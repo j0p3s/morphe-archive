@@ -2451,14 +2451,6 @@
                 "updatedAt": 1791173860408
             },
             {
-                "name": "ysamjo-youtubetv-patches",
-                "source": "https://raw.githubusercontent.com/ysamjo/ysamjo-youtubetv-patches/main/patches-bundle.json",
-                "autoUpdate": true,
-                "sortOrder": 333,
-                "createdAt": 1791173860744,
-                "updatedAt": 1791173860744
-            },
-            {
                 "name": "railone-patches",
                 "source": "https://raw.githubusercontent.com/VipinVIP/railone-patches/main/patches-bundle.json",
                 "autoUpdate": true,
@@ -2571,14 +2563,6 @@
                 "updatedAt": 1791348299607
             },
             {
-                "name": "ysamjo-rtlplus-patches",
-                "source": "https://raw.githubusercontent.com/ysamjo/ysamjo-rtlplus-patches/main/patches-bundle.json",
-                "autoUpdate": true,
-                "sortOrder": 348,
-                "createdAt": 1791348300841,
-                "updatedAt": 1791348300841
-            },
-            {
                 "name": "VKlean",
                 "source": "https://raw.githubusercontent.com/Solvo37/VKlean/main/patches-bundle.json",
                 "autoUpdate": true,
@@ -2641,6 +2625,134 @@
                 "sortOrder": 356,
                 "createdAt": 1791609472046,
                 "updatedAt": 1791609472046
+            },
+            {
+                "name": "morphe-patches",
+                "source": "https://raw.githubusercontent.com/2eno/morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 357,
+                "createdAt": 1791701180145,
+                "updatedAt": 1791701180145
+            },
+            {
+                "name": "wallapop-oled-noads-patches",
+                "source": "https://raw.githubusercontent.com/ByXuXy88/wallapop-oled-noads-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 358,
+                "createdAt": 1791701182937,
+                "updatedAt": 1791701182937
+            },
+            {
+                "name": "morphe-patches",
+                "source": "https://raw.githubusercontent.com/DiogoGra/morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 359,
+                "createdAt": 1791701184257,
+                "updatedAt": 1791701184257
+            },
+            {
+                "name": "waze-patches",
+                "source": "https://raw.githubusercontent.com/Forsigh/waze-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 360,
+                "createdAt": 1791701185718,
+                "updatedAt": 1791701185718
+            },
+            {
+                "name": "test-morphe-patch",
+                "source": "https://raw.githubusercontent.com/fynnaly/test-morphe-patch/master/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 361,
+                "createdAt": 1791701186417,
+                "updatedAt": 1791701186417
+            },
+            {
+                "name": "Gitro-Morphe-Patches",
+                "source": "https://raw.githubusercontent.com/GitGitro/Gitro-Morphe-Patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 362,
+                "createdAt": 1791701186691,
+                "updatedAt": 1791701186691
+            },
+            {
+                "name": "morphe-patches",
+                "source": "https://raw.githubusercontent.com/hajs110208/morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 363,
+                "createdAt": 1791701187829,
+                "updatedAt": 1791701187829
+            },
+            {
+                "name": "immersive-keyboard-patches",
+                "source": "https://raw.githubusercontent.com/JacksonJones2003/immersive-keyboard-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 364,
+                "createdAt": 1791701189397,
+                "updatedAt": 1791701189397
+            },
+            {
+                "name": "qqmusic-english-patches",
+                "source": "https://raw.githubusercontent.com/JacksonJones2003/qqmusic-english-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 365,
+                "createdAt": 1791701189820,
+                "updatedAt": 1791701189820
+            },
+            {
+                "name": "kveld-extra-morphe-patches",
+                "source": "https://raw.githubusercontent.com/kveld9/kveld-extra-morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 366,
+                "createdAt": 1791701191030,
+                "updatedAt": 1791701191030
+            },
+            {
+                "name": "morphe-patches",
+                "source": "https://raw.githubusercontent.com/o0b/morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 367,
+                "createdAt": 1791701193452,
+                "updatedAt": 1791701193452
+            },
+            {
+                "name": "morphed-pl",
+                "source": "https://raw.githubusercontent.com/RikoDEV/morphed-pl/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 368,
+                "createdAt": 1791701195027,
+                "updatedAt": 1791701195027
+            },
+            {
+                "name": "sailhighsea-patches",
+                "source": "https://raw.githubusercontent.com/SailHighSea/sailhighsea-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 369,
+                "createdAt": 1791701195503,
+                "updatedAt": 1791701195503
+            },
+            {
+                "name": "patches",
+                "source": "https://raw.githubusercontent.com/sqzass/patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 370,
+                "createdAt": 1791701195883,
+                "updatedAt": 1791701195883
+            },
+            {
+                "name": "servus-patches",
+                "source": "https://raw.githubusercontent.com/Sudashiii/servus-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 371,
+                "createdAt": 1791701196100,
+                "updatedAt": 1791701196100
+            },
+            {
+                "name": "morphe-patches-custom",
+                "source": "https://raw.githubusercontent.com/TorbenStriegel/morphe-patches-custom/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 372,
+                "createdAt": 1791701197552,
+                "updatedAt": 1791701197552
             }
         ]
     }
