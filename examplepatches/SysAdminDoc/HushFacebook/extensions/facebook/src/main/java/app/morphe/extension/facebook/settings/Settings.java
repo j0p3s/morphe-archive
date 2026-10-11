@@ -420,11 +420,29 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_hold_analytics_uploads", FALSE, true);
 
     /**
+     * Facebook's camera roll cloud processing and its media count reports
+     * ({@link app.morphe.extension.facebook.misc.CameraRollProcessing}). Starts off. Facebook
+     * cancels the work it scheduled the next time it checks, which a restart brings about.
+     */
+    public static final BooleanSetting HOLD_CAMERA_ROLL_PROCESSING =
+            new BooleanSetting("hushfacebook_hold_camera_roll_processing", FALSE, true);
+
+    /**
      * Screenshots of the screens Facebook marks secure ({@link app.morphe.extension.facebook.misc.Screenshots}).
      * Starts off. A screen takes it when it's next opened.
      */
     public static final BooleanSetting ALLOW_SCREENSHOTS =
             new BooleanSetting("hushfacebook_allow_screenshots", FALSE);
+
+    /**
+     * Facebook's Facebook Plus app icons on its App icon page ({@link app.morphe.extension.facebook.misc.AppIcons}).
+     * Starts off. The App icon page reads it each time it opens. An icon picked while it's on is a
+     * launcher alias, so it stays when the switch goes off, unless Facebook's start-up rollback (behind
+     * a server flag, off on the accounts seen so far) puts the blue one back. Facebook's component
+     * manager resets it on the first start after an update, which the switch skips while it's on.
+     */
+    public static final BooleanSetting UNLOCK_APP_ICONS =
+            new BooleanSetting("hushfacebook_unlock_app_icons", FALSE);
 
     /**
      * Facebook's haptics on its own taps and gestures ({@link app.morphe.extension.facebook.misc.Haptics}).
@@ -575,6 +593,22 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_hide_related_groups_under_comments", FALSE);
 
     /**
+     * Comments whose words link to an online shop, like the Shopee links pasted under reels, are
+     * left out with their replies ({@link app.morphe.extension.facebook.comments.CommentSheetOptions},
+     * #118). Off by default. A change shows on the next comments drawn.
+     */
+    public static final BooleanSetting HIDE_SHOP_LINK_COMMENTS =
+            new BooleanSetting("hushfacebook_hide_shop_link_comments", FALSE);
+
+    /**
+     * Comments holding a phrase from {@link #HIDDEN_WORDS} and none from {@link #KEPT_WORDS} are
+     * left out with their replies, matched as posts are
+     * ({@link app.morphe.extension.facebook.comments.CommentSheetOptions}, #118). Off by default.
+     */
+    public static final BooleanSetting HIDE_COMMENTS_WITH_WORDS =
+            new BooleanSetting("hushfacebook_hide_comments_with_words", FALSE);
+
+    /**
      * Facebook's text boxes (posts, comments, captions, a story's text) look people up to tag only
      * for a word that starts with @. Off, they also look them up for a plain word Facebook takes for
      * a name, what its code calls an implicit mention
@@ -647,6 +681,14 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_keep_progress_bar", FALSE);
 
     /**
+     * With {@link #KEEP_PROGRESS_BAR} on, a reel's elapsed and total time stay up above the bar and
+     * keep counting ({@link app.morphe.extension.facebook.media.ProgressBar}). Starts on. Off, the
+     * time shows only while you drag the bar, as Facebook has it.
+     */
+    public static final BooleanSetting KEEP_PROGRESS_BAR_TIME =
+            new BooleanSetting("hushfacebook_keep_progress_bar_time", TRUE);
+
+    /**
      * Facebook's own text, React Native screens' included, drawn in the font {@link #FONT_SOURCE}
      * names instead of Meta's Optimistic, at the same weight and slant. A typeface already on
      * screen keeps its font until Facebook restarts.
@@ -665,6 +707,15 @@ public class Settings extends BaseSettings {
     /** Web links leave Facebook's in-app browser for the default browser. */
     public static final BooleanSetting OPEN_LINKS_EXTERNALLY =
             new BooleanSetting("hushfacebook_open_links_externally", TRUE);
+
+    /**
+     * Facebook's own browser builds neither of its link history writers
+     * ({@link app.morphe.extension.facebook.misc.LinkHistory}), so a link that opens in it isn't
+     * recorded for your link history or sent as a navigation event. On by default. A change applies
+     * to the next link opened.
+     */
+    public static final BooleanSetting HOLD_LINK_HISTORY =
+            new BooleanSetting("hushfacebook_hold_link_history", TRUE);
 
     /** The tracking keys come off the links Facebook hands out when someone shares. */
     public static final BooleanSetting SANITIZE_SHARING_LINKS =
@@ -895,6 +946,14 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_saved_shortcut", FALSE);
 
     /**
+     * A launcher shortcut and a Menu row to the videos you've watched, reels included (Facebook's
+     * Activity log, Videos you've watched), added only when the shortcut won't displace an existing
+     * entry.
+     */
+    public static final BooleanSetting WATCH_HISTORY_SHORTCUT =
+            new BooleanSetting("hushfacebook_watch_history_shortcut", FALSE);
+
+    /**
      * A cold start, and a return after {@link #APP_LOCK_AFTER}, ask for the phone's screen lock
      * before Facebook shows ({@link app.morphe.extension.facebook.misc.AppLock}). The settings
      * entry's own switch, so every build has it ({@link PatchFamily#ENTRY_SWITCHES}). Off by default.
@@ -968,11 +1027,11 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting MARKETPLACE_ONLY =
             new BooleanSetting("hushfacebook_marketplace_only", FALSE, true);
 
-    /** Silences only recognized social promotions while Marketplace mode is selected. */
+    /** Silences only recognized social promotions while Marketplace only is selected. */
     public static final BooleanSetting MARKETPLACE_QUIET_NOTIFICATIONS =
             new BooleanSetting("hushfacebook_marketplace_quiet_notifications", FALSE);
 
-    /** Skip only confirmed feed warm-ups once the tab bar has applied Marketplace mode. */
+    /** Skip only confirmed feed warm-ups once the tab bar has applied Marketplace only. */
     public static final BooleanSetting MARKETPLACE_SKIP_FEED_PREFETCH =
             new BooleanSetting("hushfacebook_marketplace_skip_feed_prefetch", FALSE);
 

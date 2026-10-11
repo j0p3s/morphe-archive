@@ -117,6 +117,7 @@ public class CarouselSaveTest {
         MediaBridge.poster = null;
         MediaBridge.postedAt = null;
         MediaBridge.cover = null;
+        MediaBridge.frames = null;
         Settings.DOWNLOAD_FEED_COVER.resetToDefault();
         Settings.SAVE_NAME_BY_POST.resetToDefault();
         LogBufferManager.clearLogBuffer();
@@ -259,8 +260,8 @@ public class CarouselSaveTest {
         assertEquals(0, server.hits("/last.jpg"));
         assertEquals(1, gallery.rows.size());
         assertEquals(Integer.valueOf(0), gallery.rows.get(1L).getAsInteger(MediaStore.MediaColumns.IS_PENDING));
-        assertEquals("Carousel cancelled. Saved 1. Failed 0. Skipped 2.", ShadowToast.getTextOfLatestToast());
-        assertEquals("Carousel cancelled. Saved 1. Failed 0. Skipped 2.", SaveControl.batchOutcome());
+        assertEquals("Carousel canceled. Saved 1. Failed 0. Skipped 2.", ShadowToast.getTextOfLatestToast());
+        assertEquals("Carousel canceled. Saved 1. Failed 0. Skipped 2.", SaveControl.batchOutcome());
         assertClean();
     }
 
@@ -286,7 +287,11 @@ public class CarouselSaveTest {
         assertClean();
     }
 
-    @Test public void aBatchUsesOneSlotAndNeverQueuesPastTheExistingLimit() throws Exception {
+    /**
+     * A batch uses one slot. A second Download all while it saves waits its turn instead of being
+     * refused, and starts once the first ends (#115). A single save past the limit is still refused.
+     */
+    @Test public void aBatchUsesOneSlotAndASecondWaitsItsTurn() throws Exception {
         CountDownLatch singles = new CountDownLatch(2);
         List<Thread> workers = new ArrayList<>();
         for (int i = 0; i < 2; i++) workers.add(MediaSave.start(context, true, (writer, progress) -> {
@@ -299,13 +304,69 @@ public class CarouselSaveTest {
         CompletableFuture<MediaSave.BatchResult> ended = new CompletableFuture<>();
         assertTrue(MediaSave.saveBatch(context, Arrays.asList(held, held), ended::complete));
         assertEquals(3, MediaSave.savesInFlight());
-        assertFalse(MediaSave.saveBatch(context, Arrays.asList(held, held), null));
+        CompletableFuture<MediaSave.BatchResult> second = new CompletableFuture<>();
+        assertTrue("the second waits its turn", MediaSave.saveBatch(context, Arrays.asList(held, held), second::complete));
+        assertEquals(1, MediaSave.batchesWaiting());
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertEquals("Queued. It starts once the post before it is saved.", ShadowToast.getTextOfLatestToast());
         assertFalse(MediaSave.saveVideo(context, SavesForTests.renditions(server.origin() + "/held.mp4"), null, null));
         release.countDown();
         ended.get(20, TimeUnit.SECONDS);
+        second.get(20, TimeUnit.SECONDS);
         for (Thread worker : workers) worker.join(10_000);
         waitForSaves();
-        assertEquals("a refused batch was queued", 2, server.hits("/held.mp4"));
+        assertEquals("each batch fetched both its pages once", 4, server.hits("/held.mp4"));
+        assertEquals(0, MediaSave.batchesWaiting());
+        assertClean();
+    }
+
+    /** Two Download all requests save one post's pages, then the other's, in the order they were asked (#115). */
+    @Test public void aSecondDownloadAllWaitsForTheFirstAndKeepsItsOrder() throws Exception {
+        List<String> order = Collections.synchronizedList(new ArrayList<>());
+        CountDownLatch entered = new CountDownLatch(1);
+        MediaSave.detailsForTests = details -> {
+            order.add(details.videoId);
+            if (order.size() == 1) { entered.countDown(); await(release); }
+        };
+        CompletableFuture<MediaSave.BatchResult> first = new CompletableFuture<>();
+        CompletableFuture<MediaSave.BatchResult> second = new CompletableFuture<>();
+        assertTrue(MediaSave.saveBatch(context, Arrays.asList(page(false, "/a1.jpg", "a1"), page(false, "/a2.jpg", "a2")), first::complete));
+        assertTrue(entered.await(10, TimeUnit.SECONDS));
+        assertTrue(MediaSave.saveBatch(context, Arrays.asList(page(false, "/b1.jpg", "b1"), page(false, "/b2.jpg", "b2")), second::complete));
+        assertEquals(1, MediaSave.batchesWaiting());
+        assertEquals("one saving, one waiting", 2, MediaSave.savesInFlight());
+        assertEquals("only the first has a Cancel", 1, SaveControl.running().size());
+        release.countDown();
+        assertEquals(2, first.get(20, TimeUnit.SECONDS).saved);
+        assertEquals(2, second.get(20, TimeUnit.SECONDS).saved);
+        waitForSaves();
+        assertEquals(Arrays.asList("a1", "a2", "b1", "b2"), order);
+        assertEquals(0, MediaSave.batchesWaiting());
+        assertClean();
+    }
+
+    /** With the line full, one more Download all says so and saves nothing, and the ones waiting still run. */
+    @Test public void aFullLineSaysSoAndTheWaitingOnesStillRun() throws Exception {
+        CountDownLatch entered = new CountDownLatch(1);
+        MediaSave.detailsForTests = details -> { entered.countDown(); await(release); };
+        assertTrue(MediaSave.saveBatch(context, Collections.singletonList(page(false, "/first.jpg", "1")), null));
+        assertTrue(entered.await(10, TimeUnit.SECONDS));
+        List<CompletableFuture<MediaSave.BatchResult>> waiting = new ArrayList<>();
+        for (int i = 0; i < MediaSave.MAX_WAITING; i++) {
+            CompletableFuture<MediaSave.BatchResult> ended = new CompletableFuture<>();
+            waiting.add(ended);
+            assertTrue(MediaSave.saveBatch(context, Collections.singletonList((MediaSave.Item) null), ended::complete));
+        }
+        assertEquals(MediaSave.MAX_WAITING, MediaSave.batchesWaiting());
+        assertTrue("refused with its own message", MediaSave.saveBatch(context, Collections.singletonList(page(false, "/late.jpg", "2")), null));
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertEquals("Not saved: 10 posts are already waiting", ShadowToast.getTextOfLatestToast());
+        assertEquals(MediaSave.MAX_WAITING, MediaSave.batchesWaiting());
+        release.countDown();
+        for (CompletableFuture<MediaSave.BatchResult> ended : waiting) assertEquals(1, ended.get(20, TimeUnit.SECONDS).skipped);
+        waitForSaves();
+        assertEquals(1, server.hits("/first.jpg"));
+        assertEquals(0, server.hits("/late.jpg"));
         assertClean();
     }
 
@@ -355,6 +416,77 @@ public class CarouselSaveTest {
         assertEquals(1, server.hits("/cover.jpg")); assertEquals(0, server.hits("/small.jpg"));
         assertEquals(1, gallery.rows.size());
         assertClean();
+    }
+
+    /**
+     * A reel whose model keeps a larger still in additional_candidates than its candidates state
+     * saves that still, and the log names where the largest came from.
+     */
+    @Test public void aReelsCoverSavesTheLargestStillItsModelKeeps() throws Exception {
+        server.serve("/v/up_1_n.jpg", "image/jpeg", body(false));
+        server.serve("/w/up_1_n.jpg", "image/jpeg", body(false));
+        MediaBridge.frames = new MediaSave.Rendition[] {new MediaSave.Rendition(server.origin() + "/w/up_1_n.jpg?stp=dst-jpg_e15", 1080, 1920, 0), null, null};
+        MediaSave.Item reel = new MediaSave.Item(false, Arrays.asList(
+                new MediaSave.Rendition(server.origin() + "/v/up_1_n.jpg?stp=dst-jpg_e15_s360x640", 360, 640, 0)), null, PostDetails.of("7"));
+        StoryDownload.Cover cover = StoryDownload.cover(reel);
+        assertEquals(2, cover.sizes.size());
+        assertEquals("first_frame 1080x1920", cover.chosenSource());
+        assertEquals("2 picture size(s) (candidates 1, first_frame 1), largest from first_frame 1080x1920", cover.summary());
+        assertTrue(ReelDownload.saveCover(context, reel));
+        waitForSaves();
+        assertEquals(1, server.hits("/w/up_1_n.jpg")); assertEquals(0, server.hits("/v/up_1_n.jpg"));
+        assertClean();
+    }
+
+    /**
+     * A reel with a custom cover keeps a first frame that is another picture, and nothing 450 states
+     * says which a reel has, so a still from another file isn't taken for its cover. The candidates
+     * save, and an address naming no file leaves the stills out too.
+     */
+    @Test public void aStillFromAnotherPictureIsNotTheCover() throws Exception {
+        server.serve("/v/custom_n.jpg", "image/jpeg", body(false));
+        server.serve("/w/frame0_n.jpg", "image/jpeg", body(false));
+        MediaBridge.frames = new MediaSave.Rendition[] {
+                new MediaSave.Rendition(server.origin() + "/w/frame0_n.jpg", 1080, 1920, 0),
+                new MediaSave.Rendition(server.origin() + "/", 1080, 1920, 0), null};
+        MediaSave.Item reel = new MediaSave.Item(false, Arrays.asList(
+                new MediaSave.Rendition(server.origin() + "/v/custom_n.jpg", 360, 640, 0)), null, PostDetails.of("7"));
+        StoryDownload.Cover cover = StoryDownload.cover(reel);
+        assertEquals(1, cover.sizes.size());
+        assertEquals("1 picture size(s) (candidates 1), largest from candidates 360x640", cover.summary());
+        assertTrue(ReelDownload.saveCover(context, reel));
+        waitForSaves();
+        assertEquals(1, server.hits("/v/custom_n.jpg")); assertEquals(0, server.hits("/w/frame0_n.jpg"));
+        assertClean();
+    }
+
+    @Test public void theFileAnAddressNamesIsWhatTwoSizesShare() {
+        assertEquals("up_1_n", StoryDownload.assetOf("https://cdn.example/v/t51.1-15/up_1_n.jpg?stp=a/b&x=1"));
+        assertEquals("up_1_n", StoryDownload.assetOf("https://cdn.example/other/up_1_n.webp#top"));
+        assertNull(StoryDownload.assetOf("https://cdn.example/"));
+        assertNull(StoryDownload.assetOf(null));
+    }
+
+    /** A reel with a single size, and no still beside it, saves as it did, and a still of other proportions is left out. */
+    @Test public void aReelsCoverWithOneSizeSavesAsBefore() throws Exception {
+        server.serve("/small.jpg", "image/jpeg", body(false));
+        MediaSave.Item reel = new MediaSave.Item(false, Arrays.asList(
+                new MediaSave.Rendition(server.origin() + "/small.jpg", 360, 640, 0)), null, PostDetails.of("7"));
+        StoryDownload.Cover alone = StoryDownload.cover(reel);
+        assertEquals("1 picture size(s) (candidates 1), largest from candidates 360x640", alone.summary());
+        MediaBridge.frames = new MediaSave.Rendition[] {null, null, new MediaSave.Rendition(server.origin() + "/sq/small.jpg", 1080, 1080, 0)};
+        assertEquals("a square smart frame isn't the cover", 1, StoryDownload.cover(reel).sizes.size());
+        assertTrue(ReelDownload.saveCover(context, reel));
+        waitForSaves();
+        assertEquals(1, server.hits("/small.jpg"));
+        assertClean();
+    }
+
+    /** Candidates that state no size give nothing to compare a still with, so the stills aren't read. */
+    @Test public void stillsAreLeftOutWhenTheCandidatesStateNoSize() {
+        MediaBridge.frames = new MediaSave.Rendition[] {new MediaSave.Rendition("https://x.invalid/f.jpg", 1080, 1920, 0), null, null};
+        MediaSave.Item reel = new MediaSave.Item(false, Arrays.asList(MediaSave.Rendition.of("https://x.invalid/c.jpg")), null, PostDetails.of("7"));
+        assertEquals(1, StoryDownload.cover(reel).sizes.size());
     }
 
     /**
@@ -469,6 +601,35 @@ public class CarouselSaveTest {
         assertTrue("a video's cover isn't a photo to save", rows.isEmpty());
         int fetched = 0;
         for (String path : Arrays.asList("/a.jpg", "/b.jpg", "/c.jpg", "/d.mp4", "/e.mp4", "/f.mp4")) fetched += server.hits(path);
+        assertEquals("nothing was fetched to decide", 0, fetched);
+    }
+
+    /**
+     * #97: the feed's Download button asks what the menu asks. With Download feed videos on and
+     * Download feed photos off, a photo post and an all-photo carousel have nothing to save, while a
+     * video, or a carousel with a video page, does. Nothing is fetched to decide.
+     */
+    @Test public void theFeedButtonGoesOnlyWhereTheMenuWouldSave() {
+        MediaSave.Item photo = page(false, "/photo.jpg", "1");
+        MediaSave.Item video = page(true, "/video.mp4", "2");
+        Settings.DOWNLOAD_PHOTOS.save(false);
+        assertFalse("a photo with the photo switch off", VideoDownload.saves(photo));
+        assertTrue(VideoDownload.saves(video));
+        assertFalse(VideoDownload.saves(null));
+
+        MediaBridge.post = Arrays.asList(page(false, "/a.jpg", "3"), page(false, "/b.jpg", "4"));
+        assertFalse("an all-photo carousel", VideoDownload.saves(MediaBridge.post));
+        MediaBridge.post = Arrays.asList(page(false, "/c.jpg", "5"), page(true, "/d.mp4", "6"));
+        assertTrue("its video page saves", VideoDownload.saves(MediaBridge.post));
+
+        Settings.DOWNLOAD_PHOTOS.save(true);
+        Settings.DOWNLOAD_VIDEOS.save(false);
+        assertTrue(VideoDownload.saves(photo));
+        assertFalse("a video's cover isn't a photo to save", VideoDownload.saves(video));
+        Settings.DOWNLOAD_PHOTOS.save(false);
+        assertFalse("every switch off", VideoDownload.saves(photo));
+        int fetched = 0;
+        for (String path : Arrays.asList("/photo.jpg", "/video.mp4", "/a.jpg", "/b.jpg", "/c.jpg", "/d.mp4")) fetched += server.hits(path);
         assertEquals("nothing was fetched to decide", 0, fetched);
     }
 
@@ -627,6 +788,8 @@ public class CarouselSaveTest {
         static String poster;
         static Long postedAt;
         static List<MediaSave.Rendition> cover;
+        /** first_frame, igtv_first_frame and smart_frame of the additional_candidates, or null when it has none. */
+        static MediaSave.Rendition[] frames;
         static final Object ALL = new Object(), DOWNLOAD = new Object();
         static CharSequence label;
         @Implementation protected static Object saveAllOption() { return ALL; }
@@ -648,6 +811,10 @@ public class CarouselSaveTest {
             MediaSave.Item item = (MediaSave.Item) (media instanceof List ? ((List<?>) media).get(0) : media);
             return item.video ? cover : item.renditions;
         }
+        @Implementation protected static Object additionalCandidates(Object versions) { return frames; }
+        @Implementation protected static Object firstFrame(Object more) { return frames[0]; }
+        @Implementation protected static Object igtvFirstFrame(Object more) { return frames[1]; }
+        @Implementation protected static Object smartFrame(Object more) { return frames[2]; }
         @Implementation protected static String versionUrl(Object version) { return ((MediaSave.Rendition) version).url; }
         @Implementation protected static Integer versionWidth(Object version) { return ((MediaSave.Rendition) version).width; }
         @Implementation protected static Integer versionHeight(Object version) { return ((MediaSave.Rendition) version).height; }

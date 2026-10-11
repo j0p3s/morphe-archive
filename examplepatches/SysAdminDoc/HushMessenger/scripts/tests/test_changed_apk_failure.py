@@ -28,7 +28,7 @@ WRAPPED_REASON = (
     'depends on "BytecodePatch@1727420902", which raised an exception:\r\n'
     "app.morphe.patcher.patch.PatchException: Install beside Meta apps: "
     "expected 6 permission loads, found 4. Use an unmodified arm64 Messenger "
-    f"580.0.0.49.91 APK (version code {SUPPORTED}).\r\r\n"
+    f"582.0.0.61.92 APK (version code {SUPPORTED}).\r\r\n"
     "\tat app.hushmessenger.patches.coexist.InstallBesideMetaAppsPatchKt.validateDexSites(InstallBesideMetaAppsPatch.kt:203)\r\n"
 )
 
@@ -52,6 +52,23 @@ def setUpModule():
 
 
 class ChangedApkChecks(unittest.TestCase):
+    def test_a_broken_build_record_is_a_check_failure_not_a_traceback(self):
+        argv = ["verify_changed_apk_failure.py", "--stock-apk", "s.apk", "--bundle", "b.mpp", "--desktop-jar", "d.jar"]
+        output = io.StringIO()
+        with (
+            patch("sys.argv", argv),
+            patch.object(checker, "PROFILE_ERROR", "The recorded builds can't be read: 1.txt is missing a code or sha256 line"),
+            patch.object(checker, "check", side_effect=AssertionError("the check must not run on broken records")),
+            redirect_stderr(output),
+        ):
+            self.assertEqual(2, checker.main())
+        self.assertIn("CHECK FAILED: The recorded builds can't be read", output.getvalue())
+        self.assertNotIn("Traceback", output.getvalue())
+        with tempfile.TemporaryDirectory() as folder:
+            Path(folder, "1.txt").write_text("code 1\n", encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "1.txt is missing a code or sha256 line"):
+                checker.recorded_builds(Path(folder))
+
     def test_dex_checksum_and_signature_are_updated_after_literal_change(self):
         data = b"dex\n035\0" + bytes(56) + checker.OLD_LITERAL
         changed = checker.altered_dex(data)

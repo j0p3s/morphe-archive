@@ -1,3 +1,21 @@
+## [1.45.0](https://github.com/legendsciber/morphe-patches/compare/v1.44.2...v1.45.0) (2026-10-10)
+
+### ✨ New Features
+
+* **aow2:** add store modes unlock and ad removal patches ([f844716](https://github.com/legendsciber/morphe-patches/commit/f8447167cad953618a973f9e85f8997f69781b24))
+
+## [1.44.2](https://github.com/legendsciber/morphe-patches/compare/v1.44.1...v1.44.2) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **templerun2:** load the offline store catalogue ([0936093](https://github.com/legendsciber/morphe-patches/commit/093609372b5757be04e5bde1f602784f65468a63))
+
+## [1.44.1](https://github.com/legendsciber/morphe-patches/compare/v1.44.0...v1.44.1) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **templerun2:** show real-money store items when offline ([e9a0a73](https://github.com/legendsciber/morphe-patches/commit/e9a0a73815721518de0396b10bbb52838e65fb39))
+
 ## [1.44.0](https://github.com/legendsciber/morphe-patches/compare/v1.43.10...v1.44.0) (2026-10-09)
 
 ### ✨ New Features

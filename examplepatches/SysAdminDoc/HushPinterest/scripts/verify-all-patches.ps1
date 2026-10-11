@@ -30,6 +30,16 @@
     branch targets, invoke registers, parameter kinds, try ranges and the contract file's rules. Its
     report goes beside the result file too.
 
+    -KeepIn names a folder where a run that passes all of that is kept, under a key made of the
+    bundle, the APK, the catalog, the patch selection, the desktop CLI, the SDK stubs and every
+    verifier file (Get-AppliedRecordKey in common.ps1). A later run with -KeepIn and the same key
+    says it's reusing that run and stops before patching. A failed or partial run is never kept.
+    The release push gate passes it, and build-release-receipt.ps1 and patch-for-device.ps1 read
+    what it kept. HUSHPINTEREST_APPLY_RECORDS stands in for -KeepIn when it isn't given, so a
+    machine that sets it keeps every passing local run for the gate to find. Without either,
+    nothing is kept or read, and every run patches. -NoReuse patches in full even when a kept run
+    matches, and keeps the new run in its place when it passes.
+
 .EXAMPLE
     scripts/verify-all-patches.ps1 -Apk C:\path\to\native-fixture.apk `
         -DesktopJar C:\path\to\morphe-desktop.jar -WorkDir C:\path\to\scratch
@@ -50,7 +60,11 @@ param(
     [string]$Aapt2,
     [string]$AndroidJar,
     [string]$ApiVersions,
-    [string[]]$PatchNames
+    [string[]]$PatchNames,
+    # The applied record store to reuse a passing run from and keep this one in.
+    [string]$KeepIn,
+    # Patch even when a run kept under the same key matches. A pass is still kept.
+    [switch]$NoReuse
 )
 
 $ErrorActionPreference = 'Stop'
@@ -141,6 +155,42 @@ if ($forced) {
     Write-Host "[verify] $($stock.package) $($stock.versionName) is a declared target, so nothing is forced"
 }
 
+# A run kept under the same key already patched these bytes with this verifier and passed every
+# check below, so it's handed back instead, once its report still reads as complete. Any input
+# that moved gives another key and a full run.
+$appliedIdentity = $null
+if (-not $KeepIn -and $env:HUSHPINTEREST_APPLY_RECORDS) { $KeepIn = $env:HUSHPINTEREST_APPLY_RECORDS }
+if ($KeepIn) {
+    $hostStubs = Resolve-HostReferenceStubs -AndroidJar $AndroidJar -ApiVersions $ApiVersions -Aapt2 $Aapt2
+    $AndroidJar = $hostStubs.AndroidJar
+    $ApiVersions = $hostStubs.ApiVersions
+    $KeepIn = Get-AppliedRecordStore -Path $KeepIn
+    $appliedIdentity = Get-AppliedRecordKey -Bundle $Bundle -Fixture $Apk -PatchList $PatchList -PatchNames $names `
+        -Forced $forced -DesktopJar $DesktopJar -AndroidJar $AndroidJar -ApiVersions $ApiVersions
+    $recorded = if ($NoReuse) { $null } else { Find-AppliedRecord -Store $KeepIn -Key $appliedIdentity.Key }
+    if ($NoReuse) {
+        Write-Host "[verify] -NoReuse: patching in full, and keeping the run as $($appliedIdentity.Key) if it passes"
+    } elseif ($recorded) {
+        $recordedReport = $null
+        try { $recordedReport = Get-Content -LiteralPath $recorded.Result -Raw | ConvertFrom-Json }
+        catch { Write-Warning "Could not parse the kept result JSON: $($_.Exception.Message)" }
+        $recordedCheck = Test-PatchingReport -Report $recordedReport -ExpectedNames $names `
+            -AllowedDependencyNames $dependencyNames -OutputPath $recorded.PatchedApk `
+            -ExpectedPackageName $expectedTarget.PackageName -ExpectedPackageVersion $expectedVersion
+        if ($recordedCheck.Valid) {
+            Write-Host ("[verify] reusing the run kept as $($appliedIdentity.Key) at $($recorded.RecordedAt): the " +
+                'bundle, the APK, the patch selection, the tools and every verifier file are unchanged, and it ' +
+                'passed every check, so nothing is patched again.')
+            Write-Host "[verify] kept run: $($recorded.Directory)"
+            $exitCode = 0
+            exit $exitCode
+        }
+        Write-Warning "[verify] the kept run $($appliedIdentity.Key) doesn't pass the report check ($($recordedCheck.Reason)); patching again."
+    } else {
+        Write-Host "[verify] no run kept as $($appliedIdentity.Key) in $KeepIn, so this one patches in full"
+    }
+}
+
 $out = Resolve-WithinRoot -Path (Join-Path $runDir 'verify-all.apk') -Root $workRoot
 $temp = Resolve-WithinRoot -Path (Join-Path $runDir 'verify-all-tmp') -Root $workRoot
 $result = Resolve-WithinRoot -Path (Join-Path $workRoot "verify-all-result-$runId.json") -Root $workRoot
@@ -208,7 +258,7 @@ $result = Resolve-WithinRoot -Path (Join-Path $workRoot "verify-all-result-$runI
         $patchedManifest = Get-ApkManifestFacts -Apk $out -Aapt2 $Aapt2
         $floor = Test-PatchedMinSdk -StockMinSdk $stockManifest.minSdk -PatchedMinSdk $patchedManifest.minSdk
         if (-not $floor.Valid) { throw "[verify] $($floor.Reason)" }
-        Write-Host "[verify] binary minSdk: $($stockManifest.minSdk) -> $($patchedManifest.minSdk) (max(stock, 28))"
+        Write-Host "[verify] binary minSdk: $($stockManifest.minSdk) -> $($patchedManifest.minSdk) (max(stock, 29))"
         $manifestSelection = @($names) + @($dependencyNames)
         $approvedChanges = @(Read-ManifestDeltaAllowlist -Path (Join-Path $PSScriptRoot 'manifest-delta-allowlist.txt') `
             -SelectedPatchNames $manifestSelection)
@@ -263,6 +313,20 @@ $result = Resolve-WithinRoot -Path (Join-Path $workRoot "verify-all-result-$runI
                 Write-Host ('[verify] success: every requested patch applied to a valid APK whose manifest changes ' +
                     'are all approved, whose resource table holds every stock resource and whose injected code ' +
                     'passes the structural checks.')
+                # Kept only here, after every check passed. Not keeping it costs a later run a
+                # patch, not this one its verdict, so a store that can't be written is a warning.
+                if ($appliedIdentity) {
+                    try {
+                        $keptRun = Save-AppliedRecord -Store $KeepIn -Identity $appliedIdentity -PatchedApk $out `
+                            -Result $result -Target $stock -Reports ([ordered]@{
+                                'resources.txt'       = $resourceReport
+                                'registers.txt'       = $registerReport
+                                'host-references.txt' = "$registerReport.host-references.txt" })
+                        Write-Host "[verify] kept this run as $($appliedIdentity.Key): $keptRun"
+                    } catch {
+                        Write-Warning "[verify] this run passed but could not be kept in ${KeepIn}: $($_.Exception.Message)"
+                    }
+                }
                 $exitCode = 0
             } else {
                 Write-Warning "[verify] the injected code failed its structural checks (exit $registerExitCode)."

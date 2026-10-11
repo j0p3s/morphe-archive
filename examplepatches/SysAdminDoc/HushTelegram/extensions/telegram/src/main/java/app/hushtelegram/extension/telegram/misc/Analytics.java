@@ -7,7 +7,6 @@ package app.hushtelegram.extension.telegram.misc;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-import java.lang.reflect.Field;
 import java.util.List;
 
 import app.hushtelegram.extension.shared.Utils;
@@ -18,13 +17,12 @@ import app.hushtelegram.extension.telegram.settings.Settings;
 /**
  * Keeps Telegram's usage reports on the phone.
  *
- * <p>When the server's app config turns on {@code collectDeviceStats}, the messages controller's
- * {@code logDeviceStats()} classifies the selected root as emulated storage and reports that boolean as a
- * {@code help.saveAppLog} event. While you scroll a channel, Telegram also times how long each post
- * stays on screen and sends the batch as {@code messages.reportReadMetrics}. Both ask this class
- * first, and while the switch is on neither is read nor sent. Messages, calls, view counts and
+ * <p>While you scroll a channel, Telegram times how long each post stays on screen and sends the
+ * batch as {@code messages.reportReadMetrics}. That send asks this class first, and while the switch
+ * is on the batch isn't sent. Messages, calls, view counts and
  * everything else Telegram needs go on as before. Four verified Premium screen interactions also
- * ask before their telemetry send. Their payload construction and billing cleanup stay intact.
+ * ask before their telemetry send. Their payload construction and billing cleanup stay intact. So
+ * does the camera's dual-camera report, which names the phone's maker and model.
  *
  * <p>Telegram Beta also carries Firebase Crashlytics and Sessions. Those are stopped through the
  * switches the SDKs themselves read: Crashlytics' saved collection switch and Sessions' local
@@ -33,39 +31,6 @@ import app.hushtelegram.extension.telegram.settings.Settings;
  */
 public final class Analytics {
     private Analytics() {}
-
-    /**
-     * Injected at the start of {@code logDeviceStats()}, with its messages controller. Counts a
-     * skipped report only when the server requested one and Telegram hasn't already handled it.
-     * True means return at once. A state lookup failure leaves Telegram's own path intact.
-     */
-    public static boolean skipDeviceStats(Object controller) {
-        HookStatus.invoked(FamilyNames.DISABLE_ANALYTICS);
-        try {
-            if (!Utils.settingsReady() || !Settings.DISABLE_ANALYTICS.get()) return false;
-        } catch (Throwable t) {
-            HookStatus.threw(FamilyNames.DISABLE_ANALYTICS, "switch read", t);
-            return false;
-        }
-        try {
-            Field requested = controller.getClass().getField("collectDeviceStats");
-            if (!requested.getBoolean(controller)) {
-                HookStatus.counted(FamilyNames.DISABLE_ANALYTICS, "device stats report not requested");
-                return false;
-            }
-            Field reported = requested.getDeclaringClass().getDeclaredField("loggedDeviceStats");
-            reported.setAccessible(true);
-            if (reported.getBoolean(controller)) {
-                HookStatus.counted(FamilyNames.DISABLE_ANALYTICS, "device stats report already handled");
-                return false;
-            }
-        } catch (Throwable t) {
-            HookStatus.threw(FamilyNames.DISABLE_ANALYTICS, "device stats state read", t);
-            return false;
-        }
-        HookStatus.counted(FamilyNames.DISABLE_ANALYTICS, "device stats report skipped");
-        return true;
-    }
 
     /**
      * Injected where a channel's read metrics are about to go out, with the batch waiting to be
@@ -92,6 +57,16 @@ public final class Analytics {
             case "premium.promo_screen_fail": return skip("premium promo fail report skipped");
             default: return false;
         }
+    }
+
+    /**
+     * Asked just before the camera's dual-camera report goes out, with its event type. That report
+     * carries the phone's maker and model and goes out when the server asks for device statistics.
+     * Only that verified type is eligible; anything else stays stock without reading the switch.
+     */
+    public static boolean skipDeviceAppLog(String type) {
+        if (!"android_dual_camera".equals(type)) return false;
+        return skip("dual camera report skipped");
     }
 
     /** The preferences file Crashlytics keeps its collection switch in, and the switch. */

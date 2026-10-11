@@ -88,7 +88,7 @@ function Get-PatchTarget {
     # Every version the catalog declares, newest first. Instagram moves a release a week, so the
     # bundle may declare the build it was last proved on and the one before it; the newest is
     # the one a device build and the README name. Compared part by part as numbers, every part:
-    # Meta's versions have five (449.0.0.52.84) and [version] takes four, so the fifth was
+    # Meta's versions have five (450.0.0.50.77) and [version] takes four, so the fifth was
     # dropped, and two builds apart only there sorted as equals in whatever order the shell left
     # them, the older one first in both.
     $declared = @($targets[$packageName] | Sort-Object -Unique)
@@ -126,8 +126,8 @@ function Test-DeclaredBuild {
         Whether an APK is one of the builds a catalog declares.
     .DESCRIPTION
         Its version name has to be declared, and so does its version code wherever the catalog pins
-        codes to that name. Another arm64 build of Instagram 449 shares the declared name and was
-        never proved, so only a declared build is patched without -f, and only a run of one proves
+        codes to that name. A build of Instagram sharing a declared name under a code the catalog
+        doesn't pin was never proved, so only a declared build is patched without -f, and only a run of one proves
         a release. Takes Get-PatchTarget's answer, or anything carrying its PackageVersions and
         PackageVersionCodes.
     #>
@@ -218,4 +218,33 @@ function Test-SelectedPatchTargets {
         }
     }
     return [pscustomobject]@{ Valid = $true; Reason = $null }
+}
+
+function Split-SecondAppPatches {
+    <#
+    .SYNOPSIS
+        The catalog's patch names in two lists: those that patch Instagram as Instagram, and those
+        that make a second app beside it (a package, data and sign-in of its own).
+    .DESCRIPTION
+        Every check that applies all patches as one Instagram (verify-all-patches.ps1, the release
+        receipt, patch-all-builds.ps1 and the receipt's validation) takes SameApp, since a second
+        app's package is no longer the catalog's and its manifest renames every authority.
+        verify-all-patches.ps1 applies SecondApp in a run of its own, and patch-for-device.ps1
+        adds it only with -Clone. Catalog order is kept in both.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)][object]$PatchList)
+
+    $secondApp = @('Install next to Instagram')
+    $names = @(@($PatchList.patches) | ForEach-Object { [string]$_.name })
+    return [pscustomobject]@{
+        SameApp   = @($names | Where-Object { $secondApp -cnotcontains $_ })
+        SecondApp = @($names | Where-Object { $secondApp -ccontains $_ })
+    }
+}
+
+function Get-SameAppPatchNames {
+    [CmdletBinding()]
+    param([Parameter(Mandatory = $true)][object]$PatchList)
+    return @((Split-SecondAppPatches -PatchList $PatchList).SameApp)
 }

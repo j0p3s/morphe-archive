@@ -5,6 +5,7 @@
 package app.hushgram.extension.instagram.profile;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
@@ -57,6 +58,8 @@ final class FriendshipChip {
 
     /** Set by tests that have no Instagram resources: the followers count's id. */
     static int followersCountIdForTests;
+    /** The followers count's id in this app, or -1 before the first lookup. */
+    private static volatile int followersCountId = -1;
 
     /**
      * The chips showing, by the counts block they're under. Blocks go when their screen does: a
@@ -74,8 +77,8 @@ final class FriendshipChip {
     }
 
     /**
-     * Shows [relation]'s chip under the counts of the profile header [inside] is part of, in the
-     * colors and typeface of [style] when there is one. False when the counts can't be found.
+     * Shows [relation]'s chip under the counts of the profile header [inside] is part of, in its
+     * own color and the typeface of [style] when there is one. False when the counts can't be found.
      */
     static boolean show(View inside, Relation relation, @Nullable TextView style) {
         View block = counts(inside);
@@ -142,7 +145,36 @@ final class FriendshipChip {
 
     private static int followersCountId(Context context) {
         if (followersCountIdForTests != 0) return followersCountIdForTests;
-        return context.getResources().getIdentifier(FOLLOWERS_COUNT, "id", context.getPackageName());
+        if (followersCountId == -1) {
+            followersCountId = context.getResources().getIdentifier(FOLLOWERS_COUNT, "id", context.getPackageName());
+        }
+        return followersCountId;
+    }
+
+    /**
+     * Blue for Follows you, green for Following each other and red for Doesn't follow you. A light
+     * profile gets darker shades, since the bright ones are hard to read on white.
+     */
+    static int color(Relation relation, boolean light) {
+        switch (relation) {
+            case FOLLOWING_EACH_OTHER:
+                return light ? Color.rgb(0x18, 0x80, 0x38) : Color.rgb(0x2E, 0xCC, 0x71);
+            case DOESNT_FOLLOW_YOU:
+                return light ? Color.rgb(0xD9, 0x30, 0x25) : Color.rgb(0xED, 0x49, 0x56);
+            default:
+                return light ? Color.rgb(0x1A, 0x73, 0xE8) : Color.rgb(0x37, 0x97, 0xEF);
+        }
+    }
+
+    /**
+     * Whether the profile is light: the pronouns line's words are dark (Instagram's gray there is
+     * well under a quarter luminance on light and well over on dark), or with no line to go by, the
+     * phone isn't in dark mode.
+     */
+    static boolean light(Context context, @Nullable TextView style) {
+        if (style != null) return Color.luminance(style.getCurrentTextColor()) < 0.25f;
+        int night = context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return night != Configuration.UI_MODE_NIGHT_YES;
     }
 
     /** The chip's words for [relation]. */
@@ -184,7 +216,7 @@ final class FriendshipChip {
             Context context = block.getContext();
             boolean follows = relation != Relation.DOESNT_FOLLOW_YOU;
             Drawable icon = icon(context, follows ? FOLLOWING_ICON : NOT_FOLLOWING_ICON);
-            int color = style != null ? style.getCurrentTextColor() : Color.GRAY;
+            int color = color(relation, light(context, style));
             pill.set(text(relation), icon, color, style != null ? style.getTypeface() : null);
             // Instagram may have set the block's padding again since; that becomes its own.
             int bottom = block.getPaddingBottom();
@@ -235,7 +267,7 @@ final class FriendshipChip {
         }
     }
 
-    /** The outlined pill: an icon at the start, then the words, in the pronouns line's color. */
+    /** The outlined pill: an icon at the start, then the words, in the relation's color. */
     static final class Pill extends Drawable {
         private final Paint words = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
         private final Paint outline = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -253,7 +285,9 @@ final class FriendshipChip {
             words.setTextSize(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 13, metrics));
             outline.setStyle(Paint.Style.STROKE);
             outline.setStrokeWidth(Math.max(1, dp(1)));
-            height = dp(28);
+            // 28dp at the usual text size, and taller when the phone's font scale makes the words
+            // taller than that, so the outline never clips them.
+            height = Math.max(dp(28), textHeight() + dp(8));
             padding = dp(12);
             iconSize = dp(16);
             iconGap = dp(6);
@@ -261,6 +295,12 @@ final class FriendshipChip {
 
         int dp(float value) {
             return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value, metrics));
+        }
+
+        /** How tall the words are at the current text size, ascent to descent. */
+        int textHeight() {
+            Paint.FontMetrics font = words.getFontMetrics();
+            return (int) Math.ceil(font.descent - font.ascent);
         }
 
         void set(String text, @Nullable Drawable icon, int color, @Nullable Typeface typeface) {

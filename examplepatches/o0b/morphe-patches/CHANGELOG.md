@@ -1,0 +1,59 @@
+## [1.8.0](https://github.com/o0b/morphe-patches/compare/v1.7.0...v1.8.0) (2026-10-09)
+
+### ✨ New Features
+
+* update UniversalPermissionPatches ([9361d9f](https://github.com/o0b/morphe-patches/commit/9361d9f87ce547b9a372e4145d575ee81e4efdb7))
+
+## [1.7.0](https://github.com/o0b/morphe-patches/compare/v1.6.1...v1.7.0) (2026-10-09)
+
+### ✨ New Features
+
+* calendar widget ([e779966](https://github.com/o0b/morphe-patches/commit/e779966967d62b79b47b6b67386fbaa9e26094d3))
+
+## [1.6.1](https://github.com/o0b/morphe-patches/compare/v1.6.0...v1.6.1) (2026-10-09)
+
+### 🐛 Bug Fixes
+
+* WaveletPremiumPatch ([d1d7c9b](https://github.com/o0b/morphe-patches/commit/d1d7c9b97f2e4cc393d4d16939b9b9fb58acfe3b))
+
+## [1.6.0](https://github.com/o0b/morphe-patches/compare/v1.5.0...v1.6.0) (2026-10-09)
+
+### ✨ New Features
+
+* IPC Guard ([bb7c52e](https://github.com/o0b/morphe-patches/commit/bb7c52ed16dedd3e5d1e67cfa84519b92d209a5d))
+
+## [1.5.0](https://github.com/o0b/morphe-patches/compare/v1.4.0...v1.5.0) (2026-10-09)
+
+### ✨ New Features
+
+* universal patches ([e60a674](https://github.com/o0b/morphe-patches/commit/e60a674dce64abe97d4de0a85cf41daa78534bed))
+
+## [1.4.0](https://github.com/o0b/morphe-patches/compare/v1.3.0...v1.4.0) (2026-10-08)
+
+### ✨ New Features
+
+* nova launcher 8.1.6 ([7fa5df7](https://github.com/o0b/morphe-patches/commit/7fa5df763a41c2d9914bd792d5ac084546709097))
+
+## [1.3.0](https://github.com/o0b/morphe-patches/compare/v1.2.0...v1.3.0) (2026-10-08)
+
+### ✨ New Features
+
+* update wavelet ([6a68473](https://github.com/o0b/morphe-patches/commit/6a68473948063d497ebfbdf7323b45e35fb1fe86))
+
+## [1.2.0](https://github.com/o0b/morphe-patches/compare/v1.1.0...v1.2.0) (2026-10-08)
+
+### ✨ New Features
+
+* wavelet 26.05 ([a61423d](https://github.com/o0b/morphe-patches/commit/a61423d91bb6e41f7b9eba2344fb3b10dd88d09a))
+
+## [1.1.0](https://github.com/o0b/morphe-patches/compare/v1.0.0...v1.1.0) (2026-10-08)
+
+### ✨ New Features
+
+* meteoblue 3.1.4 unlock ([a8136bf](https://github.com/o0b/morphe-patches/commit/a8136bfb61bed3dfc0b0baa9849028ab92116214))
+
+## 1.0.0 (2026-10-08)
+
+### ✨ New Features
+
+* octopi launcher 1.92 unlock ([a46de78](https://github.com/o0b/morphe-patches/commit/a46de78ad17be0af86865367de5cfe0ba6c807f9))

@@ -4,6 +4,114 @@ Every Hushfeed release, newest first.
 
 ## Unreleased
 
+* **TikTok:** Protect external pages in TikTok's browser now counts the puzzle CAPTCHA that LIVEs and the Shop open as one of TikTok's own pages, so the puzzle keeps its link back to TikTok (#87). It loads from TikTok's own servers, just not from an address the switch knew.
+
+* **TikTok:** A quick second tap on Build details, Hook status, Licenses or What's new no longer opens the same window twice, one on top of the other.
+
+* **TikTok:** Like the video, as a Double tap or Long press action, now stays with the video you're on in every kind of feed. Where that video has no heart to press, it tells you instead of liking the one next to it.
+
+* **TikTok:** A Double tap set to one of Hushfeed's actions now runs it once per tap, even if TikTok passes the same tap to two of its handlers.
+
+* **TikTok:** Patching a TikTok version Hushfeed doesn't list is safer. The extras of Show the progress bar and the comment translate button are now left out on their own when they don't fit that version, so they can't stop the patch or go in halfway.
+
+* **TikTok:** The Keep captions in Clear display and Automatic Clear display rows now spell Clear display the way TikTok does.
+
+* **TikTok:** With Hide the comment bar on opened videos on, the progress bar on a long video you open from search or a profile now sits under the caption again. Before, it drew across the creator's name (#50).
+
+* **TikTok:** Fade the video controls now also fades the progress bar on a paused video, the Following tab's stories pill, and on a video opened from search its top search bar, Full screen button and Add comment bar. Before, those stayed at full strength (#84).
+
+* **TikTok:** A story can now be saved from its share sheet. Turn on Save a story from its share sheet under Downloads and a save button shows up there. It saves the copy without the watermark when TikTok has one, and tells you when only the watermarked copy is there (#93).
+
+* **TikTok:** Show the progress bar has a new switch under Playback, Seek bar on video stories, which starts off. It puts a thin line along the bottom of a video story that you can drag to go back or skip ahead, with the time shown while you drag. Tapping still moves between stories (#72).
+
+* **TikTok:** Keep playing in the background can now start a video over when it ends, so you don't have to press Play in the notification each time. Turn on Replay in the background under Playback. A call or another app's sound still pauses it (#99).
+
+* **TikTok:** The music disc can spin again. TikTok 47.1.4 keeps it still out of the box, so Feed screen now has Spin the music disc, and Keep the music disc still if you'd rather it never turns. Both need a restart (#68).
+
+* **TikTok:** Show the progress bar has two new switches under Playback, both off at first. Show the time beside the progress bar adds the time played and the video's length at the end of the bar, and Bigger progress bar handle draws a larger handle on a slightly thicker line (#90).
+
+* **TikTok:** With Hide the Clear display controls on, TikTok's loading line, the thin bar that grows from the middle along the bottom of a video while it buffers, now goes too while the screen is cleared (#84).
+
+* **TikTok:** A new Translate button in comments switch under Comments shows TikTok's own translate button next to the comment count. One tap translates every comment and reply, and another brings the originals back (#85). It starts off.
+
+* **TikTok:** Clear display no longer leaves a thin line across the bottom of each new video for a few seconds (#84). It was the hairline along the top of the tab bar, which stayed behind when the tabs went away.
+
+* **TikTok:** Hide the status bar in LIVE rooms keeps the black strip at the top away for the whole LIVE (#137). It used to give up after TikTok put the strip back a few times, like when panels open and close over the stream. A new Show a LIVE under the status bar switch lets a LIVE reach the top edge with the clock and icons over it, if you'd rather keep the bar. It starts off.
+
+* **TikTok:** Double tap can now do anything Long press does, like copying the link or saving the frame, and Long press has a new Like the video choice (#136). A like from a long press works like TikTok's own and never takes a like away.
+
+* **TikTok:** A collection or another grid you open a video from keeps every post in it, so Hide photo posts, blocked words and the other feed filters no longer make it play the wrong video (#135). Only ads are taken out of a list you opened.
+
+* **TikTok:** Hide the Send to row no longer takes Report, Download and the rest of the actions row with it on the small share sheet a long press opens (#120). On that sheet TikTok puts both rows in one frame, and the whole frame was being hidden.
+
+* **TikTok:** Show the progress bar shows the bar on the For You feed again, short videos included (#134). On 47.1.4 it was switching on the wrong TikTok check, one that decides whether a video is an ad, so the bar never came back while a video played.
+
+* **TikTok:** The diagnostic report has a new Storage section listing the biggest folders in TikTok's storage, so a report can show what's filling it up (#70). It names folders only, never files, and hides account numbers.
+
+* **TikTok:** Pressing back on a cleared video from search or a profile no longer counts as turning Clear display off. Opening the same video again clears it like any other, and a remembered Clear display stays on (#84).
+
+* **TikTok:** Remove LIVE extras now says it takes out the files for joining someone's LIVE as a guest, so joining by voice or video may stop working with it in (#132). Leave it out if you join LIVEs.
+
+* **TikTok:** When Clear display is remembered, or Automatic Clear display has no delay, TikTok no longer shows the tabs under its loading spinner and the first video's buttons for about a second after a cold start. A video opened from Favorites or a profile starts cleared the same way (#84).
+
+* **TikTok:** With Show where a video was posted on, the creator's name no longer gets cut short to fit the country when the row has room for both, so "Rn D… · TR" reads in full again (#127). A name that's really too long is still shortened so the country stays whole.
+
+* **TikTok:** Hide already seen videos no longer takes videos out of a collection you open, so tapping a saved video plays that video again instead of the wrong one or nothing (#135). It still hides seen videos in For You, Following and Friends.
+
+* **TikTok:** A new patch, Keep the app language, adds a Keep the language picked in TikTok switch under System in App (#61). When TikTok starts and decides the phone's language changed, it drops the language you picked in its own settings and follows the phone. With the switch on, your pick stays. It starts off.
+
+* **TikTok:** A new Write the username and caption on the video switch in Downloads draws the @username and the first line of the caption in the bottom left corner of videos Hushfeed saves. The phone encodes the video again for it, so those saves take longer and show their progress with a Cancel button. It starts off.
+
+* **TikTok:** Remove creation tools now warns that opening a creation tool, like effect search on the camera, can close TikTok (#133). Leave it out if you make videos.
+
+* **TikTok:** Drop the animated image cache no longer swaps TikTok's frame cache for one that holds a single frame, which could leave animated stickers in comments stuck on their first frame (#130). Its switch is now called Don't decode animated frames ahead, and turning it on only stops TikTok from decoding frames before they're shown.
+
+* **TikTok:** The Following stories bubble at the top of the feed comes back when Clear display ends. TikTok hides it as Clear display starts and used to leave it gone until the feed reloaded. It only comes back if it was showing before and still has someone in it.
+
+* **TikTok:** A new Translate into row in Comments takes one language code, like en or es. Comments and captions TikTok translates come out in that language instead of the app's, so you can keep TikTok in one language and read translations in another. Leave it empty to keep TikTok's choice.
+
+* **TikTok:** A new Burn-in guard choice under Clear display dims the buttons, caption and tabs over the video to a quarter after 5 seconds without a touch, and your next touch brings them back. With Dim when idle and shift, everything on the feed also moves a few pixels every 2 minutes, so an OLED screen doesn't wear in under controls that never move.
+
+* **TikTok:** Hide the comment bar on opened videos now also takes the bar off a photo post you open from search. Before, the Add comment bar stayed on those.
+
+* **TikTok:** A new Sound format choice in Downloads lets Save the sound as well and the Save the original sound long press make Opus files (.ogg). They're smaller than TikTok's M4A, and your phone encodes the sound again to make them. It needs Android 10 or later. As TikTok sent it stays the default, so those saves come out the same as before.
+
+* **TikTok:** Fade the video controls now works with Clear display. Set between 1 and 99, Clear display keeps the buttons and caption on screen at the level you picked instead of taking them away, and a tap on them goes to the video, so nothing opens by accident. Press and hold or pinch still takes you out of Clear display, and outside it faded controls take taps as before (#84).
+
+* **TikTok:** Mute feed videos keeps the feed quiet after you switch TikTok between light and dark. Before, the next videos could play with sound until you left the feed and came back.
+
+* **TikTok:** Show how many were filtered and the switches that hide parts of the Inbox keep working after you switch TikTok between light and dark. Before, they could stop until TikTok was restarted.
+
+* **TikTok:** Long-press Home for Hushfeed settings keeps working after you switch TikTok between light and dark. Before, it stopped until TikTok was restarted.
+
+* **TikTok:** Restoring a backup no longer turns on the Network proxy or replaces the proxy address you already have, so a backup someone else made can't send your TikTok traffic through their server. On a phone with no proxy set up yet, the address comes along with the switch off, and a note after the restore says so.
+
+* **TikTok:** Don't auto translate these languages now keeps Traditional Chinese as it was written when you type zh-Hant, zh-TW, zh-HK or zh-MO, while zh-Hans-TW still means Simplified. Before, those entries protected Simplified Chinese instead (#121).
+
+* **TikTok:** Hide feed LIVE button still patches on a TikTok build where the side menu button can't be found. It skips that part, and the Hide the side menu button row only shows when the button was found (#128).
+
+* **TikTok:** Settings search now finds Build details and What's new. A few results, like Feature Gate Lab and Licenses, now name the group they're in, and a search made only of punctuation says No matching settings.
+
+* **TikTok:** The notice that shows at the bottom of Hushfeed settings now closes when you tap it, and the tap no longer lands on the setting under it. TalkBack reads its action as Close.
+
+* **TikTok:** Pause now says in plain words what stays while it's on. Your settings stay saved, and so do changes made when you patched, like the app's name or icon. TikTok's Auto scroll is also written the same way on every row now.
+
+* **TikTok:** The language lists in Feed filter and Comments now accept an extra comma, like en,,es. They used to refuse the list with a blank name in the message.
+
+* **TikTok:** If copying the build details fails, the message now tells you to use Save build details instead.
+
+* **TikTok:** What's new no longer shows stray backticks around setting names.
+
+* **TikTok:** The time picker for When to send in Keep a streak going now opens dark or light to match Hushfeed settings.
+
+* **TikTok:** Skip the splash ad, Skip update checks, Limit background traffic, Drop the animated image cache, Stop on-device AI profiling and Enable voice comments now each have a switch in Hushfeed settings, so Pause turns them off too and Morphe Manager's simple mode now picks them. Each of those switches starts off. If you patched with any of these before, turn its switch on after you update to keep it working. Skip the splash ad, Skip update checks, Limit background traffic and Don't decode animated frames ahead are under Performance in App. Stop on-device AI profiling is in Privacy and Allow voice comments is in Comments.
+
+* **TikTok:** New patch, Skip passkey sign-in, in Morphe Manager's simple mode with its switch off (#102). Password managers won't hand a passkey to a patched app, so an account with a passkey could get stuck at TikTok's passkey step. Turn on Sign in without a passkey in Hushfeed settings > App and TikTok treats your phone as one without passkeys, so it offers its other ways to sign in, like your password or a code by email or text. If you're signed out, long-press Home to open Hushfeed settings.
+
+## 0.70.0 (2026-10-09)
+
+* **TikTok:** Author text size now sizes the post date next to the creator's name too, so the two stay the same size (#66).
+
 * **TikTok:** Comments settings has a new row, Don't auto translate these languages. It's empty until you fill it in (#121). Type language codes like `es, de`, and when TikTok translates for you, captions and comments in those languages stay as they were written. See translation still works when you tap it, and TikTok's own Don't translate list isn't changed.
 
 * **TikTok:** Keep offline videos until you delete them now covers two more ways TikTok cleared your list. With the switch on, TikTok's Auto adjust no longer lowers your offline videos limit or trims the list when TikTok starts, and the clean-up TikTok runs when its test of turning offline videos on by default ends is skipped (#123). Restart TikTok after you change the switch.
@@ -20,11 +128,7 @@ Every Hushfeed release, newest first.
 
 * **TikTok:** The Dark background color option in Morphe Manager now says "color code" instead of "hex code", and explains that black turns those pixels off completely on OLED screens.
 
-## 0.70.1 (2026-10-09)
-
 * **TikTok:** The Hushfeed settings home now shows a compact status and search above seven groups. Related pages sit together, with backups, diagnostics and the Feature Gate Lab under App & advanced. About Hushfeed keeps build details and licenses in one place. Search still takes you straight to a setting, and your saved choices carry over. Pause now explains that saved settings and changes built into the APK remain.
-
-## 0.70.0 (2026-10-09)
 
 * **TikTok:** Hushfeed now supports TikTok 47.1.4 only. If you're on 47.0.3 or 47.1.3, download the 47.1.4 APK from APKMirror and patch it in Morphe Manager with the same signing key, so your login and settings carry over. Feature Gate Lab keeps each override whose switch 47.1.4 still has and turns the rest off with its usual notice.
 

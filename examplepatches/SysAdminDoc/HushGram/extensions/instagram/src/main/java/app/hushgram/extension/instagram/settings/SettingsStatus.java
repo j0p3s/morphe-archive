@@ -80,6 +80,10 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean storySound() {
+        return false;
+    }
+
     public static boolean storySeen() {
         return false;
     }
@@ -97,6 +101,10 @@ public final class SettingsStatus {
     }
 
     public static boolean typing() {
+        return false;
+    }
+
+    public static boolean activeStatus() {
         return false;
     }
 
@@ -165,6 +173,10 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean accentColor() {
+        return false;
+    }
+
     public static boolean notificationGroups() {
         return false;
     }
@@ -198,6 +210,14 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean profileNotes() {
+        return false;
+    }
+
+    public static boolean profilePostsList() {
+        return false;
+    }
+
     public static boolean homeFeed() {
         return false;
     }
@@ -215,6 +235,10 @@ public final class SettingsStatus {
     }
 
     public static boolean reelsSuggestions() {
+        return false;
+    }
+
+    public static boolean paidPartnershipReels() {
         return false;
     }
 
@@ -273,6 +297,22 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean glassTabBar() {
+        return false;
+    }
+
+    public static boolean fullScreenBars() {
+        return false;
+    }
+
+    public static boolean savedOnProfile() {
+        return false;
+    }
+
+    public static boolean stopHeartbeat() {
+        return false;
+    }
+
     public static boolean keepReelSpeed() {
         return false;
     }
@@ -281,11 +321,25 @@ public final class SettingsStatus {
         return false;
     }
 
+    /** Rewritten by the Blur the bars around Reels patch. */
+    public static boolean reelBlurBars() {
+        return false;
+    }
+
+    /** Rewritten by the Control taps and volume on Reels patch. */
+    public static boolean reelTapAndVolume() {
+        return false;
+    }
+
     public static boolean reelAutoScroll() {
         return false;
     }
 
     public static boolean reelScrolling() {
+        return false;
+    }
+
+    public static boolean reelOrigin() {
         return false;
     }
 
@@ -369,6 +423,26 @@ public final class SettingsStatus {
 
     /** Rewritten by the Show a post's exact time patch. */
     public static boolean postTime() {
+        return false;
+    }
+
+    /** Rewritten by the Show hidden like counts patch. */
+    public static boolean hiddenLikeCounts() {
+        return false;
+    }
+
+    /** Rewritten by the Back leaves Home patch. */
+    public static boolean backLeavesHome() {
+        return false;
+    }
+
+    /** Rewritten by the Start feed videos with sound patch. */
+    public static boolean feedSound() {
+        return false;
+    }
+
+    /** Rewritten by the Long press to zoom patch. */
+    public static boolean longPressZoom() {
         return false;
     }
 

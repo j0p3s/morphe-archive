@@ -91,13 +91,21 @@ public enum PatchFamily {
     REAR_CAMERA_FIRST(FamilyNames.REAR_CAMERA_FIRST, "rearCameraFirst", null, Settings.REAR_CAMERA_FIRST),
     HIDE_GALLERY_CAMERA_TILE(FamilyNames.HIDE_GALLERY_CAMERA_TILE, "hideGalleryCameraTile", null, Settings.HIDE_GALLERY_CAMERA_TILE),
     HIDE_STICKER_TIME(FamilyNames.HIDE_STICKER_TIME, "hideStickerTime", null, Settings.HIDE_STICKER_TIME),
+    CHANGE_STICKER_SIZE(FamilyNames.CHANGE_STICKER_SIZE, "stickerSize", null, Settings.CHANGE_STICKER_SIZE),
     IGNORE_MUTED_MENTIONS(FamilyNames.IGNORE_MUTED_MENTIONS, "ignoreMutedMentions", null, Settings.IGNORE_MUTED_MENTIONS),
     HIDE_BLOCKED_IN_GROUPS(FamilyNames.HIDE_BLOCKED_IN_GROUPS, "hideBlockedInGroups", null, Settings.HIDE_BLOCKED_IN_GROUPS),
+    HIDE_BY_KEYWORD(FamilyNames.HIDE_BY_KEYWORD, "hideByKeyword", null, Settings.HIDE_BY_KEYWORD),
     HIDE_FEATURES_AND_INVITE(FamilyNames.HIDE_FEATURES_AND_INVITE, "hideFeaturesAndInvite", null, Settings.HIDE_FEATURES_AND_INVITE),
     MESSAGE_MENU_REPEAT(FamilyNames.MESSAGE_MENU_REPEAT, "messageMenuRepeat", null, Settings.MESSAGE_MENU_REPEAT, Settings.MESSAGE_MENU_COPY_PHOTO, Settings.MESSAGE_MENU_DETAILS, Settings.MESSAGE_MENU_QUICK_FORWARD),
     KEEP_DELETED_MESSAGES(FamilyNames.KEEP_DELETED_MESSAGES, "keepDeleted", null, Settings.KEEP_DELETED_MESSAGES),
     ASK_BEFORE_STICKER(FamilyNames.ASK_BEFORE_STICKER, "askBeforeSending", null, Settings.ASK_BEFORE_STICKER, Settings.ASK_BEFORE_GIF, Settings.ASK_BEFORE_VOICE_VIDEO, Settings.ASK_BEFORE_CALL),
     BETA_LOGS_OFF(FamilyNames.BETA_LOGS_OFF, "betaLogsOff", null, Settings.BETA_LOGS_OFF),
+    OUTSIDE_TRANSLATE(FamilyNames.OUTSIDE_TRANSLATE, "outsideTranslate", null, Settings.OUTSIDE_TRANSLATE),
+    HIDE_CHANNEL_BUTTONS(FamilyNames.HIDE_CHANNEL_BUTTONS, "hideChannelButtons", null, Settings.HIDE_CHANNEL_BUTTONS),
+    HIDE_SEND_AS(FamilyNames.HIDE_SEND_AS, "hideSendAs", null, Settings.HIDE_SEND_AS),
+    FASTER_DOWNLOADS(FamilyNames.FASTER_DOWNLOADS, "fasterDownloads", null, Settings.FASTER_DOWNLOADS),
+    SAVE_DOWNLOADS(FamilyNames.SAVE_DOWNLOADS, "saveDownloads", null, Settings.SAVE_DOWNLOADS),
+    CHAT_TYPE_FOLDERS(FamilyNames.CHAT_TYPE_FOLDERS, "chatTypeFolders", null, Settings.CHAT_TYPE_FOLDERS),
     DISABLE_ANALYTICS(FamilyNames.DISABLE_ANALYTICS, "disableAnalytics", null,
             Settings.DISABLE_ANALYTICS),
     DISABLE_CALL_DEBUG(FamilyNames.DISABLE_CALL_DEBUG, "disableCallDebug", null,
@@ -113,7 +121,8 @@ public enum PatchFamily {
     DISABLE_UPDATE_CHECKS(FamilyNames.DISABLE_UPDATE_CHECKS, "disableUpdateChecks", null,
             Settings.DISABLE_UPDATE_CHECKS),
     REPAIR_FIREBASE_PUSH(FamilyNames.REPAIR_FIREBASE_PUSH, "repairFirebasePush", null,
-            Settings.REPAIR_FIREBASE_PUSH);
+            Settings.REPAIR_FIREBASE_PUSH),
+    UNIFIED_PUSH(FamilyNames.UNIFIED_PUSH, "unifiedPush", null, Settings.UNIFIED_PUSH);
 
     /** The patch's name in Morphe Manager. */
     public final String patchName;
@@ -159,10 +168,133 @@ public enum PatchFamily {
     @Nullable
     static volatile Set<Capability> capabilitiesForTests;
 
-    /** The families whose switches the Chats page holds. The page and its home row both read this. */
-    static final Set<PatchFamily> CHATS_PAGE = Collections.unmodifiableSet(EnumSet.of(HIDE_ADS, HIDE_STORIES,
-            HIDE_RECOMMENDATIONS, HIDE_COMMERCE, HIDE_PROMOTIONAL_BANNERS, HIDE_SPONSORED_PROXY, HIDE_POPULAR_APPS, HIDE_CONTACTS_BLOCK, HIDE_GREETING_STICKERS, DISABLE_CHAT_SWIPE, DISABLE_CHANNEL_PULL, NORMAL_PASTE, SHOW_LOCAL_IDS, DISABLE_DOUBLE_TAP_REACTIONS,
-            QUIET_CONTACTS_NAG, HOLIDAY_LOOK, USE_SYSTEM_FONT, AMOLED_BLACK, HIDE_TRANSLATE_BAR, EXACT_NUMBERS, REVEAL_SPOILERS, HIDE_KEYBOARD_ON_SCROLL, KEEP_VIDEOS_MUTED, SWIPE_BACK_ON_PROFILES, HIDE_PHONE_NUMBER, MESSAGE_SECONDS, ALLOW_CHAT_BLUR, VOICE_ONE_AT_A_TIME, NO_HAPTICS, REACTION_EFFECTS_OFF, HIDE_FOLDER_COUNTERS, FORWARD_HIDE_SENDER, VOICE_MUSIC_PLAYER, SILENCE_NON_CONTACTS, DISABLE_ARCHIVE_PULL, REAR_CAMERA_FIRST, HIDE_GALLERY_CAMERA_TILE, HIDE_STICKER_TIME, IGNORE_MUTED_MENTIONS, HIDE_BLOCKED_IN_GROUPS, HIDE_FEATURES_AND_INVITE, MESSAGE_MENU_REPEAT, KEEP_DELETED_MESSAGES, ASK_BEFORE_STICKER, BETA_LOGS_OFF));
+    /**
+     * The settings pages that hold switches, in the order they're drawn, each with the families
+     * whose switches it holds. They follow Morphe Manager's categories so a patch is found under
+     * the same name in both: Ads takes Search's one patch, Chat list takes Stories', Look and feel
+     * holds Interface and Theme, and Notifications keeps the push repair. The link switches have
+     * their own Links page and the update switch its Updates page, as before.
+     */
+    enum Page {
+        ADS("Ads", HIDE_ADS, HIDE_COMMERCE, HIDE_PROMOTIONAL_BANNERS, HIDE_SPONSORED_PROXY, HIDE_POPULAR_APPS),
+        CHAT_LIST("Chat list", HIDE_STORIES, HIDE_CONTACTS_BLOCK, DISABLE_CHAT_SWIPE, DISABLE_ARCHIVE_PULL,
+                HIDE_FOLDER_COUNTERS, CHAT_TYPE_FOLDERS),
+        CONVERSATIONS("Conversations", HIDE_GREETING_STICKERS, DISABLE_CHANNEL_PULL, NORMAL_PASTE,
+                DISABLE_DOUBLE_TAP_REACTIONS, HIDE_TRANSLATE_BAR, OUTSIDE_TRANSLATE, REVEAL_SPOILERS, FORWARD_HIDE_SENDER,
+                REAR_CAMERA_FIRST, HIDE_GALLERY_CAMERA_TILE, HIDE_BLOCKED_IN_GROUPS, HIDE_BY_KEYWORD, MESSAGE_MENU_REPEAT,
+                KEEP_DELETED_MESSAGES, ASK_BEFORE_STICKER),
+        PLAYBACK("Playback", KEEP_VIDEOS_MUTED, VOICE_ONE_AT_A_TIME, VOICE_MUSIC_PLAYER, FASTER_DOWNLOADS, SAVE_DOWNLOADS),
+        NOTIFICATIONS("Notifications", REPAIR_FIREBASE_PUSH, UNIFIED_PUSH, SILENCE_NON_CONTACTS, IGNORE_MUTED_MENTIONS),
+        LOOK("Look and feel", HIDE_RECOMMENDATIONS, QUIET_CONTACTS_NAG, SHOW_LOCAL_IDS, HOLIDAY_LOOK, USE_SYSTEM_FONT,
+                AMOLED_BLACK, EXACT_NUMBERS, HIDE_KEYBOARD_ON_SCROLL, SWIPE_BACK_ON_PROFILES, MESSAGE_SECONDS,
+                ALLOW_CHAT_BLUR, NO_HAPTICS, REACTION_EFFECTS_OFF, HIDE_STICKER_TIME, CHANGE_STICKER_SIZE, HIDE_FEATURES_AND_INVITE,
+                HIDE_CHANNEL_BUTTONS, HIDE_SEND_AS),
+        PRIVACY("Privacy", DISABLE_ANALYTICS, DISABLE_CALL_DEBUG, DISABLE_DRAFT_PREVIEWS, GALLERY_CAMERA_ON_TAP,
+                HIDE_PHONE_NUMBER, BETA_LOGS_OFF);
+
+        /** The English title, which is also the page's route and its translation key. */
+        final String title;
+        final Set<PatchFamily> families;
+
+        Page(String title, PatchFamily first, PatchFamily... rest) {
+            this.title = title;
+            this.families = Collections.unmodifiableSet(EnumSet.of(first, rest));
+        }
+
+        /** The page a family's switches sit on, or null for Links, Updates and families without a switch. */
+        @Nullable
+        static Page of(PatchFamily family) {
+            for (Page page : values()) if (page.families.contains(family)) return page;
+            return null;
+        }
+
+        /** Whether this build put anything on the page. */
+        boolean inBuild(Set<PatchFamily> build) {
+            return !Collections.disjoint(build, families);
+        }
+
+        /** The title as shown, written out so the translation check sees each one. */
+        String label() {
+            switch (this) {
+                case ADS: return L10n.t("Ads");
+                case CHAT_LIST: return L10n.t("Chat list");
+                case CONVERSATIONS: return L10n.t("Conversations");
+                case PLAYBACK: return L10n.t("Playback");
+                case NOTIFICATIONS: return L10n.t("Notifications");
+                case LOOK: return L10n.t("Look and feel");
+                default: return L10n.t("Privacy");
+            }
+        }
+    }
+
+    /**
+     * Short headings that split the two long pages, so a switch is found by what it changes rather
+     * than by scrolling thirty rows. Every family on Conversations and Look and feel sits in exactly
+     * one group of its page, and the other pages are short enough to read as one card. Groups are
+     * drawn in the order listed here, and a group's rows in the order of its families.
+     */
+    enum Group {
+        IN_A_CHAT(Page.CONVERSATIONS, "In a chat", HIDE_GREETING_STICKERS, DISABLE_CHANNEL_PULL, NORMAL_PASTE,
+                DISABLE_DOUBLE_TAP_REACTIONS, REVEAL_SPOILERS),
+        MESSAGE_MENU(Page.CONVERSATIONS, "Message menu", MESSAGE_MENU_REPEAT),
+        SENDING(Page.CONVERSATIONS, "Sending", FORWARD_HIDE_SENDER, ASK_BEFORE_STICKER),
+        ATTACHMENT_MENU(Page.CONVERSATIONS, "Attachment menu", REAR_CAMERA_FIRST, HIDE_GALLERY_CAMERA_TILE),
+        TRANSLATION(Page.CONVERSATIONS, "Translation", HIDE_TRANSLATE_BAR, OUTSIDE_TRANSLATE),
+        HIDDEN_MESSAGES(Page.CONVERSATIONS, "Hidden messages", HIDE_BLOCKED_IN_GROUPS, HIDE_BY_KEYWORD),
+        DELETED_MESSAGES(Page.CONVERSATIONS, "Deleted messages", KEEP_DELETED_MESSAGES),
+        THEME(Page.LOOK, "Theme", AMOLED_BLACK, USE_SYSTEM_FONT, HOLIDAY_LOOK, ALLOW_CHAT_BLUR),
+        MESSAGES(Page.LOOK, "Messages and stickers", MESSAGE_SECONDS, EXACT_NUMBERS, REACTION_EFFECTS_OFF, HIDE_STICKER_TIME,
+                CHANGE_STICKER_SIZE),
+        PROFILES(Page.LOOK, "Profiles", SHOW_LOCAL_IDS, SWIPE_BACK_ON_PROFILES),
+        TOUCH_AND_KEYBOARD(Page.LOOK, "Touch and keyboard", NO_HAPTICS, HIDE_KEYBOARD_ON_SCROLL),
+        LESS_CLUTTER(Page.LOOK, "Less clutter", HIDE_RECOMMENDATIONS, QUIET_CONTACTS_NAG, HIDE_FEATURES_AND_INVITE,
+                HIDE_CHANNEL_BUTTONS, HIDE_SEND_AS);
+
+        final Page page;
+        /** The English heading, which is also its translation key. */
+        final String title;
+        final List<PatchFamily> families;
+
+        Group(Page page, String title, PatchFamily... families) {
+            this.page = page;
+            this.title = title;
+            this.families = Collections.unmodifiableList(Arrays.asList(families));
+        }
+
+        /** The group a family's rows sit in, or null for a family on a page that isn't split. */
+        @Nullable
+        static Group of(PatchFamily family) {
+            for (Group group : values()) if (group.families.contains(family)) return group;
+            return null;
+        }
+
+        /** The family whose switch carries this key, or null for a row that isn't a family's switch. */
+        @Nullable
+        static PatchFamily owner(String key) {
+            for (PatchFamily family : PatchFamily.values()) {
+                for (BooleanSetting setting : family.switches) if (setting.key.equals(key)) return family;
+            }
+            return null;
+        }
+
+        /** The heading as shown, written out so the translation check sees each one. */
+        String label() {
+            switch (this) {
+                case IN_A_CHAT: return L10n.t("In a chat");
+                case MESSAGE_MENU: return L10n.t("Message menu");
+                case SENDING: return L10n.t("Sending");
+                case ATTACHMENT_MENU: return L10n.t("Attachment menu");
+                case TRANSLATION: return L10n.t("Translation");
+                case HIDDEN_MESSAGES: return L10n.t("Hidden messages");
+                case DELETED_MESSAGES: return L10n.t("Deleted messages");
+                case THEME: return L10n.t("Theme");
+                case MESSAGES: return L10n.t("Messages and stickers");
+                case PROFILES: return L10n.t("Profiles");
+                case TOUCH_AND_KEYBOARD: return L10n.t("Touch and keyboard");
+                default: return L10n.t("Less clutter");
+            }
+        }
+    }
 
     /** Each independent hook, its owning family and the flag set only after it was inserted. */
     public enum Capability {
@@ -176,12 +308,12 @@ public enum PatchFamily {
         STORY_TOUCHES(HIDE_STORIES, "storyTouches", "avatar story taps"),
         CHANNEL_RECOMMENDATIONS(HIDE_RECOMMENDATIONS, "channelRecommendations", "similar channels and bots"),
         CACHED_RECOMMENDATIONS(HIDE_RECOMMENDATIONS, "cachedRecommendations", "cached recommendations"),
-        DEVICE_STATS(DISABLE_ANALYTICS, "deviceStats", "device statistics reports"),
         READ_METRICS(DISABLE_ANALYTICS, "readMetrics", "channel read metrics"),
         PREMIUM_PROMO_SHOW(DISABLE_ANALYTICS, "premiumPromoShow", "Premium promo views"),
         PREMIUM_PROMO_TAP(DISABLE_ANALYTICS, "premiumPromoTap", "Premium promo taps"),
         PREMIUM_PROMO_ACCEPT(DISABLE_ANALYTICS, "premiumPromoAccept", "Premium promo accepts"),
         PREMIUM_PROMO_FAIL(DISABLE_ANALYTICS, "premiumPromoFail", "Premium promo failures"),
+        DUAL_CAMERA_REPORTS(DISABLE_ANALYTICS, "dualCameraReport", "dual camera reports"),
         // Telegram Beta carries these SDKs and the regular build doesn't, so a build without them isn't missing anything.
         CRASH_REPORTS(DISABLE_ANALYTICS, "crashReports", "Firebase crash reports", true),
         SESSION_REPORTS(DISABLE_ANALYTICS, "sessionReports", "Firebase session reports", true),
@@ -196,6 +328,14 @@ public enum PatchFamily {
         COMMERCE_SETTINGS_ROWS(HIDE_COMMERCE, "commerceSettingsRows", "Settings sales rows"),
         COMMERCE_PROFILE_GIFTS(HIDE_COMMERCE, "commerceProfileGifts", "profile Gifts tabs"),
         COMMERCE_CHANNEL_GIFT(HIDE_COMMERCE, "commerceChannelGift", "channel Gift button"),
+        COMMERCE_ATTACH_WALLET(HIDE_COMMERCE, "commerceAttachWallet", "attach menu Wallet button"),
+        COMMERCE_MENU_WALLET(HIDE_COMMERCE, "commerceMenuWallet", "chat list menu Wallet item"),
+        COMMERCE_PROFILE_SEND_GRAM(HIDE_COMMERCE, "commerceProfileSendGram", "profile menu Send Gram item"),
+        COMMERCE_ADDRESS_SEND_GRAM(HIDE_COMMERCE, "commerceAddressSendGram", "TON link Send Gram item"),
+        COMMERCE_TRANSFER_SEND_GRAM(HIDE_COMMERCE, "commerceTransferSendGram", "Gram transfer Send Gram item"),
+        COMMERCE_PREMIUM_STICKERS(HIDE_COMMERCE, "commercePremiumStickers", "Premium stickers in the keyboard and packs"),
+        COMMERCE_PREMIUM_EFFECTS(HIDE_COMMERCE, "commercePremiumEffects", "Premium sticker effects"),
+        COMMERCE_PREMIUM_EMOJI_PACKS(HIDE_COMMERCE, "commercePremiumEmojiPacks", "Premium emoji packs in the emoji keyboard"),
         PROMOTIONAL_SUGGESTIONS(HIDE_PROMOTIONAL_BANNERS, "promotionalSuggestions", "promotional suggestions"),
         BIRTHDAY_GIFT_BANNER(HIDE_PROMOTIONAL_BANNERS, "birthdayGiftBanner", "birthday gift banner"),
         CACHED_PROXY_DIALOG(HIDE_SPONSORED_PROXY, "cachedProxyDialog", "cached proxy channel"),

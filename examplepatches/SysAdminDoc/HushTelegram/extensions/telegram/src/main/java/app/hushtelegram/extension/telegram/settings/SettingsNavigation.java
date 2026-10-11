@@ -16,6 +16,7 @@ import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.PreferenceCategory;
 import android.preference.PreferenceScreen;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -31,8 +32,11 @@ import androidx.annotation.Nullable;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
+import java.util.EnumMap;
+import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 import app.hushtelegram.extension.shared.L10n;
@@ -61,6 +65,8 @@ final class SettingsNavigation extends BaseAdapter {
     private final List<Preference> visible = new ArrayList<>();
     private final Preference browse;
     private final Preference more;
+    /** The home page's last row, which opens HushTelegram's Ko-fi page in a browser. */
+    private final Preference support;
     private final Preference empty;
     /** The line a category or search page starts with while a pause or a restart applies to it. */
     private final Preference pageStatus;
@@ -80,6 +86,10 @@ final class SettingsNavigation extends BaseAdapter {
     private int homeOffset;
     private int morePosition;
     private int moreOffset;
+    /** The headings inside a long page, made once so each keeps its place and id between rebuilds. */
+    private final Map<PatchFamily.Group, Preference> groupHeadings = new EnumMap<>(PatchFamily.Group.class);
+    /** The card each row of a split page is drawn in, and each of its headings. Empty elsewhere. */
+    private final Map<Preference, Object> cards = new IdentityHashMap<>();
 
     private final DataSetObserver changes = new DataSetObserver() {
         @Override public void onChanged() { rebuild(); }
@@ -96,12 +106,13 @@ final class SettingsNavigation extends BaseAdapter {
         Context context = screen.getContext();
         // Stable English route IDs survive a locale change; the displayed names are localized.
         Set<PatchFamily> build = PatchFamily.inThisBuild();
-        section("Chats", L10n.t("Chats"), chatsSummary(build), SettingsIcons.CHAT, true);
-        section("Privacy", L10n.t("Privacy"), privacySummary(build), SettingsIcons.BLOCK, true);
-        section("Notifications", L10n.t("Notifications"), null, SettingsIcons.BELL, false);
+        // The switch pages are on the home page, in the order they're drawn; a page this build
+        // put nothing on has no category, so section() leaves it out.
+        for (PatchFamily.Page switches : PatchFamily.Page.values()) {
+            section(switches.title, switches.label(), summary(switches, build), icon(switches), true);
+        }
         section("Links", L10n.t("Links"), null, SettingsIcons.LINKS, false);
         section("Updates", L10n.t("Updates"), null, SettingsIcons.UPDATES, false);
-        section("Set when you patched", L10n.t("Set when you patched"), null, SettingsIcons.PATCHED, false);
         section("Pause", L10n.t("Pause"), null, SettingsIcons.PAUSE, false);
         section("Settings backup", L10n.t("Settings backup"), null, SettingsIcons.EXPORT, false);
         section("Diagnostics", L10n.t("Diagnostics"), null, SettingsIcons.BUG, false);
@@ -110,7 +121,10 @@ final class SettingsNavigation extends BaseAdapter {
         browse.setTitle(L10n.t("Browse settings"));
         more = link(context, L10n.t("More settings"), L10n.t("Links, updates, backup and more"), SettingsIcons.SETTINGS);
         more.setOnPreferenceClickListener(ignored -> { navigate(MORE); return true; });
-        empty = new HushTelegramPreferenceFragment.Row(context);
+        support = link(context, L10n.t("Support HushTelegram"), L10n.t("Buy me a coffee on Ko-fi"), SettingsIcons.OPENING);
+        support.setKey(HushTelegramPreferenceFragment.SUPPORT);
+        support.setOnPreferenceClickListener(row -> { HushTelegramPreferenceFragment.openSupport(row.getContext()); return true; });
+        empty =new HushTelegramPreferenceFragment.Row(context);
         empty.setTitle(L10n.t("No matching settings"));
         empty.setSummary(L10n.t("Try a different word or clear the search."));
         empty.setSelectable(false);
@@ -130,6 +144,19 @@ final class SettingsNavigation extends BaseAdapter {
         }
         source.registerDataSetObserver(changes);
         list.setAdapter(this);
+        // The list ignores Enter on a row holding a focusable view, so a status row's Enter
+        // presses the button it shows, whose label says what that does.
+        list.setOnKeyListener((view, key, event) -> {
+            if (key != KeyEvent.KEYCODE_DPAD_CENTER && key != KeyEvent.KEYCODE_ENTER
+                    && key != KeyEvent.KEYCODE_NUMPAD_ENTER) return false;
+            int position = list.getSelectedItemPosition();
+            if (position < 0 || position >= getCount() || !carriesAction(getItem(position))) return false;
+            View row = list.getSelectedView();
+            View action = row == null ? null : row.findViewWithTag(STATUS_ACTION);
+            if (action == null) return false;
+            if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) action.performClick();
+            return true;
+        });
         list.setOnItemClickListener((parent, view, position, id) -> {
             Preference item = getItem(position);
             int original = originalPosition(item);
@@ -158,13 +185,35 @@ final class SettingsNavigation extends BaseAdapter {
         }
     }
 
+    /** A switch page's line on the home page. Only Ads and Privacy have one. */
+    @Nullable
+    static String summary(PatchFamily.Page page, Set<PatchFamily> build) {
+        switch (page) {
+            case ADS: return adsSummary(build);
+            case PRIVACY: return privacySummary(build);
+            default: return null;
+        }
+    }
+
+    private static String icon(PatchFamily.Page page) {
+        switch (page) {
+            case ADS: return SettingsIcons.BLOCK;
+            case CHAT_LIST: return SettingsIcons.LIST;
+            case CONVERSATIONS: return SettingsIcons.FORUM;
+            case PLAYBACK: return SettingsIcons.PLAY;
+            case NOTIFICATIONS: return SettingsIcons.BELL;
+            case LOOK: return SettingsIcons.PALETTE;
+            default: return SettingsIcons.PRIVACY;
+        }
+    }
+
     /**
-     * The Chats row's line, from what this build hides: the ads its hooks cover, and "and more"
-     * only when another Chats switch is there too. Null when Hide ads covers nothing, since the
+     * The Ads row's line, from what this build hides: the ads its hooks cover, and "and more"
+     * only when another Ads switch is there too. Null when Hide ads covers nothing, since the
      * page then holds only switches the line would leave unnamed.
      */
     @Nullable
-    static String chatsSummary(Set<PatchFamily> build) {
+    static String adsSummary(Set<PatchFamily> build) {
         if (!build.contains(PatchFamily.HIDE_ADS)) return null;
         Set<PatchFamily.Capability> installed = PatchFamily.HIDE_ADS.installedCapabilities();
         boolean channels = installed.contains(PatchFamily.Capability.CHANNEL_ADS)
@@ -173,7 +222,7 @@ final class SettingsNavigation extends BaseAdapter {
         if (!channels && !search) return null;
         String ads = channels && search ? L10n.t("Ads in channels and search")
                 : channels ? L10n.t("Ads in channels") : L10n.t("Ads in search");
-        for (PatchFamily family : PatchFamily.CHATS_PAGE) {
+        for (PatchFamily family : PatchFamily.Page.ADS.families) {
             if (family != PatchFamily.HIDE_ADS && build.contains(family)) return L10n.f("%1$s, and more", ads);
         }
         return ads;
@@ -181,8 +230,9 @@ final class SettingsNavigation extends BaseAdapter {
 
     /**
      * The Privacy row's line, naming only the switches this build put on that page. The draft
-     * preview and gallery camera switches are off as shipped, so they add "and more" rather than
-     * names of their own, unless one of them is all the page holds.
+     * preview, gallery camera, phone number and beta log switches are off as shipped, so they add
+     * "and more" rather than names of their own. A page holding only the draft or camera switch
+     * still names it; one holding only the last two has no line.
      */
     @Nullable
     static String privacySummary(Set<PatchFamily> build) {
@@ -190,13 +240,15 @@ final class SettingsNavigation extends BaseAdapter {
         boolean calls = build.contains(PatchFamily.DISABLE_CALL_DEBUG);
         boolean drafts = build.contains(PatchFamily.DISABLE_DRAFT_PREVIEWS);
         boolean camera = build.contains(PatchFamily.GALLERY_CAMERA_ON_TAP);
+        boolean others = build.contains(PatchFamily.HIDE_PHONE_NUMBER) || build.contains(PatchFamily.BETA_LOGS_OFF);
         String named = reports && calls ? L10n.t("Usage reports and call diagnostics")
                 : reports ? L10n.t("Usage reports") : calls ? L10n.t("Call diagnostics") : null;
         if (named == null) {
-            if (drafts && camera) return L10n.f("%1$s, and more", L10n.t("Draft link previews"));
-            return drafts ? L10n.t("Draft link previews") : camera ? L10n.t("Gallery camera") : null;
+            if (drafts) return camera || others ? L10n.f("%1$s, and more", L10n.t("Draft link previews")) : L10n.t("Draft link previews");
+            if (camera) return others ? L10n.f("%1$s, and more", L10n.t("Gallery camera")) : L10n.t("Gallery camera");
+            return null;
         }
-        return drafts || camera ? L10n.f("%1$s, and more", named) : named;
+        return drafts || camera || others ? L10n.f("%1$s, and more", named) : named;
     }
 
     private static Preference link(Context context, String title, String summary, String icon) {
@@ -236,8 +288,10 @@ final class SettingsNavigation extends BaseAdapter {
         for (Section section : sections) {
             if (preference != section.category && preference.getParent() != section.category) continue;
             navigate(section.id);
-            // A link to one setting lands on its row rather than the top of a long page.
+            // A link to one setting lands on its row rather than the top of a long page, with the
+            // row's heading above it on a split page.
             int row = visible.indexOf(preference);
+            if (row > 0 && groupHeadings.containsValue(visible.get(row - 1))) row--;
             if (row > 0) showAt(row, 0);
             return true;
         }
@@ -328,6 +382,7 @@ final class SettingsNavigation extends BaseAdapter {
 
     private void rebuild() {
         visible.clear();
+        cards.clear();
         String terms = normalized(query).trim();
         Section selected = selected();
         if (!terms.isEmpty()) {
@@ -348,7 +403,7 @@ final class SettingsNavigation extends BaseAdapter {
             if (visible.isEmpty()) visible.add(empty);
             else addPageStatus();
         } else if (selected != null) {
-            for (int i = 0; i < selected.category.getPreferenceCount(); i++) visible.add(selected.category.getPreference(i));
+            addPageRows(selected.category);
             addPageStatus();
         } else if (MORE.equals(route)) {
             for (Section section : sections) if (!section.primary) visible.add(section.link);
@@ -357,6 +412,7 @@ final class SettingsNavigation extends BaseAdapter {
             visible.add(browse);
             for (Section section : sections) if (section.primary) visible.add(section.link);
             visible.add(more);
+            visible.add(support);
         }
         if (terms.isEmpty()) host.showResults(-1);
         // Undo can remove the entire status card. Reserve its former scroll range at the
@@ -366,6 +422,60 @@ final class SettingsNavigation extends BaseAdapter {
             list.setPadding(list.getPaddingLeft(), list.getPaddingTop(), list.getPaddingRight(), bottom);
         }
         notifyDataSetChanged();
+    }
+
+    /**
+     * A page's rows. A long page is split into its groups, each under its heading in a card of its
+     * own, and a row with no switch of its own, like Sticker size or Filters for groups, stays
+     * with the switch above it. A row whose family no group lists leads the page rather than
+     * going missing.
+     */
+    private void addPageRows(PreferenceCategory category) {
+        int count = category.getPreferenceCount();
+        Preference[] rows = new Preference[count];
+        PatchFamily[] owners = new PatchFamily[count];
+        PatchFamily owner = null;
+        boolean split = false;
+        for (int i = 0; i < count; i++) {
+            rows[i] = category.getPreference(i);
+            PatchFamily family = rows[i].hasKey() ? PatchFamily.Group.owner(rows[i].getKey()) : null;
+            if (family != null) owner = family;
+            owners[i] = owner;
+            split |= owner != null && PatchFamily.Group.of(owner) != null;
+        }
+        if (!split) {
+            for (Preference row : rows) visible.add(row);
+            return;
+        }
+        for (int i = 0; i < count; i++) {
+            if (owners[i] == null || PatchFamily.Group.of(owners[i]) == null) visible.add(rows[i]);
+        }
+        for (PatchFamily.Group group : PatchFamily.Group.values()) {
+            boolean headed = false;
+            for (PatchFamily family : group.families) {
+                for (int i = 0; i < count; i++) {
+                    if (owners[i] != family) continue;
+                    if (!headed) {
+                        Preference heading = heading(group);
+                        visible.add(heading);
+                        cards.put(heading, heading);
+                        headed = true;
+                    }
+                    visible.add(rows[i]);
+                    cards.put(rows[i], group);
+                }
+            }
+        }
+    }
+
+    private Preference heading(PatchFamily.Group group) {
+        Preference heading = groupHeadings.get(group);
+        if (heading == null) {
+            heading = new HushTelegramPreferenceFragment.Heading(screen.getContext());
+            heading.setTitle(group.label());
+            groupHeadings.put(group, heading);
+        }
+        return heading;
     }
 
     private int headings() {
@@ -389,8 +499,8 @@ final class SettingsNavigation extends BaseAdapter {
             pageStatus.setTitle(paused ? L10n.t("HushTelegram is paused") : L10n.t("HushTelegram is on"));
             // Worded like the Pause switch: Debug logging and what was set when patching stay in.
             pageStatus.setSummary(paused == nextPaused
-                    ? L10n.t("Until you resume, every switch except Debug logging acts as if it were off. Edits "
-                            + "made when you patched stay in.")
+                    ? L10n.t("Until you resume, every switch except Debug logging acts as if it were off. Your "
+                            + "choices stay saved. Edits made when you patched stay in.")
                     : paused ? L10n.t("HushTelegram turns back on when Telegram restarts.")
                     : L10n.t("HushTelegram pauses when Telegram restarts."));
             pageStatus.setIcon(SettingsIcons.icon(context, paused ? SettingsIcons.PAUSE : SettingsIcons.PATCHED,
@@ -435,7 +545,19 @@ final class SettingsNavigation extends BaseAdapter {
     @Override public long getItemId(int position) { return System.identityHashCode(getItem(position)); }
     @Override public boolean hasStableIds() { return true; }
     @Override public boolean areAllItemsEnabled() { return false; }
-    @Override public boolean isEnabled(int position) { return getItem(position).isEnabled() && getItem(position).isSelectable(); }
+    /**
+     * A row with a Pause, Resume or Undo button counts too, so a keyboard stops on it and Enter
+     * presses the button (the key listener). A tap still isn't an item click: the list skips
+     * those on rows holding a focusable view, and TalkBack reads that row as it did.
+     */
+    @Override public boolean isEnabled(int position) {
+        Preference item = getItem(position);
+        return (item.isEnabled() && item.isSelectable()) || carriesAction(item);
+    }
+
+    private boolean carriesAction(Preference item) {
+        return item == screen.getPreference(0) || (item == pageStatus && pageAction);
+    }
     // Preference creates several incompatible layouts. Never recycle one kind into another.
     @Override public int getItemViewType(int position) { return IGNORE_ITEM_VIEW_TYPE; }
 
@@ -495,12 +617,16 @@ final class SettingsNavigation extends BaseAdapter {
         action.setAllCaps(false);
         action.setTextSize(14);
         action.setTextColor(palette().heading);
-        action.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+        // Clear until it's pressed or a keyboard puts focus on it, which then shows.
+        action.setBackground(new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(ScreenColors.half(palette().accent)), null,
+                new android.graphics.drawable.ColorDrawable(android.graphics.Color.WHITE)));
         action.setMinWidth(dp(48));
         action.setMinHeight(dp(48));
         action.setMinimumWidth(dp(48));
         action.setMinimumHeight(dp(48));
         action.setPadding(0, 0, 0, 0);
+        action.setTag(STATUS_ACTION);
         action.setOnClickListener(ignored -> {
             if (pageStatusAction) pageStatusHeight = Math.max(pageStatusHeight, row.getHeight());
             if (nextPaused) {
@@ -523,7 +649,6 @@ final class SettingsNavigation extends BaseAdapter {
             ViewGroup column = (ViewGroup) summary.getParent();
             View earlier = column.findViewWithTag(STATUS_ACTION);
             if (earlier != null) column.removeView(earlier);
-            action.setTag(STATUS_ACTION);
             column.addView(action, place);
             frame.setVisibility(View.GONE);
             return;
@@ -540,7 +665,9 @@ final class SettingsNavigation extends BaseAdapter {
     private int dp(int value) { return Math.round(value * screen.getContext().getResources().getDisplayMetrics().density); }
 
     private Object group(Preference item) {
-        if (item == more || item == browse || item == screen.getPreference(0)) return item;
+        Object card = cards.get(item);
+        if (card != null) return card;
+        if (item == more || item == support || item == browse || item == screen.getPreference(0)) return item;
         if (item.getParent() != null) return item.getParent();
         return sections;
     }

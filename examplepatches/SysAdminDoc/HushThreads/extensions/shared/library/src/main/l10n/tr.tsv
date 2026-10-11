@@ -198,6 +198,8 @@ Pure black dark mode	Saf siyah karanlık mod
 Dark mode uses true black instead of dark gray. Turn on dark mode in Threads to see it. Restart Threads to see the change.	Karanlık mod koyu gri yerine gerçek siyahı kullanır. Görmek için Threads'te karanlık modu aç. Değişikliği görmek için Threads'i yeniden başlat.
 Hide the Instagram button	Instagram düğmesini gizle
 Takes the Instagram button off the top of profiles, yours and other people's. Restart Threads to see the change.	Kendi profilinin ve başkalarının profillerinin üstündeki Instagram düğmesini kaldırır. Değişikliği görmek için Threads'i yeniden başlat.
+Hide ghost post bubbles	Hayalet gönderi balonlarını gizle
+Takes the ghost post bubbles off profile pictures, on profiles and in the row at the top of your feed. Restart Threads to see the change.	Profil fotoğraflarındaki hayalet gönderi balonlarını kaldırır, profillerde ve akışının üstündeki sırada. Değişikliği görmek için Threads'i yeniden başlat.
 Turn features on or off	Özellikleri aç veya kapat
 # Fotoğrafları ve videoları kaydetme
 %1$d saved in lower quality than on Threads.	%1$d öğe Threads'tekinden daha düşük kalitede kaydedildi.
@@ -275,3 +277,7 @@ Hide screenshots from Threads	Ekran görüntülerini Threads'ten gizle
 Threads isn't told when you take a screenshot, so it can't log it or react to it.	Ekran görüntüsü aldığında Threads'e haber verilmez, bu yüzden onu kaydedemez ya da ona tepki veremez.
 Full size photos	Tam boyutlu fotoğraflar
 Photos load at the largest size Threads has, not one picked for your screen. They look sharper and use more data.	Fotoğraflar ekranına göre seçilen bir boyutta değil, Threads'te bulunan en büyük boyutta yüklenir. Daha net görünür ve daha fazla veri kullanır.
+# context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
+Support HushThreads	HushThreads'i destekle
+# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
+Buy me a coffee on Ko-fi	Ko-fi'de bana bir kahve ısmarla

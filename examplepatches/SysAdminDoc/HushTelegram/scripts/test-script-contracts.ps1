@@ -352,13 +352,13 @@ Assert-True ($dualTargets.Count -eq 2 -and $dualTargets[0].PackageName -ceq 'org
     'The complete package inventory is not default web followed by beta.'
 $betaTarget = Get-PatchTarget -PatchList $catalog -PackageName 'org.telegram.messenger.beta'
 Assert-True ((Get-PatchTarget -PatchList $catalog).PackageName -ceq 'org.telegram.messenger.web' -and
-    $betaTarget.PackageVersion -ceq '12.10.7' -and $betaTarget.PackageVersionCodes['12.10.7'][0] -eq '71239') `
+    $betaTarget.PackageVersion -ceq '13.0.1' -and $betaTarget.PackageVersionCodes['13.0.1'][0] -eq '71669') `
     'An explicit beta selector changed the default web target or lost its exact code.'
-Assert-True ((Get-VendorFixtureName -Target $betaTarget -VersionName '12.10.7' -VersionCode '71239') -ceq
-    'telegram-beta-12.10.7-71239.apk') 'The beta fixture naming rule lost its package or build code.'
+Assert-True ((Get-VendorFixtureName -Target $betaTarget -VersionName '13.0.1' -VersionCode '71669') -ceq
+    'telegram-beta-13.0.1-71669.apk') 'The beta fixture naming rule lost its package or build code.'
 Assert-Throws { Get-PatchTarget -PatchList $catalog -PackageName 'org.telegram.messenger' } '*does not declare package*' `
     'Store was credited with beta or web support.'
-Assert-Throws { Get-VendorFixtureName -Target $betaTarget -VersionName '12.10.7' -VersionCode '71179' } '*not a declared build*' `
+Assert-Throws { Get-VendorFixtureName -Target $betaTarget -VersionName '13.0.1' -VersionCode '71668' } '*not a declared build*' `
     'Another beta code was treated as the retained fixture.'
 $missingTarget = [pscustomobject]@{ patches = @([pscustomobject]@{ name = 'missing target' }) }
 Assert-Throws { Get-PatchTarget -PatchList $missingTarget } '*has no compatible package*' `
@@ -607,16 +607,19 @@ $unchanged = Get-ManifestDelta -Stock $facts -Patched $facts
 Assert-True (@(ConvertTo-ManifestDeltaEntries -Delta $unchanged).Count -eq 0) `
     'An unchanged manifest produced a delta.'
 
-# The checked-in allowlist approves one change and nothing else: HushTelegram settings exports an
-# alias of Telegram's launcher activity for Android's App info page.
+# The checked-in allowlist approves three changes and nothing else: HushTelegram settings exports an
+# alias of Telegram's launcher activity for Android's App info page, and UnifiedPush notifications
+# exports the receiver and service a UnifiedPush app talks to.
 $checkedInAllowlist = @(Read-ManifestDeltaAllowlist -Path (Join-Path $PSScriptRoot 'manifest-delta-allowlist.txt') |
     Where-Object { $_ })
 $settingsAlias = 'activity-alias:app.hushtelegram.extension.telegram.settings.OpenSettings'
-$approvedEntries = @("exported-added $settingsAlias")
+$approvedEntries = @("exported-added $settingsAlias",
+    'exported-added receiver:app.hushtelegram.extension.telegram.misc.UnifiedPushReceiver',
+    'exported-added service:app.hushtelegram.extension.telegram.misc.UnifiedPushRaise')
 Assert-True ((@($checkedInAllowlist | Sort-Object -CaseSensitive) -join "`n") -ceq
         (@($approvedEntries | Sort-Object -CaseSensitive) -join "`n")) `
-    ('The checked-in manifest delta allowlist approves something besides the settings alias, or leaves it ' +
-     "out: $($checkedInAllowlist -join ', ')")
+    ('The checked-in manifest delta allowlist approves something besides the settings alias and the UnifiedPush ' +
+     "receiver and service, or leaves one out: $($checkedInAllowlist -join ', ')")
 
 $allowlistRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("receipt-" + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $allowlistRoot | Out-Null
@@ -1032,7 +1035,9 @@ try {
     $withApproved = {
         param($r)
         foreach ($target in $r.targets) {
-            $target.manifestDelta.exportedComponentsAdded = @($settingsAlias)
+            $target.manifestDelta.exportedComponentsAdded = @($settingsAlias,
+                'receiver:app.hushtelegram.extension.telegram.misc.UnifiedPushReceiver',
+                'service:app.hushtelegram.extension.telegram.misc.UnifiedPushRaise')
         }
     }
     $approvedReceipt = Test-TestReceipt -Receipt (New-TestReceipt -Mutate $withApproved) -Approved $checkedInAllowlist
@@ -1511,6 +1516,36 @@ try {
     Assert-True ([System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'release-receipt.ps1')) -match
             '(?s)function\s+Get-ReleaseReceiptSchemaVersion\b.*?#>\s*return\s+(\d+)\s*\}' -and [int]$Matches[1] -eq $currentSchema) `
         'Resolve-ReceiptSchema can no longer read the schema out of this checkout''s own release-receipt.ps1.'
+
+    # git failing is not "the file isn't there": a commit the clone doesn't hold stops each reader
+    # instead of falling back to the working copy.
+    $unheld = '0' * 40
+    Assert-Throws { Resolve-ReceiptSchema -Root $toolchainRoot -Commit $unheld } '*git ls-tree*failed*' `
+        'A commit git could not read fell back to this checkout''s receipt schema.'
+    Assert-Throws { Resolve-ReceiptToolchain -Root $toolchainRoot -Commit $unheld -WorkingToolchain $workingToolchain } '*git ls-tree*failed*' `
+        'A commit git could not read fell back to the working catalog.'
+    Assert-Throws { Resolve-ReceiptCatalog -Root $toolchainRoot -Commit $unheld -WorkingPatchList $workingList } '*git ls-tree*failed*' `
+        'A commit git could not read fell back to the working patch list.'
+    Assert-Throws { Resolve-ReceiptManifestAllowlist -Root $toolchainRoot -Commit $unheld -WorkingPath $allowlistFile } '*git ls-tree*failed*' `
+        'A commit git could not read fell back to the working allowlist.'
+    $notARepo = Join-Path ([IO.Path]::GetTempPath()) ("hushtelegram-notrepo-" + [guid]::NewGuid().ToString('N'))
+    New-Item -ItemType Directory -Path $notARepo | Out-Null
+    try {
+        $env:GIT_CEILING_DIRECTORIES = $notARepo
+        # A tree with no repository holds no tag: the floor is unchecked and says so, it doesn't throw.
+        $noRepository = Resolve-IndexManagerFloor -Root $notARepo -Version '0.0.9' -Commit $releaseCommitSha
+        Assert-True ($null -eq $noRepository.Floor -and $noRepository.Note -like '*doesn''t have*') `
+            "A tree with no repository gave the index a Manager floor: $($noRepository.Floor), $($noRepository.Note)"
+        # A .git that git can't open is a failure, not "no repository": exit 128 is the same for both.
+        $brokenRepo = Join-Path $notARepo 'broken'
+        New-Item -ItemType Directory -Path $brokenRepo | Out-Null
+        Set-Content -LiteralPath (Join-Path $brokenRepo '.git') -Value ('gitdir: ' + (Join-Path $notARepo 'gone')) -Encoding ASCII
+        Assert-Throws { Resolve-IndexManagerFloor -Root $brokenRepo -Version '0.0.9' -Commit $releaseCommitSha } '*rev-parse --git-dir*failed*' `
+            'A .git that git could not open read as a tree with no repository.'
+    } finally {
+        $env:GIT_CEILING_DIRECTORIES = $null
+        Remove-Item -LiteralPath $notARepo -Recurse -Force -ErrorAction SilentlyContinue
+    }
 
     # A catalog that pins nothing usable still stops the run, rather than being read as blank.
     foreach ($broken in @(
@@ -2161,7 +2196,9 @@ try {
                 Edit = { param($text) $text -replace '(latest release is \[v[^\]]+\]\([^)\s]*\), with )\d+( patches)',
                     ('${1}' + (@($catalog.patches).Count + 1) + '${2}') } },
             @{ Name = 'no sentence naming the latest release'; Pattern = '*does not say which release is the latest*'
-                Edit = { param($text) $text -replace 'The latest release is \[v[^\]]+\]\([^)\s]*\), with \d+ patches\.', 'Releases are on GitHub.' } })) {
+                # The sentence can go on past the count ("built for Telegram 12.10.6 and ..."), and its
+                # version numbers hold dots, so it ends at the first period followed by a space.
+                Edit = { param($text) $text -replace 'The latest release is \[v[^\]]+\]\([^)\s]*\), with \d+ patches.*?\.(?=\s|$)', 'Releases are on GitHub.' } })) {
         $unedited = Get-Content -LiteralPath (Join-Path $factsRoot 'README.md') -Raw
         Set-FactsFile 'README.md' $case.Edit
         try {
@@ -2287,11 +2324,21 @@ try {
             @{ From = '"https://github\.com/'; To = '"http://github.com/'
                 Pattern = '*must use HTTPS*'; Name = 'an index serving the bundle over plain HTTP' },
             @{ From = '"https://github\.com/'; To = '"https://example.com/'
-                Pattern = '*must be on github.com*'; Name = 'an index serving the bundle from another host' })) {
+                Pattern = '*must be on github.com*'; Name = 'an index serving the bundle from another host' },
+            @{ From = 'SysAdminDoc/HushTelegram/releases'; To = 'Sys!Admin/HushTelegram/releases'
+                Pattern = '*owner or repository GitHub would not accept*Sys!Admin*'; Name = 'an index naming an owner GitHub would not accept' },
+            @{ From = 'SysAdminDoc/HushTelegram/releases'; To = 'SysAdminDoc/Hush!Telegram/releases'
+                Pattern = '*owner or repository GitHub would not accept*Hush!Telegram*'; Name = 'an index naming a repository GitHub would not accept' })) {
         Set-FactsFile 'patches-bundle.json' { param($text) $text -replace $address.From, $address.To }
         Assert-Throws { Invoke-Facts } $address.Pattern "The release facts check accepted $($address.Name)."
         Reset-FactsFile 'patches-bundle.json'
     }
+
+    # A folder the check can't read is an error, not a folder with nothing newer in it: the
+    # newest-source scans that decide "results older than sources" used to skip it silently.
+    $factsText = [System.IO.File]::ReadAllText((Join-Path $PSScriptRoot 'validate-release-facts.ps1'))
+    Assert-True ($factsText -notmatch '-Recurse -File -ErrorAction SilentlyContinue') `
+        'validate-release-facts.ps1 skips an unreadable source folder in its newest-source scan.'
 
     # A dead link: the address has every right shape and names a release nobody published, which
     # is how the index once pointed at a tag that did not exist yet. GitHub answers 404 for it;
@@ -4330,7 +4377,7 @@ try {
         "The release check did not hold the index's Manager floor to the release tag: $said"
 
     Save-ReleaseReceipt -Builds $releaseTarget.PackageVersions -WithoutOtherPackages
-    Assert-Throws { Invoke-ReleaseCheck } '*declared org.telegram.messenger.beta 12.10.7 (71239)*patched without -f*' `
+    Assert-Throws { Invoke-ReleaseCheck } '*declared org.telegram.messenger.beta 13.0.1 (71669)*patched without -f*' `
         'Web evidence proved beta without any beta run.'
     Save-ReleaseReceipt -Builds $releaseTarget.PackageVersions
 
@@ -4504,8 +4551,8 @@ class AlignmentFixture {
     $androidName = 'http://schemas.android.com/apk/res/android:name(0x01010003)='
     $androidExported = '          A: http://schemas.android.com/apk/res/android:exported(0x01010010)=true'
     # Telegram asks for internet access and exports its launcher activity, on every build. The patched
-    # build exports the settings alias beside the launcher: the change the checked-in allowlist
-    # approves, and the only one the patches make here.
+    # build exports the settings alias beside the launcher, and the UnifiedPush receiver and service:
+    # the changes the checked-in allowlist approves, and the only ones the patches make here.
     function Get-FixtureManifest([string]$Build, [string]$Code, [switch]$WithSplit, [switch]$Patched,
             [string]$Package = $releaseTarget.PackageName, [int]$MinSdk = 21) {
         $binaryMinSdk = if ($Patched) { [Math]::Max($MinSdk, 28) } else { $MinSdk }
@@ -4531,11 +4578,25 @@ class AlignmentFixture {
         if ($Patched) {
             $lines += @('        E: activity-alias (line=60)',
                 "          A: $androidName`"app.hushtelegram.extension.telegram.settings.OpenSettings`" (Raw: `"app.hushtelegram.extension.telegram.settings.OpenSettings`")",
+                $androidExported,
+                '        E: receiver (line=70)',
+                "          A: $androidName`"app.hushtelegram.extension.telegram.misc.UnifiedPushReceiver`" (Raw: `"app.hushtelegram.extension.telegram.misc.UnifiedPushReceiver`")",
+                $androidExported,
+                '        E: service (line=80)',
+                "          A: $androidName`"app.hushtelegram.extension.telegram.misc.UnifiedPushRaise`" (Raw: `"app.hushtelegram.extension.telegram.misc.UnifiedPushRaise`")",
                 $androidExported)
         }
         return ($lines -join "`n") + "`n"
     }
     $dependencyNamesHere = @(Get-PatchDependencyNames -PatchList $releaseCatalog -RequestedNames $releaseNames)
+    # A fixture is found by its package and version, as telegram.org's build and the beta can declare
+    # the same version (13.0.1 both): keyed by the version alone, the beta's took the web build's
+    # place and the web build had no fixture. The release target's keep the bare version, which
+    # every lookup below by $releaseTarget.PackageVersion or $newerBuild reads.
+    function Get-FixtureKey([string]$Package, [string]$Version) {
+        if ($Package -ceq $releaseTarget.PackageName) { return $Version }
+        return "$Package $Version"
+    }
     $fixturePaths = @{}
     # Beside the declared builds, a newer one the catalog doesn't declare, the kind a release run
     # patches under -f to see what still applies on it. Each declared build carries the version code
@@ -4571,7 +4632,7 @@ class AlignmentFixture {
             failedPatches = @()
             packageName = $package
             packageVersion = $build } | ConvertTo-Json -Depth 6)
-        $fixturePaths[$build] = $apkm
+        $fixturePaths[(Get-FixtureKey -Package $package -Version $build)] = $apkm
     }
     # And another build of the oldest declared version, as one Telegram release can come as several
     # arm64 builds: the declared name at a code the catalog doesn't pin, as an APKMirror .apkm. Only
@@ -4625,8 +4686,10 @@ class AlignmentFixture {
     # A fixture for every declared build and the newer one: one target each, only the newer build
     # forced, every patch applied, and no manifest change but the approved two, because the patched
     # manifest is held to the merge and not to the base.
-    $declaredBuildVersions = @($releaseTargets | ForEach-Object { $_.PackageVersions })
-    $builtBuilds = $declaredBuildVersions + @($newerBuild)
+    $declaredBuilds = @(foreach ($packageTarget in $releaseTargets) {
+        foreach ($version in $packageTarget.PackageVersions) { Get-FixtureKey -Package $packageTarget.PackageName -Version $version }
+    })
+    $builtBuilds = $declaredBuilds + @($newerBuild)
     $allFixtures = @($builtBuilds | ForEach-Object { $fixturePaths[$_] })
     try {
         Invoke-ReceiptBuilder -Fixtures $allFixtures
@@ -4637,12 +4700,13 @@ class AlignmentFixture {
         "build-release-receipt.ps1 did not patch inside a build queue slot: $(Get-LastQueuedJob)"
     $built = Get-Content -LiteralPath $releaseReceipt -Raw | ConvertFrom-Json
     $builtTargets = @($built.targets)
-    $builtVersions = @($builtTargets | ForEach-Object { [string]$_.source.versionName })
-    Assert-True (($builtVersions -join ',') -eq ($builtBuilds -join ',')) `
-        "The receipt does not hold one run of each fixture: $($builtVersions -join ', ')"
+    $builtKeys = @($builtTargets | ForEach-Object {
+        Get-FixtureKey -Package ([string]$_.source.package) -Version ([string]$_.source.versionName) })
+    Assert-True (($builtKeys -join ',') -eq ($builtBuilds -join ',')) `
+        "The receipt does not hold one run of each fixture: $($builtKeys -join ', ')"
     foreach ($builtTarget in $builtTargets) {
-        $label = [string]$builtTarget.source.versionName
-        $declared = $declaredBuildVersions -contains $label
+        $label = Get-FixtureKey -Package ([string]$builtTarget.source.package) -Version ([string]$builtTarget.source.versionName)
+        $declared = $declaredBuilds -contains $label
         Assert-True ($builtTarget.source.forced -eq (-not $declared)) `
             "The receipt says $label was $(if ($builtTarget.source.forced) { 'forced' } else { 'not forced' })."
         Assert-True ($builtTarget.source.sha256 -eq (Get-Sha256Hex -Path $fixturePaths[$label])) `
@@ -4666,7 +4730,7 @@ class AlignmentFixture {
         "Each fixture was not merged once, before it was patched: $($mergeRuns -join '; ')"
     $patchRuns = @(Get-Content -LiteralPath $javaLog)
     $expectedRuns = @($builtBuilds | ForEach-Object {
-        "patch $($fixturePaths[$_]) merged forced=$(if ($declaredBuildVersions -contains $_) { 0 } else { 1 })" })
+        "patch $($fixturePaths[$_]) merged forced=$(if ($declaredBuilds -contains $_) { 0 } else { 1 })" })
     Assert-True (($patchRuns -join "`n") -eq ($expectedRuns -join "`n")) `
         "The CLI was not run once per fixture, on its merge, with -f for the undeclared build only: $($patchRuns -join '; ')"
     # The SBOM beside the bundle, recorded by name, hash and count, once OSV had been asked about it.
@@ -5018,7 +5082,7 @@ class AlignmentFixture {
         & (Join-Path $PSScriptRoot 'patch-for-device.ps1') @arguments 6> $null
     }
     $deviceApk = Join-Path $deviceOut "hushtelegram-$releaseVersionHere-signed.apk"
-    foreach ($build in $declaredBuildVersions) {
+    foreach ($build in $declaredBuilds) {
         try {
             Invoke-DeviceBuild -Apk $fixturePaths[$build]
         } catch {
@@ -5042,7 +5106,8 @@ class AlignmentFixture {
                 -Value (Get-FixtureManifest -Build $version -Code $code -Package $packageTarget.PackageName)
             Set-Content -LiteralPath "$defaultFixture.patched.txt" -Encoding ASCII -NoNewline `
                 -Value (Get-FixtureManifest -Build $version -Code $code -Package $packageTarget.PackageName -Patched)
-            Copy-Item -LiteralPath "$($fixturePaths[$version]).result.json" -Destination "$defaultFixture.result.json"
+            Copy-Item -LiteralPath "$($fixturePaths[(Get-FixtureKey -Package $packageTarget.PackageName -Version $version)]).result.json" `
+                -Destination "$defaultFixture.result.json"
             $defaultFixtures[$packageTarget.PackageName] = $defaultFixture
         }
         $env:HUSHTELEGRAM_FIXTURE_DIR = $fixtures

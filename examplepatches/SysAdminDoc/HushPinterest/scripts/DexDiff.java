@@ -276,7 +276,8 @@ public class DexDiff {
             Map.entry("feed", 4), Map.entry("views", 3), Map.entry("guard", 2), Map.entry("refresh", 2),
             Map.entry("navigation", 2), Map.entry("menu", 2), Map.entry("downloads", 2), Map.entry("comments", 5),
             Map.entry("links", 6), Map.entry("analytics", 5), Map.entry("answers", 4), Map.entry("imageOrder", 1), Map.entry("closeupImage", 2), Map.entry("topicSuggestions", 2), Map.entry("boardMenu", 1), Map.entry("settings", 3),
-            Map.entry("longPress", 2), Map.entry("surveyPrompts", 2));
+            Map.entry("longPress", 2), Map.entry("surveyPrompts", 2), Map.entry("pinInvites", 2), Map.entry("browserId", 2),
+            Map.entry("firebaseCertificate", 1));
 
     /**
      * A start-call, next-call, sole-call or once-call line: its method reference, the next-call's
@@ -2825,6 +2826,7 @@ public class DexDiff {
                 }
                 if (selector.equals("shareCloseup")) {
                     closeupShareGuard(m, hook);
+                    sendableStubs();
                     return original != null;
                 }
                 if (selector.equals("update")) {
@@ -2879,6 +2881,44 @@ public class DexDiff {
             }
             if (!shaped || !new TreeSet<>(named).equals(expected) || named.size() != expected.size())
                 fail("save toast stub names " + named + " instead of the save toast models " + expected);
+        }
+
+        /**
+         * The closeup share's sendable stubs: each casts its input and returns one field, the id and
+         * the kind the sendable's (String, int) constructor stores from those parameters. Its
+         * accessors change meaning between builds, so nothing else names the pin reliably.
+         */
+        void sendableStubs() {
+            String sendable = "Lcom/pinterest/sendshare/model/SendableObject;";
+            ClassDef owner = clean.classes.get(sendable);
+            List<Method> inits = new ArrayList<>();
+            if (owner != null) for (Method m : owner.getMethods())
+                if (m.getName().equals("<init>") && descriptor(m).equals("(Ljava/lang/String;I)V") && m.getImplementation() != null) inits.add(m);
+            if (inits.size() != 1) { fail("share sendable has no single (String, int) constructor"); return; }
+            Method init = inits.get(0);
+            int registers = init.getImplementation().getRegisterCount(), self = parameter(init, -1);
+            List<String> ids = new ArrayList<>(), kinds = new ArrayList<>();
+            // Stores into the sendable's own field of the parameter's type, through this, the same
+            // three things the patch requires, so a parameter forwarded elsewhere isn't counted.
+            for (Instruction i : instructions(init)) {
+                if (!(reference(i) instanceof FieldReference field) || !(i instanceof TwoRegisterInstruction two)
+                        || two.getRegisterB() != self || !field.getDefiningClass().equals(sendable)) continue;
+                if (i.getOpcode() == Opcode.IPUT_OBJECT && firstRegister(i) == registers - 2 && field.getType().equals("Ljava/lang/String;"))
+                    ids.add(String.valueOf(field));
+                if (i.getOpcode() == Opcode.IPUT && firstRegister(i) == registers - 1 && field.getType().equals("I")) kinds.add(String.valueOf(field));
+            }
+            if (ids.size() != 1 || kinds.size() != 1) { fail("share sendable constructor doesn't store one id and one kind"); return; }
+            String own = BASE + "actions/SystemShare;->";
+            Method id = stub(own + "sendableId(Ljava/lang/Object;)Ljava/lang/String;", List.of(Opcode.CHECK_CAST, Opcode.IGET_OBJECT,
+                    Opcode.RETURN_OBJECT), Arrays.asList(sendable, ids.get(0), null));
+            Method kind = stub(own + "sendableType(Ljava/lang/Object;)I", List.of(Opcode.CHECK_CAST, Opcode.IGET, Opcode.RETURN),
+                    Arrays.asList(sendable, kinds.get(0), null));
+            for (Method m : new Method[]{id, kind}) {
+                if (m == null) continue;
+                List<Instruction> body = instructions(m);
+                if (((TwoRegisterInstruction) body.get(1)).getRegisterB() != parameter(m, 0) || firstRegister(body.get(2)) != firstRegister(body.get(1)))
+                    fail(m + " doesn't return the field it reads from its own sendable");
+            }
         }
 
         boolean hasSendableShareSource(Method m) {
@@ -3226,9 +3266,10 @@ public class DexDiff {
 
         /**
          * The long-press menu's Download button: one call at the head of the menu's show method with
-         * the menu and its event, nothing borrowed, and six stubs bound to the members the clean APK
+         * the menu and its event, nothing borrowed, and seven stubs bound to the members the clean APK
          * has for them: the event's pin, the menu's shown id, the pin's id getter, the menu's button
-         * list and layout method, and Pinterest's own button model, icon, string, factory and styler.
+         * list and layout method, a button's detached mark and spring driver, and Pinterest's own
+         * button model, icon, string, factory and styler.
          */
         void longPress(Contract c) {
             String menuType = c.strings.get(1);
@@ -3350,8 +3391,94 @@ public class DexDiff {
                             || !arguments(body.get(7)).equals(List.of(shaped)) || firstRegister(body.get(8)) != shaped)
                         fail("long-press download button stub builds the button from the wrong registers");
                 }
+                // A button the hook put back gets its springs back: the boolean its detach handler
+                // sets and the job that handler cancels, both cleared from one zero.
+                String[] springs = springReset(item);
+                if (springs == null) {
+                    fail("long-press menu button has no single detached mark and spring driver to clear");
+                    resolved = false;
+                } else {
+                    Method reset = stub(own + "springsReattached(Ljava/lang/Object;)V", List.of(Opcode.CHECK_CAST, Opcode.CONST_4,
+                            Opcode.IPUT_BOOLEAN, Opcode.IPUT_OBJECT, Opcode.RETURN_VOID), Arrays.asList(item, null, springs[0], springs[1], null));
+                    if (reset != null) {
+                        List<Instruction> body = instructions(reset);
+                        int held = parameter(reset, 0), zero = firstRegister(body.get(1));
+                        if (firstRegister(body.get(0)) != held || zero == held || ((NarrowLiteralInstruction) body.get(1)).getNarrowLiteral() != 0
+                                || firstRegister(body.get(2)) != zero || ((TwoRegisterInstruction) body.get(2)).getRegisterB() != held
+                                || firstRegister(body.get(3)) != zero || ((TwoRegisterInstruction) body.get(3)).getRegisterB() != held)
+                            fail("long-press springs reset doesn't clear the button's own mark and driver from a zero");
+                    }
+                }
             }
             capability(c.callee, resolved);
+        }
+
+        /**
+         * A long-press menu button's detached mark and spring driver, found the way the patch finds
+         * them on the button's class chain: the one boolean its detach handler writes, and the one
+         * non-array object field that the method reading that boolean both reads and writes.
+         */
+        String[] springReset(String item) {
+            List<ClassDef> chain = new ArrayList<>();
+            for (ClassDef owner = clean.classes.get(item); owner != null;
+                    owner = owner.getSuperclass() == null ? null : clean.classes.get(owner.getSuperclass())) chain.add(owner);
+            Set<String> types = new HashSet<>();
+            List<Method> methods = new ArrayList<>();
+            for (ClassDef owner : chain) {
+                types.add(owner.getType());
+                for (Method method : owner.getMethods())
+                    if (method.getImplementation() != null && !AccessFlags.STATIC.isSet(method.getAccessFlags())) methods.add(method);
+            }
+            List<Method> detaches = new ArrayList<>();
+            for (Method method : methods) if (method.getName().equals("onDetachedFromWindow") && method.getParameterTypes().isEmpty()
+                    && method.getReturnType().equals("V")) detaches.add(method);
+            if (detaches.size() != 1) return null;
+            Set<String> flags = chainFields(detaches.get(0), Opcode.IPUT_BOOLEAN, types);
+            if (flags.size() != 1) return null;
+            String flag = flags.iterator().next();
+            List<Method> starters = new ArrayList<>();
+            for (Method method : methods) if (chainFields(method, Opcode.IGET_BOOLEAN, types).contains(flag)) starters.add(method);
+            if (starters.size() != 1) return null;
+            Set<String> drivers = chainFields(starters.get(0), Opcode.IGET_OBJECT, types);
+            drivers.retainAll(chainFields(starters.get(0), Opcode.IPUT_OBJECT, types));
+            drivers.removeIf(field -> field.substring(field.lastIndexOf(':') + 1).startsWith("["));
+            if (drivers.size() != 1) return null;
+            String driver = drivers.iterator().next();
+            // Clearing the driver is only safe because the detach handler cancels it, which the
+            // patch requires too: a method the handler calls reads it and cancels that value.
+            Set<String> calls = new HashSet<>();
+            for (Instruction i : instructions(detaches.get(0)))
+                if (reference(i) instanceof MethodReference call && types.contains(call.getDefiningClass())
+                        && call.getParameterTypes().isEmpty() && call.getReturnType().equals("V")) calls.add(call.getName());
+            for (Method method : methods)
+                if (calls.contains(method.getName()) && method.getParameterTypes().isEmpty() && cancels(method, driver))
+                    return new String[]{flag, driver};
+            return null;
+        }
+
+        /** Whether [m] reads [driver] and then calls a (CancellationException)V method, a Job's cancel, on the value it read. */
+        boolean cancels(Method m, String driver) {
+            List<Instruction> body = instructions(m);
+            for (int at = 0; at < body.size(); at++) {
+                if (body.get(at).getOpcode() != Opcode.IGET_OBJECT || !driver.equals(String.valueOf(reference(body.get(at))))) continue;
+                int held = firstRegister(body.get(at));
+                for (Instruction next : body.subList(at + 1, body.size())) {
+                    if (reference(next) instanceof MethodReference call && call.getReturnType().equals("V")
+                            && descriptor(call).equals("(Ljava/util/concurrent/CancellationException;)V")
+                            && arguments(next).size() == 2 && arguments(next).get(0) == held) return true;
+                    if (!next.getOpcode().canContinue() || next.getOpcode().setsRegister() && firstRegister(next) == held) break;
+                }
+            }
+            return false;
+        }
+
+        /** The fields of [types] that [m] touches with [opcode]. */
+        Set<String> chainFields(Method m, Opcode opcode, Set<String> types) {
+            Set<String> found = new TreeSet<>();
+            for (Instruction i : instructions(m))
+                if (i.getOpcode() == opcode && reference(i) instanceof FieldReference field && types.contains(field.getDefiningClass()))
+                    found.add(field.toString());
+            return found;
         }
 
         /** An extension stub the patch filled: these opcodes, naming these references, its input cast first. */
@@ -3780,12 +3907,239 @@ public class DexDiff {
             return names.containsAll(BOARD_OPTIONS);
         }
 
+        static final String SENDABLE = "Lcom/pinterest/sendshare/model/SendableObject;";
+
+        /** Pinterest's invite logger, as the patch finds it: (SendableObject, A, B, int, String, String)V on an instance. */
+        static boolean inviteLogger(Method m) {
+            if (m.getImplementation() == null || AccessFlags.STATIC.isSet(m.getAccessFlags()) || !m.getReturnType().equals("V")) return false;
+            List<String> types = m.getParameterTypes().stream().map(Object::toString).toList();
+            return types.size() == 6 && types.get(0).equals(SENDABLE) && types.get(3).equals("I")
+                    && types.get(4).equals("Ljava/lang/String;") && types.get(5).equals("Ljava/lang/String;")
+                    && types.subList(1, 3).stream().allMatch(t -> t.startsWith("L") && !t.startsWith("Ljava/") && !t.startsWith("Landroid/"));
+        }
+
         /** True when [i] reads [register] as a value or as a call or array argument. */
         static boolean readsRegister(Instruction i, int register) {
             for (int[] read : valueReads(i)) if (read[0] == register || read[1] == 'W' && read[0] + 1 == register) return true;
             if (i instanceof FiveRegisterInstruction || i instanceof RegisterRangeInstruction)
                 for (int argument : invokeRegisters(i)) if (argument == register) return true;
             return false;
+        }
+
+        static final String START_ACTIVITY = "Landroid/content/Context;->startActivity(Landroid/content/Intent;)V";
+
+        /** A share straight to one app, as the patch finds it in the clean target: where it starts the app, and with what. */
+        record DirectShare(Method method, int at, int shared, int url, int intent) {}
+
+        /** An instance call to a method of the invite logger's shape, in any class. */
+        static boolean inviteLoggerCall(Instruction i) {
+            if (i.getOpcode() != Opcode.INVOKE_VIRTUAL && i.getOpcode() != Opcode.INVOKE_VIRTUAL_RANGE || !(reference(i) instanceof MethodReference call)
+                    || !call.getReturnType().equals("V")) return false;
+            List<String> types = call.getParameterTypes().stream().map(Object::toString).toList();
+            return types.size() == 6 && types.get(0).equals(SENDABLE) && types.get(3).equals("I")
+                    && types.get(4).equals("Ljava/lang/String;") && types.get(5).equals("Ljava/lang/String;")
+                    && types.subList(1, 3).stream().allMatch(t -> t.startsWith("L") && !t.startsWith("Ljava/") && !t.startsWith("Landroid/"));
+        }
+
+        /** True when nothing reaches the instructions after [from], up to and including [to], but [from] and they themselves. */
+        static boolean enteredOnlyFrom(FeatureFlow graph, int from, int to) {
+            for (int k = 0; k < graph.normal.size(); k++) {
+                for (int next : graph.normal.get(k)) if (next > from && next <= to && (k < from || k >= to)) return false;
+                for (int next : graph.handlers.get(k)) if (next > from && next <= to) return false;
+            }
+            return true;
+        }
+
+        /**
+         * The shares straight to one app in the clean target. Each is a method holding "invite_url"
+         * that starts the app with an intent a static builder made, then passes the shared object and
+         * the invite link to an instance call of the invite logger's shape. Nothing between the start
+         * and that call is entered from elsewhere or writes either value, nothing between the builder
+         * and the start writes the intent, and the start itself is reached only by falling through.
+         * The three registers are distinct and at most v15.
+         */
+        List<DirectShare> directShares() {
+            List<DirectShare> out = new ArrayList<>();
+            for (Method m : clean.holding("invite_url")) {
+                List<Instruction> body = instructions(m);
+                FeatureFlow graph = new FeatureFlow(m);
+                for (int start = 0; start < body.size(); start++) {
+                    Instruction call = body.get(start);
+                    if (call.getOpcode() != Opcode.INVOKE_VIRTUAL || !START_ACTIVITY.equals(String.valueOf(reference(call)))) continue;
+                    List<Integer> started = arguments(call);
+                    int log = -1;
+                    for (int k = start + 1; k < body.size() && log < 0; k++) if (inviteLoggerCall(body.get(k))) log = k;
+                    if (log < 0 || started.size() != 2) continue;
+                    List<Integer> logged = arguments(body.get(log));
+                    if (logged.size() != 7) continue;
+                    int shared = logged.get(1), url = logged.get(6), intent = started.get(1);
+                    if (shared > 15 || url > 15 || intent > 15 || new HashSet<>(List.of(shared, url, intent)).size() != 3) continue;
+                    if (!enteredOnlyFrom(graph, start - 1, start) || !enteredOnlyFrom(graph, start, log)) continue;
+                    boolean written = false;
+                    for (int k = start + 1; k < log; k++) if (writes(body.get(k), shared) || writes(body.get(k), url)) written = true;
+                    if (written) continue;
+                    int made = -1;
+                    for (int k = start - 1; k >= 0 && made < 0; k--) if (writes(body.get(k), intent)) made = k;
+                    if (made < 1 || body.get(made).getOpcode() != Opcode.MOVE_RESULT_OBJECT || !enteredOnlyFrom(graph, made, start)) continue;
+                    Instruction builder = body.get(made - 1);
+                    if (builder.getOpcode() != Opcode.INVOKE_STATIC && builder.getOpcode() != Opcode.INVOKE_STATIC_RANGE
+                            || !(reference(builder) instanceof MethodReference built) || !built.getReturnType().equals("Landroid/content/Intent;")) continue;
+                    out.add(new DirectShare(m, start, shared, url, intent));
+                }
+            }
+            return out;
+        }
+
+        /**
+         * Plain pin links. The invite logger is an instance method of a class holding "invite_url",
+         * shaped (SendableObject, A, B, int, String, String)V, that a method of its own class holding
+         * the string calls. Exactly one call in it builds the log event from (A, kind, B, id String,
+         * int, String, String, ...), its kind and id each the result of a no-argument getter of the
+         * untouched shared object right above it. The hook goes just in front of that call: the
+         * logger's invite link parameter moved into a scratch local, then the hook with the call's
+         * kind and id registers and the scratch. The scratch must be a local nothing in the clean
+         * logger reads before writing, from the event call on, and the link parameter must still be
+         * its argument there. The share straight to one app (see [directShares]) gets the second hook
+         * right in front of its app start, with the shared object, link and intent registers, and
+         * the two stubs it reads the shared object through call the log event's own getters. The
+         * patch puts in both hooks or neither. Found in the clean target, never from the hooks.
+         */
+        void pinInvites(Contract c) {
+            String hook = c.strings.get(0);
+            List<Method> loggers = new ArrayList<>();
+            for (Method caller : clean.holding("invite_url")) {
+                ClassDef owner = clean.classes.get(caller.getDefiningClass());
+                if (owner == null) continue;
+                for (Instruction i : instructions(caller)) {
+                    if (!(reference(i) instanceof MethodReference call) || !call.getDefiningClass().equals(owner.getType())) continue;
+                    for (Method own : owner.getMethods())
+                        if (inviteLogger(own) && own.toString().equals(call.toString()) && !loggers.contains(own)) loggers.add(own);
+                }
+            }
+            // The patch leaves Plain pin links out of a build without exactly this shape, and so
+            // expects nothing here: no flag and, through the unclaimed call check, no hook call.
+            Method logger = loggers.size() == 1 ? loggers.get(0) : null;
+            if (logger == null || clean.duplicates.contains(logger.toString()) || clean.duplicates.contains(logger.getDefiningClass())) {
+                capability(c.callee, false);
+                return;
+            }
+            List<Instruction> was = instructions(logger);
+            List<String> types = logger.getParameterTypes().stream().map(Object::toString).toList();
+            List<Integer> builds = new ArrayList<>();
+            for (int at = 0; at < was.size(); at++) {
+                if (!was.get(at).getOpcode().name().startsWith("INVOKE_") || !(reference(was.get(at)) instanceof MethodReference call)
+                        || call.getReturnType().equals("V")) continue;
+                List<String> p = call.getParameterTypes().stream().map(Object::toString).toList();
+                if (p.size() >= 7 && p.get(0).equals(types.get(1)) && p.get(1).startsWith("L") && p.get(2).equals(types.get(2))
+                        && p.subList(3, 7).equals(List.of("Ljava/lang/String;", "I", "Ljava/lang/String;", "Ljava/lang/String;"))) builds.add(at);
+            }
+            if (builds.size() != 1) { capability(c.callee, false); return; }
+            int event = builds.get(0);
+            Instruction call = was.get(event);
+            int offset = call.getOpcode() == Opcode.INVOKE_STATIC || call.getOpcode() == Opcode.INVOKE_STATIC_RANGE ? 0 : 1;
+            List<Integer> original = arguments(call);
+            if (original.size() < offset + 7) { capability(c.callee, false); return; }
+            int kind = original.get(offset + 1), id = original.get(offset + 3), url = parameter(logger, 5), sendable = parameter(logger, 0);
+            String kindType = ((MethodReference) reference(call)).getParameterTypes().get(1).toString();
+            FeatureFlow graph = new FeatureFlow(logger);
+            java.util.function.IntPredicate entered = at -> {
+                for (int k = 0; k < graph.normal.size(); k++)
+                    if (k != at - 1 && graph.normal.get(k).contains(at) || graph.handlers.get(k).contains(at)) return true;
+                return false;
+            };
+            boolean shaped = kind <= 15 && id <= 15 && kind != id && !entered.test(event);
+            String[] getters = new String[2];
+            for (int register : new int[]{kind, id}) {
+                int write = -1;
+                for (int k = event - 1; k >= 0 && write < 0; k--) if (writes(was.get(k), register)) write = k;
+                Instruction getter = write > 0 ? was.get(write - 1) : null;
+                boolean ok = getter != null && was.get(write).getOpcode() == Opcode.MOVE_RESULT_OBJECT
+                        && getter.getOpcode() == Opcode.INVOKE_VIRTUAL && arguments(getter).equals(List.of(sendable))
+                        && reference(getter) instanceof MethodReference read && read.getDefiningClass().equals(SENDABLE)
+                        && read.getParameterTypes().isEmpty() && read.getReturnType().equals(register == kind ? kindType : "Ljava/lang/String;");
+                for (int k = write; ok && k <= event; k++) if (entered.test(k)) ok = false;
+                if (ok && reachedAfterWrite(graph, was, sendable, write - 1)) ok = false;
+                if (ok) getters[register == kind ? 0 : 1] = String.valueOf(reference(getter));
+                shaped &= ok;
+            }
+            // The link must still be the argument at the event call, along every path there.
+            if (reachedAfterWrite(graph, was, url, event)) shaped = false;
+            // And some local the hook's call can name must be free from the event call on.
+            boolean free = false;
+            for (int scratch = 0; scratch < Math.min(16, parameter(logger, -1)) && !free; scratch++)
+                free = scratch != kind && scratch != id && unread(graph, was, event, scratch);
+            if (!shaped || !free) { capability(c.callee, false); return; }
+            List<DirectShare> shares = directShares();
+            DirectShare share = shares.size() == 1 ? shares.get(0) : null;
+            if (share == null || share.method().toString().equals(logger.toString()) || clean.duplicates.contains(share.method().toString())
+                    || clean.duplicates.contains(share.method().getDefiningClass())) {
+                capability(c.callee, false);
+                return;
+            }
+
+            Method m = actual(logger);
+            List<Integer> sites = calls(m, hook, 1);
+            boolean placed = false;
+            if (m != null && sites.size() == 1) {
+                int at = sites.get(0);
+                List<Instruction> body = instructions(m);
+                List<Integer> passed = arguments(body.get(at));
+                int scratch = passed.size() == 3 ? passed.get(2) : -1;
+                Instruction move = at > 0 ? body.get(at - 1) : null;
+                placed = at == event + 1 && at + 1 < body.size() && move != null && move.getOpcode() == Opcode.MOVE_OBJECT_FROM16
+                        && ((TwoRegisterInstruction) move).getRegisterA() == scratch && ((TwoRegisterInstruction) move).getRegisterB() == url
+                        && passed.equals(List.of(kind, id, scratch)) && scratch >= 0 && scratch < parameter(m, -1) && scratch <= 15
+                        && String.valueOf(reference(body.get(at + 1))).equals(String.valueOf(reference(call)))
+                        && arguments(body.get(at + 1)).equals(original)
+                        && onlyFrom(m, at, at - 1) && onlyFrom(m, at + 1, at) && (at - 1 == 0 || onlyFrom(m, at - 1, at - 2));
+                if (!placed) fail(hook + " is not the invite link, kind and id passed right in front of the log event in " + m);
+                else if (!unread(graph, was, event, scratch)) {
+                    fail(hook + " borrows v" + scratch + " in " + m + ", which the logger still reads after its log event");
+                    placed = false;
+                }
+                remove(m, at - 1, at + 1);
+            }
+
+            String direct = c.strings.get(1);
+            Method sharer = actual(share.method());
+            List<Integer> shareSites = calls(sharer, direct, 1);
+            boolean shared = false;
+            if (sharer != null && shareSites.size() == 1) {
+                int at = shareSites.get(0);
+                List<Instruction> body = instructions(sharer);
+                Instruction start = instructions(share.method()).get(share.at());
+                shared = at == share.at() && at + 1 < body.size()
+                        && arguments(body.get(at)).equals(List.of(share.shared(), share.url(), share.intent()))
+                        && START_ACTIVITY.equals(String.valueOf(reference(body.get(at + 1))))
+                        && arguments(body.get(at + 1)).equals(arguments(start))
+                        && onlyFrom(sharer, at + 1, at) && (at == 0 || onlyFrom(sharer, at, at - 1));
+                if (!shared) fail(direct + " is not the shared object, invite link and intent passed right in front of the app start in " + sharer);
+                remove(sharer, at, at + 1);
+            }
+
+            boolean stubs = false;
+            if (placed && shared) {
+                String own = BASE + "privacy/PlainPinLinks;->";
+                List<Opcode> shape = List.of(Opcode.IF_EQZ, Opcode.CHECK_CAST, Opcode.INVOKE_VIRTUAL, Opcode.MOVE_RESULT_OBJECT,
+                        Opcode.RETURN_OBJECT, Opcode.CONST_4, Opcode.RETURN_OBJECT);
+                Method kindStub = stub(own + "sharedKind(Ljava/lang/Object;)Ljava/lang/Object;", shape,
+                        Arrays.asList(null, SENDABLE, getters[0], null, null, null, null));
+                Method idStub = stub(own + "sharedId(Ljava/lang/Object;)Ljava/lang/String;", shape,
+                        Arrays.asList(null, SENDABLE, getters[1], null, null, null, null));
+                stubs = kindStub != null && idStub != null;
+                for (Method read : Arrays.asList(kindStub, idStub)) {
+                    if (read == null) continue;
+                    List<Instruction> body = instructions(read);
+                    int input = parameter(read, 0);
+                    if (firstRegister(body.get(0)) != input || !flow(read).normal.get(0).contains(5) || !arguments(body.get(2)).equals(List.of(input))
+                            || firstRegister(body.get(3)) != firstRegister(body.get(4)) || firstRegister(body.get(5)) != firstRegister(body.get(6))
+                            || ((NarrowLiteralInstruction) body.get(5)).getNarrowLiteral() != 0) {
+                        fail(read + " doesn't answer its input's getter, or null for none");
+                        stubs = false;
+                    }
+                }
+            }
+            capability(c.callee, placed && shared && stubs);
         }
 
         /** True when no path from [from], a handler included, reads [register] before writing it. */
@@ -3802,6 +4156,22 @@ public class DexDiff {
                 if (!writes(body.get(k), register)) work.addAll(graph.normal.get(k));
             }
             return true;
+        }
+
+        /** True when [target] can run after some write to [register], along a branch, a loop or a handler. */
+        static boolean reachedAfterWrite(FeatureFlow graph, List<Instruction> body, int register, int target) {
+            BitSet seen = new BitSet();
+            Deque<Integer> work = new ArrayDeque<>();
+            for (int k = 0; k < body.size(); k++) if (writes(body.get(k), register)) work.addAll(graph.normal.get(k));
+            while (!work.isEmpty()) {
+                int k = work.poll();
+                if (k == target) return true;
+                if (seen.get(k)) continue;
+                seen.set(k);
+                work.addAll(graph.normal.get(k));
+                work.addAll(graph.handlers.get(k));
+            }
+            return false;
         }
 
         static final String TOPIC_BINDER = "Presenter bound to BubblesListView must be of type BubblesListPresenter";
@@ -4127,6 +4497,140 @@ public class DexDiff {
             capability(c.callee, all);
         }
 
+        /**
+         * Firebase's request header builder, found by its texts: the certificate header's value goes
+         * through the hook, with the connection, between the header's name and its write, and the
+         * method is otherwise untouched.
+         */
+        void firebaseCertificate(Contract c) {
+            String hook = c.strings.get(0);
+            List<Method> builders = new ArrayList<>();
+            for (Method m : clean.holding("X-Android-Cert")) if (m.getReturnType().equals("Ljava/net/HttpURLConnection;")
+                    && clean.texts.get(m.toString()).containsAll(List.of("X-Android-Package", "x-goog-api-key", "SHA1",
+                    "Could not get fingerprint hash for package: "))) builders.add(m);
+            Method builder = unique(builders, "Firebase request header builder");
+            boolean found = false;
+            if (builder != null) {
+                List<Instruction> was = instructions(builder);
+                List<Integer> names = new ArrayList<>();
+                for (int at = 0; at < was.size(); at++)
+                    if (reference(was.get(at)) instanceof StringReference s && s.getString().equals("X-Android-Cert")) names.add(at);
+                Method m = actual(builder);
+                List<Integer> sites = calls(m, hook, 1);
+                if (m != null && sites.size() == 1 && names.size() == 1 && names.get(0) + 1 < was.size()) {
+                    int at = sites.get(0);
+                    List<Integer> write = arguments(was.get(names.get(0) + 1));
+                    List<Instruction> body = instructions(m);
+                    boolean shaped = at == names.get(0) + 1 && write.size() == 3 && body.size() == was.size() + 2
+                            && arguments(body.get(at)).equals(List.of(write.get(0), write.get(2)))
+                            && body.get(at + 1).getOpcode() == Opcode.MOVE_RESULT_OBJECT && firstRegister(body.get(at + 1)) == write.get(2)
+                            && arguments(body.get(at + 2)).equals(write)
+                            && onlyFrom(m, at, at - 1) && onlyFrom(m, at + 1, at) && onlyFrom(m, at + 2, at + 1);
+                    if (!shaped) fail(hook + " doesn't take the certificate header's value between its name and its write in " + m);
+                    else { remove(m, at, at + 2); found = true; }
+                }
+            }
+            capability(c.callee, found);
+        }
+
+        static final String BLOCK_STORE = "Lcom/google/android/gms/auth/blockstore/";
+
+        /**
+         * A Block Store wrapper's instance read, save and delete of a keyed record, the same shape the
+         * patch looks for, or null unless the class has exactly one of each on one continuation type.
+         */
+        static Method[] blockStore(ClassDef cd) {
+            Method read = null, save = null, delete = null;
+            int reads = 0, saves = 0, deletes = 0;
+            Set<String> continuations = new HashSet<>();
+            for (Method m : cd.getMethods()) {
+                if (AccessFlags.STATIC.isSet(m.getAccessFlags()) || m.getImplementation() == null) continue;
+                if (storeCall(m, List.of("Ljava/lang/String;"), "Ljava/io/Serializable;", BLOCK_STORE + "RetrieveBytesRequest;")) { read = m; reads++; }
+                else if (storeCall(m, List.of("Ljava/lang/String;", "[B"), "Ljava/lang/Object;", BLOCK_STORE + "StoreBytesData;")) { save = m; saves++; }
+                else if (storeCall(m, List.of("Ljava/util/List;"), "Ljava/lang/Object;", BLOCK_STORE + "DeleteBytesRequest;")) { delete = m; deletes++; }
+                else continue;
+                continuations.add(m.getParameterTypes().get(m.getParameterTypes().size() - 1).toString());
+            }
+            return reads == 1 && saves == 1 && deletes == 1 && continuations.size() == 1 ? new Method[]{read, save, delete} : null;
+        }
+
+        static boolean storeCall(Method m, List<String> leading, String returns, String request) {
+            List<String> types = new ArrayList<>();
+            for (CharSequence p : m.getParameterTypes()) types.add(p.toString());
+            if (!m.getReturnType().equals(returns) || types.size() != leading.size() + 1
+                    || !types.subList(0, leading.size()).equals(leading) || !types.get(leading.size()).startsWith("L")) return false;
+            for (Instruction i : instructions(m)) {
+                Reference r = reference(i);
+                if (r instanceof TypeReference && ((TypeReference) r).getType().equals(request)) return true;
+                if (r instanceof MethodReference && (((MethodReference) r).getDefiningClass().equals(request)
+                        || ((MethodReference) r).getReturnType().equals(request)
+                        || ((MethodReference) r).getParameterTypes().stream().anyMatch(p -> p.toString().equals(request)))) return true;
+                if (r instanceof FieldReference && (((FieldReference) r).getDefiningClass().equals(request)
+                        || ((FieldReference) r).getType().equals(request))) return true;
+            }
+            return false;
+        }
+
+        /**
+         * Pinterest's browser ID in Block Store: the read answers no record when its hook says so and
+         * the save returns what its hook hands back unless that's null, both ahead of the method's own
+         * first instruction, and the extension's delete stub calls the wrapper's own delete.
+         */
+        void browserId(Contract c) {
+            List<ClassDef> stores = new ArrayList<>();
+            for (ClassDef cd : clean.classes.values()) if (!cd.getType().startsWith(OWN) && blockStore(cd) != null) stores.add(cd);
+            ClassDef owner = uniqueClass(stores, "Block Store wrapper");
+            if (owner == null) { capability(c.callee, false); return; }
+            Method[] store = blockStore(owner);
+            boolean read = browserIdPrefix(actual(store[0]), c.strings.get(0), true);
+            boolean save = browserIdPrefix(actual(store[1]), c.strings.get(1), false);
+            String continuation = store[0].getParameterTypes().get(1).toString();
+            Method stub = stub(BASE + "privacy/AdvertisingId;->deleteBrowserId(Ljava/lang/Object;Ljava/util/List;Ljava/lang/Object;)Ljava/lang/Object;",
+                    List.of(Opcode.CHECK_CAST, Opcode.CHECK_CAST, Opcode.INVOKE_VIRTUAL, Opcode.MOVE_RESULT_OBJECT, Opcode.RETURN_OBJECT),
+                    Arrays.asList(owner.getType(), continuation, store[2].toString(), null, null));
+            boolean deletes = stub != null;
+            if (stub != null) {
+                List<Instruction> body = instructions(stub);
+                if (firstRegister(body.get(1)) != parameter(stub, 2)
+                        || !arguments(body.get(2)).equals(List.of(parameter(stub, 0), parameter(stub, 1), parameter(stub, 2)))
+                        || firstRegister(body.get(3)) != firstRegister(body.get(4))) {
+                    fail(stub + " doesn't hand its store, keys and continuation to " + store[2]); deletes = false;
+                }
+            }
+            capability(c.callee, read && save && deletes);
+        }
+
+        /**
+         * The hook call at index 0, then a move-result and an if-eqz on one local that lands on the
+         * original first instruction. The read hook takes the key and its enabled arm answers null;
+         * the save hook takes this, key, bytes and continuation and its enabled arm returns its answer.
+         */
+        boolean browserIdPrefix(Method m, String hook, boolean read) {
+            List<Integer> sites = calls(m, hook, 1);
+            if (m == null || sites.size() != 1) return false;
+            List<Instruction> body = instructions(m);
+            Layout layout = new Layout(m.getImplementation());
+            int resume = read ? 5 : 4;
+            List<Integer> expected = read ? List.of(parameter(m, 0))
+                    : List.of(parameter(m, -1), parameter(m, 0), parameter(m, 1), parameter(m, 2));
+            int register = body.size() > 1 ? firstRegister(body.get(1)) : -1;
+            Instruction branch = body.size() > 2 ? body.get(2) : null;
+            boolean placed = sites.get(0) == 0 && body.size() > resume && arguments(body.get(0)).equals(expected)
+                    && body.get(1).getOpcode() == (read ? Opcode.MOVE_RESULT : Opcode.MOVE_RESULT_OBJECT)
+                    && branch.getOpcode() == Opcode.IF_EQZ && firstRegister(branch) == register
+                    && layout.addresses.get(2) + ((OffsetInstruction) branch).getCodeOffset() == layout.addresses.get(resume)
+                    && register >= 0 && register < parameter(m, -1);
+            if (placed && read) placed = body.get(3).getOpcode() == Opcode.CONST_4 && firstRegister(body.get(3)) == register
+                    && ((NarrowLiteralInstruction) body.get(3)).getNarrowLiteral() == 0
+                    && body.get(4).getOpcode() == Opcode.RETURN_OBJECT && firstRegister(body.get(4)) == register;
+            if (placed && !read) placed = body.get(3).getOpcode() == Opcode.RETURN_OBJECT && firstRegister(body.get(3)) == register;
+            // Nothing else may jump into the prefix.
+            for (int at = 1; placed && at < resume; at++) placed = onlyFrom(m, at, at - 1);
+            if (!placed) { fail(hook + " isn't a guarded prefix with " + (read ? "a null" : "its own") + " answer ahead of " + m); return false; }
+            remove(m, 0, resume);
+            return true;
+        }
+
         /** Engage's one client gateway: the service read, the pass-through hook, then the SDK's own null test. */
         boolean engageGateway(String hook) {
             List<Method> gateways = new ArrayList<>();
@@ -4338,11 +4842,14 @@ public class DexDiff {
                     case "links": links(c); break;
                     case "analytics": analytics(c); break;
                     case "answers": answers(c); break;
+                    case "browserId": browserId(c); break;
+                    case "firebaseCertificate": firebaseCertificate(c); break;
                     case "imageOrder": imageOrder(c); break;
                     case "closeupImage": closeupImage(c); break;
                     case "topicSuggestions": topicSuggestions(c); break;
                     case "boardMenu": boardMenu(c); break;
                     case "surveyPrompts": surveyPrompts(c); break;
+                    case "pinInvites": pinInvites(c); break;
                     case "settings": settings(c); break;
                     default: fail("unknown mutation kind " + c.target);
                 }

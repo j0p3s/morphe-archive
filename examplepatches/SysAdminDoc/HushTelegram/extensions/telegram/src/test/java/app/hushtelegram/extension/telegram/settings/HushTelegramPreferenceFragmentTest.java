@@ -15,6 +15,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.robolectric.Shadows.shadowOf;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -28,15 +29,20 @@ import android.preference.PreferenceGroup;
 import android.preference.SwitchPreference;
 import android.text.Spanned;
 import android.text.style.StyleSpan;
+import android.widget.EditText;
+import android.widget.ListView;
 
 import app.hushtelegram.extension.shared.L10n;
 import app.hushtelegram.extension.shared.SettingsContextRule;
 import app.hushtelegram.extension.shared.diagnostics.HookStatus;
 import app.hushtelegram.extension.shared.settings.BaseSettings;
 import app.hushtelegram.extension.shared.settings.BooleanSetting;
+import app.hushtelegram.extension.shared.settings.FailingStore;
 import app.hushtelegram.extension.shared.settings.HushTelegramPause;
 import app.hushtelegram.extension.shared.settings.PauseForTests;
 import app.hushtelegram.extension.shared.settings.preference.ImmediateAction;
+import app.hushtelegram.extension.telegram.misc.MessageFilters;
+import app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests;
 
 import org.junit.After;
 import org.junit.Before;
@@ -117,6 +123,7 @@ public class HushTelegramPreferenceFragmentTest {
         ROW_TITLES.put(PatchFamily.NO_HAPTICS, "Stop vibrations on taps");
         ROW_TITLES.put(PatchFamily.REACTION_EFFECTS_OFF, "Turn off reaction effects");
         ROW_TITLES.put(PatchFamily.HIDE_FOLDER_COUNTERS, "Hide folder tab counters");
+        ROW_TITLES.put(PatchFamily.CHAT_TYPE_FOLDERS, "Folders by chat type");
         ROW_TITLES.put(PatchFamily.FORWARD_HIDE_SENDER, "Hide sender names when forwarding");
         ROW_TITLES.put(PatchFamily.VOICE_MUSIC_PLAYER, "Voice messages in the music player");
         ROW_TITLES.put(PatchFamily.SILENCE_NON_CONTACTS, "Silence people outside your contacts");
@@ -124,13 +131,20 @@ public class HushTelegramPreferenceFragmentTest {
         ROW_TITLES.put(PatchFamily.REAR_CAMERA_FIRST, "Start the camera on the rear lens");
         ROW_TITLES.put(PatchFamily.HIDE_GALLERY_CAMERA_TILE, "Hide gallery camera tile");
         ROW_TITLES.put(PatchFamily.HIDE_STICKER_TIME, "Hide time on stickers");
+        ROW_TITLES.put(PatchFamily.CHANGE_STICKER_SIZE, "Change sticker size");
         ROW_TITLES.put(PatchFamily.IGNORE_MUTED_MENTIONS, "Ignore mentions in muted chats");
         ROW_TITLES.put(PatchFamily.HIDE_BLOCKED_IN_GROUPS, "Hide blocked users in groups");
+        ROW_TITLES.put(PatchFamily.HIDE_BY_KEYWORD, "Hide messages by keyword");
         ROW_TITLES.put(PatchFamily.HIDE_FEATURES_AND_INVITE, "Hide Telegram Features and Invite Friends");
         ROW_TITLES.put(PatchFamily.MESSAGE_MENU_REPEAT, "Add Repeat to the message menu");
         ROW_TITLES.put(PatchFamily.KEEP_DELETED_MESSAGES, "Keep deleted messages");
         ROW_TITLES.put(PatchFamily.ASK_BEFORE_STICKER, "Ask before sending a sticker");
         ROW_TITLES.put(PatchFamily.BETA_LOGS_OFF, "Turn off beta debug logs");
+        ROW_TITLES.put(PatchFamily.OUTSIDE_TRANSLATE, "Translate with an outside service");
+        ROW_TITLES.put(PatchFamily.HIDE_CHANNEL_BUTTONS, "Hide channel bar buttons");
+        ROW_TITLES.put(PatchFamily.HIDE_SEND_AS, "Hide Send as button");
+        ROW_TITLES.put(PatchFamily.FASTER_DOWNLOADS, "Faster downloads");
+        ROW_TITLES.put(PatchFamily.SAVE_DOWNLOADS, "Save downloaded files");
         ROW_TITLES.put(PatchFamily.DISABLE_ANALYTICS, "Stop usage reports");
         ROW_TITLES.put(PatchFamily.DISABLE_CALL_DEBUG, "Stop call diagnostics");
         ROW_TITLES.put(PatchFamily.DISABLE_DRAFT_PREVIEWS, "No previews before sending");
@@ -139,6 +153,7 @@ public class HushTelegramPreferenceFragmentTest {
         ROW_TITLES.put(PatchFamily.STRIP_LINK_TRACKING, "Remove link tracking tags");
         ROW_TITLES.put(PatchFamily.DISABLE_UPDATE_CHECKS, "Turn off Telegram's update checks");
         ROW_TITLES.put(PatchFamily.REPAIR_FIREBASE_PUSH, "Repair Firebase push registration");
+        ROW_TITLES.put(PatchFamily.UNIFIED_PUSH, "UnifiedPush notifications");
     }
 
     /** The sections every build has, in the order they're drawn. */
@@ -215,7 +230,7 @@ public class HushTelegramPreferenceFragmentTest {
      * sections every build needs always are.
      */
     @Test
-    public void theFeatureRowsAreThePatchesInThisBuild() {
+    public void theFeatureRowsAreThePatchesInThisBuild() throws Exception {
         List<Set<PatchFamily>> builds = new ArrayList<>();
         builds.add(EnumSet.noneOf(PatchFamily.class));
         for (PatchFamily family : PatchFamily.values()) builds.add(EnumSet.of(family));
@@ -244,48 +259,11 @@ public class HushTelegramPreferenceFragmentTest {
                 }
 
                 List<String> sections = sections(page);
+                // A page for each Manager category group this build has a switch in, then the pages every build has.
+                Set<String> holding = new HashSet<>();
+                for (PatchFamily family : build) holding.add(pageOf(family));
                 List<String> expected = new ArrayList<>();
-                if (build.contains(PatchFamily.HIDE_ADS) || build.contains(PatchFamily.HIDE_STORIES)
-                        || build.contains(PatchFamily.HIDE_RECOMMENDATIONS) || build.contains(PatchFamily.HIDE_COMMERCE)
-                        || build.contains(PatchFamily.HIDE_PROMOTIONAL_BANNERS) || build.contains(PatchFamily.HIDE_SPONSORED_PROXY)
-                        || build.contains(PatchFamily.HIDE_POPULAR_APPS) || build.contains(PatchFamily.HIDE_CONTACTS_BLOCK)
-                        || build.contains(PatchFamily.HIDE_GREETING_STICKERS)
-                        || build.contains(PatchFamily.DISABLE_CHAT_SWIPE)
-                        || build.contains(PatchFamily.DISABLE_CHANNEL_PULL)
-                        || build.contains(PatchFamily.NORMAL_PASTE) || build.contains(PatchFamily.SHOW_LOCAL_IDS)
-                        || build.contains(PatchFamily.DISABLE_DOUBLE_TAP_REACTIONS)
-                        || build.contains(PatchFamily.QUIET_CONTACTS_NAG) || build.contains(PatchFamily.HOLIDAY_LOOK)
-                        || build.contains(PatchFamily.USE_SYSTEM_FONT) || build.contains(PatchFamily.AMOLED_BLACK)
-                        || build.contains(PatchFamily.HIDE_TRANSLATE_BAR)
-                        || build.contains(PatchFamily.EXACT_NUMBERS)
-                        || build.contains(PatchFamily.REVEAL_SPOILERS)
-                        || build.contains(PatchFamily.HIDE_KEYBOARD_ON_SCROLL)
-                        || build.contains(PatchFamily.KEEP_VIDEOS_MUTED)
-                        || build.contains(PatchFamily.SWIPE_BACK_ON_PROFILES)
-                        || build.contains(PatchFamily.HIDE_PHONE_NUMBER)
-                        || build.contains(PatchFamily.MESSAGE_SECONDS)
-                        || build.contains(PatchFamily.ALLOW_CHAT_BLUR)
-                        || build.contains(PatchFamily.VOICE_ONE_AT_A_TIME)
-                        || build.contains(PatchFamily.NO_HAPTICS)
-                        || build.contains(PatchFamily.REACTION_EFFECTS_OFF)
-                        || build.contains(PatchFamily.HIDE_FOLDER_COUNTERS)
-                        || build.contains(PatchFamily.FORWARD_HIDE_SENDER)
-                        || build.contains(PatchFamily.VOICE_MUSIC_PLAYER)
-                        || build.contains(PatchFamily.SILENCE_NON_CONTACTS)
-                        || build.contains(PatchFamily.DISABLE_ARCHIVE_PULL)
-                        || build.contains(PatchFamily.REAR_CAMERA_FIRST)
-                        || build.contains(PatchFamily.HIDE_GALLERY_CAMERA_TILE)
-                        || build.contains(PatchFamily.HIDE_STICKER_TIME)
-                        || build.contains(PatchFamily.IGNORE_MUTED_MENTIONS)
-                        || build.contains(PatchFamily.HIDE_BLOCKED_IN_GROUPS)
-                        || build.contains(PatchFamily.HIDE_FEATURES_AND_INVITE)
-                        || build.contains(PatchFamily.MESSAGE_MENU_REPEAT)
-                        || build.contains(PatchFamily.KEEP_DELETED_MESSAGES)
-                        || build.contains(PatchFamily.ASK_BEFORE_STICKER)
-                        || build.contains(PatchFamily.BETA_LOGS_OFF)) expected.add("Chats");
-                if (build.contains(PatchFamily.DISABLE_ANALYTICS) || build.contains(PatchFamily.DISABLE_CALL_DEBUG)
-                        || build.contains(PatchFamily.DISABLE_DRAFT_PREVIEWS) || build.contains(PatchFamily.GALLERY_CAMERA_ON_TAP)) expected.add("Privacy");
-                if (build.contains(PatchFamily.REPAIR_FIREBASE_PUSH)) expected.add("Notifications");
+                for (String title : ManagerCategories.PAGE_ORDER) if (holding.contains(title)) expected.add(title);
                 expected.addAll(EVERY_BUILD);
                 if (!expected.equals(sections)) wrong.add(build + ": sections " + sections);
             }
@@ -346,6 +324,19 @@ public class HushTelegramPreferenceFragmentTest {
                     + "notification service, using Telegram's original certificate. Notification permission and "
                     + "battery settings still apply.",
                     String.valueOf(page.findPreference(Settings.REPAIR_FIREBASE_PUSH.key).getSummary()));
+            assertEquals("UnifiedPush notifications", String.valueOf(page.findPreference(Settings.UNIFIED_PUSH.key).getTitle()));
+            assertEquals("For phones where Firebase notifications don't arrive. Telegram signs up an address from a "
+                    + "UnifiedPush app like ntfy, and Telegram's servers call it to wake Telegram when something "
+                    + "arrives. The messages still come from Telegram itself. Turned off, Telegram goes back to "
+                    + "Firebase the next time it starts.",
+                    String.valueOf(page.findPreference(Settings.UNIFIED_PUSH.key).getSummary()));
+            // Telegram keeps signing up with Firebase until the switch is turned on.
+            assertFalse(Settings.UNIFIED_PUSH.key,
+                    ((SwitchPreference) page.findPreference(Settings.UNIFIED_PUSH.key)).isChecked());
+            // With no UnifiedPush app installed, the row under it says what to install.
+            assertEquals("Push app", String.valueOf(page.findPreference(UnifiedPushPicker.KEY).getTitle()));
+            assertEquals("Install a UnifiedPush app like ntfy, then come back here.",
+                    String.valueOf(page.findPreference(UnifiedPushPicker.KEY).getSummary()));
             assertEquals("Open links externally", String.valueOf(page.findPreference(Settings.OPEN_EXTERNAL_LINKS.key).getTitle()));
             assertEquals("Opens normal web links in your browser. Telegram links, sign-in and payment pages keep "
                     + "working the way they did.",
@@ -514,6 +505,13 @@ public class HushTelegramPreferenceFragmentTest {
             // Folder tabs show their counts until the switch is turned on.
             assertFalse(Settings.HIDE_FOLDER_COUNTERS.key,
                     ((SwitchPreference) page.findPreference(Settings.HIDE_FOLDER_COUNTERS.key)).isChecked());
+            assertEquals("Folders by chat type", String.valueOf(page.findPreference(Settings.CHAT_TYPE_FOLDERS.key).getTitle()));
+            assertEquals("Turning this on makes Private, Groups, Channels and Bots folders, as tabs above the chat list "
+                    + "and on your other devices. Turning it off removes the ones it made, unless you renamed or changed them.",
+                    String.valueOf(page.findPreference(Settings.CHAT_TYPE_FOLDERS.key).getSummary()));
+            // No folders are made until the switch is turned on.
+            assertFalse(Settings.CHAT_TYPE_FOLDERS.key,
+                    ((SwitchPreference) page.findPreference(Settings.CHAT_TYPE_FOLDERS.key)).isChecked());
             assertEquals("Hide sender names when forwarding", String.valueOf(page.findPreference(Settings.FORWARD_HIDE_SENDER.key).getTitle()));
             assertEquals("Each new forward starts with Hide sender's name turned on, so copies arrive without the "
                     + "original author. You can still turn it off before sending.",
@@ -528,6 +526,21 @@ public class HushTelegramPreferenceFragmentTest {
             // A voice message keeps jumping to the chat until the switch is turned on.
             assertFalse(Settings.VOICE_MUSIC_PLAYER.key,
                     ((SwitchPreference) page.findPreference(Settings.VOICE_MUSIC_PLAYER.key)).isChecked());
+            assertEquals("Faster downloads", String.valueOf(page.findPreference(Settings.FASTER_DOWNLOADS.key).getTitle()));
+            assertEquals("Files download in 512 KB pieces, 8 at a time, instead of 128 KB pieces 4 at a time. If a big "
+                    + "piece fails, Telegram goes back to small ones. The next download picks this up.",
+                    String.valueOf(page.findPreference(Settings.FASTER_DOWNLOADS.key).getSummary()));
+            // Downloads keep Telegram's piece size until the switch is turned on.
+            assertFalse(Settings.FASTER_DOWNLOADS.key,
+                    ((SwitchPreference) page.findPreference(Settings.FASTER_DOWNLOADS.key)).isChecked());
+            assertEquals("Save downloaded files", String.valueOf(page.findPreference(Settings.SAVE_DOWNLOADS.key).getTitle()));
+            assertEquals("Each file or song you download also goes to Download/Telegram on your phone, where file "
+                    + "managers and other apps can open it. Files from secret chats and chats that don't allow saving "
+                    + "stay in Telegram.",
+                    String.valueOf(page.findPreference(Settings.SAVE_DOWNLOADS.key).getSummary()));
+            // Downloads stay in Telegram's own folder until the switch is turned on.
+            assertFalse(Settings.SAVE_DOWNLOADS.key,
+                    ((SwitchPreference) page.findPreference(Settings.SAVE_DOWNLOADS.key)).isChecked());
             assertEquals("Silence people outside your contacts", String.valueOf(page.findPreference(Settings.SILENCE_NON_CONTACTS.key).getTitle()));
             assertEquals("Private messages from people not in your contacts still show a notification, but without "
                     + "sound or vibration. Bots, reminders and login codes keep their sound.",
@@ -563,6 +576,15 @@ public class HushTelegramPreferenceFragmentTest {
             // A sticker shows its time until the switch is turned on.
             assertFalse(Settings.HIDE_STICKER_TIME.key,
                     ((SwitchPreference) page.findPreference(Settings.HIDE_STICKER_TIME.key)).isChecked());
+            assertEquals("Change sticker size", String.valueOf(page.findPreference(Settings.CHANGE_STICKER_SIZE.key).getTitle()));
+            assertEquals("Stickers in chats show at the size you pick below. Animated emoji and dice keep Telegram's "
+                    + "size. A chat picks this up the next time you open it.",
+                    String.valueOf(page.findPreference(Settings.CHANGE_STICKER_SIZE.key).getSummary()));
+            // Stickers keep Telegram's size until the switch is turned on.
+            assertFalse(((SwitchPreference) page.findPreference(Settings.CHANGE_STICKER_SIZE.key)).isChecked());
+            assertEquals("Sticker size", String.valueOf(page.findPreference(HushTelegramPreferenceFragment.STICKER_SIZE_ROW).getTitle()));
+            assertEquals("75% of Telegram's size",
+                    String.valueOf(page.findPreference(HushTelegramPreferenceFragment.STICKER_SIZE_ROW).getSummary()));
             assertEquals("Ignore mentions in muted chats", String.valueOf(page.findPreference(Settings.IGNORE_MUTED_MENTIONS.key).getTitle()));
             assertEquals("Mentions and replies in groups or channels you've muted no longer notify you. Chats you "
                     + "haven't muted notify as before.",
@@ -577,6 +599,15 @@ public class HushTelegramPreferenceFragmentTest {
             // Blocked people's group messages show until the switch is turned on.
             assertFalse(Settings.HIDE_BLOCKED_IN_GROUPS.key,
                     ((SwitchPreference) page.findPreference(Settings.HIDE_BLOCKED_IN_GROUPS.key)).isChecked());
+            assertEquals("Messages in groups and channels that match one of your filters are left out when you open "
+                    + "the chat. Private chats and your own messages stay as they are. Nothing is deleted, and your "
+                    + "filters stay on this phone.",
+                    String.valueOf(page.findPreference(Settings.HIDE_BY_KEYWORD.key).getSummary()));
+            assertFalse(((SwitchPreference) page.findPreference(Settings.HIDE_BY_KEYWORD.key)).isChecked());
+            assertEquals("Filters for groups", String.valueOf(page.findPreference(FilterEditor.GROUPS).getTitle()));
+            assertEquals("No filters yet.", String.valueOf(page.findPreference(FilterEditor.GROUPS).getSummary()));
+            assertEquals("Filters for channels", String.valueOf(page.findPreference(FilterEditor.CHANNELS).getTitle()));
+            assertEquals("No filters yet.", String.valueOf(page.findPreference(FilterEditor.CHANNELS).getSummary()));
             assertEquals("Hide Telegram Features and Invite Friends", String.valueOf(page.findPreference(Settings.HIDE_FEATURES_AND_INVITE.key).getTitle()));
             assertEquals("Removes the Telegram Features row from Settings and Invite Friends from Contacts. With no "
                     + "contacts yet, the invite list goes too.",
@@ -614,6 +645,27 @@ public class HushTelegramPreferenceFragmentTest {
             // The beta keeps writing its logs until the switch is turned on.
             assertFalse(Settings.BETA_LOGS_OFF.key,
                     ((SwitchPreference) page.findPreference(Settings.BETA_LOGS_OFF.key)).isChecked());
+            assertEquals("Translate with an outside service", String.valueOf(page.findPreference(Settings.OUTSIDE_TRANSLATE.key).getTitle()));
+            assertEquals("Adds Translate here to a message's menu and Translate this chat to a chat's menu, using "
+                            + "Google's web translate in place of Telegram's Premium translation. The text you ask to "
+                            + "translate is sent to Google, one message at a time, and nothing leaves your phone until "
+                            + "you turn a chat or message on.",
+                    String.valueOf(page.findPreference(Settings.OUTSIDE_TRANSLATE.key).getSummary()));
+            // Messages stay as sent until a chat or message is turned on.
+            assertFalse(Settings.OUTSIDE_TRANSLATE.key,
+                    ((SwitchPreference) page.findPreference(Settings.OUTSIDE_TRANSLATE.key)).isChecked());
+            assertEquals("Search, Direct messages and Info leave the bar at the bottom of a channel. Mute and Join stay, "
+                            + "and tapping the channel's name at the top still opens its info. A channel picks this up the "
+                            + "next time you open it.",
+                    String.valueOf(page.findPreference(Settings.HIDE_CHANNEL_BUTTONS.key).getSummary()));
+            assertEquals("Your picture next to the message box goes away in groups and channels where you could post as "
+                            + "a channel, while you're posting as yourself. Once you pick a channel it shows again, so you "
+                            + "can always see who you're posting as. To pick one, turn this off first. A chat picks this up "
+                            + "the next time you open it.",
+                    String.valueOf(page.findPreference(Settings.HIDE_SEND_AS.key).getSummary()));
+            // A channel's bar and the message box stay stock until their switches are turned on.
+            assertFalse(((SwitchPreference) page.findPreference(Settings.HIDE_CHANNEL_BUTTONS.key)).isChecked());
+            assertFalse(((SwitchPreference) page.findPreference(Settings.HIDE_SEND_AS.key)).isChecked());
             assertEquals("Ask before sending a GIF", String.valueOf(page.findPreference(Settings.ASK_BEFORE_GIF.key).getTitle()));
             assertEquals("Asks Send or Cancel before a GIF you tap goes into a chat. Cancel drops it. Scheduled GIFs "
                     + "go out without asking.",
@@ -682,7 +734,7 @@ public class HushTelegramPreferenceFragmentTest {
             assertEquals("Clear kept messages", String.valueOf(clear.getTitle()));
             assertEquals("Deletes the messages this phone kept after others deleted them, in every account, the way "
                     + "Telegram would have.", String.valueOf(clear.getSummary()));
-            assertEquals("Chats", String.valueOf(clear.getParent().getTitle()));
+            assertEquals("Conversations", String.valueOf(clear.getParent().getTitle()));
             assertTrue("a tap acts, so no chevron", ((ImmediateAction) clear).actsOnTap());
             assertFalse("it stores nothing", clear.isPersistent());
 
@@ -693,6 +745,250 @@ public class HushTelegramPreferenceFragmentTest {
             assertTrue(HookStatus.missing(FamilyNames.KEEP_DELETED_MESSAGES).toString().contains("accounts"));
         } finally {
             HookStatus.clear();
+        }
+    }
+
+    /**
+     * Hide messages by keyword brings a row for each list under its switch. A tap opens the list;
+     * Save keeps the dialog and what was typed when a line can't be used, and saves the list
+     * trimmed when every line can.
+     */
+    @Test
+    public void theFilterListsComeWithHideByKeywordAndSaveOnlyWhatWorks() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        PatchFamily.inBuildForTests.remove(PatchFamily.HIDE_BY_KEYWORD);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            assertNull(pageOf(controller).findPreference(FilterEditor.GROUPS));
+            assertNull(pageOf(controller).findPreference(FilterEditor.CHANNELS));
+        }
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_BY_KEYWORD);
+        ShadowToast.reset();
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            List<Preference> rows = new ArrayList<>();
+            collect(pageOf(controller).getPreferenceScreen(), rows);
+            int toggle = indexOfKey(rows, Settings.HIDE_BY_KEYWORD.key);
+            assertEquals(FilterEditor.GROUPS, rows.get(toggle + 1).getKey());
+            assertEquals(FilterEditor.CHANNELS, rows.get(toggle + 2).getKey());
+            Preference groups = rows.get(toggle + 1);
+            assertEquals("Conversations", String.valueOf(groups.getParent().getTitle()));
+            assertFalse("it stores nothing itself", groups.isPersistent());
+
+            assertTrue(groups.getOnPreferenceClickListener().onPreferenceClick(groups));
+            ShadowLooper.idleMainLooper();
+            AlertDialog editor = (AlertDialog) ShadowAlertDialog.getLatestDialog();
+            assertTrue(editor.isShowing());
+            assertEquals("Filters for groups", String.valueOf(shadowOf(editor).getTitle()));
+            EditText field = editor.findViewById(android.R.id.edit);
+            assertEquals("", field.getText().toString());
+
+            field.setText("spam\n\n/(a+)+/");
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertTrue("a line that can't be used keeps the dialog", editor.isShowing());
+            assertEquals("Line 3 may be slow on long messages. Try a simpler pattern.", ShadowToast.getTextOfLatestToast());
+            assertEquals("", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+
+            field.setText("/(unclosed/");
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertEquals("Line 1 isn't a valid regex. Fix it or take off the slashes.", ShadowToast.getTextOfLatestToast());
+
+            StringBuilder wide = new StringBuilder();
+            String line = new String(new char[MessageFilters.MAX_FILTER_CHARS]).replace('\0', '字');
+            for (int i = 0; i < MessageFilters.MAX_FILTERS; i++) wide.append(line).append('\n');
+            field.setText(wide);
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertTrue("a list too big for a settings file keeps the dialog", editor.isShowing());
+            assertEquals("This list is too long for a settings file. Remove a few lines.",
+                    ShadowToast.getTextOfLatestToast());
+            assertEquals("", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+
+            field.setText("spam");
+            try (FailingStore ignored = FailingStore.install(FailingStore.Fault.COMMIT_FALSE)) {
+                editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+                ShadowLooper.idleMainLooper();
+            }
+            assertTrue("a save that fails keeps the dialog", editor.isShowing());
+            assertEquals("Couldn't save the filters. Try again in a moment.", ShadowToast.getTextOfLatestToast());
+            assertEquals("No filters yet.", String.valueOf(groups.getSummary()));
+
+            field.setText("  spam \n\n/\\bgiveaway\\b/\n");
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertFalse(editor.isShowing());
+            assertEquals("Filters saved.", ShadowToast.getTextOfLatestToast());
+            assertEquals("spam\n/\\bgiveaway\\b/", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+            assertEquals("2 filters.", String.valueOf(groups.getSummary()));
+            assertEquals("the other list is its own", "", Settings.MESSAGE_FILTERS_CHANNELS.savedValue());
+        } finally {
+            Settings.MESSAGE_FILTERS_GROUPS.resetToDefault();
+            Settings.MESSAGE_FILTERS_CHANNELS.resetToDefault();
+        }
+    }
+
+    /**
+     * Translate with an outside service brings a Translation service row under its switch. A tap
+     * opens the address, model and key; Save keeps the dialog when one can't be used, and Use
+     * Google forgets the key. The key is kept in the outside translate's own file, never in the
+     * settings the backup reads.
+     */
+    @Test
+    public void theTranslationServiceRowSavesAnAiServiceAndUseGoogleForgetsTheKey() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        PatchFamily.inBuildForTests.remove(PatchFamily.OUTSIDE_TRANSLATE);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            assertNull(pageOf(controller).findPreference(TranslateServiceEditor.KEY));
+        }
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.OUTSIDE_TRANSLATE);
+        android.content.SharedPreferences file = app.hushtelegram.extension.shared.Utils.getContext()
+                .getSharedPreferences("hushtelegram_outside_translate", 0);
+        file.edit().clear().commit();
+        app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests.reset();
+        ShadowToast.reset();
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            List<Preference> rows = new ArrayList<>();
+            collect(pageOf(controller).getPreferenceScreen(), rows);
+            int toggle = indexOfKey(rows, Settings.OUTSIDE_TRANSLATE.key);
+            Preference row = rows.get(toggle + 1);
+            assertEquals(TranslateServiceEditor.KEY, row.getKey());
+            assertEquals("Translation service", String.valueOf(row.getTitle()));
+            assertEquals("Google's web translate. Tap to use an AI service with your own key.", String.valueOf(row.getSummary()));
+            assertFalse("it stores nothing itself", row.isPersistent());
+
+            assertTrue(row.getOnPreferenceClickListener().onPreferenceClick(row));
+            ShadowLooper.idleMainLooper();
+            AlertDialog editor = (AlertDialog) ShadowAlertDialog.getLatestDialog();
+            assertTrue(editor.isShowing());
+            assertEquals("Translation service", String.valueOf(shadowOf(editor).getTitle()));
+            EditText address = editor.findViewById(android.R.id.text1);
+            EditText model = editor.findViewById(android.R.id.text2);
+            EditText key = editor.findViewById(android.R.id.edit);
+            assertEquals("https://api.openai.com/v1", address.getText().toString());
+            assertEquals("gpt-4o-mini", model.getText().toString());
+            assertEquals("", key.getText().toString());
+            assertTrue("the key field is masked",
+                    (key.getInputType() & android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD) != 0);
+            assertEquals("no autofill service is offered the key", android.view.View.IMPORTANT_FOR_AUTOFILL_NO,
+                    key.getImportantForAutofill());
+
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertTrue("no key keeps the dialog", editor.isShowing());
+            assertEquals("Type your API key, or tap Use Google.", ShadowToast.getTextOfLatestToast());
+
+            address.setText("http://api.example.com/v1");
+            key.setText("sk-test-123");
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertTrue("a key never goes out over plain http", editor.isShowing());
+            assertEquals("The address has to start with https://.", ShadowToast.getTextOfLatestToast());
+            assertFalse(file.contains("ai_key"));
+
+            address.setText(" https://openrouter.ai/api/v1 ");
+            model.setText("deepseek/deepseek-chat");
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertFalse(editor.isShowing());
+            assertEquals("Translation service saved.", ShadowToast.getTextOfLatestToast());
+            assertEquals("Your AI service at openrouter.ai, model deepseek/deepseek-chat.", String.valueOf(row.getSummary()));
+            assertEquals("sk-test-123", file.getString("ai_key", null));
+            assertEquals("https://openrouter.ai/api/v1", file.getString("ai_address", null));
+            // Nothing of the service is in the settings a backup or the report reads.
+            for (String saved : app.hushtelegram.extension.shared.Utils.getContext()
+                    .getSharedPreferences(app.hushtelegram.extension.shared.settings.Setting.PREFERENCES_NAME, 0).getAll().keySet()) {
+                assertFalse(saved, saved.contains("ai_") || saved.contains("translate_service"));
+            }
+
+            assertTrue(row.getOnPreferenceClickListener().onPreferenceClick(row));
+            ShadowLooper.idleMainLooper();
+            editor = (AlertDialog) ShadowAlertDialog.getLatestDialog();
+            assertEquals("the saved key comes back masked", "sk-test-123",
+                    ((EditText) editor.findViewById(android.R.id.edit)).getText().toString());
+            editor.getButton(AlertDialog.BUTTON_NEUTRAL).performClick();
+            ShadowLooper.idleMainLooper();
+            assertFalse(editor.isShowing());
+            assertEquals("Back to Google's web translate.", ShadowToast.getTextOfLatestToast());
+            assertEquals("Google's web translate. Tap to use an AI service with your own key.", String.valueOf(row.getSummary()));
+            assertFalse("Use Google forgets the key", file.contains("ai_key"));
+        } finally {
+            file.edit().clear().commit();
+            app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests.reset();
+        }
+    }
+
+    /**
+     * Change sticker size brings a row for the size under its switch. A tap lists the four sizes
+     * with the saved one checked, and a pick saves it at once and closes the list.
+     */
+    @Test
+    public void theStickerSizeRowListsTheSizesAndSavesThePick() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        PatchFamily.inBuildForTests.remove(PatchFamily.CHANGE_STICKER_SIZE);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            assertNull(pageOf(controller).findPreference(HushTelegramPreferenceFragment.STICKER_SIZE_ROW));
+        }
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.CHANGE_STICKER_SIZE);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            List<Preference> rows = new ArrayList<>();
+            collect(pageOf(controller).getPreferenceScreen(), rows);
+            int toggle = indexOfKey(rows, Settings.CHANGE_STICKER_SIZE.key);
+            Preference size = rows.get(toggle + 1);
+            assertEquals(HushTelegramPreferenceFragment.STICKER_SIZE_ROW, size.getKey());
+            assertEquals("Look and feel", String.valueOf(size.getParent().getTitle()));
+            assertFalse("it stores nothing itself", size.isPersistent());
+
+            assertTrue(size.getOnPreferenceClickListener().onPreferenceClick(size));
+            ShadowLooper.idleMainLooper();
+            AlertDialog list = (AlertDialog) ShadowAlertDialog.getLatestDialog();
+            assertTrue(list.isShowing());
+            assertEquals("Sticker size", String.valueOf(shadowOf(list).getTitle()));
+            ListView choices = list.getListView();
+            assertEquals(4, choices.getCount());
+            List<String> labels = new ArrayList<>();
+            for (int i = 0; i < choices.getCount(); i++) labels.add(String.valueOf(choices.getAdapter().getItem(i)));
+            assertEquals(Arrays.asList("50%", "75%", "125%", "150%"), labels);
+            assertEquals("the saved size is checked", 1, choices.getCheckedItemPosition());
+
+            shadowOf(list).clickOnItem(3);
+            ShadowLooper.idleMainLooper();
+            assertFalse(list.isShowing());
+            assertEquals(150, (int) Settings.STICKER_SIZE.savedValue());
+            assertEquals("150% of Telegram's size", String.valueOf(size.getSummary()));
+            assertFalse("picking a size leaves the switch alone", Settings.CHANGE_STICKER_SIZE.savedValue());
+        } finally {
+            Settings.STICKER_SIZE.resetToDefault();
+        }
+    }
+
+    @Test
+    public void aListThatIsTooLongOrHasALongLineIsSaid() {
+        StringBuilder many = new StringBuilder();
+        for (int i = 0; i <= app.hushtelegram.extension.telegram.misc.MessageFilters.MAX_FILTERS; i++) many.append("word").append(i).append('\n');
+        assertEquals("A list holds up to 100 filters.", FilterEditor.refusal(many.toString()));
+        assertEquals("Line 2 is longer than 200 characters.",
+                FilterEditor.refusal("ok\n" + new String(new char[201]).replace('\0', 'x')));
+        assertNull(FilterEditor.refusal(""));
+        assertNull(FilterEditor.refusal("\n  \n"));
+    }
+
+    /** Its row says nothing leaves the phone until a chat or message is turned on, so off forgets them. */
+    @Test
+    public void switchingOutsideTranslateOffForgetsTheChatsTurnedOn() {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.OUTSIDE_TRANSLATE);
+        Settings.OUTSIDE_TRANSLATE.save(true);
+        app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests.reset();
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            assertTrue(OutsideTranslateForTests.toggleChat(42));
+            SwitchPreference row = (SwitchPreference) pageOf(controller).findPreference(Settings.OUTSIDE_TRANSLATE.key);
+            assertTrue(row.getOnPreferenceChangeListener().onPreferenceChange(row, Boolean.TRUE));
+            assertTrue("switching on forgot the chat", OutsideTranslateForTests.chatOn(42));
+            assertTrue(row.getOnPreferenceChangeListener().onPreferenceChange(row, Boolean.FALSE));
+            app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests.reset();
+            assertFalse(OutsideTranslateForTests.chatOn(42));
+        } finally {
+            Settings.OUTSIDE_TRANSLATE.resetToDefault();
+            app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests.reset();
         }
     }
 
@@ -776,8 +1072,8 @@ public class HushTelegramPreferenceFragmentTest {
                             + L10n.join(Arrays.asList("channel ads", "video ads", "search ads")) + ".",
                     String.valueOf(page.findPreference(Settings.HIDE_ADS.key).getSummary()));
             assertEquals("This patched app doesn't change " + L10n.join(Arrays.asList(
-                            "device statistics reports", "channel read metrics", "Premium promo views",
-                            "Premium promo taps", "Premium promo accepts", "Premium promo failures")) + ".",
+                            "channel read metrics", "Premium promo views",
+                            "Premium promo taps", "Premium promo accepts", "Premium promo failures", "dual camera reports")) + ".",
                     String.valueOf(page.findPreference(Settings.DISABLE_ANALYTICS.key).getSummary()));
         }
     }
@@ -900,6 +1196,14 @@ public class HushTelegramPreferenceFragmentTest {
             if (key.equals(rows.get(i).getKey())) return i;
         }
         return -1;
+    }
+
+    private static String pageOf(PatchFamily family) {
+        try {
+            return ManagerCategories.pageOf(family);
+        } catch (Exception unreadable) {
+            throw new AssertionError(unreadable);
+        }
     }
 
     private static HushTelegramPreferenceFragment pageOf(ActivityController<Activity> controller) {

@@ -10,6 +10,7 @@ import static org.junit.Assert.assertTrue;
 import static org.robolectric.Shadows.shadowOf;
 
 import android.app.Activity;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.net.Uri;
@@ -17,6 +18,7 @@ import android.os.SystemClock;
 import android.widget.FrameLayout;
 
 import com.facebook.common.util.TriState;
+import com.facebook.graphql.model.GraphQLComment;
 import com.facebook.graphql.model.GraphQLPagesYouMayLikeFeedUnit;
 import com.facebook.graphql.model.GraphQLStory;
 
@@ -93,6 +95,7 @@ import app.morphe.extension.facebook.media.TapToPlayForTests;
 import app.morphe.extension.facebook.menu.MenuSectionsForTests;
 import app.morphe.extension.facebook.misc.MetaUpsells;
 import app.morphe.extension.facebook.misc.AnalyticsUploads;
+import app.morphe.extension.facebook.misc.AppIcons;
 import app.morphe.extension.facebook.misc.Haptics;
 import app.morphe.extension.facebook.misc.ScreenshotDetection;
 import app.morphe.extension.facebook.misc.ScreenTransitionsForTests;
@@ -224,6 +227,7 @@ public class PausedHooksTest {
         // A Facebook start a day after the last try asks GitHub for the newest release.
         probes.put(Settings.CHECK_FOR_RELEASES, ReleaseCheckForTests::aStartAsksGitHub);
         probes.put(Settings.SAVED_SHORTCUT, SavedShortcutTest::aStartPublishes);
+        probes.put(Settings.WATCH_HISTORY_SHORTCUT, WatchHistoryShortcutTest::aStartPublishes);
         // A cold start on a phone with a screen lock covers Facebook and asks for it.
         probes.put(Settings.APP_LOCK, AppLockForTests::aStartLocks);
         return probes;
@@ -573,13 +577,16 @@ public class PausedHooksTest {
                 () -> MetaAiSummaries.holds(MetaAiSummaries.POST_SUMMARY)));
         // The comment box's check answers no for its GIF and sticker buttons, a long press on Like
         // returns before the reaction picker opens, a comment starts with its replies open, and the
-        // check under a post's comments answers no for Related groups.
+        // check under a post's comments answers no for Related groups. A comment linking to a shop,
+        // and one holding a phrase from the hide list, are left out of the comment section.
         probes.put(PatchFamily.COMMENT_SHEET_OPTIONS, Arrays.asList(
                 () -> CommentSheetOptions.holdsButton(CommentSheetOptions.GIF_BUTTON),
                 () -> CommentSheetOptions.holdsButton(CommentSheetOptions.STICKER_BUTTON),
                 CommentSheetOptions::skipReactionPicker,
                 () -> CommentSheetOptions.openReplyThreads(false),
-                () -> CommentSheetOptions.holdsBottomContent(CommentSheetOptions.RELATED_GROUPS)));
+                () -> CommentSheetOptions.holdsBottomContent(CommentSheetOptions.RELATED_GROUPS),
+                () -> CommentSheetOptions.hidesComment(new GraphQLComment("https://s.shopee.vn/9zKs")),
+                () -> CommentSheetOptions.hidesComment(new GraphQLComment("Big SPOILER inside"))));
         // A word without @ in a post or comment box looks nobody up, and a list of people left open
         // by an earlier @ is closed.
         probes.put(PatchFamily.TAG_SUGGESTIONS, Arrays.asList(
@@ -655,6 +662,11 @@ public class PausedHooksTest {
         probes.put(PatchFamily.PROGRESS_BAR, Arrays.asList(ProgressBar::keepsReelBar, ProgressBar::keepsControls));
         // A tab asked for shows without its slide.
         probes.put(PatchFamily.SCREEN_TRANSITIONS, Collections.singletonList(() -> !ScreenTransitionsForTests.slides()));
+        // The app icon benefit is answered yes, at the provider's check and at the picker's own look,
+        // and the update reset leaves a picked icon alone.
+        probes.put(PatchFamily.APP_ICONS, Arrays.asList(
+                () -> AppIcons.unlocked(AppIcons.BENEFIT), () -> AppIcons.entitled(false),
+                () -> AppIcons.keepsIcon(new ComponentName("com.facebook.katana", AppIcons.LAUNCHER + ".vaporwave_ic"))));
         // A window's secure flag comes out.
         probes.put(PatchFamily.SCREENSHOTS, Collections.singletonList(
                 () -> Screenshots.layoutFlags(0x2000) == 0));

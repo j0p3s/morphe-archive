@@ -124,6 +124,12 @@ public class Settings extends BaseSettings {
     public static final IntegerSetting PHOTO_VIDEO_SECONDS = new IntegerSetting("photo_video_seconds", 3, false,
             Setting.parent(DOWNLOAD_PHOTOS_AS_VIDEO)).withRange(1, 10);
     public static final BooleanSetting DOWNLOAD_AUDIO_TRACK = new BooleanSetting("download_audio_track", FALSE);
+    /**
+     * "original" keeps a saved sound in TikTok's own container; "opus" makes an .ogg. The row
+     * greys where the phone can't make one, and says why itself, since no switch would help.
+     */
+    public static final StringSetting DOWNLOAD_SOUND_FORMAT = new StringSetting("download_sound_format", "original",
+            false, app.morphe.extension.tiktok.download.SoundFormat::opusPossible);
     /** TikTok's watermarked copy saved when the clean file can't be fetched, instead of nothing. */
     public static final BooleanSetting DOWNLOAD_WATERMARK_FALLBACK = new BooleanSetting("download_watermark_fallback", FALSE);
     /** The video's cover, at the largest size it comes in, saved with each Download. */
@@ -137,6 +143,8 @@ public class Settings extends BaseSettings {
             "download_details_json", FALSE, false, Setting.parent(DOWNLOAD_DETAILS));
     /** The caption, creator, date and link written into the saved MP4 as tags players read. */
     public static final BooleanSetting DOWNLOAD_TAGS = new BooleanSetting("download_tags", FALSE);
+    /** The @username and the caption's first line drawn into the saved video's picture. */
+    public static final BooleanSetting DOWNLOAD_BURN_CAPTION = new BooleanSetting("download_burn_caption", FALSE);
     public static final BooleanSetting CHECK_SAVED_VIDEOS = new BooleanSetting("check_saved_videos", FALSE);
     /** A check mark on profile grids for videos in the record the check above keeps. */
     public static final BooleanSetting MARK_SAVED_VIDEOS = new BooleanSetting(
@@ -163,6 +171,7 @@ public class Settings extends BaseSettings {
     public static final StringSetting DOWNLOAD_STICKER_FORMAT = new StringSetting("download_sticker_format", "mp4");
     public static final BooleanSetting SAVE_PROFILE_PICTURE = new BooleanSetting("save_profile_picture", FALSE);
     public static final BooleanSetting SAVE_STORY = new BooleanSetting("save_story", FALSE);
+    public static final BooleanSetting SAVE_STORY_FROM_SHARE = new BooleanSetting("save_story_from_share", FALSE);
     public static final StringSetting DOUBLE_TAP_ACTION = new StringSetting("double_tap_action", "default");
     public static final StringSetting LONG_PRESS_ACTION = new StringSetting("long_press_action", "default");
     /**
@@ -214,8 +223,24 @@ public class Settings extends BaseSettings {
             new BooleanSetting("fill_video_to_screen", FALSE);
     public static final BooleanSetting UNCAP_REFRESH_RATE =
             new BooleanSetting("uncap_refresh_rate", FALSE);
+    // The four Performance patches, in the default selection because each hook asks one of these
+    // first. Off until the reader turns one on, and a paused build answers off. The splash, update
+    // and traffic hooks act on TikTok's startup tasks, so they need a restart. The animated image
+    // cache is read as each sticker or GIF is built, so it reaches the next one without one.
+    public static final BooleanSetting SKIP_SPLASH_AD = new BooleanSetting("skip_splash_ad", FALSE, true);
+    public static final BooleanSetting SKIP_UPDATE_CHECKS = new BooleanSetting("skip_update_checks", FALSE, true);
+    public static final BooleanSetting LIMIT_BACKGROUND_TRAFFIC =
+            new BooleanSetting("limit_background_traffic", FALSE, true);
+    public static final BooleanSetting DROP_ANIMATED_IMAGE_CACHE =
+            new BooleanSetting("drop_animated_image_cache", FALSE);
     /** Keep playing in the background (#52). TikTok reads its gate once a process, so a restart applies it. */
     public static final BooleanSetting BACKGROUND_PLAY = new BooleanSetting("background_play", FALSE, true);
+    /**
+     * Replay in the background (#99): a video that ends while TikTok plays in the background
+     * starts again instead of waiting on the notification's Play. Read at each end, so no restart.
+     */
+    public static final BooleanSetting BACKGROUND_REPLAY = new BooleanSetting(
+            "background_replay", FALSE, false, Setting.parent(BACKGROUND_PLAY));
     public static final BooleanSetting HIDE_LAUNCHER_SHORTCUTS =
             new BooleanSetting("hide_launcher_shortcuts", FALSE);
     /**
@@ -392,6 +417,22 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting COMMENT_BATCH_TRANSLATION = new BooleanSetting("comment_batch_translation", FALSE);
     /** Languages TikTok's automatic translation leaves alone, added to its own Don't translate list (#121). */
     public static final StringSetting DONT_AUTO_TRANSLATE_LANGUAGES = new StringSetting("dont_auto_translate_languages", "");
+    /** The one language TikTok translates into instead of its own choice, empty for TikTok's (TranslateInto). */
+    public static final StringSetting TRANSLATE_INTO = new StringSetting("translate_into", "");
+    /**
+     * TikTok's own translate button in the comment header (#85). No restart: the header asks its
+     * gates each time a comment sheet opens.
+     */
+    public static final BooleanSetting COMMENT_TRANSLATE_BUTTON = new BooleanSetting("comment_translate_button", FALSE);
+    /**
+     * Whether the toggle behind that button was last turned on by the button Hushfeed showed. No
+     * row of its own: it is how turning the switch off knows to answer that toggle off, rather
+     * than one TikTok turned on itself. Kept out of import and export for the same reason as
+     * {@link #LAUNCHER_SHORTCUTS_REMOVED}: the toggle it describes lives in TikTok's storage on
+     * one phone.
+     */
+    public static final BooleanSetting COMMENT_TRANSLATE_BUTTON_TURNED_ON =
+            new BooleanSetting("comment_translate_button_turned_on", FALSE, false, false);
     // Restart-gated: the comment keyboard builds its slot tree once per session, and the
     // trigger that adds the emoji row is asked at that moment only.
     public static final BooleanSetting HIDE_COMMENT_QUICK_REACTIONS =
@@ -429,6 +470,12 @@ public class Settings extends BaseSettings {
     /** Offline videos stay until you clear them, instead of expiring after TikTok's lifetime (#123). */
     public static final BooleanSetting KEEP_OFFLINE_VIDEOS = new BooleanSetting("keep_offline_videos", FALSE, true);
     public static final BooleanSetting SHOW_SEEKBAR = new BooleanSetting("show_seekbar", TRUE);
+    /** The time played and the video's length at the end of the progress bar (#90). */
+    public static final BooleanSetting SEEKBAR_TIME = new BooleanSetting("seekbar_time", FALSE);
+    /** A larger handle and a slightly thicker line on the progress bar at rest (#90). */
+    public static final BooleanSetting SEEKBAR_BIG_HANDLE = new BooleanSetting("seekbar_big_handle", FALSE);
+    /** A line along the bottom of a video story that can be dragged to seek (#72). */
+    public static final BooleanSetting STORY_SEEKBAR = new BooleanSetting("story_seekbar", FALSE);
     public static final BooleanSetting SHOW_SEEKBAR_THUMBNAIL = new BooleanSetting(
             "show_seekbar_thumbnail",
             TRUE
@@ -651,10 +698,18 @@ public class Settings extends BaseSettings {
     /**
      * How see-through the controls over the video are drawn, as a percentage: 100 leaves them as
      * TikTok draws them, lower fades the rail, caption, music row and tabs while they keep taking
-     * taps, and 0 hides the rail and caption the way Clear display does (#84).
+     * taps, and 0 hides the rail and caption the way Clear display does (#84). In Clear display a
+     * level between keeps the rail and caption in sight at that level and lets taps through them
+     * to the video (VideoOverlayHider, TapThroughControls).
      */
     public static final IntegerSetting FADE_CONTROLS_OPACITY =
             new IntegerSetting("fade_controls_opacity", 100).withRange(0, 100);
+    /**
+     * Burn-in guard for OLED screens (BurnInGuard): "dim" draws the controls the fade covers at a
+     * quarter after a few seconds without a touch, "dim_shift" also moves the window's content a
+     * couple of dp every two minutes. Over the feed and an opened video only.
+     */
+    public static final StringSetting BURN_IN_GUARD = new StringSetting("burn_in_guard", "off");
     public static final BooleanSetting HIDE_SHARE_GUIDE = new BooleanSetting("hide_share_guide", FALSE);
     public static final BooleanSetting HIDE_RAIL_FOLLOW = new BooleanSetting("hide_rail_follow", FALSE);
     public static final BooleanSetting HIDE_RAIL_LIKE = new BooleanSetting("hide_rail_like", FALSE);
@@ -663,9 +718,20 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting HIDE_RAIL_MUSIC = new BooleanSetting("hide_rail_music", FALSE);
     public static final BooleanSetting HIDE_RAIL_SHARE = new BooleanSetting("hide_rail_share", FALSE);
     public static final BooleanSetting HIDE_RAIL_COUNTS = new BooleanSetting("hide_rail_counts", FALSE);
+    /**
+     * Whether the music disc turns (#68, MusicDiscSpin). TikTok reads the two settings behind it
+     * once per launch, so both take a restart (Spin also lifts the holds past them, which are asked
+     * on every video). Holding it still is declared first because Spin names it as the switch that
+     * overrides it.
+     */
+    public static final BooleanSetting STOP_MUSIC_DISC_SPIN = new BooleanSetting("stop_music_disc_spin", FALSE, true);
+    public static final BooleanSetting SPIN_MUSIC_DISC = new BooleanSetting("spin_music_disc", FALSE, true,
+            Setting.parentNot(STOP_MUSIC_DISC_SPIN));
     public static final BooleanSetting HIDE_STATUS_BAR = new BooleanSetting("hide_status_bar", FALSE);
     /** LIVE rooms are an activity of their own, which Hide the status bar never reached (#38). */
     public static final BooleanSetting HIDE_STATUS_BAR_IN_LIVE = new BooleanSetting("hide_status_bar_in_live", FALSE);
+    /** Only the black strip TikTok keeps for the bar goes; the bar stays over the stream (#137). */
+    public static final BooleanSetting LIVE_UNDER_STATUS_BAR = new BooleanSetting("live_under_status_bar", FALSE);
     public static final StringSetting TOUCH_TARGET_SCALE = new StringSetting("touch_target_scale", "1");
     public static final BooleanSetting HIDE_SENSITIVE_WARNINGS = new BooleanSetting("hide_sensitive_warnings", FALSE);
     /** The Check sources banner on a video TikTok flags as unverified, and the share warnings that read it. */
@@ -776,6 +842,9 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting GHOST_HIDE_ONLINE_STATUS =
             new BooleanSetting("ghost_hide_online_status", FALSE, false, Setting.parent(GHOST_MODE));
     public static final BooleanSetting DISABLE_ANALYTICS = new BooleanSetting("disable_analytics", FALSE);
+    // Stop on-device AI profiling, in the default selection with this off. TikTok starts the
+    // engine during launch, so a restart applies it.
+    public static final BooleanSetting STOP_AI_PROFILING = new BooleanSetting("stop_ai_profiling", FALSE, true);
     // One switch per device-access patch, off by default: the patches are in the default selection,
     // so TikTok reads as it ships until the reader turns a block on. Each is read at the
     // intercepted call, so none needs a restart.
@@ -808,6 +877,12 @@ public class Settings extends BaseSettings {
     // The store those installer reads name, by package. A restart for the same reason (#112).
     public static final StringSetting STORE_IDENTITY_INSTALLER =
             new StringSetting("store_identity_installer", "com.android.vending", true);
+    // Skip passkey sign-in (#102), in the default selection with this off. Read each time a
+    // sign-in screen asks whether this phone can use passkeys, so no restart.
+    public static final BooleanSetting SKIP_PASSKEY_SIGN_IN = new BooleanSetting("skip_passkey_sign_in", FALSE);
+    // Keep the app language (#61), in the default selection with this off. TikTok's reset runs
+    // once early in each start, so a change counts from the next one, with no restart asked for.
+    public static final BooleanSetting KEEP_APP_LANGUAGE = new BooleanSetting("keep_app_language", FALSE);
     // App lock. Off until the reader turns it on, and read as each screen starts, so no restart.
     // The delay is whole minutes TikTok may spend in the background before it asks again.
     public static final BooleanSetting APP_LOCK = new BooleanSetting("app_lock", FALSE);
@@ -823,6 +898,9 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting HIDE_LIVE_RING = new BooleanSetting("hide_live_ring", FALSE);
     // Lift text length limits: comments, repost notes and the bio.
     public static final BooleanSetting LIFT_LENGTH_LIMITS = new BooleanSetting("lift_length_limits", FALSE);
+    // Enable voice comments, in the default selection with this off. A restart, since TikTok may
+    // keep the answer for a comment box it has already built.
+    public static final BooleanSetting ENABLE_VOICE_COMMENTS = new BooleanSetting("enable_voice_comments", FALSE, true);
     public static final BooleanSetting KEEP_FAVORITES_TAB =
             new BooleanSetting("keep_favorites_tab", TRUE, true);
     /** The Following and For You names above the feed; the pager under them keeps swiping (issue #32). */
@@ -965,7 +1043,7 @@ public class Settings extends BaseSettings {
                 BOTTOM_NAVIGATION_OBSERVED_TABS, DOWNLOAD_PATH, DOWNLOAD_PATHS_MIGRATED,
                 REMEMBERED_SPEED, SESSION_BUDGET_STATE, BLOCK_AUTHOR_BUTTON_POSITION,
                 LOCAL_HIDE_BUTTON_POSITION, BLOCK_SOUND_BUTTON_POSITION, NOT_INTERESTED_BUTTON_POSITION,
-                FEED_MUTE_BUTTON_POSITION,
+                FEED_MUTE_BUTTON_POSITION, COMMENT_TRANSLATE_BUTTON_TURNED_ON,
                 SHARE_ACTION_CATALOG, PROFILE_SHORTCUT_CATALOG, POPUP_LABEL_CATALOG, DIAGNOSTIC_REPORT_SALT, AUTO_STREAK_STATE,
                 // The budget's day is worked out from this hour. Paused, the budget counts
                 // nothing and holds nothing, but its record still has to name the right day.

@@ -27,6 +27,8 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.Implementation;
+import org.robolectric.annotation.Implements;
 import org.robolectric.shadow.api.Shadow;
 import org.robolectric.shadows.ShadowDownloadManager;
 import org.robolectric.shadows.ShadowToast;
@@ -44,7 +46,7 @@ import app.hushpinterest.extension.shared.settings.HushPinterestPause;
 import app.hushpinterest.extension.shared.settings.PauseForTests;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 30)
+@Config(sdk = 30, shadows = PinActionsTest.PatchedSendable.class)
 public class PinActionsTest {
     @Rule public final SettingsContextRule settingsContext = new SettingsContextRule();
     private Activity activity;
@@ -67,6 +69,8 @@ public class PinActionsTest {
         Settings.SYSTEM_SHARE.save(false);
         Settings.EXTERNAL_BROWSER.save(false);
         Settings.DOWNLOAD_PINS.save(false);
+        Settings.SAVE_IN_PINTEREST_FOLDER.resetToDefault();
+        DownloadFolder.PICKED.resetToDefault();
         PatchFamilyForTests.capabilities(null);
         PauseForTests.resume();
         Utils.setActivity(null);
@@ -220,6 +224,78 @@ public class PinActionsTest {
         assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
     }
 
+    /** #5: the folder switch sends the download to the folder Pinterest's own image save uses. */
+    @Test public void saveInPinterestsFolderQueuesInPictures100PintPins() throws Exception {
+        assertFalse("the folder switch starts off", Settings.SAVE_IN_PINTEREST_FOLDER.savedValue());
+        Settings.SAVE_IN_PINTEREST_FOLDER.save(true);
+        assertTrue(PinDownloads.start(pin, activity));
+        Method await = Utils.class.getDeclaredMethod("awaitBackgroundTasksForTests");
+        await.setAccessible(true);
+        await.invoke(null);
+        ShadowDownloadManager downloads = Shadows.shadowOf((DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE));
+        assertEquals(1, downloads.getRequestCount());
+        ShadowDownloadManager.ShadowRequest request = Shadow.extract(downloads.getRequest(0));
+        String fileName = request.getDestination().getLastPathSegment();
+        assertTrue(String.valueOf(fileName), fileName != null && fileName.matches("Pinterest_123456_[0-9]+\\.jpg"));
+        Uri expected = Uri.withAppendedPath(Uri.fromFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)),
+                "100PINT/Pins/" + fileName);
+        assertEquals(expected, request.getDestination());
+        // Android's Downloads list shows only the Download folder, so the toast names this one.
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertEquals("Download started. Check Pictures/100PINT/Pins.", ShadowToast.getTextOfLatestToast());
+        // History keeps the folder with the request, for when Android no longer has it.
+        String history = activity.getSharedPreferences(DownloadLedger.STORE, Context.MODE_PRIVATE)
+                .getString(DownloadLedger.RECORDS, "").split("\n")[0];
+        assertTrue(history, history.contains(",123456,") && history.endsWith(",P"));
+        assertEquals(DownloadFolder.PINTEREST, DownloadFolder.of(expected.toString()));
+        assertEquals(DownloadFolder.PINTEREST, DownloadFolder.of("file:///storage/emulated/0/Pictures/100PINT/Pins/" + fileName));
+        assertNull(DownloadFolder.of("file:///storage/emulated/0/Download/" + fileName));
+        assertNull(DownloadFolder.of(null));
+        Settings.SAVE_IN_PINTEREST_FOLDER.save(false);
+        assertEquals("Download started. Check Downloads.", PinDownloads.startedMessage(true, null));
+        Uri back = Shadow.<ShadowDownloadManager.ShadowRequest>extract(PinDownloads.request(
+                new PinMedia.Source("https://i.pinimg.com/originals/pin.jpg", "image/jpeg", ".jpg"), "pin.jpg")).getDestination();
+        assertEquals(Uri.withAppendedPath(Uri.fromFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)), "pin.jpg"), back);
+    }
+
+    /** #5: a folder picked by hand gets the download, its toast and its history line; Pinterest's folder still wins while on. */
+    @Test public void aPickedFolderQueuesThereAndPinterestsFolderStillWins() throws Exception {
+        DownloadFolder.PICKED.save("Pictures/Art");
+        assertTrue(PinDownloads.start(pin, activity));
+        Method await = Utils.class.getDeclaredMethod("awaitBackgroundTasksForTests");
+        await.setAccessible(true);
+        await.invoke(null);
+        ShadowDownloadManager downloads = Shadows.shadowOf((DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE));
+        assertEquals(1, downloads.getRequestCount());
+        ShadowDownloadManager.ShadowRequest request = Shadow.extract(downloads.getRequest(0));
+        String fileName = request.getDestination().getLastPathSegment();
+        assertTrue(String.valueOf(fileName), fileName != null && fileName.matches("Pinterest_123456_[0-9]+\\.jpg"));
+        assertEquals(Uri.withAppendedPath(Uri.fromFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)),
+                "Art/" + fileName), request.getDestination());
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        assertEquals("Download started. Check Pictures/Art.", ShadowToast.getTextOfLatestToast());
+        String history = activity.getSharedPreferences(DownloadLedger.STORE, Context.MODE_PRIVATE)
+                .getString(DownloadLedger.RECORDS, "").split("\n")[0];
+        assertTrue(history, history.contains(",123456,") && history.endsWith(",F:Pictures/Art"));
+        assertEquals("Pictures/Art", DownloadFolder.of(request.getDestination().toString()));
+
+        Settings.SAVE_IN_PINTEREST_FOLDER.save(true);
+        assertEquals(DownloadFolder.PINTEREST, DownloadFolder.current());
+        Settings.SAVE_IN_PINTEREST_FOLDER.save(false);
+        // The top of a standard folder, and Download's own subfolders, are places too.
+        DownloadFolder.PICKED.save("Download/Pins");
+        PinMedia.Source source = new PinMedia.Source("https://i.pinimg.com/originals/pin.jpg", "image/jpeg", ".jpg");
+        assertEquals(Uri.withAppendedPath(Uri.fromFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)),
+                "Pins/pin.jpg"), Shadow.<ShadowDownloadManager.ShadowRequest>extract(PinDownloads.request(source, "pin.jpg")).getDestination());
+        DownloadFolder.PICKED.save("DCIM");
+        assertEquals(Uri.withAppendedPath(Uri.fromFile(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DCIM)),
+                "pin.jpg"), Shadow.<ShadowDownloadManager.ShadowRequest>extract(PinDownloads.request(source, "pin.jpg")).getDestination());
+        // A saved value that no longer reads as a folder keeps Download.
+        DownloadFolder.PICKED.save("Music/Pins");
+        assertNull(DownloadFolder.current());
+        assertEquals("Download started, but its history couldn't be saved. Check DCIM.", PinDownloads.startedMessage(false, "DCIM"));
+    }
+
     @Test public void aStandInSizeQueuesTheOriginalTheMediaHostHasOrElseItself() throws Exception {
         Map<String, Object> standIn = Map.of("id", "123456", "images", Map.of(
                 "236x", Map.of("url", "https://i.pinimg.com/236x/0b/b2/5b/0bb25b05de960e1fee5da5e9c4e8f12e.jpg"),
@@ -315,19 +391,21 @@ public class PinActionsTest {
         assertEquals(0, Shadows.shadowOf(manager).getRequestCount());
     }
 
+    /** Pinterest's sendable: the id and kind its (String, int) constructor stores, 0 for a pin. */
     private static final class Sendable {
-        private final String a;
-        private final int c;
+        private final String id;
+        private final int type;
 
         private Sendable(String id, int type) {
-            a = id;
-            c = type;
+            this.id = id;
+            this.type = type;
         }
+    }
 
-        @SuppressWarnings("unused") private String e() { return a; }
-
-        @SuppressWarnings("unused") private Source c() { return Source.PIN; }
-
-        @SuppressWarnings("unused") private int d() { return c; }
+    /** The stubs as the patch writes them: a cast and one read of the constructor's field each. */
+    @Implements(value = SystemShare.class, isInAndroidSdk = false)
+    public static final class PatchedSendable {
+        @Implementation protected static String sendableId(Object sendable) { return ((Sendable) sendable).id; }
+        @Implementation protected static int sendableType(Object sendable) { return ((Sendable) sendable).type; }
     }
 }

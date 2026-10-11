@@ -20,39 +20,39 @@ About	Hakkında
 Android 11 and older don't say which links open here. Tap to open this app's settings, then Open by default.	Android 11 ve öncesi burada hangi bağlantıların açıldığını bildirmez. Bu uygulamanın ayarlarını açmak için dokunun, ardından Varsayılan olarak aç'a gidin.
 Back	Geri
 Cancel	İptal
-Loads switch choices from a saved file. You see how many switches it will change before anything is applied. It applies to all accounts.	Kayıtlı bir dosyadan anahtar seçimlerini yükler. Hiçbir şey uygulanmadan önce kaç anahtarın değişeceğini görürsünüz. Tüm hesaplar için geçerlidir.
+Loads your switches, filter lists and sticker size from a saved file. You see which switches it will change before anything is applied. It applies to all accounts.	Anahtarlarınızı, filtre listelerinizi ve çıkartma boyutunu kayıtlı bir dosyadan yükler. Hiçbir şey uygulanmadan önce hangi anahtarların değişeceğini görürsünüz. Tüm hesaplar için geçerlidir.
 Clear diagnostic data	Tanılama verilerini temizle
 Copy a short report or save the full one to Download/Morphe. Links, IDs and sign-in details are left out. Look it over before sharing.	Kısa bir rapor kopyalayın veya tam raporu Download/Morphe içine kaydedin. Bağlantılar, kimlikler ve oturum bilgileri dahil edilmez. Paylaşmadan önce göz atın.
 Copy quick report	Hızlı raporu kopyala
-Couldn't import the settings, and couldn't put back the ones you had. Check the switches on this screen.	Ayarlar içe aktarılamadı ve önceki ayarların geri yüklenemedi. Bu ekrandaki anahtarları kontrol et.
+Couldn't import or restore old settings. Check the switches.	İçe aktarma ve geri yükleme başarısız. Anahtarları kontrol et.
 Couldn't import the settings. Nothing was changed.	Ayarlar içe aktarılamadı. Hiçbir şey değiştirilmedi.
 Couldn't open that file. Nothing was changed.	Bu dosya açılamadı. Hiçbir şey değiştirilmedi.
 Couldn't open the file picker. Try again.	Dosya seçici açılamadı. Tekrar dene.
 Couldn't put back the diagnostic data. Try again.	Tanılama verileri geri getirilemedi. Tekrar dene.
 Couldn't save the settings file. Try again.	Ayar dosyası kaydedilemedi. Tekrar dene.
 Couldn't start that. Try again in a moment.	Bu işlem başlatılamadı. Birazdan tekrar dene.
-Couldn't start the report export. Try again shortly.	Rapor dışa aktarımı başlatılamadı. Birazdan tekrar dene.
+Couldn't start the report export. Try again in a moment.	Rapor dışa aktarımı başlatılamadı. Birazdan tekrar dene.
 Couldn't turn HushTelegram back on. Try again.	HushTelegram yeniden açılamadı. Tekrar dene.
 Debug logging	Hata ayıklama günlüğü
 Diagnostic data cleared. Tap again to put it back.	Tanılama verileri temizlendi. Geri getirmek için tekrar dokun.
 Diagnostic data put back.	Tanılama verileri geri getirildi.
 Diagnostic report copied to the clipboard.	Tanılama raporu panoya kopyalandı.
 Clears the activity log and patch checks that a report would include.	Bir raporda yer alacak etkinlik günlüğünü ve yama denetimlerini temizler.
-Every switch except Debug logging acts as if it were off. Edits made when you patched stay in. Your choices stay saved.	Hata ayıklama günlüğü dışındaki her anahtar kapalıymış gibi davranır. Yamalama sırasında yapılan değişiklikler geçerli kalır. Seçimleriniz kayıtlı kalır.
+Every switch except Debug logging acts as if it were off. Your choices stay saved. Edits made when you patched stay in.	Hata ayıklama günlüğü dışındaki her anahtar kapalıymış gibi davranır. Seçimleriniz kayıtlı kalır. Yamalama sırasında yapılan değişiklikler geçerli kalır.
 Export diagnostic report	Tanılama raporunu dışa aktar
 Export settings	Ayarları dışa aktar
 After Telegram restarts, every switch except Debug logging acts as if it were off. Your choices stay saved. Edits made when you patched stay in.	Telegram yeniden başlatıldıktan sonra Hata ayıklama günlüğü dışındaki her anahtar kapalıymış gibi davranır. Seçimleriniz kayıtlı kalır. Yamalama sırasında yapılan değişiklikler geçerli kalır.
 Hide ads	Reklamları gizle
 Links, updates, backup and more	Bağlantılar, güncellemeler, yedekleme ve daha fazlası
 Privacy	Gizlilik
-Saves your switch choices to a file, for all accounts in this Telegram app. Pause, Debug logging and the update check aren't included.	Anahtar seçimlerinizi bir dosyaya kaydeder; bu Telegram uygulamasındaki tüm hesaplar için geçerlidir. Duraklat, Hata ayıklama günlüğü ve güncelleme denetimi dahil değildir.
-Settings exported. The app holding the file wouldn't let HushTelegram read it back, so it wasn't checked.	Ayarlar dışa aktarıldı. Dosyayı tutan uygulama HushTelegram'un onu geri okumasına izin vermedi, bu yüzden kontrol edilmedi.
-The app holding that file is taking too long, so HushTelegram stopped waiting. Nothing was changed.	O dosyayı tutan uygulama çok uzun sürüyor, bu yüzden HushTelegram beklemeyi bıraktı. Hiçbir şey değiştirilmedi.
-The app holding the last settings file still hasn't answered. Try again later.	Son ayar dosyasını tutan uygulama hâlâ yanıt vermedi. Daha sonra tekrar dene.
-The app holding the settings file is taking too long, so HushTelegram stopped waiting. That app may still finish saving it, so check the file before you rely on it.	Ayar dosyasını tutan uygulama çok uzun sürüyor, bu yüzden HushTelegram beklemeyi bıraktı. O uygulama kaydetmeyi yine de bitirebilir, bu yüzden dosyaya güvenmeden önce onu kontrol et.
+Saves your switches, filter lists and sticker size to a file, for all accounts in this Telegram app. Pause, Debug logging, the HushTelegram release check, UnifiedPush and Folders by chat type stay out.	Anahtarlarınızı, filtre listelerinizi ve çıkartma boyutunu bir dosyaya kaydeder; bu Telegram uygulamasındaki tüm hesaplar için geçerlidir. Duraklat, Hata ayıklama günlüğü, HushTelegram sürüm denetimi, UnifiedPush ve Sohbet türüne göre klasörler dahil edilmez.
+Settings exported but not checked. Open the file to make sure.	Ayarlar dışa aktarıldı ama kontrol edilmedi. Dosyayı açıp kontrol et.
+That app is slow to answer. Nothing was changed. Try again.	Bu uygulama geç yanıt veriyor. Hiçbir şey değiştirilmedi. Tekrar dene.
+That file's app still hasn't answered. Try again later.	O dosyanın uygulaması hâlâ yanıt vermedi. Sonra tekrar dene.
+That app is slow. It may still save the file, so check it.	Bu uygulama yavaş. Dosyayı hâlâ kaydediyor olabilir, o yüzden kontrol et.
 The file %1$s couldn't be removed. Delete it from %2$s, then tap Resume again.	%1$s dosyası kaldırılamadı. Onu %2$s içinden sil, sonra yeniden Devam et'e dokun.
-The settings file was saved, but what's in it doesn't match what was written. Save it again as a new file.	Ayar dosyası kaydedildi ama içeriği yazılanla eşleşmiyor. Yeni bir dosya olarak yeniden kaydedin.
-Until you resume, every switch except Debug logging acts as if it were off. Edits made when you patched stay in.	Devam edene kadar Hata ayıklama günlüğü dışındaki her anahtar kapalıymış gibi davranır. Yamalama sırasında yapılan değişiklikler geçerli kalır.
+Saved, but the file doesn't match. Save it again as a new file.	Kaydedildi ama dosya eşleşmiyor. Yeni bir dosya olarak tekrar kaydet.
+Until you resume, every switch except Debug logging acts as if it were off. Your choices stay saved. Edits made when you patched stay in.	Devam edene kadar Hata ayıklama günlüğü dışındaki her anahtar kapalıymış gibi davranır. Seçimleriniz kayıtlı kalır. Yamalama sırasında yapılan değişiklikler geçerli kalır.
 Full report saved to %1$s	Tam rapor şuraya kaydedildi: %1$s
 The GPL-3.0 license, and credits for the projects HushTelegram is built on	GPL-3.0 lisansı ve HushTelegram'ın dayandığı projelerin teşekkür notları
 HushTelegram is on	HushTelegram açık
@@ -82,29 +82,29 @@ Couldn't reach GitHub. Try again later.	GitHub'a ulaşılamadı. Daha sonra tekr
 GitHub is blocking checks from this network for now. Try again later.	GitHub şu an bu ağdan gelen denetimleri engelliyor. Daha sonra tekrar deneyin.
 GitHub sent a reply HushTelegram couldn't read. Try again later.	GitHub, HushTelegram'ın okuyamadığı bir yanıt gönderdi. Daha sonra tekrar deneyin.
 Saving the settings file	Ayar dosyası kaydediliyor
-Set when you patched	Yamaladığında ayarlananlar
 Settings couldn't open	Ayarlar açılamadı
-Settings couldn't refresh completely. Reopen settings and try again.	Ayarlar tamamen yenilenemedi. Ayarları yeniden açıp tekrar dene.
+Settings couldn't refresh. Reopen settings and try again.	Ayarlar yenilenemedi. Ayarları yeniden açıp tekrar dene.
 Settings exported.	Ayarlar dışa aktarıldı.
 Settings imported. %1$d switch changed.	Ayarlar içe aktarıldı. %1$d anahtar değişti.
 Settings imported. %1$d switches changed.	Ayarlar içe aktarıldı. %1$d anahtar değişti.
 Source code and issues	Kaynak kodu ve sorunlar
 Stays in while paused	Duraklatılsa da devrede kalır
 Tap to turn it back on.	Yeniden açmak için dokun.
-That file is too large to be a settings file. Nothing was changed.	Bu dosya bir ayar dosyası olamayacak kadar büyük. Hiçbir şey değiştirilmedi.
-That file isn't readable text, so it may have been damaged on the way. Nothing was changed.	Bu dosya okunabilir bir metin değil, aktarım sırasında hasar görmüş olabilir. Hiçbir şey değiştirilmedi.
-That file lists a setting twice, so there's no telling which value to use. Nothing was changed.	Bu dosyada bir ayar iki kez geçiyor, bu yüzden hangi değerin kullanılacağı belli değil. Hiçbir şey değiştirilmedi.
+That file is too big for a settings file. Nothing was changed.	Bu dosya bir ayar dosyası için çok büyük. Hiçbir şey değiştirilmedi.
+That file isn't readable text. Nothing was changed.	Bu dosya okunabilir bir metin değil. Hiçbir şey değiştirilmedi.
+That file lists a setting twice. Nothing was changed.	Bu dosya bir ayarı iki kez listeliyor. Hiçbir şey değiştirilmedi.
 That isn't a HushTelegram settings file. Nothing was changed.	Bu bir HushTelegram ayar dosyası değil. Hiçbir şey değiştirilmedi.
-That settings file holds a value HushTelegram can't read. Nothing was changed.	Bu ayar dosyasında HushTelegram'un okuyamadığı bir değer var. Hiçbir şey değiştirilmedi.
-That settings file is damaged or only partly downloaded. Nothing was changed.	Bu ayar dosyası hasarlı ya da yalnızca bir kısmı indirilmiş. Hiçbir şey değiştirilmedi.
-That settings file was written by a newer HushTelegram than this one. Nothing was changed.	Bu ayar dosyası, HushTelegram'un bu sürümünden daha yeni bir sürümüyle oluşturulmuş. Hiçbir şey değiştirilmedi.
-The diagnostic report couldn't be saved yet. Try again in a moment.	Tanılama raporu henüz kaydedilemedi. Birazdan tekrar dene.
+A value in that file can't be read. Nothing was changed.	Bu dosyadaki bir değer okunamıyor. Hiçbir şey değiştirilmedi.
+That file is damaged. Download it again. Nothing was changed.	Bu dosya bozuk. Yeniden indir. Hiçbir şey değiştirilmedi.
+Update HushTelegram to read that file. Nothing was changed.	Bu dosyayı okumak için HushTelegram'ı güncelle. Hiçbir şey değiştirilmedi.
+The report couldn't be saved yet. Try again in a moment.	Rapor henüz kaydedilemedi. Birazdan tekrar dene.
 The diagnostic report couldn't be saved. Try again.	Tanılama raporu kaydedilemedi. Tekrar dene.
 The file %1$s couldn't be removed. Delete it from %2$s to turn HushTelegram back on.	%1$s dosyası kaldırılamadı. HushTelegram'u yeniden açmak için onu %2$s içinden sil.
-That setting couldn't be updated. The switch shows the value that is saved.	Bu ayar güncellenemedi. Anahtar kayıtlı değeri gösterir.
+Couldn't remove %1$s. Delete it by hand.	%1$s kaldırılamadı. Elle sil.
+Couldn't save that. It's back to the saved value. Try again.	Kaydedilemedi. Kayıtlı değere dönüldü. Tekrar dene.
 There's no diagnostic data to clear.	Temizlenecek tanılama verisi yok.
 There's no diagnostic data to put back.	Geri getirilecek tanılama verisi yok.
-This phone has no file picker, so there's no way to choose a file here.	Bu telefonda dosya seçici yok, bu yüzden burada dosya seçmenin bir yolu yok.
+This phone has no file picker, so you can't choose a file here.	Bu telefonda dosya seçici yok, o yüzden dosya seçemezsin.
 Version	Sürüm
 Records what HushTelegram does and shows error messages, to help with a bug report. Leave it off for everyday use.	HushTelegram'ın yaptıklarını kaydeder ve hata mesajlarını gösterir; bir hata raporuna yardımcı olur. Günlük kullanımda kapalı bırakın.
 You paused HushTelegram.	HushTelegram'u duraklattın.
@@ -112,7 +112,7 @@ Your switches already match that file, so nothing will change.	Anahtarların zat
 Copy a short report to the clipboard.	Kısa raporu panoya kopyalar.
 Save the full report in Download/Morphe.	Tam raporu Download/Morphe konumuna kaydeder.
 Settings imported.	Ayarlar içe aktarıldı.
-No app on this phone can open the link. The address is %1$s.	Bu telefondaki hiçbir uygulama bağlantıyı açamıyor. Adres: %1$s.
+Can't open the link. Go to %1$s.	Bağlantı açılamıyor. %1$s adresine git.
 # context: Separate pages under More settings. Settings backup contains export and import; Diagnostics contains logging and diagnostic data controls.
 Settings backup	Ayar yedeği
 Diagnostics	Tanılama
@@ -139,11 +139,10 @@ Android didn't say which links open here. Tap to check in Android's settings.	An
 Selecting links by hand	Bağlantıları elle seçme
 
 A change here applies after Telegram restarts.	Buradaki bir değişiklik Telegram yeniden başladıktan sonra geçerli olur.
-Android opens t.me links in this app only if you select their addresses on its Open by default page. Other link settings don't change.	Android, t.me bağlantılarını bu uygulamada yalnızca adreslerini uygulamanın Varsayılan olarak aç sayfasında seçerseniz açar. Diğer bağlantı ayarları değişmez.
+Android opens t.me links in this Telegram app only if you select their addresses on its Open by default page. Other link settings don't change.	Android, t.me bağlantılarını bu Telegram uygulamasında yalnızca adreslerini uygulamanın Varsayılan olarak aç sayfasında seçerseniz açar. Diğer bağlantı ayarları değişmez.
 Android verified this app for Telegram's web addresses, so their links open here.	Android bu uygulamayı Telegram'ın web adresleri için doğruladı, bu yüzden bağlantıları burada açılır.
-Android's settings for this app didn't open. Open App info from Telegram's icon, then Open by default.	Bu uygulamanın Android ayarları açılamadı. Telegram simgesinden Uygulama bilgileri'ni, ardından Varsayılan olarak aç'ı açın.
+App settings didn't open. Try App info, then Open by default.	Ayarlar açılmadı. Uygulama bilgisi, sonra Varsayılan olarak aç'ı dene.
 Removes sponsored messages in channels, sponsored accounts in search and ads in videos. They're never loaded, so none count as seen.	Kanallardaki sponsorlu mesajları, aramadaki sponsorlu hesapları ve videolardaki reklamları kaldırır. Hiçbiri yüklenmez, bu yüzden hiçbiri görülmüş sayılmaz.
-Chats	Sohbetler
 HushTelegram %1$s on Telegram %2$s	Telegram %2$s üzerinde HushTelegram %1$s
 HushTelegram %1$s is made for Telegram %2$s.	HushTelegram %1$s, Telegram %2$s için hazırlandı.
 HushTelegram pauses when Telegram restarts.	HushTelegram, Telegram yeniden başladığında duraklatılır.
@@ -161,7 +160,6 @@ Stop usage reports	Kullanım raporlarını durdur
 channel ads	kanal reklamları
 video ads	video reklamları
 search ads	arama reklamları
-device statistics reports	cihaz istatistik raporları
 channel read metrics	kanal okuma ölçümleri
 This patched app doesn't change %1$s.	Yamalanmış bu uygulamada %1$s değişmedi.
 This patched app changes %1$s but not %2$s.	Yamalanmış bu uygulamada %1$s değişti, %2$s değişmedi.
@@ -185,10 +183,18 @@ call debug reports	arama hata ayıklama raporları
 call log file uploads	arama günlük dosyası yüklemeleri
 call log reports	arama günlük raporları
 Hide Premium, gifts and Stars	Premium, hediyeler ve Stars'ı gizle
-Removes Premium, Stars, My Grams, Business and Send a Gift from Settings, Gifts tabs on profiles, and the Gift button in channels.	Premium, Stars, My Grams, Business ve Hediye Gönder'i Ayarlar'dan, profillerdeki Hediyeler sekmelerini ve kanallardaki Hediye düğmesini kaldırır.
+Removes Premium, Stars, My Grams, Wallet, Business and Send a Gift from Settings, Wallet and Send Gram from the chat, profile and link menus, Gifts tabs on profiles, the Gift button in channels, and Premium stickers, their effects and Premium emoji packs if you don't have Premium.	Premium, Stars, My Grams, Cüzdan, Business ve Hediye Gönder'i Ayarlar'dan, Cüzdan ve Gram Gönder'i sohbet, profil ve bağlantı menülerinden, profillerdeki Hediyeler sekmelerini, kanallardaki Hediye düğmesini ve Premium'unuz yoksa Premium çıkartmaları, efektlerini ve Premium emoji paketlerini kaldırır.
 Settings sales rows	Ayarlar'daki satış seçenekleri
 profile Gifts tabs	profil Hediyeler sekmeleri
 channel Gift button	kanal Hediye düğmesi
+attach menu Wallet button	ek menüsündeki Cüzdan düğmesi
+chat list menu Wallet item	sohbet listesi menüsündeki Cüzdan öğesi
+profile menu Send Gram item	profil menüsündeki Gram Gönder öğesi
+TON link Send Gram item	TON bağlantısındaki Gram Gönder öğesi
+Gram transfer Send Gram item	Gram transferindeki Gram Gönder öğesi
+Premium stickers in the keyboard and packs	klavye ve paketlerdeki Premium çıkartmalar
+Premium sticker effects	Premium çıkartma efektleri
+Premium emoji packs in the emoji keyboard	emoji klavyesindeki Premium emoji paketleri
 Hide promotional banners	Tanıtım afişlerini gizle
 Hides the Premium, birthday and low Stars balance banners above your chat list. Account security notices and other suggestions still show.	Sohbet listenizin üstündeki Premium, doğum günü ve düşük Stars bakiyesi afişlerini gizler. Hesap güvenliği bildirimleri ve diğer öneriler görünmeye devam eder.
 promotional suggestions	tanıtım önerileri
@@ -210,6 +216,7 @@ Premium promo views	Premium tanıtım görüntülemeleri
 Premium promo taps	Premium tanıtım dokunuşları
 Premium promo accepts	Premium tanıtım onayları
 Premium promo failures	Premium tanıtım hataları
+dual camera reports	çift kamera raporları
 Firebase crash reports	Firebase çökme raporları
 Firebase session reports	Firebase oturum raporları
 Accounts	Hesaplar
@@ -304,6 +311,15 @@ Ask before sending a sticker	Çıkartma göndermeden önce sor
 Asks Send or Cancel before a sticker you tap goes into a chat. Cancel drops it. Scheduled stickers go out without asking.	Dokunduğunuz bir çıkartma sohbete girmeden önce Gönder veya İptal sorar. İptal onu atar. Zamanlanmış çıkartmalar sormadan gider.
 Turn off beta debug logs	Beta hata ayıklama günlüklerini kapat
 Telegram Beta keeps debug logs on your phone all the time, its connection log included, and its own debug menu can't stop that. This stops them. Logs already saved stay until you clear them, and the regular build doesn't keep them, so nothing changes there. Restart Telegram to see the change.	Telegram Beta, bağlantı günlüğü dahil, telefonunuza sürekli hata ayıklama günlükleri yazar ve kendi hata ayıklama menüsü bunu durduramaz. Bu ayar onları durdurur. Önceden kaydedilmiş günlükler siz silene kadar kalır, normal sürüm ise bu günlükleri tutmaz, yani orada hiçbir şey değişmez. Değişikliği görmek için Telegram'ı yeniden başlatın.
+Translate with an outside service	Harici bir hizmetle çevir
+Adds Translate here to a message's menu and Translate this chat to a chat's menu, using Google's web translate in place of Telegram's Premium translation. The text you ask to translate is sent to Google, one message at a time, and nothing leaves your phone until you turn a chat or message on.	Bir mesajın menüsüne Burada çevir, bir sohbetin menüsüne Bu sohbeti çevir ekler ve Telegram'ın Premium çevirisi yerine Google'ın web çevirisini kullanır. Çevirmesini istediğiniz metin birer mesaj olarak Google'a gönderilir ve siz bir sohbeti ya da mesajı açana kadar telefonunuzdan hiçbir şey çıkmaz.
+Translate here	Burada çevir
+Show original	Orijinali göster
+Translate this chat	Bu sohbeti çevir
+This chat will be translated	Bu sohbet çevrilecek
+This chat shows the original messages	Bu sohbet orijinal mesajları gösteriyor
+(Translated. Long-press for the original.)	(Çevrildi. Orijinali için uzun basın.)
+Translation isn't available right now	Çeviri şu anda kullanılamıyor
 Ask before sending a GIF	GIF göndermeden önce sor
 Asks Send or Cancel before a GIF you tap goes into a chat. Cancel drops it. Scheduled GIFs go out without asking.	Dokunduğunuz bir GIF sohbete girmeden önce Gönder veya İptal sorar. İptal onu atar. Zamanlanmış GIF'ler sormadan gider.
 Ask before sending a voice or video message	Sesli veya görüntülü mesaj göndermeden önce sor
@@ -402,3 +418,146 @@ ID copied	Kimlik kopyalandı
 Data center %1$s	Veri merkezi %1$s
 Copy data center %1$s	Veri merkezini kopyala %1$s
 Data center copied	Veri merkezi kopyalandı
+# context: titles of the settings pages that replaced the Chats page, after Morphe Manager's categories.
+Ads	Reklamlar
+Chat list	Sohbet listesi
+Conversations	Konuşmalar
+Playback	Oynatma
+Look and feel	Görünüm ve kullanım
+# context: Hide channel bar buttons and Hide Send as button. Search, Direct messages, Info, Mute and Join are Telegram's own button names in a channel; Send as is Telegram's name for the picture that picks who you post as.
+Hide channel bar buttons	Kanal çubuğu düğmelerini gizle
+Search, Direct messages and Info leave the bar at the bottom of a channel. Mute and Join stay, and tapping the channel's name at the top still opens its info. A channel picks this up the next time you open it.	Ara, Doğrudan mesajlar ve Bilgi, bir kanalın altındaki çubuktan kalkar. Sessize al ve Katıl kalır, üstteki kanal adına dokunmak da bilgilerini açmaya devam eder. Bir kanal bunu bir sonraki açışınızda uygular.
+Hide Send as button	Farklı gönder düğmesini gizle
+Your picture next to the message box goes away in groups and channels where you could post as a channel, while you're posting as yourself. Once you pick a channel it shows again, so you can always see who you're posting as. To pick one, turn this off first. A chat picks this up the next time you open it.	Kanal olarak paylaşım yapabileceğiniz grup ve kanallarda, kendi adınıza paylaşırken mesaj kutusunun yanındaki resminiz kaybolur. Bir kanal seçtiğinizde yeniden görünür, böylece kimin adına paylaştığınızı her zaman görürsünüz. Bir kanal seçmek için önce bunu kapatın. Bir sohbet bunu bir sonraki açışınızda uygular.
+# context: Hide messages by keyword. A filter is one line of text the person writes; a line in slashes is a regular expression. The settings page has one list for groups and one for channels, each edited in a dialog with Save and Cancel. Keep /crypto|airdrop/ exactly as written.
+Hide messages by keyword	Mesajları anahtar kelimeye göre gizle
+Messages in groups and channels that match one of your filters are left out when you open the chat. Private chats and your own messages stay as they are. Nothing is deleted, and your filters stay on this phone.	Gruplarda ve kanallarda filtrelerinizden biriyle eşleşen mesajlar, sohbeti açtığınızda gösterilmez. Özel sohbetler ve kendi mesajlarınız olduğu gibi kalır. Hiçbir şey silinmez ve filtreleriniz bu telefonda kalır.
+Filters for groups	Gruplar için filtreler
+Filters for channels	Kanallar için filtreler
+No filters yet.	Henüz filtre yok.
+%1$d filter.	%1$d filtre.
+%1$d filters.	%1$d filtre.
+A list holds up to %1$d filters.	Bir liste en fazla %1$d filtre alır.
+Line %1$d is longer than %2$d characters.	%1$d. satır %2$d karakterden uzun.
+Line %1$d isn't a valid regex. Fix it or take off the slashes.	%1$d. satır geçerli bir regex değil. Düzelt ya da eğik çizgileri kaldır.
+Line %1$d may be slow on long messages. Try a simpler pattern.	%1$d. satır uzun mesajlarda yavaş olabilir. Daha basit bir kalıp dene.
+This list is too long for a settings file. Remove a few lines.	Bu liste ayar dosyası için çok uzun. Birkaç satırı kaldır.
+One filter a line	Her satıra bir filtre
+Text on a line matches wherever it appears in a message. A line in slashes, like /crypto|airdrop/, is a regular expression. Case doesn't matter.	Bir satırdaki metin, mesajın neresinde geçerse geçsin eşleşir. Eğik çizgiler arasındaki bir satır, örneğin /crypto|airdrop/, bir düzenli ifadedir. Büyük ve küçük harf fark etmez.
+Save	Kaydet
+Couldn't save the filters. Try again in a moment.	Filtreler kaydedilemedi. Birazdan tekrar deneyin.
+Filters saved.	Filtreler kaydedildi.
+%1$d list of message filters will change.	%1$d mesaj filtresi listesi değişecek.
+%1$d lists of message filters will change.	%1$d mesaj filtresi listesi değişecek.
+# context: Change sticker size. The person picks a size for stickers in chats as a percent of Telegram's own size (50%, 75%, 125% or 150%), from a list that opens when they tap the Sticker size row. %1$s is that percent, already written the way the language writes one, for example 75%.
+Change sticker size	Çıkartma boyutunu değiştir
+Stickers in chats show at the size you pick below. Animated emoji and dice keep Telegram's size. A chat picks this up the next time you open it.	Sohbetlerdeki çıkartmalar aşağıda seçtiğiniz boyutta gösterilir. Hareketli emojiler ve zarlar Telegram'ın boyutunu korur. Bir sohbet bunu bir sonraki açışınızda uygular.
+Sticker size	Çıkartma boyutu
+%1$s of Telegram's size	Telegram boyutunun %1$s kadarı
+Couldn't save the size. Try again in a moment.	Boyut kaydedilemedi. Birazdan tekrar deneyin.
+The sticker size will change.	Çıkartma boyutu değişecek.
+# context: short headings that split the Conversations and Look and feel settings pages into groups of switches. Each names what the switches under it change: things inside an open chat, the menu a message opens on a long press, sending, the attachment menu's camera and gallery, translation, messages hidden from a chat, messages others deleted, the theme, how messages and stickers look, profiles, touch feedback and the keyboard, and rows or buttons hidden to reduce clutter.
+In a chat	Sohbette
+Message menu	Mesaj menüsü
+Sending	Gönderme
+Attachment menu	Ek menüsü
+Translation	Çeviri
+Hidden messages	Gizlenen mesajlar
+Deleted messages	Silinen mesajlar
+Theme	Tema
+Messages and stickers	Mesajlar ve çıkartmalar
+Profiles	Profiller
+Touch and keyboard	Dokunma ve klavye
+Less clutter	Daha sade
+# context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
+Support HushTelegram	HushTelegram'u destekle
+# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
+Buy me a coffee on Ko-fi	Ko-fi'de bana bir kahve ısmarla
+# context: Faster downloads, a switch on the Playback page. Telegram downloads a file in pieces; this makes them bigger and asks for more at once.
+Faster downloads	Daha hızlı indirmeler
+# context: that switch's summary. KB is kilobytes. "Goes back to small ones" means Telegram drops to the small pieces on its own if a big one fails.
+Files download in 512 KB pieces, 8 at a time, instead of 128 KB pieces 4 at a time. If a big piece fails, Telegram goes back to small ones. The next download picks this up.	Dosyalar 128 KB'lık parçalar halinde 4'er 4'er değil, 512 KB'lık parçalar halinde 8'er 8'er indirilir. Büyük bir parça başarısız olursa Telegram küçük parçalara geri döner. Bir sonraki indirme bunu hemen kullanır.
+# context: Translate with an outside service, on the Conversations page. A row under that switch, and the title of the dialog it opens: where the text to translate is sent.
+Translation service	Çeviri hizmeti
+Google's web translate. Tap to use an AI service with your own key.	Google'ın web çevirisi. Kendi anahtarınla bir yapay zekâ hizmeti kullanmak için dokun.
+# context: that row's summary once an AI service is set. %1$s is the service's host name, like api.openai.com, and %2$s its model name, like gpt-4o-mini.
+Your AI service at %1$s, model %2$s.	%1$s adresindeki yapay zekâ hizmetin, model %2$s.
+# context: hints in the three fields of that dialog: the web address of the AI service, the model to ask, and the secret key the service gave the person.
+Service address	Hizmet adresi
+Model	Model
+API key	API anahtarı
+# context: the dialog's explanation. OpenAI, OpenRouter, DeepSeek and Groq are company names and stay as they are.
+With a key, the text you translate goes to this AI service instead of Google. Any service that takes OpenAI's chat format works, like OpenAI, OpenRouter, DeepSeek or Groq. The key stays on this phone and never goes in a settings file.	Bir anahtarla, çevirdiğin metin Google yerine bu yapay zekâ hizmetine gider. OpenAI'ın sohbet biçimini kabul eden her hizmet çalışır, örneğin OpenAI, OpenRouter, DeepSeek veya Groq. Anahtar bu telefonda kalır ve hiçbir zaman bir ayar dosyasına girmez.
+# context: a dialog button that goes back to Google's free web translate and forgets the key. "Use Google" is also quoted in a message below.
+Use Google	Google'ı kullan
+Couldn't save the translation service. Try again in a moment.	Çeviri hizmeti kaydedilemedi. Birazdan tekrar dene.
+Translation service saved.	Çeviri hizmeti kaydedildi.
+Back to Google's web translate.	Yeniden Google'ın web çevirisi.
+# context: why the dialog can't save yet. https:// stays as it is.
+Type your API key, or tap Use Google.	API anahtarını yaz ya da Google'ı kullan seçeneğine dokun.
+Type a model name.	Bir model adı yaz.
+Take the spaces out of the address, model and key.	Adres, model ve anahtardaki boşlukları kaldır.
+The address has to start with https://.	Adres https:// ile başlamalı.
+# context: a short toast when the AI service turns the key down (HTTP 401 or 403).
+Your AI service didn't accept the key	Yapay zekâ hizmetin anahtarı kabul etmedi
+# context: a switch on the Notifications page. UnifiedPush is the name of an open notification standard and stays as it is.
+UnifiedPush notifications	UnifiedPush bildirimleri
+# context: that switch's summary. Firebase is Google's notification service and ntfy is an app; both names stay as they are.
+For phones where Firebase notifications don't arrive. Telegram signs up an address from a UnifiedPush app like ntfy, and Telegram's servers call it to wake Telegram when something arrives. The messages still come from Telegram itself. Turned off, Telegram goes back to Firebase the next time it starts.	Firebase bildirimlerinin gelmediği telefonlar için. Telegram, ntfy gibi bir UnifiedPush uygulamasından aldığı bir adresi kaydeder ve Telegram'ın sunucuları bir şey geldiğinde Telegram'ı uyandırmak için bu adresi çağırır. Mesajlar yine Telegram'ın kendisinden gelir. Kapatılırsa Telegram bir sonraki açılışta Firebase'e döner.
+# context: a row under that switch, and the title of the list it opens: which installed UnifiedPush app, like ntfy, delivers the notifications.
+Push app	Push uygulaması
+Install a UnifiedPush app like ntfy, then come back here.	ntfy gibi bir UnifiedPush uygulaması yükle, sonra buraya geri dön.
+# context: that row's summary. %1$s is the app's name, like ntfy. "The switch" is the UnifiedPush notifications switch above the row.
+%1$s. Turn the switch on to sign up with it.	%1$s. Onunla kaydolmak için anahtarı aç.
+%1$s ended the sign-up. Turn the switch off and on to sign up again.	%1$s kaydı sonlandırdı. Yeniden kaydolmak için anahtarı kapatıp aç.
+%1$s turned the sign-up down. Check that it allows UnifiedPush.	%1$s kaydı reddetti. UnifiedPush'a izin verip vermediğini kontrol et.
+# context: the row's summary once signed up: Telegram's servers wake Telegram up through that app.
+Telegram's wake-ups come through %1$s.	Telegram %1$s üzerinden uyandırılıyor.
+Signing up with %1$s…	%1$s ile kaydolunuyor…
+# context: a toast when the row is tapped and no UnifiedPush app is installed.
+Install a UnifiedPush app like ntfy first.	Önce ntfy gibi bir UnifiedPush uygulaması yükle.
+# context: the Push app row's summary when several UnifiedPush apps are installed and none is picked yet. Tapping the row opens the list.
+Tap to pick which UnifiedPush app to use.	Hangi UnifiedPush uygulamasının kullanılacağını seçmek için dokun.
+# context: Save downloaded files, a switch on the Playback page. It copies each downloaded file or song to the phone's shared Download/Telegram folder.
+Save downloaded files	İndirilen dosyaları kaydet
+# context: that switch's summary. "Download/Telegram" is a folder path and stays as it is. Chats that don't allow saving are ones whose owner turned on Telegram's content protection.
+Each file or song you download also goes to Download/Telegram on your phone, where file managers and other apps can open it. Files from secret chats and chats that don't allow saving stay in Telegram.	İndirdiğin her dosya ve şarkı telefonundaki Download/Telegram klasörüne de kopyalanır. Dosya yöneticileri ve diğer uygulamalar onu orada açabilir. Gizli sohbetlerden ve kaydetmeye izin vermeyen sohbetlerden gelen dosyalar Telegram'da kalır.
+# context: Folders by chat type, a switch on the Chat list page. Turning it on makes Telegram chat folders for each kind of chat.
+Folders by chat type	Sohbet türüne göre klasörler
+# context: that switch's summary. Private, Groups, Channels and Bots are the folder names, use the same words as their own entries.
+Turning this on makes Private, Groups, Channels and Bots folders, as tabs above the chat list and on your other devices. Turning it off removes the ones it made, unless you renamed or changed them.	Açınca Özel, Gruplar, Kanallar ve Botlar klasörleri oluşturulur. Sohbet listesinin üstünde sekme olarak ve diğer cihazlarında da görünürler. Kapatınca oluşturduğu klasörler kaldırılır, yeniden adlandırdığın ya da değiştirdiğin klasörler kalır.
+# context: a chat folder name for one-to-one chats with people. Telegram allows at most 12 characters.
+Private	Özel
+# context: a chat folder name for group chats. At most 12 characters.
+Groups	Gruplar
+# context: a chat folder name for channels. At most 12 characters.
+Channels	Kanallar
+# context: a chat folder name for chats with bots. At most 12 characters.
+Bots	Botlar
+# context: a toast after flipping the Folders by chat type switch while HushTelegram is paused.
+HushTelegram is paused, so your folders stay as they are.	HushTelegram duraklatıldı, klasörlerin olduğu gibi kalıyor.
+# context: a toast when the folder switch is flipped before signing in.
+Sign in to Telegram first.	Önce Telegram'a giriş yap.
+# context: a toast when the folder switch is flipped before Telegram has loaded the folder list.
+Telegram is still loading your folders. Try again in a moment.	Telegram klasörlerini hâlâ yüklüyor. Birazdan tekrar dene.
+# context: a toast when making or removing the folders failed.
+Couldn't change your folders. Try again in a moment.	Klasörlerin değiştirilemedi. Birazdan tekrar dene.
+# context: a toast when every chat type already has a folder, so none were made.
+You already have a folder for each chat type.	Her sohbet türü için zaten bir klasörün var.
+# context: a short toast (two lines at most) when Telegram's folder limit left no room, so no folders were made.
+Folder limit reached. Remove a folder and try again.	Klasör sınırına ulaşıldı. Bir klasörü kaldırıp tekrar dene.
+# context: a short toast (two lines at most) when only some of the folders fit under Telegram's folder limit.
+Made some folders. The folder limit left no room for the rest.	Bazı klasörler oluşturuldu. Sınır, kalanına yer bırakmadı.
+# context: a short toast (two lines at most) after the folders were made. Private, Groups, Channels and Bots are the folder names, use the same words as their own entries.
+Made Private, Groups, Channels and Bots folders.	Özel, Gruplar, Kanallar ve Botlar klasörleri oluşturuldu.
+# context: a toast after turning the switch off when none of its folders were left to remove.
+There were no folders from HushTelegram to remove.	Kaldırılacak HushTelegram klasörü yoktu.
+# context: a short toast (two lines at most) after the switch went off. Folders the person renamed or changed are kept.
+Removed the folders HushTelegram made. Changed ones stay.	HushTelegram klasörleri kaldırıldı. Değiştirilenler kalır.
+Telegram refused this app's ID	Telegram bu uygulamanın kimliğini reddetti
+Telegram turned down the API ID this app signs in with, so no login code was sent. Patch HushTelegram again with Use registered Telegram API credentials and your own ID from my.telegram.org/apps. The guide walks you through it.	Telegram bu uygulamanın giriş için kullandığı API kimliğini reddetti, bu yüzden giriş kodu gönderilmedi. HushTelegram'ı Use registered Telegram API credentials ve my.telegram.org/apps adresinden aldığınız kendi kimliğinizle yeniden yamalayın. Rehber adım adım anlatıyor.
+Telegram didn't accept the API ID and hash this app was patched with, so no login code was sent. Copy both again from my.telegram.org/apps and patch once more.	Telegram bu uygulamanın yamalandığı API kimliğini ve hash değerini kabul etmedi, bu yüzden giriş kodu gönderilmedi. İkisini my.telegram.org/apps adresinden yeniden kopyalayın ve tekrar yamalayın.
+Open the guide	Rehberi aç
+%1$s turns on	%1$s açılacak
+%1$s turns off	%1$s kapanacak
+Preparing the diagnostic report	Tanılama raporu hazırlanıyor

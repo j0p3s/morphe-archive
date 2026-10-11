@@ -60,7 +60,18 @@ public class ExtensionPreferenceCategory extends ConditionalPreferenceCategory {
                 || SettingsStatus.firstLaunchSetupEnabled
                 || SettingsStatus.screenCaptureEnabled
                 || SettingsStatus.videoOverlaysEnabled
-                || SettingsStatus.storeIdentityEnabled;
+                || SettingsStatus.storeIdentityEnabled
+                || SettingsStatus.passkeySignInEnabled
+                || SettingsStatus.appLanguageEnabled
+                || hasPerformance();
+    }
+
+    /** The four Performance patches, each with one switch in front of its hooks. */
+    private static boolean hasPerformance() {
+        return SettingsStatus.skipSplashAdEnabled
+                || SettingsStatus.skipUpdateChecksEnabled
+                || SettingsStatus.limitBackgroundTrafficEnabled
+                || SettingsStatus.animatedImageCacheEnabled;
     }
 
     @Override
@@ -245,7 +256,8 @@ public class ExtensionPreferenceCategory extends ConditionalPreferenceCategory {
         // the store check on Privacy, under a heading of its own.
         if (SettingsStatus.screenCaptureEnabled || SettingsStatus.videoOverlaysEnabled
                 || SettingsStatus.refreshRateEnabled || SettingsStatus.launcherShortcutsEnabled
-                || SettingsStatus.firstLaunchSetupEnabled || SettingsStatus.storeIdentityEnabled) {
+                || SettingsStatus.firstLaunchSetupEnabled || SettingsStatus.storeIdentityEnabled
+                || SettingsStatus.passkeySignInEnabled || SettingsStatus.appLanguageEnabled) {
             addPreference(new SectionHeadingPreference(context, "System"));
         }
         if (SettingsStatus.screenCaptureEnabled) {
@@ -266,6 +278,13 @@ public class ExtensionPreferenceCategory extends ConditionalPreferenceCategory {
                     "Let a LIVE fill the screen up to the top edge. The status bar comes back when "
                             + "you leave the LIVE. Swipe down from the top to peek at it.",
                     Settings.HIDE_STATUS_BAR_IN_LIVE
+            ));
+            addPreference(new TogglePreference(
+                    context,
+                    "Show a LIVE under the status bar",
+                    "Let a LIVE reach the top edge with the clock and status icons over it, instead "
+                            + "of a black strip. Hide the status bar in LIVE rooms takes them away instead.",
+                    Settings.LIVE_UNDER_STATUS_BAR
             ));
         }
         if (SettingsStatus.refreshRateEnabled) {
@@ -313,6 +332,74 @@ public class ExtensionPreferenceCategory extends ConditionalPreferenceCategory {
                     Settings.STORE_IDENTITY_INSTALLER,
                     new String[]{"Play Store", "Galaxy Store", "AppGallery", "Amazon Appstore"},
                     StoreIdentity.installers()));
+        }
+        if (SettingsStatus.passkeySignInEnabled) {
+            addPreference(new TogglePreference(
+                    context,
+                    "Sign in without a passkey",
+                    "TikTok treats your phone as one without passkeys, so signing in asks for your "
+                            + "password or a code by email or text instead. Password managers won't "
+                            + "hand a passkey to a patched app.",
+                    Settings.SKIP_PASSKEY_SIGN_IN
+            ));
+        }
+        if (SettingsStatus.appLanguageEnabled) {
+            addPreference(new TogglePreference(
+                    context,
+                    "Keep the language picked in TikTok",
+                    "When TikTok starts and decides the phone's language changed, it forgets the "
+                            + "language you picked in its settings and follows the phone. With this "
+                            + "on, your pick stays. Counts from TikTok's next start.",
+                    Settings.KEEP_APP_LANGUAGE
+            ));
+        }
+        // Each of these used to change TikTok the moment it was patched in, with no switch. They
+        // start off now, so a row here is the only way any of them does anything.
+        if (hasPerformance()) {
+            addPreference(new SectionHeadingPreference(context, "Performance"));
+        }
+        if (SettingsStatus.skipSplashAdEnabled) {
+            addPreference(new TogglePreference(
+                    context,
+                    "Skip the splash ad",
+                    "Stop the full-screen ad TikTok can show while it starts up.",
+                    Settings.SKIP_SPLASH_AD
+            ));
+        }
+        if (SettingsStatus.skipUpdateChecksEnabled) {
+            addPreference(new TogglePreference(
+                    context,
+                    "Skip update checks",
+                    "Stop the two background tasks TikTok uses to check for updates, one of them "
+                            + "when your phone starts. Some in-app update prompts may stop. Play "
+                            + "Store updates still work.",
+                    Settings.SKIP_UPDATE_CHECKS
+            ));
+        }
+        if (SettingsStatus.limitBackgroundTrafficEnabled) {
+            // Patched with Skip notification setup, the same switch stops push setup as well.
+            addPreference(new TogglePreference(
+                    context,
+                    "Limit background traffic",
+                    SettingsStatus.skipPushSetupEnabled
+                            ? "Stop TikTok loading upcoming videos ahead of time and setting up "
+                                    + "notifications. You won't get notifications, messages "
+                                    + "included, while this is on. Videos may take a moment "
+                                    + "longer to start."
+                            : "Stop TikTok loading upcoming videos ahead of time. It uses less "
+                                    + "data, but videos may take a moment longer to start.",
+                    Settings.LIMIT_BACKGROUND_TRAFFIC
+            ));
+        }
+        if (SettingsStatus.animatedImageCacheEnabled) {
+            addPreference(new TogglePreference(
+                    context,
+                    "Don't decode animated frames ahead",
+                    "Animated stickers and GIFs decode each frame as it's shown instead of a few "
+                            + "ahead, so they use a little less memory. Applies to the next ones "
+                            + "that load.",
+                    Settings.DROP_ANIMATED_IMAGE_CACHE
+            ));
         }
     }
 }

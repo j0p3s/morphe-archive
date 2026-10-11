@@ -44,8 +44,10 @@ public final class SettingsStatus {
     public static boolean analyticsUploads() { return false; }
     public static boolean stripLinkTracking() { return false; }
     public static boolean linkTracking() { return false; }
+    public static boolean plainPinLinks() { return false; }
     public static boolean hideAdvertisingId() { return false; }
     public static boolean advertisingId() { return false; }
+    public static boolean browserId() { return false; }
     public static boolean removeAdTrackingPermissions() { return false; }
     public static boolean spoofSignature() { return false; }
     public static boolean downloadPins() { return false; }
@@ -84,4 +86,6 @@ public final class SettingsStatus {
     public static boolean closeupImage() { return false; }
     public static boolean disableUpdateNag() { return false; }
     public static boolean updateNag() { return false; }
+    public static boolean fixPushNotifications() { return false; }
+    public static boolean firebaseCertificate() { return false; }
 }

@@ -552,6 +552,43 @@ public class AuthorRegionTest {
         assertEquals(LONG_NAME, name.getText().toString());
     }
 
+    /**
+     * #127: TikTok's name is 0dp with weight 1 in a wrap_content row. Written without a layout,
+     * the country was squeezed into the short name's own width and the name cut to "Rn D… · TR"
+     * with half the row empty.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    public void aShortNameInAWeightedRowGrowsRatherThanBeingCut() {
+        LinearLayout row = new LinearLayout(context);
+        TextView name = new TextView(context);
+        name.setId(NAME_ID);
+        name.setSingleLine(true);
+        name.setEllipsize(TextUtils.TruncateAt.END);
+        name.setText("Rn Dunyasi");
+        row.addView(name, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView postTime = new TextView(context);
+        postTime.setId(POST_TIME_ID);
+        postTime.setText(" · 13s ago");
+        row.addView(postTime);
+        FrameLayout root = new FrameLayout(context);
+        root.addView(row, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        layOut(root);
+        int before = name.getWidth();
+
+        AuthorRegion.decorate(name, null, "TR");
+        layOut(root);
+        AuthorRegion.decorate(name, null, "TR");
+
+        assertEquals("Rn Dunyasi · TR", name.getText().toString());
+        assertEquals(0, name.getLayout().getEllipsisCount(0));
+        assertTrue("the name took the room it needed", name.getWidth() > before);
+
+        AuthorRegion.restore();
+        assertEquals("Rn Dunyasi", name.getText().toString());
+    }
+
     /** On a LIVE preview or an ad with no author row, the only row left can be the cell beside it. */
     @Test
     public void aLoneRowOffScreenIsNotTheVideosRow() {
@@ -687,6 +724,53 @@ public class AuthorRegionTest {
             ((TextView) row.getChildAt(0)).setText("aittaac");
             row.getViewTreeObserver().dispatchOnGlobalLayout();
             assertEquals("the feed's hook went with the detail page",
+                    "aittaac · AZ", ((TextView) row.getChildAt(0)).getText().toString());
+        } finally {
+            AuthorRegion.restore();
+            Settings.SHOW_AUTHOR_HANDLE.resetToDefault();
+            Settings.SHOW_AUTHOR_REGION.resetToDefault();
+            reset.invoke(null);
+        }
+    }
+
+    /**
+     * TikTok's launcher entry is a second MainActivity under the feed's, and a theme change can
+     * resume it for a moment while the feed stays in front and gets no new resume. The hook went
+     * with it, taking the country off the feed's row, and the install its onCreate posted ran
+     * after it had stopped again.
+     */
+    @Test
+    public void aBuriedMainActivityResumedForAMomentHandsTheCountryBack() throws Exception {
+        Method reset = CurrentVideoAuthor.class.getDeclaredMethod("resetForTests");
+        reset.setAccessible(true);
+        reset.invoke(null);
+        Settings.SHOW_AUTHOR_HANDLE.save(false);
+        Settings.SHOW_AUTHOR_REGION.save(true);
+        try (ActivityController<MainActivity> feed = Robolectric.buildActivity(MainActivity.class).setup().visible();
+             ActivityController<MainActivity> launcher = Robolectric.buildActivity(MainActivity.class).create()) {
+            LinearLayout row = feedRow("aittaac");
+            feed.get().setContentView(row);
+            Utils.setContext(feed.get());
+            AuthorRegion.install(feed.get());
+            feed.pause().resume();
+            play(new Clip("feed", "aittaac", "aittaac", "AZ"));
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+            layOut(row.getRootView());
+            row.getViewTreeObserver().dispatchOnGlobalLayout();
+            assertEquals("aittaac · AZ", ((TextView) row.getChildAt(0)).getText().toString());
+
+            launcher.get().setContentView(feedRow("aittaac"));
+            AuthorRegion.install(launcher.get());
+            // Recreated, the buried copy is resumed for a moment and stopped again, and the
+            // install its onCreate posted runs after that.
+            launcher.start().resume().pause().stop();
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+
+            assertEquals("the feed in front lost its country",
+                    "aittaac · AZ", ((TextView) row.getChildAt(0)).getText().toString());
+            ((TextView) row.getChildAt(0)).setText("aittaac");
+            row.getViewTreeObserver().dispatchOnGlobalLayout();
+            assertEquals("the feed's hook stayed on the buried copy",
                     "aittaac · AZ", ((TextView) row.getChildAt(0)).getText().toString());
         } finally {
             AuthorRegion.restore();

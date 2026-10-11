@@ -155,7 +155,8 @@ val studioCreationDebloatPatch = rawResourcePatch(
     name = "Remove creation tools",
     description = "Removes TikTok's camera, editing and effects files, saving about 40 MB of " +
         "storage. The catch: the Create tab and every recording, editing and effects tool stop " +
-        "working.",
+        "working, and opening one, like effect search, can close TikTok. Leave it out if you " +
+        "make videos.",
     default = false,
 ) {
     category("Performance")
@@ -189,9 +190,10 @@ val studioCreationDebloatPatch = rawResourcePatch(
 @Suppress("unused")
 val liveStreamSuiteOptimizerPatch = rawResourcePatch(
     name = "Remove LIVE extras",
-    description = "Removes the files for LIVE co-hosting, matches, games and gift effects, so " +
-        "the app gets about 3 MB smaller. The catch: in LIVEs, battle scores and guest names can " +
-        "go missing, and co-hosting, games or animated gifts may stop working.",
+    description = "Removes the files for LIVE co-hosting, joining a LIVE as a guest, matches, " +
+        "games and gift effects, so the app gets about 3 MB smaller. The catch: in LIVEs, battle " +
+        "scores and guest names can go missing, and joining someone's LIVE by voice or video, " +
+        "co-hosting, games or animated gifts may stop working.",
     default = false,
 ) {
     category("Performance")

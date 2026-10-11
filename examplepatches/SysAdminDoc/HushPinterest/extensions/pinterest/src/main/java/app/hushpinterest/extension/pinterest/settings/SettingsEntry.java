@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import app.hushpinterest.extension.pinterest.actions.DownloadLedger;
-import app.hushpinterest.extension.pinterest.actions.PendingSaveJournal;
+import app.hushpinterest.extension.pinterest.ui.PinterestToasts;
 import app.hushpinterest.extension.shared.L10n;
 import app.hushpinterest.extension.shared.Logger;
 import app.hushpinterest.extension.shared.Utils;
@@ -91,9 +91,11 @@ public final class SettingsEntry {
      * Injected before each return of the application's {@code onCreate}, after Pinterest's own
      * startup. Watches every Pinterest activity, so a pending open lands on whichever one resumes
      * next: signed out, the launcher hands straight over to the login screen. Also where the
-     * release check, when it's on, asks at most once a day, on a worker.
+     * release check, when it's on, asks at most once a day, on a worker. From here on HushPinterest's
+     * messages use Pinterest's own toasts where they can.
      */
     public static void onApplicationCreate(Context context) {
+        PinterestToasts.install();
         try {
             if (!Utils.isMainProcess()) return;
             if (context instanceof Application && !callbacksRegistered) {
@@ -105,7 +107,6 @@ public final class SettingsEntry {
         }
         ReleaseCheck.onPinterestStart();
         DownloadLedger.onStart(context);
-        if (PatchFamily.Capability.PIN_DOWNLOADS.installed()) PendingSaveJournal.onStart(context);
         publishShortcut(context);
     }
 
@@ -177,8 +178,8 @@ public final class SettingsEntry {
 
     /**
      * Publishes [shortcut] at the front. From Android 11 a push evicts the lowest-ranked dynamic
-     * shortcut when Pinterest's own fill the limit. Android 9 and 10 have no push, so an add does the
-     * same: it updates the shortcut in place when [present], and otherwise makes room first by
+     * shortcut when Pinterest's own fill the limit. Android 10 has no push, so an add does the same:
+     * it updates the shortcut in place when [present], and otherwise makes room first by
      * taking off the last one, as a push would, since an add past the limit throws.
      */
     private static void push(ShortcutManager manager, ShortcutInfo shortcut, boolean present) {

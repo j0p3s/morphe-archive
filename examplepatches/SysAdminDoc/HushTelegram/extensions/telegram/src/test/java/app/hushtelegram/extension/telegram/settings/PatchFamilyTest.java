@@ -14,6 +14,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertThrows;
 import static org.junit.Assert.assertTrue;
 
@@ -96,13 +97,23 @@ public class PatchFamilyTest {
         Settings.REAR_CAMERA_FIRST.resetToDefault();
         Settings.HIDE_GALLERY_CAMERA_TILE.resetToDefault();
         Settings.HIDE_STICKER_TIME.resetToDefault();
+        Settings.CHANGE_STICKER_SIZE.resetToDefault();
+        Settings.STICKER_SIZE.resetToDefault();
         Settings.IGNORE_MUTED_MENTIONS.resetToDefault();
         Settings.HIDE_BLOCKED_IN_GROUPS.resetToDefault();
+        Settings.HIDE_BY_KEYWORD.resetToDefault();
         Settings.HIDE_FEATURES_AND_INVITE.resetToDefault();
         Settings.MESSAGE_MENU_REPEAT.resetToDefault();
         Settings.KEEP_DELETED_MESSAGES.resetToDefault();
         Settings.ASK_BEFORE_STICKER.resetToDefault();
         Settings.BETA_LOGS_OFF.resetToDefault();
+        Settings.OUTSIDE_TRANSLATE.resetToDefault();
+        Settings.HIDE_CHANNEL_BUTTONS.resetToDefault();
+        Settings.HIDE_SEND_AS.resetToDefault();
+        Settings.FASTER_DOWNLOADS.resetToDefault();
+        Settings.SAVE_DOWNLOADS.resetToDefault();
+        Settings.CHAT_TYPE_FOLDERS.resetToDefault();
+        Settings.UNIFIED_PUSH.resetToDefault();
         Settings.ASK_BEFORE_GIF.resetToDefault();
         Settings.ASK_BEFORE_VOICE_VIDEO.resetToDefault();
         Settings.ASK_BEFORE_CALL.resetToDefault();
@@ -117,6 +128,37 @@ public class PatchFamilyTest {
      * switch in neither list goes unmentioned by the screen and the tests that hold Pause to it.
      */
     @Test
+    public void outsideTranslateHasItsOwnOffByDefaultSwitchThatAppliesAtOnce() {
+        PatchFamily family = PatchFamily.OUTSIDE_TRANSLATE;
+        assertEquals("Translate with an outside service", family.patchName);
+        assertEquals(Collections.singletonList(Settings.OUTSIDE_TRANSLATE), family.switches);
+        assertFalse(Settings.OUTSIDE_TRANSLATE.defaultValue);
+        assertFalse(Settings.OUTSIDE_TRANSLATE.rebootApp);
+        assertTrue(family.expectedCapabilities().isEmpty());
+        assertOnItsPage(family);
+    }
+
+    @Test
+    public void hideChannelBarButtonsAndSendAsHaveTheirOwnOffByDefaultSwitches() {
+        PatchFamily bar = PatchFamily.HIDE_CHANNEL_BUTTONS;
+        assertEquals("Hide channel bar buttons", bar.patchName);
+        assertEquals("hideChannelButtons", bar.statusMethod);
+        assertEquals(Collections.singletonList(Settings.HIDE_CHANNEL_BUTTONS), bar.switches);
+        PatchFamily sendAs = PatchFamily.HIDE_SEND_AS;
+        assertEquals("Hide Send as button", sendAs.patchName);
+        assertEquals("hideSendAs", sendAs.statusMethod);
+        assertEquals(Collections.singletonList(Settings.HIDE_SEND_AS), sendAs.switches);
+        for (PatchFamily family : Arrays.asList(bar, sendAs)) {
+            assertFalse(family.switches.get(0).defaultValue);
+            // Both take effect the next time a chat updates its bar or message box, without a restart.
+            assertFalse(family.switches.get(0).rebootApp);
+            assertTrue(family.expectedCapabilities().isEmpty());
+            assertOnItsPage(family);
+            assertEquals(PatchFamily.Page.LOOK, PatchFamily.Page.of(family));
+        }
+    }
+
+    @Test
     public void turnOffBetaLogsHasItsOwnOffByDefaultSwitchThatAppliesAfterARestart() {
         PatchFamily family = PatchFamily.BETA_LOGS_OFF;
         assertEquals("Turn off beta debug logs", family.patchName);
@@ -124,7 +166,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.BETA_LOGS_OFF.defaultValue);
         assertTrue(Settings.BETA_LOGS_OFF.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -137,7 +179,7 @@ public class PatchFamilyTest {
             assertFalse(setting.key, setting.rebootApp);
         }
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -148,7 +190,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.KEEP_DELETED_MESSAGES.defaultValue);
         assertFalse(Settings.KEEP_DELETED_MESSAGES.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -162,7 +204,7 @@ public class PatchFamilyTest {
             assertFalse(setting.key, setting.rebootApp);
         }
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -173,7 +215,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.HIDE_FEATURES_AND_INVITE.defaultValue);
         assertFalse(Settings.HIDE_FEATURES_AND_INVITE.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -184,7 +226,23 @@ public class PatchFamilyTest {
         assertFalse(Settings.HIDE_BLOCKED_IN_GROUPS.defaultValue);
         assertFalse(Settings.HIDE_BLOCKED_IN_GROUPS.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
+    }
+
+    @Test
+    public void hideByKeywordHasItsOwnOffByDefaultSwitchAndTwoEmptyLists() {
+        PatchFamily family = PatchFamily.HIDE_BY_KEYWORD;
+        assertEquals("Hide messages by keyword", family.patchName);
+        assertEquals("hideByKeyword", family.statusMethod);
+        // The lists aren't switches: Pause turns the switch off and leaves what was written.
+        assertEquals(Collections.singletonList(Settings.HIDE_BY_KEYWORD), family.switches);
+        assertFalse(Settings.HIDE_BY_KEYWORD.defaultValue);
+        assertFalse(Settings.HIDE_BY_KEYWORD.rebootApp);
+        assertEquals("", Settings.MESSAGE_FILTERS_GROUPS.defaultValue);
+        assertEquals("", Settings.MESSAGE_FILTERS_CHANNELS.defaultValue);
+        assertTrue(family.expectedCapabilities().isEmpty());
+        assertOnItsPage(family);
+        assertEquals(PatchFamily.Page.CONVERSATIONS, PatchFamily.Page.of(family));
     }
 
     @Test
@@ -195,7 +253,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.IGNORE_MUTED_MENTIONS.defaultValue);
         assertFalse(Settings.IGNORE_MUTED_MENTIONS.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -206,7 +264,21 @@ public class PatchFamilyTest {
         assertFalse(Settings.HIDE_STICKER_TIME.defaultValue);
         assertFalse(Settings.HIDE_STICKER_TIME.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
+    }
+
+    @Test
+    public void changeStickerSizeHasItsOwnOffByDefaultSwitchAndASizeOfThreeQuarters() {
+        PatchFamily family = PatchFamily.CHANGE_STICKER_SIZE;
+        assertEquals("Change sticker size", family.patchName);
+        assertEquals(Collections.singletonList(Settings.CHANGE_STICKER_SIZE), family.switches);
+        assertFalse(Settings.CHANGE_STICKER_SIZE.defaultValue);
+        assertFalse(Settings.CHANGE_STICKER_SIZE.rebootApp);
+        assertEquals(75, (int) Settings.STICKER_SIZE.defaultValue);
+        assertEquals(50, Settings.STICKER_SIZE.minimum());
+        assertEquals(150, Settings.STICKER_SIZE.maximum());
+        assertTrue(family.expectedCapabilities().isEmpty());
+        assertOnItsPage(family);
     }
 
     @Test
@@ -217,7 +289,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.HIDE_GALLERY_CAMERA_TILE.defaultValue);
         assertFalse(Settings.HIDE_GALLERY_CAMERA_TILE.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -228,7 +300,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.REAR_CAMERA_FIRST.defaultValue);
         assertFalse(Settings.REAR_CAMERA_FIRST.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -239,7 +311,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.DISABLE_ARCHIVE_PULL.defaultValue);
         assertTrue(Settings.DISABLE_ARCHIVE_PULL.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -250,7 +322,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.SILENCE_NON_CONTACTS.defaultValue);
         assertFalse(Settings.SILENCE_NON_CONTACTS.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -261,7 +333,65 @@ public class PatchFamilyTest {
         assertFalse(Settings.VOICE_MUSIC_PLAYER.defaultValue);
         assertFalse(Settings.VOICE_MUSIC_PLAYER.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
+    }
+
+    @Test
+    public void fasterDownloadsHasItsOwnOffByDefaultSwitchOnPlaybackThatAppliesAtOnce() {
+        PatchFamily family = PatchFamily.FASTER_DOWNLOADS;
+        assertEquals("Faster downloads", family.patchName);
+        assertEquals("fasterDownloads", family.statusMethod);
+        assertEquals(Collections.singletonList(Settings.FASTER_DOWNLOADS), family.switches);
+        assertFalse(Settings.FASTER_DOWNLOADS.defaultValue);
+        // Telegram picks the piece size each time a download starts, so no restart is needed.
+        assertFalse(Settings.FASTER_DOWNLOADS.rebootApp);
+        assertTrue(family.expectedCapabilities().isEmpty());
+        assertOnItsPage(family);
+        assertEquals(PatchFamily.Page.PLAYBACK, PatchFamily.Page.of(family));
+    }
+
+    @Test
+    public void saveDownloadsHasItsOwnOffByDefaultSwitchOnPlaybackThatAppliesAtOnce() {
+        PatchFamily family = PatchFamily.SAVE_DOWNLOADS;
+        assertEquals("Save downloaded files", family.patchName);
+        assertEquals("saveDownloads", family.statusMethod);
+        assertEquals(Collections.singletonList(Settings.SAVE_DOWNLOADS), family.switches);
+        assertFalse(Settings.SAVE_DOWNLOADS.defaultValue);
+        // Each finished download reads the switch, so no restart is needed.
+        assertFalse(Settings.SAVE_DOWNLOADS.rebootApp);
+        assertTrue(family.expectedCapabilities().isEmpty());
+        assertOnItsPage(family);
+        assertEquals(PatchFamily.Page.PLAYBACK, PatchFamily.Page.of(family));
+    }
+
+    @Test
+    public void chatTypeFoldersHasItsOwnOffByDefaultSwitchOnChatListThatAppliesAtOnce() {
+        PatchFamily family = PatchFamily.CHAT_TYPE_FOLDERS;
+        assertEquals("Folders by chat type", family.patchName);
+        assertEquals("chatTypeFolders", family.statusMethod);
+        assertEquals(Collections.singletonList(Settings.CHAT_TYPE_FOLDERS), family.switches);
+        assertFalse(Settings.CHAT_TYPE_FOLDERS.defaultValue);
+        // Flipping the switch makes or removes the folders then and there, so no restart is needed.
+        assertFalse(Settings.CHAT_TYPE_FOLDERS.rebootApp);
+        assertNull(family.staysWhilePaused);
+        assertTrue(family.expectedCapabilities().isEmpty());
+        assertOnItsPage(family);
+        assertEquals(PatchFamily.Page.CHAT_LIST, PatchFamily.Page.of(family));
+    }
+
+    @Test
+    public void unifiedPushHasItsOwnOffByDefaultSwitchOnNotificationsThatAppliesAtOnce() {
+        PatchFamily family = PatchFamily.UNIFIED_PUSH;
+        assertEquals("UnifiedPush notifications", family.patchName);
+        assertEquals("unifiedPush", family.statusMethod);
+        assertEquals(Collections.singletonList(Settings.UNIFIED_PUSH), family.switches);
+        assertFalse(Settings.UNIFIED_PUSH.defaultValue);
+        // The switch signs up or ends the sign-up when it changes, so no restart is needed.
+        assertFalse(Settings.UNIFIED_PUSH.rebootApp);
+        assertNull(family.staysWhilePaused);
+        assertTrue(family.expectedCapabilities().isEmpty());
+        assertOnItsPage(family);
+        assertEquals(PatchFamily.Page.NOTIFICATIONS, PatchFamily.Page.of(family));
     }
 
     @Test
@@ -272,7 +402,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.FORWARD_HIDE_SENDER.defaultValue);
         assertFalse(Settings.FORWARD_HIDE_SENDER.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -283,7 +413,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.HIDE_FOLDER_COUNTERS.defaultValue);
         assertFalse(Settings.HIDE_FOLDER_COUNTERS.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -294,7 +424,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.REACTION_EFFECTS_OFF.defaultValue);
         assertFalse(Settings.REACTION_EFFECTS_OFF.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -305,7 +435,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.NO_HAPTICS.defaultValue);
         assertFalse(Settings.NO_HAPTICS.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -316,7 +446,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.VOICE_ONE_AT_A_TIME.defaultValue);
         assertFalse(Settings.VOICE_ONE_AT_A_TIME.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -327,7 +457,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.ALLOW_CHAT_BLUR.defaultValue);
         assertFalse(Settings.ALLOW_CHAT_BLUR.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -338,7 +468,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.MESSAGE_SECONDS.defaultValue);
         assertFalse(Settings.MESSAGE_SECONDS.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -349,7 +479,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.HIDE_PHONE_NUMBER.defaultValue);
         assertFalse(Settings.HIDE_PHONE_NUMBER.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -360,7 +490,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.SWIPE_BACK_ON_PROFILES.defaultValue);
         assertFalse(Settings.SWIPE_BACK_ON_PROFILES.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -371,7 +501,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.KEEP_VIDEOS_MUTED.defaultValue);
         assertFalse(Settings.KEEP_VIDEOS_MUTED.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -382,7 +512,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.HIDE_KEYBOARD_ON_SCROLL.defaultValue);
         assertFalse(Settings.HIDE_KEYBOARD_ON_SCROLL.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -393,7 +523,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.REVEAL_SPOILERS.defaultValue);
         assertFalse(Settings.REVEAL_SPOILERS.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -404,7 +534,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.EXACT_NUMBERS.defaultValue);
         assertFalse(Settings.EXACT_NUMBERS.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -457,9 +587,9 @@ public class PatchFamilyTest {
                 PatchFamily.Capability.SEARCH_ADS);
         assertEquals(expectedAds, PatchFamily.HIDE_ADS.expectedCapabilities());
         assertEquals(installedAds, PatchFamily.HIDE_ADS.installedCapabilities());
-        assertEquals(EnumSet.of(PatchFamily.Capability.DEVICE_STATS, PatchFamily.Capability.READ_METRICS,
+        assertEquals(EnumSet.of(PatchFamily.Capability.READ_METRICS,
                         PatchFamily.Capability.PREMIUM_PROMO_SHOW, PatchFamily.Capability.PREMIUM_PROMO_TAP,
-                        PatchFamily.Capability.PREMIUM_PROMO_ACCEPT, PatchFamily.Capability.PREMIUM_PROMO_FAIL,
+                        PatchFamily.Capability.PREMIUM_PROMO_ACCEPT, PatchFamily.Capability.PREMIUM_PROMO_FAIL, PatchFamily.Capability.DUAL_CAMERA_REPORTS,
                         PatchFamily.Capability.CRASH_REPORTS, PatchFamily.Capability.SESSION_REPORTS),
                 PatchFamily.DISABLE_ANALYTICS.expectedCapabilities());
         assertEquals(EnumSet.of(PatchFamily.Capability.READ_METRICS),
@@ -487,7 +617,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.HIDE_CONTACTS_BLOCK.defaultValue);
         assertTrue(family.expectedCapabilities().isEmpty());
         assertFalse(PatchFamily.QUIET_CONTACTS_NAG.switches.contains(Settings.HIDE_CONTACTS_BLOCK));
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -498,7 +628,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.HIDE_TRANSLATE_BAR.defaultValue);
         assertFalse(Settings.HIDE_TRANSLATE_BAR.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -509,7 +639,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.AMOLED_BLACK.defaultValue);
         assertTrue(Settings.AMOLED_BLACK.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -520,7 +650,7 @@ public class PatchFamilyTest {
         assertFalse(Settings.USE_SYSTEM_FONT.defaultValue);
         assertTrue(Settings.USE_SYSTEM_FONT.rebootApp);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -530,7 +660,7 @@ public class PatchFamilyTest {
         assertEquals(Collections.singletonList(Settings.HIDE_GREETING_STICKERS), family.switches);
         assertFalse(Settings.HIDE_GREETING_STICKERS.defaultValue);
         assertTrue(family.expectedCapabilities().isEmpty());
-        assertTrue(PatchFamily.CHATS_PAGE.contains(family));
+        assertOnItsPage(family);
     }
 
     @Test
@@ -569,8 +699,9 @@ public class PatchFamilyTest {
         for (int i = 0; i < patches.length(); i++) {
             JSONObject patch = patches.getJSONObject(i);
             String name = patch.getString("name");
-            if ("Use registered Telegram API credentials".equals(name) || "Use registered Maps API key".equals(name)) {
-                assertFalse("patch-time credentials must be optional", patch.getBoolean("use"));
+            if ("Use registered Telegram API credentials".equals(name) || "Use registered Maps API key".equals(name)
+                    || "HushTelegram icon and name".equals(name)) {
+                assertFalse("patch-time choices must be optional", patch.getBoolean("use"));
                 JSONArray options = patch.getJSONArray("options");
                 Set<String> keys = new TreeSet<>();
                 for (int option = 0; option < options.length(); option++) {
@@ -581,7 +712,7 @@ public class PatchFamilyTest {
                 }
                 Set<String> expected = "Use registered Telegram API credentials".equals(name)
                         ? new TreeSet<>(Arrays.asList("apiId", "apiHash"))
-                        : Collections.singleton("apiKey");
+                        : Collections.singleton("Use registered Maps API key".equals(name) ? "apiKey" : "appName");
                 assertEquals(expected, keys);
                 assertEquals(expected.size(), options.length());
             } else listed.add(patch.getString("name"));
@@ -655,9 +786,9 @@ public class PatchFamilyTest {
         assertEquals(Arrays.asList(
                 "Hide ads: on (hushtelegram_hide_ads=on)",
                 "Disable analytics: disabled by its switch (hushtelegram_disable_analytics=off)",
-                "not in this build: Hide Stories, Hide recommendations, Hide Premium, gifts and Stars, Hide promotional banners, Hide sponsored proxy channel, Hide popular apps, Hide contacts on Telegram, Hide greeting stickers, Disable chat swipe actions, Disable pull to next channel, Use normal paste, Show user and chat IDs, Disable double-tap reactions, Quiet contacts nag, Holiday look all year, Use system font, AMOLED black, Hide translate bar, Exact numbers, Reveal spoilers, Hide keyboard on scroll, Keep videos muted on volume keys, Swipe back on profiles, Hide phone number, Message times with seconds, Allow chat blur on slower phones, Play voice messages one at a time, Turn off haptic feedback, Turn off reaction effects, Hide folder tab counters, Hide sender names when forwarding, Voice messages in the music player, Silence people outside your contacts, Disable pull to archive, Start the camera on the rear lens, Hide gallery camera tile, Hide time on stickers, Ignore mentions in muted chats, Hide blocked users in groups, Hide Telegram Features and Invite Friends, Add Repeat to the message menu, Keep deleted messages, Ask before sending a sticker, Turn off beta debug logs, Disable call debug upload, Disable draft link previews, Gallery camera on tap, Open links externally, Strip link tracking, Disable update checks, Repair Firebase push registration",
+                "not in this build: Hide Stories, Hide recommendations, Hide Premium, gifts and Stars, Hide promotional banners, Hide sponsored proxy channel, Hide popular apps, Hide contacts on Telegram, Hide greeting stickers, Disable chat swipe actions, Disable pull to next channel, Use normal paste, Show user and chat IDs, Disable double-tap reactions, Quiet contacts nag, Holiday look all year, Use system font, AMOLED black, Hide translate bar, Exact numbers, Reveal spoilers, Hide keyboard on scroll, Keep videos muted on volume keys, Swipe back on profiles, Hide phone number, Message times with seconds, Allow chat blur on slower phones, Play voice messages one at a time, Turn off haptic feedback, Turn off reaction effects, Hide folder tab counters, Hide sender names when forwarding, Voice messages in the music player, Silence people outside your contacts, Disable pull to archive, Start the camera on the rear lens, Hide gallery camera tile, Hide time on stickers, Change sticker size, Ignore mentions in muted chats, Hide blocked users in groups, Hide messages by keyword, Hide Telegram Features and Invite Friends, Add Repeat to the message menu, Keep deleted messages, Ask before sending a sticker, Turn off beta debug logs, Translate with an outside service, Hide channel bar buttons, Hide Send as button, Faster downloads, Save downloaded files, Folders by chat type, Disable call debug upload, Disable draft link previews, Gallery camera on tap, Open links externally, Strip link tracking, Disable update checks, Repair Firebase push registration, UnifiedPush notifications",
                 "Hide ads coverage: channel ads, video ads, search ads",
-                "Disable analytics coverage: device statistics reports, channel read metrics, Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures, Firebase crash reports, Firebase session reports"),
+                "Disable analytics coverage: channel read metrics, Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures, dual camera reports, Firebase crash reports, Firebase session reports"),
                 running);
 
         // Every family in this build has a switch, but the line still has room, after the switch's
@@ -686,7 +817,7 @@ public class PatchFamilyTest {
                 PatchFamily.Capability.READ_METRICS);
         List<String> running = PatchFamily.reportLines(build, false);
         assertTrue(running.toString(), running.contains("Hide ads coverage: channel ads; missing: video ads, search ads"));
-        assertTrue(running.toString(), running.contains("Disable analytics coverage: channel read metrics; missing: device statistics reports, Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures"));
+        assertTrue(running.toString(), running.contains("Disable analytics coverage: channel read metrics; missing: Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures, dual camera reports"));
         Settings.HIDE_ADS.save(false);
         Settings.DISABLE_ANALYTICS.save(false);
         List<String> disabled = PatchFamily.reportLines(build, false);
@@ -696,7 +827,7 @@ public class PatchFamilyTest {
         PatchFamily.capabilitiesForTests = EnumSet.noneOf(PatchFamily.Capability.class);
         List<String> none = PatchFamily.reportLines(build, false);
         assertTrue(none.toString(), none.contains("Hide ads coverage: none; missing: channel ads, video ads, search ads"));
-        assertTrue(none.toString(), none.contains("Disable analytics coverage: none; missing: device statistics reports, channel read metrics, Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures"));
+        assertTrue(none.toString(), none.contains("Disable analytics coverage: none; missing: channel read metrics, Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures, dual camera reports"));
     }
 
     /** Telegram's regular build has no Firebase reporters, so a build without them is complete, not partial. */
@@ -716,16 +847,16 @@ public class PatchFamilyTest {
         PatchFamily.capabilitiesForTests = regular;
         assertEquals("complete", PatchFamily.DISABLE_ANALYTICS.coverageSummary("complete"));
         assertEquals(regular, PatchFamily.DISABLE_ANALYTICS.shownCapabilities());
-        assertTrue(PatchFamily.reportLines(build, false).contains("Disable analytics coverage: device statistics reports, channel read metrics, "
-                + "Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures"));
+        assertTrue(PatchFamily.reportLines(build, false).contains("Disable analytics coverage: channel read metrics, "
+                + "Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures, dual camera reports"));
 
         // One of the two hooked: the other is left out, never called missing.
         Set<PatchFamily.Capability> crashOnly = EnumSet.copyOf(regular);
         crashOnly.add(PatchFamily.Capability.CRASH_REPORTS);
         PatchFamily.capabilitiesForTests = crashOnly;
         assertEquals("complete", PatchFamily.DISABLE_ANALYTICS.coverageSummary("complete"));
-        assertTrue(PatchFamily.reportLines(build, true).contains("Disable analytics coverage: device statistics reports, channel read metrics, "
-                + "Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures, Firebase crash reports"));
+        assertTrue(PatchFamily.reportLines(build, true).contains("Disable analytics coverage: channel read metrics, "
+                + "Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures, dual camera reports, Firebase crash reports"));
 
         // A carried target that's hooked still counts when a regular one is missing.
         Set<PatchFamily.Capability> partial = EnumSet.of(PatchFamily.Capability.READ_METRICS, PatchFamily.Capability.SESSION_REPORTS);
@@ -735,7 +866,7 @@ public class PatchFamilyTest {
         assertTrue(summary, summary.contains("Firebase session reports"));
         assertFalse(summary, summary.contains("Firebase crash reports"));
         assertTrue(PatchFamily.reportLines(build, false).contains("Disable analytics coverage: channel read metrics, Firebase session reports; "
-                + "missing: device statistics reports, Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures"));
+                + "missing: Premium promo views, Premium promo taps, Premium promo accepts, Premium promo failures, dual camera reports"));
     }
 
     /**
@@ -774,12 +905,80 @@ public class PatchFamilyTest {
         }
     }
 
+    /**
+     * Every switch sits on the page named for its Morphe Manager category, so a patch is found
+     * under the same name in both, and the description Manager shows sends the reader there.
+     */
+    @Test
+    public void everySwitchIsOnThePageItsManagerCategoryNamesAndTheDescriptionSaysSo() throws Exception {
+        Map<String, String> descriptions = ManagerCategories.descriptions();
+        List<String> wrong = new java.util.ArrayList<>();
+        for (PatchFamily family : PatchFamily.values()) {
+            String expected = ManagerCategories.pageOf(family);
+            PatchFamily.Page page = PatchFamily.Page.of(family);
+            String actual = page != null ? page.title : family == PatchFamily.OPEN_EXTERNAL_LINKS
+                    || family == PatchFamily.STRIP_LINK_TRACKING ? "Links" : family == PatchFamily.DISABLE_UPDATE_CHECKS
+                    ? "Updates" : null;
+            if (!expected.equals(actual)) wrong.add(family + " is on " + actual + ", not " + expected);
+            // Links and Updates are under More settings; the switch pages are on the home page.
+            String path = "HushTelegram settings > " + (page == null ? "More settings > " : "") + expected;
+            String description = descriptions.get(family.patchName);
+            if (description.contains("HushTelegram settings >") && !description.contains(path + ".")
+                    && !description.contains(path + ",")) {
+                wrong.add(family.patchName + "'s description doesn't send the reader to " + path);
+            }
+        }
+        assertEquals(Collections.emptyList(), wrong);
+        // Each page in the order the screen draws them, and every page holds something.
+        List<String> order = new java.util.ArrayList<>();
+        for (PatchFamily.Page page : PatchFamily.Page.values()) {
+            order.add(page.title);
+            assertFalse(page.title, page.families.isEmpty());
+        }
+        assertEquals(ManagerCategories.PAGE_ORDER, order);
+    }
+
+    /**
+     * The two long pages are split into groups, and every family on them is in exactly one group of
+     * its own page, so no switch drops out of a page or shows twice. The short pages aren't split.
+     */
+    @Test
+    public void everyFamilyOnTheLongPagesSitsInExactlyOneGroupOfItsPage() {
+        Map<PatchFamily, PatchFamily.Group> placed = new java.util.EnumMap<>(PatchFamily.class);
+        for (PatchFamily.Group group : PatchFamily.Group.values()) {
+            assertFalse(group.title, group.families.isEmpty());
+            assertTrue(group + " is on " + group.page, group.page == PatchFamily.Page.CONVERSATIONS
+                    || group.page == PatchFamily.Page.LOOK);
+            for (PatchFamily family : group.families) {
+                assertEquals(family + " is in " + group + " on another page", group.page, PatchFamily.Page.of(family));
+                assertNull(family + " is in two groups", placed.put(family, group));
+                assertSame(group, PatchFamily.Group.of(family));
+                for (BooleanSetting setting : family.switches) assertSame(family, PatchFamily.Group.owner(setting.key));
+            }
+        }
+        for (PatchFamily.Page page : new PatchFamily.Page[]{PatchFamily.Page.CONVERSATIONS, PatchFamily.Page.LOOK}) {
+            for (PatchFamily family : page.families) assertNotNull(family + " is in no group", placed.get(family));
+        }
+        assertNull(PatchFamily.Group.of(PatchFamily.HIDE_ADS));
+        assertNull(PatchFamily.Group.owner(Settings.MESSAGE_FILTERS_GROUPS.key));
+        // Each heading is looked up by its English text, and no two headings read alike.
+        Set<String> titles = new HashSet<>();
+        for (PatchFamily.Group group : PatchFamily.Group.values()) {
+            assertEquals(group.title, group.label());
+            assertTrue(group.title + " twice", titles.add(group.title));
+        }
+    }
+
+    private static void assertOnItsPage(PatchFamily family) {
+        try {
+            assertEquals(ManagerCategories.pageOf(family), PatchFamily.Page.of(family).title);
+        } catch (Exception unreadable) {
+            throw new AssertionError(unreadable);
+        }
+    }
+
     /** patches-list.json at the repository root, found from wherever Gradle runs the test. */
     private static File patchesList() {
-        for (File dir = new File("").getAbsoluteFile(); dir != null; dir = dir.getParentFile()) {
-            File candidate = new File(dir, "patches-list.json");
-            if (candidate.isFile()) return candidate;
-        }
-        throw new AssertionError("no patches-list.json above " + new File("").getAbsolutePath());
+        return ManagerCategories.patchesList();
     }
 }

@@ -5,9 +5,7 @@
 package app.morphe.patches.telegram.misc.analytics
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
-import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.newInstance
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.BytecodePatchContext
@@ -15,7 +13,6 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patches.shared.compat.AppCompatibilities
-import app.morphe.patches.telegram.ads.MESSAGES_CONTROLLER
 import app.morphe.patches.telegram.misc.extension.EXTENSION_PACKAGE
 import app.morphe.patches.telegram.misc.extension.enableCapability
 import app.morphe.patches.telegram.misc.extension.enableStatus
@@ -23,13 +20,12 @@ import app.morphe.patches.telegram.misc.extension.freeLocalsAt
 import app.morphe.patches.telegram.misc.extension.handleTargets
 import app.morphe.patches.telegram.misc.extension.parameterRegisterNumber
 import app.morphe.patches.telegram.misc.extension.patchLog
-import app.morphe.patches.telegram.misc.extension.requireLocals
 import app.morphe.patches.telegram.misc.extension.requireStatusMethod
-import app.morphe.patches.telegram.misc.extension.requireThisIntact
 import app.morphe.patches.telegram.misc.extension.telegramExtensionPatch
 import app.morphe.patches.telegram.misc.settings.settingsPatch
 import app.morphe.util.addInstructionsAtControlFlowLabel
 import app.morphe.util.ControlFlow
+import app.morphe.util.definitionReaches
 import app.morphe.util.namedRegisters
 import app.morphe.util.indexOfFirstInstruction
 import app.morphe.util.indexOfFirstInstructionReversed
@@ -49,21 +45,6 @@ private const val PATCH = "Disable analytics"
 
 private const val ANALYTICS = "$EXTENSION_PACKAGE/misc/Analytics;"
 
-/**
- * The messages controller's `logDeviceStats()`: when the server's config sets
- * `collectDeviceStats`, it classifies the selected root as emulated storage and reports that boolean as a
- * `help.saveAppLog` event. Found by that field and that request, both kept names.
- */
-internal object LogDeviceStatsFingerprint : Fingerprint(
-    definingClass = MESSAGES_CONTROLLER,
-    returnType = "V",
-    parameters = listOf(),
-    filters = listOf(
-        fieldAccess(definingClass = MESSAGES_CONTROLLER, name = "collectDeviceStats", type = "Z"),
-        newInstance("Lorg/telegram/tgnet/TLRPC\$TL_help_saveAppLog;"),
-    ),
-)
-
 /** A channel's batch of read metrics: how long each post stayed on screen as you scrolled. */
 internal const val REPORT_READ_METRICS = "Lorg/telegram/tgnet/TLRPC\$TL_messages_reportReadMetrics;"
 
@@ -81,17 +62,16 @@ internal object SendReadMetricsFingerprint : Fingerprint(
 /**
  * Keeps Telegram's usage reports on the phone.
  *
- * The storage event reports whether the selected root contains /storage/emulated/. That
- * method hands the extension its controller first and returns before classification while the
- * switch is on and a report is pending. The extension reads Telegram's two existing report flags
- * so a call that was never going to send anything isn't counted as a skipped report.
- *
- * Read metrics followed on 2026-10-01, when Telegram's own request log on a signed-in phone showed
+ * Telegram 13.0 dropped the old storage report (logDeviceStats), so there's nothing left to stop there.
+ * Read metrics were added on 2026-10-01, when Telegram's own request log on a signed-in phone showed
  * `messages.reportReadMetrics` going out as a channel was scrolled. One method builds it, and it
  * asks the extension just before, with the batch in hand. View counts are a separate request and
  * stay as they are. Premium screen views, item taps, accepts and canceled purchases carry four
  * verified interaction types. Their guards skip only the telemetry send, keeping billing callbacks
- * and all other operations. Each place stands alone, and the patch log names any missing target.
+ * and all other operations. The camera's `android_dual_camera` report (13.0.1: whether dual camera
+ * works, with Build.MANUFACTURER + MODEL, sent when the server sets collectDeviceStats) is skipped
+ * the same way; the camera still saves its own dual-camera state after it. Each place stands
+ * alone, and the patch log names any missing target.
  * Each successful hook also sets its
  * own build flag, so settings and diagnostic reports show which targets remain covered.
  *
@@ -107,7 +87,8 @@ internal object SendReadMetricsFingerprint : Fingerprint(
 val disableAnalyticsPatch = bytecodePatch(
     name = PATCH,
     description = "Stops Telegram from reporting how you use the app, like how long you read channel posts and what you" +
-        " tap on Premium screens. On Telegram Beta it also turns off Firebase's crash and session reports from the " +
+        " tap on Premium screens, and keeps the camera from reporting your phone's maker and model. On Telegram Beta" +
+        " it also turns off Firebase's crash and session reports from the " +
         "next start. Messages, calls and notifications work as before. On by default. Turn it off in " +
         "HushTelegram settings > Privacy.",
     default = true,
@@ -118,42 +99,20 @@ val disableAnalyticsPatch = bytecodePatch(
 
     execute {
         requireStatusMethod("disableAnalytics")
-        requireStatusMethod("deviceStats")
         requireStatusMethod("readMetrics")
-        PremiumPromoEvent.entries.forEach { requireStatusMethod(it.capability) }
+        AppLogEvent.entries.forEach { requireStatusMethod(it.capability) }
         requireStatusMethod("crashReports")
         requireStatusMethod("sessionReports")
 
-        val device = LogDeviceStatsFingerprint.methodOrNull
-        device?.requireLocals(PATCH, 1)
-        device?.requireThisIntact(PATCH, listOf(0))
         val metrics = SendReadMetricsFingerprint.methodOrNull
         val metricsMissing = metrics?.skipReadMetricsWhen("$ANALYTICS->skipReadMetrics(Ljava/util/List;)Z", dryRun = true)
-        val premium = resolvePremiumPromoHooks()
+        val premium = resolveAppLogHooks()
         // Proven before anything changes. Telegram's regular build has neither SDK, so it skips both quietly.
         val crashReports = resolveCrashReporter()
         val sessionReports = resolveSessions()
 
         handleTargets(PATCH, "usage reports", Report.entries) { report ->
             when (report) {
-                Report.DEVICE_STATS -> device.let { method ->
-                    if (method == null) "no method of the messages controller reads collectDeviceStats and sends a help.saveAppLog event"
-                    else {
-                        val first = method.getInstruction(0)
-                        method.addInstructionsWithLabels(
-                            0,
-                            """
-                                invoke-static/range {p0 .. p0}, $ANALYTICS->skipDeviceStats(Ljava/lang/Object;)Z
-                                move-result v0
-                                if-eqz v0, :hush_keep
-                                return-void
-                            """,
-                            ExternalLabel("hush_keep", first),
-                        )
-                        enableCapability("deviceStats")
-                        null
-                    }
-                }
                 Report.READ_METRICS -> metrics.let { method ->
                     if (method == null) "no method builds $REPORT_READ_METRICS"
                     else if (metricsMissing != null) metricsMissing
@@ -164,15 +123,17 @@ val disableAnalyticsPatch = bytecodePatch(
                 else -> {
                     val event = report.premium!!
                     val hook = premium[event]
-                    if (hook == null) "no verified ${event.type} interaction builder"
+                    if (hook == null) "no verified ${event.type} report builder"
                     else {
                         hook.method.addInstructionsAtControlFlowLabel(hook.index, hook.code,
                             ExternalLabel("hush_continue", hook.method.getInstruction(hook.continuation)))
+                        // Spelled out per event: PatchStatusWiringTest reads each flag from the source.
                         when (event) {
-                            PremiumPromoEvent.SHOW -> enableCapability("premiumPromoShow")
-                            PremiumPromoEvent.TAP -> enableCapability("premiumPromoTap")
-                            PremiumPromoEvent.ACCEPT -> enableCapability("premiumPromoAccept")
-                            PremiumPromoEvent.FAIL -> enableCapability("premiumPromoFail")
+                            AppLogEvent.SHOW -> enableCapability("premiumPromoShow")
+                            AppLogEvent.TAP -> enableCapability("premiumPromoTap")
+                            AppLogEvent.ACCEPT -> enableCapability("premiumPromoAccept")
+                            AppLogEvent.FAIL -> enableCapability("premiumPromoFail")
+                            AppLogEvent.DUAL_CAMERA -> enableCapability("dualCameraReport")
                         }
                         null
                     }
@@ -202,9 +163,9 @@ val disableAnalyticsPatch = bytecodePatch(
 }
 
 /** The reports Telegram sends about how the app is used. */
-private enum class Report(val premium: PremiumPromoEvent? = null) {
-    DEVICE_STATS, READ_METRICS, PREMIUM_SHOW(PremiumPromoEvent.SHOW), PREMIUM_TAP(PremiumPromoEvent.TAP),
-    PREMIUM_ACCEPT(PremiumPromoEvent.ACCEPT), PREMIUM_FAIL(PremiumPromoEvent.FAIL),
+private enum class Report(val premium: AppLogEvent? = null) {
+    READ_METRICS, PREMIUM_SHOW(AppLogEvent.SHOW), PREMIUM_TAP(AppLogEvent.TAP),
+    PREMIUM_ACCEPT(AppLogEvent.ACCEPT), PREMIUM_FAIL(AppLogEvent.FAIL), DUAL_CAMERA(AppLogEvent.DUAL_CAMERA),
 }
 
 /**
@@ -247,26 +208,40 @@ private fun MutableMethod.skipReadMetricsWhen(hook: String, dryRun: Boolean = fa
 
 internal const val SAVE_APP_LOG = "Lorg/telegram/tgnet/TLRPC\$TL_help_saveAppLog;"
 private const val APP_EVENT = "Lorg/telegram/tgnet/TLRPC\$TL_inputAppEvent;"
-internal enum class PremiumPromoEvent(val type: String, val capability: String, val parameters: List<String>) {
-    SHOW("premium.promo_screen_show", "premiumPromoShow", listOf("Ljava/lang/String;")),
-    TAP("premium.promo_screen_tap", "premiumPromoTap", listOf("I", "I")),
-    ACCEPT("premium.promo_screen_accept", "premiumPromoAccept", emptyList()),
-    FAIL("premium.promo_screen_fail", "premiumPromoFail", emptyList()),
+internal const val LOG_DUAL_CAMERA = "Lorg/telegram/messenger/ApplicationLoader;->logDualCamera(ZZ)V"
+
+/**
+ * The `help.saveAppLog` events the switch stops, each with the payload its builder must carry: the
+ * JSON type of its data, a key that data must name, and the extension method asked before the send.
+ * [after] is a stock call the send continues into before the builder returns.
+ */
+internal enum class AppLogEvent(
+    val type: String, val capability: String, val parameters: List<String>, val data: String, val key: String? = null,
+    val hook: String = "skipPremiumAppLog", val after: String? = null,
+) {
+    SHOW("premium.promo_screen_show", "premiumPromoShow", listOf("Ljava/lang/String;"), "TL_jsonObject", "source"),
+    TAP("premium.promo_screen_tap", "premiumPromoTap", listOf("I", "I"), "TL_jsonObject", "item"),
+    ACCEPT("premium.promo_screen_accept", "premiumPromoAccept", emptyList(), "TL_jsonNull"),
+    FAIL("premium.promo_screen_fail", "premiumPromoFail", emptyList(), "TL_jsonNull"),
+    // The camera reports whether the phone handles dual camera, with its maker and model, when the
+    // server's collectDeviceStats flag asks for it. Saving that state on the phone stays.
+    DUAL_CAMERA("android_dual_camera", "dualCameraReport", listOf("Z"), "TL_jsonObject", "device",
+        hook = "skipDeviceAppLog", after = LOG_DUAL_CAMERA),
 }
-internal data class PremiumPromoHook(val method: MutableMethod, val index: Int, val continuation: Int, val code: String)
+internal data class AppLogHook(val method: MutableMethod, val index: Int, val continuation: Int, val code: String)
 
 /** Exact payload literals select these builders; operational and unknown app-log events aren't selected. */
-internal fun BytecodePatchContext.resolvePremiumPromoHooks(): Map<PremiumPromoEvent, PremiumPromoHook> {
-    val candidates = PremiumPromoEvent.entries.associateWith { mutableListOf<Method>() }
+internal fun BytecodePatchContext.resolveAppLogHooks(): Map<AppLogEvent, AppLogHook> {
+    val candidates = AppLogEvent.entries.associateWith { mutableListOf<Method>() }
     classDefForEach { classDef ->
         if (classDef.type.startsWith("Lapp/hushtelegram/extension/")) return@classDefForEach
         for (method in classDef.methods) {
             val instructions = method.appLogInstructions()
             if (instructions.none { it.opcode == Opcode.NEW_INSTANCE && it.appLogReference() == SAVE_APP_LOG }) continue
-            for (event in PremiumPromoEvent.entries) if (instructions.any { it.appLogString() == event.type }) candidates.getValue(event) += method
+            for (event in AppLogEvent.entries) if (instructions.any { it.appLogString() == event.type }) candidates.getValue(event) += method
         }
     }
-    val hooks = mutableMapOf<PremiumPromoEvent, PremiumPromoHook>()
+    val hooks = mutableMapOf<AppLogEvent, AppLogHook>()
     for ((event, matches) in candidates) {
         promoShape(matches.size <= 1, "ambiguous ${event.type} builder")
         val found = matches.singleOrNull() ?: continue
@@ -309,31 +284,35 @@ internal fun BytecodePatchContext.resolvePremiumPromoHooks(): Map<PremiumPromoEv
         val dataRegister = instructions[data.single()].namedRegisters()[0]
         val dataObject = (type + 1 until data.single()).lastOrNull { instructions[it].opcode.setsRegister() &&
             instructions[it].namedRegisters().firstOrNull() == dataRegister }
-        val expectedData = if (event == PremiumPromoEvent.SHOW || event == PremiumPromoEvent.TAP) "TL_jsonObject" else "TL_jsonNull"
         promoShape(dataObject != null && instructions[dataObject].opcode == Opcode.NEW_INSTANCE &&
-            instructions[dataObject].appLogReference() == "Lorg/telegram/tgnet/TLRPC\$$expectedData;" &&
-            (event != PremiumPromoEvent.SHOW || instructions.any { it.appLogString() == "source" }) &&
-            (event != PremiumPromoEvent.TAP || instructions.any { it.appLogString() == "item" }), "${event.type} verified payload changed")
+            instructions[dataObject].appLogReference() == "Lorg/telegram/tgnet/TLRPC\$${event.data};" &&
+            (event.key == null || instructions.any { it.appLogString() == event.key }), "${event.type} verified payload changed")
         val flow = ControlFlow.of(method)
-        promoShape(flow.promoDefinitionReaches(type - 1, type, instructions[type].namedRegisters()[0]),
+        promoShape(flow.definitionReaches(type - 1, type, instructions[type].namedRegisters()[0]),
             "${event.type} payload type can bypass its verified literal")
         promoShape(listOf(type, data.single(), batch.single() + 1).all {
-            flow.promoDefinitionReaches(events.single(), it, eventRegister)
+            flow.definitionReaches(events.single(), it, eventRegister)
         }, "${event.type} event identity changed before its payload or batch use")
-        promoShape(flow.promoDefinitionReaches(requests.single(), batch.single(), requestRegister) &&
-            flow.promoDefinitionReaches(requests.single(), send, requestRegister), "${event.type} request identity changed before sending")
-        promoShape(flow.promoDefinitionReaches(dataObject!!, data.single(), dataRegister),
+        promoShape(flow.definitionReaches(requests.single(), batch.single(), requestRegister) &&
+            flow.definitionReaches(requests.single(), send, requestRegister), "${event.type} request identity changed before sending")
+        promoShape(flow.definitionReaches(dataObject!!, data.single(), dataRegister),
             "${event.type} data can bypass its verified allocation")
-        promoShape(flow.promoDefinitionReaches(batch.single(), batch.single() + 1, instructions[batch.single()].namedRegisters()[0]),
+        promoShape(flow.definitionReaches(batch.single(), batch.single() + 1, instructions[batch.single()].namedRegisters()[0]),
             "${event.type} batch can bypass its verified read")
-        promoShape(listOf(type, data.single(), batch.single() + 1).all { flow.promoDefinitionReaches(it, send) },
+        promoShape(listOf(type, data.single(), batch.single() + 1).all { flow.definitionReaches(it, send) },
             "${event.type} telemetry send can bypass its verified payload or batch append")
         promoShape(flow.normal[send].size == 1, "${event.type} send continuation changed")
         val continuation = flow.normal[send].single()
-        if (event != PremiumPromoEvent.FAIL) {
+        if (event != AppLogEvent.FAIL) {
+            // A report that continues into a stock call must reach it straight from the send and
+            // return right after, so skipping the send skips nothing else.
+            val end = if (event.after == null) continuation else continuation + 1
             promoShape(AccessFlags.STATIC.isSet(method.accessFlags) && method.returnType == "V" &&
-                method.parameterTypes.map { it.toString() } == event.parameters && instructions[continuation].opcode == Opcode.RETURN_VOID &&
-                instructions.count { it.appLogCall()?.name == "sendRequest" } == 1, "${event.type} is no longer a standalone interaction report")
+                method.parameterTypes.map { it.toString() } == event.parameters &&
+                (event.after == null || instructions[continuation].appLogCall()?.toString() == event.after &&
+                    flow.normal[continuation] == listOf(end)) &&
+                instructions.getOrNull(end)?.opcode == Opcode.RETURN_VOID &&
+                instructions.count { it.appLogCall()?.name == "sendRequest" } == 1, "${event.type} is no longer a standalone report")
         } else {
             val request = requests.single()
             val cancellation = request - 1
@@ -366,39 +345,14 @@ internal fun BytecodePatchContext.resolvePremiumPromoHooks(): Map<PremiumPromoEv
                 "Premium fail event is no longer the cancellation response")
         }
         val answer = method.freeLocalsAt(PATCH, send, 1, targets = listOf(continuation), highest = 255).single()
-        hooks[event] = PremiumPromoHook(method, send, continuation, """
+        hooks[event] = AppLogHook(method, send, continuation, """
             const-string v$answer, "${event.type}"
-            invoke-static/range {v$answer .. v$answer}, $ANALYTICS->skipPremiumAppLog(Ljava/lang/String;)Z
+            invoke-static/range {v$answer .. v$answer}, $ANALYTICS->${event.hook}(Ljava/lang/String;)Z
             move-result v$answer
             if-nez v$answer, :hush_continue
         """)
     }
     return hooks
-}
-
-/** A throwing definition leaves the old value, and later backedges can revisit an earlier use. */
-private fun ControlFlow.promoDefinitionReaches(source: Int, use: Int, register: Int? = null): Boolean {
-    val seen = mutableSetOf<Pair<Int, Boolean>>()
-    val pending = ArrayDeque<Pair<Int, Boolean>>()
-    pending += 0 to false
-    var reached = false
-    while (pending.isNotEmpty()) {
-        val state = pending.removeFirst()
-        if (!seen.add(state)) continue
-        val (at, known) = state
-        if (at == use) {
-            if (!known) return false
-            reached = true
-        }
-        val instruction = instructions[at]
-        val destination = instruction.namedRegisters().firstOrNull()
-        val overwritten = register != null && instruction.opcode.setsRegister() &&
-            (destination == register || instruction.opcode.setsWideRegister() && destination?.plus(1) == register)
-        val next = if (at == source) true else known && !overwritten
-        normal[at].forEach { pending += it to next }
-        exceptional[at].forEach { pending += it to known }
-    }
-    return reached
 }
 
 private fun promoShape(valid: Boolean, reason: String) {

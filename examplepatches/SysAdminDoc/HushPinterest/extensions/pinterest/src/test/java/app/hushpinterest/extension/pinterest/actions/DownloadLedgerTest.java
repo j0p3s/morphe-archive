@@ -88,20 +88,19 @@ public class DownloadLedgerTest {
         clearProcessView();
     }
 
-    @Test public void downloadedPinsAreRequestedOrSavedOnesButNotFailedSkippedOrUnsupported() {
+    @Test public void downloadedPinsAreRequestedOnesButNotFailedSkippedOrUnsupported() {
         owned("111", DownloadManager.STATUS_RUNNING);
         owned("112", DownloadManager.STATUS_SUCCESSFUL);
         owned("113", DownloadManager.STATUS_FAILED);
         assertTrue(DownloadLedger.record(app, 9999, "114"));
-        assertTrue(DownloadLedger.recordResult(app, "222", DownloadLedger.State.SAVED));
         assertTrue(DownloadLedger.recordResult(app, "333", DownloadLedger.State.SKIPPED));
         assertTrue(DownloadLedger.recordResult(app, "444", DownloadLedger.State.FAILED));
         assertTrue(DownloadLedger.recordResult(app, "555", DownloadLedger.State.UNSUPPORTED));
-        assertEquals(new java.util.HashSet<>(java.util.Arrays.asList("111", "112", "222")), DownloadLedger.downloadedPinIds(app));
+        assertEquals(new java.util.HashSet<>(java.util.Arrays.asList("111", "112")), DownloadLedger.downloadedPinIds(app));
 
         // When Android can't be asked, its requests still count, so nothing is saved twice.
         nativeJobs.nullCursor = true;
-        assertEquals(new java.util.HashSet<>(java.util.Arrays.asList("111", "112", "113", "114", "222")),
+        assertEquals(new java.util.HashSet<>(java.util.Arrays.asList("111", "112", "113", "114")),
                 DownloadLedger.downloadedPinIds(app));
         nativeJobs.nullCursor = false;
     }
@@ -115,14 +114,141 @@ public class DownloadLedgerTest {
         String stored = preferences().getString(DownloadLedger.RECORDS, "");
         assertEquals(32, stored.lines().count());
         for (String row : stored.split("\n")) assertTrue(row, row.matches("[0-9]+,[0-9]{1,30},[0-9]+"));
-        assertEquals(1, preferences().getAll().size());
-        assertFalse(stored.contains("https"));
-        assertFalse(stored.contains("token"));
-        assertFalse(stored.contains("Pinterest_"));
-        assertFalse(stored.contains("content:"));
+        // The eight older requests keep only their ID and pin ID, newest first.
+        String earlier = preferences().getString(DownloadLedger.EARLIER, "");
+        assertEquals(8, earlier.lines().count());
+        for (String row : earlier.split("\n")) assertTrue(row, row.matches("[0-9]+,[0-9]{1,30}"));
+        assertTrue(earlier, earlier.startsWith("7,1007\n"));
+        assertEquals(2, preferences().getAll().size());
+        for (String text : new String[]{stored, earlier}) {
+            assertFalse(text.contains("https"));
+            assertFalse(text.contains("token"));
+            assertFalse(text.contains("Pinterest_"));
+            assertFalse(text.contains("content:"));
+        }
         assertEquals(40, nativeJobs.getRequestCount());
         assertEquals(0, nativeJobs.removes);
         assertEquals(32, nativeJobs.queries.get(0).length);
+    }
+
+    @Test public void aFullBoardOfSavesStillCountsOnceItsPinsLeaveTheVisibleHistory() {
+        // Download board takes up to 500 pins, and the visible history shows the newest 32.
+        java.util.Set<String> saved = new java.util.HashSet<>();
+        for (int i = 0; i < BoardDownloads.PINS; i++) {
+            String pin = Integer.toString(10000 + i);
+            owned(pin, DownloadManager.STATUS_SUCCESSFUL);
+            saved.add(pin);
+        }
+        assertTrue(DownloadLedger.recordResult(app, "99", DownloadLedger.State.SKIPPED));
+        assertTrue(DownloadLedger.recordResult(app, "98", DownloadLedger.State.UNSUPPORTED));
+        nativeJobs.queries.clear();
+        assertEquals(saved, DownloadLedger.downloadedPinIds(app));
+        // One query, under the 999 host parameters SQLite allows before 3.32 (Android 10's Downloads).
+        assertEquals(1, nativeJobs.queries.size());
+        assertEquals(BoardDownloads.PINS, nativeJobs.queries.get(0).length);
+        assertTrue(DownloadLedger.LIMIT + DownloadLedger.EARLIER_LIMIT < 999);
+
+        List<DownloadLedger.Job> shown = new DownloadLedger(app).reconcile();
+        assertEquals(DownloadLedger.LIMIT, shown.size());
+        assertEquals("98", shown.get(0).pinId);
+        assertEquals(DownloadLedger.LIMIT, preferences().getString(DownloadLedger.RECORDS, "").lines().count());
+        // Skipped and unsupported results never count, so only requests move back.
+        assertEquals(BoardDownloads.PINS - DownloadLedger.LIMIT + 2,
+                preferences().getString(DownloadLedger.EARLIER, "").lines().count());
+    }
+
+    @Test public void theEarlierHistoryKeepsItsNewestEntriesAndAndroidStillDecidesWhatCounts() {
+        owned("0", DownloadManager.STATUS_SUCCESSFUL);
+        long failed = owned("1", DownloadManager.STATUS_PENDING);
+        long missing = owned("2", DownloadManager.STATUS_SUCCESSFUL);
+        owned("3", DownloadManager.STATUS_SUCCESSFUL);
+        int total = DownloadLedger.LIMIT + DownloadLedger.EARLIER_LIMIT;
+        for (int i = 4; i < total; i++) owned(Integer.toString(100 + i), DownloadManager.STATUS_SUCCESSFUL);
+        java.util.Set<String> downloaded = DownloadLedger.downloadedPinIds(app);
+        assertEquals(total, downloaded.size());
+        assertTrue(downloaded.containsAll(java.util.Arrays.asList("0", "1", "2", "3")));
+        assertEquals(DownloadLedger.EARLIER_LIMIT, preferences().getString(DownloadLedger.EARLIER, "").lines().count());
+
+        // A newer download pushes the oldest entry out of both lists, and only that one.
+        owned("77", DownloadManager.STATUS_SUCCESSFUL);
+        downloaded = DownloadLedger.downloadedPinIds(app);
+        assertEquals(total, downloaded.size());
+        assertFalse(downloaded.contains("0"));
+        assertTrue(downloaded.contains("77"));
+        assertEquals(DownloadLedger.EARLIER_LIMIT, preferences().getString(DownloadLedger.EARLIER, "").lines().count());
+
+        // Earlier requests are asked about again: failed or gone from Android, they can be saved again.
+        status(failed, DownloadManager.STATUS_FAILED);
+        manager.remove(missing);
+        downloaded = DownloadLedger.downloadedPinIds(app);
+        assertFalse(downloaded.contains("1"));
+        assertFalse(downloaded.contains("2"));
+        assertTrue(downloaded.contains("3"));
+        // When Android can't be asked, they still count, so nothing is saved twice.
+        nativeJobs.nullCursor = true;
+        assertTrue(DownloadLedger.downloadedPinIds(app).contains("2"));
+        nativeJobs.nullCursor = false;
+    }
+
+    @Test public void removingAPinFromHistoryForgetsItsEarlierEntriesToo() throws Exception {
+        owned("7", DownloadManager.STATUS_SUCCESSFUL);
+        owned("8", DownloadManager.STATUS_SUCCESSFUL);
+        for (int i = 0; i < DownloadLedger.LIMIT; i++) owned(Integer.toString(100 + i), DownloadManager.STATUS_SUCCESSFUL);
+        long again = owned("7", DownloadManager.STATUS_SUCCESSFUL);
+        assertTrue(DownloadLedger.downloadedPinIds(app).containsAll(java.util.Arrays.asList("7", "8")));
+
+        assertTrue(DownloadLedger.removeHistory(app, again, null));
+        settle();
+        java.util.Set<String> downloaded = DownloadLedger.downloadedPinIds(app);
+        assertFalse(downloaded.contains("7"));
+        assertTrue(downloaded.contains("8"));
+        assertEquals(DownloadLedger.LIMIT + 3, nativeJobs.getRequestCount());
+        assertEquals(0, nativeJobs.removes);
+        assertFalse(preferences().getString(DownloadLedger.EARLIER, "").contains(",7\n"));
+    }
+
+    @Test public void removingAResultThatNeverCountedKeepsThePinsEarlierDownloads() throws Exception {
+        owned("7", DownloadManager.STATUS_SUCCESSFUL);
+        for (int i = 0; i < DownloadLedger.LIMIT; i++) owned(Integer.toString(100 + i), DownloadManager.STATUS_SUCCESSFUL);
+        assertTrue(DownloadLedger.recordResult(app, "7", DownloadLedger.State.SKIPPED));
+        long skipped = new DownloadLedger(app).reconcile().get(0).id;
+
+        assertTrue(DownloadLedger.removeHistory(app, skipped, null));
+        settle();
+        assertTrue(DownloadLedger.downloadedPinIds(app).contains("7"));
+        assertEquals("1,100\n0,7\n", preferences().getString(DownloadLedger.EARLIER, ""));
+    }
+
+    @Test public void removingARowThatMovedToTheEarlierHistoryStillForgetsIt() throws Exception {
+        long first = owned("7", DownloadManager.STATUS_SUCCESSFUL);
+        // The dialog still shows the row, but newer downloads have pushed it out of the visible history.
+        for (int i = 0; i < DownloadLedger.LIMIT; i++) owned(Integer.toString(100 + i), DownloadManager.STATUS_SUCCESSFUL);
+
+        assertTrue(DownloadLedger.removeHistory(app, first, null));
+        settle();
+        assertFalse(DownloadLedger.downloadedPinIds(app).contains("7"));
+        assertEquals(DownloadLedger.LIMIT, new DownloadLedger(app).reconcile().size());
+        assertEquals("", preferences().getString(DownloadLedger.EARLIER, ""));
+        assertEquals("History removed. Files and active downloads were kept.", ShadowToast.getTextOfLatestToast());
+        assertNotNull(nativeJobs.getRequest(first));
+    }
+
+    @Test public void malformedOrOversizeEarlierHistoryCountsNothing() {
+        // Only Android's request IDs belong there; a signed line is a local result and never counts.
+        long known = enqueue("321");
+        status(known, DownloadManager.STATUS_SUCCESSFUL);
+        preferences().edit().putString(DownloadLedger.EARLIER,
+                known + ",321\n" + known + ",999\n-1,123\n-7,456\nbad,1\n6,bad\n7,1,extra\n9999999999999999999,2\n").commit();
+        nativeJobs.queries.clear();
+        assertEquals(new java.util.HashSet<>(java.util.Arrays.asList("321")), DownloadLedger.downloadedPinIds(app));
+        assertArrayEquals(new long[]{known}, nativeJobs.queries.get(0));
+        nativeJobs.queries.clear();
+        // Over 51 characters a line: refused whole, though each line alone would be asked about.
+        preferences().edit().putString(DownloadLedger.EARLIER, (known + ",3\n").repeat(DownloadLedger.EARLIER_LIMIT * 13)).commit();
+        assertTrue(DownloadLedger.downloadedPinIds(app).isEmpty());
+        preferences().edit().putInt(DownloadLedger.EARLIER, 1).commit();
+        assertTrue(DownloadLedger.downloadedPinIds(app).isEmpty());
+        assertTrue(nativeJobs.queries.isEmpty());
     }
 
     @Test public void zeroIdIsOwnedAndInvalidAdmissionNeverQueriesAnything() {
@@ -139,8 +265,11 @@ public class DownloadLedgerTest {
 
     @Test public void malformedDuplicateAndOversizeMetadataCannotExpandOwnership() {
         preferences().edit().putString(DownloadLedger.RECORDS,
-                "7,123,100\n7,999,200\n-1,123,100\n8,bad,100\n9,123,0\n"
-                        + "9999999999999999999,123,100\n10,123,9999999999999999999\n11,123,100,extra\n").commit();
+                "7,123,100\n7,999,200\n-1,123,100\n8,bad,100\n9,123,0\n-5,123,100,SAVED\n"
+                        + "9999999999999999999,123,100\n10,123,9999999999999999999\n11,123,100,extra\n-6,123,100,P\n"
+                        // A folder field that isn't one DownloadManager writes to is no folder at all.
+                        + "12,123,100,F:Music/x\n13,123,100,F:Pictures/../x\n14,123,100,F:\n15,123,100,F:Download\n"
+                        + "16,123,100,F:Pictures/a\u0007b\n-17,123,100,F:Pictures/x\n").commit();
         List<DownloadLedger.Job> jobs = new DownloadLedger(app).reconcile();
         assertEquals(1, jobs.size());
         assertEquals(7, jobs.get(0).id);
@@ -148,7 +277,7 @@ public class DownloadLedgerTest {
         assertEquals(DownloadLedger.State.MISSING, jobs.get(0).state);
         assertArrayEquals(new long[]{7}, nativeJobs.queries.get(0));
         nativeJobs.queries.clear();
-        preferences().edit().putString(DownloadLedger.RECORDS, "1,2,3\n".repeat(700)).commit();
+        preferences().edit().putString(DownloadLedger.RECORDS, "1,2,3\n".repeat(DownloadLedger.RECORDS_LENGTH / 6 + 1)).commit();
         assertTrue(new DownloadLedger(app).reconcile().isEmpty());
         assertTrue(nativeJobs.queries.isEmpty());
         preferences().edit().putInt(DownloadLedger.RECORDS, 1).commit();
@@ -194,6 +323,25 @@ public class DownloadLedgerTest {
         assertFalse(jobs.get(1).canRetry());
         try { jobs.clear(); fail("mutable result"); }
         catch (UnsupportedOperationException expectedImmutable) { }
+    }
+
+    /** Android's Downloads list shows only the Download folder, so a save in Pinterest's folder says where it is. */
+    @Test public void aFinishedDownloadInPinterestsFolderSaysWhereItIs() {
+        Settings.SAVE_IN_PINTEREST_FOLDER.save(true);
+        try {
+            owned("200", DownloadManager.STATUS_SUCCESSFUL);
+            owned("201", DownloadManager.STATUS_FAILED);
+        } finally {
+            Settings.SAVE_IN_PINTEREST_FOLDER.save(false);
+        }
+        owned("202", DownloadManager.STATUS_SUCCESSFUL);
+        List<DownloadLedger.Job> jobs = new DownloadLedger(app).reconcile();
+        assertEquals("202", jobs.get(0).pinId);
+        assertEquals("Check Downloads for the saved file.", jobs.get(0).reasonText());
+        assertEquals("201", jobs.get(1).pinId);
+        assertEquals("Download failed.", jobs.get(1).reasonText());
+        assertEquals("200", jobs.get(2).pinId);
+        assertEquals("Saved in Pictures/100PINT/Pins.", jobs.get(2).reasonText());
     }
 
     @Test public void pausedAndFailedReasonCodesHaveNonsecretFallbacks() {
@@ -272,16 +420,6 @@ public class DownloadLedgerTest {
         assertEquals(DownloadLedger.SENDER_PERMISSION, registration().broadcastPermission);
     }
 
-    @Test @Config(sdk = 28)
-    public void AndroidNineDoesNotCreateNativeLedgerOrReceiver() throws Exception {
-        assertFalse(DownloadLedger.record(app, 1, "123"));
-        DownloadLedger.onStart(app);
-        settle();
-        assertTrue(registrations().isEmpty());
-        assertTrue(nativeJobs.queries.isEmpty());
-        assertTrue(preferences().getAll().isEmpty());
-    }
-
     @Test public void missingRequestIsGuidanceWithoutAssumingTheFileWasDeleted() throws Exception {
         long id = owned("123", DownloadManager.STATUS_SUCCESSFUL);
         manager.remove(id); // Simulates removal in system Downloads, not a ledger action.
@@ -295,6 +433,65 @@ public class DownloadLedgerTest {
         assertEquals(0, nativeJobs.getRequestCount());
         assertEquals(0, nativeJobs.removes);
         assertEquals("Open the pin again to get a fresh download link.", ShadowToast.getTextOfLatestToast());
+    }
+
+    @Test public void aRequestKeepsItsFolderAfterAndroidForgetsIt() {
+        long id = enqueue("300");
+        status(id, DownloadManager.STATUS_SUCCESSFUL);
+        assertTrue(DownloadLedger.record(app, id, "300", DownloadFolder.PINTEREST));
+        String saved = preferences().getString(DownloadLedger.RECORDS, "").split("\n")[0];
+        assertTrue(saved.startsWith(id + ",300,"));
+        assertTrue(saved.endsWith(",P"));
+        manager.remove(id); // Simulates removal in system Downloads, not a ledger action.
+        nativeJobs.removes = 0;
+        DownloadLedger.Job job = new DownloadLedger(app).reconcile().get(0);
+        assertEquals(DownloadLedger.State.MISSING, job.state);
+        assertEquals("Android no longer has this request. Check Pictures/100PINT/Pins before saving again.", job.reasonText());
+        // A Download request keeps the old line shape, so history written before the flag reads the same.
+        long plain = owned("301", DownloadManager.STATUS_SUCCESSFUL);
+        String first = preferences().getString(DownloadLedger.RECORDS, "").split("\n")[0];
+        assertTrue(first.startsWith(plain + ",301,"));
+        assertEquals(3, first.split(",", -1).length);
+        assertEquals(0, nativeJobs.removes);
+    }
+
+    /** #5: a folder picked by hand is kept with its request, commas and all, and named once Android forgets it. */
+    @Test public void aPickedFolderIsKeptWithItsRequestAndNamedWhenAndroidForgetsIt() {
+        String folder = "Pictures/Art, 100% mine";
+        long id = enqueue("310");
+        status(id, DownloadManager.STATUS_SUCCESSFUL);
+        assertTrue(DownloadLedger.record(app, id, "310", folder));
+        String saved = preferences().getString(DownloadLedger.RECORDS, "").split("\n")[0];
+        assertTrue(saved, saved.startsWith(id + ",310,") && saved.endsWith(",F:Pictures/Art%2C 100%25 mine"));
+        manager.remove(id); // Simulates removal in system Downloads, not a ledger action.
+        nativeJobs.removes = 0;
+        DownloadLedger.Job job = new DownloadLedger(app).reconcile().get(0);
+        assertEquals(DownloadLedger.State.MISSING, job.state);
+        assertEquals("Android no longer has this request. Check " + folder + " before saving again.", job.reasonText());
+        // A full history of the longest folders, every character escaped, still reads back whole.
+        String longest = "Documents/" + ",".repeat(DownloadFolder.MAX_LENGTH - "Documents/".length());
+        assertEquals(DownloadFolder.MAX_LENGTH, longest.length());
+        for (int i = 0; i < DownloadLedger.LIMIT; i++) {
+            assertTrue(DownloadLedger.record(app, 1_000_000_000_000_000_000L + i, "9".repeat(30), longest));
+        }
+        String full = preferences().getString(DownloadLedger.RECORDS, "");
+        assertTrue(full.length() + " <= " + DownloadLedger.RECORDS_LENGTH, full.length() <= DownloadLedger.RECORDS_LENGTH);
+        List<DownloadLedger.Job> jobs = new DownloadLedger(app).reconcile();
+        assertEquals(DownloadLedger.LIMIT, jobs.size());
+        assertEquals("Android no longer has this request. Check " + longest + " before saving again.", jobs.get(0).reasonText());
+        assertEquals(0, nativeJobs.removes);
+    }
+
+    /** A request whose folder wasn't kept is placed by the destination Android reports for it. */
+    @Test public void aPickedFolderIsReadFromAndroidWhenTheLineDoesNotSayIt() {
+        DownloadFolder.PICKED.save("DCIM/Pins");
+        try {
+            owned("320", DownloadManager.STATUS_SUCCESSFUL);
+        } finally {
+            DownloadFolder.PICKED.save("");
+        }
+        List<DownloadLedger.Job> jobs = new DownloadLedger(app).reconcile();
+        assertEquals("Saved in DCIM/Pins.", jobs.get(0).reasonText());
     }
 
     @Test public void nullDeniedAndPartialQueryFailuresRemainUnavailableAndCloseTheCursor() {
@@ -724,7 +921,8 @@ public class DownloadLedgerTest {
             if (denied) throw new SecurityException("native query denied");
             if (nullCursor) return null;
             cursor = new MatrixCursor(new String[]{DownloadManager.COLUMN_ID, DownloadManager.COLUMN_STATUS,
-                    DownloadManager.COLUMN_REASON, DownloadManager.COLUMN_URI, DownloadManager.COLUMN_MEDIA_TYPE}) {
+                    DownloadManager.COLUMN_REASON, DownloadManager.COLUMN_URI, DownloadManager.COLUMN_MEDIA_TYPE,
+                    DownloadManager.COLUMN_LOCAL_URI}) {
                 private int statusReads;
                 @Override public int getInt(int column) {
                     if (column == 1 && failAfterReads >= 0 && statusReads++ == failAfterReads) {
@@ -748,7 +946,8 @@ public class DownloadLedgerTest {
             ShadowDownloadManager.ShadowRequest request = Shadow.extract(original);
             cursor.addRow(new Object[]{id, request.getStatus(), reasons.getOrDefault(id, 0),
                     sources.containsKey(id) ? sources.get(id) : request.getUri().toString(),
-                    mimes.containsKey(id) ? mimes.get(id) : request.getMimeType()});
+                    mimes.containsKey(id) ? mimes.get(id) : request.getMimeType(),
+                    request.getDestination() == null ? null : request.getDestination().toString()});
         }
 
         @Implementation protected Uri getUriForDownloadedFile(long id) {

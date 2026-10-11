@@ -510,6 +510,30 @@ public class Utils {
         return settingsReady;
     }
 
+    /**
+     * Waits up to [timeoutMillis] for {@link #settingsReady()}, for a hook that a library's own
+     * startup reaches on a worker thread before the application's onCreate: Firebase's init
+     * provider opens its first Installations request that way. Answers at once on the main
+     * thread, the thread setContext runs on, where waiting could only time out.
+     */
+    public static boolean awaitSettingsReady(long timeoutMillis) {
+        if (settingsReady) return true;
+        if (Looper.myLooper() == Looper.getMainLooper()) return false;
+        long deadline = System.nanoTime() + timeoutMillis * 1_000_000L;
+        while (!settingsReady) {
+            long left = deadline - System.nanoTime();
+            if (left <= 0) return false;
+            try {
+                // A short poll rather than a notify, so setContext stays as it is.
+                Thread.sleep(Math.max(1L, Math.min(10L, left / 1_000_000L)));
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+                return settingsReady;
+            }
+        }
+        return true;
+    }
+
     /** Persistent preference writes are owned by the package's main process. */
     public static boolean isMainProcess() {
         Context appContext = context;
@@ -750,6 +774,22 @@ public class Utils {
     }
 
     /**
+     * Shows a message in the app's own style instead of an Android toast. It runs on the main
+     * thread and answers false when it can't show this message, which then goes out as an Android
+     * toast.
+     */
+    public interface ToastPresenter {
+        boolean show(String message, int toastDuration);
+    }
+
+    private static volatile ToastPresenter toastPresenter;
+
+    /** Set by an app's extension that can show that app's own toasts. Null goes back to Android's. */
+    public static void setToastPresenter(@Nullable ToastPresenter presenter) {
+        toastPresenter = presenter;
+    }
+
+    /**
      * Safe to call from any thread.
      *
      * @param messageToToast Message to show.
@@ -758,6 +798,7 @@ public class Utils {
     public static void showToast(String messageToToast, int toastDuration) {
         Objects.requireNonNull(messageToToast);
         runOnMainThreadNowOrLater(() -> {
+            if (presented(messageToToast, toastDuration)) return;
             Context currentContext = context;
 
             if (currentContext == null) {
@@ -767,6 +808,18 @@ public class Utils {
                 Toast.makeText(currentContext, messageToToast, toastDuration).show();
             }
         });
+    }
+
+    /** True when the app's own toast took the message. A presenter that fails leaves it to Android. */
+    private static boolean presented(String message, int toastDuration) {
+        ToastPresenter presenter = toastPresenter;
+        if (presenter == null) return false;
+        try {
+            return presenter.show(message, toastDuration);
+        } catch (Exception | LinkageError ex) {
+            Logger.printException(() -> "The app's own toast failed, showing an Android toast instead", ex);
+            return false;
+        }
     }
 
     /**

@@ -52,7 +52,8 @@ class SaveProfilePictureHookTest {
         val declared = ExtensionDex.classDef(PROFILE_PICTURE).methods
             .filter { AccessFlags.PUBLIC.isSet(it.accessFlags) && AccessFlags.STATIC.isSet(it.accessFlags) }
             .map { "${it.name}(${it.parameterTypes.joinToString("")})${it.returnType}" }
-        for (method in listOf(OFFER_PICTURE.substringAfter("->"), "$ADD_ROW_STUB(${ADD_ROW_PARAMETERS.joinToString("")})Z")) {
+        for (method in listOf(OFFER_PICTURE.substringAfter("->"), OFFER_POPUP.substringAfter("->"), POPUP_ITEM_FIELDS.substringAfter("->"),
+            "$ADD_ROW_STUB(${ADD_ROW_PARAMETERS.joinToString("")})Z")) {
             assertTrue("$method is not in the extension: $declared", method in declared)
         }
         val bridges = ExtensionDex.classDef(INSTAGRAM_MEDIA).methods.map { it.name }
@@ -82,6 +83,15 @@ class SaveProfilePictureHookTest {
             assertEquals(SHOWER, (code[at + 1].reference() as TypeReference).type)
         }
 
+        val popup = code.indices.single { code[it].referenceText() == OFFER_POPUP }
+        val popupUser = code[popup - 1] as TwoRegisterInstruction
+        val offer = code[popup] as FiveRegisterInstruction
+        assertEquals("the account, off the newer helper", "$NEWER->user:$USER", code[popup - 1].referenceText())
+        assertEquals("the list, the account and the context the popup is built with", listOf(6, popupUser.registerA, 8),
+            listOf(offer.registerC, offer.registerD, offer.registerE))
+        assertEquals("the owner is the newer helper", 0, popupUser.registerB)
+        assertEquals("right before the popup takes its list", "$POPUP->take(Ljava/util/List;)V", code[popup + 1].referenceText())
+
         val stub = context.method(PROFILE_PICTURE, ADD_ROW_STUB).instructions()
         val adds = stub.single { it.opcode == Opcode.INVOKE_VIRTUAL_RANGE } as RegisterRangeInstruction
         assertEquals("$SHEET->add(${ROW_ADDER_PARAMETERS.joinToString("")})V", (adds as Instruction).referenceText())
@@ -89,6 +99,25 @@ class SaveProfilePictureHookTest {
         assertEquals("no icon, as the newer menu's own rows", -1, stub.literal(adds.startRegister + 4))
         assertEquals("the plain text color, not Report's red", 0, stub.literal(adds.startRegister + 5))
         assertEquals("the stub says the row went in", Opcode.RETURN, stub.last().opcode)
+
+        // The fixture's item stores its eleventh and sixteenth arguments in each other's field, as 450 does.
+        val names = (0 until 24).map { "a$it" }.toMutableList().apply { this[10] = "a15"; this[15] = "a10" }
+        assertEquals("the item's fields in argument order", "fixture.PopupItem|" + names.joinToString(","), layout(context))
+    }
+
+    @Test
+    fun anItemArgumentNotStoredFailsThePatch() = refuses("doesn't store argument(s) 3") {
+        context(itemStores = { at -> at != 3 }).findProfileMenus()
+    }
+
+    @Test
+    fun anItemArgumentStoredInAFieldOfAnotherTypeFailsThePatch() = refuses("doesn't have argument 9's type") {
+        context(itemFieldType = { at -> if (at == 9) "Ljava/lang/Object;" else null }).findProfileMenus()
+    }
+
+    @Test
+    fun anItemConstructorThatBranchesFailsThePatch() = refuses("constructor branches") {
+        context(itemBranches = true).findProfileMenus()
     }
 
     @Test
@@ -122,17 +151,44 @@ class SaveProfilePictureHookTest {
     }
 
     @Test
+    fun aPopupItemOfAnotherSizeFailsThePatch() = refuses("expected one item class built with 24 arguments") {
+        context(popupItemArguments = 23).findProfileMenus()
+    }
+
+    @Test
+    fun twoPopupsFailThePatch() = refuses("expected one PopupWindow") {
+        context(host = host(twoPopups = true)).findProfileMenus()
+    }
+
+    @Test
+    fun aPopupNotHandedItsListRightAwayFailsThePatch() = refuses("isn't handed its list right after it's built") {
+        context(host = host(popupGap = true)).findProfileMenus()
+    }
+
+    @Test
+    fun aPopupWhoseContextIsNotTheHelpersFailsThePatch() = refuses("context isn't read off the newer helper") {
+        context(host = host(popupContextFromElsewhere = true)).findProfileMenus()
+    }
+
+    @Test
     fun aSheetShownTwiceFailsThePatch() = refuses("shown once, found 2") {
         context(host = host(showTwice = true)).findProfileMenus()
     }
 
-    /** In each declared build: both menus offer the row, the stub reaches the sheet's adder, and the picture's bridges are written. */
+    /**
+     * In each of the seven 450 builds: both menus offer the row, the stub reaches the sheet's adder,
+     * the picture's bridges are written, and the pop-up item's fields are handed over in its
+     * constructor's argument order, each of that argument's type.
+     */
     @Test
     fun eachDeclaredBuildOffersTheRow() {
         val versions = AppCompatibilities.instagram().single().targets.mapNotNull { it.version }.toSet()
+        val bundles = versions.flatMap { version -> Fixtures.files { it.extension == "apks" && it.name.contains("-$version-") } } +
+            Fixtures.otherBuilds()
+        assertEquals("the declared build and the six others", 7, bundles.size)
         var checked = 0
-        for (version in versions) {
-            for (bundle in Fixtures.files { it.extension == "apks" && it.name.contains("-$version-") }) {
+        run {
+            for (bundle in bundles) {
                 val kept = mutableListOf<ClassDef>()
                 FixtureDex.forEach(bundle) { dex ->
                     for (classDef in dex.classes) {
@@ -146,7 +202,10 @@ class SaveProfilePictureHookTest {
                 }
                 val made = hosts.flatMap { it.methods }.flatMap { it.instructions() }
                     .filter { it.opcode == Opcode.NEW_INSTANCE }.map { (it.reference() as TypeReference).type }.toSet()
-                kept += hosts + FixtureDex.classes(bundle, made).values
+                val built = FixtureDex.classes(bundle, made).values
+                // The item's click callback is an interface nothing in the host makes.
+                val taken = built.flatMap { it.methods }.filter { it.name == "<init>" }.flatMap { it.parameterTypes.map(Any::toString) }.toSet()
+                kept += hosts + built + FixtureDex.classes(bundle, taken - made).values
                 val context = PatchContexts.of(
                     kept.distinctBy { it.type } + ExtensionDex.classDef(PROFILE_PICTURE) + ExtensionDex.classDef(INSTAGRAM_MEDIA),
                 )
@@ -160,6 +219,7 @@ class SaveProfilePictureHookTest {
                     it.name == menus.method.name && it.parameterTypes == menus.method.parameterTypes
                 }
                 assertEquals("${bundle.name}: one offer per menu", 2, host.instructions().count { it.referenceText() == OFFER_PICTURE })
+                assertEquals("${bundle.name}: one offer for the pop-up list", 1, host.instructions().count { it.referenceText() == OFFER_POPUP })
                 val stub = context.method(PROFILE_PICTURE, ADD_ROW_STUB).instructions()
                 val adds = stub.single { it.opcode == Opcode.INVOKE_VIRTUAL_RANGE }
                 assertEquals("${bundle.name}: the stub's adder", menus.sheetType,
@@ -169,10 +229,18 @@ class SaveProfilePictureHookTest {
                 for (bridge in PICTURE_BRIDGES) {
                     assertEquals("${bundle.name}: $bridge", Opcode.CHECK_CAST, context.method(INSTAGRAM_MEDIA, bridge).instructions().first().opcode)
                 }
+                val (item, fields) = layout(context).split("|")
+                val itemClass = context.classDefBy("L${item.replace('.', '/')};")
+                val arguments = itemClass.methods.single { it.name == "<init>" }.parameterTypes.map(Any::toString)
+                val names = fields.split(",")
+                assertEquals("${bundle.name}: one field per argument", arguments.size, names.toSet().size)
+                names.forEachIndexed { at, name ->
+                    assertEquals("${bundle.name}: $name holds argument $at", arguments[at], itemClass.fields.single { it.name == name }.type)
+                }
                 checked++
             }
         }
-        assertTrue("no fixture of a declared build", checked > 0)
+        assertEquals("every build checked", 7, checked)
     }
 
     /** With the bio's getter gone, every other bridge goes in and the bio's keeps answering null, so only Copy bio is left out. */
@@ -215,6 +283,13 @@ class SaveProfilePictureHookTest {
 
     private fun BytecodePatchContext.method(type: String, name: String): Method = mutableClassDefBy(type).methods.single { it.name == name }
 
+    /** What the patched [POPUP_ITEM_FIELDS] stub answers. */
+    private fun layout(context: BytecodePatchContext): String {
+        val stub = context.method(PROFILE_PICTURE, POPUP_ITEM_FIELDS.substringAfter("->").substringBefore("(")).instructions()
+        assertEquals(listOf(Opcode.CONST_STRING, Opcode.RETURN_OBJECT), stub.map { it.opcode })
+        return (stub[0].reference() as com.android.tools.smali.dexlib2.iface.reference.StringReference).string
+    }
+
     private fun Method.instructions(): List<Instruction> = implementation?.instructions?.toList().orEmpty()
     private fun Method.loads(string: String) = instructions().any {
         ((it.reference()) as? com.android.tools.smali.dexlib2.iface.reference.StringReference)?.string == string
@@ -238,6 +313,9 @@ class SaveProfilePictureHookTest {
         const val BOTTOM = "Lfixture/BottomOptions;"
         const val NEWER = "Lfixture/Options;"
         const val CONTEXT = "Landroid/content/Context;"
+        const val POPUP = "Lfixture/Popup;"
+        const val ITEM = "Lfixture/PopupItem;"
+        const val CALLBACK = "Lfixture/Click;"
         val PICTURE_BRIDGES = listOf(
             "profilePicture", "fullSizeProfilePicture", "username", "biography", "profilePictureUrl", "profilePictureWidth",
             "profilePictureHeight", "candidateUrl", "candidateWidth", "candidateHeight",
@@ -248,7 +326,66 @@ class SaveProfilePictureHookTest {
             host: ClassDef = host(),
             sheet: ClassDef = sheet(),
             newer: ClassDef = helper(NEWER, PROFILE_MENUS[1]),
-        ) = PatchContexts.of(listOf(host, sheet, helper(BOTTOM, PROFILE_MENUS[0]), newer, ExtensionDex.classDef(PROFILE_PICTURE)))
+            popupItemArguments: Int = 24,
+            itemStores: (Int) -> Boolean = { true },
+            itemFieldType: (Int) -> String? = { null },
+            itemBranches: Boolean = false,
+        ) = PatchContexts.of(
+            listOf(host, sheet, helper(BOTTOM, PROFILE_MENUS[0]), newer, ExtensionDex.classDef(PROFILE_PICTURE)) +
+                popup(popupItemArguments, itemStores, itemFieldType, itemBranches),
+        )
+
+        /**
+         * Shaped like 450's X.03W6, X.0juk and X.0qhV: the pop-up list, its item and the item's click
+         * callback. Like X.0juk, the item stores its eleventh and sixteenth arguments in each other's
+         * field by name.
+         */
+        fun popup(
+            arguments: Int,
+            stores: (Int) -> Boolean = { true },
+            fieldType: (Int) -> String? = { null },
+            branches: Boolean = false,
+        ): List<ClassDef> {
+            val parameters = (0 until arguments).map {
+                when (it) {
+                    4 -> CALLBACK
+                    in 9..15 -> "Ljava/lang/Integer;"
+                    16, 17 -> "Ljava/lang/String;"
+                    in 18..23 -> "Z"
+                    else -> "Ljava/lang/Object;"
+                }
+            }
+            val constructor = AccessFlags.PUBLIC.value or AccessFlags.CONSTRUCTOR.value
+            fun swapped(at: Int) = when (at) { 10 -> 15; 15 -> 10; else -> at }
+            val storesCode = parameters.indices.filter(stores).joinToString("\n") { at ->
+                val (move, put) = if (parameters[at] == "Z") "move/from16" to "iput-boolean" else "move-object/from16" to "iput-object"
+                // A store takes registers up to v15 only, so each argument goes through v0 first, as many of X.0juk's do.
+                "$move v0, p${at + 1}\n$put v0, p0, $ITEM->a${swapped(at)}:${parameters[at]}"
+            }
+            val body = (if (branches) "if-eqz p1, :done\n" else "") +
+                "invoke-direct { p0 }, Ljava/lang/Object;-><init>()V\n$storesCode\n:done\nreturn-void"
+            val item = ImmutableClassDef(
+                ITEM, AccessFlags.PUBLIC.value, "Ljava/lang/Object;", null, null, null,
+                parameters.indices.map { at ->
+                    ImmutableField(ITEM, "a$at", fieldType(at) ?: parameters[swapped(at)], AccessFlags.PUBLIC.value or AccessFlags.FINAL.value,
+                        null, null, null)
+                },
+                listOf(method(ITEM, "<init>", parameters, parameters.size + 2, body, constructor)),
+            )
+            val callback = ImmutableClassDef(
+                CALLBACK, AccessFlags.PUBLIC.value or AccessFlags.INTERFACE.value or AccessFlags.ABSTRACT.value,
+                "Ljava/lang/Object;", null, null, null, null, null,
+            )
+            val window = ImmutableClassDef(
+                POPUP, AccessFlags.PUBLIC.value, "Landroid/widget/PopupWindow;", null, null, null, null,
+                listOf(
+                    method(POPUP, "<init>", listOf(CONTEXT, SESSION, "Ljava/lang/Integer;", "Z"), 6, "return-void", constructor),
+                    method(POPUP, "take", listOf("Ljava/util/List;"), 3, "const/4 v0, 0x0\ncheck-cast v0, $ITEM\nreturn-void", PUBLIC_FINAL),
+                    method(POPUP, "other", listOf("Ljava/util/List;"), 3, "return-void", PUBLIC_FINAL),
+                ),
+            )
+            return listOf(item, callback, window)
+        }
 
         /** Shaped like 450's X.0NFq and X.0NFr: the kept name, the account and the context the sheet shows with. */
         fun helper(type: String, name: String, users: Int = 1): ClassDef = ImmutableClassDef(
@@ -268,7 +405,19 @@ class SaveProfilePictureHookTest {
         )
 
         /** Shaped like 450's X.09D9.A02: the bottom sheet's menu, or the newer one, each built and shown. */
-        fun host(newerName: String = PROFILE_MENUS[1], readsContext: Boolean = true, jumpToShower: Boolean = false, showTwice: Boolean = false): ClassDef {
+        fun host(
+            newerName: String = PROFILE_MENUS[1],
+            readsContext: Boolean = true,
+            jumpToShower: Boolean = false,
+            showTwice: Boolean = false,
+            twoPopups: Boolean = false,
+            popupGap: Boolean = false,
+            popupContextFromElsewhere: Boolean = false,
+        ): ClassDef {
+            val popupContext = "iget-object v8, v0, " + (if (popupContextFromElsewhere) BOTTOM else NEWER) + "->context:$CONTEXT"
+            val handOver = if (popupGap) "move-object v7, v6\n invoke-virtual { v7, v6 }, $POPUP->take(Ljava/util/List;)V"
+                else "invoke-virtual { v2, v6 }, $POPUP->take(Ljava/util/List;)V"
+            val second = if (twoPopups) "new-instance v9, $POPUP\n invoke-direct { v9, v8, v5, v1, v3 }, $POPUP-><init>($CONTEXT${SESSION}Ljava/lang/Integer;Z)V" else ""
             val adds = "invoke-virtual/range { v20 .. v25 }, $SHEET->add(${ROW_ADDER_PARAMETERS.joinToString("")})V"
             val newerContext = if (readsContext) "iget-object v1, v0, $NEWER->context:$CONTEXT" else "const/4 v1, 0x0"
             val body = """
@@ -299,6 +448,7 @@ class SaveProfilePictureHookTest {
                 invoke-virtual { v1, v0 }, $SHOWER->show($CONTEXT)V
                 return-void
                 :newer
+                if-nez v5, :popup
                 new-instance v0, $NEWER
                 invoke-direct { v0 }, $NEWER-><init>()V
                 const-string v1, "$newerName"
@@ -309,6 +459,19 @@ class SaveProfilePictureHookTest {
                 $newerContext
                 invoke-virtual { v2, v1 }, $SHOWER->show($CONTEXT)V
                 ${if (showTwice) "new-instance v2, $SHOWER\n invoke-direct { v2, v7 }, $SHOWER-><init>($SHEET)V" else ""}
+                return-void
+                :popup
+                new-instance v0, $NEWER
+                invoke-direct { v0 }, $NEWER-><init>()V
+                $popupContext
+                new-instance v6, Ljava/util/ArrayList;
+                invoke-direct { v6 }, Ljava/util/ArrayList;-><init>()V
+                const/4 v3, 0x0
+                const/4 v1, 0x0
+                new-instance v2, $POPUP
+                invoke-direct { v2, v8, v5, v1, v3 }, $POPUP-><init>($CONTEXT${SESSION}Ljava/lang/Integer;Z)V
+                $handOver
+                $second
                 return-void
             """
             return ImmutableClassDef(

@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import app.hushpinterest.extension.pinterest.ads.HookTargets;
 import app.hushpinterest.extension.shared.L10n;
 import app.hushpinterest.extension.shared.Logger;
 import app.hushpinterest.extension.shared.diagnostics.HookStatus;
@@ -51,7 +52,8 @@ public enum PatchFamily {
     HIDE_SHOPPING(FamilyNames.HIDE_SHOPPING, "hideShopping", null, Settings.HIDE_SHOPPING),
     DISABLE_ANALYTICS(FamilyNames.DISABLE_ANALYTICS, "disableAnalytics",
             "Firebase and Google Analytics collection is turned off", Settings.DISABLE_ANALYTICS),
-    STRIP_LINK_TRACKING(FamilyNames.STRIP_LINK_TRACKING, "stripLinkTracking", null, Settings.STRIP_LINK_TRACKING),
+    STRIP_LINK_TRACKING(FamilyNames.STRIP_LINK_TRACKING, "stripLinkTracking", null, Settings.STRIP_LINK_TRACKING,
+            Settings.PLAIN_PIN_LINKS),
     HIDE_ADVERTISING_ID(FamilyNames.HIDE_ADVERTISING_ID, "hideAdvertisingId", null, Settings.HIDE_ADVERTISING_ID),
     /** Manifest permissions removed when patching: no switch, so Pause can't reach it. */
     REMOVE_AD_TRACKING_PERMISSIONS(FamilyNames.REMOVE_AD_TRACKING_PERMISSIONS, "removeAdTrackingPermissions",
@@ -59,7 +61,7 @@ public enum PatchFamily {
     /** Signature spoofing metadata added to the manifest when patching: no switch either. */
     SPOOF_SIGNATURE(FamilyNames.SPOOF_SIGNATURE, "spoofSignature",
             "Pinterest's original signature is added to the app"),
-    DOWNLOAD_PINS(FamilyNames.DOWNLOAD_PINS, "downloadPins", null, Settings.DOWNLOAD_PINS),
+    DOWNLOAD_PINS(FamilyNames.DOWNLOAD_PINS, "downloadPins", null, Settings.DOWNLOAD_PINS, Settings.SAVE_IN_PINTEREST_FOLDER),
     DOWNLOAD_BOARD(FamilyNames.DOWNLOAD_BOARD, "downloadBoard", null, Settings.DOWNLOAD_BOARD),
     LONG_PRESS_DOWNLOAD(FamilyNames.LONG_PRESS_DOWNLOAD, "longPressDownload", null, Settings.LONG_PRESS_DOWNLOAD),
     EXTERNAL_BROWSER(FamilyNames.EXTERNAL_BROWSER, "externalBrowser", null, Settings.EXTERNAL_BROWSER),
@@ -77,7 +79,8 @@ public enum PatchFamily {
     HIDE_SURVEY_PROMPTS(FamilyNames.HIDE_SURVEY_PROMPTS, "hideSurveyPrompts", null, Settings.HIDE_SURVEY_PROMPTS),
     HIDE_SAVE_TOASTS(FamilyNames.HIDE_SAVE_TOASTS, "hideSaveToasts", null, Settings.HIDE_SAVE_TOASTS),
     ORIGINAL_IMAGES(FamilyNames.ORIGINAL_IMAGES, "originalImages", null, Settings.ORIGINAL_IMAGES),
-    DISABLE_UPDATE_NAG(FamilyNames.DISABLE_UPDATE_NAG, "disableUpdateNag", null, Settings.DISABLE_UPDATE_NAG);
+    DISABLE_UPDATE_NAG(FamilyNames.DISABLE_UPDATE_NAG, "disableUpdateNag", null, Settings.DISABLE_UPDATE_NAG),
+    FIX_PUSH_NOTIFICATIONS(FamilyNames.FIX_PUSH_NOTIFICATIONS, "fixPushNotifications", null, Settings.FIX_PUSH_NOTIFICATIONS);
 
     /** The patch's name in Morphe Manager. */
     public final String patchName;
@@ -142,7 +145,9 @@ public enum PatchFamily {
         ANALYTICS_TASKS(DISABLE_ANALYTICS, "analyticsTasks", "Analytics launch tasks"),
         ANALYTICS_UPLOADS(DISABLE_ANALYTICS, "analyticsUploads", "Analytics uploads"),
         LINK_TRACKING(STRIP_LINK_TRACKING, "linkTracking", "Strip link tracking"),
+        PLAIN_PIN_LINKS(STRIP_LINK_TRACKING, "plainPinLinks", "Plain pin links"),
         ADVERTISING_ID(HIDE_ADVERTISING_ID, "advertisingId", "Hide advertising ID"),
+        BROWSER_ID(HIDE_ADVERTISING_ID, "browserId", "Block Store browser ID"),
         PIN_DOWNLOADS(DOWNLOAD_PINS, "pinDownloads", "Download pins"),
         BOARD_MENU(DOWNLOAD_BOARD, "boardMenu", "board menus"),
         BOARD_PINS(DOWNLOAD_BOARD, "boardPins", "loaded board pins"),
@@ -161,7 +166,8 @@ public enum PatchFamily {
         SAVE_TOASTS(HIDE_SAVE_TOASTS, "saveToasts", "Hide save toasts"),
         IMAGE_CHOOSER(ORIGINAL_IMAGES, "imageChooser", "collage images"),
         CLOSEUP_IMAGE(ORIGINAL_IMAGES, "closeupImage", "pin closeups"),
-        UPDATE_NAG(DISABLE_UPDATE_NAG, "updateNag", "Disable update nag");
+        UPDATE_NAG(DISABLE_UPDATE_NAG, "updateNag", "Disable update nag"),
+        FIREBASE_CERTIFICATE(FIX_PUSH_NOTIFICATIONS, "firebaseCertificate", "Fix push notifications");
 
         public final PatchFamily family;
         final String statusMethod;
@@ -207,16 +213,33 @@ public enum PatchFamily {
         return Collections.unmodifiableSet(installed);
     }
 
-    /** Keeps the usual description for complete builds and names precise coverage for partial ones. */
+    /**
+     * Keeps the usual description for complete builds and names precise coverage for partial ones.
+     * A capability whose separate targets the patch recorded ({@link HookTargets}) counts as
+     * complete only when every one of them went in whole; otherwise each target is named in its own
+     * right, so one list holder out of three never reads as the whole feed.
+     */
     String coverageSummary(String completeSummary) {
-        Set<Capability> expected = expectedCapabilities();
-        Set<Capability> installed = installedCapabilities();
-        if (installed.size() == expected.size()) return completeSummary;
         List<String> covered = new ArrayList<>();
         List<String> missing = new ArrayList<>();
-        for (Capability capability : expected) {
-            (installed.contains(capability) ? covered : missing).add(L10n.t(capability.label));
+        boolean complete = true;
+        for (Capability capability : expectedCapabilities()) {
+            if (!capability.installed()) {
+                complete = false;
+                missing.add(L10n.t(capability.label));
+                continue;
+            }
+            List<HookTargets.Target> targets = HookTargets.of(capability);
+            if (HookTargets.allComplete(targets)) {
+                covered.add(L10n.t(capability.label));
+                continue;
+            }
+            complete = false;
+            for (HookTargets.Target target : targets) {
+                (target.hooked == 0 ? missing : covered).add(target.summaryLabel());
+            }
         }
+        if (complete) return completeSummary;
         if (covered.isEmpty()) return L10n.f("This build doesn't include the parts that handle %1$s.", L10n.join(missing));
         return L10n.f("This build handles %1$s. It's missing the parts for %2$s.", L10n.join(covered), L10n.join(missing));
     }
@@ -225,10 +248,30 @@ public enum PatchFamily {
         List<String> covered = new ArrayList<>();
         List<String> missing = new ArrayList<>();
         for (Capability capability : expectedCapabilities()) {
-            (capability.installed() ? covered : missing).add(capability.label);
+            if (!capability.installed()) missing.add(capability.label);
+            else covered.add(HookTargets.allComplete(HookTargets.of(capability)) ? capability.label : capability.label + " (partial)");
         }
         String line = patchName + " coverage: " + (covered.isEmpty() ? "none" : String.join(", ", covered));
         return missing.isEmpty() ? line : line + "; missing: " + String.join(", ", missing);
+    }
+
+    /**
+     * One line per installed capability whose targets the patch records, naming each target and
+     * how much of it went in, then what that capability has no hook for at all.
+     */
+    private List<String> targetReportLines() {
+        List<String> lines = new ArrayList<>();
+        for (Capability capability : expectedCapabilities()) {
+            if (!HookTargets.tracks(capability) || !capability.installed()) continue;
+            List<HookTargets.Target> targets = HookTargets.of(capability);
+            List<String> parts = new ArrayList<>();
+            for (HookTargets.Target target : targets) parts.add(target.reportText());
+            String line = patchName + " targets for " + capability.label + ": "
+                    + (parts.isEmpty() ? "not recorded" : String.join(", ", parts));
+            List<String> uncovered = HookTargets.notCovered(capability);
+            lines.add(uncovered.isEmpty() ? line : line + "; no hook of its own: " + String.join(", ", uncovered));
+        }
+        return lines;
     }
 
     @Nullable
@@ -309,6 +352,7 @@ public enum PatchFamily {
         for (PatchFamily family : values()) {
             if (inBuild.contains(family) && !family.expectedCapabilities().isEmpty()) {
                 lines.add(family.coverageReportLine());
+                lines.addAll(family.targetReportLines());
             }
         }
         return lines;

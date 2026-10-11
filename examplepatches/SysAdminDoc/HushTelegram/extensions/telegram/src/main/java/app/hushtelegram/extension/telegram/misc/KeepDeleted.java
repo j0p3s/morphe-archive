@@ -35,7 +35,7 @@ import java.util.Map;
 public final class KeepDeleted {
     private KeepDeleted() {}
 
-    /** Newest messages remembered per account. Older ones lose the label first. */
+    /** Newest messages remembered per account. Past it, the oldest go to Telegram's own deletion. */
     static final int LIMIT = 5000;
 
     /** Bubbles measured lately, which a chat on screen can be asked to draw again. */
@@ -215,6 +215,7 @@ public final class KeepDeleted {
     static void decide(Source source, long dialogId, ArrayList<Integer> ids, long channelId) {
         ArrayList<Integer> release = new ArrayList<>(ids);
         ArrayList<long[]> kept = new ArrayList<>();
+        List<String> overflow = Collections.emptyList();
         long self = 0;
         try {
             self = source.self();
@@ -222,12 +223,18 @@ public final class KeepDeleted {
                 if (!keeps(row, self) || !release.remove(Integer.valueOf(row.id))) continue;
                 kept.add(new long[] {row.dialog, row.id});
             }
-            remember(self, kept);
+            overflow = remember(self, kept);
             if (!kept.isEmpty()) HookStatus.counted(FamilyNames.KEEP_DELETED_MESSAGES, "deleted messages kept");
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.KEEP_DELETED_MESSAGES, "decision", failure);
             release = new ArrayList<>(ids);
             kept.clear();
+        }
+        // Forgotten past the cap, a kept message would stay in the database with no label, out of
+        // reach of Clear kept messages, so it goes to Telegram's own deletion now instead.
+        if (!overflow.isEmpty()) {
+            handBack(source, self, overflow);
+            HookStatus.counted(FamilyNames.KEEP_DELETED_MESSAGES, "oldest kept messages handed back");
         }
         redraw(source, self, kept);
         if (release.isEmpty()) return;
@@ -319,9 +326,8 @@ public final class KeepDeleted {
     /** One account's part of [clear]. Forgets first, so a deletion that fails on the queue can put its messages back. */
     private static int clearAccount(Source source) throws Exception {
         long owner = source.self();
-        List<String> messages = keptBy(owner);
+        List<String> messages = takeAll(owner);
         if (messages.isEmpty()) return 0;
-        forget(owner, messages);
         try {
             source.post(() -> handBack(source, owner, messages));
         } catch (Throwable refused) {
@@ -377,16 +383,18 @@ public final class KeepDeleted {
         }
     }
 
-    static synchronized void remember(long owner, List<long[]> messages) {
-        if (messages.isEmpty()) return;
+    /** Remembers [messages] for [owner] as the newest, and returns the oldest ones past {@link #LIMIT}, now forgotten. */
+    static synchronized List<String> remember(long owner, List<long[]> messages) {
+        if (messages.isEmpty()) return Collections.emptyList();
         LinkedHashSet<String> set = load(owner);
         for (long[] message : messages) {
             String key = key(message[0], message[1]);
             set.remove(key);
             set.add(key);
         }
+        List<String> dropped = new ArrayList<>();
         for (Iterator<String> oldest = set.iterator(); set.size() > LIMIT && oldest.hasNext(); ) {
-            oldest.next();
+            dropped.add(oldest.next());
             oldest.remove();
         }
         try {
@@ -394,6 +402,7 @@ public final class KeepDeleted {
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.KEEP_DELETED_MESSAGES, "saving kept messages", failure);
         }
+        return dropped;
     }
 
     static synchronized boolean isKept(long owner, long dialog, long id) {
@@ -405,17 +414,32 @@ public final class KeepDeleted {
         return Collections.unmodifiableList(new ArrayList<>(load(owner)));
     }
 
-    /** Drops [messages] from what [owner] remembers, and saves the rest. */
-    static synchronized void forget(long owner, List<String> messages) {
+    /**
+     * Everything [owner] remembers, oldest first, forgotten in the same step. One lock, so an
+     * overflow on the storage queue can't hand the same messages back between a read and a forget.
+     */
+    static synchronized List<String> takeAll(long owner) {
         LinkedHashSet<String> set = load(owner);
-        set.removeAll(messages);
+        List<String> taken = new ArrayList<>(set);
+        if (taken.isEmpty()) return taken;
+        set.clear();
         save(owner, set);
+        return taken;
     }
 
-    /** Puts [messages] back in what [owner] remembers, after a clear that couldn't hand them over. */
+    /**
+     * Puts [messages] back in what [owner] remembers, after a hand-back that couldn't happen. They
+     * go back as the oldest, so they're the next to leave: as the newest, a chat whose deletion
+     * keeps failing would push real kept messages out ahead of their turn.
+     */
     static synchronized void restore(long owner, List<String> messages) {
         LinkedHashSet<String> set = load(owner);
-        set.addAll(messages);
+        LinkedHashSet<String> restored = new LinkedHashSet<>();
+        for (String message : messages) if (!set.contains(message)) restored.add(message);
+        if (restored.isEmpty()) return;
+        restored.addAll(set);
+        set.clear();
+        set.addAll(restored);
         save(owner, set);
     }
 

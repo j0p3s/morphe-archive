@@ -2,6 +2,7 @@ package unipatches.compatibility
 
 import app.morphe.patcher.patch.rawResourcePatch
 import java.io.File
+import java.security.MessageDigest
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
 import java.util.zip.ZipOutputStream
@@ -12,7 +13,7 @@ import org.w3c.dom.Document
 import org.w3c.dom.Element
 
 private const val EXPANSION_ASSET_DIRECTORY = "assets/unipatch-legacy-expansion"
-private val expansionFilePattern = Regex("main\\.\\d+\\.([A-Za-z0-9_.]+)\\.obb")
+private val expansionFilePattern = Regex("(?:main|patch)\\.\\d+\\.([A-Za-z0-9_.]+)\\.obb")
 private val nativeEntryPattern = Regex("assets/libs/([^/]+)/([^/]+\\.so)")
 
 internal data class LegacyExpansionOptions(
@@ -23,6 +24,31 @@ internal data class LegacyExpansionOptions(
 )
 
 internal fun expansionAssetPath(fileName: String): String = "$EXPANSION_ASSET_DIRECTORY/$fileName"
+
+internal fun expansionChecksumAssetPath(fileName: String): String = expansionAssetPath("$fileName.sha256")
+
+internal fun expansionChecksumText(file: File): String = "${file.length()}\n${expansionSha256(file)}\n"
+
+internal fun expansionSha256(file: File): String {
+    val digest = MessageDigest.getInstance("SHA-256")
+    file.inputStream().buffered().use { input ->
+        val buffer = ByteArray(DEFAULT_COPY_BUFFER)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            digest.update(buffer, 0, count)
+        }
+    }
+    val bytes = digest.digest()
+    val hex = "0123456789abcdef"
+    return buildString(bytes.size * 2) {
+        for (byte in bytes) {
+            val value = byte.toInt() and 0xff
+            append(hex[value ushr 4])
+            append(hex[value and 0x0f])
+        }
+    }
+}
 
 internal fun expansionNativeDestination(entryName: String): String? =
     nativeEntryPattern.matchEntire(entryName)?.let { match ->
@@ -71,9 +97,23 @@ internal fun rewriteExpansionObb(source: File, output: File, removedEntries: Set
     }
 }
 
+internal fun stageExpansionNativeLibraries(
+    zip: ZipFile,
+    nativeEntries: List<Pair<String, String>>,
+    outputForDestination: (String) -> File,
+) {
+    for ((entryName, destination) in nativeEntries) {
+        val output = outputForDestination(destination)
+        output.parentFile?.mkdirs()
+        zip.getInputStream(zip.getEntry(entryName)).use { input ->
+            output.outputStream().use { outputStream -> input.copyTo(outputStream, DEFAULT_COPY_BUFFER) }
+        }
+    }
+}
+
 /**
- * Stages an optional expansion OBB, relocates full native libraries that old Unity packages
- * incorrectly kept inside it, and can omit those relocated entries from embedded output.
+ * Stages an optional main or patch expansion OBB, relocates full native libraries stored
+ * under the conventional assets/libs/<abi>/ path, and can omit them from embedded output.
  * All operations happen at patch time; no host path is retained.
  */
 internal fun legacyExpansionFilesPatch(optionsProvider: () -> LegacyExpansionOptions) = rawResourcePatch(
@@ -102,7 +142,7 @@ internal fun legacyExpansionFilesPatch(optionsProvider: () -> LegacyExpansionOpt
             "Legacy compatibility: cannot validate expansion OBB because APK package name could not be resolved."
         }
         require(isExpansionFileForPackage(source.name, packageName)) {
-            "Legacy compatibility: expected OBB filename main.<versionCode>.<package>.obb matching package $packageName, got ${source.name}"
+            "Legacy compatibility: expected main.<versionCode>.<package>.obb or patch.<versionCode>.<package>.obb matching package $packageName, got ${source.name}"
         }
 
         val nativeEntries = mutableListOf<Pair<String, String>>()
@@ -124,12 +164,8 @@ internal fun legacyExpansionFilesPatch(optionsProvider: () -> LegacyExpansionOpt
                 require(nativeEntries.isNotEmpty()) {
                     "Legacy compatibility: requested native-library relocation, but OBB contains no assets/libs/<abi>/*.so entries."
                 }
-                for ((entryName, destination) in nativeEntries) {
-                    val output = get(destination, false)
-                    output.parentFile?.mkdirs()
-                    zip.getInputStream(zip.getEntry(entryName)).use { input ->
-                        output.outputStream().use { outputStream -> input.copyTo(outputStream, DEFAULT_COPY_BUFFER) }
-                    }
+                stageExpansionNativeLibraries(zip, nativeEntries) { destination -> get(destination, false) }
+                nativeEntries.forEach { (entryName, destination) ->
                     logger.info("Legacy compatibility: relocated OBB native library $entryName to $destination.")
                 }
             }
@@ -152,6 +188,11 @@ internal fun legacyExpansionFilesPatch(optionsProvider: () -> LegacyExpansionOpt
                 }
                 logger.info("Legacy compatibility: embedded expansion OBB ${source.name} (${source.length()} bytes).")
             }
+            val checksumAsset = get(expansionChecksumAssetPath(source.name), false)
+            checksumAsset.parentFile?.mkdirs()
+            val checksumText = expansionChecksumText(output)
+            checksumAsset.writeText(checksumText)
+            logger.info("Legacy compatibility: embedded OBB checksum metadata prepared for ${source.name} (${output.length()} bytes).")
         }
     }
 }

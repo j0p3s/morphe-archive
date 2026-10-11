@@ -20,39 +20,39 @@ About	Tentang
 Android 11 and older don't say which links open here. Tap to open this app's settings, then Open by default.	Android 11 dan versi sebelumnya tidak memberi tahu tautan mana yang terbuka di sini. Ketuk untuk membuka pengaturan aplikasi ini, lalu Buka secara default.
 Back	Kembali
 Cancel	Batal
-Loads switch choices from a saved file. You see how many switches it will change before anything is applied. It applies to all accounts.	Memuat pilihan sakelar dari berkas yang disimpan. Anda melihat berapa sakelar yang akan berubah sebelum apa pun diterapkan. Berlaku untuk semua akun.
+Loads your switches, filter lists and sticker size from a saved file. You see which switches it will change before anything is applied. It applies to all accounts.	Memuat sakelar, daftar filter, dan ukuran stiker Anda dari berkas yang disimpan. Anda melihat sakelar mana yang akan berubah sebelum apa pun diterapkan. Berlaku untuk semua akun.
 Clear diagnostic data	Hapus data diagnostik
 Copy a short report or save the full one to Download/Morphe. Links, IDs and sign-in details are left out. Look it over before sharing.	Salin laporan singkat atau simpan yang lengkap ke Download/Morphe. Tautan, ID, dan data masuk tidak disertakan. Periksa dulu sebelum membagikannya.
 Copy quick report	Salin laporan singkat
-Couldn't import the settings, and couldn't put back the ones you had. Check the switches on this screen.	Pengaturan tidak dapat diimpor, dan pengaturan sebelumnya tidak dapat dikembalikan. Periksa sakelar di layar ini.
+Couldn't import or restore old settings. Check the switches.	Gagal mengimpor atau memulihkan pengaturan lama. Periksa sakelarnya.
 Couldn't import the settings. Nothing was changed.	Pengaturan tidak dapat diimpor. Tidak ada yang diubah.
 Couldn't open that file. Nothing was changed.	File itu tidak dapat dibuka. Tidak ada yang diubah.
 Couldn't open the file picker. Try again.	Pemilih file tidak dapat dibuka. Coba lagi.
 Couldn't put back the diagnostic data. Try again.	Data diagnostik tidak dapat dikembalikan. Coba lagi.
 Couldn't save the settings file. Try again.	File pengaturan tidak dapat disimpan. Coba lagi.
 Couldn't start that. Try again in a moment.	Tidak dapat dimulai. Coba lagi dalam beberapa saat.
-Couldn't start the report export. Try again shortly.	Ekspor laporan tidak dapat dimulai. Coba lagi dalam beberapa saat.
+Couldn't start the report export. Try again in a moment.	Ekspor laporan tidak dapat dimulai. Coba lagi dalam beberapa saat.
 Couldn't turn HushTelegram back on. Try again.	HushTelegram tidak dapat diaktifkan lagi. Coba lagi.
 Debug logging	Pencatatan debug
 Diagnostic data cleared. Tap again to put it back.	Data diagnostik dihapus. Ketuk lagi untuk mengembalikannya.
 Diagnostic data put back.	Data diagnostik dikembalikan.
 Diagnostic report copied to the clipboard.	Laporan diagnostik disalin ke papan klip.
 Clears the activity log and patch checks that a report would include.	Menghapus catatan aktivitas dan hasil pemeriksaan tambalan yang akan disertakan dalam laporan.
-Every switch except Debug logging acts as if it were off. Edits made when you patched stay in. Your choices stay saved.	Semua sakelar kecuali Pencatatan debug dianggap mati. Perubahan yang dibuat saat menambal tetap berlaku. Pilihan Anda tetap tersimpan.
+Every switch except Debug logging acts as if it were off. Your choices stay saved. Edits made when you patched stay in.	Semua sakelar kecuali Pencatatan debug dianggap mati. Pilihan Anda tetap tersimpan. Perubahan yang dibuat saat menambal tetap berlaku.
 Export diagnostic report	Ekspor laporan diagnostik
 Export settings	Ekspor pengaturan
 After Telegram restarts, every switch except Debug logging acts as if it were off. Your choices stay saved. Edits made when you patched stay in.	Setelah Telegram dimulai ulang, semua sakelar kecuali Pencatatan debug dianggap mati. Pilihan Anda tetap tersimpan. Perubahan yang dibuat saat menambal tetap berlaku.
 Hide ads	Sembunyikan iklan
 Links, updates, backup and more	Tautan, pembaruan, cadangan, dan lainnya
 Privacy	Privasi
-Saves your switch choices to a file, for all accounts in this Telegram app. Pause, Debug logging and the update check aren't included.	Menyimpan pilihan sakelar Anda ke berkas, untuk semua akun di aplikasi Telegram ini. Jeda, Pencatatan debug, dan pemeriksaan pembaruan tidak disertakan.
-Settings exported. The app holding the file wouldn't let HushTelegram read it back, so it wasn't checked.	Pengaturan diekspor. Aplikasi yang menyimpan file itu tidak mengizinkan HushTelegram membacanya kembali, jadi file itu tidak diperiksa.
-The app holding that file is taking too long, so HushTelegram stopped waiting. Nothing was changed.	Aplikasi yang menyimpan file itu terlalu lama, jadi HushTelegram berhenti menunggu. Tidak ada yang diubah.
-The app holding the last settings file still hasn't answered. Try again later.	Aplikasi yang menyimpan file pengaturan terakhir masih belum merespons. Coba lagi nanti.
-The app holding the settings file is taking too long, so HushTelegram stopped waiting. That app may still finish saving it, so check the file before you rely on it.	Aplikasi yang menyimpan file pengaturan terlalu lama, jadi HushTelegram berhenti menunggu. Aplikasi itu mungkin masih menyelesaikan penyimpanannya, jadi periksa file itu sebelum mengandalkannya.
+Saves your switches, filter lists and sticker size to a file, for all accounts in this Telegram app. Pause, Debug logging, the HushTelegram release check, UnifiedPush and Folders by chat type stay out.	Menyimpan sakelar, daftar filter, dan ukuran stiker Anda ke berkas, untuk semua akun di aplikasi Telegram ini. Jeda, Pencatatan debug, pemeriksaan rilis HushTelegram, UnifiedPush, dan Folder menurut jenis obrolan tidak disertakan.
+Settings exported but not checked. Open the file to make sure.	Pengaturan diekspor tapi belum diperiksa. Buka filenya untuk memastikan.
+That app is slow to answer. Nothing was changed. Try again.	Aplikasi itu lambat merespons. Tidak ada yang diubah. Coba lagi.
+That file's app still hasn't answered. Try again later.	Aplikasi file itu belum menjawab. Coba lagi nanti.
+That app is slow. It may still save the file, so check it.	Aplikasi itu lambat. Mungkin masih menyimpan file, jadi periksa file-nya.
 The file %1$s couldn't be removed. Delete it from %2$s, then tap Resume again.	File %1$s tidak dapat dihapus. Hapus file itu dari %2$s, lalu ketuk Lanjutkan lagi.
-The settings file was saved, but what's in it doesn't match what was written. Save it again as a new file.	Berkas pengaturan tersimpan, tetapi isinya tidak sama dengan yang ditulis. Simpan lagi sebagai berkas baru.
-Until you resume, every switch except Debug logging acts as if it were off. Edits made when you patched stay in.	Sampai Anda melanjutkan, semua sakelar kecuali Pencatatan debug dianggap mati. Perubahan yang dibuat saat menambal tetap berlaku.
+Saved, but the file doesn't match. Save it again as a new file.	Tersimpan, tetapi isi file tidak cocok. Simpan lagi sebagai file baru.
+Until you resume, every switch except Debug logging acts as if it were off. Your choices stay saved. Edits made when you patched stay in.	Sampai Anda melanjutkan, semua sakelar kecuali Pencatatan debug dianggap mati. Pilihan Anda tetap tersimpan. Perubahan yang dibuat saat menambal tetap berlaku.
 Full report saved to %1$s	Laporan lengkap disimpan ke %1$s
 The GPL-3.0 license, and credits for the projects HushTelegram is built on	Lisensi GPL-3.0 dan kredit untuk proyek-proyek yang menjadi dasar HushTelegram
 HushTelegram is on	HushTelegram aktif
@@ -82,29 +82,29 @@ Couldn't reach GitHub. Try again later.	GitHub tidak dapat dihubungi. Coba lagi 
 GitHub is blocking checks from this network for now. Try again later.	GitHub sedang memblokir pemeriksaan dari jaringan ini untuk sementara. Coba lagi nanti.
 GitHub sent a reply HushTelegram couldn't read. Try again later.	GitHub mengirim balasan yang tidak bisa dibaca HushTelegram. Coba lagi nanti.
 Saving the settings file	Menyimpan file pengaturan
-Set when you patched	Diatur saat Anda menambal
 Settings couldn't open	Pengaturan tidak dapat dibuka
-Settings couldn't refresh completely. Reopen settings and try again.	Pengaturan tidak dapat dimuat ulang sepenuhnya. Buka kembali pengaturan lalu coba lagi.
+Settings couldn't refresh. Reopen settings and try again.	Pengaturan tidak dapat disegarkan. Buka lagi pengaturan dan coba lagi.
 Settings exported.	Pengaturan diekspor.
 Settings imported. %1$d switch changed.	Pengaturan diimpor. %1$d sakelar berubah.
 Settings imported. %1$d switches changed.	Pengaturan diimpor. %1$d sakelar berubah.
 Source code and issues	Kode sumber dan laporan masalah
 Stays in while paused	Tetap aktif saat dijeda
 Tap to turn it back on.	Ketuk untuk mengaktifkan HushTelegram lagi.
-That file is too large to be a settings file. Nothing was changed.	File itu terlalu besar untuk sebuah file pengaturan. Tidak ada yang diubah.
-That file isn't readable text, so it may have been damaged on the way. Nothing was changed.	File itu bukan teks yang dapat dibaca, jadi mungkin rusak saat ditransfer. Tidak ada yang diubah.
-That file lists a setting twice, so there's no telling which value to use. Nothing was changed.	File itu mencantumkan satu pengaturan dua kali, jadi tidak jelas nilai mana yang harus dipakai. Tidak ada yang diubah.
+That file is too big for a settings file. Nothing was changed.	File itu terlalu besar untuk file pengaturan. Tidak ada yang diubah.
+That file isn't readable text. Nothing was changed.	File itu bukan teks yang bisa dibaca. Tidak ada yang diubah.
+That file lists a setting twice. Nothing was changed.	File itu memuat satu pengaturan dua kali. Tidak ada yang diubah.
 That isn't a HushTelegram settings file. Nothing was changed.	Itu bukan file pengaturan HushTelegram. Tidak ada yang diubah.
-That settings file holds a value HushTelegram can't read. Nothing was changed.	File pengaturan itu memuat nilai yang tidak dapat dibaca HushTelegram. Tidak ada yang diubah.
-That settings file is damaged or only partly downloaded. Nothing was changed.	File pengaturan itu rusak atau hanya terunduh sebagian. Tidak ada yang diubah.
-That settings file was written by a newer HushTelegram than this one. Nothing was changed.	File pengaturan itu dibuat oleh versi HushTelegram yang lebih baru daripada versi ini. Tidak ada yang diubah.
-The diagnostic report couldn't be saved yet. Try again in a moment.	Laporan diagnostik belum dapat disimpan. Coba lagi dalam beberapa saat.
+A value in that file can't be read. Nothing was changed.	Ada nilai di file itu yang tidak bisa dibaca. Tidak ada yang diubah.
+That file is damaged. Download it again. Nothing was changed.	File itu rusak. Unduh lagi. Tidak ada yang diubah.
+Update HushTelegram to read that file. Nothing was changed.	Perbarui HushTelegram untuk membaca file itu. Tidak ada yang diubah.
+The report couldn't be saved yet. Try again in a moment.	Laporan belum bisa disimpan. Coba lagi sebentar lagi.
 The diagnostic report couldn't be saved. Try again.	Laporan diagnostik tidak dapat disimpan. Coba lagi.
 The file %1$s couldn't be removed. Delete it from %2$s to turn HushTelegram back on.	File %1$s tidak dapat dihapus. Hapus file itu dari %2$s untuk mengaktifkan HushTelegram lagi.
-That setting couldn't be updated. The switch shows the value that is saved.	Pengaturan itu tidak bisa diperbarui. Sakelar menampilkan nilai yang tersimpan.
+Couldn't remove %1$s. Delete it by hand.	%1$s tidak bisa dihapus. Hapus secara manual.
+Couldn't save that. It's back to the saved value. Try again.	Tidak bisa disimpan. Nilai tersimpan dipulihkan. Coba lagi.
 There's no diagnostic data to clear.	Tidak ada data diagnostik yang dapat dihapus.
 There's no diagnostic data to put back.	Tidak ada data diagnostik yang dapat dikembalikan.
-This phone has no file picker, so there's no way to choose a file here.	Ponsel ini tidak memiliki pemilih file, jadi file tidak dapat dipilih di sini.
+This phone has no file picker, so you can't choose a file here.	Ponsel ini tidak punya pemilih file, jadi kamu tidak bisa memilih file.
 Version	Versi
 Records what HushTelegram does and shows error messages, to help with a bug report. Leave it off for everyday use.	Mencatat apa yang dilakukan HushTelegram dan menampilkan pesan kesalahan, untuk membantu laporan bug. Biarkan mati untuk pemakaian sehari-hari.
 You paused HushTelegram.	Anda menjeda HushTelegram.
@@ -112,7 +112,7 @@ Your switches already match that file, so nothing will change.	Sakelar Anda suda
 Copy a short report to the clipboard.	Salin laporan singkat ke papan klip.
 Save the full report in Download/Morphe.	Simpan laporan lengkap di Download/Morphe.
 Settings imported.	Pengaturan diimpor.
-No app on this phone can open the link. The address is %1$s.	Tidak ada aplikasi di ponsel ini yang dapat membuka tautan ini. Alamatnya %1$s.
+Can't open the link. Go to %1$s.	Tautan tidak bisa dibuka. Buka %1$s.
 # context: Separate pages under More settings. Settings backup contains export and import; Diagnostics contains logging and diagnostic data controls.
 Settings backup	Cadangan setelan
 Diagnostics	Diagnostik
@@ -139,11 +139,10 @@ Android didn't say which links open here. Tap to check in Android's settings.	An
 Selecting links by hand	Memilih tautan secara manual
 
 A change here applies after Telegram restarts.	Perubahan di sini berlaku setelah Telegram dimulai ulang.
-Android opens t.me links in this app only if you select their addresses on its Open by default page. Other link settings don't change.	Android membuka tautan t.me di aplikasi ini hanya jika Anda memilih alamatnya di halaman Buka secara default milik aplikasi. Pengaturan tautan lain tidak berubah.
+Android opens t.me links in this Telegram app only if you select their addresses on its Open by default page. Other link settings don't change.	Android membuka tautan t.me di aplikasi Telegram ini hanya jika Anda memilih alamatnya di halaman Buka secara default milik aplikasi. Pengaturan tautan lain tidak berubah.
 Android verified this app for Telegram's web addresses, so their links open here.	Android telah memverifikasi aplikasi ini untuk alamat web Telegram, jadi tautannya terbuka di sini.
-Android's settings for this app didn't open. Open App info from Telegram's icon, then Open by default.	Pengaturan Android untuk aplikasi ini tidak terbuka. Buka Info aplikasi dari ikon Telegram, lalu Buka secara default.
+App settings didn't open. Try App info, then Open by default.	Pengaturan aplikasi tidak terbuka. Coba Info aplikasi, lalu Buka secara default.
 Removes sponsored messages in channels, sponsored accounts in search and ads in videos. They're never loaded, so none count as seen.	Menghapus pesan bersponsor di kanal, akun bersponsor di pencarian, dan iklan di video. Semuanya tidak pernah dimuat, jadi tidak ada yang dihitung sebagai dilihat.
-Chats	Chat
 HushTelegram %1$s on Telegram %2$s	HushTelegram %1$s di Telegram %2$s
 HushTelegram %1$s is made for Telegram %2$s.	HushTelegram %1$s dibuat untuk Telegram %2$s.
 HushTelegram pauses when Telegram restarts.	HushTelegram dijeda saat Telegram dimulai ulang.
@@ -161,7 +160,6 @@ Stop usage reports	Hentikan laporan penggunaan
 channel ads	iklan saluran
 video ads	iklan video
 search ads	iklan pencarian
-device statistics reports	laporan statistik perangkat
 channel read metrics	metrik pembacaan saluran
 This patched app doesn't change %1$s.	Aplikasi yang ditambal ini tidak mengubah %1$s.
 This patched app changes %1$s but not %2$s.	Aplikasi yang ditambal ini mengubah %1$s, tetapi tidak %2$s.
@@ -185,10 +183,18 @@ call debug reports	laporan debug panggilan
 call log file uploads	unggahan berkas log panggilan
 call log reports	laporan log panggilan
 Hide Premium, gifts and Stars	Sembunyikan Premium, hadiah dan Stars
-Removes Premium, Stars, My Grams, Business and Send a Gift from Settings, Gifts tabs on profiles, and the Gift button in channels.	Menghapus Premium, Stars, My Grams, Business, dan Kirim Hadiah dari Pengaturan, tab Hadiah di profil, dan tombol Hadiah di kanal.
+Removes Premium, Stars, My Grams, Wallet, Business and Send a Gift from Settings, Wallet and Send Gram from the chat, profile and link menus, Gifts tabs on profiles, the Gift button in channels, and Premium stickers, their effects and Premium emoji packs if you don't have Premium.	Menghapus Premium, Stars, My Grams, Dompet, Business, dan Kirim Hadiah dari Pengaturan, Dompet dan Kirim Gram dari menu chat, profil, dan tautan, tab Hadiah di profil, tombol Hadiah di kanal, serta stiker Premium beserta efeknya dan paket emoji Premium jika kamu tidak punya Premium.
 Settings sales rows	Penawaran di Pengaturan
 profile Gifts tabs	tab Hadiah pada profil
 channel Gift button	tombol Hadiah pada kanal
+attach menu Wallet button	tombol Dompet di menu lampiran
+chat list menu Wallet item	item Dompet di menu daftar chat
+profile menu Send Gram item	item Kirim Gram di menu profil
+TON link Send Gram item	item Kirim Gram di tautan TON
+Gram transfer Send Gram item	item Kirim Gram di transfer Gram
+Premium stickers in the keyboard and packs	stiker Premium di keyboard dan paket
+Premium sticker effects	efek stiker Premium
+Premium emoji packs in the emoji keyboard	paket emoji Premium di keyboard emoji
 Hide promotional banners	Sembunyikan banner promosi
 Hides the Premium, birthday and low Stars balance banners above your chat list. Account security notices and other suggestions still show.	Menyembunyikan banner Premium, ulang tahun, dan saldo Stars yang menipis di atas daftar obrolan Anda. Pemberitahuan keamanan akun dan saran lainnya tetap tampil.
 promotional suggestions	saran promosi
@@ -210,6 +216,7 @@ Premium promo views	tampilan promosi Premium
 Premium promo taps	ketukan promosi Premium
 Premium promo accepts	persetujuan promosi Premium
 Premium promo failures	kegagalan promosi Premium
+dual camera reports	laporan kamera ganda
 Firebase crash reports	laporan crash Firebase
 Firebase session reports	laporan sesi Firebase
 Accounts	Akun
@@ -304,6 +311,15 @@ Ask before sending a sticker	Tanya dulu sebelum mengirim stiker
 Asks Send or Cancel before a sticker you tap goes into a chat. Cancel drops it. Scheduled stickers go out without asking.	Menanyakan Kirim atau Batal sebelum stiker yang Anda ketuk masuk ke obrolan. Batal membuangnya. Stiker terjadwal terkirim tanpa bertanya.
 Turn off beta debug logs	Matikan log debug beta
 Telegram Beta keeps debug logs on your phone all the time, its connection log included, and its own debug menu can't stop that. This stops them. Logs already saved stay until you clear them, and the regular build doesn't keep them, so nothing changes there. Restart Telegram to see the change.	Telegram Beta selalu menyimpan log debug di ponsel Anda, termasuk log koneksinya, dan menu debug miliknya sendiri tidak bisa menghentikannya. Ini menghentikannya. Log yang sudah tersimpan tetap ada sampai Anda menghapusnya, dan versi biasa tidak menyimpannya, jadi di sana tidak ada yang berubah. Mulai ulang Telegram untuk melihat perubahannya.
+Translate with an outside service	Terjemahkan dengan layanan luar
+Adds Translate here to a message's menu and Translate this chat to a chat's menu, using Google's web translate in place of Telegram's Premium translation. The text you ask to translate is sent to Google, one message at a time, and nothing leaves your phone until you turn a chat or message on.	Menambahkan Terjemahkan di sini ke menu pesan dan Terjemahkan obrolan ini ke menu obrolan, memakai terjemahan web Google sebagai pengganti terjemahan Premium Telegram. Teks yang Anda minta diterjemahkan dikirim ke Google, satu pesan sekali kirim, dan tidak ada yang keluar dari ponsel Anda sebelum Anda mengaktifkan obrolan atau pesan.
+Translate here	Terjemahkan di sini
+Show original	Tampilkan asli
+Translate this chat	Terjemahkan obrolan ini
+This chat will be translated	Obrolan ini akan diterjemahkan
+This chat shows the original messages	Obrolan ini menampilkan pesan asli
+(Translated. Long-press for the original.)	(Diterjemahkan. Tekan lama untuk melihat aslinya.)
+Translation isn't available right now	Terjemahan tidak tersedia saat ini
 Ask before sending a GIF	Tanya dulu sebelum mengirim GIF
 Asks Send or Cancel before a GIF you tap goes into a chat. Cancel drops it. Scheduled GIFs go out without asking.	Menanyakan Kirim atau Batal sebelum GIF yang Anda ketuk masuk ke obrolan. Batal membuangnya. GIF terjadwal terkirim tanpa bertanya.
 Ask before sending a voice or video message	Tanya dulu sebelum mengirim pesan suara atau video
@@ -402,3 +418,146 @@ ID copied	ID disalin
 Data center %1$s	Pusat data %1$s
 Copy data center %1$s	Salin pusat data %1$s
 Data center copied	Pusat data disalin
+# context: titles of the settings pages that replaced the Chats page, after Morphe Manager's categories.
+Ads	Iklan
+Chat list	Daftar chat
+Conversations	Percakapan
+Playback	Pemutaran
+Look and feel	Tampilan dan penggunaan
+# context: Hide channel bar buttons and Hide Send as button. Search, Direct messages, Info, Mute and Join are Telegram's own button names in a channel; Send as is Telegram's name for the picture that picks who you post as.
+Hide channel bar buttons	Sembunyikan tombol bilah kanal
+Search, Direct messages and Info leave the bar at the bottom of a channel. Mute and Join stay, and tapping the channel's name at the top still opens its info. A channel picks this up the next time you open it.	Cari, Pesan langsung, dan Info hilang dari bilah di bagian bawah kanal. Bisukan dan Gabung tetap ada, dan mengetuk nama kanal di atas tetap membuka infonya. Kanal akan menerapkannya saat Anda membukanya lagi.
+Hide Send as button	Sembunyikan tombol Kirim sebagai
+Your picture next to the message box goes away in groups and channels where you could post as a channel, while you're posting as yourself. Once you pick a channel it shows again, so you can always see who you're posting as. To pick one, turn this off first. A chat picks this up the next time you open it.	Foto Anda di samping kotak pesan hilang di grup dan kanal tempat Anda bisa memposting sebagai kanal, selama Anda memposting sebagai diri sendiri. Setelah Anda memilih kanal, foto itu muncul lagi, jadi Anda selalu tahu sebagai siapa Anda memposting. Untuk memilih kanal, matikan ini dulu. Obrolan akan menerapkannya saat Anda membukanya lagi.
+# context: Hide messages by keyword. A filter is one line of text the person writes; a line in slashes is a regular expression. The settings page has one list for groups and one for channels, each edited in a dialog with Save and Cancel. Keep /crypto|airdrop/ exactly as written.
+Hide messages by keyword	Sembunyikan pesan berdasarkan kata kunci
+Messages in groups and channels that match one of your filters are left out when you open the chat. Private chats and your own messages stay as they are. Nothing is deleted, and your filters stay on this phone.	Pesan di grup dan kanal yang cocok dengan salah satu filter Anda tidak ditampilkan saat Anda membuka obrolan. Obrolan pribadi dan pesan Anda sendiri tetap seperti biasa. Tidak ada yang dihapus, dan filter Anda tetap di ponsel ini.
+Filters for groups	Filter untuk grup
+Filters for channels	Filter untuk kanal
+No filters yet.	Belum ada filter.
+%1$d filter.	%1$d filter.
+%1$d filters.	%1$d filter.
+A list holds up to %1$d filters.	Satu daftar memuat hingga %1$d filter.
+Line %1$d is longer than %2$d characters.	Baris %1$d lebih panjang dari %2$d karakter.
+Line %1$d isn't a valid regex. Fix it or take off the slashes.	Baris %1$d bukan regex yang valid. Perbaiki atau hapus garis miringnya.
+Line %1$d may be slow on long messages. Try a simpler pattern.	Baris %1$d bisa lambat pada pesan panjang. Coba pola yang lebih sederhana.
+This list is too long for a settings file. Remove a few lines.	Daftar ini terlalu panjang untuk file pengaturan. Hapus beberapa baris.
+One filter a line	Satu filter per baris
+Text on a line matches wherever it appears in a message. A line in slashes, like /crypto|airdrop/, is a regular expression. Case doesn't matter.	Teks pada satu baris cocok di mana pun teks itu muncul dalam pesan. Baris di antara garis miring, seperti /crypto|airdrop/, adalah ekspresi reguler. Huruf besar dan kecil tidak berpengaruh.
+Save	Simpan
+Couldn't save the filters. Try again in a moment.	Filter tidak dapat disimpan. Coba lagi sebentar lagi.
+Filters saved.	Filter disimpan.
+%1$d list of message filters will change.	%1$d daftar filter pesan akan berubah.
+%1$d lists of message filters will change.	%1$d daftar filter pesan akan berubah.
+# context: Change sticker size. The person picks a size for stickers in chats as a percent of Telegram's own size (50%, 75%, 125% or 150%), from a list that opens when they tap the Sticker size row. %1$s is that percent, already written the way the language writes one, for example 75%.
+Change sticker size	Ubah ukuran stiker
+Stickers in chats show at the size you pick below. Animated emoji and dice keep Telegram's size. A chat picks this up the next time you open it.	Stiker di obrolan ditampilkan dengan ukuran yang Anda pilih di bawah. Emoji animasi dan dadu tetap memakai ukuran Telegram. Obrolan menerapkannya saat Anda membukanya lagi.
+Sticker size	Ukuran stiker
+%1$s of Telegram's size	%1$s dari ukuran Telegram
+Couldn't save the size. Try again in a moment.	Ukuran tidak dapat disimpan. Coba lagi sebentar lagi.
+The sticker size will change.	Ukuran stiker akan berubah.
+# context: short headings that split the Conversations and Look and feel settings pages into groups of switches. Each names what the switches under it change: things inside an open chat, the menu a message opens on a long press, sending, the attachment menu's camera and gallery, translation, messages hidden from a chat, messages others deleted, the theme, how messages and stickers look, profiles, touch feedback and the keyboard, and rows or buttons hidden to reduce clutter.
+In a chat	Di obrolan
+Message menu	Menu pesan
+Sending	Mengirim
+Attachment menu	Menu lampiran
+Translation	Terjemahan
+Hidden messages	Pesan tersembunyi
+Deleted messages	Pesan yang dihapus
+Theme	Tema
+Messages and stickers	Pesan dan stiker
+Profiles	Profil
+Touch and keyboard	Sentuhan dan keyboard
+Less clutter	Lebih ringkas
+# context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
+Support HushTelegram	Dukung HushTelegram
+# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
+Buy me a coffee on Ko-fi	Traktir aku secangkir kopi di Ko-fi
+# context: Faster downloads, a switch on the Playback page. Telegram downloads a file in pieces; this makes them bigger and asks for more at once.
+Faster downloads	Unduhan lebih cepat
+# context: that switch's summary. KB is kilobytes. "Goes back to small ones" means Telegram drops to the small pieces on its own if a big one fails.
+Files download in 512 KB pieces, 8 at a time, instead of 128 KB pieces 4 at a time. If a big piece fails, Telegram goes back to small ones. The next download picks this up.	File diunduh dalam potongan 512 KB, 8 sekaligus, bukan potongan 128 KB, 4 sekaligus. Jika potongan besar gagal, Telegram kembali ke potongan kecil. Unduhan berikutnya langsung memakainya.
+# context: Translate with an outside service, on the Conversations page. A row under that switch, and the title of the dialog it opens: where the text to translate is sent.
+Translation service	Layanan terjemahan
+Google's web translate. Tap to use an AI service with your own key.	Terjemahan web Google. Ketuk untuk memakai layanan AI dengan kunci milikmu sendiri.
+# context: that row's summary once an AI service is set. %1$s is the service's host name, like api.openai.com, and %2$s its model name, like gpt-4o-mini.
+Your AI service at %1$s, model %2$s.	Layanan AI-mu di %1$s, model %2$s.
+# context: hints in the three fields of that dialog: the web address of the AI service, the model to ask, and the secret key the service gave the person.
+Service address	Alamat layanan
+Model	Model
+API key	Kunci API
+# context: the dialog's explanation. OpenAI, OpenRouter, DeepSeek and Groq are company names and stay as they are.
+With a key, the text you translate goes to this AI service instead of Google. Any service that takes OpenAI's chat format works, like OpenAI, OpenRouter, DeepSeek or Groq. The key stays on this phone and never goes in a settings file.	Dengan kunci, teks yang kamu terjemahkan dikirim ke layanan AI ini, bukan ke Google. Layanan apa pun yang menerima format chat OpenAI bisa dipakai, seperti OpenAI, OpenRouter, DeepSeek, atau Groq. Kunci tetap di ponsel ini dan tidak pernah masuk ke file pengaturan.
+# context: a dialog button that goes back to Google's free web translate and forgets the key. "Use Google" is also quoted in a message below.
+Use Google	Pakai Google
+Couldn't save the translation service. Try again in a moment.	Layanan terjemahan tidak bisa disimpan. Coba lagi sebentar lagi.
+Translation service saved.	Layanan terjemahan disimpan.
+Back to Google's web translate.	Kembali ke terjemahan web Google.
+# context: why the dialog can't save yet. https:// stays as it is.
+Type your API key, or tap Use Google.	Ketik kunci API-mu, atau ketuk Pakai Google.
+Type a model name.	Ketik nama model.
+Take the spaces out of the address, model and key.	Hapus spasi dari alamat, model, dan kunci.
+The address has to start with https://.	Alamat harus diawali dengan https://.
+# context: a short toast when the AI service turns the key down (HTTP 401 or 403).
+Your AI service didn't accept the key	Layanan AI-mu tidak menerima kunci itu
+# context: a switch on the Notifications page. UnifiedPush is the name of an open notification standard and stays as it is.
+UnifiedPush notifications	Notifikasi UnifiedPush
+# context: that switch's summary. Firebase is Google's notification service and ntfy is an app; both names stay as they are.
+For phones where Firebase notifications don't arrive. Telegram signs up an address from a UnifiedPush app like ntfy, and Telegram's servers call it to wake Telegram when something arrives. The messages still come from Telegram itself. Turned off, Telegram goes back to Firebase the next time it starts.	Untuk ponsel yang tidak menerima notifikasi Firebase. Telegram mendaftarkan alamat dari aplikasi UnifiedPush seperti ntfy, dan server Telegram memanggilnya untuk membangunkan Telegram saat ada yang masuk. Pesannya tetap datang dari Telegram sendiri. Jika dimatikan, Telegram kembali ke Firebase saat dimulai berikutnya.
+# context: a row under that switch, and the title of the list it opens: which installed UnifiedPush app, like ntfy, delivers the notifications.
+Push app	Aplikasi push
+Install a UnifiedPush app like ntfy, then come back here.	Pasang aplikasi UnifiedPush seperti ntfy, lalu kembali ke sini.
+# context: that row's summary. %1$s is the app's name, like ntfy. "The switch" is the UnifiedPush notifications switch above the row.
+%1$s. Turn the switch on to sign up with it.	%1$s. Nyalakan sakelar untuk mendaftar dengannya.
+%1$s ended the sign-up. Turn the switch off and on to sign up again.	%1$s mengakhiri pendaftaran. Matikan lalu nyalakan sakelar untuk mendaftar lagi.
+%1$s turned the sign-up down. Check that it allows UnifiedPush.	%1$s menolak pendaftaran. Periksa apakah aplikasi itu mengizinkan UnifiedPush.
+# context: the row's summary once signed up: Telegram's servers wake Telegram up through that app.
+Telegram's wake-ups come through %1$s.	Telegram dibangunkan lewat %1$s.
+Signing up with %1$s…	Mendaftar dengan %1$s…
+# context: a toast when the row is tapped and no UnifiedPush app is installed.
+Install a UnifiedPush app like ntfy first.	Pasang dulu aplikasi UnifiedPush seperti ntfy.
+# context: the Push app row's summary when several UnifiedPush apps are installed and none is picked yet. Tapping the row opens the list.
+Tap to pick which UnifiedPush app to use.	Ketuk untuk memilih aplikasi UnifiedPush yang dipakai.
+# context: Save downloaded files, a switch on the Playback page. It copies each downloaded file or song to the phone's shared Download/Telegram folder.
+Save downloaded files	Simpan file yang diunduh
+# context: that switch's summary. "Download/Telegram" is a folder path and stays as it is. Chats that don't allow saving are ones whose owner turned on Telegram's content protection.
+Each file or song you download also goes to Download/Telegram on your phone, where file managers and other apps can open it. Files from secret chats and chats that don't allow saving stay in Telegram.	Setiap file atau lagu yang kamu unduh juga masuk ke Download/Telegram di ponselmu, tempat pengelola file dan aplikasi lain bisa membukanya. File dari obrolan rahasia dan obrolan yang tidak mengizinkan penyimpanan tetap di Telegram.
+# context: Folders by chat type, a switch on the Chat list page. Turning it on makes Telegram chat folders for each kind of chat.
+Folders by chat type	Folder menurut jenis obrolan
+# context: that switch's summary. Private, Groups, Channels and Bots are the folder names, use the same words as their own entries.
+Turning this on makes Private, Groups, Channels and Bots folders, as tabs above the chat list and on your other devices. Turning it off removes the ones it made, unless you renamed or changed them.	Jika diaktifkan, folder Pribadi, Grup, Kanal, dan Bot dibuat sebagai tab di atas daftar obrolan dan di perangkatmu yang lain. Jika dimatikan, folder yang dibuatnya dihapus, kecuali yang sudah kamu ganti nama atau ubah.
+# context: a chat folder name for one-to-one chats with people. Telegram allows at most 12 characters.
+Private	Pribadi
+# context: a chat folder name for group chats. At most 12 characters.
+Groups	Grup
+# context: a chat folder name for channels. At most 12 characters.
+Channels	Kanal
+# context: a chat folder name for chats with bots. At most 12 characters.
+Bots	Bot
+# context: a toast after flipping the Folders by chat type switch while HushTelegram is paused.
+HushTelegram is paused, so your folders stay as they are.	HushTelegram sedang dijeda, jadi foldermu tetap seperti semula.
+# context: a toast when the folder switch is flipped before signing in.
+Sign in to Telegram first.	Masuk ke Telegram terlebih dahulu.
+# context: a toast when the folder switch is flipped before Telegram has loaded the folder list.
+Telegram is still loading your folders. Try again in a moment.	Telegram masih memuat foldermu. Coba lagi sebentar lagi.
+# context: a toast when making or removing the folders failed.
+Couldn't change your folders. Try again in a moment.	Tidak bisa mengubah foldermu. Coba lagi sebentar lagi.
+# context: a toast when every chat type already has a folder, so none were made.
+You already have a folder for each chat type.	Kamu sudah punya folder untuk setiap jenis obrolan.
+# context: a short toast (two lines at most) when Telegram's folder limit left no room, so no folders were made.
+Folder limit reached. Remove a folder and try again.	Batas folder tercapai. Hapus satu folder lalu coba lagi.
+# context: a short toast (two lines at most) when only some of the folders fit under Telegram's folder limit.
+Made some folders. The folder limit left no room for the rest.	Sebagian folder dibuat. Batas folder tidak cukup untuk sisanya.
+# context: a short toast (two lines at most) after the folders were made. Private, Groups, Channels and Bots are the folder names, use the same words as their own entries.
+Made Private, Groups, Channels and Bots folders.	Folder Pribadi, Grup, Kanal, dan Bot dibuat.
+# context: a toast after turning the switch off when none of its folders were left to remove.
+There were no folders from HushTelegram to remove.	Tidak ada folder dari HushTelegram yang perlu dihapus.
+# context: a short toast (two lines at most) after the switch went off. Folders the person renamed or changed are kept.
+Removed the folders HushTelegram made. Changed ones stay.	Folder buatan HushTelegram dihapus. Yang diubah tetap ada.
+Telegram refused this app's ID	Telegram menolak ID aplikasi ini
+Telegram turned down the API ID this app signs in with, so no login code was sent. Patch HushTelegram again with Use registered Telegram API credentials and your own ID from my.telegram.org/apps. The guide walks you through it.	Telegram menolak ID API yang dipakai aplikasi ini untuk masuk, jadi kode login tidak dikirim. Tambal ulang HushTelegram dengan Use registered Telegram API credentials dan ID Anda sendiri dari my.telegram.org/apps. Panduannya menjelaskan caranya.
+Telegram didn't accept the API ID and hash this app was patched with, so no login code was sent. Copy both again from my.telegram.org/apps and patch once more.	Telegram tidak menerima ID API dan hash yang dipakai saat menambal aplikasi ini, jadi kode login tidak dikirim. Salin keduanya lagi dari my.telegram.org/apps lalu tambal ulang.
+Open the guide	Buka panduan
+%1$s turns on	%1$s dinyalakan
+%1$s turns off	%1$s dimatikan
+Preparing the diagnostic report	Menyiapkan laporan diagnostik

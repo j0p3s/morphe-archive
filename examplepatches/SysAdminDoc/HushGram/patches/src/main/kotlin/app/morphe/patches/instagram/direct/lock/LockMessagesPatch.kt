@@ -74,9 +74,10 @@ internal object BannerFingerprint : Fingerprint(
 @Suppress("unused")
 val lockMessagesPatch = bytecodePatch(
     name = "Lock your messages",
-    description = "Covers your inbox and chats, or all of Instagram, until your fingerprint, face or screen lock " +
-        "says it's you. Message notifications only say that a message came. Starts off. Turn it on in HushGram " +
-        "settings > Messages.",
+    description = "Covers your inbox and chats, all of Instagram, or just the single chats you pick under Locked chats, " +
+        "until your fingerprint, face or screen lock says it's you. Message notifications only say that a message " +
+        "came. Chats you pick under Hidden chats leave your inbox and their notifications don't post. Starts off. " +
+        "Turn it on in HushGram settings > Messages.",
     default = true,
 ) {
     category("Messages")
@@ -87,9 +88,17 @@ val lockMessagesPatch = bytecodePatch(
         requireStatusMethod("messagesLock")
         val targets = findLockTargets()
         val posts = findDirectPosts(targets.notify)
+        val chats = findChatLockTargets()
+        val hidden = findHiddenChatTargets()
+        val search = findSearchTargets()
+        val recents = findRecentTargets()
         hideNotificationText(targets.notify)
         hideDirectPosts(posts)
         holdBanner(targets.banner)
+        hookChatLocks(chats)
+        hideChatsFromInbox(hidden)
+        hideChatsFromSearch(search)
+        hideChatsFromRecents(recents)
         enableStatus("messagesLock")
     }
 }

@@ -339,13 +339,17 @@ exit /b 19
         if ($Variant -eq 'foreign') { $lease.ownershipToken = 'another-chat' }
         if ($Variant -eq 'other-project') { $lease.project = 'AnotherProject' }
         if ($Variant -eq 'expired') { $lease.expiresUtc = [DateTimeOffset]::UtcNow.AddMinutes(-1).ToString('o') }
+        # PowerShell 7 reads this back as a DateTime, which used to lose its zone and pass west of UTC.
+        if ($Variant -eq 'expired-zulu') {
+            $lease.expiresUtc = [DateTime]::UtcNow.AddMinutes(-1).ToString('yyyy-MM-ddTHH:mm:ssZ', [Globalization.CultureInfo]::InvariantCulture)
+        }
         if ($Variant -eq 'wrong-recorded-serial') { $lease.serial = 'ANOTHER' }
         [IO.File]::WriteAllText((Join-Path $leaseRoot ($Serial + '.json')), ($lease | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
     }
     $leaseArguments = @{Adb = $fakeAdb; Serial = 'READY'; OwnershipToken = $leaseToken;
         ExpectedIdentity = 'FixtureModel'; LeaseDirectory = $leaseRoot}
     Assert-Throws { Assert-HushThreadsDeviceLease @leaseArguments } '*No readable exclusive device lease*' 'A missing lease passed.'
-    foreach ($variant in @('foreign', 'other-project', 'expired', 'wrong-recorded-serial')) {
+    foreach ($variant in @('foreign', 'other-project', 'expired', 'expired-zulu', 'wrong-recorded-serial')) {
         Write-TestDeviceLease -Variant $variant
         $before = [IO.File]::ReadAllText((Join-Path $leaseRoot 'READY.json'))
         Assert-Throws { Assert-HushThreadsDeviceLease @leaseArguments } '*device lease*' "Lease variant $variant passed."
@@ -367,6 +371,19 @@ exit /b 19
     $renewed = Get-Content (Join-Path $leaseRoot 'READY.json') -Raw | ConvertFrom-Json
     Assert-True ([DateTimeOffset]$renewed.expiresUtc -gt [DateTimeOffset]::UtcNow.AddMinutes(19)) 'The owned lease was not renewed.'
     Assert-True ($renewed.ownershipToken -ceq $leaseToken) 'Renewal changed the ownership token.'
+    Remove-Item -LiteralPath $log -Force
+    # A lease taken for longer than a renewal keeps its own end, written the way the pool's own
+    # lease scripts write it, in whole seconds with a Z.
+    Write-TestDeviceLease
+    $longPath = Join-Path $leaseRoot 'READY.json'
+    $long = Get-Content -LiteralPath $longPath -Raw | ConvertFrom-Json
+    $now = [DateTimeOffset]::UtcNow
+    $longEnd = $now.AddMinutes(90).AddTicks(-($now.Ticks % [TimeSpan]::TicksPerSecond))
+    $long.expiresUtc = $longEnd.UtcDateTime.ToString('yyyy-MM-ddTHH:mm:ssZ', [Globalization.CultureInfo]::InvariantCulture)
+    [IO.File]::WriteAllText($longPath, ($long | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
+    Assert-HushThreadsDeviceLease @leaseArguments
+    $kept = Get-Content -LiteralPath $longPath -Raw | ConvertFrom-Json
+    Assert-True ([Math]::Abs(([DateTimeOffset]$kept.expiresUtc - $longEnd).TotalSeconds) -lt 1) 'Renewal shortened a longer lease.'
     Remove-Item -LiteralPath $log -Force
     Write-TestDeviceLease -Serial 'emulator-5554'
     Assert-HushThreadsDeviceLease -Adb $fakeAdb -Serial 'emulator-5554' -OwnershipToken $leaseToken `
@@ -5048,7 +5065,13 @@ try {
         }
         return ($lines -join "`n") + "`n"
     }
-    $dependencyNamesHere = @(Get-PatchDependencyNames -PatchList $releaseCatalog -RequestedNames $releaseNames)
+    # Change version code, one of the release's patches, raises the patched build's code to
+    # Int.MAX_VALUE; the verifier holds the patched side to exactly that code when it's selected.
+    function Get-PatchedFixtureCode([string]$Code) {
+        if (@($releaseNames) -ccontains 'Change version code') { return '2147483647' }
+        return $Code
+    }
+    $dependencyNamesHere =@(Get-PatchDependencyNames -PatchList $releaseCatalog -RequestedNames $releaseNames)
     $fixturePaths = @{}
     # Beside the declared builds, a newer one the catalog doesn't declare, the kind a release run
     # patches under -f to see what still applies on it. Each declared build carries the version code
@@ -5067,7 +5090,7 @@ try {
         Set-Content -LiteralPath "$apkm.merged.txt" -Encoding ASCII -NoNewline `
             -Value (Get-FixtureManifest -Build $build -Code "$versionCode" -WithSplit)
         Set-Content -LiteralPath "$apkm.patched.txt" -Encoding ASCII -NoNewline `
-            -Value (Get-FixtureManifest -Build $build -Code "$versionCode" -WithSplit -Patched)
+            -Value (Get-FixtureManifest -Build $build -Code (Get-PatchedFixtureCode "$versionCode") -WithSplit -Patched)
         # The report the CLI writes: every patch and the internal dependencies applied, one step,
         # and the input's own version, which is what the CLI reports.
         Set-Content -LiteralPath "$apkm.result.json" -Encoding ASCII -Value ([ordered]@{
@@ -5270,7 +5293,7 @@ try {
     # Patched from the plain APK itself: its manifest with the patches' change and no split's
     # component, which verify-all-patches.ps1 would refuse as a change nobody approved.
     Set-Content -LiteralPath "$plainFixture.patched.txt" -Encoding ASCII -NoNewline `
-        -Value (Get-FixtureManifest -Build $releaseTarget.PackageVersion -Code $newestCode -Patched)
+        -Value (Get-FixtureManifest -Build $releaseTarget.PackageVersion -Code (Get-PatchedFixtureCode $newestCode) -Patched)
     try {
         $said = Invoke-VerifyAll -Apk $plainFixture
         Assert-True ($said -like '*success: every requested patch applied*' -and $said -notlike '*into one APK for the CLI*' -and
@@ -6565,8 +6588,13 @@ exit 0
     Assert-True (@(Read-FlowLog).Count -eq 0) 'A refused preflight still ran a check.'
 
     # All five in order at release priority, then the prep commit pushed, the gate at release
-    # priority too, and the priority put back after.
+    # priority too, and the priority put back after. The results a filtered run leaves are gone
+    # before the push: the gate reads that folder and refused every preflight's own push over them.
+    $flowResults = Join-Path $flowRepo 'extensions/threads/build/test-results/testDebugUnitTest'
+    New-Item -ItemType Directory -Force -Path $flowResults | Out-Null
+    Set-Content -LiteralPath (Join-Path $flowResults 'TEST-app.morphe.extension.hushthreads.L10nTest.xml') -Value '<testsuite tests="1"/>'
     Invoke-FlowStage -Stage preflight -Version 1.2.3
+    Assert-True (-not (Test-Path -LiteralPath $flowResults)) 'Preflight left its filtered run''s partial test results for the push to read.'
     $flow = @(Read-FlowLog)
     Assert-True ((Get-FlowSteps $flow) -eq 'gradle prepare | contracts | python pytests | gradle quick | facts precheck | push priority=release') `
         "Preflight did not run the comparator, the contracts, the text tests, Gradle and the facts check, then push: $($flow -join ' | ')"

@@ -14,7 +14,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.drawable.Icon;
 import android.os.Build;
+import android.os.Bundle;
 import android.service.notification.StatusBarNotification;
+
+import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,9 +40,9 @@ import app.morphe.extension.shared.L10n;
  *
  * <p>A save used to say "Saving..." when it started and nothing more until it ended, so a large
  * video looked stuck and nothing could stop one. The notification goes when the save ends, and the
- * toast that says how it ended stays as it was. Successful publication leaves generic file actions.
- * A video WhatsApp may refuse leaves one note of its
- * own behind, with a button to the switch that avoids it ({@link #showRefused}).
+ * toast that says how it ended stays as it was. Successful publication leaves a card with generic
+ * file actions, and on a video WhatsApp may refuse that same card says so, with a third button to
+ * the switch that avoids it ({@link #showCompleted}).
  *
  * <p>Cancel is a broadcast to a receiver registered in Facebook's process, not a component added to
  * its manifest, since a patch that adds one changes what other apps can reach. From Android 13 the
@@ -61,13 +64,20 @@ public final class SaveControl {
     static final String CHANNEL = "hushfacebook_saves";
     /** Every notification here is posted under this tag, so its id can't replace one of Facebook's. */
     static final String TAG = "hushfacebook-save";
-    /**
-     * The tag of the note a finished save leaves ({@link #showRefused}). Not {@link #TAG}: a save
-     * ending takes its own number down there, and {@link #removeStale} everything that isn't running.
-     */
-    static final String SAVED_TAG = "hushfacebook-saved";
-    /** One note at a time: the next save's replaces it rather than stacking up. */
+    /** The request code of a finished card's button to Save videos other apps can open. */
     static final int SAVED_ID = 1;
+    /**
+     * The most finished-save cards ({@link #showCompleted}) kept up at once. Android lets an app hold
+     * about fifty notifications and drops the next without a word, so after a run of saves nobody
+     * cleared, the next save's progress card, Cancel and all, would never show. Facebook's own count
+     * towards the same fifty.
+     */
+    static final int COMPLETED_KEPT = 20;
+    /** Which finished-save card came first, for {@link #trimCompleted} when two were posted in the same instant. */
+    static final String EXTRA_COMPLETED_ORDER = "app.morphe.extension.facebook.COMPLETED_ORDER";
+    private static final AtomicInteger COMPLETED_ORDER = new AtomicInteger();
+    /** Held while a finished-save card goes up and the oldest come down. */
+    static final Object COMPLETED_LOCK = new Object();
 
     /** Unguessable, and new in every process. */
     private static final String TOKEN = UUID.randomUUID().toString();
@@ -207,63 +217,93 @@ public final class SaveControl {
     }
 
     /**
-     * After a save WhatsApp and some editors may refuse, with Save videos other apps can open off:
-     * a note that says so under [saved], the usual end-of-save text, with a button that opens the
-     * settings at that switch. A toast can't carry a button (#11, #14). Answers whether it's up.
+     * The finished-save card: Open and Share for the file, which needs both the atomic success
+     * state and the writer's committed row. [refused], when not null, is the end-of-save text of a
+     * save WhatsApp and some editors may refuse, with Save videos other apps can open off: the card
+     * then says so under it, with a third button that opens the settings at that switch. A toast
+     * can't carry a button (#11, #14), and one card says it all where two used to repeat the
+     * "saved" line. Answers whether the card is up.
      */
-    static boolean showRefused(Context application, String saved) {
-        NotificationManager manager = notifications(application);
+    static boolean showCompleted(Save save, MediaStoreWriter writer, @Nullable String refused) {
+        if (save.state() != State.SUCCEEDED || writer.publishedUri() == null || writer.publishedMime() == null) return false;
+        NotificationManager manager = notifications(save.application);
         if (manager == null) return false;
         try {
-            Intent open = SettingsEntry.settingIntent(application, Settings.DOWNLOAD_COMPATIBLE.key);
-            PendingIntent button = PendingIntent.getActivity(application, SAVED_ID, open,
-                PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
-            String text = saved + "\n" + L10n.f(application, "Turn on %1$s to save videos that WhatsApp and these editors accept.",
-                L10n.isolate(L10n.t(application, "Save videos other apps can open")));
-            Notification note = new Notification.Builder(application, CHANNEL)
+            Context application = save.application;
+            PendingIntent open = SavedFileActions.button(application, writer.publishedUri(), writer.publishedMime(), false);
+            PendingIntent share = SavedFileActions.button(application, writer.publishedUri(), writer.publishedMime(), true);
+            Bundle order = new Bundle(1);
+            order.putInt(EXTRA_COMPLETED_ORDER, COMPLETED_ORDER.getAndIncrement());
+            Notification.Builder card = new Notification.Builder(application, CHANNEL)
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                .setContentTitle(L10n.t(application, "WhatsApp and some editors may not accept this video"))
-                .setContentText(text)
-                .setStyle(new Notification.BigTextStyle().bigText(text))
-                .setContentIntent(button)
-                .setAutoCancel(true)
-                .addAction(new Notification.Action.Builder((Icon) null,
-                    L10n.t(application, "Open the setting"), button).build())
-                .build();
-            manager.notify(SAVED_TAG, SAVED_ID, note);
-            return true;
-        } catch (Throwable t) {
-            MediaDownload.failure(() -> "could not show the note about the saved format", t);
-            return false;
-        }
-    }
-
-    /** Finished file actions require both the atomic success state and the writer's committed row. */
-    static void showCompleted(Save save, MediaStoreWriter writer) {
-        if (save.state() != State.SUCCEEDED || writer.publishedUri() == null || writer.publishedMime() == null) return;
-        NotificationManager manager = notifications(save.application);
-        if (manager == null) return;
-        try {
-            PendingIntent open = SavedFileActions.button(save.application, writer.publishedUri(), writer.publishedMime(), false);
-            PendingIntent share = SavedFileActions.button(save.application, writer.publishedUri(), writer.publishedMime(), true);
-            Notification note = new Notification.Builder(save.application, CHANNEL)
-                .setSmallIcon(android.R.drawable.stat_sys_download_done)
-                .setContentTitle(save.video ? L10n.t(save.application, "Video saved") : L10n.t(save.application, "Photo saved"))
+                .setContentTitle(refused != null ? L10n.t(application, "WhatsApp and some editors may not accept this video")
+                    : save.video ? L10n.t(application, "Video saved") : L10n.t(application, "Photo saved"))
                 .setCategory(Notification.CATEGORY_STATUS)
                 .setShowWhen(false)
                 .setOnlyAlertOnce(true)
                 .setAutoCancel(true)
                 .setContentIntent(open)
-                .addAction(new Notification.Action.Builder((Icon) null, L10n.t(save.application, "Open"), open).build())
-                .addAction(new Notification.Action.Builder((Icon) null, L10n.t(save.application, "Share"), share).build())
-                .build();
+                .addAction(new Notification.Action.Builder((Icon) null, L10n.t(application, "Open"), open).build())
+                .addAction(new Notification.Action.Builder((Icon) null, L10n.t(application, "Share"), share).build())
+                .addExtras(order);
+            if (refused != null) {
+                Intent setting = SettingsEntry.settingIntent(application, Settings.DOWNLOAD_COMPATIBLE.key);
+                PendingIntent button = PendingIntent.getActivity(application, SAVED_ID, setting,
+                    PendingIntent.FLAG_IMMUTABLE | PendingIntent.FLAG_UPDATE_CURRENT);
+                String text = refused + "\n" + L10n.f(application, "Turn on %1$s to save videos that WhatsApp and these editors accept.",
+                    L10n.isolate(L10n.t(application, "Save videos other apps can open")));
+                card.setContentText(text)
+                    .setStyle(new Notification.BigTextStyle().bigText(text))
+                    .addAction(new Notification.Action.Builder((Icon) null, L10n.t(application, "Open the setting"), button).build());
+            }
+            Notification note = card.build();
             // URI identity also survives a process restarting its numeric running-save counter.
-            manager.notify(SavedFileActions.TAG + writer.publishedUri(), 0, note);
+            String tag = SavedFileActions.TAG + writer.publishedUri();
+            // One save at a time posts and trims, so two ending together each count the other's card once.
+            synchronized (COMPLETED_LOCK) {
+                manager.notify(tag, 0, note);
+                trimCompleted(manager, tag);
+            }
+            return true;
         } catch (Throwable failure) {
             // An exception's message may contain the local URI. Report only its class.
             String kind = failure.getClass().getSimpleName();
             MediaDownload.failure(() -> "could not show completed save actions (" + kind + ")", null);
+            return false;
         }
+    }
+
+    /**
+     * Takes down the oldest finished-save cards so that, with [posted] (the one just sent, which
+     * the system may not list yet), {@link #COMPLETED_KEPT} stay up. Never throws.
+     */
+    static void trimCompleted(NotificationManager manager, String posted) {
+        try {
+            List<StatusBarNotification> others = new ArrayList<>();
+            for (StatusBarNotification shown : manager.getActiveNotifications()) {
+                String tag = shown.getTag();
+                if (tag != null && tag.startsWith(SavedFileActions.TAG) && !tag.equals(posted)) others.add(shown);
+            }
+            int keep = COMPLETED_KEPT - 1;
+            if (others.size() <= keep) return;
+            // Oldest first: by when the system took it, then by the order this process posted them
+            // in, since the system's clock has a coarser grain than two saves ending together.
+            others.sort((a, b) -> {
+                int byTime = Long.compare(a.getPostTime(), b.getPostTime());
+                return byTime != 0 ? byTime : Integer.compare(order(a), order(b));
+            });
+            for (int i = 0; i < others.size() - keep; i++) {
+                manager.cancel(others.get(i).getTag(), others.get(i).getId());
+            }
+        } catch (Throwable failure) {
+            String kind = failure.getClass().getSimpleName();
+            MediaDownload.failure(() -> "could not take down old finished-save cards (" + kind + ")", null);
+        }
+    }
+
+    private static int order(StatusBarNotification card) {
+        Bundle extras = card.getNotification().extras;
+        return extras == null ? -1 : extras.getInt(EXTRA_COMPLETED_ORDER, -1);
     }
 
     /** Facebook's notification service, when this channel may post, else {@code null}. */

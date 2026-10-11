@@ -14,6 +14,7 @@
 package app.hushtelegram.extension.shared.settings.preference;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -166,6 +167,76 @@ public class LogBufferManagerExportTest {
             assertEquals(report, new String(java.nio.file.Files.readAllBytes(file.toPath()), StandardCharsets.UTF_8));
         }
         assertNotEquals(first, second);
+    }
+
+    /** Logcat reaches adb and bug reports, so it gets redacted text: the message, the exception and its stack. */
+    @Test public void noCredentialReachesLogcat() {
+        app.hushtelegram.extension.shared.Utils.setContext(RuntimeEnvironment.getApplication());
+        org.robolectric.shadows.ShadowLog.clear();
+        String[][] corpus = app.hushtelegram.extension.shared.diagnostics.DiagnosticRedactorTest.CREDENTIAL_CORPUS;
+        for (String[] row : corpus) {
+            app.hushtelegram.extension.shared.Logger.printException(() -> "Probe " + row[0], new java.io.IOException(row[0]));
+        }
+        StringBuilder logged = new StringBuilder();
+        for (org.robolectric.shadows.ShadowLog.LogItem item : org.robolectric.shadows.ShadowLog.getLogs()) {
+            logged.append(item.msg).append('\n');
+            if (item.throwable != null) logged.append(android.util.Log.getStackTraceString(item.throwable));
+        }
+        assertTrue("nothing reached logcat", logged.indexOf("Probe ") >= 0);
+        assertTrue("the stack didn't reach logcat", logged.indexOf("java.io.IOException") >= 0);
+        for (String[] row : corpus) {
+            assertFalse(row[1] + " reached logcat", logged.indexOf(row[1]) >= 0);
+        }
+    }
+
+    /** The line logged when logging itself fails is redacted too, the failure's own text included. */
+    @Test public void noCredentialReachesLogcatWhenLoggingFails() {
+        app.hushtelegram.extension.shared.Utils.setContext(RuntimeEnvironment.getApplication());
+        org.robolectric.shadows.ShadowLog.clear();
+        String[][] corpus = app.hushtelegram.extension.shared.diagnostics.DiagnosticRedactorTest.CREDENTIAL_CORPUS;
+        for (String[] row : corpus) {
+            // Logger asks the exception for its message, so this one fails the log on purpose.
+            Throwable hostile = new java.io.IOException() {
+                @Override public String getMessage() {
+                    throw new IllegalStateException("Hostile " + row[0]);
+                }
+            };
+            app.hushtelegram.extension.shared.Logger.printException(() -> "Probe " + row[0], hostile);
+        }
+        StringBuilder logged = new StringBuilder();
+        for (org.robolectric.shadows.ShadowLog.LogItem item : org.robolectric.shadows.ShadowLog.getLogs()) {
+            logged.append(item.msg).append('\n');
+            if (item.throwable != null) logged.append(android.util.Log.getStackTraceString(item.throwable));
+        }
+        assertTrue("the fallback line never ran", logged.indexOf("Could not log a message: Probe ") >= 0);
+        assertTrue("the failure didn't reach logcat", logged.indexOf("IllegalStateException") >= 0);
+        for (String[] row : corpus) {
+            assertFalse(row[1] + " reached logcat", logged.indexOf(row[1]) >= 0);
+        }
+    }
+
+    /** The row says it's busy and takes no second tap while a report is built, then comes back as it was. */
+    @Test public void theReportRowIsBusyUntilTheReportIsDone() throws Exception {
+        try (org.robolectric.android.controller.ActivityController<android.app.Activity> controller =
+                     Robolectric.buildActivity(android.app.Activity.class).setup()) {
+            app.hushtelegram.extension.shared.Utils.setContext(RuntimeEnvironment.getApplication());
+            LogBufferManager.clearLogBuffer();
+            ExportDiagnosticReportPreference row = new ExportDiagnosticReportPreference(controller.get());
+            row.setSummary("Copy a short report or save the full one.");
+            row.getOnPreferenceClickListener().onPreferenceClick(row);
+            android.app.AlertDialog dialog = (android.app.AlertDialog) org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+            Shadows.shadowOf(dialog).clickOnItem(0);
+
+            assertTrue(row.isBusy());
+            assertFalse(row.isEnabled());
+            assertEquals("Preparing the diagnostic report", String.valueOf(row.getSummary()));
+
+            app.hushtelegram.extension.shared.Utils.awaitBackgroundTasksForTests();
+            org.robolectric.shadows.ShadowLooper.idleMainLooper();
+            assertFalse(row.isBusy());
+            assertTrue(row.isEnabled());
+            assertEquals("Copy a short report or save the full one.", String.valueOf(row.getSummary()));
+        }
     }
 
     /**

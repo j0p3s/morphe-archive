@@ -39,6 +39,7 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowActivity;
 import org.robolectric.shadows.ShadowLooper;
+import org.robolectric.shadows.ShadowToast;
 
 import app.hushgram.extension.shared.SettingsContextRule;
 import app.hushgram.extension.shared.Utils;
@@ -86,10 +87,10 @@ public class ExportFeedbackTest {
             ShadowActivity.IntentForResult picked = pick(page, host.get());
             shadowOf(host.get()).receiveResult(picked.intent, Activity.RESULT_CANCELED, null);
             finish();
-            assertEquals("Settings export cancelled.", page.findPreference(CONFIGURATION).getSummary());
+            assertEquals("Settings export canceled.", page.findPreference(CONFIGURATION).getSummary());
             host.get().getFragmentManager().beginTransaction().remove(page).commitNow();
             page = DownloadSettingsTest.pageIn(host);
-            assertEquals("Settings export cancelled.", page.findPreference(CONFIGURATION).getSummary());
+            assertEquals("Settings export canceled.", page.findPreference(CONFIGURATION).getSummary());
             assertTrue(page.findPreference(CONFIGURATION).isEnabled());
         }
     }
@@ -107,6 +108,24 @@ public class ExportFeedbackTest {
             assertEquals("Couldn't export HushGram settings. Try another file.", summary);
             assertFalse(summary.contains("private-token"));
             assertTrue(page.findPreference(CONFIGURATION).isEnabled());
+        }
+    }
+
+    @Test public void anErrorWhileWritingStillEndsTheExportAndSaysSo() throws Exception {
+        try (ActivityController<Activity> host = Robolectric.buildActivity(Activity.class).setup()) {
+            HushgramPreferenceFragment page = DownloadSettingsTest.pageIn(host);
+            shadowOf(host.get().getContentResolver()).registerOutputStream(DOCUMENT, new ByteArrayOutputStream() {
+                @Override public synchronized void write(byte[] bytes, int start, int count) {
+                    throw new OutOfMemoryError();
+                }
+            });
+            ShadowActivity.IntentForResult picked = pick(page, host.get());
+            shadowOf(host.get()).receiveResult(picked.intent, Activity.RESULT_OK, new Intent().setData(DOCUMENT));
+            finish();
+            assertFalse("the export stayed busy", ExportStatus.CONFIGURATION.active());
+            assertEquals("Couldn't export HushGram settings. Try another file.", page.findPreference(CONFIGURATION).getSummary());
+            assertTrue(page.findPreference(CONFIGURATION).isEnabled());
+            assertEquals("Couldn't export HushGram settings. Try another file.", ShadowToast.getTextOfLatestToast());
         }
     }
 
@@ -269,7 +288,7 @@ public class ExportFeedbackTest {
             ShadowActivity.IntentForResult first = pick(old, host.get());
             host.get().getFragmentManager().beginTransaction().remove(old).commitNow();
             HushgramPreferenceFragment page = DownloadSettingsTest.pageIn(host);
-            assertEquals("Settings export cancelled.", page.findPreference(CONFIGURATION).getSummary());
+            assertEquals("Settings export canceled.", page.findPreference(CONFIGURATION).getSummary());
             ShadowActivity.IntentForResult second = pick(page, host.get());
             shadowOf(host.get()).receiveResult(second.intent, Activity.RESULT_CANCELED, null);
             String message = page.findPreference(CONFIGURATION).getSummary().toString();

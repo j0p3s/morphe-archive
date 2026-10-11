@@ -26,7 +26,8 @@ import app.hushpinterest.extension.shared.settings.BooleanSetting;
  *
  * <p>A switch's default is the second argument of its {@link BooleanSetting}. The patches that were
  * in Morphe Manager's default selection from the start (Hide ads, Disable analytics, Strip link
- * tracking and Hide advertising ID) keep their switches on. Every other patch is in the default
+ * tracking and Hide advertising ID) keep their switches on, and so does Fix push notifications,
+ * since a patched build gets no push notifications without it. Every other patch is in the default
  * selection too, and its switches start off, so a build patched with the defaults acts like
  * Pinterest until one is turned on. While HushPinterest is paused, safe mode included
  * ({@link app.hushpinterest.extension.shared.settings.HushPinterestPause}), a switch answers off unless
@@ -57,10 +58,18 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushpinterest_disable_analytics", TRUE);
     public static final BooleanSetting STRIP_LINK_TRACKING =
             new BooleanSetting("hushpinterest_strip_link_tracking", TRUE);
+    public static final BooleanSetting PLAIN_PIN_LINKS =
+            new BooleanSetting("hushpinterest_plain_pin_links", FALSE);
     public static final BooleanSetting HIDE_ADVERTISING_ID =
             new BooleanSetting("hushpinterest_hide_ad_id", TRUE);
     public static final BooleanSetting DOWNLOAD_PINS =
             new BooleanSetting("hushpinterest_download_pins", FALSE);
+    /**
+     * Downloads go to Pictures/100PINT/Pins, the folder Pinterest's own image save uses, instead of
+     * Download. Download pins' second switch: it only changes where a download goes.
+     */
+    public static final BooleanSetting SAVE_IN_PINTEREST_FOLDER =
+            new BooleanSetting("hushpinterest_save_in_pinterest_folder", FALSE);
     public static final BooleanSetting DOWNLOAD_BOARD =
             new BooleanSetting("hushpinterest_download_board", FALSE);
     public static final BooleanSetting LONG_PRESS_DOWNLOAD =
@@ -101,6 +110,14 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushpinterest_original_images", FALSE);
     public static final BooleanSetting DISABLE_UPDATE_NAG =
             new BooleanSetting("hushpinterest_disable_update_nag", FALSE);
+
+    /**
+     * Firebase gets Pinterest's own certificate fingerprint when it signs this install up for push
+     * notifications ({@link app.hushpinterest.extension.pinterest.notifications.PushNotifications}). On to
+     * start: a patched build gets no push notifications at all without it.
+     */
+    public static final BooleanSetting FIX_PUSH_NOTIFICATIONS =
+            new BooleanSetting("hushpinterest_fix_push_notifications", TRUE);
 
     /**
      * Once a day, when Pinterest starts, ask api.github.com whether a newer HushPinterest release is

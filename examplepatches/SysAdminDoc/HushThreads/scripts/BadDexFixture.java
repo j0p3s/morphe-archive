@@ -34,12 +34,15 @@ import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstructio
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction21t;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22c;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22b;
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22s;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22t;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22x;
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction23x;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction31i;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction31t;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction35c;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction3rc;
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction51l;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutablePackedSwitchPayload;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableSparseSwitchPayload;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableSwitchElement;
@@ -710,6 +713,55 @@ public class BadDexFixture {
     private static final ImmutableMethodReference STRING_EQUALS = method("Ljava/lang/String;", "equals", "Z", OBJECT);
     private static final ImmutableMethodReference MEDIA_AD = method(FEATURE_MEDIA, "sponsored", "Z");
     private static final ImmutableMethodReference INJECTED_AD = method("Lfixture/AdFlag;", "injected", "Z", OBJECT);
+    private static final String FEATURE_RETURN = "Lapp/morphe/extension/hushthreads/feed/ReturnRefresh;";
+    private static final String FEATURE_ACTIVITY = "Lcom/instagram/barcelona/mainactivity/BarcelonaActivity;";
+    private static final String FEATURE_WARM = "Lfixture/WarmStart;";
+    private static final String FEATURE_WARM_DECISION = "Lfixture/WarmDecision;";
+    private static final String FEATURE_HOT_START = "Lfixture/HotStart;";
+    private static final String FEATURE_HOT_HELPER = "Lfixture/HotStartHelper;";
+    private static final String FEATURE_DECIDER = "Lfixture/HotStartDecider;";
+    private static final ImmutableMethodReference HOT_START_DECISION = method(FEATURE_DECIDER, "decide", FEATURE_HOT_START,
+            FEATURE_HOT_HELPER, "Ljava/lang/String;", "J", "J");
+    private static final ImmutableMethodReference HOLD_HOT_START = method(FEATURE_RETURN, "holdHotStart", "Z");
+    private static final ImmutableMethodReference RESET_TO_FEED = method(FEATURE_RETURN, "resetToFeed", "Z", "Z");
+    private static final ImmutableMethodReference WARM_START = method(FEATURE_RETURN, "warmStart", "Z", "Z");
+    private static final ImmutableMethodReference CACHED_POSTS = method(FEATURE_RETURN, "cachedPosts", "Z", "Z");
+    private static final String FEATURE_AUTOPLAY = "Lapp/morphe/extension/hushthreads/feed/VideoAutoplay;";
+    private static final String FEATURE_VIDEO = "Lfixture/Video;";
+    private static final String FEATURE_POSTS = "Lfixture/FeedPost;";
+    private static final ImmutableMethodReference PLAYBACK_EFFECT = method(FEATURE_VIDEO, "effect", "V", OBJECT, "I", "Z", "Z");
+    /** PostVideo plays by its fourth boolean, as on 450, after its changed and default masks. */
+    private static final ImmutableMethodReference POST_VIDEO = method(FEATURE_VIDEO, "post", "V", OBJECT, "I", "I", "Z", "Z", "Z", "Z", "Z");
+    /** The bit of PostVideo's default mask that has it play by its default, a 1, instead of the flag it's handed. */
+    private static final int PLAY_DEFAULT = 0x4000;
+    private static final ImmutableMethodReference HOLD_VIDEO = method(FEATURE_AUTOPLAY, "play", "Z", "Z");
+    private static final String FEATURE_PURE_BLACK = "Lapp/morphe/extension/hushthreads/theme/PureBlack;";
+    private static final String FEATURE_THEME = "Lfixture/BdsTheme;";
+    private static final String FEATURE_THEME_COLORS = "Lfixture/ThemeColors;";
+    private static final String FEATURE_SCHEMES = "Lfixture/ColorSchemes;";
+    private static final String FEATURE_SCHEME = "Lfixture/ColorScheme;";
+    /** A color scheme takes 20 colors, the fewest Pure black dark mode reads as one. Threads' takes 39. */
+    private static final int SCHEME_COLORS = 20;
+    private static final ImmutableMethodReference SCHEME_INIT = method(FEATURE_SCHEME, "<init>", "V",
+            Collections.nCopies(SCHEME_COLORS, "J").toArray(new String[0]));
+    private static final ImmutableMethodReference THEME_HELPER = method(FEATURE_THEME_COLORS, "dark", FEATURE_THEME_COLORS, OBJECT);
+    private static final ImmutableMethodReference THEME_COLORS_INIT = method(FEATURE_THEME_COLORS, "<init>", "V", "J");
+    private static final ImmutableMethodReference PURE_ARGB = method(FEATURE_PURE_BLACK, "argb", "J", "J");
+    private static final ImmutableMethodReference PURE_COLOR = method(FEATURE_PURE_BLACK, "color", "J", "J");
+    private static final String FEATURE_SETTINGS_ROW = "Lapp/morphe/extension/hushthreads/settings/ThreadsSettingsRow;";
+    private static final String FEATURE_ROW_CLICK = "Lapp/morphe/extension/hushthreads/settings/ThreadsSettingsRow$Click;";
+    private static final String FEATURE_SETTINGS_SCREEN = "Lfixture/SettingsScreenKt;";
+    private static final String FEATURE_SETTINGS_LIST = "Lfixture/SettingsScreenKt$list$1;";
+    private static final String FEATURE_ENTRY_KIND = "Lfixture/SettingsEntryKind;";
+    private static final String FEATURE_COMPOSER = "Lfixture/Composer;";
+    private static final String FEATURE_MODIFIER = "Lfixture/Modifier;";
+    private static final String FUNCTION0 = "Lkotlin/jvm/functions/Function0;";
+    private static final ImmutableMethodReference SETTINGS_ROW = method(FEATURE_SETTINGS_SCREEN, "SettingsRow", "V",
+            FEATURE_COMPOSER, FEATURE_MODIFIER, "Ljava/lang/Integer;", FUNCTION0, "I", "I", "I", "I", "Z");
+    private static final ImmutableMethodReference ACCOUNTS_ROW = method(FEATURE_SETTINGS_SCREEN, "AccountsCenterRow", "V",
+            FEATURE_COMPOSER, FEATURE_MODIFIER, "Ljava/lang/String;", "Ljava/lang/String;", FUNCTION0, "I", "I", "I", "Z");
+    private static final ImmutableMethodReference START_GROUP = method(FEATURE_COMPOSER, "startGroup", "V", "I");
+    private static final ImmutableMethodReference ADD_ROW = method(FEATURE_SETTINGS_ROW, "add", "V", OBJECT);
 
     /** A Pando getter: it asks for the field by its name's hash and, here, answers null. */
     private static Method pandoGetter(String owner, String name, String returns, String field) {
@@ -718,29 +770,31 @@ public class BadDexFixture {
     }
 
     /**
-     * The share-link hook after a read of the link into [link], with the post in v7 and v0/v1 free.
-     * Faults: the link register swapped for the code's, the code getter swapped for another field's,
-     * and the post check jumping past the call.
+     * The share-link hook after a read of the link into [link], with the post in [post] and the
+     * post's code going in [code] and its author's name in v1. Faults: the link register swapped for
+     * the code's, the code getter swapped for another field's, and the post check jumping past the call.
      */
-    private static List<Instruction> postLinkHook(int link, String fault) {
-        return List.of(new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), new ImmutableInstruction11n(Opcode.CONST_4, 1, 0),
-                ifEqz(7, fault.equals("post-link-bypass") ? 20 : 16),
-                virtual(fault.equals("post-link-getter") ? POST_TITLE : POST_CODE, 7), op(Opcode.MOVE_RESULT_OBJECT, 0),
-                virtual(POST_AUTHOR, 7), op(Opcode.MOVE_RESULT_OBJECT, 1),
+    private static List<Instruction> postLinkHook(int link, int post, int code, String fault) {
+        return List.of(new ImmutableInstruction11n(Opcode.CONST_4, code, 0), new ImmutableInstruction11n(Opcode.CONST_4, 1, 0),
+                ifEqz(post, fault.equals("post-link-bypass") ? 20 : 16),
+                virtual(fault.equals("post-link-getter") ? POST_TITLE : POST_CODE, post), op(Opcode.MOVE_RESULT_OBJECT, code),
+                virtual(POST_AUTHOR, post), op(Opcode.MOVE_RESULT_OBJECT, 1),
                 ifEqz(1, 6),
                 virtual(USERNAME, 1), op(Opcode.MOVE_RESULT_OBJECT, 1),
-                invoke(POST_LINKER, fault.equals("post-link-register") ? 0 : link, 1, 0), op(Opcode.MOVE_RESULT_OBJECT, link));
+                invoke(POST_LINKER, fault.equals("post-link-register") ? code : link, 1, code), op(Opcode.MOVE_RESULT_OBJECT, link));
     }
 
     /**
      * A resumed share's hook after a read into [link]: the post kept against [key] back into v7,
-     * cast to a post, then the share-link hook. Faults named [prefix] plus recall-key, recall-cast or
-     * post-link-bypass break only this copy.
+     * cast to a post, then the share-link hook. Faults named [prefix] plus recall-key, recall-cast,
+     * recall-live (the post back into v3, which the method still reads) or post-link-bypass break
+     * only this copy.
      */
     private static List<Instruction> recallHook(int key, int link, String fault, String prefix) {
+        int post = fault.equals(prefix + "recall-live") ? 3 : 7;
         List<Instruction> hook = new ArrayList<>(List.of(invoke(POST_RECALL, fault.equals(prefix + "recall-key") ? link : key),
-                op(Opcode.MOVE_RESULT_OBJECT, 7), type(Opcode.CHECK_CAST, 7, fault.equals(prefix + "recall-cast") ? FEATURE_USER : FEATURE_MEDIA)));
-        hook.addAll(postLinkHook(link, fault.equals(prefix + "post-link-bypass") ? "post-link-bypass" : ""));
+                op(Opcode.MOVE_RESULT_OBJECT, post), type(Opcode.CHECK_CAST, post, fault.equals(prefix + "recall-cast") ? FEATURE_USER : FEATURE_MEDIA)));
+        hook.addAll(postLinkHook(link, post, 0, fault.equals(prefix + "post-link-bypass") ? "post-link-bypass" : ""));
         return hook;
     }
 
@@ -1410,6 +1464,372 @@ public class BadDexFixture {
         }
     }
 
+    private static int codeUnits(List<Instruction> instructions) {
+        int units = 0;
+        for (Instruction i : instructions) units += i.getCodeUnits();
+        return units;
+    }
+
+    /**
+     * Threads' four return checks, each hooked where Block background-return feed refresh hooks it
+     * on 450 when [hooked]. The warm-start check sets its answer true past the threshold, logs a
+     * short time away and jumps back, then stores the answer. For you's swap joins a true and a false
+     * over an if-gez and guards the swap on the result. The reset to main feed returns its own answer,
+     * and the hot-start decision answers null for a return with no stop time. Faults: each hook
+     * missing, the hot-start branch inverted, the reset's hook on the parameter the answer was copied
+     * from, the warm-start hook past the store, and the swap's if-gez landing past its hook.
+     */
+    private static List<ClassDef> returnRefreshClasses(boolean hooked, String fault) {
+        List<ClassDef> classes = new ArrayList<>();
+        // check(Object, boolean): v0..v5 locals, then the arguments; the answer in v1.
+        List<Instruction> warmHook = hooked && !fault.equals("warm-start-missing")
+                ? List.of(invoke(WARM_START, 1), op(Opcode.MOVE_RESULT, 1)) : List.of();
+        List<Instruction> answered = new ArrayList<>(List.of(type(Opcode.NEW_INSTANCE, 0, FEATURE_WARM_DECISION),
+                direct(method(FEATURE_WARM_DECISION, "<init>", "V"), 0)));
+        if (!fault.equals("warm-start-moved")) answered.addAll(warmHook);
+        answered.add(objectField(Opcode.IPUT_BOOLEAN, 1, 0, FEATURE_WARM_DECISION, "refresh", "Z"));
+        if (fault.equals("warm-start-moved")) answered.addAll(warmHook);
+        answered.add(op(Opcode.RETURN_OBJECT, 0));
+        List<Instruction> check = new ArrayList<>(List.of(string(0, "hot_start_wall_clock_bg_elapsed_ms"),
+                new ImmutableInstruction11n(Opcode.CONST_4, 1, 0), new ImmutableInstruction21s(Opcode.CONST_WIDE_16, 2, 0),
+                new ImmutableInstruction21s(Opcode.CONST_WIDE_16, 4, 0), new ImmutableInstruction23x(Opcode.CMP_LONG, 0, 2, 4),
+                // Past the true and the store to the short log, which jumps back to just past the true.
+                new ImmutableInstruction21t(Opcode.IF_LTZ, 0, 3 + codeUnits(answered)), new ImmutableInstruction11n(Opcode.CONST_4, 1, 1)));
+        check.addAll(answered);
+        check.add(string(0, "background_time_too_short_for_hot_start_feed_refresh"));
+        check.add(new ImmutableInstruction10t(Opcode.GOTO, -2 - codeUnits(answered)));
+        // swap(): v0..v5 locals, this in v6; the answer in v5, joined where the hook goes.
+        List<Instruction> swapHook = hooked && !fault.equals("cached-posts-missing")
+                ? List.of(invoke(CACHED_POSTS, 5), op(Opcode.MOVE_RESULT, 5)) : List.of();
+        List<Instruction> swap = new ArrayList<>(List.of(new ImmutableInstruction21s(Opcode.CONST_WIDE_16, 0, 0),
+                new ImmutableInstruction21s(Opcode.CONST_WIDE_16, 2, 0), new ImmutableInstruction23x(Opcode.CMP_LONG, 4, 0, 2),
+                new ImmutableInstruction11n(Opcode.CONST_4, 5, 1),
+                new ImmutableInstruction21t(Opcode.IF_GEZ, 4, fault.equals("cached-posts-bypass") ? 3 + codeUnits(swapHook) : 3),
+                new ImmutableInstruction11n(Opcode.CONST_4, 5, 0)));
+        swap.addAll(swapHook);
+        swap.addAll(List.of(objectField(Opcode.IGET_OBJECT, 0, 6, FEATURE_WARM, "posts", OBJECT), ifEqz(5, 4),
+                objectField(Opcode.IPUT_OBJECT, 0, 6, FEATURE_WARM, "shown", OBJECT), op(Opcode.RETURN_VOID)));
+        classes.add(featureClass(FEATURE_WARM, OBJECT, List.of(featureField(FEATURE_WARM, "posts", OBJECT), featureField(FEATURE_WARM, "shown", OBJECT)),
+                define(FEATURE_WARM, "check", FEATURE_WARM_DECISION, true, body(8, check.toArray(new Instruction[0])), OBJECT, "Z"),
+                define(FEATURE_WARM, "swap", "V", false, body(7, swap.toArray(new Instruction[0])))));
+        classes.add(featureClass(FEATURE_WARM_DECISION, OBJECT, List.of(featureField(FEATURE_WARM_DECISION, "refresh", "Z")),
+                define(FEATURE_WARM_DECISION, "<init>", "V", false, body(1, direct(method(OBJECT, "<init>", "V"), 0), op(Opcode.RETURN_VOID)))));
+
+        // reset(boolean): v0 and v1 locals, this in v2, the answer copied from v3 into v1.
+        List<Instruction> reset = new ArrayList<>(List.of(string(0, "RESET_TO_MAIN_FEED"), string(0, "reset_to_home_feed"),
+                new ImmutableInstruction12x(Opcode.MOVE, 1, 3)));
+        if (hooked && !fault.equals("reset-missing")) {
+            int answer = fault.equals("reset-register") ? 3 : 1;
+            reset.add(invoke(RESET_TO_FEED, answer));
+            reset.add(op(Opcode.MOVE_RESULT, answer));
+        }
+        reset.add(op(Opcode.RETURN, 1));
+        // onStart: v0..v5 locals, this in v6. The decision takes the helper, the last surface and two times.
+        classes.add(featureClass(FEATURE_ACTIVITY, OBJECT, List.of(featureField(FEATURE_ACTIVITY, "helper", FEATURE_HOT_HELPER)),
+                define(FEATURE_ACTIVITY, "onStart", "V", false, body(7, objectField(Opcode.IGET_OBJECT, 0, 6, FEATURE_ACTIVITY, "helper", FEATURE_HOT_HELPER),
+                        string(1, "feed"), new ImmutableInstruction21s(Opcode.CONST_WIDE_16, 2, 0), new ImmutableInstruction21s(Opcode.CONST_WIDE_16, 4, 0),
+                        new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 0, 6, HOT_START_DECISION), op(Opcode.MOVE_RESULT_OBJECT, 0),
+                        virtual(method(FEATURE_ACTIVITY, "handle", "V", FEATURE_HOT_START), 6, 0), op(Opcode.RETURN_VOID))),
+                define(FEATURE_ACTIVITY, "handle", "V", false, body(3, string(0, "badge_decision"), op(Opcode.RETURN_VOID)), FEATURE_HOT_START),
+                define(FEATURE_ACTIVITY, "reset", "Z", false, body(4, reset.toArray(new Instruction[0])), "Z")));
+
+        // decide(helper, surface, stopped, now): v0..v2 locals, then the arguments; null with no stop time.
+        List<Instruction> decide = new ArrayList<>();
+        if (hooked && !fault.equals("hot-start-missing")) {
+            // Past its own two units and the null return's two, onto the decision's first instruction.
+            decide.addAll(List.of(invoke(HOLD_HOT_START), op(Opcode.MOVE_RESULT, 0),
+                    new ImmutableInstruction21t(fault.equals("hot-start-inverted") ? Opcode.IF_NEZ : Opcode.IF_EQZ, 0, 4),
+                    new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN_OBJECT, 0)));
+        }
+        decide.addAll(List.of(new ImmutableInstruction21s(Opcode.CONST_WIDE_16, 0, 0), new ImmutableInstruction23x(Opcode.CMP_LONG, 2, 5, 0),
+                new ImmutableInstruction21t(Opcode.IF_GTZ, 2, 4), new ImmutableInstruction11n(Opcode.CONST_4, 2, 0), op(Opcode.RETURN_OBJECT, 2),
+                type(Opcode.NEW_INSTANCE, 2, FEATURE_HOT_START), direct(method(FEATURE_HOT_START, "<init>", "V"), 2), op(Opcode.RETURN_OBJECT, 2)));
+        classes.add(featureClass(FEATURE_DECIDER, OBJECT, List.of(), define(FEATURE_DECIDER, "decide", FEATURE_HOT_START, true,
+                body(9, decide.toArray(new Instruction[0])), FEATURE_HOT_HELPER, "Ljava/lang/String;", "J", "J")));
+        classes.add(featureClass(FEATURE_HOT_START, OBJECT, List.of(), define(FEATURE_HOT_START, "<init>", "V", false,
+                body(1, direct(method(OBJECT, "<init>", "V"), 0), op(Opcode.RETURN_VOID)))));
+        return classes;
+    }
+
+    /**
+     * Disable video autoplay's shapes: PostVideo, which sets its playback effect's first boolean
+     * from its own fourth, or from the 1 it defaults to when its default mask's 0x4000 bit is set,
+     * and its callers. A single post, a carousel and an Instagram post hand it their own boolean in
+     * v7 as the flag. A trend preview and an ad card set the bit and pass a 0, and so does the
+     * viewer. When [hooked], each caller but the viewer asks the extension about v7 just before the
+     * call, the carousel's branch to its call landing on the question, and the trend preview and ad
+     * card first clear the bit in v3 and load the default's 1 into v7. Faults: the carousel's hook
+     * missing, the single post's hook on the boolean before the flag, the hook moved into PostVideo
+     * itself, the carousel's branch landing past its hook, the Instagram post's hook missing, the
+     * trend preview and ad card hooked like posts with their bits left set, the ad card asking
+     * about a 0, the viewer's bit cleared, and an ad card that reads its mask again after PostVideo.
+     */
+    private static List<ClassDef> videoAutoplayClasses(boolean hooked, String fault) {
+        List<ClassDef> classes = new ArrayList<>();
+        // post(composer, changed, defaults, five booleans): v0..v2 locals, then the arguments; the mask in v5, the flag in v9.
+        List<Instruction> post = new ArrayList<>();
+        if (hooked && fault.equals("autoplay-inside")) {
+            post.addAll(List.of(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 9, 1, HOLD_VIDEO), op(Opcode.MOVE_RESULT, 9)));
+        }
+        // The default's 1 replaces the flag when the mask's bit is set. False lands on the 0; true
+        // sets the 1 and jumps past the 0 to the effect.
+        post.addAll(List.of(string(0, "com.instagram.barcelona.feed.post.video.PostVideo (PostVideo.kt:84)"),
+                new ImmutableInstruction12x(Opcode.MOVE, 1, 9), new ImmutableInstruction22s(Opcode.AND_INT_LIT16, 2, 5, PLAY_DEFAULT), ifEqz(2, 3),
+                new ImmutableInstruction11n(Opcode.CONST_4, 1, 1), ifEqz(1, 4), new ImmutableInstruction11n(Opcode.CONST_4, 2, 1),
+                new ImmutableInstruction10t(Opcode.GOTO, 2), new ImmutableInstruction11n(Opcode.CONST_4, 2, 0),
+                invoke(PLAYBACK_EFFECT, 3, 4, 2, 10), op(Opcode.RETURN_VOID)));
+        classes.add(featureClass(FEATURE_VIDEO, OBJECT, List.of(),
+                define(FEATURE_VIDEO, "effect", "V", true, body(5, string(0, "com.instagram.video.player.compose.VideoPlaybackEffect (VideoPlaybackEffect.kt:41)"),
+                        op(Opcode.RETURN_VOID)), OBJECT, "I", "Z", "Z"),
+                define(FEATURE_VIDEO, "post", "V", true, body(11, post.toArray(new Instruction[0])), OBJECT, "I", "I", "Z", "Z", "Z", "Z", "Z")));
+        boolean callers = hooked && !fault.equals("autoplay-inside");
+        classes.add(featureClass(FEATURE_POSTS, OBJECT, List.of(),
+                videoCaller("single", "com.instagram.barcelona.feed.post.ui.PostSingleMedia.<anonymous> (PostSingleMedia.kt:212)", 0,
+                        callers ? asked(fault.equals("autoplay-register") ? 6 : 7) : List.of(), false, false, false),
+                videoCaller("carousel", "com.instagram.barcelona.feed.post.ui.PostCarousel.<anonymous> (PostCarousel.kt:131)", 0,
+                        callers && !fault.equals("autoplay-missing") ? asked(7) : List.of(), true, fault.equals("autoplay-bypass"), false),
+                videoCaller("inline", "com.instagram.barcelona.igmedia.InlineIgVideo (InlineIgVideo.kt:38)", 0x20,
+                        callers && !fault.equals("autoplay-inline-missing") ? asked(7) : List.of(), false, false, false),
+                videoCaller("trend", "com.instagram.barcelona.common.ui.mediahighlights.AutoplayingMediaHighlightVideo (TrendMediaHighlightsPreview.kt:235)",
+                        PLAY_DEFAULT | 0x20, !callers ? List.of() : fault.equals("autoplay-default-ignored") ? asked(7) : defaultAsked(0x20, 1), false, false, false),
+                videoCaller("ad", "com.instagram.barcelona.sponsored.ui.AdCard (AdCard.kt:143)", PLAY_DEFAULT | 0x40,
+                        !callers ? List.of() : fault.equals("autoplay-default-ignored") ? asked(7) : defaultAsked(0x40, fault.equals("autoplay-ad-literal") ? 0 : 1),
+                        false, false, fault.equals("autoplay-ad-live")),
+                // The viewer's bit cleared without a question: it would play by the 0 it passes, never at all.
+                videoCaller("viewer", "com.instagram.barcelona.feed.mediaviewer.ui.MediaViewerVideo (MediaViewerVideo.kt:90)", PLAY_DEFAULT | 0x80,
+                        callers && fault.equals("autoplay-viewer") ? List.of(new ImmutableInstruction31i(Opcode.CONST, 3, 0x80)) : List.of(), false, false, false)));
+        return classes;
+    }
+
+    /** The extension asked about v[register], its answer back in it. */
+    private static List<Instruction> asked(int register) {
+        return List.of(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, register, 1, HOLD_VIDEO), op(Opcode.MOVE_RESULT, register));
+    }
+
+    /** The default mask without its play bit, [mask], in v3, [value] in the flag's v7, and the extension asked about v7. */
+    private static List<Instruction> defaultAsked(int mask, int value) {
+        List<Instruction> block = new ArrayList<>(List.of(new ImmutableInstruction31i(Opcode.CONST, 3, mask), new ImmutableInstruction21s(Opcode.CONST_16, 7, value)));
+        block.addAll(asked(7));
+        return block;
+    }
+
+    /**
+     * A composable holding [note] that calls PostVideo with [defaults] as its default mask, in v3,
+     * and the flag in v7: its own boolean, or a 0 when the mask leaves the flag to PostVideo's
+     * default. [question] goes just before the call. [branch] puts an if-nez on that boolean in
+     * front, aimed at the call, and [bypass] lands it past the question. [readsMask] reads v3 again
+     * after the call.
+     */
+    private static Method videoCaller(String name, String note, int defaults, List<Instruction> question, boolean branch, boolean bypass, boolean readsMask) {
+        // PostVideo's composer, changed, defaults and five booleans in v1..v8; the arguments in v9 and v10.
+        List<Instruction> body = new ArrayList<>(List.of(string(0, note), new ImmutableInstruction12x(Opcode.MOVE_OBJECT, 1, 9),
+                new ImmutableInstruction11n(Opcode.CONST_4, 2, 0), new ImmutableInstruction21s(Opcode.CONST_16, 3, defaults),
+                new ImmutableInstruction11n(Opcode.CONST_4, 4, 0), new ImmutableInstruction11n(Opcode.CONST_4, 5, 1),
+                new ImmutableInstruction11n(Opcode.CONST_4, 6, 0),
+                (defaults & PLAY_DEFAULT) == 0 ? new ImmutableInstruction12x(Opcode.MOVE, 7, 10) : new ImmutableInstruction11n(Opcode.CONST_4, 7, 0),
+                new ImmutableInstruction11n(Opcode.CONST_4, 8, 1)));
+        if (branch) {
+            // Past its own two units and the 0's one, onto the question when there is one.
+            body.add(new ImmutableInstruction21t(Opcode.IF_NEZ, 10, 3 + (bypass ? codeUnits(question) : 0)));
+            body.add(new ImmutableInstruction11n(Opcode.CONST_4, 8, 0));
+        }
+        body.addAll(question);
+        body.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 1, 8, POST_VIDEO));
+        if (readsMask) body.add(new ImmutableInstruction12x(Opcode.MOVE, 0, 3));
+        body.add(op(Opcode.RETURN_VOID));
+        return define(FEATURE_POSTS, name, "V", true, body(11, body.toArray(new Instruction[0])), OBJECT, "Z");
+    }
+
+    /**
+     * Pure black dark mode's shapes: Threads' theme, which loads #101010 itself as 449 did and calls
+     * a helper that loads it as 450 does, each load shifted into a Compose color, and the class
+     * holding the two color schemes the theme reads. Its static initializer builds the light one and
+     * then the dark one, as 450 does, from shared colors: the dark one passes #101010 as its first
+     * two colors where the light one passes white, and the light one passes #101010 as its third, a
+     * dark color on light backgrounds. When [hooked], each load asks argb right after and the dark
+     * backgrounds, in v10 and v12, ask color right before the dark constructor. Faults: the helper's
+     * hook missing, the theme's hook on the gray loaded before its #101010, the second background's
+     * hook missing, that hook on the third color instead, and the background hooks put before the
+     * light constructor.
+     */
+    private static List<ClassDef> pureBlackClasses(boolean hooked, String fault) {
+        List<ClassDef> classes = new ArrayList<>();
+        // invoke(Object, Object): v0..v5 locals, this in v6 and the arguments in v7 and v8; #101010 in v3.
+        List<Instruction> theme = new ArrayList<>(List.of(string(0, "com.instagram.barcelona.bds.theme.BdsTheme.<anonymous> (BdsTheme.kt:73)"),
+                staticField(Opcode.SGET_OBJECT, 0, FEATURE_SCHEMES, "light", FEATURE_SCHEME),
+                staticField(Opcode.SGET_OBJECT, 0, FEATURE_SCHEMES, "dark", FEATURE_SCHEME),
+                new ImmutableInstruction21s(Opcode.CONST_16, 5, 32), constWide(1, 0xff1c1c1cL), constWide(3, 0xff101010L)));
+        if (hooked) theme.addAll(pureBlackHook(PURE_ARGB, fault.equals("pure-black-load-register") ? 1 : 3));
+        theme.addAll(List.of(new ImmutableInstruction23x(Opcode.SHL_LONG, 3, 3, 5), invoke(THEME_HELPER, 7), op(Opcode.MOVE_RESULT_OBJECT, 0),
+                type(Opcode.NEW_INSTANCE, 0, FEATURE_THEME_COLORS), direct(THEME_COLORS_INIT, 0, 3, 4), op(Opcode.RETURN_OBJECT, 0)));
+        classes.add(featureClass(FEATURE_THEME, OBJECT, List.of(),
+                define(FEATURE_THEME, "invoke", OBJECT, false, body(9, theme.toArray(new Instruction[0])), OBJECT, OBJECT)));
+        // dark(Object): v0..v5 locals and the argument in v6; #101010 in v2.
+        List<Instruction> helper = new ArrayList<>(List.of(new ImmutableInstruction21s(Opcode.CONST_16, 5, 32), constWide(0, 0xff0a0a0aL),
+                new ImmutableInstruction23x(Opcode.SHL_LONG, 0, 0, 5), constWide(2, 0xff101010L)));
+        if (hooked && !fault.equals("pure-black-load-missing")) helper.addAll(pureBlackHook(PURE_ARGB, 2));
+        helper.addAll(List.of(new ImmutableInstruction23x(Opcode.SHL_LONG, 2, 2, 5), type(Opcode.NEW_INSTANCE, 4, FEATURE_THEME_COLORS),
+                direct(THEME_COLORS_INIT, 4, 2, 3), op(Opcode.RETURN_OBJECT, 4)));
+        classes.add(featureClass(FEATURE_THEME_COLORS, OBJECT, List.of(),
+                define(FEATURE_THEME_COLORS, "dark", FEATURE_THEME_COLORS, true, body(7, helper.toArray(new Instruction[0])), OBJECT),
+                define(FEATURE_THEME_COLORS, "<init>", "V", false, body(3, direct(method(OBJECT, "<init>", "V"), 0), op(Opcode.RETURN_VOID)), "J")));
+
+        // The shift in v0 and the shared colors, each shifted into a Compose color: #101010 in v1,
+        // white in v3, the dark scheme's gray in v5 and the light scheme's in v7.
+        List<Instruction> init = new ArrayList<>(List.of(new ImmutableInstruction21s(Opcode.CONST_16, 0, 32)));
+        long[] shared = {0xff101010L, 0xffffffffL, 0xff1c1c1cL, 0xfff5f5f5L};
+        for (int n = 0; n < shared.length; n++) {
+            init.add(constWide(1 + 2 * n, shared[n]));
+            init.add(new ImmutableInstruction23x(Opcode.SHL_LONG, 1 + 2 * n, 1 + 2 * n, 0));
+        }
+        List<Integer> backgrounds = !hooked ? List.of() : fault.equals("pure-black-background-missing") ? List.of(10)
+                : fault.equals("pure-black-background-register") ? List.of(10, 14) : List.of(10, 12);
+        boolean onLight = fault.equals("pure-black-light");
+        init.addAll(schemeBuild("light", 3, 1, 7, onLight ? backgrounds : List.of()));
+        init.addAll(schemeBuild("dark", 1, 3, 5, onLight ? List.of() : backgrounds));
+        init.add(op(Opcode.RETURN_VOID));
+        int fieldFlags = AccessFlags.PUBLIC.getValue() | AccessFlags.STATIC.getValue();
+        classes.add(featureClass(FEATURE_SCHEMES, OBJECT, List.of(flaggedField(FEATURE_SCHEMES, "light", FEATURE_SCHEME, fieldFlags),
+                flaggedField(FEATURE_SCHEMES, "dark", FEATURE_SCHEME, fieldFlags)),
+                define(FEATURE_SCHEMES, "<clinit>", "V", true, body(10 + 2 * SCHEME_COLORS, init.toArray(new Instruction[0])))));
+        classes.add(featureClass(FEATURE_SCHEME, OBJECT, List.of(), define(FEATURE_SCHEME, "<init>", "V", false,
+                body(1 + 2 * SCHEME_COLORS, direct(method(OBJECT, "<init>", "V"), 0), op(Opcode.RETURN_VOID)),
+                Collections.nCopies(SCHEME_COLORS, "J").toArray(new String[0]))));
+        return classes;
+    }
+
+    /**
+     * A color scheme built in v9 and stored in [field]: its first two colors copied from v[background],
+     * its third from v[text] and the rest from v[rest], asking color about each register in [hooks]
+     * just before the constructor.
+     */
+    private static List<Instruction> schemeBuild(String field, int background, int text, int rest, List<Integer> hooks) {
+        List<Instruction> build = new ArrayList<>(List.of(type(Opcode.NEW_INSTANCE, 9, FEATURE_SCHEME)));
+        for (int p = 0; p < SCHEME_COLORS; p++) {
+            build.add(new ImmutableInstruction22x(Opcode.MOVE_WIDE_FROM16, 10 + 2 * p, p < 2 ? background : p == 2 ? text : rest));
+        }
+        for (int hook : hooks) build.addAll(pureBlackHook(PURE_COLOR, hook));
+        build.add(new ImmutableInstruction3rc(Opcode.INVOKE_DIRECT_RANGE, 9, 1 + 2 * SCHEME_COLORS, SCHEME_INIT));
+        build.add(staticField(Opcode.SPUT_OBJECT, 9, FEATURE_SCHEMES, field, FEATURE_SCHEME));
+        return build;
+    }
+
+    /** const-wide v[register], [value]: a 64-bit load, as Threads loads an ARGB color. */
+    private static Instruction constWide(int register, long value) {
+        return new ImmutableInstruction51l(Opcode.CONST_WIDE, register, value);
+    }
+
+    /** A Pure black hook on the pair at v[register]: the range call with its move-result-wide back into it. */
+    private static List<Instruction> pureBlackHook(ImmutableMethodReference hook, int register) {
+        return List.of(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, register, 2, hook), op(Opcode.MOVE_RESULT_WIDE, register));
+    }
+
+    /**
+     * The HushThreads settings row's host shapes: Threads' settings row and Accounts Center row, each
+     * holding its note, an entry enum whose static initializer makes PRIVACY 0 and MORE 1, and the
+     * list lambda that switches on an entry's ordinal. Each case starts its group on the composer in
+     * v12, sets a click, label and icon and goes to a run they share, which copies the composer in
+     * and reads the modifier from a static field for the settings row call. When [hooked], the MORE
+     * case asks ThreadsSettingsRow.add about v12 right before its goto. Faults: the hook missing, the
+     * hook in the PRIVACY case instead, and the hook on the entry in v14 instead of the composer.
+     */
+    private static List<ClassDef> settingsRowClasses(boolean hooked, String fault) {
+        List<ClassDef> classes = new ArrayList<>();
+        classes.add(featureClass(FEATURE_SETTINGS_SCREEN, OBJECT, List.of(),
+                define(FEATURE_SETTINGS_SCREEN, "SettingsRow", "V", true, body(10,
+                        string(0, "com.instagram.barcelona.settings.SettingsRow (SettingsScreen.kt:301)"), op(Opcode.RETURN_VOID)),
+                        SETTINGS_ROW.getParameterTypes().toArray(new String[0])),
+                define(FEATURE_SETTINGS_SCREEN, "AccountsCenterRow", "V", true, body(10,
+                        string(0, "com.instagram.barcelona.settings.AccountsCenterRow (SettingsScreen.kt:342)"), op(Opcode.RETURN_VOID)),
+                        ACCOUNTS_ROW.getParameterTypes().toArray(new String[0]))));
+
+        int enumFlags = AccessFlags.PUBLIC.getValue() | AccessFlags.FINAL.getValue() | AccessFlags.STATIC.getValue() | AccessFlags.ENUM.getValue();
+        ImmutableMethodReference entryInit = method(FEATURE_ENTRY_KIND, "<init>", "V", "Ljava/lang/String;", "I");
+        List<Instruction> entries = new ArrayList<>();
+        List<ImmutableField> constants = new ArrayList<>();
+        String[] names = {"PRIVACY", "MORE"};
+        for (int n = 0; n < names.length; n++) {
+            entries.addAll(List.of(type(Opcode.NEW_INSTANCE, 0, FEATURE_ENTRY_KIND), string(1, names[n]),
+                    new ImmutableInstruction11n(Opcode.CONST_4, 2, n), direct(entryInit, 0, 1, 2),
+                    staticField(Opcode.SPUT_OBJECT, 0, FEATURE_ENTRY_KIND, names[n], FEATURE_ENTRY_KIND)));
+            constants.add(flaggedField(FEATURE_ENTRY_KIND, names[n], FEATURE_ENTRY_KIND, enumFlags));
+        }
+        entries.add(op(Opcode.RETURN_VOID));
+        classes.add(featureClass(FEATURE_ENTRY_KIND, "Ljava/lang/Enum;", constants,
+                define(FEATURE_ENTRY_KIND, "<clinit>", "V", true, body(3, entries.toArray(new Instruction[0]))),
+                define(FEATURE_ENTRY_KIND, "<init>", "V", false, body(3, direct(method("Ljava/lang/Enum;", "<init>", "V", "Ljava/lang/String;", "I"), 0, 1, 2),
+                        op(Opcode.RETURN_VOID)), "Ljava/lang/String;", "I")));
+
+        // invoke(entry, composer): v0..v12 locals, this in v13, the entry in v14 and the composer in v15.
+        List<Instruction> list = new ArrayList<>(List.of(string(0, "com.instagram.barcelona.settings.SettingsScreen.<anonymous> (SettingsScreen.kt:131)"),
+                new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 12, 15), type(Opcode.CHECK_CAST, 12, FEATURE_COMPOSER),
+                type(Opcode.CHECK_CAST, 14, FEATURE_ENTRY_KIND), virtual(method(FEATURE_ENTRY_KIND, "ordinal", "I"), 14), op(Opcode.MOVE_RESULT, 1),
+                new ImmutableInstruction31t(Opcode.PACKED_SWITCH, 1, 0), op(Opcode.RETURN_VOID)));
+        int switchAt = 6;
+        int[] cases = new int[names.length], gotos = new int[names.length];
+        for (int n = 0; n < names.length; n++) {
+            cases[n] = list.size();
+            list.addAll(List.of(new ImmutableInstruction35c(Opcode.INVOKE_INTERFACE, 2, 12, 1, 0, 0, 0, START_GROUP),
+                    new ImmutableInstruction11n(Opcode.CONST_4, 5, 0), new ImmutableInstruction21s(Opcode.CONST_16, 6, 100 + n),
+                    new ImmutableInstruction21s(Opcode.CONST_16, 7, 200 + n)));
+            boolean more = names[n].equals("MORE");
+            if (hooked && (more ? !fault.equals("settings-row-missing") && !fault.equals("settings-row-outside") : fault.equals("settings-row-outside"))) {
+                list.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, more && fault.equals("settings-row-register") ? 14 : 12, 1, ADD_ROW));
+            }
+            gotos[n] = list.size();
+            list.add(new ImmutableInstruction10t(Opcode.GOTO, 0));
+        }
+        int tail = list.size();
+        list.addAll(List.of(new ImmutableInstruction12x(Opcode.MOVE_OBJECT, 2, 12), staticField(Opcode.SGET_OBJECT, 3, FEATURE_MODIFIER, "Companion", FEATURE_MODIFIER),
+                new ImmutableInstruction11n(Opcode.CONST_4, 4, 0), new ImmutableInstruction11n(Opcode.CONST_4, 8, 0),
+                new ImmutableInstruction11n(Opcode.CONST_4, 9, 0), new ImmutableInstruction11n(Opcode.CONST_4, 10, 0),
+                new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 2, 9, SETTINGS_ROW), op(Opcode.RETURN_VOID)));
+        for (int g : gotos) featureBranch(list, g, tail, Opcode.GOTO, 0, 0);
+        int[] address = new int[list.size() + 1];
+        for (int k = 0; k < list.size(); k++) address[k + 1] = address[k] + list.get(k).getCodeUnits();
+        int payload = address[list.size()];
+        // The payload sits on an even address, so the hook, three units, adds or drops the nop before it.
+        if (payload % 2 != 0) {
+            list.add(op(Opcode.NOP));
+            payload++;
+        }
+        list.set(switchAt, new ImmutableInstruction31t(Opcode.PACKED_SWITCH, 1, payload - address[switchAt]));
+        List<ImmutableSwitchElement> targets = new ArrayList<>();
+        for (int n = 0; n < names.length; n++) targets.add(new ImmutableSwitchElement(n, address[cases[n]] - address[switchAt]));
+        list.add(new ImmutablePackedSwitchPayload(targets));
+        classes.add(featureClass(FEATURE_SETTINGS_LIST, OBJECT, List.of(),
+                define(FEATURE_SETTINGS_LIST, "invoke", "V", false, body(16, list.toArray(new Instruction[0])), OBJECT, OBJECT)));
+        return classes;
+    }
+
+    /**
+     * The extension's ThreadsSettingsRow and its click, as a bundle carries them: showRow written to
+     * call the Accounts Center row and the click a kotlin Function0 when [hooked], and otherwise the
+     * empty stub and a plain class. Faults: the stub left empty and the click without Function0.
+     */
+    private static List<ClassDef> settingsRowExtension(boolean hooked, String fault) {
+        // showRow(composer, click, title, subtitle, icon): v0..v8 locals, the arguments in v9 to v13.
+        boolean written = hooked && !fault.equals("settings-row-stub");
+        List<Instruction> stub = !written ? List.of(op(Opcode.RETURN_VOID)) : List.of(
+                new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 0, 9), type(Opcode.CHECK_CAST, 0, FEATURE_COMPOSER),
+                staticField(Opcode.SGET_OBJECT, 1, FEATURE_MODIFIER, "Companion", FEATURE_MODIFIER),
+                new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 2, 11), new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 3, 12),
+                new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 4, 10), type(Opcode.CHECK_CAST, 4, FUNCTION0),
+                new ImmutableInstruction22x(Opcode.MOVE_FROM16, 5, 13), new ImmutableInstruction11n(Opcode.CONST_4, 6, 0),
+                new ImmutableInstruction11n(Opcode.CONST_4, 7, 0), new ImmutableInstruction11n(Opcode.CONST_4, 8, 0),
+                new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 0, 9, ACCOUNTS_ROW), op(Opcode.RETURN_VOID));
+        List<ClassDef> classes = new ArrayList<>();
+        classes.add(featureClass(FEATURE_SETTINGS_ROW, OBJECT, List.of(),
+                define(FEATURE_SETTINGS_ROW, "add", "V", true, body(1, op(Opcode.RETURN_VOID)), OBJECT),
+                define(FEATURE_SETTINGS_ROW, "showRow", "V", true, body(written ? 14 : 5, stub.toArray(new Instruction[0])),
+                        OBJECT, OBJECT, "Ljava/lang/String;", "Ljava/lang/String;", "I")));
+        List<String> interfaces = hooked && !fault.equals("settings-row-click") ? List.of(FUNCTION0) : List.of();
+        classes.add(new ImmutableClassDef(FEATURE_ROW_CLICK, AccessFlags.PUBLIC.getValue() | AccessFlags.FINAL.getValue(), OBJECT, interfaces,
+                null, null, List.of(), List.of(define(FEATURE_ROW_CLICK, "invoke", OBJECT, false,
+                        body(2, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN_OBJECT, 0))))));
+        return classes;
+    }
+
     /** Independent small host shapes. Every faulty build still passes all structural checks. */
     private static List<ClassDef> featureBuild(boolean patched, Set<String> selected, int mask, String fault) {
         List<ClassDef> classes = new ArrayList<>(patched ? good() : clean(cleanHost()));
@@ -1485,9 +1905,10 @@ public class BadDexFixture {
         List<Instruction> fetch = new ArrayList<>(List.of(string(0, "itas-android"),
                 new ImmutableInstruction12x(Opcode.MOVE_OBJECT, 3, 8), type(Opcode.CHECK_CAST, 3, FEATURE_RESPONSE),
                 virtual(LINK_GETTER, 3), op(Opcode.MOVE_RESULT_OBJECT, 2)));
-        if (links && !fault.equals("post-link-missing")) fetch.addAll(postLinkHook(2, fault));
+        if (links && !fault.equals("post-link-missing")) fetch.addAll(postLinkHook(2, 7, 0, fault));
         fetch.addAll(List.of(virtual(LINK_GETTER, 3), op(Opcode.MOVE_RESULT_OBJECT, 4)));
-        if (links && !fault.equals("post-link-missing")) fetch.addAll(postLinkHook(4, fault));
+        // post-link-live: the second hook takes the post's code into v2, the first link, which the fetch still stores.
+        if (links && !fault.equals("post-link-missing")) fetch.addAll(postLinkHook(4, 7, fault.equals("post-link-live") ? 2 : 0, fault));
         fetch.addAll(List.of(type(Opcode.NEW_INSTANCE, 1, FEATURE_SHARE), direct(method(FEATURE_SHARE, "<init>", "V"), 1),
                 objectField(Opcode.IPUT_OBJECT, 4, 1, FEATURE_SHARE, "raw", "Ljava/lang/String;"),
                 objectField(Opcode.IPUT_OBJECT, 2, 1, FEATURE_SHARE, "link", "Ljava/lang/String;"),
@@ -1500,30 +1921,39 @@ public class BadDexFixture {
                 featureField(FEATURE_SHARE, "link", "Ljava/lang/String;"), featureField(FEATURE_SHARE, "post", FEATURE_MEDIA)),
                 define(FEATURE_SHARE, "<init>", "V", false, body(1, direct(method(OBJECT, "<init>", "V"), 0), op(Opcode.RETURN_VOID)))));
         // Copy link: an object holding its post in one post field reads the response's link itself.
-        // v0..v7 locals, this in v8 and the response in v9; the hook takes the post into v7.
+        // v0..v7 locals, this in v8 and the response in v9; the hook takes the post into v7. The
+        // response in v3 is cast again after the read, so a hook there may not take v3.
         List<Instruction> copied = new ArrayList<>(List.of(new ImmutableInstruction12x(Opcode.MOVE_OBJECT, 3, 9),
                 type(Opcode.CHECK_CAST, 3, FEATURE_RESPONSE), virtual(LINK_GETTER, 3), op(Opcode.MOVE_RESULT_OBJECT, 2)));
         if (links && !fault.equals("holder-link-missing")) {
-            copied.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 7, fault.equals("holder-link-receiver") ? 9 : 8));
-            copied.add(objectField(Opcode.IGET_OBJECT, 7, 7, fault.equals("holder-link-field") ? FEATURE_SHARE : FEATURE_HOLDER, "post", FEATURE_MEDIA));
+            int media = fault.equals("holder-link-live") ? 3 : 7;
+            copied.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, media, fault.equals("holder-link-receiver") ? 9 : 8));
+            copied.add(objectField(Opcode.IGET_OBJECT, media, media, fault.equals("holder-link-field") ? FEATURE_SHARE : FEATURE_HOLDER, "post", FEATURE_MEDIA));
             // The holder-post-link faults break only this copy of the hook, so the fetch's passes first.
-            copied.addAll(postLinkHook(2, fault.startsWith("holder-post-link-") ? fault.substring("holder-".length()) : fault));
+            copied.addAll(postLinkHook(2, media, 0, fault.startsWith("holder-post-link-") ? fault.substring("holder-".length()) : fault));
         }
+        copied.add(type(Opcode.CHECK_CAST, 3, FEATURE_RESPONSE));
         copied.add(op(Opcode.RETURN_OBJECT, 2));
         classes.add(featureClass(FEATURE_HOLDER, OBJECT, List.of(featureField(FEATURE_HOLDER, "post", FEATURE_MEDIA)),
                 define(FEATURE_HOLDER, "copied", OBJECT, false, body(10, copied.toArray(new Instruction[0])), OBJECT)));
         // Send: a static use case hands the plain fetch its post and its continuation, then reads the
         // link after resuming without the post. v0..v7 locals, the use case in v8, the post in v9 and
-        // the continuation in v10, copied into v5.
+        // the continuation in v10, copied into v5. Its return sits in a try whose handler answers the
+        // response in v3: the return can't throw, but a hook in front of it can, so the hook may
+        // not take v3 either.
         List<Instruction> send = new ArrayList<>(List.of(new ImmutableInstruction12x(Opcode.MOVE_OBJECT, 5, 10),
                 type(Opcode.NEW_INSTANCE, 2, FEATURE_REPOSITORY)));
         if (links && !fault.equals("resume-remember-missing")) send.add(invoke(POST_KEEPER, fault.equals("resume-remember-key") ? 8 : 5, 9));
         send.addAll(List.of(virtual(PLAIN_FETCH, 2, 8, 9, 8, 5), op(Opcode.MOVE_RESULT_OBJECT, 3),
                 type(Opcode.CHECK_CAST, 3, FEATURE_RESPONSE), virtual(LINK_GETTER, 3), op(Opcode.MOVE_RESULT_OBJECT, 4)));
+        int guarded = codeUnits(send);
         if (links && !fault.equals("resume-recall-missing")) send.addAll(recallHook(5, 4, fault, "resume-"));
         send.add(op(Opcode.RETURN_OBJECT, 4));
+        int handler = codeUnits(send);
+        send.add(op(Opcode.RETURN_OBJECT, 3));
         classes.add(featureClass(FEATURE_SEND, OBJECT, List.of(), define(FEATURE_SEND, "send", OBJECT, true,
-                body(11, send.toArray(new Instruction[0])), FEATURE_SEND, FEATURE_MEDIA, OBJECT)));
+                body(11, List.of(tryBlock(guarded, handler - guarded, handler)), send.toArray(new Instruction[0])),
+                FEATURE_SEND, FEATURE_MEDIA, OBJECT)));
         // Quick sends: a coroutine body takes its post out of its own Object field and empties the
         // field before it waits, in one case of a switch. v0..v7 locals, this in v8 and the resumed
         // result in v9.
@@ -1593,9 +2023,11 @@ public class BadDexFixture {
         classes.add(featureClass("Lfixture/Mqtt;", OBJECT, List.of(featureField("Lfixture/Mqtt;", "endpoint", "Ljava/lang/String;")),
                 define("Lfixture/Mqtt;", "<init>", "V", false, body(4, mqtt.toArray(new Instruction[0])), "Lorg/json/JSONObject;")));
 
+        // trust-locals gives the method three registers, so `this` is v2 and the prefix writes it. Stock and patched agree on that.
+        int signerSelf = fault.equals("trust-locals") ? 2 : 5;
         List<Instruction> signers = new ArrayList<>();
         if (trust && !fault.equals("trust-missing")) {
-            signers.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 0, 5));
+            signers.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 0, signerSelf));
             signers.add(objectField(Opcode.IGET_OBJECT, 0, 0, SIGNER_HOST, "info", PACKAGE_INFO));
             signers.add(invoke(fault.equals("trust-replaced") ? method("Ljava/util/Collections;", "singletonList", SHORTCUT_LIST, OBJECT) : ORIGINAL_SIGNERS, 0));
             signers.add(op(Opcode.MOVE_RESULT_OBJECT, 1));
@@ -1605,11 +2037,11 @@ public class BadDexFixture {
             signers.add(direct(method(SIGNER_RESULT, "<init>", "V", SHORTCUT_LIST, "Z", "Z"), 0, 1, 2, 2));
             signers.add(op(Opcode.RETURN_OBJECT, 0));
         }
-        signers.addAll(List.of(objectField(Opcode.IGET_OBJECT, 0, 5, SIGNER_HOST, "info", PACKAGE_INFO),
+        signers.addAll(List.of(objectField(Opcode.IGET_OBJECT, 0, signerSelf, SIGNER_HOST, "info", PACKAGE_INFO),
                 objectField(Opcode.IGET_OBJECT, 1, 0, PACKAGE_INFO, "signingInfo", "Landroid/content/pm/SigningInfo;"),
                 virtual(method("Landroid/content/pm/SigningInfo;", "getApkContentsSigners", "[Landroid/content/pm/Signature;"), 1),
                 op(Opcode.MOVE_RESULT_OBJECT, 1),
-                objectField(Opcode.IGET_OBJECT, 0, 5, SIGNER_HOST, "info", PACKAGE_INFO),
+                objectField(Opcode.IGET_OBJECT, 0, signerSelf, SIGNER_HOST, "info", PACKAGE_INFO),
                 objectField(Opcode.IGET_OBJECT, 1, 0, PACKAGE_INFO, "signingInfo", "Landroid/content/pm/SigningInfo;"),
                 virtual(method("Landroid/content/pm/SigningInfo;", "getSigningCertificateHistory", "[Landroid/content/pm/Signature;"), 1),
                 op(Opcode.MOVE_RESULT_OBJECT, 1),
@@ -1618,17 +2050,24 @@ public class BadDexFixture {
                 new ImmutableInstruction11n(Opcode.CONST_4, 2, 0),
                 direct(method(SIGNER_RESULT, "<init>", "V", SHORTCUT_LIST, "Z", "Z"), 0, 1, 2, 2), op(Opcode.RETURN_OBJECT, 0)));
         classes.add(featureClass(SIGNER_HOST, OBJECT, List.of(featureField(SIGNER_HOST, "info", PACKAGE_INFO)),
-                define(SIGNER_HOST, "read", SIGNER_RESULT, false, body(6, signers.toArray(new Instruction[0])))));
+                define(SIGNER_HOST, "read", SIGNER_RESULT, false, body(signerSelf + 1, signers.toArray(new Instruction[0])))));
         classes.add(featureClass(SIGNER_RESULT, OBJECT, List.of(), define(SIGNER_RESULT, "<init>", "V", false,
                 body(4, direct(method(OBJECT, "<init>", "V"), 0), op(Opcode.RETURN_VOID)), SHORTCUT_LIST, "Z", "Z")));
+        classes.addAll(returnRefreshClasses(patched && selected.contains("returnRefresh"), fault));
+        classes.addAll(videoAutoplayClasses(patched && selected.contains("disableVideoAutoplay"), fault));
+        classes.addAll(pureBlackClasses(patched && selected.contains("pureBlack"), fault));
+        classes.addAll(settingsRowClasses(patched && selected.contains("settingsRow"), fault));
         if (fault.startsWith("ambiguous-suggestion-") || fault.startsWith("proven-suggestion-")) corruptSuggestionStock(classes, fault);
         if (!patched) return classes;
 
         List<Method> flags = new ArrayList<>();
-        for (String flag : List.of("hideAds", "hideSuggestedUsers", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust")) {
+        for (String flag : List.of("hideAds", "hideSuggestedUsers", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust",
+                "returnRefresh", "disableVideoAutoplay", "pureBlack")) {
             if ((fault.equals("status-missing") || fault.equals("historical-missing-ad-status")) && flag.equals("hideAds")) continue;
-            // The published bundles came before Open links in browser.
-            if (fault.startsWith("historical") && flag.equals("openLinksExternally")) continue;
+            // The published bundles came before Open links in browser, Block background-return feed refresh, Disable video
+            // autoplay and Pure black dark mode.
+            if (fault.startsWith("historical") && (flag.equals("openLinksExternally") || flag.equals("returnRefresh")
+                    || flag.equals("disableVideoAutoplay") || flag.equals("pureBlack"))) continue;
             if ((fault.equals("suggestion-status-missing") || fault.startsWith("historical")) && flag.equals("hideSuggestedUsers")) continue;
             boolean enabled = selected.contains(flag) && !(fault.equals("status-false") && flag.equals("hideAds"));
             if (fault.equals("suggestion-status-false") && flag.equals("hideSuggestedUsers")) enabled = false;
@@ -1664,6 +2103,17 @@ public class BadDexFixture {
                 body(2, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN, 0)), CONTEXT, "Ljava/lang/String;")));
         classes.add(featureClass(FEATURE_TRUST, OBJECT, List.of(), define(FEATURE_TRUST, "originalSigners", SHORTCUT_LIST, true,
                 body(2, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN_OBJECT, 0)), PACKAGE_INFO)));
+        classes.add(featureClass(FEATURE_RETURN, OBJECT, List.of(),
+                define(FEATURE_RETURN, "holdHotStart", "Z", true, body(1, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN, 0))),
+                define(FEATURE_RETURN, "resetToFeed", "Z", true, body(1, op(Opcode.RETURN, 0)), "Z"),
+                define(FEATURE_RETURN, "warmStart", "Z", true, body(1, op(Opcode.RETURN, 0)), "Z"),
+                define(FEATURE_RETURN, "cachedPosts", "Z", true, body(1, op(Opcode.RETURN, 0)), "Z")));
+        classes.add(featureClass(FEATURE_AUTOPLAY, OBJECT, List.of(), define(FEATURE_AUTOPLAY, "play", "Z", true, body(1, op(Opcode.RETURN, 0)), "Z")));
+        classes.add(featureClass(FEATURE_PURE_BLACK, OBJECT, List.of(),
+                define(FEATURE_PURE_BLACK, "argb", "J", true, body(2, op(Opcode.RETURN_WIDE, 0)), "J"),
+                define(FEATURE_PURE_BLACK, "color", "J", true, body(2, op(Opcode.RETURN_WIDE, 0)), "J")));
+        // The published bundles came before the settings row too, and their extension has no ThreadsSettingsRow.
+        if (!fault.startsWith("historical")) classes.addAll(settingsRowExtension(selected.contains("settingsRow"), fault));
         if (patched && (fault.equals("ad-body") || fault.equals("ad-helper-body") || fault.equals("getter-body")
                 || fault.equals("ad-helper-native") || fault.equals("getter-static"))) {
             String owner = fault.equals("ad-body") ? FEATURE_MEDIA : fault.startsWith("ad-helper-") ? "Lfixture/AdFlag;" : FEATURE_ITEM;
@@ -1768,7 +2218,8 @@ public class BadDexFixture {
         if (!out.isDirectory() && !out.mkdirs()) throw new IllegalStateException("Cannot create " + out);
 
         Map<String, List<ClassDef>> dexes = new LinkedHashMap<>();
-        Set<String> allFeatures = Set.of("hideAds", "hideSuggestedUsers", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust");
+        Set<String> allFeatures = Set.of("hideAds", "hideSuggestedUsers", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust",
+                "returnRefresh", "disableVideoAutoplay", "pureBlack", "settingsRow");
         dexes.put("features-clean", featureBuild(false, Set.of(), 0, ""));
         dexes.put("features-good", featureBuild(true, allFeatures, 7, ""));
         dexes.put("features-omitted", featureBuild(true, Set.of(), 0, ""));
@@ -1783,6 +2234,30 @@ public class BadDexFixture {
                 "pigeon-missing", "pigeon-replaced", "pigeon-bypass",
                 "default-missing", "mqtt-missing", "trust-missing", "trust-replaced", "trust-fallback", "status-missing", "status-false")) {
             dexes.put("features-bad-" + fault, featureBuild(true, allFeatures, 7, fault));
+        }
+        // Background-return refresh alone, so a failure can only be its own.
+        for (String fault : List.of("hot-start-missing", "hot-start-inverted", "reset-missing", "reset-register",
+                "warm-start-missing", "warm-start-moved", "cached-posts-missing", "cached-posts-bypass")) {
+            dexes.put("features-bad-" + fault, featureBuild(true, Set.of("returnRefresh"), 0, fault));
+        }
+        // Disable video autoplay alone too. The ad card that reads its mask after PostVideo does so in its own stock build.
+        for (String fault : List.of("autoplay-missing", "autoplay-register", "autoplay-inside", "autoplay-bypass",
+                "autoplay-inline-missing", "autoplay-default-ignored", "autoplay-ad-literal", "autoplay-viewer", "autoplay-ad-live")) {
+            dexes.put("features-bad-" + fault, featureBuild(true, Set.of("disableVideoAutoplay"), 0, fault));
+        }
+        dexes.put("features-autoplay-live-clean", featureBuild(false, Set.of(), 0, "autoplay-ad-live"));
+        // And Pure black dark mode.
+        for (String fault : List.of("pure-black-load-missing", "pure-black-load-register", "pure-black-background-missing",
+                "pure-black-background-register", "pure-black-light")) {
+            dexes.put("features-bad-" + fault, featureBuild(true, Set.of("pureBlack"), 0, fault));
+        }
+        // And the HushThreads settings row.
+        for (String fault : List.of("settings-row-missing", "settings-row-outside", "settings-row-register", "settings-row-stub", "settings-row-click")) {
+            dexes.put("features-bad-" + fault, featureBuild(true, Set.of("settingsRow"), 0, fault));
+        }
+        // And share-link hooks that write a register the method still reads after them, sanitize sharing links alone.
+        for (String fault : List.of("post-link-live", "holder-link-live", "resume-recall-live")) {
+            dexes.put("features-bad-" + fault, featureBuild(true, Set.of("sanitizeSharingLinks"), 0, fault));
         }
         for (String fault : List.of("suggestion-stub", "suggestion-media-guard", "suggestion-type-guard", "suggestion-null-guard",
                 "suggestion-item-missing", "suggestion-media-missing", "suggestion-type-missing", "suggestion-null-missing",
@@ -1838,7 +2313,9 @@ public class BadDexFixture {
         }
         dexes.put("features-metadata-clean", metadataStock);
         dexes.put("features-metadata-good", metadataPatched);
-        for (String feature : List.of("hideAds", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust")) {
+        // The settings row has no status to clear: a selection without it is what leaves it out.
+        for (String feature : List.of("hideAds", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust", "returnRefresh",
+                "disableVideoAutoplay", "pureBlack", "settingsRow")) {
             List<ClassDef> unselected = featureBuild(true, Set.of("hideSuggestedUsers", feature), 7, "");
             omitFeatureStatus(unselected, feature, false);
             dexes.put("features-bad-omitted-" + feature, unselected);
@@ -1863,6 +2340,8 @@ public class BadDexFixture {
         dexes.put("features-no-default-pigeon", featureBuild(true, Set.of("disableAnalytics"), 1, "default-coverage-missing"));
         dexes.put("features-bad-default-coverage", featureBuild(true, Set.of("disableAnalytics"), 3, "default-coverage-missing"));
         dexes.put("features-ad-discarded-clean", featureBuild(false, Set.of(), 0, "ad-discarded"));
+        dexes.put("features-trust-locals-clean", featureBuild(false, Set.of(), 0, "trust-locals"));
+        dexes.put("features-bad-trust-locals", featureBuild(true, Set.of("restoreTrust"), 0, "trust-locals"));
         dexes.put("features-exception-clean", featureExceptionBuild(false, ""));
         dexes.put("features-exception-good", featureExceptionBuild(true, ""));
         for (String fault : List.of("range", "type", "target", "order")) {

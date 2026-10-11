@@ -2,7 +2,85 @@
 
 Every Hushfacebook release, newest first.
 
-## 0.9.0 (2026-10-09)
+## Unreleased
+
+### Added
+
+* **Facebook:** Two new switches under Comments in `Comment sheet options`, **Hide comments with shop links** and **Hide comments with your words** (issue #118). The first leaves out comments that link to Shopee, Lazada, Tokopedia, AliExpress, Temu, Shein, TikTok Shop or Amazon's short links, replies and all. The second leaves out comments holding something from your News feed **Words to hide** list, unless they also have something from **Words that keep a post**, so the one list now covers posts and comments. Both start off, and the report counts what each one hid.
+
+### Fixed
+
+* **Facebook:** A link to a site that isn't Meta's shows up in the diagnostic report's list of screens opened as "(outside link)" and nothing more. The list used to keep the site and the page's path, so a report could name a page you read in Facebook's browser or a file you opened from it.
+* **Facebook:** Finished-save cards don't pile up any more. The shade keeps the newest twenty "Video saved" and "Photo saved" cards and lets the oldest go. Android stops an app at about fifty notifications and drops the next without a word, which could leave the next save's progress card, Cancel button and all, with no room to show.
+* **Facebook:** When the phone's decoder gives no sample rate for a reel's xHE-AAC sound, or changes its format part way through, the save falls back to Facebook's single file where there is one and the log says why. The first case used to end in a division by zero. The second would have gone on into sound that comes out wrong.
+* **Facebook:** Cancel, Pause, Resume, Undo, Add a topic pack, Back and Clear search in the settings show a ripple when tapped. They showed nothing before.
+* **Facebook:** **Turn off HDR brightness** also asks the phone's video decoder to bring an HDR video down to the usual range on Android 12 and newer (issue #93). Until now only the window was told to stay in the usual range, and a video the phone's own decoder plays, like a VP9 HLG reel, could still light the screen up. A decoder that turns the request down is set up again without it, so the video still plays, and the diagnostic report counts which way each decoder answered.
+* **Facebook:** With **Tap to play** on, a reel that's waiting for your tap no longer goes into picture-in-picture when you leave Facebook (issue #90). The window used to stay armed from the reel before, so going home opened a floating player for a reel you hadn't started. Once you tap play, leaving works as it did. A reel you were watching in the floating player also keeps playing when you open it back up into Facebook. Facebook pauses it on the way back and starts it again, and Tap to play used to hold that start, so the reel sat with its play button over the time you'd already watched.
+* **Facebook:** Facebook's push service no longer turns down a patched Facebook (issue #112). On a re-signed build it checked Facebook's certificate, didn't recognize it, stopped and got started again, over and over, and each round could leave threads running, which can drain the battery. It now gets Facebook's original certificate for that check, the same fix HushThreads got for Threads. It's part of every build, whichever patches you pick.
+* **Facebook:** A save WhatsApp may refuse shows one card in the shade. It has Open and Share like any finished save, says why the video may be refused and adds an **Open the setting** button. It used to post a second card next to the finished-save one.
+* **Facebook:** Two saves finishing in the same moment keep twenty finished-save cards. Each one trimmed the shade on its own, so they could both let a card go and leave nineteen.
+* **Facebook:** The Messenger link test under Links writes its result into its own row, where it stays readable. It used to show as a long toast that some phones cut short.
+
+### Changed
+
+* **Facebook:** Summaries and toasts call the Marketplace switch's state Marketplace only, like the switch does. Some said "Marketplace mode", which isn't a name you'd find in the settings search.
+* **Facebook:** The seen posts row is called **Keep seen posts hidden for**, so it makes sense on its own in the settings search. While **Hide posts you've already seen** is off, its summary says to turn that on first.
+* **Tooling:** When the release notes check turns down the phrase about which Facebook builds a release was tried on, its error says the word Facebook has to come right after "to". The 0.10.0 notes were refused once for "to both Facebook" with no hint why.
+
+## 0.10.0 (2026-10-10)
+
+* **Facebook:** This release gathers everything since v0.9.0 and brings 87 patches for Facebook 582.0.0.50.54, up from 86. The new one is `Unlock app icons`, which lets you pick any icon on Facebook's App icon page. New switches add a Watch history shortcut, keep a reel's time above its progress bar, stop link history in Facebook's browser and hold back camera roll processing. Saves whose only sound is xHE-AAC now get sound most players can play, and the Reported issues list below maps each report this release touches.
+
+### Added
+
+* **Facebook:** New patch, `Unlock app icons`, under Appearance (issue #109). Facebook already carries every icon on its App icon page and keeps most of them for Facebook Plus. With the switch on you can pick any of them, and Facebook switches your home screen icon to it and keeps it when it restarts or you update Hushfacebook. Facebook puts its own icon back on the first start after an update, and the switch stops that. Turned off, your pick stays until the next update, so pick the blue icon first if you want it back sooner. It's in Manager's default selection with its switch off.
+* **Facebook:** **Stop link history in Facebook's browser**, a new switch under Privacy that comes with Open links in external browser and starts on. Links that still open in Facebook's own browser, like Facebook's pages or any link on a phone with no other browser, aren't recorded for your link history or sent to Facebook as pages you visited. The browser just never builds its two link recorders, which is what it does when Facebook turns the feature off. Login, checkout and autofill keep working, and your Enhanced browsing setting stays as it is.
+* **Facebook:** **Hold back camera roll processing**, a second switch in Hold back analytics uploads under Privacy, which starts off. The processing behind camera roll sharing suggestions goes through your photos and videos, runs Facebook's models on them and uploads photos with what it found, and another job tells Facebook how many photos and videos you have. Facebook's server decides whether they run, and the app asks one check before it schedules or runs the work. With the switch on that answer is no, so Facebook cancels the work it scheduled, and the count job is cancelled too. Photos you pick to post go another way and never ask it.
+* **Facebook:** **Show a reel's time**, a new switch right below Keep the progress bar that starts on (issue #73). While the bar is kept, a reel's elapsed and total time stay above it and keep counting. Turn it off to see the time only while you drag, as before.
+* **Facebook:** **Watch history shortcut**, a new switch under Menu that starts off (issue #114). Turn it on and holding Facebook's icon offers Watch history, the videos and reels you've watched, when there's room next to Facebook's own shortcuts. The Menu's Settings and privacy group gets a Watch history row too. Both open Facebook's Videos you've watched page.
+
+### Fixed
+
+* **Facebook:** Open and Share on a finished save only answer their own buttons now. Another app on the phone could send Facebook the same request with a guessed file address and get it to open or share a video or photo Facebook had saved, with no tap from you.
+* **Facebook:** When a piece of Hushfacebook fails to load, Facebook keeps running. An error like that at app start or while opening a screen used to close Facebook every time, and pausing Hushfacebook didn't help.
+* **Facebook:** The **Share sheet items to hide** list closes with the settings page when you rotate the phone or Facebook closes the screen. It used to stay up over a window that was already gone, and it now follows the page's colors too.
+* **Facebook:** On a Facebook build that reads the loop setting in a way the reel hook can't use, the play reels once switch is refused while patching. Before, that build's reel player would fail to load.
+* **Facebook:** **Share sheet items to hide** calls Facebook's Muse item Muse. It showed up as "Share to hatch", Facebook's name for it inside the app.
+* **Facebook:** A reel's link from Copy link loses the `s=yWDuG2&fs=e` Facebook 582 adds to every copied reel, as long as Sanitize sharing links is on. Those two only say the link was copied.
+* **Facebook:** `Open on a chosen tab` set to Feeds opens the Feeds page again on Facebook 582 when your tab bar has no Feeds tab. The page showed for a moment and then Facebook jumped back to Home, because 582 treats its own Feeds links as links to Home. It now opens the page the way the Menu's Feeds row does.
+* **Facebook:** With `Material You theme` in dark mode, the comments under a post take your palette on Facebook 582. Each comment row draws its own gray box there, which the theme didn't reach, so the list stayed Facebook's gray while the rest of the sheet changed (issue #37).
+* **Facebook:** With `Material You theme` in dark mode, the box under a link post's picture, where the site name and title sit, takes your palette too. On some accounts Facebook sends that box a gray of its own, which the theme didn't reach, so it stayed gray in the middle of an otherwise themed post (issue #37).
+* **Facebook:** **Accent color** reaches the blues Facebook's server picks for a screen. A profile's Add to story, Message and Sign up buttons, links in a profile's bio and Marketplace's For you tab and location name now take your color in light and dark mode. They stayed Facebook's blue before, while the tab bar and the chips around them changed. Facebook blue and Pause leave them as Facebook draws them.
+* **Facebook:** In light mode, **Accent color** now tints the pale blue behind a selected chip, like Marketplace's For you pill. That fill stayed Facebook's light blue while the text on it changed, so a teal label sat on a blue pill. It's now a light shade of your color at the same brightness, and the label stays at least as readable as Facebook's own.
+* **Facebook:** After you update Hushfacebook, the settings page no longer shows a line like "Hushfacebook 0.7.1 targets Facebook 581" left over from the last release check. That line came from a check made before the update and named the older release's Facebook build. It now waits for the next check.
+* **Facebook:** The **Mark as seen button** eye sits in a story's top row now, next to the arrow and the three dots, instead of floating over the picture (issue #117). It also hides while you swipe to the next person's stories or drag a story down to close it, and comes back once the story stops moving. Before, it stayed put at the top of the screen through both.
+* **Facebook:** **Keep the progress bar** works on every reel now (issue #73). Short reels, which Facebook gives no bar at all, get one too, and their caption moves up to leave room for it like a longer reel's does, so the bar no longer sits on the caption. The bar also moves smoothly. Facebook only moved it about ten times a second, so it crept along in little jumps.
+* **Facebook:** **Open the Messenger app** finds a Messenger installed under another package name, like a copy made with Clone app, and the Get Messenger card stays hidden for it (issue #116). The top bar's Messenger icon used to look only for Meta's own package, so with a renamed copy it fell through to Facebook's Chats.
+* **Facebook:** Saved reels whose only sound is xHE-AAC play with sound in more players now (issue #14). Some gallery apps played them silent. Hushfacebook turns that sound into AAC-LC while it saves, also with Save videos other apps can open off, as long as your phone has an AAC encoder, and the picture keeps its full quality.
+* **Facebook:** The Lock Facebook cover tells a screen reader that Facebook is locked, marks its heading, and reads the reason line out when it changes.
+* **Tooling:** A release's notes can map the reported issues it touches. Bullets under a `### Reported issues` heading in the CHANGELOG show up in their own Reported issues block, after the changes.
+* **Tooling:** The release's index step now moves the Facebook build in the repository description along with the version and patch count. After the 582 port it had left the description on 581, and the release facts check refused the index push until it was set by hand.
+
+### Changed
+
+* **Facebook:** The README tells people who patched in Manager's Expert mode before how to pick up the patches that are new to the default selection, since Manager keeps an Expert selection as it was.
+* **Facebook:** Clearer wording in a few places. The Tab to open on summary names the switch you'd actually turn off (Hide the Friends tab) instead of the patch name. The save toast for a video WhatsApp may refuse says to open Downloads in Hushfacebook settings to fix it. One save toast got its missing period, and the Pause list spells "recolored" like the rest of the app.
+* **Facebook:** The **Messenger** and **Instagram** rows under Links say what to pick on newer Android, where that app's Open by default page offers **In the app** and **In your browser** instead of an **Open supported links** switch. Picking **In your browser** for the official Messenger frees facebook.com and www.facebook.com, so they stay selected for Hushfacebook (issue #111).
+* **Facebook:** Block ad telemetry also stops several of the ways Facebook sends your phone's advertising ID. The job that posts it with your limit-tracking choice is stopped, and so are the launch event that carries it next to your device id, the GraphQL report of it and the install event sent from the first login screen. Other apps on your phone that ask Facebook for the ID get the empty answer Facebook gives when Google Play services has none, and Facebook no longer logs which app asked. The code that registers ad views and clicks with Android's own ad measurement returns right away, and so do the check of that measurement's status and the test ad audience job. A Facebook build that moved one of these still gets the rest, and the patch log says which one kept running.
+
+### Reported issues
+
+* **Facebook:** #109 Unlock the paid Facebook icons: the new `Unlock app icons` patch under Appearance lets you pick any icon on Facebook's App icon page.
+* **Facebook:** #114 Shortcuts for Reels and Watch history: the new **Watch history shortcut** switch under Menu adds a Watch history shortcut to Facebook's icon and a Watch history row to the Menu.
+* **Facebook:** #73 Keep the reel progress bar visible: **Keep the progress bar** covers short reels too and moves smoothly, and the new **Show a reel's time** switch keeps the elapsed and total time above it.
+* **Facebook:** #117 Mark as seen button glitch: the eye sits in the story's top row and hides while a story is moving.
+* **Facebook:** #37 Material You in dark mode: the comments under a post and the box under a link post's picture take your palette.
+* **Facebook:** #14 Saved videos playing silent in some gallery apps: saves whose only sound is xHE-AAC get AAC-LC sound, with the picture at full quality.
+* **Facebook:** #116 Opens Chats instead of Messenger: the Messenger icon now finds a Messenger installed under another package name, like a Clone app copy.
+* **Facebook:** #111 Links from Messenger opening in Messenger's browser: the Messenger and Instagram rows under Links say what to pick on newer Android so facebook.com links stay with Hushfacebook.
+* **Facebook:** Already in Hushfacebook and seen working since the last release: #84 **Hide the tab bar while scrolling** (AMOLED too), #65 the Material You colors on the tab bar, #98 **Share the post's own link**, #104 **Hide group buttons in the share sheet** and #107 **Hide the Follow link on posts**.
+
+## 0.9.0 (2026-10-10)
 
 * **Facebook:** This release gathers everything since v0.8.0 and brings 86 patches for Facebook 582.0.0.50.54, up from 85. The new one is `Share sheet items`, which takes the items you pick off Facebook's share sheet. Morphe Manager's default selection now holds every patch but three, and after an update the settings page tells you which switches start off now. New switches hide the share sheet's Send to group buttons, share a post's own link instead of a /share/ link, play reels once and hide the Follow link on posts. Morphe Manager 1.34.0 or newer is required.
 

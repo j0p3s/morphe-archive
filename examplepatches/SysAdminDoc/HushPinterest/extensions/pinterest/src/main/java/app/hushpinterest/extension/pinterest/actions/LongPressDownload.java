@@ -17,6 +17,7 @@ import java.util.List;
 import app.hushpinterest.extension.pinterest.settings.FamilyNames;
 import app.hushpinterest.extension.pinterest.settings.PatchFamily;
 import app.hushpinterest.extension.pinterest.settings.Settings;
+import app.hushpinterest.extension.shared.Logger;
 import app.hushpinterest.extension.shared.Utils;
 import app.hushpinterest.extension.shared.diagnostics.HookStatus;
 
@@ -28,6 +29,9 @@ import app.hushpinterest.extension.shared.diagnostics.HookStatus;
  * with a switch off, it returns without touching the menu. For a pin it takes the buttons the menu
  * just laid out, adds Pinterest's own Download button after them and has the menu lay them out
  * again, so the arc, the entry animation and release-to-select all come from Pinterest.
+ *
+ * <p>Pinterest's buttons are taken out and put back for that, and a button taken out marks its
+ * springs detached for good, so the hook clears that mark on each one it put back.
  *
  * <p>The menu's touch handling calls performClick() on the button under the finger before it
  * closes, so a plain click listener is enough. The pin is held weakly, and a click only downloads
@@ -52,6 +56,14 @@ public final class LongPressDownload {
 
     /** Rewritten to hand the menu a new button list through its own layout method. */
     private static void layoutItems(Object menu, List<Object> buttons) {}
+
+    /**
+     * Rewritten to clear a menu button's detached mark and the spring driver its detach cancelled.
+     * Taking a button out of the menu runs its detach handler, which marks it detached for good,
+     * and a marked button never starts its springs again, so it would stay at the zero size it
+     * starts at.
+     */
+    private static void springsReattached(Object button) {}
 
     /**
      * Rewritten to build Pinterest's own menu button with its Download icon and "Download" label,
@@ -81,12 +93,14 @@ public final class LongPressDownload {
             if (pin == null) return;
             String id = modelId(pin);
             ArrayList<Object> laidOut = menuItems(menu);
+            ViewGroup group = (ViewGroup) menu;
+            Logger.printDebug(() -> "Long-press menu before Download: " + (laidOut == null ? "no list" : laidOut.size() + " laid out")
+                    + ", " + group.getChildCount() + " children");
             if (id == null || laidOut == null || laidOut.isEmpty()) return;
             for (Object laid : laidOut) {
                 if (!(laid instanceof View) || ITEM_TAG.equals(((View) laid).getTag())) return;
             }
             List<Object> buttons = new ArrayList<>(laidOut.subList(1, laidOut.size()));
-            ViewGroup group = (ViewGroup) menu;
             View item = downloadItem(group.getContext());
             if (item == null) return;
             item.setTag(ITEM_TAG);
@@ -99,6 +113,10 @@ public final class LongPressDownload {
             for (Object laid : laidOut) group.removeView((View) laid);
             laidOut.clear();
             layoutItems(menu, buttons);
+            // Pinterest's buttons went out of the menu and back in, so they get their springs back
+            // before the show method springs them in. Download was never out.
+            for (int at = 0; at < buttons.size() - 1; at++) springsReattached(buttons.get(at));
+            Logger.printDebug(() -> "Long-press menu after Download: " + laidOut.size() + " laid out, " + group.getChildCount() + " children");
             HookStatus.counted(FamilyNames.LONG_PRESS_DOWNLOAD, "download button added to long-press menu");
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.LONG_PRESS_DOWNLOAD, "add long-press download button", failure);

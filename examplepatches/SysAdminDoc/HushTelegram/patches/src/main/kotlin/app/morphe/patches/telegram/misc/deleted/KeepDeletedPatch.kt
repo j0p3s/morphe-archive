@@ -47,7 +47,6 @@ internal const val CHANNEL_DELETE = "Lorg/telegram/tgnet/tl/TL_update\$TL_update
 internal const val USER_DELETE_MESSAGES = "$USER_DELETE->messages:Ljava/util/ArrayList;"
 internal const val CHANNEL_DELETE_MESSAGES = "$CHANNEL_DELETE->messages:Ljava/util/ArrayList;"
 internal const val ADD_ALL = "Ljava/util/ArrayList;->addAll(Ljava/util/Collection;)Z"
-internal const val DELETE_BY_PUSH = "$MESSAGES_CONTROLLER->deleteMessagesByPush(JLjava/util/ArrayList;J)V"
 private const val OBJECT = "Ljava/lang/Object;"
 private const val LIST = "Ljava/util/ArrayList;"
 internal const val MESSAGE_OBJECT = "Lorg/telegram/messenger/MessageObject;"
@@ -68,7 +67,7 @@ private val MOVE_OBJECTS = setOf(Opcode.MOVE_OBJECT, Opcode.MOVE_OBJECT_FROM16, 
 val keepDeletedPatch = bytecodePatch(
     name = "Keep deleted messages",
     description = "Keeps a message on your phone when someone else deletes it, and marks it deleted next to the time. " +
-        "Your own deletes still work normally. Starts off. Turn it on in HushTelegram settings > Chats.",
+        "Your own deletes still work normally. Starts off. Turn it on in HushTelegram settings > Conversations.",
     default = true,
 ) {
     category("Conversations")

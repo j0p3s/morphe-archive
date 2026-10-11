@@ -19,6 +19,7 @@ import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.InsetDrawable;
 import android.graphics.drawable.LayerDrawable;
 import android.os.Bundle;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
@@ -273,6 +274,20 @@ public final class MaterialYouTheme {
     }
 
     /**
+     * Route four for the box under a link post's picture, its site and title (issue #37). In
+     * Facebook's dark mode each kind of link attachment picks that colour by parsing one MobileConfig
+     * sends before it looks at a token, and the box came out #333334, CARD_BACKGROUND's dark grey.
+     * That grey is no {@link #SURFACES} colour, light mode drawing it too, so {@link #parseColor}
+     * alone leaves it. The patch sends only those parses here, and the box is a background like a
+     * React card's ({@link #reactBackground}): once Facebook has said dark mode is on, a grey
+     * {@link #FDS_DARK} lists takes the palette's neutral at the same lightness. With AMOLED in the
+     * build its near black stays.
+     */
+    public static int parseLinkBox(String text) {
+        return darkBackground(parseColor(text));
+    }
+
+    /**
      * Route two's counterpart: Facebook reading a colour resource with {@code Context.getColor}. The
      * patch sends every such call here, including the ones AMOLED already sent to its own, and
      * AMOLED goes first.
@@ -333,19 +348,56 @@ public final class MaterialYouTheme {
      * #252728 (issue #37). Facebook keeps that colour only in its default configuration, and the
      * night style can't move a token some code reads as a plain colour when no system tone sits
      * close to it. A colour drawable of one of the {@link #SURFACES} takes the palette here, as a
-     * colour read with {@code getColor} does; any other drawable comes back as it was.
+     * colour read with {@code getColor} does, and so does a shape's flat fill ({@link #recolour});
+     * any other drawable comes back as it was.
      */
     public static Drawable getDrawable(Context context, int id) {
         return recolour(context.getDrawable(id));
     }
 
     /**
+     * The same read through {@code Resources}: androidx's {@code ResourcesCompat} and a Litho lookup
+     * that holds no {@code Context} ask a resource for its drawable this way, and a colour resource
+     * comes back as a ColorDrawable of its colour. Same answer as {@link #getDrawable(Context, int)}.
+     */
+    @SuppressWarnings("deprecation")
+    public static Drawable getDrawable(Resources resources, int id) {
+        return recolour(resources.getDrawable(id));
+    }
+
+    /** The same for {@code Resources.getDrawable(int, Theme)}. */
+    public static Drawable getDrawable(Resources resources, int id, @Nullable Resources.Theme theme) {
+        return recolour(resources.getDrawable(id, theme));
+    }
+
+    /**
+     * A theme attribute read as {@code TypedValue.data}, after {@code Theme.resolveAttribute}. Some
+     * code takes the colour that way (581's {@code LX/2pM;->A00}, which the comment sheet's action
+     * text and, it seems, its rows ask), and a night style item for a token can't move when no system
+     * tone sits close to it: SURFACE_BACKGROUND keeps #252728 (issue #37). The patch sends each read
+     * here with the whole value. Only a colour moves, so a dimension, a flag or a reference comes
+     * back as it was, and the colour goes the way {@link #withoutToken} sends any other.
+     */
+    public static int colourData(TypedValue value) {
+        int data = value.data;
+        if (value.type < TypedValue.TYPE_FIRST_COLOR_INT || value.type > TypedValue.TYPE_LAST_COLOR_INT) return data;
+        return withoutToken(data);
+    }
+
+    /**
      * The drawable with its colour from {@link #withoutToken}, on a copy of its state: drawables of
-     * one resource share it, and light mode reads the same resource.
+     * one resource share it, and light mode reads the same resource. A shape's flat fill, alone or as
+     * a layer, takes the palette as a sheet's does ({@link #recolourShapes}), without AMOLED: on 582
+     * each comment row loads a rectangle of SURFACE_BACKGROUND's #252728 this way, and a #313238 one
+     * for a pressed row, and keeps them inside a drawable of its own, where no view's background walk
+     * sees them (#37).
      */
     @Nullable
     static Drawable recolour(@Nullable Drawable drawable) {
-        if (!(drawable instanceof ColorDrawable)) return drawable;
+        if (!(drawable instanceof ColorDrawable)) {
+            if (!SettingsStatus.amoledTheme()) recolourShapes(drawable);
+            return drawable;
+        }
         ColorDrawable plain = (ColorDrawable) drawable;
         int color = plain.getColor();
         int themed = withoutToken(color);

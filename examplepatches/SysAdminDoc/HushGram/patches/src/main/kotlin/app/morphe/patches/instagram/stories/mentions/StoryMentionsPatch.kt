@@ -5,10 +5,13 @@
 package app.morphe.patches.instagram.stories.mentions
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
+import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
+import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patches.instagram.download.MEDIA
 import app.morphe.patches.instagram.download.USER
 import app.morphe.patches.instagram.download.accountBridges
@@ -17,7 +20,10 @@ import app.morphe.patches.instagram.misc.extension.EXTENSION_PACKAGE
 import app.morphe.patches.instagram.misc.extension.classesHolding
 import app.morphe.patches.instagram.misc.extension.enableStatus
 import app.morphe.patches.instagram.misc.extension.instagramExtensionPatch
+import app.morphe.patches.instagram.misc.extension.localRegisterCount
 import app.morphe.patches.instagram.misc.extension.requireStatusMethod
+import app.morphe.patches.instagram.media.taptoplay.FRAGMENT_ACTIVITY
+import app.morphe.patches.instagram.media.taptoplay.TOUCH as TAP_CLOCK
 import app.morphe.patches.instagram.misc.settings.settingsPatch
 import app.morphe.patches.instagram.stories.time.STORY_ITEM
 import app.morphe.patches.shared.compat.AppCompatibilities
@@ -28,12 +34,14 @@ import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
 
 internal const val PATCH = "See who a story mentions"
 internal const val STORY_MENTIONS = "$EXTENSION_PACKAGE/stories/StoryMentions;"
 internal const val BIND = "$STORY_MENTIONS->bind(Ljava/lang/Object;Ljava/lang/Object;)V"
+internal const val PILL_TOUCH = "$STORY_MENTIONS->touch(Landroid/app/Activity;Landroid/view/MotionEvent;)Z"
 
 /**
  * The trace name of the step where the story viewer's item binder gives one of its pages the story
@@ -52,6 +60,7 @@ internal const val FULL_NAME = "full_name"
 internal val STUBS = listOf("itemView", "media", "mentions", "mentionUser", "fullName")
 
 private const val LIST = "Ljava/util/List;"
+private const val MOTION_EVENT = "Landroid/view/MotionEvent;"
 private const val STRING = "Ljava/lang/String;"
 
 /**
@@ -72,11 +81,13 @@ val storyMentionsPatch = bytecodePatch(
     execute {
         requireStatusMethod("storyMentions")
         val found = findStoryMentions()
+        val touch = findPillTouch()
         val stubs = storyMentionStubs()
         val pictures = accountBridges(PATCH)
         stubs.fill(found)
         pictures()
         hookStoryBinds(found)
+        hookPillTouch(touch)
         enableStatus("storyMentions")
     }
 }
@@ -98,8 +109,8 @@ internal class StoryBind(
 
 /**
  * What the patch found: the binders, the page's type and its field holding its [REEL_VIEW_GROUP],
- * the story item's field holding its Media, Media's getter of [REEL_MENTIONS], the type of each
- * mention and its getter of the account, and the account's getter of [FULL_NAME]. All of them
+ * the story item's field holding its Media, Media's getter of [REEL_MENTIONS], the public interface
+ * every mention implements and its getter of the account, and the account's getter of [FULL_NAME]. All of them
  * public, since the stubs reach them from the extension's package.
  */
 internal class StoryMentionSites(
@@ -117,8 +128,8 @@ internal class StoryMentionSites(
  * Finds every method that loads [BIND_MEDIA] and, after it, puts a story item into a field of
  * exactly one type, the viewer's page. The page keeps its media view in one public field, and the
  * binders read the story's Media out of one public field of the story item. Media's getter of
- * [REEL_MENTIONS] names the type of each mention with a const-class, and that type has one getter
- * answering the account. Fails before anything changes when any of it isn't there exactly once,
+ * [REEL_MENTIONS] names the type of each mention with a const-class, and that type implements one public
+ * interface with one abstract getter answering the account. Fails before anything changes when any of it isn't there exactly once,
  * since that's an Instagram this patch hasn't seen.
  */
 internal fun BytecodePatchContext.findStoryMentions(): StoryMentionSites {
@@ -164,12 +175,21 @@ internal fun BytecodePatchContext.findStoryMentions(): StoryMentionSites {
     val mention = types.singleOrNull()
         ?: refuse("expected $MEDIA->${mentions.name} to name one type of mention, found ${types.size}")
     val mentionClass = classDefBy(mention)
-    val users = mentionClass.methods.filter {
-        it.parameterTypes.isEmpty() && it.returnType == USER && !AccessFlags.STATIC.isSet(it.accessFlags) &&
-            AccessFlags.PUBLIC.isSet(it.accessFlags)
+    // Media's getter answers its cached list when one is set, and a story Instagram parsed from JSON
+    // fills that list with a different class than the one named here. Both implement the same public
+    // interface, whose one abstract getter answers the account, so the stubs read it through that.
+    val holders = mentionClass.interfaces.mapNotNull { name ->
+        val declared = classDefByOrNull(name) ?: return@mapNotNull null
+        if (!AccessFlags.INTERFACE.isSet(declared.accessFlags)) return@mapNotNull null
+        val getters = declared.methods.filter {
+            it.parameterTypes.isEmpty() && it.returnType == USER && AccessFlags.ABSTRACT.isSet(it.accessFlags) &&
+                !AccessFlags.STATIC.isSet(it.accessFlags)
+        }
+        getters.singleOrNull()?.let { declared to it }
     }
-    val mentionUser = users.singleOrNull()
-        ?: refuse("expected one getter of the account on $mention, found ${users.size}")
+    val (shared, mentionUser) = holders.singleOrNull()
+        ?: refuse("expected one interface of $mention with one getter of the account, found ${holders.size}: ${holders.joinToString { it.first.type }}")
+    val mentionInterface = shared.type
     val fullName = pandoGetter(PATCH, USER, FULL_NAME, STRING)
 
     // The stubs cast to these and call these from the extension's package, so a private one would
@@ -178,14 +198,15 @@ internal fun BytecodePatchContext.findStoryMentions(): StoryMentionSites {
         STORY_ITEM.takeUnless { AccessFlags.PUBLIC.isSet(classDefBy(STORY_ITEM).accessFlags) },
         MEDIA.takeUnless { AccessFlags.PUBLIC.isSet(classDefBy(MEDIA).accessFlags) },
         "$MEDIA->${mentions.name}".takeUnless { AccessFlags.PUBLIC.isSet(mentions.accessFlags) },
-        mention.takeUnless { AccessFlags.PUBLIC.isSet(mentionClass.accessFlags) },
+        mentionInterface.takeUnless { AccessFlags.PUBLIC.isSet(shared.accessFlags) },
+        "$mentionInterface->${mentionUser.name}".takeUnless { AccessFlags.PUBLIC.isSet(mentionUser.accessFlags) },
         USER.takeUnless { AccessFlags.PUBLIC.isSet(classDefBy(USER).accessFlags) },
         "$USER->${fullName.name}".takeUnless { AccessFlags.PUBLIC.isSet(fullName.accessFlags) },
     )
     if (closed.isNotEmpty()) refuse("${closed.joinToString()} isn't public, so the extension can't reach it")
 
     return StoryMentionSites(
-        binds.map { it.first }, page, view.name, media, mentions.name, mention, mentionUser.name, fullName.name,
+        binds.map { it.first }, page, view.name, media, mentions.name, mentionInterface, mentionUser.name, fullName.name,
     )
 }
 
@@ -195,7 +216,7 @@ internal class StoryMentionStubs(private val stubs: Map<String, MutableMethod>) 
         write("itemView", "check-cast p0, ${found.page}", "iget-object p0, p0, ${found.page}->${found.view}:$REEL_VIEW_GROUP")
         write("media", "check-cast p0, $STORY_ITEM", "iget-object p0, p0, $STORY_ITEM->${found.media}:$MEDIA")
         write("mentions", "check-cast p0, $MEDIA", "invoke-virtual { p0 }, $MEDIA->${found.mentions}()$LIST", "move-result-object p0")
-        write("mentionUser", "check-cast p0, ${found.mention}", "invoke-virtual { p0 }, ${found.mention}->${found.mentionUser}()$USER", "move-result-object p0")
+        write("mentionUser", "check-cast p0, ${found.mention}", "invoke-interface { p0 }, ${found.mention}->${found.mentionUser}()$USER", "move-result-object p0")
         write("fullName", "check-cast p0, $USER", "invoke-virtual { p0 }, $USER->${found.fullName}()$STRING", "move-result-object p0")
     }
 
@@ -227,6 +248,46 @@ internal fun BytecodePatchContext.hookStoryBinds(found: StoryMentionSites) {
         }
         method.addInstructions(bind.index + 1, "invoke-static { v${bind.page}, v${bind.item} }, $BIND")
     }
+}
+
+/**
+ * IgFragmentActivity's own dispatchTouchEvent, which every touch on an Instagram screen passes
+ * through before any of its views. The story viewer takes each touch on a story for its own taps
+ * and swipes before the header sees it (#125), so a tap on the pill is caught here instead. The
+ * hook's answer goes in the method's first local, which is written before it's read.
+ */
+internal fun BytecodePatchContext.findPillTouch(): MutableMethod {
+    val activity = classDefByOrNull(FRAGMENT_ACTIVITY) ?: refuse("this build has no $FRAGMENT_ACTIVITY")
+    val touches = activity.methods.filter {
+        it.name == "dispatchTouchEvent" && it.returnType == "Z" && it.parameterTypes.map(CharSequence::toString) == listOf(MOTION_EVENT) &&
+            it.implementation != null
+    }
+    val touch = touches.singleOrNull() ?: refuse("expected $FRAGMENT_ACTIVITY to have one dispatchTouchEvent of its own, found ${touches.size}")
+    if (touch.localRegisterCount() < 1) refuse("$FRAGMENT_ACTIVITY->dispatchTouchEvent has no local register for the hook's answer")
+    return mutableClassDefBy(FRAGMENT_ACTIVITY).methods.single {
+        it.name == touch.name && it.parameterTypes.map(CharSequence::toString) == listOf(MOTION_EVENT)
+    }
+}
+
+/**
+ * First thing in [touch], hands the activity and the event to [PILL_TOUCH]. When it answers true
+ * the touch was on the pill and is answered as handled. Otherwise the code after it runs as it was.
+ * Tap to play reads every touch here too and is held first, so when its call is already in, this
+ * one goes right after it. When Tap to play comes later, it goes in front of this one.
+ */
+internal fun hookPillTouch(touch: MutableMethod) {
+    val first = (touch.getInstruction(0) as? ReferenceInstruction)?.reference as? MethodReference
+    val at = if (first != null && "${first.definingClass}->${first.name}(${first.parameterTypes.joinToString("")})${first.returnType}" == TAP_CLOCK) 1 else 0
+    touch.addInstructionsWithLabels(
+        at,
+        """
+            invoke-static/range { p0 .. p1 }, $PILL_TOUCH
+            move-result v0
+            if-eqz v0, :instagram
+            return v0
+        """,
+        ExternalLabel("instagram", touch.getInstruction(at)),
+    )
 }
 
 private fun Method.code(): List<Instruction> = implementation?.instructions?.toList().orEmpty()

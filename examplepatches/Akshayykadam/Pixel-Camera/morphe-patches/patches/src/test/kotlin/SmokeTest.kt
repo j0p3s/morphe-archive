@@ -21,6 +21,20 @@ class SmokeTest {
             for (c in dex.classes) {
                 if (c.type in listOf("Lknq;", "Lknk;", "Lkmd;", "Lkmo;")) {
                     foundZoom.add(c.type)
+                    if (c.type == "Lknq;") {
+                        val initM = c.methods.firstOrNull { it.name == "<init>" }
+                        val insList = initM?.implementation?.instructions?.toList() ?: emptyList()
+                        for (i in insList.indices) {
+                            val ins = insList[i]
+                            val ref = (ins as? com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction)?.reference?.toString() ?: ""
+                            if (ref.contains("Lyqc;->p")) {
+                                val nextIns = insList.getOrNull(i + 1)
+                                val reg = (nextIns as? com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction)?.registerA
+                                println("Patched knq.<init> Lyqc;->p move-result-object register = $reg")
+                                assertTrue(reg != 5, "Register must NOT be 5 (was clobbering float register for gei.o)")
+                            }
+                        }
+                    }
                 }
                 if (c.type in listOf("Lqge;", "Lqfz;", "Lqfr;", "Lqgh;", "Lkov;", "Ljex;")) {
                     foundPortrait.add(c.type)
@@ -38,6 +52,30 @@ class SmokeTest {
             }
         }
         println("Inspected patched dex: found ${foundZoom.size} zoom, ${foundPortrait.size} portrait, ${foundPhotoSaving.size} photo saving classes")
+    }
+
+    @Test
+    fun testInspectMttK() {
+        val dexFile = java.io.File("build/tmp/test_patcher/patched_dex/classes.dex")
+        if (!dexFile.exists()) return
+        val dex = com.android.tools.smali.dexlib2.DexFileFactory.loadDexFile(dexFile, com.android.tools.smali.dexlib2.Opcodes.getDefault())
+        val mtt = dex.classes.firstOrNull { it.type == "Lmtt;" } ?: return
+        val kMethod = mtt.methods.firstOrNull { it.name == "K" } ?: return
+        val impl = kMethod.implementation ?: return
+        val insList = impl.instructions.toList()
+        for (i in insList.indices) {
+            val ins = insList[i]
+            val refStr = (ins as? com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction)?.reference?.toString() ?: ""
+            if (refStr.contains("getEffectiveLookId") || refStr.contains("ShotParams_tomte_type_set")) {
+                println(">>> Target instruction at index $i:")
+                for (j in (i - 5).coerceAtLeast(0)..(i + 5).coerceAtMost(insList.size - 1)) {
+                    val insJ = insList[j]
+                    val r = (insJ as? com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction)?.reference?.toString() ?: ""
+                    println("   [$j] ${insJ.opcode} ref=$r")
+                }
+                break
+            }
+        }
     }
 
     @Test
@@ -242,6 +280,35 @@ class SmokeTest {
             if (zoomSuccess) {
                 println("Generated ZoomControllers.dex: ${zoomDexOut.length()} bytes")
                 zoomDexOut.copyTo(java.io.File("../src/main/resources/ZoomControllers.dex"), overwrite = true)
+            }
+        }
+    }
+
+    @Test
+    fun testInspectZoomDex() {
+        val dexFile = java.io.File("src/main/resources/ZoomControllers.dex")
+        assertTrue(dexFile.exists(), "ZoomControllers.dex must exist")
+        val dex = com.android.tools.smali.dexlib2.DexFileFactory.loadDexFile(dexFile, com.android.tools.smali.dexlib2.Opcodes.getDefault())
+        for (className in listOf("Lknq;", "Lknk;")) {
+            val cls = dex.classes.firstOrNull { it.type == className }
+            assertTrue(cls != null, "Class $className must exist in ZoomControllers.dex")
+            val initM = cls!!.methods.firstOrNull { it.name == "<init>" }
+            assertTrue(initM != null, "Class $className must have <init>")
+            val instructions = initM!!.implementation!!.instructions.toList()
+            println("Inspecting $className <init>: ${instructions.size} instructions")
+            for (i in instructions.indices) {
+                val ins = instructions[i]
+                val ref = (ins as? com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction)?.reference?.toString() ?: ""
+                if (ref.contains("Lyqc;->p") || ref.contains("Lgei;->o")) {
+                    println("  [$i] ${ins.opcode} ref=$ref")
+                    val prev = if (i > 0) instructions[i-1] else null
+                    val next = if (i < instructions.size - 1) instructions[i+1] else null
+                    val nextNext = if (i < instructions.size - 2) instructions[i+2] else null
+                    val nextNextNext = if (i < instructions.size - 3) instructions[i+3] else null
+                    println("     next: ${next?.opcode} reg=${(next as? com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction)?.registerA}")
+                    println("     nextNext: ${nextNext?.opcode} regA=${(nextNext as? com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction)?.registerA} regB=${(nextNext as? com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction)?.registerB}")
+                    println("     nextNextNext: ${nextNextNext?.opcode}")
+                }
             }
         }
     }

@@ -49,7 +49,11 @@ final class SupportedLinks {
      */
     static final String APP_MANAGER = "com.facebook.appmanager";
 
-    /** Messenger, verified for facebook.com, www.facebook.com, m.me and www.m.me (#78). */
+    /**
+     * Messenger, verified for facebook.com, www.facebook.com, m.me and www.m.me (#78). Messenger
+     * 582's manifest also lists fb.me and www.fb.me (paths /msg), but only in a filter without
+     * autoVerify, so Android never verifies Messenger for them and they stay this app's to select.
+     */
     static final String MESSENGER = "com.facebook.orca";
 
     /** Instagram, verified for facebook.com, www.facebook.com and m.facebook.com (#78). */
@@ -95,10 +99,12 @@ final class SupportedLinks {
             switch (this) {
                 case MESSENGER:
                     return L10n.t("Messenger can claim facebook.com and m.me links for itself, which turns this app's link switches "
-                            + "back off. Tap, turn off Open supported links there, then recheck Supported links above.");
+                            + "back off. Tap, turn off Open supported links there (on newer Android, pick In your browser), then "
+                            + "recheck Supported links above.");
                 case INSTAGRAM:
                     return L10n.t("Instagram can claim facebook.com links for itself, which turns this app's link switches back off. "
-                            + "Tap, turn off Open supported links there, then recheck Supported links above.");
+                            + "Tap, turn off Open supported links there (on newer Android, pick In your browser), then recheck "
+                            + "Supported links above.");
                 default:
                     return L10n.t("Meta App Manager can claim Facebook's web addresses for itself, so their links skip this app. Tap, "
                             + "turn off Open supported links there, then recheck Supported links above.");

@@ -136,14 +136,14 @@ public class ExpandedControlsTest {
             View root = screen.get().getWindow().getDecorView();
             EditText search = root.findViewWithTag("find_control");
             TextView status = root.findViewWithTag("search_status");
-            search.setText("  PEOPLE YOU  ");
+            search.setText("  PEOPLE YOU MAY  ");
             assertEquals(ExpectedTotals.shown(1), status.getText().toString());
             assertEquals(View.VISIBLE, ((View) root.findViewWithTag("people").getParent()).getVisibility());
             assertEquals(View.GONE, ((View) root.findViewWithTag("stories").getParent()).getVisibility());
             search.setText("Stickers");
             assertEquals(ExpectedTotals.shown(4), status.getText().toString());
             search.setText("missing control xyz");
-            assertEquals("No matching controls. Try another search.", status.getText().toString());
+            assertEquals("No matching controls.", status.getText().toString());
             search.setText("");
             assertEquals(ExpectedTotals.shown(ExpectedTotals.CONTROLS), status.getText().toString());
         }

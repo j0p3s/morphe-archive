@@ -1,5 +1,85 @@
 ## Unreleased
 
+* **TikTok:** Proteger páginas externas no navegador do TikTok agora conta o CAPTCHA de quebra-cabeça que os LIVEs e a Loja abrem como uma página do próprio TikTok, então o quebra-cabeça mantém a ligação com o TikTok (#87). Ele carrega dos servidores do TikTok, só que de um endereço que a opção não conhecia.
+
+* **TikTok:** Um segundo toque rápido em Detalhes da compilação, Verificação de recursos, Licenças ou Novidades não abre mais a mesma janela duas vezes, uma em cima da outra.
+
+* **TikTok:** Curtir o vídeo, como ação de Toque duplo ou Toque longo, agora fica no vídeo que você está vendo em qualquer tipo de feed. Se esse vídeo não tiver coração para tocar, ele avisa em vez de curtir o vídeo ao lado.
+
+* **TikTok:** Um Toque duplo definido para uma ação do Hushfeed agora a executa uma vez por toque, mesmo que o TikTok passe o mesmo toque para dois dos seus tratadores.
+
+* **TikTok:** Aplicar o patch numa versão do TikTok que o Hushfeed não lista ficou mais seguro. Os extras de Mostrar a barra de progresso e o botão de traduzir comentários agora ficam de fora sozinhos quando não se encaixam nessa versão, então não podem parar o patch nem entrar pela metade.
+
+* **TikTok:** As linhas Keep captions in Clear display e Automatic Clear display agora escrevem Clear display do jeito que o TikTok escreve.
+
+* **TikTok:** Com Esconder a barra de comentários nos vídeos abertos ligado, a barra de progresso de um vídeo longo que você abre pela busca ou por um perfil volta a ficar embaixo da legenda. Antes ela passava por cima do nome do criador (#50).
+
+* **TikTok:** Esmaecer os controles do vídeo agora também esmaece a barra de progresso de um vídeo pausado, a pílula de stories da aba Seguindo e, num vídeo aberto pela busca, a barra de busca no topo, o botão Tela cheia e a barra de Adicionar comentário. Antes eles ficavam com intensidade total (#84).
+
+* **TikTok:** Agora dá para salvar um story pela folha de compartilhamento. Ative Salvar um story pela folha de compartilhamento em Downloads e um botão de salvar aparece ali. Ele salva a cópia sem marca d'água quando o TikTok tem uma, e avisa quando só existe a cópia com marca d'água (#93).
+
+* **TikTok:** Mostrar a barra de progresso tem um novo botão em Reprodução, Barra de reprodução nos stories em vídeo, que começa desligado. Ele coloca uma linha fina na parte de baixo de um story em vídeo que você pode arrastar para voltar ou avançar, com o tempo aparecendo enquanto você arrasta. Tocar ainda passa de um story para outro (#72).
+
+* **TikTok:** Continuar tocando em segundo plano agora pode recomeçar um vídeo quando ele termina, então você não precisa tocar em Reproduzir na notificação toda vez. Ative Repetir em segundo plano em Reprodução. Uma ligação ou o som de outro app ainda pausa o vídeo (#99).
+
+* **TikTok:** O disco de música pode girar de novo. O TikTok 47.1.4 já vem com ele parado, então Tela do feed agora tem Girar o disco de música, e Manter o disco de música parado se você preferir que ele nunca gire. Os dois precisam reiniciar o app (#68).
+
+* **TikTok:** Mostrar a barra de progresso ganhou duas chaves novas em Reprodução, as duas desligadas no começo. Mostrar o tempo ao lado da barra de progresso põe o tempo assistido e a duração do vídeo no fim da barra, e Marcador maior na barra de progresso desenha um marcador maior numa linha um pouco mais grossa (#90).
+
+* **TikTok:** Com Esconder os controles da tela limpa ligado, a linha de carregamento do TikTok, a barra fina que cresce do meio ao longo da borda de baixo de um vídeo enquanto ele carrega, agora também some enquanto a tela está limpa (#84).
+
+* **TikTok:** A nova chave Botão de traduzir nos comentários, em Comentários, mostra o próprio botão de traduzir do TikTok ao lado da contagem de comentários. Um toque traduz todos os comentários e respostas, e outro traz os originais de volta (#85). Ela começa desligada.
+
+* **TikTok:** Tela limpa não deixa mais uma linha fina na parte de baixo de cada vídeo novo por alguns segundos (#84). Era a linha fina na borda de cima da barra de abas, que ficava para trás quando as abas sumiam.
+
+* **TikTok:** Ocultar a barra de status nas LIVEs mantém a faixa preta de cima longe durante a LIVE inteira (#137). Antes ele desistia depois que o TikTok colocava a faixa de volta algumas vezes, como quando painéis abrem e fecham sobre a transmissão. A nova chave Mostrar a LIVE sob a barra de status deixa a LIVE chegar até a borda de cima com o relógio e os ícones por cima, se você preferir manter a barra. Ela começa desligada.
+
+* **TikTok:** Toque duplo agora faz tudo o que o Toque longo faz, como copiar o link ou salvar o quadro, e o Toque longo ganhou a opção Curtir o vídeo (#136). Uma curtida pelo toque longo funciona como a do próprio TikTok e nunca tira uma curtida.
+
+* **TikTok:** Uma coleção ou outra grade de onde você abre um vídeo mantém todas as publicações, então o Hide photo posts, as palavras bloqueadas e os outros filtros do feed não fazem mais tocar o vídeo errado (#135). De uma lista que você abriu, só os anúncios são tirados.
+
+* **TikTok:** O Hide the Send to row não leva mais junto Report, Download e o resto da fileira de ações na folha de compartilhar pequena que abre com um toque longo (#120). Nessa folha o TikTok coloca as duas fileiras no mesmo quadro, e o quadro inteiro estava sendo escondido.
+
+* **TikTok:** O Show the progress bar volta a mostrar a barra no feed Para Você, inclusive em vídeos curtos (#134). Na 47.1.4 ele ligava a verificação errada do TikTok, a que decide se um vídeo é anúncio, então a barra nunca voltava enquanto o vídeo tocava.
+
+* **TikTok:** O relatório de diagnóstico tem uma nova seção Storage que lista as maiores pastas no armazenamento do TikTok, então um relatório consegue mostrar o que está enchendo ele (#70). Ela só cita pastas, nunca arquivos, e esconde números de conta.
+
+* **TikTok:** Apertar voltar em um vídeo limpo aberto pela busca ou por um perfil não conta mais como desligar o Clear display. Abrir o mesmo vídeo de novo limpa ele como qualquer outro, e um Clear display lembrado continua ligado (#84).
+
+* **TikTok:** O Remove LIVE extras agora avisa que tira os arquivos para entrar na LIVE de outra pessoa como convidado, então entrar por voz ou vídeo pode parar de funcionar com ele (#132). Deixe ele de fora se você entra em LIVEs.
+
+* **TikTok:** Quando o Clear display fica lembrado, ou o Automatic Clear display não tem atraso, o TikTok não mostra mais as abas embaixo do ícone de carregamento nem os botões do primeiro vídeo por cerca de um segundo depois de abrir do zero. Um vídeo aberto pelos Favorites ou por um perfil também já começa limpo (#84).
+
+* **TikTok:** Com Show where a video was posted ligado, o nome do criador não é mais cortado para caber o país quando a linha tem espaço para os dois, então "Rn D… · TR" volta a aparecer inteiro (#127). Um nome que é longo demais de verdade continua sendo encurtado para o país aparecer inteiro.
+
+* **TikTok:** Hide already seen videos não tira mais vídeos de uma coleção que você abre, então tocar num vídeo salvo volta a tocar esse vídeo, e não outro ou nada (#135). Ele continua escondendo vídeos já vistos em For You, Following e Friends.
+
+* **TikTok:** Um patch novo, Keep the app language, adiciona a chave Manter o idioma escolhido no TikTok em Sistema, dentro de Aplicativo (#61). Quando o TikTok abre e decide que o idioma do celular mudou, ele descarta o idioma que você escolheu nas configurações dele e segue o celular. Com a chave ligada, sua escolha fica. Ela começa desligada.
+
+* **TikTok:** Uma nova chave Escrever o nome de usuário e a legenda no vídeo, em Downloads, coloca o @nome de usuário e a primeira linha da legenda no canto inferior esquerdo dos vídeos que o Hushfeed salva. O celular codifica o vídeo de novo para isso, então esses salvamentos demoram mais e mostram o progresso com um botão Cancelar. Ela começa desligada.
+
+* **TikTok:** Remove creation tools agora avisa que abrir uma ferramenta de criação, como a busca de efeitos na câmera, pode fechar o TikTok (#133). Deixe ele de fora se você faz vídeos.
+
+* **TikTok:** Drop the animated image cache não troca mais o cache de quadros do TikTok por um que guarda um único quadro, o que podia deixar figurinhas animadas nos comentários travadas no primeiro quadro (#130). A chave dele agora se chama Não decodificar quadros animados com antecedência, e ligada ela só impede o TikTok de decodificar quadros antes de aparecerem.
+
+* **TikTok:** A bolha de stories de Seguindo no topo do feed volta quando a Tela limpa termina. O TikTok a esconde quando a Tela limpa começa, e antes ela ficava sumida até o feed recarregar. Ela só volta se estava aparecendo antes e ainda tem alguém nela.
+
+* **TikTok:** Uma nova linha Traduzir para em Comentários aceita um código de idioma, como en ou es. Os comentários e legendas que o TikTok traduz saem nesse idioma em vez do idioma do app, então você pode usar o TikTok em um idioma e ler as traduções em outro. Deixe vazia para manter a escolha do TikTok.
+
+* **TikTok:** Uma nova opção Proteção contra burn-in em Tela limpa escurece os botões, a legenda e as abas sobre o vídeo para um quarto depois de 5 segundos sem toque, e o próximo toque os traz de volta. Com Escurecer quando parado e deslocar, tudo no feed também se move alguns pixels a cada 2 minutos, para a tela OLED não marcar embaixo de controles que nunca saem do lugar.
+
+* **TikTok:** Esconder a barra de comentários nos vídeos abertos agora também tira a barra de um post de fotos que você abre pela busca. Antes, a barra de adicionar comentário ficava nesses posts.
+
+* **TikTok:** Uma nova opção, Formato do som, em Downloads deixa Salvar o som também e Salvar o som original ao tocar e segurar criarem arquivos Opus (.ogg). Eles são menores que o M4A do TikTok, e o seu celular codifica o som de novo para criá-los. Precisa do Android 10 ou mais recente. Como o TikTok enviou continua sendo o padrão, então esses salvamentos saem iguais a antes.
+
+* **TikTok:** Esmaecer os controles do vídeo agora funciona com a Tela limpa. Entre 1 e 99, a Tela limpa mantém os botões e a legenda na tela no nível que você escolheu em vez de tirá-los, e um toque neles vai para o vídeo, então nada abre sem querer. Tocar e segurar ou fazer um gesto de pinça ainda tira você da Tela limpa, e fora dela os controles esmaecidos recebem toques como antes (#84).
+
+* **TikTok:** Silenciar os vídeos do feed agora mantém o feed sem som depois que você troca o TikTok entre claro e escuro. Antes, os próximos vídeos podiam tocar com som até você sair do feed e voltar.
+
+* **TikTok:** Mostrar quantos foram filtrados e as chaves que ocultam partes da Caixa de entrada continuam funcionando quando você troca o TikTok entre claro e escuro. Antes, podiam parar até o TikTok ser reiniciado.
+
+* **TikTok:** Toque e segure Início para abrir as configurações do Hushfeed continua funcionando quando você troca o TikTok entre claro e escuro. Antes, parava até o TikTok ser reiniciado.
+
 * **TikTok:** Restaurar um backup não liga mais o Proxy de rede nem substitui o endereço de proxy que você já tem, então um backup feito por outra pessoa não consegue mandar seu tráfego do TikTok pelo servidor dela. Num celular sem proxy configurado, o endereço vem junto com a chave desligada, e um aviso depois da restauração explica isso.
 
 * **TikTok:** Não traduzir automaticamente estes idiomas agora deixa o chinês tradicional como foi escrito quando você digita zh-Hant, zh-TW, zh-HK ou zh-MO, enquanto zh-Hans-TW continua sendo chinês simplificado. Antes, essas entradas protegiam o chinês simplificado no lugar dele (#121).
@@ -19,6 +99,10 @@
 * **TikTok:** Novidades não mostra mais crases soltas em volta dos nomes das configurações.
 
 * **TikTok:** O seletor de horário de Quando enviar em Manter uma sequência agora abre escuro ou claro, igual às configurações do Hushfeed.
+
+* **TikTok:** Skip the splash ad, Skip update checks, Limit background traffic, Drop the animated image cache, Stop on-device AI profiling e Enable voice comments agora têm cada um uma chave em Configurações do Hushfeed, então Pausar também os desliga e o modo simples do Morphe Manager agora os escolhe. Cada uma dessas chaves começa desligada. Se você já tinha aplicado algum desses patches, ligue a chave dele depois de atualizar para que continue funcionando. Pular o anúncio de abertura, Pular verificações de atualização, Limitar o tráfego em segundo plano e Não decodificar quadros animados com antecedência ficam em Desempenho, dentro de Aplicativo. Parar o perfilamento por IA no aparelho fica em Privacidade e Permitir comentários de voz fica em Comentários.
+
+* **TikTok:** Novo patch, Skip passkey sign-in, escolhido pelo modo simples do Morphe Manager com a chave desligada (#102). Gerenciadores de senhas não entregam uma chave de acesso a um app modificado, então uma conta com chave de acesso podia travar na etapa de chave de acesso do TikTok. Ligue Entrar sem chave de acesso em Configurações do Hushfeed > Aplicativo e o TikTok trata seu celular como um aparelho sem chaves de acesso, oferecendo as outras formas que ele tem de entrar, como sua senha ou um código por e-mail ou SMS. Se você estiver desconectado, toque e segure Início para abrir as configurações do Hushfeed.
 
 ## 0.70.0 (2026-10-09)
 

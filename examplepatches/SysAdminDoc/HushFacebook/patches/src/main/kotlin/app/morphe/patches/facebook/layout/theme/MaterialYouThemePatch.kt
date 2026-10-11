@@ -4,6 +4,7 @@
  */
 package app.morphe.patches.facebook.layout.theme
 
+import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.BytecodePatchContext
@@ -22,6 +23,9 @@ import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
 import java.io.File
 import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Document
@@ -47,6 +51,21 @@ private const val MIG = "$MATERIAL_YOU->mig(ILjava/lang/Object;)I"
 internal const val CONTEXT_GET_DRAWABLE = "Landroid/content/Context;->getDrawable(I)Landroid/graphics/drawable/Drawable;"
 
 /**
+ * The same read through `Resources`, which androidx's `ResourcesCompat` and a Litho resource lookup that
+ * doesn't go through a `Context` use. A colour resource comes back as a ColorDrawable of its colour,
+ * so these answer through the same stand-in as [CONTEXT_GET_DRAWABLE].
+ */
+internal const val RESOURCES_GET_DRAWABLE = "Landroid/content/res/Resources;->getDrawable(I)Landroid/graphics/drawable/Drawable;"
+internal const val RESOURCES_GET_THEMED_DRAWABLE =
+    "Landroid/content/res/Resources;->getDrawable(ILandroid/content/res/Resources\$Theme;)Landroid/graphics/drawable/Drawable;"
+
+/** A theme attribute's value read as `TypedValue.data`, which none of the colour calls above see (issue #37). */
+internal const val TYPED_VALUE_DATA = "Landroid/util/TypedValue;->data:I"
+
+/** What a data read becomes: the value, whole, so the extension can see its type. */
+internal const val COLOUR_DATA = "$MATERIAL_YOU->colourData(Landroid/util/TypedValue;)I"
+
+/**
  * Where Material You sends each framework colour call, route four's `Color.parseColor`, the reads
  * of a colour resource and a theme attribute's `TypedArray.getColor`, and each of AMOLED's stand-ins
  * for them when AMOLED went first. Litho reads a token's attribute that last way (581
@@ -56,7 +75,8 @@ internal const val CONTEXT_GET_DRAWABLE = "Landroid/content/Context;->getDrawabl
 internal val YOU_COLOUR_CALLS: Map<String, String> =
     listOf(PARSE_COLOR, CONTEXT_GET_COLOR, RESOURCES_GET_COLOR, RESOURCES_GET_THEMED_COLOR, TYPED_ARRAY_GET_COLOR).flatMap { framework ->
         listOf(framework, AMOLED_COLOUR_CALLS.getValue(framework)).map { it to standIn(MATERIAL_YOU, framework) }
-    }.toMap() + (CONTEXT_GET_DRAWABLE to standIn(MATERIAL_YOU, CONTEXT_GET_DRAWABLE))
+    }.toMap() + listOf(CONTEXT_GET_DRAWABLE, RESOURCES_GET_DRAWABLE, RESOURCES_GET_THEMED_DRAWABLE)
+        .associateWith { standIn(MATERIAL_YOU, it) }
 
 /** The status bar: the colour and FDS's dark check. Runs AMOLED's own first when AMOLED is in the build. */
 internal const val STATUS_BAR_YOU = "$MATERIAL_YOU->statusBar(IZ)I"
@@ -230,7 +250,7 @@ private const val DEFAULT_VALUES = "res/values"
 private const val EMPTY_RESOURCES = "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<resources>\n</resources>\n"
 
 /** A decoded resource file parsed for reading only, so nothing writes it back. */
-private fun readOnly(file: File): Document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
+internal fun readOnly(file: File): Document = DocumentBuilderFactory.newInstance().newDocumentBuilder().parse(file)
 
 /**
  * The colours given a night value in [res], a decoded resource folder: every values folder with a
@@ -244,7 +264,7 @@ internal fun nightValuedColours(res: File): Set<String> =
         .flatMapTo(sortedSetOf()) { readOnly(it).colourValues().keys }
 
 /** Each colour in a decoded colours file, by name, with its value as written. */
-private fun Document.colourValues(): Map<String, String> {
+internal fun Document.colourValues(): Map<String, String> {
     val colors = getElementsByTagName("color")
     return (0 until colors.length).mapNotNull { colors.item(it) as? Element }
         .associate { it.getAttribute("name") to it.textContent.trim() }
@@ -362,6 +382,13 @@ val materialYouThemePatch = bytecodePatch(
             "No call to TypedArray.getColor found, so the comment list's rows would stay grey"
         }
 
+        // The box under a link post's picture (issue #37), whose dark-mode colour MobileConfig sends.
+        check(hookLinkBoxColour() > 0) { "No parse of the link box's colour found, so link posts would keep a grey box" }
+
+        // The comment list's rows (issue #37): a theme attribute resolved into a TypedValue and read as
+        // its `data`, which SURFACE_BACKGROUND's night item (#252728) reaches without a colour call.
+        check(readColourData() > 0) { "No TypedValue.data read found, so rows that read a theme colour that way would stay grey" }
+
         // Route three. AMOLED, when it went first, has blackened all but one of these, which is why
         // finding none is fine then.
         val read = readSurfaceLiterals()
@@ -371,6 +398,57 @@ val materialYouThemePatch = bytecodePatch(
         // the hooks in already, and ReactColours runs both themes.
         hookReactColours()
     }
+}
+
+/**
+ * The MobileConfig colour the box under a link post's picture takes in Facebook's dark mode (issue
+ * #37). On 582 ten methods read it, one for each kind of link attachment: the attachment footer's
+ * (arm64 `LX/4sz;->A0E` and `A0J`), FDSPostLinkAttachment's render (`LX/Vzq;->render`) and seven
+ * more renders. In dark mode each reads this config's string first and parses it when it isn't
+ * empty, and only then falls back to a grey a second config picks or to CARD_BACKGROUND_FLAT's
+ * token, which route one already themes. The string came out #333334, a grey light mode draws too,
+ * so route four's parser leaves it.
+ */
+internal const val LINK_BOX_COLOUR_CONFIG = 0x103074c000203a8L
+
+/** Where the parse of [LINK_BOX_COLOUR_CONFIG]'s string goes instead of route four's parser. */
+internal const val PARSE_LINK_BOX = "$MATERIAL_YOU->parseLinkBox(Ljava/lang/String;)I"
+
+/** Whether [method] loads [LINK_BOX_COLOUR_CONFIG]. */
+internal fun readsLinkBoxColour(method: Method): Boolean =
+    method.implementation?.instructions?.any { (it as? WideLiteralInstruction)?.wideLiteral == LINK_BOX_COLOUR_CONFIG } == true
+
+/**
+ * In each method that reads [LINK_BOX_COLOUR_CONFIG], sends its one call to route four's parser to
+ * [PARSE_LINK_BOX] on the same register. Runs after route four, so the call is already Material
+ * You's stand-in, AMOLED's included. Answers how many it changed. A method that reads the config
+ * with no parser call, or more than one, is refused: the parse to change would be a guess.
+ */
+internal fun BytecodePatchContext.hookLinkBoxColour(): Int {
+    val parser = standIn(MATERIAL_YOU, PARSE_COLOR)
+    val owners = mutableSetOf<String>()
+    classDefForEach { classDef ->
+        if (classDef.type.startsWith(EXTENSION_PACKAGE)) return@classDefForEach
+        if (classDef.methods.any(::readsLinkBoxColour)) owners += classDef.type
+    }
+    var changed = 0
+    for (type in owners) {
+        for (method in mutableClassDefBy(type).methods.filter(::readsLinkBoxColour)) {
+            val parses = method.implementation!!.instructions.withIndex().filter { it.value.referenceText() == parser }
+            check(parses.size == 1) {
+                "${method.definingClass}->${method.name} reads the link box's colour with ${parses.size} calls to $parser"
+            }
+            val (index, call) = parses.single()
+            val text = when (call) {
+                is RegisterRangeInstruction -> call.startRegister
+                is FiveRegisterInstruction -> call.registerC
+                else -> error("${method.definingClass}->${method.name}: unexpected call form ${call.opcode}")
+            }
+            method.replaceInstruction(index, "invoke-static/range { v$text .. v$text }, $PARSE_LINK_BOX")
+            changed++
+        }
+    }
+    return changed
 }
 
 /**
@@ -395,6 +473,38 @@ internal fun BytecodePatchContext.readSurfaceLiterals(): Int {
     return owners.sumOf { type ->
         mutableClassDefByOrNull(type)?.methods?.sumOf { if (handsToBar(it)) 0 else it.readSurfaceFields() } ?: 0
     }
+}
+
+/**
+ * Every `iget vA, vB, TypedValue.data` in the app becomes `colourData(vB)` into vA, so a theme
+ * attribute read as a plain colour takes the palette like the colour calls do. The extension looks
+ * at the value's type and only answers for a colour. The TypedValue register is read before the
+ * result is written, so `iget v0, v0` stays right. `iget` only names registers up to v15, which is
+ * all the short call form takes too. Answers how many it replaced.
+ */
+internal fun BytecodePatchContext.readColourData(): Int {
+    val owners = mutableSetOf<String>()
+    classDefForEach { classDef ->
+        if (classDef.type.startsWith(EXTENSION_PACKAGE)) return@classDefForEach
+        if (classDef.methods.any { method -> method.implementation?.instructions?.any { it.isColourDataRead() } == true }) {
+            owners += classDef.type
+        }
+    }
+    return owners.sumOf { type -> mutableClassDefByOrNull(type)?.methods?.sumOf { it.readColourData() } ?: 0 }
+}
+
+private fun Instruction.isColourDataRead(): Boolean =
+    opcode == Opcode.IGET && referenceText() == TYPED_VALUE_DATA
+
+/** [readColourData] for one method. */
+internal fun MutableMethod.readColourData(): Int {
+    val sites = (implementation ?: return 0).instructions.withIndex().filter { it.value.isColourDataRead() }
+        .map { it.index to it.value as TwoRegisterInstruction }
+    sites.asReversed().forEach { (index, read) ->
+        replaceInstruction(index, "invoke-static { v${read.registerB} }, $COLOUR_DATA")
+        addInstruction(index + 1, "move-result v${read.registerA}")
+    }
+    return sites.size
 }
 
 private fun Instruction.referenceText(): String? = (this as? ReferenceInstruction)?.reference?.toString()

@@ -11,12 +11,14 @@ function Assert-Selection([bool]$Condition, [string]$Message) {
 
 $catalog = Get-Content (Join-Path $Root 'patches-list.json') -Raw | ConvertFrom-Json
 $model = Get-SelectionStatusModel -Root $Root
+$optional = @($model.Capabilities | Where-Object Optional | ForEach-Object Status | Sort-Object)
+Assert-Selection (($optional -join ',') -ceq 'crashReports,sessionReports') 'The targets only some builds carry changed without the checker''s markers.'
 $plans = @(Get-PatchSelectionCases -Catalog $catalog -StatusModel $model)
-Assert-Selection ($plans.Count -eq 75 -and @($plans.Id | Sort-Object -Unique).Count -eq 75) 'The matrix changed its bounded case inventory.'
+Assert-Selection ($plans.Count -eq 84 -and @($plans.Id | Sort-Object -Unique).Count -eq 84) 'The matrix changed its bounded case inventory.'
 Assert-Selection (@($plans | Where-Object Failure).Count -eq 10) 'A malformed, incomplete or typed-input refusal is missing.'
 Assert-Selection (@($plans | Where-Object Id -CEQ 'maps-array-noop').Count -eq 1) 'The CLI typed-option no-op case is missing.'
-Assert-Selection (@($plans | Where-Object Default).Count -eq 1 -and $plans[0].Id -ceq 'default54') 'Defaults must be exercised through the actual CLI defaults.'
-Assert-Selection ($plans[0].Names.Count -eq 54 -and ($plans | Where-Object Id -CEQ 'full56').Names.Count -eq 56) 'Default and full catalog counts changed.'
+Assert-Selection (@($plans | Where-Object Default).Count -eq 1 -and $plans[0].Id -ceq 'default63') 'Defaults must be exercised through the actual CLI defaults.'
+Assert-Selection ($plans[0].Names.Count -eq 63 -and ($plans | Where-Object Id -CEQ 'full66').Names.Count -eq 66) 'Default and full catalog counts changed.'
 $hostile = $catalog | ConvertTo-Json -Depth 20 | ConvertFrom-Json
 ($hostile.patches | Where-Object name -CEQ 'Use registered Telegram API credentials').name = 'private_catalog_name_canary_472009'
 $refusal = $null
@@ -31,11 +33,13 @@ foreach ($plan in $plans) {
     $settings = $plan.Names -ccontains 'HushTelegram settings' -or
         @($plan.Names | Where-Object { $model.Families.Name -ccontains $_ }).Count -gt 0
     Assert-Selection ($expectation.settings -eq $settings) 'A selection inherited the wrong extension or minSdk premise.'
+    Assert-Selection ($expectation.icon -eq ($plan.Names -ccontains 'HushTelegram icon and name')) 'The checker expects the launcher icon on the wrong cases.'
     Assert-Selection ($expectation.flags.Count -eq $model.StatusNames.Count) 'The compiled checker omitted a status flag.'
     foreach ($capability in $model.Capabilities) {
         $family = $model.Families | Where-Object Enum -CEQ $capability.Family
         Assert-Selection ($expectation.flags[$capability.Status] -eq ($plan.Names -ccontains $family.Name)) 'A capability was credited to an omitted family.'
     }
+    Assert-Selection ((@($expectation.optional | Sort-Object) -join ',') -ceq ($optional -join ',')) 'The checker lost which targets only some builds carry.'
     Assert-Selection ($plan.ApiId -cmatch '^[1-9][0-9]*$' -and [int]$plan.ApiId -gt 0 -and
         $plan.ApiHash -cmatch '^[0-9a-f]{32}$' -and $plan.MapsKey -cmatch '^AIza[0-9A-Za-z_-]{35}$') 'Synthetic configured values no longer fit the real validators.'
     $document = @(New-SelectionOptionsDocument -Catalog $catalog -Selection $plan -BundleName 'fixture.mpp' -BundleHash ('a' * 64) | ConvertFrom-Json)
@@ -113,7 +117,7 @@ try {
     $desktop = Resolve-DesktopCli -Root $Root -Required
     $fixtureDir = $env:HUSHTELEGRAM_FIXTURE_DIR
     if (-not $fixtureDir) { $fixtureDir = Join-Path $Root 'fixtures' }
-    $fixtures = @('telegram-web-12.10.6-71129.apk', 'telegram-beta-12.10.7-71239.apk') |
+    $fixtures = @('telegram-web-13.0.1-71679.apk', 'telegram-beta-13.0.1-71669.apk') |
         ForEach-Object { Join-Path $fixtureDir $_ }
     foreach ($fixture in $fixtures) {
         Assert-Selection (Test-Path -LiteralPath $fixture -PathType Leaf) 'A native-version control fixture is missing.'
@@ -122,13 +126,30 @@ try {
     $classes = Join-Path $scratch 'classes'
     $compile = Invoke-SelectionTool -Program $compiler -Arguments @('-encoding', 'UTF-8', '-cp', $desktop, '-d', $classes,
         (Join-Path $Root 'scripts/DexDiff.java'), (Join-Path $Root 'scripts/SelectionCheck.java'),
-        (Join-Path $Root 'scripts/SelectionCheckNativeVersionTest.java')) -PrivateOutput (Join-Path $scratch 'compile-private.txt')
+        (Join-Path $Root 'scripts/SelectionCheckNativeVersionTest.java'), (Join-Path $Root 'scripts/SelectionCheckFixtureTest.java')) `
+        -PrivateOutput (Join-Path $scratch 'compile-private.txt')
     Assert-Selection ($compile -eq 0) 'The compiled selection checker tests did not compile.'
     $nativeOutput = Join-Path $scratch 'native-private.txt'
     $native = Invoke-SelectionTool -Program $java -Arguments (@('-Xmx512m', '-XX:ActiveProcessorCount=2', '-cp',
         ($classes + [IO.Path]::PathSeparator + $desktop), 'SelectionCheckNativeVersionTest') + $fixtures) -PrivateOutput $nativeOutput
     Assert-Selection ($native -eq 0 -and (Get-Content $nativeOutput -Raw).Contains('NATIVE_VERSION_CHECKS_PASSED checks=84')) `
         'The native-version checker lost its exact insertion or refusal controls.'
+    $fixtureOutput = Join-Path $scratch 'fixture-private.txt'
+    $fixtureCode = Invoke-SelectionTool -Program $java -Arguments (@('-Xmx512m', '-XX:ActiveProcessorCount=2', '-cp',
+        ($classes + [IO.Path]::PathSeparator + $desktop), 'SelectionCheckFixtureTest') + $fixtures) -PrivateOutput $fixtureOutput
+    Assert-Selection ($fixtureCode -eq 0 -and (Get-Content $fixtureOutput -Raw).Contains('FIXTURE_CHECKS_PASSED checks=41')) `
+        'The checker lost its beta-logs gate, its refusal controls, its Firebase markers or its launcher icon control.'
+    # A matrix run keeps one checker, which decodes the clean fixture once and answers each case.
+    $checker = Start-SelectionChecker -Java $java -ClassPath ($classes + [IO.Path]::PathSeparator + $desktop) -Apk $fixtures[0] `
+        -PrivateOutput (Join-Path $scratch 'checker-private.txt')
+    $answers = @(foreach ($n in 1..2) {
+        Invoke-SelectionChecker -Checker $checker -Request @((Join-Path $scratch "missing-$n.apk"), (Join-Path $scratch 'missing.json'),
+            (Join-Path $scratch "evidence-$n.json"))
+    })
+    $decoded = Stop-SelectionChecker -Checker $checker
+    Assert-Selection ($answers.Count -eq 2 -and $answers -notcontains $true -and $null -ne $decoded -and $decoded.Cases -eq 2 -and
+        $decoded.Decodes -eq 1 -and (Test-Path -LiteralPath (Join-Path $scratch 'evidence-2.json.failure-private.txt'))) `
+        'The selection checker did not answer each case from one decode of the clean fixture.'
     $canary = 'private_selection_error_canary_529771'
     Assert-Selection (-not (Test-SelectionPublicText -Text ('before ' + $canary + ' after') -Canaries @($canary))) 'The output guard accepted a credential sentinel.'
     Assert-Selection (Test-SelectionPublicText -Text 'REFUSAL_PASSED' -Canaries @($canary)) 'The output guard rejected a fixed status code.'
@@ -144,4 +165,16 @@ try {
     Assert-Selection ($LASTEXITCODE -ne 0 -and $publicOutput.Contains('MATRIX_FAILED') -and
         (Test-SelectionPublicText -Text $publicOutput -Canaries @($canary))) 'An invalid input leaked its path through the public error stream.'
 } finally { Remove-GeneratedPath -Path $scratch -Root ([IO.Path]::GetTempPath()) }
+# The icon patch adds its three mipmaps, and only a case that selects it may.
+$none = "[resources] added resources: 0`r`n[resources] files named by the patched table: 7115, moved 0"
+$icons = "[resources] added resources: 3`r`n  0x7f0d0021 mipmap/hush_launcher`r`n  0x7f0d0022 mipmap/hush_launcher_foreground`r`n" +
+    "  0x7f0d0023 mipmap/hush_launcher_monochrome`r`n[resources] files named by the patched table: 7115, moved 0"
+$full = ($plans | Where-Object Id -CEQ 'full66').Names
+$default = $plans[0].Names
+Assert-Selection (Test-SelectionAddedResources -Report $none -Closure $default) 'A case without the icon was refused for adding nothing.'
+Assert-Selection (-not (Test-SelectionAddedResources -Report $icons -Closure $default)) 'A case without the icon patch was allowed its mipmaps.'
+Assert-Selection (Test-SelectionAddedResources -Report $icons -Closure $full) 'The full catalog was refused the icon patch''s mipmaps.'
+Assert-Selection (-not (Test-SelectionAddedResources -Report $none -Closure $full)) 'The full catalog passed without the icon patch''s mipmaps.'
+Assert-Selection (-not (Test-SelectionAddedResources -Report ($icons -replace 'hush_launcher_monochrome', 'hush_other') -Closure $full)) 'A stray added resource passed as the icon patch''s.'
+Assert-Selection (-not (Test-SelectionAddedResources -Report 'no table report' -Closure $default)) 'A report without its added resources line passed.'
 Write-Host "[selections] contracts passed ($assertions assertions)"

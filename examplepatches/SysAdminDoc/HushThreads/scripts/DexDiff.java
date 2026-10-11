@@ -12,6 +12,7 @@ import com.android.tools.smali.dexlib2.iface.MultiDexContainer;
 import com.android.tools.smali.dexlib2.iface.TryBlock;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction;
+import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
@@ -198,7 +199,8 @@ public class DexDiff {
     /** The kind a first-call rule that asks only for a call leaving a class prefix is read into. */
     private static final String OUTSIDE_FIRST_CALL = "first-call-outside";
     private static final Set<String> THREADS_FEATURES = Set.of(
-            "hideAds", "hideSuggestedUsers", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust");
+            "hideAds", "hideSuggestedUsers", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust",
+            "returnRefresh", "disableVideoAutoplay", "pureBlack", "settingsRow");
 
     private static final class Contract {
         final String kind;
@@ -1562,6 +1564,16 @@ public class DexDiff {
         return registers;
     }
 
+    /** Every register [i] names, in operand order: a range's or a call's, or A, B and C as it has them. */
+    private static List<Integer> namedRegisters(Instruction i) {
+        if (i instanceof RegisterRangeInstruction || i instanceof FiveRegisterInstruction) return callRegisters(i);
+        List<Integer> named = new ArrayList<>();
+        if (i instanceof OneRegisterInstruction) named.add(((OneRegisterInstruction) i).getRegisterA());
+        if (i instanceof TwoRegisterInstruction) named.add(((TwoRegisterInstruction) i).getRegisterB());
+        if (i instanceof ThreeRegisterInstruction) named.add(((ThreeRegisterInstruction) i).getRegisterC());
+        return named;
+    }
+
     /** "v2, v1" for [registers]. */
     private static String registerList(List<Integer> registers) {
         List<String> named = new ArrayList<>();
@@ -1946,6 +1958,54 @@ public class DexDiff {
     private static final String ENDPOINT = "Lapp/morphe/extension/hushthreads/misc/Analytics;->endpoint(Ljava/lang/String;)Ljava/lang/String;";
     private static final String SIGNERS = "Lapp/morphe/extension/hushthreads/misc/ThreadsSignature;->originalSigners(Landroid/content/pm/PackageInfo;)Ljava/util/List;";
     private static final String LOGGING_URL = "https://graph.facebook.com/logging_client_events";
+    private static final String RETURN_REFRESH = "Lapp/morphe/extension/hushthreads/feed/ReturnRefresh;->";
+    private static final String HOLD_HOT_START = RETURN_REFRESH + "holdHotStart()Z";
+    private static final String RESET_TO_FEED = RETURN_REFRESH + "resetToFeed(Z)Z";
+    private static final String WARM_START = RETURN_REFRESH + "warmStart(Z)Z";
+    private static final String CACHED_POSTS = RETURN_REFRESH + "cachedPosts(Z)Z";
+    /** The activity every Threads screen lives in, a kept name, and the strings its return checks log. */
+    private static final String BARCELONA_ACTIVITY = "Lcom/instagram/barcelona/mainactivity/BarcelonaActivity;";
+    private static final String TOO_SHORT = "background_time_too_short_for_hot_start_feed_refresh";
+    private static final String WALL_CLOCK = "hot_start_wall_clock_bg_elapsed_ms";
+    private static final String RESET_TO_MAIN_FEED = "RESET_TO_MAIN_FEED";
+    private static final String RESET_TO_HOME_FEED = "reset_to_home_feed";
+    private static final String BADGE_DECISION = "badge_decision";
+    private static final String HOLD_VIDEO = "Lapp/morphe/extension/hushthreads/feed/VideoAutoplay;->play(Z)Z";
+    /** Compose's notes naming Threads' video in a post and the effect that starts its player. They name the source file, so they survive Redex. */
+    private static final String POST_VIDEO_NOTE = "com.instagram.barcelona.feed.post.video.PostVideo (PostVideo.kt:";
+    private static final String PLAYBACK_EFFECT_NOTE = "com.instagram.video.player.compose.VideoPlaybackEffect (VideoPlaybackEffect.kt:";
+    /** The notes of the feed post composables that put a video in a post: one on its own, and one in a carousel. */
+    private static final List<String> FEED_POST_NOTES = List.of("com.instagram.barcelona.feed.post.ui.PostSingleMedia",
+            "com.instagram.barcelona.feed.post.ui.PostCarousel");
+    /** The notes of the composables that show a video inside a post: an Instagram post shown in a thread, a trend's preview and an ad card. */
+    private static final List<String> EMBED_NOTES = List.of("com.instagram.barcelona.igmedia.InlineIgVideo (InlineIgVideo.kt:",
+            "com.instagram.barcelona.common.ui.mediahighlights.AutoplayingMediaHighlightVideo (TrendMediaHighlightsPreview.kt:",
+            "com.instagram.barcelona.sponsored.ui.AdCard (AdCard.kt:");
+    /** The note of the full-screen viewer's video composable, which plays by PostVideo's default and has to stay as Threads wrote it. */
+    private static final String MEDIA_VIEWER_NOTE = "com.instagram.barcelona.feed.mediaviewer.ui.MediaViewerVideo";
+    private static final String PURE_BLACK = "Lapp/morphe/extension/hushthreads/theme/PureBlack;->";
+    private static final String PURE_ARGB = PURE_BLACK + "argb(J)J";
+    private static final String PURE_COLOR = PURE_BLACK + "color(J)J";
+    /** Compose's note in Threads' theme, the lambda that builds its colors for dark or light mode. It names the source file, so it survives Redex. */
+    private static final String BDS_THEME_NOTE = "com.instagram.barcelona.bds.theme.BdsTheme.<anonymous> (BdsTheme.kt:";
+    /** Threads' dark mode background, #101010, and white, as the ARGB literals its theme and color schemes load. */
+    private static final long THREADS_DARK = 0xff101010L, THREADS_WHITE = 0xffffffffL;
+    /** A color scheme's constructor takes at least this many colors and nothing else. Threads' takes 39. */
+    private static final int SCHEME_COLORS = 20;
+    private static final String SETTINGS_ROW = "Lapp/morphe/extension/hushthreads/settings/ThreadsSettingsRow;";
+    private static final String ADD_ROW = SETTINGS_ROW + "->add(Ljava/lang/Object;)V";
+    private static final String SHOW_ROW = SETTINGS_ROW + "->showRow(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;I)V";
+    private static final String ROW_CLICK = "Lapp/morphe/extension/hushthreads/settings/ThreadsSettingsRow$Click;";
+    private static final String FUNCTION0 = "Lkotlin/jvm/functions/Function0;";
+    /**
+     * Compose's notes in Threads' settings row, in the row it draws Accounts Center with, and in the
+     * lambda that draws each entry of its settings list. They name the source file, so they survive Redex.
+     */
+    private static final String SETTINGS_ROW_NOTE = "com.instagram.barcelona.settings.SettingsRow (SettingsScreen.kt:";
+    private static final String ACCOUNTS_ROW_NOTE = "com.instagram.barcelona.settings.AccountsCenterRow (SettingsScreen.kt:";
+    private static final String SETTINGS_LIST_NOTE = "com.instagram.barcelona.settings.SettingsScreen.<anonymous>";
+    /** The settings entry the HushThreads row goes above. Redex keeps an enum constant's name. */
+    private static final String MORE_ENTRY = "MORE";
 
     /** Keep duplicate definitions visible: choosing whichever dex was visited last hides corruption. */
     private static Map<String, List<Method>> featureMethods(File apk, Map<String, String> parents) throws Exception {
@@ -2017,10 +2077,14 @@ public class DexDiff {
     }
 
     private static void featureCall(List<Instruction> body, int at, String callee, int input, int output) {
+        // A hook answering a boolean hands it back with move-result, and one answering a long with
+        // move-result-wide, taking the pair from [input]; the others answer an object.
+        boolean wide = callee.endsWith(")J");
+        Opcode result = callee.endsWith(")Z") ? Opcode.MOVE_RESULT : wide ? Opcode.MOVE_RESULT_WIDE : Opcode.MOVE_RESULT_OBJECT;
         requireFeature(at >= 0 && at + 1 < body.size() && isStaticInvoke(body.get(at).getOpcode())
                 && reference(body.get(at)).equals(callee)
-                && Arrays.equals(invokeRegisters(body.get(at)), new int[]{input})
-                && body.get(at + 1).getOpcode() == Opcode.MOVE_RESULT_OBJECT
+                && Arrays.equals(invokeRegisters(body.get(at)), wide ? new int[]{input, input + 1} : new int[]{input})
+                && body.get(at + 1).getOpcode() == result
                 && ((OneRegisterInstruction) body.get(at + 1)).getRegisterA() == output,
                 "missing or miswired " + callee + " at instruction " + at);
     }
@@ -2287,6 +2351,8 @@ public class DexDiff {
         final Method method;
         final Layout layout;
         final List<List<Integer>> normal = new ArrayList<>(), exceptional = new ArrayList<>();
+        /** The handlers of every try each instruction sits in, whether or not it can throw: code a hook puts in front of it can. */
+        final List<List<Integer>> guarded = new ArrayList<>();
 
         FeatureFlow(Method method) {
             this.method = method;
@@ -2307,12 +2373,14 @@ public class DexDiff {
                         for (SwitchElement e : ((SwitchPayload) payload).getSwitchElements()) targets.add(address + e.getOffset());
                     } else targets.add(target);
                 }
-                if (i.getOpcode().canThrow()) for (TryBlock<? extends ExceptionHandler> t : method.getImplementation().getTryBlocks()) {
+                for (TryBlock<? extends ExceptionHandler> t : method.getImplementation().getTryBlocks()) {
                     if (address < t.getStartCodeAddress() || address >= t.getStartCodeAddress() + t.getCodeUnitCount()) continue;
                     for (ExceptionHandler h : t.getExceptionHandlers()) handlers.add(h.getHandlerCodeAddress());
                 }
+                List<Integer> caught = handlers.stream().map(indices::get).filter(java.util.Objects::nonNull).distinct().toList();
                 normal.add(targets.stream().map(indices::get).filter(java.util.Objects::nonNull).distinct().toList());
-                exceptional.add(handlers.stream().map(indices::get).filter(java.util.Objects::nonNull).distinct().toList());
+                exceptional.add(i.getOpcode().canThrow() ? caught : List.of());
+                guarded.add(caught);
             }
         }
 
@@ -2349,6 +2417,138 @@ public class DexDiff {
 
         boolean parsedOnEveryPath(int definition, int use, int register) {
             return sourceOnEveryPath(definition, -1, use, register, true);
+        }
+
+        /**
+         * Whether [register] holds the boolean [parameter] arrived in at [use] on every path: as it
+         * arrived, through narrow moves, or as the 0 or 1 Compose writes when a caller leaves it out.
+         */
+        boolean booleanOnEveryPath(int use, int register, int parameter) {
+            BitSet[] before = new BitSet[layout.instructions.size()];
+            before[0] = new BitSet(method.getImplementation().getRegisterCount());
+            before[0].set(parameter);
+            Deque<Integer> work = new ArrayDeque<>(List.of(0));
+            while (!work.isEmpty()) {
+                int n = work.removeFirst();
+                Instruction i = layout.instructions.get(n);
+                BitSet input = before[n], output = (BitSet) input.clone();
+                if (i.getOpcode().setsRegister()) {
+                    int destination = ((OneRegisterInstruction) i).getRegisterA();
+                    boolean copy = i.getOpcode() == Opcode.MOVE || i.getOpcode() == Opcode.MOVE_FROM16 || i.getOpcode() == Opcode.MOVE_16;
+                    boolean literal = (i.getOpcode() == Opcode.CONST_4 || i.getOpcode() == Opcode.CONST_16 || i.getOpcode() == Opcode.CONST)
+                            && (((WideLiteralInstruction) i).getWideLiteral() == 0 || ((WideLiteralInstruction) i).getWideLiteral() == 1);
+                    output.set(destination, literal || copy && input.get(((TwoRegisterInstruction) i).getRegisterB()));
+                    if (i.getOpcode().setsWideRegister()) output.clear(destination + 1);
+                }
+                for (int next : normal.get(n)) if (mergeSource(before, next, output)) work.add(next);
+                // A throwing instruction's destination is written only along its normal edge.
+                for (int next : exceptional.get(n)) if (mergeSource(before, next, input)) work.add(next);
+            }
+            return before[use] != null && before[use].get(register);
+        }
+
+        private List<List<Integer>> into, thrownInto;
+
+        /**
+         * The writes of [register] that reach the instruction at [use], -1 standing for a path from
+         * the entry that writes none. A throwing instruction writes nothing along its handler edge.
+         * It's the patches' ReachingWrites.reaching.
+         */
+        Set<Integer> reaching(int use, int register) {
+            if (into == null) {
+                into = new ArrayList<>();
+                thrownInto = new ArrayList<>();
+                for (int n = 0; n < layout.instructions.size(); n++) { into.add(new ArrayList<>()); thrownInto.add(new ArrayList<>()); }
+                for (int n = 0; n < layout.instructions.size(); n++) {
+                    for (int next : normal.get(n)) into.get(next).add(n);
+                    for (int next : exceptional.get(n)) thrownInto.get(next).add(n);
+                }
+            }
+            Set<Integer> writes = new TreeSet<>();
+            Set<List<Integer>> seen = new HashSet<>();
+            Deque<List<Integer>> work = new ArrayDeque<>();
+            java.util.function.IntConsumer before = at -> {
+                if (at == 0) writes.add(-1);
+                for (int from : into.get(at)) if (seen.add(List.of(from, 0))) work.add(List.of(from, 0));
+                for (int from : thrownInto.get(at)) if (seen.add(List.of(from, 1))) work.add(List.of(from, 1));
+            };
+            before.accept(use);
+            while (!work.isEmpty()) {
+                List<Integer> step = work.removeFirst();
+                Instruction i = layout.instructions.get(step.get(0));
+                boolean writesIt = i.getOpcode().setsRegister() && i instanceof OneRegisterInstruction
+                        && (registerA(i) == register || i.getOpcode().setsWideRegister() && registerA(i) + 1 == register);
+                if (step.get(1) == 0 && writesIt) writes.add(step.get(0)); else before.accept(step.get(0));
+            }
+            return writes;
+        }
+
+        /**
+         * The one instruction whose value [register] holds at [use] on every path, followed back
+         * through narrow moves, as {its index, the register it wrote}, or {-1, the register} for the
+         * value the method got. Null when paths disagree.
+         */
+        int[] origin(int use, int register) {
+            while (true) {
+                Set<Integer> writes = reaching(use, register);
+                if (writes.size() != 1) return null;
+                int write = writes.iterator().next();
+                if (write < 0) return new int[]{-1, register};
+                Instruction i = layout.instructions.get(write);
+                if (i.getOpcode() != Opcode.MOVE && i.getOpcode() != Opcode.MOVE_FROM16 && i.getOpcode() != Opcode.MOVE_16) return new int[]{write, register};
+                use = write;
+                register = ((TwoRegisterInstruction) i).getRegisterB();
+            }
+        }
+
+        /**
+         * The instructions that can read [register] once the one at [index] has run, before
+         * something writes it again, on every path. Reads are over-counted as Pure black dark
+         * mode's patch counts them: a named register is read unless it's the plain destination,
+         * and a wide instruction's registers count with the one above. A throwing instruction
+         * writes nothing, so its handlers see the value.
+         */
+        List<Integer> readsAfter(int index, int register) {
+            List<Integer> starts = new ArrayList<>(normal.get(index));
+            starts.addAll(exceptional.get(index));
+            return reads(starts, register, exceptional);
+        }
+
+        /**
+         * The instructions that can read [register] on a path from the one at [index], that one
+         * included, before something writes it again: empty when code put in front of it may
+         * write the register for itself. It's the patches' RegisterLiveness.liveInto, which the
+         * fixture tests hold each hook's scratch registers to: reads count as [readsAfter] counts
+         * them, and inside a try a handler's reads count before an instruction's own write even
+         * where it can't throw, since the code put in front of it can.
+         */
+        List<Integer> readsFrom(int index, int register) {
+            return reads(List.of(index), register, guarded);
+        }
+
+        /** The reads of [register] on a path from [starts] before a write, a handler in [handlers] seeing the value from before it. */
+        private List<Integer> reads(List<Integer> starts, int register, List<List<Integer>> handlers) {
+            Set<Integer> reads = new TreeSet<>();
+            BitSet seen = new BitSet();
+            Deque<Integer> work = new ArrayDeque<>();
+            for (int next : starts) if (!seen.get(next)) { seen.set(next); work.add(next); }
+            while (!work.isEmpty()) {
+                int n = work.removeFirst();
+                Instruction i = layout.instructions.get(n);
+                String name = i.getOpcode().name;
+                boolean wide = name.contains("wide") || name.contains("long") || name.contains("double");
+                boolean plainWrite = i.getOpcode().setsRegister() && !name.endsWith("/2addr") && i.getOpcode() != Opcode.CHECK_CAST;
+                List<Integer> named = namedRegisters(i);
+                for (int k = plainWrite ? 1 : 0; k < named.size(); k++) {
+                    if (named.get(k) == register || wide && named.get(k) + 1 == register) reads.add(n);
+                }
+                List<Integer> next = new ArrayList<>(handlers.get(n));
+                boolean writes = i.getOpcode().setsRegister() && i instanceof OneRegisterInstruction
+                        && (registerA(i) == register || i.getOpcode().setsWideRegister() && registerA(i) + 1 == register);
+                if (!writes) next.addAll(normal.get(n));
+                for (int k : next) if (!seen.get(k)) { seen.set(k); work.add(k); }
+            }
+            return new ArrayList<>(reads);
         }
 
         boolean sourceOnEveryPath(int definition, int parameter, int use, int register, boolean allowNull) {
@@ -2971,10 +3171,11 @@ public class DexDiff {
         }
         requireFeature(posts.size() == 1, "post link fetch stores " + posts.size() + " posts with the link");
         int post = ((TwoRegisterInstruction) body.get(posts.get(0))).getRegisterA();
+        FeatureFlow fetchFlow = new FeatureFlow(fetch);
         Map<Integer, FeatureBlock> blocks = new HashMap<>();
         for (int read : reads) {
             int value = ((OneRegisterInstruction) body.get(read + 1)).getRegisterA();
-            blocks.put(read + 2, (now, at) -> featurePostLink(clean, now, at, value, post));
+            blocks.put(read + 2, (now, at) -> featurePostLink(clean, now, at, value, post, fetchFlow, read + 2));
         }
         featureBody(fetch, featureMethod(patched, featureSig(fetch)), 0, Map.of(), POST_LINK, null, blocks);
 
@@ -2992,10 +3193,11 @@ public class DexDiff {
             int self = m.getImplementation().getRegisterCount() - m.getParameterTypes().size() - 1
                     - (int) m.getParameterTypes().stream().filter(p -> p.toString().equals("J") || p.toString().equals("D")).count();
             String held = type + "->" + postFields.get(0) + ":" + MEDIA;
+            FeatureFlow holderFlow = new FeatureFlow(m);
             Map<Integer, FeatureBlock> holderBlocks = new HashMap<>();
             for (int read : holderReads) {
                 int value = ((OneRegisterInstruction) holder.get(read + 1)).getRegisterA();
-                holderBlocks.put(read + 2, (now, at) -> featureHolderLink(clean, now, at, value, self, held));
+                holderBlocks.put(read + 2, (now, at) -> featureHolderLink(clean, now, at, value, self, held, holderFlow, read + 2));
             }
             featureBody(m, featureMethod(patched, featureSig(m)), 0, Map.of(), POST_LINK, null, holderBlocks);
             calls.put(featureSig(m), holderReads.size());
@@ -3043,9 +3245,10 @@ public class DexDiff {
                 continue;
             }
             remembers.put(featureSig(m), resumed.size());
+            FeatureFlow resumedFlow = new FeatureFlow(m);
             for (int read : stockReads) {
                 int value = registerA(stock.get(read + 1));
-                resumed.put(read + 2, (now, at) -> featureResumeLink(clean, now, at, value, key));
+                resumed.put(read + 2, (now, at) -> featureResumeLink(clean, now, at, value, key, resumedFlow, read + 2));
             }
             featureBody(m, featureMethod(patched, featureSig(m)), 0, Map.of(), POST_LINK, null, resumed);
             recalls.put(featureSig(m), stockReads.size());
@@ -3083,8 +3286,12 @@ public class DexDiff {
         return 1;
     }
 
-    /** A resumed share's hook: the post kept against [key] back out of the extension, cast to a post, then the fetch's hook with it. */
-    private static int featureResumeLink(Map<String, List<Method>> clean, List<Instruction> body, int at, int link, int key) {
+    /**
+     * A resumed share's hook in front of [stock]'s instruction [site]: the post kept against [key]
+     * back out of the extension into a free local, cast to a post, then the fetch's hook with it.
+     */
+    private static int featureResumeLink(Map<String, List<Method>> clean, List<Instruction> body, int at, int link, int key,
+            FeatureFlow stock, int site) {
         requireFeature(at + 3 <= body.size() && isStaticInvoke(body.get(at).getOpcode()) && reference(body.get(at)).equals(REMEMBERED_POST)
                 && Arrays.equals(invokeRegisters(body.get(at)), new int[]{key}) && body.get(at + 1).getOpcode() == Opcode.MOVE_RESULT_OBJECT,
                 "missing or miswired " + REMEMBERED_POST + " at instruction " + at);
@@ -3092,7 +3299,24 @@ public class DexDiff {
         requireFeature(post != key && post != link && body.get(at + 2).getOpcode() == Opcode.CHECK_CAST
                 && registerA(body.get(at + 2)) == post && reference(body.get(at + 2)).equals(MEDIA),
                 "resumed link hook doesn't cast the post it got back at " + (at + 2));
-        return 3 + featurePostLink(clean, body, at + 3, link, post);
+        featureScratch(stock, site, "resumed link hook at instruction " + at, post);
+        return 3 + featurePostLink(clean, body, at + 3, link, post, stock, site);
+    }
+
+    /**
+     * Throws naming [hook] unless each of [scratch], registers a hook in front of [stock]'s
+     * instruction [site] writes for itself, is one nothing reads from there on before writing it,
+     * a handler of a try the site sits in included. Every path out of the hook goes to the site or
+     * those handlers: featureBody holds branches to the site to the hook's first instruction and
+     * relocates each try range around it. A register still read there would be swapped for the
+     * hook's own value without a word; the method verifies all the same when the kinds agree.
+     */
+    private static void featureScratch(FeatureFlow stock, int site, String hook, int... scratch) {
+        for (int register : scratch) {
+            List<Integer> reads = stock.readsFrom(site, register);
+            requireFeature(reads.isEmpty(), hook + " writes v" + register + ", which " + featureSig(stock.method)
+                    + " reads from its instruction " + site + " on, at " + reads);
+        }
     }
 
     /** The reads of the permalink in [body]: a call to one of [getters] on [owners], and its result. */
@@ -3109,8 +3333,12 @@ public class DexDiff {
         return reads;
     }
 
-    /** A holder's hook: this into a free local, the post out of the holder's post field, then the fetch's hook with that post. */
-    private static int featureHolderLink(Map<String, List<Method>> clean, List<Instruction> body, int at, int link, int self, String post) {
+    /**
+     * A holder's hook in front of [stock]'s instruction [site]: this into a free local, the post out
+     * of the holder's post field, then the fetch's hook with that post.
+     */
+    private static int featureHolderLink(Map<String, List<Method>> clean, List<Instruction> body, int at, int link, int self, String post,
+            FeatureFlow stock, int site) {
         requireFeature(at + 2 <= body.size() && body.get(at).getOpcode() == Opcode.MOVE_OBJECT_FROM16
                 && body.get(at + 1).getOpcode() == Opcode.IGET_OBJECT, "holder link hook doesn't load its post at " + at);
         TwoRegisterInstruction copy = (TwoRegisterInstruction) body.get(at), load = (TwoRegisterInstruction) body.get(at + 1);
@@ -3118,15 +3346,18 @@ public class DexDiff {
         requireFeature(copy.getRegisterB() == self && media < self, "holder link hook reads its post through another register than this");
         requireFeature(load.getRegisterA() == media && load.getRegisterB() == media && reference(body.get(at + 1)).equals(post),
                 "holder link hook reads another field than " + post);
-        return 2 + featurePostLink(clean, body, at + 2, link, media);
+        featureScratch(stock, site, "holder link hook at instruction " + at, media);
+        return 2 + featurePostLink(clean, body, at + 2, link, media, stock, site);
     }
 
     /**
-     * The hook after one link read: null code and name, the post's code and its author's username
-     * when there is a post and an author, then the extension with the link, the name and the code,
-     * its answer replacing the link.
+     * The hook after one link read, in front of [stock]'s instruction [site]: null code and name,
+     * the post's code and its author's username when there is a post and an author, then the
+     * extension with the link, the name and the code, its answer replacing the link. The code and
+     * the name go in registers nothing reads from the site on.
      */
-    private static int featurePostLink(Map<String, List<Method>> clean, List<Instruction> body, int at, int link, int post) {
+    private static int featurePostLink(Map<String, List<Method>> clean, List<Instruction> body, int at, int link, int post,
+            FeatureFlow stock, int site) {
         Opcode[] shape = {Opcode.CONST_4, Opcode.CONST_4, Opcode.IF_EQZ, Opcode.INVOKE_VIRTUAL, Opcode.MOVE_RESULT_OBJECT,
                 Opcode.INVOKE_VIRTUAL, Opcode.MOVE_RESULT_OBJECT, Opcode.IF_EQZ, Opcode.INVOKE_VIRTUAL, Opcode.MOVE_RESULT_OBJECT,
                 Opcode.INVOKE_STATIC, Opcode.MOVE_RESULT_OBJECT};
@@ -3146,6 +3377,7 @@ public class DexDiff {
                 && readsField(clean, body.get(at + 8), USER, "Ljava/lang/String;", "username"), "post link hook reads another user field than username");
         requireFeature(reference(body.get(at + 10)).equals(POST_LINK) && Arrays.equals(invokeRegisters(body.get(at + 10)), new int[]{link, name, code})
                 && registerA(body.get(at + 11)) == link, "missing or miswired " + POST_LINK + " at instruction " + (at + 10));
+        featureScratch(stock, site, "post link hook at instruction " + at, code, name);
         return shape.length;
     }
 
@@ -3240,6 +3472,14 @@ public class DexDiff {
                 && ((TwoRegisterInstruction) body.get(0)).getRegisterB() == self
                 && ((TwoRegisterInstruction) body.get(1)).getRegisterA() == 0 && ((TwoRegisterInstruction) body.get(1)).getRegisterB() == 0,
                 "signature wrapper uses the wrong PackageInfo receiver");
+        // The prefix writes v0 (the receiver copy, the PackageInfo, the result), v1 (the signers) and v2 (the false flag)
+        // before the stock body runs. Each has to be a local, below the register `this` and the parameters start at.
+        int locals = actual.getImplementation().getRegisterCount() - 1 - actual.getParameterTypes().stream().mapToInt(DexDiff::slots).sum();
+        for (int k : new int[]{0, 1, 3, 5, 6}) {
+            int written = ((OneRegisterInstruction) body.get(k)).getRegisterA();
+            requireFeature(written < locals, "signature wrapper writes v" + written + ", which is " + (written == locals ? "this" : "a parameter")
+                    + " and not one of the method's " + locals + (locals == 1 ? " local" : " locals"));
+        }
         featureCall(body, 2, SIGNERS, 0, 1);
         requireFeature(((OneRegisterInstruction) body.get(4)).getRegisterA() == 1
                 && ((OneRegisterInstruction) body.get(5)).getRegisterA() == 0 && reference(body.get(5)).equals(stock.getReturnType())
@@ -3309,6 +3549,787 @@ public class DexDiff {
         return register;
     }
 
+    /** Where one of Threads' return checks makes its boolean answer: the stock method, the instruction the hook goes in front of, and the answer's register. */
+    private static final class ReturnSite {
+        final Method stock;
+        final int at;
+        final int register;
+
+        ReturnSite(Method stock, int at, int register) {
+            this.stock = stock;
+            this.at = at;
+            this.register = register;
+        }
+    }
+
+    /**
+     * Block background-return feed refresh: each of Threads' four return checks asks the extension
+     * once, where its answer is made. The hot-start decision asks first thing and answers null when
+     * the feed is held. The reset to main feed, the warm-start check and For you's swap hand their
+     * own answer to the extension right before it's returned, stored or joined, so every path to
+     * that answer goes through the hook.
+     */
+    private static void featureReturnRefresh(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        for (Map.Entry<String, ReturnSite> e : featureReturnSites(clean).entrySet()) {
+            ReturnSite site = e.getValue();
+            featureBody(site.stock, featureMethod(patched, featureSig(site.stock)), 0, Map.of(site.at, site.register), e.getKey());
+            featureHostCalls(patched, e.getKey(), Map.of(featureSig(site.stock), 1));
+        }
+        Method stock = featureHotStartDecision(clean);
+        Method actual = featureMethod(patched, featureSig(stock));
+        List<Instruction> body = instructions(actual);
+        int locals = stock.getImplementation().getRegisterCount() - stock.getParameterTypes().stream().mapToInt(DexDiff::slots).sum();
+        requireFeature(AccessFlags.STATIC.isSet(stock.getAccessFlags()) && body.size() > 5 && isStaticInvoke(body.get(0).getOpcode())
+                && reference(body.get(0)).equals(HOLD_HOT_START) && invokeRegisters(body.get(0)).length == 0
+                && body.get(1).getOpcode() == Opcode.MOVE_RESULT && body.get(2).getOpcode() == Opcode.IF_EQZ
+                && featureLiteral(body.get(3), 0) && body.get(4).getOpcode() == Opcode.RETURN_OBJECT,
+                "hot-start decision hook is missing");
+        int held = ((OneRegisterInstruction) body.get(1)).getRegisterA();
+        requireFeature(held < locals && ((OneRegisterInstruction) body.get(2)).getRegisterA() == held
+                && ((OneRegisterInstruction) body.get(3)).getRegisterA() == held
+                && ((OneRegisterInstruction) body.get(4)).getRegisterA() == held, "hot-start decision hook uses the wrong register");
+        Layout layout = new Layout(actual.getImplementation());
+        requireFeature(layout.addresses.get(2) + ((OffsetInstruction) body.get(2)).getCodeOffset() == layout.addresses.get(5),
+                "a return the extension doesn't hold doesn't fall through to the hot-start decision");
+        featureBody(stock, actual, 5, Map.of(), HOLD_HOT_START);
+        featureHostCalls(patched, HOLD_HOT_START, Map.of(featureSig(stock), 1));
+    }
+
+    /** The three return checks that hand the extension their own answer, by the call each one makes. */
+    private static Map<String, ReturnSite> featureReturnSites(Map<String, List<Method>> clean) {
+        Map<String, ReturnSite> sites = new LinkedHashMap<>();
+        Method warm = featureTarget(clean, m -> !m.getParameterTypes().isEmpty()
+                && m.getParameterTypes().get(m.getParameterTypes().size() - 1).toString().equals("Z")
+                && holds(m, TOO_SHORT, WALL_CLOCK), "warm-start check");
+        sites.put(WARM_START, featureWarmStore(warm));
+        Method reset = featureTarget(clean, m -> m.getDefiningClass().equals(BARCELONA_ACTIVITY) && m.getReturnType().equals("Z")
+                && holds(m, RESET_TO_MAIN_FEED, RESET_TO_HOME_FEED), "reset to main feed");
+        List<Instruction> body = instructions(reset);
+        int answer = featureOne(java.util.stream.IntStream.range(0, body.size()).boxed()
+                .filter(k -> body.get(k).getOpcode() == Opcode.RETURN).toList(), "reset to main feed's return");
+        sites.put(RESET_TO_FEED, new ReturnSite(reset, answer, ((OneRegisterInstruction) body.get(answer)).getRegisterA()));
+        // For you's swap compares the time away once more, in the warm-start check's class.
+        List<ReturnSite> swaps = new ArrayList<>();
+        for (List<Method> definitions : clean.values()) for (Method m : definitions) {
+            if (m.getDefiningClass().equals(warm.getDefiningClass())) swaps.addAll(featureSwaps(m));
+        }
+        sites.put(CACHED_POSTS, featureOne(swaps, "For you's swap to posts fetched in the background"));
+        return sites;
+    }
+
+    /**
+     * The warm-start check's store of its refresh answer. A cmp-long of the time away with the
+     * threshold, then an if-ltz that sends a short time to the TOO_SHORT log, which runs straight
+     * from the branch's target. The const/4 1 right after the if-ltz is the answer, and the first
+     * iput-boolean of its register after that stores it into the decision Threads hands back.
+     */
+    private static ReturnSite featureWarmStore(Method warm) {
+        Layout layout = new Layout(warm.getImplementation());
+        List<Instruction> body = layout.instructions;
+        int logged = featureOne(java.util.stream.IntStream.range(0, body.size()).boxed()
+                .filter(k -> reference(body.get(k)).equals(TOO_SHORT)).toList(), "warm-start check's short log");
+        int branch = featureOne(java.util.stream.IntStream.range(1, body.size()).boxed().filter(k -> {
+            if (body.get(k).getOpcode() != Opcode.IF_LTZ || body.get(k - 1).getOpcode() != Opcode.CMP_LONG
+                    || ((OneRegisterInstruction) body.get(k)).getRegisterA() != ((OneRegisterInstruction) body.get(k - 1)).getRegisterA()) return false;
+            int target = layout.addresses.indexOf(layout.addresses.get(k) + ((OffsetInstruction) body.get(k)).getCodeOffset());
+            if (target < 0 || target > logged) return false;
+            for (int n = target; n < logged; n++) if (body.get(n) instanceof OffsetInstruction || !body.get(n).getOpcode().canContinue()) return false;
+            return true;
+        }).toList(), "warm-start threshold comparison");
+        requireFeature(featureLiteral(body.get(branch + 1), 1), "warm-start check sets no true answer past its threshold");
+        int register = ((OneRegisterInstruction) body.get(branch + 1)).getRegisterA();
+        for (int k = branch + 2; k < body.size(); k++) {
+            if (body.get(k).getOpcode() == Opcode.IPUT_BOOLEAN && ((TwoRegisterInstruction) body.get(k)).getRegisterA() == register) {
+                return new ReturnSite(warm, k, register);
+            }
+        }
+        throw new IllegalArgumentException("warm-start answer v" + register + " is never stored");
+    }
+
+    /**
+     * For you's swaps to the posts it fetched in the background in [m]: a cmp-long, a const/4 true,
+     * an if-gez on the comparison over a const/4 false into the join, and an if-eqz on that answer
+     * within six instructions of the join, which guards the swap. The hook goes in at the join.
+     */
+    private static List<ReturnSite> featureSwaps(Method m) {
+        List<ReturnSite> sites = new ArrayList<>();
+        if (m.getImplementation() == null) return sites;
+        Layout layout = new Layout(m.getImplementation());
+        List<Instruction> body = layout.instructions;
+        for (int zero = 3; zero + 1 < body.size(); zero++) {
+            int branch = zero - 1, compare = zero - 3, join = zero + 1;
+            if (!featureLiteral(body.get(zero), 0) || !featureLiteral(body.get(zero - 2), 1)
+                    || body.get(branch).getOpcode() != Opcode.IF_GEZ || body.get(compare).getOpcode() != Opcode.CMP_LONG) continue;
+            int answer = ((OneRegisterInstruction) body.get(zero)).getRegisterA();
+            if (((OneRegisterInstruction) body.get(zero - 2)).getRegisterA() != answer
+                    || ((OneRegisterInstruction) body.get(branch)).getRegisterA() != ((OneRegisterInstruction) body.get(compare)).getRegisterA()
+                    || layout.addresses.get(branch) + ((OffsetInstruction) body.get(branch)).getCodeOffset() != layout.addresses.get(join)) continue;
+            for (int k = join; k < Math.min(body.size(), join + 6); k++) {
+                if (body.get(k).getOpcode() == Opcode.IF_EQZ && ((OneRegisterInstruction) body.get(k)).getRegisterA() == answer) {
+                    sites.add(new ReturnSite(m, join, answer));
+                    break;
+                }
+            }
+        }
+        return sites;
+    }
+
+    /**
+     * The hot-start decision. It has no string of its own: BarcelonaActivity's handler of it is the
+     * one method there holding badge_decision, and onStart makes it with one static call answering
+     * the handler's parameter type, from a helper, the last surface and two times.
+     */
+    private static Method featureHotStartDecision(Map<String, List<Method>> clean) {
+        Method handler = featureTarget(clean, m -> m.getDefiningClass().equals(BARCELONA_ACTIVITY) && m.getReturnType().equals("V")
+                && m.getParameterTypes().size() == 1 && holds(m, BADGE_DECISION), "hot-start handler");
+        String decision = handler.getParameterTypes().get(0).toString();
+        Method onStart = featureTarget(clean, m -> m.getDefiningClass().equals(BARCELONA_ACTIVITY) && m.getName().equals("onStart")
+                && m.getParameterTypes().isEmpty(), "BarcelonaActivity.onStart");
+        String call = featureOne(instructions(onStart).stream().filter(i -> isStaticInvoke(i.getOpcode()))
+                .map(i -> (MethodReference) ((ReferenceInstruction) i).getReference())
+                .filter(r -> r.getReturnType().equals(decision) && r.getParameterTypes().size() == 4
+                        && r.getParameterTypes().get(0).toString().startsWith("L")
+                        && r.getParameterTypes().get(1).toString().equals("Ljava/lang/String;")
+                        && r.getParameterTypes().get(2).toString().equals("J") && r.getParameterTypes().get(3).toString().equals("J"))
+                .map(DexDiff::featureSig).distinct().toList(), "onStart's hot-start decision");
+        return featureMethod(clean, call);
+    }
+
+    private static boolean featureLiteral(Instruction i, long value) {
+        return i.getOpcode() == Opcode.CONST_4 && ((WideLiteralInstruction) i).getWideLiteral() == value;
+    }
+
+    /**
+     * Where Disable video autoplay hooks: PostVideo, its playback effect, its play flag, each feed
+     * post, Instagram post, trend preview and ad card method's calls to PostVideo with their play
+     * flag's register, and the viewer's methods that call PostVideo.
+     */
+    private record VideoSites(Method postVideo, Method effect, PlayFlag flag, Map<Method, Map<Integer, Integer>> calls, List<Method> viewers) {}
+
+    /** PostVideo's play flag: the [parameter] it plays by, and the [test] of the register holding it. */
+    private record PlayFlag(int parameter, int test) {}
+
+    /** PostVideo's default for its play flag: a caller that sets [bit] of its [mask] parameter gets [value] instead of the flag it hands over. */
+    private record PlayDefault(int mask, long bit, long value) {}
+
+    /**
+     * Disable video autoplay: every call a feed post, an Instagram post shown in a thread, a trend
+     * preview or an ad card makes to PostVideo asks the extension first about the flag it hands
+     * PostVideo as whether to play, on that flag's own register, with every branch to the call
+     * landing on the hook. A call whose default mask, one constant, leaves the flag to PostVideo's
+     * default, as the trend preview and the ad card do on 450, would have PostVideo ignore that
+     * register, so it first gets the mask without the flag's bit and the default's value in the
+     * flag's register, and nothing may read either after the call. PostVideo, its playback effect
+     * and the full-screen viewer keep their stock bodies, so the viewer plays as it always has.
+     */
+    private static void featureVideoAutoplay(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        VideoSites sites = featureVideoSites(clean);
+        List<Method> stock = new ArrayList<>(List.of(sites.postVideo(), sites.effect()));
+        stock.addAll(sites.viewers());
+        for (Method m : stock) featureBody(m, featureMethod(patched, featureSig(m)), 0, Map.of(), HOLD_VIDEO);
+        PlayDefault fallback = featurePlayDefault(sites.postVideo(), sites.flag());
+        int maskOffset = 0;
+        if (fallback != null) for (int p = 0; p < fallback.mask(); p++) maskOffset += slots(sites.postVideo().getParameterTypes().get(p));
+        Map<String, Integer> calls = new TreeMap<>();
+        for (Map.Entry<Method, Map<Integer, Integer>> e : sites.calls().entrySet()) {
+            Method caller = e.getKey();
+            List<Instruction> body = instructions(caller);
+            FeatureFlow flow = new FeatureFlow(caller);
+            Map<Integer, Integer> asked = new TreeMap<>();
+            Map<Integer, FeatureBlock> defaulted = new HashMap<>();
+            for (Map.Entry<Integer, Integer> call : e.getValue().entrySet()) {
+                int k = call.getKey(), play = call.getValue();
+                if (fallback == null) { asked.put(k, play); continue; }
+                int mask = invokeRegisters(body.get(k))[maskOffset];
+                int[] origin = flow.origin(k, mask);
+                requireFeature(origin != null && origin[0] >= 0 && featureConstant(body.get(origin[0])),
+                        featureSig(caller) + " hands PostVideo a default mask in v" + mask + " at instruction " + k + " that isn't one constant");
+                long value = ((WideLiteralInstruction) body.get(origin[0])).getWideLiteral();
+                if ((value & fallback.bit()) == 0) { asked.put(k, play); continue; }
+                for (int written : new int[]{mask, play}) {
+                    List<Integer> reads = flow.readsAfter(k, written);
+                    requireFeature(reads.isEmpty(), "the default flag's hook at instruction " + k + " writes v" + written + ", which "
+                            + featureSig(caller) + " reads after PostVideo, at " + reads);
+                }
+                defaulted.put(k, featureDefaultedFlag(mask, value & ~fallback.bit(), play, fallback.value()));
+            }
+            featureBody(caller, featureMethod(patched, featureSig(caller)), 0, asked, HOLD_VIDEO, null, defaulted);
+            calls.put(featureSig(caller), e.getValue().size());
+        }
+        featureHostCalls(patched, HOLD_VIDEO, calls);
+    }
+
+    /** A defaulted call's hook: [mask] in its mask's register, [value] in the flag's, then the question on the flag. */
+    private static FeatureBlock featureDefaultedFlag(int maskRegister, long mask, int play, long value) {
+        return (body, at) -> {
+            requireFeature(at + 1 < body.size() && featureConstant(body.get(at)) && registerA(body.get(at)) == maskRegister
+                    && ((WideLiteralInstruction) body.get(at)).getWideLiteral() == mask,
+                    "missing or miswired default mask " + mask + " in v" + maskRegister + " at instruction " + at);
+            requireFeature(featureConstant(body.get(at + 1)) && registerA(body.get(at + 1)) == play
+                    && ((WideLiteralInstruction) body.get(at + 1)).getWideLiteral() == value,
+                    "missing or miswired default flag " + value + " in v" + play + " at instruction " + (at + 1));
+            featureCall(body, at + 2, HOLD_VIDEO, play, play);
+            return 4;
+        };
+    }
+
+    /** Whether [i] loads an int constant. */
+    private static boolean featureConstant(Instruction i) {
+        Opcode opcode = i.getOpcode();
+        return opcode == Opcode.CONST_4 || opcode == Opcode.CONST_16 || opcode == Opcode.CONST || opcode == Opcode.CONST_HIGH16;
+    }
+
+    /**
+     * PostVideo and its playback effect, each the one method holding its note, every call to
+     * PostVideo from a method holding a feed post's, an Instagram post's, a trend preview's or an
+     * ad card's note, by the register its play flag goes in, and the viewer's methods that call
+     * PostVideo. Each of the five notes and the viewer's has to hold at least one.
+     */
+    private static VideoSites featureVideoSites(Map<String, List<Method>> clean) {
+        Method effect = featureTarget(clean, m -> holdsNote(m, PLAYBACK_EFFECT_NOTE), "video playback effect");
+        Method postVideo = featureTarget(clean, m -> holdsNote(m, POST_VIDEO_NOTE), "PostVideo");
+        requireFeature(AccessFlags.STATIC.isSet(postVideo.getAccessFlags()) && AccessFlags.STATIC.isSet(effect.getAccessFlags()),
+                "PostVideo or its playback effect isn't static");
+        PlayFlag flag = featurePlayFlag(postVideo, effect);
+        int offset = 0;
+        for (int p = 0; p < flag.parameter(); p++) offset += slots(postVideo.getParameterTypes().get(p));
+        String target = featureSig(postVideo);
+        Map<Method, Map<Integer, Integer>> calls = new LinkedHashMap<>();
+        List<String> notes = new ArrayList<>(FEED_POST_NOTES);
+        notes.addAll(EMBED_NOTES);
+        for (String note : notes) {
+            int found = 0;
+            for (List<Method> definitions : clean.values()) for (Method m : definitions) {
+                if (!holdsNote(m, note)) continue;
+                List<Instruction> body = instructions(m);
+                for (int k = 0; k < body.size(); k++) {
+                    if (!isStaticInvoke(body.get(k).getOpcode()) || !reference(body.get(k)).equals(target)) continue;
+                    calls.computeIfAbsent(m, unused -> new TreeMap<>()).put(k, invokeRegisters(body.get(k))[offset]);
+                    found++;
+                }
+            }
+            requireFeature(found > 0, "no call to PostVideo holds \"" + note + "\"");
+        }
+        List<Method> viewers = new ArrayList<>();
+        for (List<Method> definitions : clean.values()) for (Method m : definitions) {
+            if (holdsNote(m, MEDIA_VIEWER_NOTE) && !callSites(instructions(m), target).isEmpty()) viewers.add(m);
+        }
+        requireFeature(!viewers.isEmpty(), "no call to PostVideo holds \"" + MEDIA_VIEWER_NOTE + "\"");
+        return new VideoSites(postVideo, effect, flag, calls, viewers);
+    }
+
+    /**
+     * PostVideo's default for its play flag: the 0 or 1 it writes into the register it tests, right
+     * behind an if-eqz that jumps over it unless one bit of an int parameter, the caller's default
+     * mask, is set. Null when PostVideo has no default for the flag, so every caller hands its own.
+     */
+    private static PlayDefault featurePlayDefault(Method postVideo, PlayFlag flag) {
+        List<Instruction> body = instructions(postVideo);
+        FeatureFlow flow = new FeatureFlow(postVideo);
+        List<Integer> literals = flow.reaching(flag.test(), registerA(body.get(flag.test()))).stream()
+                .filter(k -> k >= 0 && body.get(k) instanceof NarrowLiteralInstruction).toList();
+        if (literals.isEmpty()) return null;
+        int write = featureOne(literals, "PostVideo's default for its play flag");
+        requireFeature(write > 0 && body.get(write - 1).getOpcode() == Opcode.IF_EQZ && lands(body, write - 1) == write + 1,
+                "PostVideo's default for its play flag isn't behind a test of its default mask");
+        int[] tests = flow.origin(write - 1, registerA(body.get(write - 1)));
+        Instruction and = tests == null || tests[0] < 0 ? null : body.get(tests[0]);
+        requireFeature(and != null && (and.getOpcode() == Opcode.AND_INT_LIT16 || and.getOpcode() == Opcode.AND_INT_LIT8)
+                && Long.bitCount(((WideLiteralInstruction) and).getWideLiteral()) == 1,
+                "PostVideo's default for its play flag isn't behind one bit of its default mask");
+        int[] mask = flow.origin(tests[0], ((TwoRegisterInstruction) and).getRegisterB());
+        int parameter = -1;
+        if (mask != null && mask[0] < 0) {
+            int at = postVideo.getImplementation().getRegisterCount() - postVideo.getParameterTypes().stream().mapToInt(DexDiff::slots).sum();
+            for (int p = 0; p < postVideo.getParameterTypes().size(); p++) {
+                if (at == mask[1] && postVideo.getParameterTypes().get(p).toString().equals("I")) parameter = p;
+                at += slots(postVideo.getParameterTypes().get(p));
+            }
+        }
+        requireFeature(parameter >= 0, "PostVideo's default mask isn't one of its int parameters");
+        return new PlayDefault(parameter, ((WideLiteralInstruction) and).getWideLiteral(), ((WideLiteralInstruction) body.get(write)).getWideLiteral());
+    }
+
+    /**
+     * Which of PostVideo's parameters says whether its video plays: the boolean it tests last before
+     * its one call to the playback effect, on a branch whose false side writes a 0 as the effect's
+     * play argument, the effect's first boolean. The tested register has to hold that one boolean on
+     * every path. It's the fourth boolean on 450.
+     */
+    private static PlayFlag featurePlayFlag(Method postVideo, Method effect) {
+        List<Instruction> body = instructions(postVideo);
+        String effectSig = featureSig(effect);
+        int call = featureOne(java.util.stream.IntStream.range(0, body.size()).boxed()
+                .filter(k -> isStaticInvoke(body.get(k).getOpcode()) && reference(body.get(k)).equals(effectSig)).toList(),
+                "PostVideo's call to the playback effect");
+        List<String> types = effect.getParameterTypes().stream().map(CharSequence::toString).toList();
+        int first = types.indexOf("Z"), offset = 0;
+        requireFeature(first >= 0, "the video playback effect takes no boolean");
+        for (int p = 0; p < first; p++) offset += slots(types.get(p));
+        int argument = invokeRegisters(body.get(call))[offset];
+        FeatureFlow flow = new FeatureFlow(postVideo);
+        for (int k = call - 1; k >= 0; k--) {
+            Opcode opcode = body.get(k).getOpcode();
+            if (opcode != Opcode.IF_EQZ && opcode != Opcode.IF_NEZ) continue;
+            int side = opcode == Opcode.IF_NEZ ? k + 1 : lands(body, k);
+            if (side <= k || side >= call || !(body.get(side) instanceof WideLiteralInstruction) || !body.get(side).getOpcode().setsRegister()
+                    || registerA(body.get(side)) != argument || ((WideLiteralInstruction) body.get(side)).getWideLiteral() != 0) continue;
+            List<Integer> held = featureBooleans(postVideo, flow, k, registerA(body.get(k)));
+            if (held.size() == 1) return new PlayFlag(held.get(0), k);
+        }
+        throw new IllegalArgumentException("PostVideo never tests one of its booleans before the playback effect");
+    }
+
+    /** The boolean parameters of static [method] that [register] holds at [use] on every path. */
+    private static List<Integer> featureBooleans(Method method, FeatureFlow flow, int use, int register) {
+        List<Integer> held = new ArrayList<>();
+        int at = method.getImplementation().getRegisterCount() - method.getParameterTypes().stream().mapToInt(DexDiff::slots).sum();
+        for (int p = 0; p < method.getParameterTypes().size(); p++) {
+            if (method.getParameterTypes().get(p).toString().equals("Z") && flow.booleanOnEveryPath(use, register, at)) held.add(p);
+            at += slots(method.getParameterTypes().get(p));
+        }
+        return held;
+    }
+
+    /** Whether [m] loads a string starting with [note], as Compose's source notes, which end in a line number, are matched. */
+    private static boolean holdsNote(Method m, String note) {
+        for (Instruction i : instructions(m)) if (i instanceof ReferenceInstruction && ((ReferenceInstruction) i).getReference() instanceof StringReference
+                && ((StringReference) ((ReferenceInstruction) i).getReference()).getString().startsWith(note)) return true;
+        return false;
+    }
+
+    /**
+     * Where Pure black dark mode hooks: the #101010 loads of Threads' theme and of each helper it
+     * builds its colors in, by method, and the dark color scheme's constructor call in its holder's
+     * static initializer, with the registers of the scheme's #101010 backgrounds.
+     */
+    private record PureBlackSites(Map<Method, List<Integer>> builders, Method initializer, int call, List<Integer> backgrounds) {}
+
+    /** One build of a color scheme: its constructor call, the field it's stored in, and each color it passes, as far as literals tell, with its register. */
+    private record SchemeBuild(int call, String field, List<Long> colors, List<Integer> registers) {
+        /** How light its opaque colors are on average: a dark scheme's are darker. */
+        double lightness() {
+            return colors.stream().filter(java.util.Objects::nonNull).map(c -> c >>> 32).filter(c -> c >>> 24 == 0xffL)
+                    .mapToDouble(c -> 0.2126 * (c >> 16 & 0xff) + 0.7152 * (c >> 8 & 0xff) + 0.0722 * (c & 0xff)).average().orElse(Double.NaN);
+        }
+    }
+
+    /**
+     * Pure black dark mode: every place Threads' theme, or a helper it builds its colors in, loads
+     * #101010 hands it to PureBlack.argb right after, on that register, and the dark color scheme's
+     * #101010 backgrounds each go through PureBlack.color right before its constructor call. The
+     * rest of those methods, the light scheme's build among them, stays as Threads wrote it, and
+     * those are the only host calls.
+     */
+    private static void featurePureBlack(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        PureBlackSites sites = featurePureBlackSites(clean);
+        Map<String, Integer> loads = new TreeMap<>();
+        for (Map.Entry<Method, List<Integer>> e : sites.builders().entrySet()) {
+            List<Instruction> body = instructions(e.getKey());
+            Map<Integer, Integer> hooks = new TreeMap<>();
+            for (int load : e.getValue()) hooks.put(load + 1, registerA(body.get(load)));
+            featureBody(e.getKey(), featureMethod(patched, featureSig(e.getKey())), 0, hooks, PURE_ARGB);
+            if (!hooks.isEmpty()) loads.put(featureSig(e.getKey()), hooks.size());
+        }
+        featureHostCalls(patched, PURE_ARGB, loads);
+        // Each background asked once, in any order, with nothing between the questions and the call.
+        FeatureBlock backgrounds = (body, at) -> {
+            Set<Integer> left = new TreeSet<>(sites.backgrounds());
+            for (int n = 0; n < sites.backgrounds().size(); n++) {
+                int hook = at + 2 * n;
+                int[] registers = hook < body.size() && isStaticInvoke(body.get(hook).getOpcode()) ? invokeRegisters(body.get(hook)) : new int[0];
+                requireFeature(registers.length > 0 && left.remove(registers[0]), "the dark scheme's backgrounds " + left
+                        + " don't each ask " + PURE_COLOR + " right before its constructor, at instruction " + hook);
+                featureCall(body, hook, PURE_COLOR, registers[0], registers[0]);
+            }
+            return 2 * sites.backgrounds().size();
+        };
+        featureBody(sites.initializer(), featureMethod(patched, featureSig(sites.initializer())), 0, Map.of(), PURE_COLOR, null,
+                Map.of(sites.call(), backgrounds));
+        featureHostCalls(patched, PURE_COLOR, Map.of(featureSig(sites.initializer()), sites.backgrounds().size()));
+    }
+
+    /**
+     * Threads' theme, the one method holding its note, and the static calls it makes answering a
+     * type it builds itself, with each one's #101010 loads; 450 loads it in one of those helpers,
+     * not in the theme. Then the dark scheme: the theme reads a dark and a light one from two static
+     * fields of one class, whose static initializer builds each once, straight through. The darker
+     * is the dark one, and its backgrounds are the colors it passes as #101010 where the light one
+     * passes white. None of them may be read again once the dark scheme is built, or the light one
+     * would get the black too.
+     */
+    private static PureBlackSites featurePureBlackSites(Map<String, List<Method>> clean) {
+        Method theme = featureTarget(clean, m -> holdsNote(m, BDS_THEME_NOTE), "Threads' theme");
+        List<Instruction> body = instructions(theme);
+        Set<String> built = new HashSet<>();
+        for (Instruction i : body) if (i.getOpcode() == Opcode.NEW_INSTANCE) built.add(reference(i));
+        Map<Method, List<Integer>> builders = new LinkedHashMap<>();
+        builders.put(theme, featureDarkLoads(theme));
+        for (Instruction i : body) {
+            if (!isStaticInvoke(i.getOpcode())) continue;
+            MethodReference helper = (MethodReference) ((ReferenceInstruction) i).getReference();
+            if (!built.contains(helper.getReturnType()) || !clean.containsKey(featureSig(helper))) continue;
+            Method m = featureMethod(clean, featureSig(helper));
+            if (!builders.containsKey(m)) builders.put(m, featureDarkLoads(m));
+        }
+        requireFeature(builders.values().stream().anyMatch(loads -> !loads.isEmpty()), "Threads' theme no longer loads #101010");
+
+        Set<String> schemes = new HashSet<>();
+        for (List<Method> definitions : clean.values()) for (Method m : definitions) {
+            if (m.getName().equals("<init>") && m.getParameterTypes().size() >= SCHEME_COLORS
+                    && m.getParameterTypes().stream().allMatch(p -> p.toString().equals("J"))) schemes.add(m.getDefiningClass());
+        }
+        Map<String, Set<String>> read = new LinkedHashMap<>();
+        for (Instruction i : body) if (i.getOpcode() == Opcode.SGET_OBJECT) {
+            FieldReference f = (FieldReference) ((ReferenceInstruction) i).getReference();
+            if (schemes.contains(f.getType())) read.computeIfAbsent(f.getDefiningClass() + " " + f.getType(), k -> new TreeSet<>()).add(f.getName());
+        }
+        String pair = featureOne(read.entrySet().stream().filter(e -> e.getValue().size() == 2).map(Map.Entry::getKey).toList(),
+                "the class holding Threads' dark and light color schemes");
+        String holder = pair.substring(0, pair.indexOf(' ')), type = pair.substring(pair.indexOf(' ') + 1);
+        Method initializer = featureMethod(clean, holder + "-><clinit>()V");
+        List<Instruction> init = instructions(initializer);
+        requireFeature(init.stream().noneMatch(i -> i instanceof OffsetInstruction && i.getOpcode() != Opcode.FILL_ARRAY_DATA),
+                holder + " branches while it builds its color schemes");
+        List<SchemeBuild> builds = featureSchemeBuilds(init, type).stream().filter(b -> read.get(pair).contains(b.field())).toList();
+        requireFeature(builds.size() == 2, holder + " builds " + builds.size() + " of the color schemes Threads' theme reads, not a dark and a light one");
+        boolean firstDark = Double.compare(builds.get(0).lightness(), builds.get(1).lightness()) <= 0;
+        SchemeBuild dark = builds.get(firstDark ? 0 : 1), light = builds.get(firstDark ? 1 : 0);
+        List<Integer> backgrounds = new ArrayList<>();
+        for (int p = 0; p < dark.colors().size(); p++) {
+            if (Long.valueOf(THREADS_DARK << 32).equals(dark.colors().get(p)) && Long.valueOf(THREADS_WHITE << 32).equals(light.colors().get(p))) {
+                backgrounds.add(dark.registers().get(p));
+            }
+        }
+        requireFeature(!backgrounds.isEmpty(), "Threads' dark color scheme has no #101010 where its light one has white");
+        FeatureFlow flow = new FeatureFlow(initializer);
+        for (int register : backgrounds) {
+            List<Integer> later = new ArrayList<>(flow.readsAfter(dark.call(), register));
+            later.addAll(flow.readsAfter(dark.call(), register + 1));
+            requireFeature(later.isEmpty(), holder + " reads v" + register + " again after building its dark scheme, at " + later);
+        }
+        return new PureBlackSites(builders, initializer, dark.call(), backgrounds);
+    }
+
+    /** Every place [m] loads #101010 as a wide literal. */
+    private static List<Integer> featureDarkLoads(Method m) {
+        List<Instruction> body = instructions(m);
+        List<Integer> loads = new ArrayList<>();
+        for (int k = 0; k < body.size(); k++) {
+            Opcode opcode = body.get(k).getOpcode();
+            if ((opcode == Opcode.CONST_WIDE || opcode == Opcode.CONST_WIDE_32 || opcode == Opcode.CONST_WIDE_16 || opcode == Opcode.CONST_WIDE_HIGH16)
+                    && ((WideLiteralInstruction) body.get(k)).getWideLiteral() == THREADS_DARK) loads.add(k);
+        }
+        return loads;
+    }
+
+    /**
+     * Each construction of a [type] in straight-line [body], with the colors it passes as far as
+     * literals, shifts and copies tell them, as Pure black dark mode's patch reads them. A color the
+     * code computes some other way is null.
+     */
+    private static List<SchemeBuild> featureSchemeBuilds(List<Instruction> body, String type) {
+        Map<Integer, Long> wide = new HashMap<>();
+        Map<Integer, Integer> narrow = new HashMap<>();
+        List<SchemeBuild> builds = new ArrayList<>();
+        for (int k = 0; k < body.size(); k++) {
+            Instruction i = body.get(k);
+            switch (i.getOpcode()) {
+                case CONST_WIDE: case CONST_WIDE_32: case CONST_WIDE_16: case CONST_WIDE_HIGH16:
+                    featureClobber(wide, narrow, registerA(i), true);
+                    wide.put(registerA(i), ((WideLiteralInstruction) i).getWideLiteral());
+                    break;
+                case CONST_4: case CONST_16: case CONST: case CONST_HIGH16:
+                    featureClobber(wide, narrow, registerA(i), false);
+                    narrow.put(registerA(i), (int) ((WideLiteralInstruction) i).getWideLiteral());
+                    break;
+                case MOVE_WIDE: case MOVE_WIDE_FROM16: case MOVE_WIDE_16: {
+                    Long value = wide.get(((TwoRegisterInstruction) i).getRegisterB());
+                    featureClobber(wide, narrow, registerA(i), true);
+                    if (value != null) wide.put(registerA(i), value);
+                    break;
+                }
+                case SHL_LONG: case SHL_LONG_2ADDR: {
+                    boolean three = i instanceof ThreeRegisterInstruction;
+                    int target = registerA(i), source = three ? ((ThreeRegisterInstruction) i).getRegisterB() : target;
+                    int amount = three ? ((ThreeRegisterInstruction) i).getRegisterC() : ((TwoRegisterInstruction) i).getRegisterB();
+                    Long value = wide.get(source);
+                    Integer shift = narrow.get(amount);
+                    featureClobber(wide, narrow, target, true);
+                    if (value != null && shift != null) wide.put(target, value << (shift & 63));
+                    break;
+                }
+                case INVOKE_DIRECT_RANGE: {
+                    MethodReference m = (MethodReference) ((ReferenceInstruction) i).getReference();
+                    if (!m.getDefiningClass().equals(type) || !m.getName().equals("<init>")) break;
+                    int start = ((RegisterRangeInstruction) i).getStartRegister();
+                    List<Long> colors = new ArrayList<>();
+                    List<Integer> registers = new ArrayList<>();
+                    for (int p = 0; p < m.getParameterTypes().size(); p++) {
+                        registers.add(start + 1 + 2 * p);
+                        colors.add(wide.get(start + 1 + 2 * p));
+                    }
+                    String field = "";
+                    for (int n = k + 1; n < body.size(); n++) if (body.get(n).getOpcode() == Opcode.SPUT_OBJECT && registerA(body.get(n)) == start) {
+                        field = ((FieldReference) ((ReferenceInstruction) body.get(n)).getReference()).getName();
+                        break;
+                    }
+                    builds.add(new SchemeBuild(k, field, colors, registers));
+                    break;
+                }
+                default:
+                    if (i.getOpcode().setsRegister()) featureClobber(wide, narrow, registerA(i), i.getOpcode().setsWideRegister());
+            }
+        }
+        return builds;
+    }
+
+    /** Forget what [register], and the one above when [pair], held, and any wide value that covered either. */
+    private static void featureClobber(Map<Integer, Long> wide, Map<Integer, Integer> narrow, int register, boolean pair) {
+        for (int r = register; r <= (pair ? register + 1 : register); r++) {
+            narrow.remove(r);
+            wide.remove(r);
+            wide.remove(r - 1);
+        }
+    }
+
+    /**
+     * Where the HushThreads settings row hooks: Threads' settings list and the goto that ends its
+     * More settings case, the composer's register there, Threads' settings row and its Accounts
+     * Center row, and the modifier field the run the case goes to passes the settings row.
+     */
+    private record SettingsRowSites(Method list, int hook, int composer, Method row, Method accounts, String modifier) {}
+
+    /**
+     * The HushThreads row in Threads' settings. The settings list asks ThreadsSettingsRow.add once,
+     * right before the goto that ends its More settings case, on the composer that case starts its
+     * group on, with the list otherwise stock and every branch to that goto landing on the call.
+     * showRow calls Threads' Accounts Center row with that composer, the modifier the case's run
+     * passes Threads' own row, the title, subtitle, click and icon, and three zeros, and nothing else.
+     * The click is a kotlin Function0, which Threads' row takes. Both of Threads' rows stay stock,
+     * and the list is the only host method that calls add.
+     */
+    private static void featureSettingsRow(Map<String, List<Method>> clean, Map<String, List<Method>> patched, File patchedApk) throws Exception {
+        SettingsRowSites sites = featureSettingsRowSites(clean);
+        FeatureBlock hook = (body, at) -> {
+            requireFeature(at < body.size() && isStaticInvoke(body.get(at).getOpcode()) && reference(body.get(at)).equals(ADD_ROW)
+                    && Arrays.equals(invokeRegisters(body.get(at)), new int[]{sites.composer()}),
+                    "missing or miswired " + ADD_ROW + " at instruction " + at + ", which has to pass the More settings case's composer, v" + sites.composer());
+            return 1;
+        };
+        featureBody(sites.list(), featureMethod(patched, featureSig(sites.list())), 0, Map.of(), ADD_ROW, null, Map.of(sites.hook(), hook));
+        featureHostCalls(patched, ADD_ROW, Map.of(featureSig(sites.list()), 1));
+        for (Method row : List.of(sites.row(), sites.accounts())) featureBody(row, featureMethod(patched, featureSig(row)), 0, Map.of(), "");
+        featureShowRow(featureMethod(patched, SHOW_ROW), sites);
+        List<ClassDef> clicks = new ArrayList<>();
+        MultiDexContainer<? extends DexFile> dex = DexFileFactory.loadDexContainer(patchedApk, Opcodes.getDefault());
+        for (String entry : dex.getDexEntryNames()) for (ClassDef cd : dex.getEntry(entry).getDexFile().getClasses()) {
+            if (cd.getType().equals(ROW_CLICK)) clicks.add(cd);
+        }
+        ClassDef click = featureOne(clicks, ROW_CLICK);
+        requireFeature(click.getInterfaces().equals(List.of(FUNCTION0)),
+                ROW_CLICK + " implements " + click.getInterfaces() + ", not " + FUNCTION0 + ", so Threads' row can't take it");
+        Method invoke = featureMethod(patched, ROW_CLICK + "->invoke()Ljava/lang/Object;");
+        requireFeature(AccessFlags.PUBLIC.isSet(invoke.getAccessFlags()) && !AccessFlags.STATIC.isSet(invoke.getAccessFlags()),
+                ROW_CLICK + "'s invoke() isn't a public instance method");
+    }
+
+    /**
+     * showRow as the settings patch writes it: straight-line copies, casts, the modifier's static
+     * read and zeros into one call to Threads' Accounts Center row, then return-void. Each argument
+     * is read back to what it holds: the composer cast to the row's composer type, the modifier, the
+     * title, the subtitle, the click cast to Function0, the icon, and zero for the changed and
+     * defaults words and the badge.
+     */
+    private static void featureShowRow(Method stub, SettingsRowSites sites) {
+        requireFeature(AccessFlags.STATIC.isSet(stub.getAccessFlags()) && stub.getImplementation() != null
+                && stub.getImplementation().getTryBlocks().isEmpty(), SHOW_ROW + " isn't a static method with an unprotected body");
+        List<Instruction> body = instructions(stub);
+        // The arguments sit at the top of the frame: the composer, the click, the title, the subtitle and the icon.
+        int first = stub.getImplementation().getRegisterCount() - 5;
+        Map<Integer, String> held = new HashMap<>();
+        for (int p = 0; p < 5; p++) held.put(first + p, "p" + p);
+        List<String> passed = null;
+        for (int k = 0; k < body.size(); k++) {
+            Instruction i = body.get(k);
+            switch (i.getOpcode()) {
+                case MOVE: case MOVE_FROM16: case MOVE_16: case MOVE_OBJECT: case MOVE_OBJECT_FROM16: case MOVE_OBJECT_16:
+                    held.put(registerA(i), held.get(((TwoRegisterInstruction) i).getRegisterB()));
+                    break;
+                case CHECK_CAST:
+                    held.put(registerA(i), held.get(registerA(i)) + " as " + reference(i));
+                    break;
+                case SGET_OBJECT:
+                    held.put(registerA(i), reference(i));
+                    break;
+                case CONST_4: case CONST_16:
+                    held.put(registerA(i), String.valueOf(((WideLiteralInstruction) i).getWideLiteral()));
+                    break;
+                case INVOKE_STATIC: case INVOKE_STATIC_RANGE:
+                    requireFeature(passed == null && reference(i).equals(featureSig(sites.accounts())),
+                            SHOW_ROW + " calls " + reference(i) + ", not Threads' Accounts Center row once");
+                    passed = new ArrayList<>();
+                    for (int register : invokeRegisters(i)) passed.add(held.get(register));
+                    break;
+                case RETURN_VOID:
+                    requireFeature(passed != null && k == body.size() - 1, SHOW_ROW + " returns before it calls Threads' Accounts Center row");
+                    break;
+                default:
+                    throw new IllegalArgumentException(SHOW_ROW + " runs " + i.getOpcode().name + ", which the settings patch doesn't write");
+            }
+        }
+        requireFeature(passed != null && body.get(body.size() - 1).getOpcode() == Opcode.RETURN_VOID,
+                SHOW_ROW + " doesn't return right after its call");
+        List<String> expected = List.of("p0 as " + sites.accounts().getParameterTypes().get(0), sites.modifier(), "p2", "p3",
+                "p1 as " + FUNCTION0, "p4", "0", "0", "0");
+        requireFeature(expected.equals(passed), SHOW_ROW + " passes Threads' Accounts Center row " + passed + ", not " + expected);
+    }
+
+    /**
+     * Where the row goes, read the way the settings patch reads it and never by obfuscated name.
+     * Threads' settings row and its Accounts Center row are the one method holding each one's note,
+     * taking (composer, modifier, Integer, Function0, four ints, boolean) and (composer, modifier,
+     * two Strings, Function0, three ints, boolean). The list is the one method holding the list note
+     * that switches and calls the settings row. It switches on the ordinal of an entry enum whose
+     * static initializer names MORE, and that case starts its group on the composer once and runs
+     * straight to a goto, reached by no branch, onto a run that calls the settings row with that
+     * composer copied in and a modifier read from a static field.
+     */
+    private static SettingsRowSites featureSettingsRowSites(Map<String, List<Method>> clean) {
+        Method row = featureTarget(clean, m -> holdsNote(m, SETTINGS_ROW_NOTE), "Threads' settings row");
+        Method accounts = featureTarget(clean, m -> holdsNote(m, ACCOUNTS_ROW_NOTE), "Threads' Accounts Center row");
+        List<String> params = row.getParameterTypes().stream().map(CharSequence::toString).toList();
+        requireFeature(AccessFlags.STATIC.isSet(row.getAccessFlags()) && row.getReturnType().equals("V") && params.size() == 9
+                && params.get(2).equals("Ljava/lang/Integer;") && params.get(3).equals(FUNCTION0)
+                && params.subList(4, 8).stream().allMatch("I"::equals) && params.get(8).equals("Z"),
+                "Threads' settings row has changed shape: " + featureSig(row));
+        requireFeature(AccessFlags.STATIC.isSet(accounts.getAccessFlags()) && accounts.getReturnType().equals("V")
+                && accounts.getParameterTypes().stream().map(CharSequence::toString).toList().equals(List.of(params.get(0), params.get(1),
+                        "Ljava/lang/String;", "Ljava/lang/String;", FUNCTION0, "I", "I", "I", "Z")),
+                "Threads' Accounts Center row has changed shape: " + featureSig(accounts));
+        String rowSig = featureSig(row);
+        Method list = featureTarget(clean, m -> holdsNote(m, SETTINGS_LIST_NOTE) && !callSites(instructions(m), rowSig).isEmpty()
+                && instructions(m).stream().anyMatch(i -> i.getOpcode() == Opcode.PACKED_SWITCH), "Threads' settings list");
+        FeatureFlow flow = new FeatureFlow(list);
+        List<Instruction> body = flow.layout.instructions;
+        int switchAt = featureOne(java.util.stream.IntStream.range(0, body.size()).boxed()
+                .filter(k -> body.get(k).getOpcode() == Opcode.PACKED_SWITCH).toList(), "Threads' settings list's packed switch");
+
+        // The switch reads an enum's ordinal straight from ordinal(), called on a value cast to the entry enum.
+        int ordinalAt = featureLastWrite(body, switchAt, registerA(body.get(switchAt)));
+        requireFeature(ordinalAt >= 1 && body.get(ordinalAt).getOpcode() == Opcode.MOVE_RESULT
+                && body.get(ordinalAt - 1) instanceof FiveRegisterInstruction && reference(body.get(ordinalAt - 1)).endsWith("->ordinal()I"),
+                "Threads' settings list doesn't switch on an enum's ordinal");
+        int castAt = featureLastWrite(body, ordinalAt - 1, invokeRegisters(body.get(ordinalAt - 1))[0]);
+        requireFeature(castAt >= 0 && body.get(castAt).getOpcode() == Opcode.CHECK_CAST, "Threads' settings list switches on an ordinal of no known type");
+        String entries = reference(body.get(castAt));
+        int ordinal = featureEnumOrdinal(clean, entries, MORE_ENTRY);
+
+        int switchAddress = flow.layout.addresses.get(switchAt);
+        Instruction payload = flow.layout.byAddress.get(switchAddress + ((OffsetInstruction) body.get(switchAt)).getCodeOffset());
+        requireFeature(payload instanceof SwitchPayload, "Threads' settings list's switch has no payload");
+        SwitchElement more = featureOne(((SwitchPayload) payload).getSwitchElements().stream().filter(e -> e.getKey() == ordinal).map(e -> (SwitchElement) e).toList(),
+                "Threads' settings list's case for " + MORE_ENTRY);
+        int caseAt = flow.layout.addresses.indexOf(switchAddress + more.getOffset());
+        requireFeature(caseAt >= 0, "Threads' settings list's " + MORE_ENTRY + " case lands between instructions");
+        int gotoAt = caseAt;
+        while (gotoAt < body.size() && !(body.get(gotoAt) instanceof OffsetInstruction) && body.get(gotoAt).getOpcode().canContinue()) gotoAt++;
+        requireFeature(gotoAt < body.size() && body.get(gotoAt).getOpcode().name.startsWith("goto"),
+                "Threads' " + MORE_ENTRY + " case doesn't end in a goto to the settings row");
+        for (int n = 0; n < body.size(); n++) {
+            if (n >= caseAt && n < gotoAt) continue;
+            List<Integer> next = new ArrayList<>(flow.normal.get(n));
+            next.addAll(flow.exceptional.get(n));
+            for (int target : next) requireFeature(target <= caseAt || target > gotoAt,
+                    "Threads' settings list branches into its " + MORE_ENTRY + " case, from instruction " + n);
+        }
+        int tailAt = flow.layout.addresses.indexOf(flow.layout.addresses.get(gotoAt) + ((OffsetInstruction) body.get(gotoAt)).getCodeOffset());
+        requireFeature(tailAt >= 0, "Threads' " + MORE_ENTRY + " case's goto lands between instructions");
+        int callAt = tailAt;
+        while (callAt < body.size() && !(body.get(callAt) instanceof OffsetInstruction) && body.get(callAt).getOpcode().canContinue()
+                && !reference(body.get(callAt)).equals(rowSig)) callAt++;
+        requireFeature(callAt < body.size() && isStaticInvoke(body.get(callAt).getOpcode()) && reference(body.get(callAt)).equals(rowSig),
+                "Threads' " + MORE_ENTRY + " case reaches something other than the settings row first");
+
+        // The composer: the one call the case makes on the composer's type, starting its group, and
+        // nothing writes it again before the goto, where the hook reads it.
+        String composerType = params.get(0);
+        int startAt = featureOne(java.util.stream.IntStream.range(caseAt, gotoAt).boxed()
+                .filter(k -> body.get(k).getOpcode() == Opcode.INVOKE_INTERFACE && reference(body.get(k)).startsWith(composerType + "->")).toList(),
+                "the " + MORE_ENTRY + " case's call on its composer");
+        int composer = invokeRegisters(body.get(startAt))[0];
+        requireFeature(featureLastWrite(body, gotoAt, composer) < startAt, "Threads' " + MORE_ENTRY + " case overwrites its composer, v" + composer);
+
+        // The row's composer is copied from that register, and its modifier comes, through copies,
+        // from a static field the shared run reads.
+        List<Integer> path = new ArrayList<>();
+        for (int k = caseAt; k < gotoAt; k++) path.add(k);
+        for (int k = tailAt; k < callAt; k++) path.add(k);
+        int[] arguments = invokeRegisters(body.get(callAt));
+        int copy = featureLastWrite(body, path, path.size(), arguments[0]);
+        requireFeature(copy >= 0 && body.get(path.get(copy)).getOpcode().name.startsWith("move-object")
+                && ((TwoRegisterInstruction) body.get(path.get(copy))).getRegisterB() == composer,
+                "Threads' settings row isn't passed the composer the " + MORE_ENTRY + " case starts its group on");
+        int at = path.size(), register = arguments[1];
+        Instruction modifier;
+        while (true) {
+            at = featureLastWrite(body, path, at, register);
+            requireFeature(at >= 0, "Threads' " + MORE_ENTRY + " case doesn't set the settings row's modifier");
+            modifier = body.get(path.get(at));
+            if (!ROW_ARGUMENT_MOVES.contains(modifier.getOpcode())) break;
+            register = ((TwoRegisterInstruction) modifier).getRegisterB();
+        }
+        requireFeature(modifier.getOpcode() == Opcode.SGET_OBJECT && at >= gotoAt - caseAt,
+                "Threads' settings row isn't passed a modifier from a static field the shared run reads");
+        return new SettingsRowSites(list, gotoAt, composer, row, accounts, reference(modifier));
+    }
+
+    /** The narrow and object copies the settings row's arguments are followed back through. */
+    private static final Set<Opcode> ROW_ARGUMENT_MOVES = Set.of(Opcode.MOVE, Opcode.MOVE_FROM16, Opcode.MOVE_16,
+            Opcode.MOVE_OBJECT, Opcode.MOVE_OBJECT_FROM16, Opcode.MOVE_OBJECT_16);
+
+    /** The index of the last instruction before [before] in [body] that writes [register], or -1. */
+    private static int featureLastWrite(List<Instruction> body, int before, int register) {
+        for (int k = before - 1; k >= 0; k--) if (featureWrites(body.get(k), register)) return k;
+        return -1;
+    }
+
+    /** The last position before [end] in [path], a run of [body]'s indices, whose instruction writes [register], or -1. */
+    private static int featureLastWrite(List<Instruction> body, List<Integer> path, int end, int register) {
+        for (int n = end - 1; n >= 0; n--) if (featureWrites(body.get(path.get(n)), register)) return n;
+        return -1;
+    }
+
+    /** Whether [i] writes [register], as its destination or the upper half of a wide one. */
+    private static boolean featureWrites(Instruction i, int register) {
+        return i.getOpcode().setsRegister() && i instanceof OneRegisterInstruction
+                && (registerA(i) == register || i.getOpcode().setsWideRegister() && registerA(i) + 1 == register);
+    }
+
+    /** The ordinal [type]'s static initializer hands its constructor beside [name], as a string and an int literal. */
+    private static int featureEnumOrdinal(Map<String, List<Method>> clean, String type, String name) {
+        Map<Integer, String> strings = new HashMap<>();
+        Map<Integer, Long> literals = new HashMap<>();
+        List<Long> ordinals = new ArrayList<>();
+        for (Instruction i : instructions(featureMethod(clean, type + "-><clinit>()V"))) {
+            if (isPlainInvoke(i.getOpcode()) && reference(i).startsWith(type + "-><init>(Ljava/lang/String;I")) {
+                List<Integer> registers = callRegisters(i);
+                if (name.equals(strings.get(registers.get(1))) && literals.containsKey(registers.get(2))) ordinals.add(literals.get(registers.get(2)));
+                continue;
+            }
+            if (!i.getOpcode().setsRegister() || !(i instanceof OneRegisterInstruction)) continue;
+            strings.remove(registerA(i));
+            literals.remove(registerA(i));
+            Opcode opcode = i.getOpcode();
+            if (opcode == Opcode.CONST_STRING || opcode == Opcode.CONST_STRING_JUMBO) {
+                strings.put(registerA(i), ((StringReference) ((ReferenceInstruction) i).getReference()).getString());
+            } else if (opcode == Opcode.CONST_4 || opcode == Opcode.CONST_16 || opcode == Opcode.CONST || opcode == Opcode.CONST_HIGH16) {
+                literals.put(registerA(i), ((WideLiteralInstruction) i).getWideLiteral());
+            }
+        }
+        return Math.toIntExact(featureOne(ordinals, type + "'s " + name + " constant"));
+    }
+
     private static void featureFalseStub(Map<String, List<Method>> patched, String signature, boolean optional) {
         if (optional && !patched.containsKey(signature)) return;
         Method stub = featureMethod(patched, signature);
@@ -3360,6 +4381,51 @@ public class DexDiff {
         featurePreserveCards(featureClasses(cleanApk, owners), featureClasses(patchedApk, owners), patched, null, null);
     }
 
+    /** Left out, Block background-return feed refresh makes no call and leaves the four methods it hooks as Threads wrote them. */
+    private static void featureOmittedReturnRefresh(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        for (String callee : List.of(HOLD_HOT_START, RESET_TO_FEED, WARM_START, CACHED_POSTS)) featureHostCalls(patched, callee, Map.of());
+        Set<String> hooked = new HashSet<>();
+        for (ReturnSite site : featureReturnSites(clean).values()) hooked.add(featureSig(site.stock));
+        hooked.add(featureSig(featureHotStartDecision(clean)));
+        featurePreserveTargets(clean, patched, m -> hooked.contains(featureSig(m)));
+    }
+
+    /**
+     * Left out, Disable video autoplay makes no call and leaves PostVideo, its effect, the viewer
+     * and the feed posts, Instagram posts, trend previews and ad cards that call it as Threads wrote them.
+     */
+    private static void featureOmittedVideoAutoplay(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        featureHostCalls(patched, HOLD_VIDEO, Map.of());
+        VideoSites sites = featureVideoSites(clean);
+        Set<String> hooked = new HashSet<>(List.of(featureSig(sites.postVideo()), featureSig(sites.effect())));
+        for (Method caller : sites.calls().keySet()) hooked.add(featureSig(caller));
+        for (Method viewer : sites.viewers()) hooked.add(featureSig(viewer));
+        featurePreserveTargets(clean, patched, m -> hooked.contains(featureSig(m)));
+    }
+
+    /** Left out, Pure black dark mode makes no call and leaves the theme, its color helpers and the schemes' initializer as Threads wrote them. */
+    private static void featureOmittedPureBlack(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        featureHostCalls(patched, PURE_ARGB, Map.of());
+        featureHostCalls(patched, PURE_COLOR, Map.of());
+        PureBlackSites sites = featurePureBlackSites(clean);
+        Set<String> hooked = new HashSet<>(List.of(featureSig(sites.initializer())));
+        for (Method builder : sites.builders().keySet()) hooked.add(featureSig(builder));
+        featurePreserveTargets(clean, patched, m -> hooked.contains(featureSig(m)));
+    }
+
+    /**
+     * Left out, the settings row makes no call, leaves Threads' settings list and both its rows as
+     * Threads wrote them, and leaves showRow, when the extension has it, the empty stub it ships as.
+     */
+    private static void featureOmittedSettingsRow(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        featureHostCalls(patched, ADD_ROW, Map.of());
+        SettingsRowSites sites = featureSettingsRowSites(clean);
+        Set<String> hooked = new HashSet<>(List.of(featureSig(sites.list()), featureSig(sites.row()), featureSig(sites.accounts())));
+        featurePreserveTargets(clean, patched, m -> hooked.contains(featureSig(m)));
+        if (patched.containsKey(SHOW_ROW)) requireFeature(instructions(featureMethod(patched, SHOW_ROW)).stream().map(Instruction::getOpcode)
+                .toList().equals(List.of(Opcode.RETURN_VOID)), "omitted settings row wrote " + SHOW_ROW);
+    }
+
     private static void featureOmitted(String feature, Map<String, List<Method>> clean, Map<String, List<Method>> patched,
             File cleanApk, File patchedApk) throws Exception {
         switch (feature) {
@@ -3394,6 +4460,10 @@ public class DexDiff {
                 featurePreserveTargets(clean, patched, m -> !callSites(instructions(m), "Landroid/content/pm/SigningInfo;->getApkContentsSigners()[Landroid/content/pm/Signature;").isEmpty()
                         && !callSites(instructions(m), "Landroid/content/pm/SigningInfo;->getSigningCertificateHistory()[Landroid/content/pm/Signature;").isEmpty());
                 break;
+            case "returnRefresh": featureOmittedReturnRefresh(clean, patched); break;
+            case "disableVideoAutoplay": featureOmittedVideoAutoplay(clean, patched); break;
+            case "pureBlack": featureOmittedPureBlack(clean, patched); break;
+            case "settingsRow": featureOmittedSettingsRow(clean, patched); break;
             default: throw new IllegalArgumentException("Unknown omitted feature " + feature);
         }
         if (feature.equals("hideAds") || feature.equals("hideSuggestedUsers")) {
@@ -3421,6 +4491,25 @@ public class DexDiff {
             findings.add("contract: selected feature has no contract: " + feature);
         for (String feature : rules) {
             try {
+                // The settings row has no status: HushThreads settings adds it, and every other patch
+                // depends on that one (verify-injected-registers.ps1 counts a selected patch's
+                // dependencies as selected). Without a selection, the row belongs to every bundle
+                // whose extension carries it, and a bundle whose extension has none came before the
+                // row and is read as leaving it out, the way bundles from before Open links in browser are.
+                if (feature.equals("settingsRow")) {
+                    if (selected == null && !hasPayload) {
+                        System.out.println("[diff] threads-feature " + feature + ": no feature payload");
+                        continue;
+                    }
+                    boolean on = selected != null ? selected.contains(feature) : patched.containsKey(ADD_ROW);
+                    if (on || hasPayload) {
+                        if (clean == null) clean = featureMethods(cleanApk, parents);
+                        if (on) featureSettingsRow(clean, patched, patchedApk);
+                        else featureOmitted(feature, clean, patched, cleanApk, patchedApk);
+                    }
+                    System.out.println("[diff] threads-feature " + feature + ": " + (on ? "verified" : "omitted"));
+                    continue;
+                }
                 boolean hasStatus = patched.containsKey(STATUS + feature + "()Z");
                 if (!hasStatus && selected != null && !selected.contains(feature)) {
                     if (hasPayload) {
@@ -3432,7 +4521,8 @@ public class DexDiff {
                 }
                 // Historical bundles predate these independently selectable families. Existing
                 // families still require their statuses whenever an extension payload exists.
-                if (!hasStatus && selected == null && (feature.equals("hideSuggestedUsers") || feature.equals("openLinksExternally"))) {
+                if (!hasStatus && selected == null && (feature.equals("hideSuggestedUsers") || feature.equals("openLinksExternally")
+                        || feature.equals("returnRefresh") || feature.equals("disableVideoAutoplay") || feature.equals("pureBlack"))) {
                     if (hasPayload) {
                         if (clean == null) clean = featureMethods(cleanApk, parents);
                         featureOmitted(feature, clean, patched, cleanApk, patchedApk);
@@ -3461,6 +4551,9 @@ public class DexDiff {
                     case "openLinksExternally": featureBrowser(clean, patched); break;
                     case "disableAnalytics": featureAnalytics(clean, patched); break;
                     case "restoreTrust": featureTrust(clean, patched); break;
+                    case "returnRefresh": featureReturnRefresh(clean, patched); break;
+                    case "disableVideoAutoplay": featureVideoAutoplay(clean, patched); break;
+                    case "pureBlack": featurePureBlack(clean, patched); break;
                     default: throw new IllegalArgumentException("Unknown feature " + feature);
                 }
                 System.out.println("[diff] threads-feature " + feature + ": verified");

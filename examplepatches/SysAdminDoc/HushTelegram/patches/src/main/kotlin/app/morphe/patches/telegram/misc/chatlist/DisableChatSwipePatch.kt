@@ -17,14 +17,14 @@ import app.morphe.patches.telegram.misc.extension.telegramExtensionPatch
 import app.morphe.patches.telegram.misc.settings.settingsPatch
 import app.morphe.util.ControlFlow
 import app.morphe.util.addInstructionsAtControlFlowLabel
+import app.morphe.util.call
 import app.morphe.util.namedRegisters
+import app.morphe.util.one
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
-import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
-import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
 private const val PATCH = "Disable chat swipe actions"
 internal const val CHAT_SWIPE = "$EXTENSION_PACKAGE/misc/ChatSwipe;"
@@ -39,7 +39,7 @@ val disableChatSwipePatch = bytecodePatch(
     name = PATCH,
     description = "Stops a sideways swipe on a chat from archiving, muting, pinning, deleting or marking it read, so a " +
         "slip can't change a chat. Press and hold still has every action. Starts off. Turn it on in " +
-        "HushTelegram settings > Chats.",
+        "HushTelegram settings > Chat list.",
     default = true,
 ) {
     category("Chats")
@@ -76,7 +76,7 @@ internal fun BytecodePatchContext.resolveChatSwipeSite(): ChatSwipeSite {
                 }
         }
     }
-    val found = candidates.one("chat list getMovementFlags")
+    val found = candidates.one("chat list getMovementFlags", ::refuse)
     val method = mutableClassDefBy(found.definingClass).methods.single {
         it.name == found.name && it.parameterTypes.map(CharSequence::toString) == found.parameterTypes.map(CharSequence::toString) &&
             it.returnType == found.returnType
@@ -84,7 +84,7 @@ internal fun BytecodePatchContext.resolveChatSwipeSite(): ChatSwipeSite {
     val body = method.instructions()
 
     // The swipe: the row is marked sliding, then the method returns makeMovementFlags(0, LEFT).
-    val sliding = body.indices.filter { body[it].call()?.name == "setSliding" }.one("setSliding call")
+    val sliding = body.indices.filter { body[it].call()?.name == "setSliding" }.one("setSliding call", ::refuse)
     val flags = body.getOrNull(sliding + 1)?.call()
     shape(body.getOrNull(sliding + 1)?.opcode == Opcode.INVOKE_STATIC && flags != null && flags.returnType == "I" &&
         flags.parameterTypes.map(CharSequence::toString) == listOf("I", "I") &&
@@ -146,7 +146,7 @@ private fun swipeBranchEntry(method: Method, swipeReturn: Int): Int {
     val region = body.indices.filter { reached[it] && !canLeaveElsewhere[it] }
     shape(swipeReturn in region, "the swipe return isn't reached")
     val entries = region.filter { at -> predecessors[at].any { canLeaveElsewhere[it] } }
-    return entries.one("swipe branch entry")
+    return entries.one("swipe branch entry", ::refuse)
 }
 
 private fun ChatSwipeSite.apply() {
@@ -186,9 +186,4 @@ private fun refuse(reason: String): Nothing =
 private fun shape(valid: Boolean, reason: String) {
     if (!valid) refuse(reason)
 }
-private fun <T> List<T>.one(what: String): T {
-    shape(size == 1, "$what has $size matches")
-    return single()
-}
 private fun Method.instructions(): List<Instruction> = implementation?.instructions?.toList().orEmpty()
-private fun Instruction.call(): MethodReference? = (this as? ReferenceInstruction)?.reference as? MethodReference

@@ -11,7 +11,10 @@
     3. The release facts, with the set an ordinary push uses (no network-heavy asset checks, no
        description test counts, no build outputs read).
     4. The CHANGELOG section the notes are built from: every bullet scoped, no dashes.
-    5. One Gradle build through the machine's queue: the catalog regenerated and compared with the
+    5. The tests a code-only commit left stale, read from the sources in under a second: every
+       method verifyAndroidBoundaries requires is still a test method, and every text the settings
+       tests expect is still in the extension sources or the translation tables.
+    6. One Gradle build through the machine's queue: the catalog regenerated and compared with the
        committed one, and the patch tests that read no Instagram APK (the README table, the
        categories, the notices and source checks), so the patch tests' long fixture scans aren't
        what finds a README row out of step.
@@ -76,6 +79,7 @@ function Stop-Preflight([string]$Reason) {
 
 Start-Step 'the checkout'
 $dirty = @(& git -C $Root status --porcelain --untracked-files=no)
+if ($LASTEXITCODE -ne 0) { Stop-Preflight "git status failed with exit code $LASTEXITCODE, so the tree can't be called clean" }
 if ($dirty.Count -gt 0) { Stop-Preflight "uncommitted changes to tracked files, the first $("$($dirty[0])".Trim())" }
 $branch = "$(& git -C $Root rev-parse --abbrev-ref HEAD)".Trim()
 if ($branch -ne 'main') { Stop-Preflight "the checkout is on $branch, and releases are cut on main" }
@@ -107,6 +111,11 @@ $notes = @('-3.13', '-I', (Join-Path $PSScriptRoot 'release_notes.py'), '--check
 if ($Version) { $notes += @('--version', $Version) }
 & py @notes
 if ($LASTEXITCODE -ne 0) { Stop-Preflight "release_notes.py exited $LASTEXITCODE" }
+Complete-Step
+
+Start-Step 'the test names and texts the sources still have'
+& py -3.13 -I (Join-Path $PSScriptRoot 'stale_tests.py') --root $Root
+if ($LASTEXITCODE -ne 0) { Stop-Preflight "stale_tests.py exited $LASTEXITCODE" }
 Complete-Step
 
 if (-not $SkipGradle) {

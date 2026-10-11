@@ -4,14 +4,15 @@
  */
 package app.hushgram.extension.instagram.feed;
 
-import android.os.SystemClock;
-
 import androidx.annotation.Nullable;
 
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.function.ToIntFunction;
 
@@ -40,9 +41,11 @@ import app.hushgram.extension.shared.settings.BooleanSetting;
  *
  * <p>Explore's grid doesn't go through that helper (S22, Instagram 449), so it keeps its posts.
  *
- * <p>Hide videos, Hide photos and Hide carousels filter by the post an item carries, whoever posted
- * it, so they sit on Home's own reads ({@link #homeItem}) rather than that helper, which Explore's
- * chain of posts and the shop and ad feeds read through too.
+ * <p>Hide videos, Hide photos, Hide carousels and Hide posts you've liked filter by the post an item
+ * carries, whoever posted it, and Hidden accounts ({@link HiddenAccounts}) by who posted it, so they
+ * sit on Home's own reads ({@link #homeItem}) rather than that helper, which Explore's chain of posts
+ * and the shop and ad feeds read through too. Following is a feed of Home's, paged through the same
+ * response parser, so it loses the same posts.
  */
 public final class FeedSuggestions {
     /**
@@ -98,6 +101,12 @@ public final class FeedSuggestions {
     /** The counted kind of a post whose type isn't one of the three, or an item with no post. */
     static final String OTHER_TYPE = "other type";
 
+    /** Why a post you've liked was taken out, on {@link #TYPES_ROUTE}. */
+    static final String LIKED = "liked";
+
+    /** The report's count of posts Hide posts you've liked took out of Home. */
+    static final String LIKED_REMOVED = "liked posts removed";
+
     /** Set once {@link #filter} has taken an item out of the home feed in this run. Tests clear it. */
     static volatile boolean tookOut;
 
@@ -112,22 +121,82 @@ public final class FeedSuggestions {
     private static final ThreadLocal<Boolean> JUST_TOOK_OUT = new ThreadLocal<>();
 
     /**
-     * How long Home's reads can go quiet and still be one read. A page of Home's feed, or its store of
-     * the last run, is read in one go, so a longer gap starts a new read ({@link #readingHome}).
+     * The page of Home's feed response being parsed on this thread, from {@link #homePageStarts} to
+     * {@link #homePageParsed}: how many items it read, and how many of them {@link #filter} took out.
+     * Null outside a page, so Home's store and every other feed's reads, on this thread or another,
+     * never count toward one.
      */
-    static final long READ_GAP_MS = 2_000;
+    private static final ThreadLocal<int[]> PAGE = new ThreadLocal<>();
 
-    /** When {@link #homeItem} last ran, by {@link #clock}. Tests clear it. */
-    static volatile long homeReadAt;
+    /** Set when the latest page of Home's own feed response that held items lost one to {@link #filter}. Tests clear it. */
+    static volatile boolean homePageLost;
 
-    /** The clock Home's reads are timed by. Tests stand in. */
-    static volatile LongSupplier clock = SystemClock::elapsedRealtime;
+    /** Set once the report has counted {@link #HOME_ENDED} for that page. Tests clear it. */
+    static volatile boolean homePageEndCounted;
 
-    /** Set once Home's latest read has lost an item to {@link #filter}. Tests clear it. */
-    static volatile boolean homeLost;
+    /**
+     * The home feed that first read the latest page's verdict, set by that read. Each account has a
+     * feed of its own, so another account's Home, still waiting on its first page or offline, isn't
+     * ended by a page that belonged to the account before it. Null until a feed reads it. Tests clear it.
+     */
+    static volatile WeakReference<Object> verdictFeed;
 
-    /** Set once Home's latest read has kept an item. Tests clear it. */
-    static volatile boolean homeKept;
+    /** The counted kind of a Home that was ended, empty, after its latest page lost items to the switches. */
+    static final String HOME_ENDED = "home page ended with every post removed";
+
+    /** The counted kind of an Older Posts page whose loading placeholder was dropped after every post on it was removed. */
+    static final String OLDER_ENDED = "older posts page ended with every post removed";
+
+    /** How long after a page of Home's response lost every item the Older Posts placeholder may still be dropped, in nanoseconds. */
+    static final long OLDER_WINDOW_NANOS = 10_000_000_000L;
+
+    /** Set when the latest page of Home's response that held items lost all of them. Tests clear it. */
+    static volatile boolean pageLostEverything;
+
+    /** When that page was parsed, by {@link #clock}. Tests clear it. */
+    static volatile long pageLostEverythingAt;
+
+    /** Set once the report has counted {@link #OLDER_ENDED} for that page. Tests clear it. */
+    static volatile boolean olderEndCounted;
+
+    /** Counts the pages of Home's response that held items, so a feed can tell a page parsed after it opened. */
+    static volatile long pageSeq;
+
+    /** The most contextual feeds {@link #olderPageLoading} remembers the page count of at once. */
+    private static final int OLDER_FEEDS_MAX = 8;
+
+    /** One contextual feed's load more policy, and how many pages had been parsed when it first asked. */
+    private static final class OlderFeed {
+        final WeakReference<Object> policy;
+        final long seqAtOpen;
+
+        OlderFeed(Object policy, long seqAtOpen) {
+            this.policy = new WeakReference<>(policy);
+            this.seqAtOpen = seqAtOpen;
+        }
+    }
+
+    /** The contextual feeds that have asked, oldest first. Guarded by itself. */
+    private static final ArrayList<OlderFeed> OLDER_FEEDS = new ArrayList<>();
+
+    /** The load more policy the contextual builder on this thread is about to ask, from {@link #olderPolicyAsked}. */
+    private static final ThreadLocal<Object> OLDER_POLICY = new ThreadLocal<>();
+
+    /** Forgets every contextual feed. Tests call it. */
+    static void forgetOlderFeeds() {
+        synchronized (OLDER_FEEDS) {
+            OLDER_FEEDS.clear();
+        }
+    }
+
+    /** The time {@link #olderPageLoading} measures a page's age by. Tests stand in. */
+    static volatile LongSupplier clock = System::nanoTime;
+
+    /** The home feed whose flag the adapter is reading, from {@link #homeFeedRead} to {@link #feedEnded} on one thread. */
+    private static final ThreadLocal<Object> READING = new ThreadLocal<>();
+
+    /** Asks a home feed whether it's empty, as {@link #feedEmpty} answers. Tests stand in. */
+    static volatile ToIntFunction<Object> emptiness = FeedSuggestions::feedEmpty;
 
     /** Whether Home's reads go through {@link #homeItem}, when a test says so instead of the build. */
     @Nullable
@@ -137,9 +206,24 @@ public final class FeedSuggestions {
     }
 
     /**
+     * Injected right before each read of the home feed adapter's "no next page" flag, with the feed
+     * object the flag is read from, which {@link #feedEnded} asks whether it's empty. A build of
+     * Home's list waiting on a short page learns its feed here too ({@link HomeNextPage#feedRead}).
+     * Never throws.
+     */
+    public static void homeFeedRead(Object feed) {
+        try {
+            READING.set(feed);
+            HomeNextPage.feedRead(feed);
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "home feed read", failure);
+        }
+    }
+
+    /**
      * Injected at each read of the home feed adapter's "no next page" flag. Answers 1 (no next
-     * page) once {@link #filter} has taken items out and a suggestion switch is still on, once
-     * {@link #homeItem} has taken posts out and a post type switch is still on, or once Hide the
+     * page) once the suggestion switches, or the post switches {@link #homeItem} takes posts out
+     * for, have emptied Home ({@link #suggestionsEmptiedHome}), or once Hide the
      * home feed has emptied Home ({@link HomeFeed#emptied}), and [noMorePages] otherwise. Turning
      * every switch off restores Instagram's answer in this run.
      *
@@ -148,39 +232,141 @@ public final class FeedSuggestions {
      * for that page while the feed is empty, so a Home emptied of suggestions kept the placeholder for
      * good. Saying there's no next page gets Instagram's own empty feed card instead. A feed with posts
      * left, or one waiting on a page, draws what it did.
-     *
-     * <p>The suggestion switches end Home only once they can have emptied it ({@link #suggestionsEmptiedHome}).
      */
     public static int feedEnded(int noMorePages) {
+        Object feed = READING.get();
+        READING.remove();
         if (noMorePages != 0) return noMorePages;
         if (HomeFeed.emptied()) return 1;
         if (!tookOut && !typesTookOut) return noMorePages;
         try {
             if (!Utils.settingsReady()) return noMorePages;
-            if (tookOut && suggestionsEmptiedHome() && (Settings.HIDE_SUGGESTED_POSTS.get()
-                    || Settings.HIDE_SUGGESTED_ACCOUNTS.get() || Settings.HIDE_THREADS_POSTS.get())) return 1;
-            return typesTookOut && (Settings.HIDE_FEED_VIDEOS.get() || Settings.HIDE_FEED_PHOTOS.get()
-                    || Settings.HIDE_FEED_CAROUSELS.get()) ? 1 : noMorePages;
+            boolean suggestions = tookOut && suggestionSwitchOn();
+            boolean posts = typesTookOut && postSwitchOn();
+            return (suggestions || posts) && suggestionsEmptiedHome(feed) ? 1 : noMorePages;
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "empty feed", failure);
             return noMorePages;
         }
     }
 
+    /** Whether any switch {@link #homeItem} takes posts out for is on, a name on Hidden accounts included. */
+    private static boolean postSwitchOn() {
+        return Settings.HIDE_FEED_VIDEOS.get() || Settings.HIDE_FEED_PHOTOS.get()
+                || Settings.HIDE_FEED_CAROUSELS.get() || Settings.HIDE_FEED_LIKED.get()
+                || !HiddenAccounts.hidden().isEmpty();
+    }
+
+    /** Whether any switch {@link #filter} takes items out for is on. */
+    private static boolean suggestionSwitchOn() {
+        return Settings.HIDE_SUGGESTED_POSTS.get() || Settings.HIDE_SUGGESTED_ACCOUNTS.get()
+                || Settings.HIDE_THREADS_POSTS.get() || Settings.HIDE_FEED_SURVEYS.get()
+                || Settings.HIDE_FEED_SHOPPING.get();
+    }
+
     /**
-     * Whether the suggestion switches can have emptied Home. Where Home's reads go through
-     * {@link #homeItem}, that's once those reads have lost an item to {@link #filter} and kept none.
-     * The helper {@link #filter} sits on also reads Explore's chain of posts and the shop and ad
+     * Whether the suggestion switches can have emptied Home, whose flag is read from [feed]. Where
+     * Home's reads go through {@link #homeItem}, that's once the latest page of Home's own feed
+     * response lost items to {@link #filter} ({@link #homePageParsed}) and the feed isn't known to
+     * hold anything.
+     *
+     * <p>The helper {@link #filter} sits on also reads Explore's chain of posts and the shop and ad
      * feeds, and Home reads its store of the last run before its first page, so an item taken out
-     * anywhere used to end a Home that was only waiting for that page, and Instagram drew its
-     * Welcome to Instagram card there for a few seconds at startup (#28). Only Home's latest read
-     * counts ({@link #readingHome}). Without those reads in the build, it's once anything's been taken
+     * anywhere used to end a Home that was only waiting for that page, and Instagram drew its Welcome
+     * to Instagram card there for a few seconds at startup (#28). None of those reads is a page of
+     * Home's response, so none of them ends Home now.
+     *
+     * <p>The page's kept items don't hold the end off: an account that follows nobody gets a page of
+     * suggestions with an item or two Instagram keeps and then draws elsewhere or not at all (#105).
+     * Instagram itself only ends a feed it finds empty, and the feed is asked here too, so a Home
+     * showing posts keeps Instagram's answer and the report counts {@link #HOME_ENDED} only for a
+     * Home that really is empty. Without Home's reads in the build, it's once anything's been taken
      * out.
      */
-    private static boolean suggestionsEmptiedHome() {
+    private static boolean suggestionsEmptiedHome(@Nullable Object feed) {
         Boolean forced = homeReadsForTests;
         boolean homeReads = forced != null ? forced : PatchFamily.feedTypesInBuild();
-        return !homeReads || (homeLost && !homeKept);
+        if (!homeReads) return true;
+        if (!homePageLost) return false;
+        if (feed != null) {
+            WeakReference<Object> bound = verdictFeed;
+            if (bound == null) verdictFeed = new WeakReference<>(feed);
+            else if (bound.get() != feed) return false;
+        }
+        int empty = feedIsEmpty(feed);
+        if (empty == 0) return false;
+        if (empty == 1 && !homePageEndCounted) {
+            homePageEndCounted = true;
+            FeedFilterCounters.sawKind(ROUTE, HOME_ENDED);
+            Logger.printDebug(() -> "Feed suggestions: Home's latest page lost its items and Home is empty, so it ends");
+        }
+        return true;
+    }
+
+    /** 1 when [feed] says it's empty, 0 when it holds something, and -1 when it can't be asked. */
+    static int feedIsEmpty(@Nullable Object feed) {
+        if (feed == null) return -1;
+        try {
+            int answer = emptiness.applyAsInt(feed);
+            return answer == 0 || answer == 1 ? answer : -1;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "home feed empty check", failure);
+            return -1;
+        }
+    }
+
+    /**
+     * Whether the home feed object the adapter reads its flag from is empty: 1 when it is, 0 when it
+     * holds something, and -1 when it can't be told. The patch writes the body, which asks the feed
+     * the question the adapter asks right after reading the flag.
+     */
+    public static int feedEmpty(Object feed) {
+        return -1;
+    }
+
+    /**
+     * Injected first thing in Home's feed response parser: a page of Home's own feed starts on this
+     * thread, and the items {@link #homeItem} reads until {@link #homePageParsed} are its items.
+     * Never throws.
+     */
+    public static void homePageStarts() {
+        try {
+            PAGE.set(new int[2]);
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "home page start", failure);
+        }
+    }
+
+    /**
+     * Injected right before each return of Home's feed response parser. A page that held items
+     * replaces the verdict of the one before: whether it lost any to {@link #filter}. It also tells
+     * {@link HomeNextPage} how many items the page kept, so a page the switches left short gets the
+     * next one asked for. A page with no items, the parser giving up on a response for one, leaves
+     * the verdict, and only tells {@link HomeNextPage} a request of its own was answered. Never throws.
+     */
+    public static void homePageParsed() {
+        try {
+            int[] page = PAGE.get();
+            PAGE.remove();
+            if (page == null) return;
+            if (page[0] == 0) {
+                HomeNextPage.emptyPageParsed();
+                return;
+            }
+            HomeNextPage.pageParsed(page[0], page[1]);
+            homePageLost = page[1] > 0;
+            homePageEndCounted = false;
+            pageSeq++;
+            pageLostEverything = page[1] >= page[0];
+            pageLostEverythingAt = clock.getAsLong();
+            olderEndCounted = false;
+            verdictFeed = null;
+            if (homePageLost) {
+                Logger.printDebug(() -> "Feed suggestions: a page of Home lost " + page[1] + " of its " + page[0] + " items");
+            }
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "home page parsed", failure);
+        }
     }
 
     /**
@@ -210,6 +396,75 @@ public final class FeedSuggestions {
         if (hasMore == 0 || !suggestionsGone()) return hasMore;
         Logger.printDebug(() -> "Feed suggestions: no next page past the end card");
         return 0;
+    }
+
+    /**
+     * Injected right before the contextual feed's model builder asks its load more policy whether the
+     * feed is loading, with that policy: one object per contextual feed, which {@link #olderPageLoading}
+     * keys what it knows of the feed by. Never throws.
+     */
+    public static void olderPolicyAsked(Object policy) {
+        try {
+            OLDER_POLICY.set(policy);
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "older posts policy", failure);
+        }
+    }
+
+    /**
+     * Injected right after the contextual feed's model builder asks whether its feed is loading, in
+     * the builder that draws a full-screen loading row while the feed is loading and empty. The
+     * Older Posts page, opened from the "Older posts" link under Home's end card, is a contextual
+     * feed. Its first page comes back through the same parser as Home's, and when the post switches
+     * or Hide suggested posts take every post out of it, the builder runs once with the page empty
+     * and the fetch still marked as loading, and nothing runs it again, so the row stayed for good.
+     *
+     * <p>Answers 0 (not loading) only for a feed whose own page has lost every item: the latest page
+     * of Home's response lost all of them, with a switch for it on, within the last
+     * {@link #OLDER_WINDOW_NANOS}, and that page was parsed after this feed first asked. A feed's
+     * first ask is when its fetch starts, so Home's own emptied page, which usually comes just before
+     * Older Posts opens, never drops the row of a fetch still running. A feed that can't be told
+     * apart (no policy handed over) keeps Instagram's answer. The builder still asks whether the feed
+     * is empty, so a feed with posts keeps what it draws. It asks for no page, so it can't loop. Never throws.
+     */
+    public static int olderPageLoading(int loading) {
+        Object policy = OLDER_POLICY.get();
+        OLDER_POLICY.remove();
+        if (loading == 0 || policy == null) return loading;
+        try {
+            long seqAtOpen = seqAtOpen(policy);
+            if (!pageLostEverything || pageSeq <= seqAtOpen) return loading;
+            if (!Utils.settingsReady()) return loading;
+            boolean suggestions = tookOut && suggestionSwitchOn();
+            boolean posts = typesTookOut && postSwitchOn();
+            if (!suggestions && !posts) return loading;
+            long age = clock.getAsLong() - pageLostEverythingAt;
+            if (age < 0 || age > OLDER_WINDOW_NANOS) return loading;
+            if (!olderEndCounted) {
+                olderEndCounted = true;
+                HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, OLDER_ENDED);
+            }
+            Logger.printDebug(() -> "Feed suggestions: a page lost every post and its feed is empty, so the loading row is dropped");
+            return 0;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "older posts", failure);
+            return loading;
+        }
+    }
+
+    /** The page count when [policy]'s feed first asked, noted now if it hasn't before. */
+    private static long seqAtOpen(Object policy) {
+        synchronized (OLDER_FEEDS) {
+            for (int i = OLDER_FEEDS.size() - 1; i >= 0; i--) {
+                Object known = OLDER_FEEDS.get(i).policy.get();
+                if (known == null) OLDER_FEEDS.remove(i);
+                else if (known == policy) return OLDER_FEEDS.get(i).seqAtOpen;
+            }
+            if (OLDER_FEEDS.size() >= OLDER_FEEDS_MAX) OLDER_FEEDS.remove(0);
+            long now = pageSeq;
+            OLDER_FEEDS.add(new OlderFeed(policy, now));
+            return now;
+        }
     }
 
     /** Whether {@link #filter} has taken items out and Hide suggested posts is on. */
@@ -252,42 +507,39 @@ public final class FeedSuggestions {
     /**
      * Injected right after Home keeps each item it reads, from its feed response and from its store
      * of the last run, beside Hide the home feed's filter when both are in. Answers null for a post
-     * of one video, one photo or a carousel while that type's switch is on, and [item] itself
-     * otherwise, or when anything goes wrong. An item with no post, a row of suggested accounts for
-     * one, stays. Also notes whether Home lost the item to {@link #filter} or kept it, for
-     * {@link #suggestionsEmptiedHome}. Never throws.
+     * of one video, one photo or a carousel while that type's switch is on, a post you've liked
+     * while Hide posts you've liked is on, or a post by an account on {@link HiddenAccounts}, and
+     * [item] itself otherwise, or when anything goes wrong. An item with no post, a row of suggested
+     * accounts for one, stays. Inside a page of Home's feed response it also counts the item toward
+     * that page, and whether it was lost to {@link #filter} or to its own removals, for
+     * {@link #homePageParsed}. Never throws.
      */
     public static Object homeItem(Object item) {
-        return homeItem(item, FeedSuggestions::mediaType);
+        return homeItem(item, FeedSuggestions::mediaType, FeedSuggestions::liked, FeedSuggestions::author);
     }
 
     static Object homeItem(Object item, ToIntFunction<Object> typeOf) {
-        boolean lost = Boolean.TRUE.equals(JUST_TOOK_OUT.get());
-        JUST_TOOK_OUT.remove();
-        readingHome();
-        if (item == null) {
-            if (lost) homeLost = true;
-            return null;
-        }
-        Object kept = byType(item, typeOf);
-        if (kept != null) homeKept = true;
-        return kept;
+        return homeItem(item, typeOf, FeedSuggestions::liked, FeedSuggestions::author);
     }
 
-    /**
-     * Starts a new read of Home once the last item came more than {@link #READ_GAP_MS} ago, forgetting
-     * what the reads before it lost and kept. Instagram asks whether Home has ended only once Home is
-     * empty, so posts an earlier read kept (another account's before a switch, or an earlier load's)
-     * are no longer there. Remembered for the whole run, they held off the end of a Home whose next
-     * read lost everything, and it kept its loading placeholder for good (#104, #105).
-     */
-    private static void readingHome() {
-        long now = clock.getAsLong();
-        if (now - homeReadAt > READ_GAP_MS) {
-            homeLost = false;
-            homeKept = false;
+    static Object homeItem(Object item, ToIntFunction<Object> typeOf, ToIntFunction<Object> likedOf) {
+        return homeItem(item, typeOf, likedOf, FeedSuggestions::author);
+    }
+
+    static Object homeItem(Object item, ToIntFunction<Object> typeOf, ToIntFunction<Object> likedOf,
+            Function<Object, String> authorOf) {
+        boolean lost = Boolean.TRUE.equals(JUST_TOOK_OUT.get());
+        JUST_TOOK_OUT.remove();
+        int[] page = PAGE.get();
+        if (page != null && (item != null || lost)) {
+            page[0]++;
+            if (lost) page[1]++;
         }
-        homeReadAt = now;
+        if (item == null) return null;
+        Object kept = byType(item, typeOf) == null ? null
+                : byLiked(item, likedOf) == null ? null : byAuthor(item, authorOf);
+        if (kept == null && page != null) page[1]++;
+        return kept;
     }
 
     /** [item], or null while the switch for its post's type is on. */
@@ -304,11 +556,50 @@ public final class FeedSuggestions {
             boolean hide = type == VIDEO ? videos : type == PHOTO ? photos : type == CAROUSEL && carousels;
             if (!hide) return item;
             FeedFilterCounters.removed(TYPES_ROUTE, 1, kind);
+            HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, kind + " posts removed");
             typesTookOut = true;
             Logger.printDebug(() -> "Feed suggestions: took a " + kind + " out of Home");
             return null;
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "post type", failure);
+            return item;
+        }
+    }
+
+    /**
+     * [item], or null while Hide posts you've liked is on and its post says you've liked it. A post
+     * that doesn't say, or an item with no post, stays.
+     */
+    private static Object byLiked(Object item, ToIntFunction<Object> likedOf) {
+        try {
+            if (!Utils.settingsReady() || !Settings.HIDE_FEED_LIKED.get()) return item;
+            if (likedOf.applyAsInt(item) != 1) return item;
+            FeedFilterCounters.removed(TYPES_ROUTE, 1, LIKED);
+            HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, LIKED_REMOVED);
+            typesTookOut = true;
+            Logger.printDebug(() -> "Feed suggestions: took a post you've liked out of Home");
+            return null;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "liked post", failure);
+            return item;
+        }
+    }
+
+    /**
+     * [item], or null when its post's author is on {@link HiddenAccounts} for the signed-in account.
+     * The author isn't read while the list is empty. A post whose author can't be read stays.
+     */
+    private static Object byAuthor(Object item, Function<Object, String> authorOf) {
+        try {
+            if (HiddenAccounts.hidden().isEmpty()) return item;
+            if (!HiddenAccounts.hides(authorOf.apply(item))) return item;
+            FeedFilterCounters.removed(TYPES_ROUTE, 1, HiddenAccounts.HIDDEN);
+            HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, HiddenAccounts.REMOVED);
+            typesTookOut = true;
+            Logger.printDebug(() -> "Feed suggestions: took a post from a hidden account out of Home");
+            return null;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, HiddenAccounts.HIDDEN, failure);
             return item;
         }
     }
@@ -320,6 +611,24 @@ public final class FeedSuggestions {
      */
     public static int mediaType(Object item) {
         return 0;
+    }
+
+    /**
+     * Whether you've liked the post a feed item carries: 1 when its has_liked says so, and 0 when it
+     * says not, doesn't say or the item carries no post. The patch writes the body, which reads the
+     * item's post field and the post's has_liked.
+     */
+    public static int liked(Object item) {
+        return 0;
+    }
+
+    /**
+     * The username of whoever posted the post a feed item carries, or null when it carries none or
+     * the post doesn't say. The patch writes the body, which reads the item's post field, the post's
+     * user and that user's username. Null as built.
+     */
+    public static String author(Object item) {
+        return null;
     }
 
     private static BooleanSetting switchFor(String kind) {

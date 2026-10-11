@@ -14,16 +14,16 @@
     <img src="https://img.shields.io/github/stars/SatanMerde/D-moniakPatches?style=for-the-badge&logo=github&color=EAC54F" alt="GitHub Stars">
   </a>
   <a href="#-liste-des-patchs--patches-list">
-    <img src="https://img.shields.io/badge/Patches-459-8A2BE2?style=for-the-badge&logo=android&logoColor=white" alt="Total Patches">
+    <img src="https://img.shields.io/badge/Patches-457-8A2BE2?style=for-the-badge&logo=android&logoColor=white" alt="Total Patches">
   </a>
   <a href="#-patchs-validés--fonctionnels--tested--functional-patches">
-    <img src="https://img.shields.io/badge/Fonctionnels-12-00C853?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Functional Patches">
+    <img src="https://img.shields.io/badge/Fonctionnels-13-00C853?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Functional Patches">
   </a>
   <a href="#-patchs-expérimentaux--en-développement--experimental-patches-ai-generated">
-    <img src="https://img.shields.io/badge/Expérimentaux-447-FFA000?style=for-the-badge&logo=probot&logoColor=white" alt="Experimental Patches">
+    <img src="https://img.shields.io/badge/Expérimentaux-444-FFA000?style=for-the-badge&logo=probot&logoColor=white" alt="Experimental Patches">
   </a>
   <a href="#-liste-des-patchs--patches-list">
-    <img src="https://img.shields.io/badge/Apps_Support%C3%A9es-90-3388FF?style=for-the-badge&logo=googleplay&logoColor=white" alt="Supported Apps">
+    <img src="https://img.shields.io/badge/Apps_Support%C3%A9es-91-3388FF?style=for-the-badge&logo=googleplay&logoColor=white" alt="Supported Apps">
   </a>
   <a href="https://github.com/SatanMerde/D-moniakPatches/releases/latest">
     <img src="https://img.shields.io/github/v/release/SatanMerde/D-moniakPatches?style=for-the-badge&logo=github&color=blueviolet" alt="Latest Release">
@@ -116,7 +116,7 @@ Un problème constaté ou vous souhaitez qu'un patch expérimental fonctionne en
 ## 🩹 Liste des patchs / Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.48.0](https://github.com/SatanMerde/D-moniakPatches/releases/tag/v1.48.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**459 patchs au total** (12 validés & fonctionnels • 447 expérimentaux)
+> **[v1.49.0](https://github.com/SatanMerde/D-moniakPatches/releases/tag/v1.49.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**457 patchs au total** (13 validés & fonctionnels • 444 expérimentaux)
 
 ---
 
@@ -125,6 +125,27 @@ Un problème constaté ou vous souhaitez qu'un patch expérimental fonctionne en
 > [!TIP]
 > **🇫🇷 Français :** Ces patchs ont été rigoureusement testés et confirmés pleinement opérationnels sur appareil réel.  
 > **🇬🇧 English :** These patches have been thoroughly tested and confirmed fully functional on real hardware.
+
+<details open>
+<summary>📦 AllTrails&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| [Unlock 3D Maps & Off-Route Alerts - AllTrails](#unlock-3d-maps-off-route-alerts-alltrails) | Unlocks 3D trail maps, real-time off-route audio and wrong-turn notifications, and environmental weather overlays in AllTrails. |
+
+</details>
+
+<details open>
+<summary>📦 BandLab&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| [Block Ads & Declutter Feed - BandLab](#block-ads-declutter-feed-bandlab) | Removes in-app promotional banners, upgrade prompts, sponsored artist cards, and interstitial ads across the BandLab home feed and studio screens. |
+| [Unlock Creator Membership & Audio Tools - BandLab](#unlock-creator-membership-audio-tools-bandlab) | Hooks Google Play Billing Client and membership state models in BandLab to unlock client-side Creator Membership perks, audio presets, master presets, and removes membership upgrade paywalls. |
+
+</details>
 
 <details open>
 <summary>📦 Hungry Shark World&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
@@ -159,22 +180,34 @@ Un problème constaté ou vous souhaitez qu'un patch expérimental fonctionne en
 </details>
 
 <details open>
-<summary>📦 Movix&nbsp;&nbsp;•&nbsp;&nbsp;6 patches</summary>
+<summary>📦 Movix&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 1.4.8 |
+| 2.6.5 | 2.6.4 | 2.6.3 | 2.6.2 | 2.6.1 | 2.6.0 | 2.5.3 | 2.5.2 |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| [Block Video Ads & Interstitials - Movix](#block-video-ads-interstitials-movix) | Strips video pre-roll and mid-roll ads, banner ads, and redirect popups across Movix movie and series player screens. |
+| [Unlock Premium Subscription - Movix](#unlock-premium-subscription-movix) | Bypasses Movix VIP/Premium subscription checks to unlock all premium and exclusive content, series, and movie libraries without an active paid subscription. |
+
+</details>
+
+<details open>
+<summary>📦 Spotify&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 🧪&nbsp;9.1.84.2231 |
 | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
-| [AMOLED Black Player & Picture-in-Picture - Movix](#amoled-black-player-picture-in-picture-movix) | Injects true OLED pitch black (#000000) into Movix catalog and unlocks Picture-in-Picture (PiP) and background audio playback. |
-| [Block Video Ads & Interstitials - Movix](#block-video-ads-interstitials-movix) | Strips video pre-roll and mid-roll ads, banner ads, and redirect popups across Movix movie and series player screens. |
-| [Bypass Download Restrictions - Movix](#bypass-download-restrictions-movix) | Bypasses offline download tier restrictions to allow downloading any movie or series episode for offline viewing without a Premium subscription, and removes download quality caps. |
-| [Disable Auto-Pause on Background - Movix](#disable-auto-pause-on-background-movix) | Prevents Movix from automatically pausing or stopping video playback when the app transitions to the background, enabling audio-only listening and uninterrupted casting. |
-| [Force HD & 4K Quality Unlock - Movix](#force-hd-4k-quality-unlock-movix) | Forces maximum available video quality (HD 1080p / 4K) on all content regardless of subscription tier or network quality detection thresholds. |
-| [Unlock Premium Subscription - Movix](#unlock-premium-subscription-movix) | Bypasses Movix VIP/Premium subscription checks to unlock all premium and exclusive content, series, and movie libraries without an active paid subscription. |
+| [Spicetify AMOLED Black Theme Bytecode](#spicetify-amoled-black-theme-bytecode) | Bytecode engine for Spicetify AMOLED Black Theme |
+| [Spicetify Custom Accent Color Bytecode](#spicetify-custom-accent-color-bytecode) | Bytecode engine for Spicetify Custom Accent Color |
 
 </details>
 
@@ -192,12 +225,11 @@ Un problème constaté ou vous souhaitez qu'un patch expérimental fonctionne en
 > 💡 **Want a patch to work?** [Submit a request here](https://github.com/SatanMerde/D-moniakPatches/issues/new?template=patch_request.yml) to prioritize reverse-engineering and make it fully functional in the next update!
 
 <details open>
-<summary>📦 AllTrails&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<summary>📦 AllTrails&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
 <br>
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
-| [Persistent Off-Route Audio Alerts & 3D Maps - AllTrails (Experimental)](#persistent-off-route-audio-alerts-3d-maps-alltrails-experimental) | ⚠️ [En cours de développement / Non testé] Unlocks 3D topographic trail elevation rendering, satellite weather overlays, and forces persistent wrong-turn audio alerts when straying off the trail. |
 | [Unlock AllTrails+ & Offline Maps - AllTrails (Experimental)](#unlock-alltrails-offline-maps-alltrails-experimental) | ⚠️ [En cours de développement / Non testé] Hooks Google Play Billing to bypass in-app purchase verification for AllTrails+ (offline topo map downloads, wrong-turn navigation alerts, and 3D trail previews). |
 
 </details>
@@ -1042,7 +1074,7 @@ Un problème constaté ou vous souhaitez qu'un patch expérimental fonctionne en
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
-| [Unlock Full Game - Silt (Experimental)](#unlock-full-game-silt-experimental) | ⚠️ [En cours de développement / Non testé] Unlocks the full game, all oceanic abyss chapters, and in-app purchase verification in Silt by hooking Google Play Billing and full game license verification checks. |
+| [Unlock Full Game - Silt (Experimental)](#unlock-full-game-silt-experimental) | ⚠️ [En cours de développement / Non testé] Unlocks the full game, all oceanic abyss chapters, and in-app purchase verification in Silt by neutralizing Google Play App Signing PairIP protection, Play Integrity remediation dialogs, and Google Play Billing. (Note: Silt requires the full XAPK/OBB bundle with UnityDataAssetPack to run). |
 
 </details>
 
@@ -1455,21 +1487,19 @@ Un problème constaté ou vous souhaitez qu'un patch expérimental fonctionne en
 </details>
 
 <details open>
-<summary>🌐 Universal&nbsp;&nbsp;•&nbsp;&nbsp;11 patches</summary>
+<summary>🌐 Universal&nbsp;&nbsp;•&nbsp;&nbsp;9 patches</summary>
 <br>
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
+| [Force 120Hz High Refresh Rate (Universal)](#force-120hz-high-refresh-rate-universal) | Forces 120Hz display refresh rate on supported devices by configuring WindowManager.LayoutParams.preferredRefreshRate and overriding internal frame rate throttles to 120 FPS. |
 | [GmsCore (MicroG) Support (Experimental)](#gmscore-microg-support-experimental) | ⚠️ [En cours de développement / Non testé] Redirects Google Play Services (GMS) dependencies to GmsCore / MicroG (app.revanced.android.gms / org.microg.gms.core), enabling Google account login and push notifications on non-rooted devices for morphed Google and third-party apps. |
-| [Spicetify AMOLED Black Theme Bytecode](#spicetify-amoled-black-theme-bytecode) | Bytecode engine for Spicetify AMOLED Black Theme |
-| [Spicetify Custom Accent Color Bytecode](#spicetify-custom-accent-color-bytecode) | Bytecode engine for Spicetify Custom Accent Color |
+| [Keep Screen Awake (Universal)](#keep-screen-awake-universal) | Forces the screen to stay illuminated and prevents the device display from dimming or going to sleep while running games, navigation apps, video tools, or readers. |
 | [Universal AMOLED Black Theme (Experimental)](#universal-amoled-black-theme-experimental) | ⚠️ [En cours de développement / Non testé] Injects true OLED pitch black (#000000) into UI background surfaces, replacing dark grey tones to maximize battery savings and contrast on AMOLED displays for any app. |
 | [Universal App Clone (Experimental)](#universal-app-clone-experimental) | ⚠️ [En cours de développement / Non testé] Enables side-by-side dual installation for any app, allowing the official unmodified app and the patched version to run simultaneously on the same device without signature or provider collisions. |
 | [Universal Bypass Play Store Install Check (Experimental)](#universal-bypass-play-store-install-check-experimental) | ⚠️ [En cours de développement / Non testé] Bypasses Google Play Store installer source verification ('Download this app from Google Play' dialogs), preventing forced redirects to the Play Store when running sideloaded or patched APKs (such as VPN apps, tools, and games). |
 | [Universal Disable Haptics & Vibration (Experimental)](#universal-disable-haptics-vibration-experimental) | ⚠️ [En cours de développement / Non testé] Silences haptic motor vibrations across any app, eliminating unnecessary vibration buzzes and conserving battery power. |
 | [Universal Enable Screen Rotation (Experimental)](#universal-enable-screen-rotation-experimental) | ⚠️ [En cours de développement / Non testé] Unlocks screen orientation restrictions across any app, allowing portrait-only applications and games to freely rotate into landscape mode for tablets, foldables, and car units. |
-| [Universal High Refresh Rate 120Hz (Experimental)](#universal-high-refresh-rate-120hz-experimental) | ⚠️ [En cours de développement / Non testé] Forces high refresh rate display mode (90Hz, 120Hz, or 144Hz) in apps and games by configuring WindowManager.LayoutParams.preferredRefreshRate and hooking framerate getters. |
-| [Universal Keep Screen On (Experimental)](#universal-keep-screen-on-experimental) | ⚠️ [En cours de développement / Non testé] Prevents the device display from automatically turning off or dimming while the patched app is open in the foreground (ideal for reading, recipes, and monitoring). |
 | [Universal WebView Debugging (Experimental)](#universal-webview-debugging-experimental) | ⚠️ [En cours de développement / Non testé] Enables Chrome Developer Tools inspection (chrome://inspect) on all internal WebViews across any hybrid application or game. |
 
 </details>

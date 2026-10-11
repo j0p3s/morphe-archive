@@ -77,29 +77,41 @@ public class SettingsNavigationTest {
         PatchFamily.inBuildForTests = null;
         PatchFamily.capabilitiesForTests = null;
         Settings.HIDE_ADS.resetToDefault();
+        Settings.REVEAL_SPOILERS.resetToDefault();
         Settings.DISABLE_UPDATE_CHECKS.resetToDefault();
         BaseSettings.PAUSED.resetToDefault();
         app.hushtelegram.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending.remove(
                 Settings.HIDE_ADS.key);
+        app.hushtelegram.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending.remove(
+                Settings.REVEAL_SPOILERS.key);
         PauseForTests.resume();
     }
 
     @Test @Config(sdk = {28, 30, 33, 36})
     public void homeAndEveryCategoryAreReachableWithoutRemovingTheModel() {
         assertNotNull(page.navigation);
-        // The status card, Browse settings, Chats, Privacy and More settings.
-        assertEquals(5, list().getCount());
-        assertEquals(9, page.sections().size());
+        // The status card, Browse settings, the seven switch pages, More settings and Support HushTelegram.
+        assertEquals(11, list().getCount());
+        assertEquals(13, page.sections().size());
         int total = page.getPreferenceScreen().getRootAdapter().getCount();
         for (Preference section : page.sections()) {
             assertTrue(page.navigation.open(section));
-            assertEquals(((PreferenceCategory) section).getPreferenceCount(), list().getCount());
+            PreferenceCategory category = (PreferenceCategory) section;
+            // Every row once, plus a heading per group on the two split pages.
+            int groups = 0;
+            for (PatchFamily.Group group : PatchFamily.Group.values()) {
+                if (group.page.title.contentEquals(section.getTitle())) groups++;
+            }
+            assertEquals(category.getPreferenceCount() + groups, list().getCount());
+            for (int i = 0; i < category.getPreferenceCount(); i++) {
+                assertEquals(1, occurrences(category.getPreference(i)));
+            }
             assertEquals(total, page.getPreferenceScreen().getRootAdapter().getCount());
             assertNotNull(page.findPreference(Settings.HIDE_ADS.key));
             assertTrue(page.navigation.back());
             while (page.navigation.back()) { }
         }
-        assertEquals(5, list().getCount());
+        assertEquals(11, list().getCount());
     }
 
     @Test public void categoryClickChangesOnlyTheSettingWhoseRowWasTapped() {
@@ -207,6 +219,71 @@ public class SettingsNavigationTest {
         return found;
     }
 
+    private int occurrences(Preference row) {
+        int found = 0;
+        for (int i = 0; i < list().getCount(); i++) if (list().getItemAtPosition(i) == row) found++;
+        return found;
+    }
+
+    /**
+     * Conversations and Look and feel open split under their headings, in the order the groups are
+     * listed, each heading spoken as one and never tappable. A row with no switch of its own stays
+     * under the switch it belongs to, and a link to a row brings its heading into view with it.
+     */
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    public void theLongPagesAreSplitUnderHeadingsInGroupOrder() {
+        for (PatchFamily.Page split : new PatchFamily.Page[]{PatchFamily.Page.CONVERSATIONS, PatchFamily.Page.LOOK}) {
+            page.navigation.navigate(split.title);
+            layout(dialog.getView());
+            List<String> headings = new ArrayList<>();
+            List<String> expected = new ArrayList<>();
+            for (PatchFamily.Group group : PatchFamily.Group.values()) if (group.page == split) expected.add(group.title);
+            PatchFamily.Group current = null;
+            for (int i = 0; i < list().getCount(); i++) {
+                Preference item = (Preference) list().getItemAtPosition(i);
+                if (item instanceof PreferenceCategory) {
+                    headings.add(String.valueOf(item.getTitle()));
+                    assertFalse(item.getTitle() + " is tappable", list().getAdapter().isEnabled(i));
+                    list().setSelection(i);
+                    layout(dialog.getView());
+                    View row = list().getChildAt(i - list().getFirstVisiblePosition());
+                    assertTrue(item.getTitle() + " isn't a heading", row.createAccessibilityNodeInfo().isHeading());
+                    for (PatchFamily.Group group : PatchFamily.Group.values()) {
+                        if (group.title.contentEquals(item.getTitle())) current = group;
+                    }
+                    continue;
+                }
+                assertNotNull(item.getTitle() + " comes before any heading", current);
+                PatchFamily owner = item.hasKey() ? PatchFamily.Group.owner(item.getKey()) : null;
+                if (owner != null) assertSame(item.getTitle() + " is under " + current, current, PatchFamily.Group.of(owner));
+            }
+            assertEquals(expected, headings);
+            while (page.navigation.back()) { }
+        }
+        page.navigation.navigate(PatchFamily.Page.CONVERSATIONS.title);
+        assertEquals(position(Settings.HIDE_TRANSLATE_BAR.key) + 1, position(Settings.OUTSIDE_TRANSLATE.key));
+        assertEquals(position(Settings.HIDE_BY_KEYWORD.key) + 1, position(FilterEditor.GROUPS));
+        assertEquals(position(FilterEditor.GROUPS) + 1, position(FilterEditor.CHANNELS));
+        assertEquals(position(Settings.KEEP_DELETED_MESSAGES.key) + 1, position(HushTelegramPreferenceFragment.CLEAR_KEPT));
+        page.navigation.back();
+        page.navigation.navigate(PatchFamily.Page.LOOK.title);
+        assertEquals(position(Settings.CHANGE_STICKER_SIZE.key) + 1, position(HushTelegramPreferenceFragment.STICKER_SIZE_ROW));
+        assertEquals(position(Settings.AMOLED_BLACK.key) - 1, titles().indexOf("Theme"));
+        page.navigation.back();
+        assertTrue(page.navigation.open(page.findPreference(Settings.HIDE_TRANSLATE_BAR.key)));
+        layout(dialog.getView());
+        assertEquals("Translation", String.valueOf(((Preference) list().getItemAtPosition(list().getFirstVisiblePosition())).getTitle()));
+        while (page.navigation.back()) { }
+        // Further down a group, the row itself is what comes to the top.
+        assertTrue(page.navigation.open(page.findPreference(Settings.OUTSIDE_TRANSLATE.key)));
+        layout(dialog.getView());
+        assertEquals(position(Settings.OUTSIDE_TRANSLATE.key), list().getFirstVisiblePosition());
+        // Search isn't split: a match on these pages sits under its page's name as before.
+        page.navigation.search("sticker size");
+        assertFalse(titles().contains("Messages and stickers"));
+        assertTrue(contains(Settings.CHANGE_STICKER_SIZE.key));
+    }
+
     private static void assertCompleteText(TextView view) {
         assertNotNull(view);
         android.text.Layout text = view.getLayout();
@@ -223,6 +300,8 @@ public class SettingsNavigationTest {
         android.widget.Button action = statusAction();
         assertEquals("Pause", action.getText().toString());
         assertTrue(action.getMinimumWidth() <= Math.round(48 * action.getResources().getDisplayMetrics().density));
+        assertTrue("a keyboard on the button wouldn't show",
+                action.getBackground() instanceof android.graphics.drawable.RippleDrawable);
         action.performClick();
         ShadowLooper.idleMainLooper();
         layout(dialog.getView());
@@ -290,8 +369,8 @@ public class SettingsNavigationTest {
         }
     }
 
-    private static final String PAUSED_LINE = "Until you resume, every switch except Debug logging acts as if it were off. Edits made when you "
-            + "patched stay in.";
+    private static final String PAUSED_LINE = "Until you resume, every switch except Debug logging acts as if it were off. Your choices stay "
+            + "saved. Edits made when you patched stay in.";
 
     /**
      * Paused, a category page opens with a short line that says so, and the saved switches keep
@@ -302,6 +381,7 @@ public class SettingsNavigationTest {
     @Config(qualifiers = "w390dp-h600dp-night-xhdpi")
     public void aPausedCategoryPageSaysSoAndKeepsItsPlaceThroughResumeAndUndo() {
         BaseSettings.PAUSED.save(true);
+        Settings.REVEAL_SPOILERS.save(true);
         PauseForTests.pause(HushTelegramPause.Reason.SWITCH);
         recreate();
         layout(dialog.getView(), 1200);
@@ -309,15 +389,22 @@ public class SettingsNavigationTest {
         int homePosition = list().getFirstVisiblePosition();
         int homeOffset = list().getChildAt(0).getTop();
 
-        page.navigation.navigate("Chats");
+        page.navigation.navigate("Conversations");
         layout(dialog.getView(), 1200);
         Preference line = (Preference) list().getItemAtPosition(0);
         assertEquals("HushTelegram is paused", String.valueOf(line.getTitle()));
         assertEquals(PAUSED_LINE, String.valueOf(line.getSummary()));
-        assertFalse("the line reads as a button of its own", list().getAdapter().isEnabled(0));
+        // The line is a keyboard's stop now, where Enter presses its Resume, so what's checked is
+        // what a screen reader gets from it.
+        assertEquals(0, list().getFirstVisiblePosition());
+        android.view.accessibility.AccessibilityNodeInfo lineNode = list().getChildAt(0).createAccessibilityNodeInfo();
+        assertFalse("the line reads as a button of its own", lineNode.isClickable());
+        assertFalse("the line reads as a button of its own", lineNode.getActionList()
+                .contains(android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK));
+        assertNotEquals(android.widget.Button.class.getName(), String.valueOf(lineNode.getClassName()));
         assertTrue("a saved choice was changed to look paused",
-                ((SwitchPreference) page.findPreference(Settings.HIDE_ADS.key)).isChecked());
-        assertTrue(Settings.HIDE_ADS.savedValue());
+                ((SwitchPreference) page.findPreference(Settings.REVEAL_SPOILERS.key)).isChecked());
+        assertTrue(Settings.REVEAL_SPOILERS.savedValue());
 
         list().scrollListBy(40);
         layout(dialog.getView(), 1200);
@@ -332,7 +419,7 @@ public class SettingsNavigationTest {
         assertFalse(BaseSettings.PAUSED.savedValue());
         assertEquals("HushTelegram turns back on when Telegram restarts.",
                 String.valueOf(((Preference) list().getItemAtPosition(0)).getSummary()));
-        assertTrue("Resume left the page", contains(Settings.HIDE_ADS.key));
+        assertTrue("Resume left the page", contains(Settings.REVEAL_SPOILERS.key));
         assertEquals(position, list().getFirstVisiblePosition());
         assertEquals(offset, list().getChildAt(0).getTop());
 
@@ -357,7 +444,7 @@ public class SettingsNavigationTest {
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "w390dp-h600dp-night-xhdpi")
     public void undoPendingPauseKeepsTheCategoryOffset() throws Exception {
-        pendingPauseUndoKeepsOffset("Chats", null, false);
+        pendingPauseUndoKeepsOffset("Conversations", null, false);
     }
 
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
@@ -369,13 +456,13 @@ public class SettingsNavigationTest {
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "w390dp-h600dp-night-xhdpi")
     public void undoPendingPauseKeepsTheOffsetWithAnExistingRestartNotice() throws Exception {
-        pendingPauseUndoKeepsOffset("Chats", null, true);
+        pendingPauseUndoKeepsOffset("Conversations", null, true);
     }
 
     private void pendingPauseUndoKeepsOffset(String route, String search, boolean restart) throws Exception {
         int normalBottomPadding = list().getPaddingBottom();
         if (restart) app.hushtelegram.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending.add(
-                Settings.HIDE_ADS.key);
+                Settings.REVEAL_SPOILERS.key);
         BaseSettings.PAUSED.save(true);
         if (search == null) page.navigation.navigate(route);
         else findSearch(dialog.getView()).setText(search);
@@ -439,36 +526,37 @@ public class SettingsNavigationTest {
 
     /** A home row names only what its page holds in this build, down to the ad hooks inserted. */
     @Test public void homeLinesNameOnlyWhatThisBuildPutOnTheirPages() {
-        assertEquals("Ads in channels and search, and more", homeLine("Chats"));
+        assertEquals("Ads in channels and search, and more", homeLine("Ads"));
         assertEquals("Usage reports and call diagnostics, and more", homeLine("Privacy"));
+        for (String quiet : new String[] {"Chat list", "Conversations", "Playback", "Notifications", "Look and feel"}) {
+            assertTrue("missing page " + quiet, contains("section_" + quiet));
+            assertNull(quiet, homeLine(quiet));
+        }
         PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_ADS, PatchFamily.DISABLE_ANALYTICS);
         recreate();
-        assertEquals("Ads in channels and search", homeLine("Chats"));
+        assertEquals("Ads in channels and search", homeLine("Ads"));
         assertEquals("Usage reports", homeLine("Privacy"));
+        assertFalse("a page with nothing on it", contains("section_Conversations"));
         PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_STORIES, PatchFamily.DISABLE_CALL_DEBUG);
         recreate();
-        assertNull(homeLine("Chats"));
+        assertFalse("an Ads page with nothing on it", contains("section_Ads"));
         assertEquals("Call diagnostics", homeLine("Privacy"));
         PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_ADS, PatchFamily.HIDE_POPULAR_APPS);
         recreate();
-        assertEquals("Ads in channels and search, and more", homeLine("Chats"));
-        // The swipe switch is off as shipped, so it adds "and more" to the ads it sits beside.
-        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_ADS, PatchFamily.DISABLE_CHAT_SWIPE);
+        assertEquals("Ads in channels and search, and more", homeLine("Ads"));
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_ADS, PatchFamily.HIDE_COMMERCE);
         recreate();
-        assertEquals("Ads in channels and search, and more", homeLine("Chats"));
-        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.DISABLE_CHAT_SWIPE);
-        recreate();
-        assertNull(homeLine("Chats"));
-        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_ADS, PatchFamily.QUIET_CONTACTS_NAG);
-        recreate();
-        assertEquals("Ads in channels and search, and more", homeLine("Chats"));
-        // The New Year look is off as shipped, so beside the ads it adds "and more", and alone it names nothing.
-        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_ADS, PatchFamily.HOLIDAY_LOOK);
-        recreate();
-        assertEquals("Ads in channels and search, and more", homeLine("Chats"));
-        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HOLIDAY_LOOK);
-        recreate();
-        assertNull(homeLine("Chats"));
+        assertEquals("Ads in channels and search, and more", homeLine("Ads"));
+        // A switch on another page adds nothing to the Ads line.
+        for (PatchFamily elsewhere : EnumSet.of(PatchFamily.DISABLE_CHAT_SWIPE, PatchFamily.QUIET_CONTACTS_NAG,
+                PatchFamily.HOLIDAY_LOOK, PatchFamily.HIDE_RECOMMENDATIONS)) {
+            PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_ADS, elsewhere);
+            recreate();
+            assertEquals(elsewhere.name(), "Ads in channels and search", homeLine("Ads"));
+            PatchFamily.inBuildForTests = EnumSet.of(elsewhere);
+            recreate();
+            assertFalse(elsewhere.name(), contains("section_Ads"));
+        }
         PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.DISABLE_ANALYTICS, PatchFamily.DISABLE_DRAFT_PREVIEWS);
         recreate();
         assertEquals("Usage reports, and more", homeLine("Privacy"));
@@ -485,16 +573,27 @@ public class SettingsNavigationTest {
         PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.DISABLE_CALL_DEBUG, PatchFamily.GALLERY_CAMERA_ON_TAP);
         recreate();
         assertEquals("Call diagnostics, and more", homeLine("Privacy"));
+        // The phone number and beta log switches moved here from Chats: they add "and more", and alone name nothing.
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.DISABLE_ANALYTICS, PatchFamily.HIDE_PHONE_NUMBER);
+        recreate();
+        assertEquals("Usage reports, and more", homeLine("Privacy"));
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.GALLERY_CAMERA_ON_TAP, PatchFamily.BETA_LOGS_OFF);
+        recreate();
+        assertEquals("Gallery camera, and more", homeLine("Privacy"));
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_PHONE_NUMBER, PatchFamily.BETA_LOGS_OFF);
+        recreate();
+        assertTrue(contains("section_Privacy"));
+        assertNull(homeLine("Privacy"));
         PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
         PatchFamily.capabilitiesForTests = EnumSet.of(PatchFamily.Capability.CHANNEL_ADS, PatchFamily.Capability.VIDEO_ADS);
         recreate();
-        assertEquals("Ads in channels, and more", homeLine("Chats"));
+        assertEquals("Ads in channels, and more", homeLine("Ads"));
         PatchFamily.capabilitiesForTests = EnumSet.of(PatchFamily.Capability.SEARCH_ADS);
         recreate();
-        assertEquals("Ads in search, and more", homeLine("Chats"));
+        assertEquals("Ads in search, and more", homeLine("Ads"));
         PatchFamily.capabilitiesForTests = EnumSet.noneOf(PatchFamily.Capability.class);
         recreate();
-        assertNull(homeLine("Chats"));
+        assertNull(homeLine("Ads"));
     }
 
     /**
@@ -517,7 +616,7 @@ public class SettingsNavigationTest {
         page.navigation.back();
         app.hushtelegram.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending.add(
                 Settings.HIDE_ADS.key);
-        page.navigation.navigate("Chats");
+        page.navigation.navigate("Ads");
         layout(dialog.getView());
         line = (Preference) list().getItemAtPosition(0);
         assertEquals("A change here applies after Telegram restarts.", String.valueOf(line.getTitle()));
@@ -537,7 +636,7 @@ public class SettingsNavigationTest {
         BaseSettings.PAUSED.save(true);
         PauseForTests.pause(HushTelegramPause.Reason.SWITCH);
         recreate();
-        page.navigation.navigate("Chats");
+        page.navigation.navigate("Conversations");
         capture("paused-feed");
         assertUncutText(dialog.getView());
         pageAction().performClick();
@@ -649,7 +748,7 @@ public class SettingsNavigationTest {
         assertEquals("No matching settings", ((Preference) list().getItemAtPosition(0)).getTitle());
         assertTrue(page.navigation.back());
         assertEquals("", search.getText().toString());
-        assertEquals(5, list().getCount());
+        assertEquals(11, list().getCount());
     }
 
     /**
@@ -755,16 +854,56 @@ public class SettingsNavigationTest {
         page.navigation.open(page.findPreference(Settings.HIDE_ADS.key));
         SettingsL10nTest.backOf(dialog).performClick();
         assertTrue(dialog.getDialog().isShowing());
-        assertEquals(5, list().getCount());
+        assertEquals(11, list().getCount());
         page.navigation.navigate("About");
         dialog.getDialog().onBackPressed();
-        // More settings: Notifications, Links, Updates, Pause, Settings backup, Diagnostics and About.
-        assertEquals(7, list().getCount());
+        // More settings: Links, Updates, Pause, Settings backup, Diagnostics and About.
+        assertEquals(6, list().getCount());
         dialog.getDialog().onBackPressed();
-        assertEquals(5, list().getCount());
+        assertEquals(11, list().getCount());
         dialog.getDialog().onBackPressed();
         ShadowLooper.idleMainLooper();
         assertFalse(controller.get().isFinishing());
+    }
+
+    /**
+     * The home page ends with Support HushTelegram, under More settings. A tap opens the Ko-fi page
+     * in a browser of its own, and with no browser a tip names the address and Telegram keeps running.
+     */
+    @Test public void theHomePageEndsWithSupportWhichOpensKoFi() {
+        Map<String, Object> before = savedValues();
+        int last = list().getCount() - 1;
+        Preference row = (Preference) list().getItemAtPosition(last);
+        assertEquals(HushTelegramPreferenceFragment.SUPPORT, row.getKey());
+        assertEquals("Support HushTelegram", String.valueOf(row.getTitle()));
+        assertEquals("Buy me a coffee on Ko-fi", String.valueOf(row.getSummary()));
+        assertEquals("More settings", String.valueOf(((Preference) list().getItemAtPosition(last - 1)).getTitle()));
+        assertTrue(list().getAdapter().isEnabled(last));
+
+        tap(HushTelegramPreferenceFragment.SUPPORT);
+        android.content.Intent started = org.robolectric.Shadows.shadowOf(controller.get()).getNextStartedActivity();
+        assertNotNull("nothing opened", started);
+        assertEquals(android.content.Intent.ACTION_VIEW, started.getAction());
+        assertEquals("https://ko-fi.com/X8K126YVER", started.getDataString());
+        assertTrue(started.hasCategory(android.content.Intent.CATEGORY_BROWSABLE));
+        assertTrue("the page would open inside Telegram's task",
+                (started.getFlags() & android.content.Intent.FLAG_ACTIVITY_NEW_TASK) != 0);
+        assertNull(started.getComponent());
+        assertEquals("the tap left the home page", last + 1, list().getCount());
+
+        org.robolectric.shadows.ShadowApplication application =
+                org.robolectric.Shadows.shadowOf(org.robolectric.RuntimeEnvironment.getApplication());
+        application.checkActivities(true);
+        try {
+            tap(HushTelegramPreferenceFragment.SUPPORT);
+            assertEquals("Can't open the link. Go to " + L10n.isolate("ko-fi.com/X8K126YVER") + ".",
+                    ShadowToast.getTextOfLatestToast());
+            assertFalse(controller.get().isFinishing());
+        } finally {
+            application.checkActivities(false);
+        }
+        assertEquals(before, savedValues());
+        assertEquals(11, list().getCount());
     }
 
     // A window as short as the layouts below, 400 px, so the window's own layout leaves both the
@@ -924,7 +1063,8 @@ public class SettingsNavigationTest {
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "pt-rBR-w390dp-h844dp-night-xhdpi")
     public void brazilianPortuguesePagesKeepTheirCompleteText() throws Exception {
-        assertEquals("Privacidade", String.valueOf(page.sections().get(1).getTitle()));
+        assertEquals("Lista de conversas", String.valueOf(page.sections().get(1).getTitle()));
+        assertEquals("Privacidade", String.valueOf(page.sections().get(6).getTitle()));
         capture("pt-br-overview");
         page.navigation.navigate("Privacy");
         capture("pt-br-privacy");

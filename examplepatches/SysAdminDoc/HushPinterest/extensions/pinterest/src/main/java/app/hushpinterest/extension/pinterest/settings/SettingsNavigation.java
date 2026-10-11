@@ -68,6 +68,8 @@ final class SettingsNavigation extends BaseAdapter {
     private final Map<String, String> searchAliases;
     private final Preference browse;
     private final Preference more;
+    /** The home page's last row, which opens HushPinterest's Ko-fi page in a browser. */
+    private final Preference support;
     private final Preference empty;
     /** The line a category or search page starts with while a pause or a restart applies to it. */
     private final Preference pageStatus;
@@ -109,6 +111,8 @@ final class SettingsNavigation extends BaseAdapter {
         section("Pin actions", L10n.t("Pin actions"), null, SettingsIcons.DOWNLOADS, true);
         section("Interface", L10n.t("Interface"), null, SettingsIcons.SETTINGS, true);
         section("Links", L10n.t("Links"), null, SettingsIcons.LINKS, false);
+        section("Notifications", L10n.t("Notifications"), null, SettingsIcons.BELL, false);
+        section("Pinterest's own settings", L10n.t("Pinterest's own settings"), null, SettingsIcons.SETTINGS, false);
         section("Updates", L10n.t("Updates"), null, SettingsIcons.UPDATES, false);
         section("Set when you patched", L10n.t("Set when you patched"), null, SettingsIcons.PATCHED, false);
         section("Pause, backup and diagnostics", L10n.t("Pause, backup and diagnostics"), null, SettingsIcons.TOOLS, false);
@@ -117,6 +121,9 @@ final class SettingsNavigation extends BaseAdapter {
         browse.setTitle(L10n.t("Browse settings"));
         more = link(context, L10n.t("More settings"), L10n.t("Links, updates, backup and more"), SettingsIcons.SETTINGS);
         more.setOnPreferenceClickListener(ignored -> { navigate(MORE); return true; });
+        support = link(context, L10n.t("Support HushPinterest"), L10n.t("Buy me a coffee on Ko-fi"), SettingsIcons.OPENING);
+        support.setKey(HushPinterestPreferenceFragment.SUPPORT);
+        support.setOnPreferenceClickListener(row -> { HushPinterestPreferenceFragment.openSupport(row.getContext()); return true; });
         empty = new HushPinterestPreferenceFragment.Row(context);
         empty.setTitle(L10n.t("No matching settings"));
         empty.setSummary(L10n.t("Try a different word or clear the search."));
@@ -337,6 +344,7 @@ final class SettingsNavigation extends BaseAdapter {
             visible.add(browse);
             for (Section section : sections) if (section.primary) visible.add(section.link);
             visible.add(more);
+            visible.add(support);
         }
         if (terms.isEmpty()) host.showResults(-1);
         // Undo can remove the entire status card. Reserve its former scroll range at the
@@ -520,7 +528,7 @@ final class SettingsNavigation extends BaseAdapter {
     private int dp(int value) { return Math.round(value * screen.getContext().getResources().getDisplayMetrics().density); }
 
     private Object group(Preference item) {
-        if (item == more || item == browse || item == screen.getPreference(0)) return item;
+        if (item == more || item == support || item == browse || item == screen.getPreference(0)) return item;
         if (item.getParent() != null) return item.getParent();
         return sections;
     }

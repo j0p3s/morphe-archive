@@ -78,7 +78,7 @@ final class HushfacebookPages {
         ReleaseCheck.watch(page);
     }
 
-    /** Appearance, in every build for Text size: the font, the emoji, where the tab bar goes, dark mode, haptics and screen transitions. */
+    /** Appearance, in every build for Text size: the font, the emoji, where the tab bar goes, dark mode, haptics, screen transitions and the app icons. */
     static void appearance(HushfacebookPreferenceFragment page, PreferenceScreen screen, Context context,
             Set<PatchFamily> build) {
         PreferenceCategory appearance = category(screen, L10n.t("Appearance"));
@@ -153,6 +153,12 @@ final class HushfacebookPages {
             appearance.addPreference(toggle(context, Settings.TURN_OFF_SCREEN_TRANSITIONS,
                     L10n.t("Tabs, the Menu and screens that open over Facebook appear at once instead of sliding in. Swiping "
                             + "between tabs still works.")));
+        }
+        if (build.contains(PatchFamily.APP_ICONS)) {
+            // The App icon page asks as it opens. A picked icon is a launcher alias, so it outlives the switch.
+            appearance.addPreference(toggle(context, Settings.UNLOCK_APP_ICONS,
+                    L10n.t("Lets you pick the app icons Facebook keeps for Facebook Plus on its App icon page. Your pick "
+                            + "stays if you turn this off, so pick the blue one first to go back.")));
         }
     }
 
@@ -234,11 +240,13 @@ final class HushfacebookPages {
         if (build.contains(PatchFamily.RESTORE_TRUST) && BaseSettings.DEBUG.get() && MessengerLinkCheck.available()) {
             Preference link = new Row(context);
             link.setTitle(L10n.t("Test the Messenger link"));
-            link.setSummary(L10n.t("Checks now whether Facebook can reach Messenger, the way it does at startup, and shows each result. "
-                    + "Appears while Debug logging is on."));
+            String about = L10n.t("Checks now whether Facebook can reach Messenger, the way it does at startup, and shows each result. "
+                    + "Appears while Debug logging is on.");
+            link.setSummary(about);
             link.setPersistent(false);
+            // The result goes under the description, whole: a toast that long gets cut on some phones.
             link.setOnPreferenceClickListener(p -> {
-                MessengerLinkCheck.start(context);
+                MessengerLinkCheck.start(context, report -> p.setSummary(about + "\n" + report));
                 return true;
             });
             hushfacebook.addPreference(mark(link, SettingsIcons.BUG));

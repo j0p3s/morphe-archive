@@ -38,6 +38,14 @@ public final class SettingsStatus {
     public static boolean commerceSettingsRows() { return false; }
     public static boolean commerceProfileGifts() { return false; }
     public static boolean commerceChannelGift() { return false; }
+    public static boolean commerceAttachWallet() { return false; }
+    public static boolean commerceMenuWallet() { return false; }
+    public static boolean commerceProfileSendGram() { return false; }
+    public static boolean commerceAddressSendGram() { return false; }
+    public static boolean commerceTransferSendGram() { return false; }
+    public static boolean commercePremiumStickers() { return false; }
+    public static boolean commercePremiumEffects() { return false; }
+    public static boolean commercePremiumEmojiPacks() { return false; }
     public static boolean hidePromotionalBanners() { return false; }
     public static boolean promotionalSuggestions() { return false; }
     public static boolean birthdayGiftBanner() { return false; }
@@ -83,11 +91,19 @@ public final class SettingsStatus {
     public static boolean hideStickerTime() { return false; }
     public static boolean ignoreMutedMentions() { return false; }
     public static boolean hideBlockedInGroups() { return false; }
+    public static boolean hideByKeyword() { return false; }
+    public static boolean stickerSize() { return false; }
     public static boolean hideFeaturesAndInvite() { return false; }
     public static boolean messageMenuRepeat() { return false; }
     public static boolean keepDeleted() { return false; }
     public static boolean askBeforeSending() { return false; }
     public static boolean betaLogsOff() { return false; }
+    public static boolean outsideTranslate() { return false; }
+    public static boolean hideChannelButtons() { return false; }
+    public static boolean hideSendAs() { return false; }
+    public static boolean fasterDownloads() { return false; }
+    public static boolean saveDownloads() { return false; }
+    public static boolean chatTypeFolders() { return false; }
     public static boolean storyRequests() { return false; }
     public static boolean storyBar() { return false; }
     public static boolean storyCamera() { return false; }
@@ -125,6 +141,7 @@ public final class SettingsStatus {
     public static boolean repairFirebasePush() { return false; }
     public static boolean firebaseCertificateHeader() { return false; }
     public static boolean firebaseLocalStatus() { return false; }
+    public static boolean unifiedPush() { return false; }
 
     public static boolean channelAds() {
         return false;
@@ -138,10 +155,6 @@ public final class SettingsStatus {
         return false;
     }
 
-    public static boolean deviceStats() {
-        return false;
-    }
-
     public static boolean readMetrics() {
         return false;
     }
@@ -150,6 +163,7 @@ public final class SettingsStatus {
     public static boolean premiumPromoTap() { return false; }
     public static boolean premiumPromoAccept() { return false; }
     public static boolean premiumPromoFail() { return false; }
+    public static boolean dualCameraReport() { return false; }
     public static boolean crashReports() { return false; }
     public static boolean sessionReports() { return false; }
 }

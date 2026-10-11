@@ -25,7 +25,6 @@ import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.PreferenceCategory;
@@ -88,6 +87,11 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
     /** The repository as a link, and as a person reads it. ExtensionHostsTest reads the link. */
     static final String SOURCE_URL = "https://github.com/SysAdminDoc/HushPinterest";
     static final String SOURCE_ADDRESS = SOURCE_URL.substring(SOURCE_URL.indexOf("://") + 3);
+    /** Where Support HushPinterest goes: the maintainer's Ko-fi page. ExtensionHostsTest reads the link. */
+    static final String SUPPORT_URL = "https://ko-fi.com/X8K126YVER";
+    static final String SUPPORT_ADDRESS = SUPPORT_URL.substring(SUPPORT_URL.indexOf("://") + 3);
+    /** The key of Support HushPinterest, the settings home page's last row. It stores nothing. */
+    static final String SUPPORT = "action_support_hushpinterest";
     /** The English of the row listing what Pause can't reach, and its key in {@link L10n}. */
     static final String STAYS_WHILE_PAUSED = "Stays in while paused";
     /** The Check now row's key. It stores nothing: no setting has this name. */
@@ -210,7 +214,9 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        SettingsBackupPreference.onResult(this, requestCode, resultCode, data);
+        if (!DownloadFolderPreference.onResult(this, requestCode, resultCode, data)) {
+            SettingsBackupPreference.onResult(this, requestCode, resultCode, data);
+        }
     }
 
     /** Shows what the switches are saved as, after an import wrote them. */
@@ -271,11 +277,20 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
                         + "until you patch again without Disable analytics."), SettingsIcons.BLOCK);
             patchToggle(privacy, context, build, PatchFamily.STRIP_LINK_TRACKING, Settings.STRIP_LINK_TRACKING,
                     L10n.t("Strip link tracking"), L10n.t("Removes tracking tags from links you copy or share. "
-                        + "Short pin.it links stay as Pinterest made them."), SettingsIcons.LINKS);
+                        + "Short pin.it links stay as Pinterest made them unless Plain pin links is on."), SettingsIcons.LINKS);
+            // Its own hooks: a build where Pinterest's invite logger or direct share wasn't found has no row for it.
+            if (build.contains(PatchFamily.STRIP_LINK_TRACKING) && PatchFamily.Capability.PLAIN_PIN_LINKS.installed()) {
+                privacy.addPreference(mark(toggle(context, Settings.PLAIN_PIN_LINKS, L10n.t("Plain pin links"),
+                        L10n.t("Copied and shared pin.it links become the pin's own pinterest.com link, so they don't say who shared them. "
+                                + "Pin links from Pinterest's country sites become that same link too. "
+                                + "When HushPinterest doesn't know the pin yet, a copied link is checked with Pinterest in the background and swapped in a moment later.")),
+                        SettingsIcons.LINKS));
+            }
             patchToggle(privacy, context, build, PatchFamily.HIDE_ADVERTISING_ID, Settings.HIDE_ADVERTISING_ID,
                     L10n.t("Hide advertising ID"), L10n.t("Pinterest sees an empty advertising ID with ad tracking "
                         + "limited, as if you deleted your ad ID in Android "
-                        + "settings."), SettingsIcons.BLOCK);
+                        + "settings. Pinterest also stops keeping its browser ID in Google's Block Store, "
+                        + "where it would outlast a reinstall."), SettingsIcons.BLOCK);
             // A patch-time fact with no switch: an explanation, so it takes the info mark.
             if (build.contains(PatchFamily.REMOVE_AD_TRACKING_PERMISSIONS)) {
                 privacy.addPreference(mark(info(context, L10n.t("Remove ad tracking permissions"),
@@ -298,8 +313,12 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
                     L10n.t("Download pins"), L10n.t("Download a pin, or select several pins in a grid. Saves videos "
                         + "and original images, or the largest size Pinterest has."), SettingsIcons.DOWNLOADS);
             if (build.contains(PatchFamily.DOWNLOAD_PINS)) {
+                // Download pins' second switch, drawn like Plain pin links: Pause turns it off with the first.
+                actions.addPreference(mark(toggle(context, Settings.SAVE_IN_PINTEREST_FOLDER, L10n.t("Save in Pinterest's folder"),
+                        L10n.t("Saves downloads in Pictures/100PINT/Pins, the folder Pinterest's own image saves use, instead of "
+                            + "Download.")), SettingsIcons.DOWNLOADS));
+                actions.addPreference(mark(new DownloadFolderPreference(this, context), SettingsIcons.DOWNLOADS));
                 actions.addPreference(mark(new DownloadHistoryPreference(context), SettingsIcons.DOWNLOADS));
-                if (Build.VERSION.SDK_INT == 28) actions.addPreference(mark(new PendingSavesPreference(context), SettingsIcons.DOWNLOADS));
             }
             patchToggle(actions, context, build, PatchFamily.DOWNLOAD_BOARD, Settings.DOWNLOAD_BOARD,
                     L10n.t("Download board"), L10n.t("Adds Download board to a board's menu. It saves the pins Pinterest "
@@ -385,6 +404,27 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
                     + "those addresses for it. Selecting them sends their links here. Your other link settings "
                     + "stay as they are.")),
                 SettingsIcons.ABOUT));
+
+        // Only with the patch: Firebase signs a patched Pinterest up for push notifications only
+        // when it names Pinterest's own certificate (PushNotifications).
+        if (build.contains(PatchFamily.FIX_PUSH_NOTIFICATIONS)) {
+            PreferenceCategory notifications = category(screen, L10n.t("Notifications"));
+            patchToggle(notifications, context, build, PatchFamily.FIX_PUSH_NOTIFICATIONS, Settings.FIX_PUSH_NOTIFICATIONS,
+                    L10n.t("Fix push notifications"),
+                    L10n.t("Lets a patched Pinterest sign up for push notifications, which it can't do on its own. A "
+                        + "change applies the next time Pinterest starts."), SettingsIcons.BELL);
+        }
+
+        // In every build: where Pinterest keeps its own controls for what no switch here covers. The
+        // rows name each path in Pinterest's own words where the build has them (NativeControls).
+        PreferenceCategory pinterest = category(screen, L10n.t("Pinterest's own settings"));
+        pinterest.addPreference(mark(info(context, L10n.t("Finding them"),
+                L10n.t("Open Pinterest's settings from the gear on your Saved tab. HushPinterest doesn't change any of "
+                    + "these.")), SettingsIcons.ABOUT));
+        for (NativeControls.Control control : NativeControls.controls()) {
+            pinterest.addPreference(mark(info(context, control.title, NativeControls.summary(context, control)),
+                    SettingsIcons.SETTINGS));
+        }
 
         // In every build: the release check is the settings entry's own, not a patch's. Its switch
         // is one Pause turns off, so it sits above the Pause row with the rest.
@@ -764,6 +804,25 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
      */
     static String markerFolder(String packageName) {
         return "Android/data/" + packageName + "/files";
+    }
+
+    /** The Ko-fi page, for a browser, in a task of its own so it never opens inside Pinterest's. */
+    static Intent supportIntent() {
+        return new Intent(Intent.ACTION_VIEW, Uri.parse(SUPPORT_URL))
+                .addCategory(Intent.CATEGORY_BROWSABLE)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    }
+
+    /** Opens the Ko-fi page, or says no app here can, as Source code and issues does. */
+    static void openSupport(Context context) {
+        try {
+            context.startActivity(supportIntent());
+        } catch (ActivityNotFoundException | SecurityException missing) {
+            // No browser, or none switched on. Uncaught, Android's exception closed Pinterest.
+            Logger.printInfo(() -> "No app opened the support link");
+            Utils.showToastLong(L10n.f("No app on this phone can open the link. The address is %1$s.",
+                    L10n.isolate(SUPPORT_ADDRESS)));
+        }
     }
 
     /**

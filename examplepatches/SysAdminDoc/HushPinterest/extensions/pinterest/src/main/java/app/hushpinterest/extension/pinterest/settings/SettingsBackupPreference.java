@@ -417,8 +417,10 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             case "hushpinterest_hide_shopping": return L10n.t("Hide shopping and product pins");
             case "hushpinterest_disable_analytics": return L10n.t("Disable analytics");
             case "hushpinterest_strip_link_tracking": return L10n.t("Strip link tracking");
+            case "hushpinterest_plain_pin_links": return L10n.t("Plain pin links");
             case "hushpinterest_hide_ad_id": return L10n.t("Hide advertising ID");
             case "hushpinterest_download_pins": return L10n.t("Download pins");
+            case "hushpinterest_save_in_pinterest_folder": return L10n.t("Save in Pinterest's folder");
             case "hushpinterest_download_board": return L10n.t("Download board");
             case "hushpinterest_long_press_download": return L10n.t("Long-press download");
             case "hushpinterest_external_browser": return L10n.t("Open links in your browser");
@@ -439,6 +441,7 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             case "hushpinterest_hide_save_toasts": return L10n.t("Hide save toasts");
             case "hushpinterest_original_images": return L10n.t("Original-quality images");
             case "hushpinterest_disable_update_nag": return L10n.t("Disable update nag");
+            case "hushpinterest_fix_push_notifications": return L10n.t("Fix push notifications");
             default: throw new IllegalArgumentException("Unlisted backup switch");
         }
     }

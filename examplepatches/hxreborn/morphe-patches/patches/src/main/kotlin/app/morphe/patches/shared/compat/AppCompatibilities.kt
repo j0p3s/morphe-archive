@@ -320,6 +320,29 @@ internal object AppCompatibilities {
         targets = listOf(AppTarget(version = "26.01.08", versionCode = 12506, minSdk = 24)),
     )
 
+    val LUMO = Compatibility(
+        name = "Lumo",
+        packageName = "me.proton.android.lumo",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x6D4AFF,
+        signatures = setOf(
+            "a747eaee28611e25217b793c07bf302234405cfd1e19068162556c79e5bf04f0",
+            "dcc9439ec1a6c6a8d0203f3423ee42bcc8b970628e53cb73a0393f398dd5b853",
+        ),
+        targets = listOf(AppTarget(version = "2.1.4-gms", versionCode = 78, minSdk = 29)),
+    )
+
+    val MEDICNEET = Compatibility(
+        name = "MedicNEET",
+        packageName = "com.halalfire.medicneet",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x4D8E78,
+        signatures = setOf(
+            "befd82717721a7d025fb5783b48469bcf222536a224a7466098459f0ba1f4559",
+        ),
+        targets = listOf(AppTarget(version = "1.5.137", versionCode = 258, minSdk = 24)),
+    )
+
     val MEMONEET = Compatibility(
         name = "MemoNeet",
         packageName = "com.adithya.memoneet",
@@ -584,6 +607,15 @@ internal object AppCompatibilities {
         ),
     )
 
+    val MAY_BULLET_JOURNAL = Compatibility(
+        name = "May: Beautiful Bullet Journal",
+        packageName = "com.azeravn.bulletjournal",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0xF2CF7F,
+        signatures = setOf("89c58e85cc8fa88481577d6c237043f975c44765ef98f622385ecafac2f9694c"),
+        targets = listOf(AppTarget(version = "1.0.216", minSdk = 24)),
+    )
+
     val RISE = Compatibility(
         name = "RISE Sleep Tracker",
         packageName = "com.risesci.nyx",
@@ -616,6 +648,28 @@ internal object AppCompatibilities {
             AppTarget(version = "3.70.0", versionCode = 840, minSdk = 23),
             AppTarget(version = "3.72.0", versionCode = 843, minSdk = 28),
         ),
+    )
+
+    val SQCOM = Compatibility(
+        name = "SQCOM",
+        packageName = "com.sqcom.shangqing",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x4880F8,
+        signatures = setOf(
+            "a931de7526cdbb08051147215c8283266f53a54ac26ac1b41d1e9d943a6a5b59",
+        ),
+        targets = listOf(AppTarget(version = "1.1.0", versionCode = 1001000, minSdk = 26)),
+    )
+
+    val STEEZY = Compatibility(
+        name = "STEEZY",
+        packageName = "co.steezy.app",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x0E7AFE,
+        signatures = setOf(
+            "72222080cdb4e8e9ef66d0ac120b85c52ef223815bae6c1a07d2b11cd373722e",
+        ),
+        targets = listOf(AppTarget(version = "5.23.0", versionCode = 299, minSdk = 24)),
     )
 
     val SYMFONIUM = Compatibility(
@@ -686,6 +740,15 @@ internal object AppCompatibilities {
             AppTarget(version = "2.33.0", versionCode = 23300, minSdk = 26),
             AppTarget(version = "2.33.1", versionCode = 23301, minSdk = 26),
         ),
+    )
+
+    val WALP = Compatibility(
+        name = "WalP",
+        packageName = "com.stresscodes.wallp",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0xA346FC,
+        signatures = setOf("dbb4adaa10cdf28ae38d36ffe3b11f5f6d30506c79f0e59e702a113b0e93a361"),
+        targets = listOf(AppTarget(version = "10.2.1", versionCode = 168, minSdk = 32)),
     )
 
     val YANOSIK = Compatibility(

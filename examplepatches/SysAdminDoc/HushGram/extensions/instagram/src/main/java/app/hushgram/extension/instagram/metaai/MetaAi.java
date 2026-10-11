@@ -30,8 +30,9 @@ import app.hushgram.extension.shared.diagnostics.HookStatus;
  * while its switch is on, the answer an account without Meta AI gets.
  *
  * <p>A keyword search's results end in an "Ask a follow-up…" bar with topic pills above it. Its flag
- * also gives the results page its header (Back and the query), so it stays on, and the view the
- * page looks the bar up in goes through {@link #followUpBar} as the page sets the bar up instead.
+ * also gives the results page its header (Back and the query), so it stays on. Instead, the bar's
+ * stub goes through {@link #followUpStub} as the page finds it, before inflating it, and the view
+ * the page then looks the pills up in goes through {@link #followUpBar}.
  *
  * <p>Home's top bar is built from a list of button names the server sends. Meta AI's ("meta_ai")
  * goes through {@link #homeButton}, and a fourth flag, which adds a Meta AI chats button when the
@@ -48,6 +49,12 @@ import app.hushgram.extension.shared.diagnostics.HookStatus;
  * <p>The share sheet builds the targets in its bottom row from a list of names. Meta AI's ("hatch",
  * shown as Muse on some accounts) has its own case, and the answer of the case's name check goes
  * through {@link #shareTarget}.
+ *
+ * <p>A reel's Blend invite button comes from one static check that the Reels viewer's reel binder
+ * and the clips viewer both read. {@link #blendButton} makes it answer "no Blend" first.
+ *
+ * <p>Your profile's top bar is filled from a list of items, one view each. Where the loop reaches
+ * the Muse button's item, {@link #museButton} decides whether it skips to the next one.
  */
 public final class MetaAi {
     /**
@@ -96,9 +103,10 @@ public final class MetaAi {
     }
 
     /**
-     * Injected where the search results page checks the view it looks its "Ask a follow-up…" bar
-     * up in, with that view. Answers null, which Instagram takes as a page without the bar, while
-     * the search switch is on, and the view otherwise, or when anything goes wrong. Never throws.
+     * Injected where the search results page checks the view it looks up a stub of its "Ask a
+     * follow-up…" bar in, with that view: on 450 the bar itself, before its topic pills are looked
+     * up in it. Answers null while the search switch is on, which Instagram takes as a view without
+     * that stub, and the view otherwise, or when anything goes wrong. Never throws.
      */
     public static View followUpBar(View view) {
         if (view == null) return null;
@@ -110,6 +118,25 @@ public final class MetaAi {
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.META_AI, "follow-up bar", failure);
             return view;
+        }
+    }
+
+    /**
+     * Injected where the search results page finds its "Ask a follow-up…" bar's stub, with the
+     * stub, before it tests it for null and inflates it. Answers null while the search switch is
+     * on, which skips the inflate, so a new results page has no bar and no topic pills, and the
+     * stub otherwise, or when anything goes wrong. Never throws.
+     */
+    public static View followUpStub(View stub) {
+        if (stub == null) return null;
+        try {
+            HookStatus.invoked(FamilyNames.META_AI);
+            if (!Utils.settingsReady() || !Settings.HIDE_META_AI_SEARCH.get()) return stub;
+            Logger.printDebug(() -> "Meta AI: left the Ask a follow-up bar out of search results");
+            return null;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.META_AI, "follow-up bar stub", failure);
+            return stub;
         }
     }
 
@@ -217,6 +244,59 @@ public final class MetaAi {
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.META_AI, "share target", failure);
             return true;
+        }
+    }
+
+    /**
+     * Injected at the start of the method that builds a profile's Muse banner (the Meet Muse card
+     * with its Try Muse button). Answers true to have it answer no banner, which every place that
+     * adds the banner to a list takes as a profile without one, while Hide the Muse card on
+     * profiles is on. Answers false otherwise, or when anything goes wrong. Never throws.
+     */
+    public static boolean museBanner() {
+        try {
+            HookStatus.invoked(FamilyNames.META_AI);
+            if (!Utils.settingsReady() || !Settings.HIDE_META_AI_PROFILE_BANNER.get()) return false;
+            Logger.printDebug(() -> "Meta AI: left the Muse card out of a profile");
+            return true;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.META_AI, "Muse banner", failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injected where the method that fills your profile's top bar reaches the Muse button's item.
+     * Answers true to have it go on to the bar's next item without adding the button, while Hide
+     * the Muse button on your profile is on. Answers false otherwise, or when anything goes wrong.
+     * Never throws.
+     */
+    public static boolean museButton() {
+        try {
+            HookStatus.invoked(FamilyNames.META_AI);
+            if (!Utils.settingsReady() || !Settings.HIDE_META_AI_PROFILE_BUTTON.get()) return false;
+            Logger.printDebug(() -> "Meta AI: left the Muse button out of the profile's top bar");
+            return true;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.META_AI, "Muse button", failure);
+            return false;
+        }
+    }
+
+    /**
+     * Injected at the start of the method that decides a reel's Blend invite button. Answers true to
+     * have it answer "no Blend" without working anything out, while Hide Blend on reels is on, and
+     * false otherwise, or when anything goes wrong. Never throws.
+     */
+    public static boolean blendButton() {
+        try {
+            HookStatus.invoked(FamilyNames.META_AI);
+            if (!Utils.settingsReady() || !Settings.HIDE_META_AI_BLEND.get()) return false;
+            Logger.printDebug(() -> "Meta AI: left the Blend button off a reel");
+            return true;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.META_AI, "Blend button", failure);
+            return false;
         }
     }
 

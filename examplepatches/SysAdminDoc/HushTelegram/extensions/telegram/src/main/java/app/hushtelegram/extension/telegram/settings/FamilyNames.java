@@ -60,13 +60,21 @@ public final class FamilyNames {
     public static final String REAR_CAMERA_FIRST = "Start the camera on the rear lens";
     public static final String HIDE_GALLERY_CAMERA_TILE = "Hide gallery camera tile";
     public static final String HIDE_STICKER_TIME = "Hide time on stickers";
+    public static final String CHANGE_STICKER_SIZE = "Change sticker size";
     public static final String IGNORE_MUTED_MENTIONS = "Ignore mentions in muted chats";
     public static final String HIDE_BLOCKED_IN_GROUPS = "Hide blocked users in groups";
+    public static final String HIDE_BY_KEYWORD = "Hide messages by keyword";
     public static final String HIDE_FEATURES_AND_INVITE = "Hide Telegram Features and Invite Friends";
     public static final String MESSAGE_MENU_REPEAT = "Add Repeat to the message menu";
     public static final String KEEP_DELETED_MESSAGES = "Keep deleted messages";
     public static final String ASK_BEFORE_STICKER = "Ask before sending a sticker";
     public static final String BETA_LOGS_OFF = "Turn off beta debug logs";
+    public static final String OUTSIDE_TRANSLATE = "Translate with an outside service";
+    public static final String HIDE_CHANNEL_BUTTONS = "Hide channel bar buttons";
+    public static final String HIDE_SEND_AS = "Hide Send as button";
+    public static final String FASTER_DOWNLOADS = "Faster downloads";
+    public static final String SAVE_DOWNLOADS = "Save downloaded files";
+    public static final String CHAT_TYPE_FOLDERS = "Folders by chat type";
     public static final String DISABLE_ANALYTICS = "Disable analytics";
     public static final String DISABLE_CALL_DEBUG = "Disable call debug upload";
     public static final String DISABLE_DRAFT_PREVIEWS = "Disable draft link previews";
@@ -75,6 +83,7 @@ public final class FamilyNames {
     public static final String STRIP_LINK_TRACKING = "Strip link tracking";
     public static final String DISABLE_UPDATE_CHECKS = "Disable update checks";
     public static final String REPAIR_FIREBASE_PUSH = "Repair Firebase push registration";
+    public static final String UNIFIED_PUSH = "UnifiedPush notifications";
 
     private FamilyNames() {
     }

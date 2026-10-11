@@ -164,6 +164,16 @@
     },
     {
       "paths": [
+        "extensions/facebook/src/main/java/app/morphe/extension/facebook/misc/LinkHistory.java",
+        "patches/src/main/kotlin/app/morphe/patches/facebook/misc/externalbrowser/LinkHistoryWriters.kt"
+      ],
+      "origin": "original",
+      "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
+      "license": "GPL-3.0-only",
+      "changes": "Written for Hushfacebook: a switch that keeps Facebook's own browser from building its two link history writers, hooked first in the factory of each kept writer class in Facebook 582, where a yes takes the factory's own null."
+    },
+    {
+      "paths": [
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/misc/TranslatedStart.java",
         "patches/src/main/kotlin/app/morphe/patches/facebook/misc/translatedstart/**"
       ],
@@ -225,12 +235,15 @@
     {
       "paths": [
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/theme/AccentColor.java",
-        "patches/src/main/kotlin/app/morphe/patches/facebook/layout/theme/AccentColorPatch.kt"
+        "extensions/facebook/src/main/java/app/morphe/extension/facebook/theme/AccentResources.java",
+        "extensions/facebook/src/main/java/app/morphe/extension/facebook/theme/ColourTable.java",
+        "patches/src/main/kotlin/app/morphe/patches/facebook/layout/theme/AccentColorPatch.kt",
+        "patches/src/main/kotlin/app/morphe/patches/facebook/layout/theme/AccentResourceBlues.kt"
       ],
       "origin": "original",
       "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
       "license": "GPL-3.0-only",
-      "changes": "Written for Hushfacebook: Accent color, which swaps Facebook's blues on a chosen set of FDS tokens for a preset's tonal ramp at the lightness each had, holding text roles to 4.5:1. It rides the colour resolver hooks the themes share and steps aside for the Material You theme."
+      "changes": "Written for Hushfacebook: Accent color, which swaps Facebook's blues on a chosen set of FDS tokens for a preset's tonal ramp at the lightness each had, holding text roles to 4.5:1. It rides the colour resolver hooks the themes share and steps aside for the Material You theme. Its route five lists the colour resources Facebook's FDS styles give the tokens, when they hold a blue, and gives each activity's resources a colour table for them through a ResourcesLoader (the way Material Components overrides colours), so views inflated from layout XML take the accent too, while route one turns the table's colours back into Facebook's before it decides. Its route six hands the fill of each Bloks box, which Facebook's server sends as a hex colour, to the same rules as a primary button's fill as the box's drawable is built, and the colour of each span of Bloks text (a profile's bio link) to the link rules before the span is made. Its route seven gives the blues of React Native text and backgrounds (Marketplace) the accent through the React hooks the themes share."
     },
     {
       "paths": [
@@ -425,6 +438,15 @@
       "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
       "license": "GPL-3.0-only",
       "changes": "Written for Hushfacebook: the anchors and stub fills behind the Debug logging test of a same-key Messenger's link, which finds Facebook's message expiration flag reader and one of its Context-to-session lookups on Facebook 577 and 580 and has the extension call them on request."
+    },
+    {
+      "paths": [
+        "patches/src/main/kotlin/app/morphe/patches/facebook/misc/resignedtrust/FbnsSignersPatch.kt"
+      ],
+      "origin": "original",
+      "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
+      "license": "GPL-3.0-only",
+      "changes": "Written for Hushfacebook: the push service's package check (582's FbnsServiceDelegateV2 hashes PackageInfo.signatures and stops the service when the hash isn't Meta's) gets Facebook's original certificate for this app's own package, so a re-signed build's push process stops restarting. The same fix was first written for HushThreads (its issue #6) by the same author."
     },
     {
       "paths": [
@@ -731,13 +753,15 @@
     {
       "paths": [
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/misc/AnalyticsUploads.java",
+        "extensions/facebook/src/main/java/app/morphe/extension/facebook/misc/CameraRollProcessing.java",
         "patches/src/main/kotlin/app/morphe/patches/facebook/misc/analytics/AnalyticsUploadAnchors.kt",
+        "patches/src/main/kotlin/app/morphe/patches/facebook/misc/analytics/CameraRollAnchors.kt",
         "patches/src/main/kotlin/app/morphe/patches/facebook/misc/analytics/HoldAnalyticsUploadsPatch.kt"
       ],
       "origin": "original",
       "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
       "license": "GPL-3.0-only",
-      "changes": "Written for Hushfacebook: Hold back analytics uploads, found in Facebook 577, 580 and 581 by names Facebook keeps. A check goes just before the one kickOffUpload() call, in the run() of the runnable the kept NativeXAnalyticsAppJobHandler schedules every three minutes, and the one resumeUploading(String) call, in the kept NativeXAnalyticsLowPriorityInit, and skips the call on a yes. The Papaya job's start, the most derived onStartJob along the kept FBPapayaJobService's superclasses, passes the answer of its config gate through the extension, so a held job takes Facebook's own off path."
+      "changes": "Written for Hushfacebook: Hold back analytics uploads, found in Facebook 577, 580 and 581 by names Facebook keeps. A check goes just before the one kickOffUpload() call, in the run() of the runnable the kept NativeXAnalyticsAppJobHandler schedules every three minutes, and the one resumeUploading(String) call, in the kept NativeXAnalyticsLowPriorityInit, and skips the call on a yes. The Papaya job's start, the most derived onStartJob along the kept FBPapayaJobService's superclasses, passes the answer of its config gate through the extension, so a held job takes Facebook's own off path. The camera roll switch, found in Facebook 582: a check goes first in the static (FbUserSession)Z config check the kept PipelineManager$runPipeline$2 calls next to its adv_pro_app_job_disabled reason, and answers it false on a yes; the kept MediaCountUploadAppJob's first config read, the kill switch whose branch cancels the MediaCountUploadWorker work, passes its answer through the extension."
     },
     {
       "paths": [
@@ -760,6 +784,17 @@
       "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
       "license": "GPL-3.0-only",
       "changes": "Written for Hushfacebook: Allow screenshots, an idea ReVanced's universal Remove screenshot restriction patch, Loukious and NexAlloy share, written here from Facebook 577, 580 and 581. Every Window.addFlags(int) and setFlags(int, int) call outside the extension becomes a static call of the extension on the same registers, and every write of WindowManager.LayoutParams.flags first runs its value through the extension, which takes FLAG_SECURE out while the switch is on."
+    },
+    {
+      "paths": [
+        "extensions/facebook/src/main/java/app/morphe/extension/facebook/misc/AppIcons.java",
+        "patches/src/main/kotlin/app/morphe/patches/facebook/misc/appicons/UnlockAppIconsAnchors.kt",
+        "patches/src/main/kotlin/app/morphe/patches/facebook/misc/appicons/UnlockAppIconsPatch.kt"
+      ],
+      "origin": "original",
+      "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
+      "license": "GPL-3.0-only",
+      "changes": "Written for Hushfacebook: Unlock app icons, the idea of HushMessenger's patch of the same name, written here from Facebook 582 for issue #109. The subscription benefit provider, found by the strings SUBSBenefitDataProvider and subs_active_benefits it keeps, has one (String)Z instance method that checks a benefit name against its Set; the hook goes first in it and answers true for CUSTOM_APP_ICON while the switch is on. The App icon page's (Set)V callback that loads CUSTOM_APP_ICON and calls Set.contains with it on each synced set passes that answer through the extension, which answers true while the switch is on."
     },
     {
       "paths": [

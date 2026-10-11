@@ -107,9 +107,12 @@ public final class OverrideExchange {
                 JSONObject nativeValues = parse(nativeBytes);
                 // App data outlives an update, so the store may hold overrides a build before this
                 // one wrote. No typed writer reaches those, so they're counted and left as they are.
+                // The snapshot keeps only what fits: a config this build lacks with nothing under it
+                // counts as nothing left out, but the strict check a change or an import goes
+                // through would refuse it, so it stays out of the overrides the snapshot carries.
                 JSONObject fitting = new JSONObject();
                 leftOut = checkOverrides(nativeValues, this, null, false, true, fitting).leftOut;
-                overrides = leftOut == 0 ? nativeValues.toString() : fitting.toString();
+                overrides = fitting.toString();
                 JSONArray held = nativeValues.optJSONArray(EXPERIMENTS);
                 experiments = held == null ? "[]" : held.toString();
             } catch (Exception failure) { throw invalid(); }
@@ -124,7 +127,9 @@ public final class OverrideExchange {
         if (activity == null || activity.isFinishing() || activity.isDestroyed()) throw invalid();
         try {
             HookStatus.invoked(FamilyNames.DEVELOPER_OPTIONS);
-            if (!HOST.equals(activity.getPackageName())) throw invalid();
+            // The running build's own package, which is the second copy's under Install next to Instagram.
+            // The document still names Instagram, so a file moves between the two copies.
+            if (!OwnPackage.name().equals(activity.getPackageName())) throw invalid();
             Object manager = DeveloperOptions.getOverrideStoreNative(activity);
             if (manager == null) throw invalid();
             File resolved = DeveloperOptions.getOverrideFileNative(manager);
@@ -136,7 +141,7 @@ public final class OverrideExchange {
             if (nativeSchema == null || nativeSchema.isEmpty() || nativeSchema.size() > MAX_PARAMETERS) throw invalid();
             List<Parameter> parameters = new ArrayList<>(nativeSchema.size());
             for (Object entry : nativeSchema) parameters.add(DeveloperOptions.getOverrideParameterNative(entry));
-            PackageInfo host = activity.getPackageManager().getPackageInfo(HOST, 0);
+            PackageInfo host = activity.getPackageManager().getPackageInfo(OwnPackage.name(), 0);
             byte[] bytes = "{}".getBytes(StandardCharsets.UTF_8);
             boolean present = file.exists();
             if (present) {
@@ -269,6 +274,46 @@ public final class OverrideExchange {
         try { checkOverrides(parse(nativeBytes), snapshot, values, false, true, null); }
         catch (JSONException | RuntimeException failure) { throw invalid(); }
         return values;
+    }
+
+    /** The value type this build gives a parameter (1 bool, 2 long, 3 string, 4 double), or 0 when it has none there. */
+    static int typeOf(Snapshot snapshot, int config, int index) {
+        Parameter parameter = snapshot.parameters.get(key(config, index));
+        return parameter == null ? 0 : parameter.type;
+    }
+
+    /**
+     * {@link #export}'s document with these overrides set (a value) or taken away (null), by
+     * parameter key. Every other override stays as the store holds it, so applying the result
+     * through {@link OverrideImport} changes only these parameters.
+     */
+    static byte[] withOverrides(Snapshot snapshot, Map<Long, String> changes) throws IOException {
+        if (snapshot == null || changes == null) throw invalid();
+        try {
+            JSONObject all = new JSONObject(snapshot.overrides);
+            for (Map.Entry<Long, String> change : changes.entrySet()) {
+                Parameter parameter = snapshot.parameters.get(change.getKey());
+                if (parameter == null || change.getValue() != null && !fits(parameter.type, change.getValue())) throw invalid();
+                // The store may label a config with or without its name, so keep whichever it uses.
+                String label = null, prefix = parameter.config + ":";
+                for (java.util.Iterator<String> labels = all.keys(); labels.hasNext();) {
+                    String candidate = labels.next();
+                    if (candidate.startsWith(prefix)) label = candidate;
+                }
+                if (label == null) label = prefix + parameter.configName;
+                JSONArray before = all.optJSONArray(label), after = new JSONArray();
+                if (before != null) {
+                    for (int i = 0; i < before.length(); i++) {
+                        String record = before.getString(i);
+                        if (!record.startsWith(parameter.index + ": ")) after.put(record);
+                    }
+                }
+                if (change.getValue() != null) after.put(parameter.index + ": " + parameter.name + ": " + change.getValue());
+                if (after.length() > 0) all.put(label, after);
+                else all.remove(label);
+            }
+            return document(snapshot, all.toString());
+        } catch (JSONException failure) { throw invalid(); }
     }
 
     static Parameter parameter(Snapshot snapshot, long key) { return snapshot.parameters.get(key); }

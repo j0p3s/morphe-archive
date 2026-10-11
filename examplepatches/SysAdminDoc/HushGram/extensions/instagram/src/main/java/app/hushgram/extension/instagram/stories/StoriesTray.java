@@ -35,6 +35,10 @@ import app.hushgram.extension.shared.settings.BooleanSetting;
  * posted before while Hide memories and recaps is on. The parser skips it the way it skips an item
  * that didn't parse. With Stop loading stories on, every item goes, and {@link #remaining} empties
  * the list of reels the tray would fetch after them, so nothing in the row loads.
+ *
+ * <p>The Music for you card isn't a tray item. Instagram puts it between the stories in the viewer,
+ * when a server flag says the card is on, so the patch passes that flag's answer through
+ * {@link #musicCard} and a yes becomes a no while Hide the Music for you card is on.
  */
 public final class StoriesTray {
     /**
@@ -69,6 +73,18 @@ public final class StoriesTray {
     static final String REWIND_ROUTE = "Story rewinds";
     static final String RECAP_ROUTE = "Memories and recaps";
     static final String STOP_ROUTE = "Stop loading stories";
+
+    /** The diagnostic counter route for Music for you card checks answered no, one for each time Instagram asked. */
+    static final String MUSIC_CARD_ROUTE = "Music for you card";
+
+    /**
+     * Every reel type the tray's parser reads, counted by name, so a report from an account that's
+     * shown a card no switch covers yet (#111's Music for you) says which type it is.
+     */
+    static final String KINDS_ROUTE = "Stories tray reel types";
+
+    /** A constant only the reel type enum has among the tray item's enum fields. */
+    private static final String REEL_TYPE_MARKER = "USER_REEL";
 
     private static volatile boolean loggedTray;
 
@@ -105,6 +121,7 @@ public final class StoriesTray {
         if (item == null) return null;
         try {
             HookStatus.invoked(FamilyNames.STORIES_TRAY);
+            FeedFilterCounters.sawKind(KINDS_ROUTE, FeedItemKinds.kindOf(item, REEL_TYPE_MARKER, FamilyNames.STORIES_TRAY));
             if (stopLoading()) {
                 FeedFilterCounters.removed(STOP_ROUTE, 1, "any");
                 return null;
@@ -138,6 +155,25 @@ public final class StoriesTray {
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.STORIES_TRAY, "reels left to fetch", failure);
             return ids;
+        }
+    }
+
+    /**
+     * Injected right after Instagram reads the server flag that lets its Music for you card into
+     * the stories viewer ([enabled] nonzero for yes). Answers no while Hide the Music for you card
+     * is on, and Instagram's own answer otherwise, or when the settings aren't ready or anything
+     * goes wrong. Never throws, and never waits for the settings.
+     */
+    public static boolean musicCard(int enabled) {
+        boolean instagram = enabled != 0;
+        try {
+            HookStatus.invoked(FamilyNames.STORIES_TRAY);
+            if (!instagram || !Utils.settingsReady() || !Settings.HIDE_MUSIC_CARD.get()) return instagram;
+            FeedFilterCounters.removed(MUSIC_CARD_ROUTE, 1, "card left out");
+            return false;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.STORIES_TRAY, "music card", failure);
+            return instagram;
         }
     }
 

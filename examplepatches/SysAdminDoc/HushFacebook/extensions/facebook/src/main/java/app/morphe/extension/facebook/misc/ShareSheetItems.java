@@ -56,7 +56,7 @@ public final class ShareSheetItems {
 
     /**
      * The types the list offers before Facebook has shown a sheet, in the order a sheet usually has
-     * them. Each is a constant of 581's item enum.
+     * them. Each is a constant of 582's item enum.
      */
     static final List<String> COMMON = Collections.unmodifiableList(Arrays.asList(
             "SHARE_NOW", "SEND_AS_MESSAGE", "ADD_TO_STORY", "SHARE_TO_GROUP", "SHARE_TO_PAGE", "COPY_LINK",
@@ -185,6 +185,8 @@ public final class ShareSheetItems {
     static String appName(String type) {
         switch (type) {
             case "SHARE_TO_META_AI": return "Meta AI";
+            // 582's sheet shows this one as Muse, between Your story and Messenger.
+            case "SHARE_TO_HATCH": return "Muse";
             case "SHARE_TO_THREADS": return "Threads";
             case "SEND_IN_WHATSAPP":
             case "SEND_AS_WHATSAPP":

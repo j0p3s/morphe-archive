@@ -198,6 +198,8 @@ Pure black dark mode	Rein schwarzer Dunkelmodus
 Dark mode uses true black instead of dark gray. Turn on dark mode in Threads to see it. Restart Threads to see the change.	Der Dunkelmodus nutzt echtes Schwarz statt Dunkelgrau. Schalte in Threads den Dunkelmodus ein, um das zu sehen. Starte Threads neu, damit die Änderung greift.
 Hide the Instagram button	Instagram-Button ausblenden
 Takes the Instagram button off the top of profiles, yours and other people's. Restart Threads to see the change.	Entfernt den Instagram-Button oben in Profilen, in deinem und in denen anderer. Starte Threads neu, damit die Änderung greift.
+Hide ghost post bubbles	Ghost-Post-Blasen ausblenden
+Takes the ghost post bubbles off profile pictures, on profiles and in the row at the top of your feed. Restart Threads to see the change.	Entfernt die Ghost-Post-Blasen von Profilbildern, in Profilen und in der Reihe oben in deinem Feed. Starte Threads neu, damit die Änderung greift.
 Turn features on or off	Funktionen ein- oder ausschalten
 # Fotos und Videos speichern
 %1$d saved in lower quality than on Threads.	%1$d in niedrigerer Qualität als auf Threads gespeichert.
@@ -275,3 +277,7 @@ Hide screenshots from Threads	Screenshots vor Threads verbergen
 Threads isn't told when you take a screenshot, so it can't log it or react to it.	Threads erfährt nicht, wenn du einen Screenshot machst, und kann ihn daher weder protokollieren noch darauf reagieren.
 Full size photos	Fotos in voller Größe
 Photos load at the largest size Threads has, not one picked for your screen. They look sharper and use more data.	Fotos werden in der größten Größe geladen, die Threads hat, nicht in einer für deinen Bildschirm gewählten. Sie wirken schärfer und verbrauchen mehr Daten.
+# context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
+Support HushThreads	HushThreads unterstützen
+# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
+Buy me a coffee on Ko-fi	Spendier mir einen Kaffee auf Ko-fi

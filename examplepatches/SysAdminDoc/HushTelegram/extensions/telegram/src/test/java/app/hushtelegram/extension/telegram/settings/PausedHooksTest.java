@@ -46,7 +46,6 @@ import java.util.Set;
 
 import app.hushtelegram.extension.telegram.ads.Ads;
 import app.hushtelegram.extension.telegram.misc.Analytics;
-import app.hushtelegram.extension.telegram.misc.AnalyticsTest.DeviceStatsController;
 import app.hushtelegram.extension.telegram.misc.UpdateChecks;
 import app.hushtelegram.extension.telegram.misc.Stories;
 import app.hushtelegram.extension.telegram.misc.Recommendations;
@@ -154,7 +153,13 @@ public class PausedHooksTest {
                 Recommendations::skipRecommendations, Recommendations::skipCachedRecommendations));
         probes.put(PatchFamily.HIDE_COMMERCE, Arrays.asList(
                 () -> !app.hushtelegram.extension.telegram.misc.Commerce.addSettingsRow(new ArrayList<>(), new Object()),
-                () -> !app.hushtelegram.extension.telegram.misc.Commerce.showGiftsTab(true)));
+                () -> !app.hushtelegram.extension.telegram.misc.Commerce.showGiftsTab(true),
+                () -> !app.hushtelegram.extension.telegram.misc.Commerce.showWalletRow(true),
+                () -> !app.hushtelegram.extension.telegram.misc.Commerce.showAttachWallet(true),
+                () -> !app.hushtelegram.extension.telegram.misc.Commerce.showMenuWallet(true),
+                () -> !app.hushtelegram.extension.telegram.misc.Commerce.showProfileSendGram(true),
+                () -> !app.hushtelegram.extension.telegram.misc.Commerce.showAddressSendGram(true),
+                () -> !app.hushtelegram.extension.telegram.misc.Commerce.showTransferSendGram(true)));
         probes.put(PatchFamily.HIDE_PROMOTIONAL_BANNERS, Arrays.asList(
                 () -> !Suggestions.filterChatList(Collections.singleton("PREMIUM_UPGRADE")).contains("PREMIUM_UPGRADE"),
                 () -> Suggestions.birthdayGiftBannerDismissed(false)));
@@ -214,9 +219,12 @@ public class PausedHooksTest {
         // Telegram's holiday check skips its date test and shows the New Year look.
         probes.put(PatchFamily.HOLIDAY_LOOK, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.HolidayLook.mode() == app.hushtelegram.extension.telegram.misc.HolidayLook.SHOW));
-        // Telegram's medium font file is answered with the phone's own face.
-        probes.put(PatchFamily.USE_SYSTEM_FONT, Collections.singletonList(
-                () -> app.hushtelegram.extension.telegram.misc.SystemFont.typeface("fonts/rmedium.ttf") != null));
+        // Telegram's medium font file is answered with the phone's own face, and so is the variable
+        // monospace face Wallet builds itself.
+        probes.put(PatchFamily.USE_SYSTEM_FONT, Arrays.asList(
+                () -> app.hushtelegram.extension.telegram.misc.SystemFont.typeface("fonts/rmedium.ttf") != null,
+                () -> app.hushtelegram.extension.telegram.misc.SystemFont.built("fonts/rmono_var.ttf",
+                        android.graphics.Typeface.DEFAULT) != android.graphics.Typeface.DEFAULT));
         // Night's window color, as Telegram reads it from the theme file, turns black.
         probes.put(PatchFamily.AMOLED_BLACK, Collections.singletonList(() -> {
             app.hushtelegram.extension.telegram.misc.BlackThemeForTests.useStandInIds();
@@ -271,6 +279,15 @@ public class PausedHooksTest {
         // A voice message opens the full player.
         probes.put(PatchFamily.VOICE_MUSIC_PLAYER, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.VoicePlayerForTests.voiceOpensThePlayer()));
+        // A download the server didn't flag keeps Telegram's small pieces.
+        probes.put(PatchFamily.FASTER_DOWNLOADS, Collections.singletonList(
+                () -> app.hushtelegram.extension.telegram.misc.DownloadSpeed.fast(false)));
+        // A finished file from a message is queued for a copy in Download/Telegram.
+        probes.put(PatchFamily.SAVE_DOWNLOADS, Collections.singletonList(
+                () -> app.hushtelegram.extension.telegram.misc.SaveDownloadsForTests.queuesACopy()));
+        // Flipping the switch on asks Telegram for the folders.
+        probes.put(PatchFamily.CHAT_TYPE_FOLDERS, Collections.singletonList(
+                () -> app.hushtelegram.extension.telegram.misc.ChatTypeFoldersForTests.asksForFolders()));
         // A stranger's notification goes out silently.
         probes.put(PatchFamily.SILENCE_NON_CONTACTS, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.NonContactsForTests.on()));
@@ -286,12 +303,18 @@ public class PausedHooksTest {
         // A sticker skips its time.
         probes.put(PatchFamily.HIDE_STICKER_TIME, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.StickerTimeForTests.on()));
+        // A sticker takes the picked size.
+        probes.put(PatchFamily.CHANGE_STICKER_SIZE, Collections.singletonList(
+                () -> app.hushtelegram.extension.telegram.misc.StickerSizeForTests.on()));
         // A mention in a muted chat stays quiet.
         probes.put(PatchFamily.IGNORE_MUTED_MENTIONS, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.MutedMentionsForTests.on()));
         // A blocked person's group messages are left out.
         probes.put(PatchFamily.HIDE_BLOCKED_IN_GROUPS, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.BlockedSendersForTests.on()));
+        // Messages that match a filter are left out.
+        probes.put(PatchFamily.HIDE_BY_KEYWORD, Collections.singletonList(
+                () -> app.hushtelegram.extension.telegram.misc.MessageFiltersForTests.on()));
         // Settings loses Telegram Features and Contacts loses Invite Friends.
         probes.put(PatchFamily.HIDE_FEATURES_AND_INVITE, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.FeaturesInviteForTests.on()));
@@ -313,6 +336,15 @@ public class PausedHooksTest {
         // Telegram Beta stops forcing its debug logs on.
         probes.put(PatchFamily.BETA_LOGS_OFF, Collections.singletonList(
                 () -> !app.hushtelegram.extension.telegram.misc.BetaLogs.forceLogs(true)));
+        // Translation only works while the switch is on.
+        probes.put(PatchFamily.OUTSIDE_TRANSLATE, Collections.singletonList(
+                () -> app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests.active()));
+        // A channel's bar keeps Search, Direct messages and Info.
+        probes.put(PatchFamily.HIDE_CHANNEL_BUTTONS, Collections.singletonList(
+                () -> app.hushtelegram.extension.telegram.misc.ChannelButtonsForTests.on()));
+        // The message box keeps its Send as button.
+        probes.put(PatchFamily.HIDE_SEND_AS, Collections.singletonList(
+                () -> app.hushtelegram.extension.telegram.misc.ChannelButtonsForTests.sendAsOn()));
         // The gallery's camera stays off until a tap, and a tap that asks for the permission wakes it.
         probes.put(PatchFamily.GALLERY_CAMERA_ON_TAP, Arrays.asList(
                 () -> app.hushtelegram.extension.telegram.misc.GalleryCamera.keepCameraOff(new Object()),
@@ -322,15 +354,15 @@ public class PausedHooksTest {
                     app.hushtelegram.extension.telegram.misc.GalleryCamera.wakeForPermission(gallery);
                     return app.hushtelegram.extension.telegram.misc.GalleryCamera.openWhenReady(gallery, new Object());
                 }));
-        // A device statistics report is never read or sent, and neither is a channel's read time.
+        // A channel's read time is never sent, and neither are Premium screen interactions.
         // On Telegram Beta, Crashlytics never starts and Sessions reads its override as off.
         probes.put(PatchFamily.DISABLE_ANALYTICS, Arrays.asList(
-                () -> Analytics.skipDeviceStats(new DeviceStatsController(true, false)),
                 () -> Analytics.skipReadMetrics(new ArrayList<>()),
                 () -> Analytics.skipPremiumAppLog("premium.promo_screen_show"),
                 () -> Analytics.skipPremiumAppLog("premium.promo_screen_tap"),
                 () -> Analytics.skipPremiumAppLog("premium.promo_screen_accept"),
                 () -> Analytics.skipPremiumAppLog("premium.promo_screen_fail"),
+                () -> Analytics.skipDeviceAppLog("android_dual_camera"),
                 () -> Analytics.skipCrashReporterStart(),
                 () -> Analytics.skipErrorReport(),
                 () -> Boolean.FALSE.equals(Analytics.sessionsEnabled(null))));
@@ -342,6 +374,9 @@ public class PausedHooksTest {
         // telegram.org's build never asks the server whether a newer one is out.
         probes.put(PatchFamily.DISABLE_UPDATE_CHECKS, Collections.singletonList(UpdateChecks::skipUpdateCheck));
         probes.put(PatchFamily.REPAIR_FIREBASE_PUSH, Collections.singletonList(PausedHooksTest::firebaseHeaderChanged));
+        // A Firebase sign-up signs up the UnifiedPush address instead.
+        probes.put(PatchFamily.UNIFIED_PUSH, Collections.singletonList(
+                () -> app.hushtelegram.extension.telegram.misc.UnifiedPushForTests.swapsFirebase()));
         return probes;
     }
 

@@ -107,6 +107,10 @@ Jump to a section	Lompat ke bagian
 Go straight to one group of settings. Back returns to where you were.	Langsung ke satu kelompok setelan. Kembali membawamu ke tempat semula.
 Browse settings	Jelajahi pengaturan
 More settings	Pengaturan lainnya
+# context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
+Support HushPinterest	Dukung HushPinterest
+# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
+Buy me a coffee on Ko-fi	Traktir aku secangkir kopi di Ko-fi
 No matching settings	Tidak ada pengaturan yang cocok
 %1$d setting found	%1$d pengaturan ditemukan
 %1$d settings found	%1$d pengaturan ditemukan
@@ -172,9 +176,12 @@ Firebase and Google Analytics collection is turned off	Pengumpulan data Firebase
 Analytics launch tasks	Tugas awal analitik
 Analytics uploads	Pengiriman data analitik
 Strip link tracking	Hapus pelacakan tautan
-Removes tracking tags from links you copy or share. Short pin.it links stay as Pinterest made them.	Menghapus tag pelacakan dari tautan yang Anda salin atau bagikan. Tautan pendek pin.it tetap seperti buatan Pinterest.
+Removes tracking tags from links you copy or share. Short pin.it links stay as Pinterest made them unless Plain pin links is on.	Menghapus tag pelacakan dari tautan yang Anda salin atau bagikan. Tautan pendek pin.it tetap seperti buatan Pinterest, kecuali Tautan pin biasa aktif.
+Plain pin links	Tautan pin biasa
+Copied and shared pin.it links become the pin's own pinterest.com link, so they don't say who shared them. Pin links from Pinterest's country sites become that same link too. When HushPinterest doesn't know the pin yet, a copied link is checked with Pinterest in the background and swapped in a moment later.	Tautan pin.it yang disalin dan dibagikan menjadi tautan pinterest.com milik pin itu sendiri, sehingga tidak menunjukkan siapa yang membagikannya. Tautan pin dari situs Pinterest untuk tiap negara juga menjadi tautan yang sama. Jika HushPinterest belum mengenal pin tersebut, tautan yang disalin diperiksa ke Pinterest di latar belakang lalu diganti sesaat kemudian.
 Hide advertising ID	Sembunyikan ID iklan
-Pinterest sees an empty advertising ID with ad tracking limited, as if you deleted your ad ID in Android settings.	Pinterest melihat ID iklan kosong dengan pelacakan iklan dibatasi, seolah Anda menghapus ID iklan di setelan Android.
+Block Store browser ID	ID browser di Block Store
+Pinterest sees an empty advertising ID with ad tracking limited, as if you deleted your ad ID in Android settings. Pinterest also stops keeping its browser ID in Google's Block Store, where it would outlast a reinstall.	Pinterest melihat ID iklan kosong dengan pelacakan iklan dibatasi, seolah Anda menghapus ID iklan di setelan Android. Pinterest juga berhenti menyimpan ID browser miliknya di Block Store Google, tempat ID itu akan tetap ada walau aplikasi dipasang ulang.
 Remove ad tracking permissions	Hapus izin pelacakan iklan
 Pinterest can no longer use Google's ad ID permission or Android's ad services. This was set when you patched. Patch again without it to bring them back.	Pinterest tidak lagi bisa memakai izin ID iklan Google atau layanan iklan Android. Ini diatur saat Anda menambal. Tambal ulang tanpanya untuk mengembalikannya.
 Pinterest's access to the ad ID and Android's ad services is removed	akses Pinterest ke ID iklan dan layanan iklan Android dihapus
@@ -206,11 +213,8 @@ Download pin	Unduh Pin
 Share pin	Bagikan Pin
 Open pin link	Buka tautan Pin
 Download started. Check Downloads.	Unduhan dimulai. Periksa Unduhan.
-Pin saved.	Pin disimpan.
+Download started. Check %s.	Unduhan dimulai. Periksa %s.
 Couldn't save this pin.	Pin ini tidak dapat disimpan.
-Another pin is being saved. Try again when it's finished.	Pin lain sedang disimpan. Coba lagi setelah selesai.
-The file may have saved. Check your chosen save location.	File mungkin sudah tersimpan. Periksa lokasi penyimpanan yang dipilih.
-Couldn't remove the incomplete file. Check your chosen save location.	File yang belum selesai tidak dapat dihapus. Periksa lokasi penyimpanan yang dipilih.
 Queued	Dalam antrean
 Downloading	Mengunduh
 Paused	Dijeda
@@ -230,12 +234,16 @@ The download server couldn't complete the request.	Server unduhan tidak dapat me
 Android couldn't save the file.	Android tidak dapat menyimpan file.
 Download failed.	Unduhan gagal.
 Check Downloads for the saved file.	Periksa file yang disimpan di Unduhan.
+Saved in %s.	Disimpan di %s.
 Android no longer has this request. Check Downloads before saving again.	Android tidak lagi memiliki permintaan ini. Periksa Unduhan sebelum menyimpan lagi.
+Android no longer has this request. Check %s before saving again.	Android tidak lagi memiliki permintaan ini. Periksa %s sebelum menyimpan lagi.
 Couldn't check Downloads. Try again.	Tidak dapat memeriksa Unduhan. Coba lagi.
 Resume HushPinterest and turn on Download pins to retry.	Lanjutkan HushPinterest dan aktifkan Unduh pin untuk mencoba lagi.
 Open the pin again to get a fresh download link.	Buka pin lagi untuk mendapatkan tautan unduhan baru.
 This request can't be retried. Check Downloads or open the pin again.	Permintaan ini tidak dapat dicoba lagi. Periksa Unduhan atau buka pin lagi.
+This request can't be retried. Check %s or open the pin again.	Permintaan ini tidak dapat dicoba lagi. Periksa %s atau buka pin lagi.
 Download started, but its history couldn't be saved. Check Downloads.	Unduhan dimulai, tetapi riwayatnya tidak dapat disimpan. Periksa Unduhan.
+Download started, but its history couldn't be saved. Check %s.	Unduhan dimulai, tetapi riwayatnya tidak dapat disimpan. Periksa %s.
 History removed. Files and active downloads were kept.	Riwayat dihapus. File dan unduhan aktif tetap disimpan.
 Couldn't remove this history entry. Try again.	Tidak dapat menghapus entri riwayat ini. Coba lagi.
 Couldn't open Downloads.	Tidak dapat membuka Unduhan.
@@ -253,29 +261,14 @@ Set as wallpaper	Jadikan wallpaper
 Opens Android's Set as options for this saved image.	Membuka opsi Setel sebagai dari Android untuk gambar tersimpan ini.
 Set as	Setel sebagai
 Couldn't open Set as. Check Downloads for the saved file.	Setel sebagai tidak dapat dibuka. Cari file tersimpan di Download.
+Couldn't open Set as. Check %s for the saved file.	Setel sebagai tidak dapat dibuka. Cari file tersimpan di %s.
 This download isn't a finished image anymore. Check Downloads.	Unduhan ini bukan lagi gambar yang selesai. Periksa Download.
+This download isn't a finished image anymore. Check %s.	Unduhan ini bukan lagi gambar yang selesai. Periksa %s.
 Resume HushPinterest and turn on Download pins to use this.	Lanjutkan HushPinterest dan aktifkan Unduh Pin untuk memakai ini.
 Remove from history	Hapus dari riwayat
 Removes this history entry. Files and active downloads are kept.	Menghapus entri riwayat ini. File dan unduhan aktif tetap disimpan.
 Open Downloads	Buka Unduhan
 Refresh	Muat ulang
-Saving	Menyimpan
-Interrupted	Terhenti
-Access unavailable	Akses tidak tersedia
-Save cleanup pending	Pembersihan penyimpanan tertunda
-This save is still running. Try again when it's finished.	Penyimpanan ini masih berjalan. Coba lagi setelah selesai.
-Couldn't check your chosen save location. Open your Files app to inspect it.	Lokasi penyimpanan yang dipilih tidak dapat diperiksa. Buka aplikasi File untuk memeriksanya.
-Save cleanup couldn't be confirmed. The file was kept. Try removing this history entry again.	Pembersihan penyimpanan tidak dapat dipastikan. File tetap disimpan. Coba hapus entri riwayat ini lagi.
-Check your chosen save location before saving again. HushPinterest won't resume or delete this file.	Periksa lokasi penyimpanan yang dipilih sebelum menyimpan lagi. HushPinterest tidak akan melanjutkan atau menghapus file ini.
-Save history removed. The file was kept.	Riwayat penyimpanan dihapus. File tetap disimpan.
-Couldn't record the save location. No file data was written.	Lokasi penyimpanan tidak dapat dicatat. Tidak ada data file yang ditulis.
-Save history is full. Remove an old entry before saving another pin.	Riwayat penyimpanan penuh. Hapus entri lama sebelum menyimpan Pin lain.
-Pending saves	Penyimpanan tertunda
-Check unfinished file picker saves. Files are kept.	Periksa penyimpanan yang belum selesai dari pemilih file. File tetap disimpan.
-Checking pending saves...	Memeriksa penyimpanan tertunda...
-No pending HushPinterest saves.	Tidak ada penyimpanan HushPinterest yang tertunda.
-Only unfinished saves are listed. Check your chosen location before saving again.	Hanya penyimpanan yang belum selesai ditampilkan. Periksa lokasi yang dipilih sebelum menyimpan lagi.
-Pin saved. Check Pending saves if its history remains.	Pin disimpan. Periksa Penyimpanan tertunda jika riwayatnya masih ada.
 Download unavailable	Unduhan tidak tersedia
 Supplied media details	Detail media yang diberikan
 Copy media link	Salin tautan media
@@ -298,10 +291,6 @@ Pinterest hasn't supplied an image to download.	Pinterest belum memberikan gamba
 HushPinterest can't download this type of image.	HushPinterest tidak bisa mengunduh jenis gambar ini.
 This media link isn't a public Pinterest link HushPinterest can use.	Tautan media ini bukan tautan publik Pinterest yang bisa dipakai HushPinterest.
 Couldn't start the download. Check system Downloads and try again.	Unduhan tidak dapat dimulai. Periksa Unduhan sistem dan coba lagi.
-Couldn't open a save location. Try again from the pin.	Lokasi penyimpanan tidak dapat dibuka. Coba lagi dari Pin.
-Couldn't complete the save. Check your connection and chosen save location.	Penyimpanan tidak dapat diselesaikan. Periksa koneksi dan lokasi penyimpanan yang dipilih.
-Couldn't write to the chosen save location. Check its access and available space.	Tidak dapat menulis ke lokasi penyimpanan yang dipilih. Periksa akses dan ruang yang tersedia.
-Couldn't download this pin. Check your connection and try again.	Pin ini tidak dapat diunduh. Periksa koneksi dan coba lagi.
 Couldn't prepare this pin for download. Open the pin again and try again.	Pin ini tidak dapat disiapkan untuk diunduh. Buka Pin lagi dan coba kembali.
 %1$s (%2$s to %3$s)	%1$s (%2$s menjadi %3$s)
 Your choice is saved, but this build doesn't include the patch for it.	Pilihan Anda tersimpan, tetapi build ini tidak menyertakan patch-nya.
@@ -318,9 +307,9 @@ On	Aktif
 Off	Nonaktif
 Copy a quick report or save the full one to %1$s. Links, IDs, cookies and sign-in tokens are left out. Check it for other private text before you share it.	Salin laporan singkat atau simpan laporan lengkap ke %1$s. Tautan, ID, cookie, dan token masuk tidak disertakan. Periksa teks pribadi lain sebelum membagikannya.
 Save the full report in %1$s.	Simpan laporan lengkap di %1$s.
-Copy a quick report. Report storage is unavailable right now. Links, IDs, cookies and sign-in tokens are left out. Check it for other private text before you share it.	Salin laporan singkat. Penyimpanan laporan saat ini tidak tersedia. Tautan, ID, cookie, dan token masuk tidak disertakan. Periksa teks pribadi lain sebelum membagikannya.
-Report storage is unavailable right now. You can still copy a quick report.	Penyimpanan laporan saat ini tidak tersedia. Anda masih dapat menyalin laporan singkat.
 Hides Play Store pop-ups asking you to update Pinterest. A pop-up that's already open stays.	Menyembunyikan pop-up Play Store yang meminta Anda memperbarui Pinterest. Pop-up yang sudah terbuka tetap ada.
+Fix push notifications	Perbaiki notifikasi push
+Lets a patched Pinterest sign up for push notifications, which it can't do on its own. A change applies the next time Pinterest starts.	Memungkinkan Pinterest yang ditambal mendaftar untuk notifikasi push, yang tidak bisa dilakukannya sendiri. Perubahan berlaku saat Pinterest dimulai berikutnya.
 Stops Pinterest from suggesting you share a screenshot. Screenshots still work. Restart Pinterest to see the change.	Menghentikan Pinterest menyarankan Anda membagikan tangkapan layar. Tangkapan layar tetap berfungsi. Mulai ulang Pinterest untuk melihat perubahannya.
 Hides your recent searches. It doesn't delete your account's search history. The change shows the next time the screen updates.	Menyembunyikan pencarian terbaru Anda. Riwayat pencarian akun Anda tidak dihapus. Perubahan terlihat saat layar diperbarui berikutnya.
 Hides Create in the bottom bar. The change shows the next time the bar updates.	Menyembunyikan Buat di bilah bawah. Perubahan terlihat saat bilah diperbarui berikutnya.
@@ -369,17 +358,17 @@ Select visible pins (up to %d)	Pilih Pin yang terlihat (maksimal %d)
 Queue selected	Antrekan pilihan
 Couldn't open the pin selection. Try again from the grid.	Tidak dapat membuka pilihan Pin. Coba lagi dari kisi.
 Stop selection	Hentikan pilihan
-Queued: %d\nSaved: %d\nSkipped: %d\nUnsupported: %d\nFailed: %d	Dalam antrean: %d\nTersimpan: %d\nDilewati: %d\nTidak didukung: %d\nGagal: %d
+Queued: %d\nSkipped: %d\nUnsupported: %d\nFailed: %d	Dalam antrean: %d\nDilewati: %d\nTidak didukung: %d\nGagal: %d
 Stopping keeps downloads already started. Unstarted selections end when Pinterest closes.	Menghentikan pilihan tidak membatalkan unduhan yang sudah dimulai. Pilihan yang belum dimulai berakhir saat Pinterest ditutup.
-History could not be saved for %d results. Check Downloads or your chosen files.	Riwayat untuk %d hasil tidak dapat disimpan. Periksa Unduhan atau file yang Anda pilih.
-Saved	Tersimpan
+History could not be saved for %d results. Check Downloads.	Riwayat untuk %d hasil tidak dapat disimpan. Periksa Unduhan.
+History could not be saved for %d results. Check %s.	Riwayat untuk %d hasil tidak dapat disimpan. Periksa %s.
 Skipped	Dilewati
 Unsupported	Tidak didukung
-Saved to the location you chose.	Disimpan ke lokasi yang Anda pilih.
 No download was queued. The selection was stopped, canceled or unavailable.	Tidak ada unduhan yang diantrekan. Pilihan dihentikan, dibatalkan, atau tidak tersedia.
 Pinterest didn't supply supported media for this pin.	Pinterest tidak menyediakan media yang didukung untuk Pin ini.
 Download a pin, or select several pins in a grid. Saves videos and original images, or the largest size Pinterest has.	Unduh satu pin, atau pilih beberapa pin dalam kisi. Menyimpan video dan gambar asli, atau ukuran terbesar yang dimiliki Pinterest.
-Android 9 uses the file picker. Results from visible-pin selections appear here.	Android 9 memakai pemilih file. Hasil pilihan Pin yang terlihat muncul di sini.
+Save in Pinterest's folder	Simpan di folder Pinterest
+Saves downloads in Pictures/100PINT/Pins, the folder Pinterest's own image saves use, instead of Download.	Menyimpan unduhan di Pictures/100PINT/Pins, folder yang dipakai Pinterest untuk gambar yang disimpannya sendiri, bukan di Download.
 Only the 32 most recent downloads and selection results are listed. Saved files are kept.	Hanya 32 unduhan dan hasil pilihan terbaru yang ditampilkan. File yang tersimpan tetap disimpan.
 # context: Download board, a row in a board's own menu and its switch on the Pin actions page.
 Download board	Unduh papan
@@ -394,3 +383,43 @@ loaded board pins	Pin papan yang dimuat
 # context: Long-press download, a button added to the round menu a held pin opens, and its switch on the Pin actions page.
 Long-press download	Unduh dengan tekan lama
 Adds a Download button to the round menu you get when you hold a pin. Slide onto it and let go to save the pin. Download pins has to be on too.	Menambahkan tombol Unduh ke menu bundar yang muncul saat kamu menahan Pin. Geser ke tombol itu lalu lepaskan untuk menyimpan Pin. Unduh Pin juga harus aktif.
+# context: Hide ads coverage in a partial build: each list holder or ad-only view the patch did or didn't hook, named in the Feed page summary. The last row adds how many of a target's hooks went in.
+promoted pins in feed pages	pin promosi di halaman feed
+promoted pins in paged results	pin promosi di hasil per halaman
+promoted pins in bookmarked lists	pin promosi di daftar bertanda
+text ads	iklan teks
+ad buttons on pin closeups	tombol iklan di tampilan dekat pin
+floating ad bars on pin closeups	bilah iklan mengambang di tampilan dekat pin
+sponsor credits on boards	keterangan sponsor di papan
+%1$s (%2$d of %3$d parts)	%1$s (%2$d dari %3$d bagian)
+# context: Pinterest's own settings page. Step labels use Pinterest's own in menu names from 14.39.0.
+Pinterest's own settings	Pengaturan Pinterest sendiri
+Finding them	Cara menemukannya
+Open Pinterest's settings from the gear on your Saved tab. HushPinterest doesn't change any of these.	Buka pengaturan Pinterest dari ikon roda gigi di tab Disimpan. HushPinterest tidak mengubah satu pun pengaturan ini.
+Settings	Pengaturan
+App theme	Tema aplikasi
+Pinterest's choice of a light or dark look, or the one your phone uses.	Pilihan Pinterest untuk tampilan terang atau gelap, atau tampilan yang dipakai ponsel Anda.
+Account management	Manajemen akun
+Privacy and data	Privasi dan data
+Pinterest's ad personalization and data choices for your account. Disable analytics doesn't change them.	Pilihan Pinterest tentang iklan yang dipersonalisasi dan data akun Anda. Nonaktifkan analitik tidak mengubahnya.
+Notifications	Notifikasi
+Which push, email and in-app notices Pinterest sends you.	Pemberitahuan push, email, dan dalam aplikasi mana yang dikirim Pinterest kepada Anda.
+Show AI content	Tampilkan konten AI
+Turned off, Pinterest shows less AI content in your feed. Hide AI-labeled pins only takes out pins that carry Pinterest's AI label.	Jika dimatikan, Pinterest menampilkan lebih sedikit konten AI di feed Anda. Sembunyikan pin berlabel AI hanya menghapus pin yang memiliki label AI dari Pinterest.
+Refine your recommendations	Persempit rekomendasi Anda
+AI content	Konten AI
+Autoplay videos on cellular data	Otomatis putar video di jaringan seluler
+Turned off, videos don't start on their own on mobile data. Pinterest may still load some of a video ahead of time.	Jika dimatikan, video tidak diputar sendiri saat memakai data seluler. Pinterest mungkin tetap memuat sebagian video lebih dulu.
+Social permissions	Izin fitur sosial
+In Pinterest: %1$s	Di Pinterest: %1$s
+Pick a download folder	Pilih folder unduhan
+Saves downloads in a folder you pick inside Pictures, DCIM, Download or Documents.	Menyimpan unduhan di folder pilihanmu di dalam Pictures, DCIM, Download, atau Documents.
+%s is picked, but Save in Pinterest's folder is on, so downloads go there.	%s dipilih, tetapi Simpan di folder Pinterest aktif, jadi unduhan masuk ke sana.
+Saving downloads in %s. Tap to pick another folder or go back to Download.	Unduhan disimpan di %s. Ketuk untuk memilih folder lain atau kembali ke Download.
+Pick another folder	Pilih folder lain
+Save in Download again	Simpan lagi di Download
+This phone has no folder picker, so there's no way to choose a folder here.	Ponsel ini tidak memiliki pemilih folder, jadi folder tidak dapat dipilih di sini.
+Couldn't open the folder picker. Try again.	Pemilih folder tidak dapat dibuka. Coba lagi.
+Pick a folder inside Pictures, DCIM, Download or Documents on the phone's own storage.	Pilih folder di dalam Pictures, DCIM, Download, atau Documents di penyimpanan internal ponsel.
+Downloads will be saved in %s.	Unduhan akan disimpan di %s.
+Downloads will be saved in Download.	Unduhan akan disimpan di Download.

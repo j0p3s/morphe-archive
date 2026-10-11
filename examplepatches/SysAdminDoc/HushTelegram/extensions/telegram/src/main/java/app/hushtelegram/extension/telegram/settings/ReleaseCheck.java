@@ -52,8 +52,8 @@ import app.hushtelegram.extension.shared.settings.preference.LogBufferManager;
  * Asks GitHub whether a newer HushTelegram release is out, once the person has turned that on.
  *
  * <p>A sideloaded Telegram gets no update check, and Morphe Manager looks at its sources only when
- * it's opened, so a new release reached nobody who didn't go looking. This is the only request the
- * extension makes for itself, so it's off until the person turns on
+ * it's opened, so a new release reached nobody who didn't go looking. Apart from Translate with an
+ * outside service, this is the only request the extension makes for itself, so it's off until the person turns on
  * {@link Settings#CHECK_FOR_RELEASES}. Then it runs at most once a day, on a worker, when Telegram
  * starts, and the Check now row runs one whenever it's tapped. Paused, or in safe mode, the switch
  * answers off like every other one, and a start asks nothing.
@@ -578,6 +578,8 @@ public final class ReleaseCheck {
             String out = L10n.f("HushTelegram %1$s is out. Update it in Morphe Manager.", L10n.isolate(newest));
             return otherTarget ? out + " " + L10n.f("It's made for Telegram %1$s.", L10n.isolate(target)) : out;
         }
+        // Running a build newer than the last check knew about: the stored target is stale, say nothing.
+        if (againstRunning != null && againstRunning < 0) return null;
         if (!otherTarget) return null;
         return L10n.f("HushTelegram %1$s is made for Telegram %2$s.", L10n.isolate(newest), L10n.isolate(target));
     }

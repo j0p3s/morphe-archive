@@ -21,7 +21,8 @@
                patches/build/fixture-apply) and SHA256SUMS.txt, into build/release-assets/<version>.
     publish    Notes from the whole CHANGELOG section with -Checked as What was checked, a
                lightweight tag, the GitHub release with the five assets, each downloaded back and
-               compared.
+               compared. -Checked must say "applied ... to Facebook <version>" with "Facebook"
+               right after "to": the app's update check reads the target from that phrase.
     index      patches-bundle.json, the README's latest-release sentence and the bug form, from the
                published release and the gate's test results, and the repository description. Then
                commit "chore(release): point Manager to the verified X.Y.Z bundle" and push.
@@ -56,6 +57,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 . (Join-Path $root 'scripts/common.ps1')
+. (Join-Path $root 'scripts/patch-target.ps1')
 
 $tag = "v$Version"
 $assets = Join-Path $root "build/release-assets/$Version"
@@ -218,8 +220,8 @@ try {
                 Write-Warning (("Preflight took {0:N1} minutes, past its five-minute budget. A quick check that " +
                     'got slow belongs in the gate, not here.') -f $minutes)
             }
-            Step ("preflight passed in {0:N1} minutes. The notes draft is in $assets. Push the source commit; its " +
-                "pre-push gate runs the fixture tests, then run -Stage bundle" -f $minutes)
+            Step (("preflight passed in {0:N1} minutes. The notes draft is in {1}. Push the source commit; its " +
+                'pre-push gate runs the fixture tests, then run -Stage bundle') -f $minutes, $assets)
         }
         'bundle' {
             $head = Assert-PushedHead
@@ -323,8 +325,12 @@ try {
             Copy-Item -LiteralPath (Join-Path $assets $receiptName) -Destination (Join-Path $root $receiptName) -Force
 
             $description = [string](& gh repo view $Repository --json description --jq .description)
-            $count = @((Get-Content -LiteralPath (Join-Path $root 'patches-list.json') -Raw | ConvertFrom-Json).patches).Count
-            $updated = $description.Trim() -replace 'Hushfacebook v\d+\.\d+\.\d+', "Hushfacebook v$Version" -replace '\b\d+ patches\b', "$count patches"
+            $catalog = Get-Content -LiteralPath (Join-Path $root 'patches-list.json') -Raw | ConvertFrom-Json
+            $count = @($catalog.patches).Count
+            # The build moves with the catalog too, or a port leaves the description on the old one.
+            $build = (Get-PatchTarget -PatchList $catalog).PackageVersion
+            $updated = $description.Trim() -replace 'Hushfacebook v\d+\.\d+\.\d+', "Hushfacebook v$Version" -replace '\b\d+ patches\b', "$count patches" `
+                -replace '\bFacebook \d+(?:\.\d+)+', "Facebook $build"
             if ($updated -ne $description.Trim()) { Invoke-Native 'The repository description' { & gh repo edit $Repository --description $updated } }
             Step ("index points at $tag ($runtime runtime tests, $patch patch tests). Commit it as " +
                 "'chore(release): point Manager to the verified $Version bundle' and push")

@@ -167,7 +167,9 @@ val commentTranslationPatch = bytecodePatch(
     name = "Translate comments",
     description = "Translates comments as they load, using TikTok's own translator, so you " +
         "don't have to tap Translate on each one. Starts off. Turn it on in Hushfeed settings > " +
-        "Comments, where a second row lists languages TikTok's automatic translation should leave alone.",
+        "Comments, where more rows list languages TikTok's automatic translation should leave alone, " +
+        "pick the language translations come out in, and add TikTok's translate button beside the " +
+        "comment count.",
     default = true,
 ) {
     category("Comments")
@@ -292,6 +294,41 @@ val commentTranslationPatch = bytecodePatch(
             SettingsStatusLoadFingerprint.method.addInstruction(
                 0,
                 "invoke-static {}, Lapp/morphe/extension/tiktok/settings/SettingsStatus;->enableDoNotAutoTranslate()V",
+            )
+        }
+
+        // The language translations come out in. Held to declared builds the same way, by
+        // TranslateIntoAnchorsTest.
+        val translateInto = try {
+            hookTranslateInto()
+            true
+        } catch (problem: Exception) {
+            if (packageMetadata.versionName in declaredVersions()) throw problem
+            println("[Translate comments] Left out Translate into on ${packageMetadata.versionName}: ${problem.message}")
+            false
+        }
+        if (translateInto) {
+            SettingsStatusLoadFingerprint.method.addInstruction(
+                0,
+                "invoke-static {}, Lapp/morphe/extension/tiktok/settings/SettingsStatus;->enableTranslateInto()V",
+            )
+        }
+
+        // TikTok's translate button in the comment header (#85). Held to declared builds by
+        // CommentTranslateButtonAnchorsTest and SwitchedReturnFixturesTest, and left out with a
+        // note on any other, the same way.
+        val translateButton = try {
+            installCommentTranslateButton()
+            true
+        } catch (problem: Exception) {
+            if (packageMetadata.versionName in declaredVersions()) throw problem
+            println("[Translate comments] Left out the translate button on ${packageMetadata.versionName}: ${problem.message}")
+            false
+        }
+        if (translateButton) {
+            SettingsStatusLoadFingerprint.method.addInstruction(
+                0,
+                "invoke-static {}, Lapp/morphe/extension/tiktok/settings/SettingsStatus;->enableCommentTranslateButton()V",
             )
         }
 

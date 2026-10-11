@@ -97,6 +97,67 @@ public class MetaAiTest {
         }
     }
 
+    /** The Muse card is left out only with its own switch, which starts off, and never while paused. */
+    @Test
+    public void theMuseBannerFollowsItsOwnSwitch() {
+        assertFalse("off to start", Settings.HIDE_META_AI_PROFILE_BANNER.get());
+        assertFalse(MetaAi.museBanner());
+        Settings.HIDE_META_AI_PROFILE_BANNER.save(true);
+        Settings.HIDE_META_AI_SEARCH.save(false);
+        try {
+            assertTrue("the search switch doesn't matter", MetaAi.museBanner());
+            PauseForTests.pause(HushgramPause.Reason.SWITCH);
+            assertFalse("paused, Instagram decides", MetaAi.museBanner());
+        } finally {
+            PauseForTests.resume();
+            Settings.HIDE_META_AI_SEARCH.save(true);
+            Settings.HIDE_META_AI_PROFILE_BANNER.resetToDefault();
+        }
+    }
+
+    /** The profile's Muse button is left out only with its own switch, which starts off, and never while paused. */
+    @Test
+    public void theMuseButtonFollowsItsOwnSwitch() {
+        assertFalse("off to start", Settings.HIDE_META_AI_PROFILE_BUTTON.get());
+        assertFalse(MetaAi.museButton());
+        try {
+            Settings.HIDE_META_AI_PROFILE_BANNER.save(true);
+            assertFalse("the Muse card's switch doesn't reach the button", MetaAi.museButton());
+            Settings.HIDE_META_AI_PROFILE_BANNER.resetToDefault();
+            Settings.HIDE_META_AI_PROFILE_BUTTON.save(true);
+            assertTrue(MetaAi.museButton());
+            assertFalse("and the button's doesn't reach the card", MetaAi.museBanner());
+            Settings.HIDE_META_AI_SEARCH.save(false);
+            assertTrue("the search switch doesn't matter", MetaAi.museButton());
+            PauseForTests.pause(HushgramPause.Reason.SWITCH);
+            assertFalse("paused, Instagram decides", MetaAi.museButton());
+        } finally {
+            PauseForTests.resume();
+            Settings.HIDE_META_AI_SEARCH.save(true);
+            Settings.HIDE_META_AI_PROFILE_BANNER.resetToDefault();
+            Settings.HIDE_META_AI_PROFILE_BUTTON.resetToDefault();
+        }
+    }
+
+    /** The Blend button is left off a reel only with its own switch, which starts off, and never while paused. */
+    @Test
+    public void theBlendButtonFollowsItsOwnSwitch() {
+        assertFalse("off to start", Settings.HIDE_META_AI_BLEND.get());
+        assertFalse(MetaAi.blendButton());
+        Settings.HIDE_META_AI_BLEND.save(true);
+        try {
+            assertTrue(MetaAi.blendButton());
+            Settings.HIDE_META_AI_SEARCH.save(false);
+            assertTrue("the search switch doesn't matter", MetaAi.blendButton());
+            PauseForTests.pause(HushgramPause.Reason.SWITCH);
+            assertFalse("paused, Instagram decides", MetaAi.blendButton());
+        } finally {
+            PauseForTests.resume();
+            Settings.HIDE_META_AI_SEARCH.save(true);
+            Settings.HIDE_META_AI_BLEND.resetToDefault();
+        }
+    }
+
     /** The search switch also leaves the results page's Ask a follow-up bar out, and only that switch. */
     @Test
     public void theFollowUpBarFollowsTheSearchSwitch() {
@@ -114,6 +175,32 @@ public class MetaAiTest {
             assertSame(stub, MetaAi.followUpBar(stub));
         } finally {
             Settings.HIDE_META_AI_SEARCH.save(true);
+        }
+    }
+
+    /** The bar's own stub is left uninflated with the search switch too, only that switch, and never while paused. */
+    @Test
+    public void theFollowUpBarsStubFollowsTheSearchSwitch() {
+        View stub = new View(RuntimeEnvironment.getApplication());
+        assertNull(MetaAi.followUpStub(stub));
+        assertNull(MetaAi.followUpStub(null));
+        Settings.HIDE_META_AI_POSTS.save(false);
+        try {
+            assertNull(MetaAi.followUpStub(stub));
+        } finally {
+            Settings.HIDE_META_AI_POSTS.save(true);
+        }
+        Settings.HIDE_META_AI_SEARCH.save(false);
+        try {
+            assertSame(stub, MetaAi.followUpStub(stub));
+        } finally {
+            Settings.HIDE_META_AI_SEARCH.save(true);
+        }
+        PauseForTests.pause(HushgramPause.Reason.SWITCH);
+        try {
+            assertSame("paused, Instagram decides", stub, MetaAi.followUpStub(stub));
+        } finally {
+            PauseForTests.resume();
         }
     }
 

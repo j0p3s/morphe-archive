@@ -277,6 +277,48 @@ public class KeepDeletedTest {
         assertEquals("Removed 1 kept message.", KeepDeleted.clearedMessage(1));
     }
 
+    @Test public void pastTheCapTheOldestKeptMessagesGoToTelegramsOwnDeletion() {
+        Settings.KEEP_DELETED_MESSAGES.save(true);
+        List<long[]> full = new ArrayList<>();
+        for (int id = 1; id <= KeepDeleted.LIMIT; id++) full.add(new long[] {10, id});
+        assertTrue("up to the cap nothing is dropped", KeepDeleted.remember(SELF, full).isEmpty());
+
+        int next = KeepDeleted.LIMIT + 1;
+        Fake telegram = new Fake(new KeepDeleted.Row(10, next, false, false, false),
+                new KeepDeleted.Row(10, next + 1, false, false, false));
+        KeepDeleted.decide(telegram, 0, ids(next, next + 1), 0);
+
+        assertTrue(KeepDeleted.isKept(SELF, 10, next + 1));
+        assertFalse(KeepDeleted.isKept(SELF, 10, 1));
+        assertFalse(KeepDeleted.isKept(SELF, 10, 2));
+        assertTrue(KeepDeleted.isKept(SELF, 10, 3));
+        assertEquals(KeepDeleted.LIMIT, KeepDeleted.keptBy(SELF).size());
+        assertEquals("the two oldest go the stock way instead of lingering with no label",
+                Arrays.asList("10:[1, 2]:0"), telegram.stock);
+        assertEquals(Arrays.asList("[1, 2]:0"), telegram.cleared);
+    }
+
+    @Test public void anOverflowThatCantBeHandedBackIsNextToLeaveAndPushesNothingOutEarly() {
+        Settings.KEEP_DELETED_MESSAGES.save(true);
+        List<long[]> full = new ArrayList<>();
+        for (int id = 1; id <= KeepDeleted.LIMIT; id++) full.add(new long[] {10, id});
+        KeepDeleted.remember(SELF, full);
+
+        int next = KeepDeleted.LIMIT + 1;
+        Fake failing = new Fake(new KeepDeleted.Row(10, next, false, false, false));
+        failing.failStock = true;
+        KeepDeleted.decide(failing, 0, ids(next), 0);
+        assertEquals("put back as the oldest", "10:1", KeepDeleted.keptBy(SELF).get(0));
+        assertTrue(KeepDeleted.isKept(SELF, 10, 2));
+
+        Fake telegram = new Fake(new KeepDeleted.Row(10, next + 1, false, false, false));
+        KeepDeleted.decide(telegram, 0, ids(next + 1), 0);
+        assertEquals("the one that failed leaves first, with one more for the new message",
+                Arrays.asList("10:[1, 2]:0"), telegram.stock);
+        assertTrue("no real kept message left ahead of its turn", KeepDeleted.isKept(SELF, 10, 3));
+        assertEquals(KeepDeleted.LIMIT, KeepDeleted.keptBy(SELF).size());
+    }
+
     @Test public void nothingKeptGivesThePlainNoticeAndAsksNothingOfTelegram() {
         Fake telegram = new Fake();
         KeepDeleted.accounts = () -> Collections.singletonList(telegram);

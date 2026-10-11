@@ -8,11 +8,10 @@ package app.morphe.patches.tiktok.misc.optimizer
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
-import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
-import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.SwitchPayload
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
 private val reviewedSplashGateInstructionCounts = setOf(
@@ -25,9 +24,6 @@ internal fun isReviewedSplashGateShape(instructionCounts: List<Int>): Boolean =
 
 internal const val ANIMATED_DRAWABLE_DESCRIPTOR = "Lcom/facebook/fresco/animation/drawable/AnimatedDrawable2;"
 
-/** Fresco's caching strategy for its keep-last-frame cache (CACHING_STRATEGY_KEEP_LAST_CACHE). */
-internal const val KEEP_LAST_FRAME_STRATEGY = 3
-
 /**
  * Fresco's animated drawable factory: it reads the caching strategy from a supplier, compares it
  * with 1, 2 and 3, and builds a FrescoFrameCache for the first two. R8 renames the class and the
@@ -38,37 +34,6 @@ internal fun Method.isAnimatedDrawableFactory(): Boolean =
         implementation?.instructions?.any { it.methodReference()?.let { ref ->
             ref.definingClass == FRESCO_FRAME_CACHE_DESCRIPTOR && ref.name == "<init>"
         } == true } == true
-
-/**
- * The caching strategy as the factory reads it: the move-result after the first
- * Integer.intValue(), and the class it builds when that value is [KEEP_LAST_FRAME_STRATEGY].
- */
-internal class CachingStrategyRead(val resultIndex: Int, val register: Int, val keepLastClass: String)
-
-internal fun Method.cachingStrategyRead(): CachingStrategyRead? {
-    val instructions = implementation?.instructions?.toList() ?: return null
-    val read = instructions.indexOfFirst { it.isIntegerIntValue() }
-    val result = instructions.getOrNull(read + 1)
-    if (read < 0 || result?.opcode != Opcode.MOVE_RESULT) return null
-    val register = (result as OneRegisterInstruction).registerA
-    // const vX, 3 then if-eq strategy, vX -> the keep-last branch, whose first instruction
-    // builds the cache.
-    val addresses = instructions.runningFold(0) { at, instruction -> at + instruction.codeUnits }
-    for (i in read + 2 until instructions.size - 1) {
-        val constant = instructions[i]
-        val compare = instructions[i + 1]
-        if (constant !is NarrowLiteralInstruction || constant.narrowLiteral != KEEP_LAST_FRAME_STRATEGY) continue
-        if (compare.opcode != Opcode.IF_EQ || compare !is TwoRegisterInstruction) continue
-        val registers = setOf(compare.registerA, compare.registerB)
-        if (registers != setOf(register, (constant as OneRegisterInstruction).registerA)) continue
-        val target = addresses[i + 1] + (compare as OffsetInstruction).codeOffset
-        val branch = addresses.indexOf(target)
-        val built = instructions.getOrNull(branch)
-        if (built?.opcode != Opcode.NEW_INSTANCE) return null
-        return CachingStrategyRead(read + 1, register, (built as ReferenceInstruction).reference.toString())
-    }
-    return null
-}
 
 /**
  * The animation backend builder the factory calls just before it constructs the drawable. It
@@ -92,6 +57,28 @@ internal fun Method.framePreparerGateIndex(): Int? {
         branch != null && addresses[i] + branch.codeOffset == gateAddress
     }
     return if (targeted) null else gate
+}
+
+/**
+ * Whether anything in the method lands on the instruction at [index]: a branch, a switch case or
+ * an exception handler. Code put in front of such an instruction would be skipped on that path.
+ */
+internal fun Method.isBranchTarget(index: Int): Boolean {
+    val body = implementation ?: return false
+    val instructions = body.instructions.toList()
+    val addresses = instructions.runningFold(0) { at, instruction -> at + instruction.codeUnits }
+    val target = addresses.getOrNull(index) ?: return false
+    val branched = instructions.indices.any { i ->
+        val branch = instructions[i] as? OffsetInstruction ?: return@any false
+        val landing = addresses[i] + branch.codeOffset
+        if (branch.opcode == Opcode.PACKED_SWITCH || branch.opcode == Opcode.SPARSE_SWITCH) {
+            val payload = instructions.getOrNull(addresses.indexOf(landing)) as? SwitchPayload
+            payload?.switchElements?.any { addresses[i] + it.offset == target } == true
+        } else {
+            landing == target
+        }
+    }
+    return branched || body.tryBlocks.any { block -> block.exceptionHandlers.any { it.handlerCodeAddress == target } }
 }
 
 /** The backend builder call in the factory: the last call on its own class before the drawable is made. */

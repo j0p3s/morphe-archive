@@ -219,6 +219,9 @@ class NotesTest(Repo):
         self.assertNotIn("What was checked", self.notes(checked=None, draft=True))
         self.refused(lambda: self.notes(checked=None), "--checked")
         self.refused(lambda: self.notes(checked="Local checks passed."), "nothing in the notes says")
+        # 0.10.0's first try: a word between "to" and "Facebook", which installed builds don't read either.
+        self.refused(lambda: self.notes(checked="All 3 patches applied to both Facebook 581.0.0.45.58 builds."),
+                     "nothing in the notes says", "with \"Facebook\" right after \"to\"")
 
     def test_refuses_a_section_cut_did_not_write(self):
         self.refused(self.notes, "no dated 0.2.0 heading")
@@ -229,6 +232,14 @@ class NotesTest(Repo):
         write(self.root / "CHANGELOG.md", CHANGELOG.replace("### Changed", "### Security"))
         self.cut()
         self.refused(self.notes, "### Security")
+
+    def test_maps_reported_issues_after_the_changes(self):
+        write(self.root / "CHANGELOG.md", CHANGELOG.replace(
+            "## 0.1.0", "### Reported issues\n\n* **Facebook:** #12 Reels froze: fixed, see Other changes.\n\n## 0.1.0"))
+        self.cut()
+        notes = self.notes()
+        self.assertIn("- Reels open on the `first` frame.\n\nReported issues\n\n"
+                      "- #12 Reels froze: fixed, see Other changes.\n\nBehind the scenes\n\n", notes)
 
     def test_refuses_a_dash_in_the_checked_paragraph(self):
         self.cut()

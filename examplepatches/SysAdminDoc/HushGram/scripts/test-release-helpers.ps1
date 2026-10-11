@@ -27,6 +27,9 @@ $variables = @('HUSHGRAM_FIXTURE_DIR', 'HUSHGRAM_DESKTOP_JAR', 'HUSHGRAM_WORKDIR
     'BUILD_QUEUE_TICKET', 'HUSHGRAM_HELPERS_LOG', 'HUSHGRAM_HELPERS_STALE', 'HUSHGRAM_HELPERS_GRADLE_EXIT')
 $saved = @{}
 foreach ($name in $variables) { $saved[$name] = [Environment]::GetEnvironmentVariable($name, [EnvironmentVariableTarget]::Process) }
+# Run from the machine's queue, this process inherits that slot's ticket, and the all-builds checks
+# would read it as a slot already held and never take the stand-in queue's.
+Remove-Item Env:\BUILD_QUEUE_TICKET, Env:\BUILD_QUEUE_PRIORITY -ErrorAction SilentlyContinue
 
 function Assert-True([bool]$Condition, [string]$Message) {
     if (-not $Condition) { throw $Message }
@@ -88,37 +91,37 @@ try {
 
     $notesDir = Join-Path $scratch 'notes'
     $changelog = Join-Path $notesDir 'CHANGELOG.md'
-    $goodChangelog = "# Changelog`n`n## Unreleased`n`n* **Tooling:** A script change.`n`n* **Instagram:** A patch change.`n`n" +
-        "## 0.0.2 (2026-10-01)`n`n* **Instagram:** First patch line.`n`n* **Tooling:** The tooling line.`n`n" +
-        "* **Instagram:** Second patch line,`n  carried on.`n`n## 0.0.1 (2026-09-01)`n`n* **Instagram:** The first release.`n"
+    $goodChangelog = "# Changelog`n`n## Unreleased`n`n### Improvements`n`n* **Tooling:** A script change.`n`n### Features`n`n* **Instagram:** A patch change.`n`n" +
+        "## 0.0.2 (2026-10-01)`n`n### Improvements`n`n* **Tooling:** The tooling line.`n`n### Features`n`n* **Instagram:** First patch line.`n`n" +
+        "* **Instagram - Hide Meta AI:** Second patch line,`n  carried on.`n`n## 0.0.1 (2026-09-01)`n`n### Features`n`n* **Instagram:** The first release.`n"
     Write-Text $changelog $goodChangelog
-    $highlights = "* One highlight.`n* Another.`n* A third.`n* A fourth.`n`n* A fifth."
-    foreach ($piece in @(@('intro.md', 'HushGram 0.0.2 is out.'), @('highlights.md', $highlights),
-            @('install.md', "* Add the source.`n* Update."), @('validation.md', 'Every test passed.'))) {
-        Write-Text (Join-Path $notesDir $piece[0]) $piece[1]
-    }
+    # The builder checks each scoped bullet's patch against the catalog beside the CHANGELOG.
+    Write-Text (Join-Path $notesDir 'patches-list.json') ([IO.File]::ReadAllText((Join-Path $Root 'patches-list.json')))
+    Write-Text (Join-Path $notesDir 'validation.md') 'Validation: 5 runtime tests passed locally. All 6 patch tests passed too.'
     $notesOut = Join-Path $notesDir 'notes.md'
+    $descriptionOut = Join-Path $notesDir 'description.json'
     $notesTool = Join-Path $releaseDir 'release_notes.py'
     function Invoke-Notes([string[]]$Extra) {
         Invoke-Python $notesTool '--changelog' $changelog @Extra
     }
-    $build = @('--version', '0.0.2', '--intro', (Join-Path $notesDir 'intro.md'), '--highlights', (Join-Path $notesDir 'highlights.md'),
-        '--install', (Join-Path $notesDir 'install.md'), '--validation', (Join-Path $notesDir 'validation.md'), '--out', $notesOut)
+    $build = @('--version', '0.0.2', '--validation', (Join-Path $notesDir 'validation.md'), '--out', $notesOut, '--description-out', $descriptionOut)
     $run = Invoke-Notes $build
     $notes = if (Test-Path -LiteralPath $notesOut) { [IO.File]::ReadAllText($notesOut) } else { '' }
     Assert-True ($run.Exit -eq 0 -and $run.Output -like '*3 CHANGELOG bullets*') "The notes builder refused a clean section: $($run.Output)"
-    $instagramAt = $notes.IndexOf('## Instagram')
-    Assert-True ($instagramAt -gt $notes.IndexOf("## What's new") -and $notes.IndexOf('## Tooling') -gt $instagramAt -and
-        $notes.IndexOf('## Install or update') -gt $notes.IndexOf('## Tooling') -and $notes.StartsWith('HushGram 0.0.2 is out.') -and
-        $notes.Contains("## What's new`n`n* One highlight.`n* Another.`n* A third.`n* A fourth.`n* A fifth.`n`n## Instagram") -and
-        $notes.Contains("* First patch line.`n* Second patch line, carried on.") -and $notes.Contains('* The tooling line.') -and
-        -not $notes.Contains('The first release') -and -not $notes.Contains('A script change')) `
-        "The notes don't carry the section's bullets by scope, in order, and nothing else: $notes"
+    $heading = '## [0.0.2](https://github.com/SysAdminDoc/HushGram/compare/v0.0.1...v0.0.2) (2026-10-01)'
+    Assert-True ($notes -ceq ("$heading`n`n### Features`n`n* **Instagram:** First patch line.`n* **Instagram - Hide Meta AI:** Second patch line, carried on.`n`n" +
+            "### Improvements`n`n* **Tooling:** The tooling line.`n`n### Validation`n`nValidation: 5 runtime tests passed locally. All 6 patch tests passed too.`n")) `
+        "The notes aren't the version heading, the typed sections with every bullet once and the validation line: $notes"
+    $description = if (Test-Path -LiteralPath $descriptionOut) { [IO.File]::ReadAllText($descriptionOut) | ConvertFrom-Json } else { '' }
+    Assert-True ($description -ceq $notes.TrimEnd("`n")) "The bundle description isn't the notes as a JSON string: $description"
     $run = Invoke-Notes @('--check')
-    Assert-True ($run.Exit -eq 0 -and $run.Output -like '*Unreleased: 2 bullets (1 Instagram, 1 Tooling)*') "The Unreleased check didn't pass: $($run.Output)"
+    Assert-True ($run.Exit -eq 0 -and $run.Output -like '*Unreleased: 2 bullets (1 Features, 1 Improvements)*') "The Unreleased check didn't pass: $($run.Output)"
     foreach ($case in @(
             @{ Name = 'an unscoped bullet'; Text = $goodChangelog.Replace('* **Tooling:** The tooling line.', '* The tooling line.'); Said = '*has no scope*' },
             @{ Name = 'an unknown scope'; Text = $goodChangelog.Replace('**Tooling:** The tooling', '**Docs:** The tooling'); Said = '*unknown scope Docs*' },
+            @{ Name = 'a bare patch name as scope'; Text = $goodChangelog.Replace('**Instagram - Hide Meta AI:**', '**Hide Meta AI:**'); Said = '*unknown scope Hide Meta AI*' },
+            @{ Name = 'a bullet outside any type heading'; Text = $goodChangelog.Replace("### Improvements`n`n", ''); Said = '*outside a type sub-heading*' },
+            @{ Name = 'an unknown sub-heading'; Text = $goodChangelog.Replace('### Improvements', '### Changes'); Said = '*unknown sub-heading*' },
             @{ Name = 'an em dash'; Text = $goodChangelog.Replace('First patch line.', "First patch line $([char]0x2014) with a dash."); Said = '*dash*' },
             @{ Name = 'a spaced hyphen'; Text = $goodChangelog.Replace('First patch line.', 'First patch line - with a dash.'); Said = '*dash*' })) {
         Write-Text $changelog $case.Text
@@ -126,30 +129,22 @@ try {
         $run = Invoke-Notes $build
         Assert-True ($run.Exit -eq 1 -and $run.Output -like $case.Said -and -not (Test-Path -LiteralPath $notesOut)) `
             "The notes builder went ahead with $($case.Name): $($run.Output)"
+        $run = Invoke-Notes @('--check', '--version', '0.0.2')
+        Assert-True ($run.Exit -eq 1 -and $run.Output -like $case.Said) "The check let through $($case.Name): $($run.Output)"
     }
     Write-Text $changelog $goodChangelog
     $run = Invoke-Notes @('--check', '--version', '0.0.9')
     Assert-True ($run.Exit -eq 1 -and $run.Output -like '*has no dated section for 0.0.9*') "A missing section passed the check: $($run.Output)"
     $run = Invoke-Notes @('--version', '0.0.2', '--out', $notesOut)
-    Assert-True ($run.Exit -eq 1 -and $run.Output -like '*missing --intro, --highlights, --install, --validation*') `
-        "The notes builder went ahead without its pieces: $($run.Output)"
-    Write-Text (Join-Path $notesDir 'intro.md') "HushGram 0.0.2 $([char]0x2013) out now."
+    Assert-True ($run.Exit -eq 1 -and $run.Output -like '*needs --validation*') "The notes builder went ahead without its pieces: $($run.Output)"
+    Write-Text (Join-Path $notesDir 'validation.md') "Validation: 5 runtime tests passed locally.`nA second paragraph."
     $run = Invoke-Notes $build
-    Assert-True ($run.Exit -eq 1 -and $run.Output -like '*a dash*in the notes*') "An intro with a dash went into the notes: $($run.Output)"
-    Write-Text (Join-Path $notesDir 'intro.md') 'HushGram 0.0.2 is out.'
-    $five = "* One.`n* Two.`n* Three.`n* Four.`n* Five."
-    foreach ($case in @(
-            @{ Name = 'two highlights'; Text = "* One.`n* Two."; Said = '*has 2 lines, it wants 5 to 8*' },
-            @{ Name = 'nine highlights'; Text = "$five`n* Six.`n* Seven.`n* Eight.`n* Nine."; Said = '*has 9 lines, it wants 5 to 8*' },
-            @{ Name = 'a highlight that isn''t a bullet'; Text = "$five`nAnd a paragraph."; Said = "*isn't a bullet of its own*" },
-            @{ Name = 'a long highlight'; Text = "$five`n* $('word ' * 40)"; Said = '*runs over 160 characters*' })) {
-        Write-Text (Join-Path $notesDir 'highlights.md') $case.Text
-        Remove-Item -LiteralPath $notesOut -ErrorAction SilentlyContinue
-        $run = Invoke-Notes $build
-        Assert-True ($run.Exit -eq 1 -and $run.Output -like $case.Said -and -not (Test-Path -LiteralPath $notesOut)) `
-            "The notes builder went ahead with $($case.Name): $($run.Output)"
-    }
-    Write-Text (Join-Path $notesDir 'highlights.md') $highlights
+    Assert-True ($run.Exit -eq 1 -and $run.Output -like '*wants the one sentence*') "A two-line validation went into the notes: $($run.Output)"
+    Write-Text (Join-Path $notesDir 'validation.md') "Validation: 5 runtime tests passed locally $([char]0x2013) all of them."
+    $run = Invoke-Notes $build
+    Assert-True ($run.Exit -eq 1 -and $run.Output -like '*a dash*in the notes*') "A validation line with a dash went into the notes: $($run.Output)"
+    $run = Invoke-Python (Join-Path $Root 'scripts/test-release-notes.py')
+    Assert-True ($run.Exit -eq 0) "The release notes tests against Manager's parser failed: $($run.Output)"
     Write-Host '[release-helpers] notes builder passed'
 
     # --- count_tests.py --------------------------------------------------------------------------
@@ -164,11 +159,11 @@ try {
     }
     $countTool = Join-Path $releaseDir 'count_tests.py'
     Write-Results (Join-Path $countRoot 'extensions/instagram/build/test-results/testDebugUnitTest') 5 -Claimed 9
-    Write-Results (Join-Path $countRoot 'patches/build/test-results/test') 7
+    Write-Results (Join-Path $countRoot 'patches/build/test-results/test/direct') 7
     $run = Invoke-Python $countTool '--root' $countRoot '--description'
     Assert-True ($run.Exit -eq 0 -and $run.Output -like '*Validation: 5 runtime tests passed locally. All 7 patch tests passed too.*') `
         "The counter didn't count test cases the way the release check does: $($run.Output)"
-    Write-Results (Join-Path $countRoot 'patches/build/test-results/test') 7 -Skipped 1
+    Write-Results (Join-Path $countRoot 'patches/build/test-results/test/direct') 7 -Skipped 1
     $run = Invoke-Python $countTool '--root' $countRoot
     Assert-True ($run.Exit -eq 1 -and $run.Output -like '*skipped=1*' -and $run.Output -like '*no release can quote it*') `
         "A run with a skip was counted as quotable: $($run.Output)"
@@ -187,7 +182,7 @@ try {
     $countCommit = "$(Invoke-CountGit rev-parse HEAD)".Trim()
     $countTree = "$(Invoke-CountGit rev-parse 'HEAD^{tree}')".Trim()
     Write-Results (Join-Path $gateCache "$countCommit/test-results/testDebugUnitTest") 4
-    Write-Results (Join-Path $gateCache "$countCommit/test-results/test") 6
+    Write-Results (Join-Path $gateCache "$countCommit/test-results/test/feed") 6
     $countManifest = Join-Path $gateCache "$countCommit/manifest.json"
     function Write-CountManifest([string]$Passed = 'true', [string]$Commit = $countCommit, [string]$Tree = $countTree) {
         Write-Text $countManifest "{`"passed`": $Passed, `"stage`": `"done`", `"commit`": `"$Commit`", `"tree`": `"$Tree`"}"
@@ -218,6 +213,56 @@ try {
     Remove-Item Env:\HUSHGRAM_GATE_CACHE
     Write-Host '[release-helpers] test counter passed'
 
+    # --- stale_tests.py --------------------------------------------------------------------------
+
+    # A checkout with one boundary class, one settings test and the sources and table it reads: a
+    # format string, two joined literals and a translated row.
+    $settingsPackage = 'app/hushgram/extension/instagram/settings'
+    function Write-StaleFixture([string]$At) {
+        Write-Text (Join-Path $At 'extensions/instagram/build.gradle.kts') (@(
+            'tasks.register("verifyAndroidBoundaries") {', '    doLast {', '        val required = mapOf(',
+            '            "app.hushgram.extension.instagram.settings.FixtureTest" to listOf(',
+            '                "keepsItsName[28]", "keepsItsName[37]"),', '        )', '        val factory = null', '    }', '}') -join "`n")
+        Write-Text (Join-Path $At "extensions/instagram/src/test/java/$settingsPackage/FixtureTest.java") (@(
+            'class FixtureTest {', '    @Test public void keepsItsName() {',
+            '        assertEquals("Stop after 20 reels", label(20));',
+            '        assertEquals("a message no source has", "Hide the " + "row", row());',
+            '        assertTrue(summary().contains("Verstecke die Zeile"));', '    }', '}') -join "`n")
+        Write-Text (Join-Path $At "extensions/instagram/src/main/java/$settingsPackage/Fixture.java") (@(
+            'class Fixture {', '    static final String ANY = "%s";', '    static final String LIMIT = "Stop after %1$d reels";',
+            '    static final String ROW = "Hide the "', '            + "row";', '}') -join "`n")
+        Write-Text (Join-Path $At 'extensions/shared/library/src/main/l10n/de.tsv') "Hide the line`tVerstecke die Zeile`n"
+    }
+    $staleRoot = Join-Path $scratch 'stale'
+    Write-StaleFixture $staleRoot
+    $staleTool = Join-Path $releaseDir 'stale_tests.py'
+    $run = Invoke-Python $staleTool '--root' $staleRoot
+    Assert-True ($run.Exit -eq 0 -and $run.Output -like '*every boundary test and settings text is still in the sources*') `
+        "The stale check refused a checkout whose tests match its sources: $($run.Output)"
+    $staleTest = Join-Path $staleRoot "extensions/instagram/src/test/java/$settingsPackage/FixtureTest.java"
+    $staleSource = Join-Path $staleRoot "extensions/instagram/src/main/java/$settingsPackage/Fixture.java"
+    $testText = [IO.File]::ReadAllText($staleTest)
+    $sourceText = [IO.File]::ReadAllText($staleSource)
+    Write-Text $staleTest $testText.Replace('void keepsItsName()', 'void keptItsName()')
+    $run = Invoke-Python $staleTool '--root' $staleRoot
+    Assert-True ($run.Exit -eq 1 -and $run.Output -like '*boundary FixtureTest.keepsItsName names no test method*') `
+        "A renamed boundary case passed the stale check: $($run.Output)"
+    Write-Text $staleTest $testText.Replace('@Test public void keepsItsName()', 'public void keepsItsName()')
+    $run = Invoke-Python $staleTool '--root' $staleRoot
+    Assert-True ($run.Exit -eq 1 -and $run.Output -like '*boundary FixtureTest.keepsItsName names no test method*') `
+        "A boundary name left on a method JUnit doesn't run passed the stale check: $($run.Output)"
+    Write-Text $staleTest $testText
+    # The bare "%s" in the source mustn't stand in for a rewritten text.
+    Write-Text $staleSource $sourceText.Replace('Stop after %1$d reels', 'Stop after %1$d videos')
+    $run = Invoke-Python $staleTool '--root' $staleRoot
+    Assert-True ($run.Exit -eq 1 -and $run.Output -like "*FixtureTest.java:3 expects text no source or table has: 'Stop after 20 reels'*") `
+        "A rewritten format string passed the stale check: $($run.Output)"
+    Write-Text $staleSource $sourceText.Replace('+ "row"', '+ "line"')
+    $run = Invoke-Python $staleTool '--root' $staleRoot
+    Assert-True ($run.Exit -eq 1 -and $run.Output -like "*FixtureTest.java:4 expects text no source or table has: 'Hide the row'*" -and
+        $run.Output -notlike '*a message no source has*') "A rewritten joined string passed, or an assert message was read as text: $($run.Output)"
+    Write-Host '[release-helpers] stale test check passed'
+
     # --- patch-all-builds.ps1 --------------------------------------------------------------------
 
     # The checkout the run reads: the real catalog, a version, and a git repository so the gate's
@@ -228,8 +273,18 @@ try {
     Write-Text (Join-Path $repo 'CHANGELOG.md') $goodChangelog
     Write-Text (Join-Path $repo '.gitignore') "build/`npatches/build/`n"
     $catalog = Get-Content -LiteralPath (Join-Path $repo 'patches-list.json') -Raw | ConvertFrom-Json
-    $patchNames = @($catalog.patches | ForEach-Object { [string]$_.name })
-    function Invoke-RepoGit { $gitArguments = $args; & git -C $repo @gitArguments 2>&1; if ($LASTEXITCODE -ne 0) { throw "git $gitArguments failed" } }
+    . (Join-Path $Root 'scripts/patch-target.ps1')
+    # The release runs patch Instagram as Instagram: a patch that makes a second app is left out.
+    $split = Split-SecondAppPatches -PatchList $catalog
+    Assert-True (@($split.SecondApp).Count -eq 1 -and $split.SecondApp[0] -ceq 'Install next to Instagram' -and
+        @($split.SameApp).Count -eq @($catalog.patches).Count - 1 -and $split.SameApp -cnotcontains 'Install next to Instagram') `
+        "The second-app split is wrong: $($split | ConvertTo-Json -Compress)"
+    $patchNames = @($split.SameApp)
+    function Invoke-RepoGit {
+        $gitArguments = $args
+        & git -C $repo @gitArguments 2>&1
+        if ($LASTEXITCODE -ne 0) { throw "git $gitArguments failed" }
+    }
     Invoke-RepoGit init -q -b main | Out-Null
     Invoke-RepoGit config core.autocrlf false | Out-Null
     Invoke-RepoGit add -A | Out-Null
@@ -308,9 +363,16 @@ function Get-BuildQueueMask { param([int]$Slot) [System.Diagnostics.Process]::Ge
     }
     function Read-Summary { Get-Content -LiteralPath (Join-Path $out 'summary.json') -Raw | ConvertFrom-Json }
 
-    # Listed: the declared build from its bundle, not its base split; the other build from its
-    # base split, the only copy; the older one from its bundle; nothing for the empty folder.
+    # Left to itself it lists the declared version's builds only and names the older one it skips.
     $run = Invoke-AllBuilds @('-ListOnly')
+    $listed = @($run.Output -split "`n" | Where-Object { $_ -like '`[all-builds`] *: *' })
+    Assert-True ($run.Exit -eq 0 -and $listed.Count -eq 2 -and $run.Output -notlike '*384510833: bundle*' -and
+        $run.Output -like "*skipped 439.0.0.37.89-384510833, not the declared version $declared (name it with -Only to patch it)*") `
+        "An older version's build was taken, or its skip wasn't named: $($run.Output)"
+    # Listed by name: the declared build from its bundle, not its base split; the other build from
+    # its base split, the only copy; the older one from its bundle; nothing for the empty folder.
+    $allThree = @('-Only', '385611438,385611395,384510833')
+    $run = Invoke-AllBuilds (@('-ListOnly') + $allThree)
     $listed = @($run.Output -split "`n" | Where-Object { $_ -like '`[all-builds`] *: *' })
     Assert-True ($run.Exit -eq 0 -and $listed.Count -eq 3 -and
         $run.Output -like "*$declared-385611438: bundle instagram-$declared-385611438.apks*" -and
@@ -325,7 +387,7 @@ function Get-BuildQueueMask { param([int]$Slot) [System.Diagnostics.Process]::Ge
     # patched APKs gone. The broken run fails the whole.
     $env:BUILD_QUEUE_SCRIPT = $queue
     $env:HUSHGRAM_ALLOW_RELEASE = '1'
-    $run = Invoke-AllBuilds @()
+    $run = Invoke-AllBuilds $allThree
     $summary = Read-Summary
     $byBuild = @{}
     foreach ($entry in @($summary.builds)) { $byBuild[$entry.build] = $entry }
@@ -368,7 +430,7 @@ function Get-BuildQueueMask { param([int]$Slot) [System.Diagnostics.Process]::Ge
     # The gate builds in a worktree at the pushed commit, and the manifest names that tree.
     Invoke-RepoGit worktree add --detach $gateTree HEAD | Out-Null
     Write-Results (Join-Path $gateTree 'extensions/instagram/build/test-results/testDebugUnitTest') 3
-    Write-Results (Join-Path $gateTree 'patches/build/test-results/test') 2
+    Write-Results (Join-Path $gateTree 'patches/build/test-results/test/stories') 2
     Write-Text (Join-Path $gateTree 'patches/build/release/patches-0.0.1.mpp') 'bundle'
     Write-Text (Join-Path $gateTree 'patches/build/release/patches-0.0.1.cdx.json') '{}'
     $gateDir = Start-GateEvidence -Commit $repoHead
@@ -379,6 +441,8 @@ function Get-BuildQueueMask { param([int]$Slot) [System.Diagnostics.Process]::Ge
         -Apk $declaredBundle -Bundle $bundle -PatchList (Join-Path $repo 'patches-list.json') -DesktopJar $desktop `
         -VersionName $declared -VersionCode '385611438' -Forced $false
     Save-GateEvidence -Directory $gateDir -GateRoot $gateTree -Commit $repoHead -Passed $true -Stage 'done' -FixturesPatched $true | Out-Null
+    Assert-True (Test-Path -LiteralPath (Join-Path $gateDir 'test-results/test/stories/TEST-fixture.Suite.xml')) `
+        'The gate did not preserve a nested patch test report.'
     $run = Invoke-AllBuilds @('-Only', '385611438', '-FromGate')
     $entry = @((Read-Summary).builds)[0]
     Assert-True ($run.Exit -eq 0 -and @(Read-Log | Where-Object { $_ -like 'patch *' }).Count -eq 0 -and $entry.ok -and
@@ -400,9 +464,10 @@ function Get-BuildQueueMask { param([int]$Slot) [System.Diagnostics.Process]::Ge
     foreach ($name in @('common.ps1', 'patch-target.ps1', 'build-jobs.ps1', 'gate-evidence.ps1')) {
         Write-Text (Join-Path $repo "scripts/$name") ([IO.File]::ReadAllText((Join-Path $Root "scripts/$name")))
     }
-    foreach ($name in @('preflight.ps1', 'release_notes.py')) {
+    foreach ($name in @('preflight.ps1', 'release_notes.py', 'stale_tests.py')) {
         Write-Text (Join-Path $repo "scripts/release/$name") ([IO.File]::ReadAllText((Join-Path $releaseDir $name)))
     }
+    Write-StaleFixture $repo
     Write-Text (Join-Path $repo 'scripts/validate-release-facts.ps1') @'
 Add-Content -LiteralPath $env:HUSHGRAM_HELPERS_LOG -Value "facts $($args -join ' ')"
 exit 0
@@ -465,6 +530,14 @@ exit [int]$env:HUSHGRAM_HELPERS_GRADLE_EXIT
     Assert-True ($run.Exit -eq 1 -and $run.Output -like '*has no scope*' -and $run.Output -like '*refused after*the CHANGELOG section for the notes*') `
         "An unscoped CHANGELOG bullet passed the preflight: $($run.Output)"
     Invoke-RepoGit reset -q --hard $preflightHead | Out-Null
+    $repoTest = Join-Path $repo "extensions/instagram/src/test/java/$settingsPackage/FixtureTest.java"
+    Write-Text $repoTest ([IO.File]::ReadAllText($repoTest).Replace('void keepsItsName()', 'void keptItsName()'))
+    Invoke-RepoGit -c user.name=SysAdminDoc -c user.email=matt_parker@outlook.com commit -q -am 'renamed boundary case' | Out-Null
+    $run = Invoke-Preflight
+    Assert-True ($run.Exit -eq 1 -and $run.Output -like '*keepsItsName names no test method*' -and
+        $run.Output -like '*refused after*the test names and texts the sources still have*' -and
+        @(Read-Log | Where-Object { $_ -like 'gradle *' }).Count -eq 0) "A renamed boundary case passed the preflight: $($run.Output)"
+    Invoke-RepoGit reset -q --hard $preflightHead | Out-Null
     Write-Host '[release-helpers] preflight passed'
 
     . (Join-Path $PSScriptRoot 'script-wiring.ps1')
@@ -475,5 +548,8 @@ exit [int]$env:HUSHGRAM_HELPERS_GRADLE_EXIT
     foreach ($name in $saved.Keys) { [Environment]::SetEnvironmentVariable($name, $saved[$name], [EnvironmentVariableTarget]::Process) }
     $temp = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
     if (-not $scratch.StartsWith($temp, [StringComparison]::OrdinalIgnoreCase)) { throw 'Unsafe release helper fixture cleanup path.' }
+    if (Get-Command Unlock-GateEvidence -ErrorAction SilentlyContinue) {
+        foreach ($commit in @($script:GateEvidenceLocks.Keys)) { Unlock-GateEvidence -Commit $commit }
+    }
     if (Test-Path -LiteralPath $scratch) { Remove-Item -LiteralPath $scratch -Recurse -Force }
 }

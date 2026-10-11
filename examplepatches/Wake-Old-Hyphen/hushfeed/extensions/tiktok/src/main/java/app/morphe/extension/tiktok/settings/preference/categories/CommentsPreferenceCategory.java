@@ -28,11 +28,15 @@ public class CommentsPreferenceCategory extends ConditionalPreferenceCategory {
     public static boolean isAvailable() {
         return SettingsStatus.commentToolsEnabled
                 || SettingsStatus.commentTranslationEnabled
+                || SettingsStatus.doNotAutoTranslateEnabled
+                || SettingsStatus.translateIntoEnabled
+                || SettingsStatus.commentTranslateButtonEnabled
                 || SettingsStatus.hideCommentQuickReactionsEnabled
                 || SettingsStatus.copyCommentsWithoutUsernameEnabled
                 || SettingsStatus.hideCommentEggsEnabled
                 || SettingsStatus.commentSortControlsEnabled
-                || SettingsStatus.lengthLimitsEnabled;
+                || SettingsStatus.lengthLimitsEnabled
+                || SettingsStatus.voiceCommentsEnabled;
     }
 
     @Override
@@ -43,6 +47,9 @@ public class CommentsPreferenceCategory extends ConditionalPreferenceCategory {
     @Override
     public void addPreferences(Context context) {
         boolean reading = SettingsStatus.commentTranslationEnabled
+                || SettingsStatus.doNotAutoTranslateEnabled
+                || SettingsStatus.translateIntoEnabled
+                || SettingsStatus.commentTranslateButtonEnabled
                 || SettingsStatus.commentSortControlsEnabled
                 || SettingsStatus.commentToolsEnabled
                 || SettingsStatus.copyCommentsWithoutUsernameEnabled;
@@ -68,6 +75,25 @@ public class CommentsPreferenceCategory extends ConditionalPreferenceCategory {
                     Settings.DONT_AUTO_TRANSLATE_LANGUAGES)
                     .withCheck(app.morphe.extension.tiktok.translation.DoNotAutoTranslate::languageProblem)
                     .withNameKeyboard());
+        }
+        if (SettingsStatus.translateIntoEnabled) {
+            addPreference(new InputTextPreference(
+                    context,
+                    "Translate into",
+                    "One language code, like en or es. Comments and captions TikTok translates come out in "
+                            + "this language instead of the app's. Leave it empty to keep TikTok's choice.",
+                    Settings.TRANSLATE_INTO)
+                    .withCheck(app.morphe.extension.tiktok.translation.TranslateInto::languageProblem)
+                    .withNameKeyboard());
+        }
+        if (SettingsStatus.commentTranslateButtonEnabled) {
+            addPreference(new TogglePreference(
+                    context,
+                    "Translate button in comments",
+                    "Adds TikTok's translate button next to the comment count. One tap translates "
+                            + "every comment, and another shows the originals again.",
+                    Settings.COMMENT_TRANSLATE_BUTTON
+            ));
         }
         if (SettingsStatus.commentSortControlsEnabled) {
             addPreference(new TogglePreference(
@@ -236,14 +262,25 @@ public class CommentsPreferenceCategory extends ConditionalPreferenceCategory {
                     Settings.BLOCK_FROM_COMMENT
             ));
         }
-        if (SettingsStatus.lengthLimitsEnabled) {
+        if (SettingsStatus.lengthLimitsEnabled || SettingsStatus.voiceCommentsEnabled) {
             addPreference(new SectionHeadingPreference(context, "Writing"));
+        }
+        if (SettingsStatus.lengthLimitsEnabled) {
             addPreference(new TogglePreference(
                     context,
                     "Lift text length limits",
                     "Let comments, repost notes and your bio run past the length TikTok's app stops at. "
                             + "TikTok's servers can still turn down a long one.",
                     Settings.LIFT_LENGTH_LIMITS
+            ));
+        }
+        if (SettingsStatus.voiceCommentsEnabled) {
+            addPreference(new TogglePreference(
+                    context,
+                    "Allow voice comments",
+                    "Show TikTok's button for recording a spoken comment, on accounts that don't "
+                            + "have it yet. It hasn't been tried on a real account, so it may not work.",
+                    Settings.ENABLE_VOICE_COMMENTS
             ));
         }
     }

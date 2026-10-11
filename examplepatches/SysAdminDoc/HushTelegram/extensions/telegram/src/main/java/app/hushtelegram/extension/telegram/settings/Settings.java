@@ -17,6 +17,8 @@ import static java.lang.Boolean.TRUE;
 
 import app.hushtelegram.extension.shared.settings.BaseSettings;
 import app.hushtelegram.extension.shared.settings.BooleanSetting;
+import app.hushtelegram.extension.shared.settings.IntegerSetting;
+import app.hushtelegram.extension.shared.settings.StringSetting;
 
 /**
  * The switches behind the hooks that ask before they act.
@@ -252,6 +254,17 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushtelegram_hide_sticker_time", FALSE);
 
     /**
+     * Stickers in chats show at {@link #STICKER_SIZE} percent of Telegram's size
+     * ({@link app.hushtelegram.extension.telegram.misc.StickerSize}).
+     */
+    public static final BooleanSetting CHANGE_STICKER_SIZE =
+            new BooleanSetting("hushtelegram_change_sticker_size", FALSE);
+
+    /** The picked sticker size, a percent of Telegram's: one of StickerSize.CHOICES. */
+    public static final IntegerSetting STICKER_SIZE =
+            new IntegerSetting("hushtelegram_sticker_size", 75).withRange(50, 150);
+
+    /**
      * A mention or a reply to you in a muted group or channel stays as quiet as the rest of the chat.
      */
     public static final BooleanSetting IGNORE_MUTED_MENTIONS =
@@ -262,6 +275,21 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting HIDE_BLOCKED_IN_GROUPS =
             new BooleanSetting("hushtelegram_hide_blocked_in_groups", FALSE);
+
+    /**
+     * Messages that match one of your filters are left out of the groups and channels you open
+     * ({@link app.hushtelegram.extension.telegram.misc.MessageFilters}).
+     */
+    public static final BooleanSetting HIDE_BY_KEYWORD =
+            new BooleanSetting("hushtelegram_hide_by_keyword", FALSE);
+
+    /** The filters for groups and supergroups, one a line. */
+    public static final StringSetting MESSAGE_FILTERS_GROUPS =
+            new StringSetting("hushtelegram_message_filters_groups", "");
+
+    /** The filters for channels' posts, one a line. */
+    public static final StringSetting MESSAGE_FILTERS_CHANNELS =
+            new StringSetting("hushtelegram_message_filters_channels", "");
 
     /**
      * Settings drops its Telegram Features row and Contacts drops its Invite Friends rows.
@@ -295,6 +323,33 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting BETA_LOGS_OFF =
             new BooleanSetting("hushtelegram_beta_logs_off", FALSE, true);
 
+    /**
+     * Translate a message or a whole chat with Google's web translate, beside Telegram's own Premium
+     * translation. Off by default, and nothing leaves the phone until a chat or message is turned on.
+     */
+    public static final BooleanSetting OUTSIDE_TRANSLATE =
+            new BooleanSetting("hushtelegram_external_translate", FALSE);
+
+    /** Search, Direct messages and Info leave the bar at the bottom of a channel. Mute and Join stay. */
+    public static final BooleanSetting HIDE_CHANNEL_BUTTONS =
+            new BooleanSetting("hushtelegram_hide_channel_buttons", FALSE);
+
+    /** The Send as picture next to the message box is left out while you'd post as yourself. */
+    public static final BooleanSetting HIDE_SEND_AS =
+            new BooleanSetting("hushtelegram_hide_send_as", FALSE);
+
+    /** Downloads take 512 KB pieces, 8 at a time, unless Telegram drops back to small ones itself. */
+    public static final BooleanSetting FASTER_DOWNLOADS =
+            new BooleanSetting("hushtelegram_faster_downloads", FALSE);
+
+    /** A file or song that finishes downloading gets a copy in Download/Telegram, unless saving it isn't allowed. */
+    public static final BooleanSetting SAVE_DOWNLOADS =
+            new BooleanSetting("hushtelegram_save_downloads", FALSE);
+
+    /** Turned on, makes Private, Groups, Channels and Bots folders; turned off, removes the untouched ones it made. */
+    public static final BooleanSetting CHAT_TYPE_FOLDERS =
+            new BooleanSetting("hushtelegram_chat_type_folders", FALSE);
+
     /** A GIF you tap asks Send or Cancel before it goes into the chat. */
     public static final BooleanSetting ASK_BEFORE_GIF =
             new BooleanSetting("hushtelegram_ask_before_gif", FALSE);
@@ -320,9 +375,8 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushtelegram_message_menu_quick_forward", FALSE);
 
     /**
-     * The device statistics report the server can ask for (a storage-type boolean, sent as a
-     * help.saveAppLog event) and a channel's read metrics (how long each post stayed on screen) are
-     * never sent ({@link app.hushtelegram.extension.telegram.misc.Analytics}).
+     * A channel's read metrics (how long each post stayed on screen), Premium screen interaction
+     * reports and the camera's dual-camera report are never sent ({@link app.hushtelegram.extension.telegram.misc.Analytics}).
      */
     public static final BooleanSetting DISABLE_ANALYTICS =
             new BooleanSetting("hushtelegram_disable_analytics", TRUE);
@@ -357,6 +411,10 @@ public class Settings extends BaseSettings {
     /** The official web certificate for the scoped Firebase Installations header only. */
     public static final BooleanSetting REPAIR_FIREBASE_PUSH =
             new BooleanSetting("hushtelegram_repair_firebase_push", TRUE);
+
+    /** Telegram signs up a UnifiedPush app's address for its wake-ups instead of Firebase's token. */
+    public static final BooleanSetting UNIFIED_PUSH =
+            new BooleanSetting("hushtelegram_unified_push", FALSE);
 
     /**
      * Once a day, when Telegram starts, ask api.github.com whether a newer HushTelegram release is

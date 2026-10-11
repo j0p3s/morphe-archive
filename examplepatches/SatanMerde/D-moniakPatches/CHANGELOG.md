@@ -1,3 +1,95 @@
+## [1.49.0](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.14...v1.49.0) (2026-10-10)
+
+### ✨ New Features
+
+* **ai:** integrate morphe-ai knowledge base, rules, and skills into workspace ([3a9a71e](https://github.com/SatanMerde/D-moniakPatches/commit/3a9a71e201596f8521f15b7040055b518bedca87))
+
+## [1.48.14](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.13...v1.48.14) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **silt:** escape dollar signs in receiver class strings ([eaef914](https://github.com/SatanMerde/D-moniakPatches/commit/eaef91475161c0965f9bba1508fd5f91236013a2))
+* **silt:** neutralize VMRunner invoke/executeVM and hijacked broadcast receivers to fully bypass PairIP ([009a56a](https://github.com/SatanMerde/D-moniakPatches/commit/009a56a7e92c1bd0f99e6ed0c535acba69aa5201))
+
+## [1.48.13](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.12...v1.48.13) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **silt:** neutralize UnityPlayer.preloadJavaPlugins and initialize TelephonyManager string ([81f0573](https://github.com/SatanMerde/D-moniakPatches/commit/81f0573b0b965ce8b14cc1de02b3be78e939b819))
+
+## [1.48.12](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.11...v1.48.12) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **silt:** restore direct UnityPlayerActivity lifecycle methods and bypass PairIP native DRM ([985bd93](https://github.com/SatanMerde/D-moniakPatches/commit/985bd93472618b8cbb55124b14b9649816f17c4c))
+
+## [1.48.11](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.10...v1.48.11) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **silt:** keep VMRunner and StartupLauncher active to populate reflection methods ([8d84d64](https://github.com/SatanMerde/D-moniakPatches/commit/8d84d643eb8582e9d34cb91ef38ba48682739f97))
+
+## [1.48.10](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.9...v1.48.10) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **silt:** neutralize Play Games AppShortcuts crash on signature change ([7bed05a](https://github.com/SatanMerde/D-moniakPatches/commit/7bed05a36299f292887419920b1b9801dc629a52))
+
+## [1.48.9](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.8...v1.48.9) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **silt:** sanitize Application.attachBaseContext and neutralize VMRunner entry points ([8b3474e](https://github.com/SatanMerde/D-moniakPatches/commit/8b3474e0ea71fc2e443bd817599d56fb47a0350e))
+
+## [1.48.8](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.7...v1.48.8) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **silt:** neutralize PairIP StartupLauncher and VMRunner entry points ([f83a332](https://github.com/SatanMerde/D-moniakPatches/commit/f83a332c4e52bc4e1d98045e8e4b1dcc714606f3))
+
+## [1.48.7](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.6...v1.48.7) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **silt:** protect constructors during PairIP hooking and clarify XAPK requirement ([e15f86b](https://github.com/SatanMerde/D-moniakPatches/commit/e15f86b434f6f0f4ded448cfecc73c1b48058395))
+* **silt:** resolve mName reference in pairip hook ([63405d4](https://github.com/SatanMerde/D-moniakPatches/commit/63405d4f3c3177dfebf5473949692229c107e4b7))
+
+## [1.48.6](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.5...v1.48.6) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **silt:** neutralize Google Play App Signing PairIP protection and harden billing hooks ([cc4cc93](https://github.com/SatanMerde/D-moniakPatches/commit/cc4cc933e017a62da2ce6e9f8c44f656a92e04c6))
+
+## [1.48.5](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.4...v1.48.5) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **silt:** bypass Play Integrity remediation dialog and unlock Play Pass ([5afc443](https://github.com/SatanMerde/D-moniakPatches/commit/5afc443166734fa5237b2dca0d8ba852f3179504))
+
+## [1.48.4](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.3...v1.48.4) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **silt:** resolve Dalvik register collision in LVL license callback hooks ([c22f54b](https://github.com/SatanMerde/D-moniakPatches/commit/c22f54b22192288dce5baf90d84cbf43688c52a8))
+
+## [1.48.3](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.2...v1.48.3) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **movix:** resolve startup ANR via safe bytecode injection and add BandLab patches ([80f71b3](https://github.com/SatanMerde/D-moniakPatches/commit/80f71b3b2404fad58e2e9448fa6efde5b9678a58))
+
+## [1.48.2](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.1...v1.48.2) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **movix:** update Movix targets to 2.6.5 recommended and support 2.6.x range; enhance Silt LVL callback ([0a52a18](https://github.com/SatanMerde/D-moniakPatches/commit/0a52a182c49542dfcb3ecb6060edfc6f1843eef7))
+
+## [1.48.1](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.0...v1.48.1) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* update Movix targets to 2.5.3, sanitize WebView hooks, fix universal patches leak ([717cb85](https://github.com/SatanMerde/D-moniakPatches/commit/717cb857c7fb374b8e60dd3aa6c92f869f48d3d5))
+
 ## [1.48.0](https://github.com/SatanMerde/D-moniakPatches/compare/v1.47.2...v1.48.0) (2026-10-04)
 
 ### 🐛 Bug Fixes

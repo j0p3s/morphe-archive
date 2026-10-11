@@ -30,6 +30,8 @@ import android.view.ViewParent;
 import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -74,6 +76,12 @@ import app.hushgram.extension.shared.settings.Setting;
  * does. Paused or in safe mode, a lock that's on keeps working, and covers all of Instagram, the
  * plainest cover there is, so neither can be used to get around it. A phone with no screen lock has
  * nothing to ask, so the messages stay open and a toast says why.
+ *
+ * <p>Single chats can be locked on their own ({@link ChatLocks}), with or without the switches
+ * above. A chat on the list gets the same cover over just that chat, asks the same lock, opens
+ * until Instagram leaves the screen, and its message notifications lose their text the same way.
+ * The banner for a new message waits while any chat on the list is locked, since it can't be told
+ * which chat it shows.
  */
 public final class MessagesLock {
     /** The inbox's list of chats, and the frame around it, as Instagram names them. */
@@ -155,7 +163,7 @@ public final class MessagesLock {
         } catch (Throwable t) {
             HookStatus.threw(FamilyNames.MESSAGES_LOCK, SCREEN, t);
         }
-        if (locked()) hideShade();
+        if (locked() || chatListLocked()) hideShade();
     }
 
     /**
@@ -167,7 +175,9 @@ public final class MessagesLock {
     public static Notification notification(Notification notification) {
         try {
             HookStatus.invoked(FamilyNames.MESSAGES_LOCK);
-            if (notification == null || !locked() || !isMessage(notification) || isHidden(notification)) return notification;
+            if (notification == null || !isMessage(notification) || isHidden(notification) || !lockedFor(notification)) {
+                return notification;
+            }
             Notification hidden = hide(Utils.getContext(), notification);
             HookStatus.counted(FamilyNames.MESSAGES_LOCK, HIDDEN);
             return hidden;
@@ -184,7 +194,7 @@ public final class MessagesLock {
     public static boolean holdBanner() {
         try {
             HookStatus.invoked(FamilyNames.MESSAGES_LOCK);
-            if (!locked()) return false;
+            if (!locked() && !chatListLocked()) return false;
             HookStatus.counted(FamilyNames.MESSAGES_LOCK, HELD);
             return true;
         } catch (Throwable t) {
@@ -198,6 +208,55 @@ public final class MessagesLock {
         if (!switchedOn()) return false;
         expire();
         return !open;
+    }
+
+    /**
+     * The chat on screen is on the list of locked chats and the phone's lock hasn't said it's you
+     * since Instagram came back. Whether the messages lock is on doesn't matter here.
+     */
+    static boolean chatLocked() {
+        if (!ChatLocks.currentListed()) return false;
+        expire();
+        return !open;
+    }
+
+    /** Some chat is on the list and the phone's lock hasn't said it's you since Instagram came back. */
+    public static boolean chatListLocked() {
+        if (!ChatLocks.any()) return false;
+        expire();
+        return !open;
+    }
+
+    /** [notification] is hidden now: the messages are locked, or its chat is on the list and locked. */
+    private static boolean lockedFor(Notification notification) {
+        if (locked()) return true;
+        if (!ChatLocks.listedIn(notification)) return false;
+        expire();
+        return !open;
+    }
+
+    /**
+     * Runs [then] at once while nothing is locked, else after the phone's lock confirms it's you.
+     * Taking a chat off the list goes through here, so it can't be used to get around the lock.
+     */
+    public static void confirmChatsThen(Activity activity, Runnable then) {
+        if (!locked() && !chatListLocked()) {
+            then.run();
+            return;
+        }
+        ask(activity, then);
+    }
+
+    /**
+     * Runs [then] at once while neither messages lock is on, else after the phone's lock confirms
+     * it's you. The list of hidden chats opens through here, since it names them.
+     */
+    public static void confirmHiddenThen(Activity activity, Runnable then) {
+        if (!switchedOn()) {
+            then.run();
+            return;
+        }
+        ask(activity, then);
     }
 
     /**
@@ -288,6 +347,9 @@ public final class MessagesLock {
         Notification.Builder builder = new Notification.Builder(context, original.getChannelId());
         Bundle marked = new Bundle();
         marked.putBoolean(HIDDEN_EXTRA, true);
+        // Its chat stays on the copy, so what is in the shade can still be matched to the chat.
+        String chat = ChatLocks.idsOf(original);
+        if (chat != null) marked.putString(ChatLocks.CHAT_EXTRA, chat);
         builder.setSmallIcon(original.getSmallIcon())
                 .setContentTitle(appName(context))
                 .setContentText(L10n.t("New message"))
@@ -329,6 +391,19 @@ public final class MessagesLock {
      * be written over (no small icon, a channel deleted since) is reported and the rest still are.
      */
     static void hideShade() {
+        hideShade(switchedOn());
+    }
+
+    /**
+     * A chat was just put on the locked list: its notifications in the shade lose their text now,
+     * not at the next lock. Other chats' stay as they are, since the messages may be open.
+     */
+    public static void chatListed() {
+        hideShade(false);
+    }
+
+    /** [everyMessage] covers each message notification, otherwise just those of listed chats. */
+    private static void hideShade(boolean everyMessage) {
         Context context;
         NotificationManager manager;
         StatusBarNotification[] active;
@@ -347,6 +422,9 @@ public final class MessagesLock {
             try {
                 Notification shown = posted.getNotification();
                 if (shown == null || !isMessage(shown) || isHidden(shown)) continue;
+                // Only the notifications of listed chats go when just chats are locked, matched by
+                // their mark or, for one that came before any chat was locked, Instagram's tag.
+                if (!everyMessage && !ChatLocks.listedIn(shown, posted.getTag())) continue;
                 manager.notify(posted.getTag(), posted.getId(), hide(context, shown, true));
                 HookStatus.counted(FamilyNames.MESSAGES_LOCK, HIDDEN);
             } catch (Throwable t) {
@@ -417,7 +495,7 @@ public final class MessagesLock {
         boolean wasOpen = open;
         open = false;
         if (askAgain) askedThisTime = false;
-        if (wasOpen && switchedOn()) hideShade();
+        if (wasOpen && (switchedOn() || ChatLocks.any())) hideShade();
     }
 
     /** Checks the activity in front before each of its frames, so a cover is in place before the messages draw. */
@@ -463,15 +541,33 @@ public final class MessagesLock {
         try {
             View decor = activity.getWindow().getDecorView();
             ViewGroup window = (ViewGroup) decor;
+            if (!switchedOn() && !ChatLocks.any() && !anyCover(window)) {
+                // Nothing to cover and nothing to take down. Before every frame, all that's left
+                // is learning which chat is open for Lock a chat, and that walks the whole window,
+                // so it waits IDLE_LOOK_MS between looks instead of running on each draw.
+                long now = SystemClock.elapsedRealtime();
+                if (now - idleLookedAt < IDLE_LOOK_MS) {
+                    keepOutOfRecents(activity, false);
+                    if (askedAt == 0) askedThisTime = false;
+                    return;
+                }
+                idleLookedAt = now;
+            }
             boolean lock = locked();
             boolean whole = wholeApp();
+            // A chat on the list is covered by itself, whether or not the messages are locked.
+            boolean chatLock = chatLocked() && !(lock && whole);
             // One cover at a time: two would each keep pulling itself in front of the other.
             boolean app = (whole || cover(window, APP) != null) && place(activity, window, APP, lock && whole);
             boolean inbox = place(activity, window, INBOX_LIST, lock && !whole);
-            boolean chat = place(activity, window, CHAT_ROOT, lock && !whole);
+            boolean messages = lock && !whole;
+            boolean chat = place(activity, window, CHAT_ROOT, messages || chatLock, !messages);
             boolean guarded = whole ? app : inbox || chat;
-            keepOutOfRecents(activity, !lock && switchedOn() && guarded);
-            if (!lock || !guarded) {
+            if (chat) ChatLocks.learnName(anchor(activity, window, CHAT_ROOT));
+            // A chat on the list stays out of the recent apps picture while it's open, too.
+            boolean listedOpen = chat && !chatLock && ChatLocks.currentListed();
+            keepOutOfRecents(activity, !lock && !chatLock && ((switchedOn() && guarded) || listedOpen));
+            if (!(lock && guarded) && !(chatLock && chat)) {
                 // Asked again the next time the messages show, unless a prompt is still up.
                 if (askedAt == 0) askedThisTime = false;
                 return;
@@ -491,6 +587,11 @@ public final class MessagesLock {
      * when that screen is on screen at all.
      */
     private static boolean place(Activity activity, ViewGroup window, String name, boolean lock) {
+        return place(activity, window, name, lock, false);
+    }
+
+    /** [single] says the cover is over one chat that was locked on its own rather than over all the messages. */
+    private static boolean place(Activity activity, ViewGroup window, String name, boolean lock, boolean single) {
         View anchor = anchor(activity, window, name);
         Cover cover = cover(window, name);
         Rect area = new Rect();
@@ -513,6 +614,7 @@ public final class MessagesLock {
             moved = true;
         }
         cover.hide(anchor);
+        cover.titleFor(single);
         // The cover stays the window's last child, so it's drawn over anything Instagram adds later.
         if (window.getChildAt(window.getChildCount() - 1) != cover) cover.bringToFront();
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) cover.getLayoutParams();
@@ -532,6 +634,18 @@ public final class MessagesLock {
             cover.layout(area.left, area.top, area.right, area.bottom);
         }
         return true;
+    }
+
+    /** How long a screen with nothing locked and no cover up goes between looks for an open chat. */
+    static final long IDLE_LOOK_MS = 500;
+    private static long idleLookedAt = Long.MIN_VALUE / 2;
+
+    /** Whether [window] has a cover at all, shown or not. */
+    private static boolean anyCover(ViewGroup window) {
+        for (int i = window.getChildCount() - 1; i >= 0; i--) {
+            if (window.getChildAt(i) instanceof Cover) return true;
+        }
+        return false;
     }
 
     /** [window]'s cover for [name]'s screen, if it has one. */
@@ -601,6 +715,9 @@ public final class MessagesLock {
         return list;
     }
 
+    /** Resource ids by name, misses included: they don't change while the process runs, and this is asked before every frame. */
+    private static final Map<String, Integer> IDS = new java.util.concurrent.ConcurrentHashMap<>();
+
     static int id(Context context, String name) {
         if (APP.equals(name)) return android.R.id.content;
         Map<String, Integer> forTests = idsForTests;
@@ -608,7 +725,12 @@ public final class MessagesLock {
             Integer id = forTests.get(name);
             return id == null ? 0 : id;
         }
-        return context.getResources().getIdentifier(name, "id", context.getPackageName());
+        Integer known = IDS.get(name);
+        if (known == null) {
+            known = context.getResources().getIdentifier(name, "id", context.getPackageName());
+            IDS.put(name, known);
+        }
+        return known;
     }
 
     /**
@@ -620,10 +742,19 @@ public final class MessagesLock {
         final String screen;
         private WeakReference<View> hidden = new WeakReference<>(null);
         private int importance;
+        private TextView title;
+        private boolean single;
 
         Cover(Context context, String screen) {
             super(context);
             this.screen = screen;
+        }
+
+        /** The cover over a chat says so when that chat is locked on its own. */
+        void titleFor(boolean single) {
+            if (title == null || this.single == single || APP.equals(screen)) return;
+            this.single = single;
+            title.setText(single ? L10n.t("This chat is locked") : L10n.t("Your messages are locked"));
         }
 
         /** Screen readers skip [anchor] and everything in it. */
@@ -659,10 +790,13 @@ public final class MessagesLock {
         cover.setClickable(true);
         cover.setFocusable(true);
 
+        // The column spans the cover. A column that wraps its content shrinks rows that match it to
+        // the icon's width, which cut the title to its first word and the Unlock link to nothing.
         LinearLayout column = new LinearLayout(activity);
         column.setOrientation(LinearLayout.VERTICAL);
         column.setGravity(Gravity.CENTER_HORIZONTAL);
-        cover.addView(column, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+        column.setPadding(dp(activity, 32), 0, dp(activity, 32), 0);
+        cover.addView(column, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER));
 
         ImageView icon = new ImageView(activity);
@@ -677,16 +811,29 @@ public final class MessagesLock {
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         title.setGravity(Gravity.CENTER);
         title.setPadding(0, dp(activity, 12), 0, dp(activity, 12));
-        column.addView(title);
+        column.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        cover.title = title;
 
         TextView unlock = new TextView(activity);
         unlock.setText(L10n.t("Unlock"));
-        unlock.setTextColor(Color.rgb(0, 149, 246));
+        // Instagram's blue reads on black, but on white it's about 3:1, so a darker blue takes over there.
+        unlock.setTextColor(dark ? Color.rgb(0, 149, 246) : Color.rgb(0, 100, 224));
         unlock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         unlock.setGravity(Gravity.CENTER);
         unlock.setPadding(dp(activity, 24), dp(activity, 12), dp(activity, 24), dp(activity, 12));
+        // A finger's worth of height, and a button to a screen reader and a keyboard.
+        unlock.setMinHeight(dp(activity, 48));
+        unlock.setFocusable(true);
+        unlock.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+            @Override public void onInitializeAccessibilityNodeInfo(View host, AccessibilityNodeInfo info) {
+                super.onInitializeAccessibilityNodeInfo(host, info);
+                info.setClassName(Button.class.getName());
+            }
+        });
         unlock.setOnClickListener(v -> ask(activity, null));
-        column.addView(unlock);
+        column.addView(unlock, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
         return cover;
     }
 
@@ -827,7 +974,8 @@ public final class MessagesLock {
     }
 
     private static String askTitle() {
-        return wholeApp() ? L10n.t("Unlock Instagram") : L10n.t("Unlock your messages");
+        if (wholeApp()) return L10n.t("Unlock Instagram");
+        return switchedOn() ? L10n.t("Unlock your messages") : L10n.t("Unlock this chat");
     }
 
     /** Draws the activity again, so the covers come off at once. */
@@ -906,5 +1054,7 @@ public final class MessagesLock {
         secured.clear();
         asker = MessagesLock::askPhone;
         idsForTests = null;
+        idleLookedAt = Long.MIN_VALUE / 2;
+        ChatLocks.resetForTests();
     }
 }

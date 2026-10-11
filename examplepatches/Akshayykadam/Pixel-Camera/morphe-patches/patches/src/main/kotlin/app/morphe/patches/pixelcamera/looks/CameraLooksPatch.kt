@@ -17,8 +17,6 @@ val cameraLooksPatch = bytecodePatch(
         // ── 1. Hook uyv (device eligibility) ────────────────────────────────────────────
         mutableClassDefByOrNull("Lvku;")?.let { clazz ->
             PixelCameraPatchUtils.forceReturnTrue(clazz, "l")
-            PixelCameraPatchUtils.forceReturnTrue(clazz, "g")
-            PixelCameraPatchUtils.forceReturnTrue(clazz, "f")
         }
 
         // ── 1b. Hook isk.a(Ltbp;)Z → always return true (unblocks Looks pipeline in Photo & Night Sight) ─
@@ -128,14 +126,14 @@ val cameraLooksPatch = bytecodePatch(
             clazz.methods.firstOrNull { it.name == "K" }?.let { method ->
                 val impl = method.implementation ?: return@let
                 val hookSmali = """
-                    invoke-static {v7}, Lcom/google/android/patch/cameralooks/TomteInitHelper;->getEffectiveLookId(I)I
-                    move-result v7
+                    invoke-static {v15}, Lcom/google/android/patch/cameralooks/TomteInitHelper;->getEffectiveLookId(I)I
+                    move-result v15
                 """.trimIndent()
                 try {
                     val instructions = hookSmali.toInstructions(method)
                     val idx = impl.instructions.indexOfFirst {
                         it.opcode == com.android.tools.smali.dexlib2.Opcode.INVOKE_STATIC &&
-                        it.toString().contains("ShotParams_tomte_type_set")
+                        (it as? com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction)?.reference?.toString()?.contains("ShotParams_tomte_type_set") == true
                     }
                     if (idx != -1) {
                         var pos = idx
@@ -147,6 +145,23 @@ val cameraLooksPatch = bytecodePatch(
             }
         }
 
+        // ── 7b. Align SpecialTypesProvider Authority in ksa.smali for Cloned Package ──
+        mutableClassDefByOrNull("Lksa;")?.let { clazz ->
+            clazz.methods.firstOrNull { it.name == "<clinit>" }?.let { method ->
+                val impl = method.implementation ?: return@let
+                for (i in 0 until impl.instructions.size) {
+                    val ins = impl.instructions[i]
+                    if (ins.opcode == com.android.tools.smali.dexlib2.Opcode.CONST_STRING) {
+                        val refStr = (ins as? com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction21c)?.reference?.toString()
+                        if (refStr == "com.google.android.apps.camera.specialtypes.SpecialTypesProvider") {
+                            val newIns = "const-string v5, \"com.google.android.GoogleCamera.morphe.specialtypes.SpecialTypesProvider\"".toInstructions(method).first()
+                            impl.replaceInstruction(i, newIns)
+                        }
+                    }
+                }
+            }
+        }
+
         // ── 8. Bypass Sauce Onboarding & Tutorials (isu, qlr, rmn) ──────────────────────
         for (onboardingClass in listOf("Lizl;", "Lqvw;", "Lrxh;")) {
             mutableClassDefByOrNull(onboardingClass)?.let { clazz ->
@@ -154,25 +169,13 @@ val cameraLooksPatch = bytecodePatch(
             }
         }
 
-        // ── 9. Bypass split check in CameraApp.smali ───────────────────────────────────
+        // ── 9. Save static Application Context in CameraApp.smali ────────────────────
         mutableClassDefByOrNull("Lcom/google/android/apps/camera/app/CameraApp;")?.let { clazz ->
-            val gASmali = """
-                iget-object v0, p0, Lcom/google/android/apps/camera/app/CameraApp;->q:Livg;
-                invoke-virtual {v0, p0}, Livg;->b(Landroid/content/Context;)V
-                invoke-direct {p0}, Lcom/google/android/apps/camera/app/CameraApp;->i()Litb;
-                move-result-object p0
-                invoke-virtual {p0}, Litb;->gA()Ladvz;
-                move-result-object p0
-                invoke-virtual {p0}, Ljava/lang/Object;->getClass()Ljava/lang/Class;
-                return-object p0
-            """.trimIndent()
-            PixelCameraPatchUtils.replaceMethodBody(clazz, "gA", "Ladvz;", gASmali)
-
             // Register Application Context in TomteInitHelper on onCreate()
             clazz.methods.firstOrNull { it.name == "onCreate" && it.parameterTypes.isEmpty() }?.let { method ->
                 val impl = method.implementation ?: return@let
                 val hookSmali = """
-                    invoke-static {p0}, Lcom/google/android/patch/cameralooks/TomteInitHelper;->setContext(Landroid/content/Context;)V
+                    invoke-static/range {p0 .. p0}, Lcom/google/android/patch/cameralooks/TomteInitHelper;->setContext(Landroid/content/Context;)V
                 """.trimIndent()
                 try {
                     val instructions = hookSmali.toInstructions(method)

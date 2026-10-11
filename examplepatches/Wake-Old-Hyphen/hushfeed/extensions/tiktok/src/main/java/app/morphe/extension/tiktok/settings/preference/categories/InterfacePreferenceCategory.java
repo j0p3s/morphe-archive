@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import app.morphe.extension.tiktok.captions.CaptionStyle;
+import app.morphe.extension.tiktok.feed.BurnInGuard;
 import app.morphe.extension.tiktok.feed.FeedTextSize;
 import app.morphe.extension.tiktok.interaction.TapConfirmation;
 import app.morphe.extension.tiktok.settings.L10n;
@@ -41,6 +42,7 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
     /** Whether this page has anything on it. The row into it asks the same question. */
     public static boolean isAvailable() {
         return SettingsStatus.videoOverlaysEnabled
+                || SettingsStatus.musicDiscSpinEnabled
                 || SettingsStatus.feedTextSizeEnabled
                 || SettingsStatus.hideFeedFollowButtonEnabled
                 || SettingsStatus.hideFeedSaveButtonEnabled
@@ -50,6 +52,7 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
                 || SettingsStatus.authorRegionEnabled
                 || SettingsStatus.engagementRateEnabled
                 || SettingsStatus.hideFeedLiveButtonEnabled
+                || SettingsStatus.hideFeedSidebarButtonEnabled
                 || SettingsStatus.hideFeedSearchButtonEnabled
                 || SettingsStatus.feedFilterEnabled
                 || SettingsStatus.promotionalBannersEnabled
@@ -89,6 +92,7 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
 
     private void addRightColumn(Context context) {
         boolean any = SettingsStatus.videoOverlaysEnabled
+                || SettingsStatus.musicDiscSpinEnabled
                 || SettingsStatus.hideFeedFollowButtonEnabled
                 || SettingsStatus.hideFeedSaveButtonEnabled
                 || SettingsStatus.exactCountsEnabled
@@ -123,6 +127,21 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
             addPreference(new ChoicePreference(context, "Feed button size", Settings.TOUCH_TARGET_SCALE,
                     new String[]{"Normal", "Larger (1.25x)"},
                     new String[]{"1", "1.25"}));
+        }
+        // TikTok 47.1.4 holds the disc still by default (#68); these answer the setting that does.
+        if (SettingsStatus.musicDiscSpinEnabled) {
+            addPreference(new TogglePreference(
+                    context,
+                    "Spin the music disc",
+                    "Turn the music disc at the bottom of the right column while a video plays, the way TikTok used to.",
+                    Settings.SPIN_MUSIC_DISC
+            ));
+            addPreference(new TogglePreference(
+                    context,
+                    "Keep the music disc still",
+                    "Hold the music disc at the bottom of the right column still, even where TikTok turns it. This overrides Spin the music disc.",
+                    Settings.STOP_MUSIC_DISC_SPIN
+            ));
         }
         if (SettingsStatus.hideFeedFollowButtonEnabled) {
             addPreference(new TogglePreference(
@@ -228,7 +247,7 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
             descriptionSize.zeroMeans("TikTok's size");
             addPreference(descriptionSize);
             NumberInputPreference authorSize = new NumberInputPreference(context, "Author text size",
-                    L10n.f(context, "Use 0 for TikTok's size, or %1$d to %2$d. Sizes the author's name and keeps Android's font scaling.",
+                    L10n.f(context, "Use 0 for TikTok's size, or %1$d to %2$d. Sizes the author's name and the post date next to it, and keeps Android's font scaling.",
                             FeedTextSize.MIN_TEXT_SIZE, FeedTextSize.MAX_TEXT_SIZE),
                     Settings.FEED_AUTHOR_TEXT_SIZE, "%1$s point", "%1$s points") {
                 @Override protected int clamp(int value) { return FeedTextSize.clampSize(value); }
@@ -297,6 +316,7 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
     private void addAroundTheVideo(Context context) {
         boolean any = SettingsStatus.videoOverlaysEnabled
                 || SettingsStatus.hideFeedLiveButtonEnabled
+                || SettingsStatus.hideFeedSidebarButtonEnabled
                 || SettingsStatus.hideFeedSearchButtonEnabled
                 || SettingsStatus.feedFilterEnabled;
         if (!any) return;
@@ -311,7 +331,8 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
         }
         // TikTok builds the side menu button in code with no view id, so only the LIVE patch's
         // toolbar check can take it away; the video overlay hider has nothing to find it by.
-        if (SettingsStatus.hideFeedLiveButtonEnabled) {
+        // A build the patch doesn't declare can leave that check out, so the row has its flag.
+        if (SettingsStatus.hideFeedSidebarButtonEnabled) {
             addPreference(new TogglePreference(
                     context,
                     "Hide the side menu button",
@@ -502,7 +523,7 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
             addPreference(new ChoicePreference(context, "Caption background", Settings.CAPTION_BACKGROUND,
                     new String[]{"TikTok default", "Transparent", "Dark", "Black"},
                     new String[]{"default", "transparent", "dark", "black"}));
-            addPreference(new TogglePreference(context, "Keep captions in clear display",
+            addPreference(new TogglePreference(context, "Keep captions in Clear display",
                     "Show the current spoken caption while the other controls are hidden.", Settings.KEEP_CAPTIONS_CLEAR_DISPLAY));
         }
     }
@@ -512,7 +533,7 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
             addPreference(new SectionHeadingPreference(context, "Clear display"));
         }
         if (SettingsStatus.automaticClearDisplayEnabled) {
-            addPreference(new TogglePreference(context, "Automatic clear display",
+            addPreference(new TogglePreference(context, "Automatic Clear display",
                     "Hide controls after each video starts. Tap to restore them.", Settings.AUTOMATIC_CLEAR_DISPLAY));
             NumberInputPreference delay = new NumberInputPreference(context, "Clear display delay",
                     "Wait before hiding the controls.", Settings.AUTOMATIC_CLEAR_DISPLAY_DELAY,
@@ -533,9 +554,13 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
             addPreference(new NumberInputPreference(
                     context,
                     "Fade the video controls",
-                    "Fade the buttons, caption and tabs over the video to this level instead of hiding them. 100 leaves them as TikTok draws them. Faded controls still take taps. At 0 the buttons and caption are hidden, and the tabs stay at 10.",
+                    "Fade the buttons, caption and tabs over the video to this level instead of hiding them. 100 leaves them as TikTok draws them. Faded controls still take taps. In Clear display the buttons and caption stay on screen at this level, and taps go through them to the video. At 0 the buttons and caption are hidden, and the tabs stay at 10.",
                     Settings.FADE_CONTROLS_OPACITY, "%1$s%%"
             ));
+            addPreference(new ChoicePreference(context, "Burn-in guard", Settings.BURN_IN_GUARD,
+                    new String[]{"Off", "Dim when idle", "Dim when idle and shift"},
+                    new String[]{BurnInGuard.OFF, BurnInGuard.DIM, BurnInGuard.DIM_AND_SHIFT})
+                    .withNote("For OLED screens. After 5 seconds without a touch, the buttons, caption and tabs over the video dim to a quarter, and your next touch brings them back. Shift also moves everything on the feed a few pixels every 2 minutes."));
         }
     }
 
@@ -573,9 +598,14 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
                     Settings.SWIPE_LEVELS_STRIP_PERCENT, "%1$s%%"));
         }
         if (SettingsStatus.doubleTapEnabled) {
+            // Long press's actions, which GestureActions runs the same way for both gestures.
             addPreference(new ChoicePreference(context, "Double tap", Settings.DOUBLE_TAP_ACTION,
-                    new String[]{"TikTok default", "Do nothing", "Open comments"},
-                    new String[]{"default", "nothing", "comments"}));
+                    new String[]{"TikTok default", "Do nothing", "Open comments",
+                            "Save the original sound", "Copy the video link", "Copy the sound link",
+                            "Find the sound on YouTube Music", "Set a sleep timer that closes TikTok",
+                            "Save the frame on screen as a photo", "Save the video's cover"},
+                    new String[]{"default", "nothing", "comments", "original_sound", "copy_link",
+                            "copy_sound_link", "youtube_music", "sleep_timer", "save_frame", "save_cover"}));
         }
         if (SettingsStatus.swipeLeftEnabled) {
             addPreference(new ChoicePreference(context, "Swipe left", Settings.SWIPE_LEFT_ACTION,
@@ -583,13 +613,14 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
                     new String[]{"default", "nothing", "comments"}));
         }
         if (SettingsStatus.longPressEnabled) {
+            // Double tap's actions and a like, which TikTok's own double tap already does.
             addPreference(new ChoicePreference(context, "Long press", Settings.LONG_PRESS_ACTION,
                     new String[]{"TikTok default (hold to speed up, quick share)", "Do nothing",
-                            "Open comments", "Save the original sound", "Copy the video link",
-                            "Copy the sound link", "Find the sound on YouTube Music",
+                            "Like the video", "Open comments", "Save the original sound",
+                            "Copy the video link", "Copy the sound link", "Find the sound on YouTube Music",
                             "Set a sleep timer that closes TikTok", "Save the frame on screen as a photo",
                             "Save the video's cover"},
-                    new String[]{"default", "nothing", "comments", "original_sound", "copy_link",
+                    new String[]{"default", "nothing", "like", "comments", "original_sound", "copy_link",
                             "copy_sound_link", "youtube_music", "sleep_timer", "save_frame", "save_cover"}));
             addPreference(new TogglePreference(context, "Seek from the edges",
                     "Press and hold the left or right third of the screen to jump back or forward. "

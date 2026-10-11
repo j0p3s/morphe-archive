@@ -286,7 +286,7 @@ public class SettingsTest {
         }
     }
 
-    /** Shaped like Messenger 580's Menu tab folder row (HRf): context, key, metadata, badge and one title. */
+    /** Shaped like Messenger's Menu tab folder row: context, key, metadata, badge and one title. */
     static class FakeDrawerFolderKey {
         final String name;
         FakeDrawerFolderKey(String name) { this.name = name; }
@@ -387,7 +387,7 @@ public class SettingsTest {
         assertTrue((launched.getFlags() & Intent.FLAG_ACTIVITY_NEW_TASK) != 0);
     }
 
-    /** Shaped like Messenger 580's keyboard tab: an activate event plus int icon and label fields. */
+    /** Shaped like Messenger's keyboard tab: an activate event plus int icon and label fields. */
     static final class KeyboardTab {
         final Object event;
         final int icon = 7;
@@ -398,14 +398,13 @@ public class SettingsTest {
         KeyboardTab emoji = new KeyboardTab(new Object());
         KeyboardTab avatar = new KeyboardTab(new com.facebook.xapp.messaging.composer.avatar.composertab.event.ActivateAvatarSticker());
         KeyboardTab gifs = new KeyboardTab("gifs");
-        java.util.List<Object> tabs = java.util.List.of(emoji, avatar, gifs);
-        assertNull(Settings.filterKeyboardTabs(tabs));
-        Settings.preferences.edit().putBoolean("avatar_stickers", true).apply();
-        assertEquals(java.util.List.of(emoji, gifs), Settings.filterKeyboardTabs(tabs));
-        assertNull(Settings.filterKeyboardTabs(java.util.List.of(emoji, gifs)));
-        assertNull(Settings.filterKeyboardTabs(null));
-        Settings.preferences.edit().putBoolean("paused", true).apply();
-        assertNull(Settings.filterKeyboardTabs(tabs));
+        java.util.List<Object> tabs = new java.util.ArrayList<>(java.util.List.of(emoji, avatar, gifs));
+        Settings.preferences.edit().putBoolean("avatar_stickers", true).putBoolean("paused", true).apply();
+        Settings.removeAvatarTabs(tabs);
+        assertEquals(3, tabs.size());
+        Settings.preferences.edit().putBoolean("paused", false).apply();
+        Settings.removeAvatarTabs(tabs);
+        assertEquals(java.util.List.of(emoji, gifs), tabs);
     }
 
     // Robolectric's default Typeface stand-in accepts any path; the native one fails on a missing file like a phone does.
@@ -552,6 +551,49 @@ public class SettingsTest {
         }
     }
 
+    /** A font that's still being written fails the merge once, so the same file gets three tries and then no more. */
+    @org.robolectric.annotation.GraphicsMode(org.robolectric.annotation.GraphicsMode.Mode.NATIVE)
+    @Test @Config(sdk = 31) public void aFailedEmojiMergeIsRetriedOnTheSameFileUpToThreeTimes() throws Exception {
+        android.graphics.Paint paint = new android.graphics.Paint();
+        String probe = Settings.EMOJI_PROBE;
+        String font = Settings.systemEmojiFont;
+        java.io.File late = java.io.File.createTempFile("FacebookEmoji", ".ttf");
+        java.io.File never = java.io.File.createTempFile("FacebookEmoji", ".ttf");
+        assertTrue(late.delete() && never.delete());
+        String like = new String(Character.toChars(0xF0000));
+        try {
+            resetEmoji();
+            Settings.systemEmojiFont = android.graphics.text.TextRunShaper.shapeTextRun(probe, 0, probe.length(), 0,
+                probe.length(), 0f, 0f, false, paint).getFont(0).getFile().getPath();
+            Settings.preferences.edit().putBoolean("use_system_emoji", true).apply();
+            android.graphics.Typeface system = Settings.systemEmojiTypeface();
+            assertNotNull(system);
+            Settings.messengerEmojiFont(late);
+            assertSame("the file isn't there yet", system, Settings.systemEmojiTypeface(null));
+            copyLikeFont(late);
+            android.graphics.Typeface merged = Settings.systemEmojiTypeface(null);
+            assertNotSame("the second try on the same file merges", system, merged);
+            paint.setTypeface(merged);
+            assertTrue(paint.hasGlyph(like));
+            // A file that keeps failing is given up on after its third try, even once it turns up.
+            Settings.messengerEmojiFont(never);
+            for (int i = 0; i < 3; i++) assertSame(system, Settings.systemEmojiTypeface(null));
+            copyLikeFont(never);
+            assertSame(system, Settings.systemEmojiTypeface(null));
+        } finally {
+            Settings.systemEmojiFont = font;
+            resetEmoji();
+            late.delete();
+            never.delete();
+        }
+    }
+
+    private void copyLikeFont(java.io.File target) throws java.io.IOException {
+        try (java.io.InputStream in = getClass().getResourceAsStream("/messenger-emoji/like-only.ttf")) {
+            java.nio.file.Files.copy(in, target.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
+    }
+
     private static void resetEmoji() {
         Settings.systemEmoji = null;
         Settings.systemEmojiMissing = false;
@@ -560,6 +602,7 @@ public class SettingsTest {
         Settings.messengerEmojiFile = null;
         Settings.mergedEmojiFile = null;
         Settings.mergedEmoji = null;
+        Settings.mergeTries = 0;
         Settings.lastEmojiLog = null;
         if (Settings.preferences != null) Settings.preferences.edit().remove(Settings.EMOJI_FONT_PATH).apply();
         Settings.hookErrors.remove("use_system_emoji");

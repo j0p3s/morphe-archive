@@ -78,7 +78,16 @@ public final class SettingsActivity extends Activity {
     private volatile long updateGeneration;
     private java.net.HttpURLConnection updateConnection;
     private LinearLayout emptyState;
-    static final int SAVE_CHOICES = 7101, READ_CHOICES = 7102;
+    static final int SAVE_CHOICES = 7101, READ_CHOICES = 7102, PICK_FONT = 7103;
+    /** The names providers give fonts, and plain bytes for one that doesn't know a font. The copy checks what it really is. */
+    static final String[] FONT_TYPES = {"font/ttf", "font/otf", "font/collection", "font/sfnt", "application/x-font-ttf",
+        "application/x-font-otf", "application/font-sfnt", "application/vnd.ms-opentype", "application/octet-stream"};
+    static final int MAX_FONT_NAME = 80;
+    /** A font copy is running. Process-wide, like the page that shows it, which the theme switch can recreate. */
+    private static final java.util.concurrent.atomic.AtomicBoolean fontBusy = new java.util.concurrent.atomic.AtomicBoolean();
+    private static java.lang.ref.WeakReference<SettingsActivity> fontPage = new java.lang.ref.WeakReference<>(null);
+    private TextView fontStatus;
+    private Button fontChoose, fontPhone;
     private String documentExport;
     private boolean documentImport;
     private boolean documentBusy;
@@ -90,6 +99,7 @@ public final class SettingsActivity extends Activity {
     private static final java.util.concurrent.Semaphore documentSlots = new java.util.concurrent.Semaphore(2);
     // Process-wide so a page recreated by the theme switch can still replace the last toast.
     private static Toast toast;
+    static final String SUPPORT_PAGE = "https://ko-fi.com/X8K126YVER";
     static final String[][] CONTROLS = {
         {"ads", "Hide inbox ads", "Hides ad cards in your chat list. Meta stopped selling these ads in November 2025, so this only matters if they come back.", "inbox"},
         {"people", "Hide People You May Know", "Hides suggested people in chats, search and stories, and on the People and Notifications tabs. Good if you only want people you know.", "inbox"},
@@ -109,6 +119,7 @@ public final class SettingsActivity extends Activity {
         {"emoji_drawer", "Restore old emoji drawer", "Brings back the earlier emoji keyboard layout by turning off Meta's redesign. Restart Messenger to see the change. Nothing changes if you never got the redesign.", "stickers"},
         {"emoji_search", "Keep emoji search on emoji", "Typing while the emoji keyboard is open no longer jumps to sticker search. The keyboard stays on emoji.", "stickers"},
         {"chat_promotions", "Hide chat promotions", "Hides promotion banners inside conversations.", "conversations"},
+        {"ad_context_banner", "Hide ad banners in business chats", "In a chat you started from a business's ad, hides the banner that shows that ad.", "conversations"},
         {"suggested_replies", "Hide business reply suggestions", "Hides suggested replies in conversations with businesses.", "conversations"},
         {"business_suggestions", "Hide business typing suggestions", "Hides business suggestions that pop up as you type.", "conversations"},
         {"event_prompts", "Hide event prompts", "Hides event promotion prompts inside chats.", "conversations"},
@@ -119,16 +130,19 @@ public final class SettingsActivity extends Activity {
         {"disappearing_swipe", "Turn off the swipe up for disappearing messages", "Swiping up at the bottom of a chat no longer turns on disappearing messages. Scrolling works as usual, and you can still set them in the chat's settings.", "conversations"},
         {"system_camera", "Use the phone's camera app", "The camera button in a chat opens your phone's camera app. The photo opens in Messenger's editor, ready to send. Photos only.", "conversations"},
         {"external_browser", "Open web links externally", "Opens web links (http and https) in your default browser. Other link types work as before.", "links_bubbles"},
-        {"bubbles", "Allow chat bubbles", "Choose Stock, Chat Heads or Native Bubbles below. Native Bubbles needs Android 11 or newer, a supported account and notification permission. Restart Messenger after changing.", "links_bubbles"},
+        {"bubbles", "Allow chat bubbles", "Choose Stock, Chat heads or Native Bubbles below. Native Bubbles needs Android 11 or newer, a supported account and notification permission. Restart Messenger after changing.", "links_bubbles"},
         {"analytics_uploads", "Stop analytics uploads", "Stops Messenger's background services from uploading usage statistics. It still records them on your phone, and they can upload after you turn this off.", "privacy"},
+        {"attribution_uploads", "Stop ad attribution uploads", "Stops the job that reads your phone's advertising ID and sends it to Meta with your ad tracking setting. The ID itself doesn't change.", "privacy"},
+        {"ad_events", "Stop inbox and ad link logging", "Stops two reports Messenger logs. One says which part of your chat list was on screen, which Messenger files under inbox ads. The other says which ad brought you in when a link from an ad opens a chat.", "privacy"},
         {"message_log", "Keep a message log", "Saves each message when its notification arrives, so you can read it after it's unsent. Works in encrypted chats. Stays on your phone.", "privacy"},
         {"allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, such as view-once photos and Quicksnap, and stops screenshot notices. It doesn't add replay or saving.", "privacy"},
-        {"hide_read_receipts", "Hide read receipts", "Stops Messenger from telling people you read their message. Replying or switching this off may notify them. Encrypted chats you open can stay unread here. Group chats aren't tested.", "privacy"},
+        {"hide_read_receipts", "Hide read receipts", "Stops Messenger from telling people you read their message. Opened encrypted chats can stay unread here. Replying or switching this off may notify them. Group chats aren't tested. Messenger's own Read receipts setting under Privacy & safety marks chats read without Seen.", "privacy"},
         {"keep_unsent", "Keep unsent messages", "Keeps messages on screen after someone unsends them, in chats where it works. Encrypted chats aren't supported and group chats aren't tested. Your own unsends may be limited.", "privacy"},
         {"anonymous_stories", "View stories anonymously", "Opens other people's stories without adding you to their viewer list. Messenger still marks them as seen on your side.", "privacy"},
         {"save_stories", "Save any story", "Adds Save to the More options menu on other people's stories, so you can keep the photo or video on your phone.", "privacy"},
         {"material_you", "Material You theme", "Colors Messenger's dark mode with your wallpaper colors on Android 12 and newer, and a fixed blue on Android 11. Turn on dark mode in Messenger first.", "theme"},
         {"app_icons", "Unlock app icons", "Lets you pick any icon in Messenger's App icon setting without a subscription. Messenger decides whether that setting shows for you. Turning this off can bring the default icon back.", "theme"},
+        {"custom_font", "Use your own font", "Shows Messenger's text in your phone's font instead of Meta's, or in a .ttf or .otf font file you choose below. Emoji don't change. Restart Messenger to see a change.", "theme"},
     };
 
     static final String DRAWER_ALIAS = "app.hushmessenger.extension.SettingsLauncher";
@@ -304,6 +318,7 @@ public final class SettingsActivity extends Activity {
             }
             for (RadioButton mode : bubbleModes) mode.setChecked(mode.getTag().equals("bubble_" + Settings.selectedBubbleMode()));
         } finally { binding = false; }
+        refreshFontFile();
         updateSetup();
     }
 
@@ -492,10 +507,13 @@ public final class SettingsActivity extends Activity {
                 groups.add(group);
             }
             LinearLayout row = controlRow(spec[0], text.control(spec, 1), text.control(spec, 2), true);
-            if ("bubbles".equals(spec[0])) {
+            if ("bubbles".equals(spec[0]) || OwnFont.KEY.equals(spec[0]) || MessageLog.KEY.equals(spec[0])) {
+                // Below the row, where TalkBack reaches them: the row's label column hides its descendants.
                 LinearLayout wrapper = ui.column();
                 ui.add(wrapper, row, 0);
-                addBubbleModes(wrapper);
+                if ("bubbles".equals(spec[0])) addBubbleModes(wrapper);
+                else if (OwnFont.KEY.equals(spec[0])) addFontFile(wrapper);
+                else addMessageLogActions(wrapper);
                 row = wrapper;
             }
             row.setTag(spec[3]);
@@ -555,8 +573,8 @@ public final class SettingsActivity extends Activity {
             bubbleModes.add(choice);
         }
         ui.add(content, modes, 8);
-        ui.add(content, ui.text(text.get(Settings.available("bubbles") ? "bubble_help" :
-            Build.VERSION.SDK_INT >= 30 ? "bubble_unsupported" : "unavailable"), 13, ui.muted, false), 8);
+        // An unavailable bundle already says so in the row's description.
+        if (Settings.available("bubbles")) ui.add(content, ui.text(text.get("bubble_help"), 13, ui.muted, false), 8);
         if (Build.VERSION.SDK_INT >= 30) {
             Button permissions = ui.button(text.get("bubble_permissions"));
             permissions.setTag("bubble_permissions");
@@ -573,6 +591,164 @@ public final class SettingsActivity extends Activity {
             conversations.setOnClickListener(view -> openNotificationSettings("android.settings.CONVERSATION_SETTINGS"));
             ui.add(content, conversations, 8);
         }
+    }
+
+    /** The font file rows under Use your own font. Use your phone's font shows only while there's a file to go back from. */
+    private void addFontFile(LinearLayout content) {
+        fontPage = new java.lang.ref.WeakReference<>(this);
+        fontStatus = ui.text("", 13, ui.muted, false);
+        fontStatus.setTag("font_file_status");
+        fontStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        ui.add(content, fontStatus, 8);
+        fontChoose = ui.button(text.get("font_file_choose"));
+        fontChoose.setTag("font_file");
+        fontChoose.setOnClickListener(view -> pickFontFile());
+        ui.add(content, fontChoose, 8);
+        fontPhone = ui.button(text.get("font_phone"));
+        fontPhone.setTag("font_phone");
+        fontPhone.setOnClickListener(view -> usePhoneFont());
+        ui.add(content, fontPhone, 8);
+        ui.add(content, ui.text(text.get("font_file_help"), 13, ui.muted, false), 8);
+        refreshFontFile();
+    }
+
+    private void refreshFontFile() {
+        if (fontStatus == null) return;
+        String name = Settings.preferences.getString(OwnFont.NAME_KEY, "");
+        boolean copy = FontFile.file(this).isFile(), busy = fontBusy.get(), on = Settings.preferences.getBoolean(OwnFont.KEY, false);
+        // With the switch off nothing here is in use yet, so the line says what turning it on would do.
+        String status = busy ? text.get("font_file_copying")
+            : name.isEmpty() ? text.get(on ? "font_file_none" : "font_file_none_off", FontFile.MAX_MEGABYTES)
+            : !copy ? text.get("font_file_missing", name)
+            : text.get(on ? "font_file_using" : "font_file_picked_off", name);
+        if (!status.contentEquals(fontStatus.getText())) fontStatus.setText(status);
+        fontChoose.setEnabled(!busy);
+        fontPhone.setEnabled(!busy);
+        // A copy no name points at still gets a way out.
+        fontPhone.setVisibility(!name.isEmpty() || copy ? View.VISIBLE : View.GONE);
+    }
+
+    private void pickFontFile() {
+        if (fontBusy.get()) return;
+        Intent picker = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
+            .putExtra(Intent.EXTRA_MIME_TYPES, FONT_TYPES);
+        try { startActivityForResult(picker, PICK_FONT); }
+        catch (android.content.ActivityNotFoundException missing) { feedback(text.get("font_file_no_picker"), Toast.LENGTH_LONG); }
+        catch (RuntimeException error) { feedback(text.get("font_file_picker_failed"), Toast.LENGTH_LONG); }
+    }
+
+    /** Copies the picked file in on a worker. The saved name changes only once the copy has passed its checks. */
+    private void copyFontFile(android.net.Uri uri) {
+        if (!fontBusy.compareAndSet(false, true)) {
+            feedback(text.get("font_file_busy"), Toast.LENGTH_LONG);
+            return;
+        }
+        refreshFontFile();
+        Context app = getApplicationContext();
+        SettingsText words = text;
+        SharedPreferences prefs = Settings.preferences;
+        Thread worker = new Thread(() -> {
+            String message;
+            try {
+                message = copyFont(app, prefs, uri, words);
+            } catch (RuntimeException | LinkageError error) {
+                android.util.Log.e("HushMessenger", "Can't copy the font file: " + error.getClass().getSimpleName());
+                message = words.get("font_file_not_saved");
+            } finally {
+                fontBusy.set(false);
+            }
+            String said = message;
+            new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> fontDone(app, said));
+        }, "HushMessengerFontCopy");
+        worker.setDaemon(true);
+        worker.start();
+    }
+
+    static String copyFont(Context app, SharedPreferences prefs, android.net.Uri uri, SettingsText words) {
+        String name = fontName(app, uri);
+        String before = prefs.getString(OwnFont.NAME_KEY, "");
+        try {
+            java.io.InputStream input;
+            try {
+                input = app.getContentResolver().openInputStream(uri);
+            } catch (java.io.IOException | RuntimeException error) {
+                // The class only: a provider's message can carry the document's name or address.
+                throw new FontFile.Refused(FontFile.Refusal.UNREADABLE, error.getClass().getSimpleName());
+            }
+            FontFile.copy(input, FontFile.file(app), OwnFont.fileCheck, new FontFile.Choice() {
+                @Override public boolean save() { return prefs.edit().putString(OwnFont.NAME_KEY, name).commit(); }
+                @Override public void undo() { prefs.edit().putString(OwnFont.NAME_KEY, before).commit(); }
+            });
+            return words.get("font_file_set", name);
+        } catch (FontFile.Refused refused) {
+            android.util.Log.i("HushMessenger", "Font file refused: " + refused.reason);
+            switch (refused.reason) {
+                case NOT_A_FONT: return words.get("font_file_not_font");
+                case TOO_LARGE: return words.get("font_file_too_large", FontFile.MAX_MEGABYTES);
+                case WONT_LOAD: return words.get("font_file_wont_load");
+                case NOT_SAVED: return words.get("font_file_not_saved");
+                default: return words.get("font_file_unreadable");
+            }
+        }
+    }
+
+    /** The picked file's name as its provider gives it, or the last part of its address. Never its path. */
+    static String fontName(Context context, android.net.Uri uri) {
+        String name = null;
+        try (android.database.Cursor cursor = context.getContentResolver().query(uri,
+                new String[] {android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) name = cursor.getString(0);
+        } catch (RuntimeException unknown) {
+            // A provider that can't say leaves the address's own last part.
+        }
+        if (name == null || name.trim().isEmpty()) name = lastPart(uri.getLastPathSegment());
+        return cleanFontName(name);
+    }
+
+    /** A document ID like "primary:Download/Fonts/x.ttf" is a path, so only what follows its last '/' or ':' is kept. */
+    static String lastPart(String segment) {
+        return segment == null ? null : segment.substring(Math.max(segment.lastIndexOf('/'), segment.lastIndexOf(':')) + 1);
+    }
+
+    /** One line with no control or formatting characters, at most {@link #MAX_FONT_NAME} long, and a stand-in when nothing's left. */
+    static String cleanFontName(String name) {
+        if (name == null) return "your font file";
+        StringBuilder clean = new StringBuilder();
+        int kept = 0;
+        for (int index = 0; index < name.length() && kept < MAX_FONT_NAME; ) {
+            int at = name.codePointAt(index);
+            index += Character.charCount(at);
+            int type = Character.getType(at);
+            if (type == Character.CONTROL || type == Character.FORMAT || type == Character.UNASSIGNED || type == Character.LINE_SEPARATOR
+                || type == Character.PARAGRAPH_SEPARATOR || type == Character.PRIVATE_USE || type == Character.SURROGATE) continue;
+            clean.appendCodePoint(Character.isWhitespace(at) ? ' ' : at);
+            kept++;
+        }
+        String trimmed = clean.toString().trim().replaceAll(" {2,}", " ");
+        return trimmed.isEmpty() ? "your font file" : trimmed;
+    }
+
+    /** Back on the main thread: the page showing the rows now, which may be a newer one than started the copy. */
+    private static void fontDone(Context app, String message) {
+        SettingsActivity page = fontPage.get();
+        if (page != null && !page.isDestroyed()) {
+            page.refreshFontFile();
+            page.feedback(message, Toast.LENGTH_LONG);
+            return;
+        }
+        if (toast != null) toast.cancel();
+        toast = Toast.makeText(app, message, Toast.LENGTH_LONG);
+        toast.show();
+    }
+
+    /** Saves the phone's font as the choice, then removes the copy, so the name never points at a deleted file. */
+    private void usePhoneFont() {
+        if (fontBusy.get()) return;
+        boolean saved = Settings.preferences.edit().putString(OwnFont.NAME_KEY, "").commit();
+        java.io.File copy = FontFile.file(this);
+        if (saved && copy.exists() && !copy.delete()) android.util.Log.i("HushMessenger", "The font file copy couldn't be removed");
+        refreshFontFile();
+        feedback(text.get(saved ? "font_phone_set" : "font_phone_failed"), Toast.LENGTH_LONG);
     }
 
     private void openNotificationSettings(String action) {
@@ -593,7 +769,8 @@ public final class SettingsActivity extends Activity {
     @SuppressWarnings("deprecation")
     private LinearLayout controlRow(String key, String title, String description, boolean divided) {
         boolean available = Settings.available(key);
-        if (!available) description += " " + text.format("bubbles".equals(key) && Build.VERSION.SDK_INT >= 30 ? "bubble_unsupported" : "unavailable");
+        if (!available) description += " " + text.format(CameraActivity.KEY.equals(key) ? "camera_unsupported"
+            : "bubbles".equals(key) && Build.VERSION.SDK_INT >= 30 ? "bubble_unsupported" : "unavailable");
         LinearLayout row = ui.row();
         LinearLayout labels = ui.column();
         labels.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
@@ -619,7 +796,6 @@ public final class SettingsActivity extends Activity {
             activityLabels.put(key, activeLabel);
             ui.add(labels, activeLabel, 4);
         }
-        if ("message_log".equals(key)) addMessageLogActions(labels);
         row.addView(labels, new LinearLayout.LayoutParams(0, -2, 1));
         Switch control = ui.toggle(key, text.display(title), text.display(("ads".equals(key) ? text.format("experimental") + ". " : "") + description), Settings.preferences.getBoolean(key, false));
         LinearLayout.LayoutParams switchParams = new LinearLayout.LayoutParams(ui.dp(48), -2);
@@ -696,13 +872,17 @@ public final class SettingsActivity extends Activity {
         long used = Settings.lastActive(key), failedAt = Settings.hookErrorAt(key);
         boolean paused = Settings.preferences.getBoolean("paused", false) || CrashGuard.isSafeMode();
         boolean failed = failedAt > 0 && failedAt >= used;
-        String status = paused ? text.get("changes_paused") : failed ? formatSince(failedAt, "error_now", "error_ago")
+        // A control that keeps its first answer for the run says so until a restart, even with its switch now off.
+        Boolean held = Settings.heldUntilRestart(key);
+        String status = held != null ? text.get(("meta_ai".equals(key) ? "meta_ai_tab_pending_" : "restart_pending_") + (held ? "off" : "on"))
+            : paused ? text.get("changes_paused") : failed ? formatSince(failedAt, "error_now", "error_ago")
             : used == 0 ? text.get("keep_unsent".equals(key) ? "unsent_not_active" : "not_active") : formatSince(used, "active_now", "active_ago");
         if (!status.contentEquals(label.getText())) label.setText(status);
-        label.setTextColor(!paused && failed ? ui.warning : !paused && used > 0 ? ui.accent : ui.muted);
-        label.setVisibility(control.isChecked() ? View.VISIBLE : View.GONE);
+        label.setTextColor(held != null || (!paused && failed) ? ui.warning : !paused && used > 0 ? ui.accent : ui.muted);
+        boolean shown = control.isChecked() || held != null;
+        label.setVisibility(shown ? View.VISIBLE : View.GONE);
         // Hidden labels share the description exposed by the row's switch node.
-        String description = switchDescriptions.get(control).toString() + (control.isChecked() ? " " + status : "");
+        String description = switchDescriptions.get(control).toString() + (shown ? " " + status : "");
         if (!description.contentEquals(control.getContentDescription())) control.setContentDescription(description);
     }
 
@@ -803,7 +983,7 @@ public final class SettingsActivity extends Activity {
             try { startActivityForResult(picker, READ_CHOICES); }
             catch (android.content.ActivityNotFoundException | SecurityException error) {
                 documentImport = false;
-                feedback(text.get("import_invalid"), Toast.LENGTH_LONG);
+                feedback(text.get("choices_file_no_picker"), Toast.LENGTH_LONG);
             }
         });
         ui.add(about, readFile, 8);
@@ -815,7 +995,8 @@ public final class SettingsActivity extends Activity {
         cancelChoicesFile = ui.button(text.get("cancel_choices_file"));
         cancelChoicesFile.setTag("cancel_choices_file");
         cancelChoicesFile.setVisibility(View.GONE);
-        cancelChoicesFile.setOnClickListener(view -> cancelDocumentJob("choices_file_canceled"));
+        cancelChoicesFile.setOnClickListener(view -> cancelDocumentJob(
+            documentJob != null && documentJob.request == READ_CHOICES ? "choices_file_canceled_read" : "choices_file_canceled"));
         ui.add(about, cancelChoicesFile, 8);
         ui.add(about, ui.text(text.get("choices_file_help"), 13, ui.muted, false), 8);
         ui.add(content, about, 12);
@@ -843,11 +1024,25 @@ public final class SettingsActivity extends Activity {
         ui.add(content, help, 18);
         Button source = ui.button(text.get("source"));
         source.setTag("source_licenses");
-        source.setOnClickListener(view -> {
-            try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse("https://github.com/SysAdminDoc/HushMessenger#research-and-credits"))); }
-            catch (android.content.ActivityNotFoundException error) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
-        });
+        source.setOnClickListener(view -> openPage("https://github.com/SysAdminDoc/HushMessenger#research-and-credits"));
         ui.add(content, source, 16);
+        LinearLayout support = ui.panel();
+        support.setTag("support");
+        support.setClickable(true);
+        support.setFocusable(true);
+        support.setBackground(ui.interactive(ui.surface, ui.line, 8));
+        support.setContentDescription(text.get("support") + ". " + text.get("support_help"));
+        support.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+            @Override public void onInitializeAccessibilityNodeInfo(View host, android.view.accessibility.AccessibilityNodeInfo info) {
+                super.onInitializeAccessibilityNodeInfo(host, info);
+                // A panel that opens a page is a button to a screen reader.
+                info.setClassName(Button.class.getName());
+            }
+        });
+        ui.add(support, ui.text(text.get("support"), 16, ui.accent, true), 0);
+        ui.add(support, ui.text(text.get("support_help"), 14, ui.muted, false), 4);
+        support.setOnClickListener(view -> openPage(SUPPORT_PAGE));
+        ui.add(content, support, 12);
         ui.add(content, ui.text(text.get("credits"), 12, ui.muted, false), 16);
         ui.add(content, ui.text(text.get("independent"), 12, ui.muted, false), 20);
     }
@@ -872,13 +1067,17 @@ public final class SettingsActivity extends Activity {
                 boolean installed = Settings.installed.contains(key);
                 boolean selected = Settings.preferences.getBoolean(key, false);
                 long lastActive = Settings.lastActive(key);
+                Boolean held = Settings.heldUntilRestart(key);
                 summary.append(key).append(": installed=").append(installed)
                     .append(", selected=").append(selected)
                     .append(", active=").append(!Settings.preview && installed && selected && !paused && !safeMode && Settings.available(key))
                     .append(", last_active=").append(lastActive == 0 ? "none" : ((System.currentTimeMillis() - lastActive) / 1000) + "s ago")
+                    .append(held == null ? "" : ", until_restart=" + held)
                     .append(", scope=").append(text.control(spec, 2))
                     .append('\n');
             }
+            String dataDir = getApplicationInfo().dataDir;
+            summary.append("Analytics stores: ").append(dataDir == null ? "unreadable" : analyticsStores(new java.io.File(dataDir))).append('\n');
             summary.append("Facebook caller checks: ").append(MessengerSignature.callerSummary()).append('\n');
             // Only controls that failed get a line: the exception's class, where it hit HushMessenger's code and when.
             Map<String, String> errors = Settings.lastHookErrors();
@@ -998,12 +1197,11 @@ public final class SettingsActivity extends Activity {
                 Button view = ui.button(text.get("update_action"));
                 view.setTag("update_release");
                 updateRelease = view;
-                view.setOnClickListener(v -> {
-                    try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(release.page))); }
-                    catch (android.content.ActivityNotFoundException error) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
-                });
+                view.setOnClickListener(v -> openPage(release.page));
                 ViewGroup parent = (ViewGroup) updateStatus.getParent();
-                parent.addView(view, parent.indexOfChild(updateStatus) + 1);
+                LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+                params.topMargin = ui.dp(8);
+                parent.addView(view, parent.indexOfChild(updateStatus) + 1, params);
             } else updateStatus.setText(comparison == 0 ? text.get("up_to_date")
                 : text.get("update_ahead", BuildConfig.VERSION_NAME, latest));
             updateStatus.setVisibility(View.VISIBLE);
@@ -1103,7 +1301,7 @@ public final class SettingsActivity extends Activity {
     private LinearLayout messageLogList;
 
     /** Two actions under the message-log switch: open the log or wipe it, no confirmation, just a toast. */
-    private void addMessageLogActions(LinearLayout labels) {
+    private void addMessageLogActions(LinearLayout content) {
         LinearLayout actions = ui.row();
         Button view = ui.button(text.get("message_log_view"));
         view.setTag("message_log_view");
@@ -1115,13 +1313,16 @@ public final class SettingsActivity extends Activity {
         LinearLayout.LayoutParams clearParams = new LinearLayout.LayoutParams(-2, -2);
         clearParams.setMarginStart(ui.dp(8));
         actions.addView(clear, clearParams);
-        ui.add(labels, actions, 6);
+        ui.add(content, actions, 8);
     }
 
     private void showMessageLog() {
         Dialog dialog = new Dialog(this);
         messageLogDialog = dialog;
+        // The log holds chat text, so the Recents thumbnail leaves it out while it's open. Screenshots still work.
+        if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(false);
         dialog.setOnDismissListener(dismissed -> {
+            if (Build.VERSION.SDK_INT >= 33) setRecentsScreenshotEnabled(true);
             if (messageLogDialog == dismissed) {
                 messageLogDialog = null;
                 messageLogList = null;
@@ -1130,6 +1331,9 @@ public final class SettingsActivity extends Activity {
         LinearLayout frame = ui.column();
         frame.setBackgroundColor(ui.background);
         frame.setPadding(ui.dp(20), ui.dp(20), ui.dp(20), ui.dp(16));
+        // A dialog doesn't inherit the activity root's direction, and TalkBack announces the pane by this title.
+        frame.setLayoutDirection(text.layoutDirection());
+        frame.setAccessibilityPaneTitle(text.get("message_log_title"));
         frame.addView(ui.text(text.get("message_log_title"), 20, ui.text, true));
         ui.add(frame, ui.text(text.get("message_log_hint"), 13, ui.muted, false), 4);
         ScrollView scroll = new ScrollView(this);
@@ -1180,7 +1384,7 @@ public final class SettingsActivity extends Activity {
         card.setBackground(ui.shape(ui.surface, ui.line, 8));
         card.setPadding(ui.dp(12), ui.dp(10), ui.dp(12), ui.dp(10));
         String who = entry.thread == null || entry.thread.isEmpty() ? text.get("message_log_unknown_thread") : entry.thread;
-        card.addView(ui.text(who + "  ·  " + formatSince(entry.time, "active_now", "active_ago"), 12, ui.muted, false));
+        card.addView(ui.text(who + "  ·  " + formatSince(entry.time, "message_log_now", "message_log_ago"), 12, ui.muted, false));
         ui.add(card, ui.text(entry.text == null || entry.text.isEmpty() ? text.get("message_log_no_text") : entry.text, 15, ui.text, false), 4);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
         params.topMargin = ui.dp(8);
@@ -1205,7 +1409,8 @@ public final class SettingsActivity extends Activity {
         long minutes = seconds / 60;
         if (minutes < 60) return text.get(ago, text.format("minutes_short", minutes));
         long hours = minutes / 60;
-        return text.get(ago, text.format("hours_short", hours));
+        if (hours < 48) return text.get(ago, text.format("hours_short", hours));
+        return text.get(ago, text.format("days_short", hours / 24));
     }
 
     private void exportChoices() {
@@ -1268,11 +1473,20 @@ public final class SettingsActivity extends Activity {
         for (Map.Entry<String, Boolean> choice : supported.entrySet()) editor.putBoolean(choice.getKey(), choice.getValue());
         editor.apply();
         refreshChoices();
-        feedback(text.count("imported", supported.size()) + skipped, Toast.LENGTH_LONG);
+        // A backup can carry the pause, and a restored pause is easy to miss.
+        String paused = Boolean.TRUE.equals(supported.get("paused")) ? " " + text.get("changes_paused") + "." : "";
+        feedback(text.count("imported", supported.size()) + paused + skipped, Toast.LENGTH_LONG);
     }
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
         super.onActivityResult(request, result, data);
+        if (request == PICK_FONT) {
+            // Cancelled: nothing to do and nothing to say.
+            if (result != RESULT_OK || data == null || data.getData() == null) return;
+            if ("content".equals(data.getData().getScheme())) copyFontFile(data.getData());
+            else feedback(text.get("font_file_unreadable"), Toast.LENGTH_LONG);
+            return;
+        }
         if (request != SAVE_CHOICES && request != READ_CHOICES) return;
         String export = documentExport;
         boolean importing = documentImport;
@@ -1284,7 +1498,7 @@ public final class SettingsActivity extends Activity {
         android.net.Uri uri = data.getData();
         // A document picker must return a provider grant, never a path opened with Messenger's own UID.
         if (!"content".equals(uri.getScheme())) {
-            feedback(text.get(request == SAVE_CHOICES ? "export_failed" : "import_invalid"), Toast.LENGTH_LONG);
+            feedback(text.get(request == SAVE_CHOICES ? "export_failed" : "restore_failed"), Toast.LENGTH_LONG);
             return;
         }
         if (!documentSlots.tryAcquire()) {
@@ -1330,7 +1544,8 @@ public final class SettingsActivity extends Activity {
         readChoicesFile.setEnabled(true);
         cancelChoicesFile.setVisibility(View.GONE);
         documentStatus.setVisibility(View.GONE);
-        if (!success) feedback(text.get(job.request == SAVE_CHOICES ? "export_failed" : "import_invalid"), Toast.LENGTH_LONG);
+        // A file that can't be read isn't a bad backup, so the two get different advice.
+        if (!success) feedback(text.get(job.request == SAVE_CHOICES ? "export_failed" : job.invalid ? "import_invalid" : "restore_failed"), Toast.LENGTH_LONG);
         else if (job.request == SAVE_CHOICES) feedback(text.get("choices_file_saved"), Toast.LENGTH_SHORT);
         else if (job.generation == documentGeneration && job.before.equals(ChoiceCodec.encode(Settings.preferences, Settings.installed)))
             restoreChoices(choices);
@@ -1351,6 +1566,8 @@ public final class SettingsActivity extends Activity {
         final Runnable deadline;
         final Thread worker;
         volatile boolean canceled;
+        /** The document was read but isn't a backup, as opposed to a document that couldn't be read. */
+        volatile boolean invalid;
         volatile android.content.res.AssetFileDescriptor asset;
         volatile java.io.Closeable stream;
         private int users = 1;
@@ -1466,6 +1683,7 @@ public final class SettingsActivity extends Activity {
                             output.write(bytes);
                         }
                     } else {
+                        boolean pipe = false;
                         if (opened.getDeclaredLength() >= 0) {
                             // Older AssetFileDescriptor input skips relative to the provider's position.
                             // Normalize seekable descriptors so the declared slice has an absolute start.
@@ -1473,12 +1691,16 @@ public final class SettingsActivity extends Activity {
                             catch (android.system.ErrnoException error) {
                                 if (error.errno != android.system.OsConstants.ESPIPE)
                                     throw new java.io.IOException("Choices document seek failed", error);
+                                pipe = true;
                             }
                         }
-                        try (java.io.InputStream input = opened.createInputStream()) {
+                        boolean brokenSkip = pipe && opened.getStartOffset() > 0 &&
+                            android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.R;
+                        try (java.io.InputStream input = brokenSkip ? pipeSlice(opened) : opened.createInputStream()) {
                             stream = input;
                             if (canceled) return;
-                            choices = ChoiceCodec.parse(ChoiceCodec.read(input));
+                            try { choices = ChoiceCodec.parse(ChoiceCodec.read(input)); }
+                            catch (ChoiceCodec.TooLarge | IllegalArgumentException malformed) { invalid = true; throw malformed; }
                         }
                     }
                 }
@@ -1501,6 +1723,132 @@ public final class SettingsActivity extends Activity {
                 release();
             }
         }
+    }
+
+    /**
+     * Android 9 and 10 skip to a slice's start before they set its length, so on a pipe that skip reads through an
+     * empty slice and moves nothing. Read the start bytes off the descriptor itself, then stop at the declared length.
+     */
+    static java.io.InputStream pipeSlice(android.content.res.AssetFileDescriptor opened) throws java.io.IOException {
+        // Close through the ParcelFileDescriptor, the way createInputStream's stream does, so the later close is a no-op.
+        java.io.InputStream raw = new android.os.ParcelFileDescriptor.AutoCloseInputStream(opened.getParcelFileDescriptor());
+        byte[] discard = new byte[8192];
+        for (long left = opened.getStartOffset(); left > 0; ) {
+            int read = raw.read(discard, 0, (int) Math.min(discard.length, left));
+            if (read < 0) throw new java.io.EOFException("Choices document ends before its slice");
+            left -= read;
+        }
+        return new java.io.FilterInputStream(raw) {
+            long remaining = opened.getDeclaredLength();
+            @Override public int read() throws java.io.IOException {
+                if (remaining <= 0) return -1;
+                int value = super.read();
+                if (value >= 0) remaining--;
+                return value;
+            }
+            @Override public int read(byte[] bytes, int offset, int length) throws java.io.IOException {
+                if (length == 0) return 0;
+                if (remaining <= 0) return -1;
+                int read = super.read(bytes, offset, (int) Math.min(length, remaining));
+                if (read > 0) remaining -= read;
+                return read;
+            }
+            @Override public long skip(long count) throws java.io.IOException {
+                if (count <= 0 || remaining <= 0) return 0;
+                long skipped = super.skip(Math.min(count, remaining));
+                remaining -= skipped;
+                return skipped;
+            }
+            @Override public int available() throws java.io.IOException {
+                return (int) Math.min(super.available(), remaining);
+            }
+        };
+    }
+
+    /**
+     * Folders one or two levels under the data dir whose names mention analytics, with how many files they hold and their
+     * total size. Shell can't read the data dir, so this is how to see whether Messenger's analytics pile up while Stop
+     * analytics uploads is on. Names and sizes only, never what's in the files, and links aren't followed.
+     */
+    static String analyticsStores(java.io.File dataDir) {
+        return analyticsStores(dataDir, 20_000, 2_000);
+    }
+
+    /**
+     * One budget covers the whole report, so a huge cache, many stores or a folder loop can't hold up the tap: at most
+     * {@code entries} directory entries looked at and {@code folders} folders opened. A count cut short ends in "+".
+     */
+    static String analyticsStores(java.io.File dataDir, int entries, int folders) {
+        java.nio.file.Path root = dataDir.toPath();
+        int[] budget = {entries, folders};
+        java.util.List<java.nio.file.Path> top = folders(root, budget, false);
+        if (top == null) return "unreadable";
+        java.util.TreeMap<String, java.nio.file.Path> found = new java.util.TreeMap<>();
+        for (java.nio.file.Path first : top) {
+            if (namesAnalytics(first)) {
+                found.put(first.getFileName().toString(), first);
+                continue;
+            }
+            java.util.List<java.nio.file.Path> inner = folders(first, budget, true);
+            if (inner != null) for (java.nio.file.Path second : inner) found.put(first.getFileName() + "/" + second.getFileName(), second);
+        }
+        java.util.List<String> stores = new java.util.ArrayList<>();
+        for (java.util.Map.Entry<String, java.nio.file.Path> store : found.entrySet())
+            stores.add(storeSize(store.getKey(), store.getValue(), budget));
+        return stores.isEmpty() ? "none" : String.join(", ", stores);
+    }
+
+    private static boolean namesAnalytics(java.nio.file.Path path) {
+        return path.getFileName().toString().toLowerCase(java.util.Locale.ROOT).contains("analytics");
+    }
+
+    /** The folders directly in dir, or only those named for analytics, checking a name before touching the entry. Null if dir can't be read. */
+    private static java.util.List<java.nio.file.Path> folders(java.nio.file.Path dir, int[] budget, boolean analyticsOnly) {
+        java.util.List<java.nio.file.Path> folders = new java.util.ArrayList<>();
+        if (budget[1]-- <= 0) return folders;
+        try (java.nio.file.DirectoryStream<java.nio.file.Path> entries = java.nio.file.Files.newDirectoryStream(dir)) {
+            for (java.nio.file.Path entry : entries) {
+                if (budget[0]-- <= 0) break;
+                if (analyticsOnly && !namesAnalytics(entry)) continue;
+                if (java.nio.file.Files.isDirectory(entry, java.nio.file.LinkOption.NOFOLLOW_LINKS)) folders.add(entry);
+            }
+        } catch (java.io.IOException | java.nio.file.DirectoryIteratorException | SecurityException e) {
+            return null;
+        }
+        return folders;
+    }
+
+    private static String storeSize(String name, java.nio.file.Path dir, int[] budget) {
+        long files = 0, bytes = 0;
+        boolean cut = false;
+        java.util.ArrayDeque<java.nio.file.Path> pending = new java.util.ArrayDeque<>();
+        pending.add(dir);
+        walk:
+        while (!pending.isEmpty()) {
+            if (budget[1]-- <= 0) {
+                cut = true;
+                break;
+            }
+            try (java.nio.file.DirectoryStream<java.nio.file.Path> entries = java.nio.file.Files.newDirectoryStream(pending.poll())) {
+                for (java.nio.file.Path entry : entries) {
+                    if (budget[0]-- <= 0) {
+                        cut = true;
+                        break walk;
+                    }
+                    java.nio.file.attribute.BasicFileAttributes attributes = java.nio.file.Files.readAttributes(entry,
+                        java.nio.file.attribute.BasicFileAttributes.class, java.nio.file.LinkOption.NOFOLLOW_LINKS);
+                    if (attributes.isDirectory()) pending.add(entry);
+                    else if (attributes.isRegularFile()) {
+                        files++;
+                        bytes += attributes.size();
+                    }
+                }
+            } catch (java.io.IOException | java.nio.file.DirectoryIteratorException | SecurityException e) {
+                // A folder that went away or can't be read just isn't counted.
+            }
+        }
+        String more = cut ? "+" : "";
+        return name + " " + files + more + " files " + bytes + more + " bytes";
     }
 
     private void infoRow(LinearLayout parent, String title, String value) {
@@ -1558,7 +1906,8 @@ public final class SettingsActivity extends Activity {
     private void filterControls(String query) {
         String needle = query.trim().toLowerCase(Locale.ROOT);
         String drawerWords = "hide app drawer icon launcher settings " + text.get("hide_drawer_icon");
-        drawerSearchLink.setVisibility(controlRows.isEmpty() || (!needle.isEmpty() && drawerWords.toLowerCase(Locale.ROOT).contains(needle)) ? View.VISIBLE : View.GONE);
+        // One letter matches almost anything, so the link waits for a second one.
+        drawerSearchLink.setVisibility(controlRows.isEmpty() || (needle.length() >= 2 && drawerWords.toLowerCase(Locale.ROOT).contains(needle)) ? View.VISIBLE : View.GONE);
         int visible = 0;
         for (int i = 0; i < controlRows.size(); i++) {
             String[] spec = installedControls.get(i);
@@ -1574,7 +1923,9 @@ public final class SettingsActivity extends Activity {
             int count = 0;
             for (View row : controlRows) if (row.getTag().equals(group.getTag()) && row.getVisibility() == View.VISIBLE) count++;
             group.setVisibility(count == 0 ? View.GONE : View.VISIBLE);
-            ((TextView) ((LinearLayout) group.getChildAt(0)).getChildAt(1)).setText(text.number(count));
+            TextView tally = (TextView) ((LinearLayout) group.getChildAt(0)).getChildAt(1);
+            tally.setText(text.number(count));
+            tally.setContentDescription(text.count("group_count", count));
         }
         for (Button button : categories) {
             boolean selected = button.getTag().equals("category_" + category);
@@ -1622,6 +1973,12 @@ public final class SettingsActivity extends Activity {
             }
         }
         feedback(text.get("open_help"), Toast.LENGTH_LONG);
+    }
+
+    /** Opens a web page in the phone's browser, or says there isn't one. */
+    private void openPage(String url) {
+        try { startActivity(new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE)); }
+        catch (android.content.ActivityNotFoundException error) { feedback(text.get("no_browser"), Toast.LENGTH_LONG); }
     }
 
     /** One toast at a time, built on the app context so no destroyed page is kept alive. */

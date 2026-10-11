@@ -140,6 +140,21 @@ public class PatchFamilyTest {
     }
 
     @Test
+    public void theTimeSwitchStartingOnDoesNotClaimTheBarIsKept() {
+        try {
+            Settings.KEEP_PROGRESS_BAR.save(false);
+            assertTrue(Settings.KEEP_PROGRESS_BAR_TIME.savedValue());
+            String line = PatchFamily.reportLines(EnumSet.of(PatchFamily.PROGRESS_BAR), false).get(0);
+            assertTrue(line, line.startsWith(FamilyNames.PROGRESS_BAR + ": disabled by its switch ("));
+            Settings.KEEP_PROGRESS_BAR.save(true);
+            assertTrue(PatchFamily.reportLines(EnumSet.of(PatchFamily.PROGRESS_BAR), false).get(0)
+                    .startsWith(FamilyNames.PROGRESS_BAR + ": on ("));
+        } finally {
+            Settings.KEEP_PROGRESS_BAR.resetToDefault();
+        }
+    }
+
+    @Test
     public void marketplaceExtrasDoNotClaimTheDisabledModeIsOn() {
         try {
             Settings.MARKETPLACE_ONLY.save(false);
@@ -388,7 +403,7 @@ public class PatchFamilyTest {
                         + "Default comment order, Hide Meta AI comment summaries, Comment sheet options, Tag "
                         + "suggestions only after @, Tap to play, Resume long videos, Default playback quality, "
                         + "Picture-in-picture, Turn off HDR brightness, Keep the progress bar, Use the system font, "
-                        + "Use the phone's emoji, Turn off haptics, Turn off screen transitions, Open links in "
+                        + "Use the phone's emoji, Turn off haptics, Turn off screen transitions, Unlock app icons, Open links in "
                         + "external browser, Sanitize sharing links, Stop update prompts, Download any story, "
                         + "Download any reel, Download any video, Download any photo, Open on a chosen tab, Following "
                         + "feed on Home, Marketplace only, Show View profile on Marketplace sellers, Hide the Reels "
@@ -411,7 +426,7 @@ public class PatchFamilyTest {
                         + "Hold a reel for 2x, Default comment order, Hide Meta AI comment summaries, Comment sheet "
                         + "options, Tag suggestions only after @, Tap to play, Resume long videos, Default playback "
                         + "quality, Picture-in-picture, Turn off HDR brightness, Keep the progress bar, Use the "
-                        + "system font, Use the phone's emoji, Turn off haptics, Turn off screen transitions, Open "
+                        + "system font, Use the phone's emoji, Turn off haptics, Turn off screen transitions, Unlock app icons, Open "
                         + "links in external browser, Sanitize sharing links, Stop update prompts, Download any "
                         + "story, Download any reel, Download any video, Download any photo, Open on a chosen tab, "
                         + "Following feed on Home, Marketplace only, Show View profile on Marketplace sellers, Hide "

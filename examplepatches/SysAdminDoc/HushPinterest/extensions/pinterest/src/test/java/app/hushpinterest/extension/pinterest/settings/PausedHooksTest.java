@@ -24,6 +24,7 @@ import android.content.pm.ActivityInfo;
 import android.content.pm.ResolveInfo;
 import android.content.res.Resources;
 import android.net.Uri;
+import android.os.Environment;
 import android.view.View;
 
 import org.junit.After;
@@ -35,6 +36,8 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadow.api.Shadow;
+import org.robolectric.shadows.ShadowDownloadManager;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -67,7 +70,9 @@ import app.hushpinterest.extension.pinterest.ads.Ads;
 import app.hushpinterest.extension.pinterest.ads.FeedFilter;
 import app.hushpinterest.extension.pinterest.privacy.Analytics;
 import app.hushpinterest.extension.pinterest.privacy.AdvertisingId;
+import app.hushpinterest.extension.pinterest.notifications.PushNotificationsTest;
 import app.hushpinterest.extension.pinterest.privacy.LinkTracking;
+import app.hushpinterest.extension.pinterest.privacy.PlainPinLinks;
 import app.hushpinterest.extension.pinterest.ui.InterfaceControls;
 import app.hushpinterest.extension.pinterest.ui.UiHooks;
 import app.hushpinterest.extension.pinterest.ui.UiHooksForTests;
@@ -94,6 +99,10 @@ public class PausedHooksTest {
 
     private static final int MEASURE_SPEC = View.MeasureSpec.makeMeasureSpec(300, View.MeasureSpec.AT_MOST);
     private static final String TRACKED_LINK = "https://www.pinterest.com/pin/123456/?utm_source=share&keep=1";
+    private static final String INVITE_LINK = "https://pin.it/Probe123";
+
+    /** Pinterest's kind of shared object, as its enum names a pin. */
+    enum ProbeKind { PIN }
     private static final Map<String, Object> PIN = Map.of("id", "123456", "images", Map.of(
             "orig", Map.of("url", "https://i.pinimg.com/originals/pin.jpg")));
     /** A pin as a board's own page carries it: saved to board 4242. */
@@ -180,7 +189,8 @@ public class PausedHooksTest {
     private static Map<BooleanSetting, List<Probe>> probes() {
         // Every hook is in this build, so the filter reads each family's switch.
         PatchFamily.capabilitiesForTests = EnumSet.allOf(PatchFamily.Capability.class);
-        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.DISABLE_ANALYTICS, PatchFamily.HIDE_ADVERTISING_ID);
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.DISABLE_ANALYTICS, PatchFamily.HIDE_ADVERTISING_ID,
+                PatchFamily.FIX_PUSH_NOTIFICATIONS);
         Map<BooleanSetting, List<Probe>> probes = new LinkedHashMap<>();
         // A promoted pin leaves the page, and an ad-only view stays hidden and sizeless.
         probes.put(Settings.HIDE_ADS, Arrays.asList(
@@ -213,10 +223,28 @@ public class PausedHooksTest {
                         TRACKED_LINK).getCharSequenceExtra(Intent.EXTRA_TEXT)),
                 () -> !TRACKED_LINK.contentEquals(LinkTracking.newPlainText("Pin link", TRACKED_LINK)
                         .getItemAt(0).getText())));
+        // A pin's own invite link, seen as Pinterest makes it, is shared and copied as the plain link.
+        probes.put(Settings.PLAIN_PIN_LINKS, Arrays.asList(
+                () -> {
+                    PlainPinLinks.invite(ProbeKind.PIN, "123456", INVITE_LINK);
+                    return !INVITE_LINK.equals(LinkTracking.cleanText(INVITE_LINK).toString());
+                },
+                () -> !INVITE_LINK.equals(LinkTracking.putStringExtra(new Intent(), Intent.EXTRA_TEXT,
+                        INVITE_LINK).getStringExtra(Intent.EXTRA_TEXT)),
+                () -> !INVITE_LINK.contentEquals(LinkTracking.newPlainText("Pin link", INVITE_LINK)
+                        .getItemAt(0).getText()),
+                // A share straight to one app gets the plain link in its text before the app opens.
+                () -> {
+                    Intent share = new Intent().putExtra(Intent.EXTRA_TEXT, INVITE_LINK);
+                    PlainPinLinks.directShare(null, INVITE_LINK, share);
+                    return !INVITE_LINK.equals(share.getStringExtra(Intent.EXTRA_TEXT));
+                }));
         probes.put(Settings.HIDE_ADVERTISING_ID, Arrays.asList(
                 () -> !"real".equals(AdvertisingId.id("real")),
-                () -> AdvertisingId.limitTracking(false)));
+                () -> AdvertisingId.limitTracking(false),
+                () -> AdvertisingId.skipBrowserId("pid")));
         probes.put(Settings.DOWNLOAD_PINS, Collections.singletonList(PausedHooksTest::queuesPinDownload));
+        probes.put(Settings.SAVE_IN_PINTEREST_FOLDER, Collections.singletonList(PausedHooksTest::savesInPinterestsFolder));
         probes.put(Settings.DOWNLOAD_BOARD, Collections.singletonList(() -> BoardDownloads.record(Collections.singletonList(BOARD_PIN))));
         probes.put(Settings.LONG_PRESS_DOWNLOAD, Collections.singletonList(PausedHooksTest::addsLongPressDownload));
         probes.put(Settings.EXTERNAL_BROWSER, Collections.singletonList(() -> withActivity(activity -> {
@@ -277,6 +305,7 @@ public class PausedHooksTest {
             return !sizes.isEmpty();
         }));
         probes.put(Settings.DISABLE_UPDATE_NAG, Collections.singletonList(UiHooks::disableUpdateNag));
+        probes.put(Settings.FIX_PUSH_NOTIFICATIONS, Collections.singletonList(PushNotificationsTest::fixesACertificate));
         return probes;
     }
 
@@ -307,23 +336,47 @@ public class PausedHooksTest {
 
     /** Robolectric records the queued request without transferring data or opening a socket. */
     private static boolean queuesPinDownload() {
-        return withActivity(activity -> {
-            DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
-            int before = Shadows.shadowOf(manager).getRequestCount();
-            try {
-                Method start = PinDownloads.class.getDeclaredMethod("start", Object.class, Context.class);
-                start.setAccessible(true);
-                boolean queued = (Boolean) start.invoke(null, PIN, activity);
-                Method await = Utils.class.getDeclaredMethod("awaitBackgroundTasksForTests");
-                await.setAccessible(true);
-                await.invoke(null);
-                boolean changed = Shadows.shadowOf(manager).getRequestCount() != before;
-                assertEquals("download result must match a queued media request", queued, changed);
-                return changed;
-            } catch (ReflectiveOperationException failure) {
-                throw new AssertionError(failure);
-            }
-        });
+        return withActivity(activity -> queuedDownload(activity) != null);
+    }
+
+    /**
+     * Save in Pinterest's folder only moves where Download pins saves, so like the long-press button
+     * its probe turns that switch on for its own run. It answers whether the download it queued went
+     * to Pictures/100PINT/Pins.
+     */
+    private static boolean savesInPinterestsFolder() {
+        boolean pins = Settings.DOWNLOAD_PINS.savedValue();
+        if (!pins) Settings.DOWNLOAD_PINS.save(true);
+        try {
+            return withActivity(activity -> {
+                ShadowDownloadManager.ShadowRequest request = queuedDownload(activity);
+                Uri destination = request == null ? null : request.getDestination();
+                return destination != null && destination.equals(Uri.withAppendedPath(Uri.fromFile(
+                        Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)),
+                        "100PINT/Pins/" + destination.getLastPathSegment()));
+            });
+        } finally {
+            if (!pins) Settings.DOWNLOAD_PINS.save(false);
+        }
+    }
+
+    /** Starts a pin download and returns the request it queued, or null when none was. */
+    private static ShadowDownloadManager.ShadowRequest queuedDownload(Activity activity) {
+        ShadowDownloadManager manager = Shadows.shadowOf((DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE));
+        int before = manager.getRequestCount();
+        try {
+            Method start = PinDownloads.class.getDeclaredMethod("start", Object.class, Context.class);
+            start.setAccessible(true);
+            boolean queued = (Boolean) start.invoke(null, PIN, activity);
+            Method await = Utils.class.getDeclaredMethod("awaitBackgroundTasksForTests");
+            await.setAccessible(true);
+            await.invoke(null);
+            boolean changed = manager.getRequestCount() != before;
+            assertEquals("download result must match a queued media request", queued, changed);
+            return changed ? Shadow.extract(manager.getRequest(manager.getRequestCount() - 1)) : null;
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
+        }
     }
 
     private static boolean quietsSdkConnection() {

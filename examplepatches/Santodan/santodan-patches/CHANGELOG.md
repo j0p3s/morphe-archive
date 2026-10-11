@@ -1,3 +1,17 @@
+## [0.10.1](https://github.com/Santodan/santodan-patches/compare/v0.10.0...v0.10.1) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* **ci:** preserve multiline release config for patch releases [skip ci] ([410338c](https://github.com/Santodan/santodan-patches/commit/410338cdcf91b97965ae429fc43d5d21e576bd65))
+
+### ✨ New Features
+
+* **nuvio:** preload next episode sources after playback starts [skip ci] ([05ea0af](https://github.com/Santodan/santodan-patches/commit/05ea0af0da590127f73788981ea49b08df467264))
+
+### 🔧 Improvements
+
+* **reddit:** batch flair hydration to reduce startup delay [skip ci] ([14d92dc](https://github.com/Santodan/santodan-patches/commit/14d92dce643683d3a0c3089fc949db1da87497c2))
+
 ## [0.10.0](https://github.com/Santodan/santodan-patches/compare/v0.9.0...v0.10.0) (2026-10-09)
 
 ### 🐛 Bug Fixes
@@ -12,6 +26,10 @@
 * **pillo:** import weight history from JSON [skip ci] ([8079226](https://github.com/Santodan/santodan-patches/commit/807922648b4aee39659263ef712f586ac6546dd8))
 
 ## Unreleased
+
+### New Features
+
+* **nuviotv:** add an independent opt-in next-episode source preload patch for beta.4/beta.5; fetch after 30 seconds of actual playback, reuse the native cache in the manual next-episode picker, refresh expired searches during longer episodes, and isolate local-scraper permission to the next target and active profile
 
 ### Bug Fixes
 

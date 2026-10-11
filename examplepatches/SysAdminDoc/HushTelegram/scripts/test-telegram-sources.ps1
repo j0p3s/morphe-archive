@@ -473,6 +473,18 @@ $commitB1 = 'b1' * 20
 $commitG1 = 'c1' * 20
 $blobKnown = '1b' * 20
 $blobMirror = '2b' * 20
+# Bundle ids in Jman's registry: alpha's stable and dev bundles, gamma's, an old bundle from a
+# repository the ledger doesn't know, another app's bundle, and one no repository stands behind.
+$jmanAlpha = 'a1' * 12
+$jmanAlphaDev = 'a2' * 12
+$jmanGamma = 'c1' * 12
+$jmanOld = 'e1' * 12
+$jmanOther = 'f1' * 12
+$jmanDelta = 'd1' * 12
+function Get-JmanImport {
+    param([string]$Repository, [string]$Channel)
+    return 'https://patch-bundles.api.jmancentral.com/api/v3/bundle?source_url=' + [Uri]::EscapeDataString($Repository) + "&version=latest&channel=$Channel"
+}
 $fixtureLedger = [ordered]@{
     schemaVersion = 1
     census = [ordered]@{ checkedAt = '2026-09-01'; skipped = @('gitlab-code-search') }
@@ -485,7 +497,7 @@ $fixtureLedger = [ordered]@{
             hushtelegram = [ordered]@{ status = 'submitted'; url = 'https://github.com/nvbangg/awesome-morphe/issues/1'; submitted = '2026-09-01' } }
         [ordered]@{ id = 'morphe-patch-tracker'; name = 'Morphe Patch Tracker'; url = 'https://drnx64.github.io/morphe-track-patches/'
             hushtelegram = [ordered]@{ status = 'listed'; url = 'https://drnx64.github.io/morphe-track-patches/#/bundle/sysadmindoc'; checked = '2026-09-01' } }
-        [ordered]@{ id = 'jman-bundles'; name = 'Jman''s ReVanced Patch Bundles'; url = 'https://github.com/Jman-Github/ReVanced-Patch-Bundles'
+        [ordered]@{ id = 'jman-bundles'; name = 'Jman''s Patch Bundle Registry'; url = 'https://github.com/Jman-Github/Patch-Bundle-Registry'
             hushtelegram = [ordered]@{ status = 'not-listed'; checked = '2026-09-01' } }
         [ordered]@{ id = 'morphe-archive'; name = 'Morphe Archive'; url = 'https://rushiforai.github.io/morphe-archive/'
             hushtelegram = [ordered]@{ status = 'listed'; url = 'https://github.com/rushiforai/morphe-archive'; checked = '2026-09-01' } }
@@ -525,7 +537,6 @@ Assert-True (Test-SourceLedger -Ledger ($fixtureLedgerText | ConvertFrom-Json) -
 
 # What each forge and index answers. A case changes one answer and puts it back.
 function New-FakeAnswers {
-    $tick = [string][char]96 * 3
     $answers = [ordered]@{
         official = @{ Status = 200; Content = '{"patches":[{"name":"Example","compatiblePackages":{"com.google.android.youtube":["20.1"]}}]}' }
         directory = @{ Status = 200; Content = (@{
@@ -537,11 +548,46 @@ function New-FakeAnswers {
             'sysadmindoc:stable' = @{ repo_url = 'https://github.com/SysAdminDoc/HushTelegram'; apps = @(@{ package = 'org.telegram.messenger.web'; patches = @(@{ name = 'Hide ads' }) }) }
             'alpha:stable' = @{ repo_url = 'https://github.com/fixture-owner/alpha-patches'; apps = @(@{ package = 'org.telegram.messenger.web'; patches = @(@{ name = 'Hide ads' }) }) }
         } | ConvertTo-Json -Depth 8) }
-        jmanSources = @{ Status = 200; Content = '{"alpha-stable":{"patches":"https://api.github.com/repos/fixture-owner/alpha-patches"},"gamma-stable":{"patches":"https://gitlab.com/api/v4/projects/fixture-group%2Fgamma-patches"}}' }
-        jmanCatalog = @{ Status = 200; Content = ("# Catalog`n| [Alpha](#alpha) | 1 | 1 | Generated |`n### X Alpha Bundle Patch List:`n" +
-            "| **Name** | **Description** | **Compatible Apps** | **Compatible Versions** |`n|---|---|---|---|`n" +
-            "| ${tick}Hide ads${tick} | ${tick}Removes ads.${tick} | ${tick}Telegram${tick} | ${tick}12.10.6${tick} |`n" +
-            "### X Gamma Bundle Patch List:`n| ${tick}Open links outside${tick} | ${tick}d${tick} | ${tick}Telegram${tick} | ${tick}Any${tick} |`n") }
+        # Jman's registry: the snapshot history (its last generation is current), the bundles, the
+        # index of patch shards and two shards. The bundles answer is built from this list per request.
+        jmanHistory = @{ Status = 200; Content = '["snapshots/0f0f0f0f0f0f0f0f0f0f0f0f","snapshots/0123456789abcdef01234567"]' }
+        jmanBundles = @(
+            [ordered]@{ id = $jmanAlpha; version = 'v1.0.0'; is_latest = $true; packages = @('org.telegram.messenger.web'); source_id = 'alpha'
+                import_urls = [ordered]@{ latest = (Get-JmanImport 'https://github.com/fixture-owner/alpha-patches' 'any')
+                    stable = (Get-JmanImport 'https://github.com/fixture-owner/alpha-patches' 'stable') }
+                download_url = 'https://github.com/fixture-owner/alpha-patches/releases/download/v1.0.0/patches-1.0.0.mpp' }
+            # The same source's dev bundle is latest too, and with no import link its release download names the repository.
+            [ordered]@{ id = $jmanAlphaDev; version = 'v1.1.0-dev.1'; is_latest = $true; packages = @('org.telegram.messenger.web'); source_id = 'alpha'
+                import_urls = $null; download_url = 'https://github.com/fixture-owner/alpha-patches/releases/download/v1.1.0-dev.1/patches-1.1.0-dev.1.mpp' }
+            [ordered]@{ id = $jmanGamma; version = 'v2.0.0'; is_latest = $true; packages = @('org.telegram.messenger.web'); source_id = 'gamma'
+                import_urls = [ordered]@{ latest = (Get-JmanImport 'https://gitlab.com/fixture-group/gamma-patches' 'any') }
+                download_url = 'https://gitlab.com/fixture-group/gamma-patches/-/releases/v2.0.0/downloads/patches-2.0.0.mpp' }
+            # Only latest bundles are read for sources, so an old one from a repository the ledger doesn't know stays quiet.
+            [ordered]@{ id = $jmanOld; version = 'v0.1.0'; is_latest = $false; packages = @('org.telegram.messenger.web'); source_id = 'newcomer'
+                import_urls = $null; download_url = 'https://github.com/newcomer/telegram-patches/releases/download/v0.1.0/patches-0.1.0.mpp' }
+            [ordered]@{ id = $jmanOther; version = 'v5.0.0'; is_latest = $true; packages = @('com.google.android.youtube'); source_id = 'other'
+                import_urls = [ordered]@{ stable = (Get-JmanImport 'https://github.com/someone-else/youtube-patches' 'stable') }
+                download_url = 'https://github.com/someone-else/youtube-patches/releases/download/v5.0.0/patches-5.0.0.mpp' }
+        )
+        # A bundle's shards come as a list or a single path. The live index also files packages
+        # under keys that differ only in case.
+        jmanIndex = @{ Status = 200; Content = ([ordered]@{
+            bundles = [ordered]@{ $jmanAlpha = @('patches/00001.json'); $jmanAlphaDev = 'patches/00002.json'
+                $jmanGamma = @('patches/00001.json', 'patches/00002.json'); $jmanOld = @('patches/00001.json') }
+            packages = [ordered]@{ 'Sofascore' = 'patches/00009.json'; 'SOFASCORE-AGAIN' = 'patches/00009.json' }
+            pages = @(); patch_ids = [ordered]@{} } | ConvertTo-Json -Depth 6).Replace('"SOFASCORE-AGAIN"', '"SofaScore"') }
+        # A shard mixes bundles. A patch for any app names no package, and one for a fork names no census package.
+        jmanShards = @{
+            '00001' = @{ Status = 200; Content = (ConvertTo-Json -Depth 6 -InputObject @(
+                [ordered]@{ bundle_id = $jmanAlpha; name = 'Hide ads'; compatiblePackages = [ordered]@{ 'org.telegram.messenger.web' = @('12.10.6') } }
+                [ordered]@{ bundle_id = $jmanAlpha; name = 'Disable typing status'; compatiblePackages = [ordered]@{ 'org.telegram.messenger.web' = $null } }
+                [ordered]@{ bundle_id = $jmanAlpha; name = 'Spoof signature'; compatiblePackages = $null }
+                [ordered]@{ bundle_id = $jmanOld; name = 'Hide replies'; compatiblePackages = [ordered]@{ 'org.telegram.messenger.web' = $null } }
+                [ordered]@{ bundle_id = $jmanGamma; name = 'Open links outside'; compatiblePackages = [ordered]@{ 'org.telegram.messenger.web' = $null } })) }
+            '00002' = @{ Status = 200; Content = (ConvertTo-Json -Depth 6 -InputObject @(
+                [ordered]@{ bundle_id = $jmanAlphaDev; name = 'Hide stories'; compatiblePackages = [ordered]@{ 'org.telegram.messenger.web' = @('12.10.7') } }
+                [ordered]@{ bundle_id = $jmanGamma; name = 'Plus only'; compatiblePackages = [ordered]@{ 'org.telegram.plus' = $null } })) }
+        }
         archive = @{ Status = 200; Content = '{"name":"patches-list.json"}' }
         searchHits = @(
             @{ repository = @{ full_name = 'fixture-owner/alpha-patches' }; path = 'patches/Alpha.kt'; sha = $blobKnown }
@@ -585,7 +631,7 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
         param($Uri, $Headers, $UserAgent, [switch]$UseBasicParsing, $TimeoutSec, $Method, $OutFile, $MaximumRedirection, [switch]$PassThru)
         $url = [string]$Uri
         $authorization = if ($Headers -and $Headers.ContainsKey('Authorization')) { [string]$Headers['Authorization'] } else { $null }
-        $fakeForge.Requests.Add([pscustomobject]@{ Uri = $url; Authorization = $authorization })
+        $fakeForge.Requests.Add([pscustomobject]@{ Uri = $url; Authorization = $authorization; MaximumRedirection = $MaximumRedirection })
         $a = $fakeForge.Answers
         $answer = $null
         switch -Regex ($url) {
@@ -593,8 +639,16 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
             '^https://morphe-patches\.software/data/bundles\.json$' { $answer = $a.directory; break }
             '^https://raw\.githubusercontent\.com/nvbangg/awesome-morphe/main/data/hashes\.json$' { $answer = $a.awesome; break }
             '^https://raw\.githubusercontent\.com/drnx64/morphe-track-patches/main/data/bundles\.json$' { $answer = $a.tracker; break }
-            '^https://raw\.githubusercontent\.com/Jman-Github/ReVanced-Patch-Bundles/bundles/patch-bundles/bundle-sources\.json$' { $answer = $a.jmanSources; break }
-            '^https://raw\.githubusercontent\.com/Jman-Github/ReVanced-Patch-Bundles/bundles/patch-bundles/PATCH-LIST-CATALOG\.md$' { $answer = $a.jmanCatalog; break }
+            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/database/snapshot-history\.json$' { $answer = $a.jmanHistory; break }
+            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/database/snapshots/0123456789abcdef01234567/bundles\.json$' {
+                $answer = @{ Status = 200; Content = (ConvertTo-Json -Depth 8 -InputObject @($a.jmanBundles)) }
+                break
+            }
+            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/database/snapshots/0123456789abcdef01234567/patch-index\.json$' { $answer = $a.jmanIndex; break }
+            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/database/snapshots/0123456789abcdef01234567/patches/(\d+)\.json$' {
+                $answer = $a.jmanShards[$Matches[1]]
+                break
+            }
             '^https://api\.github\.com/repos/rushiforai/morphe-archive/contents/examplepatches/SysAdminDoc/HushTelegram/patches-list\.json$' { $answer = $a.archive; break }
             '^https://api\.github\.com/search/code\?q=([^&]+)&per_page=100&page=1$' {
                 $query = [Uri]::UnescapeDataString($Matches[1])
@@ -624,11 +678,15 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
             '^https://api\.github\.com/repos/(newcomer/telegram-patches|clone/alpha-clone)$' { $answer = $a.repoMeta; break }
             '^https://api\.github\.com/repos/fixture-owner/alpha-old$' { $answer = $a.oldNameMeta; break }
             '^https://github\.com/SysAdminDoc/HushTelegram/releases/download/v9\.9\.9/release-receipt-9\.9\.9\.json$' { $answer = $a.receipt; break }
+            '^https://api\.github\.com/repos/fixture-owner/moved-same$' { $answer = @{ Status = 301; Location = '/repos/fixture-owner/alpha-patches' }; break }
+            '^https://api\.github\.com/repos/fixture-owner/moved-away$' { $answer = @{ Status = 302; Location = 'https://elsewhere.example/steal' }; break }
+            '^https://api\.github\.com/repos/fixture-owner/moved-down$' { $answer = @{ Status = 302; Location = 'http://api.github.com/repos/fixture-owner/alpha-patches' }; break }
         }
         if ($null -eq $answer) { throw "The audit made a request no stand-in answers: $url" }
         if ($answer.Status -ne 200) {
             $failure = New-Object System.Exception "Response status code does not indicate success: $($answer.Status)."
-            Add-Member -InputObject $failure -NotePropertyName Response -NotePropertyValue ([pscustomobject]@{ StatusCode = $answer.Status })
+            Add-Member -InputObject $failure -NotePropertyName Response -NotePropertyValue ([pscustomobject]@{
+                StatusCode = $answer.Status; Headers = @{ Location = $answer.Location } })
             throw $failure
         }
         return [pscustomobject]@{ StatusCode = 200; Content = [string]$answer.Content }
@@ -695,7 +753,52 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
     Assert-True (@($fakeForge.Requests | Where-Object { $_.Uri -like 'https://api.github.com/*' -and $_.Authorization -ne "Bearer $fakeToken" }).Count -eq 0) `
         'A GitHub API request went out without the token.'
     Assert-True ($clean.ReportText.IndexOf($fakeToken) -lt 0 -and $stamped.IndexOf($fakeToken) -lt 0) 'The token was written to the report or the ledger.'
+    # Jman's registry: alpha (its stable and dev bundles) and gamma are its Telegram sources, and a
+    # shard two bundles share is fetched once.
+    Assert-True ($clean.Said -like "*Jman's bundle index: 2 Telegram bundles; HushTelegram not listed*") "Jman's registry was not read for alpha and gamma: $($clean.Said)"
+    Assert-True (@($fakeForge.Requests | Where-Object { $_.Uri -like '*/patches/00001.json' }).Count -eq 1 -and
+        @($fakeForge.Requests | Where-Object { $_.Uri -like '*/snapshots/0f0f0f0f0f0f0f0f0f0f0f0f/*' }).Count -eq 0) `
+        "Jman's registry was read from an older generation, or a shared shard was fetched more than once."
     Reset-FixtureLedger
+
+    # A request that carries a token follows a redirect itself, to the same host over https and
+    # nowhere else; one that carries none is left to the client.
+    $auditAst = [System.Management.Automation.Language.Parser]::ParseFile($auditScript, [ref]$null, [ref]$null)
+    foreach ($name in @('Get-RedirectTarget', 'Invoke-SourceRequest', 'ConvertTo-SourceJsonObject', 'ConvertFrom-SourceJson')) {
+        $found = @($auditAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+            $node.Name -eq $name }, $true))
+        Assert-True ($found.Count -eq 1) "audit-telegram-sources.ps1 no longer defines $name once."
+        Invoke-Expression $found[0].Extent.Text
+    }
+    function Write-Step { param($Text) }
+    $GitHubToken = $fakeToken
+    $GitLabToken = $null
+    $RateLimitWaitSeconds = 0
+    $script:requestCount = 0
+    $fakeForge.Requests.Clear()
+    $followed = Invoke-SourceRequest -Uri 'https://api.github.com/repos/fixture-owner/moved-same' -Auth github
+    Assert-True ($followed.Status -eq 200 -and $fakeForge.Requests.Count -eq 2 -and
+        $fakeForge.Requests[1].Uri -eq 'https://api.github.com/repos/fixture-owner/alpha-patches' -and
+        $fakeForge.Requests[0].MaximumRedirection -eq 0 -and $fakeForge.Requests[1].Authorization -eq "Bearer $fakeToken") `
+        'A same-host redirect on a token request was not followed by hand with the token kept.'
+    foreach ($away in @('moved-away', 'moved-down')) {
+        $fakeForge.Requests.Clear()
+        Assert-Throws { Invoke-SourceRequest -Uri "https://api.github.com/repos/fixture-owner/$away" -Auth github } '*Refused a redirect*' `
+            "A redirect ($away) on a token request was followed."
+        Assert-True (@($fakeForge.Requests | Where-Object { $_.Uri -notlike 'https://api.github.com/*' }).Count -eq 0) `
+            "The token request went on to another address after the $away redirect."
+    }
+    $fakeForge.Requests.Clear()
+    [void](Invoke-SourceRequest -Uri 'https://morphe-patches.software/data/bundles.json')
+    Assert-True ($null -eq $fakeForge.Requests[0].MaximumRedirection) 'A request with no token had its redirects switched off.'
+
+    # Keys that differ only in case can't both be properties, so that JSON is read case-sensitively,
+    # in order, with arrays kept as arrays and the later key renamed. Broken JSON fails as before.
+    $cased = ConvertFrom-SourceJson -Text '{"b":1,"a":{"K":[1],"k":[]},"B":2}' -What 'the stand-in'
+    Assert-True ((@($cased.PSObject.Properties | ForEach-Object { $_.Name }) -join ',') -ceq 'b,a,B#2' -and $cased.b -eq 1 -and $cased.'B#2' -eq 2 -and
+        $cased.a.K -is [array] -and @($cased.a.K).Count -eq 1 -and $cased.a.'k#2' -is [array] -and @($cased.a.'k#2').Count -eq 0) `
+        "JSON with keys that differ only in case was misread: $($cased | ConvertTo-Json -Compress -Depth 4)"
+    Assert-Throws { ConvertFrom-SourceJson -Text '{"a":' -What 'the stand-in' } 'the stand-in did not answer JSON: *' 'Broken JSON was not refused.'
 
     # -SkipGitLabCodeSearch holds with GITLAB_TOKEN set, as the audit's help tells a maintainer to
     # set it: no GitLab search goes out and the census keeps recording the skip.
@@ -775,6 +878,22 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
     Assert-Drift 'listing-changed' '*Morphe Patch Tracker no longer lists HushTelegram*' 'A listing that disappeared'
     $fakeForge.Answers = New-FakeAnswers
 
+    # The tracker writes bundle keys that differ only in case (ImmortalZeus:dev and immortalzeus:dev).
+    # Both are read: the second names a repository the ledger doesn't know.
+    $trackerApps = '"apps":[{"package":"org.telegram.messenger.web","patches":[{"name":"Hide ads"}]}]'
+    $fakeForge.Answers.tracker.Content = ('{"sysadmindoc:stable":{"repo_url":"https://github.com/SysAdminDoc/HushTelegram",' + $trackerApps + '},' +
+        '"alpha:stable":{"repo_url":"https://github.com/fixture-owner/alpha-patches",' + $trackerApps + '},' +
+        '"ALPHA:stable":{"repo_url":"https://github.com/newcomer/telegram-patches",' + $trackerApps + '}}')
+    $casedTracker = Invoke-Audit
+    Assert-True (@($casedTracker.Report.findings | Where-Object { $_.kind -eq 'source-failed' }).Count -eq 0) `
+        ("A tracker answer with keys that differ only in case failed a source: " +
+            (@($casedTracker.Report.findings | ForEach-Object { "$($_.kind): $($_.detail)" }) -join ' | '))
+    Assert-True ($casedTracker.ExitCode -eq 1 -and $casedTracker.Said -like '*Morphe Patch Tracker: 3 Telegram bundles; HushTelegram listed*' -and
+        @($casedTracker.Report.findings | Where-Object { $_.kind -eq 'addition' -and $_.repository -eq 'https://github.com/newcomer/telegram-patches' -and
+            $_.detail -like '*Morphe Patch Tracker*' }).Count -eq 1) "The tracker's second, case-differing bundle was not read: $($casedTracker.Said)"
+    Assert-True ([IO.File]::ReadAllText($fixtureLedgerPath) -ceq $fixtureLedgerText) 'The case-differing tracker case changed the ledger.'
+    $fakeForge.Answers = New-FakeAnswers
+
     $fakeForge.Answers.official.Content = '{"patches":[{"name":"Hide ads","compatiblePackages":[{"packageName":"org.telegram.messenger.web"}]}]}'
     Assert-Drift 'official-bundle-changed' '*official bundle now patches*org.telegram.messenger.web*' 'The official bundle taking on Telegram'
     $fakeForge.Answers = New-FakeAnswers
@@ -811,10 +930,56 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
     Assert-Drift 'license-added' '*beta-module*now has a licence (MIT*' 'An unlicensed source that gained a licence'
     $fakeForge.Answers = New-FakeAnswers
 
-    $tick = [string][char]96 * 3
-    $fakeForge.Answers.jmanCatalog.Content += "### X Delta Bundle Patch List:`n| ${tick}Hide replies${tick} | ${tick}d${tick} | ${tick}Telegram${tick} | ${tick}Any${tick} |`n"
-    Assert-Drift 'index-unresolved' "*Jman's catalog lists Telegram patches under 'Delta'*" 'A Jman section no repository stands behind'
+    # A latest Telegram bundle in Jman's registry that no repository stands behind: a source on
+    # another forge, or no import link and a download from somewhere that isn't a GitHub release.
+    foreach ($unresolved in @(
+            @{ Import = [ordered]@{ latest = 'https://patch-bundles.api.jmancentral.com/api/reseam/bundle?source_url=https%3A%2F%2Fgit.example.org%2Fsomeone%2Fpatches&version=latest&channel=any' }
+                Download = 'https://git.example.org/someone/patches/releases/download/v1.0.0/patches.mpp'
+                Detail = '*its source https://git.example.org/someone/patches is not a GitHub or GitLab repository*' }
+            @{ Import = $null; Download = 'https://downloads.example.org/delta/patches-1.0.0.mpp'; Detail = '*it names no source repository*' })) {
+        $fakeForge.Answers.jmanBundles = @($fakeForge.Answers.jmanBundles) + , ([ordered]@{ id = $jmanDelta; version = 'v1.0.0'; is_latest = $true
+            packages = @('org.telegram.messenger.web'); source_id = 'delta'; import_urls = $unresolved.Import; download_url = $unresolved.Download })
+        Assert-Drift 'index-unresolved' "*Jman's registry lists bundle $jmanDelta (v1.0.0) for org.telegram.messenger.web*$($unresolved.Detail)" `
+            'A latest Telegram bundle no repository stands behind'
+        $fakeForge.Answers = New-FakeAnswers
+    }
+
+    # What the registry's latest bundles patch reaches the ledger's checks: alpha's stable and dev
+    # bundles merge on GitHub, gamma is read on GitLab, and only each bundle's own Telegram patches count.
+    foreach ($bundle in $fakeForge.Answers.jmanBundles) {
+        if (@($jmanAlpha, $jmanAlphaDev, $jmanGamma) -contains $bundle.id) { $bundle.packages = @(@($bundle.packages) + 'org.telegram.messenger.beta') }
+    }
+    $reached = Invoke-Audit
+    $alphaReached = @($reached.Report.findings | Where-Object { $_.kind -eq 'packages-changed' -and $_.repository -eq 'https://github.com/fixture-owner/alpha-patches' })
+    $gammaReached = @($reached.Report.findings | Where-Object { $_.kind -eq 'packages-changed' -and $_.repository -eq 'https://gitlab.com/fixture-group/gamma-patches' })
+    Assert-True ($reached.ExitCode -eq 1 -and $alphaReached.Count -eq 1 -and $gammaReached.Count -eq 1) `
+        ("Jman's latest alpha and gamma bundles naming a new package were not both reported: " +
+            (@($reached.Report.findings | ForEach-Object { "$($_.kind): $($_.repository) $($_.detail)" }) -join ' | '))
+    $alphaFeatures = @($alphaReached[0].evidence.features)
+    Assert-True (@($alphaReached[0].evidence.sources) -contains 'Jman''s bundle index' -and $alphaFeatures -contains 'Disable typing status' -and
+        $alphaFeatures -contains 'Hide stories' -and $alphaFeatures -notcontains 'Spoof signature' -and $alphaFeatures -notcontains 'Hide replies') `
+        "Alpha's stable and dev bundles in Jman's registry were not read for their own Telegram patches: $($alphaFeatures -join ', ')"
+    Assert-True ((@($gammaReached[0].evidence.sources) -join ',') -eq 'Jman''s bundle index' -and (@($gammaReached[0].evidence.features) -join ',') -eq 'Open links outside') `
+        "Gamma's GitLab bundle in Jman's registry was not read for its Telegram patches: $($gammaReached[0].evidence | ConvertTo-Json -Compress -Depth 4)"
+    Assert-True ([IO.File]::ReadAllText($fixtureLedgerPath) -ceq $fixtureLedgerText) 'The registry packages case changed the ledger.'
     $fakeForge.Answers = New-FakeAnswers
+
+    # Any bundle of HushTelegram's own in the registry, latest or not, is a listing.
+    $fakeForge.Answers.jmanBundles = @($fakeForge.Answers.jmanBundles) + , ([ordered]@{ id = ('5d' * 12); version = 'v0.0.1'; is_latest = $false
+        packages = @('org.telegram.messenger.web'); source_id = 'self'; import_urls = $null
+        download_url = 'https://github.com/SysAdminDoc/HushTelegram/releases/download/v0.0.1/patches-0.0.1.mpp' })
+    Assert-Drift 'listing-changed' "*Jman's Patch Bundle Registry lists HushTelegram now*" 'A registry bundle of HushTelegram''s own'
+    $fakeForge.Answers = New-FakeAnswers
+
+    # A snapshot history that doesn't end in a snapshot generation fails the source, and nothing
+    # past the history is requested from the registry.
+    foreach ($history in @('[]', '["snapshots/../../main"]')) {
+        $fakeForge.Answers.jmanHistory.Content = $history
+        Assert-Drift 'source-failed' "*Jman's bundle index could not be read*snapshot generation*" "A snapshot history of $history"
+        Assert-True (@($fakeForge.Requests | Where-Object { $_.Uri -like '*/Patch-Bundle-Registry/*' -and $_.Uri -notlike '*/snapshot-history.json' }).Count -eq 0) `
+            "The registry was read past a snapshot history of $history."
+        $fakeForge.Answers = New-FakeAnswers
+    }
 
     # An index still spelling a source by its old name is that source, not an addition.
     $fakeForge.Answers.directory.Content = $fakeForge.Answers.directory.Content -replace '"fixture-owner/alpha-patches"', '"fixture-owner/alpha-old"'

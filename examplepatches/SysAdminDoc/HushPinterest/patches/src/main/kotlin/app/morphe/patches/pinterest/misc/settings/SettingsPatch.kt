@@ -25,6 +25,7 @@ import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.pinterest.misc.extension.EXTENSION_PACKAGE
 import app.morphe.patches.pinterest.misc.extension.PINTEREST_APPLICATION
 import app.morphe.patches.pinterest.misc.extension.pinterestExtensionPatch
+import app.morphe.patches.pinterest.ui.routeToastsToPinterest
 import app.morphe.util.superclassChain
 import com.android.tools.smali.dexlib2.Opcode
 import org.w3c.dom.Element
@@ -71,7 +72,7 @@ internal fun BytecodePatchContext.declaredInHierarchy(
  * Adds an alias of [MAIN_ACTIVITY] that answers [APPLICATION_PREFERENCES], which is what makes
  * Android's App info page for Pinterest show "Additional settings in the app". The alias opens
  * Pinterest's own launcher activity with that action, and the extension opens the settings from there.
- * The settings extension needs API 28, so the patched APK also declares that floor, preserving any
+ * The settings extension needs API 29, so the patched APK also declares that floor, preserving any
  * higher minimum Pinterest already requires.
  */
 internal val settingsManifestPatch = resourcePatch {
@@ -102,7 +103,7 @@ internal val settingsManifestPatch = resourcePatch {
                 sdk.getAttribute("android:minSdkVersion").toIntOrNull()?.takeIf { it > 0 }
                     ?: throw PatchException("AndroidManifest.xml has an invalid minSdkVersion")
             }
-            sdk.setAttribute("android:minSdkVersion", maxOf(stockMinSdk, 28).toString())
+            sdk.setAttribute("android:minSdkVersion", maxOf(stockMinSdk, 29).toString())
 
             val alias = document.createElement("activity-alias").apply {
                 setAttribute("android:name", SETTINGS_ALIAS_NAME)
@@ -125,7 +126,8 @@ internal val settingsManifestPatch = resourcePatch {
  * Pinterest's launcher icon opens Pinterest with an extra; from Android's App info page for Pinterest,
  * "Additional settings in the app" opens it with [APPLICATION_PREFERENCES]. Pinterest's launcher
  * activity reports its intent, and the screen opens over the next Pinterest activity to resume.
- * Every name used here is a manifest component or a framework override or call.
+ * Every name hooked here is a manifest component or a framework override or call. It also has
+ * HushPinterest's messages show as Pinterest's own toasts, which only fills in extension stubs.
  */
 @Suppress("unused")
 val settingsPatch = bytecodePatch(
@@ -169,5 +171,9 @@ val settingsPatch = bytecodePatch(
         // Each of those calls now goes through the extension, which puts it back in front
         // afterwards. Framework names only, which the obfuscator keeps.
         rerouteShortcutCalls()
+
+        // HushPinterest's messages as Pinterest's own toasts. Only the extension's stubs change,
+        // and a build whose toast code reads differently keeps Android toasts.
+        routeToastsToPinterest()
     }
 }

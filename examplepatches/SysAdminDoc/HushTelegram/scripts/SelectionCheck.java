@@ -2,15 +2,21 @@ import com.android.tools.smali.dexlib2.AccessFlags;
 import com.android.tools.smali.dexlib2.DexFileFactory;
 import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.Opcodes;
+import com.android.tools.smali.dexlib2.builder.BuilderInstruction;
+import com.android.tools.smali.dexlib2.builder.BuilderOffsetInstruction;
 import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction11x;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction22b;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction21t;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction3rc;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction22s;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction23x;
 import com.android.tools.smali.dexlib2.iface.ClassDef;
+import com.android.tools.smali.dexlib2.iface.DexFile;
 import com.android.tools.smali.dexlib2.iface.Field;
 import com.android.tools.smali.dexlib2.iface.Method;
 import com.android.tools.smali.dexlib2.iface.MethodImplementation;
+import com.android.tools.smali.dexlib2.iface.MultiDexContainer;
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction;
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction;
@@ -19,7 +25,12 @@ import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstructio
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.dexlib2.iface.reference.StringReference;
+import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference;
+import com.reandroid.arsc.chunk.PackageBlock;
+import com.reandroid.arsc.chunk.TableBlock;
 import com.reandroid.arsc.chunk.xml.AndroidManifestBlock;
+import com.reandroid.arsc.container.SpecTypePair;
+import com.reandroid.arsc.model.ResourceEntry;
 import com.reandroid.arsc.chunk.xml.ResXmlAttribute;
 import com.reandroid.arsc.chunk.xml.ResXmlElement;
 import com.reandroid.json.JSONArray;
@@ -31,8 +42,10 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.zip.ZipFile;
@@ -45,25 +58,50 @@ public final class SelectionCheck {
     private static final String CONNECTIONS = "Lorg/telegram/tgnet/ConnectionsManager;";
     private static final String ANDROID = "{http://schemas.android.com/apk/res/android}";
     private static final String ALIAS = "app.hushtelegram.extension.telegram.settings.OpenSettings";
+    private static final String PUSH_RECEIVER = "app.hushtelegram.extension.telegram.misc.UnifiedPushReceiver";
+    private static final String PUSH_RAISE = "app.hushtelegram.extension.telegram.misc.UnifiedPushRaise";
+    private static final String PUSH_SIGN_UP = "Lorg/telegram/messenger/PushListenerController;->sendRegistrationToServer(ILjava/lang/String;)V";
+    private static final String ATTACH_NAME = "Lorg/telegram/messenger/FileLoader;->getAttachFileName(Lorg/telegram/tgnet/TLObject;)Ljava/lang/String;";
+    private static final String REMOVE_FILTER = "Lorg/telegram/messenger/MessagesController;->removeFilter(Lorg/telegram/messenger/MessagesController$DialogFilter;)V";
+    private static final String DEBUG_VERSION = "Lorg/telegram/messenger/BuildVars;->DEBUG_VERSION:Z";
+    private static final String BETA_LOGS = OWN + "telegram/misc/BetaLogs;";
+    /**
+     * Flags of targets only some builds carry, and the string that shows the host carries one: the
+     * patch hooks it when anything outside the extension names that string, and says nothing otherwise.
+     */
+    static final Map<String, String> OPTIONAL_MARKERS = Map.of(
+            "crashReports", "firebase_crashlytics_collection_enabled",
+            "sessionReports", "firebase_sessions_enabled");
 
     static final class Expected {
-        boolean settings, links, api, maps;
+        boolean settings, links, api, maps, icon, push;
         int apiId;
         String apiHash, mapsKey;
         Map<String, Boolean> flags;
+        Set<String> optional;
 
         Expected(JSONObject input) {
             settings = input.getBoolean("settings");
             links = input.getBoolean("links");
             api = input.getBoolean("api");
             maps = input.getBoolean("maps");
+            icon = input.optBoolean("icon", false);
+            push = input.optBoolean("push", false);
             apiId = input.optInt("apiId");
             apiHash = input.optString("apiHash");
             mapsKey = input.optString("mapsKey");
             flags = new TreeMap<>();
             JSONObject values = input.getJSONObject("flags");
             for (String key : values.keySet()) flags.put(key, values.getBoolean(key));
+            optional = new TreeSet<>();
+            JSONArray names = input.optJSONArray("optional");
+            for (int i = 0; names != null && i < names.length(); i++) {
+                String name = names.getString(i);
+                require(OPTIONAL_MARKERS.containsKey(name) && flags.containsKey(name) && optional.add(name));
+            }
         }
+
+        boolean betaLogsOff() { return Boolean.TRUE.equals(flags.get("betaLogsOff")); }
     }
 
     static final class Evidence {
@@ -90,9 +128,45 @@ public final class SelectionCheck {
                 + String.join("", method.getParameterTypes()) + ")" + method.getReturnType();
     }
 
-    private static Map<String, ClassDef> classes(File apk) throws Exception {
+    /** One APK decoded once: its dex entry names, method prints and classes. */
+    static final class Side {
+        static int decodes;
+        final File apk;
+        final TreeSet<String> dexEntries;
+        final Map<String, String> bodies;
+        final Map<String, ClassDef> classes;
+        private final Map<String, Boolean> carried = new HashMap<>();
+
+        Side(File apk) throws Exception {
+            this.apk = apk;
+            dexEntries = dexEntries(apk);
+            var dex = DexFileFactory.loadDexContainer(apk, Opcodes.getDefault());
+            bodies = DexDiff.fingerprintAll(dex);
+            classes = classes(dex);
+            decodes++;
+        }
+
+        boolean carries(String marker) { return carried.computeIfAbsent(marker, m -> SelectionCheck.carries(classes, m)); }
+    }
+
+    /** Whether code outside the extension names this string, the way the patch decides a build carries a target. */
+    static boolean carries(Map<String, ClassDef> classes, String marker) {
+        for (ClassDef type : classes.values()) {
+            if (type.getType().startsWith(OWN)) continue;
+            for (Method method : type.getMethods()) {
+                if (method.getImplementation() == null) continue;
+                for (Instruction instruction : method.getImplementation().getInstructions()) {
+                    if (instruction instanceof ReferenceInstruction reference
+                            && reference.getReference() instanceof StringReference string
+                            && string.getString().equals(marker)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    static Map<String, ClassDef> classes(MultiDexContainer<? extends DexFile> dex) throws Exception {
         Map<String, ClassDef> result = new HashMap<>();
-        var dex = DexFileFactory.loadDexContainer(apk, Opcodes.getDefault());
         for (String entry : dex.getDexEntryNames()) {
             for (ClassDef type : dex.getEntry(entry).getDexFile().getClasses()) {
                 require(result.put(type.getType(), type) == null);
@@ -214,7 +288,6 @@ public final class SelectionCheck {
         hook(calls, flags, "storyTouches", "misc/Stories", "hideAvatarStoryTouches");
         hook(calls, flags, "channelRecommendations", "misc/Recommendations", "skipRecommendations");
         hook(calls, flags, "cachedRecommendations", "misc/Recommendations", "skipCachedRecommendations");
-        hook(calls, flags, "deviceStats", "misc/Analytics", "skipDeviceStats");
         hook(calls, flags, "readMetrics", "misc/Analytics", "skipReadMetrics");
         hook(calls, flags, "crashReports", "misc/Analytics", "skipCrashReporterStart", "skipErrorReport");
         hook(calls, flags, "sessionReports", "misc/Analytics", "sessionsEnabled");
@@ -224,6 +297,7 @@ public final class SelectionCheck {
             if (Boolean.TRUE.equals(flags.get(status))) promoFlags++;
         }
         require(promo == promoFlags);
+        hook(calls, flags, "dualCameraReport", "misc/Analytics", "skipDeviceAppLog");
         hook(calls, flags, "callDebugUpload", "misc/CallDebug", "skipCallDebugUpload");
         hook(calls, flags, "callLogFileUpload", "misc/CallDebug", "skipCallLogFileUpload");
         hook(calls, flags, "callLogUpload", "misc/CallDebug", "skipCallLogUpload");
@@ -232,9 +306,21 @@ public final class SelectionCheck {
         hook(calls, flags, "pollLinkPreviews", "misc/DraftPreviews", "skipPollPreview");
         hook(calls, flags, "storyLinkPreviews", "misc/DraftPreviews", "skipStoryLinkPreview");
         hook(calls, flags, "botSharePreviews", "misc/DraftPreviews", "skipBotSharePreview");
-        hook(calls, flags, "commerceSettingsRows", "misc/Commerce", "addSettingsRow");
+        hook(calls, flags, "commerceSettingsRows", "misc/Commerce", "addSettingsRow", "showWalletRow");
         hook(calls, flags, "commerceProfileGifts", "misc/Commerce", "addProfileTab", "showGiftsTab");
         hook(calls, flags, "commerceChannelGift", "misc/Commerce", "showChannelGiftButton");
+        hook(calls, flags, "commerceAttachWallet", "misc/Commerce", "showAttachWallet");
+        hook(calls, flags, "commerceMenuWallet", "misc/Commerce", "showMenuWallet");
+        hook(calls, flags, "commerceProfileSendGram", "misc/Commerce", "showProfileSendGram");
+        hook(calls, flags, "commerceAddressSendGram", "misc/Commerce", "showAddressSendGram");
+        hook(calls, flags, "commerceTransferSendGram", "misc/Commerce", "showTransferSendGram");
+        hook(calls, flags, "commercePremiumEffects", "misc/Commerce", "skipPremiumEffect");
+        hook(calls, flags, "commercePremiumEmojiPacks", "misc/Commerce", "dropLockedEmojiPacks");
+        // Both sticker targets ask premiumStickersBlocked: the two filters and the keyboard pass,
+        // and the effect player's tooltip.
+        int blocked = (Boolean.TRUE.equals(flags.get("commercePremiumStickers")) ? 3 : 0)
+                + (Boolean.TRUE.equals(flags.get("commercePremiumEffects")) ? 1 : 0);
+        require(calls.getOrDefault(OWN + "telegram/misc/Commerce;->premiumStickersBlocked", 0) == blocked);
         hook(calls, flags, "promotionalSuggestions", "misc/Suggestions", "filterChatList");
         hook(calls, flags, "birthdayGiftBanner", "misc/Suggestions", "birthdayGiftBannerDismissed");
         hook(calls, flags, "cachedProxyDialog", "ads/ProxyPromotions", "hideCachedProxyDialog");
@@ -252,7 +338,7 @@ public final class SelectionCheck {
         hook(calls, flags, "disableChannelPull", "misc/ForumTopicPull", "stopTopicPull", "keepTopicStill");
         hook(calls, flags, "quietContactsNag", "misc/ContactsNag", "skipAsk", "hideBadge");
         hook(calls, flags, "holidayLook", "misc/HolidayLook", "mode");
-        hook(calls, flags, "useSystemFont", "misc/SystemFont", "typeface");
+        hook(calls, flags, "useSystemFont", "misc/SystemFont", "typeface", "built");
         hook(calls, flags, "amoledBlack", "misc/BlackTheme", "loaded");
         hook(calls, flags, "hideTranslateBar", "misc/TranslateBar", "hidden");
         hook(calls, flags, "exactNumbers", "misc/ExactNumbers", "format");
@@ -274,6 +360,7 @@ public final class SelectionCheck {
         hook(calls, flags, "rearCameraFirst", "misc/RearCamera", "front");
         hook(calls, flags, "hideGalleryCameraTile", "misc/GalleryCameraTile", "tile");
         hook(calls, flags, "hideStickerTime", "misc/StickerTime", "hidden");
+        hook(calls, flags, "stickerSize", "misc/StickerSize", "size");
         hook(calls, flags, "ignoreMutedMentions", "misc/MutedMentions", "notifyDialog");
         hook(calls, flags, "hideBlockedInGroups", "misc/BlockedSenders", "type");
         hook(calls, flags, "hideFeaturesAndInvite", "misc/FeaturesInvite", "addFeaturesRow");
@@ -281,6 +368,13 @@ public final class SelectionCheck {
         hook(calls, flags, "keepDeleted", "misc/KeepDeleted", "userUpdate", "channelUpdate", "push", "measuring");
         hook(calls, flags, "askBeforeSending", "misc/SendConfirm", "sticker", "gif", "voice", "call");
         hook(calls, flags, "betaLogsOff", "misc/BetaLogs", "forceLogs");
+        hook(calls, flags, "outsideTranslate", "misc/OutsideTranslate", "show", "fill", "chosen", "headerMenu", "headerClick");
+        hook(calls, flags, "hideChannelButtons", "misc/ChannelButtons", "set");
+        hook(calls, flags, "hideSendAs", "misc/SendAs", "show");
+        hook(calls, flags, "fasterDownloads", "misc/DownloadSpeed", "fast");
+        hook(calls, flags, "saveDownloads", "misc/SaveDownloads", "fileLoaded");
+        hook(calls, flags, "unifiedPush", "misc/UnifiedPush", "token", "type");
+        hook(calls, flags, "hideByKeyword", "misc/MessageFilters", "type");
         hook(calls, flags, "galleryCameraOnTap", "misc/GalleryCamera", "keepCameraOff", "wakeOnTap", "openWhenReady");
         hook(calls, flags, "disableUpdateChecks", "misc/UpdateChecks", "skipUpdateCheck");
         for (String[] bridge : List.of(
@@ -295,22 +389,86 @@ public final class SelectionCheck {
             require(linked == Boolean.TRUE.equals(flags.get("firebaseLocalStatus")));
             if (linked) method(types, bridge[1]);
         }
+        // UnifiedPush hands its address to Telegram's own sign-up through a stub the patch writes.
+        List<Instruction> signUp = instructions(method(types, OWN + "telegram/misc/UnifiedPush;->sendToTelegram(ILjava/lang/String;)V"));
+        boolean signUpLinked = signUp.size() == 2 && signUp.get(0).getOpcode() == Opcode.INVOKE_STATIC
+                && signUp.get(0) instanceof ReferenceInstruction reference
+                && reference.getReference().toString().equals(PUSH_SIGN_UP)
+                && signUp.get(1).getOpcode() == Opcode.RETURN_VOID;
+        require(signUpLinked == Boolean.TRUE.equals(flags.get("unifiedPush")));
+        if (signUpLinked) method(types, PUSH_SIGN_UP);
+        // Save downloaded files tells a document from its thumbnail by the downloader's own name for it.
+        List<Instruction> attach = instructions(method(types, OWN + "telegram/misc/SaveDownloads;->attachName(Ljava/lang/Object;)Ljava/lang/String;"));
+        boolean attachLinked = attach.size() == 4 && attach.get(1).getOpcode() == Opcode.INVOKE_STATIC
+                && attach.get(1) instanceof ReferenceInstruction call
+                && call.getReference().toString().equals(ATTACH_NAME)
+                && attach.get(3).getOpcode() == Opcode.RETURN_OBJECT;
+        require(attachLinked == Boolean.TRUE.equals(flags.get("saveDownloads")));
+        if (attachLinked) method(types, ATTACH_NAME);
+        // Folders by chat type has no hook; its stubs are the patch, so the delete one stands for them.
+        List<Instruction> delete = instructions(method(types, OWN + "telegram/misc/ChatTypeFolders;->deleteFolder(II)V"));
+        long removes = delete.stream().filter(instruction -> instruction.getOpcode() == Opcode.INVOKE_VIRTUAL
+                && instruction instanceof ReferenceInstruction call
+                && call.getReference().toString().equals(REMOVE_FILTER)).count();
+        boolean deleteLinked = removes == 1 && delete.get(delete.size() - 1).getOpcode() == Opcode.RETURN_VOID;
+        require(deleteLinked == Boolean.TRUE.equals(flags.get("chatTypeFolders")));
+        if (deleteLinked) method(types, REMOVE_FILTER);
     }
 
+    /**
+     * BuildVars' initializer as Turn off beta debug logs leaves it: the one DEBUG_VERSION read goes
+     * through BetaLogs.forceLogs into the same register ahead of the if-nez that reads it, and the
+     * if-nez's labels move to the call. Built the way the patch builds it, so a jump or exception
+     * range across the call has to match too.
+     */
+    static MutableMethodImplementation withBetaLogsGate(MethodImplementation clean) {
+        MutableMethodImplementation body = new MutableMethodImplementation(clean);
+        List<BuilderInstruction> code = body.getInstructions();
+        int read = -1;
+        for (int i = 0; i < code.size(); i++) {
+            if (code.get(i).getOpcode() == Opcode.SGET_BOOLEAN
+                    && ((ReferenceInstruction) code.get(i)).getReference() instanceof FieldReference field
+                    && (field.getDefiningClass() + "->" + field.getName() + ":" + field.getType()).equals(DEBUG_VERSION)) {
+                require(read == -1);
+                read = i;
+            }
+        }
+        require(read >= 0 && read + 1 < code.size() && code.get(read + 1).getOpcode() == Opcode.IF_NEZ);
+        int register = ((OneRegisterInstruction) code.get(read)).getRegisterA();
+        require(((OneRegisterInstruction) code.get(read + 1)).getRegisterA() == register);
+        var target = ((BuilderOffsetInstruction) code.get(read + 1)).getTarget();
+        // The patch's order: copy the if-nez after itself, put the call between, then drop the
+        // original, which hands its labels to the call.
+        body.addInstruction(read + 2, new BuilderInstruction21t(Opcode.IF_NEZ, register, target));
+        body.addInstruction(read + 2, new BuilderInstruction11x(Opcode.MOVE_RESULT, register));
+        body.addInstruction(read + 2, new BuilderInstruction3rc(Opcode.INVOKE_STATIC_RANGE, register, 1,
+                new ImmutableMethodReference(BETA_LOGS, "forceLogs", List.of("Z"), "Z")));
+        body.removeInstruction(read + 1);
+        return body;
+    }
+
+    /** The baseline already carries the beta-logs gate when it is the same selection built without credentials. */
     private static int apiChanges(Map<String, ClassDef> before, Map<String, ClassDef> after,
-                                  Expected expected) {
-        Method original = method(before, API), patched = method(after, API);
+                                  Expected expected, boolean gatedBaseline) {
+        return buildVarsChanges(method(before, API), method(after, API), expected.api, expected.apiId,
+                expected.apiHash, expected.betaLogsOff() && !gatedBaseline);
+    }
+
+    /** BuildVars' initializer differs only by the API pair written in place, once the beta-logs gate is added where expected. */
+    static int buildVarsChanges(Method original, Method patched, boolean api, int apiId, String apiHash, boolean betaLogsGate) {
+        MethodImplementation reference = betaLogsGate ? withBetaLogsGate(original.getImplementation())
+                : original.getImplementation();
         require(original.getAccessFlags() == patched.getAccessFlags()
-                && original.getImplementation().getRegisterCount()
-                == patched.getImplementation().getRegisterCount()
-                && tryRanges(original.getImplementation()).equals(tryRanges(patched.getImplementation())));
-        List<Instruction> oldCode = instructions(original), newCode = instructions(patched);
+                && reference.getRegisterCount() == patched.getImplementation().getRegisterCount()
+                && tryRanges(reference).equals(tryRanges(patched.getImplementation())));
+        List<Instruction> oldCode = new ArrayList<>(), newCode = instructions(patched);
+        reference.getInstructions().forEach(oldCode::add);
         require(oldCode.size() == newCode.size());
         int changed = 0, id = 0, hash = 0;
         for (int i = 0; i < oldCode.size(); i++) {
             Instruction old = oldCode.get(i), next = newCode.get(i);
             if (DexDiff.render(old).equals(DexDiff.render(next))) continue;
-            require(expected.api && i + 1 < oldCode.size()
+            require(api && i + 1 < oldCode.size()
                     && old instanceof OneRegisterInstruction && next instanceof OneRegisterInstruction
                     && ((OneRegisterInstruction) old).getRegisterA()
                     == ((OneRegisterInstruction) next).getRegisterA()
@@ -325,7 +483,7 @@ public final class SelectionCheck {
             if (field.getName().equals("APP_ID") && field.getType().equals("I")) {
                 require(writer.getOpcode() == Opcode.SPUT && next.getOpcode() == Opcode.CONST
                         && next instanceof NarrowLiteralInstruction
-                        && ((NarrowLiteralInstruction) next).getNarrowLiteral() == expected.apiId);
+                        && ((NarrowLiteralInstruction) next).getNarrowLiteral() == apiId);
                 id++;
             } else {
                 require(field.getName().equals("APP_HASH") && field.getType().equals("Ljava/lang/String;")
@@ -333,13 +491,12 @@ public final class SelectionCheck {
                         && (next.getOpcode() == Opcode.CONST_STRING
                         || next.getOpcode() == Opcode.CONST_STRING_JUMBO)
                         && ((StringReference) ((ReferenceInstruction) next).getReference())
-                        .getString().equals(expected.apiHash));
+                        .getString().equals(apiHash));
                 hash++;
             }
             changed++;
         }
-        require(changed == (expected.api ? 2 : 0) && id == (expected.api ? 1 : 0)
-                && hash == (expected.api ? 1 : 0));
+        require(changed == (api ? 2 : 0) && id == (api ? 1 : 0) && hash == (api ? 1 : 0));
         return changed;
     }
 
@@ -452,7 +609,32 @@ public final class SelectionCheck {
 
     private static Node only(List<Node> elements) { require(elements.size() == 1); return elements.get(0); }
 
-    private static int manifestChanges(File clean, File patched, Expected expected, boolean credentialsOnlyDelta) throws Exception {
+    /** The id the patched table gave the icon patch's launcher picture, mipmap/hush_launcher. */
+    private static int launcherIcon(File apk) throws Exception {
+        TableBlock table;
+        try (ZipFile zip = new ZipFile(apk)) {
+            var entry = zip.getEntry(TableBlock.FILE_NAME);
+            require(entry != null);
+            try (var input = new java.io.BufferedInputStream(zip.getInputStream(entry))) { table = TableBlock.load(input); }
+        }
+        int found = 0;
+        for (PackageBlock block : table.listPackages()) {
+            for (SpecTypePair pair : block.listSpecTypePairs()) {
+                Iterator<ResourceEntry> resources = pair.getResources();
+                while (resources.hasNext()) {
+                    ResourceEntry resource = resources.next();
+                    if (resource == null || resource.isEmpty() || !"mipmap".equals(resource.getType())
+                            || !"hush_launcher".equals(resource.getName())) continue;
+                    require(found == 0);
+                    found = resource.getResourceId();
+                }
+            }
+        }
+        require(found != 0);
+        return found;
+    }
+
+    static int manifestChanges(File clean, File patched, Expected expected, boolean credentialsOnlyDelta) throws Exception {
         Node before = manifest(clean), after = manifest(patched);
         Node application = only(before.children("application"));
         if (expected.settings && !credentialsOnlyDelta) {
@@ -485,6 +667,38 @@ public final class SelectionCheck {
                         .child(new Node("data").attribute("scheme", "STRING:" + scheme)));
             }
         }
+        if (expected.push && !credentialsOnlyDelta) {
+            // UnifiedPush notifications asks to see the UnifiedPush apps and declares the two
+            // components they talk to.
+            List<Node> queries = before.children("queries");
+            require(queries.size() <= 1);
+            Node query = queries.isEmpty() ? new Node("queries") : queries.get(0);
+            if (queries.isEmpty()) before.child(query);
+            query.child(new Node("intent").child(new Node("action").attribute("name", "STRING:org.unifiedpush.android.distributor.REGISTER")));
+            Node actions = new Node("intent-filter");
+            for (String action : List.of("NEW_ENDPOINT", "MESSAGE", "UNREGISTERED", "REGISTRATION_FAILED")) {
+                actions.child(new Node("action").attribute("name", "STRING:org.unifiedpush.android.connector." + action));
+            }
+            application.child(new Node("receiver").attribute("name", "STRING:" + PUSH_RECEIVER)
+                    .attribute("exported", "BOOL:true").child(actions));
+            application.child(new Node("service").attribute("name", "STRING:" + PUSH_RAISE)
+                    .attribute("exported", "BOOL:true")
+                    .child(new Node("intent-filter").child(new Node("action")
+                            .attribute("name", "STRING:org.unifiedpush.android.connector.RAISE_TO_FOREGROUND"))));
+        }
+        if (expected.icon && !credentialsOnlyDelta) {
+            // HushTelegram icon and name points the application, and Telegram's default launcher
+            // entry where it names its own, at the picture it added. No case sets a name.
+            String icon = "REFERENCE:" + launcherIcon(patched);
+            String original = application.attributes.get(ANDROID + "icon");
+            require(original != null && original.startsWith("REFERENCE:") && !original.equals(icon));
+            application.attribute("icon", icon).attribute("roundIcon", icon);
+            Node launcher = only(application.children("activity-alias").stream().filter(n ->
+                    "STRING:org.telegram.messenger.DefaultIcon".equals(n.attributes.get(ANDROID + "name"))).toList());
+            for (String name : List.of("icon", "roundIcon")) {
+                if (launcher.attributes.containsKey(ANDROID + name)) launcher.attribute(name, icon);
+            }
+        }
         int changed = 0;
         if (expected.maps) {
             Node entry = only(application.children("meta-data").stream().filter(n ->
@@ -500,18 +714,17 @@ public final class SelectionCheck {
         return changed;
     }
 
-    private static Evidence check(File clean, File patched, Expected expected, boolean credentialsOnlyDelta) throws Exception {
+    private static Evidence check(Side clean, Side patched, Expected expected, boolean credentialsOnlyDelta) throws Exception {
         Evidence result = new Evidence();
         result.settings = expected.settings;
-        TreeSet<String> oldDex = dexEntries(clean), newDex = dexEntries(patched);
-        require(newDex.containsAll(oldDex));
-        Map<String, String> oldBodies = DexDiff.fingerprintAll(clean), newBodies = DexDiff.fingerprintAll(patched);
+        require(patched.dexEntries.containsAll(clean.dexEntries));
+        Map<String, String> oldBodies = clean.bodies, newBodies = patched.bodies;
         require(newBodies.keySet().containsAll(oldBodies.keySet()));
         TreeSet<String> changed = new TreeSet<>(), added = new TreeSet<>(newBodies.keySet());
         added.removeAll(oldBodies.keySet());
         for (String key : oldBodies.keySet()) if (!oldBodies.get(key).equals(newBodies.get(key))) changed.add(key);
         require(expected.settings && !credentialsOnlyDelta || added.isEmpty());
-        Map<String, ClassDef> before = classes(clean), after = classes(patched);
+        Map<String, ClassDef> before = clean.classes, after = patched.classes;
         Method originalInit = nativeInitializer(before.get(CONNECTIONS));
         Method patchedInit = nativeInitializer(after.get(CONNECTIONS));
         result.nativeVersionChanges = nativeVersionChanges(originalInit, patchedInit, expected.api, expected.apiId);
@@ -540,35 +753,84 @@ public final class SelectionCheck {
                 if (!method.getReturnType().equals("Z") || !method.getParameterTypes().isEmpty()) continue;
                 require(expected.flags.containsKey(method.getName()));
                 boolean value = flag(method);
-                require(value == expected.flags.get(method.getName()));
+                boolean wanted = expected.flags.get(method.getName());
+                // A target the host doesn't carry leaves its flag off however the family was picked.
+                if (expected.optional.contains(method.getName())) {
+                    wanted &= clean.carries(OPTIONAL_MARKERS.get(method.getName()));
+                }
+                require(value == wanted);
                 result.flags.put(method.getName(), value);
             }
             require(result.flags.keySet().equals(expected.flags.keySet()));
             compiledHooks(after, result.flags);
         }
-        result.apiLiteralChanges = apiChanges(before, after, expected);
-        result.mapsValueChanges = manifestChanges(clean, patched, expected, credentialsOnlyDelta);
+        result.apiLiteralChanges = apiChanges(before, after, expected, credentialsOnlyDelta);
+        result.mapsValueChanges = manifestChanges(clean.apk, patched.apk, expected, credentialsOnlyDelta);
         result.changedMethods = changed.size();
         result.addedMethods = added.size();
         return result;
     }
 
+    /** One case: {patched, expectation, evidence} and, for full-configured, the full catalog's build as baseline. */
+    private static void answer(Side clean, String[] request) throws Exception {
+        require(request.length == 3 || request.length == 4);
+        Expected expected = new Expected(new JSONObject(new File(request[1])));
+        Side patched = new Side(new File(request[0]));
+        Evidence evidence = check(clean, patched, expected, false);
+        if (request.length == 4) check(new Side(new File(request[3])), patched, expected, true);
+        Files.writeString(new File(request[2]).toPath(), evidence.json().toString() + "\n", StandardCharsets.UTF_8);
+    }
+
+    private static void reportPrivately(String evidencePath, Exception failure) {
+        try (var privateReport = new java.io.PrintWriter(evidencePath + ".failure-private.txt", StandardCharsets.UTF_8)) {
+            failure.printStackTrace(privateReport);
+        } catch (Exception unavailable) {
+            System.err.println("SELECTION_EVIDENCE_WRITE_FAILED");
+        }
+    }
+
+    /**
+     * --serve CLEAN: the matrix keeps one checker for a whole run, so the clean fixture is decoded
+     * once, not once a case. Each stdin line is one case, the one-shot arguments after CLEAN joined
+     * by tabs, and gets one SELECTION_CHECK_PASSED or SELECTION_CHECK_FAILED line back. At the end of
+     * input the decode count goes out, so a run can show it decoded the clean fixture once.
+     */
+    private static void serve(File clean) throws Exception {
+        Side stock = new Side(clean);
+        var input = new java.io.BufferedReader(new java.io.InputStreamReader(System.in, StandardCharsets.UTF_8));
+        int cases = 0;
+        for (String line; (line = input.readLine()) != null; ) {
+            if (line.isEmpty()) continue;
+            String[] request = line.split("\t", -1);
+            cases++;
+            try {
+                answer(stock, request);
+                System.out.println("SELECTION_CHECK_PASSED");
+            } catch (Exception failure) {
+                if (request.length >= 3) reportPrivately(request[2], failure);
+                System.out.println("SELECTION_CHECK_FAILED");
+            }
+            System.out.flush();
+        }
+        System.out.println("SELECTION_CHECK_DECODES cases=" + cases + " decodes=" + Side.decodes);
+    }
+
     public static void main(String[] args) {
+        if (args.length == 2 && args[0].equals("--serve")) {
+            try {
+                serve(new File(args[1]));
+            } catch (Exception failure) {
+                System.err.println("SELECTION_CHECK_FAILED");
+                System.exit(1);
+            }
+            return;
+        }
         try {
             require(args.length == 4 || args.length == 5);
-            Expected expected = new Expected(new JSONObject(new File(args[2])));
-            Evidence evidence = check(new File(args[0]), new File(args[1]), expected, false);
-            if (args.length == 5) check(new File(args[4]), new File(args[1]), expected, true);
-            Files.writeString(new File(args[3]).toPath(), evidence.json().toString() + "\n", StandardCharsets.UTF_8);
+            answer(new Side(new File(args[0])), java.util.Arrays.copyOfRange(args, 1, args.length));
             System.out.println("SELECTION_CHECK_PASSED");
         } catch (Exception failure) {
-            if (args.length >= 4) {
-                try (var privateReport = new java.io.PrintWriter(args[3] + ".failure-private.txt", StandardCharsets.UTF_8)) {
-                    failure.printStackTrace(privateReport);
-                } catch (Exception unavailable) {
-                    System.err.println("SELECTION_EVIDENCE_WRITE_FAILED");
-                }
-            }
+            if (args.length >= 4) reportPrivately(args[3], failure);
             System.err.println("SELECTION_CHECK_FAILED");
             System.exit(1);
         }

@@ -14,6 +14,7 @@ import app.morphe.patcher.util.smali.toInstructions
 import app.morphe.patches.telegram.misc.extension.freeLocalsAt
 import app.morphe.util.ControlFlow
 import app.morphe.util.addInstructionsAtControlFlowLabel
+import app.morphe.util.call
 import app.morphe.util.namedRegisters
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
@@ -372,7 +373,7 @@ internal fun BytecodePatchContext.resolveHolidayLogoSites(holiday: HolidayLookSi
         invoke-virtual {v11}, $VIEW->getScaleY()F
         move-result v11
         sub-float v11, v24, v11
-        mul-float v11, v11, v10
+        mul-float/2addr v11, v10
         float-to-int v10, v11
         add-int/2addr v13, v10
         invoke-virtual {v9}, $DRAWABLE->getIntrinsicHeight()I
@@ -388,7 +389,7 @@ internal fun BytecodePatchContext.resolveHolidayLogoSites(holiday: HolidayLookSi
         mul-float v10, v10, v23
         invoke-virtual {v8}, $VIEW->getAlpha()F
         move-result v8
-        mul-float v8, v8, v10
+        mul-float/2addr v8, v10
         float-to-int v8, v8
         invoke-virtual {v9, v8}, $DRAWABLE->setAlpha(I)V
         invoke-virtual {v9, v1}, $DRAWABLE->draw($CANVAS)V
@@ -533,6 +534,7 @@ private fun BytecodePatchContext.requireTitleStorage(setter: MethodReference, ti
     val createTitle = body[5].call() ?: refuse("no title view creation")
     shape(createTitle.definingClass == setter.definingClass && createTitle.parameterTypes.map(CharSequence::toString) == listOf("I") &&
         createTitle.returnType == "V", "the logo's title view creation changed")
+    // Telegram 13.0 copies VISIBLE (0) from v1, the title index it loaded first.
     val forwardingPrefix = """
         iget-object v0, p0, $titleViews
         const/4 v1, 0x0
@@ -546,7 +548,7 @@ private fun BytecodePatchContext.requireTitleStorage(setter: MethodReference, ti
         if-eqz p1, :invisible
         iget-boolean v3, p0, $hidden
         if-nez v3, :invisible
-        const/4 v3, 0x0
+        move v3, v1
         goto :visibility
         :invisible
         const/4 v3, 0x4
@@ -563,7 +565,7 @@ private fun BytecodePatchContext.requireTitleStorage(setter: MethodReference, ti
         8 to listOf(9, 13), 10 to listOf(11, 13), 12 to listOf(14))) {
         shape(flow.normal[source].toSet() == targets.toSet(), "the logo title forwarding changed a branch")
     }
-    shape(flow.preservesValue(0, 15, 0) && flow.preservesValue(1, 15, 1) && flow.preservesParameter(17, 5) &&
+    shape(flow.preservesValue(0, 15, 0) && flow.preservesValue(1, 11, 1) && flow.preservesValue(1, 15, 1) && flow.preservesParameter(17, 5) &&
         flow.normal[15] == listOf(16) && flow.normal[16] == listOf(17) && flow.dominates(15, 17),
         "the logo title or its destination can be overwritten before forwarding")
     val forward = body[17].call() ?: refuse("no logo title forwarding call")
@@ -721,7 +723,6 @@ private fun operation(instruction: Instruction) = listOf(instruction.opcode, ins
 private fun Instruction.literal() = (this as? WideLiteralInstruction)?.wideLiteral
 private fun Instruction.reference() = (this as? ReferenceInstruction)?.reference?.toString()
 private fun Instruction.field() = (this as? ReferenceInstruction)?.reference as? FieldReference
-private fun Instruction.call() = (this as? ReferenceInstruction)?.reference as? MethodReference
 private fun Method.body() = implementation?.instructions?.toList().orEmpty()
 private fun shape(valid: Boolean, reason: String) { if (!valid) refuse(reason) }
 private fun refuse(reason: String): Nothing = throw PatchException("Holiday look all year: $reason (before editing)")

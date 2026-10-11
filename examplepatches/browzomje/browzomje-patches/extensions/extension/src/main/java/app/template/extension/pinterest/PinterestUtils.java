@@ -137,6 +137,18 @@ public final class PinterestUtils {
         }
     }
 
+    public static void filterPinMenu(final Object menu) {
+        whenMenuIsReady(menu, () -> PinMenuFilter.apply(menu));
+    }
+
+    public static void addPinImageInfo(final Object menu) {
+        whenMenuIsReady(menu, () -> PinImageMenu.addInfo(menu));
+    }
+
+    public static void upgradePinImageDownload(final Object menu) {
+        whenMenuIsReady(menu, () -> PinImageMenu.upgradeDownload(menu));
+    }
+
     public static void addDownloadVideoOption(final Object menuContainer) {
         MorpheLog.hookFired(MorpheLog.VIDEO,
                 "menu " + (menuContainer == null ? "null" : menuContainer.getClass().getName()));
@@ -649,6 +661,14 @@ public final class PinterestUtils {
      * <p>Si nasconde la View invece di rimuovere l'elemento dalla lista: gli indici restano
      * validi e il resto del codice della barra continua a funzionare.
      */
+    public static void hideNavBarTabWhenReady(Object navBar, int tabOrdinal) {
+        if (navBar instanceof ViewGroup) {
+            ((ViewGroup) navBar).post(() -> hideNavBarTab(navBar, tabOrdinal));
+        } else {
+            MorpheLog.e(MorpheLog.NAVBAR, "navigation setup did not pass a ViewGroup");
+        }
+    }
+
     public static void hideNavBarTab(Object navBar, int tabOrdinal) {
         String tabName = navTabName(tabOrdinal);
         MorpheLog.hookFired(MorpheLog.NAVBAR, "tab " + tabName);
@@ -685,7 +705,7 @@ public final class PinterestUtils {
                         + tab.getClass().getName());
                 return;
             }
-            MorpheViews.hidePersistently(tabView, MorpheLog.NAVBAR, "tasto " + tabName);
+            MorpheViews.hideHorizontalSlot(tabView, MorpheLog.NAVBAR, "tasto " + tabName);
         } catch (Throwable t) {
             MorpheLog.e(MorpheLog.NAVBAR, "could not hide tab " + tabName, t);
         }
@@ -781,8 +801,36 @@ public final class PinterestUtils {
         return null;
     }
 
+    private static View interfaceItemView(Object tab, Class<?> contract) {
+        if (contract.getName().startsWith("android.")) return null;
+        for (Method method : contract.getDeclaredMethods()) {
+            if (method.getParameterTypes().length != 0 || method.getReturnType() != View.class)
+                continue;
+            try {
+                method.setAccessible(true);
+                Object result = method.invoke(tab);
+                if (result instanceof View) return (View) result;
+            } catch (Throwable ignored) {
+                // Try an inherited interface or the legacy fallback.
+            }
+        }
+        for (Class<?> parent : contract.getInterfaces()) {
+            View result = interfaceItemView(tab, parent);
+            if (result != null) return result;
+        }
+        return null;
+    }
+
     /** @return la View restituita dall'unico metodo senza argomenti che ne restituisce una. */
     private static View findViewAccessor(Object tab) {
+        // The tab interface exposes its complete item View. Concrete Gestalt widgets also
+        // expose icon/root/label getters; reflection order must not select one of those.
+        for (Class<?> type = tab.getClass(); type != null; type = type.getSuperclass()) {
+            for (Class<?> contract : type.getInterfaces()) {
+                View item = interfaceItemView(tab, contract);
+                if (item != null) return item;
+            }
+        }
         for (Method method : tab.getClass().getMethods()) {
             if (method.getParameterTypes().length != 0
                     || !View.class.isAssignableFrom(method.getReturnType())) {
@@ -898,7 +946,15 @@ public final class PinterestUtils {
                         + "header: the hook fired at the right place but the header has changed");
                 return;
             }
-            MorpheViews.hidePersistently(button, MorpheLog.HEADER, what);
+            // The resource ID can belong to an icon inside a fixed-size button wrapper.
+            // Collapse the whole direct child of the header's horizontal container.
+            View container = findByName(root, HEADER_CONTAINER_ID);
+            View slot = button;
+            while (slot.getParent() instanceof View && slot.getParent() != container) {
+                slot = (View) slot.getParent();
+            }
+            if (slot.getParent() != container) slot = button;
+            MorpheViews.hideHorizontalSlot(slot, MorpheLog.HEADER, what);
         } catch (Throwable t) {
             MorpheLog.e(MorpheLog.HEADER, "could not hide " + what, t);
         }
@@ -1623,7 +1679,8 @@ public final class PinterestUtils {
     static View findReferenceRow(ViewGroup container) {
         for (int i = 0; i < container.getChildCount(); i++) {
             View child = container.getChildAt(i);
-            if (child instanceof RelativeLayout) {
+            if (child instanceof RelativeLayout && !PinMenuFilter.isCustom(child) && child.isClickable()
+                    && child.getVisibility() == View.VISIBLE) {
                 TextView tv = findTextView(child);
                 if (tv != null) {
                     return child;
@@ -1650,21 +1707,29 @@ public final class PinterestUtils {
      * @param row la riga appena costruita, non ancora aggiunta
      */
     static void matchRowTextAppearance(ViewGroup container, View row) {
+        PinMenuFilter.markCustom(row);
         try {
             TextView ours = findTextView(row);
             if (ours == null) {
                 return;
             }
-            for (int i = 0; i < container.getChildCount(); i++) {
-                TextView theirs = findTextView(container.getChildAt(i));
-                if (theirs == null || theirs == ours || theirs.getTextSize() <= 0f) {
-                    continue;
-                }
+            // Menu headers, previews and follow labels use a different text style.
+            // Copy an actual native action row, not the first TextView in the tree.
+            View reference = findReferenceRow(container);
+            TextView theirs = reference == null ? null : findTextView(reference);
+            if (theirs != null && theirs != ours && theirs.getTextSize() > 0f) {
                 ours.setTextSize(android.util.TypedValue.COMPLEX_UNIT_PX, theirs.getTextSize());
                 ours.setTypeface(theirs.getTypeface());
                 ours.setTextColor(theirs.getTextColors());
-                MorpheLog.d(MorpheLog.REFLECTION, "row text aligned with the menu ("
-                        + theirs.getTextSize() + "px)");
+                ours.setLetterSpacing(theirs.getLetterSpacing());
+                ours.setFontFeatureSettings(theirs.getFontFeatureSettings());
+                if (android.os.Build.VERSION.SDK_INT >= 26) {
+                    ours.setFontVariationSettings(theirs.getFontVariationSettings());
+                }
+                ours.setPaintFlags(theirs.getPaintFlags());
+                ours.setIncludeFontPadding(theirs.getIncludeFontPadding());
+                MorpheLog.d(MorpheLog.REFLECTION, "row text aligned with native action ("
+                        + theirs.getTextSize() + "px, source=" + theirs.getText() + ")");
                 return;
             }
             MorpheLog.d(MorpheLog.REFLECTION, "no existing row to copy the text style from");
@@ -1747,7 +1812,7 @@ public final class PinterestUtils {
             if (isZh) return "复制直链";
             if (isKo) return "직접 링크 복사";
             if (isPl) return "Kopiuj bezpośredni link";
-            if (isNl) return "Directe link gekopiëerd";
+            if (isNl) return "Directe link kopiëren";
             if (isTr) return "Doğrudan bağlantıyı kopyala";
             if (isAr) return "نسخ الرابط المباشر";
             return "Copy direct link";
@@ -1826,6 +1891,7 @@ public final class PinterestUtils {
             if (isJa) return "動画のダウンロードを開始しました…";
             if (isZh) return "已开始下载视频…";
             if (isKo) return "동영상 다운로드를 시작했습니다…";
+            if (isPl) return "Rozpoczęto pobieranie wideo…";
             if (isNl) return "Video downloaden gestart…";
             if (isTr) return "Video indirme başladı…";
             if (isAr) return "بدأ تنزيل الفيديو…";
@@ -1848,7 +1914,7 @@ public final class PinterestUtils {
             return "Download whole board";
         }
         if ("board_no_pins".equals(key)) {
-            if (isIt) return "Nessun pin in memoria: scorri la bacheca e riprova";
+            if (isIt) return "Nessun Pin caricato: scorri la bacheca e riprova";
             if (isEs) return "No hay pines en memoria: desplázate por el tablero e inténtalo de nuevo";
             if (isFr) return "Aucun pin en mémoire : faites défiler le tableau et réessayez";
             if (isDe) return "Keine Pins im Speicher: scrolle die Pinnwand und versuche es erneut";
@@ -1857,10 +1923,11 @@ public final class PinterestUtils {
             if (isJa) return "メモリにピンがありません。ボードをスクロールしてからもう一度お試しください";
             if (isZh) return "内存中没有 Pin：请先滚动画板后重试";
             if (isKo) return "메모리에 핀이 없습니다. 보드를 스크롤한 후 다시 시도하세요";
+            if (isPl) return "Brak wczytanych pinów: przewiń tablicę i spróbuj ponownie";
             if (isNl) return "Geen pins in geheugen: scroll door het bord en probeer opnieuw";
             if (isTr) return "Bellekte pin yok: panoyu kaydırıp tekrar deneyin";
             if (isAr) return "لا توجد دبابيس في الذاكرة: مرّر اللوحة وأعد المحاولة";
-            return "No pins in memory: scroll the board and try again";
+            return "No pins loaded: scroll the board and try again";
         }
         if ("board_download_started".equals(key)) {
             if (isIt) return "Download di %d pin avviato…";
@@ -1872,6 +1939,7 @@ public final class PinterestUtils {
             if (isJa) return "%d 件のピンのダウンロードを開始しました…";
             if (isZh) return "已开始下载 %d 个 Pin…";
             if (isKo) return "%d개 핀 다운로드를 시작했습니다…";
+            if (isPl) return "Rozpoczęto pobieranie %d pinów…";
             if (isNl) return "Downloaden van %d pins gestart…";
             if (isTr) return "%d pin indirme başladı…";
             if (isAr) return "بدأ تنزيل %d دبوس…";
@@ -1887,6 +1955,7 @@ public final class PinterestUtils {
             if (isJa) return "画像 %1 件、動画 %2 件をダウンロードしました。";
             if (isZh) return "已下载 %1 张图片和 %2 个视频。";
             if (isKo) return "이미지 %1개, 동영상 %2개를 다운로드했습니다.";
+            if (isPl) return "Pobrano %1 obrazów i %2 filmów.";
             if (isNl) return "%1 afbeeldingen en %2 video's gedownload.";
             if (isTr) return "%1 resim ve %2 video indirildi.";
             if (isAr) return "تم تنزيل %1 صورة و%2 فيديو.";
@@ -1902,6 +1971,7 @@ public final class PinterestUtils {
             if (isJa) return "%d 件は既にあるためスキップしました。";
             if (isZh) return "%d 个已存在，已跳过。";
             if (isKo) return "%d개는 이미 있어 건너뛰었습니다.";
+            if (isPl) return "Pominięto %d istniejących plików.";
             if (isNl) return "%d al aanwezig, overgeslagen.";
             if (isTr) return "%d zaten var, atlandı.";
             if (isAr) return "%d موجودة بالفعل، تم تخطيها.";
@@ -1917,6 +1987,7 @@ public final class PinterestUtils {
             if (isJa) return "%d 件の動画をスキップしました: 外部アプリ (yt-dlp) が必要です。";
             if (isZh) return "已跳过 %d 个视频：需要外部应用 (yt-dlp)。";
             if (isKo) return "동영상 %d개 건너뜀: 외부 앱(yt-dlp)이 필요합니다.";
+            if (isPl) return "Pominięto %d filmów: wymagają zewnętrznej aplikacji (yt-dlp).";
             if (isNl) return "%d video's overgeslagen: vereisen een externe app (yt-dlp).";
             if (isTr) return "%d video atlandı: harici uygulama (yt-dlp) gerekiyor.";
             if (isAr) return "تم تخطي %d فيديو: تتطلب تطبيقًا خارجيًا (yt-dlp).";
@@ -1932,6 +2003,7 @@ public final class PinterestUtils {
             if (isJa) return "%d 件失敗しました。";
             if (isZh) return "%d 个失败。";
             if (isKo) return "%d개 실패.";
+            if (isPl) return "Nie udało się pobrać %d plików.";
             if (isNl) return "%d mislukt.";
             if (isTr) return "%d başarısız.";
             if (isAr) return "%d فشل.";
@@ -1959,7 +2031,8 @@ public final class PinterestUtils {
             if (isTr) return "Resim indiriliyor…";
             if (isAr) return "جاري تنزيل الصورة…";
             if (isHi) return "छви डाउनलोड हो रही है…";
-            if (isIn || isMs) return "Mengunduh gambar…";
+            if (isIn) return "Mengunduh gambar…";
+            if (isMs) return "Memuat turun imej…";
             if (isVi) return "Đang tải hình ảnh xuống…";
             if (isUk) return "Завантаження зображення…";
             if (isSv) return "Laddar ner bild…";
@@ -1968,7 +2041,8 @@ public final class PinterestUtils {
             if (isFi) return "Ladataan kuvaa…";
             if (isFil) return "Dina-download ang larawan…";
             if (isEl) return "Λήψη εικόνας…";
-            if (isCs || isSk) return "Stahování obrázku…";
+            if (isCs) return "Stahování obrázku…";
+            if (isSk) return "Sťahovanie obrázka…";
             if (isHu) return "Kép letöltése…";
             if (isRo) return "Se descarcă imaginea…";
             if (isIw) return "מוריד תמונה…";
@@ -2114,7 +2188,8 @@ public final class PinterestUtils {
             if (isTr) return "Kilit ekranı";
             if (isAr) return "شاشة القفل";
             if (isHi) return "लॉक स्क्रीन";
-            if (isIn || isMs) return "Layar Kunci";
+            if (isIn) return "Layar kunci";
+            if (isMs) return "Skrin kunci";
             if (isVi) return "Màn hình khóa";
             if (isUk) return "Екран блокування";
             if (isSv) return "Låsskärm";
@@ -2123,7 +2198,8 @@ public final class PinterestUtils {
             if (isFi) return "Lukitusnäyttö";
             if (isFil) return "Lock screen";
             if (isEl) return "Οθόνη κλειδώματος";
-            if (isCs || isSk) return "Uzamykací obrazovka";
+            if (isCs) return "Uzamykací obrazovka";
+            if (isSk) return "Uzamknutá obrazovka";
             if (isHu) return "Képernyőzár";
             if (isRo) return "Ecran de blocare";
             if (isIw) return "מסך הנעילה";
@@ -2143,9 +2219,10 @@ public final class PinterestUtils {
             if (isPl) return "Oba";
             if (isNl) return "Beide";
             if (isTr) return "Her ikisi";
-            if (isAr) return "كليهma";
+            if (isAr) return "كلاهما";
             if (isHi) return "दोनों";
-            if (isIn || isMs) return "Keduanya";
+            if (isIn) return "Keduanya";
+            if (isMs) return "Kedua-duanya";
             if (isVi) return "Cả hai";
             if (isUk) return "Обидва";
             if (isSv) return "Båda";

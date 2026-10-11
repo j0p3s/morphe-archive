@@ -12,12 +12,13 @@ body:
 
         - **Check whether it's already reported.** Search the [open and closed bug reports](https://github.com/SysAdminDoc/HushTelegram/issues?q=is%3Aissue%20label%3Abug). If yours was closed and it still happens, comment on it and we'll reopen it. GitHub doesn't let the person who reported something reopen it.
         - **Patching stopped with an error?** Say which Telegram version you picked. The desktop scripts write a public patch summary you can attach below. Keep raw patching reports and configured APKs private because they can contain credentials.
+        - **Stuck right after typing your phone number?** Telegram's server doesn't accept a sign-in from a patched app that still has the built-in API ID. The README's [Your Telegram account](https://github.com/SysAdminDoc/HushTelegram#your-telegram-account) section shows how to patch with your own, which fixes it.
   - type: input
     id: versions
     attributes:
       label: HushTelegram and Telegram versions
       description: Long-press the Telegram icon and tap HushTelegram, or open Telegram's App info page and tap Additional settings in the app. Then open More settings, then About, and copy the Version line.
-      placeholder: HushTelegram 0.0.12 on Telegram 12.10.6
+      placeholder: HushTelegram 0.0.12 on Telegram 13.0.1
     validations:
       required: true
   - type: input
@@ -25,7 +26,7 @@ body:
     attributes:
       label: Which Telegram file did you patch?
       description: Where it came from, such as telegram.org's APK, and its version code if you know it. Most bugs on a build that should work come from a different build of the same version.
-      placeholder: telegram.org's APK, 12.10.6
+      placeholder: telegram.org's APK, 13.0.1
   - type: dropdown
     id: manager
     attributes:
@@ -39,8 +40,8 @@ body:
   - type: input
     id: manager_version
     attributes:
-      label: Its version
-      description: Morphe Manager shows its version in its own settings. If you picked "Something else", name the program too.
+      label: Version of the patching app
+      description: Not Telegram's version. Morphe Manager shows its own version in its settings. If you picked "Something else", name the program too.
       placeholder: Morphe Manager 1.34.0
     validations:
       required: true
@@ -92,8 +93,10 @@ body:
         - Open links externally
         - Quiet contacts nag
         - Repair Firebase push registration
+        - UnifiedPush notifications
         - Use registered Telegram API credentials
         - Use registered Maps API key
+        - HushTelegram icon and name
         - Use system font
         - AMOLED black
         - Hide translate bar
@@ -109,13 +112,17 @@ body:
         - Turn off haptic feedback
         - Turn off reaction effects
         - Hide folder tab counters
+        - Folders by chat type
         - Hide sender names when forwarding
         - Voice messages in the music player
+        - Faster downloads
+        - Save downloaded files
         - Silence people outside your contacts
         - Disable pull to archive
         - Start the camera on the rear lens
         - Hide gallery camera tile
         - Hide time on stickers
+        - Change sticker size
         - Ignore mentions in muted chats
         - Hide blocked users in groups
         - Hide Telegram Features and Invite Friends
@@ -123,6 +130,10 @@ body:
         - Keep deleted messages
         - Ask before sending a sticker
         - Turn off beta debug logs
+        - Translate with an outside service
+        - Hide channel bar buttons
+        - Hide Send as button
+        - Hide messages by keyword
         - Strip link tracking
         - HushTelegram settings
     validations:

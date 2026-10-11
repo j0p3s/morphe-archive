@@ -1,6 +1,6 @@
 package com.dmoniak.patches.spotify
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import com.dmoniak.patches.shared.replaceMethod
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.bytecodePatch
@@ -26,6 +26,8 @@ val spotifyAmoledThemeBytecodePatch = bytecodePatch(
     name = "Spicetify AMOLED Black Theme Bytecode",
     description = "Bytecode engine for Spicetify AMOLED Black Theme",
 ) {
+    compatibleWith(COMPATIBILITY_SPOTIFY)
+
     execute {
         val logger = Logger.getLogger(this::class.java.name)
         executeSpotifyAmoledThemeLogic(logger)
@@ -305,13 +307,15 @@ fun BytecodePatchContext.executeSpotifyAmoledThemeLogic(logger: Logger) {
             if (semanticMatch && method.parameterTypes.isEmpty()) {
                 if (retType == "I") {
                     try {
-                        val mutableMethod = mutableClass.findMutableMethodOf(method)
-                        mutableMethod.addInstructions(
-                            0,
-                            """
+                        mutableClass.replaceMethod(
+
+                            method,
+
+                            smaliCode = """
                             const/high16 v0, -0x1000000
                             return v0
-                            """.trimIndent() // Pure Black
+                            """.trimIndent()
+
                         )
                         methodsHooked++
                         logger.info("[Spotify AMOLED] Hooked background color method in: ${type}->${mName}")
@@ -320,13 +324,15 @@ fun BytecodePatchContext.executeSpotifyAmoledThemeLogic(logger: Logger) {
                     }
                 } else if (retType == "J") {
                     try {
-                        val mutableMethod = mutableClass.findMutableMethodOf(method)
-                        mutableMethod.addInstructions(
-                            0,
-                            """
+                        mutableClass.replaceMethod(
+
+                            method,
+
+                            smaliCode = """
                             const-wide v0, 0x00000000ff000000L
                             return-wide v0
                             """.trimIndent()
+
                         )
                         methodsHooked++
                         logger.info("[Spotify AMOLED] Hooked Compose background color method in: ${type}->${mName}")
@@ -343,13 +349,15 @@ fun BytecodePatchContext.executeSpotifyAmoledThemeLogic(logger: Logger) {
                 mNameLower == "isnightmodeactive"
             ) && retType == "Z" && method.parameterTypes.isEmpty()) {
                 try {
-                    val mutableMethod = mutableClass.findMutableMethodOf(method)
-                    mutableMethod.addInstructions(
-                        0,
-                        """
+                    mutableClass.replaceMethod(
+
+                        method,
+
+                        smaliCode = """
                         const/4 v0, 0x1
                         return v0
                         """.trimIndent()
+
                     )
                     methodsHooked++
                     logger.info("[Spotify AMOLED] Enforced dark theme: ${type}->${mName}")

@@ -111,7 +111,8 @@ public enum PatchFamily {
             Settings.HIDE_META_AI_SUMMARIES),
     COMMENT_SHEET_OPTIONS(FamilyNames.COMMENT_SHEET_OPTIONS, "commentSheetOptions", null,
             Settings.LIKE_ONLY, Settings.HIDE_COMMENT_GIF_STICKER_BUTTONS, Settings.OPEN_REPLY_THREADS,
-            Settings.HIDE_RELATED_GROUPS_UNDER_COMMENTS),
+            Settings.HIDE_RELATED_GROUPS_UNDER_COMMENTS, Settings.HIDE_SHOP_LINK_COMMENTS,
+            Settings.HIDE_COMMENTS_WITH_WORDS),
     TAG_SUGGESTIONS(FamilyNames.TAG_SUGGESTIONS, "tagSuggestions", null,
             Settings.TAG_SUGGESTIONS_ONLY_AFTER_AT),
     TAP_TO_PLAY(FamilyNames.TAP_TO_PLAY, "tapToPlay", null,
@@ -125,7 +126,7 @@ public enum PatchFamily {
     HDR_BRIGHTNESS(FamilyNames.HDR_BRIGHTNESS, "turnOffHdrBrightness", null,
             Settings.TURN_OFF_HDR_BRIGHTNESS),
     PROGRESS_BAR(FamilyNames.PROGRESS_BAR, "keepProgressBar", null,
-            Settings.KEEP_PROGRESS_BAR),
+            Settings.KEEP_PROGRESS_BAR, Settings.KEEP_PROGRESS_BAR_TIME),
     SYSTEM_FONT(FamilyNames.SYSTEM_FONT, "systemFont", null,
             Settings.USE_SYSTEM_FONT),
     SYSTEM_EMOJI(FamilyNames.SYSTEM_EMOJI, "systemEmoji", null,
@@ -134,8 +135,10 @@ public enum PatchFamily {
             Settings.TURN_OFF_HAPTICS),
     SCREEN_TRANSITIONS(FamilyNames.SCREEN_TRANSITIONS, "turnOffScreenTransitions", null,
             Settings.TURN_OFF_SCREEN_TRANSITIONS),
+    APP_ICONS(FamilyNames.APP_ICONS, "unlockAppIcons", null,
+            Settings.UNLOCK_APP_ICONS),
     EXTERNAL_BROWSER(FamilyNames.EXTERNAL_BROWSER, "externalBrowser", null,
-            Settings.OPEN_LINKS_EXTERNALLY),
+            Settings.OPEN_LINKS_EXTERNALLY, Settings.HOLD_LINK_HISTORY),
     SANITIZE_SHARING_LINKS(FamilyNames.SANITIZE_SHARING_LINKS, "sanitizeSharingLinks", null,
             Settings.SANITIZE_SHARING_LINKS, Settings.SHARE_POST_OWN_LINK),
     UPDATE_PROMPTS(FamilyNames.UPDATE_PROMPTS, "updatePrompts", null,
@@ -190,7 +193,7 @@ public enum PatchFamily {
     META_AI_SEARCH(FamilyNames.META_AI_SEARCH, "metaAiSearch", null,
             Settings.HIDE_META_AI_IN_SEARCH),
     ANALYTICS_UPLOADS(FamilyNames.ANALYTICS_UPLOADS, "analyticsUploads", null,
-            Settings.HOLD_ANALYTICS_UPLOADS),
+            Settings.HOLD_ANALYTICS_UPLOADS, Settings.HOLD_CAMERA_ROLL_PROCESSING),
     SCREENSHOTS(FamilyNames.SCREENSHOTS, "allowScreenshots", null,
             Settings.ALLOW_SCREENSHOTS),
     SCREENSHOT_DETECTION(FamilyNames.SCREENSHOT_DETECTION, "screenshotDetection", null,
@@ -212,7 +215,7 @@ public enum PatchFamily {
     AD_TELEMETRY(FamilyNames.AD_TELEMETRY, "adTelemetry", "the block on reports of ad screenshots and app installs"),
     AUDIENCE_NETWORK(FamilyNames.AUDIENCE_NETWORK, "audienceNetwork", "the Audience Network block"),
     AMOLED_THEME(FamilyNames.AMOLED_THEME, "amoledTheme", "the black background in dark mode"),
-    MATERIAL_YOU_THEME(FamilyNames.MATERIAL_YOU_THEME, "materialYouTheme", "the recoloured dark mode"),
+    MATERIAL_YOU_THEME(FamilyNames.MATERIAL_YOU_THEME, "materialYouTheme", "the recolored dark mode"),
     // No switch: a list picks the accent, and Pause makes it read Facebook's blue, so nothing stays in.
     ACCENT_COLOR(FamilyNames.ACCENT_COLOR, "accentColor", Settings.ACCENT_COLOR),
     RESTORE_TRUST(FamilyNames.RESTORE_TRUST, "restoreTrust", "the re-signed build fix"),
@@ -259,11 +262,12 @@ public enum PatchFamily {
 
     /**
      * The switches of the settings entry itself, which no family owns: every build with this screen
-     * carries them. These are the release check, Saved shortcut and Lock Facebook. Pause turns them off like a
-     * family's switches, so the screen draws them above the Pause row with the rest.
+     * carries them. These are the release check, the Saved and Watch history shortcuts and Lock Facebook. Pause
+     * turns them off like a family's switches, so the screen draws them above the Pause row with the rest.
      */
     static final List<BooleanSetting> ENTRY_SWITCHES = Collections.unmodifiableList(
-            java.util.Arrays.asList(Settings.CHECK_FOR_RELEASES, Settings.SAVED_SHORTCUT, Settings.APP_LOCK));
+            java.util.Arrays.asList(Settings.CHECK_FOR_RELEASES, Settings.SAVED_SHORTCUT,
+                    Settings.WATCH_HISTORY_SHORTCUT, Settings.APP_LOCK));
 
     /**
      * The switches the download patches share and none of them owns: each shapes what every
@@ -439,6 +443,7 @@ public enum PatchFamily {
         if (this == MARKETPLACE_ONLY) anyOn = Settings.MARKETPLACE_ONLY.savedValue();
         if (this == VIDEO_DOWNLOAD) anyOn = Settings.DOWNLOAD_VIDEOS.savedValue();
         if (this == TAP_TO_PLAY) anyOn = Settings.TAP_TO_PLAY.savedValue();
+        if (this == PROGRESS_BAR) anyOn = Settings.KEEP_PROGRESS_BAR.savedValue();
         if (this == PROMO_NOTIFICATIONS) {
             anyOn = false;
             for (BooleanSetting setting : switches) {

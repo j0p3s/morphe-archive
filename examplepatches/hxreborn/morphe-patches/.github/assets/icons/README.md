@@ -58,11 +58,13 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `vpnify.png` | vpnify (`com.vpn.free.hotspot.secure.vpnify`) | VPNIFY | APK 2.3.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `protonvpn.png` | Proton VPN (`ch.protonvpn.android`) | Proton AG | APK 5.20.39.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `hinducalendar.png` | Hindu Calendar (`com.alokmandavgane.hinducalendar`) | Alok Mandavgane | APK 9.3.0, adaptive icon `res/drawable-v26/ic_launcher_vector.xml` |
+| `walp.png` | WalP - Stock HD Wallpapers (`com.stresscodes.wallp`) | Stress Codes | APK 10.2.1, adaptive icon `res/mipmap-anydpi/ic_launcher.xml` |
 | `vllo.png` | VLLO (`com.darinsoft.vimo`) | vimosoft | APK 13.7.4, adaptive icon `res/mipmap-anydpi-v26/vllo_icon.xml` |
 | `terabox.png` | TeraBox (`com.dubox.drive`) | Flextech Inc. | APK 4.26.0, adaptive icon `res/drawable-anydpi-v26/ic_element_appicon_netdisk_new.xml` |
 | `echogram.png` | Echogram (`com.liori.echogram`) | Illuzion Apps | APK 1.0.7.0, `res/mipmap-xxxhdpi-v4/ic_launcher.png` |
 | `echoequalizer.png` | Echo Equalizer (`com.hapibits.soundlift`) | HapiBits | APK 9.2, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `ledblinker.png` | LED Blinker (`com.ledblinker`) | Mario Ostwald | APK 26.01.08, `res/mipmap-xxxhdpi-v4/ic_launcher_new.webp` |
+| `lumo.png` | Lumo (`me.proton.android.lumo`) | Proton AG | APK 2.1.4-nogms, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `fddb.png` | Fddb (`com.fddb`) | Fddb | APK v7.8.4, `res/mipmap-xxxhdpi-v4/ic_launcher.png` |
 | `faststlviewer.png` | Fast STL Viewer (`com.performance.meshview`) | Fast STL Viewer | APK 2.84, `res/Gd.png`, cut to a circle |
 | `cxxdroid.png` | Cxxdroid (`ru.iiec.cxxdroid`) | IIEC | APK 6.0_arm64, `mipmap/ic_launcher`, xxxhdpi |
@@ -76,11 +78,14 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `musixmatch.png` | Musixmatch (`com.musixmatch.android.lyrify`) | Musixmatch | APK 8.4.2, `mipmap/mxm_icon_manifest_round` xxxhdpi (`res/raw/MZ`) |
 | `pocketwhip.png` | Pocket Whip (`com.greenstone.pocketwhip`) | Original Pocket Whip | APK 2.3, `res/mipmap-hdpi-v4/pocket_whip_icon_round.png` |
 | `memoneet.png` | MemoNeet (`com.adithya.memoneet`) | MemoNeet | APK 62.6, `res/mipmap-xxxhdpi-v4/ic_launcher.png`, cut to a circle |
+| `medicneet.png` | MedicNEET (`com.halalfire.medicneet`) | SkorA Labs | APK 1.5.137, `res/mipmap-xxxhdpi-v4/launcher_icon.png`, cut to a circle |
 | `keepa.png` | Keepa (`com.keepa.mobile`) | Keepa.com | APK 6.2.1, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `joyn.png` | Joyn (`de.prosiebensat1digital.seventv`) | SevenOne Entertainment Group GmbH | APK 6.9.0-AOS-609012264, `res/mipmap-xxxhdpi-v4/ic_launcher.png`, cut to a circle |
 | `photone.png` | Photone (`io.lightray.photone`) | Lightray Innovation GmbH | APK 1.5.4, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `audiolab.png` | AudioLab (`com.hitrolab.audioeditor`) | HitroLab | APK 1.3.33, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `imo.png` | imo (`com.imo.android.imoim`) | imo.im | APK 2026.08.1041, adaptive icon `res/drawable-anydpi-v26/b63.xml`, cut to a circle |
+| `steezy.png` | STEEZY (`co.steezy.app`) | STEEZY | APK 5.23.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
+| `sqcom.png` | SQCOM (`com.sqcom.shangqing`) | Shenzhen SHANGQING INDUSTRIAL CO., LTD | APK 1.1.0, `mipmap/wd_path_executor` (round icon), xxxhdpi |
 
 Showly's icon is also published under GPLv3 in [`trakt/showly`](https://github.com/trakt/showly),
 so its copyright terms are compatible with this one. The rest are used under nominative fair

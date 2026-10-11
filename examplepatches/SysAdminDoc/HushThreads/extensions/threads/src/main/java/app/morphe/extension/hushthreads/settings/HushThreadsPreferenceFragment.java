@@ -75,6 +75,11 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
     /** The repository as a link, and as a person reads it. ExtensionHostsTest reads the link. */
     static final String SOURCE_URL = "https://github.com/SysAdminDoc/HushThreads";
     static final String SOURCE_ADDRESS = SOURCE_URL.substring(SOURCE_URL.indexOf("://") + 3);
+    /** Where Support HushThreads goes: the maintainer's Ko-fi page. */
+    static final String SUPPORT_URL = "https://ko-fi.com/X8K126YVER";
+    static final String SUPPORT_ADDRESS = SUPPORT_URL.substring(SUPPORT_URL.indexOf("://") + 3);
+    /** The key of Support HushThreads, the settings home page's last row. It stores nothing. */
+    static final String SUPPORT = "action_support_hushthreads";
     /** The English of the row listing what Pause can't reach, and its key in {@link L10n}. */
     static final String STAYS_WHILE_PAUSED = "Stays in while paused";
     /** The Check now row's key. It stores nothing: no setting has this name. */
@@ -328,7 +333,8 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
             saves = new SaveSettingsRows.Saves(downloads);
         }
 
-        if (build.contains(PatchFamily.PURE_BLACK) || build.contains(PatchFamily.HIDE_INSTAGRAM_BUTTON)) {
+        if (build.contains(PatchFamily.PURE_BLACK) || build.contains(PatchFamily.HIDE_INSTAGRAM_BUTTON)
+                || build.contains(PatchFamily.HIDE_GHOST_POST_BUBBLES)) {
             PreferenceCategory appearance = category(screen, L10n.t("Appearance"));
             if (build.contains(PatchFamily.PURE_BLACK)) {
                 appearance.addPreference(toggle(context, Settings.PURE_BLACK, L10n.t("Pure black dark mode"),
@@ -339,6 +345,11 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
                 appearance.addPreference(toggle(context, Settings.HIDE_INSTAGRAM_BUTTON, L10n.t("Hide the Instagram button"),
                         L10n.t("Takes the Instagram button off the top of profiles, yours and other people's. "
                             + "Restart Threads to see the change.")));
+            }
+            if (build.contains(PatchFamily.HIDE_GHOST_POST_BUBBLES)) {
+                appearance.addPreference(toggle(context, Settings.HIDE_GHOST_POST_BUBBLES, L10n.t("Hide ghost post bubbles"),
+                        L10n.t("Takes the ghost post bubbles off profile pictures, on profiles and in the row at the top "
+                            + "of your feed. Restart Threads to see the change.")));
             }
         }
 
@@ -469,6 +480,25 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
         // Appended to the model; the overview draws it immediately below its status card.
         Preference lacking = missingDefaultsRow(context, build);
         if (lacking != null) screen.addPreference(lacking);
+    }
+
+    /** The Ko-fi page, for a browser, in a task of its own so it never opens inside Threads'. */
+    static Intent supportIntent() {
+        return new Intent(Intent.ACTION_VIEW, Uri.parse(SUPPORT_URL))
+                .addCategory(Intent.CATEGORY_BROWSABLE)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+    }
+
+    /** Opens the Ko-fi page, or says no app here can, as Source code and issues does. */
+    static void openSupport(Context context) {
+        try {
+            context.startActivity(supportIntent());
+        } catch (ActivityNotFoundException | SecurityException missing) {
+            // No browser, or none switched on. Uncaught, Android's exception closed Threads.
+            Logger.printInfo(() -> "No app opened the support link");
+            Utils.showToastLong(L10n.f("No app on this phone can open the link. The address is %1$s.",
+                    L10n.isolate(SUPPORT_ADDRESS)));
+        }
     }
 
     /**

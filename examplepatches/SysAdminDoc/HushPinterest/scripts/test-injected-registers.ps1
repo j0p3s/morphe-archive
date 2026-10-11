@@ -430,7 +430,7 @@ try {
 
 # The verifier run end to end, with stand-ins for the tools it starts: a java that answers the
 # version probe and plays DexDiff with the given exit code, an aapt2 that describes Pinterest
-# 14.38.0, and an apksigner that reports a Pinterest signer from patches-list.json. With
+# 14.39.0, and an apksigner that reports a Pinterest signer from patches-list.json. With
 # -JavaGone the apksigner also deletes that java, which leaves it unable to start by the time
 # DexDiff runs, as a JDK replaced mid-run would. A Continue preference around the DexDiff call
 # once turned exactly that into '[registers] success.'.
@@ -467,7 +467,7 @@ exit /b $DexDiffExit
 @echo off
 echo   E: manifest (line=2)
 echo     A: http://schemas.android.com/apk/res/android:versionCode(0x0101021b)=511908382
-echo     A: http://schemas.android.com/apk/res/android:versionName(0x0101021c)="14.38.0" (Raw: "14.38.0")
+echo     A: http://schemas.android.com/apk/res/android:versionName(0x0101021c)="14.39.0" (Raw: "14.39.0")
 echo     A: package="$standInPackage" (Raw: "$standInPackage")
 exit /b 0
 "@
@@ -627,7 +627,7 @@ try {
         ("The contract file holds rules this suite builds no bad fixtures for:`n$($otherRules -join "`n")")
     $families = @(Get-Content -LiteralPath $featureContracts | Where-Object { $_.StartsWith('family|') } |
         ForEach-Object { $values = $_ -split '\|'; [pscustomobject]@{ Flag = $values[1]; Name = $values[2]; Caps = @($values[3] -split ',' | Where-Object { $_ }) } })
-    Assert-True ($families.Count -eq 25) 'Every one of the 25 installed families needs a compiled contract.'
+    Assert-True ($families.Count -eq 26) 'Every one of the 26 installed families needs a compiled contract.'
     # A manifest-only family declares no capability and is the only kind that may.
     $manifestOnly = @($families | Where-Object { $_.Caps.Count -eq 0 } | ForEach-Object { $_.Flag })
     Assert-True (($manifestOnly -join ',') -ceq 'removeAdTrackingPermissions,spoofSignature') "Only Remove ad tracking permissions and Spoof signature for Google sign-in change no bytecode, not: $($manifestOnly -join ', ')"
@@ -671,6 +671,15 @@ try {
         'feature-profile-duplicate' = $false
         'feature-profile-wrong-argument' = $false
         'feature-profile-bad-fallback' = $false
+        'feature-browser-id-good' = $true
+        'feature-browser-id-missing' = $false
+        'feature-browser-id-misrouted' = $false
+        'feature-browser-id-bad-fallback' = $false
+        'feature-browser-id-save-missing' = $false
+        'feature-browser-id-save-bad-fallback' = $false
+        'feature-browser-id-changed-original' = $false
+        'feature-browser-id-false-capability' = $false
+        'feature-browser-id-bad-stub' = $false
         'feature-feed-ads' = $true
         'feature-feed-ai' = $true
         'feature-feed-shopping' = $true
@@ -730,6 +739,7 @@ try {
         $cleanName = if ($name -eq 'feature-links-partial') { 'feature-links-partial-clean' }
             elseif ($name -eq 'feature-links-doubled-host-good') { 'feature-links-doubled-clean' }
             elseif ($name -like 'feature-profile-*') { 'feature-profile-clean' }
+            elseif ($name -like 'feature-browser-id-*') { 'feature-browser-id-clean' }
             elseif ($name -like 'feature-guard-interior-*') { 'feature-guard-interior-clean' }
             elseif ($name -eq 'feature-optional-unrelated') { 'feature-optional-unrelated-clean' }
             elseif ($name -eq 'feature-optional-absent') { 'feature-optional-clean' } else { 'feature-clean' }
@@ -763,6 +773,19 @@ try {
         }
         if ($name -eq 'feature-links-disabled-misses-fallback' -or $name -like 'feature-links-copied-*-bad' -or $name -like 'feature-links-integer-*-bad') {
             Assert-True ($text.Contains('fallback after its disabled family control')) "An original call disconnected from the disabled family path passed as a fallback.`n$text"
+        }
+        $browserIdReason = switch ($name) {
+            'feature-browser-id-missing' { 'skipBrowserId(Ljava/lang/String;)Z has 0 calls' }
+            'feature-browser-id-misrouted' { 'misrouted call' }
+            'feature-browser-id-bad-fallback' { "isn't a guarded prefix with a null answer" }
+            'feature-browser-id-save-missing' { 'saveBrowserId(Ljava/lang/Object;Ljava/lang/String;[BLjava/lang/Object;)Ljava/lang/Object; has 0 calls' }
+            'feature-browser-id-save-bad-fallback' { "isn't a guarded prefix with its own answer" }
+            'feature-browser-id-changed-original' { 'beyond its validated mutations' }
+            'feature-browser-id-false-capability' { 'browserId flag is false, clean target requires true' }
+            'feature-browser-id-bad-stub' { 'where the clean APK has' }
+        }
+        if ($browserIdReason) {
+            Assert-True ($text.Contains($browserIdReason)) "The Block Store fixture $name wasn't refused for its own fault ($browserIdReason).`n$text"
         }
     }
     $duplicateFlags = Invoke-DexDiff -Clean (Get-FeatureApk 'feature-clean') -Patched (New-DexApk -Name 'feature-duplicate-flags' -Entries ([ordered]@{

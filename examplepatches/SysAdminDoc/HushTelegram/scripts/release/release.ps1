@@ -18,8 +18,9 @@
       preflight  What a release gate would otherwise only reach late, in about five minutes: every
                  tracked PowerShell script parses, the release text and stage order tests, the facts
                  check, the patch tests without the fixture suite, and the translation tests. Then
-                 push with BUILD_QUEUE_PRIORITY=release, so the full pre-push gate runs ahead of
-                 everyday builds.
+                 push with HUSHTELEGRAM_SKIP_PRE_PUSH=1: the build stage runs the same full suite
+                 and applies every patch to every fixture on the pushed commit, so the pre-push gate
+                 would only run it all twice.
       build      From the pushed, clean release commit: the full test and lint run with every fixture
                  required, the patch list and bundle (classes.dex in it, its Timestamp the commit's
                  time), verify-all-patches.ps1 on every declared Telegram build (one target per
@@ -96,7 +97,16 @@ function Invoke-Step {
     if ($LASTEXITCODE -ne 0) { throw "$What failed (exit $LASTEXITCODE)." }
 }
 
-function Get-Head { return "$(git -C $Root rev-parse HEAD)".Trim() }
+function Invoke-Git {
+    # Output lines of a git read; a non-zero exit throws, so a failure never reads as "nothing found".
+    param([string[]]$GitArgs)
+    $global:LASTEXITCODE = 0
+    $lines = @(& git -C $Root @GitArgs)
+    if ($LASTEXITCODE -ne 0) { throw "git $($GitArgs -join ' ') failed (exit $LASTEXITCODE)." }
+    return $lines
+}
+
+function Get-Head { return "$(Invoke-Git @('rev-parse', 'HEAD'))".Trim() }
 
 function Get-ShortCommit([string]$Commit) {
     if ($Commit.Length -gt 8) { return $Commit.Substring(0, 8) }
@@ -136,7 +146,7 @@ function Assert-NotPublished {
     }
 }
 
-function Get-TreeChanges { return @(git -C $Root status --porcelain --untracked-files=all | Where-Object { $_ }) }
+function Get-TreeChanges { return @(Invoke-Git @('status', '--porcelain', '--untracked-files=all') | Where-Object { $_ }) }
 
 function Assert-OnlyChanged {
     # The working tree's changes are all in -Paths, the files the stage itself writes.
@@ -150,7 +160,7 @@ function Assert-OnlyChanged {
 function Assert-PushedHead {
     Assert-OnlyChanged
     $head = Get-Head
-    $remote = (("$(@(git -C $Root ls-remote origin refs/heads/main) | Select-Object -First 1)") -split '\s+')[0]
+    $remote = (("$(@(Invoke-Git @('ls-remote', 'origin', 'refs/heads/main')) | Select-Object -First 1)") -split '\s+')[0]
     if ($head -ne $remote) { throw "HEAD $head isn't origin's main ($remote). Push the release commit first." }
     return $head
 }
@@ -190,7 +200,7 @@ function Invoke-ReleaseGradle {
 
 function Get-UnparsedScripts {
     # Every tracked .ps1 that doesn't parse, read as UTF-8 so both editions see the same text.
-    foreach ($name in @(git -C $Root ls-files -- '*.ps1')) {
+    foreach ($name in @(Invoke-Git @('ls-files', '--', '*.ps1'))) {
         $tokens = $null
         $errors = $null
         $text = [IO.File]::ReadAllText((Join-Path $Root $name), [Text.Encoding]::UTF8)
@@ -245,7 +255,7 @@ function Assert-BundlePinned {
     }
     if (-not $hasDex) { throw "$Bundle has no classes.dex, so Morphe Manager would load no patches from it." }
     $stamp = [regex]::Match($manifest, '(?m)^Timestamp: (\d+)').Groups[1].Value
-    $seconds = "$(git -C $Root log -1 --format=%ct $Commit)".Trim()
+    $seconds = "$(Invoke-Git @('log', '-1', '--format=%ct', $Commit))".Trim()
     if ($stamp -ne "${seconds}000") {
         throw "The bundle's Timestamp $stamp isn't the release commit's time ($seconds). Build it again from a clean checkout."
     }
@@ -268,6 +278,25 @@ function Test-Assets {
     return $listed[$bundleName]
 }
 
+function Invoke-Gh {
+    # Output lines of a gh read; a non-zero exit throws with gh's own message. Standard error stays
+    # out of what it returns: a gh warning there would otherwise be published as a description.
+    param([string[]]$GhArgs)
+    $preference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = 'Continue'
+        $global:LASTEXITCODE = 0
+        $all = @(& gh @GhArgs 2>&1)
+        $code = $LASTEXITCODE
+    } finally {
+        $ErrorActionPreference = $preference
+    }
+    $lines = @($all | Where-Object { $_ -isnot [System.Management.Automation.ErrorRecord] } | ForEach-Object { "$_" })
+    $errors = @($all | Where-Object { $_ -is [System.Management.Automation.ErrorRecord] } | ForEach-Object { "$_" })
+    if ($code -ne 0) { throw "gh $($GhArgs -join ' ') failed (exit $code): $(($errors + $lines) -join ' ')" }
+    return $lines
+}
+
 function Test-ReleaseOnGitHub {
     $preference = $ErrorActionPreference
     try {
@@ -275,18 +304,22 @@ function Test-ReleaseOnGitHub {
         # terminating error under Stop. The exit code is the answer.
         $ErrorActionPreference = 'Continue'
         $global:LASTEXITCODE = 0
-        gh release view $tag -R $Repository --json tagName 2>&1 | Out-Null
-        return ($LASTEXITCODE -eq 0)
+        $answer = @(gh release view $tag -R $Repository --json tagName 2>&1 | ForEach-Object { "$_" })
+        $code = $LASTEXITCODE
     } finally {
         $ErrorActionPreference = $preference
     }
+    if ($code -eq 0) { return $true }
+    # Only gh's own "release not found" means unpublished; auth and network failures stop the stage.
+    if (($answer -join ' ') -match 'release not found') { return $false }
+    throw "gh release view $tag failed (exit $code): $($answer -join ' ')"
 }
 
 switch ($Stage) {
     'prepare' {
         Assert-NotPublished
-        if ("$(git -C $Root rev-parse --abbrev-ref HEAD)".Trim() -ne 'main') { throw 'Releases are cut on main.' }
-        if ("$(git -C $Root tag --list $tag)".Trim()) { throw "$tag already exists. Release a new version." }
+        if ("$(Invoke-Git @('rev-parse', '--abbrev-ref', 'HEAD'))".Trim() -ne 'main') { throw 'Releases are cut on main.' }
+        if ("$(Invoke-Git @('tag', '--list', $tag))".Trim()) { throw "$tag already exists. Release a new version." }
         Assert-OnlyChanged @('CHANGELOG.md', 'gradle.properties', 'README.md', 'patches-list.json')
         if (-not $Date) { $Date = (Get-Date).ToString('yyyy-MM-dd') }
         Write-Step (Invoke-ChangelogCut -Path (Join-Path $Root 'CHANGELOG.md') -Version $Version -Date $Date)
@@ -329,8 +362,8 @@ switch ($Stage) {
             Write-Warning "preflight took $minutes minutes, over its five-minute budget. Look for a slow step before the next release."
         }
         Save-StageRecord 'preflight' @{ minutes = $minutes }
-        Write-Step ("preflight passed in $minutes minutes. Push with BUILD_QUEUE_PRIORITY=release so the full gate runs " +
-            'at release priority, then run -Stage build.')
+        Write-Step ("preflight passed in $minutes minutes. Push with HUSHTELEGRAM_SKIP_PRE_PUSH=1, since -Stage build runs " +
+            'the full suite and every fixture apply on the pushed commit, then run -Stage build.')
     }
     'build' {
         Assert-NotPublished
@@ -423,10 +456,10 @@ switch ($Stage) {
         $notesPath = Join-Path $stages 'notes.md'
         Write-ReleaseText -Path $notesPath -Text $notes
 
-        if (-not "$(git -C $Root tag --list $tag)".Trim()) { Invoke-Step "Tagging $tag" { git -C $Root tag $tag $head } }
-        $tagged = "$(git -C $Root rev-parse "$tag^{commit}")".Trim()
+        if (-not "$(Invoke-Git @('tag', '--list', $tag))".Trim()) { Invoke-Step "Tagging $tag" { git -C $Root tag $tag $head } }
+        $tagged = "$(Invoke-Git @('rev-parse', "$tag^{commit}"))".Trim()
         if ($tagged -ne $head) { throw "$tag points at $tagged, not the release commit $head." }
-        $remoteTag = "$(@(git -C $Root ls-remote origin "refs/tags/$tag") | Select-Object -First 1)"
+        $remoteTag = "$(@(Invoke-Git @('ls-remote', 'origin', "refs/tags/$tag")) | Select-Object -First 1)"
         if (-not $remoteTag) {
             Invoke-Step "Pushing $tag" { git -C $Root push origin "refs/tags/$tag" }
         } elseif (($remoteTag -split '\s+')[0] -ne $head) {
@@ -457,7 +490,7 @@ switch ($Stage) {
         } finally {
             Remove-Item -LiteralPath $hostedCopy -Recurse -Force -ErrorAction SilentlyContinue
         }
-        $body = @(gh release view $tag -R $Repository --json body --jq .body) -join "`n"
+        $body = @(Invoke-Gh @('release', 'view', $tag, '-R', $Repository, '--json', 'body', '--jq', '.body')) -join "`n"
         $missing = @(Get-MissingChangelogBullets -Changelog $changelog -Version $Version -Notes $body)
         if ($missing.Count -gt 0) {
             throw "The published notes leave out $($missing.Count) of the $Version bullets, starting with: $($missing[0])"
@@ -477,7 +510,7 @@ switch ($Stage) {
         if (-not $Description -or -not (Test-Path -LiteralPath $Description -PathType Leaf)) {
             throw '-Description names the file holding the text Morphe Manager shows for the bundle.'
         }
-        $publishedAt = "$(gh release view $tag -R $Repository --json publishedAt --jq .publishedAt)".Trim()
+        $publishedAt = "$(Invoke-Gh @('release', 'view', $tag, '-R', $Repository, '--json', 'publishedAt', '--jq', '.publishedAt'))".Trim()
         if (-not $publishedAt) { throw "$tag isn't published on GitHub. Run -Stage publish first." }
         $invariant = [Globalization.CultureInfo]::InvariantCulture
         $created = [DateTimeOffset]::Parse($publishedAt, $invariant).UtcDateTime.ToString('yyyy-MM-ddTHH:mm:ss', $invariant)
@@ -487,7 +520,7 @@ switch ($Stage) {
         Set-BugFormVersion -Path (Join-Path $Root '.github/ISSUE_TEMPLATE/bug_report.yml') -Version $Version -TelegramVersion $telegram
         Write-Step "patches-bundle.json points at $tag (created_at $created), and the bug form reads HushTelegram $Version on Telegram $telegram"
         $count = @((Get-Catalog).patches).Count
-        $current = "$(gh repo view $Repository --json description --jq .description)".Trim()
+        $current = "$(Invoke-Gh @('repo', 'view', $Repository, '--json', 'description', '--jq', '.description'))".Trim()
         $updated = Get-UpdatedRepoDescription -Description $current -Version $Version -Count $count -TelegramVersion $telegram
         if ($updated -cne $current) {
             Invoke-Step 'Updating the repository description' { gh repo edit $Repository --description $updated }

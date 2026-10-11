@@ -162,6 +162,20 @@ tasks {
         classpath = sourceSets["test"].runtimeClasspath
         mainClass.set("santodan.patches.VerifyNuvioStreamPreloadRuntimeKt")
     }
+    register<JavaExec>("verifyNuvioNextEpisodePreload") {
+        dependsOn("testClasses")
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("santodan.patches.VerifyNuvioNextEpisodePreloadKt")
+    }
+    register<JavaExec>("verifyNuvioNextEpisodeBundle") {
+        dependsOn("testClasses", "buildAndroid")
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("santodan.patches.VerifyNuvioNextEpisodeBundleKt")
+        maxHeapSize = "4g"
+        args(file("../../OriginalApps/NuvioTV-1.1.0-beta5.apk").absolutePath,
+            file("${layout.buildDirectory.get()}/libs/patches-${project.version}.mpp").absolutePath,
+            file("${layout.buildDirectory.get()}/verification/nuvio-next-episode-bundle").absolutePath)
+    }
     register<JavaExec>("verifyNuvioBadgeComposition") {
         dependsOn("testClasses")
         classpath = sourceSets["test"].runtimeClasspath
@@ -237,6 +251,14 @@ tasks {
         classpath = sourceSets["test"].runtimeClasspath
         mainClass.set("santodan.patches.VerifyRedditGuestMode")
         args(fileTree("../../.inspect-reddit") { include("classes*.dex") }.files.sorted().map { it.absolutePath })
+    }
+
+    register<JavaExec>("verifyRedditPostBatch") {
+        dependsOn("testClasses", ":extensions:reddit-filter:compileReleaseJavaWithJavac")
+        classpath = sourceSets["test"].runtimeClasspath + files(androidTestJar,
+            project(":extensions:reddit-filter").layout.buildDirectory.dir(
+                "intermediates/javac/release/compileReleaseJavaWithJavac/classes"))
+        mainClass.set("santodan.patches.VerifyRedditPostBatch")
     }
 
     register<JavaExec>("verifyPilloPatch") {

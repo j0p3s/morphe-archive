@@ -1071,7 +1071,7 @@ try {
     # the unanchored pattern also matched PackageVersions[0], the newest build alone; the release
     # root section below runs the check on a receipt of its own as well.
     $factsSource = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'validate-release-facts.ps1') -Raw
-    Assert-True ($factsSource -match '-ExpectedPatchNames @\(\$resolvedList\.PatchList\.patches' -and
+    Assert-True ($factsSource -match '-ExpectedPatchNames @\(Get-SameAppPatchNames -PatchList \$resolvedList\.PatchList\)' -and
         $factsSource -match '\$receiptTarget = Get-PatchTarget -PatchList \$resolvedList\.PatchList' -and
         $factsSource -match '-ExpectedPackageName \$receiptTarget\.PackageName' -and
         $factsSource -match '-ExpectedPackageVersions \$receiptTarget\.PackageVersions(?![\w.\[])' -and
@@ -2312,7 +2312,7 @@ try {
     # patcher, Manager at the README's floor refuses it.
     # Test results as Gradle writes them, one class per file, for the cases below.
     $runtimeResults = 'extensions/instagram/build/test-results/testDebugUnitTest'
-    $patchResults = 'patches/build/test-results/test'
+    $patchResults = 'patches/build/test-results/test/direct'
     function Write-FactsResults {
         param([string]$Folder, [string]$Suite, [int]$Tests, [int]$Skipped = 0, [string]$Under = $factsRoot)
         $directory = Join-Path $Under $Folder
@@ -2414,10 +2414,9 @@ param([string]$Root, [switch]$SkipDescriptionTestCount, [switch]$SkipTestResults
     $patchQuoted = 7
     $indexDocument = [ordered]@{
         created_at = '2026-09-30T12:00:00'
-        description = ("HushGram v$versionHere`: $countHere patches for Instagram $buildHere (com.instagram.android).`n`n" +
-            "Validation: $runtimeQuoted runtime tests passed locally. All $patchQuoted patch tests passed too.`n`n" +
-            "Needs Morphe Manager $floorHere or newer. Patch the arm64-v8a bundle of Instagram $buildHere, build $codeHere. " +
-            "Every one of the $countHere patches applied to it.")
+        description = ("## [$versionHere](https://github.com/$slugHere/compare/v0.0.1...v$versionHere) (2026-09-30)`n`n" +
+            "### Features`n`n* **Instagram:** Every change, one line each.`n`n" +
+            "### Validation`n`nValidation: $runtimeQuoted runtime tests passed locally. All $patchQuoted patch tests passed too.")
         download_url = "https://github.com/$slugHere/releases/download/v$versionHere/patches-$versionHere.mpp"
         signature_download_url = ''
         version = $versionHere
@@ -2444,19 +2443,21 @@ param([string]$Root, [switch]$SkipDescriptionTestCount, [switch]$SkipTestResults
         @{ File = 'patches-bundle.json'; Case = 'an index publishing another version'; Pattern = "*patches-bundle.json version does not match v$versionHere*"
             Edit = { param($text) $text -replace '"version":\s*"[^"]+"', '"version": "0.0.1"' } },
         @{ File = 'patches-bundle.json'; Case = 'a description counting other patches'; Pattern = '*bundle description patch count*'
-            Edit = { param($text) $text -replace '(?<!\d)\d+ patches\b', '3 patches' } },
-        @{ File = 'patches-bundle.json'; Case = 'a description counting two ways'; Pattern = "*names 3 and $countHere patches, and it has to name one count*"
-            Edit = { param($text) ([regex]'(?<!\d)\d+ patches\b').Replace($text, '3 patches', 1) } },
+            Edit = { param($text) $text.Replace('Validation: ', "It has $($countHere + 1) patches. Validation: ") } },
+        @{ File = 'patches-bundle.json'; Case = 'a description counting two ways'; Pattern = "*names $($countHere + 1) and $($countHere + 2) patches, and it has to name one count*"
+            Edit = { param($text) $text.Replace('Validation: ', "It has $($countHere + 1) patches and $($countHere + 2) patches. Validation: ") } },
         @{ File = 'patches-bundle.json'; Case = 'a description naming another build'; Pattern = '*bundle description target version*'
-            Edit = { param($text) $text.Replace("Instagram $buildHere", 'Instagram 448.0.0.1.1') } },
+            Edit = { param($text) $text.Replace('Validation: ', 'Built for Instagram 448.0.0.1.1. Validation: ') } },
         @{ File = 'patches-bundle.json'; Case = 'an address that is not the release asset'; Pattern = '*patches-bundle.json download URL does not match*'
             Edit = { param($text) $text -replace 'https://github\.com/SysAdminDoc/HushGram/releases/download/[^"]+', 'http://127.0.0.1:1/patches.mpp' } },
         @{ File = 'patches-bundle.json'; Case = 'an address over plain HTTP'; Pattern = '*must use HTTPS*'
             Edit = { param($text) $text.Replace('"https://github.com/', '"http://github.com/') } },
         @{ File = 'patches-bundle.json'; Case = 'an address on another host'; Pattern = '*must be on github.com*'
             Edit = { param($text) $text.Replace('"https://github.com/', '"https://example.com/') } },
-        @{ File = 'patches-bundle.json'; Case = 'a description naming no Manager'; Pattern = '*does not say which Morphe Manager it needs*'
-            Edit = { param($text) $text -replace 'Needs Morphe Manager \S+ or newer\. ', '' } },
+        @{ File = 'patches-bundle.json'; Case = 'a description opening on another version'; Pattern = '*bundle description version heading*'
+            Edit = { param($text) $text -replace '## \[[^\]]+\]', '## [0.0.1]' } },
+        @{ File = 'patches-bundle.json'; Case = 'a description with no version heading'; Pattern = '*bundle description version heading*'
+            Edit = { param($text) $text -replace '## \[[^\]]+\]\([^)]*\) \([^)]*\)', 'HushGram' } },
         @{ File = 'README.md'; Case = 'a README still saying there''s no release'; Pattern = "*README still says there's no release yet*"
             Edit = { param($text) $text + "`nThere's no release yet.`n" } },
         @{ File = 'README.md'; Case = 'a README naming no latest release'; Pattern = '*does not say which release is the latest*'
@@ -2499,12 +2500,22 @@ param([string]$Root, [switch]$SkipDescriptionTestCount, [switch]$SkipTestResults
             "The lenient check refused the next version being prepared over the published index: $said"
         Assert-Throws { Invoke-Facts } "*patches-bundle.json version does not match v$nextVersion*" `
             'The strict check accepted an index that lags the source.'
+        # The published index still holds the old layout, an intro line and no version heading. While
+        # it lags the source that description is history and passes as it is. Once this release
+        # wrote the index (the strict run, and the 'no version heading' case above) it can't.
+        Set-FactsFile 'patches-bundle.json' { param($text) $text -replace '"description":\s*"[^"]*"', '"description": "HushGram v0.0.1: 3 patches for Instagram 1.2.3 (com.instagram.android)."' }
+        $said = Invoke-LenientFacts
+        Assert-True ($said -like "*source $nextVersion is being prepared while the working index remains on $versionHere*") `
+            "The lenient check refused an old-layout description on a lagging index: $said"
+        Assert-Throws { Invoke-Facts } "*patches-bundle.json version does not match v$nextVersion*" `
+            'The strict check accepted an index that lags the source.'
+        Reset-FactsFile 'patches-bundle.json'
         # And the published version's heading can't go while the index still publishes it.
         Set-FactsFile 'CHANGELOG.md' { param($text) $text.Replace("## $versionHere (2026-09-30)", 'Some prose.') }
         Assert-Throws { Invoke-LenientFacts } "*no heading for $versionHere*" `
             'The lenient check accepted a CHANGELOG that dropped the version the index publishes.'
     } finally {
-        foreach ($name in @('gradle.properties', 'patches-list.json', 'README.md', 'CHANGELOG.md')) { Reset-FactsFile $name }
+        foreach ($name in @('gradle.properties', 'patches-list.json', 'README.md', 'CHANGELOG.md', 'patches-bundle.json')) { Reset-FactsFile $name }
     }
 
     # A dead link: the address has every right shape and names a release nobody published. GitHub
@@ -2653,7 +2664,10 @@ try {
     $releaseVersionHere = Get-BundleVersion -Root $releaseRepo
     $releaseCatalog = Get-Content -LiteralPath (Join-Path $releaseRepo 'patches-list.json') -Raw | ConvertFrom-Json
     $releaseTarget = Get-PatchTarget -PatchList $releaseCatalog
-    $releaseNames = @($releaseCatalog.patches | ForEach-Object { [string]$_.name })
+    # As build-release-receipt.ps1 counts them: Install next to Instagram makes a second app and stays out.
+    $releaseNames = @(Get-SameAppPatchNames -PatchList $releaseCatalog)
+    # What a release publishes (README, the GitHub description, the bundle) is the whole catalog.
+    $releaseCatalogCount = @($releaseCatalog.patches).Count
     $releaseToolchain = Read-CatalogToolchain -Source 'the release fixture catalog' `
         -Text (Get-Content -LiteralPath (Join-Path $releaseRepo 'gradle/libs.versions.toml') -Raw)
     $releaseReceipt = Join-Path $releaseRepo "release-receipt-$releaseVersionHere.json"
@@ -3365,9 +3379,9 @@ try {
     $releaseFloor = $releaseToolchain.ManagerFloor
     [System.IO.File]::WriteAllText((Join-Path $releaseRepo 'patches-bundle.json'), ([ordered]@{
             created_at = '2026-09-30T12:00:00'
-            description = ("HushGram v$releaseVersionHere`: $($releaseNames.Count) patches for Instagram $declaredBuild.`n`n" +
-                "Validation: 5 runtime tests passed locally. All 7 patch tests passed too.`n`n" +
-                "Needs Morphe Manager $releaseFloor or newer.")
+            description = ("## [$releaseVersionHere](https://github.com/$slugHere/compare/v0.0.1...v$releaseVersionHere) (2026-09-30)`n`n" +
+                "### Features`n`n* **Instagram:** Every change, one line each.`n`n" +
+                "### Validation`n`nValidation: 5 runtime tests passed locally. All 7 patch tests passed too.")
             download_url = "https://github.com/$slugHere/releases/download/v$releaseVersionHere/patches-$releaseVersionHere.mpp"
             signature_download_url = ''
             version = $releaseVersionHere } | ConvertTo-Json -Depth 4), (New-Object System.Text.UTF8Encoding($false)))
@@ -3375,7 +3389,7 @@ try {
     $readmeText = Get-Content -LiteralPath $readmePath -Raw
     $readmeText = [regex]::Replace($readmeText, "(?m)There's no release yet\.[^\r\n]*", (
         "The latest release is [v$releaseVersionHere](https://github.com/$slugHere/releases/tag/v$releaseVersionHere), " +
-        "with $($releaseNames.Count) patches. Add it to Morphe Manager with " +
+        "with $($releaseCatalogCount) patches. Add it to Morphe Manager with " +
         "[this link](https://morphe.software/add-source?github=$([Uri]::EscapeDataString($slugHere)))."))
     Set-Content -LiteralPath $readmePath -Encoding UTF8 -NoNewline -Value $readmeText
     # The versions released before this one stay, as a release keeps them: the check holds the
@@ -3394,7 +3408,7 @@ try {
     foreach ($file in @($releaseBundle, $releaseSbom, $releaseReceipt, $releaseSums)) {
         Copy-Item -LiteralPath $file -Destination (Join-Path $servedDir (Split-Path -Leaf $file)) -Force
     }
-    Set-Content -LiteralPath (Join-Path $tools 'patch-names.txt') -Encoding ASCII -Value @($releaseNames | ForEach-Object { "Name: $_" })
+    Set-Content -LiteralPath (Join-Path $tools 'patch-names.txt') -Encoding ASCII -Value @($releaseCatalog.patches | ForEach-Object { "Name: $($_.name)" })
     $listJava = Join-Path $tools 'list-java.cmd'
     [System.IO.File]::WriteAllText($listJava, ((@(
         '@echo off',
@@ -3423,7 +3437,7 @@ try {
     # the release doesn't carry. Morphe's add-source page answers for this repository only, and gh
     # reads back the repository description a release sets, unless a case has put another in
     # $githubDescription. Dot-sourced into each run, so the check finds them first.
-    $githubDescription = "HushGram v$releaseVersionHere`: $($releaseNames.Count) patches for Instagram $declaredBuild."
+    $githubDescription = "HushGram v$releaseVersionHere`: $($releaseCatalogCount) patches for Instagram $declaredBuild."
     $publishedStandIns = {
         function Invoke-WebRequest {
             param($Uri, $Method, $OutFile, $MaximumRedirection, $TimeoutSec, [switch]$PassThru, [switch]$UseBasicParsing)
@@ -3489,13 +3503,13 @@ try {
     foreach ($expected in @(
             "*indexed bundle URL answers 200*",
             "*Morphe add-source page answers 200*",
-            "*the GitHub description of $slugHere names v$releaseVersionHere, $($releaseNames.Count) patches and Instagram $declaredBuild*",
+            "*the GitHub description of $slugHere names v$releaseVersionHere, $($releaseCatalogCount) patches and Instagram $declaredBuild*",
             "*5 runtime tests, 7 patch tests*",
             "*the Instagram source census is 0 day(s) old*",
             "*the hosted patches-$releaseVersionHere.mpp matches the bundle built here byte for byte*",
             "*published bundle is pinned to v$releaseVersionHere ($releaseCommit)*",
-            "*the published bundle carries $($releaseNames.Count) patches, as described*",
-            "*the index asks for Morphe Manager $releaseFloor or newer, as tag v$releaseVersionHere pins*",
+            "*the published bundle carries $($releaseCatalogCount) patches, as described*",
+            "*the index description names no Morphe Manager floor, the README carries it*",
             "*Morphe Manager can read the $releaseVersionHere entry*",
             "*the hosted release-receipt-$releaseVersionHere.json is the receipt checked here, as SHA256SUMS.txt lists it*",
             "*the hosted patches-$releaseVersionHere.cdx.json is the SBOM the receipt names and SHA256SUMS.txt lists*",
@@ -3564,7 +3578,7 @@ try {
         } finally {
             Remove-Item -LiteralPath $releaseBundle -Force -ErrorAction SilentlyContinue
         }
-        $sevenPatchTests = Get-ChildItem -LiteralPath (Join-Path $indexGate 'test-results/test') -Filter '*.xml' | Select-Object -First 1
+        $sevenPatchTests = Get-ChildItem -LiteralPath (Join-Path $indexGate 'test-results/test') -Filter '*.xml' -File -Recurse | Select-Object -First 1
         $sevenPatchTestsText = [System.IO.File]::ReadAllText($sevenPatchTests.FullName)
         try {
             # Six patch tests in the gate's results, with the manifest saying so, against a
@@ -3597,7 +3611,7 @@ try {
         Assert-Throws { Invoke-IndexPushCheck $publishedRun } "*The GitHub description of $slugHere does not say*" `
             'An index push went through with a GitHub description naming another release.'
     } finally {
-        $githubDescription = "HushGram v$releaseVersionHere`: $($releaseNames.Count) patches for Instagram $declaredBuild."
+        $githubDescription = "HushGram v$releaseVersionHere`: $($releaseCatalogCount) patches for Instagram $declaredBuild."
     }
     $savedSlug = $slugHere
     $slugHere = 'SysAdminDoc/Elsewhere'

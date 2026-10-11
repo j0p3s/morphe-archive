@@ -94,9 +94,11 @@ public class CustomBrandingPatch {
         @Nullable
         String startupAnimationResourceName() {
             return switch (this) {
-                case LIGHT, DARK, BLACK -> "tada_startup_animation";
+                case ORIGINAL -> null;
+                case CUSTOM -> null;
+                // The play animation is shared by PLAY and PLAY_BLACK.
                 case PLAY, PLAY_BLACK -> "tada_startup_animation_play";
-                default -> null;
+                default -> "tada_startup_animation";
             };
         }
     }

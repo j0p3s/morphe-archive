@@ -20,39 +20,39 @@ About	Acerca de
 Android 11 and older don't say which links open here. Tap to open this app's settings, then Open by default.	Android 11 y las versiones anteriores no indican qué enlaces se abren aquí. Toca para abrir los ajustes de esta app y luego Abrir de forma predeterminada.
 Back	Atrás
 Cancel	Cancelar
-Loads switch choices from a saved file. You see how many switches it will change before anything is applied. It applies to all accounts.	Carga opciones de interruptores desde un archivo guardado. Ves cuántos interruptores cambiará antes de aplicar nada. Se aplica a todas las cuentas.
+Loads your switches, filter lists and sticker size from a saved file. You see which switches it will change before anything is applied. It applies to all accounts.	Carga tus interruptores, listas de filtros y tamaño de stickers desde un archivo guardado. Ves qué interruptores cambiará antes de aplicar nada. Se aplica a todas las cuentas.
 Clear diagnostic data	Borrar datos de diagnóstico
 Copy a short report or save the full one to Download/Morphe. Links, IDs and sign-in details are left out. Look it over before sharing.	Copia un informe breve o guarda el completo en Download/Morphe. Los enlaces, los ID y los datos de inicio de sesión no se incluyen. Revísalo antes de compartirlo.
 Copy quick report	Copiar informe rápido
-Couldn't import the settings, and couldn't put back the ones you had. Check the switches on this screen.	No se pudo importar la configuración ni restaurar la que tenías. Revisa los interruptores de esta pantalla.
+Couldn't import or restore old settings. Check the switches.	No se pudo importar ni restaurar la configuración. Revisa los interruptores.
 Couldn't import the settings. Nothing was changed.	No se pudo importar la configuración. No se cambió nada.
 Couldn't open that file. Nothing was changed.	No se pudo abrir ese archivo. No se cambió nada.
 Couldn't open the file picker. Try again.	No se pudo abrir el selector de archivos. Inténtalo de nuevo.
 Couldn't put back the diagnostic data. Try again.	No se pudieron restaurar los datos de diagnóstico. Inténtalo de nuevo.
 Couldn't save the settings file. Try again.	No se pudo guardar el archivo de configuración. Inténtalo de nuevo.
 Couldn't start that. Try again in a moment.	No se pudo iniciar. Inténtalo de nuevo en un momento.
-Couldn't start the report export. Try again shortly.	No se pudo iniciar la exportación del informe. Inténtalo de nuevo en breve.
+Couldn't start the report export. Try again in a moment.	No se pudo iniciar la exportación del informe. Inténtalo de nuevo en un momento.
 Couldn't turn HushTelegram back on. Try again.	No se pudo volver a activar HushTelegram. Inténtalo de nuevo.
 Debug logging	Registro de depuración
 Diagnostic data cleared. Tap again to put it back.	Se borraron los datos de diagnóstico. Toca de nuevo para restaurarlos.
 Diagnostic data put back.	Se restauraron los datos de diagnóstico.
 Diagnostic report copied to the clipboard.	Informe de diagnóstico copiado en el portapapeles.
 Clears the activity log and patch checks that a report would include.	Borra el registro de actividad y las comprobaciones de parches que incluiría un informe.
-Every switch except Debug logging acts as if it were off. Edits made when you patched stay in. Your choices stay saved.	Todos los interruptores salvo Registro de depuración funcionan como si estuvieran desactivados. Los cambios hechos al parchear se mantienen. Tus opciones siguen guardadas.
+Every switch except Debug logging acts as if it were off. Your choices stay saved. Edits made when you patched stay in.	Todos los interruptores salvo Registro de depuración funcionan como si estuvieran desactivados. Tus opciones siguen guardadas. Los cambios hechos al parchear se mantienen.
 Export diagnostic report	Exportar informe de diagnóstico
 Export settings	Exportar configuración
 After Telegram restarts, every switch except Debug logging acts as if it were off. Your choices stay saved. Edits made when you patched stay in.	Después de reiniciar Telegram, todos los interruptores salvo Registro de depuración funcionan como si estuvieran desactivados. Tus opciones siguen guardadas. Los cambios hechos al parchear se mantienen.
 Hide ads	Ocultar anuncios
 Links, updates, backup and more	Enlaces, actualizaciones, copia de seguridad y más
 Privacy	Privacidad
-Saves your switch choices to a file, for all accounts in this Telegram app. Pause, Debug logging and the update check aren't included.	Guarda en un archivo tus opciones de interruptores, para todas las cuentas de esta app de Telegram. No incluye Pausar, Registro de depuración ni la comprobación de actualizaciones.
-Settings exported. The app holding the file wouldn't let HushTelegram read it back, so it wasn't checked.	Configuración exportada. La app que guarda el archivo no dejó que HushTelegram lo volviera a leer, así que no se comprobó.
-The app holding that file is taking too long, so HushTelegram stopped waiting. Nothing was changed.	La app que guarda ese archivo tarda demasiado, así que HushTelegram dejó de esperar. No se cambió nada.
-The app holding the last settings file still hasn't answered. Try again later.	La app del último archivo de configuración aún no ha respondido. Inténtalo más tarde.
-The app holding the settings file is taking too long, so HushTelegram stopped waiting. That app may still finish saving it, so check the file before you rely on it.	La app que guarda el archivo de configuración tarda demasiado, así que HushTelegram dejó de esperar. Esa app aún puede terminar de guardarlo, así que revisa el archivo antes de confiar en él.
+Saves your switches, filter lists and sticker size to a file, for all accounts in this Telegram app. Pause, Debug logging, the HushTelegram release check, UnifiedPush and Folders by chat type stay out.	Guarda en un archivo tus interruptores, listas de filtros y tamaño de stickers, para todas las cuentas de esta app de Telegram. Pausar, Registro de depuración, la búsqueda de versiones de HushTelegram, UnifiedPush y Carpetas por tipo de chat se quedan fuera.
+Settings exported but not checked. Open the file to make sure.	Configuración exportada sin revisar. Abre el archivo para comprobarlo.
+That app is slow to answer. Nothing was changed. Try again.	Esa app tarda en responder. No se cambió nada. Inténtalo de nuevo.
+That file's app still hasn't answered. Try again later.	La app de ese archivo aún no responde. Inténtalo más tarde.
+That app is slow. It may still save the file, so check it.	Esa app va lenta. Puede que aún guarde el archivo, así que revísalo.
 The file %1$s couldn't be removed. Delete it from %2$s, then tap Resume again.	No se pudo eliminar el archivo %1$s. Bórralo de %2$s y luego vuelve a tocar Reanudar.
-The settings file was saved, but what's in it doesn't match what was written. Save it again as a new file.	El archivo de ajustes se guardó, pero su contenido no coincide con lo que se escribió. Guárdalo de nuevo como un archivo nuevo.
-Until you resume, every switch except Debug logging acts as if it were off. Edits made when you patched stay in.	Hasta que reanudes, todos los interruptores salvo Registro de depuración funcionan como si estuvieran desactivados. Los cambios hechos al parchear se mantienen.
+Saved, but the file doesn't match. Save it again as a new file.	Se guardó, pero el archivo no coincide. Guárdalo de nuevo como archivo nuevo.
+Until you resume, every switch except Debug logging acts as if it were off. Your choices stay saved. Edits made when you patched stay in.	Hasta que reanudes, todos los interruptores salvo Registro de depuración funcionan como si estuvieran desactivados. Tus opciones siguen guardadas. Los cambios hechos al parchear se mantienen.
 Full report saved to %1$s	Informe completo guardado en %1$s
 The GPL-3.0 license, and credits for the projects HushTelegram is built on	La licencia GPL-3.0 y los créditos de los proyectos en los que se basa HushTelegram
 HushTelegram is on	HushTelegram está activado
@@ -82,29 +82,29 @@ Couldn't reach GitHub. Try again later.	No se pudo contactar con GitHub. Intént
 GitHub is blocking checks from this network for now. Try again later.	GitHub está bloqueando las comprobaciones desde esta red por ahora. Inténtalo más tarde.
 GitHub sent a reply HushTelegram couldn't read. Try again later.	GitHub envió una respuesta que HushTelegram no pudo leer. Inténtalo más tarde.
 Saving the settings file	Guardando el archivo de configuración
-Set when you patched	Aplicado al parchear
 Settings couldn't open	No se pudo abrir la configuración
-Settings couldn't refresh completely. Reopen settings and try again.	No se pudo actualizar la configuración por completo. Vuelve a abrirla e inténtalo de nuevo.
+Settings couldn't refresh. Reopen settings and try again.	La configuración no se actualizó. Ábrela de nuevo e inténtalo otra vez.
 Settings exported.	Configuración exportada.
 Settings imported. %1$d switch changed.	Configuración importada. Cambió %1$d interruptor.
 Settings imported. %1$d switches changed.	Configuración importada. Cambiaron %1$d interruptores.
 Source code and issues	Código fuente e incidencias
 Stays in while paused	Se mantiene durante la pausa
 Tap to turn it back on.	Toca para volver a activarlo.
-That file is too large to be a settings file. Nothing was changed.	Ese archivo es demasiado grande para ser un archivo de configuración. No se cambió nada.
-That file isn't readable text, so it may have been damaged on the way. Nothing was changed.	Ese archivo no es texto legible, así que puede haberse dañado por el camino. No se cambió nada.
-That file lists a setting twice, so there's no telling which value to use. Nothing was changed.	Ese archivo incluye un ajuste dos veces, así que no se sabe qué valor usar. No se cambió nada.
+That file is too big for a settings file. Nothing was changed.	Ese archivo es demasiado grande para ser de configuración. No se cambió nada.
+That file isn't readable text. Nothing was changed.	Ese archivo no es texto legible. No se cambió nada.
+That file lists a setting twice. Nothing was changed.	Ese archivo repite una configuración. No se cambió nada.
 That isn't a HushTelegram settings file. Nothing was changed.	Eso no es un archivo de configuración de HushTelegram. No se cambió nada.
-That settings file holds a value HushTelegram can't read. Nothing was changed.	Ese archivo de configuración contiene un valor que HushTelegram no puede leer. No se cambió nada.
-That settings file is damaged or only partly downloaded. Nothing was changed.	Ese archivo de configuración está dañado o solo se descargó en parte. No se cambió nada.
-That settings file was written by a newer HushTelegram than this one. Nothing was changed.	Ese archivo de configuración lo escribió una versión de HushTelegram más reciente que esta. No se cambió nada.
-The diagnostic report couldn't be saved yet. Try again in a moment.	Todavía no se pudo guardar el informe de diagnóstico. Inténtalo de nuevo en un momento.
+A value in that file can't be read. Nothing was changed.	No se puede leer un valor de ese archivo. No se cambió nada.
+That file is damaged. Download it again. Nothing was changed.	Ese archivo está dañado. Descárgalo de nuevo. No se cambió nada.
+Update HushTelegram to read that file. Nothing was changed.	Actualiza HushTelegram para leer ese archivo. No se cambió nada.
+The report couldn't be saved yet. Try again in a moment.	El informe aún no se pudo guardar. Inténtalo de nuevo en un momento.
 The diagnostic report couldn't be saved. Try again.	No se pudo guardar el informe de diagnóstico. Inténtalo de nuevo.
 The file %1$s couldn't be removed. Delete it from %2$s to turn HushTelegram back on.	No se pudo eliminar el archivo %1$s. Bórralo de %2$s para volver a activar HushTelegram.
-That setting couldn't be updated. The switch shows the value that is saved.	No se pudo actualizar ese ajuste. El interruptor muestra el valor guardado.
+Couldn't remove %1$s. Delete it by hand.	No se pudo quitar %1$s. Bórralo a mano.
+Couldn't save that. It's back to the saved value. Try again.	No se pudo guardar. Volvió al valor guardado. Inténtalo de nuevo.
 There's no diagnostic data to clear.	No hay datos de diagnóstico que borrar.
 There's no diagnostic data to put back.	No hay datos de diagnóstico que restaurar.
-This phone has no file picker, so there's no way to choose a file here.	Este teléfono no tiene selector de archivos, así que aquí no hay forma de elegir un archivo.
+This phone has no file picker, so you can't choose a file here.	Este teléfono no tiene selector de archivos, así que no puedes elegir uno.
 Version	Versión
 Records what HushTelegram does and shows error messages, to help with a bug report. Leave it off for everyday use.	Registra lo que hace HushTelegram y muestra mensajes de error, para ayudar con un informe de errores. Déjalo desactivado en el uso diario.
 You paused HushTelegram.	Pausaste HushTelegram.
@@ -112,7 +112,7 @@ Your switches already match that file, so nothing will change.	Tus interruptores
 Copy a short report to the clipboard.	Copia un informe breve en el portapapeles.
 Save the full report in Download/Morphe.	Guarda el informe completo en Download/Morphe.
 Settings imported.	Configuración importada.
-No app on this phone can open the link. The address is %1$s.	Ninguna app de este teléfono puede abrir el enlace. La dirección es %1$s.
+Can't open the link. Go to %1$s.	No se puede abrir el enlace. Ve a %1$s.
 # context: Separate pages under More settings. Settings backup contains export and import; Diagnostics contains logging and diagnostic data controls.
 Settings backup	Copia de ajustes
 Diagnostics	Diagnóstico
@@ -139,11 +139,10 @@ Android didn't say which links open here. Tap to check in Android's settings.	An
 Selecting links by hand	Seleccionar enlaces a mano
 
 A change here applies after Telegram restarts.	Un cambio de aquí se aplica cuando Telegram se reinicie.
-Android opens t.me links in this app only if you select their addresses on its Open by default page. Other link settings don't change.	Android abre los enlaces t.me en esta app solo si seleccionas sus direcciones en su página Abrir de forma predeterminada. Los demás ajustes de enlaces no cambian.
+Android opens t.me links in this Telegram app only if you select their addresses on its Open by default page. Other link settings don't change.	Android abre los enlaces t.me en esta app de Telegram solo si seleccionas sus direcciones en su página Abrir de forma predeterminada. Los demás ajustes de enlaces no cambian.
 Android verified this app for Telegram's web addresses, so their links open here.	Android verificó esta app para las direcciones web de Telegram, así que sus enlaces se abren aquí.
-Android's settings for this app didn't open. Open App info from Telegram's icon, then Open by default.	No se abrieron los ajustes de Android para esta app. Abre Información de la app desde el icono de Telegram y luego Abrir de forma predeterminada.
+App settings didn't open. Try App info, then Open by default.	No se abrió. Prueba Info de la app, luego Abrir de forma predeterminada.
 Removes sponsored messages in channels, sponsored accounts in search and ads in videos. They're never loaded, so none count as seen.	Quita los mensajes patrocinados en canales, las cuentas patrocinadas en la búsqueda y los anuncios en videos. Nunca se cargan, así que ninguno cuenta como visto.
-Chats	Chats
 HushTelegram %1$s on Telegram %2$s	HushTelegram %1$s en Telegram %2$s
 HushTelegram %1$s is made for Telegram %2$s.	HushTelegram %1$s está hecho para Telegram %2$s.
 HushTelegram pauses when Telegram restarts.	HushTelegram se pausa cuando Telegram se reinicie.
@@ -161,7 +160,6 @@ Stop usage reports	Detener los informes de uso
 channel ads	anuncios en canales
 video ads	anuncios en videos
 search ads	anuncios en búsquedas
-device statistics reports	informes de estadísticas del dispositivo
 channel read metrics	métricas de lectura de canales
 This patched app doesn't change %1$s.	Esta app parcheada no modifica %1$s.
 This patched app changes %1$s but not %2$s.	Esta app parcheada modifica %1$s, pero no %2$s.
@@ -185,10 +183,18 @@ call debug reports	informes de depuración de llamadas
 call log file uploads	subidas de archivos de registro de llamadas
 call log reports	informes de registro de llamadas
 Hide Premium, gifts and Stars	Ocultar Premium, regalos y Stars
-Removes Premium, Stars, My Grams, Business and Send a Gift from Settings, Gifts tabs on profiles, and the Gift button in channels.	Quita Premium, Stars, My Grams, Business y Enviar un regalo de los ajustes, las pestañas de regalos en los perfiles y el botón de regalo en los canales.
+Removes Premium, Stars, My Grams, Wallet, Business and Send a Gift from Settings, Wallet and Send Gram from the chat, profile and link menus, Gifts tabs on profiles, the Gift button in channels, and Premium stickers, their effects and Premium emoji packs if you don't have Premium.	Quita Premium, Stars, My Grams, Billetera, Business y Enviar un regalo de los ajustes, Billetera y Enviar Gram de los menús de chats, perfiles y enlaces, las pestañas de regalos en los perfiles, el botón de regalo en los canales y los stickers Premium con sus efectos y los paquetes de emojis Premium si no tienes Premium.
 Settings sales rows	Ofertas en Ajustes
 profile Gifts tabs	pestañas de regalos de los perfiles
 channel Gift button	botón de regalo de los canales
+attach menu Wallet button	botón de Billetera del menú de adjuntos
+chat list menu Wallet item	opción de Billetera del menú de la lista de chats
+profile menu Send Gram item	opción Enviar Gram del menú del perfil
+TON link Send Gram item	opción Enviar Gram de los enlaces TON
+Gram transfer Send Gram item	opción Enviar Gram de las transferencias de Gram
+Premium stickers in the keyboard and packs	stickers Premium del teclado y los paquetes
+Premium sticker effects	efectos de los stickers Premium
+Premium emoji packs in the emoji keyboard	paquetes de emojis Premium del teclado de emojis
 Hide promotional banners	Ocultar banners promocionales
 Hides the Premium, birthday and low Stars balance banners above your chat list. Account security notices and other suggestions still show.	Oculta los banners de Premium, cumpleaños y saldo bajo de Stars sobre tu lista de chats. Los avisos de seguridad de la cuenta y otras sugerencias se siguen mostrando.
 promotional suggestions	sugerencias promocionales
@@ -210,6 +216,7 @@ Premium promo views	vistas de promociones de Premium
 Premium promo taps	toques en promociones de Premium
 Premium promo accepts	aceptaciones de promociones de Premium
 Premium promo failures	fallos de promociones de Premium
+dual camera reports	informes de cámara dual
 Firebase crash reports	informes de fallos de Firebase
 Firebase session reports	informes de sesión de Firebase
 Accounts	Cuentas
@@ -304,6 +311,15 @@ Ask before sending a sticker	Preguntar antes de enviar un sticker
 Asks Send or Cancel before a sticker you tap goes into a chat. Cancel drops it. Scheduled stickers go out without asking.	Pregunta Enviar o Cancelar antes de que un sticker que tocas entre en un chat. Cancelar lo descarta. Los stickers programados salen sin preguntar.
 Turn off beta debug logs	Desactivar los registros de depuración de la beta
 Telegram Beta keeps debug logs on your phone all the time, its connection log included, and its own debug menu can't stop that. This stops them. Logs already saved stay until you clear them, and the regular build doesn't keep them, so nothing changes there. Restart Telegram to see the change.	Telegram Beta guarda registros de depuración en tu teléfono todo el tiempo, incluido el registro de conexión, y su propio menú de depuración no puede detenerlo. Esto los detiene. Los registros ya guardados se quedan hasta que los borres, y la versión normal no los guarda, así que ahí no cambia nada. Reinicia Telegram para ver el cambio.
+Translate with an outside service	Traducir con un servicio externo
+Adds Translate here to a message's menu and Translate this chat to a chat's menu, using Google's web translate in place of Telegram's Premium translation. The text you ask to translate is sent to Google, one message at a time, and nothing leaves your phone until you turn a chat or message on.	Añade Traducir aquí al menú de un mensaje y Traducir este chat al menú de un chat, con el traductor web de Google en lugar de la traducción Premium de Telegram. El texto que pidas traducir se envía a Google, un mensaje cada vez, y nada sale de tu teléfono hasta que actives un chat o un mensaje.
+Translate here	Traducir aquí
+Show original	Mostrar original
+Translate this chat	Traducir este chat
+This chat will be translated	Este chat se traducirá
+This chat shows the original messages	Este chat muestra los mensajes originales
+(Translated. Long-press for the original.)	(Traducido. Mantén pulsado para ver el original.)
+Translation isn't available right now	La traducción no está disponible ahora
 Ask before sending a GIF	Preguntar antes de enviar un GIF
 Asks Send or Cancel before a GIF you tap goes into a chat. Cancel drops it. Scheduled GIFs go out without asking.	Pregunta Enviar o Cancelar antes de que un GIF que tocas entre en un chat. Cancelar lo descarta. Los GIF programados salen sin preguntar.
 Ask before sending a voice or video message	Preguntar antes de enviar un mensaje de voz o de video
@@ -402,3 +418,146 @@ ID copied	ID copiado
 Data center %1$s	Centro de datos %1$s
 Copy data center %1$s	Copiar centro de datos %1$s
 Data center copied	Centro de datos copiado
+# context: titles of the settings pages that replaced the Chats page, after Morphe Manager's categories.
+Ads	Anuncios
+Chat list	Lista de chats
+Conversations	Conversaciones
+Playback	Reproducción
+Look and feel	Apariencia y uso
+# context: Hide channel bar buttons and Hide Send as button. Search, Direct messages, Info, Mute and Join are Telegram's own button names in a channel; Send as is Telegram's name for the picture that picks who you post as.
+Hide channel bar buttons	Ocultar botones de la barra del canal
+Search, Direct messages and Info leave the bar at the bottom of a channel. Mute and Join stay, and tapping the channel's name at the top still opens its info. A channel picks this up the next time you open it.	Buscar, Mensajes directos e Información salen de la barra inferior de un canal. Silenciar y Unirse se quedan, y tocar el nombre del canal arriba sigue abriendo su información. Un canal lo aplica la próxima vez que lo abras.
+Hide Send as button	Ocultar el botón Enviar como
+Your picture next to the message box goes away in groups and channels where you could post as a channel, while you're posting as yourself. Once you pick a channel it shows again, so you can always see who you're posting as. To pick one, turn this off first. A chat picks this up the next time you open it.	Tu foto junto al cuadro de mensaje desaparece en grupos y canales donde podrías publicar como un canal, mientras publicas como tú. Cuando eliges un canal vuelve a aparecer, así siempre ves como quién publicas. Para elegir uno, desactiva esto primero. Un chat lo aplica la próxima vez que lo abras.
+# context: Hide messages by keyword. A filter is one line of text the person writes; a line in slashes is a regular expression. The settings page has one list for groups and one for channels, each edited in a dialog with Save and Cancel. Keep /crypto|airdrop/ exactly as written.
+Hide messages by keyword	Ocultar mensajes por palabra clave
+Messages in groups and channels that match one of your filters are left out when you open the chat. Private chats and your own messages stay as they are. Nothing is deleted, and your filters stay on this phone.	Los mensajes de grupos y canales que coinciden con uno de tus filtros se omiten al abrir el chat. Los chats privados y tus propios mensajes se quedan como están. No se borra nada, y tus filtros se quedan en este teléfono.
+Filters for groups	Filtros para grupos
+Filters for channels	Filtros para canales
+No filters yet.	Aún no hay filtros.
+%1$d filter.	%1$d filtro.
+%1$d filters.	%1$d filtros.
+A list holds up to %1$d filters.	Una lista admite hasta %1$d filtros.
+Line %1$d is longer than %2$d characters.	La línea %1$d tiene más de %2$d caracteres.
+Line %1$d isn't a valid regex. Fix it or take off the slashes.	La línea %1$d no es una expresión válida. Corrígela o quita las barras.
+Line %1$d may be slow on long messages. Try a simpler pattern.	La línea %1$d podría ser lenta con mensajes largos. Prueba un patrón más simple.
+This list is too long for a settings file. Remove a few lines.	Lista demasiado larga para el archivo de configuración. Quita unas líneas.
+One filter a line	Un filtro por línea
+Text on a line matches wherever it appears in a message. A line in slashes, like /crypto|airdrop/, is a regular expression. Case doesn't matter.	El texto de una línea coincide dondequiera que aparezca en un mensaje. Una línea entre barras, como /crypto|airdrop/, es una expresión regular. No importan las mayúsculas.
+Save	Guardar
+Couldn't save the filters. Try again in a moment.	No se pudieron guardar los filtros. Inténtalo de nuevo en un momento.
+Filters saved.	Filtros guardados.
+%1$d list of message filters will change.	Cambiará %1$d lista de filtros de mensajes.
+%1$d lists of message filters will change.	Cambiarán %1$d listas de filtros de mensajes.
+# context: Change sticker size. The person picks a size for stickers in chats as a percent of Telegram's own size (50%, 75%, 125% or 150%), from a list that opens when they tap the Sticker size row. %1$s is that percent, already written the way the language writes one, for example 75%.
+Change sticker size	Cambiar el tamaño de los stickers
+Stickers in chats show at the size you pick below. Animated emoji and dice keep Telegram's size. A chat picks this up the next time you open it.	Los stickers en los chats se muestran al tamaño que elijas abajo. Los emojis animados y los dados mantienen el tamaño de Telegram. Un chat lo aplica la próxima vez que lo abras.
+Sticker size	Tamaño de los stickers
+%1$s of Telegram's size	%1$s del tamaño de Telegram
+Couldn't save the size. Try again in a moment.	No se pudo guardar el tamaño. Inténtalo de nuevo en un momento.
+The sticker size will change.	Cambiará el tamaño de los stickers.
+# context: short headings that split the Conversations and Look and feel settings pages into groups of switches. Each names what the switches under it change: things inside an open chat, the menu a message opens on a long press, sending, the attachment menu's camera and gallery, translation, messages hidden from a chat, messages others deleted, the theme, how messages and stickers look, profiles, touch feedback and the keyboard, and rows or buttons hidden to reduce clutter.
+In a chat	En un chat
+Message menu	Menú de mensajes
+Sending	Envío
+Attachment menu	Menú de adjuntos
+Translation	Traducción
+Hidden messages	Mensajes ocultos
+Deleted messages	Mensajes eliminados
+Theme	Tema
+Messages and stickers	Mensajes y stickers
+Profiles	Perfiles
+Touch and keyboard	Toque y teclado
+Less clutter	Menos distracciones
+# context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
+Support HushTelegram	Apoya HushTelegram
+# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
+Buy me a coffee on Ko-fi	Invítame a un café en Ko-fi
+# context: Faster downloads, a switch on the Playback page. Telegram downloads a file in pieces; this makes them bigger and asks for more at once.
+Faster downloads	Descargas más rápidas
+# context: that switch's summary. KB is kilobytes. "Goes back to small ones" means Telegram drops to the small pieces on its own if a big one fails.
+Files download in 512 KB pieces, 8 at a time, instead of 128 KB pieces 4 at a time. If a big piece fails, Telegram goes back to small ones. The next download picks this up.	Los archivos se descargan en partes de 512 KB, 8 a la vez, en lugar de partes de 128 KB, 4 a la vez. Si una parte grande falla, Telegram vuelve a las pequeñas. La próxima descarga ya lo aplica.
+# context: Translate with an outside service, on the Conversations page. A row under that switch, and the title of the dialog it opens: where the text to translate is sent.
+Translation service	Servicio de traducción
+Google's web translate. Tap to use an AI service with your own key.	El traductor web de Google. Toca para usar un servicio de IA con tu propia clave.
+# context: that row's summary once an AI service is set. %1$s is the service's host name, like api.openai.com, and %2$s its model name, like gpt-4o-mini.
+Your AI service at %1$s, model %2$s.	Tu servicio de IA en %1$s, modelo %2$s.
+# context: hints in the three fields of that dialog: the web address of the AI service, the model to ask, and the secret key the service gave the person.
+Service address	Dirección del servicio
+Model	Modelo
+API key	Clave de API
+# context: the dialog's explanation. OpenAI, OpenRouter, DeepSeek and Groq are company names and stay as they are.
+With a key, the text you translate goes to this AI service instead of Google. Any service that takes OpenAI's chat format works, like OpenAI, OpenRouter, DeepSeek or Groq. The key stays on this phone and never goes in a settings file.	Con una clave, el texto que traduces va a este servicio de IA en lugar de a Google. Funciona cualquier servicio que acepte el formato de chat de OpenAI, como OpenAI, OpenRouter, DeepSeek o Groq. La clave se queda en este teléfono y nunca va a un archivo de ajustes.
+# context: a dialog button that goes back to Google's free web translate and forgets the key. "Use Google" is also quoted in a message below.
+Use Google	Usar Google
+Couldn't save the translation service. Try again in a moment.	No se pudo guardar el servicio de traducción. Inténtalo de nuevo en un momento.
+Translation service saved.	Servicio de traducción guardado.
+Back to Google's web translate.	De vuelta al traductor web de Google.
+# context: why the dialog can't save yet. https:// stays as it is.
+Type your API key, or tap Use Google.	Escribe tu clave de API o toca Usar Google.
+Type a model name.	Escribe el nombre de un modelo.
+Take the spaces out of the address, model and key.	Quita los espacios de la dirección, el modelo y la clave.
+The address has to start with https://.	La dirección tiene que empezar por https://.
+# context: a short toast when the AI service turns the key down (HTTP 401 or 403).
+Your AI service didn't accept the key	Tu servicio de IA no aceptó la clave
+# context: a switch on the Notifications page. UnifiedPush is the name of an open notification standard and stays as it is.
+UnifiedPush notifications	Notificaciones por UnifiedPush
+# context: that switch's summary. Firebase is Google's notification service and ntfy is an app; both names stay as they are.
+For phones where Firebase notifications don't arrive. Telegram signs up an address from a UnifiedPush app like ntfy, and Telegram's servers call it to wake Telegram when something arrives. The messages still come from Telegram itself. Turned off, Telegram goes back to Firebase the next time it starts.	Para teléfonos donde no llegan las notificaciones de Firebase. Telegram registra una dirección de una app de UnifiedPush como ntfy, y los servidores de Telegram la llaman para despertar a Telegram cuando llega algo. Los mensajes siguen llegando del propio Telegram. Si lo desactivas, Telegram vuelve a Firebase la próxima vez que se inicie.
+# context: a row under that switch, and the title of the list it opens: which installed UnifiedPush app, like ntfy, delivers the notifications.
+Push app	App de push
+Install a UnifiedPush app like ntfy, then come back here.	Instala una app de UnifiedPush como ntfy y luego vuelve aquí.
+# context: that row's summary. %1$s is the app's name, like ntfy. "The switch" is the UnifiedPush notifications switch above the row.
+%1$s. Turn the switch on to sign up with it.	%1$s. Activa el interruptor para registrarte con ella.
+%1$s ended the sign-up. Turn the switch off and on to sign up again.	%1$s terminó el registro. Desactiva y vuelve a activar el interruptor para registrarte de nuevo.
+%1$s turned the sign-up down. Check that it allows UnifiedPush.	%1$s rechazó el registro. Comprueba que permita UnifiedPush.
+# context: the row's summary once signed up: Telegram's servers wake Telegram up through that app.
+Telegram's wake-ups come through %1$s.	Telegram se despierta a través de %1$s.
+Signing up with %1$s…	Registrando con %1$s…
+# context: a toast when the row is tapped and no UnifiedPush app is installed.
+Install a UnifiedPush app like ntfy first.	Primero instala una app de UnifiedPush como ntfy.
+# context: the Push app row's summary when several UnifiedPush apps are installed and none is picked yet. Tapping the row opens the list.
+Tap to pick which UnifiedPush app to use.	Toca para elegir qué app de UnifiedPush usar.
+# context: Save downloaded files, a switch on the Playback page. It copies each downloaded file or song to the phone's shared Download/Telegram folder.
+Save downloaded files	Guardar archivos descargados
+# context: that switch's summary. "Download/Telegram" is a folder path and stays as it is. Chats that don't allow saving are ones whose owner turned on Telegram's content protection.
+Each file or song you download also goes to Download/Telegram on your phone, where file managers and other apps can open it. Files from secret chats and chats that don't allow saving stay in Telegram.	Cada archivo o canción que descargues también va a Download/Telegram en tu teléfono, donde los gestores de archivos y otras apps pueden abrirlo. Los archivos de chats secretos y de chats que no permiten guardar se quedan en Telegram.
+# context: Folders by chat type, a switch on the Chat list page. Turning it on makes Telegram chat folders for each kind of chat.
+Folders by chat type	Carpetas por tipo de chat
+# context: that switch's summary. Private, Groups, Channels and Bots are the folder names, use the same words as their own entries.
+Turning this on makes Private, Groups, Channels and Bots folders, as tabs above the chat list and on your other devices. Turning it off removes the ones it made, unless you renamed or changed them.	Al activarlo se crean las carpetas Privados, Grupos, Canales y Bots, como pestañas sobre la lista de chats y en tus otros dispositivos. Al desactivarlo se quitan las que creó, salvo las que hayas renombrado o cambiado.
+# context: a chat folder name for one-to-one chats with people. Telegram allows at most 12 characters.
+Private	Privados
+# context: a chat folder name for group chats. At most 12 characters.
+Groups	Grupos
+# context: a chat folder name for channels. At most 12 characters.
+Channels	Canales
+# context: a chat folder name for chats with bots. At most 12 characters.
+Bots	Bots
+# context: a toast after flipping the Folders by chat type switch while HushTelegram is paused.
+HushTelegram is paused, so your folders stay as they are.	HushTelegram está en pausa, así que tus carpetas se quedan como están.
+# context: a toast when the folder switch is flipped before signing in.
+Sign in to Telegram first.	Primero inicia sesión en Telegram.
+# context: a toast when the folder switch is flipped before Telegram has loaded the folder list.
+Telegram is still loading your folders. Try again in a moment.	Telegram todavía está cargando tus carpetas. Inténtalo de nuevo en un momento.
+# context: a toast when making or removing the folders failed.
+Couldn't change your folders. Try again in a moment.	No se pudieron cambiar tus carpetas. Inténtalo de nuevo en un momento.
+# context: a toast when every chat type already has a folder, so none were made.
+You already have a folder for each chat type.	Ya tienes una carpeta para cada tipo de chat.
+# context: a short toast (two lines at most) when Telegram's folder limit left no room, so no folders were made.
+Folder limit reached. Remove a folder and try again.	Límite de carpetas alcanzado. Quita una y vuelve a intentarlo.
+# context: a short toast (two lines at most) when only some of the folders fit under Telegram's folder limit.
+Made some folders. The folder limit left no room for the rest.	Se crearon algunas carpetas. El límite no dejó sitio para el resto.
+# context: a short toast (two lines at most) after the folders were made. Private, Groups, Channels and Bots are the folder names, use the same words as their own entries.
+Made Private, Groups, Channels and Bots folders.	Carpetas Privados, Grupos, Canales y Bots creadas.
+# context: a toast after turning the switch off when none of its folders were left to remove.
+There were no folders from HushTelegram to remove.	No había carpetas de HushTelegram que quitar.
+# context: a short toast (two lines at most) after the switch went off. Folders the person renamed or changed are kept.
+Removed the folders HushTelegram made. Changed ones stay.	Se quitaron las carpetas de HushTelegram. Las cambiadas se quedan.
+Telegram refused this app's ID	Telegram rechazó el ID de esta app
+Telegram turned down the API ID this app signs in with, so no login code was sent. Patch HushTelegram again with Use registered Telegram API credentials and your own ID from my.telegram.org/apps. The guide walks you through it.	Telegram rechazó el ID de API con el que inicia sesión esta app, así que no se envió ningún código. Vuelve a parchear HushTelegram con Use registered Telegram API credentials y tu propio ID de my.telegram.org/apps. La guía te explica cómo.
+Telegram didn't accept the API ID and hash this app was patched with, so no login code was sent. Copy both again from my.telegram.org/apps and patch once more.	Telegram no aceptó el ID de API y el hash con los que se parcheó esta app, así que no se envió ningún código. Cópialos de nuevo desde my.telegram.org/apps y vuelve a parchear.
+Open the guide	Abrir la guía
+%1$s turns on	%1$s se activa
+%1$s turns off	%1$s se desactiva
+Preparing the diagnostic report	Preparando el informe de diagnóstico

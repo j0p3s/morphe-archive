@@ -781,7 +781,12 @@ public final class MediaDownload {
 
         DashManifest.Track video = pick.video;
         DashManifest.Track audio = pick.audio;
-        boolean reencodeSound = pick.reencodeSound;
+        // Sound is xHE-AAC only when the manifest offers no AAC-LC or HE-AAC, and Messenger, gallery
+        // players and many editors turn it down (HushMessenger #38, #14). So a phone that can make
+        // it AAC-LC does, with saves other apps can open off too. A re-encode that fails fails the
+        // join, and the single file follows as with the switch on.
+        boolean reencodeSound = pick.reencodeSound
+            || (audio != null && AacReencode.isXhe(audio.codecs) && AacReencode.available());
         boolean transcodeVideo = pick.transcodeVideo;
         boolean keptCompatible = kept != null && compatible;
 
@@ -960,12 +965,12 @@ public final class MediaDownload {
                     if (result.ok() || cancelled) info(() -> "save finished: " + result);
                     else failure(() -> "save finished: " + result, null);
                     String text = message(application, result.status, writer.savedLocation(), result.lower);
-                    if (result.ok()) SaveControl.showCompleted(save, writer);
-                    if (result.ok() && result.refused && !compatibleSaves()) {
+                    boolean refused = result.ok() && result.refused && !compatibleSaves();
+                    boolean carded = result.ok() && SaveControl.showCompleted(save, writer, refused ? text : null);
+                    if (refused) {
                         info(() -> "the saved file has a track WhatsApp and some editors refuse, with Save videos "
                             + "other apps can open off");
-                        Feedback.show(application, refusedMessage(application, SaveControl.showRefused(application, text)),
-                            true);
+                        Feedback.show(application, refusedMessage(application, carded), true);
                     } else {
                         Feedback.show(application, text, !result.ok() && !cancelled);
                     }
@@ -1016,7 +1021,7 @@ public final class MediaDownload {
                     ? L10n.t(application, "Saved to the gallery")
                     : L10n.f(application, "Saved to %1$s", L10n.isolate(location));
             case EXPIRED:
-                return L10n.t(application, "Link expired. Reopen the item and try again");
+                return L10n.t(application, "Link expired. Reopen the item and try again.");
             case REFUSED:
                 return L10n.t(application, "Not saved: that isn't a Facebook photo or video");
             case TOO_LARGE:
@@ -1037,7 +1042,7 @@ public final class MediaDownload {
     static String refusedMessage(Context application, boolean notified) {
         return notified
             ? L10n.t(application, "Saved, but WhatsApp and some editors may not accept it")
-            : L10n.t(application, "Saved, but WhatsApp may not accept it. Fix: Downloads in Hushfacebook settings.");
+            : L10n.t(application, "Saved, but WhatsApp may not accept it. Open Downloads in Hushfacebook settings to fix that.");
     }
 
     /**

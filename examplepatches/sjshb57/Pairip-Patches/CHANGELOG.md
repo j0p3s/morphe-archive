@@ -1,4 +1,8 @@
-## [1.10.3](https://github.com/sjshb57/Pairip-Patches/compare/v1.10.2...v1.10.3) (2026-08-29)
+## [1.11.0](https://github.com/sjshb57/Pairip-Patches/compare/v1.10.2...v1.11.0) (2026-10-11)
+
+### ✨ New Features
+
+* upgrade Gradle, dependencies, and update patch generator ([587102a](https://github.com/sjshb57/Pairip-Patches/commit/587102a1bd36ffd43b497f2424bcc989d2e84db8))
 
 ### 🔧 Improvements
 

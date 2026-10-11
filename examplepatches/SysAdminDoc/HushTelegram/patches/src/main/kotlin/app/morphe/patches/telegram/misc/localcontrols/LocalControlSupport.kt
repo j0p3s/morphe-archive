@@ -29,7 +29,6 @@ internal fun <T> List<T>.controlSingle(why: String): T {
 }
 internal fun Method.controlBody() = implementation?.instructions?.toList().orEmpty()
 internal fun Instruction.controlRef() = (this as? ReferenceInstruction)?.reference?.toString()
-internal fun Instruction.controlCall() = (this as? ReferenceInstruction)?.reference as? MethodReference
 internal fun Instruction.controlField() = (this as? ReferenceInstruction)?.reference as? FieldReference
 internal fun Instruction.controlString() = ((this as? ReferenceInstruction)?.reference as? StringReference)?.string
 internal fun MethodReference.controlShape(parameters: List<String>, result: String) =
@@ -46,6 +45,40 @@ internal fun BytecodePatchContext.controlHook(type: String, name: String, parame
     controlShape(method.controlShape(parameters, result) && method.controlCallable(true) &&
         method.implementation!!.registerCount >= maxOf(operands, if (result == "V") 0 else 1), "$name runtime hook changed")
     return method
+}
+
+/** Throws unless [reference], a method or a field, is public on a public class, and static or not as [static] says. */
+internal fun BytecodePatchContext.requireReachable(reference: String, static: Boolean) {
+    val owner = mutableClassDefByOrNull(reference.substringBefore("->"))
+    val member = reference.substringAfter("->")
+    val reachable = owner != null && AccessFlags.PUBLIC.isSet(owner.accessFlags) && if ('(' in member) {
+        owner.methods.any {
+            it.toString() == reference && AccessFlags.PUBLIC.isSet(it.accessFlags) && AccessFlags.STATIC.isSet(it.accessFlags) == static
+        }
+    } else {
+        owner.fields.any {
+            "${it.name}:${it.type}" == member && AccessFlags.PUBLIC.isSet(it.accessFlags) && AccessFlags.STATIC.isSet(it.accessFlags) == static
+        }
+    }
+    controlShape(reachable, "$reference isn't reachable from the extension")
+}
+
+/**
+ * Throws unless [type] is a public class and each of [wanted] is public on it. A field is written
+ * `name:Type` and a method `name(Parameters)Return`, after `static ` when it's static; a method
+ * also mustn't be abstract.
+ */
+internal fun BytecodePatchContext.controlMembers(type: String, vararg wanted: String) {
+    val owner = classDefByOrNull(type)
+    controlShape(owner != null && AccessFlags.PUBLIC.isSet(owner.accessFlags), "$type is missing")
+    for (member in wanted) {
+        val static = member.startsWith("static ")
+        val name = member.removePrefix("static ")
+        val ok = if ('(' in name) owner!!.methods.any { "${it.name}(${it.parameterTypes.joinToString("")})${it.returnType}" == name &&
+            AccessFlags.PUBLIC.isSet(it.accessFlags) && AccessFlags.STATIC.isSet(it.accessFlags) == static && !AccessFlags.ABSTRACT.isSet(it.accessFlags) }
+        else owner!!.fields.any { "${it.name}:${it.type}" == name && AccessFlags.PUBLIC.isSet(it.accessFlags) && AccessFlags.STATIC.isSet(it.accessFlags) == static }
+        controlShape(ok, "$type no longer has $member")
+    }
 }
 
 /** Proves that a receiver copied at entry still names this instance on every path to its use. */

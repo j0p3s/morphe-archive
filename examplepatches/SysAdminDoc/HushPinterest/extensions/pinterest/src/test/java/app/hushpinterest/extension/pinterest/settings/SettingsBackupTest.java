@@ -234,15 +234,15 @@ public class SettingsBackupTest {
         assertEquals("a setting in Settings isn't a switch, and a settings file has no format for it",
                 Collections.emptyList(), notSwitches);
         assertEquals(Arrays.asList(Settings.HIDE_ADS, Settings.HIDE_AI_PINS,
-                        Settings.HIDE_SHOPPING, Settings.DISABLE_ANALYTICS, Settings.STRIP_LINK_TRACKING,
-                        Settings.HIDE_ADVERTISING_ID, Settings.DOWNLOAD_PINS, Settings.DOWNLOAD_BOARD, Settings.LONG_PRESS_DOWNLOAD,
+                        Settings.HIDE_SHOPPING, Settings.DISABLE_ANALYTICS, Settings.STRIP_LINK_TRACKING, Settings.PLAIN_PIN_LINKS,
+                        Settings.HIDE_ADVERTISING_ID, Settings.DOWNLOAD_PINS, Settings.SAVE_IN_PINTEREST_FOLDER, Settings.DOWNLOAD_BOARD, Settings.LONG_PRESS_DOWNLOAD,
                         Settings.EXTERNAL_BROWSER, Settings.SYSTEM_SHARE,
                         Settings.HIDE_SCREENSHOT_SHARE, Settings.HIDE_SEARCH_HISTORY,
                         Settings.HIDE_NAV_CREATE, Settings.HIDE_NAV_NOTIFICATIONS, Settings.HIDE_NAV_SEARCH, Settings.HIDE_HEADER_BUTTONS,
                         Settings.HIDE_PIN_MENU_COLLAGE, Settings.HIDE_PIN_MENU_VISUAL_SEARCH,
                         Settings.HIDE_PIN_MENU_PIN_BOOST, Settings.HIDE_COMMENTS, Settings.HIDE_TOPIC_SUGGESTIONS,
                         Settings.QUIET_EMAIL_REMINDER, Settings.HIDE_SURVEY_PROMPTS, Settings.HIDE_SAVE_TOASTS, Settings.ORIGINAL_IMAGES,
-                        Settings.DISABLE_UPDATE_NAG),
+                        Settings.DISABLE_UPDATE_NAG, Settings.FIX_PUSH_NOTIFICATIONS),
                 SettingsBackup.ALLOWLIST);
     }
 
@@ -1283,7 +1283,7 @@ public class SettingsBackupTest {
     // ---- The screen and the picker ------------------------------------------------------------
 
     @Test
-    @Config(sdk = {28, 30, 33, 36})
+    @Config(sdk = {29, 30, 33, 36})
     public void exportWritesTheFileThroughTheSystemPicker() throws Exception {
         Settings.HIDE_ADS.save(false);
         try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
@@ -1309,7 +1309,7 @@ public class SettingsBackupTest {
 
     /** What Export writes is what Import takes back, through both pickers, every switch included. */
     @Test
-    @Config(sdk = {28, 30, 33, 36})
+    @Config(sdk = {29, 30, 33, 36})
     public void aFileExportedThroughThePickerImportsBackThroughIt() throws Exception {
         Settings.HIDE_ADS.save(false);
         Settings.STRIP_LINK_TRACKING.save(false);
@@ -1441,7 +1441,7 @@ public class SettingsBackupTest {
     }
 
     @Test
-    @Config(sdk = {28, 30, 33, 36})
+    @Config(sdk = {29, 30, 33, 36})
     public void aCancelledPickerChangesNothingAndSaysNothing() throws Exception {
         try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
             Activity activity = controller.get();
@@ -1462,7 +1462,7 @@ public class SettingsBackupTest {
      * finds it by the name the framework gave the page that asked, which the rebuilt one keeps.
      */
     @Test
-    @Config(sdk = {28, 30, 33, 36})
+    @Config(sdk = {29, 30, 33, 36})
     public void thePickersAnswerReachesThePageRebuiltBehindIt() throws Exception {
         String file = fileWith(Settings.STRIP_LINK_TRACKING, false);
         try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
@@ -1622,7 +1622,7 @@ public class SettingsBackupTest {
      * holds a filler.
      */
     @Test
-    @Config(sdk = {28, 30, 33, 36})
+    @Config(sdk = {29, 30, 33, 36})
     public void aFullWorkerQueueLeavesTheRowsUsable() throws Exception {
         try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
             Activity activity = controller.get();
@@ -1774,7 +1774,7 @@ public class SettingsBackupTest {
      * nothing new starts, and its late answer shows no preview and says nothing.
      */
     @Test
-    @Config(sdk = {28, 30, 33, 36})
+    @Config(sdk = {29, 30, 33, 36})
     public void aStalledAppGivesTheRowsBackAndItsLateAnswerChangesNothing() throws Exception {
         CountDownLatch release = new CountDownLatch(1);
         SettingsFileProvider.stall = release;

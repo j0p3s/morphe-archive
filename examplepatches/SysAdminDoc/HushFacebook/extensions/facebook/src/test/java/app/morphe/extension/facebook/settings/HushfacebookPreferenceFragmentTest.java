@@ -724,6 +724,30 @@ public class HushfacebookPreferenceFragmentTest {
     }
 
     /**
+     * Share sheet items to hide opens a list of checkboxes over the page's window like the dialogs
+     * above, and it was the one the page didn't track: a rotation left it up as a leaked window.
+     */
+    @Test
+    public void theShareSheetListClosesWhenTheViewGoes() {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.SHARE_SHEET_ITEMS);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            List<Preference> rows = rowsOf(controller);
+            Preference items = rows.get(indexOfKey(rows, AppPages.SHARE_ITEMS_ROW));
+            ShadowAlertDialog.reset();
+            items.getOnPreferenceClickListener().onPreferenceClick(items);
+            AlertDialog list = ShadowAlertDialog.getLatestAlertDialog();
+            assertNotNull("the row opened nothing", list);
+            assertTrue(list.isShowing());
+            assertEquals("Hide from the share sheet", String.valueOf(Shadows.shadowOf(list).getTitle()));
+
+            controller.recreate();
+            ShadowLooper.idleMainLooper();
+
+            assertFalse("the share sheet list outlived the page", list.isShowing());
+        }
+    }
+
+    /**
      * A Save on a word list can land as the activity goes. The button's click and the edit
      * dialog's close are posted one after the other, and when the activity's end comes between
      * them, it closes the dialog itself, which still counts as Save. The list's listener then runs
@@ -1049,9 +1073,9 @@ public class HushfacebookPreferenceFragmentTest {
         Settings.HIDE_FEEDS_TAB.save(true);
         try {
             assertEquals(feeds, HushfacebookPreferenceFragment.startTabSummary(StartTab.FEEDS));
-            // Any other tab Hide tabs keeps off the bar still opens Home.
+            // Any other tab Hide the Friends tab and its kin keep off the bar still opens Home.
             Settings.HIDE_FRIENDS_TAB.save(true);
-            assertEquals("Facebook opens on Home while Hide tabs keeps Friends off the tab bar. Your choice stays saved.",
+            assertEquals("Facebook opens on Home while Hide the Friends tab is on, since Friends is off the tab bar. Your choice stays saved.",
                     HushfacebookPreferenceFragment.startTabSummary(StartTab.FRIENDS));
         } finally {
             Settings.HIDE_FEEDS_TAB.resetToDefault();
@@ -1472,7 +1496,7 @@ public class HushfacebookPreferenceFragmentTest {
     }
 
     /**
-     * Hide seen posts' rows. Keep them hidden for follows the switch, Forget seen posts works with the
+     * Hide seen posts' rows. Keep seen posts hidden for follows the switch, Forget seen posts works with the
      * switch off too, and turning the switch off forgets the list and its file.
      */
     @Test
@@ -1490,6 +1514,11 @@ public class HushfacebookPreferenceFragmentTest {
             assertEquals(Settings.SEEN_POSTS_KEEP.key, keep.getKey());
             assertEquals("Forget seen posts", String.valueOf(forget.getTitle()));
             assertFalse("the keep time is open with the switch off", keep.isEnabled());
+            assertEquals("Keep seen posts hidden for", String.valueOf(keep.getTitle()));
+            String greyed = String.valueOf(keep.getSummary());
+            assertTrue("the greyed keep time doesn't say why: " + greyed,
+                    greyed.contains("Turn on") && greyed.contains(SwitchLabels.title(Settings.HIDE_SEEN_POSTS))
+                            && greyed.endsWith("to use this."));
             assertTrue("Forget seen posts is greyed out with the switch off", forget.isEnabled());
 
             SeenPostsForTests.rememberAndWrite("left from before");
@@ -1500,6 +1529,8 @@ public class HushfacebookPreferenceFragmentTest {
 
             assertTrue(seen.getOnPreferenceChangeListener().onPreferenceChange(seen, true));
             assertTrue(keep.isEnabled());
+            assertFalse("the open keep time still says to turn the switch on",
+                    String.valueOf(keep.getSummary()).contains("Turn on"));
             assertTrue(forget.isEnabled());
             SeenPostsForTests.rememberAndWrite("seen with it on");
             assertTrue(file.exists());

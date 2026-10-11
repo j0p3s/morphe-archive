@@ -5,11 +5,10 @@
 package app.hushgram.extension.instagram.feed;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
-
-import android.os.SystemClock;
 
 import org.junit.After;
 import org.junit.Before;
@@ -25,6 +24,7 @@ import app.hushgram.extension.instagram.reels.FeedReels;
 import app.hushgram.extension.instagram.settings.Settings;
 import app.hushgram.extension.shared.SettingsContextRule;
 import app.hushgram.extension.shared.diagnostics.FeedFilterCounters;
+import app.hushgram.extension.shared.diagnostics.HookStatus;
 import app.hushgram.extension.shared.settings.BooleanSetting;
 
 /** Which home feed items Hide suggested posts takes out, and which it leaves. */
@@ -56,23 +56,78 @@ public class FeedSuggestionsTest {
         }
     }
 
-    /** Every test but the one about Home's own reads runs the way a build without them does. */
+    /** Every test but the ones about Home's own reads runs the way a build without them does. */
     @Before
     public void withoutHomeReads() {
         FeedSuggestions.homeReadsForTests = false;
-        FeedSuggestions.homeLost = false;
-        FeedSuggestions.homeKept = false;
-        FeedSuggestions.homeReadAt = 0;
+        FeedSuggestions.homePageLost = false;
+        FeedSuggestions.homePageEndCounted = false;
+        FeedSuggestions.verdictFeed = null;
+        FeedSuggestions.tookOut = false;
+        FeedSuggestions.pageLostEverything = false;
+        FeedSuggestions.pageLostEverythingAt = 0;
+        FeedSuggestions.olderEndCounted = false;
+        FeedSuggestions.forgetOlderFeeds();
+        FeedSuggestions.clock = System::nanoTime;
     }
 
     @After
     public void resetHomeReads() {
+        // Closes a page a failed test left open on this thread.
+        FeedSuggestions.homePageParsed();
         FeedSuggestions.homeReadsForTests = null;
-        FeedSuggestions.homeLost = false;
-        FeedSuggestions.homeKept = false;
-        FeedSuggestions.homeReadAt = 0;
-        FeedSuggestions.clock = SystemClock::elapsedRealtime;
+        FeedSuggestions.homePageLost = false;
+        FeedSuggestions.homePageEndCounted = false;
+        FeedSuggestions.verdictFeed = null;
+        FeedSuggestions.emptiness = FeedSuggestions::feedEmpty;
         FeedSuggestions.tookOut = false;
+        FeedSuggestions.pageLostEverything = false;
+        FeedSuggestions.pageLostEverythingAt = 0;
+        FeedSuggestions.olderEndCounted = false;
+        FeedSuggestions.forgetOlderFeeds();
+        FeedSuggestions.clock = System::nanoTime;
+        for (BooleanSetting setting : suggestionSwitches()) setting.resetToDefault();
+    }
+
+    /**
+     * Every switch filter() takes items out for. A method, not a static field: Settings can only be
+     * loaded once the test's context is in place.
+     */
+    private static BooleanSetting[] suggestionSwitches() {
+        return new BooleanSetting[] {Settings.HIDE_SUGGESTED_POSTS, Settings.HIDE_SUGGESTED_ACCOUNTS,
+                Settings.HIDE_THREADS_POSTS, Settings.HIDE_FEED_SURVEYS, Settings.HIDE_FEED_SHOPPING};
+    }
+
+    /** A home feed object, as the adapter reads its flag from, that says whether it's empty. */
+    static final class Feed {
+        boolean empty;
+
+        Feed(boolean empty) {
+            this.empty = empty;
+        }
+    }
+
+    /** The adapter's read of its flag: the feed handed over first, then Instagram's answer through feedEnded. */
+    private static int adapterReads(Feed feed, int noMorePages) {
+        FeedSuggestions.homeFeedRead(feed);
+        return FeedSuggestions.feedEnded(noMorePages);
+    }
+
+    /** One item Home's reads take: through the helper's filter, then homeItem. */
+    private static Object homeRead(Item item) {
+        return FeedSuggestions.homeItem(FeedSuggestions.filter(item), ignored -> 0);
+    }
+
+    /** A page of Home's own feed response holding [items], parsed on this thread. */
+    private static void homePage(Item... items) {
+        FeedSuggestions.homePageStarts();
+        for (Item item : items) homeRead(item);
+        FeedSuggestions.homePageParsed();
+    }
+
+    private void withHomeReads() {
+        FeedSuggestions.homeReadsForTests = true;
+        FeedSuggestions.emptiness = feed -> ((Feed) feed).empty ? 1 : 0;
     }
 
     @Test
@@ -223,65 +278,245 @@ public class FeedSuggestionsTest {
     }
 
     /**
-     * Where Home's reads go through homeItem, only Home's own losses end it (#28). An item taken out
-     * of another feed, a null the helper answered on its own, or a loss beside a kept post leaves
-     * Instagram's answer, so a Home waiting on its first page keeps its loading placeholder.
+     * #28: where Home's reads go through homeItem, only a page of Home's own feed response that lost
+     * items ends Home. An item taken out of another feed, a null the helper answered on its own, and
+     * Home's store of the last run losing everything before its first page all leave Instagram's
+     * answer, so a Home waiting on its first page keeps its loading placeholder and draws no Welcome
+     * card at startup.
      */
     @Test
-    public void onlyHomesOwnReadsEndHome() {
-        FeedSuggestions.homeReadsForTests = true;
-        FeedSuggestions.tookOut = false;
+    public void onlyAPageOfHomesOwnEndsHome() {
+        withHomeReads();
+        Feed waiting = new Feed(true);
         assertNull(FeedSuggestions.filter(new Item(Kind.EXPLORE_STORY)));
-        assertEquals("taken out of another feed", 0, FeedSuggestions.feedEnded(0));
-        assertEquals(1, FeedSuggestions.feedEnded(1));
+        assertEquals("taken out of Explore's chain or a shop feed", 0, adapterReads(waiting, 0));
+        assertEquals(1, adapterReads(waiting, 1));
 
         assertNull(FeedSuggestions.homeItem(FeedSuggestions.filter(null), item -> 0));
-        assertEquals("the helper's own null", 0, FeedSuggestions.feedEnded(0));
+        assertEquals("the helper's own null", 0, adapterReads(waiting, 0));
 
-        assertNull(FeedSuggestions.homeItem(FeedSuggestions.filter(new Item(Kind.SUGGESTED_USERS)), item -> 0));
-        assertEquals("Home lost one and kept none", 1, FeedSuggestions.feedEnded(0));
-        assertEquals(1, FeedSuggestions.feedEnded(1));
+        for (int i = 0; i < 20; i++) assertNull(homeRead(new Item(Kind.EXPLORE_STORY)));
+        assertNull(homeRead(new Item(Kind.SUGGESTED_USERS)));
+        assertEquals("Home's store lost everything, and its first page hasn't come", 0, adapterReads(waiting, 0));
+
+        homePage(new Item(Kind.SUGGESTED_USERS), new Item(Kind.EXPLORE_STORY));
+        assertEquals("Home's own page lost everything", 1, adapterReads(waiting, 0));
+        assertEquals(1, adapterReads(waiting, 1));
 
         Item post = new Item(Kind.MEDIA);
-        assertSame(post, FeedSuggestions.homeItem(FeedSuggestions.filter(post), item -> FeedSuggestions.PHOTO));
-        assertEquals("Home kept a post", 0, FeedSuggestions.feedEnded(0));
-        assertEquals(1, FeedSuggestions.feedEnded(1));
+        homePage(post, new Item(Kind.EXPLORE_STORY));
+        Feed showing = new Feed(false);
+        assertEquals("Home shows the post it kept", 0, adapterReads(showing, 0));
+        homePage(post);
+        assertEquals("a page that lost nothing", 0, adapterReads(waiting, 0));
     }
 
     /**
-     * Only Home's latest read decides. A post an earlier read kept, the first account's before a
-     * switch, doesn't hold off the end of a Home whose next read lost everything (#104, #105), and a
-     * later read that keeps a post holds it off again.
+     * #105, as the S22 showed it on an account that follows nobody: Home's store reads lose a run of
+     * suggestions on one thread while Home's own page, on another, loses a suggested post and six
+     * Explore stories and keeps one item Instagram draws elsewhere. The store's reads don't count
+     * toward the page, the page ends the empty Home, and the report says so once however often the
+     * adapter asks.
      */
     @Test
-    public void aLaterReadIsJudgedOnItsOwn() {
-        long[] now = {50_000};
-        FeedSuggestions.clock = () -> now[0];
-        FeedSuggestions.homeReadsForTests = true;
+    public void aPageOfOnlySuggestionsEndsTheEmptyHomeAndTheReportSaysSo() throws Exception {
+        withHomeReads();
+        FeedFilterCounters.snapshotAndClear();
+        Thread store = new Thread(() -> {
+            for (int i = 0; i < 160; i++) homeRead(new Item(Kind.EXPLORE_STORY));
+        });
+        FeedSuggestions.homePageStarts();
+        assertNull(homeRead(new Item(Kind.SUGGESTED_USERS)));
+        store.start();
+        store.join();
+        for (int i = 0; i < 6; i++) assertNull(homeRead(new Item(Kind.EXPLORE_STORY)));
+        Item drawnElsewhere = new Item(Kind.MEDIA);
+        assertSame(drawnElsewhere, homeRead(drawnElsewhere));
+        FeedSuggestions.homePageParsed();
+
+        Feed home = new Feed(true);
+        assertEquals("every post removed", 1, adapterReads(home, 0));
+        assertEquals(1, adapterReads(home, 0));
+        String report = String.join("\n", FeedFilterCounters.report());
+        assertTrue(report, report.contains(FeedSuggestions.HOME_ENDED + " 1"));
+
+        for (BooleanSetting setting : suggestionSwitches()) setting.save(false);
+        assertEquals("every suggestion switch off", 0, adapterReads(home, 0));
+    }
+
+    /**
+     * Each page is judged on its own (#104, #105). A post an earlier page kept, the first account's
+     * before a switch, doesn't hold off the end of a Home whose next page lost everything, a later page
+     * that keeps a post holds it off again, and a page with no items, a response the parser gave up
+     * on, leaves the verdict where it was.
+     */
+    @Test
+    public void eachPageIsJudgedOnItsOwn() {
+        withHomeReads();
+        FeedFilterCounters.snapshotAndClear();
+        Feed home = new Feed(true);
         Item post = new Item(Kind.MEDIA);
-        assertSame(post, FeedSuggestions.homeItem(FeedSuggestions.filter(post), item -> FeedSuggestions.PHOTO));
-        assertNull(FeedSuggestions.homeItem(FeedSuggestions.filter(new Item(Kind.EXPLORE_STORY)), item -> 0));
-        assertEquals("the first account's Home kept a post", 0, FeedSuggestions.feedEnded(0));
+        homePage(post);
+        assertEquals("the first account's page kept its post", 0, adapterReads(home, 0));
 
-        now[0] += FeedSuggestions.READ_GAP_MS + 1;
-        assertNull(FeedSuggestions.homeItem(FeedSuggestions.filter(new Item(Kind.EXPLORE_STORY)), item -> 0));
-        now[0] += 10;
-        assertNull(FeedSuggestions.homeItem(FeedSuggestions.filter(new Item(Kind.SUGGESTED_USERS)), item -> 0));
-        assertEquals("the next account's Home lost everything", 1, FeedSuggestions.feedEnded(0));
+        homePage(new Item(Kind.EXPLORE_STORY), new Item(Kind.SUGGESTED_USERS));
+        assertEquals("the next account's page lost everything", 1, adapterReads(home, 0));
 
-        now[0] += FeedSuggestions.READ_GAP_MS + 1;
-        assertSame(post, FeedSuggestions.homeItem(FeedSuggestions.filter(post), item -> FeedSuggestions.PHOTO));
-        assertEquals("a later read kept a post", 0, FeedSuggestions.feedEnded(0));
+        homePage();
+        assertEquals("an empty response changes nothing", 1, adapterReads(home, 0));
+
+        homePage(post);
+        assertEquals("a later page kept a post", 0, adapterReads(home, 0));
+
+        homePage(new Item(Kind.EXPLORE_STORY));
+        assertEquals(1, adapterReads(home, 0));
+        String report = String.join("\n", FeedFilterCounters.report());
+        assertTrue("counted once per emptied page: " + report, report.contains(FeedSuggestions.HOME_ENDED + " 2"));
+    }
+
+    /**
+     * A feed that can't say whether it's empty, because the check failed or the build has none, still
+     * ends after a page that lost items: Instagram checks the feed itself before drawing the empty card.
+     * Only the report's count waits for a feed that says it's empty, and one with posts keeps
+     * Instagram's answer.
+     */
+    @Test
+    public void aFeedThatCantSayStillEndsUncounted() {
+        withHomeReads();
+        FeedFilterCounters.snapshotAndClear();
+        homePage(new Item(Kind.EXPLORE_STORY));
+        FeedSuggestions.emptiness = feed -> {
+            throw new IllegalStateException("gone");
+        };
+        Feed home = new Feed(true);
+        assertEquals("the check threw", 1, adapterReads(home, 0));
+        FeedSuggestions.emptiness = FeedSuggestions::feedEmpty;
+        assertEquals("the stub, unfilled", 1, adapterReads(home, 0));
+        assertEquals("no feed handed over", 1, FeedSuggestions.feedEnded(0));
+        String report = String.join("\n", FeedFilterCounters.report());
+        assertFalse(report, report.contains(FeedSuggestions.HOME_ENDED));
+
+        withHomeReads();
+        assertEquals("a feed with posts", 0, adapterReads(new Feed(false), 0));
+    }
+
+    /**
+     * A page's verdict belongs to the Home that read it first. Another account's Home, empty while
+     * its first page is on the way or its request failed, keeps Instagram's answer until a page of
+     * its own comes, rather than getting the end card from the account before it.
+     */
+    @Test
+    public void anotherAccountsHomeWaitsForItsOwnPage() {
+        withHomeReads();
+        Feed first = new Feed(true);
+        Feed next = new Feed(true);
+        homePage(new Item(Kind.EXPLORE_STORY));
+        assertEquals(1, adapterReads(first, 0));
+
+        assertEquals("ended by the other account's page", 0, adapterReads(next, 0));
+        assertEquals("the first account's Home stays ended", 1, adapterReads(first, 0));
+
+        homePage(new Item(Kind.SUGGESTED_USERS));
+        assertEquals("its own page lost everything", 1, adapterReads(next, 0));
+        assertEquals(0, adapterReads(first, 0));
+    }
+
+    /** The feed handed over is the next flag read's alone: a read without one doesn't reuse it. */
+    @Test
+    public void theFeedHandedOverIsForTheNextReadOnly() {
+        withHomeReads();
+        homePage(new Item(Kind.EXPLORE_STORY));
+        assertEquals(0, adapterReads(new Feed(false), 0));
+        assertEquals("a read with no feed handed over can't tell", 1, FeedSuggestions.feedEnded(0));
+    }
+
+    /** One item Home reads, with a post of [type] that a type switch may take out. */
+    private static Object homeTyped(Item item, int type) {
+        return FeedSuggestions.homeItem(FeedSuggestions.filter(item), ignored -> type);
+    }
+
+    /**
+     * Home reads its store of the last run before its first page. A post a type switch takes out there
+     * is not a page of Home's response, so a Home waiting on that page isn't ended (#28's flash).
+     */
+    @Test
+    public void aStoreReadThatRemovesPostsBeforeAnyPageDoesntEndHome() {
+        withHomeReads();
+        Settings.HIDE_FEED_VIDEOS.save(true);
+        try {
+            assertNull(homeTyped(new Item(Kind.MEDIA), FeedSuggestions.VIDEO));
+            assertTrue(FeedSuggestions.typesTookOut);
+            assertEquals("waiting on its first page", 0, adapterReads(new Feed(true), 0));
+        } finally {
+            Settings.HIDE_FEED_VIDEOS.resetToDefault();
+            FeedSuggestions.typesTookOut = false;
+        }
+    }
+
+    /** A page whose posts were all taken out by a type switch ends an empty Home, and the report counts it once. */
+    @Test
+    public void aPageEmptiedByATypeSwitchEndsAnEmptyHome() {
+        withHomeReads();
+        Settings.HIDE_FEED_VIDEOS.save(true);
+        try {
+            FeedFilterCounters.snapshotAndClear();
+            FeedSuggestions.homePageStarts();
+            assertNull(homeTyped(new Item(Kind.MEDIA), FeedSuggestions.VIDEO));
+            assertNull(homeTyped(new Item(Kind.MEDIA), FeedSuggestions.VIDEO));
+            FeedSuggestions.homePageParsed();
+            assertTrue(FeedSuggestions.homePageLost);
+            assertEquals(1, adapterReads(new Feed(true), 0));
+            String report = String.join("\n", FeedFilterCounters.report());
+            assertTrue(report, report.contains(FeedSuggestions.HOME_ENDED + " 1"));
+        } finally {
+            Settings.HIDE_FEED_VIDEOS.resetToDefault();
+            FeedSuggestions.typesTookOut = false;
+        }
+    }
+
+    /** A Home that still shows posts keeps Instagram's answer, however many posts the page lost. */
+    @Test
+    public void aHomeStillShowingPostsKeepsInstagramsAnswerOnThePostPath() {
+        withHomeReads();
+        Settings.HIDE_FEED_VIDEOS.save(true);
+        try {
+            FeedSuggestions.homePageStarts();
+            assertNull(homeTyped(new Item(Kind.MEDIA), FeedSuggestions.VIDEO));
+            assertTrue(homeTyped(new Item(Kind.MEDIA), FeedSuggestions.PHOTO) != null);
+            FeedSuggestions.homePageParsed();
+            assertEquals(0, adapterReads(new Feed(false), 0));
+            assertEquals(1, adapterReads(new Feed(false), 1));
+        } finally {
+            Settings.HIDE_FEED_VIDEOS.resetToDefault();
+            FeedSuggestions.typesTookOut = false;
+        }
+    }
+
+    /** A page that kept every post it read doesn't end Home just because a store read lost one earlier. */
+    @Test
+    public void aKeptPageClearsAnEarlierTypeVerdict() {
+        withHomeReads();
+        Settings.HIDE_FEED_VIDEOS.save(true);
+        try {
+            homeTyped(new Item(Kind.MEDIA), FeedSuggestions.VIDEO);
+            FeedSuggestions.homePageStarts();
+            assertTrue(homeTyped(new Item(Kind.MEDIA), FeedSuggestions.PHOTO) != null);
+            FeedSuggestions.homePageParsed();
+            assertFalse(FeedSuggestions.homePageLost);
+            assertEquals(0, adapterReads(new Feed(true), 0));
+        } finally {
+            Settings.HIDE_FEED_VIDEOS.resetToDefault();
+            FeedSuggestions.typesTookOut = false;
+        }
     }
 
     @Test
     @Config(sdk = {28, 37})
     public void turningOffAllSuggestionSwitchesRestoresBothNativeEndAnswers() {
-        BooleanSetting[] switches = {Settings.HIDE_SUGGESTED_POSTS,
-                Settings.HIDE_SUGGESTED_ACCOUNTS, Settings.HIDE_THREADS_POSTS};
+        BooleanSetting[] switches = suggestionSwitches();
         try {
             for (Kind removed : new Kind[] {Kind.EXPLORE_STORY, Kind.SUGGESTED_USERS,
-                    Kind.THREADS_IN_FEED_UNIT}) {
+                    Kind.THREADS_IN_FEED_UNIT, Kind.FEED_SURVEY, Kind.SHOPPING_RECOMMENDATION_UNIT}) {
                 for (BooleanSetting setting : switches) setting.save(true);
                 FeedSuggestions.tookOut = false;
                 assertNull(removed.name(), FeedSuggestions.filter(new Item(removed)));
@@ -341,5 +576,184 @@ public class FeedSuggestionsTest {
         assertTrue(report.toString(), report.toString().contains(FeedSuggestions.ROUTE));
         assertTrue(report.toString(), report.toString().contains("SUGGESTED_USERS"));
         assertTrue(report.toString(), report.toString().contains("EXPLORE_STORY"));
+    }
+    /** What the Older Posts hook counted on the Feed suggestions line. */
+    private static String olderCounted() {
+        String report = String.join("\n", HookStatus.report());
+        return report.contains(FeedSuggestions.OLDER_ENDED + " 1") ? "once" : report.contains(FeedSuggestions.OLDER_ENDED) ? "more" : "none";
+    }
+
+    /** One build of a contextual feed's model: the builder hands over [policy], then Instagram says it's loading. */
+    private static int older(Object policy) {
+        FeedSuggestions.olderPolicyAsked(policy);
+        return FeedSuggestions.olderPageLoading(1);
+    }
+
+    /** A page of Home's response holding [count] videos, parsed on this thread. */
+    private static void videoPage(int count) {
+        FeedSuggestions.homePageStarts();
+        for (int i = 0; i < count; i++) homeTyped(new Item(Kind.MEDIA), FeedSuggestions.VIDEO);
+        FeedSuggestions.homePageParsed();
+    }
+
+    /**
+     * The Older Posts page (a contextual feed) fetches its first page through Home's parser. With
+     * every post on it taken out by the post switches, its model builder runs once with the fetch
+     * still loading and an empty feed, and its full-screen loading row never went. The hook says it
+     * isn't loading, counts that once for the page, and asks for nothing.
+     */
+    @Test
+    public void anOlderPostsPageThatLostEveryPostStopsLoading() {
+        withHomeReads();
+        FeedSuggestions.clock = () -> 1_000L;
+        Settings.HIDE_FEED_VIDEOS.save(true);
+        Object feed = new Object();
+        try {
+            HookStatus.clear();
+            assertEquals("the fetch starts: Instagram's row", 1, older(feed));
+            videoPage(6);
+            assertTrue(FeedSuggestions.pageLostEverything);
+            assertEquals("the loading row is dropped", 0, older(feed));
+            assertEquals("again on a later build of the model", 0, older(feed));
+            FeedSuggestions.olderPolicyAsked(feed);
+            assertEquals("a fetch that isn't loading stays that way", 0, FeedSuggestions.olderPageLoading(0));
+            assertEquals("counted once for the page", "once", olderCounted());
+        } finally {
+            Settings.HIDE_FEED_VIDEOS.resetToDefault();
+            FeedSuggestions.typesTookOut = false;
+            HookStatus.clear();
+        }
+    }
+
+    /**
+     * Home's end card usually shows right after Home's last page lost every item, so Older Posts
+     * opens inside the window with its first fetch still running. Its loading row stays until its own
+     * page arrives; Home's emptied page is not its page. A second feed that opens later, with the
+     * first one's page behind it, is told apart the same way.
+     */
+    @Test
+    public void anOlderPostsFetchStillRunningKeepsItsLoadingRow() {
+        withHomeReads();
+        FeedSuggestions.clock = () -> 1_000L;
+        Settings.HIDE_FEED_VIDEOS.save(true);
+        Object older = new Object();
+        Object other = new Object();
+        try {
+            HookStatus.clear();
+            videoPage(6);
+            assertTrue("Home's last page lost everything", FeedSuggestions.pageLostEverything);
+            assertEquals("opened inside the window", 1, older(older));
+            assertEquals("the model builds again, the fetch still running", 1, older(older));
+            assertEquals("and again", 1, older(older));
+            assertEquals("nothing counted", "none", olderCounted());
+
+            videoPage(3);
+            assertEquals("its own page lost everything", 0, older(older));
+            assertEquals("another feed opening now keeps its row", 1, older(other));
+            assertEquals("until its own page comes", 1, older(other));
+            videoPage(2);
+            assertEquals("then drops it", 0, older(other));
+        } finally {
+            Settings.HIDE_FEED_VIDEOS.resetToDefault();
+            FeedSuggestions.typesTookOut = false;
+            HookStatus.clear();
+        }
+    }
+
+    /** A builder that handed over no policy can't be told apart from Home's page, so it keeps Instagram's answer. */
+    @Test
+    public void aFeedWithNoPolicyKeepsInstagramsRow() {
+        withHomeReads();
+        FeedSuggestions.clock = () -> 1_000L;
+        Settings.HIDE_FEED_VIDEOS.save(true);
+        try {
+            videoPage(6);
+            videoPage(6);
+            assertEquals(1, FeedSuggestions.olderPageLoading(1));
+        } finally {
+            Settings.HIDE_FEED_VIDEOS.resetToDefault();
+            FeedSuggestions.typesTookOut = false;
+        }
+    }
+
+    /** Home itself still ends exactly as it did when a page loses every post: the older-posts hook adds nothing there. */
+    @Test
+    public void homeStillEndsTheSameWayAfterAPageThatLostEveryPost() {
+        withHomeReads();
+        FeedSuggestions.clock = () -> 1_000L;
+        Settings.HIDE_FEED_VIDEOS.save(true);
+        try {
+            FeedSuggestions.homePageStarts();
+            assertNull(homeTyped(new Item(Kind.MEDIA), FeedSuggestions.VIDEO));
+            assertNull(homeTyped(new Item(Kind.MEDIA), FeedSuggestions.VIDEO));
+            FeedSuggestions.homePageParsed();
+            assertEquals("an empty Home ends", 1, adapterReads(new Feed(true), 0));
+            assertEquals("a Home showing posts keeps Instagram's answer", 0, adapterReads(new Feed(false), 0));
+            assertEquals("Instagram's own end stays", 1, adapterReads(new Feed(false), 1));
+            assertEquals("the end card rule is unchanged", 0, FeedSuggestions.endCardRule(0));
+            assertEquals("no next page is unchanged", 1, FeedSuggestions.moreAfterFollowing(1));
+        } finally {
+            Settings.HIDE_FEED_VIDEOS.resetToDefault();
+            FeedSuggestions.typesTookOut = false;
+        }
+    }
+
+    /** Anything short of a page that lost every post leaves Instagram's loading row alone. */
+    @Test
+    public void theLoadingRowStaysUnlessAPageLostEverythingJustNow() {
+        withHomeReads();
+        long[] now = {1_000L};
+        FeedSuggestions.clock = () -> now[0];
+        Settings.HIDE_FEED_VIDEOS.save(true);
+        Object feed = new Object();
+        try {
+            assertEquals("no page yet", 1, older(feed));
+
+            // A page that kept a post.
+            FeedSuggestions.homePageStarts();
+            assertNull(homeTyped(new Item(Kind.MEDIA), FeedSuggestions.VIDEO));
+            assertTrue(homeTyped(new Item(Kind.MEDIA), FeedSuggestions.PHOTO) != null);
+            FeedSuggestions.homePageParsed();
+            assertFalse(FeedSuggestions.pageLostEverything);
+            assertEquals("a page that kept a post", 1, older(feed));
+
+            // A page that lost everything, then too long ago, or before the clock, or with the switches off.
+            videoPage(3);
+            now[0] = 1_000L + FeedSuggestions.OLDER_WINDOW_NANOS + 1;
+            assertEquals("too long ago", 1, older(feed));
+            now[0] = 500L;
+            assertEquals("a clock that went back", 1, older(feed));
+            now[0] = 2_000L;
+            Settings.HIDE_FEED_VIDEOS.save(false);
+            assertEquals("switch off", 1, older(feed));
+            Settings.HIDE_FEED_VIDEOS.save(true);
+            assertEquals("the switch back on", 0, older(feed));
+
+            // An empty page, a parser that read nothing, leaves the verdict of the page before.
+            FeedSuggestions.homePageStarts();
+            FeedSuggestions.homePageParsed();
+            assertEquals("a page with no items changes nothing", 0, older(feed));
+        } finally {
+            Settings.HIDE_FEED_VIDEOS.resetToDefault();
+            FeedSuggestions.typesTookOut = false;
+        }
+    }
+
+    /** A page the suggestion switches emptied ends the Older Posts loading row too. */
+    @Test
+    public void anOlderPostsPageEmptiedBySuggestionSwitchesStopsLoading() {
+        withHomeReads();
+        FeedSuggestions.clock = () -> 1_000L;
+        Object feed = new Object();
+        assertEquals(1, older(feed));
+        homePage(new Item(Kind.EXPLORE_STORY), new Item(Kind.SUGGESTED_USERS));
+        assertTrue(FeedSuggestions.tookOut);
+        assertEquals(0, older(feed));
+        Settings.HIDE_SUGGESTED_POSTS.save(false);
+        Settings.HIDE_SUGGESTED_ACCOUNTS.save(false);
+        Settings.HIDE_THREADS_POSTS.save(false);
+        Settings.HIDE_FEED_SURVEYS.save(false);
+        Settings.HIDE_FEED_SHOPPING.save(false);
+        assertEquals("every switch off is Instagram's row", 1, older(feed));
     }
 }

@@ -1,9 +1,35 @@
+%1$s isn't a language code. Use two letters, like en, es or de.	%1$s non è un codice lingua. Usa due lettere, come en, es o de.
+Applies to Save the sound as well and to Save the original sound on a long press. Opus makes a smaller file, but the sound is encoded again from TikTok's copy.	Vale per Salva anche l'audio e per Salva l'audio originale con la pressione prolungata. Opus crea un file più piccolo, ma l'audio viene ricodificato dalla copia di TikTok.
+As TikTok sent it (M4A or MP3)	Come lo invia TikTok (M4A o MP3)
+Burn-in guard	Protezione dal burn-in
+Couldn't write the caption on this video. Saving it without.	Non è stato possibile scrivere la descrizione su questo video. Viene salvato senza.
+Dim when idle	Attenua quando inattivo
+Dim when idle and shift	Attenua quando inattivo e sposta
+For OLED screens. After 5 seconds without a touch, the buttons, caption and tabs over the video dim to a quarter, and your next touch brings them back. Shift also moves everything on the feed a few pixels every 2 minutes.	Per schermi OLED. Dopo 5 secondi senza tocchi, i pulsanti, la didascalia e le schede sopra il video si attenuano a un quarto, e il tocco successivo li riporta. Sposta muove anche tutto il feed di qualche pixel ogni 2 minuti.
 Importing new history ended Undo for the earlier clear. You can clear the imported history.	L'importazione di una nuova cronologia impedisce di annullare la cancellazione precedente. Puoi cancellare la cronologia importata.
 %1$d setting in that file can't be restored here and was skipped	%1$d impostazione del file non può essere ripristinata qui ed è stata saltata
 %1$d settings in that file can't be restored here and were skipped	%1$d impostazioni del file non possono essere ripristinate qui e sono state saltate
 Import watch history	Importa cronologia di visualizzazione
+Keep the language picked in TikTok	Mantieni la lingua scelta in TikTok
+One language code, like en or es. Comments and captions TikTok translates come out in this language instead of the app's. Leave it empty to keep TikTok's choice.	Un codice lingua, come en o es. I commenti e le didascalie che TikTok traduce escono in questa lingua invece che in quella dell'app. Lascialo vuoto per tenere la scelta di TikTok.
+Opus (.ogg), a smaller file	Opus (.ogg), file più piccolo
+Opus didn't work on this phone. Saving the sound as TikTok sent it instead.	Opus non ha funzionato su questo telefono. Salvo l'audio come l'ha inviato TikTok.
+Opus needs Android 10 or later, so sounds save as TikTok sent them.	Opus richiede Android 10 o successivo, quindi l'audio viene salvato come lo invia TikTok.
+Puts a save button in the sheet a story's Share button opens. It saves the story you're watching, and holding a story still pauses it.	Aggiunge un pulsante di salvataggio al menu che si apre dal pulsante Condividi di una storia. Salva la storia che stai guardando, e tenere premuta una storia la mette ancora in pausa.
+Save a story from its share sheet	Salva una storia dal menu di condivisione
+Saved videos show the @username and the first line of the caption in the bottom left corner. The phone encodes the whole video again to do it, so saving takes longer. Applies to saves made by Hushfeed.	I video salvati mostrano il @nome utente e la prima riga della descrizione nell'angolo in basso a sinistra. Per farlo il telefono ricodifica tutto il video, quindi il salvataggio richiede più tempo. Vale per i salvataggi fatti da Hushfeed.
+Sound format	Formato audio
+TikTok only had its watermarked copy of this story, so that copy was saved to %1$s	TikTok aveva solo la copia con filigrana di questa storia, quindi è stata salvata quella copia in %1$s
+Translate button in comments	Pulsante Traduci nei commenti
+Adds TikTok's translate button next to the comment count. One tap translates every comment, and another shows the originals again.	Aggiunge il pulsante Traduci di TikTok accanto al numero di commenti. Un tocco traduce tutti i commenti, un altro mostra di nuovo gli originali.
+Translate into	Traduci in
+Type one language code here, like en.	Scrivi qui un codice lingua, come en.
 Use this account's TikTok JSON export, up to %1$s MB and %2$s entries. Dates without a time zone use this phone's time zone.	Usa l'esportazione JSON di TikTok di questo account, fino a %1$s MB e %2$s voci. Le date senza fuso orario usano quello di questo telefono.
 Sign in to TikTok before importing watch history.	Accedi a TikTok prima di importare la cronologia di visualizzazione.
+When TikTok starts and decides the phone's language changed, it forgets the language you picked in its settings and follows the phone. With this on, your pick stays. Counts from TikTok's next start.	Quando TikTok si avvia e decide che la lingua del telefono è cambiata, scarta la lingua che hai scelto nelle sue impostazioni e segue il telefono. Con questa opzione attiva, la tua scelta resta. Vale dal prossimo avvio di TikTok.
+Write the username and caption on the video	Scrivi nome utente e descrizione sul video
+Writing the caption on the video	Scrittura della descrizione sul video
+Writing the caption on the video: %1$s	Scrittura della descrizione sul video: %1$s
 Your TikTok account changed. Choose the file again for this account.	Il tuo account TikTok è cambiato. Scegli di nuovo il file per questo account.
 Reading watch history	Lettura della cronologia
 Importing watch history	Importazione della cronologia
@@ -124,6 +150,8 @@ How much of a video you watch before it's hidden next time. Zero counts it after
 Later	Più tardi
 Leave when TikTok says time is up	Esci quando TikTok dice che il tempo è scaduto
 Let a LIVE fill the screen up to the top edge. The status bar comes back when you leave the LIVE. Swipe down from the top to peek at it.	Lascia che un LIVE riempia lo schermo fino al bordo superiore. La barra di stato torna quando esci dal LIVE. Scorri verso il basso dall'alto per vederla per un attimo.
+Show a LIVE under the status bar	Mostra il LIVE sotto la barra di stato
+Let a LIVE reach the top edge with the clock and status icons over it, instead of a black strip. Hide the status bar in LIVE rooms takes them away instead.	Lascia che un LIVE arrivi fino al bordo superiore con l'ora e le icone di stato sopra, invece di una striscia nera. Nascondi la barra di stato nelle stanze LIVE invece le toglie del tutto.
 Loading the gate list and TikTok's current values…	Caricamento dell'elenco gate e dei valori attuali di TikTok…
 New value	Nuovo valore
 No app on this phone opens that file	Nessuna app su questo telefono apre quel file
@@ -202,7 +230,7 @@ Auto-advance	Avanzamento automatico
 Staying on a video	Restare su un video
 Auto-advance stopped after %1$d videos	Avanzamento automatico interrotto dopo %1$d video
 Auto-advance stopped after one video	Avanzamento automatico interrotto dopo un video
-Automatic clear display	Vista pulita automatica
+Automatic Clear display	Vista pulita automatica
 Avatar and follow button	Avatar e pulsante Segui
 Back	Indietro
 Back up settings	Esegui il backup delle impostazioni
@@ -580,6 +608,10 @@ Hide the track name beside the caption.	Nascondi il nome del brano accanto alla 
 Hide the status bar	Nascondi la barra di stato
 Hide stories from the feed.	Nascondi le storie dal feed.
 Hide the whole column on the right, from the avatar down to the music disc.	Nascondi l'intera colonna a destra, dall'avatar fino al disco musicale.
+Spin the music disc	Fai girare il disco musicale
+Turn the music disc at the bottom of the right column while a video plays, the way TikTok used to.	Fai girare il disco musicale in fondo alla colonna di destra mentre il video va, come faceva TikTok prima.
+Keep the music disc still	Tieni fermo il disco musicale
+Hold the music disc at the bottom of the right column still, even where TikTok turns it. This overrides Spin the music disc.	Tieni fermo il disco musicale in fondo alla colonna di destra, anche quando TikTok lo fa girare. Ha la precedenza su Fai girare il disco musicale.
 Hide this creator on this phone	Nascondi questo creator su questo telefono
 Hide verified accounts	Nascondi gli account verificati
 Hide video actions	Nascondi le azioni sul video
@@ -618,7 +650,7 @@ Inserted cards	Card inserite
 Keep a local record of what you have watched and hide those videos when the feed sends them again.	Tieni un registro locale di ciò che hai guardato e nascondi quei video quando il feed li invia di nuovo.
 Keep a paused video paused	Mantieni in pausa un video messo in pausa
 Move to the next video when the current one ends. Pauses, open dialogs and screen-time holds stop it. Restart TikTok to apply this.	Passa al video successivo quando quello attuale finisce. Pause, finestre di dialogo aperte e blocchi per il tempo di utilizzo lo interrompono. Riavvia TikTok per applicare la modifica.
-Keep captions in clear display	Mantieni i sottotitoli nella vista pulita
+Keep captions in Clear display	Mantieni i sottotitoli nella vista pulita
 Keep going	Continua
 Keep the Favorites tab	Mantieni la scheda Preferiti
 Keep the clock and status icons off the screen while TikTok is open. Swipe down from the top to peek at them.	Mantieni l'orologio e le icone di stato fuori dallo schermo mentre TikTok è aperto. Scorri verso il basso dall'alto per vederli per un attimo.
@@ -643,7 +675,7 @@ Last recording: 1 gate.	Ultima registrazione: 1 gate.
 Layout	Layout
 Layout, search, profile and system	Layout, ricerca, profilo e sistema
 Leave maximum empty to keep it unlimited.	Lascia il massimo vuoto per non avere limiti.
-Leave the sound out of the saved video. Save the sound as well still writes the .m4a beside it if you want both.	Non includere l'audio nel video salvato. Salva anche l'audio scrive comunque il file .m4a accanto al video, se vuoi entrambi.
+Leave the sound out of the saved video. Save the sound as well still writes the sound file beside it if you want both.	Non includere l'audio nel video salvato. Salva anche l'audio scrive comunque il file audio accanto al video, se vuoi entrambi.
 Length and views per like	Durata e visualizzazioni per Mi piace
 Less than a minute left	Meno di un minuto rimanente
 Let screenshots, screen recording and Circle to Search work on TikTok again. Restart TikTok to apply this.	Consenti di nuovo screenshot, registrazione dello schermo e Circle to Search su TikTok. Riavvia TikTok per applicare la modifica.
@@ -687,6 +719,7 @@ Messages, profiles and search still work.	Messaggi, profili e ricerca continuano
 Microphone in use	Microfono in uso
 Comments range	Intervallo dei commenti
 Favorites range	Intervallo dei preferiti
+Likes aren't available for this video	I Mi piace non sono disponibili per questo video
 Likes range	Intervallo dei Mi piace
 Shares range	Intervallo delle condivisioni
 Use Save report for this large report	Usa Salva rapporto per questo rapporto di grandi dimensioni
@@ -983,6 +1016,14 @@ Show the country a video was posted from next to the creator's name.	Mostra il p
 Show the current spoken caption while the other controls are hidden.	Mostra il sottotitolo attualmente recitato mentre gli altri controlli sono nascosti.
 Show the handle instead of the name	Mostra il nome utente invece del nome visualizzato
 Show the progress bar	Mostra la barra di avanzamento
+Show the time beside the progress bar	Mostra il tempo accanto alla barra di avanzamento
+Show the time played and the video's length at the end of the progress bar while it's on screen.	Mostra il tempo trascorso e la durata del video alla fine della barra di avanzamento mentre è sullo schermo.
+Bigger progress bar handle	Cursore più grande nella barra di avanzamento
+Draw a larger handle and a slightly thicker line on the progress bar, so it's easier to see where you are.	Disegna un cursore più grande e una linea un po' più spessa nella barra di avanzamento, così vedi meglio dove sei arrivato.
+Seek bar on video stories	Barra di riproduzione nelle storie video
+Add a thin line along the bottom of a video story that you can drag to go back or skip ahead. The time shows while you drag, and a tap on it still moves between stories.	Aggiungi una linea sottile in fondo a una storia video che puoi trascinare per tornare indietro o andare avanti. Il tempo compare mentre trascini, e un tocco sulla linea continua a passare da una storia all'altra.
+Story position	Posizione nella storia
+%1$s of %2$s	%1$s di %2$s
 Show the progress bar thumbnail	Mostra la miniatura nella barra di avanzamento
 Show the whole Activity and New followers lists instead of stopping at a View all button.	Mostra le liste complete "Attività" e "Nuovi follower" invece di fermarti al pulsante "Visualizza tutto".
 Show the whole video instead of cropping it to the window. Nothing changes on a tall phone, where it already fits. On a folding phone opened up, a squarer screen or a split view the sides or the ends stop being cut off.	Mostra il video per intero invece di ritagliarlo nella finestra. Su un telefono molto allungato non cambia nulla, perché il video ci rientra già. Su un telefono pieghevole aperto, uno schermo più quadrato o in una visualizzazione divisa, i lati o le estremità non vengono più tagliati.
@@ -1231,7 +1272,7 @@ When a video ends in full screen, stay on it instead of moving to the next one. 
 While diagnostic logging is on, a message names the part of Hushfeed that failed. Off keeps failures in the report only.	Quando la registrazione diagnostica è attiva, un messaggio indica quale parte di Hushfeed ha avuto un problema. Se disattivata, gli errori restano solo nel rapporto.
 Window width needed to enable the layout. Restart TikTok to apply this.	Larghezza della finestra necessaria per attivare il layout. Riavvia TikTok per applicare la modifica.
 Words, countries and languages	Parole, paesi e lingue
-Write the video's sound beside it as an .m4a. Android 10 and later file audio separately, so it lands in Music under the same folder name as your videos.	Salva l'audio del video a fianco come file .m4a. Da Android 10 in poi l'audio viene archiviato separatamente, quindi finisce in Music nella cartella con lo stesso nome della tua cartella video.
+Write the video's sound beside it, in the format picked under Sound format. Android 10 and later file audio separately, so it lands in Music under the same folder name as your videos.	Salva l'audio del video a fianco, nel formato scelto in Formato audio. Da Android 10 in poi l'audio viene archiviato separatamente, quindi finisce in Music nella cartella con lo stesso nome della tua cartella video.
 YTDLnis background mode	Modalità in background di YTDLnis
 YTDLnis download type	Tipo di download di YTDLnis
 Yes	Sì
@@ -1447,6 +1488,8 @@ Clearing seen videos	Eliminazione dei video visti in corso
 Couldn't clear seen videos. Try again.	Non è stato possibile eliminare i video visti. Riprova.
 Keep playing in the background	Continua la riproduzione in background
 The video you're watching keeps playing to its end after you leave TikTok or turn the screen off, with TikTok's own media notification to pause it. TikTok's background play switch stays on while this is on. Restart TikTok to apply this.	Il video che stai guardando continua fino alla fine anche se esci da TikTok o spegni lo schermo, e puoi metterlo in pausa dalla notifica multimediale di TikTok. L'interruttore di riproduzione in background di TikTok resta attivo finché questa opzione è attiva. Riavvia TikTok per applicare la modifica.
+Replay in the background	Ripeti in background
+When a video ends while TikTok plays in the background, it starts over instead of waiting for you to press Play in the notification. A call or another app's sound still pauses it.	Quando un video finisce mentre TikTok è in riproduzione in background, ricomincia da capo invece di aspettare che tu prema Riproduci nella notifica. Una chiamata o l'audio di un'altra app lo mettono comunque in pausa.
 Keep playing in the background is on in Hushfeed's Playback settings, so TikTok gets 2 for this key and an override here has no effect until that switch is off.	"Continua la riproduzione in background" è attivo nelle impostazioni di Riproduzione di Hushfeed, quindi TikTok riceve 2 per questa chiave, e una sovrascrittura qui non ha effetto finché quell'interruttore non è disattivato.
 2, from Keep playing in the background	2, da "Continua la riproduzione in background"
 Let the last video finish	Lascia finire l'ultimo video
@@ -1634,7 +1677,7 @@ Pick the popups to stop. The list holds the ones TikTok has tried to show on thi
 No popups have been seen yet	Nessun popup visto finora
 Use TikTok for a while. A popup shows up here after TikTok first tries to show it.	Usa TikTok per un po'. Un popup compare qui dopo che TikTok prova a mostrarlo per la prima volta.
 Fade the video controls	Attenua i controlli del video
-Fade the buttons, caption and tabs over the video to this level instead of hiding them. 100 leaves them as TikTok draws them. Faded controls still take taps. At 0 the buttons and caption are hidden, and the tabs stay at 10.	Attenua i pulsanti, la didascalia e le schede sopra il video fino a questo livello invece di nasconderli. Con 100 restano come li disegna TikTok. I controlli attenuati rispondono ancora al tocco. Con 0 i pulsanti e la didascalia vengono nascosti, mentre le schede restano a 10.
+Fade the buttons, caption and tabs over the video to this level instead of hiding them. 100 leaves them as TikTok draws them. Faded controls still take taps. In Clear display the buttons and caption stay on screen at this level, and taps go through them to the video. At 0 the buttons and caption are hidden, and the tabs stay at 10.	Attenua i pulsanti, la didascalia e le schede sopra il video fino a questo livello invece di nasconderli. Con 100 restano come li disegna TikTok. I controlli attenuati rispondono ancora al tocco. Nella vista pulita i pulsanti e la didascalia restano sullo schermo a questo livello, e i tocchi li attraversano fino al video. Con 0 i pulsanti e la didascalia vengono nascosti, mentre le schede restano a 10.
 Loop a story	Ripeti una storia
 Replay a story from the start when it ends instead of moving to the next one. Tap or swipe to move on.	Riavvia una storia dall'inizio quando finisce invece di passare alla successiva. Tocca o scorri per andare avanti.
 Hold a photo story	Mantieni una storia con foto
@@ -1835,6 +1878,7 @@ Language	Lingua
 Username last changed	Ultimo cambio del nome utente
 Display name last changed	Ultimo cambio del nome visualizzato
 Private account	Account privato
+Like the video	Metti Mi piace al video
 Liked videos	Video con Mi piace
 Public	Pubblici
 Copy	Copia
@@ -1891,3 +1935,19 @@ Budgets and reminders	Limiti e promemoria
 %1$s, %2$s	%1$s, %2$s
 Don't auto translate these languages	Non tradurre automaticamente queste lingue
 Separate language codes with commas, like es, de. When TikTok translates for you, captions and comments in these languages stay as they were written. See translation still works when you tap it. TikTok's own Don't translate list stays the way it is.	Separa i codici lingua con virgole, come es, de. Quando TikTok traduce per te, le didascalie e i commenti in queste lingue restano come sono stati scritti. Vedi traduzione funziona ancora quando lo tocchi. L'elenco Non tradurre di TikTok resta com'è.
+Performance	Prestazioni
+Skip the splash ad	Salta l'annuncio di avvio
+Stop the full-screen ad TikTok can show while it starts up.	Blocca l'annuncio a schermo intero che TikTok può mostrare all'avvio.
+Skip update checks	Salta i controlli degli aggiornamenti
+Stop the two background tasks TikTok uses to check for updates, one of them when your phone starts. Some in-app update prompts may stop. Play Store updates still work.	Ferma le due attività in background che TikTok usa per cercare aggiornamenti, una delle quali all'accensione del telefono. Alcuni avvisi di aggiornamento nell'app potrebbero non comparire più. Gli aggiornamenti dal Play Store funzionano ancora.
+Limit background traffic	Limita il traffico in background
+Stop TikTok loading upcoming videos ahead of time and setting up notifications. You won't get notifications, messages included, while this is on. Videos may take a moment longer to start.	Impedisce a TikTok di caricare in anticipo i prossimi video e di configurare le notifiche. Finché è attivo non riceverai notifiche, nemmeno per i messaggi. I video potrebbero metterci un po' di più a partire.
+Stop TikTok loading upcoming videos ahead of time. It uses less data, but videos may take a moment longer to start.	Impedisce a TikTok di caricare in anticipo i prossimi video. Usa meno dati, ma i video potrebbero metterci un po' di più a partire.
+Don't decode animated frames ahead	Non decodificare in anticipo i fotogrammi animati
+Animated stickers and GIFs decode each frame as it's shown instead of a few ahead, so they use a little less memory. Applies to the next ones that load.	Sticker animati e GIF decodificano ogni fotogramma quando viene mostrato invece di alcuni in anticipo, così usano un po' meno memoria. Vale per i prossimi che vengono caricati.
+Stop on-device AI profiling	Ferma la profilazione IA sul dispositivo
+Stop TikTok's built-in AI engine from starting, so it doesn't get a copy of everything TikTok logs about your use. TikTok works as if the engine weren't there.	Impedisce l'avvio del motore IA integrato di TikTok, così non riceve una copia di tutto ciò che TikTok registra sul tuo utilizzo. TikTok funziona come se il motore non ci fosse.
+Allow voice comments	Consenti i commenti vocali
+Show TikTok's button for recording a spoken comment, on accounts that don't have it yet. It hasn't been tried on a real account, so it may not work.	Mostra il pulsante di TikTok per registrare un commento vocale sugli account che non lo hanno ancora. Non è stato provato su un account reale, quindi potrebbe non funzionare.
+Sign in without a passkey	Accedi senza passkey
+TikTok treats your phone as one without passkeys, so signing in asks for your password or a code by email or text instead. Password managers won't hand a passkey to a patched app.	TikTok tratta il tuo telefono come uno senza passkey, quindi per accedere chiede la password o un codice via email o SMS. I gestori di password non danno una passkey a un'app modificata.

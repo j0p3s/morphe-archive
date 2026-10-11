@@ -29,6 +29,7 @@ import java.io.StringWriter;
 import java.util.function.BooleanSupplier;
 
 import app.hushtelegram.extension.shared.diagnostics.DiagnosticCategory;
+import app.hushtelegram.extension.shared.diagnostics.DiagnosticRedactor;
 import app.hushtelegram.extension.shared.settings.BaseSettings;
 import app.hushtelegram.extension.shared.settings.preference.LogBufferManager;
 
@@ -154,10 +155,25 @@ public class Logger {
             logBuilt(logLevel, category, explicitSource, message, messageString, ex, includeStackTrace, showToast);
         } catch (Throwable failure) {
             try {
-                Log.e(MORPHE_LOG_TAG_PREFIX + "Logger", "Could not log a message: " + messageString, failure);
+                // Redacted like every other logcat line: the failure can carry the message's text.
+                Log.e(MORPHE_LOG_TAG_PREFIX + "Logger", forLogcat(
+                        "Could not log a message: " + messageString + "\n" + Log.getStackTraceString(failure)));
             } catch (Throwable ignored) {
-                // Nothing is left to report through.
+                try {
+                    Log.e(MORPHE_LOG_TAG_PREFIX + "Logger", "Could not log a message.");
+                } catch (Throwable alsoIgnored) {
+                    // Nothing is left to report through.
+                }
             }
+        }
+    }
+
+    /** The redacted text, or none of it when redaction is what failed. */
+    private static String forLogcat(String text) {
+        try {
+            return DiagnosticRedactor.redact(text);
+        } catch (Throwable failure) {
+            return "Could not log a message: it couldn't be redacted.";
         }
     }
 
@@ -201,18 +217,18 @@ public class Logger {
         LogBufferManager.appendEvent(category, className, logLevel.name(), logText);
 
         String logTag = MORPHE_LOG_TAG_PREFIX + className;
+        // Logcat reaches adb and bug reports, so it gets the redaction an exported report gets,
+        // the exception's own text and stack included.
+        String logcatText = DiagnosticRedactor.redact(ex == null ? logText : logText + "\n" + Log.getStackTraceString(ex));
         switch (logLevel) {
             case DEBUG:
-                if (ex == null) Log.d(logTag, logText);
-                else Log.d(logTag, logText, ex);
+                Log.d(logTag, logcatText);
                 break;
             case INFO:
-                if (ex == null) Log.i(logTag, logText);
-                else Log.i(logTag, logText, ex);
+                Log.i(logTag, logcatText);
                 break;
             case ERROR:
-                if (ex == null) Log.e(logTag, logText);
-                else Log.e(logTag, logText, ex);
+                Log.e(logTag, logcatText);
                 break;
         }
 

@@ -1,0 +1,220 @@
+/*
+ * Copyright 2026 HushTelegram contributors
+ * https://github.com/SysAdminDoc/HushTelegram
+ */
+package app.hushtelegram.extension.telegram.misc;
+
+import static org.junit.Assert.*;
+
+import app.hushtelegram.extension.shared.SettingsContextRule;
+import app.hushtelegram.extension.shared.diagnostics.HookStatus;
+import app.hushtelegram.extension.shared.settings.HushTelegramPause;
+import app.hushtelegram.extension.shared.settings.PauseForTests;
+import app.hushtelegram.extension.shared.settings.SettingReadsForTests;
+import app.hushtelegram.extension.telegram.settings.FamilyNames;
+import app.hushtelegram.extension.telegram.settings.Settings;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+import org.robolectric.annotation.Config;
+
+@RunWith(RobolectricTestRunner.class)
+@Config(sdk = 30)
+public class MessageFiltersTest {
+    @Rule public final SettingsContextRule settingsContext = new SettingsContextRule();
+
+    private static final long GROUP = -1001234567890L;
+
+    @Before public void reset() { restore(); }
+    @After public void restore() {
+        PauseForTests.resume();
+        SettingReadsForTests.mend(Settings.HIDE_BY_KEYWORD);
+        Settings.HIDE_BY_KEYWORD.resetToDefault();
+        Settings.MESSAGE_FILTERS_GROUPS.resetToDefault();
+        Settings.MESSAGE_FILTERS_CHANNELS.resetToDefault();
+        HookStatus.clear();
+    }
+
+    @Test public void offByDefaultEveryMessageKeepsItsType() {
+        assertFalse(Settings.HIDE_BY_KEYWORD.get());
+        assertEquals("", Settings.MESSAGE_FILTERS_GROUPS.get());
+        assertEquals(0, MessageFilters.type(new Object(), 0));
+        assertEquals("Telegram's own hidden messages stay hidden", -1, MessageFilters.type(new Object(), -1));
+        assertEquals(5, MessageFilters.type(null, 5));
+        assertTrue(String.join("\n", HookStatus.report()).contains(FamilyNames.HIDE_BY_KEYWORD));
+    }
+
+    @Test public void eachKindOfChatUsesItsOwnListAndNeverAPrivateChatOrYourOwnMessage() {
+        Settings.HIDE_BY_KEYWORD.save(true);
+        Settings.MESSAGE_FILTERS_GROUPS.save("free crypto");
+        Settings.MESSAGE_FILTERS_CHANNELS.save("sponsored");
+        assertTrue(MessageFilters.on());
+        assertTrue("a group", MessageFilters.hides(GROUP, false, false, "Get FREE Crypto now"));
+        assertTrue("a basic group", MessageFilters.hides(-42L, false, false, "free crypto"));
+        assertFalse("the channels list in a group", MessageFilters.hides(GROUP, false, false, "sponsored"));
+        assertTrue("a channel's post", MessageFilters.hides(GROUP, false, true, "This post is Sponsored"));
+        assertFalse("the groups list on a channel's post", MessageFilters.hides(GROUP, false, true, "free crypto"));
+        assertFalse("a private chat", MessageFilters.hides(7L, false, false, "free crypto"));
+        assertFalse("a secret chat", MessageFilters.hides(0x4000000000000007L, false, false, "free crypto"));
+        assertFalse("your own message", MessageFilters.hides(GROUP, true, false, "free crypto"));
+        assertFalse("a message without text", MessageFilters.hides(GROUP, false, false, null));
+        assertFalse(MessageFilters.hides(GROUP, false, false, ""));
+        assertFalse(MessageFilters.hides(GROUP, false, false, "free stuff, crypto later"));
+        // The unpatched stubs put every message in a private chat, so it keeps its type.
+        assertEquals(3, MessageFilters.type(new Object(), 3));
+    }
+
+    @Test public void wordsMatchAnywhereAndSlashesMakeAnExpressionBothIgnoringCase() {
+        List<MessageFilters.Filter> filters = parsed("Überweisung\n/\\bgive\\s*away\\b/\n  padded  ");
+        assertEquals(3, filters.size());
+        assertTrue(MessageFilters.matches(filters, "bitte ÜBERWEISUNG heute"));
+        assertTrue(MessageFilters.matches(filters, "Big GiveAway today"));
+        assertTrue(MessageFilters.matches(filters, "give away"));
+        assertFalse("a word boundary", MessageFilters.matches(filters, "giveaways"));
+        assertTrue("trimmed", MessageFilters.matches(filters, "...padded..."));
+        assertFalse(MessageFilters.matches(filters, "nothing here"));
+        assertTrue("plain text isn't an expression", MessageFilters.matches(parsed("a.b"), "x a.b y"));
+        assertFalse(MessageFilters.matches(parsed("a.b"), "axb"));
+        assertTrue("slashes inside a line are text", MessageFilters.matches(parsed("1/2/3"), "on 1/2/3"));
+    }
+
+    @Test public void aFilterReadsNoFurtherThanTelegramsLongestMessage() {
+        String padding = new String(new char[MessageFilters.MAX_TEXT - 4]).replace('\0', ' ');
+        assertTrue(MessageFilters.matches(parsed("spam"), padding + "spam"));
+        assertFalse(MessageFilters.matches(parsed("spam"), padding + " spam"));
+        assertFalse(MessageFilters.matches(parsed("/spam$/"), padding + " spam"));
+    }
+
+    @Test public void anExpressionReadsLessOfAMessageThanPlainText() {
+        String padding = new String(new char[MessageFilters.MAX_EXPRESSION_TEXT - 4]).replace('\0', ' ');
+        assertTrue(MessageFilters.matches(parsed("/spam/"), padding + "spam"));
+        assertFalse(MessageFilters.matches(parsed("/spam/"), padding + " spam"));
+        assertTrue("plain text reads on", MessageFilters.matches(parsed("spam"), padding + " spam"));
+        assertTrue("the expression still finds what's early", MessageFilters.matches(parsed("/^x.*/"), "x" + padding + "  spam"));
+        assertTrue("the end of a message", MessageFilters.matches(parsed("/spam$/"), padding + "spam"));
+        assertFalse("the cut isn't the end", MessageFilters.matches(parsed("/spam$/"), padding + "spam tail"));
+        assertFalse("nor a line break with more after it", MessageFilters.matches(parsed("/spam$/"), padding + "spam\r\ntail"));
+        assertTrue(MessageFilters.matches(parsed("/\\bspam\\b/"), padding + "spam tail"));
+        assertFalse("a word that goes on past the cut", MessageFilters.matches(parsed("/\\bspam\\b/"), padding + "spammy"));
+    }
+
+    @Test public void aLineThatCantBeUsedIsSaidAndLeftOutOfTheChat() {
+        assertNull(MessageFilters.problem("plain words"));
+        assertNull(MessageFilters.problem("/(ab)+c/"));
+        assertNull(MessageFilters.problem("(a+)+ as text"));
+        assertEquals(MessageFilters.Problem.BROKEN, MessageFilters.problem("/(unclosed/"));
+        assertEquals(MessageFilters.Problem.BROKEN, MessageFilters.problem("/[a-/"));
+        assertEquals(MessageFilters.Problem.TOO_LONG, MessageFilters.problem(repeat('x', MessageFilters.MAX_FILTER_CHARS + 1)));
+        assertNull(MessageFilters.problem(repeat('x', MessageFilters.MAX_FILTER_CHARS)));
+        for (String slow : new String[]{"/(a+)+/", "/(a*)*b/", "/(\\w+\\s?)+$/", "/((ab)*)+/", "/(a{2,})+/", "/(?:x+y?)*/",
+                "/(a)\\1/", "/(?<w>a)\\k<w>/", "/(a+){2,5}/",
+                // A repeated choice, or a repeated group with an optional part, splits a run of text many ways.
+                "/(.|\\s)*x/", "/(a|aa)+b/", "/(?:foo|bar)+/", "/(a?a)+/", "/((a|b)c)*/",
+                // Two open-ended repeats, lazy or not, or one with too many optional parts beside it.
+                "/.*.*x/", "/\\w+\\s*\\w+!/", "/.*?x.*?y/", "/a+b{1,}/", "/x+y{1,99}/", "/.{0,99}.{0,99}.{0,99}/",
+                "/a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?a?/",
+                // What's quoted in a class, a control character and a code point hide no bracket or count.
+                "/[\\Q[\\E](a|aa)+b/", "/\\c[(a|aa)+b/", "/\\x{61}+\\x{61}+\\x{61}+b/",
+                // The comments flag changes what spaces and # mean.
+                "/(?x)(a|aa) +b/", "/(?x)a#{99999999999}/", "/(?ix-s:(a|aa) +)b/",
+                // {0,1} is a ?, so these are (a?a)+ and twenty optional parts.
+                "/(a{0,1}a)+b/", "/" + times("a{0,1}", 20) + times("a", 20) + "b/",
+                // A look behind tries each place its text could start.
+                "/(?<=.{0,1000}c)x/", "/(?<!\\d{1,3})x/", "/(?<=a?b)x/",
+                // Choices that can match at the same place still multiply.
+                "/" + times("(?:a|a)", 16) + "b/", "/" + times("(?:a|ab)", 16) + "b/"}) {
+            assertEquals(slow, MessageFilters.Problem.SLOW, MessageFilters.problem(slow));
+        }
+        assertTrue("ICU reads a comment", MessageFilters.slow("(?#[)(a|aa)+b"));
+        assertNotNull(MessageFilters.problem("/(?#[)(a|aa)+b/"));
+        assertFalse("a count past any number", MessageFilters.slow("a{0,99999999999999999999}"));
+        assertFalse(MessageFilters.slow("a{99999999999}b+"));
+        for (String fine : new String[]{"/[+*]+/", "/\\(a?\\)+/", "/(a+)?/", "/(a{1})+/", "/(?:foo|bar) now/", "/\\Q(a+)+\\E/",
+                "/a{2}b+/", "/[(]a?[)]+/", "/(ab)+c/", "/https?:\\/\\/\\S+/", "/a+?b/", "/a*+b/", "/(?i)x+/",
+                "/\\d{3}[-.]?\\d{4}/", "/\\bfree\\s{1,9}crypto\\s{1,9}now\\b/", "/\\(?\\d{3}\\)? ?\\d+/",
+                "/\\b(?:buy|sell)\\s+crypto\\b/",
+                // A choice's sides are tried one after the other.
+                "/spam.*|scam.*/", "/(?:foo|bar).*/", "/(?:buy.*|sell.*) now/",
+                "/[\\Q]\\E]+x/", "/\\x{61}+b/", "/\\p{L}+ crypto/",
+                // Only one plain word of a list can match at a place.
+                "/(?:buy|sell|earn|win|get) ?\\$? ?\\d+/", "/(?:free|cheap|bonus) (?:btc|eth|usdt|sol)\\s+now/",
+                "/(a+){0,1}b/", "/x{0,1}y+/", "/(?<=\\s)crypto/", "/(?<!\\d{3})x+/"}) {
+            assertNull(fine, MessageFilters.problem(fine));
+        }
+        List<MessageFilters.Filter> kept = parsed("/(unclosed/\n/(a+)+/\nspam");
+        assertEquals("only the line that works", 1, kept.size());
+        assertTrue(MessageFilters.matches(kept, "spam"));
+    }
+
+    @Test public void aListIsItsTrimmedLinesUpToItsLimit() {
+        assertEquals(Collections.emptyList(), MessageFilters.lines(null));
+        assertEquals(Collections.emptyList(), MessageFilters.lines(" \n\n "));
+        assertEquals(Arrays.asList("a", "b c"), MessageFilters.lines(" a \r\n\n b c "));
+        assertEquals("a\nb c", MessageFilters.join(MessageFilters.lines(" a \r\n\n b c ")));
+        assertEquals("a carriage return alone ends a line too", Arrays.asList("a", "b", "c"),
+                MessageFilters.lines("a\rb\r\rc"));
+        List<String> many = new ArrayList<>();
+        for (int i = 0; i < MessageFilters.MAX_FILTERS + 5; i++) many.add("word" + i);
+        assertEquals(MessageFilters.MAX_FILTERS, parsed(MessageFilters.join(many)).size());
+    }
+
+    @Test public void aListFitsASettingsFileByItsWrittenSizeNotItsLength() {
+        assertTrue(MessageFilters.fits(Collections.emptyList()));
+        assertTrue("full of short Latin lines", MessageFilters.fits(lines(MessageFilters.MAX_FILTERS, 'x', MessageFilters.MAX_FILTER_CHARS)));
+        assertFalse("each character takes three bytes",
+                MessageFilters.fits(lines(MessageFilters.MAX_FILTERS, '字', MessageFilters.MAX_FILTER_CHARS)));
+        assertTrue(MessageFilters.fits(lines(MessageFilters.MAX_FILTERS, '字', 60)));
+        assertFalse("a slash is written as two characters",
+                MessageFilters.fits(lines(MessageFilters.MAX_FILTERS, '/', MessageFilters.MAX_FILTER_CHARS)));
+    }
+
+    private static List<String> lines(int count, char c, int length) {
+        List<String> lines = new ArrayList<>();
+        for (int i = 0; i < count; i++) lines.add(repeat(c, length));
+        return lines;
+    }
+
+    @Test public void aChangedListIsReadAgain() {
+        Settings.MESSAGE_FILTERS_GROUPS.save("first");
+        assertSame("read once and kept", MessageFilters.filters(false), MessageFilters.filters(false));
+        assertTrue(MessageFilters.matches(MessageFilters.filters(false), "first"));
+        Settings.MESSAGE_FILTERS_GROUPS.save("second");
+        assertFalse(MessageFilters.matches(MessageFilters.filters(false), "first"));
+        assertTrue(MessageFilters.matches(MessageFilters.filters(false), "second"));
+        assertTrue(MessageFilters.filters(true).isEmpty());
+    }
+
+    @Test public void pausingAnEarlyStartOrAnUnreadableSwitchKeepsTheMessage() {
+        Settings.HIDE_BY_KEYWORD.save(true);
+        for (HushTelegramPause.Reason reason : HushTelegramPause.Reason.values()) {
+            if (reason == HushTelegramPause.Reason.NONE) continue;
+            PauseForTests.pause(reason);
+            assertFalse(reason.name(), MessageFilters.on());
+            PauseForTests.resume();
+        }
+        SettingsContextRule.withoutContext(() -> assertFalse(MessageFilters.on()));
+        SettingReadsForTests.breakReads(Settings.HIDE_BY_KEYWORD);
+        assertFalse(MessageFilters.on());
+        assertFalse(HookStatus.missing(FamilyNames.HIDE_BY_KEYWORD).isEmpty());
+    }
+
+    private static List<MessageFilters.Filter> parsed(String list) {
+        Settings.MESSAGE_FILTERS_GROUPS.save(list);
+        return MessageFilters.filters(false);
+    }
+
+    private static String times(String text, int count) {
+        return String.join("", Collections.nCopies(count, text));
+    }
+
+    private static String repeat(char c, int count) {
+        return new String(new char[count]).replace('\0', c);
+    }
+}

@@ -215,34 +215,52 @@ fun BytecodePatchContext.cloneMethodWithAdditionalRegisters(
  * Completely replaces a method's implementation with a brand-new implementation with [registerCount] registers
  * and [smaliCode], leaving zero leftover instructions, zero dead-code register type mismatches, and no try blocks.
  */
-fun BytecodePatchContext.replaceMethod(
+fun MutableClass.replaceMethod(
     method: Method,
-    registerCount: Int,
+    registerCount: Int = 2,
     smaliCode: String,
 ): MutableMethod {
-    val mutableClass = mutableClassDefBy(method.definingClass)
-    val target = mutableClass.methods.first { MethodUtil.methodSignaturesMatch(it, method) }
-    mutableClass.methods.remove(target)
+    var paramRegs = 0
+    for (type in method.parameterTypes) {
+        paramRegs += if (type == "J" || type == "D") 2 else 1
+    }
+    if (!AccessFlags.STATIC.isSet(method.accessFlags)) {
+        paramRegs += 1
+    }
+    val effectiveRegisterCount = maxOf(registerCount, paramRegs + 2)
+
+    val target = this.methods.first { MethodUtil.methodSignaturesMatch(it, method) }
+    this.methods.remove(target)
 
     val newImpl = ImmutableMethodImplementation(
-        registerCount,
+        effectiveRegisterCount,
         emptyList(),
         emptyList(),
         null,
     )
+    val cleanAccessFlags = method.accessFlags and AccessFlags.NATIVE.value.inv()
     val newMethod = ImmutableMethod(
         method.definingClass,
         method.name,
         method.parameters,
         method.returnType,
-        method.accessFlags,
+        cleanAccessFlags,
         method.annotations,
         method.hiddenApiRestrictions,
         newImpl,
     ).toMutable().apply {
         addInstructions(0, smaliCode)
     }
-    mutableClass.methods.add(newMethod)
+    this.methods.add(newMethod)
     return newMethod
 }
+
+/**
+ * Convenience extension on [BytecodePatchContext] to completely replace a method's implementation.
+ */
+fun BytecodePatchContext.replaceMethod(
+    method: Method,
+    registerCount: Int = 2,
+    smaliCode: String,
+): MutableMethod = mutableClassDefBy(method.definingClass).replaceMethod(method, registerCount, smaliCode)
 

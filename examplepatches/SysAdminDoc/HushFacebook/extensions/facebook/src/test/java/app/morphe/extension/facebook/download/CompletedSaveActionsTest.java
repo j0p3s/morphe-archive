@@ -85,6 +85,9 @@ public class CompletedSaveActionsTest {
         watcher = CompletedEntryForTests.watcher();
         ((Application) context).registerActivityLifecycleCallbacks(watcher);
         LogBufferManager.clearLogBuffer();
+        // Each test starts as a fresh process would, so a key kept in memory from an earlier test's
+        // storage never stands in for this one's.
+        SavedFileActions.forgetKey();
     }
 
     @After public void tearDown() throws Exception {
@@ -345,6 +348,51 @@ public class CompletedSaveActionsTest {
         assertEquals(two, second.getData());
     }
 
+    /**
+     * After a run of saves nobody cleared, the oldest cards go, so Android's limit on an app's
+     * notifications never swallows the next save's own progress card.
+     */
+    @Test public void onlyTheNewestCompletedCardsStayUp() throws Exception {
+        List<Uri> saved = new ArrayList<>();
+        for (int i = 0; i < SaveControl.COMPLETED_KEPT + 3; i++) {
+            saved.add(entry(save(true, "video/mp4"), 0).getData());
+        }
+        assertEquals(SaveControl.COMPLETED_KEPT, completed().size());
+        for (int i = 0; i < saved.size(); i++) {
+            boolean up = false;
+            for (StatusBarNotification note : notifications().getActiveNotifications()) {
+                if ((COMPLETED + ":" + saved.get(i)).equals(note.getTag())) up = true;
+            }
+            assertEquals("card " + i + " of " + saved.size(), i >= 3, up);
+        }
+    }
+
+    @Test public void aFinishedSaveWaitsForTheOneBeforeItToPostAndTrim() throws Exception {
+        MediaStoreWriter writer = new MediaStoreWriter(context, true);
+        Uri uri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, gallery.next);
+        shadowOf(context.getContentResolver()).registerOutputStream(uri, new ByteArrayOutputStream());
+        writer.open("application/octet-stream").write(1);
+        writer.commit();
+        SaveControl.Save save = SaveControl.begin(context, true);
+        try {
+            assertTrue(save.publishing());
+            save.published(true);
+            Thread poster = new Thread(() -> SaveControl.showCompleted(save, writer, null));
+            synchronized (SaveControl.COMPLETED_LOCK) {
+                // Another save is posting its card and trimming: this one waits its turn.
+                poster.start();
+                long until = System.currentTimeMillis() + 10_000;
+                while (poster.getState() != Thread.State.BLOCKED && poster.isAlive() && System.currentTimeMillis() < until) {
+                    Thread.sleep(5);
+                }
+                assertEquals("the second save didn't wait", Thread.State.BLOCKED, poster.getState());
+                assertTrue("a card went up while another save trimmed", completed().isEmpty());
+            }
+            poster.join(10_000);
+            assertEquals(1, completed().size());
+        } finally { save.end(); }
+    }
+
     @Test public void aPendingWriterAndAnUnclaimedSaveExposeNoFileHandle() throws Exception {
         MediaStoreWriter writer = new MediaStoreWriter(context, true);
         assertNull(writer.publishedUri());
@@ -358,7 +406,7 @@ public class CompletedSaveActionsTest {
         assertEquals("video/mp4", writer.publishedMime());
         SaveControl.Save save = SaveControl.begin(context, true);
         try {
-            SaveControl.showCompleted(save, writer);
+            SaveControl.showCompleted(save, writer, null);
             assertTrue(completed().isEmpty());
         } finally { save.end(); }
     }
@@ -386,21 +434,21 @@ public class CompletedSaveActionsTest {
         assertEquals("Save canceled", ShadowToast.getTextOfLatestToast());
     }
 
-    @Test public void theCompatibilityAdviceAndFileActionsCoexist() throws Exception {
+    @Test public void theCompatibilityAdviceAndFileActionsShareOneCard() throws Exception {
         Uri uri = ContentUris.withAppendedId(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, gallery.next);
         shadowOf(context.getContentResolver()).registerOutputStream(uri, new ByteArrayOutputStream());
         finish(MediaDownload.start(context, true,
                 (writer, progress) -> Downloader.publish(file, "video/mp4", writer, progress).refused()));
         assertEquals(1, completed().size());
-        Notification advice = null;
-        for (StatusBarNotification note : notifications().getActiveNotifications()) {
-            if (SaveControl.SAVED_TAG.equals(note.getTag())) advice = note.getNotification();
-        }
-        assertNotNull(advice);
-        assertEquals(1, advice.actions.length);
-        assertEquals("Open the setting", advice.actions[0].title.toString());
+        assertEquals("one save, one card", 1, notifications().getActiveNotifications().length);
+        Notification card = completed().get(0);
+        assertEquals(3, card.actions.length);
+        assertEquals("Open", card.actions[0].title.toString());
+        assertEquals("Share", card.actions[1].title.toString());
+        assertEquals("Open the setting", card.actions[2].title.toString());
+        assertEquals(uri, new Intent(shadowOf(card.actions[0].actionIntent).getSavedIntent()).getData());
         assertEquals(Settings.DOWNLOAD_COMPATIBLE.key,
-                shadowOf(advice.actions[0].actionIntent).getSavedIntent().getStringExtra(SettingsEntry.EXTRA_SHOW_SETTING));
+                shadowOf(card.actions[2].actionIntent).getSavedIntent().getStringExtra(SettingsEntry.EXTRA_SHOW_SETTING));
         assertEquals("Saved, but WhatsApp and some editors may not accept it", ShadowToast.getTextOfLatestToast());
     }
 
@@ -417,6 +465,57 @@ public class CompletedSaveActionsTest {
             controller.start().resume();
             settle();
             assertNull(shadowOf(controller.get()).getNextStartedActivity());
+        }
+    }
+
+    /**
+     * Facebook's launcher activity is exported, so any app can send the buttons' action with a
+     * guessed address of a file Facebook saved. Without the button's key nothing opens or shares,
+     * and the intent reaches Facebook as it came. The real button still works after a restart.
+     */
+    @Test public void aRequestFromAnotherAppOpensAndSharesNothing() throws Exception {
+        Notification note = save(true, "video/mp4");
+        for (int action = 0; action < 2; action++) {
+            Intent real = entry(note, action);
+            assertNotNull("the button carries no key", real.getStringExtra(SavedFileActions.KEY));
+            Intent forged = new Intent(real.getAction()).setComponent(real.getComponent())
+                    .setDataAndType(real.getData(), real.getType());
+            Intent guessed = new Intent(forged).putExtra(SavedFileActions.KEY, "00000000000000000000000000000000");
+            for (Intent request : new Intent[]{forged, guessed}) {
+                try (ActivityController<Activity> controller = receive(request)) {
+                    assertNull("another app's request reached a file handler",
+                            shadowOf(controller.get()).getNextStartedActivity());
+                    assertEquals(real.getAction(), controller.get().getIntent().getAction());
+                }
+            }
+            // A process restart reads the same key back, so the notification's own tap still works.
+            SavedFileActions.forgetKey();
+            try (ActivityController<Activity> controller = receive(real)) {
+                Intent launched = shadowOf(controller.get()).getNextStartedActivity();
+                assertNotNull("the notification's own tap stopped working after a restart", launched);
+                Intent target = action == 0 ? launched : launched.getParcelableExtra(Intent.EXTRA_INTENT);
+                assertEquals(gallery.uris.get(0), action == 0 ? target.getData()
+                        : target.getParcelableExtra(Intent.EXTRA_STREAM));
+                assertNull("the key was left for Facebook to read",
+                        controller.get().getIntent().getStringExtra(SavedFileActions.KEY));
+            }
+        }
+    }
+
+    /** A button another Facebook process made carries the key that process kept, which this one never read. */
+    @Test public void aKeyAnotherProcessKeptStillOpens() throws Exception {
+        Notification note = save(true, "video/mp4");
+        Intent real = entry(note, 0);
+        String other = "0123456789abcdef0123456789abcdef";
+        assertNotEquals(other, real.getStringExtra(SavedFileActions.KEY));
+        Files.write(new File(context.getNoBackupFilesDir(), SavedFileActions.KEY_FILE).toPath(),
+                other.getBytes(java.nio.charset.StandardCharsets.US_ASCII));
+        Intent fromOther = new Intent(real).putExtra(SavedFileActions.KEY, other);
+        for (Intent tap : new Intent[]{fromOther, real}) {
+            try (ActivityController<Activity> controller = receive(tap)) {
+                assertNotNull("a tap on a button with a kept key opened nothing",
+                        shadowOf(controller.get()).getNextStartedActivity());
+            }
         }
     }
 

@@ -15,16 +15,21 @@ import app.morphe.patches.instagram.download.MEDIA
 import app.morphe.patches.instagram.download.PROFILE_PICTURE_INFO
 import app.morphe.patches.instagram.download.USER
 import app.morphe.patches.instagram.download.accountBridges
+import app.morphe.patches.instagram.media.taptoplay.FRAGMENT_ACTIVITY
+import app.morphe.patches.instagram.media.taptoplay.TOUCH as TAP_CLOCK
 import app.morphe.patches.instagram.stories.time.STORY_ITEM
 import app.morphe.patches.shared.compat.AppCompatibilities
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.builder.BuilderOffsetInstruction
 import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
@@ -35,11 +40,14 @@ import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction10x
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction11n
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction11x
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction21c
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22c
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction31i
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction3rc
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableFieldReference
+import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableStringReference
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableTypeReference
 import org.junit.Assert.assertEquals
@@ -56,6 +64,8 @@ import org.junit.Test
 class StoryMentionsHookTest {
     private val page = "Lfixture/StoryPage;"
     private val mention = "Lfixture/MentionSticker;"
+    private val shared = "Lfixture/MentionHolder;"
+    private val otherShared = "Lfixture/MentionHolderToo;"
     private val mainBinder = "Lfixture/ReelBinder;"
     private val catchUpBinder = "Lfixture/CatchUpBinder;"
     private val public = AccessFlags.PUBLIC.value or AccessFlags.FINAL.value
@@ -69,8 +79,16 @@ class StoryMentionsHookTest {
     private fun field(owner: String, name: String, type: String, flags: Int = AccessFlags.PUBLIC.value) =
         ImmutableField(owner, name, type, flags, null, null, null)
 
-    private fun type(owner: String, fields: List<ImmutableField> = emptyList(), methods: List<Method> = emptyList(), flags: Int = AccessFlags.PUBLIC.value) =
-        ImmutableClassDef(owner, flags, "Ljava/lang/Object;", null, null, null, fields, methods)
+    private fun type(
+        owner: String, fields: List<ImmutableField> = emptyList(), methods: List<Method> = emptyList(),
+        flags: Int = AccessFlags.PUBLIC.value, interfaces: List<String>? = null,
+    ) = ImmutableClassDef(owner, flags, "Ljava/lang/Object;", interfaces, null, null, fields, methods)
+
+    /** An interface of [name] declaring one abstract no-arg getter of the account. */
+    private fun holder(name: String, getter: String, flags: Int) = type(
+        name, methods = listOf(ImmutableMethod(name, getter, emptyList(), USER, AccessFlags.PUBLIC.value or AccessFlags.ABSTRACT.value, null, null, null)),
+        flags = flags,
+    )
 
     /** A getter of [owner] answering [returns] that holds the hash of [field], then loads [classes] by const-class. */
     private fun getter(owner: String, name: String, returns: String, field: String, vararg classes: String, flags: Int = public) =
@@ -108,6 +126,7 @@ class StoryMentionsHookTest {
         viewFlags: Int = AccessFlags.PUBLIC.value,
         binders: Boolean = true,
         closed: Set<String> = emptySet(),
+        interfaces: List<String> = listOf(shared),
     ): List<ClassDef> {
         fun flags(part: String, open: Int) = if (part in closed) open and AccessFlags.PUBLIC.value.inv() else open
         return listOfNotNull(
@@ -122,7 +141,9 @@ class StoryMentionsHookTest {
             type(mention, methods = listOf(
                 method(mention, "Dqh", emptyList(), USER, public, 1, ImmutableInstruction21c(Opcode.CONST_CLASS, 0, ImmutableTypeReference(USER)), ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0)),
                 method(mention, "A00", emptyList(), USER, public or AccessFlags.STATIC.value, 1, ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0)),
-            ), flags = flags("mention", public)),
+            ), flags = public, interfaces = interfaces),
+            holder(shared, "Dqh", flags("holder", AccessFlags.PUBLIC.value or AccessFlags.INTERFACE.value or AccessFlags.ABSTRACT.value)),
+            holder(otherShared, "Dqi", AccessFlags.PUBLIC.value or AccessFlags.INTERFACE.value or AccessFlags.ABSTRACT.value),
             type(USER, methods = listOf(
                 getter(USER, "B0x", "Ljava/lang/String;", FULL_NAME, flags = flags("fullName", public)),
                 getter(USER, "B0y", "Ljava/lang/String;", "username"),
@@ -137,6 +158,7 @@ class StoryMentionsHookTest {
             .filter { AccessFlags.PUBLIC.isSet(it.accessFlags) && AccessFlags.STATIC.isSet(it.accessFlags) }
             .map { "${it.name}(${it.parameterTypes.joinToString("")})" }
         assertTrue("bind is not in the extension: $declared", BIND.substringAfter("->").substringBefore(")") + ")" in declared)
+        assertTrue("touch is not in the extension: $declared", PILL_TOUCH.substringAfter("->").substringBefore(")") + ")" in declared)
         for (stub in STUBS) assertTrue("$stub is not in the extension: $declared", "$stub(Ljava/lang/Object;)" in declared)
     }
 
@@ -164,13 +186,84 @@ class StoryMentionsHookTest {
         assertEquals("$page->A1Y:$REEL_VIEW_GROUP", context.stub("itemView")[1].referenceText())
         assertEquals("$STORY_ITEM->A17:$MEDIA", context.stub("media")[1].referenceText())
         assertEquals("$MEDIA->A9U()Ljava/util/List;", context.stub("mentions")[1].referenceText())
-        assertEquals("$mention->Dqh()$USER", context.stub("mentionUser")[1].referenceText())
+        assertEquals("$shared->Dqh()$USER", context.stub("mentionUser")[1].referenceText())
+        assertEquals(Opcode.INVOKE_INTERFACE, context.stub("mentionUser")[1].opcode)
+        assertEquals(shared, ((context.stub("mentionUser")[0] as ReferenceInstruction).reference as TypeReference).type)
         assertEquals("$USER->B0x()Ljava/lang/String;", context.stub("fullName")[1].referenceText())
         for (name in STUBS) {
             val code = context.stub(name)
             assertEquals("$name casts first", Opcode.CHECK_CAST, code[0].opcode)
             assertTrue("$name returns what it read", code.take(4).any { it.opcode == Opcode.RETURN_OBJECT })
         }
+    }
+
+    /**
+     * IgFragmentActivity with its own dispatchTouchEvent: [locals] locals, then the activity and the
+     * event. It loads its trace name and answers false, after Tap to play's call when [tapClock].
+     */
+    private fun activity(locals: Int = 7, tapClock: Boolean = false): ClassDef {
+        val self = locals
+        val answer = if (locals > 0) 0 else self
+        val code = listOfNotNull(
+            ImmutableInstruction3rc(
+                Opcode.INVOKE_STATIC_RANGE, self, 2,
+                ImmutableMethodReference(TAP_CLOCK.substringBefore("->"), "touch", listOf("Landroid/app/Activity;", "Landroid/view/MotionEvent;"), "V"),
+            ).takeIf { tapClock },
+            ImmutableInstruction21c(Opcode.CONST_STRING, answer, ImmutableStringReference("dispatchTouchEvent")),
+            ImmutableInstruction11n(Opcode.CONST_4, answer, 0),
+            ImmutableInstruction11x(Opcode.RETURN, answer),
+        )
+        return ImmutableClassDef(
+            FRAGMENT_ACTIVITY, AccessFlags.PUBLIC.value, "Landroidx/appcompat/app/AppCompatActivity;", null, null, null, null,
+            listOf(method(FRAGMENT_ACTIVITY, "dispatchTouchEvent", listOf("Landroid/view/MotionEvent;"), "Z", AccessFlags.PUBLIC.value, locals + 2, *code.toTypedArray())),
+        )
+    }
+
+    /**
+     * The activity hands each touch to the pill's hook first thing, answers true when it says so,
+     * and otherwise runs on from its own first instruction, with the answer in its first local.
+     */
+    @Test
+    fun aTapOnThePillIsCaughtFirstThingInTheActivity() {
+        val context = PatchContexts.of(standIns() + activity())
+        val touch = context.findPillTouch()
+        hookPillTouch(touch)
+
+        val code = touch.implementation!!.instructions.toList()
+        assertEquals(Opcode.INVOKE_STATIC_RANGE, code[0].opcode)
+        assertEquals(PILL_TOUCH, code[0].referenceText())
+        assertEquals("this and the event", listOf(7, 2), (code[0] as RegisterRangeInstruction).let { listOf(it.startRegister, it.registerCount) })
+        assertEquals(Opcode.MOVE_RESULT, code[1].opcode)
+        assertEquals(0, (code[1] as OneRegisterInstruction).registerA)
+        assertEquals(Opcode.IF_EQZ, code[2].opcode)
+        assertEquals("the branch goes to Instagram's own first instruction", 4, (code[2] as BuilderOffsetInstruction).target.location.index)
+        assertEquals(Opcode.RETURN, code[3].opcode)
+        assertEquals(0, (code[3] as OneRegisterInstruction).registerA)
+        assertEquals(Opcode.CONST_STRING, code[4].opcode)
+    }
+
+    /** Tap to play's call stays first, since its contract holds it there, and the pill's comes right after. */
+    @Test
+    fun withTapToPlaysHookInThePillsGoesRightAfterIt() {
+        val context = PatchContexts.of(standIns() + activity(tapClock = true))
+        val touch = context.findPillTouch()
+        hookPillTouch(touch)
+
+        val code = touch.implementation!!.instructions.toList()
+        assertEquals(TAP_CLOCK, code[0].referenceText())
+        assertEquals(PILL_TOUCH, code[1].referenceText())
+        assertEquals("the branch goes past both hooks", 5, (code[3] as BuilderOffsetInstruction).target.location.index)
+        assertEquals(Opcode.CONST_STRING, code[5].opcode)
+    }
+
+    @Test
+    fun anActivityWithNoLocalFailsThePatch() = refuses("no local register") {
+        PatchContexts.of(standIns() + activity(locals = 0)).findPillTouch()
+    }
+
+    @Test
+    fun noActivityFailsThePatch() = refuses("this build has no") {
+        PatchContexts.of(standIns()).findPillTouch()
     }
 
     @Test
@@ -184,6 +277,14 @@ class StoryMentionsHookTest {
         refuses("one type of mention, found 2") { PatchContexts.of(standIns(mentionTypes = listOf(mention, USER))).findStoryMentions() }
 
     @Test
+    fun aMentionWithNoSharedInterfaceFailsThePatch() =
+        refuses("found 0") { PatchContexts.of(standIns(interfaces = emptyList())).findStoryMentions() }
+
+    @Test
+    fun aMentionWithTwoSharedInterfacesFailsThePatch() =
+        refuses("found 2") { PatchContexts.of(standIns(interfaces = listOf(shared, otherShared))).findStoryMentions() }
+
+    @Test
     fun aPrivateMediaViewFailsThePatch() =
         refuses("isn't public") { PatchContexts.of(standIns(viewFlags = AccessFlags.PRIVATE.value)).findStoryMentions() }
 
@@ -191,7 +292,7 @@ class StoryMentionsHookTest {
     @Test
     fun whatTheStubsCantReachFailsThePatch() {
         for ((part, named) in mapOf(
-            "item" to STORY_ITEM, "media" to MEDIA, "mentions" to "$MEDIA->A9U", "mention" to mention,
+            "item" to STORY_ITEM, "media" to MEDIA, "mentions" to "$MEDIA->A9U", "holder" to shared,
             "user" to USER, "fullName" to "$USER->B0x",
         )) {
             refuses("$named isn't public") { PatchContexts.of(standIns(closed = setOf(part))).findStoryMentions() }
@@ -211,20 +312,24 @@ class StoryMentionsHookTest {
 
     /**
      * In each declared build, the two binders holding the trace name are found and hooked once
-     * each, the stubs are filled and the account's picture bridges are written.
+     * each, the stubs are filled, the account's picture bridges are written and the activity hands
+     * each touch to the pill's hook first thing.
      */
     @Test
     fun eachDeclaredBuildHooksBothBinders() {
         val versions = AppCompatibilities.instagram().single().targets.mapNotNull { it.version }.toSet()
         var checked = 0
-        for (version in versions) {
-            for (bundle in Fixtures.files { it.extension == "apks" && it.name.contains("-$version-") }) {
+        val bundles = versions.flatMap { version -> Fixtures.files { it.extension == "apks" && it.name.contains("-$version-") } } +
+            Fixtures.otherBuilds()
+        assertEquals("the declared build and the six others", 7, bundles.size)
+        run {
+            for (bundle in bundles) {
                 val binders = FixtureDex.classesHolding(bundle, BIND_MEDIA)
                 val pages = binders.flatMap { it.methods }.flatMap { it.instructions() }
                     .filter { it.opcode == Opcode.IPUT_OBJECT }
                     .mapNotNull { ((it as ReferenceInstruction).reference as FieldReference).takeIf { f -> f.type == STORY_ITEM }?.definingClass }
                     .toSet()
-                val models = FixtureDex.classes(bundle, pages + setOf(STORY_ITEM, MEDIA, USER, PROFILE_PICTURE_INFO, IMAGE_URL))
+                val models = FixtureDex.classes(bundle, pages + setOf(STORY_ITEM, MEDIA, USER, PROFILE_PICTURE_INFO, IMAGE_URL, FRAGMENT_ACTIVITY))
                 val key = REEL_MENTIONS.hashCode()
                 val mentionTypes = models.getValue(MEDIA).methods
                     .filter { method -> method.instructions().any { (it as? NarrowLiteralInstruction)?.narrowLiteral == key } }
@@ -232,11 +337,14 @@ class StoryMentionsHookTest {
                     .filter { it.opcode == Opcode.CONST_CLASS }
                     .map { ((it as ReferenceInstruction).reference as TypeReference).type }
                     .toSet()
-                val classes = (binders + models.values + FixtureDex.classes(bundle, mentionTypes).values +
+                val mentionClasses = FixtureDex.classes(bundle, mentionTypes)
+                val holders = FixtureDex.classes(bundle, mentionClasses.values.flatMap { it.interfaces }.toSet())
+                val classes = (binders + models.values + mentionClasses.values + holders.values +
                     ExtensionDex.classDef(STORY_MENTIONS) + ExtensionDex.classDef(INSTAGRAM_MEDIA)).distinctBy { it.type }
                 val context = PatchContexts.of(classes)
 
                 val found = context.findStoryMentions()
+                val touch = context.findPillTouch()
                 val stubs = context.storyMentionStubs()
                 val pictures = context.accountBridges(PATCH)
                 val cast = { context.mutableClassDefBy(INSTAGRAM_MEDIA).methods
@@ -245,22 +353,56 @@ class StoryMentionsHookTest {
                 stubs.fill(found)
                 pictures()
                 context.hookStoryBinds(found)
+                hookPillTouch(touch)
 
-                assertEquals("${bundle.name}: the binders", 2, found.binds.size)
+                assertEquals("${buildOf(bundle)}: the binders", 2, found.binds.size)
+                val touched = touch.implementation!!.instructions.toList()
+                assertEquals("${buildOf(bundle)}: the pill's hook first in dispatchTouchEvent", PILL_TOUCH, touched[0].referenceText())
+                assertEquals("${buildOf(bundle)}: Instagram's own code after it", 4, (touched[2] as BuilderOffsetInstruction).target.location.index)
                 for (bind in found.binds) {
                     val code = context.mutableClassDefBy(bind.type).methods.single {
                         it.name == bind.name && it.parameterTypes.map(Any::toString) == bind.parameters
                     }.instructions()
-                    assertEquals("${bundle.name}: ${bind.type}->${bind.name} calls bind once", 1, code.count { it.referenceText() == BIND })
+                    assertEquals("${buildOf(bundle)}: ${bind.type}->${bind.name} calls bind once", 1, code.count { it.referenceText() == BIND })
                 }
-                for (name in STUBS) assertEquals("${bundle.name}: $name", Opcode.CHECK_CAST, context.stub(name)[0].opcode)
+                for (name in STUBS) assertEquals("${buildOf(bundle)}: $name", Opcode.CHECK_CAST, context.stub(name)[0].opcode)
+                val user = context.stub("mentionUser")
+                assertEquals("${buildOf(bundle)}: the account is read through an interface", Opcode.INVOKE_INTERFACE, user[1].opcode)
+                assertEquals("${buildOf(bundle)}: the cast", found.mention, ((user[0] as ReferenceInstruction).reference as TypeReference).type)
+                val holder = holders.getValue(found.mention)
+                assertTrue("${buildOf(bundle)}: ${found.mention} is public", AccessFlags.PUBLIC.isSet(holder.accessFlags))
+                assertTrue("${buildOf(bundle)}: ${found.mention} is an interface", AccessFlags.INTERFACE.isSet(holder.accessFlags))
+                val getters = holder.methods.filter {
+                    it.parameterTypes.isEmpty() && it.returnType == USER && AccessFlags.ABSTRACT.isSet(it.accessFlags)
+                }
+                assertEquals("${buildOf(bundle)}: the interface's one getter of the account", listOf(found.mentionUser), getters.map { it.name })
+                assertTrue("${buildOf(bundle)}: the named mention class implements it", mentionClasses.values.any { found.mention in it.interfaces })
+                // The plain model Instagram's JSON parser fills the cached list with implements it too:
+                // another public class taking a User in its constructor.
+                val implementers = mutableSetOf<String>()
+                val jsonModels = mutableSetOf<String>()
+                FixtureDex.forEach(bundle) { dex ->
+                    for (classDef in dex.classes) if (found.mention in classDef.interfaces) {
+                        implementers += classDef.type
+                        if (AccessFlags.PUBLIC.isSet(classDef.accessFlags) && classDef.type !in mentionClasses &&
+                            classDef.methods.any { it.name == "<init>" && it.parameterTypes.any { type -> type == USER } }
+                        ) jsonModels += classDef.type
+                    }
+                }
+                assertTrue("${buildOf(bundle)}: no other public class taking a User implements ${found.mention}: $implementers", jsonModels.isNotEmpty())
+                assertTrue("${buildOf(bundle)}: ${found.mention} is implemented by ${implementers}", true)
+                println("MENTION-INTERFACE ${bundle.name} ${found.mention}->${found.mentionUser} json=$jsonModels named=${mentionClasses.keys.filter { found.mention in mentionClasses.getValue(it).interfaces }}")
                 // The account's username and picture, and nothing only a profile's own patches read.
-                assertEquals("${bundle.name}: the bridges written", setOf("profilePicture", "username", "candidateUrl"), cast() - castBefore)
+                assertEquals("${buildOf(bundle)}: the bridges written", setOf("profilePicture", "username", "candidateUrl"), cast() - castBefore)
                 checked++
             }
         }
         assertTrue("no fixture was checked", checked > 0)
     }
+
+    private fun name(bundle: java.io.File) = bundle.parentFile?.name ?: bundle.name
+
+    private fun buildOf(bundle: java.io.File) = bundle.parentFile?.name ?: bundle.name
 
     private fun refuses(detail: String, run: () -> Unit) {
         val failure = assertThrows(PatchException::class.java) { run() }

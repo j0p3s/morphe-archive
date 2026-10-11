@@ -317,6 +317,40 @@ public class SettingsSearchQueryTest {
         assertFalse(search(search, "release notes").contains("What's new"));
     }
 
+    /** While its notes are unread, What's new is found under About Hushfeed and opens there. */
+    @Test public void whatsNewIsFoundWhileItsNotesAreUnread() throws Exception {
+        // A release with its own bundled notes. With nothing dismissed yet, only the installed
+        // release's section counts as unread, so a version with no section would find nothing.
+        TikTokPreferenceFragment.setReleaseVersionForTests("0.70.0");
+        try {
+            TikTokPreferenceFragment search = attachSearch();
+            assertTrue("What's new is not indexed while pending",
+                    search(search, "release notes").contains("What's new"));
+            assertEquals("About Hushfeed", category(search, "What's new"));
+
+            Preference result = null;
+            PreferenceScreen screen = search.getPreferenceScreen();
+            for (int position = 0; position < screen.getPreferenceCount(); position++) {
+                Preference candidate = screen.getPreference(position);
+                if (candidate.getTitle() != null && "What's new".contentEquals(candidate.getTitle())) {
+                    result = candidate;
+                    break;
+                }
+            }
+            assertNotNull(result);
+            assertTrue(result.getOnPreferenceClickListener().onPreferenceClick(result));
+            search.getActivity().getFragmentManager().executePendingTransactions();
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+            android.app.Fragment opened = search.getActivity().getFragmentManager()
+                    .findFragmentById(android.R.id.content);
+            assertTrue(opened instanceof TikTokPreferenceFragment);
+            assertEquals("ABOUT", opened.getArguments().getString("morphe_settings_hub"));
+            assertEquals("action_release_notes", opened.getArguments().getString("morphe_settings_target_key"));
+        } finally {
+            TikTokPreferenceFragment.setReleaseVersionForTests(null);
+        }
+    }
+
     /** "???" folds to nothing, and the page said Start typing under a box with text in it. */
     @Test public void aQueryOfOnlyPunctuationSaysNothingMatched() throws Exception {
         TikTokPreferenceFragment search = attachSearch();

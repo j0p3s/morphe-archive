@@ -74,8 +74,8 @@ public class SettingsL10nTest {
             "Region, backups and diagnostics", "Version, changes and licenses",
             "Budgets and reminders",
             "Active", "Paused", "Restart pending", "Hushfeed is active", "Hushfeed is paused",
-            "Pause runtime changes after restarting TikTok. Your settings stay saved. Changes built into the APK remain.",
-            "Hushfeed runtime changes are paused. Your settings stay saved. Changes built into the APK remain."
+            "Pause Hushfeed's switches after TikTok restarts. Your settings stay saved. Changes made when you patched, like the app's name or icon, stay.",
+            "Hushfeed's switches are paused. Your settings stay saved. Changes made when you patched, like the app's name or icon, stay."
     };
 
     @Before
@@ -917,7 +917,7 @@ public class SettingsL10nTest {
         String[] titles = {"Description text size", "Author text size"};
         String[] summaries = {
                 "Use 0 for TikTok's size, or %1$d to %2$d. Sizes the description below the author's name and keeps Android's font scaling.",
-                "Use 0 for TikTok's size, or %1$d to %2$d. Sizes the author's name and keeps Android's font scaling."};
+                "Use 0 for TikTok's size, or %1$d to %2$d. Sizes the author's name and the post date next to it, and keeps Android's font scaling."};
         String[] keys = {Settings.FEED_DESCRIPTION_TEXT_SIZE.key, Settings.FEED_AUTHOR_TEXT_SIZE.key};
         SettingsStatus.feedTextSizeEnabled = true;
         List<String> locales = new ArrayList<>(languages());
@@ -1472,6 +1472,9 @@ public class SettingsL10nTest {
                 if (translatedSummary == null) continue;
                 for (String title : titles) {
                     if (title.equals(row[0]) || !summary.contains(title)) continue;
+                    // "Hide the status bar" inside a quoted "Hide the status bar in LIVE rooms"
+                    // names the longer row, not its own.
+                    if (onlyInsideLongerTitle(summary, title, titles)) continue;
                     String translatedTitle = table.get(title);
                     if (translatedTitle == null) continue;
                     checked++;
@@ -1486,6 +1489,25 @@ public class SettingsL10nTest {
         assertTrue("no summary quotes another row's title, so this checked nothing", checked > 0);
         assertEquals("summaries that name a switch by words no switch carries:\n"
                 + String.join("\n", wrong), 0, wrong.size());
+    }
+
+    /** Whether every place {@code title} shows up in {@code summary} is part of a longer quoted title. */
+    private static boolean onlyInsideLongerTitle(String summary, String title, Set<String> titles) {
+        for (int at = summary.indexOf(title); at >= 0; at = summary.indexOf(title, at + 1)) {
+            boolean covered = false;
+            for (String longer : titles) {
+                if (longer.length() <= title.length() || !longer.contains(title)) continue;
+                for (int start = summary.indexOf(longer); start >= 0; start = summary.indexOf(longer, start + 1)) {
+                    if (start <= at && at + title.length() <= start + longer.length()) {
+                        covered = true;
+                        break;
+                    }
+                }
+                if (covered) break;
+            }
+            if (!covered) return false;
+        }
+        return true;
     }
 
     /**

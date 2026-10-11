@@ -107,6 +107,10 @@ Jump to a section	Ir a una sección
 Go straight to one group of settings. Back returns to where you were.	Ve directo a un grupo de ajustes. Atrás te devuelve a donde estabas.
 Browse settings	Explorar ajustes
 More settings	Más ajustes
+# context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
+Support HushPinterest	Apoya HushPinterest
+# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
+Buy me a coffee on Ko-fi	Invítame a un café en Ko-fi
 No matching settings	No hay ajustes coincidentes
 %1$d setting found	%1$d ajuste encontrado
 %1$d settings found	%1$d ajustes encontrados
@@ -172,9 +176,12 @@ Firebase and Google Analytics collection is turned off	La recopilación de Fireb
 Analytics launch tasks	Inicio de estadísticas
 Analytics uploads	Envíos de estadísticas
 Strip link tracking	Quitar rastreo de enlaces
-Removes tracking tags from links you copy or share. Short pin.it links stay as Pinterest made them.	Quita las etiquetas de seguimiento de los enlaces que copias o compartes. Los enlaces cortos pin.it se quedan como los creó Pinterest.
+Removes tracking tags from links you copy or share. Short pin.it links stay as Pinterest made them unless Plain pin links is on.	Quita las etiquetas de seguimiento de los enlaces que copias o compartes. Los enlaces cortos pin.it se quedan como los creó Pinterest, salvo que Enlaces de pin simples esté activado.
+Plain pin links	Enlaces de pin simples
+Copied and shared pin.it links become the pin's own pinterest.com link, so they don't say who shared them. Pin links from Pinterest's country sites become that same link too. When HushPinterest doesn't know the pin yet, a copied link is checked with Pinterest in the background and swapped in a moment later.	Los enlaces de pin.it copiados y compartidos pasan a ser el enlace de pinterest.com del propio pin, así no dicen quién los compartió. Los enlaces de pines de los sitios de Pinterest de cada país también pasan a ser ese mismo enlace. Si HushPinterest aún no conoce el pin, un enlace copiado se consulta con Pinterest en segundo plano y se cambia un momento después.
 Hide advertising ID	Ocultar el ID de publicidad
-Pinterest sees an empty advertising ID with ad tracking limited, as if you deleted your ad ID in Android settings.	Pinterest ve un ID de publicidad vacío con el seguimiento de anuncios limitado, como si hubieras borrado tu ID de publicidad en los ajustes de Android.
+Block Store browser ID	ID de navegador en Block Store
+Pinterest sees an empty advertising ID with ad tracking limited, as if you deleted your ad ID in Android settings. Pinterest also stops keeping its browser ID in Google's Block Store, where it would outlast a reinstall.	Pinterest ve un ID de publicidad vacío con el seguimiento de anuncios limitado, como si hubieras borrado tu ID de publicidad en los ajustes de Android. Pinterest también deja de guardar su ID de navegador en el Block Store de Google, donde sobreviviría a una reinstalación.
 Remove ad tracking permissions	Quitar permisos de seguimiento publicitario
 Pinterest can no longer use Google's ad ID permission or Android's ad services. This was set when you patched. Patch again without it to bring them back.	Pinterest ya no puede usar el permiso de ID de publicidad de Google ni los servicios de anuncios de Android. Esto se definió al parchear. Vuelve a parchear sin él para recuperarlos.
 Pinterest's access to the ad ID and Android's ad services is removed	el acceso de Pinterest al ID de publicidad y a los servicios de publicidad de Android está eliminado
@@ -206,11 +213,8 @@ Download pin	Descargar pin
 Share pin	Compartir pin
 Open pin link	Abrir enlace del pin
 Download started. Check Downloads.	Descarga iniciada. Revisa Descargas.
-Pin saved.	Pin guardado.
+Download started. Check %s.	Descarga iniciada. Revisa %s.
 Couldn't save this pin.	No se pudo guardar este pin.
-Another pin is being saved. Try again when it's finished.	Se está guardando otro pin. Inténtalo de nuevo cuando termine.
-The file may have saved. Check your chosen save location.	Puede que el archivo se haya guardado. Revisa la ubicación que elegiste.
-Couldn't remove the incomplete file. Check your chosen save location.	No se pudo eliminar el archivo incompleto. Revisa la ubicación que elegiste.
 Queued	En cola
 Downloading	Descargando
 Paused	En pausa
@@ -230,12 +234,16 @@ The download server couldn't complete the request.	El servidor de descarga no pu
 Android couldn't save the file.	Android no pudo guardar el archivo.
 Download failed.	La descarga falló.
 Check Downloads for the saved file.	Busca el archivo guardado en Descargas.
+Saved in %s.	Guardado en %s.
 Android no longer has this request. Check Downloads before saving again.	Android ya no tiene esta solicitud. Revisa Descargas antes de volver a guardar.
+Android no longer has this request. Check %s before saving again.	Android ya no tiene esta solicitud. Revisa %s antes de volver a guardar.
 Couldn't check Downloads. Try again.	No se pudo consultar Descargas. Inténtalo de nuevo.
 Resume HushPinterest and turn on Download pins to retry.	Reanuda HushPinterest y activa Descargar pines para volver a intentarlo.
 Open the pin again to get a fresh download link.	Abre el pin de nuevo para obtener un enlace de descarga actualizado.
 This request can't be retried. Check Downloads or open the pin again.	Esta solicitud no puede repetirse. Revisa Descargas o abre el pin de nuevo.
+This request can't be retried. Check %s or open the pin again.	Esta solicitud no puede repetirse. Revisa %s o abre el pin de nuevo.
 Download started, but its history couldn't be saved. Check Downloads.	La descarga comenzó, pero no se pudo guardar su historial. Revisa Descargas.
+Download started, but its history couldn't be saved. Check %s.	La descarga comenzó, pero no se pudo guardar su historial. Revisa %s.
 History removed. Files and active downloads were kept.	Historial eliminado. Se conservaron los archivos y las descargas activas.
 Couldn't remove this history entry. Try again.	No se pudo eliminar esta entrada del historial. Inténtalo de nuevo.
 Couldn't open Downloads.	No se pudo abrir Descargas.
@@ -253,29 +261,14 @@ Set as wallpaper	Usar como fondo de pantalla
 Opens Android's Set as options for this saved image.	Abre las opciones de Android para usar esta imagen guardada.
 Set as	Usar como
 Couldn't open Set as. Check Downloads for the saved file.	No se pudo abrir Usar como. Busca el archivo guardado en Descargas.
+Couldn't open Set as. Check %s for the saved file.	No se pudo abrir Usar como. Busca el archivo guardado en %s.
 This download isn't a finished image anymore. Check Downloads.	Esta descarga ya no es una imagen terminada. Revisa Descargas.
+This download isn't a finished image anymore. Check %s.	Esta descarga ya no es una imagen terminada. Revisa %s.
 Resume HushPinterest and turn on Download pins to use this.	Reanuda HushPinterest y activa Descargar Pines para usar esto.
 Remove from history	Eliminar del historial
 Removes this history entry. Files and active downloads are kept.	Elimina esta entrada del historial. Se conservan los archivos y las descargas activas.
 Open Downloads	Abrir Descargas
 Refresh	Actualizar
-Saving	Guardando
-Interrupted	Interrumpido
-Access unavailable	Acceso no disponible
-Save cleanup pending	Limpieza del guardado pendiente
-This save is still running. Try again when it's finished.	Este guardado sigue en curso. Inténtalo de nuevo cuando termine.
-Couldn't check your chosen save location. Open your Files app to inspect it.	No se pudo comprobar la ubicación elegida. Abre tu aplicación de archivos para revisarla.
-Save cleanup couldn't be confirmed. The file was kept. Try removing this history entry again.	No se pudo confirmar la limpieza del guardado. Se conservó el archivo. Intenta quitar esta entrada del historial de nuevo.
-Check your chosen save location before saving again. HushPinterest won't resume or delete this file.	Revisa la ubicación elegida antes de guardar de nuevo. HushPinterest no reanudará ni eliminará este archivo.
-Save history removed. The file was kept.	Se quitó el historial del guardado. Se conservó el archivo.
-Couldn't record the save location. No file data was written.	No se pudo registrar la ubicación. No se escribió ningún dato en el archivo.
-Save history is full. Remove an old entry before saving another pin.	El historial de guardados está lleno. Quita una entrada antigua antes de guardar otro Pin.
-Pending saves	Guardados pendientes
-Check unfinished file picker saves. Files are kept.	Revisa los guardados sin terminar del selector de archivos. Se conservan los archivos.
-Checking pending saves...	Comprobando guardados pendientes...
-No pending HushPinterest saves.	No hay guardados pendientes de HushPinterest.
-Only unfinished saves are listed. Check your chosen location before saving again.	Solo se muestran los guardados sin terminar. Revisa la ubicación elegida antes de guardar de nuevo.
-Pin saved. Check Pending saves if its history remains.	Pin guardado. Revisa Guardados pendientes si aún aparece en el historial.
 Download unavailable	Descarga no disponible
 Supplied media details	Detalles del contenido proporcionado
 Copy media link	Copiar enlace del archivo
@@ -298,10 +291,6 @@ Pinterest hasn't supplied an image to download.	Pinterest no ha proporcionado un
 HushPinterest can't download this type of image.	HushPinterest no puede descargar este tipo de imagen.
 This media link isn't a public Pinterest link HushPinterest can use.	Este enlace de medios no es un enlace público de Pinterest que HushPinterest pueda usar.
 Couldn't start the download. Check system Downloads and try again.	No se pudo iniciar la descarga. Revisa las descargas del sistema e inténtalo de nuevo.
-Couldn't open a save location. Try again from the pin.	No se pudo abrir una ubicación de guardado. Inténtalo de nuevo desde el Pin.
-Couldn't complete the save. Check your connection and chosen save location.	No se pudo completar el guardado. Revisa la conexión y la ubicación elegida.
-Couldn't write to the chosen save location. Check its access and available space.	No se pudo escribir en la ubicación elegida. Revisa el acceso y el espacio disponible.
-Couldn't download this pin. Check your connection and try again.	No se pudo descargar este Pin. Revisa la conexión e inténtalo de nuevo.
 Couldn't prepare this pin for download. Open the pin again and try again.	No se pudo preparar este Pin para descargarlo. Ábrelo de nuevo e inténtalo otra vez.
 %1$s (%2$s to %3$s)	%1$s (de %2$s a %3$s)
 Your choice is saved, but this build doesn't include the patch for it.	Tu elección está guardada, pero esta versión no incluye el parche para ella.
@@ -318,9 +307,9 @@ On	Activado
 Off	Desactivado
 Copy a quick report or save the full one to %1$s. Links, IDs, cookies and sign-in tokens are left out. Check it for other private text before you share it.	Copia un informe rápido o guarda el completo en %1$s. Se omiten enlaces, ID, cookies y tokens de inicio de sesión. Revisa si contiene otros datos privados antes de compartirlo.
 Save the full report in %1$s.	Guarda el informe completo en %1$s.
-Copy a quick report. Report storage is unavailable right now. Links, IDs, cookies and sign-in tokens are left out. Check it for other private text before you share it.	Copia un informe rápido. El almacenamiento de informes no está disponible ahora. Se omiten enlaces, ID, cookies y tokens de inicio de sesión. Revisa otros datos privados antes de compartirlo.
-Report storage is unavailable right now. You can still copy a quick report.	El almacenamiento de informes no está disponible ahora. Aún puedes copiar un informe rápido.
 Hides Play Store pop-ups asking you to update Pinterest. A pop-up that's already open stays.	Oculta los avisos de Play Store que te piden actualizar Pinterest. Un aviso que ya está abierto se queda.
+Fix push notifications	Arreglar notificaciones push
+Lets a patched Pinterest sign up for push notifications, which it can't do on its own. A change applies the next time Pinterest starts.	Permite que un Pinterest parcheado se registre para recibir notificaciones push, algo que no puede hacer por sí solo. Un cambio se aplica la próxima vez que Pinterest se inicie.
 Stops Pinterest from suggesting you share a screenshot. Screenshots still work. Restart Pinterest to see the change.	Evita que Pinterest te sugiera compartir una captura de pantalla. Las capturas siguen funcionando. Reinicia Pinterest para ver el cambio.
 Hides your recent searches. It doesn't delete your account's search history. The change shows the next time the screen updates.	Oculta tus búsquedas recientes. No borra el historial de búsqueda de tu cuenta. El cambio se ve la próxima vez que se actualice la pantalla.
 Hides Create in the bottom bar. The change shows the next time the bar updates.	Oculta Crear en la barra inferior. El cambio se ve la próxima vez que se actualice la barra.
@@ -369,17 +358,17 @@ Select visible pins (up to %d)	Seleccionar pines visibles (hasta %d)
 Queue selected	Poner selección en cola
 Couldn't open the pin selection. Try again from the grid.	No se pudo abrir la selección de pines. Inténtalo de nuevo desde la cuadrícula.
 Stop selection	Detener selección
-Queued: %d\nSaved: %d\nSkipped: %d\nUnsupported: %d\nFailed: %d	En cola: %d\nGuardados: %d\nOmitidos: %d\nNo compatibles: %d\nFallidos: %d
+Queued: %d\nSkipped: %d\nUnsupported: %d\nFailed: %d	En cola: %d\nOmitidos: %d\nNo compatibles: %d\nFallidos: %d
 Stopping keeps downloads already started. Unstarted selections end when Pinterest closes.	Detener conserva las descargas iniciadas. Las selecciones sin iniciar terminan al cerrar Pinterest.
-History could not be saved for %d results. Check Downloads or your chosen files.	No se pudo guardar el historial de %d resultados. Revisa Descargas o los archivos elegidos.
-Saved	Guardado
+History could not be saved for %d results. Check Downloads.	No se pudo guardar el historial de %d resultados. Revisa Descargas.
+History could not be saved for %d results. Check %s.	No se pudo guardar el historial de %d resultados. Revisa %s.
 Skipped	Omitido
 Unsupported	No compatible
-Saved to the location you chose.	Guardado en la ubicación elegida.
 No download was queued. The selection was stopped, canceled or unavailable.	No se puso ninguna descarga en cola. La selección se detuvo, se canceló o no estaba disponible.
 Pinterest didn't supply supported media for this pin.	Pinterest no proporcionó contenido compatible para este pin.
 Download a pin, or select several pins in a grid. Saves videos and original images, or the largest size Pinterest has.	Descarga un pin o selecciona varios en una cuadrícula. Guarda videos e imágenes originales, o el mayor tamaño que tenga Pinterest.
-Android 9 uses the file picker. Results from visible-pin selections appear here.	Android 9 usa el selector de archivos. Aquí aparecen los resultados de las selecciones de pines visibles.
+Save in Pinterest's folder	Guardar en la carpeta de Pinterest
+Saves downloads in Pictures/100PINT/Pins, the folder Pinterest's own image saves use, instead of Download.	Guarda las descargas en Pictures/100PINT/Pins, la carpeta que usa Pinterest para sus propias imágenes guardadas, en lugar de Download.
 Only the 32 most recent downloads and selection results are listed. Saved files are kept.	Solo se muestran las 32 descargas y resultados de selección más recientes. Se conservan los archivos guardados.
 # context: Download board, a row in a board's own menu and its switch on the Pin actions page.
 Download board	Descargar tablero
@@ -394,3 +383,43 @@ loaded board pins	pines cargados del tablero
 # context: Long-press download, a button added to the round menu a held pin opens, and its switch on the Pin actions page.
 Long-press download	Descarga con pulsación larga
 Adds a Download button to the round menu you get when you hold a pin. Slide onto it and let go to save the pin. Download pins has to be on too.	Añade un botón de descarga al menú circular que aparece al mantener pulsado un pin. Desliza el dedo hasta él y suéltalo para guardar el pin. Descargar pines también tiene que estar activado.
+# context: Hide ads coverage in a partial build: each list holder or ad-only view the patch did or didn't hook, named in the Feed page summary. The last row adds how many of a target's hooks went in.
+promoted pins in feed pages	pines promocionados en las páginas del feed
+promoted pins in paged results	pines promocionados en los resultados por páginas
+promoted pins in bookmarked lists	pines promocionados en las listas con marcador
+text ads	anuncios de texto
+ad buttons on pin closeups	botones de anuncio en las vistas ampliadas de pines
+floating ad bars on pin closeups	barras flotantes de anuncios en las vistas ampliadas de pines
+sponsor credits on boards	créditos de patrocinio en los tableros
+%1$s (%2$d of %3$d parts)	%1$s (%2$d de %3$d partes)
+# context: Pinterest's own settings page. Step labels use Pinterest's own es menu names from 14.39.0.
+Pinterest's own settings	Configuración propia de Pinterest
+Finding them	Dónde encontrarlas
+Open Pinterest's settings from the gear on your Saved tab. HushPinterest doesn't change any of these.	Abre la configuración de Pinterest desde el engranaje de tu pestaña Guardado. HushPinterest no cambia ninguna de estas opciones.
+Settings	Configuración
+App theme	Tema de la aplicación
+Pinterest's choice of a light or dark look, or the one your phone uses.	La opción de Pinterest entre un aspecto claro u oscuro, o el que usa tu teléfono.
+Account management	Administración de la cuenta
+Privacy and data	Privacidad y datos
+Pinterest's ad personalization and data choices for your account. Disable analytics doesn't change them.	Las opciones de Pinterest sobre anuncios personalizados y datos de tu cuenta. Desactivar estadísticas no las cambia.
+Notifications	Notificaciones
+Which push, email and in-app notices Pinterest sends you.	Qué avisos push, por correo y en la aplicación te envía Pinterest.
+Show AI content	Mostrar contenido de IA
+Turned off, Pinterest shows less AI content in your feed. Hide AI-labeled pins only takes out pins that carry Pinterest's AI label.	Si lo desactivas, Pinterest muestra menos contenido de IA en tu feed. Ocultar pines con etiqueta de IA solo quita los pines que llevan la etiqueta de IA de Pinterest.
+Refine your recommendations	Ajusta las recomendaciones
+AI content	Contenido de IA
+Autoplay videos on cellular data	Reproducir los videos automáticamente con datos móviles
+Turned off, videos don't start on their own on mobile data. Pinterest may still load some of a video ahead of time.	Si lo desactivas, los videos no empiezan solos con datos móviles. Pinterest puede seguir cargando parte de un video por adelantado.
+Social permissions	Permisos sociales
+In Pinterest: %1$s	En Pinterest: %1$s
+Pick a download folder	Elegir una carpeta de descargas
+Saves downloads in a folder you pick inside Pictures, DCIM, Download or Documents.	Guarda las descargas en una carpeta que elijas dentro de Pictures, DCIM, Download o Documents.
+%s is picked, but Save in Pinterest's folder is on, so downloads go there.	%s está elegida, pero Guardar en la carpeta de Pinterest está activado, así que las descargas van ahí.
+Saving downloads in %s. Tap to pick another folder or go back to Download.	Las descargas se guardan en %s. Toca para elegir otra carpeta o volver a Download.
+Pick another folder	Elegir otra carpeta
+Save in Download again	Volver a guardar en Download
+This phone has no folder picker, so there's no way to choose a folder here.	Este teléfono no tiene selector de carpetas, así que aquí no hay forma de elegir una carpeta.
+Couldn't open the folder picker. Try again.	No se pudo abrir el selector de carpetas. Inténtalo de nuevo.
+Pick a folder inside Pictures, DCIM, Download or Documents on the phone's own storage.	Elige una carpeta dentro de Pictures, DCIM, Download o Documents en el almacenamiento interno del teléfono.
+Downloads will be saved in %s.	Las descargas se guardarán en %s.
+Downloads will be saved in Download.	Las descargas se guardarán en Download.

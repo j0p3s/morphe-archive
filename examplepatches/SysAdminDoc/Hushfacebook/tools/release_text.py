@@ -44,7 +44,8 @@ VERSION = re.compile(r"^\d+\.\d+\.\d+$")
 DASHES = ("—", "–")
 # Morphe Manager's scope: "Facebook", or "Facebook - <area>", and the development-only "Tooling".
 BULLET = re.compile(r"^\* \*\*(?P<scope>Facebook(?: - [^*]+)?|Tooling):\*\* (?P<text>\S.*)$")
-GROUPS = {"Added": "New in this release", "Fixed": "Fixes", "Changed": "Other changes", "Removed": "Removed"}
+GROUPS = {"Added": "New in this release", "Fixed": "Fixes", "Changed": "Other changes", "Removed": "Removed",
+          "Reported issues": "Reported issues"}
 TOOLING_GROUP = "Behind the scenes"
 ABI_NAMES = {"ARM64_V8A": "arm64-v8a", "ARMEABI_V7A": "armeabi-v7a", "X86_64": "x86_64", "X86": "x86"}
 
@@ -333,7 +334,9 @@ def github_notes(root: Path, version: str, checked: str | None, draft: bool = Fa
     said, sentence = target_in(notes)
     if said is None and not draft:
         fail(f"nothing in the notes says which Facebook build this release targets, and the app's update check "
-             f"reads it from them. Say \"All N patches applied ... to Facebook {newest}\" in the checked paragraph.")
+             f"reads it from them. Say \"All N patches applied ... to Facebook {newest}\" in the checked paragraph, "
+             f"with \"Facebook\" right after \"to\" (\"to both Facebook {newest} builds\" isn't read: installed "
+             f"builds parse the same phrase, so the checker can't loosen it).")
     if said is not None and said != newest:
         fail(f"the app's update check would read Facebook {said} as this release's target, from \"{sentence}\". "
              f"It's {newest}: reword that sentence, or say {newest} first.")

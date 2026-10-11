@@ -87,6 +87,19 @@ final class AppPages {
             return true;
         });
         menu.addPreference(saved);
+        SwitchPreference watched = toggle(context, Settings.WATCH_HISTORY_SHORTCUT,
+                build.contains(PatchFamily.MENU_SETTINGS_ROW)
+                ? L10n.t("Adds Watch history, the videos and reels you've watched, to the menu you get by holding "
+                        + "Facebook's icon, if there's room, and a Watch history row in Settings and privacy. Existing "
+                        + "shortcuts stay.")
+                : L10n.t("Adds Watch history, the videos and reels you've watched, to the menu you get by holding "
+                        + "Facebook's icon, if there's room. Existing shortcuts stay."));
+        watched.setOnPreferenceChangeListener((preference, value) -> {
+            Settings.WATCH_HISTORY_SHORTCUT.save((Boolean) value);
+            WatchHistoryShortcut.changed(context);
+            return true;
+        });
+        menu.addPreference(watched);
         if (build.contains(PatchFamily.MENU_PROMOTIONS)) {
             menu.addPreference(toggle(context, Settings.HIDE_MENU_UPGRADES,
                     L10n.t("The Upgrades section and its offers leave Facebook's Menu. Settings, Help and support "
@@ -278,7 +291,7 @@ final class AppPages {
                             + "instead of a facebook.com/share/ link made for that one share.")));
         }
         if (build.contains(PatchFamily.SHARE_SHEET_ITEMS)) {
-            links.addPreference(shareItemsRow(context));
+            links.addPreference(shareItemsRow(page, context));
             links.addPreference(toggle(context, Settings.HIDE_SHARE_GROUP_BUTTONS,
                     L10n.t("Takes away Send to group when you pick two or more people, and the share sheet's own ways to start "
                             + "a new group, so nothing you share makes a group chat by accident. Send separately stays.")));
@@ -291,14 +304,14 @@ final class AppPages {
     }
 
     /** Share sheet items' row: the items it keeps out, picked from a list of checkboxes. */
-    static Preference shareItemsRow(Context context) {
+    static Preference shareItemsRow(HushfacebookPreferenceFragment page, Context context) {
         SettingsRows.Row row = new SettingsRows.Row(context);
         row.setKey(SHARE_ITEMS_ROW);
         row.setTitle(L10n.t("Share sheet items to hide"));
         row.setPersistent(false);
         row.setSummary(shareItemsSummary(ShareSheetItems.hidden()));
         row.setOnPreferenceClickListener(p -> {
-            showShareItems(context, row);
+            showShareItems(page, context, row);
             return true;
         });
         return row;
@@ -316,7 +329,7 @@ final class AppPages {
     }
 
     /** The list: every item it knows, ticked when it's kept out. Save keeps the ticks. */
-    private static void showShareItems(Context context, Preference row) {
+    private static void showShareItems(HushfacebookPreferenceFragment page, Context context, Preference row) {
         List<String> types = ShareSheetItems.choices();
         Set<String> hidden = ShareSheetItems.hidden();
         String[] names = new String[types.size()];
@@ -325,7 +338,8 @@ final class AppPages {
             names[i] = ShareSheetItems.label(types.get(i));
             ticked[i] = hidden.contains(types.get(i));
         }
-        AlertDialog dialog = new AlertDialog.Builder(context)
+        // Through the page, so it closes with the page's view and takes the screen's colors.
+        page.show(new AlertDialog.Builder(context)
                 .setTitle(L10n.t("Hide from the share sheet"))
                 .setMultiChoiceItems(names, ticked, (shown, which, isTicked) -> ticked[which] = isTicked)
                 .setPositiveButton(L10n.t("Save"), (shown, which) -> {
@@ -336,9 +350,7 @@ final class AppPages {
                     ShareSheetItems.hide(picked);
                     row.setSummary(shareItemsSummary(ShareSheetItems.hidden()));
                 })
-                .setNegativeButton(L10n.t("Cancel"), null)
-                .show();
-        ScreenColors.dialog(dialog);
+                .setNegativeButton(L10n.t("Cancel"), null));
     }
 
     /**
@@ -368,6 +380,16 @@ final class AppPages {
             privacy.addPreference(toggle(context, Settings.HOLD_ANALYTICS_UPLOADS,
                     L10n.t("Stops Facebook sending usage statistics in the background and running its on-phone learning tasks. "
                             + "Restart Facebook to see the change.")));
+            // Facebook cancels the work it scheduled the next time it asks, which a restart brings about.
+            privacy.addPreference(toggle(context, Settings.HOLD_CAMERA_ROLL_PROCESSING,
+                    L10n.t("Stops the camera roll processing behind sharing suggestions, which goes through your photos "
+                            + "and videos and uploads photos and details about them, and stops the report of how many you "
+                            + "have. Restart Facebook to see the change.")));
+        }
+        if (build.contains(PatchFamily.EXTERNAL_BROWSER)) {
+            privacy.addPreference(toggle(context, Settings.HOLD_LINK_HISTORY,
+                    L10n.t("Links that open in Facebook's own browser aren't recorded for your link history or sent to "
+                            + "Facebook as pages you visited. Applies to the next link you open.")));
         }
         if (build.contains(PatchFamily.SCREENSHOT_DETECTION)) {
             privacy.addPreference(toggle(context, Settings.BLOCK_SCREENSHOT_DETECTION,

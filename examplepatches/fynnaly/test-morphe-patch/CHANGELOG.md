@@ -1,0 +1,110 @@
+## [1.11.0](https://github.com/fynnaly/test-morphe-patch/compare/v1.10.1...v1.11.0) (2026-10-08)
+
+### ✨ New Features
+
+* **botworld:** force GMS static availability and add ads path tracer ([05c09d2](https://github.com/fynnaly/test-morphe-patch/commit/05c09d2f0a8ccba9234b4efe0ca81bb96caeb3ca))
+
+## [1.10.1](https://github.com/fynnaly/test-morphe-patch/compare/v1.10.0...v1.10.1) (2026-10-08)
+
+### 🐛 Bug Fixes
+
+* **botworld:** keep ads SDK init so game reaches patched bridges ([091174d](https://github.com/fynnaly/test-morphe-patch/commit/091174dbfac358cdf583b8374029c84876716fd5))
+
+## [1.10.0](https://github.com/fynnaly/test-morphe-patch/compare/v1.9.0...v1.10.0) (2026-10-08)
+
+### ✨ New Features
+
+* **botworld:** complete ad load locally so game reaches reward path ([9642562](https://github.com/fynnaly/test-morphe-patch/commit/9642562fc3b5d169b87b14947fa18066c9584a9d))
+
+## [1.9.0](https://github.com/fynnaly/test-morphe-patch/compare/v1.8.0...v1.9.0) (2026-10-08)
+
+### ✨ New Features
+
+* **botworld:** cover decagon bridge and fully offline init providers ([d03cf9f](https://github.com/fynnaly/test-morphe-patch/commit/d03cf9f6b2a2b8dc39f6509e1298d3ed874cff9f))
+
+## [1.8.0](https://github.com/fynnaly/test-morphe-patch/compare/v1.7.1...v1.8.0) (2026-10-08)
+
+### ✨ New Features
+
+* **botworld:** complete AdMob rewarded flow locally via Unity bridge ([ac5d725](https://github.com/fynnaly/test-morphe-patch/commit/ac5d725d855d4c6c0804f8f995881998400a7878))
+
+## [1.7.1](https://github.com/fynnaly/test-morphe-patch/compare/v1.7.0...v1.7.1) (2026-10-08)
+
+### 🐛 Bug Fixes
+
+* **botworld:** patch impl showAd convergence point so all Unity call paths grant reward ([0f5b26d](https://github.com/fynnaly/test-morphe-patch/commit/0f5b26d439bdb403715e5a20dfbb1eb9ae00a421))
+
+## [1.7.0](https://github.com/fynnaly/test-morphe-patch/compare/v1.6.1...v1.7.0) (2026-10-08)
+
+### 🐛 Bug Fixes
+
+* **botworld:** correct Kotlin escaping for inner-class descriptors ([6095ea4](https://github.com/fynnaly/test-morphe-patch/commit/6095ea4b86b1ea84685119001a6a22d7a780c98f))
+* **botworld:** use v0 register and drop unused import in rewarded patch ([2497348](https://github.com/fynnaly/test-morphe-patch/commit/2497348a1c57d45d4fe716ab6f30824934c80aaf))
+
+### ✨ New Features
+
+* **botworld:** complete rewarded ads locally without playing ads ([e036c5f](https://github.com/fynnaly/test-morphe-patch/commit/e036c5f59297e4694260f87cbba9cd7501db4b43))
+
+## [1.6.1](https://github.com/fynnaly/test-morphe-patch/compare/v1.6.0...v1.6.1) (2026-10-08)
+
+### 🐛 Bug Fixes
+
+* **botworld:** expose offline login as named patch so it appears in Manager ([a5ed9b9](https://github.com/fynnaly/test-morphe-patch/commit/a5ed9b9a44dfe73842573e2d9828a804259ce79e))
+
+## [1.6.0](https://github.com/fynnaly/test-morphe-patch/compare/v1.5.0...v1.6.0) (2026-10-08)
+
+### ✨ New Features
+
+* **botworld:** disable tamper guard and Play Games login for offline play ([c15fe81](https://github.com/fynnaly/test-morphe-patch/commit/c15fe8167a73e8d934c08f77ceac369a9987cc49))
+
+## [1.5.0](https://github.com/fynnaly/test-morphe-patch/compare/v1.4.0...v1.5.0) (2026-10-08)
+
+### ✨ New Features
+
+* **wibuku:** support 1.4.1 (74) alongside 1.4.5 (78) ([27e0fef](https://github.com/fynnaly/test-morphe-patch/commit/27e0fef5bcdd5d023860bc6ec964159edfdb7dd0))
+
+## [1.4.0](https://github.com/fynnaly/test-morphe-patch/compare/v1.3.0...v1.4.0) (2026-10-07)
+
+### ✨ New Features
+
+* **wibuku:** log response status, code and data in login tracer ([385181e](https://github.com/fynnaly/test-morphe-patch/commit/385181eff0c3f770f7a70a4481436610b3e01209))
+
+## [1.3.0](https://github.com/fynnaly/test-morphe-patch/compare/v1.2.0...v1.3.0) (2026-10-07)
+
+### ✨ New Features
+
+* **wibuku:** log dialog message and server error in login tracer ([1afea2b](https://github.com/fynnaly/test-morphe-patch/commit/1afea2b8e624f6cb13e72cf33864f2dfe6a79286))
+
+## [1.2.0](https://github.com/fynnaly/test-morphe-patch/compare/v1.1.0...v1.2.0) (2026-10-07)
+
+### ✨ New Features
+
+* **wibuku:** extend login tracer to cover splash worker and dialogs ([5137d06](https://github.com/fynnaly/test-morphe-patch/commit/5137d063c7b91a7ccb8f40265e1b35b403df2cf6))
+
+## [1.1.0](https://github.com/fynnaly/test-morphe-patch/compare/v1.0.1...v1.1.0) (2026-10-07)
+
+### ✨ New Features
+
+* **wibuku:** add opt-in login tracer for splash gate diagnosis ([8f9fa4c](https://github.com/fynnaly/test-morphe-patch/commit/8f9fa4c3acc73fa7832397511afd51aae51afc76))
+
+## [1.0.1](https://github.com/fynnaly/test-morphe-patch/compare/v1.0.0...v1.0.1) (2026-10-07)
+
+### 🐛 Bug Fixes
+
+* **wibuku:** redirect GMS bind transport to MicroG-RE instead of metadata only ([48db272](https://github.com/fynnaly/test-morphe-patch/commit/48db2728640ffff7625954a899d35f85bcab95ba))
+
+## 1.0.0 (2026-10-07)
+
+### 🐛 Bug Fixes
+
+* **build:** add missing package-lock.json for npm ci ([c9fb107](https://github.com/fynnaly/test-morphe-patch/commit/c9fb107bbe0530859a21046c25a17d476680cb85))
+
+### ✨ New Features
+
+* **wibuku:** premium unlock and MicroG-RE Google sign-in for 1.4.5 ([b4abd13](https://github.com/fynnaly/test-morphe-patch/commit/b4abd136dc4a833f0d802662c8e8ec226357d4f2))
+* **wibuku:** premium unlock and MicroG-RE Google sign-in for 1.4.5 ([bc381dc](https://github.com/fynnaly/test-morphe-patch/commit/bc381dcbf32bc967da98864f724e57d7e0acb849))
+
+# Changelog
+
+All notable changes will be published here by semantic-release.
+The first release is built from the first `feat:` commit on `main`.

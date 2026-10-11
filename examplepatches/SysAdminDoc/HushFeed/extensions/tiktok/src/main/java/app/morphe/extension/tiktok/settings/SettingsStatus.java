@@ -142,6 +142,10 @@ public class SettingsStatus {
     public static boolean hideFeedSidebarButtonEnabled = false;
     public static boolean hideFeedSearchButtonEnabled = false;
     public static boolean showSeekbarEnabled = false;
+    /** Show the progress bar's extras, which a build other than the declared one can leave out
+     *  while the bar itself still applies: the time and the bigger handle, and the story seek bar. */
+    public static boolean seekbarExtrasEnabled = false;
+    public static boolean storySeekbarEnabled = false;
     public static boolean sanitizeShareUrlsEnabled = false;
     public static boolean contactListBlockerEnabled = false;
     public static boolean searchHistoryEnabled = false;
@@ -220,6 +224,20 @@ public class SettingsStatus {
 
     public static void enableDoNotAutoTranslate() {
         doNotAutoTranslateEnabled = true;
+    }
+
+    /** Translate comments hooked the translation service's answer to which language to translate into. */
+    public static boolean translateIntoEnabled = false;
+
+    public static void enableTranslateInto() {
+        translateIntoEnabled = true;
+    }
+
+    /** Translate comments hooked the gates and toggle behind TikTok's translate button in the comment header. */
+    public static boolean commentTranslateButtonEnabled = false;
+
+    public static void enableCommentTranslateButton() {
+        commentTranslateButtonEnabled = true;
     }
 
     public static void enableHideCommentQuickReactions() {
@@ -317,6 +335,14 @@ public class SettingsStatus {
 
     public static void enableShowSeekbar() {
         showSeekbarEnabled = true;
+    }
+
+    public static void enableSeekbarExtras() {
+        seekbarExtrasEnabled = true;
+    }
+
+    public static void enableStorySeekbar() {
+        storySeekbarEnabled = true;
     }
 
     public static void enableSanitizeShareUrls() {
@@ -535,6 +561,14 @@ public class SettingsStatus {
         footnotesEnabled = true;
     }
 
+    /** Hide video overlays found the music disc's two animation settings on this build and hooked them (#68). */
+    public static boolean musicDiscSpinEnabled = false;
+
+    public static void enableMusicDiscSpin() {
+        musicDiscSpinEnabled = true;
+        app.morphe.extension.tiktok.feed.MusicDiscSpin.installed();
+    }
+
     /** Hide inbox items found the group chat banner's update on this build and hooked it. */
     public static boolean groupChatBannerEnabled = false;
 
@@ -547,6 +581,72 @@ public class SettingsStatus {
 
     public static void enableProfileThoughts() {
         profileThoughtsEnabled = true;
+    }
+
+    /** Skip the splash ad put its switch in front of the splash tasks and gates. */
+    public static boolean skipSplashAdEnabled = false;
+
+    public static void enableSkipSplashAd() {
+        skipSplashAdEnabled = true;
+    }
+
+    /** Skip update checks put its switch in front of the two update check tasks. */
+    public static boolean skipUpdateChecksEnabled = false;
+
+    public static void enableSkipUpdateChecks() {
+        skipUpdateChecksEnabled = true;
+    }
+
+    /** Limit background traffic put its switch in front of the buffer preload gate. */
+    public static boolean limitBackgroundTrafficEnabled = false;
+
+    public static void enableLimitBackgroundTraffic() {
+        limitBackgroundTrafficEnabled = true;
+    }
+
+    /**
+     * Limit background traffic was patched with Skip notification setup, so its switch stops
+     * push setup too, and the row says so. Only ever set alongside the flag above.
+     */
+    public static boolean skipPushSetupEnabled = false;
+
+    public static void enableSkipPushSetup() {
+        skipPushSetupEnabled = true;
+    }
+
+    /** Drop the animated image cache put its switch in front of Fresco's cache choice. */
+    public static boolean animatedImageCacheEnabled = false;
+
+    public static void enableAnimatedImageCache() {
+        animatedImageCacheEnabled = true;
+    }
+
+    /** Stop on-device AI profiling put its switch in front of the Pitaya start-up. */
+    public static boolean aiProfilingEnabled = false;
+
+    public static void enableAiProfiling() {
+        aiProfilingEnabled = true;
+    }
+
+    /** Enable voice comments put its switch in front of TikTok's voice comment gate. */
+    public static boolean voiceCommentsEnabled = false;
+
+    public static void enableVoiceComments() {
+        voiceCommentsEnabled = true;
+    }
+
+    /** Skip passkey sign-in put its switch in front of TikTok's passkey support check. */
+    public static boolean passkeySignInEnabled = false;
+
+    public static void enablePasskeySignIn() {
+        passkeySignInEnabled = true;
+    }
+
+    /** Keep the app language put its switch in front of TikTok's language reset. */
+    public static boolean appLanguageEnabled = false;
+
+    public static void enableAppLanguage() {
+        appLanguageEnabled = true;
     }
 
     static {

@@ -26,7 +26,7 @@ internal const val TARGET_PROFILE_27 = "27"
 internal const val TARGET_PROFILE_29 = "29"
 
 internal fun selectLegacyTargetSdk(original: Int?, profile: String?, custom: Int): Int = when (profile) {
-    TARGET_PROFILE_AUTOMATIC -> if (original != null && original < 30) 27 else custom
+    TARGET_PROFILE_AUTOMATIC -> original ?: 27
     TARGET_PROFILE_27 -> 27
     TARGET_PROFILE_29 -> 29
     else -> custom
@@ -47,6 +47,43 @@ internal fun addPermission(document: Document, name: String, maxSdkVersion: Int?
     permission.setAttributeNS(NS_ANDROID, "android:name", name)
     maxSdkVersion?.let { permission.setAttributeNS(NS_ANDROID, "android:maxSdkVersion", it.toString()) }
     root.appendChild(permission)
+    return true
+}
+
+private fun Element.manifestLocalName(): String = localName ?: tagName.substringAfter(':')
+
+private fun Element.childElements(): List<Element> =
+    (0 until childNodes.length).mapNotNull { childNodes.item(it) as? Element }
+
+private fun elementsNamed(parent: Element, name: String): List<Element> {
+    val plain = parent.getElementsByTagName(name)
+    val namespaced = parent.getElementsByTagNameNS("*", name)
+    return ((0 until plain.length).mapNotNull { plain.item(it) as? Element } +
+        (0 until namespaced.length).mapNotNull { namespaced.item(it) as? Element }).distinct()
+}
+
+private fun createManifestChild(document: Document, parent: Element, name: String): Element {
+    val namespace = parent.namespaceURI
+    val prefix = parent.prefix
+    val qualifiedName = if (prefix.isNullOrEmpty()) name else "$prefix:$name"
+    return if (namespace.isNullOrEmpty()) document.createElement(name) else document.createElementNS(namespace, qualifiedName)
+}
+
+internal fun addPackageVisibilityQuery(document: Document, packageName: String): Boolean {
+    if (packageName.isBlank() || packageName.any { it.isWhitespace() || Character.isISOControl(it) }) return false
+    val root = document.documentElement ?: return false
+    val queriesElements = root.childElements().filter { it.manifestLocalName() == "queries" }
+    if (queriesElements.any { queries -> elementsNamed(queries, "package").any { it.androidAttribute("name") == packageName } }) {
+        return false
+    }
+    val queries = queriesElements.firstOrNull() ?: createManifestChild(document, root, "queries").also { element ->
+        val application = root.childElements().firstOrNull { it.manifestLocalName() == "application" }
+        if (application == null) root.appendChild(element) else root.insertBefore(element, application)
+    }
+    createManifestChild(document, queries, "package").also {
+        it.setAttributeNS(NS_ANDROID, "android:name", packageName)
+        queries.appendChild(it)
+    }
     return true
 }
 
@@ -153,52 +190,44 @@ internal fun relaxSharedLibraries(document: Document): Int {
 
 internal val exportedComponentTags = listOf("activity", "activity-alias", "service", "receiver")
 
-internal fun Element.androidAttribute(name: String): String =
-    getAttributeNS(NS_ANDROID, name).ifEmpty { getAttribute("android:$name") }
-
-internal fun Element.hasAndroidAttribute(name: String): Boolean =
-    hasAttributeNS(NS_ANDROID, name) || getAttribute("android:$name").isNotEmpty()
-
-internal fun Element.intentFilters(): List<Element> {
-    val plain = getElementsByTagName("intent-filter")
-    if (plain.length > 0) {
-        return (0 until plain.length).mapNotNull { plain.item(it) as? Element }
+private fun Element.androidAttributeValue(name: String): String? {
+    getAttributeNodeNS(NS_ANDROID, name)?.let { return it.nodeValue }
+    getAttributeNode("android:$name")?.let { return it.nodeValue }
+    for (index in 0 until attributes.length) {
+        val attribute = attributes.item(index)
+        val qualifiedName = attribute.nodeName
+        val localName = attribute.localName ?: qualifiedName.substringAfter(':')
+        val prefix = attribute.prefix ?: qualifiedName.substringBefore(':', "")
+        if (localName == name && (attribute.namespaceURI == NS_ANDROID ||
+                (prefix.isNotEmpty() && lookupNamespaceURI(prefix) == NS_ANDROID))
+        ) return attribute.nodeValue
     }
-    val namespaced = getElementsByTagNameNS("*", "intent-filter")
-    return (0 until namespaced.length).mapNotNull { namespaced.item(it) as? Element }
+    return null
 }
+
+internal fun Element.androidAttribute(name: String): String = androidAttributeValue(name).orEmpty()
+
+internal fun Element.hasAndroidAttribute(name: String): Boolean = androidAttributeValue(name) != null
+
+internal fun Element.intentFilters(): List<Element> = elementsNamed(this, "intent-filter")
 
 internal fun Element.hasIntentFilter(): Boolean = intentFilters().isNotEmpty()
 
-internal fun Element.isLauncherComponent(): Boolean {
-    for (filter in intentFilters()) {
-        val actions = filter.getElementsByTagName("action")
-        val namespacedActions = if (actions.length == 0) filter.getElementsByTagNameNS("*", "action") else null
-        val hasMainAction = (0 until (namespacedActions?.length ?: actions.length)).any { index ->
-            val action = (namespacedActions?.item(index) ?: actions.item(index)) as? Element
-            action?.androidAttribute("name") == "android.intent.action.MAIN"
-        }
-        if (!hasMainAction) continue
-
-        val categories = filter.getElementsByTagName("category")
-        val namespacedCategories = if (categories.length == 0) filter.getElementsByTagNameNS("*", "category") else null
-        val hasLauncherCategory = (0 until (namespacedCategories?.length ?: categories.length)).any { index ->
-            val category = (namespacedCategories?.item(index) ?: categories.item(index)) as? Element
-            category?.androidAttribute("name") == "android.intent.category.LAUNCHER"
-        }
-        if (hasLauncherCategory) {
-            return true
-        }
+internal fun Element.isLauncherComponent(): Boolean = intentFilters().any { filter ->
+    val hasMainAction = elementsNamed(filter, "action").any {
+        it.androidAttribute("name") == "android.intent.action.MAIN"
     }
-    return false
+    val hasLauncherCategory = elementsNamed(filter, "category").any {
+        it.androidAttribute("name") == "android.intent.category.LAUNCHER"
+    }
+    hasMainAction && hasLauncherCategory
 }
 
 internal fun repairMissingComponentExportFlags(document: Document, logger: Logger): Int {
+    val root = document.documentElement ?: return 0
     var repaired = 0
     for (tagName in exportedComponentTags) {
-        val components = document.getElementsByTagName(tagName)
-        for (index in 0 until components.length) {
-            val component = components.item(index) as? Element ?: continue
+        for (component in elementsNamed(root, tagName)) {
             if (component.hasAndroidAttribute("exported") || !component.hasIntentFilter()) continue
 
             val exported = component.isLauncherComponent().toString()
@@ -211,28 +240,109 @@ internal fun repairMissingComponentExportFlags(document: Document, logger: Logge
 }
 
 internal fun exportAllActivities(document: Document, logger: Logger): Int {
+    val root = document.documentElement ?: return 0
     var changed = 0
-    var overridden = 0
+    var preservedFalseCount = 0
     for (tagName in listOf("activity", "activity-alias")) {
-        val activities = document.getElementsByTagName(tagName)
-        for (index in 0 until activities.length) {
-            val activity = activities.item(index) as? Element ?: continue
+        for (activity in elementsNamed(root, tagName)) {
+            if (!activity.hasIntentFilter()) continue
             if (activity.hasAndroidAttribute("exported")) {
-                if (activity.androidAttribute("exported") != "true") {
-                    activity.setAttributeNS(NS_ANDROID, "android:exported", "true")
-                    changed++
-                    overridden++
-                }
+                if (activity.androidAttribute("exported") == "false") preservedFalseCount++
                 continue
             }
             activity.setAttributeNS(NS_ANDROID, "android:exported", "true")
             changed++
         }
     }
-    if (overridden > 0) {
-        logger.warning("Legacy compatibility: Export All Activities overrode explicit android:exported=\"false\" on $overridden component(s).")
+    if (preservedFalseCount > 0) {
+        logger.warning("Legacy compatibility: Export All Activities preserved explicit android:exported=\"false\" on $preservedFalseCount component(s).")
     }
     return changed
+}
+
+internal fun legacyManifestPreflightFindings(
+    document: Document,
+    spoofTargetSdk: Boolean,
+    targetSdkProfile: String?,
+    customTargetSdk: Int?,
+    repairExportFlags: Boolean,
+    exportAllActivityComponents: Boolean,
+    playStorePackageVisibility: Boolean,
+    bypassPackageVisibility: Boolean,
+    embedExpansionObb: Boolean,
+    expansionObbPath: String?,
+): List<LegacyCompatibilityPreflightFinding> {
+    val root = document.documentElement ?: return listOf(
+        LegacyCompatibilityPreflightFinding("AndroidManifest.xml", false, "leave unchanged", "all", "unknown", "manifest root is missing"),
+    )
+    val packageName = root.getAttribute("package")
+    val findings = mutableListOf<LegacyCompatibilityPreflightFinding>()
+    val originalTarget = originalTargetSdk(document)
+    if (spoofTargetSdk || originalTarget != null) {
+        val proposedTarget = if (spoofTargetSdk) selectLegacyTargetSdk(originalTarget, targetSdkProfile, customTargetSdk ?: 34) else originalTarget
+        findings += LegacyCompatibilityPreflightFinding(
+            pattern = "uses-sdk targetSdkVersion",
+            detected = originalTarget != null,
+            proposal = if (spoofTargetSdk) "set targetSdkVersion to " + proposedTarget else "preserve the APK targetSdkVersion",
+            apiRange = "Android API 23-40 supported by this option",
+            confidence = if (originalTarget == null) "fallback" else "exact manifest attribute",
+            uncertainty = if (originalTarget == null) "original target is absent; fallback changes platform security behavior" else "target changes compatibility behavior and may reduce protections",
+        )
+    }
+    val missingExported = exportedComponentTags.flatMap { elementsNamed(root, it) }
+        .filter { it.hasIntentFilter() && !it.hasAndroidAttribute("exported") }
+    if (missingExported.isNotEmpty() || repairExportFlags || exportAllActivityComponents) {
+        val launcherCount = missingExported.count { it.isLauncherComponent() }
+        findings += LegacyCompatibilityPreflightFinding(
+            pattern = "filtered components missing android:exported",
+            detected = missingExported.isNotEmpty(),
+            proposal = when {
+                exportAllActivityComponents -> "set missing activity/alias flags true; preserve explicit values"
+                repairExportFlags -> "set launcher components true and other filtered components false"
+                else -> "enable safe missing-export repair only if installation requires it"
+            },
+            apiRange = "Android 12/API 31+ when targetSdkVersion is 31+",
+            confidence = "exact manifest element/filter/attribute scan",
+            uncertainty = launcherCount.toString() + " launcher components among " + missingExported.size + " missing flags; external caller needs are not inferred",
+        )
+    }
+    val existingPlayQuery = root.childElements().filter { it.manifestLocalName() == "queries" }.any { queries ->
+        elementsNamed(queries, "package").any { it.androidAttribute("name") == "com.android.vending" }
+    }
+    if (playStorePackageVisibility || existingPlayQuery) {
+        findings += LegacyCompatibilityPreflightFinding(
+            pattern = "Google Play package visibility",
+            detected = existingPlayQuery,
+            proposal = if (playStorePackageVisibility && !existingPlayQuery) "add a scoped queries/package entry for com.android.vending" else "preserve the existing scoped query",
+            apiRange = "Android 11/API 30+",
+            confidence = "exact manifest query scan",
+            uncertainty = "only Google Play visibility is covered; other installed packages remain hidden",
+        )
+    }
+    if (bypassPackageVisibility) {
+        findings += LegacyCompatibilityPreflightFinding(
+            pattern = "broad package visibility",
+            detected = hasPermission(document, QUERY_ALL_PACKAGES),
+            proposal = "add QUERY_ALL_PACKAGES (broad visibility explicitly requested)",
+            apiRange = "Android 11/API 30+",
+            confidence = "explicit high-impact option",
+            uncertainty = "exposes installed-app visibility and may violate store policy",
+        )
+    }
+    val obbPath = expansionObbPath.orEmpty().trim()
+    if (embedExpansionObb || obbPath.isNotEmpty()) {
+        val obb = java.io.File(obbPath)
+        val valid = obb.isFile && obb.canRead() && isExpansionFileForPackage(obb.name, packageName)
+        findings += LegacyCompatibilityPreflightFinding(
+            pattern = "embedded expansion OBB",
+            detected = valid,
+            proposal = if (embedExpansionObb && valid) "embed and stage " + obb.name + " with runtime checksum verification" else "select a readable main/patch OBB matching the APK package",
+            apiRange = "all supported Android versions",
+            confidence = if (valid) "exact path, filename, package, and readability checks" else "uncertain or absent input",
+            uncertainty = "archive contents and device OBB publication are verified in apply/runtime phases",
+        )
+    }
+    return findings
 }
 
 @Suppress("unused")
@@ -261,240 +371,390 @@ val legacyAppCompatibilityPatch = resourcePatch(
 ) {
     try { category("Legacy App Compatibility") } catch (_: NoSuchMethodError) {}
 
-    val spoofTargetSdk by booleanOption(
+    val preset by stringOption(
+        title = "Legacy App Compatibility > Preset",
+        key = "legacyCompatibilityPreset",
+        default = LegacyCompatibilityPresets.CUSTOM,
+        description = "Custom (default) uses your individual choices and conservative defaults. Android 7–9 (API 24–28), Android 10 (29), Android 11 (30), Android 12/12L (31–32), Android 13 (33), and Android 14+ (34+) describe the APK's original target era, not your current device. Era profiles keep the original target SDK, repair missing exported flags safely, repair exact receiver calls, and add Apache HTTP/foreground-service/Bluetooth compatibility only for eras before those APIs changed. Unity enables native-library extraction only when exact Unity classes are detected; OpenIAB enables only recognized OpenIAB receiver repair and a scoped Play Store query; Unity + OpenIAB combines both independently detected repairs. Every non-Custom preset overrides all ordinary options and disables trust-all certificates, IMEI spoofing, QUERY_ALL_PACKAGES, export-all, cleartext and hidden-API bypass. Those six choices are dormant outside Custom; ordinary Custom choices need not restore. Presets never embed OBBs, bypass downloaders, lower target SDK, force all receivers exported, or enable uncertain engine mutations.",
+        values = linkedMapOf(
+            "Custom" to "custom",
+            "Android 7–9 origin" to "android_7_9",
+            "Android 10 origin" to "android_10",
+            "Android 11 origin" to "android_11",
+            "Android 12/12L origin" to "android_12",
+            "Android 13 origin" to "android_13",
+            "Android 14+ origin" to "android_14_plus",
+            "Unity" to "unity",
+            "OpenIAB" to "openiab",
+            "Unity + OpenIAB" to "unity_openiab",
+        ),
+    )
+
+    val diagnosticsOnlyRaw by booleanOption(
+        title = "Legacy App Compatibility > Diagnostics > Preflight Only (No APK Changes)",
+        default = false,
+        key = "legacyCompatibilityDiagnosticsOnly",
+        description = "Scan the manifest and recognized bytecode fingerprints, report proposed fixes, API ranges, and uncertainty, but do not modify the APK. Rerun with this off to apply selected fixes.",
+    )
+
+    val spoofTargetSdkRaw by booleanOption(
         title = "Legacy App Compatibility > Installation and manifest > Spoof Target SDK",
         default = false,
         key = "legacyCompatibilitySpoofTargetSdk",
-        description = "Report a compatible target SDK so older apps can install or launch on modern Android. This may change platform behavior and does not repair incompatible code. Explicit opt-in is required because lowering an app's target SDK can weaken platform protections.",
+        description = "Try this if Android blocks an older app from installing or launching because its target SDK is too old. Lowering the target can restore older Android behavior and reduce platform protections; it cannot fix incompatible app code. Leave off unless you have this specific problem.",
     )
-    val targetSdk by intOption(
+    val targetSdkRaw by intOption(
         title = "Legacy App Compatibility > Installation and manifest > Target SDK version",
         default = 34,
         key = "legacyCompatibilityTargetSdk",
-        description = "Target SDK value used by the Custom profile. Values outside 23..40 are rejected. Default: 34.",
+        description = "Choose the target SDK number only when the Custom profile is selected. Android accepts values 23–40 here; other values are rejected. Lower values can restore legacy behavior but may weaken security and privacy protections. Default: 34.",
     )
-    val targetSdkProfile by stringOption(
+    val targetSdkProfileRaw by stringOption(
         title = "Legacy App Compatibility > Installation and manifest > Target SDK compatibility profile",
-        default = TARGET_PROFILE_CUSTOM,
+        default = TARGET_PROFILE_AUTOMATIC,
         key = "legacyCompatibilityTargetSdkProfile",
-        description = "Custom uses the Target SDK version value above. Automatic uses target 27 for apps originally below 30 and the custom value otherwise. Target 27 or Target 29 are fixed legacy profiles. This does not repair incompatible code.",
+        description = "Choose Custom to use the number above; Automatic to keep the APK's existing target (or use 27 if it has none); or fixed target 27/29 profiles for troubleshooting. Prefer Automatic unless you know the app needs another target: changing it alters Android's compatibility rules, and cannot repair broken code.",
         values = linkedMapOf(
             "Custom target SDK" to TARGET_PROFILE_CUSTOM,
-            "Automatic legacy profile" to TARGET_PROFILE_AUTOMATIC,
+            "Preserve original target (automatic)" to TARGET_PROFILE_AUTOMATIC,
             "Target SDK 27" to TARGET_PROFILE_27,
             "Target SDK 29" to TARGET_PROFILE_29,
         ),
     )
-    val legacyReviver by booleanOption(
+    val legacyReviverRaw by booleanOption(
         title = "Legacy App Compatibility > Installation and manifest > Legacy App Reviver",
-        default = true,
+        default = false,
         key = "legacyCompatibilityReviver",
-        description = "Enable selected manifest compatibility declarations for older apps. The sub-options apply only when this feature is enabled.",
+        description = "Turn this on to add the compatibility declarations selected below. Leave it off if the app does not need them; enabling declarations does not grant runtime permissions or guarantee the app will work.",
     )
-    val apacheLegacy by booleanOption(
+    val apacheLegacyRaw by booleanOption(
         title = "Legacy App Compatibility > Installation and manifest > Apache HTTP legacy library",
         default = true,
         key = "legacyCompatibilityApacheLegacy",
-        description = "When Legacy App Reviver is enabled, add org.apache.http.legacy as an optional shared library for old HttpClient users.",
+        description = "Use when the app crashes or fails to start because it uses the removed Apache HttpClient library. Adds that library as optional; it will not help if the app needs other missing libraries. Requires Legacy App Reviver.",
     )
-    val foregroundService by booleanOption(
+    val foregroundServiceRaw by booleanOption(
         title = "Legacy App Compatibility > Installation and manifest > Foreground service permission",
         default = true,
         key = "legacyCompatibilityForegroundService",
-        description = "When Legacy App Reviver is enabled, declare FOREGROUND_SERVICE for older background-service apps.",
+        description = "Use when an older app starts a foreground service and fails because its manifest lacks this permission. This only declares permission; Android may require additional service permissions or user-visible behavior. Requires Legacy App Reviver.",
     )
-    val exactAlarms by booleanOption(
+    val exactAlarmsRaw by booleanOption(
         title = "Legacy App Compatibility > Installation and manifest > Exact alarm permission",
         default = false,
         key = "legacyCompatibilityExactAlarms",
-        description = "When Legacy App Reviver is enabled, declare SCHEDULE_EXACT_ALARM. Android may still require user approval; enable only for apps that schedule exact alarms.",
+        description = "Use only if the app's reminders or scheduled actions must run at an exact time and are blocked by the missing declaration. Android can still require user approval, and this does not grant that approval. Requires Legacy App Reviver.",
     )
-    val bluetooth by booleanOption(
+    val bluetoothRaw by booleanOption(
         title = "Legacy App Compatibility > Installation and manifest > Bluetooth permissions",
         default = true,
         key = "legacyCompatibilityBluetooth",
-        description = "When Legacy App Reviver is enabled, declare modern Bluetooth permissions. Declarations do not grant runtime access.",
+        description = "Use when the app needs Bluetooth discovery or connections on newer Android. The manifest declarations do not grant runtime access; Android may still show permission prompts. Requires Legacy App Reviver.",
     )
-    val openIabReceiverRegistrationMode by stringOption(
+    val openIabReceiverRegistrationModeRaw by stringOption(
         title = "Legacy App Compatibility > Runtime compatibility > Fix OpenIAB dynamic receiver registration",
         default = OPEN_IAB_AUTOMATIC,
         key = "legacyCompatibilityOpenIabReceiverRegistrationMode",
-        description = "Automatic applies the fix only when the exact OpenIAB UnityPlugin call, receiver ownership, resolvable IntentFilter actions, recognized internal or external-store action set, and safe register layout are confirmed. It uses NOT_EXPORTED for internal receivers and EXPORTED only for verified external-store broadcasts; unknown or mixed actions are skipped. Disabled leaves OpenIAB unchanged. Force applies the exact method fix for troubleshooting and may affect external billing broadcasts. Automatic is recommended.",
+        description = "Choose Automatic (recommended) if OpenIAB billing broadcasts fail: it patches only a recognized UnityPlugin receiver setup and skips uncertain cases. Disabled leaves it unchanged. Force applies the fix even when automatic checks cannot confirm the setup; this may stop external-store billing broadcasts, so use only to diagnose a known OpenIAB issue.",
         values = linkedMapOf(
             "Automatic (recommended)" to OPEN_IAB_AUTOMATIC,
             "Disabled" to OPEN_IAB_DISABLED,
             "Force OpenIAB receiver fix" to OPEN_IAB_FORCE,
         ),
     )
-    val bypassHiddenApi by booleanOption(
+    val bypassHiddenApiRaw by booleanOption(
         title = "Legacy App Compatibility > Runtime compatibility > Bypass Hidden API Restrictions",
         default = false,
         key = "legacyCompatibilityHiddenApi",
-        description = "Exempt all hidden non-SDK interfaces for this app on Android 9 and newer, so old apps using reflection on framework internals keep working. Applies at app startup; affects only this app's process. Explicit opt-in is required because this weakens Android's non-SDK API boundary.",
+        description = "Try this only if the app fails because it uses hidden Android framework APIs through reflection. It bypasses the non-SDK API restriction for this app's process on Android 9+, which can reduce stability and security; leave off otherwise. Takes effect at app startup.",
     )
-    val trustCertificates by booleanOption(
+    val trustCertificatesRaw by booleanOption(
         title = "Legacy App Compatibility > Runtime compatibility > Trust All Certificates",
         default = false,
         key = "legacyCompatibilityTrustCertificates",
-        description = "Security risk: disables TLS certificate and hostname validation for HttpsURLConnection traffic, allowing man-in-the-middle interception. Only enable for legacy apps whose servers use expired or self-signed certificates. WebView traffic is not covered. A separate acknowledgement is required.",
+        description = "Last-resort workaround if this app cannot connect because its server uses an expired or self-signed certificate. It disables certificate and hostname checks for HttpsURLConnection, so attackers on the network could read or alter traffic. Do not use for sensitive accounts or payments. Does not affect WebView; requires the separate risk acknowledgement.",
     )
-    val acknowledgeTrustCertificates by booleanOption(
+    val acknowledgeTrustCertificatesRaw by booleanOption(
         title = "Legacy App Compatibility > Runtime compatibility > Acknowledge Trust-All TLS Risk",
         default = false,
         key = "legacyCompatibilityAcknowledgeTrustCertificates",
-        description = "Explicitly acknowledge that trust-all TLS is a high-risk, process-wide override. Trust All Certificates is ignored unless this acknowledgement is enabled too.",
+        description = "Enable only after understanding that Trust All Certificates allows network interception by disabling TLS checks. It is required for that option to take effect; leave both off unless diagnosing a certificate problem.",
     )
-    val redirectLegacyStorage by booleanOption(
+    val redirectLegacyStorageRaw by booleanOption(
         title = "Legacy App Compatibility > Runtime compatibility > Redirect Legacy External Storage Paths",
         default = false,
         key = "legacyCompatibilityRedirectLegacyStorage",
-        description = "Rewrite direct Environment.getExternalStorageDirectory and getExternalStoragePublicDirectory calls to app-scoped directories so games and apps writing to storage root no longer crash or lose saves. This can break code that builds shared-storage or OBB paths from the returned root; use only when intended and keep it disabled for apps using conventional OBB paths.",
+        description = "Try this if the app crashes or loses saves because it writes directly to the shared-storage root. Those API calls are redirected to app-specific storage, which can break shared-file access and OBB paths. Leave off if the app relies on files visible to other apps or uses conventional OBB directories.",
     )
-    val receiverFixAppWide by booleanOption(
+    val receiverFixAppWideRaw by booleanOption(
         title = "Legacy App Compatibility > Runtime compatibility > Fix Dynamic Receiver Registrations (App Wide)",
         default = true,
         key = "legacyCompatibilityReceiverFixAppWide",
-        description = "Wrap every Context.registerReceiver call that has no receiver flags with a runtime branch passing RECEIVER_NOT_EXPORTED on Android 13 and newer. Without it, apps targeting SDK 33+ crash at registration. System broadcasts still reach NOT_EXPORTED receivers, but custom broadcasts sent by other apps may no longer arrive. OpenIAB classes are left to the dedicated OpenIAB option.",
+        description = "Try this if receiver registration crashes on Android 13+. Each call is classified from its statically resolved IntentFilter actions: app-only calls are private, known system/store actions stay exported, and ambiguous calls are skipped with a warning. The fix can miss dynamic filters or expose exported receivers to other apps; OpenIAB is handled separately.",
     )
-    val repairExportFlags by booleanOption(
+    val repairExportFlagsRaw by booleanOption(
         title = "Legacy App Compatibility > Installation and manifest > Repair Missing Component Export Flags",
         default = false,
         key = "legacyCompatibilityRepairExportFlags",
-        description = "Add missing android:exported values to activities, aliases, services, and receivers that have intent filters. Do NOT enable this together with Export All Activities because they overlap. If both are selected accidentally, Export All Activities takes precedence. Explicit opt-in is required because exported components expand the app's attack surface.",
+        description = "Use if Android refuses to install the APK because a component with an intent filter has no exported setting. The patch fills only missing values; exported components can be launched by other apps, so enable only to fix that install error. Do not combine with Export All Activities; if both are on, that option takes precedence.",
     )
-    val exportAllActivityComponents by booleanOption(
+    val exportAllActivityComponentsRaw by booleanOption(
         title = "Legacy App Compatibility > Installation and manifest > Export All Activities",
         default = false,
         key = "legacyCompatibilityExportAllActivities",
-        description = "Set android:exported=true on every activity and activity-alias. Do NOT enable this together with Repair Missing Component Export Flags because they overlap. If both are selected accidentally, this option takes precedence.",
+        description = "Use only if a launcher activity is not visible or Android rejects the APK because an activity or alias with an intent filter lacks an exported setting. It exposes those matching components to other apps; existing explicit values are preserved. Do not combine with Repair Missing Component Export Flags.",
     )
-    val allowCleartext by booleanOption(
+    val allowCleartextRaw by booleanOption(
         title = "Legacy App Compatibility > Installation and manifest > Allow Cleartext Traffic",
         default = false,
         key = "legacyCompatibilityAllowCleartext",
-        description = "Allow HTTP traffic through android:usesCleartextTraffic. Existing networkSecurityConfig is preserved and may continue restricting cleartext traffic.",
+        description = "Try this if the app cannot connect to a server that supports only plain HTTP. Unencrypted traffic can be read or changed on the network, so do not enable for logins, payments, or other sensitive data. An existing network security configuration may still block HTTP.",
     )
-    val relaxLibraries by booleanOption(
+    val relaxLibrariesRaw by booleanOption(
         title = "Legacy App Compatibility > Installation and manifest > Relax Shared Libraries",
         default = false,
         key = "legacyCompatibilityRelaxLibraries",
-        description = "Mark required uses-library entries as optional so missing shared libraries do not block installation. The app may still crash if it actually requires a library.",
+        description = "Use if Android will not install the app because an optional device library is missing. This lets installation continue, but the app may crash or lose features if it truly needs that library.",
     )
-    val bypassPackageVisibility by booleanOption(
-        title = "Legacy App Compatibility > Installation and manifest > Bypass Package Visibility",
+    val playStorePackageVisibilityRaw by booleanOption(
+        title = "Legacy App Compatibility > Installation and manifest > Play Store Package Visibility",
+        default = false,
+        key = "legacyCompatibilityPlayStoreVisibility",
+        description = "Use if the app incorrectly reports that Google Play is not installed on Android 11+. It allows checks for Google Play only, not other apps, and is preferable to broad package visibility when Play is the only check needed.",
+    )
+    val bypassPackageVisibilityRaw by booleanOption(
+        title = "Legacy App Compatibility > Installation and manifest > Bypass Package Visibility (Broad)",
         default = false,
         key = "legacyCompatibilityPackageVisibility",
-        description = "Declare QUERY_ALL_PACKAGES so old apps can detect the Play Store and other installed apps on Android 11 and newer instead of receiving NameNotFoundException.",
+        description = "Use only if the app must check for many different installed apps and those checks fail on Android 11+. This requests visibility into all installed packages, which exposes more information and may be restricted by app-store policy. Prefer Play Store Package Visibility if only Google Play is needed.",
     )
-    val manifestCompatAttributes by booleanOption(
+    val manifestCompatAttributesRaw by booleanOption(
         title = "Legacy App Compatibility > Installation and manifest > Extra Manifest Compatibility Attributes",
         default = false,
         key = "legacyCompatibilityManifestAttributes",
-        description = "Enable android:largeHeap (bigger heap for old games) and android:hardwareAccelerated (fixes blank screens in apps that disabled GPU rendering; may conflict with software-drawing apps).",
+        description = "Try if the app runs out of memory or shows a blank screen: enables a larger heap and hardware-accelerated drawing. The larger heap can increase memory pressure, and GPU drawing may break apps that depend on software rendering; leave off if the app already displays and runs correctly.",
     )
-    val legacyStorage by booleanOption(
+    val legacyStorageRaw by booleanOption(
         title = "Legacy App Compatibility > Storage and display > Legacy External Storage",
         default = false,
         key = "legacyCompatibilityLegacyStorage",
-        description = "Request the Android 10 legacy shared-storage model and add WRITE_EXTERNAL_STORAGE if absent. Android 11 and newer may ignore this setting.",
+        description = "Use if an older app cannot read or save files because it expects the Android 10 shared-storage model. Android 11+ may ignore this request, and it does not bypass newer storage restrictions.",
     )
-    val expansionObbPath by filePathOption(
-        title = "Legacy App Compatibility > Unity/OBB > Expansion OBB file",
+    val expansionObbPathRaw by filePathOption(
+        title = "Legacy App Compatibility > Expansion data and OBB > Expansion OBB file",
         default = "",
         key = "legacyCompatibilityExpansionObbPath",
         allowedExtensions = listOf("obb"),
-        description = "Optional main.<versionCode>.<package>.obb source. Leave empty unless APK startup expects a missing Play expansion file.",
+        description = "Select the app's matching main or patch .obb file only when it fails to start because its Play expansion data is missing. Use the exact version and package naming expected by the app; leave empty if it does not need an OBB.",
     )
-    val relocateExpansionNativeLibraries by booleanOption(
-        title = "Legacy App Compatibility > Unity/OBB > Relocate full native libraries from OBB",
+    val relocateExpansionNativeLibrariesRaw by booleanOption(
+        title = "Legacy App Compatibility > Expansion data and OBB > Relocate native libraries from OBB",
         default = false,
         key = "legacyCompatibilityRelocateExpansionNativeLibraries",
-        description = "Copy assets/libs/<abi>/*.so entries from the selected OBB into APK lib/<abi>/ paths. Use when Unity/Mono native libraries are incomplete or misplaced in the OBB.",
+        description = "Use if the app's native .so libraries are incorrectly stored inside the selected OBB and the game cannot load them. Copies them into the APK's matching ABI library folders; leave off if the OBB has no such libraries or the app already works.",
     )
-    val removeRelocatedNativeLibrariesFromObb by booleanOption(
-        title = "Legacy App Compatibility > Unity/OBB > Remove relocated native libraries from embedded OBB",
+    val removeRelocatedNativeLibrariesFromObbRaw by booleanOption(
+        title = "Legacy App Compatibility > Expansion data and OBB > Remove relocated native libraries from embedded OBB",
         default = false,
         key = "legacyCompatibilityRemoveRelocatedNativeLibrariesFromObb",
-        description = "When native-library relocation and OBB embedding are both enabled, omit relocated assets/libs/<abi>/*.so entries from the embedded OBB without changing the source file.",
+        description = "Use together with library relocation and OBB embedding to avoid storing the same native libraries twice. It removes those copied .so entries from the APK's embedded OBB only; the selected source OBB file is not changed.",
     )
-    val embedExpansionObb by booleanOption(
-        title = "Legacy App Compatibility > Unity/OBB > Embed and stage expansion OBB",
+    val embedExpansionObbRaw by booleanOption(
+        title = "Legacy App Compatibility > Expansion data and OBB > Embed and stage expansion OBB",
         default = false,
         key = "legacyCompatibilityEmbedExpansionObb",
-        description = "Embed selected OBB as an APK asset and stage it into Android's conventional OBB directory before app startup. Large APK growth and external-storage policy limits still apply.",
+        description = "Use when the app needs an OBB at first launch and no downloader can provide it. The file is bundled inside the APK and copied to the expected OBB folder; this can greatly increase APK size and may hit storage or distribution limits.",
     )
-    val bypassExpansionDownloader by booleanOption(
-        title = "Legacy App Compatibility > Unity/OBB > Bypass expansion downloader launcher",
+    val bypassExpansionDownloaderRaw by booleanOption(
+        title = "Legacy App Compatibility > Expansion data and OBB > Bypass known Unity expansion downloader",
         default = false,
         key = "legacyCompatibilityBypassExpansionDownloader",
-        description = "Move the launcher filter from com.google.android.vending.expansion.downloader_impl.DownloaderActivity to the known Unity launcher. Requires Embed and stage expansion OBB.",
+        description = "Use only for the recognized Unity expansion downloader when it blocks startup despite bundling the OBB. It redirects launcher handling to Unity's known launcher; it is not a general downloader repair and requires Embed and stage expansion OBB.",
     )
-    val allScreens by booleanOption(
+    val allScreensRaw by booleanOption(
         title = "Legacy App Compatibility > Storage and display > Support All Screens",
-        default = true,
+        default = false,
         key = "legacyCompatibilityAllScreens",
-        description = "Remove compatible-screens restrictions and mark common screen sizes and densities as supported.",
+        description = "Keep enabled so Android can install the app on phones and tablets whose screen size or density is not listed in its original manifest. This changes compatibility declarations, not the app's layout; some screens may still display poorly.",
     )
-    val extractNativeLibs by booleanOption(
+    val extractNativeLibsRaw by booleanOption(
         title = "Legacy App Compatibility > Native runtime > Extract native libraries",
         default = false,
         key = "legacyCompatibilityExtractNativeLibs",
-        description = "Set android:extractNativeLibs=true for old native loaders that cannot execute compressed APK libraries. This increases installed storage use.",
+        description = "Use if an older game cannot load its native .so files from the APK. Android will extract those libraries during installation, using more device storage; leave off if native libraries already load normally.",
     )
-    val disableHeapTagging by booleanOption(
+    val disableHeapTaggingRaw by booleanOption(
         title = "Legacy App Compatibility > Native runtime > Disable Heap Pointer Tagging",
         default = false,
         key = "legacyCompatibilityDisableHeapTagging",
-        description = "Disable native heap pointer tagging for older native apps that fail under newer Android memory behavior.",
+        description = "Try this if an older native game crashes on startup with a memory/tagging-related error on newer Android. It changes native memory behavior for compatibility; leave off if there is no such crash.",
     )
-    val vmSafeMode by booleanOption(
+    val vmSafeModeRaw by booleanOption(
         title = "Legacy App Compatibility > Native runtime > VM Safe Mode",
         default = false,
         key = "legacyCompatibilityVmSafeMode",
-        description = "Disable selected VM AOT/JIT optimizations for compatibility. This can reduce performance.",
+        description = "Try this only if an older app crashes or misbehaves because of Android runtime compilation. Disabling selected optimizations can make the app slower; leave off unless testing shows it fixes the problem.",
     )
-    val spoofImei by booleanOption(
+    val spoofImeiRaw by booleanOption(
         title = "Legacy App Compatibility > Device compatibility > Spoof IMEI",
         default = false,
         key = "legacyCompatibilitySpoofImei",
-        description = "Replace recognized TelephonyManager IMEI getter results. This is limited to matching bytecode calls.",
+        description = "Use only if the app refuses to run because it expects an IMEI value. Replaces recognized IMEI getter results with the value below; only matching calls are changed, and apps may use other identifiers instead. Avoid using an identifier that belongs to another device.",
     )
-    val imei by stringOption(
+    val imeiRaw by stringOption(
         title = "Legacy App Compatibility > Device compatibility > IMEI value",
         default = "000000000000000",
         key = "legacyCompatibilityImei",
-        description = "Exactly 15 digits used when Spoof IMEI is enabled. Invalid values are rejected.",
+        description = "Enter exactly 15 digits to return from the IMEI calls affected by Spoof IMEI. Invalid values are rejected. This is an app-compatibility override, not a real device identifier.",
     )
 
-    dependsOn(legacyImeiPatch { Pair(spoofImei == true, imei.orEmpty().trim()) })
-    dependsOn(openIabReceiverFlagsPatch { openIabReceiverRegistrationMode ?: OPEN_IAB_AUTOMATIC })
-    dependsOn(legacyRuntimeHooksPatch {
-        LegacyRuntimeOptions(
-            hiddenApiExemptions = bypassHiddenApi == true,
-            trustCertificates = trustCertificates == true && acknowledgeTrustCertificates == true,
-            storageRedirect = redirectLegacyStorage == true,
-            embeddedExpansionObb = embedExpansionObb == true && expansionObbPath.orEmpty().trim().isNotEmpty(),
-            expansionDownloaderBypass = bypassExpansionDownloader == true && embedExpansionObb == true && expansionObbPath.orEmpty().trim().isNotEmpty(),
-        )
-    })
-    dependsOn(legacyExpansionFilesPatch {
-        LegacyExpansionOptions(
-            obbPath = expansionObbPath.orEmpty().trim(),
-            relocateNativeLibraries = relocateExpansionNativeLibraries == true,
-            embedExpansionObb = embedExpansionObb == true,
-            removeRelocatedNativeLibrariesFromObb = removeRelocatedNativeLibrariesFromObb == true,
-        )
-    })
-    dependsOn(legacyReceiverFlagsPatch { receiverFixAppWide == true })
+    val detectedEngines = LegacyDetectedEngines()
+    dependsOn(legacyEngineDetectionPatch(detectedEngines))
+    val presetId = LegacyCompatibilityPresets.validate(preset ?: LegacyCompatibilityPresets.CUSTOM)
+    val diagnosticsOnly = LegacyCompatibilityPresets.boolean(presetId, "diagnosticsOnly", diagnosticsOnlyRaw)
+    val spoofTargetSdk = LegacyCompatibilityPresets.boolean(presetId, "spoofTargetSdk", spoofTargetSdkRaw)
+    val targetSdk = LegacyCompatibilityPresets.target(presetId, targetSdkRaw)
+    val targetSdkProfile = LegacyCompatibilityPresets.targetProfile(presetId, targetSdkProfileRaw)
+    val legacyReviver = LegacyCompatibilityPresets.boolean(presetId, "legacyReviver", legacyReviverRaw)
+    val apacheLegacy = LegacyCompatibilityPresets.boolean(presetId, "apacheLegacy", apacheLegacyRaw)
+    val foregroundService = LegacyCompatibilityPresets.boolean(presetId, "foregroundService", foregroundServiceRaw)
+    val exactAlarms = LegacyCompatibilityPresets.boolean(presetId, "exactAlarms", exactAlarmsRaw)
+    val bluetooth = LegacyCompatibilityPresets.boolean(presetId, "bluetooth", bluetoothRaw)
+    val openIabReceiverRegistrationMode = LegacyCompatibilityPresets.openIabMode(presetId, openIabReceiverRegistrationModeRaw)
+    val bypassHiddenApi = LegacyCompatibilityPresets.boolean(presetId, "bypassHiddenApi", bypassHiddenApiRaw)
+    val trustCertificates = LegacyCompatibilityPresets.boolean(presetId, "trustCertificates", trustCertificatesRaw)
+    val acknowledgeTrustCertificates = LegacyCompatibilityPresets.boolean(presetId, "acknowledgeTrustCertificates", acknowledgeTrustCertificatesRaw)
+    val redirectLegacyStorage = LegacyCompatibilityPresets.boolean(presetId, "redirectLegacyStorage", redirectLegacyStorageRaw)
+    val receiverFixAppWide = LegacyCompatibilityPresets.boolean(presetId, "receiverFixAppWide", receiverFixAppWideRaw)
+    val repairExportFlags = LegacyCompatibilityPresets.boolean(presetId, "repairExportFlags", repairExportFlagsRaw)
+    val exportAllActivityComponents = LegacyCompatibilityPresets.boolean(presetId, "exportAllActivityComponents", exportAllActivityComponentsRaw)
+    val allowCleartext = LegacyCompatibilityPresets.boolean(presetId, "allowCleartext", allowCleartextRaw)
+    val relaxLibraries = LegacyCompatibilityPresets.boolean(presetId, "relaxLibraries", relaxLibrariesRaw)
+    val bypassPackageVisibility = LegacyCompatibilityPresets.boolean(presetId, "bypassPackageVisibility", bypassPackageVisibilityRaw)
+    val manifestCompatAttributes = LegacyCompatibilityPresets.boolean(presetId, "manifestCompatAttributes", manifestCompatAttributesRaw)
+    val legacyStorage = LegacyCompatibilityPresets.boolean(presetId, "legacyStorage", legacyStorageRaw)
+    val expansionObbPath = if (presetId == LegacyCompatibilityPresets.CUSTOM) expansionObbPathRaw else ""
+    val relocateExpansionNativeLibraries = LegacyCompatibilityPresets.boolean(presetId, "relocateExpansionNativeLibraries", relocateExpansionNativeLibrariesRaw)
+    val removeRelocatedNativeLibrariesFromObb = LegacyCompatibilityPresets.boolean(presetId, "removeRelocatedNativeLibrariesFromObb", removeRelocatedNativeLibrariesFromObbRaw)
+    val embedExpansionObb = LegacyCompatibilityPresets.boolean(presetId, "embedExpansionObb", embedExpansionObbRaw)
+    val bypassExpansionDownloader = LegacyCompatibilityPresets.boolean(presetId, "bypassExpansionDownloader", bypassExpansionDownloaderRaw)
+    val allScreens = LegacyCompatibilityPresets.boolean(presetId, "allScreens", allScreensRaw)
+    val extractNativeLibs = LegacyCompatibilityPresets.boolean(presetId, "extractNativeLibs", extractNativeLibsRaw)
+    val disableHeapTagging = LegacyCompatibilityPresets.boolean(presetId, "disableHeapTagging", disableHeapTaggingRaw)
+    val vmSafeMode = LegacyCompatibilityPresets.boolean(presetId, "vmSafeMode", vmSafeModeRaw)
+    val spoofImei = LegacyCompatibilityPresets.boolean(presetId, "spoofImei", spoofImeiRaw)
+    val imei = if (presetId == LegacyCompatibilityPresets.CUSTOM) imeiRaw else "000000000000000"
+
+    if (shouldApplyLegacyCompatibilityMutations(diagnosticsOnly == true)) {
+        dependsOn(legacyImeiPatch { Pair(spoofImei == true, imei.orEmpty().trim()) })
+        dependsOn(openIabReceiverFlagsPatch { openIabReceiverRegistrationMode ?: OPEN_IAB_AUTOMATIC })
+        dependsOn(legacyRuntimeHooksPatch {
+            LegacyRuntimeOptions(
+                hiddenApiExemptions = bypassHiddenApi == true,
+                trustCertificates = trustCertificates == true && acknowledgeTrustCertificates == true,
+                storageRedirect = redirectLegacyStorage == true,
+                embeddedExpansionObb = embedExpansionObb == true && expansionObbPath.orEmpty().trim().isNotEmpty(),
+                expansionDownloaderBypass = bypassExpansionDownloader == true && embedExpansionObb == true && expansionObbPath.orEmpty().trim().isNotEmpty(),
+            )
+        })
+        dependsOn(legacyExpansionFilesPatch {
+            LegacyExpansionOptions(
+                obbPath = expansionObbPath.orEmpty().trim(),
+                relocateNativeLibraries = relocateExpansionNativeLibraries == true,
+                embedExpansionObb = embedExpansionObb == true,
+                removeRelocatedNativeLibrariesFromObb = removeRelocatedNativeLibrariesFromObb == true,
+            )
+        })
+        dependsOn(legacyReceiverFlagsPatch { receiverFixAppWide == true })
+        dependsOn(legacyDownloaderPendingIntentPatch { true })
+        dependsOn(legacyLicenseServiceIntentPatch { true })
+    } else {
+        dependsOn(legacyCompatibilityBytecodePreflightPatch())
+    }
 
     execute {
         val logger = Logger.getLogger(this::class.java.name)
+        val playStorePackageVisibility = LegacyCompatibilityPresets.playStorePackageVisibility(
+            presetId, playStorePackageVisibilityRaw, detectedEngines.openIab,
+        )
+        val obbPathForLog = expansionObbPath.orEmpty().trim()
+        fun optionLogValue(value: Any?): String =
+            value?.toString()?.filterNot { Character.isISOControl(it) }?.take(300) ?: "<unset>"
+
+        logger.info(
+            buildString {
+                appendLine("Legacy App Compatibility options (selected values):")
+                appendLine("  patchEnabled=true")
+            appendLine("  diagnosticsOnly=${optionLogValue(diagnosticsOnly)}")
+                appendLine("  spoofTargetSdk=${optionLogValue(spoofTargetSdk)}")
+                appendLine("  targetSdk=${optionLogValue(targetSdk)}")
+                appendLine("  targetSdkProfile=${optionLogValue(targetSdkProfile)}")
+                appendLine("  legacyReviver=${optionLogValue(legacyReviver)}")
+                appendLine("  apacheLegacy=${optionLogValue(apacheLegacy)}")
+                appendLine("  foregroundService=${optionLogValue(foregroundService)}")
+                appendLine("  exactAlarms=${optionLogValue(exactAlarms)}")
+                appendLine("  bluetooth=${optionLogValue(bluetooth)}")
+                appendLine("  openIabReceiverRegistrationMode=${optionLogValue(openIabReceiverRegistrationMode)}")
+                appendLine("  bypassHiddenApi=${optionLogValue(bypassHiddenApi)}")
+                appendLine("  trustCertificates=${optionLogValue(trustCertificates)}")
+                appendLine("  acknowledgeTrustCertificates=${optionLogValue(acknowledgeTrustCertificates)}")
+                appendLine("  redirectLegacyStorage=${optionLogValue(redirectLegacyStorage)}")
+                appendLine("  receiverFixAppWide=${optionLogValue(receiverFixAppWide)}")
+                appendLine("  repairExportFlags=${optionLogValue(repairExportFlags)}")
+                appendLine("  exportAllActivityComponents=${optionLogValue(exportAllActivityComponents)}")
+                appendLine("  allowCleartext=${optionLogValue(allowCleartext)}")
+                appendLine("  relaxLibraries=${optionLogValue(relaxLibraries)}")
+                appendLine("  playStorePackageVisibility=${optionLogValue(playStorePackageVisibility)}")
+                appendLine("  bypassPackageVisibility=${optionLogValue(bypassPackageVisibility)}")
+                appendLine("  manifestCompatAttributes=${optionLogValue(manifestCompatAttributes)}")
+                appendLine("  legacyStorage=${optionLogValue(legacyStorage)}")
+                appendLine("  expansionObbPath=${if (obbPathForLog.isBlank()) "<not set>" else "${optionLogValue(obbPathForLog.substringAfterLast('/'))} (directory redacted)"}")
+                appendLine("  relocateExpansionNativeLibraries=${optionLogValue(relocateExpansionNativeLibraries)}")
+                appendLine("  removeRelocatedNativeLibrariesFromObb=${optionLogValue(removeRelocatedNativeLibrariesFromObb)}")
+                appendLine("  embedExpansionObb=${optionLogValue(embedExpansionObb)}")
+                appendLine("  bypassExpansionDownloader=${optionLogValue(bypassExpansionDownloader)}")
+                appendLine("  allScreens=${optionLogValue(allScreens)}")
+                appendLine("  extractNativeLibs=${optionLogValue(extractNativeLibs)}")
+                appendLine("  disableHeapTagging=${optionLogValue(disableHeapTagging)}")
+                appendLine("  vmSafeMode=${optionLogValue(vmSafeMode)}")
+                appendLine("  spoofImei=${optionLogValue(spoofImei)}")
+                appendLine("  imei=<redacted; configured=${imei.orEmpty().trim().isNotEmpty()}>")
+                appendLine("  effectiveTrustCertificates=${trustCertificates == true && acknowledgeTrustCertificates == true}")
+                appendLine("  effectiveEmbedExpansionObb=${embedExpansionObb == true && obbPathForLog.isNotBlank()}")
+                appendLine("  effectiveBypassExpansionDownloader=${bypassExpansionDownloader == true && embedExpansionObb == true && obbPathForLog.isNotBlank()}")
+            },
+        )
+
         if (trustCertificates == true && acknowledgeTrustCertificates != true) {
             logger.warning("Legacy compatibility: Trust All Certificates was requested without the required high-risk acknowledgement; trust-all TLS remains disabled.")
         }
+        fun reportManifestPreflight(manifest: Document) {
+            legacyManifestPreflightFindings(
+                document = manifest,
+                spoofTargetSdk = spoofTargetSdk == true,
+                targetSdkProfile = targetSdkProfile,
+                customTargetSdk = targetSdk,
+                repairExportFlags = repairExportFlags == true,
+                exportAllActivityComponents = exportAllActivityComponents == true,
+                playStorePackageVisibility = playStorePackageVisibility == true,
+                bypassPackageVisibility = bypassPackageVisibility == true,
+                embedExpansionObb = embedExpansionObb == true,
+                expansionObbPath = obbPathForLog,
+            ).forEach { logger.info(formatLegacyCompatibilityPreflightFinding(it)) }
+        }
+
+        if (diagnosticsOnly == true) {
+            get("AndroidManifest.xml", false).inputStream().use { input ->
+                document(input).use { manifest -> reportManifestPreflight(manifest) }
+            }
+            logger.info("Legacy compatibility preflight complete; diagnostics-only mode applied no APK changes.")
+            return@execute
+        }
+
         var changed = 0
         var noApplication = false
         document("AndroidManifest.xml").use { manifest ->
+            reportManifestPreflight(manifest)
             noApplication = manifest.documentElement.applicationOrNull() == null
             val originalTarget = originalTargetSdk(manifest)
             if (spoofTargetSdk == true) {
@@ -565,7 +825,7 @@ val legacyAppCompatibilityPatch = resourcePatch(
                     logger.warning("Legacy compatibility: target SDK $effectiveTarget is 30 or higher; requestLegacyExternalStorage is ignored on Android 11 and newer.")
                 }
             }
-            if (bypassExpansionDownloader == true) {
+            if (bypassExpansionDownloader == true && detectedEngines.unity) {
                 if (embedExpansionObb == true && expansionObbPath.orEmpty().trim().isNotEmpty()) {
                     changed += moveExpansionDownloaderLauncher(manifest, logger)
                 } else {
@@ -578,6 +838,10 @@ val legacyAppCompatibilityPatch = resourcePatch(
                 if (updated) changed++
             }
             if (relaxLibraries == true) changed += relaxSharedLibraries(manifest)
+            if (playStorePackageVisibility == true && addPackageVisibilityQuery(manifest, "com.android.vending")) {
+                changed++
+                logger.info("Legacy compatibility: added Google Play package visibility query.")
+            }
             if (bypassPackageVisibility == true) {
                 if (addPermission(manifest, QUERY_ALL_PACKAGES)) {
                     changed++
@@ -588,7 +852,7 @@ val legacyAppCompatibilityPatch = resourcePatch(
                 if (setApplicationAttribute(manifest, "largeHeap", "true")) changed++
                 if (setApplicationAttribute(manifest, "hardwareAccelerated", "true")) changed++
             }
-            if (extractNativeLibs == true && setApplicationAttribute(manifest, "extractNativeLibs", "true")) changed++
+            if (extractNativeLibs == true && (presetId == LegacyCompatibilityPresets.CUSTOM || detectedEngines.unity) && setApplicationAttribute(manifest, "extractNativeLibs", "true")) changed++
             if (disableHeapTagging == true && setApplicationAttribute(manifest, "allowNativeHeapPointerTagging", "false")) changed++
             if (vmSafeMode == true && setApplicationAttribute(manifest, "vmSafeMode", "true")) changed++
         }

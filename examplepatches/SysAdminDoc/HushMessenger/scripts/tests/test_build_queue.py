@@ -59,9 +59,9 @@ class BuildQueueCommands(unittest.TestCase):
     def test_queue_runs_the_command_line_inside_a_labelled_slot(self):
         job = ["java", "-jar", "desktop.jar", "--enable=Hide People You May Know", "C:/it's.apk"]
         with self.environment(queue_script=self.queue_script):
-            command = queue.queued(job, "hushmessenger heap patch 346213494")
+            command = queue.queued(job, "hushmessenger heap patch 346415686")
             self.assertEqual(
-                ["-File", str(self.queue_script), "-Label", "hushmessenger heap patch 346213494", "-Run"],
+                ["-File", str(self.queue_script), "-Label", "hushmessenger heap patch 346415686", "-Run"],
                 command[-6:-1],
             )
             self.assertEqual(
@@ -76,6 +76,13 @@ class BuildQueueCommands(unittest.TestCase):
             # PowerShell drops an empty argument, which would shift every one after it.
             with self.assertRaisesRegex(ValueError, "empty argument"):
                 queue.queued(["java", "", "desktop.jar"], "job")
+
+    def test_curly_quotes_stay_inside_the_literal(self):
+        # PowerShell ends a single-quoted string at a curly quote as well as at ', so each one is doubled.
+        self.assertEqual("'O\u2019\u2019Brien \u2018\u2018x\u201a\u201ay\u201b\u201b'", queue.quote("O\u2019Brien \u2018x\u201ay\u201b"))
+        with self.environment(queue_script=self.queue_script):
+            command = queue.queued(["java", "C:/Users/O\u2019Brien/it's.apk"], "job")
+        self.assertIn("'C:/Users/O\u2019\u2019Brien/it''s.apk'", command[-1])
 
     def test_a_named_script_that_is_missing_stops_instead_of_running_unqueued(self):
         missing = self.root / "gone.ps1"

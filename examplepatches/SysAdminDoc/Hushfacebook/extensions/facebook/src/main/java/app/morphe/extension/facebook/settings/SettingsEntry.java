@@ -51,6 +51,7 @@ import app.morphe.extension.facebook.misc.ScreenTransitions;
 import app.morphe.extension.facebook.misc.TextSize;
 import app.morphe.extension.facebook.navigation.ReelsTab;
 import app.morphe.extension.facebook.stories.StorySeenButton;
+import app.morphe.extension.facebook.theme.AccentResources;
 import app.morphe.extension.facebook.theme.MaterialYouTheme;
 
 /**
@@ -103,7 +104,8 @@ public final class SettingsEntry {
      * Injected before each return of the application's {@code onCreate}, after Facebook's own
      * startup. Watches every Facebook activity, so a pending open lands on whichever one resumes next:
      * signed out, the launcher hands straight over to the login screen. With Material You in the
-     * build, each activity's dark window background takes the palette from here on. Also where the release
+     * build, each activity's dark window background takes the palette from here on, and with Accent
+     * color each activity's resources take the accent's colour table. Also where the release
      * check, when it's on, asks at most once a day, on a worker, and where what a save cut short
      * by Android left behind is removed, on a worker too. In Facebook's other processes it only
      * starts Lock Facebook's watch ({@link AppLock#watch}).
@@ -129,7 +131,11 @@ public final class SettingsEntry {
             TextSize.application(context);
             // Only with the theme in the build, so its class and palette aren't loaded otherwise.
             if (SettingsStatus.materialYouTheme()) MaterialYouTheme.watchWindows(context);
-        } catch (Exception ex) {
+            // Accent color's route five, for the colours views inflated from XML read themselves.
+            if (SettingsStatus.accentColor()) AccentResources.watchActivities(context);
+        } catch (Throwable ex) {
+            // Throwable, as in every hook: an Error here, from a class that fails to load or set
+            // itself up, would end Facebook at every start, paused or not.
             Logger.printException(() -> "Settings entry: could not watch activities", ex);
         }
         ReleaseCheck.onFacebookStart();
@@ -149,6 +155,7 @@ public final class SettingsEntry {
             ReelsTab.removePublished(app);
             publishShortcutNow(app);
             SavedShortcut.refreshNow(app);
+            WatchHistoryShortcut.refreshNow(app);
         });
     }
 
@@ -306,6 +313,7 @@ public final class SettingsEntry {
                 keepFirstQueued.set(false);
                 keepFirstNow(app);
                 SavedShortcut.refreshNow(app);
+                WatchHistoryShortcut.refreshNow(app);
             });
             if (!queued) keepFirstQueued.set(false);
         } catch (Throwable t) {
@@ -321,7 +329,7 @@ public final class SettingsEntry {
         try {
             SavedFileActions.receive(activity.getIntent());
             noteIntent(activity.getIntent());
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             Logger.printException(() -> "Settings entry: onActivityCreate failure", ex);
         }
     }
@@ -331,7 +339,7 @@ public final class SettingsEntry {
         try {
             SavedFileActions.receive(intent);
             noteIntent(intent);
-        } catch (Exception ex) {
+        } catch (Throwable ex) {
             Logger.printException(() -> "Settings entry: onNewIntent failure", ex);
         }
     }
@@ -499,6 +507,7 @@ public final class SettingsEntry {
             if (openPending) openWhenSettled(activity);
             relabelIfStale(activity);
             SavedShortcut.refresh(activity);
+            WatchHistoryShortcut.refresh(activity);
         }
 
         @Override
@@ -525,7 +534,10 @@ public final class SettingsEntry {
         }
 
         @Override public void onActivityStarted(Activity activity) { }
-        @Override public void onActivityStopped(Activity activity) { }
+        @Override
+        public void onActivityStopped(Activity activity) {
+            TapToPlay.activityStopped(activity);
+        }
 
         @Override public void onActivitySaveInstanceState(Activity activity, Bundle state) { }
         @Override

@@ -140,7 +140,7 @@ Import	Importieren
 Import settings	Einstellungen importieren
 Importing settings	Einstellungen werden importiert
 Licenses	Lizenzen
-Link expired. Reopen the item and try again	Link abgelaufen. Öffne den Inhalt neu und versuche es noch einmal
+Link expired. Reopen the item and try again.	Link abgelaufen. Öffne den Inhalt neu und versuche es noch einmal.
 Links	Links
 Privacy	Datenschutz
 Material You theme	Material-You-Design
@@ -246,7 +246,7 @@ The file %1$s couldn't be removed. Delete it from %2$s to turn Hushfacebook back
 the part of the Reels ad blocking built in when you patched	der beim Patchen eingebaute Teil der Reels-Werbeblockade
 the re-signed build fix	der Fix für neu signierte Builds
 the start-up fix for x86 devices	der Startfix für x86-Geräte
-the recoloured dark mode	die Umfärbung des Dunkelmodus
+the recolored dark mode	die Umfärbung des Dunkelmodus
 Hides friend suggestions between posts and on your own profile.	Blendet Freundschaftsvorschläge zwischen Beiträgen und auf deinem eigenen Profil aus.
 Hides the row of stories at the top of the feed, including Create story.	Blendet die Reihe mit Stories oben im Feed aus, einschließlich Story erstellen.
 Hides rows of reels between posts, and the reels Facebook adds where your feed ends.	Blendet Reihen mit Reels zwischen Beiträgen aus, ebenso die Reels, die Facebook am Ende deines Feeds anhängt.
@@ -317,6 +317,14 @@ Hides reels and Watch videos that Facebook marks as made with AI. Ones only thei
 Don't send reel watch history	Reel-Wiedergabeverlauf nicht senden
 Hold back analytics uploads	Analyse-Uploads zurückhalten
 Stops Facebook sending usage statistics in the background and running its on-phone learning tasks. Restart Facebook to see the change.	Facebook sendet im Hintergrund keine Nutzungsstatistiken mehr und führt seine Lernaufgaben auf dem Telefon nicht mehr aus. Starte Facebook neu, um die Änderung zu sehen.
+# context: switch title under Privacy; camera roll means the photos and videos saved on the phone, and sharing suggestions is Facebook's own feature name, so use Facebook's wording in your language if you know it
+Hold back camera roll processing	Verarbeitung der Aufnahmen zurückhalten
+# context: description of that switch; the report is a count of the photos and videos on the phone
+Stops the camera roll processing behind sharing suggestions, which goes through your photos and videos and uploads photos and details about them, and stops the report of how many you have. Restart Facebook to see the change.	Stoppt die Verarbeitung deiner Aufnahmen für Teilen-Vorschläge, die deine Fotos und Videos durchgeht und Fotos samt Angaben dazu hochlädt, und die Meldung, wie viele du hast. Starte Facebook neu, um die Änderung zu sehen.
+# context: switch title under Privacy; link history is Facebook's own name for its list of links you opened in its built-in browser, so use Facebook's wording in your language if you know it
+Stop link history in Facebook's browser	Linkverlauf in Facebooks Browser stoppen
+# context: description of that switch; Facebook's own browser is the one built into the app
+Links that open in Facebook's own browser aren't recorded for your link history or sent to Facebook as pages you visited. Applies to the next link you open.	Links, die sich in Facebooks eigenem Browser öffnen, landen nicht in deinem Linkverlauf und werden Facebook nicht als besuchte Seiten gemeldet. Gilt ab dem nächsten Link, den du öffnest.
 Allow screenshots	Bildschirmfotos erlauben
 Lets you take screenshots and screen recordings on pages where Facebook blocks them. Reopen a page that's already open.	Du kannst Screenshots und Bildschirmaufnahmen auf Seiten machen, auf denen Facebook sie sperrt. Öffne eine bereits offene Seite erneut.
 Block screenshot detection	Bildschirmfoto-Erkennung blockieren
@@ -626,26 +634,26 @@ Hides posts featuring Meta's AI characters, the chatbots people make with Meta A
 Also hides posts their creator labeled as made with AI, not just the ones Facebook detects itself. Untested on a real feed, so it starts off.	Blendet auch Beiträge aus, die ihr Urheber als mit KI erstellt gekennzeichnet hat, nicht nur die, die Facebook selbst erkennt. Auf einem echten Feed noch nicht getestet, daher startet es ausgeschaltet.
 Return to regular Facebook	Zurück zum normalen Facebook
 Restore the normal tabs at the next restart. Your other settings stay saved.	Beim nächsten Neustart werden die normalen Tabs wiederhergestellt. Deine anderen Einstellungen bleiben gespeichert.
-Marketplace mode is off. Restart Facebook to restore its normal tabs.	Marketplace-Modus ist aus. Starte Facebook neu, um die normalen Tabs wiederherzustellen.
+Marketplace only is off. Restart Facebook to restore its normal tabs.	Marketplace-Modus ist aus. Starte Facebook neu, um die normalen Tabs wiederherzustellen.
 Couldn't save the change. Try again.	Die Änderung konnte nicht gespeichert werden. Versuch es erneut.
-Marketplace mode chooses the opening tab. Your previous choice stays saved.	Der Marketplace-Modus bestimmt den Start-Tab. Deine bisherige Auswahl bleibt gespeichert.
-Restart needed. Marketplace mode will turn on the next time Facebook starts.	Neustart erforderlich. Der Marketplace-Modus wird beim nächsten Start von Facebook aktiviert.
+Marketplace only chooses the opening tab. Your previous choice stays saved.	Der Marketplace-Modus bestimmt den Start-Tab. Deine bisherige Auswahl bleibt gespeichert.
+Restart needed. Marketplace only will turn on the next time Facebook starts.	Neustart erforderlich. Der Marketplace-Modus wird beim nächsten Start von Facebook aktiviert.
 Restart needed. The normal tabs will return the next time Facebook starts.	Neustart erforderlich. Die normalen Tabs kehren beim nächsten Start von Facebook zurück.
 Marketplace is hidden in Facebook's tab settings. Show it under Settings, Tab bar, Customize the bar. Your normal tabs stay available.	Marketplace ist in Facebooks Tab-Einstellungen ausgeblendet. Blende es unter Einstellungen, Tab-Leiste, Leiste anpassen ein. Deine normalen Tabs bleiben verfügbar.
 Marketplace unavailable. Facebook hasn't supplied a Marketplace tab for this account. Your normal tabs stay available.	Marketplace nicht verfügbar. Facebook hat für dieses Konto keinen Marketplace-Tab bereitgestellt. Deine normalen Tabs bleiben verfügbar.
 Couldn't check the tab bar. Your normal tabs stay available. Restart Facebook to try again.	Die Tab-Leiste konnte nicht geprüft werden. Deine normalen Tabs bleiben verfügbar. Starte Facebook neu, um es erneut zu versuchen.
-Waiting for Facebook's tab bar. Marketplace mode will apply when Facebook builds it.	Warten auf Facebooks Tab-Leiste. Der Marketplace-Modus wird angewendet, sobald Facebook sie erstellt.
+Waiting for Facebook's tab bar. Marketplace only will apply when Facebook builds it.	Warten auf Facebooks Tab-Leiste. Der Marketplace-Modus wird angewendet, sobald Facebook sie erstellt.
 Off. Turn on to open Marketplace and hide the feed and other social tabs after restarting Facebook.	Aus. Aktiviere den Modus, um nach einem Neustart von Facebook Marketplace zu öffnen und den Feed sowie andere soziale Tabs auszublenden.
 Quiet social notifications	Soziale Benachrichtigungen stummschalten
 Skip feed preloading	Feed-Vorladen überspringen
-Marketplace mode is off.	Marketplace-Modus ist aus.
+Marketplace only is off.	Marketplace-Modus ist aus.
 Paused with Hushfacebook. Your Marketplace choice stays saved. Tabs already hidden return after a restart while paused.	Mit Hushfacebook pausiert. Deine Marketplace-Auswahl bleibt gespeichert. Bereits ausgeblendete Tabs kehren nach einem Neustart zurück, solange Hushfacebook pausiert ist.
-While Marketplace mode is on, silences video suggestions, memories, birthdays and friend suggestions. Messages and trading updates still arrive.	Solange der Marktplatz-Modus an ist, werden Videovorschläge, Erinnerungen, Geburtstage und Freundschaftsvorschläge stummgeschaltet. Nachrichten und Handelsmeldungen kommen weiterhin an.
-While Marketplace mode is on, loads less of the feed in the background. Some loading still happens at startup.	Solange der Marktplatz-Modus an ist, wird weniger vom Feed im Hintergrund geladen. Beim Start wird trotzdem noch etwas geladen.
+While Marketplace only is on, silences video suggestions, memories, birthdays and friend suggestions. Messages and trading updates still arrive.	Solange der Marktplatz-Modus an ist, werden Videovorschläge, Erinnerungen, Geburtstage und Freundschaftsvorschläge stummgeschaltet. Nachrichten und Handelsmeldungen kommen weiterhin an.
+While Marketplace only is on, loads less of the feed in the background. Some loading still happens at startup.	Solange der Marktplatz-Modus an ist, wird weniger vom Feed im Hintergrund geladen. Beim Start wird trotzdem noch etwas geladen.
 Active. Marketplace, Notifications and Profile/Menu stay. Find Hushfacebook settings in Menu, under Settings and privacy.	Aktiv. Marketplace, Benachrichtigungen und Profil/Menü bleiben erhalten. Die Hushfacebook-Einstellungen findest du im Menü unter Einstellungen und Privatsphäre.
 
 # context: Settings overview, category navigation and search.
-Marketplace mode and your start tab	Marketplace-Modus und Starttab
+Marketplace only and your start tab	Marketplace-Modus und Starttab
 Ads, suggestions and word filters	Werbung, Vorschläge und Wortfilter
 Suggestions, saving, auto-advance and viewing anonymously	Vorschläge, Speichern, automatischer Wechsel und anonymes Ansehen
 Cleaner reels and video controls	Reels und Videosteuerung
@@ -693,9 +701,9 @@ Messenger	Messenger
 # context: title of a row under Links; Instagram is the name of Meta's app, keep it as is
 Instagram	Instagram
 # context: the Messenger row's description; "Open supported links" is Android's own switch, "Supported links" is the row above
-Messenger can claim facebook.com and m.me links for itself, which turns this app's link switches back off. Tap, turn off Open supported links there, then recheck Supported links above.	Messenger kann facebook.com- und m.me-Links für sich beanspruchen, wodurch die Link-Schalter dieser App wieder ausgehen. Tippe, schalte dort „Unterstützte Links öffnen“ aus und prüfe dann oben noch einmal „Unterstützte Links“.
+Messenger can claim facebook.com and m.me links for itself, which turns this app's link switches back off. Tap, turn off Open supported links there (on newer Android, pick In your browser), then recheck Supported links above.	Messenger kann facebook.com- und m.me-Links für sich beanspruchen, wodurch die Link-Schalter dieser App wieder ausgehen. Tippe, schalte dort „Unterstützte Links öffnen“ aus (auf neuerem Android wähle „Im Browser“) und prüfe dann oben noch einmal „Unterstützte Links“.
 # context: the Instagram row's description; "Open supported links" is Android's own switch, "Supported links" is the row above
-Instagram can claim facebook.com links for itself, which turns this app's link switches back off. Tap, turn off Open supported links there, then recheck Supported links above.	Instagram kann facebook.com-Links für sich beanspruchen, wodurch die Link-Schalter dieser App wieder ausgehen. Tippe, schalte dort „Unterstützte Links öffnen“ aus und prüfe dann oben noch einmal „Unterstützte Links“.
+Instagram can claim facebook.com links for itself, which turns this app's link switches back off. Tap, turn off Open supported links there (on newer Android, pick In your browser), then recheck Supported links above.	Instagram kann facebook.com-Links für sich beanspruchen, wodurch die Link-Schalter dieser App wieder ausgehen. Tippe, schalte dort „Unterstützte Links öffnen“ aus (auf neuerem Android wähle „Im Browser“) und prüfe dann oben noch einmal „Unterstützte Links“.
 # context: message when Android's page for Messenger doesn't open; "App info" and "Open by default" are Android's page names
 Messenger's settings didn't open. Open App info from Messenger's icon, then Open by default.	Die Einstellungen von Messenger ließen sich nicht öffnen. Öffne die App-Info über das Messenger-Symbol, dann „Standardmäßig öffnen“.
 # context: message when Android's page for Instagram doesn't open; "App info" and "Open by default" are Android's page names
@@ -800,7 +808,7 @@ Hide the Create tab	Erstellen-Tab ausblenden
 Hide the Explore tab	Erkunden-Tab ausblenden
 Hide the Jobs tab	Jobs-Tab ausblenden
 Removes this tab from the tab bar. Its page is still in the Menu. Restart Facebook to see the change.	Entfernt diesen Tab aus der Tab-Leiste. Seine Seite bleibt im Menü. Starte Facebook neu, um die Änderung zu sehen.
-Facebook opens on Home while Hide tabs keeps %1$s off the tab bar. Your choice stays saved.	Facebook startet mit Home, solange Tabs ausblenden %1$s aus der Tab-Leiste nimmt. Deine Auswahl bleibt gespeichert.
+Facebook opens on Home while %1$s is on, since %2$s is off the tab bar. Your choice stays saved.	Facebook öffnet auf der Startseite, solange „%1$s“ an ist, da %2$s dann nicht in der Tab-Leiste ist. Deine Auswahl bleibt gespeichert.
 # context: summary of that switch; Video is Facebook's name for the tab on some accounts
 No dot or new count on the Reels tab, called Video on some accounts. Other tabs keep theirs.	Kein Punkt und keine Neu-Zahl am Reels-Tab, bei manchen Konten Video genannt. Andere Tabs behalten ihre.
 # context: title of the overview row under the status card when the build lacks one patch Morphe Manager selects by default
@@ -816,7 +824,7 @@ Not in this build: %1$s. Morphe Manager selects them by default. Patch again wit
 # context: Toast at the end of a video save whose file uses a codec WhatsApp and some video editors can't open (AV1, VP9, HEVC or xHE-AAC). A notification with a button to the fix is showing too. Keep it short: Android shows two lines at most.
 Saved, but WhatsApp and some editors may not accept it	Gespeichert, aber WhatsApp und manche Editoren nehmen es evtl. nicht an
 # context: Toast at the end of a video save whose file WhatsApp may not open, when no notification can be shown. Downloads is the section of Hushfacebook settings with the fix. Two lines at most.
-Saved, but WhatsApp may not accept it. Fix: Downloads in Hushfacebook settings.	Gespeichert, aber WhatsApp nimmt es evtl. nicht an. Lösung: Downloads in den Hushfacebook-Einstellungen.
+Saved, but WhatsApp may not accept it. Open Downloads in Hushfacebook settings to fix that.	Gespeichert, aber WhatsApp nimmt es evtl. nicht an. Öffne Downloads in den Hushfacebook-Einstellungen, um das zu beheben.
 # context: Second line of the notification after such a save. %1$s is the switch's name, Save videos other apps can open. They: WhatsApp and the editors.
 Turn on %1$s to save videos that WhatsApp and these editors accept.	Schalte %1$s ein, um Videos zu speichern, die WhatsApp und diese Editoren annehmen.
 # context: Title of the notification after a video save whose file uses a codec WhatsApp and some video editors can't open.
@@ -912,6 +920,11 @@ Adds Saved to the menu you get by holding Facebook's icon, if there's room. Exis
 Adds Saved to the menu you get by holding Facebook's icon, if there's room, and a Saved row in Settings and privacy. Existing shortcuts stay.	Fügt Gespeichert zum Menü hinzu, das beim langen Drücken des Facebook-Symbols erscheint, wenn Platz ist, sowie eine Zeile Gespeichert unter Einstellungen und Privatsphäre. Vorhandene Verknüpfungen bleiben.
 Your launcher has no room for another shortcut.	Dein Launcher hat keinen Platz für eine weitere Verknüpfung.
 Saved isn't available in this build.	Gespeichert ist in dieser Version nicht verfügbar.
+Watch history	Wiedergabeverlauf
+Watch history shortcut	Verknüpfung zum Wiedergabeverlauf
+Watch history isn't available in this build.	Wiedergabeverlauf ist in dieser Version nicht verfügbar.
+Adds Watch history, the videos and reels you've watched, to the menu you get by holding Facebook's icon, if there's room, and a Watch history row in Settings and privacy. Existing shortcuts stay.	Fügt Wiedergabeverlauf, also die Videos und Reels, die du angesehen hast, zum Menü hinzu, das beim langen Drücken des Facebook-Symbols erscheint, wenn Platz ist, sowie eine Zeile Wiedergabeverlauf unter Einstellungen und Privatsphäre. Vorhandene Verknüpfungen bleiben.
+Adds Watch history, the videos and reels you've watched, to the menu you get by holding Facebook's icon, if there's room. Existing shortcuts stay.	Fügt Wiedergabeverlauf, also die Videos und Reels, die du angesehen hast, zum Menü hinzu, das beim langen Drücken des Facebook-Symbols erscheint, wenn Platz ist. Vorhandene Verknüpfungen bleiben.
 # context: The optional matching mode for both post word lists.
 Match whole words	Ganze Wörter abgleichen
 Matches whole words only, in both lists. For example, hat matches hat! but not what or hats.	Gleicht nur ganze Wörter ab, in beiden Listen. Zum Beispiel passt hat zu hat!, aber nicht zu what oder hats.
@@ -929,6 +942,8 @@ Turn off haptics	Haptik ausschalten
 Stops the small vibrations Facebook makes when you tap or swipe. Your keyboard and phone vibrations aren't affected.	Stoppt die kleinen Vibrationen, die Facebook beim Tippen oder Wischen macht. Tastatur und Telefon vibrieren weiterhin.
 Turn off screen transitions	Bildschirmübergänge ausschalten
 Tabs, the Menu and screens that open over Facebook appear at once instead of sliding in. Swiping between tabs still works.	Tabs, das Menü und Seiten, die sich über Facebook öffnen, erscheinen sofort, ohne einzugleiten. Das Wischen zwischen Tabs funktioniert weiterhin.
+Unlock app icons	App-Symbole freischalten
+Lets you pick the app icons Facebook keeps for Facebook Plus on its App icon page. Your pick stays if you turn this off, so pick the blue one first to go back.	Du kannst auf Facebooks Seite „App-Symbol“ auch die Symbole wählen, die Facebook für Facebook Plus vorbehält. Deine Wahl bleibt, wenn du das ausschaltest. Wähle also zuerst das blaue, um zurückzuwechseln.
 # context: switch title under Playback; Android's own name for the floating video window
 Picture-in-picture	Bild im Bild
 # context: summary of that switch
@@ -941,6 +956,8 @@ HDR videos and photos stay at your screen's usual brightness instead of turning 
 Keep the progress bar	Fortschrittsbalken behalten
 # context: summary of that switch; a reel is a short vertical video
 A reel's progress bar stays full size, ready to drag. A full-screen video's controls stay until you tap.	Der Fortschrittsbalken eines Reels bleibt in voller Größe und lässt sich jederzeit ziehen. Die Steuerung eines Vollbildvideos bleibt, bis du tippst.
+Show a reel's time	Zeit eines Reels anzeigen
+With Keep the progress bar on, a reel's elapsed and total time stay above the bar. Off, they show only while you drag it.	Wenn Fortschrittsbalken behalten an ist, bleiben die vergangene und die Gesamtzeit eines Reels über dem Balken. Ist es aus, erscheinen sie nur, während du den Balken ziehst.
 # context: switch title under Marketplace; View profile is Facebook's own button on a seller's Marketplace page that opens their regular Facebook profile, so use Facebook's label for it in this language
 Show View profile on Marketplace sellers	„Profil ansehen“ bei Marketplace-Verkäufern zeigen
 # context: summary of that switch
@@ -1237,7 +1254,8 @@ Hide posts you've already seen	Bereits gesehene Beiträge ausblenden
 # context: description of that switch; Facebook decides what counts as seen, the list never leaves the phone; turning the switch off empties the list
 Posts you've scrolled past stay out of the feed when it loads again. The list stays on this phone. Turning this off empties it.	Beiträge, an denen du vorbeigescrollt bist, bleiben beim erneuten Laden aus dem Feed. Die Liste bleibt auf diesem Telefon. Beim Ausschalten wird sie geleert.
 # context: title of the row under that switch that picks how many days a seen post stays hidden
-Keep them hidden for	Ausgeblendet lassen für
+Keep seen posts hidden for	Gesehene Beiträge ausgeblendet lassen für
+Turn on %1$s to use this.	Schalte %1$s ein, um das zu nutzen.
 # context: choice in that row
 1 day	1 Tag
 # context: choice in that row
@@ -1346,3 +1364,11 @@ Takes away Send to group when you pick two or more people, and the share sheet's
 Share the post's own link	Eigenen Link des Beitrags teilen
 # context: that switch's summary. Copy link is the share sheet item of that name; facebook.com/share/ is a web address and stays as written
 Copy link and the share sheet's other link shares give the post's own facebook.com address instead of a facebook.com/share/ link made for that one share.	„Link kopieren“ und die anderen Wege, beim Teilen einen Link zu senden, geben die eigene facebook.com-Adresse des Beitrags statt eines facebook.com/share/-Links, der nur für dieses eine Teilen erstellt wird.
+# context: switch title under Comments in Hushfacebook settings, after Hide related groups
+Hide comments with shop links	Kommentare mit Shop-Links ausblenden
+# context: that switch's summary. Shopee, Lazada and Amazon are online shops and stay as written
+Hides comments that link to a shop like Shopee, Lazada or Amazon, along with their replies.	Blendet Kommentare mit Links zu einem Shop wie Shopee, Lazada oder Amazon samt ihren Antworten aus.
+# context: switch title under Comments, right after Hide comments with shop links
+Hide comments with your words	Kommentare mit deinen Wörtern ausblenden
+# context: that switch's summary. Words to hide is the word list row under News feed and Words that keep a post its second list; use the same translations as those rows
+Hides comments containing a word from your Words to hide list in News feed, along with their replies. Words that keep a post keep a comment too.	Blendet Kommentare mit einem Wort aus deiner Liste „Wörter zum Ausblenden“ unter Newsfeed samt ihren Antworten aus. Wörter, bei denen ein Beitrag bleibt, lassen auch einen Kommentar stehen.

@@ -381,11 +381,11 @@ foreach ($invalid in @('', '0', '-1', 'Future', '2147483648')) {
 Assert-Throws {
     ConvertFrom-ManifestXmlTree -Lines ($manifestLines + @('      E: uses-sdk (line=90)')) -Source 'duplicate-sdk'
 } '*More than one uses-sdk*' 'An ambiguous binary minimum SDK was accepted.'
-foreach ($pair in @(@(21, 28), @(28, 28), @(36, 36))) {
+foreach ($pair in @(@(21, 29), @(29, 29), @(36, 36))) {
     $floor = Test-PatchedMinSdk -StockMinSdk $pair[0] -PatchedMinSdk $pair[1]
     Assert-True $floor.Valid "A correct binary floor $($pair -join ' -> ') was refused: $($floor.Reason)"
 }
-foreach ($pair in @(@(21, 27), @(36, 28), @(21, 29), @($null, 28), @(21, $null), @('21', 28), @(21, 28.5))) {
+foreach ($pair in @(@(21, 28), @(36, 29), @(21, 30), @($null, 29), @(21, $null), @('21', 29), @(21, 29.5))) {
     $floor = Test-PatchedMinSdk -StockMinSdk $pair[0] -PatchedMinSdk $pair[1]
     Assert-True (-not $floor.Valid) "An invalid binary floor $($pair -join ' -> ') was accepted."
 }
@@ -570,7 +570,7 @@ try {
                 forced = $false }
             patches = @([ordered]@{ name = 'Alpha'; applied = $true; reason = $null },
                         [ordered]@{ name = 'Beta'; applied = $true; reason = $null })
-            sdk = [ordered]@{ stockMinSdk = 21; patchedMinSdk = 28 }
+            sdk = [ordered]@{ stockMinSdk = 21; patchedMinSdk = 29 }
             manifestDelta = [ordered]@{ permissionsAdded = @(); permissionsRemoved = @()
                 exportedComponentsAdded = @(); exportedComponentsRemoved = @() }
         }, [ordered]@{
@@ -624,11 +624,11 @@ try {
         'a target with no binary SDK facts'      = { param($r) $r.targets[0].PSObject.Properties.Remove('sdk') }
         'a target with no stock minimum'        = { param($r) $r.targets[0].sdk.PSObject.Properties.Remove('stockMinSdk') }
         'a target with no patched minimum'      = { param($r) $r.targets[0].sdk.PSObject.Properties.Remove('patchedMinSdk') }
-        'a string SDK minimum'                  = { param($r) $r.targets[0].sdk.patchedMinSdk = '28' }
-        'a fractional SDK minimum'              = { param($r) $r.targets[0].sdk.patchedMinSdk = 28.5 }
-        'a minimum below API 28'                = { param($r) $r.targets[0].sdk.patchedMinSdk = 27 }
-        'a lowered higher stock minimum'        = { param($r) $r.targets[1].sdk.patchedMinSdk = 28 }
-        'an unnecessarily raised stock minimum' = { param($r) $r.targets[0].sdk.patchedMinSdk = 29 }
+        'a string SDK minimum'                  = { param($r) $r.targets[0].sdk.patchedMinSdk = '29' }
+        'a fractional SDK minimum'              = { param($r) $r.targets[0].sdk.patchedMinSdk = 29.5 }
+        'a minimum below API 29'                = { param($r) $r.targets[0].sdk.patchedMinSdk = 28 }
+        'a lowered higher stock minimum'        = { param($r) $r.targets[1].sdk.patchedMinSdk = 29 }
+        'an unnecessarily raised stock minimum' = { param($r) $r.targets[0].sdk.patchedMinSdk = 30 }
         'fewer verdicts than patches'           = { param($r) $r.targets[0].patches = @($r.targets[0].patches[0]) }
         'a patch the catalog does not list'     = { param($r) $r.targets[0].patches[1].name = 'Gamma' }
         'the same patch reported twice'         = { param($r) $r.targets[0].patches[1].name = 'Alpha' }
@@ -1613,9 +1613,10 @@ try {
     Copy-Item -LiteralPath (Join-Path $Root $bugFormRelative) -Destination (Join-Path $factsRoot $bugFormRelative)
 
     function Invoke-Facts {
-        param([switch]$WithUrls)
+        param([switch]$WithUrls, [switch]$AllowLag)
         $arguments = @{ Root = $factsRoot; SkipDescriptionTestCount = $true }
         if (-not $WithUrls) { $arguments['SkipUrlCheck'] = $true }
+        if ($AllowLag) { $arguments['AllowPublishedIndexLag'] = $true }
         # 6>, not *>. The check says what it found with Write-Host, which is the information
         # stream, and that is all this wants to hide. Redirecting every stream also swallows the
         # terminating error, so each case below was accepted in silence and proved nothing.
@@ -1673,15 +1674,18 @@ try {
         Set-FactsFile 'patches-bundle.json' { param($text) $synced }
     }
 
-    # The bug form names the published version, which the synced index above now names too.
+    # The bug form names the published version and build, which the synced index above now names
+    # too. The build moved there without the form until 2026-10-10, so the control failed through
+    # the whole 14.39.0 hold for a reason none of its cases were about.
     function Sync-FixtureBugForm {
         $fixtureVersion = ((Get-Content -LiteralPath (Join-Path $factsRoot 'gradle.properties')) `
             -match '^version\s*=' | Select-Object -First 1) -replace '^version\s*=\s*', ''
-        $publishedHere = Get-ReleaseIndexVersion
-        if ($publishedHere -eq $fixtureVersion) { return }
-        Set-FactsFile $bugFormRelative {
-            param($text) $text -replace ('HushPinterest ' + [regex]::Escape($publishedHere) + ' on Pinterest'), "HushPinterest $fixtureVersion on Pinterest"
-        }
+        $fixtureBuild = (Get-PatchTarget -PatchList (Get-Content -LiteralPath (Join-Path $factsRoot 'patches-list.json') -Raw |
+            ConvertFrom-Json)).PackageVersion
+        $text = Get-Content -LiteralPath (Join-Path $factsRoot $bugFormRelative) -Raw
+        $synced = $text -replace '(placeholder:[ \t]*HushPinterest )\S+ on Pinterest \S+', "`${1}$fixtureVersion on Pinterest $fixtureBuild"
+        if ($synced -ceq $text) { return }
+        Set-FactsFile $bugFormRelative { param($unused) $synced }
     }
 
     # And the README's version badge and the sentence naming the latest release, which a release
@@ -1752,8 +1756,11 @@ try {
         }
         Set-FactsFile 'patches-list.json' { param($text) $text.Replace($newestBuild, $movedBuild) }
         Set-FactsFile 'README.md' { param($text) $text.Replace($newestBuild, $movedBuild) }
-        # What the maintainer's tree holds: the published index and form as they were, the form's
-        # build moved with the catalog.
+        # What the maintainer's tree holds: the published index and form as they were. While the
+        # index lags, the form names the published release and the build it was made for, the one a
+        # reporter on it runs. This case used to move the form's build with the catalog, which only
+        # went unnoticed while the published form named an older build than the catalog's newest;
+        # the 0.0.7 index push (2026-10-10) was the first tree where it didn't.
         Copy-ReleaseFile 'patches-bundle.json' (Join-Path $factsRoot 'patches-bundle.json')
         Copy-Item -LiteralPath (Join-Path $Root $bugFormRelative) -Destination (Join-Path $factsRoot $bugFormRelative) -Force
         # And its README sentence naming that published release, which the sync above moved to the
@@ -1763,12 +1770,18 @@ try {
             param($text) $text -replace '(latest (?:published )?release is (?:still )?\[?v)\d+(?:\.\d+)+', "`${1}$publishedHere" `
                 -replace '(latest release is \[v[^\]]*\]\([^)\s]*/tag/v)\d+(?:\.\d+)+', "`${1}$publishedHere"
         }
-        Set-FactsFile $bugFormRelative {
-            param($text) $text -replace ('(placeholder:\s*HushPinterest \S+ on Pinterest )' + [regex]::Escape($newestBuild)), "`${1}$movedBuild"
-        }
         $global:LASTEXITCODE = 0
         & $factsScript -Root $factsRoot -SkipDescriptionTestCount -AllowPublishedIndexLag -SkipUrlCheck 6> $null
         Assert-True ($LASTEXITCODE -eq 0) "The gate refused the $window tree this case is built on, so it proves nothing."
+        # A form that names the catalog's build while the index still describes the last release
+        # asks a reporter on that release for a build they don't have.
+        $windowForm = Get-Content -LiteralPath (Join-Path $factsRoot $bugFormRelative) -Raw
+        Set-FactsFile $bugFormRelative {
+            param($text) $text -replace '(placeholder:[ \t]*HushPinterest \S+ on Pinterest )\S+', "`${1}$movedBuild"
+        }
+        Assert-Throws { & $factsScript -Root $factsRoot -SkipDescriptionTestCount -AllowPublishedIndexLag -SkipUrlCheck 6> $null } `
+            '*bug report form version placeholder*' "The gate accepted a $window bug form naming the catalog's build instead of the published one."
+        Set-FactsFile $bugFormRelative { param($unused) $windowForm }
         # Lagging, the README may name the source's version or the published one, and no other.
         $windowReadme = Get-Content -LiteralPath (Join-Path $factsRoot 'README.md') -Raw
         foreach ($stale in @(
@@ -2002,6 +2015,29 @@ try {
     }
     Assert-Throws { Invoke-Facts } '*bug report form version placeholder*' `
         'A bug report form naming an old Pinterest build was accepted.'
+    Reset-FactsFile $bugFormRelative
+    # A hold: the catalog has moved to a newer Pinterest build while the index keeps the version
+    # and the build it was released on. A reporter then runs the published release on that older
+    # build, so under the gate's lag allowance the form names the index's build, and a form that
+    # already names the catalog's build is refused.
+    $catalogBuild = (Get-PatchTarget -PatchList (Get-Content -LiteralPath (Join-Path $factsRoot 'patches-list.json') -Raw |
+        ConvertFrom-Json)).PackageVersion
+    $heldBuild = '14.0.0'
+    Set-FactsFile 'patches-bundle.json' {
+        param($text) $text -replace ('(?<![\d.])' + [regex]::Escape($catalogBuild) + '(?!\d)'), $heldBuild
+    }
+    Set-FactsFile $bugFormRelative {
+        param($text) $text -replace '(placeholder:[ \t]*HushPinterest \S+ on Pinterest )\S+', "`${1}$heldBuild"
+    }
+    try { Invoke-Facts -AllowLag } catch {
+        throw "A held index with the bug form on its own build was refused: $($_.Exception.Message)"
+    }
+    Set-FactsFile $bugFormRelative {
+        param($text) $text -replace '(placeholder:[ \t]*HushPinterest \S+ on Pinterest )\S+', "`${1}$catalogBuild"
+    }
+    Assert-Throws { Invoke-Facts -AllowLag } '*bug report form version placeholder*' `
+        'A bug report form naming the catalog''s unreleased build while the index lags was accepted.'
+    Reset-FactsFile 'patches-bundle.json'
     Reset-FactsFile $bugFormRelative
     Set-FactsFile $bugFormRelative {
         param($text) $text -replace '(placeholder:\s*Morphe Manager )\S+', '${1}1.20.0'
@@ -2984,6 +3020,111 @@ try {
         Assert-True ($wrapped.Trim() -like "dir=$hookRoot tasks=*,:patches:test,*:extensions:pinterest:lint,:patches:fixtureTest") `
             "The build wrapper was not handed :patches:fixtureTest after the quick checks: $wrapped"
 
+        # A release push (HUSHPINTEREST_RELEASE_GATE=1) also builds the bundle, last, and runs every
+        # declared fixture through the pushed commit's verify-all-patches.ps1 with that bundle and
+        # the record store, which reuses a kept run only when its key (this bundle's hash among the
+        # inputs) matches and patches in full otherwise. The flag is read once and taken out of the
+        # environment. An everyday push builds no bundle and patches nothing.
+        $releaseLog = Join-Path $hookRoot 'release-gate.log'
+        $releaseFails = Join-Path $hookRoot 'release-gate-verify-fails.txt'
+        $releaseStore = Join-Path $hookRoot 'release-gate-records'
+        $releaseVerifier = Join-Path $hookRoot 'scripts/verify-all-patches.ps1'
+        $releaseProperties = Join-Path $hookRoot 'gradle.properties'
+        $releaseBundleHere = Get-ReleaseBundlePath -Root $hookRoot -Version '9.9.9'
+        $passStub = Join-Path $hookRoot 'build-wrapper-passes.ps1'
+        Set-Content -LiteralPath $passStub -Encoding UTF8 -Value @(
+            'param([string]$ProjectDir, [string[]]$Tasks)',
+            "Add-Content -LiteralPath '$releaseLog' -Value ('build ' + (`$Tasks -join ','))",
+            'exit 0')
+        Set-Content -LiteralPath $releaseVerifier -Encoding UTF8 -Value @(
+            'param([string]$Apk, [string]$DesktopJar, [string]$WorkDir, [string]$Bundle, [string]$KeepIn)',
+            "Add-Content -LiteralPath '$releaseLog' -Value (`"verify apk=`$Apk bundle=`$Bundle keep=`$KeepIn`")",
+            "if (Test-Path -LiteralPath '$releaseFails') { exit 1 }",
+            'exit 0')
+        Set-Content -LiteralPath $releaseProperties -Encoding ASCII -Value 'version = 9.9.9'
+        New-Item -ItemType Directory -Path (Split-Path -Parent $releaseBundleHere) -Force | Out-Null
+        Set-Content -LiteralPath $releaseBundleHere -Encoding ASCII -Value 'bundle stand-in'
+        $savedDesktopJar = $env:HUSHPINTEREST_DESKTOP_JAR
+        $savedRecordStore = $env:HUSHPINTEREST_APPLY_RECORDS
+        try {
+            $env:HUSHPINTEREST_BUILD_WRAPPER = $passStub
+            $env:HUSHPINTEREST_DESKTOP_JAR = $passStub
+            $env:HUSHPINTEREST_APPLY_RECORDS = $releaseStore
+            $declaredHere = @(foreach ($version in $routingTarget.PackageVersions) {
+                    foreach ($code in @($routingTarget.PackageVersionCodes[$version])) { Join-Path $routingFixtures "pinterest-$version-$code.apk" }
+                })
+            Assert-True ($declaredHere.Count -gt 0) 'The routing fixture folder holds no declared build to patch.'
+
+            Remove-Item -LiteralPath $releaseLog -Force -ErrorAction SilentlyContinue
+            $env:HUSHPINTEREST_RELEASE_GATE = '1'
+            & $prePushScript -Root $hookRoot -ChangedPaths @('extensions/pinterest/src/main/java/Any.java') 6> $null
+            Assert-True (-not (Test-Path Env:\HUSHPINTEREST_RELEASE_GATE)) 'The hook left HUSHPINTEREST_RELEASE_GATE set for what it ran.'
+            $logged = @(Get-Content -LiteralPath $releaseLog)
+            $builds = @($logged | Where-Object { $_ -like 'build *' })
+            $verifies = @($logged | Where-Object { $_ -like 'verify *' })
+            Assert-True ($builds.Count -ge 1 -and $builds[-1] -like '*,:patches:fixtureTest,:patches:buildAndroid' -and
+                @($builds | Select-Object -SkipLast 1 | Where-Object { $_ -like '*:patches:buildAndroid*' }).Count -eq 0) `
+                "A release push did not build the bundle last, in its final pass: $($builds -join ' | ')"
+            Assert-True ($logged.IndexOf($builds[-1]) -lt $logged.IndexOf($verifies[0])) `
+                "A release push patched the fixtures before its build finished: $($logged -join ' | ')"
+            $expectedVerifies = @($declaredHere | ForEach-Object { "verify apk=$_ bundle=$releaseBundleHere keep=$releaseStore" })
+            Assert-True ((@($verifies | Sort-Object) -join "`n") -ceq (@($expectedVerifies | Sort-Object) -join "`n")) `
+                "A release push did not run each declared fixture through verify-all-patches.ps1 with the bundle it built and the record store: $($verifies -join ' | ')"
+
+            Set-Content -LiteralPath $releaseFails -Value 'fail' -Encoding ASCII
+            $env:HUSHPINTEREST_RELEASE_GATE = '1'
+            Assert-Throws { & $prePushScript -Root $hookRoot -ChangedPaths @('extensions/pinterest/src/main/java/Any.java') 6> $null } `
+                '*did not pass verify-all-patches.ps1 with the bundle built from*' 'A release push went out with a fixture that failed verify-all-patches.ps1.'
+            Remove-Item -LiteralPath $releaseFails -Force
+
+            Remove-Item -LiteralPath $releaseLog -Force -ErrorAction SilentlyContinue
+            & $prePushScript -Root $hookRoot -ChangedPaths @('extensions/pinterest/src/main/java/Any.java') 6> $null
+            $logged = @(Get-Content -LiteralPath $releaseLog)
+            Assert-True (@($logged | Where-Object { $_ -like '*buildAndroid*' -or $_ -like 'verify *' }).Count -eq 0) `
+                "An everyday push built the bundle or patched a fixture: $($logged -join ' | ')"
+        } finally {
+            Remove-Item -LiteralPath Env:\HUSHPINTEREST_RELEASE_GATE -ErrorAction SilentlyContinue
+            $env:HUSHPINTEREST_DESKTOP_JAR = $savedDesktopJar
+            $env:HUSHPINTEREST_APPLY_RECORDS = $savedRecordStore
+            $env:HUSHPINTEREST_BUILD_WRAPPER = $wrapperStub
+            Remove-Item -LiteralPath $releaseLog, $releaseFails, $passStub, $releaseVerifier, $releaseProperties -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath (Join-Path $hookRoot 'patches') -Recurse -Force -ErrorAction SilentlyContinue
+        }
+
+        # The cheap checks fail first: one build without the fixture suite (and a release push's
+        # bundle), then the full one, which finds the quick pass's tasks up to date. A quick pass
+        # that fails stops the push before the fixture suite starts. A stub logs each call and fails
+        # the quick one while the fail marker exists.
+        $passLog = Join-Path $hookRoot 'wrapper-passes.txt'
+        $passFails = Join-Path $hookRoot 'wrapper-quick-fails.txt'
+        $quickStub = Join-Path $hookRoot 'build-wrapper-quick.ps1'
+        Set-Content -LiteralPath $quickStub -Encoding UTF8 -Value @(
+            'param([string]$ProjectDir, [string[]]$Tasks)',
+            "Add-Content -LiteralPath '$passLog' -Value (`$Tasks -join ',')",
+            "if ((Test-Path -LiteralPath '$passFails') -and `$Tasks -notcontains ':patches:fixtureTest') { exit 1 }",
+            'exit 0')
+        $env:HUSHPINTEREST_BUILD_WRAPPER = $quickStub
+        try {
+            Remove-Item -LiteralPath $passLog, $passFails -Force -ErrorAction SilentlyContinue
+            & $prePushScript -Root $hookRoot -ChangedPaths @('extensions/pinterest/src/main/java/Any.java') 6> $null
+            $passes = @(Get-Content -LiteralPath $passLog)
+            Assert-True ($passes.Count -eq 2) "The gate did not build twice, quick then full: $($passes -join ' | ')"
+            Assert-True ($passes[0] -like '*:extensions:pinterest:test*:patches:test*:extensions:pinterest:lint*' -and
+                $passes[0] -notlike '*fixtureTest*' -and $passes[0] -notlike '*buildAndroid*') `
+                "The first build was not the quick one without the fixture suite: $($passes[0])"
+            Assert-True ($passes[1] -like '*:patches:test*' -and $passes[1] -like '*,:patches:fixtureTest') `
+                "The second build was not the full one ending with the fixture suite: $($passes[1])"
+
+            Remove-Item -LiteralPath $passLog -Force
+            Set-Content -LiteralPath $passFails -Value 'fail' -Encoding ASCII
+            Assert-Throws { & $prePushScript -Root $hookRoot -ChangedPaths @('extensions/pinterest/src/main/java/Any.java') 6> $null } `
+                '*quick pass failed, so the fixture suite never started*' 'A failed quick build was ignored.'
+            Assert-True (@(Get-Content -LiteralPath $passLog).Count -eq 1) 'The full build ran after the quick one failed.'
+        } finally {
+            Remove-Item -LiteralPath $passLog, $passFails, $quickStub -Force -ErrorAction SilentlyContinue
+            $env:HUSHPINTEREST_BUILD_WRAPPER = $wrapperStub
+        }
+
         # The Gradle file that writes the release bundle. The contract tests hold it to the
         # directory common.ps1 reads the bundle from, and a push that moved only it ran the build
         # and never them; the bundle path then went unchecked until the next script push.
@@ -3646,7 +3787,7 @@ try {
 
     $apkm = Join-Path $commonRoot 'pinterest.apkm'
     $apkmEntries = [ordered]@{
-        'info.json' = '{"versioncode":"14388010"}'
+        'info.json' = '{"versioncode":"14398020"}'
         'base.apk' = 'base'
         'split_config.arm64_v8a.apk' = ('native code ' * 64)
     }
@@ -3879,6 +4020,74 @@ Assert-True ($hookText -match "'HUSHPINTEREST_BUILD_WRAPPER', 'HUSHPINTEREST_DEV
 
 Write-Host '[scripts] build queue contracts passed'
 
+# --- applied record keys ---------------------------------------------------------------------
+#
+# A fixture apply that passed every check is kept under a key (Get-AppliedRecordKey), and a run
+# with the same key reuses it. The key has to move when any input moves: the bundle, the fixture,
+# the catalog, the patch selection, the forced flag, the desktop CLI, the SDK stubs and every file
+# the verifier loads or starts, DexDiff.java among them. The order the patches are named in
+# doesn't count. And the verifier file list has to be what verify-all-patches.ps1 and
+# verify-injected-registers.ps1 actually reach, followed through every script they dot-source.
+$reached = New-Object 'System.Collections.Generic.HashSet[string]' ([StringComparer]::OrdinalIgnoreCase)
+$pending = New-Object 'System.Collections.Generic.Queue[string]'
+foreach ($start in @('verify-all-patches.ps1', 'verify-injected-registers.ps1')) { [void]$reached.Add($start); $pending.Enqueue($start) }
+while ($pending.Count -gt 0) {
+    $text = Get-Content -LiteralPath (Join-Path $PSScriptRoot $pending.Dequeue()) -Raw
+    foreach ($reference in [regex]::Matches($text, "Join-Path \`$PSScriptRoot '([^']+)'")) {
+        $name = $reference.Groups[1].Value
+        if ($reached.Add($name) -and $name -like '*.ps1') { $pending.Enqueue($name) }
+    }
+}
+$keyed = @(Get-AppliedRecordVerifierFiles)
+$unkeyed = @($reached | Where-Object { $keyed -notcontains $_ } | Sort-Object)
+$unreached = @($keyed | Where-Object { -not $reached.Contains($_) } | Sort-Object)
+Assert-True ($unkeyed.Count -eq 0 -and $unreached.Count -eq 0 -and $keyed -contains 'DexDiff.java') `
+    ("Get-AppliedRecordVerifierFiles isn't the set the verifier reaches. Not keyed: $($unkeyed -join ', '). " +
+        "Keyed but not reached: $($unreached -join ', ').")
+
+$keyRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("hushpinterest-record-key-" + [guid]::NewGuid().ToString('N'))
+try {
+    $keyInputs = @{}
+    foreach ($name in @('Bundle', 'Fixture', 'PatchList', 'DesktopJar', 'AndroidJar', 'ApiVersions')) {
+        $keyInputs[$name] = Join-Path $keyRoot "$name.bin"
+    }
+    $keyScripts = Join-Path $keyRoot 'scripts'
+    New-Item -ItemType Directory -Path $keyScripts -Force | Out-Null
+    foreach ($name in @($keyInputs.Keys)) { [IO.File]::WriteAllText($keyInputs[$name], "stand-in $name") }
+    foreach ($name in $keyed) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $keyScripts }
+    function Get-TestRecordKey([string[]]$Names = @('Hide ads', 'Download pins'), [bool]$Forced = $false) {
+        return (Get-AppliedRecordKey @keyInputs -PatchNames $Names -Forced $Forced -ScriptRoot $keyScripts).Key
+    }
+    $baseKey = Get-TestRecordKey
+    Assert-True ($baseKey -cmatch '^[0-9a-f]{64}$') "The applied record key isn't a SHA-256 in lower-case hex: $baseKey"
+    Assert-True ((Get-TestRecordKey -Names @('Download pins', 'Hide ads')) -ceq $baseKey) `
+        'The applied record key depends on the order the patches are named in.'
+    Assert-True ((Get-TestRecordKey -Names @('Hide ads')) -cne $baseKey) 'Leaving a patch out did not change the applied record key.'
+    Assert-True ((Get-TestRecordKey -Forced $true) -cne $baseKey) 'A forced run has the key of a declared one.'
+    $moved = @()
+    foreach ($file in @($keyInputs.Values) + @($keyed | ForEach-Object { Join-Path $keyScripts $_ })) {
+        $saved = [IO.File]::ReadAllBytes($file)
+        try {
+            [IO.File]::AppendAllText($file, "`nchanged")
+            if ((Get-TestRecordKey) -ceq $baseKey) { $moved += Split-Path -Leaf $file }
+        } finally { [IO.File]::WriteAllBytes($file, $saved) }
+    }
+    Assert-True ($moved.Count -eq 0) "Changing these inputs left the applied record key as it was: $($moved -join ', ')"
+    Assert-True ((Get-TestRecordKey) -ceq $baseKey) 'The applied record key did not come back with its inputs.'
+    Remove-Item -LiteralPath (Join-Path $keyScripts 'DexDiff.java') -Force
+    Assert-Throws { Get-TestRecordKey } '*without the verifier file DexDiff.java*' 'A key was made without DexDiff.java.'
+    # A record that names another key, or none, is never handed back.
+    $store = Join-Path $keyRoot 'store'
+    New-Item -ItemType Directory -Path (Join-Path $store $baseKey) -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $store "$baseKey/record.json") -Encoding ASCII -Value ('{"schema":1,"key":"' + ('0' * 64) + '"}')
+    Assert-True ($null -eq (Find-AppliedRecord -Store $store -Key $baseKey 3> $null)) 'A record naming another key was handed back.'
+    Assert-True ($null -eq (Find-AppliedRecord -Store $store -Key ('1' * 64))) 'A key with no record found one.'
+} finally {
+    Remove-Item -LiteralPath $keyRoot -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+Write-Host '[scripts] applied record key contracts passed'
+
 # --- split bundle callers ----------------------------------------------------------------------
 #
 # The morphe CLI merges an .apkm's splits into one APK before it patches, and since 1.17.0 deletes
@@ -3969,7 +4178,11 @@ Write-Host '[scripts] relative path contracts passed'
 $releaseRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("hushpinterest-release-" + [guid]::NewGuid().ToString('N'))
 $savedQueueScript = $env:BUILD_QUEUE_SCRIPT
 $savedQueuePriority = $env:BUILD_QUEUE_PRIORITY
+$savedApplyRecords = $env:HUSHPINTEREST_APPLY_RECORDS
 try {
+    # No run below keeps or reads an applied record unless its case names a store: a kept pass
+    # would answer the failure cases without the CLI, and the machine's own store isn't theirs.
+    $env:HUSHPINTEREST_APPLY_RECORDS = $null
     # The stand-in runs below go through a stand-in build queue, never the machine's, and it
     # writes down which jobs took a slot and at which priority.
     $releaseQueueLog = Join-Path $releaseRoot 'queue.log'
@@ -4109,7 +4322,7 @@ try {
     $androidExported = '          A: http://schemas.android.com/apk/res/android:exported(0x01010010)=true'
     function Get-FixtureManifest([string]$Build, [string]$Code, [switch]$WithSplit, [switch]$Patched,
             [string]$Package = $releaseTarget.PackageName, [int]$MinSdk = 21) {
-        $binaryMinSdk = if ($Patched) { [Math]::Max($MinSdk, 28) } else { $MinSdk }
+        $binaryMinSdk = if ($Patched) { [Math]::Max($MinSdk, 29) } else { $MinSdk }
         $lines = @(
             'N: android=http://schemas.android.com/apk/res/android (line=1)',
             '  E: manifest (line=1)',
@@ -4225,7 +4438,7 @@ try {
                     package = $releaseTarget.PackageName; versionName = $Builds[$i]; versionCode = $code
                     sha256 = ([string]'ABCDEF'[$i % 6] * 64); forced = $false }
                 patches       = @($releaseNames | ForEach-Object { [ordered]@{ name = $_; applied = $true; reason = $null } })
-                sdk           = [ordered]@{ stockMinSdk = 21; patchedMinSdk = 28 }
+                sdk           = [ordered]@{ stockMinSdk = 21; patchedMinSdk = 29 }
                 manifestDelta = $approvedDelta
             }
             if ($Schema -ge 4) {
@@ -4439,8 +4652,30 @@ try {
         Where-Object { $_.packageName -eq $releaseTarget.PackageName } | ForEach-Object { $_.signatures } |
         Sort-Object -Unique | Select-Object -First 1)
     Assert-True ($releaseSigner.Count -eq 1) 'The release catalog names no signer for the stand-in apksigner.'
+    # It signs too: patch-for-device.ps1 signs a kept gate run with it. "sign ... --out <apk> <in>"
+    # copies the input and the manifest beside it, and notes the call in apksigner.log.
     Set-Content -LiteralPath (Join-Path $tools 'apksigner.bat') -Encoding ASCII -Value @(
-        '@echo off', "echo Signer #1 certificate SHA-256 digest: $($releaseSigner[0])", 'exit /b 0')
+        '@echo off',
+        'setlocal EnableExtensions EnableDelayedExpansion',
+        'set "HERE=%~dp0"',
+        'if /i not "%~1"=="sign" (',
+        "    echo Signer #1 certificate SHA-256 digest: $($releaseSigner[0])",
+        '    exit /b 0',
+        ')',
+        'set "OUT=" & set "LAST=" & set "PREV=" & set "ALIAS="',
+        ':next',
+        'shift',
+        'if "%~1"=="" goto signed',
+        'if "!PREV!"=="--out" set "OUT=%~1"',
+        'if "!PREV!"=="--ks-key-alias" set "ALIAS=%~1"',
+        'set "PREV=%~1"',
+        'set "LAST=%~1"',
+        'goto next',
+        ':signed',
+        '>>"!HERE!apksigner.log" echo sign alias=!ALIAS! in=!LAST! out=!OUT!',
+        'copy /y "!LAST!" "!OUT!" >nul || exit /b 3',
+        'if exist "!LAST!.xmltree" copy /y "!LAST!.xmltree" "!OUT!.xmltree" >nul',
+        'exit /b 0')
     New-TestBundleArchive -Path (Join-Path $tools 'patched.apk') -Entries ([ordered]@{
         'AndroidManifest.xml' = 'binary manifest'; 'classes.dex' = "dex`n035" })
 
@@ -4500,7 +4735,8 @@ try {
     # above, and what the builder says is kept in $builderSaid, warnings included.
     $builderSaid = ''
     function Invoke-ReceiptBuilder([string[]]$Fixtures, [string]$Bundle,
-            [string]$WorkDir = (Join-Path $releaseRoot 'work'), [string]$DesktopJar = $stubJar, [switch]$SkipAdvisoryCheck) {
+            [string]$WorkDir = (Join-Path $releaseRoot 'work'), [string]$DesktopJar = $stubJar, [switch]$SkipAdvisoryCheck,
+            [string]$AppliedDir) {
         Remove-Item -LiteralPath $javaLog, $mergeLog -Force -ErrorAction SilentlyContinue
         $saved = @{}
         foreach ($variable in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'GIT_*' })) {
@@ -4514,6 +4750,7 @@ try {
                 Java = $stubJava; Aapt2 = $stubAapt2; AndroidJar = $stubAndroidJar; ApiVersions = $stubApiVersions }
             if ($Bundle) { $arguments['Bundle'] = $Bundle }
             if ($SkipAdvisoryCheck) { $arguments['SkipAdvisoryCheck'] = $true }
+            if ($AppliedDir) { $arguments['AppliedDir'] = $AppliedDir }
             $script:builderSaid = @(& (Join-Path $PSScriptRoot 'build-release-receipt.ps1') @arguments 3>&1 6>&1 |
                 ForEach-Object { "$_" }) -join "`n"
             if ($LASTEXITCODE -ne 0) { throw "build-release-receipt.ps1 exited $LASTEXITCODE." }
@@ -4565,7 +4802,7 @@ try {
             "The receipt does not record every patch applied to $label."
         $stockMinSdk = if ($label -eq $newerBuild) { 36 } else { 21 }
         Assert-True ($builtTarget.sdk.stockMinSdk -eq $stockMinSdk -and
-                $builtTarget.sdk.patchedMinSdk -eq [Math]::Max($stockMinSdk, 28)) `
+                $builtTarget.sdk.patchedMinSdk -eq [Math]::Max($stockMinSdk, 29)) `
             "The receipt does not record the binary SDK floor measured for $label."
         # The alias, the collection switches and the ad declarations are the patches' changes. The
         # split's activity the merge brings in is the merge's.
@@ -4607,11 +4844,11 @@ try {
     Assert-True ($said -like "*$builtProved*") "The release check did not accept the receipt the builder wrote: $said"
 
     # The builder must read and reject a wrong binary minimum, not merely write SDK facts that
-    # agree with themselves. Both sides of API 28 and a higher stock floor are exercised.
+    # agree with themselves. Both sides of API 29 and a higher stock floor are exercised.
     foreach ($wrongSdk in @(
-            @{ Build = $releaseTarget.PackageVersion; Stock = 21; Patched = 27; Expected = 28 },
-            @{ Build = $releaseTarget.PackageVersion; Stock = 21; Patched = 29; Expected = 28 },
-            @{ Build = $newerBuild; Stock = 36; Patched = 28; Expected = 36 })) {
+            @{ Build = $releaseTarget.PackageVersion; Stock = 21; Patched = 28; Expected = 29 },
+            @{ Build = $releaseTarget.PackageVersion; Stock = 21; Patched = 30; Expected = 29 },
+            @{ Build = $newerBuild; Stock = 36; Patched = 29; Expected = 36 })) {
         $manifestPath = "$($fixturePaths[$wrongSdk.Build]).patched.txt"
         $manifestBytes = [System.IO.File]::ReadAllBytes($manifestPath)
         try {
@@ -4680,12 +4917,14 @@ try {
     # yields no merged APK stops the run before anything is patched. A plain APK goes to the CLI as
     # it is and is its own stock side.
     $verifyAllScript = Join-Path $PSScriptRoot 'verify-all-patches.ps1'
-    function Invoke-VerifyAll([string]$Apk, [switch]$Force) {
+    function Invoke-VerifyAll([string]$Apk, [switch]$Force, [string]$KeepIn, [string]$Bundle = $releaseBundle, [switch]$NoReuse) {
         Remove-Item -LiteralPath $javaLog, $mergeLog, $resourceStock -Force -ErrorAction SilentlyContinue
         $global:LASTEXITCODE = 0
+        $kept = if ($KeepIn) { @{ KeepIn = $KeepIn } } else { @{} }
         $said = @(& $verifyAllScript -Apk $Apk -DesktopJar $stubJar -WorkDir (Join-Path $releaseRoot 'verify-work') `
-            -Bundle $releaseBundle -PatchList (Join-Path $releaseRepo 'patches-list.json') -Java $stubJava `
-            -Aapt2 $stubAapt2 -AndroidJar $stubAndroidJar -ApiVersions $stubApiVersions -Force:$Force 3>&1 6>&1 | ForEach-Object { "$_" }) -join "`n"
+            -Bundle $Bundle -PatchList (Join-Path $releaseRepo 'patches-list.json') -Java $stubJava `
+            -Aapt2 $stubAapt2 -AndroidJar $stubAndroidJar -ApiVersions $stubApiVersions -Force:$Force -NoReuse:$NoReuse @kept 3>&1 6>&1 |
+            ForEach-Object { "$_" }) -join "`n"
         if ($LASTEXITCODE -ne 0) { throw "verify-all-patches.ps1 exited $LASTEXITCODE`: $said" }
         return $said
     }
@@ -4706,15 +4945,15 @@ try {
             "$(@(Get-Content -LiteralPath $javaLog) -join '; ')")
     Assert-True ((Get-Content -LiteralPath $resourceStock -Raw) -ceq (Get-Content -LiteralPath "$newestFixture.merged.txt" -Raw)) `
         'The resource check was not handed the merge as its stock side.'
-    Assert-True ($said -like '*binary minSdk: 21 -> 28 (max(stock, 28))*') `
-        "The verification run did not check the binary API 28 floor: $said"
+    Assert-True ($said -like '*binary minSdk: 21 -> 29 (max(stock, 29))*') `
+        "The verification run did not check the binary API 29 floor: $said"
     $higher = Invoke-VerifyAll -Apk $fixturePaths[$newerBuild] -Force
-    Assert-True ($higher -like '*binary minSdk: 36 -> 36 (max(stock, 28))*' -and
+    Assert-True ($higher -like '*binary minSdk: 36 -> 36 (max(stock, 29))*' -and
             $higher -like '*success: every requested patch applied*') `
         "The verification run did not preserve a higher stock SDK floor: $higher"
     foreach ($wrongSdk in @(
-            @{ Build = $releaseTarget.PackageVersion; Stock = 21; Patched = 27; Expected = 28 },
-            @{ Build = $newerBuild; Stock = 36; Patched = 28; Expected = 36 })) {
+            @{ Build = $releaseTarget.PackageVersion; Stock = 21; Patched = 28; Expected = 29 },
+            @{ Build = $newerBuild; Stock = 36; Patched = 29; Expected = 36 })) {
         $manifestPath = "$($fixturePaths[$wrongSdk.Build]).patched.txt"
         $manifestBytes = [System.IO.File]::ReadAllBytes($manifestPath)
         try {
@@ -4764,6 +5003,125 @@ try {
     }
     Assert-True (@(Get-ChildItem -LiteralPath (Join-Path $releaseRoot 'verify-work') -Directory -Filter 'verify-*').Count -eq 0) `
         'verify-all-patches.ps1 left a run folder behind.'
+
+    # Kept runs (ROADMAP "Don't verify the same bundle twice"). A run that passes every check is
+    # kept under its key, and the next run with the same key says so and doesn't start the CLI.
+    # -NoReuse, a changed bundle and a kept APK that changed afterwards all patch again. A run
+    # that fails a check is never kept, and nothing half-written is left in the store.
+    $recordStore = Join-Path $releaseRoot 'applied-records'
+    function Get-StoreEntries([string]$Store) { @(Get-ChildItem -LiteralPath $Store -Directory -Force -ErrorAction SilentlyContinue) }
+    $said = Invoke-VerifyAll -Apk $newestFixture -KeepIn $recordStore
+    $keptKey = [regex]::Match($said, 'kept this run as ([0-9a-f]{64})').Groups[1].Value
+    $keptRecord = Join-Path $recordStore $keptKey
+    Assert-True ($keptKey -and (@(Get-StoreEntries $recordStore).Name -join ',') -ceq $keptKey -and
+        (Test-Path -LiteralPath (Join-Path $keptRecord 'record.json')) -and (Test-Path -LiteralPath (Join-Path $keptRecord 'patched.apk')) -and
+        (Test-Path -LiteralPath (Join-Path $keptRecord 'result.json')) -and (Test-Path -LiteralPath $javaLog)) `
+        "A passing run with -KeepIn did not patch once and keep exactly one record: $said"
+    $keptFacts = Get-Content -LiteralPath (Join-Path $keptRecord 'record.json') -Raw | ConvertFrom-Json
+    # Get-Sha256Hex writes upper case and the record lower case.
+    Assert-True ($keptFacts.key -ceq $keptKey -and $keptFacts.inputs.bundle -eq (Get-Sha256Hex -Path $releaseBundle) -and
+        $keptFacts.inputs.fixture -eq (Get-Sha256Hex -Path $newestFixture) -and
+        $keptFacts.inputs.files.'DexDiff.java' -eq (Get-Sha256Hex -Path (Join-Path $PSScriptRoot 'DexDiff.java')) -and
+        $keptFacts.patchedSha256 -eq (Get-Sha256Hex -Path (Join-Path $keptRecord 'patched.apk'))) `
+        "The kept record doesn't name the bundle, fixture and verifier hashes it was made from: $($keptFacts | ConvertTo-Json -Depth 6 -Compress)"
+    $said = Invoke-VerifyAll -Apk $newestFixture -KeepIn $recordStore
+    Assert-True ($said -like "*reusing the run kept as $keptKey*" -and -not (Test-Path -LiteralPath $javaLog) -and
+        -not (Test-Path -LiteralPath $mergeLog) -and -not (Test-Path -LiteralPath $resourceStock)) `
+        "A second run with the same key patched again or didn't say it reused the kept run: $said"
+    # The machine-wide store variable stands in for -KeepIn.
+    $env:HUSHPINTEREST_APPLY_RECORDS = $recordStore
+    try {
+        $said = Invoke-VerifyAll -Apk $newestFixture
+        Assert-True ($said -like "*reusing the run kept as $keptKey*" -and -not (Test-Path -LiteralPath $javaLog)) `
+            "HUSHPINTEREST_APPLY_RECORDS did not stand in for -KeepIn: $said"
+    } finally { $env:HUSHPINTEREST_APPLY_RECORDS = $null }
+    $said = Invoke-VerifyAll -Apk $newestFixture -KeepIn $recordStore -NoReuse
+    Assert-True ($said -like '*-NoReuse: patching in full*' -and (Test-Path -LiteralPath $javaLog) -and
+        $said -like "*kept this run as $keptKey*" -and (@(Get-StoreEntries $recordStore).Name -join ',') -ceq $keptKey) `
+        "-NoReuse did not patch in full and keep the new run in the old one's place: $said"
+    # Any input that moves gives another key: here the bundle, one entry longer.
+    $otherBundle = Join-Path $releaseRoot 'other-bundle.mpp'
+    New-TestBundleArchive -Path $otherBundle -Entries ([ordered]@{
+        'META-INF/MANIFEST.MF' = "Manifest-Version: 1.0`nVersion: $releaseVersionHere`n`n"
+        'classes.dex' = "dex`n035" + ('patches' * 9) })
+    $said = Invoke-VerifyAll -Apk $newestFixture -KeepIn $recordStore -Bundle $otherBundle
+    $otherKey = [regex]::Match($said, 'kept this run as ([0-9a-f]{64})').Groups[1].Value
+    Assert-True ($said -like '*no run kept as * so this one patches in full*' -and (Test-Path -LiteralPath $javaLog) -and
+        $otherKey -and $otherKey -cne $keptKey -and @(Get-StoreEntries $recordStore).Count -eq 2) `
+        "Another bundle reused the first bundle's run instead of patching: $said"
+    Remove-GeneratedPath -Path (Join-Path $recordStore $otherKey) -Root $recordStore
+    Remove-Item -LiteralPath $otherBundle -Force
+    # A kept APK whose bytes changed after it was kept isn't trusted: the run says so and patches.
+    $keptApk = Join-Path $keptRecord 'patched.apk'
+    $keptBytes = [IO.File]::ReadAllBytes($keptApk)
+    [IO.File]::WriteAllBytes($keptApk, [byte[]]($keptBytes + [byte[]](0x0A)))
+    $said = Invoke-VerifyAll -Apk $newestFixture -KeepIn $recordStore
+    Assert-True ($said -like '*patched APK changed after it was kept*' -and (Test-Path -LiteralPath $javaLog) -and
+        $said -like "*kept this run as $keptKey*" -and
+        (Get-Sha256Hex -Path $keptApk) -eq (Get-Content -LiteralPath (Join-Path $keptRecord 'record.json') -Raw | ConvertFrom-Json).patchedSha256) `
+        "A record whose APK changed was reused, or the passing run didn't replace it: $said"
+    # A run that fails a check, in a store of its own, leaves the store empty: no record and no
+    # staging folder.
+    $failedStore = Join-Path $releaseRoot 'applied-records-failed'
+    foreach ($flagName in @('dexdiff-fails.txt', 'references-fails.txt')) {
+        $flag = Join-Path $tools $flagName
+        Set-Content -LiteralPath $flag -Value 'on' -Encoding ASCII
+        try {
+            Assert-Throws { Invoke-VerifyAll -Apk $newestFixture -KeepIn $failedStore } '*verify-all-patches.ps1 exited 1*' `
+                "verify-all-patches.ps1 passed when $($flagName -replace '\.txt$', '')."
+        } finally { Remove-Item -LiteralPath $flag -Force -ErrorAction SilentlyContinue }
+        Assert-True (@(Get-StoreEntries $failedStore).Count -eq 0) `
+            "A run that failed when $($flagName -replace '\.txt$', '') left something in the record store: $(@(Get-StoreEntries $failedStore).Name -join ', ')"
+    }
+
+    # The receipt reads a kept run of each fixture instead of patching it, and still checks the
+    # report, manifests and delta, so the release check takes what it writes. The stand-in aapt2
+    # reads a manifest written beside an APK and a record keeps the APK alone, so the manifest the
+    # CLI stand-in wrote goes beside each kept APK here. A real aapt2 reads the APK itself.
+    $receiptStore = Join-Path $releaseRoot 'applied-records-receipt'
+    foreach ($build in $builtBuilds) {
+        $said = Invoke-VerifyAll -Apk $fixturePaths[$build] -KeepIn $receiptStore -Force:($build -eq $newerBuild)
+        $buildKey = [regex]::Match($said, 'kept this run as ([0-9a-f]{64})').Groups[1].Value
+        Assert-True ([bool]$buildKey) "verify-all-patches.ps1 -KeepIn kept no run of ${build}: $said"
+        Copy-Item -LiteralPath "$($fixturePaths[$build]).patched.txt" -Destination (Join-Path $receiptStore "$buildKey/patched.apk.xmltree")
+    }
+    Assert-True (@(Get-AppliedRecords -Store $receiptStore).Count -eq $builtBuilds.Count) `
+        "The store doesn't hold one kept run per fixture: $(@(Get-StoreEntries $receiptStore).Name -join ', ')"
+    $receiptBeforeKept = [IO.File]::ReadAllBytes($releaseReceipt)
+    try {
+        Invoke-ReceiptBuilder -Fixtures $allFixtures -AppliedDir $receiptStore
+        Assert-True (-not (Test-Path -LiteralPath $javaLog)) `
+            "The receipt patched a fixture a kept run covers: $(@(Get-Content -LiteralPath $javaLog -ErrorAction SilentlyContinue) -join '; ')"
+        Assert-True ([regex]::Matches($builderSaid, 'passed every check with this bundle in the run kept as').Count -eq $builtBuilds.Count) `
+            "The receipt did not say it read each fixture's kept run: $builderSaid"
+        $keptReceipt = Get-Content -LiteralPath $releaseReceipt -Raw | ConvertFrom-Json
+        Assert-True ((@($keptReceipt.targets | ForEach-Object { [string]$_.source.versionName }) -join ',') -eq ($builtBuilds -join ',')) `
+            "The receipt read from kept runs does not hold one target per fixture: $($keptReceipt.targets.source.versionName -join ', ')"
+        $said = Invoke-ReleaseCheck
+        Assert-True ($said -like "*$builtProved*") "The release check did not accept a receipt read from kept runs: $said"
+    } finally {
+        [IO.File]::WriteAllBytes($releaseReceipt, $receiptBeforeKept)
+    }
+
+    # patch-for-device.ps1 signs the kept APK for a phone instead of patching, says so, and still
+    # holds the report and the manifest to the build. -NoReuse patches with the CLI as before.
+    $apksignerLog = Join-Path $tools 'apksigner.log'
+    $keptDevice = @{ Root = $releaseRepo; DesktopJar = $stubJar; Java = $stubJava; Aapt2 = $stubAapt2
+        OutDir = (Join-Path $releaseRoot 'device-kept'); AndroidJar = $stubAndroidJar; ApiVersions = $stubApiVersions
+        Apk = $newestFixture; AppliedDir = $receiptStore }
+    Remove-Item -LiteralPath $javaLog, $apksignerLog -Force -ErrorAction SilentlyContinue
+    $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6>&1 | ForEach-Object { "$_" })
+    $handed = [string]$said[-1]
+    Assert-True (-not (Test-Path -LiteralPath $javaLog) -and (Test-Path -LiteralPath $handed -PathType Leaf) -and
+        ($said -join "`n") -like '*passed every check in the gate run kept as*' -and
+        (Get-Content -LiteralPath $apksignerLog -Raw) -like '*sign alias=sideload in=*patched.apk out=*') `
+        "patch-for-device.ps1 did not sign the kept run instead of patching: $($said -join ' | ')"
+    $keptDevice['NoReuse'] = $true
+    Remove-Item -LiteralPath $javaLog, $apksignerLog -Force -ErrorAction SilentlyContinue
+    $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6> $null)
+    Assert-True ((@(Get-Content -LiteralPath $javaLog) -join '; ') -eq "patch $newestFixture merged forced=0" -and
+        -not (Test-Path -LiteralPath $apksignerLog)) `
+        "patch-for-device.ps1 -NoReuse did not patch with the CLI: $(@(Get-Content -LiteralPath $javaLog -ErrorAction SilentlyContinue) -join '; ')"
 
     # The newest build alone, or beside the undeclared one, is not enough for a receipt: the older
     # declared build has no run. The builder says so before it patches anything. It used to patch
@@ -4901,8 +5259,9 @@ try {
     function Invoke-DeviceBuild([string]$Apk, [string]$OutDir = $deviceOut, [string]$DesktopJar = $stubJar,
             [string]$OutputApk) {
         Remove-Item -LiteralPath $javaLog, $mergeLog -Force -ErrorAction SilentlyContinue
+        # An empty record store of its own, so no kept run, the machine's included, answers for the CLI.
         $arguments = @{ Root = $releaseRepo; DesktopJar = $DesktopJar; Java = $stubJava; Aapt2 = $stubAapt2; OutDir = $OutDir
-            AndroidJar = $stubAndroidJar; ApiVersions = $stubApiVersions }
+            AndroidJar = $stubAndroidJar; ApiVersions = $stubApiVersions; AppliedDir = (Join-Path $releaseRoot 'applied-records-none') }
         if ($Apk) { $arguments['Apk'] = $Apk }
         if ($OutputApk) { $arguments['OutputApk'] = $OutputApk }
         $paths = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @arguments 6> $null)
@@ -4984,7 +5343,7 @@ try {
             foreach ($inputApk in @($fixturePaths[$releaseTarget.PackageVersion], $failureFixture)) {
                 $jobArgs = @{ Root = $releaseRepo; DesktopJar = $stubJar; Java = $stubJava; Aapt2 = $stubAapt2;
                     AndroidJar = $stubAndroidJar; ApiVersions = $stubApiVersions;
-                    OutDir = $concurrentOut; Apk = $inputApk }
+                    OutDir = $concurrentOut; Apk = $inputApk; AppliedDir = (Join-Path $releaseRoot 'applied-records-none') }
                 $jobs += Start-Job -ScriptBlock {
                     param($Script, $Arguments)
                     $ErrorActionPreference = 'Stop'
@@ -5035,7 +5394,7 @@ try {
             $env:PATH = $tools + [IO.Path]::PathSeparator + $savedPath
             Assert-Throws {
                 & $patchScript -Root $releaseRepo -Apk $failureFixture -DesktopJar $stubJar -Java $stubJava `
-                    -Aapt2 $stubAapt2 -OutDir $malformedOut -Serial emulator-5999 `
+                    -Aapt2 $stubAapt2 -OutDir $malformedOut -Serial emulator-5999 -AppliedDir (Join-Path $releaseRoot 'applied-records-none') `
                     -LeaseDirectory (Join-Path $releaseRoot 'forbidden-leases') 6> $null
             } '*JSON*' 'The device runner reached installation after a malformed report.'
             Assert-True (-not (Test-Path -LiteralPath $forbiddenDeviceLog) -and
@@ -5681,6 +6040,7 @@ try {
 } finally {
     $env:BUILD_QUEUE_SCRIPT = $savedQueueScript
     $env:BUILD_QUEUE_PRIORITY = $savedQueuePriority
+    $env:HUSHPINTEREST_APPLY_RECORDS = $savedApplyRecords
     if ($signerHome -and (Test-Path -LiteralPath $signerHome)) {
         Invoke-ReleaseChecksumGpg 'gpgconf' @('--homedir', $signerHome, '--kill', 'gpg-agent') | Out-Null
     }
@@ -5776,6 +6136,116 @@ Assert-True ($libsReaders.Count -eq 0) `
 
 Write-Host '[scripts] release bundle path contracts passed'
 
+# Every tracked PowerShell file parses. The release stages, the device helpers and the receipt run
+# only on a release or with a phone, so a syntax slip in one of them would otherwise first show
+# there. Read as UTF-8 (Get-ScriptAst), so both editions parse the same text.
+$unparsed = New-Object System.Collections.Generic.List[string]
+$trackedScripts = @(& git -C $Root ls-files -- '*.ps1')
+Assert-True ($LASTEXITCODE -eq 0 -and $trackedScripts.Count -gt 0) 'git could not list the tracked PowerShell files.'
+foreach ($tracked in $trackedScripts) {
+    try { [void](Get-ScriptAst -Path (Join-Path $Root $tracked)) } catch { $unparsed.Add($_.Exception.Message) }
+}
+Assert-True ($unparsed.Count -eq 0) ("These tracked scripts don't parse: " + ($unparsed -join '; '))
+Write-Host "[scripts] all $($trackedScripts.Count) tracked PowerShell files parse"
+
+# --- release stages refuse to run out of order ------------------------------------------------
+#
+# scripts/release/release.ps1 runs one stage a call, and each reads what the stage before it left
+# before it does anything. Each case runs a stage on a scratch repository in a shell of its own, so
+# what the stage puts in its environment stays there. No case reaches the network, Gradle, Python
+# or a key: every refusal here comes before the first of them.
+$stageRoot = Join-Path ([System.IO.Path]::GetTempPath()) ('hushpinterest-stages-' + [guid]::NewGuid().ToString('N'))
+$stageRunner = Join-Path ([System.IO.Path]::GetTempPath()) ('hushpinterest-stage-runner-' + [guid]::NewGuid().ToString('N') + '.ps1')
+$stageShell = (Get-Process -Id $PID).Path
+$stageUtf8 = New-Object System.Text.UTF8Encoding $false
+function Invoke-ReleaseStageCase {
+    param([string]$Stage, [string]$Version = '0.0.7', [switch]$Signing)
+    $ErrorActionPreference = 'Continue'
+    # @(...) around the if: an if hands back its one item, and splatting a lone string passes its characters.
+    $extra = @(if ($Signing) { '-Signing' })
+    $lines = @(& $stageShell -NoProfile -ExecutionPolicy Bypass -File $stageRunner -Script (Join-Path $PSScriptRoot 'release/release.ps1') `
+        -Root $stageRoot -Stage $Stage -Version $Version @extra 2>&1 | ForEach-Object { "$_" })
+    return [pscustomobject]@{ Code = $LASTEXITCODE; Text = ($lines -join "`n") }
+}
+function Set-StageFile([string]$Name, [string]$Text) {
+    $path = Join-Path $stageRoot $Name
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $path) | Out-Null
+    [System.IO.File]::WriteAllText($path, $Text, $stageUtf8)
+}
+function Invoke-StageGit([string[]]$Arguments) {
+    $ErrorActionPreference = 'Continue'
+    & git -C $stageRoot @Arguments 2>&1 | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw "git $($Arguments -join ' ') failed in the stage scratch repository." }
+}
+function Assert-StageRefused($Result, [string]$Pattern, [string]$Message) {
+    Assert-True ($Result.Code -ne 0 -and $Result.Text -like "*REFUSED: *$Pattern*") "$Message It said: $($Result.Text)"
+}
+try {
+    [System.IO.File]::WriteAllText($stageRunner, @'
+param([string]$Script, [string]$Root, [string]$Stage, [string]$Version, [switch]$Signing)
+$forward = @{ Root = $Root; Stage = $Stage; Version = $Version }
+if ($Signing) {
+    $key = Join-Path $Root 'build/pinned-key.asc'
+    $forward['SigningFingerprint'] = 'A' * 40
+    $forward['TrustedPublicKeyPath'] = $key
+}
+try { & $Script @forward; exit 0 } catch { Write-Output ('REFUSED: ' + $_.Exception.Message); exit 1 }
+'@, $stageUtf8)
+    New-Item -ItemType Directory -Path $stageRoot | Out-Null
+    Invoke-StageGit @('init', '--quiet')
+    Invoke-StageGit @('symbolic-ref', 'HEAD', 'refs/heads/main')
+    Invoke-StageGit @('config', 'user.name', 'Release stage contract')
+    Invoke-StageGit @('config', 'user.email', 'stages@example.invalid')
+    Invoke-StageGit @('config', 'commit.gpgsign', 'false')
+    Set-StageFile '.gitignore' "build/`n"
+    Set-StageFile 'gradle.properties' "version = 0.0.6`n"
+    Invoke-StageGit @('add', '--all')
+    Invoke-StageGit @('commit', '--quiet', '-m', 'chore: the last release')
+
+    Set-StageFile 'stray.txt' "left over`n"
+    Assert-StageRefused (Invoke-ReleaseStageCase prepare) 'clean checkout*stray.txt' 'prepare ran on a tree with changes.'
+    Remove-Item -LiteralPath (Join-Path $stageRoot 'stray.txt')
+    Assert-StageRefused (Invoke-ReleaseStageCase prepare -Version 0.0.6) "already says 0.0.6, but HEAD*isn't its prepare commit" `
+        'prepare took a version gradle.properties already holds.'
+    Assert-StageRefused (Invoke-ReleaseStageCase prepare -Version 0.0.5) "0.0.5 isn't newer than 0.0.6" 'prepare went back a version.'
+    foreach ($stage in 'preflight', 'gate', 'build') {
+        Assert-StageRefused (Invoke-ReleaseStageCase $stage) 'Run -Stage prepare first.' "$stage ran before the release was prepared."
+    }
+    Assert-StageRefused (Invoke-ReleaseStageCase publish) 'Run release.ps1 -Stage prepare, preflight, gate and build first.' `
+        'publish ran before the release was prepared.'
+
+    # A commit that only borrows the subject, leaving gradle.properties behind, isn't a prepare commit.
+    Invoke-StageGit @('commit', '--quiet', '--allow-empty', '-m', 'release: prepare 0.0.7')
+    Assert-StageRefused (Invoke-ReleaseStageCase preflight) 'Run -Stage prepare first.' 'A commit named like a prepare commit passed for one.'
+    Invoke-StageGit @('reset', '--quiet', '--hard', 'HEAD~1')
+
+    Set-StageFile 'gradle.properties' "version = 0.0.7`n"
+    Invoke-StageGit @('commit', '--quiet', '--all', '-m', 'release: prepare 0.0.7')
+    $prepared = (& git -C $stageRoot rev-parse HEAD).Trim()
+    $again = Invoke-ReleaseStageCase prepare
+    Assert-True ($again.Code -eq 0 -and $again.Text -like "*0.0.7 is already prepared at $prepared*") `
+        "prepare didn't say a prepared release was prepared already: $($again.Text)"
+    Assert-StageRefused (Invoke-ReleaseStageCase gate) "The preflight hasn't passed for $prepared. Run -Stage preflight first." `
+        'gate ran before the preflight passed.'
+    Assert-StageRefused (Invoke-ReleaseStageCase build) "$prepared hasn't gone out through the release gate. Run -Stage gate first." `
+        'build ran before the release gate.'
+    # A stage marker counts only for the commit it names.
+    Set-StageFile 'build/release-stages/0.0.7/gate.json' ('{"stage":"gate","version":"0.0.7","commit":"' + ('0' * 40) + '"}')
+    Assert-StageRefused (Invoke-ReleaseStageCase build) 'Run -Stage gate first.' "build took another commit's gate marker."
+    Set-StageFile 'build/release-stages/0.0.7/preflight.json' ('{"stage":"preflight","version":"0.0.7","commit":"' + $prepared + '","finishedAt":"2026-10-10T00:00:00Z","minutes":4.2}')
+    $again = Invoke-ReleaseStageCase preflight
+    Assert-True ($again.Code -eq 0 -and $again.Text -like "*preflight already passed for $prepared*4.2 min*") `
+        "preflight ran again for a commit it had passed: $($again.Text)"
+    Set-StageFile 'build/pinned-key.asc' "not a key`n"
+    Assert-StageRefused (Invoke-ReleaseStageCase publish -Signing) "there is no patches-0.0.7.mpp*Run release.ps1 -Stage build first." `
+        'publish ran with no built assets.'
+} finally {
+    foreach ($path in $stageRoot, $stageRunner) {
+        if (Test-Path -LiteralPath $path) { Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction SilentlyContinue }
+    }
+}
+Write-Host '[scripts] release stage order contracts passed'
+
 # --- tracked files name no machine -----------------------------------------------------------
 #
 # No tracked file names the working-notes folder .gitignore keeps out, the backup folders on the
@@ -5836,3 +6306,5 @@ if ($LASTEXITCODE -ne 0) { throw 'The compiled manifest contracts did not pass.'
 if ($LASTEXITCODE -ne 0) { throw 'The offline release signature contracts did not pass.' }
 & (Join-Path $PSScriptRoot 'test-published-index.ps1')
 if ($LASTEXITCODE -ne 0) { throw 'The offline published index contracts did not pass.' }
+& (Join-Path $PSScriptRoot 'test-app-inventory.ps1')
+if ($LASTEXITCODE -ne 0) { throw 'The app inventory contracts did not pass.' }

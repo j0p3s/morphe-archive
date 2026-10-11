@@ -36,6 +36,7 @@ public class HostScreensTest {
         Settings.initialize(RuntimeEnvironment.getApplication());
         Settings.preferences.edit().clear().commit();
         CrashGuard.resetForTests();
+        HostScreens.shortcutWork = Runnable::run;
     }
 
     @After public void forgetApplication() {
@@ -149,6 +150,41 @@ public class HostScreensTest {
             assertEquals(HostScreens.SCREEN_HOST, opened.getComponent().getClassName());
             assertEquals("settings", opened.getStringExtra(HostScreens.EXTRA));
         }
+    }
+
+    /** Messenger reuses the holder for other rows as the menu scrolls, and its listener is set once, at create. */
+    @Test public void aRecycledMenuRowStillDoesWhatMessengerMadeItDo() {
+        mount();
+        Settings.initialize(RuntimeEnvironment.getApplication());
+        try (var screen = Robolectric.buildActivity(Activity.class).setup()) {
+            int[] stockTaps = {0};
+            TextView row = new TextView(screen.get());
+            View item = new View(screen.get());
+            item.setOnClickListener(v -> stockTaps[0]++);
+            MenuRowHolder holder = new MenuRowHolder(row, item);
+            row.setText("HushMessenger");
+            Settings.handleMenuItemBound(holder);
+            Settings.handleMenuItemBound(holder);
+            // Bound to our row again, the listener isn't wrapped twice.
+            Settings.MenuRowClick listener = (Settings.MenuRowClick) Shadows.shadowOf(item).getOnClickListener();
+            assertFalse(listener.stock instanceof Settings.MenuRowClick);
+            item.performClick();
+            assertEquals(0, stockTaps[0]);
+            assertEquals("settings", Shadows.shadowOf(screen.get()).getNextStartedActivity().getStringExtra(HostScreens.EXTRA));
+            row.setText("Marketplace");
+            Settings.handleMenuItemBound(holder);
+            item.performClick();
+            assertEquals(1, stockTaps[0]);
+            assertNull(Shadows.shadowOf(screen.get()).getNextStartedActivity());
+        }
+    }
+
+    /** The binder serves several holder types, and one without a text field is Messenger's business, not an error. */
+    @Test public void aMenuHolderWithoutATextFieldIsntRecordedAsAFailure() {
+        Settings.hookErrors.remove("menu_row");
+        Settings.handleMenuItemBound(new Object());
+        Settings.handleMenuItemBound(null);
+        assertNull(Settings.hookErrors.get("menu_row"));
     }
 
     /** Settings start from a hook's first use, the way they do when SettingsProvider never ran. */

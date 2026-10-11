@@ -21,6 +21,7 @@ import app.morphe.patches.telegram.misc.extension.writeStub
 import app.morphe.patches.telegram.misc.settings.settingsPatch
 import app.morphe.util.ControlFlow
 import app.morphe.util.addInstructionsAtControlFlowLabel
+import app.morphe.util.call
 import app.morphe.util.namedRegisters
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
@@ -44,7 +45,7 @@ private const val ARRAY_LIST = "Ljava/util/ArrayList;"
 val hideSponsoredProxyPatch = bytecodePatch(
     name = PATCH,
     description = "Hides the sponsored channel a proxy adds to your chat list and folders. Your proxy settings aren't " +
-        "touched. On by default. Turn it off in HushTelegram settings > Chats.",
+        "touched. On by default. Turn it off in HushTelegram settings > Ads.",
     default = true,
 ) {
     category("Ads")
@@ -256,7 +257,6 @@ private fun <T> List<T>.unique(what: String): T {
 }
 private fun Method.instructions(): List<Instruction> = implementation?.instructions?.toList().orEmpty()
 private fun Instruction.field(): FieldReference? = (this as? ReferenceInstruction)?.reference as? FieldReference
-private fun Instruction.call(): MethodReference? = (this as? ReferenceInstruction)?.reference as? MethodReference
 private fun Instruction.literal(): Int? = (this as? NarrowLiteralInstruction)?.narrowLiteral
 private fun MethodReference.hasShape(parameters: List<String>, returns: String) = returnType == returns &&
     parameterTypes.map { it.toString() } == parameters

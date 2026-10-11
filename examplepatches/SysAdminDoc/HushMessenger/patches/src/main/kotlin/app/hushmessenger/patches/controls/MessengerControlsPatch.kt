@@ -142,11 +142,14 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             EMOJI_SEARCH -> method.validateEmojiSearch()
             DISAPPEARING_SWIPE -> method.validateDisappearingSwipe()
             ANALYTICS_UPLOADS -> method.validateAnalyticsUpload()
+            ATTRIBUTION_UPLOADS -> method.validateAttributionUpload()
+            AD_EVENTS -> method.validateAdEvent()
             MESSAGE_LOG -> method.validateMessageLog()
             "original_photo" -> method.validateOriginalPhoto()
             ORIGINAL_VIDEO -> method.validateOriginalVideo()
             SYSTEM_CAMERA -> method.validateSystemCamera()
-            "avatar_tabs" -> if (method.returnType == "V") method.validateKeyboardTabsInline() else method.validateKeyboardTabs()
+            in CUSTOM_FONT_HOOKS -> method.validateCustomFont(hook)
+            "avatar_tabs" -> method.validateKeyboardTabsInline()
             "typing_mailbox" -> method.validateOutgoingTyping()
             "anonymous_stories" -> method.validateStorySeen()
             "growth_notes" -> method.validateNotesTips()
@@ -186,11 +189,14 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             EMOJI_SEARCH -> method.injectEmojiSearch()
             DISAPPEARING_SWIPE -> method.injectDisappearingSwipe()
             ANALYTICS_UPLOADS -> method.injectAnalyticsUpload()
+            ATTRIBUTION_UPLOADS -> method.injectAttributionUpload()
+            AD_EVENTS -> method.injectAdEvent()
             MESSAGE_LOG -> method.injectMessageLog()
             "original_photo" -> method.injectOriginalPhoto()
             ORIGINAL_VIDEO -> method.injectOriginalVideo()
             SYSTEM_CAMERA -> method.injectSystemCamera()
-            "avatar_tabs" -> if (method.returnType == "V") method.injectKeyboardTabsInline() else method.injectKeyboardTabs()
+            in CUSTOM_FONT_HOOKS -> method.injectCustomFont(hook)
+            "avatar_tabs" -> method.injectKeyboardTabsInline()
             "typing_mailbox" -> method.injectOutgoingTyping()
             "anonymous_stories" -> method.injectStorySeen()
             "growth_notes" -> method.injectNotesTips()
@@ -263,6 +269,9 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
                 injectNativeBubbles(methods.getValue("bubbles").single(), methods.getValue("bubble_mode").single(),
                     capability, nativeBubbleRoutesVerified)
                 nativeRoutesApplied = nativeBubbleRoutesVerified
+                // Settings then treats the control as unavailable (Settings.available), and the patcher log says why.
+                if (!nativeBubbleRoutesVerified) java.util.logging.Logger.getLogger("").warning(
+                    "Allow chat bubbles: this Messenger's native bubble routes don't match the tested build, so the switch shows as unavailable in HushMessenger settings")
             } else {
                 injectControl(key, methods)
                 inboxRoute?.let { (route, stub) -> stub.writeInboxRefreshRoute(route) }
@@ -297,7 +306,7 @@ val hideSubtabsPatch = controlPatch("subtabs", "Hide inbox tabs", "Hides the Hom
 @Suppress("unused")
 val hideFacebookPatch = controlPatch("facebook", "Hide Facebook shortcuts", "Hides Facebook buttons, profile and sharing shortcuts, and Also from Meta in the Menu tab. Handy if you only use Messenger.", "Navigation")
 @Suppress("unused")
-val hideMetaAiPatch = controlPatch("meta_ai", "Hide Meta AI", "Hides the Meta AI floating button, toolbar button, tab, menu entries and AI in search.", "Navigation", "ai_menu", "ai_fab", "ai_toolbar", "ai_tab", "ai_search", "ai_search_chip")
+val hideMetaAiPatch = controlPatch("meta_ai", "Hide Meta AI", "Hides the Meta AI floating button, toolbar button, tab, menu entries and AI in search. Restart Messenger to see the tab go.", "Navigation", "ai_menu", "ai_fab", "ai_toolbar", "ai_tab", "ai_search", "ai_search_chip")
 @Suppress("unused")
 val hideMomentsPatch = controlPatch("moments", "Hide Chat Moments", "Hides Chat Moments in the menu.", "Navigation")
 @Suppress("unused")
@@ -315,6 +324,9 @@ val keepEmojiSearchPatch = controlPatch("emoji_search", "Keep emoji search on em
 @Suppress("unused")
 val hideChatPromotionsPatch = controlPatch("chat_promotions", "Hide chat promotions", "Hides promotion banners inside conversations.", "Conversations")
 @Suppress("unused")
+val hideAdContextBannerPatch = controlPatch("ad_context_banner", "Hide ad banners in business chats",
+    "In a chat you started from a business's ad, hides the banner that shows that ad.", "Conversations")
+@Suppress("unused")
 val hideSuggestedRepliesPatch = controlPatch("suggested_replies", "Hide business reply suggestions", "Hides suggested replies in conversations with businesses.", "Conversations")
 @Suppress("unused")
 val hideBusinessSuggestionsPatch = controlPatch("business_suggestions", "Hide business typing suggestions", "Hides business suggestions that pop up as you type.", "Conversations")
@@ -325,7 +337,7 @@ val suppressTypingPatch = controlPatch("typing", "Hide typing indicator", "Stops
 @Suppress("unused")
 val externalBrowserPatch = controlPatch("external_browser", "Open web links externally", "Opens web links (http and https) in your default browser instead of inside Messenger. Other link types work as before.", "Links and bubbles", "browser")
 @Suppress("unused")
-val enableBubblesPatch = controlPatch("bubbles", "Allow chat bubbles", "Lets you pick Stock, Chat Heads or Native Bubbles for floating chats. Needs Android 11 or newer.", "Links and bubbles", "bubbles", "bubble_mode")
+val enableBubblesPatch = controlPatch("bubbles", "Allow chat bubbles", "Lets you pick Stock, Chat heads or Native Bubbles for floating chats. Needs Android 11 or newer. Chat heads also needs Messenger's own Chat heads switch, and Native Bubbles needs Messenger's bubbles allowed in Android's notification settings.", "Links and bubbles", "bubbles", "bubble_mode")
 @Suppress("unused")
 val useSystemEmojiPatch = controlPatch("use_system_emoji", "Use system emoji", "Shows emoji in your phone's own style instead of Messenger's.", "Conversations", "emoji_typeface")
 @Suppress("unused")
@@ -347,13 +359,23 @@ val systemCameraPatch = controlPatch("system_camera", "Use the phone's camera ap
 val stopAnalyticsUploadsPatch = controlPatch("analytics_uploads", "Stop analytics uploads",
     "Stops the background services Messenger uses to upload usage statistics. It still records them on your phone, and they can upload after you turn this off.", "Privacy")
 @Suppress("unused")
+val stopAttributionUploadsPatch = controlPatch("attribution_uploads", "Stop ad attribution uploads",
+    "Stops the job that reads your phone's advertising ID and sends it to Meta with your ad tracking setting. The ID itself doesn't change.", "Privacy")
+@Suppress("unused")
+val stopAdEventsPatch = controlPatch("ad_events", "Stop inbox and ad link logging",
+    "Stops two reports Messenger logs. One says which part of your chat list was on screen, which Messenger files under inbox ads. The other says which ad brought you in when a link from an ad opens a chat.", "Privacy")
+@Suppress("unused")
 val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, such as view-once photos and Quicksnap, and stops screenshot notices. It doesn't add replay or saving.", "Privacy", "allow_screenshot", "screenshot_viewers")
 @Suppress("unused")
-val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Stops Messenger from telling people you read their message. Encrypted chats you open can stay unread on this phone. Replying or switching this off may notify the sender.", "Privacy", "hide_read_receipts", "read_mailbox")
+val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Stops Messenger from telling people you read their message. Encrypted chats you open can stay unread on this phone. Replying or switching this off may notify the sender. Group chats aren't tested. Messenger's own Read receipts setting under Privacy & safety marks chats read without showing Seen.", "Privacy", "hide_read_receipts", "read_mailbox")
 @Suppress("unused")
 val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Keeps messages on screen after someone unsends them, in chats where it works. Encrypted chats aren't supported, and group chats aren't tested.", "Privacy", "keep_unsent", "unsent_indicator", "delta_unsent")
 @Suppress("unused")
 val unlockAppIconsPatch = controlPatch("app_icons", "Unlock app icons", "Lets you pick any icon in Messenger's App icon setting without a subscription. Messenger still decides whether that setting shows for your account.", "Theme")
+@Suppress("unused")
+val customFontPatch = controlPatch("custom_font", "Use your own font",
+    "Shows Messenger's text in your phone's font instead of Meta's, or in a .ttf or .otf file you pick in HushMessenger settings. Emoji don't change. Restart Messenger after changing it.",
+    "Theme", "font_layout", "font_repository", "font_roboto", "font_by_name", "font_input")
 private var anonymousStoriesApplied = false
 
 private val anonymousStoriesResources = resourcePatch(description = "Record HushMessenger capability: anonymous_stories") {
