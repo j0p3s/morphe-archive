@@ -2753,6 +2753,54 @@
                 "sortOrder": 372,
                 "createdAt": 1791701197552,
                 "updatedAt": 1791701197552
+            },
+            {
+                "name": "xr-porting-hub",
+                "source": "https://raw.githubusercontent.com/AngelDark92/xr-porting-hub/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 373,
+                "createdAt": 1791780207077,
+                "updatedAt": 1791780207077
+            },
+            {
+                "name": "morphe-youtube-vr-patches",
+                "source": "https://raw.githubusercontent.com/commit-regrets/morphe-youtube-vr-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 374,
+                "createdAt": 1791780208747,
+                "updatedAt": 1791780208747
+            },
+            {
+                "name": "origin-island-patches",
+                "source": "https://raw.githubusercontent.com/JacksonJones2003/origin-island-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 375,
+                "createdAt": 1791780213048,
+                "updatedAt": 1791780213048
+            },
+            {
+                "name": "sabopura-morphe-patches",
+                "source": "https://raw.githubusercontent.com/sabopura/sabopura-morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 376,
+                "createdAt": 1791780218260,
+                "updatedAt": 1791780218260
+            },
+            {
+                "name": "morphe-patches",
+                "source": "https://raw.githubusercontent.com/tachibana-shin/morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 377,
+                "createdAt": 1791780218768,
+                "updatedAt": 1791780218768
+            },
+            {
+                "name": "plex-morphe-patches",
+                "source": "https://raw.githubusercontent.com/UnkyBadTouch/plex-morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 378,
+                "createdAt": 1791780220623,
+                "updatedAt": 1791780220623
             }
         ]
     }
