@@ -14,6 +14,7 @@ Technical documentation and patch catalog for Lightroom on Android.
 | **Target Package Format** | APK (PairIP-free variant, arm64-v8a) |
 | **Primary Architecture** | `arm64-v8a` |
 | **Authoritative Source** | Uptodown (APK variant, not the Play APKM bundle: the Play bundle ships PairIP integrity which kills resigned builds at boot) |
+| **Secondary Input** | APKMirror Play bundle (`com.adobe.lrmobile_11.6.01-711106010_2arch_7dpi_24lang`, SHA-256 `019620c4...7d4873a`): supported for lab use; Sideload Install Support neutralizes its PairIP stack so resigned builds boot |
 
 ---
 
@@ -21,7 +22,8 @@ Technical documentation and patch catalog for Lightroom on Android.
 
 | Patch Name | Typology | Default State | Dependencies | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **Unlock Premium Features** | `bytecodePatch` | `true` (Enabled) | None | Activates internal Limited-Time Premium Unlock (LTPU) gate to bypass subscription requirements. |
+| **Sideload Install Support** | `bytecodePatch` | `true` (Enabled) | None | Neutralizes sideload installer/signature checks (PairIP `LicenseClient`, `SignatureCheck`, `LicenseActivity`) and completes Play Integrity token requests. On the PairIP-free Uptodown input the PairIP hooks are skipped honestly (classes absent) and only the Integrity hook applies; on the Play-bundle input all 5 hooks apply. |
+| **Unlock Premium Features** | `bytecodePatch` | `true` (Enabled) | Sideload Install Support (applied automatically as dependency) | Activates internal Limited-Time Premium Unlock (LTPU) gate to bypass subscription requirements. |
 | **Lightroom Background Sync** | `resourcePatch` | `false` (Disabled) | None | Disables WorkManager background sync services, scheduled jobs, and boot receiver. WorkManager startup initializer is preserved for boot stability. |
 | **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | Telemetry Manifest Purge (internal) | Neutralizes AppMeasurement and Crashlytics dispatchers, strips ad permissions, injects opt-out flags. Components preserved for boot stability. |
 | **Lightroom Junk Cleaner** | `rawResourcePatch` | `false` (Disabled) | None | Purges build metadata and duplicate license files from APK root and META-INF. |

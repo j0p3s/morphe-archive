@@ -30,6 +30,7 @@ import app.morphe.extension.shared.settings.BooleanSetting;
 import app.morphe.extension.shared.settings.EnumSetting;
 import app.morphe.extension.shared.settings.Setting;
 import app.morphe.extension.shared.settings.StringSetting;
+import app.morphe.extension.shared.settings.preference.CrashFile;
 
 /**
  * The switches behind the hooks that ask before they act.
@@ -646,6 +647,14 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_resume_long_videos", FALSE);
 
     /**
+     * With a reel or video paused, a tap on its right third steps it one frame forward and a tap on
+     * its left third one frame back ({@link app.morphe.extension.facebook.media.FrameStep}). Starts
+     * off. Off or paused, every tap goes to Facebook as before.
+     */
+    public static final BooleanSetting FRAME_STEP =
+            new BooleanSetting("hushfacebook_frame_step", FALSE);
+
+    /**
      * Videos, reels and video stories start at the quality in {@link #PLAYBACK_QUALITY}, through
      * the same per-video choice Facebook's own quality menu makes
      * ({@link app.morphe.extension.facebook.media.QualityChoice}). A pick in that menu still wins
@@ -963,6 +972,21 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_app_lock", FALSE);
 
     /**
+     * A Java crash that ends the app also goes to Download/Hushfacebook as a text file
+     * ({@link CrashFile}), so it can be sent with a bug report when Facebook won't open. The
+     * settings entry's own switch, so every build has it ({@link PatchFamily#ENTRY_SWITCHES}). On
+     * by default: the file holds only what the diagnostic report's crash section shows, redacted
+     * the same way. Like the other switches it answers off while Hushfacebook is paused.
+     */
+    public static final BooleanSetting SAVE_CRASH_FILE =
+            new BooleanSetting("hushfacebook_save_crash_file", TRUE);
+
+    static {
+        // The crash handler is the shared library's, which can't name this class.
+        CrashFile.useSwitch(SAVE_CRASH_FILE);
+    }
+
+    /**
      * The story viewer's menu offers Save on anyone's story, and Save runs Hushfacebook's own
      * download. Off, only your own stories offer it, and it's Facebook's own save.
      */
@@ -1017,6 +1041,13 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting FOLLOWING_FEED_HOME =
             new BooleanSetting("hushfacebook_following_feed_home", FALSE);
+
+    /**
+     * Which of the Feeds tab's filters Home shows while {@link #FOLLOWING_FEED_HOME} is on. All is
+     * the most recent feed. A filter Facebook's feed types don't have leaves Home on All.
+     */
+    public static final EnumSetting<FeedsSubtab> HOME_FEED =
+            new EnumSetting<>("hushfacebook_home_feed", FeedsSubtab.ALL, Setting.parent(FOLLOWING_FEED_HOME));
 
     /**
      * The tab bar keeps Marketplace, Notifications and the profile or Menu tab, and a start from

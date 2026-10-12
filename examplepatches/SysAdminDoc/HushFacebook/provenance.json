@@ -284,6 +284,15 @@
     },
     {
       "paths": [
+        "extensions/shared/library/src/main/java/app/morphe/extension/shared/settings/preference/CrashFile.java"
+      ],
+      "origin": "original",
+      "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
+      "license": "GPL-3.0-only",
+      "changes": "Written for Hushfacebook: writes the redacted crash report to Download/Hushfacebook through MediaStore, keeps the newest five, and takes a file back when the process lived through the exception."
+    },
+    {
+      "paths": [
         "extensions/shared/library/src/main/java/app/morphe/extension/shared/L10nTranslations.java"
       ],
       "origin": "original",
@@ -703,6 +712,17 @@
       "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
       "license": "GPL-3.0-only",
       "changes": "Written for Hushfacebook: resume long videos. FacebookAppAdsRemover describes the behavior and has no licence, so nothing was taken from its code. The patch finds FbGrootPlayer in Facebook 577 and 580 by its play trace, then its kept-name maybeTrackVideoStart and maybeTrackVideoStop, its release, bind and static seek by the trace strings they keep, its public seek as the one that hands on to that seek, its position reader as the one int method of the interface that declares isPlaying, and its length reader as the other int method its own remaining-time sum asks. VideoPlayerParams' field names come from the debug dump that reports each under its real name. The extension saves where a video longer than two minutes stopped, up to 200 of them for 30 days in a preferences file of its own, forgets one stopped near its end, and seeks back once on the video's next first start unless a seek came first or Facebook placed the start itself."
+    },
+    {
+      "paths": [
+        "extensions/facebook/src/main/java/app/morphe/extension/facebook/media/FrameStep.java",
+        "patches/src/main/kotlin/app/morphe/patches/facebook/media/framestep/FrameStepAnchors.kt",
+        "patches/src/main/kotlin/app/morphe/patches/facebook/media/framestep/FrameStepPatch.kt"
+      ],
+      "origin": "original",
+      "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
+      "license": "GPL-3.0-only",
+      "changes": "Written for Hushfacebook: Frame step, for issue #95, from Facebook 582. It finds FbGrootPlayer the way Resume long videos does and hooks its kept-name maybeTrackVideoStart and maybeTrackVideoStop, its release and its static seek, plus the one Integer-and-int boolean check that seek asks before dropping a small seek, and fills stubs with the position reader, isPlaying, the public seek and the one ViewGroup field the attach holding FbGrootPlayer.attachPlayerViewInternal writes. GestureReactionComponent, found by its constructor's name, makes a view whose constructor sets one OnTouchListener; the hook goes first in its onTouch. The extension steps a paused player under a quick side-third tap by 33 ms with BY_INITIAL_FRAME_PERFECT_SEEK (BY_USER gets 582's fast seek, which landed up to two seconds early) and turns the tap's up into a cancel. A moment later it reads where the player landed, and when that's off it asks once more with the offset taken off and keeps the offset for that player's later steps."
     },
     {
       "paths": [

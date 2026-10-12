@@ -1,3 +1,28 @@
+## [1.5.2](https://github.com/YYDarlinker/morphe-ai-caption-translator/compare/v1.5.1...v1.5.2) (2026-10-12)
+
+- Keep uploaded subtitles exactly as authored, including two-row subtitles such as romanization above a translation; only auto-generated subtitles get locally optimized sentence breaks and page turns, tuned for Japanese and other unpunctuated languages.
+- Remove bracketed furigana readings from the text sent for translation, so the translation does not repeat them.
+
+## [1.5.1](https://github.com/YYDarlinker/morphe-ai-caption-translator/compare/v1.5.0...v1.5.1) (2026-10-12)
+
+- Fix captions that were missing or shown twice on videos whose subtitle tracks repeat every cue.
+- Choose the source subtitle track by the video's spoken language, preferring human-made tracks.
+- Show the video's own subtitles in the selected language directly, without translation requests, with sentence breaks and page turns optimized locally.
+
+## [1.5.0](https://github.com/YYDarlinker/morphe-ai-caption-translator/compare/v1.4.1...v1.5.0) (2026-10-12)
+
+- Support YouTube 21.20.405 with official Morphe Patches 1.47.0.
+- Fix Shorts captions disappearing after looping or reopening a video.
+- Fix YouTube crashes caused by interrupted translation responses.
+- Improve caption pagination and prevent repeated pages and flicker.
+- Reduce caption startup latency with streaming responses and faster planning.
+- Display original subtitles in the AI caption overlay without translation requests.
+
+## [1.4.1](https://github.com/YYDarlinker/morphe-ai-caption-translator/compare/v1.4.0...v1.4.1) (2026-10-11)
+
+- Remove prompt settings.
+- Fix Arabic interface layout issues.
+
 ## [1.4.0](https://github.com/YYDarlinker/morphe-ai-caption-translator/compare/v1.3.5...v1.4.0) (2026-10-05)
 
 ### 🐛 Bug Fixes

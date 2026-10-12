@@ -25,7 +25,9 @@ import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstructio
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference;
 import com.android.tools.smali.dexlib2.iface.reference.StringReference;
+import com.android.tools.smali.dexlib2.iface.value.EncodedValue;
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference;
+import com.android.tools.smali.dexlib2.util.EncodedValueUtils;
 import com.reandroid.arsc.chunk.PackageBlock;
 import com.reandroid.arsc.chunk.TableBlock;
 import com.reandroid.arsc.chunk.xml.AndroidManifestBlock;
@@ -175,6 +177,16 @@ public final class SelectionCheck {
         return result;
     }
 
+    /**
+     * A field's initial value, with an explicit default (0, false, null) read as none. The DEX
+     * writer drops trailing defaults when a patch rewrites the class, and the field starts at its
+     * type's default either way.
+     */
+    static EncodedValue initialValue(Field field) {
+        EncodedValue value = field.getInitialValue();
+        return value == null || EncodedValueUtils.isDefaultValue(value) ? null : value;
+    }
+
     static void declarations(ClassDef original, ClassDef replacement, boolean allowAddedMethods) {
         require(original.getAccessFlags() == replacement.getAccessFlags()
                 && java.util.Objects.equals(original.getSuperclass(), replacement.getSuperclass())
@@ -187,7 +199,7 @@ public final class SelectionCheck {
         for (Field field : original.getFields()) {
             Field next = fields.remove(field.getName() + ":" + field.getType());
             require(next != null && field.getAccessFlags() == next.getAccessFlags()
-                    && java.util.Objects.equals(field.getInitialValue(), next.getInitialValue())
+                    && java.util.Objects.equals(initialValue(field), initialValue(next))
                     && field.getAnnotations().equals(next.getAnnotations())
                     && field.getHiddenApiRestrictions().equals(next.getHiddenApiRestrictions()));
         }
@@ -362,7 +374,7 @@ public final class SelectionCheck {
         hook(calls, flags, "hideStickerTime", "misc/StickerTime", "hidden");
         hook(calls, flags, "stickerSize", "misc/StickerSize", "size");
         hook(calls, flags, "ignoreMutedMentions", "misc/MutedMentions", "notifyDialog");
-        hook(calls, flags, "hideBlockedInGroups", "misc/BlockedSenders", "type");
+        hook(calls, flags, "hideBlockedInGroups", "misc/BlockedSenders", "type", "hideReply");
         hook(calls, flags, "hideFeaturesAndInvite", "misc/FeaturesInvite", "addFeaturesRow");
         hook(calls, flags, "messageMenuRepeat", "misc/MessageMenu", "fill");
         hook(calls, flags, "keepDeleted", "misc/KeepDeleted", "userUpdate", "channelUpdate", "push", "measuring");
@@ -371,6 +383,7 @@ public final class SelectionCheck {
         hook(calls, flags, "outsideTranslate", "misc/OutsideTranslate", "show", "fill", "chosen", "headerMenu", "headerClick");
         hook(calls, flags, "hideChannelButtons", "misc/ChannelButtons", "set");
         hook(calls, flags, "hideSendAs", "misc/SendAs", "show");
+        hook(calls, flags, "hideContactsTab", "misc/MainTabs", "tabsShown", "blocksSwipe");
         hook(calls, flags, "fasterDownloads", "misc/DownloadSpeed", "fast");
         hook(calls, flags, "saveDownloads", "misc/SaveDownloads", "fileLoaded");
         hook(calls, flags, "unifiedPush", "misc/UnifiedPush", "token", "type");

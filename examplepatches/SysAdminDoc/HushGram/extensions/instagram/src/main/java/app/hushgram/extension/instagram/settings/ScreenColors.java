@@ -182,6 +182,8 @@ final class ScreenColors {
         }
         paintChevron(row, preference);
         ImageView icon = row.findViewById(android.R.id.icon);
+        // Decoration: the row's title already says what it is, so a screen reader skips the icon.
+        if (icon != null) icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         if (icon != null && preference.getIcon() != null) {
             ViewGroup.LayoutParams imageSize = icon.getLayoutParams();
             imageSize.width = dp(row, 24);
@@ -195,14 +197,51 @@ final class ScreenColors {
                 frame.setLayoutParams(size);
             }
         }
-        PreferenceGroup parent = preference.getParent();
-        boolean grouped = parent instanceof PreferenceCategory;
-        boolean first = !grouped || parent.getPreference(0) == preference;
-        boolean last = !grouped || parent.getPreference(parent.getPreferenceCount() - 1) == preference;
-        paintSurface(row, preference, first, last);
+        paintSurface(row, preference, opensCard(preference), closesCard(preference));
     }
 
-    /** Group boundaries follow the visible rows, including a filtered search result. */
+    /**
+     * Whether [preference] is the top row of the card it sits in. A section's rows share one card.
+     * On the page itself, the rows that open each category's page share one too, and Support
+     * HushGram joins the About row it follows; every other row there is a card of its own.
+     */
+    static boolean opensCard(Preference preference) {
+        PreferenceGroup parent = preference.getParent();
+        if (parent == null) return true;
+        int at = indexIn(parent, preference);
+        if (at <= 0) return true;
+        return !(parent instanceof PreferenceCategory) && !sharesCard(parent.getPreference(at - 1), preference);
+    }
+
+    /** Whether [preference] is the bottom row of its card. */
+    static boolean closesCard(Preference preference) {
+        PreferenceGroup parent = preference.getParent();
+        if (parent == null) return true;
+        int at = indexIn(parent, preference);
+        if (at < 0 || at == parent.getPreferenceCount() - 1) return true;
+        return !(parent instanceof PreferenceCategory) && !sharesCard(preference, parent.getPreference(at + 1));
+    }
+
+    /** Two neighbours on the page itself that draw as one card: both open a page, or Support follows one. */
+    private static boolean sharesCard(Preference above, Preference below) {
+        return opensPage(above) && (opensPage(below) || HushgramPreferenceFragment.SUPPORT_ROW_KEY.equals(below.getKey()));
+    }
+
+    private static boolean opensPage(Preference preference) {
+        String key = preference.getKey();
+        return key != null && key.startsWith(HushgramPreferenceFragment.CATEGORY_ROW_KEY);
+    }
+
+    /** Where [preference] stands among the rows [group] shows, which it keeps in their order. */
+    private static int indexIn(PreferenceGroup group, Preference preference) {
+        for (int i = 0; i < group.getPreferenceCount(); i++) if (group.getPreference(i) == preference) return i;
+        return -1;
+    }
+
+    /**
+     * Group boundaries follow the visible rows, including a filtered search result. The card's
+     * height is the row's: its text wraps at any font size and the row grows to fit.
+     */
     void paintSurface(View row, Preference preference, boolean first, boolean last) {
         float radius = dp(row, 10);
         GradientDrawable surface = new GradientDrawable();
@@ -234,6 +273,28 @@ final class ScreenColors {
             title.setAllCaps(true);
         }
         row.setPaddingRelative(dp(row, 20), dp(row, 20), dp(row, 20), dp(row, 8));
+    }
+
+    /**
+     * The line that opens a category's page: secondary text on the page itself, outside any card,
+     * starting where the section titles do. It wraps and the row grows with it at any font size.
+     */
+    void paintIntro(View row) {
+        TextView text = row.findViewById(android.R.id.title);
+        if (text != null) {
+            text.setTextColor(summary);
+            text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            text.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            text.setLineSpacing(dp(row, 2), 1);
+            if (text.getParent() instanceof View) {
+                View block = (View) text.getParent();
+                block.setPadding(0, 0, 0, 0);
+                block.setMinimumHeight(0);
+            }
+        }
+        row.setBackground(null);
+        row.setMinimumHeight(0);
+        row.setPaddingRelative(dp(row, 20), dp(row, 12), dp(row, 20), 0);
     }
 
     /** Marks the chevron a row was given, so a recycled row's can be found and taken off. */
@@ -562,6 +623,12 @@ final class ScreenColors {
     static void heading(View row) {
         ScreenColors colors = shown;
         (colors == null ? DEFAULT : colors).paintHeading(row);
+    }
+
+    /** Paints a category page's intro with the colours on show, if there are any. */
+    static void intro(View row) {
+        ScreenColors colors = shown;
+        (colors == null ? DEFAULT : colors).paintIntro(row);
     }
 
     /** Paints both recovery actions even if the ordinary settings page failed to initialize. */

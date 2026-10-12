@@ -634,7 +634,7 @@ Hide LIVE videos from the feed.	Скрывать видео LIVE из ленты
 The Message requests row leaves the Inbox. Requests keep arriving and wait there until you turn this off.	Строка «Запросы на сообщения» исчезает из Входящих. Запросы продолжают поступать и ждут там, пока вы не выключите это.
 The New followers row leaves the top of the Inbox. The accounts still follow you.	Строка «Новые подписчики» исчезает сверху Входящих. Аккаунты по-прежнему подписаны на вас.
 Hide the Send to row	Скрывать строку «Отправить»
-Hide the Tako AI bubble above the profile button, the Ask bar under videos, the Ask Tako button on the search page, the Ask Tako tab on search results and the Tako bar above comments.	Скрывать значок ИИ Tako над кнопкой профиля, строку «Спросить» под видео, кнопку «Спросить Tako» на странице поиска, вкладку «Спросить Tako» в результатах поиска и строку Tako над комментариями.
+Hide the Tako AI bubble above the profile button or in the bottom corner of videos, the Ask bar under videos, the Ask Tako button on the search page, the Ask Tako tab on search results and the Tako bar above comments.	Скрывать значок ИИ Tako над кнопкой профиля или в нижнем углу видео, строку «Спросить» под видео, кнопку «Спросить Tako» на странице поиска, вкладку «Спросить Tako» в результатах поиска и строку Tako над комментариями.
 The Tako assistant's conversation leaves the Inbox list. The Tako bubble on the feed has its own switch under Feed tabs.	Переписка с ассистентом Tako исчезает из списка Входящих. У значка Tako в ленте есть свой переключатель в разделе «Вкладки ленты».
 The activity status control leaves the Inbox header. Whether others see you as active is unchanged.	Элемент управления статусом активности исчезает из шапки Входящих. То, видят ли вас другие активным, не меняется.
 Hide the add people icon	Скрывать значок добавления людей
@@ -710,6 +710,8 @@ Move to the next video when the current one ends. Pauses, open dialogs and scree
 Keep captions in Clear display	Оставлять субтитры в чистом виде
 Keep going	Продолжить
 Keep the Favorites tab	Оставлять вкладку Избранное
+Dark Favorites popup	Тёмное окно Избранного
+When TikTok is in dark mode, the list of collections you get by holding the Favorites button is dark too instead of white.	Когда TikTok в тёмной теме, список подборок, который открывается при удержании кнопки «Избранное», тоже тёмный, а не белый.
 Keep the clock and status icons off the screen while TikTok is open. Swipe down from the top to peek at them.	Держать часы и значки статуса скрытыми, пока открыт TikTok. Проведите вниз от верхнего края, чтобы увидеть их.
 Keep the screen's refresh rate	Сохранять частоту обновления экрана
 Keep the speed you chose for the next video. Off, each new video starts at 1x and a manual choice lasts for that video only.	Сохранять выбранную скорость для следующего видео. При выключении каждое новое видео начинается на 1x, а ручной выбор действует только для текущего видео.
@@ -1727,6 +1729,7 @@ Unpersonalized For You videos	Неперсонализированные вид�
 Reviewed presets for TikTok %1$s	Проверенные предустановки для TikTok %1$s
 No presets have been reviewed for TikTok %1$s yet	Для TikTok %1$s пока нет проверенных предустановок
 Repost with a comment	Репост с комментарием
+Profile banner	Баннер профиля
 Profile banner and new profile layout	Баннер профиля и новый вид профиля
 Comment with live photos, the camera or audio	Комментарии с живыми фото, камерой или аудио
 Save comments to Favorites	Сохранять комментарии в Избранное
@@ -1854,6 +1857,8 @@ Play the audio on videos TikTok silenced because their sound was pulled for copy
 Match region fields in requests	Подменять поля региона в запросах
 Show exact LIVE viewer counts	Показывать точное число зрителей LIVE
 A LIVE room shows how many people are watching as a rounded number like 1.2K. This shows the exact count instead.	В комнате LIVE число зрителей показано округлённо, например 1,2K. Этот переключатель показывает точное число.
+Offer LIVE quality in more rooms	Выбор качества LIVE в большем числе комнат
+TikTok lets you pick a LIVE's quality only in some rooms. This adds Video quality to the menu in most of the others, and the next room opens at the quality you picked last.	TikTok даёт выбрать качество LIVE только в некоторых комнатах. Этот переключатель добавляет Качество видео в меню большинства остальных, а следующая комната открывается в последнем выбранном качестве.
 Keep watching in a small window	Смотреть в маленьком окне
 When you leave TikTok while a video plays, it keeps playing in a small window over your other apps, with a button to pause it. Works in the feed and on videos you open from a profile, search or a sound. Needs Android 8 or later.	Если выйти из TikTok во время воспроизведения видео, оно продолжит воспроизводиться в маленьком окне поверх других приложений, с кнопкой паузы. Работает в ленте и в видео, открытых из профиля, поиска или звука. Требуется Android 8 или новее.
 Play	Воспроизвести

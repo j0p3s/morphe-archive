@@ -4,6 +4,48 @@ Every Hushfeed release, newest first.
 
 ## Unreleased
 
+## 0.71.3 (2026-10-11)
+
+* **TikTok:** With Show a LIVE under the status bar on, rooms further on keep the shade under the clock too. It used to go light again after the first few LIVEs you scrolled through (#137).
+
+* **TikTok:** Hide the Tako bubble now also hides the Tako bubble in the bottom right corner of feed videos, which some accounts get instead of the one above the profile button (#115).
+
+* **TikTok:** The Feature Gate Lab has a new Profile banner preset. It turns on Add background in TikTok's Edit profile without switching the rest of the profile to the new layout (#80).
+
+* **TikTok:** The collections popup you get by holding the Favorites button is dark now when TikTok is in dark mode, instead of white. Dark Favorites popup in Hushfeed settings > App turns it off (#142).
+
+## 0.71.2 (2026-10-11)
+
+* **TikTok:** Hide the status bar in LIVE rooms and Show a LIVE under the status bar now work on a LIVE opened from the preview under a creator's card in search too. TikTok opens that LIVE inside the page it uses for opened videos, which the switches didn't reach (#137).
+
+## 0.71.1 (2026-10-11)
+
+* **TikTok:** With Keep captions in Clear display on, the caption in Clear display now sits where TikTok showed it before the controls went away, instead of dropping to the bottom edge (#141). Before any caption has shown, it keeps the old spot.
+
+* **TikTok:** With Show a LIVE under the status bar on, the strip under the clock is shaded like the rest of the room's top again. On phones where TikTok keeps a black strip for the bar, it showed lighter than the stream below it (#137).
+
+## 0.71.0 (2026-10-11)
+
+* **TikTok:** With Double tap set to one of Hushfeed's actions and Long-press controls patched in, a second tap your finger stays on a moment too long no longer brings up TikTok's long press menu as well, so the share panel stops opening on top of the comments. (#63)
+
+* **TikTok:** LIVE controls has a third switch, Offer LIVE quality in more rooms, under Hushfeed settings > Playback. TikTok offers Video quality in a LIVE's menu only when the stream asks for it or TikTok turns its newer quality picker on for your account, so in some rooms there was no way to pick one. With the switch on, most rooms without it get the newer picker (audio-only rooms still don't), and the next room opens at the quality you picked last until TikTok closes. It's off by default. (#57)
+
+* **TikTok:** Show dates on profile grids and Show engagement rate work on TikTok 47.1.4's grids now, on a profile's videos and on Favorites and liked videos too. That version sets each cell's view count in a place the patch didn't reach, so neither the date nor the rate showed up there.
+
+* **TikTok:** Blocked creators, blocked words, the view and like ranges and switches like Hide LIVE videos and Hide stories now work on the Following tab too. On TikTok 47.1.4 that tab only lost its ads and place-tagged videos, so a creator you'd blocked could still turn up there.
+
+* **TikTok:** A word that isn't a language code in Don't auto translate these languages now gets a plain "isn't a language code" message. It used to warn that no video would ever match, which is the caption language filter's warning and doesn't fit a list that only keeps text untranslated (#121).
+
+* **TikTok:** Build details now also names the patches that only change TikTok's resources, like Change app name, Custom launcher icon and Trust user certificates. It lists the patch, never the name or picture you picked in its options.
+
+* **TikTok:** With Log diagnostics on, the log now says once per video how many progress bar preview pictures TikTok sent with it. If the preview doesn't show while you drag the bar, a diagnostics export tells whether the video came with any (#140).
+
+* **TikTok:** Build details and the full log export now list every patch that changed TikTok's code in your build, by a short name, including the ones with no switch like Comment send fix and Network request report.
+
+* **TikTok:** Clear display, remembered or automatic, now also clears a video you open from search. TikTok hands that video to the opened page already playing, and Clear display waited for a start that never came there, so the buttons and TikTok's search bar stayed up (#84).
+
+* **TikTok:** Hide video overlays and Feed text sizes now also work when a link starts TikTok straight into search or a video, with no For You feed behind it. Before, the videos opened that way kept every overlay and TikTok's own text size (#84).
+
 * **TikTok:** Protect external pages in TikTok's browser now counts the puzzle CAPTCHA that LIVEs and the Shop open as one of TikTok's own pages, so the puzzle keeps its link back to TikTok (#87). It loads from TikTok's own servers, just not from an address the switch knew.
 
 * **TikTok:** A quick second tap on Build details, Hook status, Licenses or What's new no longer opens the same window twice, one on top of the other.
@@ -48,7 +90,7 @@ Every Hushfeed release, newest first.
 
 * **TikTok:** The diagnostic report has a new Storage section listing the biggest folders in TikTok's storage, so a report can show what's filling it up (#70). It names folders only, never files, and hides account numbers.
 
-* **TikTok:** Pressing back on a cleared video from search or a profile no longer counts as turning Clear display off. Opening the same video again clears it like any other, and a remembered Clear display stays on (#84).
+* **TikTok:** Pressing back on a cleared video, or opening the share panel from it, no longer counts as turning Clear display off. Opening the same video again clears it like any other, and a remembered Clear display stays on (#84).
 
 * **TikTok:** Remove LIVE extras now says it takes out the files for joining someone's LIVE as a guest, so joining by voice or video may stop working with it in (#132). Leave it out if you join LIVEs.
 

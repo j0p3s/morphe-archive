@@ -220,6 +220,8 @@ Download as video	Baixar como vídeo
 Download as photo	Baixar como foto
 Download on stories	Baixar nos stories
 Adds Download to the menu of anyone's story, photo or video, saved at your download quality. Off or paused, Instagram's own menu returns.	Adiciona Baixar ao menu do story de qualquer pessoa, foto ou vídeo, salvo na sua qualidade de download. Desativado ou pausado, o menu do próprio Instagram volta.
+Upload stories at full quality	Enviar stories em qualidade máxima
+Video stories you post are sent up to 1080 pixels wide instead of 720, as they are with Instagram's own Upload at highest quality setting on. Photo stories stay as they are.	Os stories em vídeo que você posta são enviados com até 1080 pixels de largura em vez de 720, como acontece com a opção Enviar na qualidade mais alta do próprio Instagram ativada. Os stories com foto continuam como estão.
 Download feed videos	Baixar vídeos do feed
 Adds Download to the menu of a post in your feed with a video. Uses the quality below. Off or paused, Instagram's own menu returns.	Adiciona Baixar ao menu de um post com vídeo no seu feed. Usa a qualidade abaixo. Desligado ou pausado, o menu do Instagram volta.
 Playback	Reprodução
@@ -760,6 +762,9 @@ Red	Vermelho
 Orange	Laranja
 Green	Verde
 Teal	Azul-petróleo
+# context: Layout switch; it puts HushGram's logo on the screen Android shows while Instagram starts
+HushGram launch screen	Tela de abertura do HushGram
+Shows HushGram's logo instead of Instagram's on the screen you see while Instagram starts, on Android 13 and newer. It shows from the next start.	Mostra o logotipo do HushGram em vez do logotipo do Instagram na tela que aparece enquanto o Instagram abre, no Android 13 ou mais recente. Ele aparece a partir da próxima abertura.
 # context: Downloads switch under Download feed videos; it adds Download cover to a feed video post's menu
 Download video covers	Baixar capas de vídeos
 Adds Download cover to the menu of a feed post with a video, and of a carousel showing one. It saves the still picture shown before the video plays, at its largest size.	Adiciona Baixar capa ao menu de um post do feed com vídeo e de um carrossel mostrando um. Salva a imagem estática exibida antes de o vídeo começar, no maior tamanho.
@@ -767,6 +772,18 @@ Adds Download cover to the menu of a feed post with a video, and of a carousel s
 Download button on feed posts	Botão de download nas publicações do feed
 Puts a download icon in the row under a post, left of Save, so one tap saves it without opening the menu. On a carousel it asks for this page or all of them.	Coloca um ícone de download na linha abaixo da publicação, à esquerda de Salvar, para que um toque a salve sem abrir o menu. Em um carrossel, ele pergunta se é só esta página ou todas.
 Nothing to download on this post	Nada para baixar nesta publicação
+# context: Downloads switch; a hold with two or three fingers on a feed post or a reel saves it
+Hold to download	Segurar para baixar
+Hold two fingers still on a feed post's picture or video, or on a reel, and it saves what's under them, the same as Download in the menu. Instagram's one-finger long press stays as it was. Needs Download feed videos or photos, and Download on reels for reels.	Segure dois dedos parados sobre a foto ou o vídeo de uma publicação do feed, ou sobre um reel, e o que está embaixo deles é salvo, igual a Baixar no menu. O toque longo de um dedo do Instagram continua como era. Precisa de Baixar vídeos do feed ou Baixar fotos do feed, e de Baixar nos reels para reels.
+# context: Downloads list under Hold to download; how many fingers the hold takes
+Fingers	Dedos
+# context: Downloads list under Hold to download; how long the fingers stay down before it saves
+Hold time	Tempo segurando
+Two fingers	Dois dedos
+Three fingers	Três dedos
+Half a second	Meio segundo
+1 second	1 segundo
+1.5 seconds	1,5 segundo
 Use HushGram's setting names	Usar os nomes de configurações do HushGram
 MetaConfig shows names from HushGram's own list in place of numbers. The list comes from Instagram 447, so a few newer settings still show as numbers. A list you import is used instead.	O MetaConfig mostra nomes da lista própria do HushGram no lugar dos números. A lista vem do Instagram 447, então algumas configurações mais novas continuam aparecendo como números. Uma lista que você importar é usada no lugar dela.
 Import setting names	Importar nomes de configurações
@@ -843,6 +860,8 @@ Ghost mode button on Home's header	Botão do modo fantasma no cabeçalho da Pág
 Adds a ghost button at the top of Home, next to Messages when it's there and at the end of the buttons when it isn't. Tap it to turn Ghost mode on or off. Restart Instagram to see the change.	Adiciona um botão de fantasma no topo da Página inicial, ao lado de Mensagens quando ele estiver lá e no fim dos botões quando não estiver. Toque nele para ativar ou desativar o modo fantasma. Reinicie o Instagram para ver a mudança.
 Search button on Home's header	Botão de Pesquisa no cabeçalho da Página inicial
 Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works with the Search tab hidden too, unless you swipe between your tabs. Restart Instagram to see the change.	Adiciona uma lupa no topo da Página inicial que abre a Pesquisa, como a aba Pesquisar. Funciona também com a aba Pesquisar oculta, a não ser que você deslize entre as abas. Reinicie o Instagram para ver a mudança.
+Center the logo on Home's header	Centralizar o logo no cabeçalho da Página inicial
+Puts Instagram's logo in the middle of the top of Home, even with header buttons hidden or added. A feed's name shown there is centered too. Restart Instagram to see the change.	Coloca o logo do Instagram no meio do topo da Página inicial, mesmo com botões do cabeçalho ocultos ou adicionados. O nome de um feed mostrado ali também fica centralizado. Reinicie o Instagram para ver a mudança.
 Search isn't on your tab bar, so this button can't open it here. If Hide the Search tab is on, turn it off and restart Instagram.	A Pesquisa não está na sua barra de abas, então este botão não consegue abri-la aqui. Se Ocultar a aba Pesquisar estiver ativado, desative e reinicie o Instagram.
 Tab order	Ordem das abas
 The tab bar keeps Instagram's order.	A barra de abas mantém a ordem do Instagram.
@@ -890,3 +909,65 @@ Full screen Home	Início em tela cheia
 Hides the status bar and the navigation bar while Home shows. Swipe in from the edge to bring them back for a moment.	Oculta a barra de status e a barra de navegação enquanto o Início aparece. Deslize a partir da borda para mostrá-las por um instante.
 Hide Notes on profile pictures	Ocultar Notas nas fotos de perfil
 Takes the Notes bubble off profile pictures, yours included. Notes in Messages stay as they are.	Tira o balão de Notas das fotos de perfil, inclusive a sua. As Notas nas Mensagens continuam como estão.
+# context: the line that opens a category's page in HushGram settings, under the page title
+How you open HushGram, and how this screen is laid out.	Como você abre o HushGram e como esta tela é organizada.
+Hide ads and share less about yourself with Instagram.	Oculte anúncios e compartilhe menos sobre você com o Instagram.
+Choose what Home shows and how it behaves.	Escolha o que o Início mostra e como ele se comporta.
+Take Meta AI out of search, your feed, reels and profiles.	Tire a Meta AI da pesquisa, do seu feed, dos reels e dos perfis.
+Tidy up the Search tab and what it remembers.	Organize a aba Pesquisar e o que ela lembra.
+Keep your chats private and your inbox clear of extras.	Mantenha suas conversas privadas e sua caixa de entrada sem extras.
+Choose what reels show, and how they play and scroll.	Escolha o que os reels mostram e como eles tocam e rolam.
+Choose which stories you see and what people see you do.	Escolha quais stories você vê e o que os outros veem você fazer.
+Choose how videos start, sound and look.	Escolha como os vídeos começam, soam e aparecem.
+Take buttons you don't use off posts and the share sheet.	Tire dos posts e do menu de compartilhamento os botões que você não usa.
+Copy, save or hide comments.	Copie, salve ou oculte comentários.
+See who follows you back, and clear extras off profiles.	Veja quem segue você de volta e tire extras dos perfis.
+Change how Instagram looks, from its colors to its emoji.	Mude a aparência do Instagram, das cores aos emojis.
+Pick your tabs, their order and how the bar looks.	Escolha suas abas, a ordem delas e a aparência da barra.
+Group Instagram's notifications so they don't pile up.	Agrupe as notificações do Instagram para que elas não se acumulem.
+Keep Instagram's saved photos and videos from filling your phone.	Evite que as fotos e vídeos guardados pelo Instagram encham seu celular.
+Save photos, videos and more, and choose where they go.	Salve fotos, vídeos e mais, e escolha para onde eles vão.
+Stop background work Instagram doesn't need.	Pare o trabalho em segundo plano de que o Instagram não precisa.
+Stop Instagram from saying this version is too old.	Impeça o Instagram de dizer que esta versão é antiga demais.
+Instagram's own testing tools. Change them only if you know what they do.	As ferramentas de teste do próprio Instagram. Mude só se você souber o que elas fazem.
+Chosen when you patched. Patch again to change them.	Escolhidos quando você aplicou os patches. Aplique os patches novamente para alterá-los.
+Save your HushGram choices to a file, or bring them back.	Salve suas escolhas do HushGram em um arquivo ou traga-as de volta.
+Your version, the source code and licenses.	Sua versão, o código-fonte e as licenças.
+Open settings with a long press on your profile's menu	Abrir configurações ao manter o menu do seu perfil pressionado
+A long press on the menu button, the three lines at the top right of your own profile, opens HushGram. A tap still opens Instagram's menu, and other profiles stay the same.	Manter pressionado o botão de menu, as três linhas no canto superior direito do seu próprio perfil, abre o HushGram. Um toque continua abrindo o menu do Instagram, e os outros perfis ficam como estão.
+Hide the top bar on the Reels tab	Ocultar a barra superior da aba Reels
+Takes away the row at the top of the Reels tab, with the Reels title, the camera button and anything else Instagram puts there. Reels you open from a profile, a post or a chat keep theirs. The camera still opens from Home.	Tira a linha do topo da aba Reels, com o título Reels, o botão da câmera e tudo o mais que o Instagram colocar ali. Os reels que você abre de um perfil, de uma publicação ou de uma conversa continuam com ela. A câmera continua abrindo pelo Início.
+Hide the Save button on reels	Ocultar o botão Salvar nos reels
+Takes the Save button out of the column of buttons beside a reel, and the count under it. Posts in your feed keep theirs.	Tira o botão Salvar da coluna de botões ao lado de um reel, junto com o número embaixo dele. As publicações do seu feed continuam com o delas.
+Unlock with	Desbloquear com
+Phone lock	Bloqueio do celular
+HushGram PIN	PIN do HushGram
+A PIN you set here unlocks your messages, in place of your screen lock. It can't be recovered, only cleared by clearing Instagram's storage.	Um PIN que você define aqui desbloqueia suas mensagens no lugar do bloqueio de tela. Ele não pode ser recuperado, só removido limpando o armazenamento do Instagram.
+Your fingerprint, face or screen lock unlocks your messages.	A digital, o rosto ou o bloqueio de tela do celular desbloqueia suas mensagens.
+Set or change the 4 to 8 digit PIN. It stays on this phone and isn't in a backup.	Defina ou troque o PIN de 4 a 8 dígitos. Ele fica só neste celular e não vai para o backup.
+PIN saved.	PIN salvo.
+PIN	PIN
+Enter your PIN	Digite seu PIN
+Forgot PIN?	Esqueceu o PIN?
+Wrong PIN. Try again.	PIN incorreto. Tente de novo.
+Too many tries. Wait %1$d seconds.	Tentativas demais. Espere %1$d segundos.
+New PIN	Novo PIN
+Confirm PIN	Confirme o PIN
+Set a PIN	Definir um PIN
+Use 4 to 8 digits.	Use de 4 a 8 dígitos.
+The PINs don't match.	Os PINs não são iguais.
+Could not save the PIN.	Não deu para salvar o PIN.
+The PIN can't be recovered. To remove it, clear Instagram's storage in Android's app settings. That signs you out and resets HushGram's settings. A saved settings backup brings the rest back, but not the PIN.	O PIN não pode ser recuperado. Para removê-lo, limpe o armazenamento do Instagram nas configurações de apps do Android. Isso desconecta você e redefine as configurações do HushGram. Um backup das configurações traz o resto de volta, mas não o PIN.
+Open app info	Abrir info do app
+Hide 'Are you interested' questions	Ocultar as perguntas “Você tem interesse nesta publicação?”
+Hides the bubble under a post that asks 'Are you interested in this post?' with Not interested and Interested buttons. Nothing is answered for you.	Oculta o balão sob uma publicação que pergunta “Você tem interesse nesta publicação?” com os botões Não tenho interesse e Tenho interesse. Nada é respondido por você.
+Show when someone was last active	Mostrar a hora exata da última atividade
+Under a name in your messages and in a chat, the exact time they were last on, like Active at 3:42 PM, replaces Active 3h ago. Active now stays as it is.	Abaixo do nome nas mensagens e no chat, a hora exata da última atividade, como Ativo às 15:42, no lugar de Ativo há 3 h. Ativo agora continua como está.
+Active at %1$s	Ativo às %1$s
+Active yesterday at %1$s	Ativo ontem às %1$s
+Active %1$s at %2$s	Ativo em %1$s às %2$s
+Rounded corners on posts	Cantos arredondados nas publicações
+Rounds the corners of a post's photo, video and carousel pages in Home and Following. Posts you scroll to after a change show it. Stories, profiles, Explore and Reels stay as they were.	Arredonda os cantos da foto, do vídeo e das páginas do carrossel de uma publicação no Início e em Seguindo. As publicações que você rolar depois de uma mudança já aparecem assim. Stories, perfis, Explorar e Reels continuam como estavam.
+Corner size	Tamanho dos cantos
+Large	Grande
+Small	Pequeno

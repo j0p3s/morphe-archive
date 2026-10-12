@@ -85,6 +85,9 @@ public final class Shapes {
     public static boolean hideAiPatched() { return false; }
     public static boolean highRefreshPatched() { return false; }
     public static boolean timelinePatched() { return false; }
+    public static boolean speedingChimePatched() { return false; }
+    public static boolean speedCamerasPatched() { return false; }
+    public static boolean wazeAlertsPatched() { return false; }
     /** Add microG support: microG Maps, which signs in through microG. */
     public static boolean microgPatched() { return false; }
 
@@ -112,6 +115,8 @@ public final class Shapes {
     /** Off by default, unlike the others: it costs battery. */
     public static volatile boolean HIGH_REFRESH = false;
     public static volatile boolean BETTER_OFFLINE = betterOfflinePatched();
+    /** When the speeding chime sounds, one of SpeedAlerts' choices. */
+    public static volatile int SPEEDING_CHIME = speedingChimePatched() ? SpeedAlerts.RED : SpeedAlerts.OFF;
 
     /** Set right before an account-sheet row opens something of ours, so the sheet's tap
      *  dispatcher returns NO_DISMISS once instead of closing the sheet behind it. */
@@ -250,6 +255,21 @@ public final class Shapes {
         HIDE_AI = on && hideAiPatched();
     }
 
+    // ---- Speeding chime ----------------------------------------------------------
+    // SpeedAlerts does the work. Read on every speedometer change, so a change
+    // needs no restart.
+
+    public static final String KEY_SPEEDING_CHIME = "speeding_chime";
+
+    public static int speedingChime(Context c) {
+        return speedingChimePatched() ? prefs(c).getInt(KEY_SPEEDING_CHIME, SpeedAlerts.RED) : SpeedAlerts.OFF;
+    }
+
+    public static void setSpeedingChime(Context c, int mode) {
+        prefs(c).edit().putInt(KEY_SPEEDING_CHIME, mode).commit();
+        SPEEDING_CHIME = speedingChimePatched() ? mode : SpeedAlerts.OFF;
+    }
+
     // ---- 120 refresh rate ------------------------------------------------------
     // RefreshRate does the work. Off until switched on. The window's rate is set
     // when Maps starts, so a change needs a restart.
@@ -356,6 +376,42 @@ public final class Shapes {
     /** Called from the fused-provider availability check, possibly before any Activity exists. */
     public static boolean playLocation() {
         return !SOURCE_ANDROID.equals(sourceInUse());
+    }
+
+    /**
+     * Called from Maps' choice of heading source (issue #41): Play services' fused orientation only while
+     * the location source is Google's Play services; Maps' own fusion of the phone's sensors otherwise.
+     * With Android its requests went to the package that does not exist, so the blue dot never showed a
+     * heading and the compass calibration prompt never cleared.
+     */
+    public static boolean playOrientation() {
+        return SOURCE_GOOGLE.equals(sourceInUse());
+    }
+
+    /**
+     * Called from Maps' location-settings check, the one a tap on the my-location button waits for (issue #40).
+     * While the source is Android, Play services is never asked -- the check's connection goes to the package
+     * that does not exist -- and after Maps had been in the background that check was never answered, so the
+     * button did nothing until Maps was restarted. Answered here from Android's own location switch instead:
+     * on means OPTIMIZED, off opens Android's location settings. null: ask Play services or microG as usual.
+     * [results] is Maps' enum of answers, looked up by its constants' names.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static Object locationSettingsAnswer(Context c, Class<?> results) {
+        if (!locationSourcePatched() || playLocation()) return null;
+        try {
+            android.location.LocationManager lm = (android.location.LocationManager) c.getSystemService(Context.LOCATION_SERVICE);
+            boolean on = lm != null && lm.isLocationEnabled();
+            if (!on) {
+                Intent settings = new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                if (!(c instanceof android.app.Activity)) settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                c.startActivity(settings);
+            }
+            return Enum.valueOf((Class) results, on ? "OPTIMIZED" : "NOT_OPTIMIZED_OR_DISABLED");
+        } catch (Throwable t) {
+            android.util.Log.w("UA", "location settings answer", t);
+            return null;
+        }
     }
 
     private static boolean locationService(String action) {
@@ -632,6 +688,9 @@ public final class Shapes {
             HIDE_TABS = hideTabsEnabled(base);
             HIDE_DIRECTORY = hideDirectoryEnabled(base);
             HIDE_AI = hideAiEnabled(base);
+            SPEEDING_CHIME = speedingChime(base);
+            if (speedCamerasPatched()) SpeedCameras.refresh(base);
+            if (wazeAlertsPatched()) WazeAlerts.refresh(base);
             HIGH_REFRESH = highRefreshEnabled(base);
             PowerSaving.refresh(base);
             if (microgPatched()) MicroG.track(base);
@@ -827,6 +886,8 @@ public final class Shapes {
     public static void navCam(Object controller) {
         if (controller == null) return;
         navCamAt = android.os.SystemClock.uptimeMillis();
+        if (speedCamerasPatched()) SpeedCameras.navigating(true);
+        if (wazeAlertsPatched()) WazeAlerts.navigating(true);
         if (controller != NAV_CAM) {
             NAV_CAM = controller;
             if (NAV_TRACE) android.util.Log.w("UA", "NAVCAM controller published: " + controller.getClass().getName());
@@ -977,6 +1038,8 @@ public final class Shapes {
      *  up to three seconds after the rest of the drive chrome had gone. */
     public static void navEnded() {
         navCamAt = 0L;
+        if (speedCamerasPatched()) SpeedCameras.navigating(false);
+        if (wazeAlertsPatched()) WazeAlerts.navigating(false);
         try {
             if (android.os.Looper.myLooper() == android.os.Looper.getMainLooper()) detachTiles();
             else new android.os.Handler(android.os.Looper.getMainLooper()).post(new Detach());

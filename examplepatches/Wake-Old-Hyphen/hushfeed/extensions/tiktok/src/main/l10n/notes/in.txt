@@ -1,4 +1,44 @@
-## Unreleased
+## 0.71.3 (2026-10-11)
+
+* **TikTok:** Saat Tampilkan LIVE di bawah bilah status aktif, ruang-ruang berikutnya juga tetap berbayang di bawah jam. Sebelumnya strip itu kembali terang setelah beberapa LIVE pertama yang kamu gulir (#137).
+
+* **TikTok:** Sembunyikan gelembung Tako sekarang juga menyembunyikan gelembung Tako di pojok kanan bawah video feed, yang muncul di sebagian akun sebagai ganti gelembung di atas tombol profil (#115).
+
+* **TikTok:** Feature Gate Lab punya preset baru Banner profil. Preset ini menyalakan Add background di Edit profile TikTok tanpa mengubah bagian profil lainnya ke tata letak baru (#80).
+
+* **TikTok:** Popup koleksi yang muncul saat kamu menahan tombol Favorit sekarang gelap, bukan putih, saat TikTok dalam mode gelap. Popup Favorit gelap di pengaturan Hushfeed > Aplikasi mematikannya (#142).
+
+## 0.71.2 (2026-10-11)
+
+* **TikTok:** Sembunyikan bilah status di ruang LIVE dan Tampilkan LIVE di bawah bilah status sekarang juga berlaku untuk LIVE yang dibuka dari pratinjau di bawah kartu kreator di pencarian. TikTok membuka LIVE itu di dalam halaman yang dipakainya untuk video yang dibuka, yang sebelumnya tidak terjangkau oleh tombol-tombol itu (#137).
+
+## 0.71.1 (2026-10-11)
+
+* **TikTok:** Kalau Pertahankan keterangan saat tampilan bersih aktif, keterangan di tampilan bersih kini tetap di tempat TikTok menampilkannya sebelum kontrol disembunyikan, bukan turun ke tepi bawah (#141). Selama belum ada keterangan yang muncul, posisinya tetap di tempat lama.
+
+* **TikTok:** Saat Tampilkan LIVE di bawah bilah status aktif, strip di bawah jam kembali berbayang seperti bagian atas ruang lainnya. Di ponsel tempat TikTok menyisakan strip hitam untuk bilah, strip itu tampak lebih terang daripada siaran di bawahnya (#137).
+
+## 0.71.0 (2026-10-11)
+
+* **TikTok:** Kalau Ketuk dua kali diatur ke salah satu aksi Hushfeed dan Long-press controls ikut dipatch, ketukan kedua yang jarinya tertahan sedikit terlalu lama tidak lagi ikut membuka menu tekan lama TikTok, jadi panel bagikan tidak lagi muncul di atas komentar. (#63)
+
+* **TikTok:** Kontrol LIVE punya sakelar ketiga, Tawarkan kualitas LIVE di lebih banyak ruang, di pengaturan Hushfeed > Pemutaran. TikTok hanya menawarkan Kualitas video di menu LIVE saat siarannya memintanya atau saat TikTok menyalakan pemilih kualitas yang lebih baru untuk akunmu, jadi di beberapa ruang kualitas tidak bisa dipilih. Dengan sakelar menyala, sebagian besar ruang tanpa pilihan itu mendapat pemilih yang baru (ruang khusus audio tidak), dan ruang berikutnya terbuka dengan kualitas yang terakhir kamu pilih sampai TikTok ditutup. Bawaannya mati. (#57)
+
+* **TikTok:** Tampilkan tanggal di kisi profil dan Tampilkan tingkat interaksi kini berfungsi di kisi TikTok 47.1.4, baik di video sebuah profil maupun di Favorit dan video yang disukai. Versi itu menulis jumlah tayangan tiap kotak di tempat yang tidak dijangkau patch, jadi tanggal dan tingkatnya tidak pernah muncul di sana.
+
+* **TikTok:** Kreator yang diblokir, kata yang diblokir, rentang tayangan dan suka, serta tombol seperti Sembunyikan video LIVE dan Sembunyikan Story kini juga berlaku di tab Mengikuti. Di TikTok 47.1.4 tab itu hanya kehilangan iklan dan video bertanda lokasi, jadi kreator yang sudah kamu blokir masih bisa muncul di sana.
+
+* **TikTok:** Kata yang bukan kode bahasa di Jangan terjemahkan otomatis bahasa ini sekarang cukup mendapat pesan "bukan kode bahasa". Sebelumnya muncul peringatan bahwa tidak ada video yang akan cocok, padahal itu peringatan filter bahasa keterangan dan tidak cocok untuk daftar yang hanya membiarkan teks tidak diterjemahkan (#121).
+
+* **TikTok:** Detail build sekarang juga menyebut patch yang hanya mengubah sumber daya TikTok, seperti Change app name, Custom launcher icon, dan Trust user certificates. Yang dicantumkan patch-nya, tidak pernah nama atau gambar yang kamu pilih di opsinya.
+
+* **TikTok:** Dengan Catat diagnostik aktif, log sekarang mencatat sekali per video berapa gambar pratinjau bilah progres yang dikirim TikTok bersamanya. Kalau pratinjau tidak muncul saat bilah digeser, ekspor diagnostik menunjukkan apakah video itu membawa gambar pratinjau (#140).
+
+* **TikTok:** Detail build dan ekspor log lengkap kini mencantumkan setiap patch di build kamu yang mengubah kode TikTok, dengan nama singkat, termasuk yang tanpa sakelar seperti Comment send fix dan Network request report.
+
+* **TikTok:** Tampilan bersih, yang diingat atau otomatis, kini juga membersihkan video yang kamu buka dari pencarian. TikTok menyerahkan video itu ke halaman yang dibuka dalam keadaan sudah diputar, dan Tampilan bersih menunggu awal pemutaran yang tidak pernah datang di sana, jadi tombol dan bilah pencarian TikTok tetap tampil (#84).
+
+* **TikTok:** Sembunyikan overlay video dan ukuran teks feed kini juga berfungsi saat sebuah tautan membuka TikTok langsung ke pencarian atau video, tanpa feed Untuk Anda di belakangnya. Sebelumnya, video yang dibuka dengan cara itu tetap menampilkan semua overlay dan ukuran teks bawaan TikTok (#84).
 
 * **TikTok:** Lindungi halaman eksternal di browser TikTok kini menganggap CAPTCHA teka-teki yang dibuka LIVE dan Toko sebagai halaman TikTok sendiri, sehingga teka-teki tetap terhubung ke TikTok (#87). CAPTCHA itu dimuat dari server TikTok sendiri, hanya dari alamat yang belum dikenal sakelar ini.
 
@@ -44,7 +84,7 @@
 
 * **TikTok:** Laporan diagnostik punya bagian Storage baru yang menampilkan folder terbesar di penyimpanan TikTok, jadi laporan bisa menunjukkan apa yang membuatnya penuh (#70). Bagian ini hanya menyebut nama folder, tidak pernah nama file, dan menyembunyikan nomor akun.
 
-* **TikTok:** Menekan kembali di video yang sudah bersih dari pencarian atau profil tidak lagi dihitung sebagai mematikan Clear display. Membuka video yang sama lagi akan membersihkannya seperti video lain, dan Clear display yang diingat tetap menyala (#84).
+* **TikTok:** Menekan kembali di video yang sudah bersih, atau membuka panel bagikan dari sana, tidak lagi dihitung sebagai mematikan Clear display. Membuka video yang sama lagi akan membersihkannya seperti video lain, dan Clear display yang diingat tetap menyala (#84).
 
 * **TikTok:** Remove LIVE extras sekarang menyebutkan bahwa ia menghapus file untuk bergabung ke LIVE orang lain sebagai tamu, jadi bergabung lewat suara atau video bisa tidak berfungsi kalau patch ini dipakai (#132). Jangan pilih patch ini kalau kamu suka bergabung ke LIVE.
 

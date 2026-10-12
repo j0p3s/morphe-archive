@@ -4,6 +4,7 @@
  */
 package app.hxreborn.extension.shared;
 
+import java.lang.reflect.Array;
 import java.lang.reflect.Method;
 
 @SuppressWarnings("unused")
@@ -39,6 +40,10 @@ public final class PairipMethods {
     }
 
     private static Class<?> forName(String name) throws ClassNotFoundException {
+        if (name.endsWith("[]")) {
+            return Array.newInstance(forName(name.substring(0, name.length() - 2)), 0).getClass();
+        }
+
         switch (name) {
             case "boolean":
                 return boolean.class;

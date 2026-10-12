@@ -1,3 +1,64 @@
+## [1.11.2](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.11.1...v1.11.2) (2026-10-12)
+
+### Bug Fixes
+
+* **moovit:** route extension merge through sharedExtensionPatch ([86756fa](https://github.com/kveld9/kveld-extra-morphe-patches/commit/86756faf9a69c52bbd6b6960cdd122368b29a032))
+* **twitter:** eliminate bare getClass null checks after Firebase Perf getInstance ([4d98ca5](https://github.com/kveld9/kveld-extra-morphe-patches/commit/4d98ca52ae2f1fd31f3dac96ef19cfc013192628))
+
+### Code Refactoring
+
+* **twitter:** drop dead profile header field and visibility loops ([7ee42db](https://github.com/kveld9/kveld-extra-morphe-patches/commit/7ee42db3cc034797fca50c63e8f53e2628ab8ea1))
+* **twitter:** drop placebo DM composer toggles ([6fb1a16](https://github.com/kveld9/kveld-extra-morphe-patches/commit/6fb1a16ca2e33d53831d7b0c556853299217d5b8))
+* **twitter:** drop placebo navigation toggles ([dc8cba8](https://github.com/kveld9/kveld-extra-morphe-patches/commit/dc8cba81b8a38de586add47740ad36df123ff83a))
+* **twitter:** drop placebo profile toggle ([a22294d](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a22294d1fd632c374c931180929951d2c9af033f))
+* **twitter:** drop placebo timeline toggles ([8895db7](https://github.com/kveld9/kveld-extra-morphe-patches/commit/8895db7bf067ccb5d2e274027ac670c7f40fd361))
+
+## [1.11.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.11.0...v1.11.1) (2026-10-12)
+
+### Bug Fixes
+
+* **twitter:** hide profile Grok CTA via header state hook ([191f7a7](https://github.com/kveld9/kveld-extra-morphe-patches/commit/191f7a720a5fe2af216389996ae6129635164605))
+
+## [1.11.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.10.0...v1.11.0) (2026-10-11)
+
+### New Features
+
+* **twitter:** add hide live banner option in timeline UI ([cdce0c6](https://github.com/kveld9/kveld-extra-morphe-patches/commit/cdce0c631f9222d6bf033d9d014f477bbf839c92))
+
+## [1.10.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.9.0...v1.10.0) (2026-10-11)
+
+### Bug Fixes
+
+* **lrmobile:** chain unlock on sideload support as required dependency ([42b8a4b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/42b8a4bd6f5dd910a72d7d1293caf2ef1d770901))
+* **lrmobile:** skip PairIP hooks honestly on PairIP-free inputs ([9e12007](https://github.com/kveld9/kveld-extra-morphe-patches/commit/9e1200770dd62ef241c79e9242d5b3a69b4f5d86))
+* **tooling:** prevent zip slip path traversal in bundle split extraction ([a0f431e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a0f431e3a31861f1985c2482f46ad78290df1dbc))
+* **twitter:** stop nulling followButtonState and restore Timeline UI default ([e72ebf0](https://github.com/kveld9/kveld-extra-morphe-patches/commit/e72ebf0e0bc0de0b5393942c5adc4e8059446e36))
+
+### New Features
+
+* **lrmobile:** support sideloaded installs ([a7ddf1d](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a7ddf1dad0497b63c49610812320760f486a9598))
+* **twitter:** add DM Debloat section patch ([f6264da](https://github.com/kveld9/kveld-extra-morphe-patches/commit/f6264da59be8741ca70a83933972f070f82709fe))
+* **twitter:** add Navigation UI section patch ([fa601b1](https://github.com/kveld9/kveld-extra-morphe-patches/commit/fa601b1d50d227bc1aa3733dd17d0e469ca3b12a))
+* **twitter:** add Post and Profile UI section patch ([656ec43](https://github.com/kveld9/kveld-extra-morphe-patches/commit/656ec435ea0e4ba848489e369972e12619334f46))
+* **twitter:** add Timeline UI section patch ([5b15603](https://github.com/kveld9/kveld-extra-morphe-patches/commit/5b1560336c4c5393b4eab9f4cc9a9f981882bc05))
+* **twitter:** bump target to 12.33.1-prod.01 ([0e86d32](https://github.com/kveld9/kveld-extra-morphe-patches/commit/0e86d32e4794981fab34181156b6afe4872fb36c))
+* **twitter:** extend Timeline UI with post and thread options ([2a2f861](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2a2f861848383a8785ec8e3a5a29db8a40d6148b))
+
+## [1.9.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.8.0...v1.9.0) (2026-10-11)
+
+### Bug Fixes
+
+* **twitter:** correct shifted icon resource IDs in drawer items patch ([25e844c](https://github.com/kveld9/kveld-extra-morphe-patches/commit/25e844c01fd45264a43260f77ab5b61fd7099164))
+* **twitter:** render sharing domain option as dropdown without file picker ([6a4a6c8](https://github.com/kveld9/kveld-extra-morphe-patches/commit/6a4a6c851f16e826572c5acb2c98eb1788ba4d6a))
+* **twitter:** suppress discover more module in post detail replies ([eb4005a](https://github.com/kveld9/kveld-extra-morphe-patches/commit/eb4005a2567726e54265b8b43ef60474db674d04))
+
+### New Features
+
+* **twitter:** add hide grok post action toggle ([0041ad0](https://github.com/kveld9/kveld-extra-morphe-patches/commit/0041ad0ee6d2a91f4b8bc193354217bd78372a1e))
+* **twitter:** add hide profile get verified pill toggle ([b4739dc](https://github.com/kveld9/kveld-extra-morphe-patches/commit/b4739dc0552bad6a43926e66dbb1db50fcced96f))
+* **twitter:** add hide profile grok button toggle ([cb4ae05](https://github.com/kveld9/kveld-extra-morphe-patches/commit/cb4ae052a03a7253f201bcff4043dbaf150aac06))
+* **twitter:** add timeline add tab toggle ([0d8e4d5](https://github.com/kveld9/kveld-extra-morphe-patches/commit/0d8e4d5d865e96f1fa731a16121d96843f3ce6bb))
+
 ## [1.8.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.7.0...v1.8.0) (2026-10-11)
 
 ### Bug Fixes

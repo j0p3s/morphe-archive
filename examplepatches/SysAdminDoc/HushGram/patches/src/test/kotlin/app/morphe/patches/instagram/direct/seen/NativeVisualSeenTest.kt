@@ -7,6 +7,7 @@ package app.morphe.patches.instagram.direct.seen
 import app.morphe.ExtensionDex
 import app.morphe.Fixtures
 import app.morphe.PatchContexts
+import app.morphe.patches.instagram.FixtureCache
 import app.morphe.patches.instagram.FixtureDex
 import app.morphe.patches.instagram.misc.extension.parameterRegisterNumber
 import app.morphe.patches.instagram.direct.seen.VisualSeenHookTest.Companion.assertVisualGuard
@@ -34,7 +35,11 @@ import java.io.File
 
 /** Native structure and injected-branch execution, without claiming sender-side acceptance. */
 class NativeVisualSeenTest {
-    @Test fun declaredBuildsBindALiveVisualCreatorAndCompleteOnlyItsHandler() = fixtures { bundle ->
+    @Test fun declaredBuildsBindALiveVisualCreatorAndCompleteOnlyItsHandler() = fixtures { bundle -> declaredBuildsBindALiveVisualCreatorAndCompleteOnlyItsHandlerOn(bundle) }
+
+    @Test fun otherBuildsBindALiveVisualCreatorAndCompleteOnlyItsHandlerToo() = otherBuilds { bundle -> declaredBuildsBindALiveVisualCreatorAndCompleteOnlyItsHandlerOn(bundle) }
+
+    private fun declaredBuildsBindALiveVisualCreatorAndCompleteOnlyItsHandlerOn(bundle: File) {
         val classes = nativeClasses(bundle)
         val context = PatchContexts.of(classes.values)
         val found = context.findVisualSeen()
@@ -55,7 +60,11 @@ class NativeVisualSeenTest {
         untouched.forEach { assertEquals(0, it.visualCode().count { ins -> ins.visualReference()?.toString() == HOLD_VISUAL_SEEN }) }
     }
 
-    @Test fun dexBackedInstructionReReadsStillResolveTheCallbackForwarding() = fixtures { bundle ->
+    @Test fun dexBackedInstructionReReadsStillResolveTheCallbackForwarding() = fixtures { bundle -> dexBackedInstructionReReadsStillResolveTheCallbackForwardingOn(bundle) }
+
+    @Test fun dexBackedInstructionReReadsStillResolveTheCallbackForwardingOnTheOtherBuildsToo() = otherBuilds { bundle -> dexBackedInstructionReReadsStillResolveTheCallbackForwardingOn(bundle) }
+
+    private fun dexBackedInstructionReReadsStillResolveTheCallbackForwardingOn(bundle: File) {
         val types = nativeClasses(bundle).keys - VISUAL_SEEN
         val context = PatchContexts.of(FixtureDex.classesAsRead(bundle, types).values + ExtensionDex.classDef(VISUAL_SEEN))
         val found = context.findVisualSeen()
@@ -63,7 +72,12 @@ class NativeVisualSeenTest {
         assertVisualGuard(found.handler, found.complete.toString())
     }
 
-    @Test fun nativeSuccessRemovesRetriesAndRewritesOnlyTheRemainingMutationQueue() = fixtures { bundle ->
+    @Test fun nativeSuccessRemovesRetriesAndRewritesOnlyTheRemainingMutationQueue() = fixtures { bundle -> nativeSuccessRemovesRetriesAndRewritesOnlyTheRemainingMutationQueueOn(bundle) }
+
+    @Test fun nativeSuccessRemovesRetriesAndRewritesOnlyTheRemainingMutationQueueOnTheOtherBuildsToo() =
+        otherBuilds { bundle -> nativeSuccessRemovesRetriesAndRewritesOnlyTheRemainingMutationQueueOn(bundle) }
+
+    private fun nativeSuccessRemovesRetriesAndRewritesOnlyTheRemainingMutationQueueOn(bundle: File) {
         val classes = nativeClasses(bundle)
         val found = PatchContexts.of(classes.values).findVisualSeen()
         val completion = classes.values.flatMap { it.methods }.single {
@@ -107,7 +121,7 @@ class NativeVisualSeenTest {
 
     companion object {
         private const val DISK_IO = "Lcom/instagram/direct/store/impl/sqlite/DirectSQLiteDiskIO;"
-        private val cached = mutableMapOf<String, Map<String, ClassDef>>()
+        private val cached = FixtureCache<Map<String, ClassDef>>()
         private val anchors = setOf(VISUAL_ENDPOINT, VISUAL_MUTATION, SUCCESS_ANCHOR, DISPATCH_ANCHOR,
             "mutation_success", "IGDirectItemSeenMutation", "seenEphemeralMessageThreadData")
 
@@ -121,7 +135,20 @@ class NativeVisualSeenTest {
             assertTrue("no fixture of a declared build", count > 0)
         }
 
-        internal fun nativeClasses(bundle: File): Map<String, ClassDef> = cached.getOrPut(bundle.absolutePath) {
+        /** [fixtures] for the other builds of the version, each failure naming the build it came from. */
+        internal fun otherBuilds(except: String? = null, only: String? = null, check: (File) -> Unit) {
+            for (base in Fixtures.otherBuilds()) {
+                val build = base.parentFile.name.substringAfterLast('-')
+                if (build == except || (only != null && build != only)) continue
+                try {
+                    check(base)
+                } catch (failure: Throwable) {
+                    throw AssertionError("${base.parentFile.name}: ${failure.message}", failure)
+                }
+            }
+        }
+
+        internal fun nativeClasses(bundle: File): Map<String, ClassDef> = cached.get(bundle) {
             val found = mutableMapOf<String, ClassDef>()
             FixtureDex.forEach(bundle) { dex ->
                 if (dex.stringSection.any { it in anchors }) for (candidate in dex.classes) {
@@ -238,7 +265,12 @@ class NativeVisualSeenTest {
             error("queue status switch did not terminate")
         }
 
-        /** The descriptor retains uploaded tasks only if its explicit retention flag is true. */
+        /**
+         * The descriptor retains uploaded tasks only if its explicit retention flag is true. The
+         * retained delay is a static final long, which 385611438 reads with an sget-wide and
+         * 385611400's Redex folds into the constant itself (a const-wide/32 of a day), so either
+         * write is the retention's.
+         */
         internal fun assertUploadedDelayIsZero(registry: Method, classes: Map<String, ClassDef>, delay: MethodReference, marker: String = VISUAL_MUTATION) {
             val descriptorClass = classes.getValue(delay.definingClass)
             val constructor = descriptorClass.methods.single { it.name == "<init>" }
@@ -250,7 +282,11 @@ class NativeVisualSeenTest {
             val low = boxed.namedRegisters().first()
             val zero = code.indices.single { code[it].opcode == Opcode.CONST_WIDE_16 && (code[it] as OneRegisterInstruction).registerA == low }
             assertEquals(0L, (code[zero] as WideLiteralInstruction).wideLiteral)
-            val retention = code.indices.single { code[it].opcode == Opcode.SGET_WIDE && (code[it] as OneRegisterInstruction).registerA == low }
+            val retention = code.indices.single {
+                it != zero && code[it].opcode.setsWideRegister() && (code[it] as? OneRegisterInstruction)?.registerA == low
+            }
+            assertTrue("the retained delay is a static or a constant", code[retention].opcode == Opcode.SGET_WIDE || code[retention] is WideLiteralInstruction)
+            (code[retention] as? WideLiteralInstruction)?.let { assertTrue("the retained delay is not zero", it.wideLiteral != 0L) }
             assertEquals(Opcode.IF_EQZ, code[retention - 1].opcode)
             assertEquals(Opcode.IGET_BOOLEAN, code[retention - 2].opcode)
             val flag = (code[retention - 2].visualReference() as FieldReference).toString()

@@ -35,7 +35,7 @@ Direct URL:
 ## 🩹 Patches list
 
 <!-- PATCHES_START -->
-> **[v1.41.0](https://github.com/byehi98/okish-morphe-patches/releases/tag/v1.41.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;97 patches total
+> **[v1.43.0](https://github.com/byehi98/okish-morphe-patches/releases/tag/v1.43.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;102 patches total
 <details>
 <summary>📦 Into the Dead 2&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
 <br>
@@ -76,7 +76,7 @@ Direct URL:
 
 **🎯 Supported versions:**
 
-| 12.7.2 |
+| 12.7.8 |
 | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
@@ -266,6 +266,23 @@ Direct URL:
 </details>
 
 <details>
+<summary>📦 Progressbar95&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 1.1110 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| [Free Store](#free-store) | Tap any shop item to get it free. No payment, no Google Play popup. |  |
+| [License Fix](#license-fix) | Stops license checks from blocking the game on patched installs. |  |
+| [No Ads + Free Rewards](#no-ads-free-rewards) | Blocks all ads and gives reward-ad gifts instantly, no video needed. |  |
+
+</details>
+
+<details>
 <summary>📦 Swamp Attack&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
 <br>
 
@@ -439,6 +456,22 @@ Direct URL:
 </details>
 
 <details>
+<summary>📦 Lemmings: Puzzle Survival&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 9.4.4 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| [Lemmings: Free Store](#lemmings-free-store) | Everything in the shop is free. Tap an item and you get it right away — no Google Play payment sheet, no purchase-failed popup, nothing charged. |  |
+| [Lemmings: VIP Unlock](#lemmings-vip-unlock) | Unlocks VIP status without paying. VIP banners, rewards and bonuses show as active — no subscription needed. |  |
+
+</details>
+
+<details>
 <summary>📦 Lumina Walls&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
 
@@ -597,7 +630,7 @@ Direct URL:
 
 **🎯 Supported versions:**
 
-| 1.3.9 |
+| 1.3.10 |
 | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |

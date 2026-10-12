@@ -14,9 +14,9 @@ Select the app you want to patch inside Morphe Manager, follow all instructions 
 ## Patches
 
 <!-- PATCHES_START -->
-> **[v1.7.13](https://github.com/bearinmindcat/morphe-patches/releases/tag/v1.7.13)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;23 patches total
+> **[v2.3.0](https://github.com/bearinmindcat/morphe-patches/releases/tag/v2.3.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;49 patches total
 <details>
-<summary><img src="docs/icons/pin-google.png" width="20" height="20" align="top"> Google Maps&nbsp;&nbsp;-&gt;&nbsp;&nbsp;<img src="docs/icons/pin-ungoogled.png" width="20" height="20" align="top"> Ungoogled Maps&nbsp;&nbsp;•&nbsp;&nbsp;23 patches</summary>
+<summary><img src="docs/icons/pin-google.png" width="20" height="20" align="top"> Google Maps&nbsp;&nbsp;-&gt;&nbsp;&nbsp;<img src="docs/icons/pin-ungoogled.png" width="20" height="20" align="top"> Ungoogled Maps&nbsp;&nbsp;•&nbsp;&nbsp;26 patches</summary>
 <br>
 
 <p>
@@ -52,8 +52,56 @@ Select the app you want to patch inside Morphe Manager, follow all instructions 
 | [Remove permissions](#remove-permissions) | Removes permissions that only serve Google-account features or Google's data collection: background location, physical activity, contacts, microphone (voice search stops working), camera (Lens and Live View stop working), car speed, advertising ID, push messages and Google services settings. Left out with Add microG support, whose account features need them. |  |
 | [Remove sign-in prompts](#remove-sign-in-prompts) | Removes Google's sign-in prompts: the first-launch "Make it your map" page, the search screen's "Tired of typing?" card and the account sheet's "Sign in" pill. Tapping "Your profile" (or the pill, where it still shows) answers with a "Can't sign in" toast instead of nothing. Left out with Add microG support, which signs in. |  |
 | [Remove telemetry](#remove-telemetry) | Points the Firebase Installations and Play services compliance check-ins at an unresolvable host, stops every ad impression and click ping from being sent, and deregisters Google's logging, performance-monitoring, survey and Location History libraries and the on-device federated-learning services. With Add microG support, Firebase Installations and Location History are left alone, so Timeline, account sync and push messages keep working. |  |
+| [Speed cameras](#speed-cameras) | Chimes and shows a note when a speed or red light camera is coming up ahead, and puts the cameras on the map, from OpenStreetMap. Off until turned on in Waze Features, a row on the account sheet, because it downloads the cameras near you from an OpenStreetMap server. |  |
+| [Speeding chime](#speeding-chime) | Plays a chime when your speed passes the speed limit during navigation, as Waze does. Maps itself only turns its speedometer red. When it chimes is chosen in Waze Features, a row on the account sheet. |  |
 | [Trim account menu](#trim-account-menu) | Removes Your Timeline, Location sharing, Your data in Maps and Help & feedback from the account sheet. Left out with Add microG support, whose account features need them. |  |
+| [Waze alerts](#waze-alerts) | Shows the alerts a Waze on the same phone is tracking -- police to begin with, and any of crashes, hazards, traffic jams, closures and speed cameras -- as pins on the map, with a chime and a note as one comes up ahead. Off until turned on in Waze Features. Waze has to be patched with Share alerts with Maps, signed in and open; in the background is enough. |  |
 | [Zoom controls in navigation](#zoom-controls-in-navigation) | Adds +, − and reset tiles during turn-by-turn that change the navigation zoom while the camera keeps following the car. |  |
+
+</details>
+
+<details>
+<summary><img src="docs/icons/alltrails.png" width="20" height="20" align="top"> AllTrails&nbsp;&nbsp;-&gt;&nbsp;&nbsp;<img src="docs/icons/alltrails-black.png" width="20" height="20" align="top"> AllTrails&nbsp;&nbsp;•&nbsp;&nbsp;8 patches</summary>
+<br>
+
+**Supported version(s):** 26.3.20
+
+| Patch | Description | Options |
+|----------|----------------|-----------|
+| [2D / 3D compass](#2d-3d-compass) | Adds a 2D / 3D compass switch to the Experimental screen. With it on, tapping the compass in navigate mode switches the map between the tilted 3D view and a flat, north-up 2D map the way Google Maps' does, from any state (following you, panned away, paused), and brings the map back to you. The compass shows a single north arrow in 2D, and the next navigation starts in the mode you used last. |  |
+| [Better filters](#better-filters) | Adds a Better filters switch to the Experimental screen. With it on, the trail filter's sliders move in finer steps over the same ranges: Rating in 0.1 stars (instead of Any, 3.5, 4 and 4.5), Length in 0.1 mi, Elevation gain in 10 ft, Highest point in 100 ft and Distance away in 1 mi (metric: 0.1 km, 5 m, 50 m, 1 km). |  |
+| [Better tracking](#better-tracking) | Adds a Better tracking switch to the Experimental screen. With it on, recordings work the way Gaia GPS records: the phone's GPS directly with every fix delivered live (no Play services batching), fixes worse than 65 m or physically impossible dropped, points kept 3 m apart, no trail-biased smoothing, and elevation converted to sea level and counted in 2 m steps. |  |
+| [Black icon](#black-icon) | Uses a white AllTrails logo on black for the launcher icon and the splash screen, instead of green on dark green, so this build is easy to tell apart from the stock app. |  |
+| [Change package name](#change-package-name) | Installs alongside stock AllTrails under its own package name. | • Package name |
+| [Experimental screen](#experimental-screen) | Adds an Experimental row to your profile's menu, under Edit profile and Share profile, that opens an Experimental screen. |  |
+| [Remember filters](#remember-filters) | Adds a Remember filter states switch to the Experimental screen. With it on, the trail filters you set (length, elevation, rating, difficulty, activities, features and the rest, but not Distance away) stay set when you go back to the home screen and after the app restarts, instead of resetting. |  |
+| [Theme](#theme) | Adds a Theme choice to the Experimental screen: Follow phone, Light, Dark or AMOLED black (dark with pure black backgrounds). AllTrails itself only follows the phone. |  |
+
+</details>
+
+<details>
+<summary><img src="docs/icons/waze.png" width="20" height="20" align="top"> Waze&nbsp;&nbsp;-&gt;&nbsp;&nbsp;<img src="docs/icons/waze.png" width="20" height="20" align="top"> Waze&nbsp;&nbsp;•&nbsp;&nbsp;15 patches</summary>
+<br>
+
+**Supported version(s):** 5.24.5.0
+
+| Patch | Description | Options |
+|----------|----------------|-----------|
+| [Alert distances](#alert-distances) | How far ahead, in metres, Waze warns of police, hazards, crashes, traffic jams and speed cameras. The defaults are the old Waze mods' (CGE); Waze's own are lower for most of them. | • Police<br>• Hazards<br>• Crashes<br>• Traffic jams<br>• Speed cameras on streets<br>• Speed cameras on highways<br>• Speed cameras on freeways<br>• Blocked lanes<br>• Least distance between two alerts |
+| [All moods](#all-moods) | Every mood can be chosen: the ones Waze keeps for higher ranks and the beta moods it hides. |  |
+| [Bigger speedometer](#bigger-speedometer) | Bigger digits on the speedometer, and on the speed limit sign beside it, so they can be read at a glance. | • Speed digits (dp)<br>• Unit label (dp)<br>• Speed limit sign digits (sp)<br>• Speed limit sign digits, 100 and over (sp) |
+| [Full black](#full-black) | Waze's dark mode in true black for AMOLED screens: the app's dark backgrounds are black, and with Black night map the night map's background too. Roads, labels, buttons and text keep their colours. | • Black night map |
+| [Hide ads](#hide-ads) | Removes the sponsored pins on the map and on Android Auto, the full-screen ads shown while you are stopped, and the ad statistics Waze sends. |  |
+| [Map skin](#map-skin) | The old Waze mods' map skin, as changes to Waze's own: bigger map labels, a wider navigation arrow head and a warm day background. The night background is Full black's. Skipped by Morphe Manager 1.35 and other patcher 1.15+ builds, which would crash Waze when the map opens; patch with Morphe Desktop to get it. | • Map labels: huge<br>• Map labels: big<br>• Map labels: medium<br>• Map labels: small<br>• Navigation arrow head width<br>• Day map background (hex) |
+| [Navigation distances](#navigation-distances) | How far ahead Android Auto gives its heads-up, and how long a jam must last before the traffic bar shows it. The defaults are the old Waze mods' (Chuppito). | • Android Auto heads-up, normal roads (m)<br>• Android Auto heads-up, freeways (m)<br>• Traffic bar: time in traffic (s) |
+| [No AI reporting](#no-ai-reporting) | Turns off conversational reporting, Waze's Gemini voice assistant for reports, together with its activation dialog, tips and onboarding. |  |
+| [No Google Assistant](#no-google-assistant) | Keeps Google Assistant out of Waze: no Assistant button, onboarding or settings entry, whatever Waze's server enables for your region. |  |
+| [Report speed limit](#report-speed-limit) | Turns on Waze's own switch for correcting the speed limit from the speedometer, the old mods' "Report speed limit". Waze's server keeps it off; what it shows is not verified here. |  |
+| [Share alerts with Maps](#share-alerts-with-maps) | Hands the alerts Waze is tracking -- police, crashes, hazards, traffic jams, closures and speed cameras -- to Ungoogled Maps on the same phone, where Waze alerts in Waze Features puts them on the map. Nothing leaves the phone. Waze has to be signed in and open; in the background is enough. |  |
+| [Speed camera sound at any speed](#speed-camera-sound-at-any-speed) | Plays the speed camera sound for every camera, not only when you are over the speed limit. |  |
+| [Speed cameras everywhere](#speed-cameras-everywhere) | Turns speed camera and police alerts back on in the countries where Waze's server switches them off. Warning of speed cameras is against the law in some of those countries. |  |
+| [Speed limit sign](#speed-limit-sign) | The style of the speed limit sign beside the speedometer, whatever the country. | • Sign style |
+| [Stay awake in the background](#stay-awake-in-the-background) | Lets Waze keep running in the background without a route for the chosen time -- Waze's server allows 10 minutes -- so that its alerts keep reaching Maps while you navigate there. Costs battery; Waze still closes itself when you close it. | • Minutes in the background |
 
 </details>
 

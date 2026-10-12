@@ -31,6 +31,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.io.File
 
 /**
  * The page address the in-app browser's menu sends for Share and for Copy link goes through
@@ -97,46 +98,64 @@ class BrowserMenuLinkTest {
         var checked = 0
         for (version in versions) {
             for (bundle in Fixtures.files { it.extension == "apks" && it.name.contains("-$version-") }) {
-                val handlers = FixtureDex.classesHolding(bundle, BROWSER_SHARE_FAILURE)
-                assertEquals("${bundle.name}: classes logging the share's failure line", 1, handlers.size)
-                val type = handlers.single().type
-                val before = handlers.single().methods.single { it.name == "handleMessage" }.implementation!!.instructions.toList()
-                val context = PatchContexts.of(handlers)
-
-                assertNull(bundle.name, context.cleanBrowserMenu())
-
-                val code = context.mutableClassDefBy(type).methods.single { it.name == "handleMessage" }.implementation!!.instructions.toList()
-                assertEquals("${bundle.name}: two calls and their results added", before.size + 4, code.size)
-                val hooks = code.indices.filter { code[it].calls(BROWSER_LINK) }
-                assertEquals(bundle.name, 2, hooks.size)
-                val (share, copy) = hooks
-                for (hook in hooks) {
-                    val register = (code[hook] as RegisterRangeInstruction).startRegister
-                    assertEquals(bundle.name, 1, (code[hook] as RegisterRangeInstruction).registerCount)
-                    assertEquals(bundle.name, Opcode.MOVE_RESULT_OBJECT, code[hook + 1].opcode)
-                    assertEquals(bundle.name, register, (code[hook + 1] as OneRegisterInstruction).registerA)
-                    val fallback = (0 until hook).last { code[it].loads("") }
-                    assertEquals("${bundle.name}: the empty address's register", register, (code[fallback] as OneRegisterInstruction).registerA)
-                }
-                assertTrue("${bundle.name}: Share's after its failure line", (0 until share).any { code[it].loads(BROWSER_SHARE_FAILURE) })
-                val put = code[share + 2]
-                assertEquals(bundle.name, "Landroid/content/Intent;->putExtra(Ljava/lang/String;Ljava/lang/String;)Landroid/content/Intent;", put.reference())
-                assertEquals("${bundle.name}: the shared text is the address", (code[share] as RegisterRangeInstruction).startRegister, (put as FiveRegisterInstruction).registerE)
-                assertTrue("${bundle.name}: its key", code[share - 1].loads("android.intent.extra.TEXT"))
-                assertTrue("${bundle.name}: Copy link's after its failure line", (share until copy).any { code[it].loads(BROWSER_COPY_FAILURE) })
-                val helper = code[copy + 2]
-                assertEquals(bundle.name, Opcode.INVOKE_STATIC, helper.opcode)
-                assertTrue(bundle.name, helper.reference().endsWith("(Landroid/content/Context;Ljava/lang/String;)Z"))
-                assertEquals("${bundle.name}: the copied text is the address", (code[copy] as RegisterRangeInstruction).startRegister, (helper as FiveRegisterInstruction).registerD)
-                assertEquals(
-                    "${bundle.name}: the rest as it was",
-                    before.map { it.opcode },
-                    code.filterIndexed { index, _ -> index !in setOf(share, share + 1, copy, copy + 1) }.map { it.opcode },
-                )
+                builds(bundle, bundle.name)
                 checked++
             }
         }
         assertTrue("no fixture of a declared build", checked > 0)
+    }
+
+    @Test
+    fun eachOtherBuildCleansBothMenuAddressesToo() {
+        for (base in Fixtures.otherBuilds()) builds(base, base.parentFile.name)
+    }
+
+    /**
+     * The builds whose clipboard helper answers nothing. It's the same ClipboardUtil copy(Context,
+     * String) everywhere, handing the text to the (Context, String, String)Z that calls
+     * setPrimaryClip, but 385611439 and 385611440 (x86, x86_64) are compiled with it void since no
+     * caller reads its answer, where every arm64 build keeps its Z. The handler drops it either way.
+     */
+    private val VOID_COPY_HELPER_BUILDS = setOf("instagram-450.0.0.50.77-385611439", "instagram-450.0.0.50.77-385611440")
+
+    private fun builds(bundle: File, label: String) {
+        val handlers = FixtureDex.classesHolding(bundle, BROWSER_SHARE_FAILURE)
+        assertEquals("${label}: classes logging the share's failure line", 1, handlers.size)
+        val type = handlers.single().type
+        val before = handlers.single().methods.single { it.name == "handleMessage" }.implementation!!.instructions.toList()
+        val context = PatchContexts.of(handlers)
+
+        assertNull(label, context.cleanBrowserMenu())
+
+        val code = context.mutableClassDefBy(type).methods.single { it.name == "handleMessage" }.implementation!!.instructions.toList()
+        assertEquals("${label}: two calls and their results added", before.size + 4, code.size)
+        val hooks = code.indices.filter { code[it].calls(BROWSER_LINK) }
+        assertEquals(label, 2, hooks.size)
+        val (share, copy) = hooks
+        for (hook in hooks) {
+            val register = (code[hook] as RegisterRangeInstruction).startRegister
+            assertEquals(label, 1, (code[hook] as RegisterRangeInstruction).registerCount)
+            assertEquals(label, Opcode.MOVE_RESULT_OBJECT, code[hook + 1].opcode)
+            assertEquals(label, register, (code[hook + 1] as OneRegisterInstruction).registerA)
+            val fallback = (0 until hook).last { code[it].loads("") }
+            assertEquals("${label}: the empty address's register", register, (code[fallback] as OneRegisterInstruction).registerA)
+        }
+        assertTrue("${label}: Share's after its failure line", (0 until share).any { code[it].loads(BROWSER_SHARE_FAILURE) })
+        val put = code[share + 2]
+        assertEquals(label, "Landroid/content/Intent;->putExtra(Ljava/lang/String;Ljava/lang/String;)Landroid/content/Intent;", put.reference())
+        assertEquals("${label}: the shared text is the address", (code[share] as RegisterRangeInstruction).startRegister, (put as FiveRegisterInstruction).registerE)
+        assertTrue("${label}: its key", code[share - 1].loads("android.intent.extra.TEXT"))
+        assertTrue("${label}: Copy link's after its failure line", (share until copy).any { code[it].loads(BROWSER_COPY_FAILURE) })
+        val helper = code[copy + 2]
+        assertEquals(label, Opcode.INVOKE_STATIC, helper.opcode)
+        val answers = if (label in VOID_COPY_HELPER_BUILDS) "V" else "Z"
+        assertTrue("${label}: ${helper.reference()}", helper.reference().endsWith("(Landroid/content/Context;Ljava/lang/String;)$answers"))
+        assertEquals("${label}: the copied text is the address", (code[copy] as RegisterRangeInstruction).startRegister, (helper as FiveRegisterInstruction).registerD)
+        assertEquals(
+            "${label}: the rest as it was",
+            before.map { it.opcode },
+            code.filterIndexed { index, _ -> index !in setOf(share, share + 1, copy, copy + 1) }.map { it.opcode },
+        )
     }
 
     private fun leftAlone(case: String, classes: List<ClassDef>) {

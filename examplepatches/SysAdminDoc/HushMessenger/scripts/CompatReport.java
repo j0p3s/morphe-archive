@@ -137,7 +137,9 @@ public class CompatReport {
         Map.entry("event_prompts", Set.of("com.facebook.messaging.events.plugins.qp.EventsQpKillSwitch")),
         Map.entry("reels_badge", Set.of("com.facebook.messaging.reels.plugins.badge.ReelsBadgeKillSwitch")),
         Map.entry("ai_toolbar", Set.of("com.facebook.messaging.inbox.tab.plugins.core.tabtoolbarbutton.aihomebutton.AiHomeButtonKillSwitch")),
-        Map.entry("ai_tab", Set.of("com.facebook.messaging.aibot.plugins.tab.tabcontent.MetaAiTabContentImplementation"))
+        Map.entry("ai_tab", Set.of("com.facebook.messaging.aibot.plugins.tab.tabcontent.MetaAiTabContentImplementation")),
+        Map.entry("tab_people", Set.of("com.facebook.messaging.peopletab.plugins.tab.tabcontent.PeopleTabContentImplementation")),
+        Map.entry("tab_notifications", Set.of("com.facebook.messaging.inbox.jewel.jeweltab.plugins.core.tabcontent.JewelTabContentImplementation"))
     );
 
     static final String APP_COMMUNICATION = "com.facebook.permission.prod.FB_APP_COMMUNICATION";
@@ -168,9 +170,11 @@ public class CompatReport {
         PATCHES.put("Hide stories and notes", List.of("stories"));
         PATCHES.put("Hide inbox tabs", List.of("subtabs"));
         PATCHES.put("Hide Facebook shortcuts", List.of("facebook"));
-        PATCHES.put("Hide Meta AI", List.of("ai_menu", "ai_fab", "ai_toolbar", "ai_tab", "ai_search", "ai_search_chip"));
+        PATCHES.put("Hide Meta AI", List.of("ai_menu", "ai_fab", "ai_toolbar", "ai_tab", "ai_search", "ai_search_chip", "ai_mentions", "ai_commands", "ai_search_hint"));
         PATCHES.put("Hide Chat Moments", List.of("moments"));
         PATCHES.put("Hide Reels badge", List.of("reels_badge"));
+        PATCHES.put("Hide People tab", List.of("tab_people"));
+        PATCHES.put("Hide Notifications tab", List.of("tab_notifications"));
         PATCHES.put("Hide AI sticker tools", List.of("ai_stickers", "ai_sticker_cell"));
         PATCHES.put("Hide avatar stickers", List.of("avatar_stickers", "avatar_tabs"));
         PATCHES.put("Restore old emoji drawer", List.of("emoji_drawer"));
@@ -186,20 +190,25 @@ public class CompatReport {
         PATCHES.put("Use system emoji", List.of("emoji_typeface"));
         PATCHES.put("Send photos at original quality", List.of("original_photo"));
         PATCHES.put("Send videos without re-encoding", List.of("original_video"));
+        PATCHES.put("Fix shared videos with xHE-AAC sound", List.of("xhe_audio"));
         PATCHES.put("Turn off the swipe up for disappearing messages", List.of("disappearing_swipe"));
         PATCHES.put("Use the phone's camera app", List.of("system_camera"));
         PATCHES.put("Stop analytics uploads", List.of("analytics_uploads"));
         PATCHES.put("Stop ad attribution uploads", List.of("attribution_uploads"));
         PATCHES.put("Stop inbox and ad link logging", List.of("ad_events"));
+        PATCHES.put("Stop MQTT logging", List.of("mqtt_telemetry"));
         PATCHES.put("Keep a message log", List.of("message_log"));
+        PATCHES.put("Auto reply", List.of("auto_reply"));
         PATCHES.put("Allow screenshots", List.of("allow_screenshot", "screenshot_viewers"));
-        PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "read_mailbox"));
+        PATCHES.put("Hide read receipts", List.of("hide_read_receipts", "reply_read"));
         PATCHES.put("Keep unsent messages", List.of("keep_unsent", "unsent_indicator", "delta_unsent"));
         PATCHES.put("Unlock app icons", List.of("app_icons"));
         PATCHES.put("Use your own font", List.of("font_layout", "font_repository", "font_roboto", "font_by_name", "font_input"));
         PATCHES.put("View stories anonymously", List.of("anonymous_stories"));
         PATCHES.put("Save any story", List.of("save_stories"));
         PATCHES.put("Slide chats in and out", List.of("chat_animation", "chat_fragment", "chat_inbox", "chat_legacy"));
+        // Manifest only: the selection menu entries need nothing from Messenger's code.
+        PATCHES.put("Bold and italic text", List.of());
         PATCHES.put("Open settings from menu", List.of("menu_settings"));
     }
 
@@ -221,7 +230,10 @@ public class CompatReport {
      */
     static final Map<String, Set<String>> FIELD_CONTROLS = new LinkedHashMap<>();
     static {
-        FIELD_CONTROLS.put("pluginSentinel", PLUGIN_GATE_ANCHORS.keySet());
+        // The @ suggestion hook checks its sections' disabled marker against the same sentinel.
+        var sentinelControls = new LinkedHashSet<>(PLUGIN_GATE_ANCHORS.keySet());
+        sentinelControls.add("ai_mentions");
+        FIELD_CONTROLS.put("pluginSentinel", sentinelControls);
         FIELD_CONTROLS.put("preferenceGetter", Set.of("browser", "people_jewel"));
         FIELD_CONTROLS.put("peopleKey", Set.of("people_jewel"));
         FIELD_CONTROLS.put("peopleFlagCheck", Set.of("people_jewel"));
@@ -1397,6 +1409,49 @@ public class CompatReport {
         return null;
     }
 
+    /**
+     * FBNS's package check (RestoreTrustPatch.kt's FbnsPackageCheckFingerprint): a void method that reads
+     * PackageInfo.signatures once and logs "PackageInfoUtil" and "Failed to create SHA-256 hash". The read's
+     * two registers must be distinct and at most v15, as routeFbnsSigners requires.
+     */
+    static List<String> fbnsCheckProblems(List<ClassDef> classes) {
+        var problems = new ArrayList<String>();
+        var checks = new ArrayList<Method>();
+        for (var cls : classes) {
+            for (var method : cls.getMethods()) {
+                if (!"V".equals(method.getReturnType()) || method.getImplementation() == null) continue;
+                // The fingerprint's filters match in order: the read, then the tag after it, then the hash failure.
+                int step = 0;
+                for (var insn : method.getImplementation().getInstructions()) {
+                    if (!(insn instanceof ReferenceInstruction ref)) continue;
+                    if (step == 0 && ref.getReference() instanceof FieldReference f
+                        && "Landroid/content/pm/PackageInfo;".equals(f.getDefiningClass()) && "signatures".equals(f.getName())) step = 1;
+                    else if (step == 1 && ref.getReference() instanceof StringReference s && "PackageInfoUtil".equals(s.getString())) step = 2;
+                    else if (step == 2 && ref.getReference() instanceof StringReference s
+                        && "Failed to create SHA-256 hash".equals(s.getString())) step = 3;
+                }
+                if (step == 3) checks.add(method);
+            }
+        }
+        if (checks.size() != 1) {
+            problems.add("expected one FBNS package check, found " + checks.size());
+            return problems;
+        }
+        var reads = new ArrayList<TwoRegisterInstruction>();
+        for (var insn : checks.get(0).getImplementation().getInstructions()) {
+            if (insn.getOpcode() == Opcode.IGET_OBJECT && ((ReferenceInstruction) insn).getReference() instanceof FieldReference f
+                && "Landroid/content/pm/PackageInfo;".equals(f.getDefiningClass()) && "signatures".equals(f.getName())) {
+                reads.add((TwoRegisterInstruction) insn);
+            }
+        }
+        if (reads.size() != 1) problems.add("expected one PackageInfo.signatures read in " + hookId(checks.get(0)) + ", found " + reads.size());
+        else if (reads.get(0).getRegisterA() == reads.get(0).getRegisterB() || reads.get(0).getRegisterA() > 15 || reads.get(0).getRegisterB() > 15) {
+            problems.add("FBNS package check " + hookId(checks.get(0)) + " reads signatures into v" + reads.get(0).getRegisterA()
+                + " from v" + reads.get(0).getRegisterB() + ", which the call can't name");
+        }
+        return problems;
+    }
+
     static final String EPHEMERAL_VIEWER = "Lcom/facebook/messaging/media/ephemeralmedia/viewer/EphemeralMediaViewerFragment;";
     static final String QUICKSNAP_VIEWER = "Lcom/facebook/messaging/quicksnap/consumption/viewer/MsgrQuicksnapViewerFragment;";
     static final String WINDOW = "Landroid/view/Window;";
@@ -2374,6 +2429,116 @@ public class CompatReport {
         return watchers.size() == 1 ? watchers : List.of();
     }
 
+    static final Set<String> AI_MENTION_PLUGINS = Set.of(
+        "messaging.aibot.core.mentionai.MentionAiRowSupplier", "messaging.aibot.core.imagine.ImagineRowSupplier",
+        "messaging.communitymessaging.ai.mentionrowsupplier.CommunityAiRowSupplier");
+
+    /**
+     * ai_mentions: the @ suggestion row dispatchers, non-static (query, ImmutableList.Builder)V methods traced as
+     * MentionRowSupplierSpec that run a Meta AI, imagine or community AI section. Mirrors AiMentions.kt.
+     */
+    static List<Method> aiMentionDispatchers(List<ClassDef> classes) {
+        var dispatchers = new ArrayList<Method>();
+        for (var cls : classes) for (var method : cls.getMethods()) {
+            if (method.getImplementation() == null || !"V".equals(method.getReturnType()) ||
+                AccessFlags.STATIC.isSet(method.getAccessFlags()) || method.getParameterTypes().size() != 2 ||
+                !"Lcom/google/common/collect/ImmutableList$Builder;".equals(method.getParameterTypes().get(1).toString())) continue;
+            var strings = new HashSet<String>();
+            for (var i : method.getImplementation().getInstructions())
+                if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr) strings.add(sr.getString());
+            if (strings.contains("messaging.mentions.composer.MentionRowSupplierSpec") &&
+                strings.stream().anyMatch(AI_MENTION_PLUGINS::contains)) dispatchers.add(method);
+        }
+        return dispatchers;
+    }
+
+    /**
+     * ai_commands: the static (controller, ThreadKey)List that turns the open chat's AiPageCustomCommands into
+     * suggestions. Counted only when exactly one method looks like it. Mirrors AiMentions.kt.
+     */
+    static List<Method> aiCommandLists(List<ClassDef> classes) {
+        var lists = new ArrayList<Method>();
+        for (var cls : classes) for (var method : cls.getMethods()) {
+            if (method.getImplementation() == null || !AccessFlags.STATIC.isSet(method.getAccessFlags()) ||
+                !"Ljava/util/List;".equals(method.getReturnType())) continue;
+            var params = new ArrayList<String>();
+            for (var t : method.getParameterTypes()) params.add(t.toString());
+            if (!params.equals(List.of(cls.getType(), "Lcom/facebook/messaging/model/threadkey/ThreadKey;"))) continue;
+            for (var i : method.getImplementation().getInstructions())
+                if (i.getOpcode() == Opcode.CHECK_CAST && ((ReferenceInstruction) i).getReference() instanceof TypeReference tr &&
+                    "Lcom/facebook/messaging/aibot/page/customcommand/AiPageCustomCommand;".equals(tr.getType())) {
+                    lists.add(method);
+                    break;
+                }
+        }
+        return lists.size() == 1 ? lists : List.of();
+    }
+
+    /**
+     * ai_search_hint: the inbox search bar builder, which names "search_bar" and picks its hint between two constants on a
+     * (FbUserSession)Z check right before Resources.getString. Counted only when exactly one method looks like it.
+     * Mirrors AiSearchHint.kt.
+     */
+    static List<Method> searchBarBuilders(List<ClassDef> classes) {
+        var builders = new ArrayList<Method>();
+        for (var cls : classes) for (var method : cls.getMethods()) {
+            var code = instructions(method);
+            if (code.stream().noneMatch(i -> i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr &&
+                "search_bar".equals(sr.getString()))) continue;
+            for (int pick = 7; pick < code.size(); pick++) {
+                if (code.get(pick).getOpcode() != Opcode.INVOKE_VIRTUAL ||
+                    !"Landroid/content/res/Resources;->getString(I)Ljava/lang/String;".equals(ref(code.get(pick)))) continue;
+                var get = (FiveRegisterInstruction) code.get(pick);
+                if (!(code.get(pick - 7) instanceof ReferenceInstruction ci && ci.getReference() instanceof MethodReference check) ||
+                    code.get(pick - 7).getOpcode() != Opcode.INVOKE_VIRTUAL || !"Z".equals(check.getReturnType()) ||
+                    check.getParameterTypes().size() != 1 ||
+                    !"Lcom/facebook/auth/usersession/FbUserSession;".equals(check.getParameterTypes().get(0).toString())) continue;
+                int held = register(code.get(pick - 6));
+                if (code.get(pick - 6).getOpcode() != Opcode.MOVE_RESULT ||
+                    !(code.get(pick - 5) instanceof ReferenceInstruction rr && rr.getReference() instanceof MethodReference resources) ||
+                    !"Landroid/content/res/Resources;".equals(resources.getReturnType()) ||
+                    code.get(pick - 4).getOpcode() != Opcode.MOVE_RESULT_OBJECT || register(code.get(pick - 4)) != get.getRegisterC() ||
+                    code.get(pick - 3).getOpcode() != Opcode.CONST || register(code.get(pick - 3)) != get.getRegisterD() ||
+                    code.get(pick - 1).getOpcode() != Opcode.CONST || register(code.get(pick - 1)) != get.getRegisterD() ||
+                    code.get(pick - 2).getOpcode() != Opcode.IF_EQZ || register(code.get(pick - 2)) != held ||
+                    !jumpsTo(code, pick - 2, pick)) continue;
+                builders.add(method);
+                break;
+            }
+        }
+        return builders.size() == 1 ? builders : List.of();
+    }
+
+    /**
+     * xhe_audio: the no-argument call() that names its copies "orca_share_media" and ends one copy with
+     * new FileOutputStream(File, Z), a static (InputStream, OutputStream)V copy, OutputStream.close() and Uri.fromFile on
+     * the same File. Counted only when exactly one method looks like it. Mirrors XheAudio.kt.
+     */
+    static List<Method> shareCopies(List<ClassDef> classes) {
+        var copies = new ArrayList<Method>();
+        for (var cls : classes) for (var method : cls.getMethods()) {
+            if (!"call".equals(method.getName()) || !method.getParameterTypes().isEmpty() || !"Ljava/lang/Object;".equals(method.getReturnType())) continue;
+            var code = instructions(method);
+            if (code.stream().noneMatch(i -> i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr &&
+                "orca_share_media".equals(sr.getString()))) continue;
+            int sites = 0;
+            for (int at = 3; at < code.size(); at++) {
+                if (!(code.get(at) instanceof FiveRegisterInstruction point) || code.get(at).getOpcode() != Opcode.INVOKE_STATIC ||
+                    !"Landroid/net/Uri;->fromFile(Ljava/io/File;)Landroid/net/Uri;".equals(ref(code.get(at)))) continue;
+                if (!(code.get(at - 1) instanceof FiveRegisterInstruction close) || close.getOpcode() != Opcode.INVOKE_VIRTUAL ||
+                    !"Ljava/io/OutputStream;->close()V".equals(ref(close))) continue;
+                if (!(code.get(at - 2) instanceof FiveRegisterInstruction copy) || copy.getOpcode() != Opcode.INVOKE_STATIC ||
+                    !(((ReferenceInstruction) copy).getReference() instanceof MethodReference copier) || !"V".equals(copier.getReturnType()) ||
+                    !copier.getParameterTypes().stream().map(Object::toString).toList().equals(List.of("Ljava/io/InputStream;", "Ljava/io/OutputStream;"))) continue;
+                if (!(code.get(at - 3) instanceof FiveRegisterInstruction open) || open.getOpcode() != Opcode.INVOKE_DIRECT ||
+                    !"Ljava/io/FileOutputStream;-><init>(Ljava/io/File;Z)V".equals(ref(open))) continue;
+                if (open.getRegisterD() == point.getRegisterC() && open.getRegisterC() == close.getRegisterC() && copy.getRegisterD() == close.getRegisterC()) sites++;
+            }
+            if (sites == 1) copies.add(method);
+        }
+        return copies.size() == 1 ? copies : List.of();
+    }
+
     static final String OVERSCROLL_BEHAVIOR = "Lcom/facebook/messaging/threadview/overscroll/ui/OverScrollActionBehavior;";
 
     /**
@@ -2400,6 +2565,40 @@ public class CompatReport {
             }
         }
         return starts;
+    }
+
+    static final String SEND_MESSAGE_EVENT = "Lcom/facebook/xapp/messaging/composer/send/event/SendMessageEvent;";
+
+    /**
+     * hide_read_receipts: the open chat's seen handler, a static (FbUserSession, own class, String)V that names
+     * MARK_THREAD_AS_SEEN_JOB and broadcast_message_seen_internal. reply_read: SendMessageEvent's five-argument
+     * constructor. Mirrors ReadReceipts.kt.
+     */
+    static List<Method> chatSeenBroadcasts(List<ClassDef> classes) {
+        var seen = new ArrayList<Method>();
+        for (var cls : classes) for (var method : cls.getMethods()) {
+            if (method.getImplementation() == null || !AccessFlags.STATIC.isSet(method.getAccessFlags()) ||
+                !"V".equals(method.getReturnType())) continue;
+            var params = new ArrayList<String>();
+            for (var t : method.getParameterTypes()) params.add(t.toString());
+            if (!params.equals(List.of("Lcom/facebook/auth/usersession/FbUserSession;", cls.getType(), "Ljava/lang/String;"))) continue;
+            var strings = new HashSet<String>();
+            for (var i : method.getImplementation().getInstructions())
+                if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr) strings.add(sr.getString());
+            if (strings.contains("MARK_THREAD_AS_SEEN_JOB") && strings.contains("broadcast_message_seen_internal")) seen.add(method);
+        }
+        return seen;
+    }
+
+    static List<Method> sendMessageEvents(List<ClassDef> classes) {
+        var events = new ArrayList<Method>();
+        for (var cls : classes) {
+            if (!SEND_MESSAGE_EVENT.equals(cls.getType())) continue;
+            for (var method : cls.getMethods())
+                if ("<init>".equals(method.getName()) && "V".equals(method.getReturnType()) && method.getParameterTypes().size() == 5)
+                    events.add(method);
+        }
+        return events;
     }
 
     static final String LAT_STATUS_JOB = "Lcom/facebook/attribution/LatStatusJob;";
@@ -2454,6 +2653,83 @@ public class CompatReport {
         return events;
     }
 
+    static Set<String> literals(Method method) {
+        var strings = new HashSet<String>();
+        for (var i : instructions(method))
+            if (i instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr) strings.add(sr.getString());
+        return strings;
+    }
+
+    /** The publish's not-connected answer: the first sget-object after "not_connected", returned at once, of its own class. */
+    static boolean hasNotSentAnswer(List<Instruction> code) {
+        int logged = -1;
+        for (int i = 0; i < code.size(); i++) {
+            if (!(code.get(i) instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr &&
+                "not_connected".equals(sr.getString()))) continue;
+            if (logged >= 0) return false;
+            logged = i;
+        }
+        if (logged < 0) return false;
+        for (int i = logged + 1; i < code.size() - 1; i++) {
+            if (code.get(i).getOpcode() != Opcode.SGET_OBJECT) continue;
+            if (!(((ReferenceInstruction) code.get(i)).getReference() instanceof FieldReference field)) return false;
+            return code.get(i + 1).getOpcode() == Opcode.RETURN_OBJECT && register(code.get(i + 1)) == register(code.get(i)) &&
+                field.getType().equals(field.getDefiningClass());
+        }
+        return false;
+    }
+
+    /** One iget-boolean tested by the next if-eqz whose false branch is the plain ping, a static (own class, X)V call. */
+    static boolean hasHealthKeepaliveFlag(Method method) {
+        var code = instructions(method);
+        int topic = -1;
+        for (int i = 0; i < code.size() && topic < 0; i++)
+            if (code.get(i) instanceof ReferenceInstruction ri && ri.getReference() instanceof StringReference sr &&
+                "/mqtt_health_stats".equals(sr.getString())) topic = i;
+        int sites = 0;
+        for (int at = 0; at < topic; at++) {
+            if (code.get(at).getOpcode() != Opcode.IGET_BOOLEAN || code.get(at + 1).getOpcode() != Opcode.IF_EQZ ||
+                ((TwoRegisterInstruction) code.get(at)).getRegisterA() != register(code.get(at + 1))) continue;
+            for (int target = 0; target < code.size(); target++) {
+                if (!jumpsTo(code, at + 1, target)) continue;
+                if (code.get(target).getOpcode() == Opcode.INVOKE_STATIC &&
+                    ((ReferenceInstruction) code.get(target)).getReference() instanceof MethodReference ping &&
+                    ping.getDefiningClass().equals(method.getDefiningClass()) && "V".equals(ping.getReturnType()) &&
+                    ping.getParameterTypes().size() == 2 && ping.getParameterTypes().get(0).toString().equals(method.getDefiningClass())) sites++;
+                break;
+            }
+        }
+        return sites == 1;
+    }
+
+    /**
+     * mqtt_telemetry: the MQTT client's instance publish (two callbacks, Integer, String, String, [B, I, J) that names
+     * exception/publish, not_connected and /mqtt_health_stats and returns a singleton when not connected, and the same
+     * class's instance (String)V keepalive that names exception/send_keepalive and /mqtt_health_stats and picks the plain
+     * ping on one config flag. Both or neither. Mirrors MqttTelemetry.kt.
+     */
+    static List<Method> mqttTelemetry(List<ClassDef> classes) {
+        var publish = new ArrayList<Method>();
+        var keepalive = new ArrayList<Method>();
+        var tail = List.of("Ljava/lang/Integer;", "Ljava/lang/String;", "Ljava/lang/String;", "[B", "I", "J");
+        for (var cls : classes) for (var method : cls.getMethods()) {
+            if (method.getImplementation() == null || AccessFlags.STATIC.isSet(method.getAccessFlags())) continue;
+            var params = new ArrayList<String>();
+            for (var t : method.getParameterTypes()) params.add(t.toString());
+            var strings = literals(method);
+            if (params.size() == 8 && method.getReturnType().startsWith("L") && params.get(0).startsWith("L") &&
+                params.get(1).startsWith("L") && params.subList(2, 8).equals(tail) &&
+                strings.containsAll(List.of("exception/publish", "not_connected", "/mqtt_health_stats")) &&
+                hasNotSentAnswer(instructions(method))) publish.add(method);
+            if (params.equals(List.of("Ljava/lang/String;")) && "V".equals(method.getReturnType()) &&
+                strings.containsAll(List.of("exception/send_keepalive", "/mqtt_health_stats")) &&
+                hasHealthKeepaliveFlag(method)) keepalive.add(method);
+        }
+        if (publish.size() != 1 || keepalive.size() != 1 ||
+            !publish.get(0).getDefiningClass().equals(keepalive.get(0).getDefiningClass())) return List.of();
+        return List.of(publish.get(0), keepalive.get(0));
+    }
+
     static Map<String, List<Method>> findControls(List<ClassDef> classes) {
         var found = new LinkedHashMap<String, List<Method>>();
         for (var key : CONTROL_KEYS) found.put(key, new ArrayList<>());
@@ -2464,13 +2740,21 @@ public class CompatReport {
         if (community != null) found.get("community_inbox").add(community.render());
         found.get("emoji_drawer").addAll(emojiDrawerReaders(classes));
         found.get("emoji_search").addAll(emojiSearchWatchers(classes));
+        found.get("ai_mentions").addAll(aiMentionDispatchers(classes));
+        found.get("ai_commands").addAll(aiCommandLists(classes));
+        found.get("ai_search_hint").addAll(searchBarBuilders(classes));
+        found.get("xhe_audio").addAll(shareCopies(classes));
         found.get("disappearing_swipe").addAll(disappearingSwipeStarts(classes));
+        found.get("hide_read_receipts").addAll(chatSeenBroadcasts(classes));
+        found.get("reply_read").addAll(sendMessageEvents(classes));
         found.get("analytics_uploads").addAll(analyticsUploads(classes));
         found.get("analytics_uploads").addAll(boundUploadTasks(classes));
         found.get("analytics_uploads").addAll(xanalyticsUploadTimers(classes));
         found.get("attribution_uploads").addAll(attributionUploads(classes));
         found.get("ad_events").addAll(adEvents(classes));
+        found.get("mqtt_telemetry").addAll(mqttTelemetry(classes));
         found.get("message_log").addAll(messageLogHooks(classes));
+        found.get("auto_reply").addAll(messageLogHooks(classes));
         found.get("system_camera").addAll(systemCameraLaunches(classes));
         customFontHooks(classes).forEach((key, methods) -> found.get(key).addAll(methods));
         for (var cls : classes) for (var method : cls.getMethods())
@@ -2707,7 +2991,6 @@ public class CompatReport {
                         case "InboxSubtabsItemSupplierImplementation$onSubscribe$1" -> found.get("subtabs").add(method);
                         case "ConversationTypingContext$sendActiveStateRunnable$1" -> found.get("typing").add(method);
                         case "SecureWindowUtils$1" -> found.get("allow_screenshot").add(method);
-                        case "ReadThreadManager$1" -> found.get("hide_read_receipts").add(method);
                     }
                 }
 
@@ -2848,11 +3131,6 @@ public class CompatReport {
                 if (paramTypes.equals(List.of("Ljava/lang/String;", "Z")) &&
                     strings.contains("setTypingIndicatorForThreadWithThreadIdentifier")) {
                     found.get("typing_mailbox").add(method);
-                }
-
-                // read_mailbox: the msys call that marks a thread read (and sends the receipt) in encrypted chats
-                if ("V".equals(method.getReturnType()) && strings.contains("markAsReadThreadWithThreadIdentifier")) {
-                    found.get("read_mailbox").add(method);
                 }
 
                 // anonymous_stories: the story mark-read handler that reports a viewed card
@@ -3568,11 +3846,13 @@ public class CompatReport {
         // Check Restore screens on re-signed builds (signer lookup fingerprint)
         {
             Method signerMethod = findSignerMethod(classes);
-            if (signerMethod != null) {
+            var fbns = fbnsCheckProblems(classes);
+            if (signerMethod != null && fbns.isEmpty()) {
                 System.out.println("[PASS] Restore screens on re-signed builds (" + hookId(signerMethod) + ")");
             } else {
                 System.out.println("[FAIL] Restore screens on re-signed builds");
-                System.out.println("       No method found matching the signer lookup pattern");
+                if (signerMethod == null) System.out.println("       No method found matching the signer lookup pattern");
+                for (var f : fbns) System.out.println("       " + f);
                 blockers.add("Restore screens on re-signed builds");
                 anyFail = true;
             }

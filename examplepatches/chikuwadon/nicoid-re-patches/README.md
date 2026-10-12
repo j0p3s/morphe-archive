@@ -11,7 +11,7 @@ nicoid 6.49の元APKにMorphe Managerでパッチを適用すると、「nicoid 
 - 対象アプリ：`com.sauzask.nicoid`（バージョン`6.49`）
 - 適用後のアプリ名：**nicoid Re**
 - 適用後のパッケージ名：`com.sauzask.nicoid.hls`
-- 正式版：`v1.8.1`
+- 正式版：`v1.8.2`
 - 開発版：`dev`ブランチで管理
 
 パッチ適用には次の元APKを使用してください。
@@ -21,7 +21,7 @@ SHA-256：`17fc6b46228af184437ade7e6f5573915bc655b86996307ff3270fdf35279cce`
 ## パッチ配布
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.8.1](https://github.com/chikuwadon/nicoid-re-patches/releases/tag/v1.8.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`ブランチ&nbsp;&nbsp;•&nbsp;&nbsp;パッチ1件
+> **[v1.8.2](https://github.com/chikuwadon/nicoid-re-patches/releases/tag/v1.8.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`ブランチ&nbsp;&nbsp;•&nbsp;&nbsp;パッチ1件
 <details open>
 <summary>📦 nicoid&nbsp;&nbsp;•&nbsp;&nbsp;パッチ1件</summary>
 <br>
@@ -75,8 +75,8 @@ https://github.com/chikuwadon/nicoid-re-patches
 - 動画情報にシリーズ・親作品・子作品を表示するように。
 - ニコレポを復旧し、投稿者や活動の種類で絞り込めるように。
 - プロフィールとアカウントページへのショートカットを表示するマイページを追加。
-- 設定項目を検索できるように。
 - 起動時に表示する画面の設定追加。
+- 常時表示モード機能を追加
 - モバイル通信時の画質の設定追加。
 - 再生速度を0.1〜3.0倍のスライダーで設定できるように。
 - 上下スワイプによる音量・輝度調整を追加。
@@ -87,6 +87,8 @@ https://github.com/chikuwadon/nicoid-re-patches
 - 関連動画の選択メニューに、ポップアップ再生・バックグラウンド再生・キャッシュ取得を追加。
 - ポップアップ画面でピンチイン・アウトできるように。
 - 再生速度を変えても、流れるコメントの速度を等倍に維持するように。
+- コメント描画の上限を25・30・60・90・120fpsから選択可能。実際のフレームレートは端末性能と画面の更新頻度に依存。
+- コメントコマンドによる色指定・上下固定・文字サイズに対応。
 - コメントサイズを10〜300%のスライダーで設定できるように。
 - 流れるコメントを太字にする設定を追加。
 - コメントの不透明度・影の大きさ・最大行数を設定できるように。

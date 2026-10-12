@@ -47,6 +47,6 @@ internal object ValidateVideoFingerprint : Fingerprint(
     parameters = listOf(
         "Lcom/brightcove/player/model/Video;",
         Type.CONTEXT,
-        "Lcom/angel/klikk/Database/Repository;"
+        "Lcom/angel/klikk/Database/Repository;",
     ),
 )

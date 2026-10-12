@@ -1,4 +1,44 @@
-## Unreleased
+## 0.71.3 (2026-10-11)
+
+* **TikTok:** Com Mostrar a LIVE sob a barra de status ligado, as salas seguintes também mantêm a sombra sob o relógio. Antes a faixa voltava a ficar clara depois das primeiras LIVEs que você passava (#137).
+
+* **TikTok:** Esconder a bolha do Tako agora também esconde a bolha do Tako no canto inferior direito dos vídeos do feed, que algumas contas recebem no lugar da que fica acima do botão de perfil (#115).
+
+* **TikTok:** O Feature Gate Lab tem uma nova predefinição Banner de perfil. Ela liga Add background no Edit profile do TikTok sem mudar o resto do perfil para o novo layout (#80).
+
+* **TikTok:** A janela de coleções que aparece ao segurar o botão de Favoritos agora fica escura em vez de branca quando o TikTok está no modo escuro. Janela de Favoritos escura nas configurações do Hushfeed > Aplicativo desliga isso (#142).
+
+## 0.71.2 (2026-10-11)
+
+* **TikTok:** Ocultar a barra de status nas LIVEs e Mostrar a LIVE sob a barra de status agora também funcionam numa LIVE aberta pela prévia abaixo do cartão de um criador na busca. O TikTok abre essa LIVE dentro da página que usa para vídeos abertos, onde as chaves não chegavam (#137).
+
+## 0.71.1 (2026-10-11)
+
+* **TikTok:** Com Manter as legendas com a tela limpa ativado, a legenda na tela limpa agora fica onde o TikTok a mostrava antes de os controles sumirem, em vez de descer até a borda inferior (#141). Enquanto nenhuma legenda tiver aparecido, ela fica no lugar antigo.
+
+* **TikTok:** Com Mostrar a LIVE sob a barra de status ligado, a faixa sob o relógio volta a ter a mesma sombra do resto do topo da sala. Nos celulares em que o TikTok reserva uma faixa preta para a barra, ela aparecia mais clara que a transmissão abaixo (#137).
+
+## 0.71.0 (2026-10-11)
+
+* **TikTok:** Com Toque duplo em uma das ações do Hushfeed e Long-press controls no patch, um segundo toque em que o dedo fica um pouco demais não abre mais junto o menu de toque longo do TikTok, então o painel de compartilhar não aparece mais por cima dos comentários. (#63)
+
+* **TikTok:** Controles de LIVE tem uma terceira chave, Oferecer a qualidade da LIVE em mais salas, em Configurações do Hushfeed > Reprodução. O TikTok só oferece Qualidade do vídeo no menu de uma LIVE quando a transmissão pede ou quando o TikTok liga o seletor de qualidade mais novo para a sua conta, então em algumas salas não dava para escolher. Com a chave ligada, a maioria das salas sem ele ganha o seletor novo (salas só de áudio não), e a próxima sala abre na última qualidade que você escolheu até o TikTok ser fechado. Vem desligada. (#57)
+
+* **TikTok:** Mostrar datas na grade do perfil e Mostrar taxa de engajamento agora funcionam nas grades do TikTok 47.1.4, tanto nos vídeos de um perfil quanto nos Favoritos e nos vídeos curtidos. Essa versão escreve as visualizações de cada quadro num lugar que o patch não alcançava, então nem a data nem a taxa apareciam ali.
+
+* **TikTok:** Criadores bloqueados, palavras bloqueadas, as faixas de visualizações e curtidas e chaves como Esconder os vídeos LIVE e Esconder os stories agora também valem na aba Seguindo. No TikTok 47.1.4 essa aba só perdia os anúncios e os vídeos com local, então um criador que você bloqueou ainda podia aparecer ali.
+
+* **TikTok:** Uma palavra que não é código de idioma em Não traduzir automaticamente estes idiomas agora recebe só a mensagem "não é um código de idioma". Antes avisava que nenhum vídeo combinaria, que é o aviso do filtro de idioma das legendas e não faz sentido numa lista que só deixa o texto sem tradução (#121).
+
+* **TikTok:** Detalhes da compilação agora também cita os patches que só mudam os recursos do TikTok, como Change app name, Custom launcher icon e Trust user certificates. Ele lista o patch, nunca o nome ou a imagem que você escolheu nas opções dele.
+
+* **TikTok:** Com Registrar diagnósticos ligado, o registro agora informa uma vez por vídeo quantas imagens de prévia da barra de progresso o TikTok mandou com ele. Se a prévia não aparece quando você arrasta a barra, uma exportação de diagnósticos mostra se o vídeo veio com alguma (#140).
+
+* **TikTok:** Detalhes da compilação e a exportação completa do log agora listam, com um nome curto, cada patch da sua compilação que alterou o código do TikTok, incluindo os sem chave, como Comment send fix e Network request report.
+
+* **TikTok:** Tela limpa, lembrada ou automática, agora também limpa um vídeo que você abre pela busca. O TikTok passa esse vídeo para a página aberta já tocando, e a Tela limpa esperava um início que ali nunca chegava, então os botões e a barra de busca do TikTok continuavam na tela (#84).
+
+* **TikTok:** Esconder sobreposições do vídeo e os tamanhos de texto do feed agora também funcionam quando um link abre o TikTok direto na busca ou em um vídeo, sem o feed Para você por trás. Antes, os vídeos abertos assim mantinham todas as sobreposições e o tamanho de texto do próprio TikTok (#84).
 
 * **TikTok:** Proteger páginas externas no navegador do TikTok agora conta o CAPTCHA de quebra-cabeça que os LIVEs e a Loja abrem como uma página do próprio TikTok, então o quebra-cabeça mantém a ligação com o TikTok (#87). Ele carrega dos servidores do TikTok, só que de um endereço que a opção não conhecia.
 
@@ -44,7 +84,7 @@
 
 * **TikTok:** O relatório de diagnóstico tem uma nova seção Storage que lista as maiores pastas no armazenamento do TikTok, então um relatório consegue mostrar o que está enchendo ele (#70). Ela só cita pastas, nunca arquivos, e esconde números de conta.
 
-* **TikTok:** Apertar voltar em um vídeo limpo aberto pela busca ou por um perfil não conta mais como desligar o Clear display. Abrir o mesmo vídeo de novo limpa ele como qualquer outro, e um Clear display lembrado continua ligado (#84).
+* **TikTok:** Apertar voltar em um vídeo limpo, ou abrir o painel de compartilhar a partir dele, não conta mais como desligar o Clear display. Abrir o mesmo vídeo de novo limpa ele como qualquer outro, e um Clear display lembrado continua ligado (#84).
 
 * **TikTok:** O Remove LIVE extras agora avisa que tira os arquivos para entrar na LIVE de outra pessoa como convidado, então entrar por voz ou vídeo pode parar de funcionar com ele (#132). Deixe ele de fora se você entra em LIVEs.
 

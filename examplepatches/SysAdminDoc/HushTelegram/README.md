@@ -1,7 +1,7 @@
 ![HushTelegram. Keep the chat. Cut the noise.](assets/readme-hero.png)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.0.12-2AABEE" alt="Version 0.0.12">
+  <img src="https://img.shields.io/badge/version-0.0.13-2AABEE" alt="Version 0.0.13">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B-3DDC84" alt="Platform Android 9+">
   <img src="https://img.shields.io/badge/Telegram-13.0.1-2AABEE" alt="Telegram 13.0.1">
@@ -22,9 +22,9 @@
 
 HushTelegram is a Morphe patch bundle for Android that takes the sponsored messages out of Telegram and keeps a few things on your phone that Telegram would otherwise send home.
 
-The latest release is [v0.0.12](https://github.com/SysAdminDoc/HushTelegram/releases/tag/v0.0.12), with 56 patches built for Telegram 12.10.6 and the official beta 12.10.7. On a signed-in phone Hide ads took a live search ad off the screen. See [the before and after](#hide-ads-before-and-after). The source here has since moved on to Telegram 13.0.1, both telegram.org's build and the beta, and the next release will be built for those.
+The latest release is [v0.0.13](https://github.com/SysAdminDoc/HushTelegram/releases/tag/v0.0.13), with 68 patches built for Telegram 13.0.1, both telegram.org's build and the official beta. On a signed-in phone Hide ads took a live search ad off the screen. See [the before and after](#hide-ads-before-and-after).
 
-v0.0.12 is mostly about reading easier. Every patch description in Morphe Manager, every row in HushTelegram settings and every message the app shows is rewritten in plain English, and Expert mode groups the patches the way you'd look for them. Keep deleted messages now marks a message the moment it's deleted while the chat is open, and a new row clears what it kept. On the beta, Disable analytics also stops Firebase's crash and session reports, and the new Turn off beta debug logs switch (off by default) stops the beta from writing debug logs all the time. Two optional patches take your own registered Telegram API credentials and Google Maps key when you patch.
+v0.0.13 moves to Telegram 13.0.1 and brings twelve new patches, most of them asked for in the issues. You can translate a whole chat with Google's web translate or an AI service on your own key, keep a copy of downloaded files and songs in Download/Telegram, and make Private, Groups, Channels and Bots folders in one tap. Phones where Firebase notifications don't arrive can get them through a UnifiedPush app like ntfy. There's also Faster downloads, a black launch screen with AMOLED black (with Telegram's logo in white on it if you want), HushTelegram's own icon and name, and switches that hide the Contacts tab, the channel bar buttons, the Send as button or messages matching your own keyword filters. HushTelegram settings is split into seven pages now, so a switch is easier to find.
 
 
 [Add to Morphe](https://morphe.software/add-source?github=SysAdminDoc%2FHushTelegram) | [Download a release](https://github.com/SysAdminDoc/HushTelegram/releases/latest) | [Browse the patches](#patches)
@@ -42,7 +42,7 @@ This project has no connection to Telegram or to the Morphe project. Neither end
 
 ## Which Telegram
 
-HushTelegram patches telegram.org's own Telegram build, package `org.telegram.messenger.web`, version 13.0.1 (version code 71679). That's what telegram.org's [Download button](https://telegram.org/android) gives you now. The APK carries every phone architecture, and it's the build each patch is checked against. Morphe Manager warns about other builds. Until the next release is out, v0.0.12 still needs 12.10.6 (version code 71129) from [APKMirror's Telegram (Web version) page](https://www.apkmirror.com/apk/telegram-fz-llc/telegram-web-version/telegram-web-version-12-10-6-release/).
+HushTelegram patches telegram.org's own Telegram build, package `org.telegram.messenger.web`, version 13.0.1 (version code 71679). That's what telegram.org's [Download button](https://telegram.org/android) gives you now. The APK carries every phone architecture, and it's the build each patch is checked against. Morphe Manager warns about other builds.
 
 Since v0.0.8 it also targets the [official beta](https://telegram.org/dl/android/apk-public-beta), package `org.telegram.messenger.beta`, version 13.0.1 (version code 71669). Its vendor signer and native patch targets are checked on their own.
 
@@ -56,9 +56,9 @@ Changed Premium report builders are refused before the patch changes any code.
 
 1. Install [Morphe Manager](https://github.com/MorpheApp/morphe-manager) 1.34.0 or newer.
 2. Add HushTelegram as a patch source: https://morphe.software/add-source?github=SysAdminDoc%2FHushTelegram
-3. Get Telegram 13.0.1, version code 71679, from telegram.org's [Download button](https://telegram.org/android). The release out now, v0.0.12, needs 12.10.6 instead. Get it from [APKMirror's Telegram (Web version) page](https://www.apkmirror.com/apk/telegram-fz-llc/telegram-web-version/telegram-web-version-12-10-6-release/) and pick the universal APK. Skip the Google Play version either way, since it's a different package.
+3. Get Telegram 13.0.1, version code 71679, from telegram.org's [Download button](https://telegram.org/android). Skip the Google Play version, since it's a different package.
 4. In Morphe Manager, pick that file, keep the default patch selection and patch. It holds every feature with a switch in HushTelegram settings, so you don't need Expert mode.
-5. Three patches are left out. If you have your own Telegram API ID and hash or a Google Maps key, turn on **Settings → Advanced → Expert mode** in Morphe Manager, pick Use registered Telegram API credentials or Use registered Maps API key, and fill in its options before you patch. Want HushTelegram's own icon on your home screen? Pick HushTelegram icon and name the same way. Its one option renames the app.
+5. Four patches are left out. If you have your own Telegram API ID and hash or a Google Maps key, turn on **Settings → Advanced → Expert mode** in Morphe Manager, pick Use registered Telegram API credentials or Use registered Maps API key, and fill in its options before you patch. Want HushTelegram's own icon on your home screen? Pick HushTelegram icon and name the same way. Its one option renames the app. Black and white launch logo puts Telegram's logo in white on the black launch screen AMOLED black gives you.
 
 Android accepts an update only when it carries the installed app's signing key. Use your retained Morphe key to update an existing patched Telegram in place. Its data and permission choices stay intact.
 
@@ -75,7 +75,7 @@ The developer installation script requires the exact device serial, expected mod
 
 ## Patches
 
-The source catalog has 66 patches, with 63 selected by default. New since v0.0.12: Translate with an outside service, Hide channel bar buttons, Hide Send as button, Hide messages by keyword, Change sticker size, HushTelegram icon and name, Faster downloads, UnifiedPush notifications, Save downloaded files and Folders by chat type. v0.0.12 has 56 patches, with 54 selected by default. Turn off beta debug logs is new in v0.0.12. Every patch but the two credential patches and HushTelegram icon and name is selected by default, so you don't need Expert mode to find a feature. Each description below says which page of HushTelegram settings holds its switch and whether it starts on or off. The credential patches need your own values, which Morphe Manager only asks for in Expert mode. Expert mode groups the patches the way you'd look for them: Chats for the chat list, Conversations for what happens inside a chat, then Playback, Notifications, Theme, Interface and a few smaller groups.
+v0.0.13 has 68 patches, with 64 selected by default. New in v0.0.13: Translate with an outside service, Hide channel bar buttons, Hide Send as button, Hide Contacts tab, Hide messages by keyword, Change sticker size, HushTelegram icon and name, Black and white launch logo, Faster downloads, UnifiedPush notifications, Save downloaded files and Folders by chat type. Every patch but the two credential patches, HushTelegram icon and name and Black and white launch logo is selected by default, so you don't need Expert mode to find a feature. Each description below says which page of HushTelegram settings holds its switch and whether it starts on or off. The credential patches need your own values, which Morphe Manager only asks for in Expert mode. Expert mode groups the patches the way you'd look for them: Chats for the chat list, Conversations for what happens inside a chat, then Playback, Notifications, Theme, Interface and a few smaller groups.
 
 | Patch | What it does |
 |---|---|
@@ -108,6 +108,7 @@ The source catalog has 66 patches, with 63 selected by default. New since v0.0.1
 | `Holiday look all year` | Shows Telegram's Santa hat and New Year snow all year, not just around New Year. Starts off. Turn it on in HushTelegram settings > Look and feel. |
 | `Use system font` | Draws Telegram's bold, italic and code text in your phone's font instead of the one built into the app. Starts off. Turn it on in HushTelegram settings > Look and feel, then restart Telegram. |
 | `AMOLED black` | Gives Telegram's Night and Dark themes pure black screens for a darker look. Message bubbles and menus keep their colors. On Android 13 and up the launch screen turns black too while your phone is in dark mode. Starts off. Turn it on in HushTelegram settings > Look and feel, then restart Telegram. |
+| `Black and white launch logo` | With AMOLED black on and your phone in dark mode, the launch screen shows Telegram's logo in white on black instead of the app icon, on Android 13 and up. It isn't selected by default, since it has Morphe rebuild Telegram's resources. Turn on Expert mode in Morphe Manager to pick it. |
 | `Hide translate bar` | Hides the translate bar at the top of chats in another language. Translate moves to the chat's menu. Starts off. Turn it on in HushTelegram settings > Conversations. |
 | `Exact numbers` | Shows member, subscriber, view, reply and reaction counts in full, like 12,345 instead of 12.3K. Starts off. Turn it on in HushTelegram settings > Look and feel. |
 | `Reveal spoilers` | Shows spoiler text, photos and videos without the cover, so you don't have to tap. View-once media, sensitive content and login codes stay covered. Starts off. Turn it on in HushTelegram settings > Conversations. |
@@ -133,7 +134,7 @@ The source catalog has 66 patches, with 63 selected by default. New since v0.0.1
 | `Hide time on stickers` | Removes the time and read checks from stickers and big animated emoji in chats. Starts off. Turn it on in HushTelegram settings > Look and feel. |
 | `Change sticker size` | Shows stickers in chats smaller or larger than Telegram does, at a size you pick. Animated emoji and dice keep their size. Starts off. Turn it on in HushTelegram settings > Look and feel. |
 | `Ignore mentions in muted chats` | Stops mentions and replies in groups or channels you've muted from notifying you. Chats you haven't muted notify as before. Starts off. Turn it on in HushTelegram settings > Notifications. |
-| `Hide blocked users in groups` | Leaves messages from people you've blocked out of groups and supergroups you open. Nothing is deleted. Starts off. Turn it on in HushTelegram settings > Conversations. |
+| `Hide blocked users in groups` | Leaves messages from people you've blocked out of groups and supergroups you open, and keeps them from notifying you. Nothing is deleted. Starts off. Turn it on in HushTelegram settings > Conversations. |
 | `Hide Telegram Features and Invite Friends` | Removes the Telegram Features row from Settings and the Invite Friends rows from Contacts. Starts off. Turn it on in HushTelegram settings > Look and feel. |
 | `Add Repeat to the message menu` | Adds Repeat, Copy photo, Message details and Quick forward to a message's press-and-hold menu, for resending, copying and forwarding faster. All four start off. Turn them on in HushTelegram settings > Conversations. |
 | `Keep deleted messages` | Keeps a message on your phone when someone else deletes it, and marks it deleted next to the time. Your own deletes still work normally. Starts off. Turn it on in HushTelegram settings > Conversations. |
@@ -142,6 +143,7 @@ The source catalog has 66 patches, with 63 selected by default. New since v0.0.1
 | `Translate with an outside service` | Adds Translate here to a message's menu and Translate this chat to a chat's menu. Text you turn on goes to Google's web translate, or to an AI service with your own key if you set one, one message at a time, and nothing is sent before that. Telegram's own translation and its Premium checks stay as they are. Starts off. Turn it on in HushTelegram settings > Conversations. |
 | `Hide channel bar buttons` | Removes the Search, Direct messages and Info buttons from the bar at the bottom of a channel. Mute and Join stay. Starts off. Turn it on in HushTelegram settings > Look and feel. |
 | `Hide Send as button` | Hides your picture next to the message box in groups and channels where you could post as a channel, while you're posting as yourself. Starts off. Turn it on in HushTelegram settings > Look and feel. |
+| `Hide Contacts tab` | Removes the Contacts tab from the bar at the bottom of the main screen, and swiping doesn't open its page either. The Calls or Settings tab stays as Telegram has it, and the chat list's new message button still opens your contacts. Starts off. Turn it on in HushTelegram settings > Chat list. |
 | `Hide messages by keyword` | Leaves messages that match your own words or regular expressions out of the groups and channels you open, with one list for groups and one for channels. Private chats and your own messages stay. Nothing is deleted, and the filters stay on the phone. Starts off. Turn it on in HushTelegram settings > Conversations. |
 | `Open links externally` | Opens ordinary web links in your browser instead of inside Telegram. Telegram links, sign-in and payment pages work as before. On by default. Turn it off in HushTelegram settings > More settings > Links. |
 | `Strip link tracking` | Removes tracking tags like utm_source, gclid and fbclid from links you open or share. Links with any other extra part stay unchanged. Starts off. Turn it on in HushTelegram settings > More settings > Links. |
@@ -160,7 +162,7 @@ On v0.0.8 there's no row in Telegram's Settings, so use the long-press or App in
 
 More settings has separate pages for Pause, Settings backup and Diagnostics. Search finds each control by its name or page. Your saved switches and backup files work as before. Support HushTelegram, the last row on the home page, opens the project's Ko-fi page in your browser.
 
-After v0.0.12 the source splits the old Chats page into Ads, Chat list, Conversations, Playback, Notifications, Look and feel and Privacy, matching the groups Morphe Manager shows. Each patch description below names its page. The screenshots still show v0.0.12.
+Since v0.0.13 the old Chats page is split into Ads, Chat list, Conversations, Playback, Notifications, Look and feel and Privacy, matching the groups Morphe Manager shows. Each patch description below names its page. The screenshots still show v0.0.12's single Chats page.
 
 <p><img src="assets/settings-overview.png" width="320" alt="HushTelegram settings with search, Pause, and rows for Chats, Privacy and More settings that say what each page holds"><img src="assets/settings-chats.png" width="320" alt="The Chats page with Hide ads and Hide Stories turned on"></p>
 
@@ -233,7 +235,7 @@ The patched app still connects to Telegram for messaging and Telegram's own serv
 | [SysAdminDoc/HushThreads](https://github.com/SysAdminDoc/HushThreads) at `b141524` | The Gradle build, the shared extension library with its settings screen, diagnostics and pause, the bytecode helpers and the checks that apply every patch to real builds before a release. Most of that came to HushThreads from [Hushfacebook](https://github.com/SysAdminDoc/Hushfacebook), and some of it from [Hushfeed](https://github.com/SysAdminDoc/hushfeed), [Andrew Liang's patches](https://github.com/andrewliang25/morphe-patches) and [FroggoMorphePatches](https://github.com/SapitoSucio/FroggoMorphePatches). |
 | [Morphe](https://github.com/MorpheApp) and [ReVanced](https://gitlab.com/ReVanced/revanced-patches) | The patcher and the patch template. Everything above grew from their code. |
 
-The Telegram patches were written for this project by reading Telegram 12.10.6 itself. Every source file says where it came from in its header, and [provenance.json](provenance.json) maps each file to the project and commit it came from, with its license. The [source ledger](sources/telegram-sources.json) records the other Telegram references, their reviewed commits and adoption decisions. A listed feature is a research candidate, not an approved addition or a dependency. The ledger also records four confirmed directory listings. The published bundle is v0.0.12. Changes under Unreleased in the changelog are newer source work.
+The Telegram patches were written for this project by reading Telegram 12.10.6 itself. Every source file says where it came from in its header, and [provenance.json](provenance.json) maps each file to the project and commit it came from, with its license. The [source ledger](sources/telegram-sources.json) records the other Telegram references, their reviewed commits and adoption decisions. A listed feature is a research candidate, not an approved addition or a dependency. The ledger also records four confirmed directory listings. The published bundle is v0.0.13. Changes under Unreleased in the changelog are newer source work.
 
 ## Building from source
 

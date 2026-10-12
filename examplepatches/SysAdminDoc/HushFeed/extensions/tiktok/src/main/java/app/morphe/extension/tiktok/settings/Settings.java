@@ -498,6 +498,12 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting SHOW_EXACT_LIVE_VIEWERS = new BooleanSetting("show_exact_live_viewers", FALSE);
     /**
+     * Offers TikTok's quality picker in more LIVE rooms and carries the last pick to the next
+     * room; the LIVE controls patch. Read when a room builds its menu and picks its starting
+     * quality, so the next room follows a change.
+     */
+    public static final BooleanSetting OFFER_LIVE_QUALITY = new BooleanSetting("offer_live_quality", FALSE);
+    /**
      * Plays the audio TikTok mutes on a post whose sound was pulled; the Keep pulled sounds
      * patch. Read as each video starts, so no restart.
      */
@@ -903,6 +909,8 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting ENABLE_VOICE_COMMENTS = new BooleanSetting("enable_voice_comments", FALSE, true);
     public static final BooleanSetting KEEP_FAVORITES_TAB =
             new BooleanSetting("keep_favorites_tab", TRUE, true);
+    /** The collections popup from holding the bookmark, dark when TikTok is (issue #142). */
+    public static final BooleanSetting DARK_QUICK_FAVORITES = new BooleanSetting("dark_quick_favorites", TRUE);
     /** The Following and For You names above the feed; the pager under them keeps swiping (issue #32). */
     public static final BooleanSetting HIDE_FEED_TAB_STRIP = new BooleanSetting("hide_feed_tab_strip", FALSE);
     public static final BooleanSetting HIDE_FEED_SEARCH_BUTTON =

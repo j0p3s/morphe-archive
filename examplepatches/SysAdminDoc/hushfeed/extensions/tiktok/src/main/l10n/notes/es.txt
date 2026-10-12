@@ -1,4 +1,46 @@
-## Unreleased
+## 0.71.3 (2026-10-11)
+
+* **TikTok:** Con Mostrar el LIVE bajo la barra de estado activado, cada sala a la que pasas llega hasta debajo del reloj con la sombra detrás. Algunas salas mantenían ahí una franja negra, y después de los primeros LIVE la franja podía volver a verse clara (#137).
+
+* **TikTok:** Con Mostrar el LIVE bajo la barra de estado activado, ocultar los controles en un LIVE ya no deja una franja oscura bajo el reloj, y la fila de arriba del panel lateral que abres deslizando a la izquierda queda por debajo del reloj (#137).
+
+* **TikTok:** Ocultar la burbuja de Tako ahora también oculta la burbuja de Tako en la esquina inferior derecha de los videos del feed, que algunas cuentas ven en lugar de la que está encima del botón de perfil (#115).
+
+* **TikTok:** Feature Gate Lab tiene un nuevo ajuste Banner de perfil. Activa Add background en Edit profile de TikTok sin pasar el resto del perfil al nuevo diseño (#80).
+
+* **TikTok:** La ventana de colecciones que aparece al mantener pulsado el botón de Favoritos ahora es oscura en vez de blanca cuando TikTok está en modo oscuro. Ventana de Favoritos oscura en los ajustes de Hushfeed > Aplicación la desactiva (#142).
+
+## 0.71.2 (2026-10-11)
+
+* **TikTok:** Ocultar la barra de estado en los LIVE y Mostrar el LIVE bajo la barra de estado ahora también funcionan en un LIVE abierto desde la vista previa bajo la tarjeta de un creador en la búsqueda. TikTok abre ese LIVE dentro de la página que usa para los videos abiertos, a la que los interruptores no llegaban (#137).
+
+## 0.71.1 (2026-10-11)
+
+* **TikTok:** Con Mantener los subtítulos con los controles ocultos activado, el subtítulo con los controles ocultos ahora queda donde TikTok lo mostraba antes de que se ocultaran los controles, en vez de bajar hasta el borde inferior (#141). Mientras no se haya mostrado ningún subtítulo, se queda en el sitio de antes.
+
+* **TikTok:** Con Mostrar el LIVE bajo la barra de estado activado, la franja bajo el reloj vuelve a tener la misma sombra que el resto de la parte superior de la sala. En los teléfonos donde TikTok deja una franja negra para la barra, se veía más clara que la transmisión de abajo (#137).
+
+## 0.71.0 (2026-10-11)
+
+* **TikTok:** Con Doble toque en una de las acciones de Hushfeed y Long-press controls en el parche, un segundo toque en el que el dedo se queda un momento de más ya no abre también el menú de pulsación larga de TikTok, así que el panel de compartir ya no aparece encima de los comentarios. (#63)
+
+* **TikTok:** Controles de LIVE tiene un tercer interruptor, Ofrecer la calidad de LIVE en más salas, en Ajustes de Hushfeed > Reproducción. TikTok solo ofrece Calidad de video en el menú de un LIVE cuando la transmisión lo pide o cuando TikTok activa su selector de calidad más nuevo para tu cuenta, así que en algunas salas no había forma de elegirla. Con el interruptor activado, la mayoría de las salas sin él reciben el selector nuevo (las salas solo de audio no), y la siguiente sala se abre con la última calidad que elegiste hasta que cierres TikTok. Viene desactivado. (#57)
+
+* **TikTok:** Mostrar fechas en la cuadrícula del perfil y Mostrar la tasa de interacción ya funcionan en las cuadrículas de TikTok 47.1.4, tanto en los vídeos de un perfil como en Favoritos y en los vídeos que te gustan. Esa versión pone las vistas de cada celda en un sitio al que el parche no llegaba, así que ni la fecha ni la tasa aparecían ahí.
+
+* **TikTok:** Los creadores bloqueados, las palabras bloqueadas, los rangos de vistas y me gusta e interruptores como Ocultar los vídeos LIVE y Ocultar las historias ahora también funcionan en la pestaña Siguiendo. En TikTok 47.1.4 esa pestaña solo perdía los anuncios y los vídeos con ubicación, así que un creador que habías bloqueado podía seguir apareciendo ahí.
+
+* **TikTok:** Una palabra que no es un código de idioma en No traducir automáticamente estos idiomas ahora recibe un simple mensaje de "no es un código de idioma". Antes avisaba de que ningún video coincidiría nunca, que es el aviso del filtro de idioma de los subtítulos y no encaja en una lista que solo deja el texto sin traducir (#121).
+
+* **TikTok:** Detalles de la compilación ahora también nombra los parches que solo cambian los recursos de TikTok, como Change app name, Custom launcher icon y Trust user certificates. Muestra el parche, nunca el nombre ni la imagen que elegiste en sus opciones.
+
+* **TikTok:** Con Registrar diagnósticos activado, el registro ahora indica una vez por video cuántas imágenes de vista previa de la barra de progreso envió TikTok con él. Si la vista previa no aparece al arrastrar la barra, una exportación de diagnósticos muestra si el video traía alguna (#140).
+
+* **TikTok:** Detalles de la compilación y la exportación completa del registro ahora enumeran, con un nombre corto, cada parche de tu compilación que cambió el código de TikTok, incluidos los que no tienen interruptor, como Comment send fix y Network request report.
+
+* **TikTok:** Controles ocultos, recordado o automático, ahora también despeja un vídeo que abres desde la búsqueda. TikTok pasa ese vídeo a la página abierta ya reproduciéndose, y Controles ocultos esperaba un inicio que ahí nunca llegaba, así que los botones y la barra de búsqueda de TikTok se quedaban (#84).
+
+* **TikTok:** Ocultar superposiciones de vídeo y los tamaños de texto del feed ahora también funcionan cuando un enlace abre TikTok directamente en la búsqueda o en un vídeo, sin el feed Para ti detrás. Antes, los vídeos abiertos así conservaban todas las superposiciones y el tamaño de texto propio de TikTok (#84).
 
 * **TikTok:** Proteger páginas externas en el navegador de TikTok ahora cuenta el CAPTCHA de rompecabezas que abren los LIVE y la Tienda como una página propia de TikTok, así el rompecabezas conserva su conexión con TikTok (#87). Se carga desde los servidores de TikTok, solo que desde una dirección que el interruptor no conocía.
 
@@ -44,7 +86,7 @@
 
 * **TikTok:** El informe de diagnóstico tiene una nueva sección Storage con las carpetas más grandes del almacenamiento de TikTok, así un informe puede mostrar qué lo está llenando (#70). Solo nombra carpetas, nunca archivos, y oculta los números de cuenta.
 
-* **TikTok:** Pulsar atrás en un video despejado que abriste desde la búsqueda o un perfil ya no cuenta como apagar Clear display. Si abres el mismo video otra vez, se despeja como cualquier otro, y un Clear display recordado sigue activo (#84).
+* **TikTok:** Pulsar atrás en un video despejado, o abrir desde él el panel de compartir, ya no cuenta como apagar Clear display. Si abres el mismo video otra vez, se despeja como cualquier otro, y un Clear display recordado sigue activo (#84).
 
 * **TikTok:** Remove LIVE extras ahora dice que quita los archivos para unirte al LIVE de otra persona como invitado, así que con él puede dejar de funcionar unirte por voz o video (#132). No lo incluyas si te unes a LIVEs.
 

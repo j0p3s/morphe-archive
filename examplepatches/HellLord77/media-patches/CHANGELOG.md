@@ -1,3 +1,22 @@
+## [1.3.3](https://github.com/HellLord77/media-patches/compare/v1.3.2...v1.3.3) (2026-10-11)
+
+### 🐛 Bug Fixes
+
+* Added chorki disable update patch ([#19](https://github.com/HellLord77/media-patches/issues/19)) ([ed6527c](https://github.com/HellLord77/media-patches/commit/ed6527cf50d01c722e0c5717636e3162948af2d1))
+* Patch additional checks for hoichoi tv ([fe4925b](https://github.com/HellLord77/media-patches/commit/fe4925b1e8b54c634d6962f91abf91d7f4c5a2de))
+
+## [1.3.3-dev.2](https://github.com/HellLord77/media-patches/compare/v1.3.3-dev.1...v1.3.3-dev.2) (2026-10-11)
+
+### 🐛 Bug Fixes
+
+* Patch additional checks for hoichoi tv ([fe4925b](https://github.com/HellLord77/media-patches/commit/fe4925b1e8b54c634d6962f91abf91d7f4c5a2de))
+
+## [1.3.3-dev.1](https://github.com/HellLord77/media-patches/compare/v1.3.2...v1.3.3-dev.1) (2026-10-11)
+
+### 🐛 Bug Fixes
+
+* Added chorki disable update patch ([#19](https://github.com/HellLord77/media-patches/issues/19)) ([ed6527c](https://github.com/HellLord77/media-patches/commit/ed6527cf50d01c722e0c5717636e3162948af2d1))
+
 ## [1.3.2](https://github.com/HellLord77/media-patches/compare/v1.3.1...v1.3.2) (2026-10-02)
 
 ### 🐛 Bug Fixes

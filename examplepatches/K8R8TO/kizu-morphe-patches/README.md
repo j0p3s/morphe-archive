@@ -4,7 +4,7 @@ Morphe-compatible patches for the **Twitch Android app**.
 
 Kizu's goal is simple: add useful Twitch enhancements, privacy/cleanup controls, and third-party emote support while keeping the patch focused on the features that are actually supported and tested.
 
-**Current stable:** [v1.9.2](https://github.com/K8R8TO/kizu-morphe-patches/releases/tag/v1.9.2)  
+**Current stable:** [v2.0.0](https://github.com/K8R8TO/kizu-morphe-patches/releases/tag/v2.0.0)  
 **Target:** Twitch Android **31.3.1** (tv.twitch.android.app)  
 **Format:** Morphe .mpp patch bundle
 
@@ -43,6 +43,15 @@ Kizu's goal is simple: add useful Twitch enhancements, privacy/cleanup controls,
 - Built-in proxy choices and a custom proxy URL.
 - Proxy fallback behavior for supported playback paths.
 
+### Player Controls
+
+- Hide Create Clip Button
+- Hide Cast
+- Hide Live Share
+- Brightness Gesture
+- Volume Gesture
+- Video Quality Menu compatibility fix
+
 ### Third-party emotes
 
 - **7TV** emotes.
@@ -63,8 +72,8 @@ Kizu's third-party picker is kept separate from Twitch's native emote picker. Tw
 - Show **deleted messages**.
 - Deleted-message styles:
   - Mod
-  - Strikethrough
-  - Grey
+  - Strikethrough (breaks in rapid chats)
+  - Grey (breaks in rapid chats)
 - **Chat timestamps**.
 - **Mention highlighting**.
 - Custom mention highlight color.

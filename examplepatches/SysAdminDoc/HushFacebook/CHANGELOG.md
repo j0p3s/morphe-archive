@@ -4,9 +4,23 @@ Every Hushfacebook release, newest first.
 
 ## Unreleased
 
+### Fixed
+
+* **Facebook:** With `Keep the progress bar` on, a reel goes where you drag it again (issue #120). Keeping the full-size look ran Facebook's time writer, which put the bar back at the player's old spot right before Facebook read it to seek. On reels that show preview frames while you drag, that sent the reel back to where the drag began. The same writer sent the bar to the start when the reel's length wasn't known yet.
+* **Facebook:** With `Show a reel's time` on, the time comes back on its own after a reel ends or after a drag with preview frames (issue #73). Facebook hid it at those moments and only showed it again on the next drag, so a reel could play on with the bar but no time.
+* **Facebook:** With `Keep the progress bar` on, reels Facebook gave no bar at all get one too (issue #73). Facebook decides per reel whether it has a bar before any of the patch's other checks, and says no for ads and for some reels it flags on its servers. Now any reel whose length is known gets the bar.
+* **Facebook:** `Unlock app icons` has a new `Pick an app icon` row right below it that opens Facebook's App icon page (issue #122). Facebook lists that page in Settings and privacy only on some accounts, so on the rest there was no way to get to the icons.
+
+## 0.11.0 (2026-10-11)
+
+* **Facebook:** This release gathers everything since v0.10.0 and brings 88 patches for Facebook 582.0.0.50.54, up from 87. The new one is `Frame step`, which moves a paused reel or video one frame at a time. New switches hide comments with shop links or with words from your News feed list, let Home show just Friends, Favorites, Groups or Pages, and save crashes to Downloads so they can go with a bug report. The kept reel progress bar no longer jumps back on the first reel or sits under the caption, Material You reaches the Menu's top card and Log out strip, and the Reported issues list below maps each report this release touches.
+
 ### Added
 
+* **Facebook:** New patch, `Frame step`, under Playback (issue #95). With it on, pause a reel or a video and tap the right third of the picture to move one frame forward, or the left third to move one frame back. The middle third plays it again, and taps on a playing video work as before. It starts off, and the report counts the steps each way.
 * **Facebook:** Two new switches under Comments in `Comment sheet options`, **Hide comments with shop links** and **Hide comments with your words** (issue #118). The first leaves out comments that link to Shopee, Lazada, Tokopedia, AliExpress, Temu, Shein, TikTok Shop or Amazon's short links, replies and all. The second leaves out comments holding something from your News feed **Words to hide** list, unless they also have something from **Words that keep a post**, so the one list now covers posts and comments. Both start off, and the report counts what each one hid.
+* **Facebook:** `Following feed on Home` has a new row under it, **Home shows**, for people who want Home to be just their friends. Pick Friends, Favorites, Groups or Pages and Home asks Facebook for that filter's newest posts, the same ones the Feeds tab shows under it. All, the default, keeps Home as it was. If your Facebook doesn't have the filter you picked, Home shows All, and the diagnostic report counts which feed Home asked for. The choice travels in an exported settings file.
+* **Facebook:** New switch under Privacy, **Save crashes to Downloads**, in every build and on from the start. When Facebook crashes, the error goes in a text file in Download/Hushfacebook, so it can go with a bug report even when Facebook won't open far enough to reach the settings. It holds the diagnostic report's crash section, with links and IDs left out, and the newest five are kept. Nothing is written while Hushfacebook is paused. The bug form now says where to find it.
 
 ### Fixed
 
@@ -20,12 +34,38 @@ Every Hushfacebook release, newest first.
 * **Facebook:** A save WhatsApp may refuse shows one card in the shade. It has Open and Share like any finished save, says why the video may be refused and adds an **Open the setting** button. It used to post a second card next to the finished-save one.
 * **Facebook:** Two saves finishing in the same moment keep twenty finished-save cards. Each one trimmed the shade on its own, so they could both let a card go and leave nineteen.
 * **Facebook:** The Messenger link test under Links writes its result into its own row, where it stays readable. It used to show as a long toast that some phones cut short.
+* **Facebook:** With **Keep the progress bar** and **Show a reel's time** on, the first reel's bar no longer jumps back to the start while it plays (issue #120). The time above the bar was refreshed before Facebook had checked that the reel's player was ready, and the code that writes the time moves the bar too, so each refresh could put the bar back at 0:00 until the player caught up. The time is now refreshed only after Facebook has moved the bar itself.
+* **Facebook:** After you pick a different app icon, the **Hushfacebook settings** shortcut on a long press of the icon opens the settings again (issue #119). Picking an icon switches Facebook's usual launcher entry off and the icon's own entry on, and the shortcut still pointed at the one that was off, so tapping it did nothing. It now points at whichever entry is on, and so do the buttons on a notification that open a setting and the Open and Share buttons on a saved file's card. The shortcut catches up the next time Facebook starts.
+* **Facebook:** With **Default comment order** set to All comments, a friend's post no longer opens with no comments (issue #110). Asking for All comments up front got some posts an empty answer, while Newest and Most relevant got their comments. Comments now open in Facebook's order first, and when the post's sort menu offers All comments, it's picked there the same way a tap does. A post without that choice keeps Facebook's order.
+* **Facebook:** With **Keep the progress bar** on, a playing reel's caption no longer sits on top of the bar and its time (issue #73). Facebook moves the caption up only while a reel is paused, so it now keeps that paused layout while the reel plays too. Short reels whose bar showed for a moment and then faded out keep it as well. The diagnostic report counts any reel whose bar Facebook still hides.
+* **Facebook:** With `Material You theme` in dark mode, the card at the top of Menu with your name and picture takes your palette, and so does the strip behind Log out at the bottom (issue #37). Facebook's server sends the card's gray along with the Menu's layout, and the strip loads the gray Facebook keeps for cards as a picture, two paths the theme didn't reach.
+* **Facebook:** With `Material You theme` in dark mode, the Create story tile at the start of the stories tray takes your palette under your picture (issue #37). Facebook writes that gray straight into its code for dark mode.
+* **Facebook:** With `Material You theme` in dark mode, the box under a link post's picture takes your palette in the feed as well (issue #37). The 0.10.0 fix waited for Facebook to say dark mode was on, and Facebook lays out the first posts of a cold start before it says so, so those boxes could stay gray.
+* **Facebook:** In Indonesian and Turkish, the Following feed on Home summary and the Feeds header call the Feeds tab by the same name as the rest of those settings ("Feed" and "Akışlar"). They said "Feeds".
 
 ### Changed
 
 * **Facebook:** Summaries and toasts call the Marketplace switch's state Marketplace only, like the switch does. Some said "Marketplace mode", which isn't a name you'd find in the settings search.
 * **Facebook:** The seen posts row is called **Keep seen posts hidden for**, so it makes sense on its own in the settings search. While **Hide posts you've already seen** is off, its summary says to turn that on first.
 * **Tooling:** When the release notes check turns down the phrase about which Facebook builds a release was tried on, its error says the word Facebook has to come right after "to". The 0.10.0 notes were refused once for "to both Facebook" with no hint why.
+* **Facebook:** Ready for Android 17, which Samsung phones are getting with One UI 9. The reels filters that drop items from a section no longer treat a list the section's class keeps for itself as the section's items. Writing back into one of those is refused once Facebook targets Android 17, and could change every section at once before that. CONTRIBUTING.md lists what else Android 17 changes and why the rest doesn't touch Hushfacebook, and the settings and pause tests also run on Android 17 now.
+* **Tooling:** The release receipt checks that every patched build keeps its native libraries 16 KB aligned, which Android 17 phones with 16 KB pages need, and records it. A build that isn't stops the release.
+* **Tooling:** CONTRIBUTING.md no longer names an old release and its patch counts, and the release facts check now holds its patcher version and Manager floor to the pins, the way it does the README's.
+* **Facebook:** **Unlock app icons** says where to pick an icon (issue #122). The icons are on Facebook's own App icon page, at Menu > Settings and privacy > App icon, and the switch's summary used to say only "its App icon page". Patch descriptions in Morphe Manager say the same now.
+
+### Reported issues
+
+* **Facebook:** #120 Progress bar resetting with Keep the progress bar on: the first reel's bar moves on from where the reel is and goes back to the start only when the reel does.
+* **Facebook:** #119 Hushfacebook settings not opening from a long press on the icon: after you pick a different app icon, the shortcut opens the settings again once Facebook has restarted.
+* **Facebook:** #110 Comment sorting: with **Default comment order** on All comments, a friend's post opens with its comments, and All comments is picked in the post's own sort menu where it has one.
+* **Facebook:** #73 Keep the reel progress bar visible: a playing reel's caption stays above the bar and its time, and short reels keep the bar.
+* **Facebook:** #37 Material You in dark mode: the card at the top of Menu, the strip behind Log out, the Create story tile and the link boxes Facebook lays out first on a cold start take your palette.
+* **Facebook:** #122 and #109 Unlocked icons: the **Unlock app icons** switch says where the icons are, Menu > Settings and privacy > App icon.
+* **Facebook:** #90 Elapsed time on a reel before tapping play: a reel waiting for your tap stays out of picture-in-picture, and a reel coming back from the floating player keeps playing.
+* **Facebook:** #93 HDR videos with Turn off HDR brightness on: the switch also asks the phone's video decoder to keep HDR video in the usual range.
+* **Facebook:** #95 Frame mode: the new `Frame step` patch moves a paused reel or video one frame at a time.
+* **Facebook:** #118 Hiding promotional link comments: **Hide comments with shop links** and **Hide comments with your words** under Comments.
+* **Facebook:** #112 Battery drain on a re-signed build: Facebook's push service accepts a patched Facebook instead of stopping and restarting over and over.
 
 ## 0.10.0 (2026-10-10)
 

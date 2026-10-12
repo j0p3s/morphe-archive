@@ -1,0 +1,379 @@
+package app.template.patches.steamlink.binary
+
+import app.template.patches.shared.PatchCategories
+import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.patch.rawResourcePatch
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK_LEGACY
+import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
+import java.io.File
+
+private val NOP = byteArrayOf(0x1f, 0x20, 0x03, 0xd5.toByte())
+
+private data class NativeEdit(
+    val offset: Int,
+    val original: ByteArray,
+    val replacement: ByteArray,
+    val locateByPattern: Boolean = false,
+)
+
+private fun ascii(value: String): ByteArray = value.toByteArray(Charsets.US_ASCII)
+
+private fun paddedAscii(value: String, size: Int): ByteArray =
+    ByteArray(size).also { ascii(value).copyInto(it) }
+
+private fun applyNativeEdits(
+    bytes: ByteArray,
+    patchName: String,
+    edits: List<NativeEdit>,
+    strictLayout: Boolean,
+): ByteArray {
+    val replacements = edits.mapNotNull { edit ->
+        require(edit.original.size == edit.replacement.size)
+
+        if (edit.locateByPattern) {
+            val originalOffsets = bytes.findPatternOffsets(edit.original)
+            val replacementOffsets = bytes.findPatternOffsets(edit.replacement)
+            return@mapNotNull when {
+                originalOffsets.size == 1 && replacementOffsets.isEmpty() ->
+                    originalOffsets.single() to edit.replacement
+                originalOffsets.isEmpty() && replacementOffsets.size == 1 -> null
+                !strictLayout -> return bytes.copyOf()
+                originalOffsets.isEmpty() && replacementOffsets.isEmpty() ->
+                    throw PatchException(
+                        "$patchName pattern is absent on the supported layout: " +
+                            "original=${edit.original.toHex()}, patched=${edit.replacement.toHex()}",
+                    )
+                else ->
+                    throw PatchException(
+                        "$patchName pattern is ambiguous on the supported layout: " +
+                            "original matches=${originalOffsets.size}, " +
+                            "patched matches=${replacementOffsets.size}",
+                    )
+            }
+        }
+
+        val end = edit.offset + edit.original.size
+        if (edit.offset < 0 || end > bytes.size) {
+            throw PatchException("$patchName offset 0x${edit.offset.toString(16)} is outside the library")
+        }
+
+        val actual = bytes.copyOfRange(edit.offset, end)
+        when {
+            actual.contentEquals(edit.replacement) -> null
+            actual.contentEquals(edit.original) -> edit.offset to edit.replacement
+            else -> throw PatchException(
+                "$patchName precondition failed at 0x${edit.offset.toString(16)}: " +
+                    "actual=${actual.toHex()}, expected=${edit.original.toHex()} " +
+                    "or patched=${edit.replacement.toHex()}",
+            )
+        }
+    }
+
+    if (replacements.isEmpty()) return bytes.copyOf()
+
+    val mutable = bytes.copyOf()
+    replacements.forEach { (offset, replacement) ->
+        replacement.copyInto(mutable, offset)
+    }
+    return mutable
+}
+
+private data class NativeLayoutEdits(
+    val versionName: String,
+    val versionCode: Int,
+    val fileSize: Int,
+    val stockSha256: String,
+    val permissionNames: List<NativeEdit>,
+    val hmdInitialization: List<NativeEdit>,
+    val lobbyPermissionState: List<NativeEdit>,
+    val streamInitialization: List<NativeEdit>,
+)
+
+private val facePermissionOriginal =
+    ascii("com.oculus.permission.FACE_TRACKING") + byteArrayOf(0)
+private val facePermissionReplacement =
+    paddedAscii("android.permission.HAND_TRACKING", 36)
+private val eyePermissionOriginal =
+    ascii("com.oculus.permission.EYE_TRACKING") + byteArrayOf(0, 0x7d, 0)
+private val eyePermissionReplacement =
+    ascii("android.permission.EYE_TRACKING_FINE") + byteArrayOf(0)
+
+private fun permissionNameEdits(faceOffset: Int, eyeOffset: Int, locateByPattern: Boolean) = listOf(
+    NativeEdit(
+        offset = faceOffset,
+        original = facePermissionOriginal,
+        replacement = facePermissionReplacement,
+        locateByPattern = locateByPattern,
+    ),
+    NativeEdit(
+        offset = eyeOffset,
+        original = eyePermissionOriginal,
+        replacement = eyePermissionReplacement,
+        locateByPattern = locateByPattern,
+    ),
+)
+
+private val NATIVE_LAYOUTS = listOf(
+    NativeLayoutEdits(
+        versionName = "2.0.20",
+        versionCode = 5001712,
+        fileSize = 2_221_072,
+        stockSha256 = "80b62797c7e26d6b67b0cca00693b076a336bdb48ebc1383a16cccb1616ed495",
+        permissionNames = permissionNameEdits(0x99924, 0xA1A7F, locateByPattern = false),
+        hmdInitialization = listOf(
+            NativeEdit(0xFFE20, byteArrayOf(0xe0.toByte(), 0x00, 0x00, 0x36), NOP),
+            NativeEdit(0xFFE28, byteArrayOf(0xa8.toByte(), 0x00, 0x00, 0x34), NOP),
+        ),
+        lobbyPermissionState = listOf(
+            NativeEdit(0x10DB10, byteArrayOf(0x14, 0x04, 0x00, 0x36), NOP),
+        ),
+        streamInitialization = listOf(
+            NativeEdit(0x116564, byteArrayOf(0x68, 0x00, 0x00, 0x35), NOP),
+            NativeEdit(0x11656C, byteArrayOf(0x68, 0x05, 0x00, 0x34), NOP),
+            NativeEdit(0x116620, byteArrayOf(0xa8.toByte(), 0x05, 0x00, 0x34), NOP),
+        ),
+    ),
+    NativeLayoutEdits(
+        versionName = "2.0.20",
+        versionCode = 5001812,
+        fileSize = 2_220_872,
+        stockSha256 = "eebf7eabfb299ab7b9e5bba1612d4a32b27c51f451efc2bd206ba6fc6ac5205a",
+        permissionNames = permissionNameEdits(0x99862, 0xA1985, locateByPattern = false),
+        hmdInitialization = listOf(
+            NativeEdit(0xFFC5C, byteArrayOf(0xe0.toByte(), 0x00, 0x00, 0x36), NOP),
+            NativeEdit(0xFFC64, byteArrayOf(0xa8.toByte(), 0x00, 0x00, 0x34), NOP),
+        ),
+        lobbyPermissionState = listOf(
+            NativeEdit(0x10DC70, byteArrayOf(0x14, 0x04, 0x00, 0x36), NOP),
+        ),
+        streamInitialization = listOf(
+            NativeEdit(0x1166C4, byteArrayOf(0x68, 0x00, 0x00, 0x35), NOP),
+            NativeEdit(0x1166CC, byteArrayOf(0x68, 0x05, 0x00, 0x34), NOP),
+            NativeEdit(0x116780, byteArrayOf(0xa8.toByte(), 0x05, 0x00, 0x34), NOP),
+        ),
+    ),
+    NativeLayoutEdits(
+        versionName = "2.0.21",
+        versionCode = 5001968,
+        fileSize = 2_234_048,
+        stockSha256 = "596b5680aa6c217daf5c151de517b1ad61b3999c6fd864ff59a718136ca40192",
+        permissionNames = permissionNameEdits(0x9334F, 0x9B7AB, locateByPattern = false),
+        hmdInitialization = listOf(
+            NativeEdit(0xFBC04, byteArrayOf(0xe0.toByte(), 0x00, 0x00, 0x36), NOP),
+            NativeEdit(0xFBC0C, byteArrayOf(0xa8.toByte(), 0x00, 0x00, 0x34), NOP),
+        ),
+        lobbyPermissionState = listOf(
+            NativeEdit(0x109BF0, byteArrayOf(0x14, 0x04, 0x00, 0x36), NOP),
+        ),
+        streamInitialization = listOf(
+            NativeEdit(0x112644, byteArrayOf(0x68, 0x00, 0x00, 0x35), NOP),
+            NativeEdit(0x11264C, byteArrayOf(0x68, 0x05, 0x00, 0x34), NOP),
+            NativeEdit(0x112700, byteArrayOf(0xa8.toByte(), 0x05, 0x00, 0x34), NOP),
+        ),
+    ),
+    NativeLayoutEdits(
+        versionName = "2.0.22",
+        versionCode = 5002244,
+        fileSize = 2_251_920,
+        stockSha256 = "4b2fa5e1b5d9d5c938873f692b0e5e18159e1199dee1253dd6eccc8fa43dfa12",
+        permissionNames = permissionNameEdits(0x93952, 0x9C10E, locateByPattern = false),
+        hmdInitialization = listOf(
+            NativeEdit(0xFD040, byteArrayOf(0xe0.toByte(), 0x00, 0x00, 0x36), NOP),
+            NativeEdit(0xFD048, byteArrayOf(0xa8.toByte(), 0x00, 0x00, 0x34), NOP),
+        ),
+        lobbyPermissionState = listOf(
+            NativeEdit(0x10B658, byteArrayOf(0x14, 0x04, 0x00, 0x36), NOP),
+        ),
+        streamInitialization = listOf(
+            NativeEdit(0x1140AC, byteArrayOf(0x68, 0x00, 0x00, 0x35), NOP),
+            NativeEdit(0x1140B4, byteArrayOf(0x68, 0x05, 0x00, 0x34), NOP),
+            NativeEdit(0x114168, byteArrayOf(0xa8.toByte(), 0x05, 0x00, 0x34), NOP),
+        ),
+    ),
+)
+
+private fun applyLayoutNativeEdits(
+    bytes: ByteArray,
+    versionName: String,
+    versionCode: String,
+    patchName: String,
+    select: (NativeLayoutEdits) -> List<NativeEdit>,
+): ByteArray {
+    val layout = NATIVE_LAYOUTS.singleOrNull {
+        it.versionName == versionName && it.versionCode.toString() == versionCode
+    }
+        ?: return bytes.copyOf()
+    if (bytes.size != layout.fileSize) {
+        throw PatchException(
+            "$patchName library size=${bytes.size} for Steam Link $versionName/$versionCode; " +
+                "expected ${layout.fileSize}, stockSha256=${layout.stockSha256}",
+        )
+    }
+    verifyAddedLegacyNativeCode(bytes, versionName, versionCode)
+    return applyNativeEdits(
+        bytes,
+        "$patchName (versionCode ${layout.versionCode})",
+        select(layout),
+        strictLayout = true,
+    )
+}
+
+private fun applyLayoutNativeEdits(
+    file: File,
+    versionName: String,
+    versionCode: String,
+    patchName: String,
+    select: (NativeLayoutEdits) -> List<NativeEdit>,
+) {
+    val bytes = file.readBytes()
+    val patched = applyLayoutNativeEdits(bytes, versionName, versionCode, patchName, select)
+    if (!patched.contentEquals(bytes)) file.writeBytes(patched)
+}
+
+private fun ByteArray.findPatternOffsets(pattern: ByteArray): List<Int> {
+    if (pattern.isEmpty() || pattern.size > size) return emptyList()
+    return (0..size - pattern.size).filter { offset ->
+        pattern.indices.all { index -> this[offset + index] == pattern[index] }
+    }
+}
+
+private val relocatablePermissionNameEdits =
+    permissionNameEdits(0, 0, locateByPattern = true)
+
+internal fun patchNativePermissionNames(
+    bytes: ByteArray,
+    versionName: String,
+    versionCode: String,
+): ByteArray {
+    // Native-XR builds already contain the Android XR permission names and working request flow.
+    // Pattern-rewriting its retained Oculus fallback names can break vendor/hand capability routing.
+    if (isNativeXrSteamLinkBuild(versionName, versionCode)) return bytes.copyOf()
+
+    val layout = NATIVE_LAYOUTS.singleOrNull {
+        it.versionName == versionName && it.versionCode.toString() == versionCode
+    }
+    if (layout != null && bytes.size != layout.fileSize) {
+        throw PatchException(
+            "Android XR native permission names library size=${bytes.size} for " +
+                "Steam Link $versionName/$versionCode; expected ${layout.fileSize}, " +
+                "stockSha256=${layout.stockSha256}",
+        )
+    }
+    if (layout == null && NATIVE_LAYOUTS.any { it.fileSize == bytes.size }) return bytes.copyOf()
+    verifyAddedLegacyNativeCode(bytes, versionName, versionCode)
+    return applyNativeEdits(
+        bytes,
+        layout?.let {
+            "Android XR native permission names (versionCode ${it.versionCode})"
+        } ?: "Android XR native permission names",
+        layout?.permissionNames ?: relocatablePermissionNameEdits,
+        strictLayout = layout != null,
+    )
+}
+
+internal fun patchHmdInitializationGates(
+    bytes: ByteArray,
+    versionName: String,
+    versionCode: String,
+): ByteArray =
+    applyLayoutNativeEdits(bytes, versionName, versionCode, "Force HMD initialization gates") {
+        it.hmdInitialization
+    }
+
+internal fun patchLobbyPermissionStateGate(
+    bytes: ByteArray,
+    versionName: String,
+    versionCode: String,
+): ByteArray =
+    applyLayoutNativeEdits(bytes, versionName, versionCode, "Force lobby permission-state gate") {
+        it.lobbyPermissionState
+    }
+
+internal fun patchStreamXrGates(
+    bytes: ByteArray,
+    versionName: String,
+    versionCode: String,
+): ByteArray =
+    applyLayoutNativeEdits(bytes, versionName, versionCode, "Force stream XR gates") {
+        it.streamInitialization
+    }
+
+@Suppress("unused")
+val androidXrNativePermissionNamesPatch = rawResourcePatch(
+    name = "Android XR native permission names",
+    description = "Replaces native Oculus face/eye permission checks with the Android XR permission names used by Galaxy XR on exact Steam Link 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, and 2.0.22/5002244 layouts.",
+    default = false,
+) {
+    category(PatchCategories.ADVANCED_XR_COMPATIBILITY)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
+
+    execute {
+        val file = get("lib/arm64-v8a/libvrlink_scene.so")
+        val bytes = file.readBytes()
+        val patched = patchNativePermissionNames(
+            bytes,
+            packageMetadata.versionName,
+            packageMetadata.versionCode,
+        )
+        if (!patched.contentEquals(bytes)) file.writeBytes(patched)
+    }
+}
+
+@Suppress("unused")
+val forceHmdInitializationGatesPatch = rawResourcePatch(
+    name = "Force HMD initialization gates",
+    description = "Bypasses the 2 verified capability gates in QSVLDeviceHmd::Init for exact Steam Link 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, and 2.0.22/5002244 layouts.",
+    default = false,
+) {
+    category(PatchCategories.ADVANCED_XR_COMPATIBILITY)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
+
+    execute {
+        applyLayoutNativeEdits(
+            get("lib/arm64-v8a/libvrlink_scene.so"),
+            packageMetadata.versionName,
+            packageMetadata.versionCode,
+            "Force HMD initialization gates",
+        ) { it.hmdInitialization }
+    }
+}
+
+@Suppress("unused")
+val forceLobbyPermissionStateGatePatch = rawResourcePatch(
+    name = "Force lobby permission-state gate",
+    description = "Bypasses the verified permission-state gate in XrSceneLobby for exact Steam Link 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, and 2.0.22/5002244 layouts.",
+    default = false,
+) {
+    category(PatchCategories.ADVANCED_XR_COMPATIBILITY)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
+
+    execute {
+        applyLayoutNativeEdits(
+            get("lib/arm64-v8a/libvrlink_scene.so"),
+            packageMetadata.versionName,
+            packageMetadata.versionCode,
+            "Force lobby permission-state gate",
+        ) { it.lobbyPermissionState }
+    }
+}
+
+@Suppress("unused")
+val forceStreamXrGatesPatch = rawResourcePatch(
+    name = "Force stream XR gates",
+    description = "Bypasses the 3 verified XR gates in exact Steam Link 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, and 2.0.22/5002244 layouts.",
+    default = false,
+) {
+    category(PatchCategories.ADVANCED_XR_COMPATIBILITY)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK_LEGACY.toTypedArray())
+
+    execute {
+        applyLayoutNativeEdits(
+            get("lib/arm64-v8a/libvrlink_scene.so"),
+            packageMetadata.versionName,
+            packageMetadata.versionCode,
+            "Force stream XR gates",
+        ) { it.streamInitialization }
+    }
+}
+
+private fun ByteArray.toHex(): String = joinToString("") { "%02x".format(it) }

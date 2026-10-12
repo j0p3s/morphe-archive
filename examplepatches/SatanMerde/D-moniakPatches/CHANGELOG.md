@@ -1,3 +1,27 @@
+## [1.52.0](https://github.com/SatanMerde/D-moniakPatches/compare/v1.51.0...v1.52.0) (2026-10-11)
+
+### ✨ New Features
+
+* **rblive:** add compatibility for RBTV+ / RBLive (com.rblive.app and com.rblive.tv) ([23da398](https://github.com/SatanMerde/D-moniakPatches/commit/23da398a0d1094c8c68b4ce3fb46541cac96e830))
+
+## [1.51.0](https://github.com/SatanMerde/D-moniakPatches/compare/v1.50.1...v1.51.0) (2026-10-11)
+
+### ✨ New Features
+
+* **fctv:** add compatibility for FCTV33 Android TV version (com.fctv77.tv) ([9a40052](https://github.com/SatanMerde/D-moniakPatches/commit/9a40052aefca75f8c44cee1d72d5e82031b3aa86))
+
+## [1.50.1](https://github.com/SatanMerde/D-moniakPatches/compare/v1.50.0...v1.50.1) (2026-10-11)
+
+### 🐛 Bug Fixes
+
+* **moises:** correct recommended target version to 2.72.0 ([9e80461](https://github.com/SatanMerde/D-moniakPatches/commit/9e804617cf676451148bafcffddda63dc615f1c5))
+
+## [1.50.0](https://github.com/SatanMerde/D-moniakPatches/compare/v1.49.0...v1.50.0) (2026-10-11)
+
+### ✨ New Features
+
+* **fctv:** add ad-blocking and VIP patches for FCTV33 (com.fctv77.app) ([630e1f9](https://github.com/SatanMerde/D-moniakPatches/commit/630e1f93c3cb0c4981fa88dd862e2f5f91c32baa))
+
 ## [1.49.0](https://github.com/SatanMerde/D-moniakPatches/compare/v1.48.14...v1.49.0) (2026-10-10)
 
 ### ✨ New Features

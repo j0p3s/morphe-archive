@@ -20,7 +20,7 @@ Hushfacebook is a Morphe patch source for Facebook's Android app, package `com.f
 
 The current declared target is Facebook 582.0.0.50.54 on Android 11 or newer. `AppCompatibilities.kt` holds its version codes and the Facebook signing certificates. It declares build 475417104 for arm64-v8a and 475417036 for armeabi-v7a. Fixtures for older builds can still help when tracing a rename, but the current catalog declares only 582. Read the README's unsupported-version section before promising that an undeclared build works, and rerun the full fixture check before changing that claim.
 
-The v0.8.0 bundle uses Morphe patcher 1.15.1 and needs Morphe Manager 1.34.0 or newer. The Gradle wrapper, dependency pins, and verification data live under `gradle/`. The Morphe plugin version is in `settings.gradle.kts`. Keep those pins aligned when updating the patcher.
+The bundle uses Morphe patcher 1.15.1 and needs Morphe Manager 1.34.0 or newer. `scripts/validate-release-facts.ps1` holds both numbers here to the pins in `gradle/libs.versions.toml`. The Gradle wrapper, dependency pins, and verification data live under `gradle/`. The Morphe plugin version is in `settings.gradle.kts`. Keep those pins aligned when updating the patcher.
 
 ## Source map
 
@@ -41,7 +41,7 @@ The v0.8.0 bundle uses Morphe patcher 1.15.1 and needs Morphe Manager 1.34.0 or 
 | `provenance.json` and `NOTICE` | Per-file origin and license notices carried into the patch bundle. `ProvenanceTest` checks the source headers against this record. |
 | `scripts/` and `fixtures/` | Build, compatibility, release, and device helpers. The Facebook APK and APKM fixtures are local inputs and are not committed. |
 
-Patch folders follow implementation areas. Morphe's visible categories come from each patch's `category()` declaration, so one category can draw patches from several folders. In v0.8.0 the release notes count 85 user-facing features. The generated 86-row catalog also includes the required `Hushfacebook settings` patch.
+Patch folders follow implementation areas. Morphe's visible categories come from each patch's `category()` declaration, so one category can draw patches from several folders. The generated catalog has one row more than the user-facing features the release notes count, because it also lists the required `Hushfacebook settings` patch.
 
 Patch and runtime directories are grouped by behavior. Their names don't always match, so start from the Morphe patch declaration and follow its injected extension class, status method, or setting key into Java.
 
@@ -438,6 +438,23 @@ The tool changes nothing. When one candidate is clearly ahead it says so and sti
 `-SignaturePath` saves what the tool captured about a method, and `-Signature` ranks a later build against a saved one, so you can capture a patch's targets while today's build is still in your fixture folder. `scripts/fingerprint-signature.schema.json` describes that file.
 
 `scripts/fingerprint-calibration.txt` holds 36 transitions from 577 to 580 that the patches resolve on both builds, among them the ones that broke when 580 came out. The Reels ad-break state lost its naming method to the abstract base class and the AMOLED colour resolver split in two, while the reel button factory gained a parameter. `scripts/test-fingerprint-candidates.ps1` fails unless every one ranks its known 580 method in the top five, so it needs both bundles in `HUSHFACEBOOK_FIXTURE_DIR`. `-Calibrate` runs the same check by hand. With `-CalibrationPath` it runs a list of your own instead, and `-OldApk` and `-NewApk` name the two builds that list describes, so once you've confirmed where a few methods went on a newer build you can hold the ranker to those too.
+
+## Android 17, checked October 11, 2026
+
+Samsung started moving phones to Android 17 with One UI 9 in September 2026. Facebook 582 targets SDK 36, and most of what Android 17 changes only reaches apps that target 37, so those rows start to matter once Facebook raises its target. Google lists the changes [for all apps](https://developer.android.com/about/versions/17/behavior-changes-all) and [for apps targeting 17](https://developer.android.com/about/versions/17/behavior-changes-17).
+
+| Change | Reaches Facebook 582 | Where in Hushfacebook | Verdict |
+|---|---|---|---|
+| Audio playback, audio focus and volume calls fail silently outside a valid lifecycle state (all apps) | Yes | Nothing on main. The background audio work (`feat/bgaudio`, 6566f02c) asks for audio focus. | Nothing to fix now. Before that branch lands it has to ask for focus only while Facebook is in front or a foreground service runs. |
+| `static final` fields can't be changed through reflection (target 37) | Not yet | `ReelSections.itemsOf` read every declared list field, static ones too, and could write a new list back. Every other `setAccessible` in the extension only reads. | Fixed: static fields are skipped. `ReelsAdFilterTest.aStaticListInASectionClassIsLeftAlone` covers it. |
+| `System.load` needs a read-only file (target 37) | Not yet | No `System.load` or `loadLibrary` in the extension. | Nothing to do. |
+| A lock-free `MessageQueue` breaks reflection on its private fields (target 37) | Not yet | No `MessageQueue` reflection. | Nothing to do. |
+| Background activity launch rules extend to `IntentSender` (target 37) | Not yet | No `startIntentSender`. The settings shortcut and the notification buttons start Facebook's own launcher entry from intents Facebook owns. | Nothing to do. |
+| Orientation and resizability requests are ignored on large screens with no opt-out (target 37) | Not yet | No `setRequestedOrientation`. | Nothing to do. |
+| The keyboard isn't brought back by itself after a rotation (all apps) | Yes | The settings search box. | Nothing depends on it. After a rotation you tap the box again. |
+| Native libraries stored uncompressed need 16 KB alignment on 16 KB page phones | Yes, on those phones | The patched APK. Facebook 582 stores its 18 libraries compressed, so Android extracts them at install. | `build-release-receipt.ps1` runs `zipalign -c -P 16 -v 4` on every patched fixture and records `nativeAlignment` in the receipt. A miss stops the release. |
+
+`PausedHooksTest` and `SettingsNavigationTest` also run at SDK 37 (Robolectric 4.17). `ColdStartHooksTest` stays alone at SDK 33, because it needs a sandbox nothing else has loaded the settings into.
 
 ## Building and checking
 

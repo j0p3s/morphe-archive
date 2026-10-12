@@ -25,16 +25,18 @@
     if (features.hideGift) selectModules([11609, 11817]);
     if (features.hideQuestDock) selectModules([14608, 14700]);
     if (features.systemEmoji) selectModules([6552]);
-    const revision = "1.5.0";
+    if (features.gestures) selectModules([7414, 11105, 1378, 10905]);
+    if (features.hideCall) selectModules([12696]);
+    const revision = "1.7.0";
     // Module 120 owns setUpDefaltReactNativeEnvironment in this exact asset.
     // Defer every feature hook until that initializer returns successfully.
     let environmentReady = false;
     const deferred = new Map();
     const settings = { picker: true, voice: false, copyBios: true, dashless: true, favouriteAnything: true, freeNitro: true, emojis: true, stickers: true, hyperlinks: true, forceLinks: false,
-        noTyping: true, quickDelete: false, quickDeleteEmbeds: false, noDelete: false, noDeleteSave: false, noDeleteLimit: 512,
+        noTyping: true, quickDelete: false, quickDeleteEmbeds: false, noDelete: false, noDeleteSave: false, noDeleteLimit: 512, noDeleteEdits: true,
         jumpToTop: true, hiddenChannels: false, pastelize:true, pastelAll:false, pastelWebhookName:true, pastelContent:false, platformIndicators:true, piDmHeader:true, piUserList:true, piProfile:true, piHideMobile:true, reviewDB:false, reviewThemedSend:true, reviewWarning:true, readAll:true, readAllMode:"guilds",
         quests:false, questsVideo:true, questsPlay:true, questsActivity:true, questsEnroll:true, systemFont:false,
-        hideGift:true, hideQuestDock:true, systemEmoji:true };
+        hideGift:true, hideQuestDock:true, systemEmoji:true, gestures:false, gestureOwn:"edit", gestureTripleDelete:true, hideCall:true };
     const status = { picker: false, attachment: false, request: false, menu: false, conversion: false, audioError: "", storage: "waiting" };
     const listeners = new Set();
     const dirty = new Set();
@@ -53,6 +55,8 @@
     const MAX_DELETED = 5000, ARCHIVE_BYTES = 32 * 1024 * 1024;
     // What the Read all button clears: servers, DMs, or both.
     const READ_ALL_MODES = ["guilds", "dms", "both"];
+    // What double-tapping your own message does: edit it, or reply like anyone else's.
+    const GESTURE_OWN_MODES = ["edit", "reply"];
     // A sub-option (piProfile, reviewWarning, pastelAll...) must also wake components that
     // subscribed to its plugin: those pages and badges read several of its settings at once.
     const notify = key => {
@@ -109,6 +113,11 @@
             if (settings.readAllMode === value && status.storage !== "loading" && status.storage !== "waiting") return true;
             settings.readAllMode = value; dirty.add(key); save(); notify(key); return true;
         }
+        if (key === "gestureOwn") {
+            if (!GESTURE_OWN_MODES.includes(value)) return false;
+            if (settings.gestureOwn === value && status.storage !== "loading" && status.storage !== "waiting") return true;
+            settings.gestureOwn = value; dirty.add(key); save(); notify(key); return true;
+        }
         if (key === "noDeleteLimit") {
             const limit = deleteLimit(value);
             // Leaving the box without changing it no longer rewrites your settings.
@@ -126,6 +135,7 @@
         // it used to write an empty file, so turning it back on lost every saved message.
         if (key === "noDelete" && !value) { clearDeleted(true, settings.noDeleteSave); archiveRestored = false; }
         if (key === "hiddenChannels") {hiddenViews.clear();}
+        if ((key === "noDeleteEdits" || key === "noDelete") && !value && edits.size) { edits.clear(); persistDeleted(); }
         settings[key] = value;
         if (key === "noDeleteSave") { if (value) restoreDeleted(); else archiveRestored = false; persistDeleted(); }
         if (key === "noDelete" && value) restoreDeleted();
@@ -159,7 +169,8 @@
                 const loaded = JSON.parse(text);
                 if (!loaded || typeof loaded !== "object" || Array.isArray(loaded)) throw new Error("Invalid preferences");
                 for (const key of Object.keys(settings))
-                    if (!dirty.has(key) && typeof loaded[key] === typeof settings[key] && (key !== "readAllMode" || READ_ALL_MODES.includes(loaded[key])))
+                    if (!dirty.has(key) && typeof loaded[key] === typeof settings[key] && (key !== "readAllMode" || READ_ALL_MODES.includes(loaded[key])) &&
+                        (key !== "gestureOwn" || GESTURE_OWN_MODES.includes(loaded[key])))
                         settings[key] = key === "noDeleteLimit" ? deleteLimit(loaded[key]) : loaded[key];
                 const auth = loaded.reviewAuth;
                 // Restore a saved ReviewDB sign-in (a ReviewDB token, never the Discord token).
@@ -436,7 +447,7 @@
 
     // Native setting nodes use Discord's own themed rows, navigation and back stack.
     let SettingsList;
-    const featureFor = key => key === "reviewThemedSend" || key === "reviewWarning" ? "reviewDB" : key === "emojis" || key === "stickers" || key === "hyperlinks" || key === "forceLinks" ? "freeNitro" : key === "quickDeleteEmbeds" ? "quickDelete" : key === "noDeleteSave" || key === "noDeleteLimit" ? "noDelete" : /^pi[A-Z]/.test(key) ? "platformIndicators" : ["pastelAll","pastelWebhookName","pastelContent"].includes(key) ? "pastelize" : key === "readAllMode" ? "readAll" : /^quests[A-Z]/.test(key) ? "quests" : key;
+    const featureFor = key => key === "reviewThemedSend" || key === "reviewWarning" ? "reviewDB" : key === "emojis" || key === "stickers" || key === "hyperlinks" || key === "forceLinks" ? "freeNitro" : key === "quickDeleteEmbeds" ? "quickDelete" : key === "noDeleteSave" || key === "noDeleteLimit" || key === "noDeleteEdits" ? "noDelete" : /^pi[A-Z]/.test(key) ? "platformIndicators" : ["pastelAll","pastelWebhookName","pastelContent"].includes(key) ? "pastelize" : key === "readAllMode" ? "readAll" : /^quests[A-Z]/.test(key) ? "quests" : /^gesture[A-Z]/.test(key) ? "gestures" : key;
     function section(label, keys) { return { label, settings: keys }; }
     // Plain-language status for General -> About; the raw values stay in status for diagnostics.
     function aboutText() {
@@ -568,38 +579,40 @@
             node.useIsDisabled = function () { useSettings(owner); return !settings[owner]; };
             next[id] = node; return id;
         };
-        withOptions("chat", "noDelete", "VENUS_NODELETE", "Keep deleted messages, outlined in red", "Including your own. Delete one again to hide it.", "Deleted messages", NoDeleteSettings);
-        toggle("chat", "voice", "Send audio files as voice messages", "An audio file sent on its own becomes a real voice message, waveform included. Needs Android 10 or newer.");
-        withOptions("chat", "freeNitro", "VENUS_FREENITRO", "Send emojis and stickers you can't use as links", "They're sent as image links, not real Nitro ones.", "Emoji and sticker links",
-            () => [section("Send as links", [option("emojis", "Emojis", "Custom emojis from other servers, and animated ones.", "VENUS_FREENITRO"),
+        withOptions("chat", "noDelete", "VENUS_NODELETE", "Keep deleted messages, outlined in red", "Yours too. Also keeps what edited messages said before. Delete a kept message again to hide it.", "Deleted messages", NoDeleteSettings);
+        toggle("chat", "voice", "Send audio files as voice messages", "An audio file sent on its own becomes a real voice message with Discord's waveform. If it can't be converted, it's sent as a file. Needs Android 10 or newer.");
+        withOptions("chat", "freeNitro", "VENUS_FREENITRO", "Send emojis and stickers you can't use as links", "Custom and animated emojis and stickers you can't use are sent as image links. They aren't real Nitro emojis.", "Emoji and sticker links",
+            () => [section("Send as links", [option("emojis", "Emojis", "Custom emojis from other servers, and animated ones, without Nitro.", "VENUS_FREENITRO"),
                 option("stickers", "Stickers", "Stickers from other servers. Animated stickers may not move.", "VENUS_FREENITRO")]),
-             section("Links", [option("hyperlinks", "Show the name instead of the link", "The emoji or sticker name, linked.", "VENUS_FREENITRO"),
-                option("forceLinks", "Always send links", "Even for emojis and stickers you can already use.", "VENUS_FREENITRO")])]);
-        toggle("chat", "noTyping", "Hide that you're typing", "You still see when others type.");
-        withOptions("chat", "quickDelete", "VENUS_QUICKDELETE", "Delete messages without asking", "Skips \"are you sure?\". This can't be undone.", "Instant delete",
-            () => [section("Also skip asking", [option("quickDeleteEmbeds", "Removing link previews", "When you remove an embed from your message.", "VENUS_QUICKDELETE")])]);
-        toggle("chat", "jumpToTop", "Add a jump to first message button", "In every chat, next to Discord's jump to present button.");
-        toggle("chat", "picker", "Show file sizes when attaching", "On photos and videos in the attachment picker.");
-        toggle("chat", "favouriteAnything", "Favourite any image or video", "From the media viewer, like GIFs.");
-        toggle("chat", "hideGift", "Hide the gift button", "On the message bar.");
-        withOptions("people", "pastelize", "VENUS_PASTELIZE", "Give names soft pastel colors", "Names and mentions without a role color.", "Pastel names",
-            () => [section("Options", [option("pastelAll", "Color every name", "Even people with a role color.", "VENUS_PASTELIZE"),
-                option("pastelWebhookName", "Color webhooks by name", "Webhooks with the same name share a color.", "VENUS_PASTELIZE"),
-                option("pastelContent", "Color message text", "The message as well as the name.", "VENUS_PASTELIZE")])]);
-        withOptions("people", "platformIndicators", "VENUS_PLATFORMINDICATORS", "Show which devices people are on", "Desktop, mobile, web, console or VR icons.", "Device icons",
+             section("Links", [option("hyperlinks", "Show the name instead of the link", "Chat shows the emoji or sticker name as a link, instead of the whole link.", "VENUS_FREENITRO"),
+                option("forceLinks", "Always send links", "Even for emojis and stickers you could send normally.", "VENUS_FREENITRO")])]);
+        toggle("chat", "noTyping", "Hide that you're typing", "Others don't see \"typing...\" for you. You still see when they type.");
+        withOptions("chat", "quickDelete", "VENUS_QUICKDELETE", "Delete messages without asking", "Skips \"are you sure?\" when you delete a message. It can't be undone.", "Instant delete",
+            () => [section("Also skip asking", [option("quickDeleteEmbeds", "Removing link previews", "Also skip it when you remove a link preview from your own message.", "VENUS_QUICKDELETE")])]);
+        toggle("chat", "jumpToTop", "Add a jump to first message button", "In every chat, and in the menu when you hold a channel or thread.");
+        toggle("chat", "picker", "Show file sizes when attaching", "Shows each photo and video's size in the attachment picker.");
+        toggle("chat", "favouriteAnything", "Favourite any image or video", "Adds the favourite star to any image or video in the media viewer, like GIFs.");
+        toggle("chat", "hideGift", "Hide the gift button", "Removes the Nitro gift button next to the message box.");
+        withOptions("chat", "gestures", "VENUS_GESTURES", "Double-tap a message to reply", "Your own messages open for editing, and three taps delete them. Double-tap no longer reacts.", "Message tap gestures", GestureSettings);
+        withOptions("people", "pastelize", "VENUS_PASTELIZE", "Give names soft pastel colors", "Names and mentions without a role color get a color picked from their user ID, so each person always has the same one.", "Pastel names",
+            () => [section("Options", [option("pastelAll", "Color every name", "Also replace role colors with each person's pastel color.", "VENUS_PASTELIZE"),
+                option("pastelWebhookName", "Color webhooks by name", "Pick a webhook's color from its name, so webhooks with the same name match. Off: from its ID.", "VENUS_PASTELIZE"),
+                option("pastelContent", "Color message text", "Color what they write too, in a lighter shade of their name color.", "VENUS_PASTELIZE")])]);
+        withOptions("people", "platformIndicators", "VENUS_PLATFORMINDICATORS", "Show which devices people are on", "Desktop, mobile, web, console or VR icons, colored by status.", "Device icons",
             () => [section("Show icons", [option("piDmHeader", "On the DM top bar", "Next to the name at the top of a DM.", "VENUS_PLATFORMINDICATORS"),
-                option("piUserList", "In lists", "Members, friends, DMs and people in voice.", "VENUS_PLATFORMINDICATORS"),
+                option("piUserList", "In lists", "In the member list, friends, DMs and voice.", "VENUS_PLATFORMINDICATORS"),
                 option("piProfile", "On profiles", "Next to the name on a profile.", "VENUS_PLATFORMINDICATORS")]),
-             section("Avatars", [option("piHideMobile", "Plain status dot", "Hide Discord's phone badge, since the icons already show mobile.", "VENUS_PLATFORMINDICATORS")])]);
-        toggle("people", "copyBios", "Select and copy profile bios", "Links in bios still work.");
-        withOptions("people", "reviewDB", "VENUS_REVIEWDB", "Show and write reviews of users and servers", "From the community ReviewDB service. Opening reviews shares that ID with it.", "Reviews", ReviewSettings);
-        withOptions("servers", "readAll", "VENUS_READALL", "Add a Read all button to the server list", "Under Direct Messages. Hold it for a one-time choice.", "Read all", ReadAllSettings);
-        toggle("servers", "hiddenChannels", "Show channels you can't open, with a lock", "You still can't read them or join locked voice channels.");
-        toggle("servers", "dashless", "Show spaces instead of dashes in channel names", "Only changes how they look.");
-        toggle("servers", "hideQuestDock", "Hide the Quests promotion", "Above your profile bar.");
+             section("Avatars", [option("piHideMobile", "Plain status dot", "Hide Discord's phone badge on avatars, since the icons already show mobile.", "VENUS_PLATFORMINDICATORS")])]);
+        toggle("people", "copyBios", "Select and copy profile bios", "Hold a bio to select and copy part of it. Links still work.");
+        withOptions("people", "reviewDB", "VENUS_REVIEWDB", "Show and write reviews of users and servers", "From the community ReviewDB service. Opening a profile's or server's reviews sends its ID to ReviewDB.", "Reviews", ReviewSettings);
+        withOptions("servers", "readAll", "VENUS_READALL", "Add a Read all button to the server list", "Under Direct Messages. Choose what it clears, or hold it to choose once.", "Read all", ReadAllSettings);
+        toggle("servers", "hiddenChannels", "Show channels you can't open, with a lock", "Shows their name, and when they were made and last used. You still can't read them or join locked voice channels.");
+        toggle("servers", "dashless", "Show spaces instead of dashes in channel names", "Only changes how names look, not the channels.");
+        toggle("people", "hideCall", "Hide the call button on profiles", "Message stretches across to fill the space.");
+        toggle("servers", "hideQuestDock", "Hide the Quests promotion", "Hides the Quest banner above your profile bar. Quests still work.");
         toggle("extras", "systemFont", "Force system font", "");
         toggle("extras", "systemEmoji", "Force system emojis", "");
-        withOptions("extras", "quests", "VENUS_QUESTS", "Complete Quests automatically", "In the background while Discord is open. You still claim rewards.", "Quests", QuestSettings);
+        withOptions("extras", "quests", "VENUS_QUESTS", "Complete Quests automatically", "Video, Play and Activity Quests, in the background while Discord is open. You still claim rewards.", "Quests", QuestSettings);
         const sections = [section("Chat", groups.chat), section("Profiles and people", groups.people),
             section("Servers and channels", groups.servers), section("More", groups.extras)].filter(entry => entry.settings.length);
         route(P, "Settings", sections);
@@ -813,8 +826,11 @@
     const deletedViews = new Map();
     const ARCHIVE = "venus-deleted-messages.json";
     const deleted = new Map(), deletedByChannel = new Map();
+    // Edit history: "channel:id" -> {channelId, id, versions:[{content, at}]}, oldest version first.
+    const edits = new Map();
+    const MAX_EDITED = 2000, MAX_VERSIONS = 10, MAX_VERSION_TEXT = 4000;
     let archiveTimer;
-    const hiddenViews = new Map(), hiddenNames = new Map();
+    const hiddenViews = new Map(), hiddenNames = new Map(), hiddenScans = new Map();
     let hiddenAccount;
     function receivedName(channel) {
         if (!channel || typeof channel.name !== "string") return null;
@@ -870,7 +886,7 @@
         // the incoming user, otherwise the first post-READY lookup erases it.
         const owner = event.type === "CONNECTION_OPEN" && event.user && event.user.id || current && current.id;
         if (event.type === "LOGOUT" || hiddenAccount !== owner) {
-            hiddenNames.clear();hiddenViews.clear();hiddenAccount = owner;
+            hiddenNames.clear();hiddenViews.clear();hiddenScans.clear();hiddenAccount = owner;
             try { hiddenConfirmed.clear(); hiddenPrompts.clear(); } catch (_) {}
         }
         if (event.type === "CHANNEL_DELETE") hiddenNames.delete(event.channel && event.channel.id || event.channelId || event.id);
@@ -960,8 +976,15 @@
         const user = userStore && userStore.getCurrentUser && userStore.getCurrentUser();
         if (settings.noDeleteSave && (!user || !archiveRestored)) return;
         try {
-            archivePending = JSON.stringify({version:1, accountId:settings.noDeleteSave && user ? user.id : null,
-                messages:settings.noDeleteSave ? Array.from(deleted.values(), archiveEntry).filter(Boolean) : []});
+            // Each kept message is turned into text once and reused, so a new deletion no longer re-serializes
+            // up to 5000 others. The same text as JSON.stringify of the whole archive.
+            const parts = [];
+            if (settings.noDeleteSave) deleted.forEach(entry => { const text = archiveText(entry); if (text) parts.push(text); });
+            // Edit history rides in the same file. Older releases ignore the extra key, so nothing breaks either way.
+            const history = [];
+            if (settings.noDeleteSave && settings.noDeleteEdits) edits.forEach(entry => { const text = editText(entry); if (text) history.push(text); });
+            archivePending = "{\"version\":1,\"accountId\":" + JSON.stringify(settings.noDeleteSave && user ? user.id : null) +
+                ",\"messages\":[" + parts.join(",") + "]" + (history.length ? ",\"edits\":[" + history.join(",") + "]" : "") + "}";
             if (archivePending.length > ARCHIVE_BYTES) throw new Error("Deleted message archive exceeds 32 MB");
         } catch (_) { status.archive = "save failed"; notify(); return; }
         if (archiveWriting) return;
@@ -981,15 +1004,18 @@
         if (!user || !constants || typeof constants.DocumentsDirPath !== "string") return;
         const accountId = user.id, path = constants.DocumentsDirPath.replace(/\/$/, "") + "/" + ARCHIVE;
         archiveLoading = true;
+        let readable = false;
         Promise.resolve().then(() => files.fileExists(path)).then(exists => exists ? files.readFile(path,"utf8") : null).then(text => {
+            readable = true;
             const current = userStore.getCurrentUser();
             if (!enabled("noDelete") || !enabled("noDeleteSave") || !current || current.id !== accountId) return;
             // Messages kept before the archive loaded, or saved ones that didn't all fit, mean the file needs updating.
             // Otherwise it already says exactly this, and opening Discord no longer rewrites it every time.
-            let restored = 0, changed = deleted.size > 0 || !text;
+            // Edits made before the archive loaded are newer than what's saved, so the file needs updating too.
+            let restored = 0, changed = deleted.size > 0 || edits.size > 0 || !text, saved = null;
             if (text) {
                 if (text.length > ARCHIVE_BYTES) throw new Error("Archive too large");
-                const saved = JSON.parse(text);
+                saved = JSON.parse(text);
                 if (saved.version !== 1 || !Array.isArray(saved.messages) || saved.messages.length > MAX_DELETED) throw new Error("Invalid archive");
                 if (saved.accountId !== accountId) changed = true;
                 else saved.messages.forEach(entry => {
@@ -1001,11 +1027,31 @@
                     } else changed = true;
                 });
             }
+            // Another account's file was already marked changed above and is never read from.
+            if (saved && saved.accountId === accountId && settings.noDeleteEdits && Array.isArray(saved.edits)) saved.edits.slice(-MAX_EDITED).forEach(entry => {
+                if (!entry || typeof entry.id !== "string" || typeof entry.channelId !== "string" || !Array.isArray(entry.versions)) { changed = true; return; }
+                const versions = entry.versions.filter(v => v && typeof v.content === "string").slice(-MAX_VERSIONS)
+                    .map(v => ({content:v.content.slice(0, MAX_VERSION_TEXT + 1), at:typeof v.at === "string" ? v.at : null}));
+                const key = deletedKey(entry.channelId, entry.id);
+                if (!versions.length || edits.has(key)) { changed = true; return; }
+                edits.set(key, {channelId:entry.channelId, id:entry.id, versions}); restored++;
+            });
             archiveRestored = true; invalidateDeleted();
             if (changed) persistDeleted(); else status.archive = "saved locally";
             if (!restored && !changed) return;
             if (msgStore && typeof msgStore.emitChange === "function") msgStore.emitChange();
-        }).catch(() => {status.archive = "restore failed"; notify();}).finally(() => {archiveLoading = false;});
+        }).catch(() => {
+            status.archive = "restore failed";
+            // A file that was read but is damaged can never load. It used to stop saving until Discord restarted,
+            // and was read again on every reconnect. Messages kept from now on replace it. A file that couldn't be
+            // read at all is left alone and tried again later, so a passing error never erases it.
+            const current = userStore.getCurrentUser();
+            if (readable && enabled("noDelete") && enabled("noDeleteSave") && current && current.id === accountId) {
+                archiveRestored = true;
+                if (deleted.size) persistDeleted();
+            }
+            notify();
+        }).finally(() => {archiveLoading = false;});
     }
     function markDeleted(message) {
         // Identity refresh only. Deletion styling belongs to row presentation, never
@@ -1022,6 +1068,15 @@
     function archiveEntry(entry) {
         if (entry.raw === undefined) { try { entry.raw = rawDeleted(entry.message, entry); } catch (_) { entry.raw = null; } }
         return entry.raw ? {channelId:entry.channelId,id:entry.id,message:entry.raw} : null;
+    }
+    function editText(entry) {
+        if (entry.text === undefined) { try { entry.text = JSON.stringify({channelId:entry.channelId, id:entry.id, versions:entry.versions}); } catch (_) { entry.text = null; } }
+        return entry.text;
+    }
+    // A kept message never changes, so its saved form is worked out once.
+    function archiveText(entry) {
+        if (entry.text === undefined) { const saved = archiveEntry(entry); try { entry.text = saved ? JSON.stringify(saved) : null; } catch (_) { entry.text = null; } }
+        return entry.text;
     }
     function rawDeleted(message, event) {
         // Retain content/metadata only; no tokens, downloaded attachments or remote fetches.
@@ -1071,12 +1126,14 @@
         const array = Array.isArray(result._array) ? result._array : null;
         const first = array && array.length ? String(array[0].id) : null, last = array && array.length ? String(array[array.length - 1].id) : null;
         const older = (a, b) => a.length - b.length || (a === b ? 0 : a < b ? -1 : 1);
+        // Whether this window has numeric bounds is the same for every kept message: check it once.
+        const bounded = first !== null && /^\d+$/.test(first);
         // Never paste a retained message into a window that doesn't contain its position;
         // that produced out-of-place rows above unloaded history or below an older jump.
         const records = [];
         bucket.forEach(entry => {
             const id = String(entry.id);
-            if (first !== null && /^\d+$/.test(id) && /^\d+$/.test(first)) {
+            if (bounded && /^\d+$/.test(id)) {
                 if (older(id, first) < 0 && result.hasMoreBefore === true) return;
                 if (older(id, last) > 0 && result.hasMoreAfter === true) return;
             }
@@ -1127,15 +1184,19 @@
         const event = args[0];
         if (!event) return orig.apply(self, args);
         if (features.hiddenChannels) channelMetadataEvent(event);
-        if (event.type === "LOGOUT") { clearDeleted(false); archiveRestored = false; clearReviewAuth(); }
+        if (event.type === "LOGOUT") { clearDeleted(false); edits.clear(); archiveRestored = false; clearReviewAuth(); }
         if (features.noDelete && RESTORE_EVENTS.has(event.type)) Promise.resolve().then(restoreDeleted);
         // Views are keyed by the store's own ChannelMessages identity, so unrelated events
         // (typing, presence, reactions) no longer force a re-merge and re-sort of every chat.
         if (event.type === "CHANNEL_DELETE") {
             const id = event.channel && event.channel.id || event.channelId || event.id, bucket = deletedByChannel.get(id);
             if (bucket) { Array.from(bucket.keys()).forEach(dropDeleted); invalidateDeleted(); persistDeleted(); }
+            let dropped = false;
+            for (const [key, entry] of edits) if (entry.channelId === id) { edits.delete(key); dropped = true; }
+            if (dropped) persistDeleted();
         }
         if (!enabled("noDelete")) return orig.apply(self, args);
+        if (event.type === "MESSAGE_UPDATE" && settings.noDeleteEdits) rememberEdit(event.message);
         if (event.type === "MESSAGE_DELETE" && event.channelId && event.id) {
             // Your own deletion of a message we were already showing: remove it for real.
             const kept = rememberDeleted(event, orig, self);
@@ -1149,6 +1210,48 @@
             return orig.apply(self, next);
         }
         return orig.apply(self, args);
+    }
+    // Only a real edit counts: Discord's own update carries edited_timestamp and new text. Link previews,
+    // reactions, pins and the update NoDelete sends for a kept message have no edit time or keep the text.
+    function rememberEdit(update) {
+        if (!update || typeof update.content !== "string" || !update.edited_timestamp || !update.id || !update.channel_id || !msgStore) return;
+        let current;
+        try { current = msgStore.getMessage(update.channel_id, update.id); } catch (_) { return; }
+        const before = current && current.content;
+        if (typeof before !== "string" || before === update.content) return;
+        const key = deletedKey(update.channel_id, update.id);
+        let entry = edits.get(key);
+        if (entry) edits.delete(key);
+        else {
+            if (edits.size >= MAX_EDITED) edits.delete(edits.keys().next().value);
+            entry = {channelId:update.channel_id, id:update.id, versions:[]};
+        }
+        const at = current.editedTimestamp || current.timestamp;
+        entry.versions.push({content:before.length > MAX_VERSION_TEXT ? before.slice(0, MAX_VERSION_TEXT) + "\u2026" : before,
+            at:at && typeof at.toISOString === "function" ? at.toISOString() : typeof at === "string" ? at : null});
+        if (entry.versions.length > MAX_VERSIONS) entry.versions.splice(0, entry.versions.length - MAX_VERSIONS);
+        entry.text = undefined; entry.view = undefined;
+        edits.set(key, entry);
+        persistDeleted();
+    }
+    // Earlier versions sit above the message in one quote bar, each as small grey struck-through text: Discord's
+    // own native block quote, subtext and strikethrough nodes, so it follows the theme and font like any message.
+    // Plain text only, so an old version can never ping anyone or open a link.
+    function editHistoryNodes(entry) {
+        if (entry.view) return entry.view;
+        const lines = [];
+        entry.versions.forEach((version, index) => {
+            if (index) lines.push({type:"br"});
+            lines.push({type:"subtext", content:[{type:"s", content:[{type:"text", content:version.content || "(empty)"}]}]});
+        });
+        entry.view = {type:"blockQuote", content:lines};
+        return entry.view;
+    }
+    function withEditHistory(message, channelId, id) {
+        if (!edits.size || !settings.noDeleteEdits || !message || !Array.isArray(message.content)) return message;
+        const entry = edits.get(deletedKey(channelId, id));
+        if (!entry || !entry.versions.length) return message;
+        return Object.assign({}, message, {content:[editHistoryNodes(entry)].concat(message.content)});
     }
     function deleteMessage(orig, self, args) {
         const key = deletedKey(args[0], args[1]), event = deleted.get(key);
@@ -1265,6 +1368,12 @@
         // records: the same final cache as walking the merged map, without visiting basic twice.
         function remember() {
             const current = userStore && userStore.getCurrentUser(), owner = current && current.id;
+            // While the switch is off this only backs up the names gateway events already record, and it ran over
+            // every channel on every channel-list render. Skip it while the server's records are the same objects.
+            const last = hiddenScans.get(guild);
+            if (!enabled("hiddenChannels") && last && last.full === full && last.basic === basic && last.owner === owner) return;
+            if (hiddenScans.size >= 64 && !last) hiddenScans.delete(hiddenScans.keys().next().value);
+            hiddenScans.set(guild, {full, basic, owner});
             const keep = channel => rememberChannelName(channel, owner);
             if (basic) Object.values(basic).forEach(keep);
             Object.values(full).forEach(keep);
@@ -1619,7 +1728,7 @@
                     dms=acks.length;
                 }
             }
-        } catch (error) { reviewToast(ui,"Couldn't mark as read: "+error); return; }
+        } catch (error) { reviewToast(ui,"Couldn't mark as read: "+String(error && error.message || error)); return; }
         const parts=[];
         if (guilds) parts.push(guilds+(guilds===1 ? " server" : " servers"));
         if (dms) parts.push(dms+(dms===1 ? " DM" : " DMs"));
@@ -1679,6 +1788,114 @@
         const view=Object.assign({},result,{listDataProps});
         readAllViews.set(result, view);
         return view;
+    }
+    // Message tap gestures (a port of Geastures+ by kmmiio99o): double-tap replies, or edits your own
+    // message; tapping a third time deletes your own message. It takes over Discord's double-tap handler
+    // (DoubleTapToReactUtils 7414, which every double-tap reaches), so Discord's own "double-tap to
+    // react" setting needs nothing changed. Reply and edit go through the same actions as swiping:
+    // replyToMessage (11047) and LongPressMessageActionSheetUtils.handleEdit (11032).
+    // The third tap is not a second double-tap. Discord's native tap tracker (NestedScrollOnTouchTracker)
+    // starts over once a double-tap fires, so the next touch is reported as a single tap
+    // (MessagesHandlers.handleTapMessage, 10905), and only after Android's double-tap timeout (300 ms)
+    // passes with no fourth tap. Waiting 260 ms for another double-tap meant the editor always opened
+    // first. Edit now waits long enough for that single tap: a quick third tap lands 400-550 ms after
+    // the double-tap. A second double-tap (tap four) still counts too.
+    const GESTURE_TRIPLE_MS = 650, GESTURE_PAIR_MS = 1500, GESTURE_DELETED_MS = 3000;
+    const gesture = {timer:undefined, pending:null, channel:null, pendingAt:0, deleted:null, deletedAt:0};
+    function gestureCancel() { if (gesture.timer !== undefined && global.clearTimeout) global.clearTimeout(gesture.timer); gesture.timer = undefined; gesture.pending = null; gesture.channel = null; }
+    function gestureOwn(message) {
+        const user = userStore && userStore.getCurrentUser();
+        return !!(user && message && message.author && message.author.id === user.id);
+    }
+    function gestureReply(message, channel) {
+        const reply = inspectedExport(11047, "default");
+        if (typeof reply !== "function") return false;
+        try { reply({message, channel, chatInputRef:null, actionSource:"message_swipe"}); return true; } catch (_) { return false; }
+    }
+    function gestureEdit(message, channel) {
+        // Only what Discord itself would let you edit (sent, yours, not a system message); otherwise reply.
+        const canEdit = inspectedExport(11120, "default"), user = userStore && userStore.getCurrentUser();
+        try { if (typeof canEdit === "function" && !canEdit(message, user && user.id)) return false; } catch (_) { return false; }
+        const edit = inspectedExport(11032, "handleEdit");
+        if (typeof edit !== "function") return false;
+        try { edit(message, channel, null, "message_swipe", true); return true; } catch (_) { return false; }
+    }
+    function gestureDelete(message, channel) {
+        const actions = msgActions || inspectedExport(6880, "default");
+        if (!actions || typeof actions.deleteMessage !== "function") return false;
+        // Discord's own delete, with QuickDelete and NoDelete still applying to it.
+        try { const result = actions.deleteMessage(channel && channel.id || message.channel_id, message.id, false);
+            if (result && typeof result.catch === "function") result.catch(() => {}); return true; } catch (_) { return false; }
+    }
+    function gestureDeletePending(now) {
+        const message = gesture.pending, channel = gesture.channel;
+        gestureCancel();
+        gesture.deleted = message.id; gesture.deletedAt = now;
+        gestureDelete(message, channel);
+    }
+    // A single tap on the message that was just double-tapped is the third tap.
+    function gestureTap(event) {
+        if (!enabled("gestures") || !settings.gestureTripleDelete || !gesture.pending) return false;
+        const data = event && event.nativeEvent, id = data && data.messageId, now = Date.now();
+        if (id == null || String(id) !== String(gesture.pending.id) || now - gesture.pendingAt >= GESTURE_PAIR_MS) return false;
+        gestureDeletePending(now);
+        return true;
+    }
+    // MessagesHandlers defines handleTapMessage on each instance in its constructor, so it's wrapped per instance.
+    function hookTapHandlers(exports) {
+        const Handlers = exports && exports.MessagesHandlers;
+        if (typeof Handlers !== "function" || typeof Reflect === "undefined" || typeof Reflect.construct !== "function") return exports;
+        function MessagesHandlers() {
+            const handlers = Reflect.construct(Handlers, arguments);
+            const tap = handlers && handlers.handleTapMessage;
+            if (typeof tap === "function") handlers.handleTapMessage = function (event) {
+                try { if (gestureTap(event)) return undefined; } catch (_) {}
+                return tap.apply(this, arguments);
+            };
+            return handlers;
+        }
+        MessagesHandlers.prototype = Handlers.prototype;
+        try { Object.setPrototypeOf(MessagesHandlers, Handlers); } catch (_) {}
+        return replaceValue(exports, "MessagesHandlers", MessagesHandlers);
+    }
+    function gestureAct(message, channel) {
+        if (!message || !channel) return;
+        const own = gestureOwn(message);
+        if (own && settings.gestureOwn === "edit" && gestureEdit(message, channel)) return;
+        gestureReply(message, channel);
+    }
+    function doubleTapMessage(orig, self, args) {
+        if (!enabled("gestures")) return orig.apply(self, args);
+        const message = args[0], channel = args[1], id = message && message.id;
+        if (!id) return orig.apply(self, args);
+        const now = Date.now();
+        // The taps that just deleted a message can land once more before it disappears: ignore them.
+        if (gesture.deleted === id && now - gesture.deletedAt < GESTURE_DELETED_MS) { gestureCancel(); return; }
+        if (gesture.pending && gesture.pending.id === id && now - gesture.pendingAt < GESTURE_PAIR_MS) {
+            if (settings.gestureTripleDelete && gestureOwn(message)) { gesture.channel = channel; gestureDeletePending(now); return; }
+            gestureCancel(); gestureAct(message, channel);
+            return;
+        }
+        gestureCancel();
+        // Nothing waits for a third tap when it couldn't delete anything.
+        if (!settings.gestureTripleDelete || !gestureOwn(message)) { gestureAct(message, channel); return; }
+        gesture.pending = message; gesture.channel = channel; gesture.pendingAt = now;
+        gesture.timer = later(() => { gesture.timer = undefined; const waiting = gesture.pending; gesture.pending = null; gesture.channel = null;
+            if (waiting === message) gestureAct(message, channel); }, GESTURE_TRIPLE_MS);
+    }
+    function GestureSettings() {
+        useSettings("gestures");
+        const ui = reviewUI();
+        if (!RN) return null;
+        const Group = ui.TableRowGroup || RN.View, on = enabled("gestures");
+        const choices = [["edit", "Edit it", "Opens it for editing, if Discord lets you edit it. Otherwise you reply."],
+            ["reply", "Reply to it", "Starts a reply, like double-tapping anyone else's message."]];
+        const groups = [
+            el(Group, {key:"own", title:"Double-tap your own message"}, choices.map(([value, label, subLabel]) => ui.TableRow &&
+                el(ui.TableRow, {key:value, label:(settings.gestureOwn === value ? "\u2713 " : "") + label, subLabel, disabled:!on, onPress:() => setSetting("gestureOwn", value)}))),
+            el(Group, {key:"triple", title:"Tap three times"},
+                switchRow(ui.TableSwitchRow, "gestureTripleDelete", "Delete your own message", "Tap one of your messages three times quickly to delete it, without asking. Someone else's message is never deleted."))];
+        return settingsBody(ui, groups);
     }
     // Quest Completer: finds unfinished Quests and completes them in the background, with no screen.
     // Based on the community quest scripts (aamiaa's gist, CompleteDiscordQuest, Questify), rebuilt on
@@ -2125,7 +2342,7 @@
         const text = questStatusText();
         const groups = [
             el(Group, {key:"types", title:"Quests to complete"},
-                toggle("questsVideo", "Video Quests", "Reports the video as watched, at normal speed."),
+                toggle("questsVideo", "Video Quests", "Reports the video as watched, at normal speed, without playing it."),
                 toggle("questsPlay", "Play Quests", "Counts time for the game without installing or starting it."),
                 toggle("questsActivity", "Activity Quests", "Counts time in an Activity without starting one."),
                 toggle("questsEnroll", "Accept new Quests", "Accept Quests you haven't started, one at a time. Off: only Quests you accepted yourself.")),
@@ -2141,8 +2358,10 @@
             el(RN.View,{style:{paddingVertical:24,paddingHorizontal:12,gap:24}},groups);
         return RN.ScrollView ? el(RN.ScrollView,scroll || null,body) : body;
     }
+    // Greyed out while the main switch is off, like the options on the Settings list.
     function switchRow(Switch,key,label,subLabel) {
-        return Switch ? el(Switch,{key,label,subLabel,value:settings[key],onValueChange:value=>setSetting(key,value)}) : null;
+        const owner=featureFor(key);
+        return Switch ? el(Switch,{key,label,subLabel,value:settings[key],disabled:owner!==key && !settings[owner],onValueChange:value=>setSetting(key,value)}) : null;
     }
     // Settings page: Discord's own radio list (TableRadioGroup 5995 / TableRadioRow 5994).
     function ReadAllSettings() {
@@ -2177,6 +2396,10 @@
         const source = row.message || message;
         const channelId = source.channel_id || source.channelId || message.channelId;
         const id = source.id || message.id;
+        if (edits.size && enabled("noDelete")) {
+            const shown = withEditHistory(next.message, channelId, id);
+            if (shown !== next.message) next = Object.assign({},next,{message:shown});
+        }
         const bucket = deleted.size && enabled("noDelete") && deletedByChannel.get(channelId);
         if (bucket && bucket.has(deletedKey(channelId,id)) && RN && typeof RN.processColor === "function") {
             // Native row highlight schema from RowGeneratorConstants (7379). No injected notice, altered
@@ -2525,8 +2748,8 @@
                 el(ui.TableRow,{key:"logout",label:"Sign out of ReviewDB",variant:authenticated ? "danger" : undefined,disabled:!authenticated,onPress:clearReviewAuth,
                     subLabel:"ReviewDB stays in Discord's Authorized Apps until you remove it there."})),
             el(Group,{key:"settings",title:"Settings"},
-                toggle("reviewThemedSend","Profile-colored send button","Match the send button to the profile's theme colors."),
-                toggle("reviewWarning","Show the be-respectful note","Show ReviewDB's reminder at the top of reviews."))];
+                toggle("reviewThemedSend","Profile-colored send button","Color the review send button with the profile's theme colors."),
+                toggle("reviewWarning","Show the be-respectful note","Show ReviewDB's reminder to be respectful above reviews."))];
         return settingsBody(ui,groups);
     }
     function NoDeleteSettings() {
@@ -2541,14 +2764,17 @@
         // An emptied field keeps the current maximum instead of silently resetting it to 512.
         const commit=() => { if (draft) setSetting("noDeleteLimit",draft); setDraft(String(settings.noDeleteLimit)); };
         const Text=inspectedExport(4833,"Text");
-        const hint="Type 1 to "+MAX_DELETED+", then tap done. Now: "+settings.noDeleteLimit+". When it's full, the oldest message is removed.";
+        const hint="How many deleted messages to keep, from 1 to "+MAX_DELETED+". Now: "+settings.noDeleteLimit+". When it's full, the oldest is removed first.";
         const onText=text => setDraft(String(text).replace(/[^0-9]/g,"").slice(0,4));
-        const inputProps={value:draft,keyboardType:"number-pad",maxLength:4,placeholder:"512",onBlur:commit,onSubmitEditing:commit,returnKeyType:"done"};
+        const inputProps={value:draft,keyboardType:"number-pad",maxLength:4,placeholder:"512",onBlur:commit,onSubmitEditing:commit,returnKeyType:"done",
+            // Read-only while NoDelete is off, like the switches above it.
+            editable:!!settings.noDelete,isDisabled:!settings.noDelete};
         // Discord's TextInput reports text via onChange(text); RN's via onChangeText.
         const input=ui.TextInput ? el(ui.TextInput,Object.assign({label:"Maximum saved messages",onChange:onText},inputProps)) :
             el(RN.TextInput,Object.assign({onChangeText:onText,style:{fontSize:16,padding:12}},inputProps));
         const groups=[
-            el(Group,{key:"save",title:"Saving"},toggle("noDeleteSave","Save permanently","Keep them after Discord restarts, saved only on this phone for your account. When off, they're cleared on restart.")),
+            el(Group,{key:"edits",title:"Edited messages"},toggle("noDeleteEdits","Show what messages said before","Saves what a message said before it was edited, and shows it faded and crossed out above it. Covers edits made while Discord is open, up to 10 per message.")),
+            el(Group,{key:"save",title:"Saving"},toggle("noDeleteSave","Save permanently","Keep deleted messages and what edited messages said before after Discord restarts. Saved only on this phone, for your account. Off: cleared when Discord restarts.")),
             el(Group,{key:"limit",title:"Maximum saved messages"},el(RN.View,{style:{padding:12,gap:8}},input,
                 Text ? el(Text,{variant:"text-xs/medium",color:"text-muted"},hint) : el(RN.Text,{style:{color:"#949ba4",fontSize:12}},hint)))];
         return settingsBody(ui,groups,{keyboardShouldPersistTaps:"handled"});
@@ -2807,6 +3033,40 @@
         useSettings("hideGift");
         return enabled("hideGift") && props && props.shouldShowGiftButton ? Object.assign({}, props, {shouldShowGiftButton:false}) : props;
     }
+    // Hide call button: UserProfileContactButtons (12696) draws Message and Call side by side, each in a
+    // flex:1 slot, or as icon buttons next to a friend button. Its disableCalls prop only greys Call out, so
+    // the Call button and the slot it sat in are left out of what it renders. Message's slot then takes the
+    // whole row, and the change animates when the setting flips while a profile is open.
+    function isCallButton(node) {
+        const icon = node && node.props && node.props.icon, Phone = inspectedExport(7309, "PhoneCallIcon");
+        return !!(Phone && icon && icon.type === Phone);
+    }
+    function withoutCall(node, depth) {
+        if (!node || typeof node !== "object" || depth > 12) return node;
+        if (Array.isArray(node)) {
+            let changed = false;
+            const next = node.map(child => { const value = withoutCall(child, depth + 1); if (value !== child) changed = true; return value; });
+            return changed ? next.filter(child => child !== null) : node;
+        }
+        if (!node.props) return node;
+        if (isCallButton(node)) return null;
+        const children = node.props.children, next = withoutCall(children, depth + 1);
+        if (next === children) return node;
+        // A slot that only held the Call button goes too, so nothing keeps half the row.
+        if (next === null || Array.isArray(next) && !next.length) return null;
+        return React.cloneElement(node, Object.assign({}, node.props, {children:next}));
+    }
+    function profileButtons(orig, self, args) {
+        useSettings("hideCall");
+        const hidden = !!enabled("hideCall"), last = React.useRef(hidden);
+        if (last.current !== hidden) {
+            last.current = hidden;
+            const animate = RN && RN.LayoutAnimation;
+            try { if (animate && animate.Presets) animate.configureNext(animate.Presets.easeInEaseOut); } catch (_) {}
+        }
+        const rendered = orig.apply(self, args);
+        return hidden ? withoutCall(rendered, 0) : rendered;
+    }
     // Discord's own "no Quest to show" answer, so the dock, the space kept for it and its tracking all go away together.
     let noQuestDock = null;
     function questDockHidden() { useSettings("hideQuestDock"); return enabled("hideQuestDock"); }
@@ -2935,6 +3195,7 @@
         if (features.reviewDB && id === 13521) return hookComponent(exports,reviewGuild);
         if (features.hideGift && (id === 11609 || id === 11817) && exports && exports.default)
             return replaceValue(exports, "default", propsComponent(exports.default, withoutGift));
+        if (features.hideCall && id === 12696) return hookComponent(exports, profileButtons);
         if (features.hideQuestDock && id === 14608) return hideQuestHooks(exports);
         if (features.hideQuestDock && id === 14700) return hideQuestDock(exports);
         if (features.systemEmoji && id === 6552 && exports && exports.default)
@@ -3000,6 +3261,11 @@
         if (features.jumpToTop && id === 11644) jumpIcon = exports && typeof exports === "object" && "default" in exports ? exports.default : exports;
         if (features.jumpToTop && id === 11642) return hookComponent(exports, jumpButton);
         if (features.jumpToTop && [9804,10418,15746].includes(id)) return hookComponent(exports, jumpSheet);
+        if (features.gestures && id === 7414) return hookExport(exports, "handleAddDefaultDoubleTapReaction", doubleTapMessage);
+        // Discord's "double-tap to change your reaction" tip would point at a gesture that now replies.
+        if (features.gestures && id === 11105) return hookExport(exports, "DoubleTapEmojiEditNudge", (orig, self, args) => enabled("gestures") ? null : orig.apply(self, args));
+        if (features.gestures && id === 1378) userStore = exports.default;
+        if (features.gestures && id === 10905) return hookTapHandlers(exports);
         if (id === 6880) {
             let actions = exports.default;
             if (!actions) return exports;

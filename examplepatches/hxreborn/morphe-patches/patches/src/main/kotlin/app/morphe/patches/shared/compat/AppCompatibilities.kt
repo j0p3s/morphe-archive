@@ -154,6 +154,17 @@ internal object AppCompatibilities {
         ),
     )
 
+    val DEVCHECK = Compatibility(
+        name = "DevCheck",
+        packageName = "flar2.devcheck",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x1E88E5,
+        signatures = setOf(
+            "f816aa5ff72263d1a9a6afb81e4c25e72fbf9002444f80a6e043f080c7010990",
+        ),
+        targets = listOf(AppTarget(version = "6.57", versionCode = 657, minSdk = 32)),
+    )
+
     val DWG_FASTVIEW = Compatibility(
         name = "DWG FastView",
         packageName = "com.gstarmc.android",
@@ -387,7 +398,18 @@ internal object AppCompatibilities {
         packageName = "com.soulbreakers.mymoveset",
         apkFileType = ApkFileType.XAPK,
         appIconColor = 0x9F1C3B,
-        targets = listOf(AppTarget(version = "1.3.2", versionCode = 15, minSdk = 24)),
+        targets = listOf(AppTarget(version = "1.4.0", versionCode = 16, minSdk = 24)),
+    )
+
+    val MY_APK = Compatibility(
+        name = "My APK",
+        packageName = "com.andatsoft.myapk.fwa",
+        apkFileType = ApkFileType.APKS,
+        appIconColor = 0x5D3FC6,
+        signatures = setOf(
+            "3fa505df0e471b20b0bf0511cd05c0ecfa2fa53a9bbed6bf51886e1b7c0db90b",
+        ),
+        targets = listOf(AppTarget(version = "4.1.1", versionCode = 3231, minSdk = 26)),
     )
 
     val NOTESNOOK = Compatibility(
@@ -529,6 +551,17 @@ internal object AppCompatibilities {
             AppTarget(version = "5.20.39.0", versionCode = 605203900, minSdk = 26),
             AppTarget(version = "5.20.57.0", versionCode = 605205700, minSdk = 26),
         ),
+    )
+
+    val PSIPHON = Compatibility(
+        name = "Psiphon",
+        packageName = "com.psiphon3.subscription",
+        apkFileType = ApkFileType.APKS,
+        appIconColor = 0xF5A623,
+        signatures = setOf(
+            "76dbef15f67726d451a12359b8579c0d7a9f635d526aa37424df131632f17810",
+        ),
+        targets = listOf(AppTarget(version = "2.5.11", versionCode = 506, minSdk = 24)),
     )
 
     val PYDROID = Compatibility(

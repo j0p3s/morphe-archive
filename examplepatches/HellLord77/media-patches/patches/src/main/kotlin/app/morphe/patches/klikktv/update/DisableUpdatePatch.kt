@@ -7,7 +7,7 @@ import app.morphe.patches.klikktv.shared.patches.activity.splashScreen.isUpdateA
 @Suppress("unused")
 val disableUpdatePatch = bytecodePatch(
     name = "Disable update",
-    description = "Force update to be not available.",
+    description = "Disables forced update.",
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_KLIKKTV)

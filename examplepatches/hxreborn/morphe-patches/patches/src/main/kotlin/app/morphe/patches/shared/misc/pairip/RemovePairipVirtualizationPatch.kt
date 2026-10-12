@@ -123,6 +123,11 @@ private val PAIRIP_HOOKED_LIBRARIES = mapOf(
     "com.nieruo.healthapp" to mapOf(
         "librealmc" to "librealmc.so",
     ),
+    "flar2.devcheck" to mapOf(
+        "libbenchmarksuite" to "libbenchmarksuite.so",
+        "libdevcheck" to "libdevcheck.so",
+        "libvulkan_info" to "libvulkan_info.so",
+    ),
     "me.proton.android.lumo" to mapOf(
         "libaccount_crux_ffi" to "libaccount_crux_ffi.so",
         "libjnidispatch" to "libjnidispatch.so",
@@ -244,6 +249,7 @@ val removePairipVirtualizationPatch = bytecodePatch {
         AppCompatibilities.AUDIOLAB,
         AppCompatibilities.BETTERSLEEP,
         AppCompatibilities.CATZY,
+        AppCompatibilities.DEVCHECK,
         AppCompatibilities.HINDU_CALENDAR,
         AppCompatibilities.LUMO,
         AppCompatibilities.VLLO,

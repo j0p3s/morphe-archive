@@ -7,7 +7,7 @@ import app.morphe.util.returnEarly
 @Suppress("unused")
 val tvodContentPatch = bytecodePatch(
     name = "Free TVOD content",
-    description = "Spoofs TVOD content to be free",
+    description = "Spoofs TVOD content to be free.",
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_ISCREENTV)

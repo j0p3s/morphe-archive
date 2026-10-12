@@ -1,4 +1,44 @@
-## Unreleased
+## 0.71.3 (2026-10-11)
+
+* **TikTok:** Con Mostra il LIVE sotto la barra di stato attivo, anche le stanze successive tengono l'ombra sotto l'orologio. Prima la striscia tornava chiara dopo i primi LIVE scorsi (#137).
+
+* **TikTok:** Nascondi la bolla di Tako ora nasconde anche la bolla di Tako nell'angolo in basso a destra dei video del feed, che alcuni account vedono al posto di quella sopra il pulsante del profilo (#115).
+
+* **TikTok:** Il Feature Gate Lab ha un nuovo preset Banner del profilo. Attiva Add background in Edit profile di TikTok senza passare il resto del profilo al nuovo layout (#80).
+
+* **TikTok:** La finestra delle raccolte che appare tenendo premuto il pulsante Preferiti ora è scura invece che bianca quando TikTok è in modalità scura. Finestra Preferiti scura nelle impostazioni di Hushfeed > App la disattiva (#142).
+
+## 0.71.2 (2026-10-11)
+
+* **TikTok:** Nascondi la barra di stato nelle stanze LIVE e Mostra il LIVE sotto la barra di stato ora funzionano anche su un LIVE aperto dall'anteprima sotto la scheda di un creator nella ricerca. TikTok apre quel LIVE dentro la pagina che usa per i video aperti, dove gli interruttori non arrivavano (#137).
+
+## 0.71.1 (2026-10-11)
+
+* **TikTok:** Con Mantieni i sottotitoli nella vista pulita attivo, nella vista pulita il sottotitolo ora resta dove TikTok lo mostrava prima che i controlli sparissero, invece di scendere fino al bordo inferiore (#141). Finché non è apparso nessun sottotitolo, resta nella posizione di prima.
+
+* **TikTok:** Con Mostra il LIVE sotto la barra di stato attivo, la striscia sotto l'orologio torna ombreggiata come il resto della parte alta della stanza. Sui telefoni dove TikTok tiene una striscia nera per la barra, sembrava più chiara della diretta sotto (#137).
+
+## 0.71.0 (2026-10-11)
+
+* **TikTok:** Con Doppio tocco impostato su un'azione di Hushfeed e Long-press controls nella patch, un secondo tocco in cui il dito resta giù un attimo di troppo non apre più anche il menu della pressione prolungata di TikTok, quindi il pannello di condivisione non compare più sopra i commenti. (#63)
+
+* **TikTok:** Controlli LIVE ha un terzo interruttore, Offri la qualità LIVE in più stanze, in Impostazioni di Hushfeed > Riproduzione. TikTok offre Qualità video nel menu di una LIVE solo quando lo chiede la diretta o quando TikTok attiva il selettore di qualità più nuovo per il tuo account, quindi in alcune stanze non si poteva sceglierla. Con l'interruttore attivo, la maggior parte delle stanze senza riceve il selettore nuovo (le stanze solo audio no), e la stanza successiva si apre con l'ultima qualità che hai scelto finché non chiudi TikTok. È spento di base. (#57)
+
+* **TikTok:** Mostra le date nella griglia del profilo e Mostra il tasso di interazione ora funzionano nelle griglie di TikTok 47.1.4, sia sui video di un profilo sia nei Preferiti e nei video che ti piacciono. Quella versione scrive le visualizzazioni di ogni riquadro in un punto che la patch non raggiungeva, quindi lì non comparivano né la data né il tasso.
+
+* **TikTok:** Creator bloccati, parole bloccate, gli intervalli di visualizzazioni e Mi piace e interruttori come Nascondi i video LIVE e Nascondi le storie ora funzionano anche nella scheda Seguiti. Su TikTok 47.1.4 quella scheda perdeva solo le pubblicità e i video con un luogo, quindi un creator che avevi bloccato poteva ancora comparire lì.
+
+* **TikTok:** Una parola che non è un codice lingua in Non tradurre automaticamente queste lingue ora riceve un semplice messaggio "non è un codice lingua". Prima avvisava che nessun video avrebbe mai corrisposto, che è l'avviso del filtro sulla lingua delle didascalie e non c'entra con un elenco che lascia solo il testo non tradotto (#121).
+
+* **TikTok:** Dettagli della build ora indica anche le patch che cambiano solo le risorse di TikTok, come Change app name, Custom launcher icon e Trust user certificates. Elenca la patch, mai il nome o l'immagine che hai scelto nelle sue opzioni.
+
+* **TikTok:** Con Registra la diagnostica attivo, il registro ora indica una volta per video quante immagini di anteprima della barra di avanzamento TikTok ha inviato con esso. Se l'anteprima non compare mentre trascini la barra, un'esportazione della diagnostica mostra se il video ne aveva (#140).
+
+* **TikTok:** Dettagli della build e l'esportazione completa del log ora elencano, con un nome breve, ogni patch della tua build che ha modificato il codice di TikTok, comprese quelle senza interruttore come Comment send fix e Network request report.
+
+* **TikTok:** Vista pulita, ricordata o automatica, ora pulisce anche un video aperto dalla ricerca. TikTok passa quel video alla pagina aperta mentre è già in riproduzione, e Vista pulita aspettava un avvio che lì non arrivava mai, quindi i pulsanti e la barra di ricerca di TikTok restavano (#84).
+
+* **TikTok:** Nascondi gli overlay dei video e le dimensioni del testo del feed ora funzionano anche quando un link avvia TikTok direttamente nella ricerca o in un video, senza il feed Per te dietro. Prima i video aperti così mantenevano tutti gli overlay e la dimensione del testo di TikTok (#84).
 
 * **TikTok:** Proteggi le pagine esterne nel browser di TikTok ora considera il CAPTCHA a puzzle che aprono i LIVE e lo Shop una pagina di TikTok, così il puzzle resta collegato a TikTok (#87). Si carica dai server di TikTok, solo da un indirizzo che l'interruttore non conosceva.
 
@@ -44,7 +84,7 @@
 
 * **TikTok:** Il report diagnostico ha una nuova sezione Storage con le cartelle più grandi nella memoria di TikTok, così un report può mostrare cosa la sta riempiendo (#70). Nomina solo le cartelle, mai i file, e nasconde i numeri degli account.
 
-* **TikTok:** Premere indietro su un video pulito aperto dalla ricerca o da un profilo non conta più come spegnere Clear display. Riaprendo lo stesso video si pulisce come gli altri, e un Clear display ricordato resta attivo (#84).
+* **TikTok:** Premere indietro su un video pulito, o aprire da lì il pannello di condivisione, non conta più come spegnere Clear display. Riaprendo lo stesso video si pulisce come gli altri, e un Clear display ricordato resta attivo (#84).
 
 * **TikTok:** Remove LIVE extras ora dice che toglie i file per entrare nella LIVE di qualcun altro come ospite, quindi con questa patch entrare con la voce o il video può smettere di funzionare (#132). Lasciala fuori se partecipi alle LIVE.
 

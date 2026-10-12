@@ -1,5 +1,7 @@
 package app.morphe.extension.bongo.repos;
 
+import static app.morphe.extension.bongo.reflect.com.google.gson.Gson.fromJson;
+
 import app.morphe.extension.bongo.util.JSONUtil;
 import app.morphe.extension.shared.Logger;
 import app.morphe.extension.shared.Utils;
@@ -34,8 +36,7 @@ public class ContentRepo {
     var contentDetails = buildContentDetails(contentTrailer, content, acceptLanguage);
     Logger.printDebug(() -> String.format("contentDetails: %s", contentDetails));
 
-    return app.morphe.extension.bongo.reflect.com.google.gson.Gson.fromJson(
-        GSON, contentDetails.toString(), classOfT);
+    return fromJson(GSON, contentDetails.toString(), classOfT);
   }
 
   @NotNull

@@ -1,3 +1,13 @@
+## [1.48.0](https://github.com/hxreborn/morphe-patches/compare/v1.47.0...v1.48.0) (2026-10-12)
+
+### New Features
+
+* **All Video Player App - Skip splash delay:** open the app without the 10 second splash wait ([0718402](https://github.com/hxreborn/morphe-patches/commit/07184027d6328e0490167bcc3fe9ffa7cb1bedc5))
+* **DevCheck - Unlock premium:** unlock the Pro tools, tests, themes and colors ([aee3ee7](https://github.com/hxreborn/morphe-patches/commit/aee3ee7dc007ede0a493ab8647f8dec86c9db7be)), closes [#187](https://github.com/hxreborn/morphe-patches/issues/187)
+* **My APK - Unlock premium:** unlock premium and remove ads ([9406552](https://github.com/hxreborn/morphe-patches/commit/9406552ca403f355cce5932d5bc38227b5e3b81a)), closes [#188](https://github.com/hxreborn/morphe-patches/issues/188)
+* **MyMoveset:** add support for `1.4.0` ([96e48d1](https://github.com/hxreborn/morphe-patches/commit/96e48d13fcca77318e4bdec149c2d68d96db2b2e))
+* **Psiphon - Unlock premium:** unlock all regions and remove ads and the upgrade button ([c304e2a](https://github.com/hxreborn/morphe-patches/commit/c304e2affa917ca1a671ad92617930b2550086dd))
+
 ## [1.47.0](https://github.com/hxreborn/morphe-patches/compare/v1.46.0...v1.47.0) (2026-10-10)
 
 ### Bug Fixes

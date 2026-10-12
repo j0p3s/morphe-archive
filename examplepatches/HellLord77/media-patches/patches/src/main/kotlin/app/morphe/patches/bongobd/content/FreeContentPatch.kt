@@ -18,7 +18,6 @@ private const val EXTENSION_CLASS = "Lapp/morphe/extension/bongo/patches/FreeCon
 @Suppress("unused")
 val freeContentPatch = bytecodePatch(
     name = "Free content",
-    description = "Use alternative api to get content details.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_BONGO)

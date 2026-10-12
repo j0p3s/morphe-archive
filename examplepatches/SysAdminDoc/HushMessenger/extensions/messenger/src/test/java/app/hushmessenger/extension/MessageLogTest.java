@@ -36,6 +36,7 @@ public class MessageLogTest {
         CrashGuard.onProcessStart(RuntimeEnvironment.getApplication());
         // With the switch still off, this drops anything an earlier test left queued.
         MessageLog.drain();
+        MessageLog.forgetCaptures();
         Settings.hookErrors.clear();
         softwareVault = new SoftwareVault();
         MessageLog.vault = softwareVault;
@@ -71,6 +72,105 @@ public class MessageLogTest {
     @Test public void tabsAndNewlinesInAMessageSurviveTheRoundTrip() throws Exception {
         MessageLog.storeNow("line one\nline\ttwo\\end", "t");
         assertEquals("line one\nline\ttwo\\end", MessageLog.entries().get(0).text);
+    }
+
+    @Test public void takesTheSenderAndTheGroupFromTheChatsNotification() throws Exception {
+        Context context = Settings.appContext;
+        android.app.NotificationManager manager = context.getSystemService(android.app.NotificationManager.class);
+        android.app.Notification.MessagingStyle style = new android.app.Notification.MessagingStyle(new android.app.Person.Builder().setName("Me").build())
+            .setConversationTitle("Climbing").setGroupConversation(true)
+            .addMessage("earlier", 1, new android.app.Person.Builder().setName("Bo").build())
+            .addMessage("see you at six", 2, new android.app.Person.Builder().setName("Ana").build());
+        manager.notify("GROUP:77", 1, new android.app.Notification.Builder(context, "chats")
+            .setSmallIcon(android.R.drawable.sym_def_app_icon).setStyle(style).build());
+        try {
+            MessageLog.storeNow("see you at six", "GROUP:77");
+            MessageLog.storeNow("no notification for this one", "ONE_TO_ONE:5:6");
+            List<MessageLog.Entry> entries = MessageLog.entries();
+            assertEquals("", entries.get(0).sender);
+            assertEquals("", entries.get(0).chat);
+            assertEquals("Ana", entries.get(1).sender);
+            assertEquals("Climbing", entries.get(1).chat);
+            assertEquals("GROUP:77", entries.get(1).thread);
+        } finally {
+            manager.cancelAll();
+        }
+    }
+
+    @Test public void aOneToOneNotificationGivesTheSenderAndNoGroup() throws Exception {
+        Context context = Settings.appContext;
+        android.app.NotificationManager manager = context.getSystemService(android.app.NotificationManager.class);
+        android.app.Notification.MessagingStyle style = new android.app.Notification.MessagingStyle(new android.app.Person.Builder().setName("Me").build())
+            .addMessage("hi\tthere", 1, new android.app.Person.Builder().setName("Ana\tB").build());
+        manager.notify("ADVANCED_CRYPTO_ONE_TO_ONE:9", 1, new android.app.Notification.Builder(context, "chats")
+            .setSmallIcon(android.R.drawable.sym_def_app_icon).setContentTitle("Ana\tB").setStyle(style).build());
+        try {
+            MessageLog.storeNow("hi\tthere", "ADVANCED_CRYPTO_ONE_TO_ONE:9");
+            MessageLog.Entry entry = MessageLog.entries().get(0);
+            // Tabs in a name or the text survive the five-column line.
+            assertEquals("Ana\tB", entry.sender);
+            assertEquals("", entry.chat);
+            assertEquals("hi\tthere", entry.text);
+        } finally {
+            manager.cancelAll();
+        }
+    }
+
+    @Test public void aMessageWhoseNotificationIsBuiltTwiceIsKeptOnce() throws Exception {
+        MessageLog.storeNow("same words", "ONE_TO_ONE:1:2");
+        MessageLog.storeNow("same words", "ONE_TO_ONE:1:2");
+        MessageLog.storeNow("same words", "ONE_TO_ONE:3:4");
+        MessageLog.storeNow("other words", "ONE_TO_ONE:1:2");
+        List<MessageLog.Entry> entries = MessageLog.entries();
+        assertEquals(3, entries.size());
+        assertEquals("other words", entries.get(0).text);
+        assertEquals("ONE_TO_ONE:3:4", entries.get(1).thread);
+        assertEquals("ONE_TO_ONE:1:2", entries.get(2).thread);
+    }
+
+    @Test public void theSameWordsAfterTheWindowAreANewMessage() {
+        long start = 1_000;
+        assertFalse(MessageLog.repeated("t", "ok", start));
+        assertTrue(MessageLog.repeated("t", "ok", start + MessageLog.DUPLICATE_WINDOW_MS));
+        assertFalse(MessageLog.repeated("t", "ok", start + MessageLog.DUPLICATE_WINDOW_MS + 1));
+        // A clock moved back doesn't hide the next message behind a capture from the future.
+        assertFalse(MessageLog.repeated("t", "later", 50_000));
+        assertFalse(MessageLog.repeated("t", "later", 40_000));
+    }
+
+    @Test public void namesAutoReplyNotedOutliveTheNotificationItAnswered() throws Exception {
+        android.app.Notification.MessagingStyle style = new android.app.Notification.MessagingStyle(new android.app.Person.Builder().setName("Me").build())
+            .addMessage("ping test", 1, new android.app.Person.Builder().setName("Ana").build());
+        android.app.Notification answered = new android.app.Notification.Builder(Settings.appContext, "chats")
+            .setSmallIcon(android.R.drawable.sym_def_app_icon).setContentTitle("Ana").setStyle(style).build();
+        // Auto reply read it, and the reply took it down before the log got to it, so it's never posted here.
+        MessageLog.noteNames("ADVANCED_CRYPTO_ONE_TO_ONE:9", "ping test", answered);
+        MessageLog.storeNow("ping test", "ADVANCED_CRYPTO_ONE_TO_ONE:9");
+        assertEquals("Ana", MessageLog.entries().get(0).sender);
+        // Used once: a later capture of other words in that chat isn't named from it.
+        MessageLog.storeNow("ping again", "ADVANCED_CRYPTO_ONE_TO_ONE:9");
+        assertEquals("", MessageLog.entries().get(0).sender);
+    }
+
+    @Test public void namesAreNotNotedWhileTheLogIsOff() throws Exception {
+        Settings.preferences.edit().putBoolean("message_log", false).commit();
+        android.app.Notification answered = new android.app.Notification.Builder(Settings.appContext, "chats")
+            .setSmallIcon(android.R.drawable.sym_def_app_icon).setContentTitle("Ana").build();
+        MessageLog.noteNames("ONE_TO_ONE:1:2", "hello", answered);
+        Settings.preferences.edit().putBoolean("message_log", true).commit();
+        MessageLog.storeNow("hello", "ONE_TO_ONE:1:2");
+        assertEquals("", MessageLog.entries().get(0).sender);
+    }
+
+    @Test public void readsALogWrittenBeforeNamesWereKept() throws Exception {
+        long now = System.currentTimeMillis();
+        byte[] plain = (now + "\tONE_TO_ONE:1:2\told format\n").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        Files.write(logFile().toPath(), MessageLog.vault().seal(plain));
+        MessageLog.Entry entry = MessageLog.entries().get(0);
+        assertEquals("old format", entry.text);
+        assertEquals("ONE_TO_ONE:1:2", entry.thread);
+        assertEquals("", entry.sender);
+        assertEquals("", entry.chat);
     }
 
     @Test public void listsNewestFirst() throws Exception {

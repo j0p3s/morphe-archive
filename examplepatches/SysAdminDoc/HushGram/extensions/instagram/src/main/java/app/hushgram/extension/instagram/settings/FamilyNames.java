@@ -32,14 +32,17 @@ public final class FamilyNames {
     public static final String BACK_LEAVES_HOME = "Back leaves Home";
     public static final String STORY_LOOP = "Loop a story";
     public static final String STORY_SOUND = "Start stories with sound";
+    public static final String STORY_UPLOAD_QUALITY = "Upload stories at full quality";
     public static final String FEED_SOUND = "Start feed videos with sound";
     public static final String LONG_PRESS_ZOOM = "Long press to zoom";
+    public static final String ROUNDED_POST_CORNERS = "Rounded post corners";
     public static final String STORY_SEEN = "View stories anonymously";
     public static final String DM_MEDIA_SEEN = "View DM photos and videos anonymously";
     public static final String SPOOF_LOCATION = "Spoof location";
     public static final String THREAD_SEEN = "Read messages without the seen receipt";
     public static final String TYPING = "Hide that you're typing";
     public static final String ACTIVE_STATUS = "Hide your active status";
+    public static final String LAST_ACTIVE = "Show when someone was last active";
     public static final String MESSAGES_LOCK = "Lock your messages";
     public static final String STORIES_TRAY = "Hide suggested stories";
     public static final String STORY_RING = "Story ring size";
@@ -66,6 +69,7 @@ public final class FamilyNames {
     public static final String STOP_HEARTBEAT = "Stop background wake-ups";
     public static final String EMOJI_STYLE = "Emoji style";
     public static final String ACCENT_COLOR = "Accent color";
+    public static final String LAUNCH_SCREEN = "HushGram launch screen";
     public static final String NOTIFICATION_GROUPS = "Group Instagram's notifications";
     public static final String HDR_BOOST = "Turn off HDR brightness boosts";
     public static final String MEDIA_CACHE = "Clear the media cache";

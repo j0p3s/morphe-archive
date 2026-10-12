@@ -17,9 +17,9 @@ patches {
 val patchListGeneratorClasspath = configurations.create("patchListGeneratorClasspath")
 
 dependencies {
-    compileOnly(libs.gson)
     patchListGeneratorClasspath(libs.gson)
 
+    implementation(libs.gson)
     implementation(libs.morphe.patches.library)
 }
 

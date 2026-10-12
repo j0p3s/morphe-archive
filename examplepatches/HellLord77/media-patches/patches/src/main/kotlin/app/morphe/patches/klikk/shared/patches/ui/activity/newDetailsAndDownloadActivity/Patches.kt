@@ -3,7 +3,7 @@ package app.morphe.patches.klikk.shared.patches.ui.activity.newDetailsAndDownloa
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.bytecodePatch
-import app.morphe.patches.shared.toInt
+import app.morphe.patches.shared.extension.kotlin.toInt
 import app.morphe.util.matchAllMethodIndicesForEach
 import app.morphe.util.matchSingle
 import app.morphe.util.returnEarly

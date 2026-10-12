@@ -1,5 +1,9 @@
 package app.morphe.extension.bongo.patches;
 
+import static app.morphe.extension.bongo.reflect.okhttp3.Request.header;
+import static app.morphe.extension.bongo.reflect.okhttp3.Response.request;
+import static app.morphe.extension.bongo.reflect.retrofit2.Response.raw;
+
 import app.morphe.extension.bongo.repos.ContentRepo;
 import app.morphe.extension.shared.Logger;
 import app.morphe.extension.shared.Utils;
@@ -45,7 +49,7 @@ public class FreeContentPatch {
             return continuation.getContext();
           }
 
-          @SuppressWarnings({"unchecked", "DataFlowIssue"})
+          @SuppressWarnings({"unchecked", "DataFlowIssue", "KotlinInternalInJava"})
           @Override
           public void resumeWith(@NotNull Object result) {
             if (!(result instanceof Result.Failure)) {
@@ -139,23 +143,14 @@ public class FreeContentPatch {
 
     if (response.code() == 403) {
       try {
-        var raw = app.morphe.extension.bongo.reflect.retrofit2.Response.raw((Object) response);
-        var request =
-            (Request)
-                Objects.requireNonNull(
-                    app.morphe.extension.bongo.reflect.okhttp3.Response.request(raw));
+        var raw = raw((Object) response);
+        var request = (Request) Objects.requireNonNull(request(raw));
         Logger.printDebug(() -> String.format("request: %s", request));
 
-        var authorization =
-            Objects.requireNonNull(
-                app.morphe.extension.bongo.reflect.okhttp3.Request.header(
-                    request, Webb.HDR_AUTHORIZATION));
+        var authorization = Objects.requireNonNull(header(request, Webb.HDR_AUTHORIZATION));
         Logger.printDebug(() -> String.format("authorization: %s", authorization));
 
-        var acceptLanguage =
-            Objects.requireNonNull(
-                app.morphe.extension.bongo.reflect.okhttp3.Request.header(
-                    request, "Accept-Language"));
+        var acceptLanguage = Objects.requireNonNull(header(request, "Accept-Language"));
         Logger.printDebug(() -> String.format("acceptLanguage: %s", acceptLanguage));
 
         var contentDetails =

@@ -1,0 +1,112 @@
+package app.template.patches.steamlink.binary
+
+import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.patch.rawResourcePatch
+import app.template.patches.shared.Constants.isLegacyXrFoundationSteamLinkBuild
+import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
+
+// Replaces RequestAndroidPermissions() with `mov w0,#1; ret` so the runtime
+// permission dialog never fires and tears down the live XR stream.
+// Internal sub-patch; not exposed top-level. Fixed offsets are selected by a verified layout.
+private val SEARCH = byteArrayOf(
+    // AArch64: sub sp,sp,#0x60 (SUB SP frame allocation) + stp x29,x30,[sp,#0x10] (callee-save prologue)
+    0xff.toByte(), 0x83.toByte(), 0x01.toByte(), 0xd1.toByte(),  // sub sp, sp, #0x60
+    0xfd.toByte(), 0x7b.toByte(), 0x01.toByte(), 0xa9.toByte(),  // stp x29, x30, [sp, #0x10]
+)
+private val REPLACE = byteArrayOf(
+    // AArch64: mov w0, #1 (return true) + ret (BX LR equivalent)
+    0x20.toByte(), 0x00.toByte(), 0x80.toByte(), 0x52.toByte(),  // movz w0, #0x1
+    0xc0.toByte(), 0x03.toByte(), 0x5f.toByte(), 0xd6.toByte(),  // ret
+)
+
+private data class PermissionPromptLayout(
+    val versionName: String,
+    val versionCode: Int,
+    val fileSize: Int,
+    val stockSha256: String,
+    val requestAndroidPermissionsOffset: Int,
+)
+
+private val PERMISSION_PROMPT_LAYOUTS = listOf(
+    PermissionPromptLayout(
+        "2.0.20", 5001712, 2_221_072,
+        "80b62797c7e26d6b67b0cca00693b076a336bdb48ebc1383a16cccb1616ed495", 0x142c0c,
+    ),
+    PermissionPromptLayout(
+        "2.0.20", 5001812, 2_220_872,
+        "eebf7eabfb299ab7b9e5bba1612d4a32b27c51f451efc2bd206ba6fc6ac5205a", 0x142c84,
+    ),
+    PermissionPromptLayout(
+        "2.0.21", 5001968, 2_234_048,
+        "596b5680aa6c217daf5c151de517b1ad61b3999c6fd864ff59a718136ca40192", 0x13ec7c,
+    ),
+    PermissionPromptLayout(
+        "2.0.22", 5002244, 2_251_920,
+        "4b2fa5e1b5d9d5c938873f692b0e5e18159e1199dee1253dd6eccc8fa43dfa12", 0x1422c4,
+    ),
+)
+
+internal fun patchPermissionPrompt(
+    bytes: ByteArray,
+    versionName: String,
+    versionCode: String,
+): ByteArray {
+    if (isNativeXrSteamLinkBuild(versionName, versionCode)) return bytes.copyOf()
+
+    val layout = PERMISSION_PROMPT_LAYOUTS.singleOrNull {
+        it.versionName == versionName && it.versionCode.toString() == versionCode
+    }
+        ?: return bytes.copyOf()
+    if (bytes.size != layout.fileSize) {
+        throw PatchException(
+            "Unexpected libvrlink_scene.so size=${bytes.size} for Steam Link " +
+                "$versionName/$versionCode; expected ${layout.fileSize}, " +
+                "stockSha256=${layout.stockSha256}",
+        )
+    }
+
+    verifyAddedLegacyNativeCode(bytes, versionName, versionCode)
+    val offset = layout.requestAndroidPermissionsOffset
+    if (offset < 0 || offset + SEARCH.size > bytes.size) {
+        throw PatchException(
+            "RequestAndroidPermissions offset is outside versionCode ${layout.versionCode}",
+        )
+    }
+
+    val current = bytes.copyOfRange(offset, offset + SEARCH.size)
+    return when {
+        current.contentEquals(REPLACE) -> bytes.copyOf()
+        current.contentEquals(SEARCH) -> bytes.copyOf().apply { REPLACE.copyInto(this, offset) }
+        else -> throw PatchException(
+            "Unexpected RequestAndroidPermissions bytes for versionCode ${layout.versionCode} " +
+                "at 0x${offset.toString(16)}",
+        )
+    }
+}
+
+internal val disablePermissionPromptNativePatch = rawResourcePatch {
+    execute {
+        // Native-XR builds ship a working Android XR permission path. Suppressing it can launch VR
+        // without HAND_TRACKING when a custom launcher grant is missing or denied, so preserve it.
+        // Dependencies run recursively without a compatibility re-check, so return before reading.
+        if (isNativeXrSteamLinkBuild(packageMetadata.versionName, packageMetadata.versionCode)) {
+            return@execute
+        }
+        if (!isLegacyXrFoundationSteamLinkBuild(
+                packageMetadata.versionName,
+                packageMetadata.versionCode,
+            )
+        ) {
+            return@execute
+        }
+        val file = get("lib/arm64-v8a/libvrlink_scene.so")
+        val bytes = file.readBytes()
+        val patched = patchPermissionPrompt(
+            bytes,
+            packageMetadata.versionName,
+            packageMetadata.versionCode,
+        )
+        if (!patched.contentEquals(bytes)) file.writeBytes(patched)
+    }
+}
+

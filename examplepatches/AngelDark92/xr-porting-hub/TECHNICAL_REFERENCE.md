@@ -1,0 +1,206 @@
+# Technical reference
+
+Implementation notes, compatibility details, validation status, and build instructions for Steam Link GalaxyXR Patches. For installation and patch selection, see the [README](README.md).
+
+## Steam Link 2.0.20 / 5001812 and 2.0.21 / 5001968
+
+Both exact bases expose the same 17-patch recommended set and 22 standalone
+patches as 2.0.20/5001712. Native addresses, complete-function guards and shader
+callers were derived independently for each build. Both use the verified
+2-projection helper, mouse-only SDL routing and array-shaped HMD extension
+configuration. The 2 blue-noise experiments remain default-off and outside the
+bundle. See the [adaptation and validation record](diagnostics/steamlink-legacy-1812-1968/README.md).
+
+## Steam Link 2.0.23 / 5002363
+
+The new exact base supports the 7 modern individual patches and **Galaxy XR recommended set (2.0.23/5002363)**, with independently verified native addresses and stock Java startup. Device identity remains optional. The 14 legacy patches stay excluded. See the [5002363 audit](diagnostics/steamlink-5002363/README.md) for source APK provenance, exact addresses, mutation/option tests, APK patching and remaining runtime gaps.
+
+## Compatibility and implementation notes
+
+The Android-Surface Fovea experiment was **tried and retired on 2026-09-07** after
+the user reported it did not work. It copied actual fovea pixels into a Surface,
+kept 3 projections and omitted the dummy quad. Its failure cause is unknown; the
+working terminal-quad fix is unchanged. See the [retirement record](diagnostics/steamlink-surface-fovea/README.md).
+
+Steam Link VR (`com.valvesoftware.steamlinkvr`) was not built for Android XR. These patches adapt it to run on the Samsung Galaxy XR headset by injecting the missing OpenXR permissions and features, bundling the Galaxy XR XR-bridge native library, providing an optional standalone face-bridge layer for face-tracking, fixing broken permission flows, tuning the rendering pipeline, and optionally allowing the patched APK to coexist with the original install.
+
+Target APK: `com.valvesoftware.steamlinkvr`. Exact compatibility metadata and guarded adaptations include v2.0.20/5001712, v2.0.20/5001812, v2.0.21/5001968, v2.0.22/5002244, and v2.0.23/5002363. The permission-free high-resolution fix accepts exactly those 5 builds; 5001712 and 5002244 have verified layouts, while 5002363 is a decoded-base adaptation with pending headset validation. Reconstruction, quad-view, permission-matrix, warm-up/omit, and DFR re-arm experiments are retired.
+
+Use Morphe Manager 1.30.0 or newer with compatibility checks enabled for build-specific filtering. Manager 1.7 cannot distinguish APKs that share versionName `2.0.22`, and Expert mode may intentionally show incompatible patches. Morphe's `default` flag is global, so 5 exact-build dependency bundles provide version-aware recommendations while every individual patch remains default-off. All 4 legacy bundles (2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968 and 2.0.22/5002244) select the same [17-patch set](PATCH_CATALOG.md#recommendation-bundles), including the 3 native force-gate patches, required XR foundation patches, Device identity with the Meta Quest Pro spoof, and both explicit older startup patches. 2.0.23/5002363 selects only GXR tongue bridge (native face tracking), Galaxy XR high-resolution fix, Microphone input preset (Voice Recognition), OLED color calibration (`final-balanced`), Unrestricted battery usage, and Visual Delay Fix (60 ms). The full GXR face bridge is restricted to the 4 legacy builds so it cannot replace Valve's native 5002363 face mappings. **Appear on top (legacy)** and **Change package name** are never recommended.
+
+**Startup permission requests (before 5002322)** and **Startup splash and XR launch mode (before 5002322)** are independently selectable and default-off. Each accepts only exact 2.0.20/5001712 and 2.0.22/5002244. The permission patch declares missing hand, eye, face, microphone and Bluetooth permissions and enables their startup requests. The splash patch enables the black startup screen and unmanaged VRLink start-mode override; older legacy builds also receive panel sizing. The shared helper defaults both behaviors off. Earlier battery/overlay settings flows use a transparent bootstrap unless those explicit patches are selected.
+
+For exact 2.0.23/5002363, the recommended set preserves stock launcher, splash, XR start mode and runtime permission handling. The battery patch alone inserts a battery-settings helper call after stock `SteamLink.onCreate` calls its superclass, before parameter registers are reused. Face/tongue bridges and high resolution no longer pull in startup permission requests or splash changes; high resolution no longer forces unmanaged Full Space.
+
+For the legacy bundles, **2.0.20/5001712**, **2.0.20/5001812**, **2.0.21/5001968**, and **2.0.22/5002244**, leave **HMD identity** on **Recommended for this build** or explicitly choose **Meta Quest Pro**. The spoof reports `Oculus Quest Pro` while retaining Galaxy XR tracking/controller routing. Existing saved explicit Samsung, Stock, or Pico choices are respected, so change those if necessary. On 2.0.23/5002363, Device identity remains optional and resolves to the Galaxy XR identity.
+
+Bundle selection does not broaden native compatibility: the high-resolution edit safely skips instead of guessing a native layout, and unsupported builds remain unchanged. All 4 exact legacy targets have the complete legacy set available.
+
+**The standalone Video dither patch remains retired.** The existing OLED patch now offers optional Comparison dithering (Off, Low, Standard), a Neutral calibration profile, and sRGB8/RGB10/experimental FP16 output. Defaults are Final balanced, 8-bit sRGB, and dithering Off. RGB10 and FP16 remain optional. See the [controlled comparison guide](PATCH_CATALOG.md#controlled-oled-comparison).
+
+### Retired underside experiment — 2026-09-03
+
+The user reported that the 2.0.22/5002322 Surface-backed underside experiment
+"doesn't work" and requested retirement. Its option, implementation, build target
+and bundled resources are removed. No new capture was reviewed, so the cause and
+GPU effect remain undetermined. The tested terminal quad is the only active mode;
+both existing helper binaries, including 2.0.20/5001712, remain unchanged.
+
+### Terminal-quad helper CPU revision — 2026-09-03
+
+The shared resolution patch now supplies 3-projection helper `v1.4-20260903` and 5001712 2-projection helper `v1.2-20260903`. Its generation-validated, non-owning render-thread cache removes steady-frame shared-ownership reference-count operations while the registry retains session ownership. It relies on OpenXR's externally synchronized destruction; lifecycle changes invalidate cached handles. Event readers still acquire ownership, and `xrPollEvent` dispatch processes data only for `XR_SUCCESS`, never `XR_EVENT_UNAVAILABLE`. Existing recommendation bundles automatically receive these helpers through their unchanged resolution-patch dependency.
+
+Host CTest registry and actual 2-/3-projection helper integration checks passed, as did both Android rebuilds using NDK `27.2.12479018` and cached OpenXR `1.1.43` headers. These revisions have no headset result or measured speed gain yet. All 6 exact supported version/build pairs, continuous 2x2 quad submission, source formats, and GPU work remain unchanged; this does not enable 10-bit output. Compare against the previous artifact with the same base, scene, options, and host settings, checking cold launch, stop/restart, palm/DFR transitions, and loss/resume. See the [patch catalog](PATCH_CATALOG.md#galaxy-xr-high-resolution-3-projection-fix-xrgalaxyxrhighresolutionpatch) for validation boundaries and A/B guidance.
+
+
+## Additional setup context
+
+The previous README described 2.0.20/5001712 as more stable according to community reports and 2.0.22/5002244 as newer but less stable. This is historical community reporting, not a controlled comparison or a guarantee for a particular setup. The depot commands for both builds remain in the [installation instructions](README.md#1-get-the-steam-link-vr-apk).
+
+No desktop IP, pairing token, APK hash, or native telemetry enrollment is required to apply the recommended patches.
+
+## Full patch list
+
+This section is generated from the patch catalog during releases.
+
+<!-- PATCHES_START EXPANDED -->
+> **[v1.27.0](https://github.com/AngelDark92/steamlink-patches/releases/tag/v1.27.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;35 patches total
+<details open>
+<summary>📦 Steam Link&nbsp;&nbsp;•&nbsp;&nbsp;26 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 2.0.20 (5001712) | 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.22 (5002244) | 2.0.23 (5002363) | 2.0.23 (5002363) | 2.0.20 (5001712) | 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.22 (5002244) | 2.0.23 (5002363) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Verified Steam Link 2.0.20 build 5001712. | Native and APK adaptation for exact Steam Link 2.0.20 build 5001812; headset validation pending. | Native and APK adaptation for exact Steam Link 2.0.21 build 5001968; headset validation pending. | Verified Steam Link 2.0.22 build 5002244. | Build 5002363 recommends Galaxy XR high-resolution 3-projection fix, GXR tongue bridge, Microphone input preset (Voice Recognition), Unrestricted battery usage, Visual Delay Fix (60 ms), and OLED color calibration with the Final balanced tested profile. The retired projection experiments are excluded. Decoded-base adaptation; headset validation pending. | Native and APK adaptation for exact Steam Link 2.0.23 build 5002363; headset validation pending. | Exact Steam Link 2.0.20/5001712 high-resolution target with its isolated 2-projection to 3-layer payload. The topology correction has prior user-reported startup and delayed-frame runtime evidence; this rebuilt binary remains uninstalled. | Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.20 build 5001812; headset validation pending. | Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.21 build 5001968; headset validation pending. | Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.22 build 5002244; headset validation pending. | Static decoded-base adaptation of the Galaxy XR high-resolution patch for exact Steam Link 2.0.23 build 5002363; headset validation pending. |
+
+#### Recommended sets
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [Galaxy XR legacy foundation (through 2.0.22/5002244)](#galaxy-xr-legacy-foundation-through-2-0-22-5002244) | Selects the 17-patch Galaxy XR legacy set, including Meta Quest Pro identity, native gates, face bridge, OLED calibration, microphone, battery, Visual Delay, explicit startup permissions and splash, and XR foundation. High-resolution output is guarded to verified layouts. | 5002244 |  |
+| [Galaxy XR recommended set (2.0.20/5001712)](#galaxy-xr-recommended-set-2-0-20-5001712) | Applies the 17-patch Galaxy XR legacy set for exact Steam Link 2.0.20 build 5001712, including explicit startup permissions and splash, Meta Quest Pro identity, permission-free high resolution, and the Final balanced tested OLED profile. | 5001712 |  |
+| [Galaxy XR recommended set (2.0.20/5001812)](#galaxy-xr-recommended-set-2-0-20-5001812) | Applies the same 17-patch Galaxy XR legacy set as 2.0.20/5001712 for exact Steam Link 2.0.20 build 5001812, including explicit startup permissions and splash, Meta Quest Pro identity, permission-free high resolution, and the Final balanced tested OLED profile. Native and APK adaptation; headset validation pending. | 5001812 |  |
+| [Galaxy XR recommended set (2.0.21/5001968)](#galaxy-xr-recommended-set-2-0-21-5001968) | Applies the same 17-patch Galaxy XR legacy set as 2.0.20/5001712 for exact Steam Link 2.0.21 build 5001968, including explicit startup permissions and splash, Meta Quest Pro identity, permission-free high resolution, and the Final balanced tested OLED profile. Native and APK adaptation; headset validation pending. | 5001968 |  |
+| [Galaxy XR recommended set (2.0.23/5002363)](#galaxy-xr-recommended-set-2-0-23-5002363) | Applies the 6-patch Galaxy XR set for exact Steam Link 2.0.23 build 5002363. Preserves stock startup and permission requests except battery settings; includes the Final balanced OLED profile. Decoded-base validation; headset validation pending. | 5002363 |  |
+
+#### Image quality
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [Galaxy XR high-resolution 3-projection fix](#galaxy-xr-high-resolution-3-projection-fix) | Permission-free resolution fix for exact builds 5001712, 5001812, 5001968, 5002244, and 5002363. Preserves each build's native projection layout (2 layers on the supported 2.0.20 and 2.0.21 builds; 3 layers on supported 2.0.22 and 2.0.23 builds) and source formats, including future RGB10_A2, while appending a static 2x2 Android-surface compositor trigger with no image copy or reconstruction. | 5001712, 5001812, 5001968, 5002244, 5002363 |  |
+| [OLED color calibration](#oled-color-calibration) | OLED calibration with optional VD-informed SDR foveal processing and a separate foveal gamma adjustment, always with 8-bit sRGB output. The VD options bypass the calibration profile on the fovea while retaining Valve's decoder colour correction. Foveal gamma can darken that layer in any mode. Exact builds 5001712, 5001812, 5001968, 5002244, and 5002363; visible improvement requires headset verification. | 5001712, 5001812, 5001968, 5002244, 5002363 | • Calibration profile<br>• Gamma<br>• Saturation<br>• Fovea VD-Like Input 10 bit<br>• Fovea VD-Like Input 8 bit<br>• Foveal gamma adjustment |
+
+#### Tracking & audio
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [Controller velocity fix](#controller-velocity-fix) | Derives current controller linear and angular velocity from grip/aim pose history and can reduce VRLink's stock four controller pose sends per display frame. | 5001712, 5001812, 5001968, 5002244 | • Maximum sample gap (ms)<br>• Controller pose-send cadence<br>• Derived velocity smoothing<br>• Maximum linear speed (m/s)<br>• Maximum angular speed (rad/s) |
+| [GXR face bridge (version 5002318 and below)](#gxr-face-bridge-version-5002318-and-below) | For exact older Steam Link builds only. Installs libgxr_face_bridge.so (XR_FB_face_tracking2 → XR_ANDROID_face_tracking API layer) and adds android.permission.FACE_TRACKING to the manifest. See the [GXR Face Bridge source](https://github.com/compdoge/gxr-face-bridge) and matching [Galaxy XR VRCFT module](https://github.com/compdoge/LinkFT). | 5001712, 5001812, 5001968, 5002244 |  |
+| [GXR tongue bridge (version 5002322 and above)](#gxr-tongue-bridge-version-5002322-and-above) | For exact Steam Link 2.0.23/5002363 with Valve's native Android XR face mapping and its independently verified native layout. Preserves Valve's face expressions and standard TongueOut while exposing Galaxy XR tongue out/left/right/up/down to the matching Galaxy XR VRCFT module. | 5002363 |  |
+| [Microphone input preset](#microphone-input-preset) | Selects the Android AAudio microphone processing mode used by Steam Link. Galaxy XR testing found Voice Recognition clearer and louder than stock Voice Communication. | 5001712, 5001812, 5001968, 5002244, 5002363 | • Microphone mode |
+| [Visual Delay Fix](#visual-delay-fix) | Adds a configurable offset to the HMD OpenXR pose-query time and zeroes all six exported HMD velocity fields. Does not affect controller paths. Its trampoline uses a dedicated executable mapping over non-runtime ELF comment bytes and preserves live PLT entries. | 5001712, 5001812, 5001968, 5002244, 5002363 | • Pose offset (ms) |
+| [XR Input Routing Config](#xr-input-routing-config) | Installs ui_config.json mappings for XR pointer/button routing in launcher UI flows. | 5001712, 5001812, 5001968, 5002244 |  |
+
+#### Startup & permissions
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [Appear on top (legacy)](#appear-on-top-legacy) | Legacy overlay-permission fallback retained for older Steam Link builds. Adds SYSTEM_ALERT_WINDOW and the compositor signal window. | 5001712, 5001812, 5001968, 5002244 |  |
+| [Startup permission requests (before 5002322)](#startup-permission-requests-before-5002322) | Requests hand, eye and face tracking, microphone and Bluetooth permissions before opening Steam Link on exact older builds. Battery settings and the visible startup splash are separate patches. | 5001712, 5001812, 5001968, 5002244 |  |
+| [Startup splash and XR launch mode (before 5002322)](#startup-splash-and-xr-launch-mode-before-5002322) | Adds the Launching Steam Link splash, older-build panel sizing and explicit unmanaged VRLink startup. Does not request tracking, microphone or Bluetooth permissions; select Startup permission requests separately. | 5001712, 5001812, 5001968, 5002244 |  |
+| [Unrestricted battery usage](#unrestricted-battery-usage) | Opens Android's per-app Battery usage page at startup so Unrestricted can be selected for XR streaming. | 5001712, 5001812, 5001968, 5002244, 5002363 |  |
+
+#### App & device identity
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [Change package name](#change-package-name) | Renames the manifest package and Steam Link's internal VR-launch component so the patched app can coexist with the original installation. | 5001712, 5001812, 5001968, 5002244 | • Package name |
+| [Device identity](#device-identity) | Overrides the HMD identity reported to SteamVR. Recommended selects Meta Quest Pro for exact legacy bundle targets through 5002244, including 2.0.20/5001712; otherwise Galaxy XR. The Galaxy profile installs its complete transport identity while preserving stock controller/hand routing and extensions. Optional on 2.0.23/5002363; explicit Quest Pro and Pico profiles populate exact Galaxy XR product entries. | 5001712, 5001812, 5001968, 5002244, 5002363 | • HMD identity |
+
+#### Advanced XR compatibility
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [Android XR native permission names](#android-xr-native-permission-names) | Replaces native Oculus face/eye permission checks with the Android XR permission names used by Galaxy XR on exact Steam Link 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, and 2.0.22/5002244 layouts. | 5001712, 5001812, 5001968, 5002244 |  |
+| [Force HMD initialization gates](#force-hmd-initialization-gates) | Bypasses the 2 verified capability gates in QSVLDeviceHmd::Init for exact Steam Link 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, and 2.0.22/5002244 layouts. | 5001712, 5001812, 5001968, 5002244 |  |
+| [Force lobby permission-state gate](#force-lobby-permission-state-gate) | Bypasses the verified permission-state gate in XrSceneLobby for exact Steam Link 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, and 2.0.22/5002244 layouts. | 5001712, 5001812, 5001968, 5002244 |  |
+| [Force stream XR gates](#force-stream-xr-gates) | Bypasses the 3 verified XR gates in exact Steam Link 2.0.20/5001712, 2.0.20/5001812, 2.0.21/5001968, and 2.0.22/5002244 layouts. | 5001712, 5001812, 5001968, 5002244 |  |
+| [XR Core Runtime](#xr-core-runtime) | Installs the Galaxy XR runtime bridge resources and extension DEX foundation used by other XR patches. | 5001712, 5001812, 5001968, 5002244 |  |
+| [XR Device Config Baseline](#xr-device-config-baseline) | Installs baseline Galaxy XR HMD/controller/default config payloads and dashboard bootstrap assets. | 5001712, 5001812, 5001968, 5002244 |  |
+| [XR Manifest Capability Pack](#xr-manifest-capability-pack) | Adds Android XR/OpenXR permissions, features, runtime queries, and app-level XR properties. | 5001712, 5001812, 5001968, 5002244 |  |
+
+</details>
+
+<details open>
+<summary>📦 Steam Link Experimental&nbsp;&nbsp;•&nbsp;&nbsp;9 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.20 (5001712) | 2.0.22 (5002244) | 2.0.23 (5002363) | 2.0.20 (5001712) | 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.22 (5002244) | 2.0.23 (5002363) | 2.0.20 (5001712) | 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.22 (5002244) | 2.0.23 (5002363) | 2.0.23 (5002363) | 2.0.20 (5001712) | 2.0.20 (5001812) | 2.0.21 (5001968) | 2.0.22 (5002244) | 2.0.20 (5001812) |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| Exact native blue-noise adaptation 2.0.20/5001812; static validation only. | Exact native blue-noise adaptation 2.0.21/5001968; static validation only. | Exact native blue-noise adaptation 2.0.20/5001712; static validation only. | Exact native blue-noise adaptation 2.0.22/5002244; static validation only. | Exact native blue-noise adaptation 2.0.23/5002363; static validation only. | Experimental patches for Steam Link 2.0.20 build 5001712. | Experimental patches for Steam Link 2.0.20 build 5001812. | Experimental patches for Steam Link 2.0.21 build 5001968. | Experimental patches for Steam Link 2.0.22 build 5002244. | Experimental patches for Steam Link 2.0.23 build 5002363. | Controller pose extrapolation layer for exact Steam Link 2.0.20/5001712; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.20/5001812; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.21/5001968; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.22/5002244; measured on 2.0.23/5002363 only, not run on this base. | Controller pose extrapolation layer for exact Steam Link 2.0.23/5002363; measured on a Galaxy XR headset. | Controller velocity frame layer for exact Steam Link 2.0.23/5002363; measured on a Galaxy XR headset. | Controller velocity frame layer for exact Steam Link 2.0.20/5001712; measured on 2.0.23/5002363 only, not run on this base. Do not combine with Controller velocity fix. | Controller velocity frame layer for exact Steam Link 2.0.20/5001812; measured on 2.0.23/5002363 only, not run on this base. Do not combine with Controller velocity fix. | Controller velocity frame layer for exact Steam Link 2.0.21/5001968; measured on 2.0.23/5002363 only, not run on this base. Do not combine with Controller velocity fix. | Controller velocity frame layer for exact Steam Link 2.0.22/5002244; measured on 2.0.23/5002363 only, not run on this base. Do not combine with Controller velocity fix. | Native and APK adaptation for exact Steam Link 2.0.20 build 5001812; headset validation pending. |
+
+#### Experiments
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | 🔢&nbsp;Builds | ⚙️&nbsp;Options |
+|----------|----------------|----------------|-----------|
+| [Background blue-noise dithering (experimental)](#background-blue-noise-dithering-experimental) | Static blue-noise quantization after video colour processing and fade, only on the background/base layer. Accepts 8-bit or 10-bit input and always uses 8-bit sRGB output. Select independently or together with the other layer's blue-noise patch. Separate from OLED/VD-like processing; headset validation pending. Unknown host shaders pass through unchanged. | 5001712, 5001812, 5001968, 5002244, 5002363 | • Declared input depth |
+| [Controller grip haptics through Shizuku (experimental)](#controller-grip-haptics-through-shizuku-experimental) | Sends controller vibration to the vibrator in the grip instead of the one at the trigger. Galaxy XR routes every OpenXR vibration to the trigger vibrator; the grip one is reachable only with shell rights, so this needs Shizuku running and its permission granted to Steam Link. Without Shizuku vibration stays as it is. | 5001712, 5001812, 5001968, 5002244, 5002363 |  |
+| [Controller pose extrapolation (experimental)](#controller-pose-extrapolation-experimental) | Makes the Galaxy XR runtime extrapolate controller poses to the time VRLink requests. Stock, the runtime returns one controller sample per display frame, so 3 of VRLink's 4 pose sends per frame repeat it. Also filters jitter out of the streamed controller pose: strongly at rest, barely in fast motion. Adds an OpenXR API layer; no Steam Link code is changed. | 5001712, 5001812, 5001968, 5002244, 5002363 |  |
+| [Controller tracking from the controller HAL through Shizuku (experimental)](#controller-tracking-from-the-controller-hal-through-shizuku-experimental) | Takes controller poses straight from the Galaxy XR controller HAL instead of the OpenXR runtime. The runtime hands an application one controller pose per display frame, about 35 ms behind the HAL; the HAL fuses the controller's IMU about 1000 times per second and predicts a pose for the requested time. The layer reads its pose and velocities 360 times per second, as often as Steam Link sends them, and filters jitter out of both. The HAL is reachable only with shell rights, so this needs Shizuku running and its permission granted to Steam Link. Without Shizuku tracking stays as it is. Steam Link 2.0.23: the angular velocity is reported local to the grip pose, as its VRLink reads it. | 5002363 |  |
+| [Controller tracking from the controller HAL through Shizuku, 2.0.20 - 2.0.22 (experimental)](#controller-tracking-from-the-controller-hal-through-shizuku-2-0-20-2-0-22-experimental) | Takes controller poses straight from the Galaxy XR controller HAL instead of the OpenXR runtime. The runtime hands an application one controller pose per display frame, about 35 ms behind the HAL; the HAL fuses the controller's IMU about 1000 times per second and predicts a pose for the requested time. The layer reads its pose and velocities 360 times per second, as often as Steam Link sends them, and filters jitter out of both. The HAL is reachable only with shell rights, so this needs Shizuku running and its permission granted to Steam Link. Without Shizuku tracking stays as it is. Steam Link 2.0.20 - 2.0.22: the angular velocity is reported in the base space, as their VRLink reads it. | 5001712, 5001812, 5001968, 5002244 |  |
+| [Controller velocity frame (experimental)](#controller-velocity-frame-experimental) | Rotates the controller velocities the Galaxy XR runtime reports into the frames SteamVR reads them in. Stock, they arrive in a frame attached to the controller, so thrown objects leave in the wrong direction. Adds an OpenXR API layer; no Steam Link code is changed. Steam Link 2.0.23: the angular velocity is reported local to the streamed pose, as its VRLink reads it. | 5002363 |  |
+| [Controller velocity frame, 2.0.20 - 2.0.22 (experimental)](#controller-velocity-frame-2-0-20-2-0-22-experimental) | Rotates the controller velocities the Galaxy XR runtime reports into the frames SteamVR reads them in. Stock, they arrive in a frame attached to the controller, so thrown objects leave in the wrong direction. Adds an OpenXR API layer; no Steam Link code is changed. Steam Link 2.0.20 - 2.0.22: the angular velocity is reported in the base space, as their VRLink reads it. | 5001712, 5001812, 5001968, 5002244 |  |
+| [Foveal blue-noise dithering (experimental)](#foveal-blue-noise-dithering-experimental) | Static blue-noise quantization after video colour processing and fade, only on the foveal layer. Accepts 8-bit or 10-bit input and always uses 8-bit sRGB output. Select independently or together with the other layer's blue-noise patch. Separate from OLED/VD-like processing; headset validation pending. Unknown host shaders pass through unchanged. | 5001712, 5001812, 5001968, 5002244, 5002363 | • Declared input depth |
+| [Full-FOV foveal canvas (experimental)](#full-fov-foveal-canvas-experimental) | Exact Steam Link 2.0.20/5001812 experiment: copies only the foveal image onto a transparent 5000x6000 regular-GL canvas per eye and submits it as the 2nd projection. Preserves the original background projection and any existing static Surface-trigger quad. GPU allocation, runtime acceptance and resolution improvement require headset validation. | 5001812 |  |
+
+</details>
+
+<!-- PATCHES_END -->
+
+## Building from source
+
+On Windows, verify JVM tests and build the Android bundle with automatic cleanup:
+
+```powershell
+.\Verify-Build.ps1
+.\Verify-Build.ps1 -Tasks ':patches:test', ':patches:auditDecodedSteamLinkPatches'
+```
+
+Each run uses a fresh workspace. Bundles remain under
+`build/verification/<run>/artifacts/patches/libs`, alongside retained test reports,
+the Gradle log and a cleanup receipt. Compiler files and decoded audit derivatives
+are removed after Gradle exits, including on failure. Pass `-KeepBuildOutputs` to
+retain intermediates. Exact fixtures, tools, caches and existing outputs are
+preserved. See [verification and disk cleanup](diagnostics/build-verification/README.md).
+
+Direct Gradle commands remain available and keep their usual output locations;
+they do not perform the wrapper's automatic cleanup:
+
+```
+./gradlew buildAndroid
+```
+
+Output: `patches/build/libs/patches-*.mpp`
+
+No Android SDK is required. The extension DEX is assembled from smali sources directly by the build.
+
+## Documentation maintenance
+
+Release automation refreshes the full patch list in this file and commits it with the release metadata. To refresh it locally from an existing catalog:
+
+```powershell
+$env:PYTHONIOENCODING = 'utf-8'
+python .github/scripts/generate_patches_readme.py AngelDark92/steamlink-patches main patches-list-all.json TECHNICAL_REFERENCE.md
+```
+
+The generator also defaults to `TECHNICAL_REFERENCE.md` when no output path is supplied. Keep the README focused on user setup; update its bundle guidance when patch recommendations change.
+
+## Further reference
+
+- [Patch catalog](PATCH_CATALOG.md): per-patch edits, dependencies, guarded layouts, and controlled OLED comparison instructions.
+- [Debugging guide](DEBUGGING.md): diagnostic capture procedures.
+- [Changelog](CHANGELOG.md): release history.

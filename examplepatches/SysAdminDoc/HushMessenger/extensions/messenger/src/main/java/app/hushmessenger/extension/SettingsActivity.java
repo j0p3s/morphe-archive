@@ -110,9 +110,11 @@ public final class SettingsActivity extends Activity {
         {"stories", "Hide stories and notes", "Hides the row of stories and notes above your chats.", "inbox"},
         {"subtabs", "Hide inbox tabs", "Hides the Home and Channels tabs inside your inbox.", "inbox"},
         {"facebook", "Hide Facebook shortcuts", "Hides Facebook buttons, profile and sharing shortcuts, and Also from Meta in the Menu tab. Handy if you only use Messenger.", "navigation"},
-        {"meta_ai", "Hide Meta AI", "Hides the Meta AI floating button, toolbar button, tab, menu entries and AI in search. Restart Messenger to see the tab go.", "navigation"},
+        {"meta_ai", "Hide Meta AI", "Hides the Meta AI floating button, toolbar button, tab and menu entries, plus AI in search and in @ suggestions. Restart Messenger to see the tab go.", "navigation"},
         {"moments", "Hide Chat Moments", "Hides Chat Moments in the menu.", "navigation"},
         {"reels_badge", "Hide Reels badge", "Hides the Reels notification badge.", "navigation"},
+        {"tab_people", "Hide People tab", "Hides the People tab in the bar at the bottom. Restart Messenger to see the tab go.", "navigation"},
+        {"tab_notifications", "Hide Notifications tab", "Hides the Notifications tab in the bar at the bottom. Restart Messenger to see the tab go.", "navigation"},
         {"chat_animation", "Slide chats in and out", "Slides a chat in from the side when you open it and out when you go back. Chat heads and bubbles aren't affected.", "navigation"},
         {"ai_stickers", "Hide AI sticker tools", "Hides the Generate AI sticker buttons, the AI sticker tab and AI sticker suggestions.", "stickers"},
         {"avatar_stickers", "Hide avatar stickers", "Hides the avatar tab in the sticker keyboard.", "stickers"},
@@ -127,16 +129,20 @@ public final class SettingsActivity extends Activity {
         {"use_system_emoji", "Use system emoji", "Shows emoji in your phone's own style instead of Messenger's built-in set.", "conversations"},
         {"original_photo", "Send photos at original quality", "With HD on, sends JPEG photos as the original image, not a smaller copy. Location is still removed. Photos over 20 MB are still compressed.", "conversations"},
         {"original_video", "Send videos without re-encoding", "Sends a video as the original file when Messenger allows it, instead of a recompressed copy. Videos over 25 MB and edited videos are still compressed.", "conversations"},
+        {"xhe_audio", "Fix shared videos with xHE-AAC sound", "A video you share into Messenger from another app whose only sound is xHE-AAC, which Messenger can't send, gets that sound converted to regular AAC first. The picture isn't touched.", "conversations"},
         {"disappearing_swipe", "Turn off the swipe up for disappearing messages", "Swiping up at the bottom of a chat no longer turns on disappearing messages. Scrolling works as usual, and you can still set them in the chat's settings.", "conversations"},
+        {"auto_reply", "Auto reply", "Answers a message with a reply you write below when it has words you pick, or any message if you leave the words empty. Replies go out through Messenger's own notification reply, encrypted chats too, at most once every five minutes per chat. One-to-one chats only unless you allow groups. A chat with disappearing messages on gets no notification reply from Messenger, so it isn't answered.", "conversations"},
         {"system_camera", "Use the phone's camera app", "The camera button in a chat opens your phone's camera app. The photo opens in Messenger's editor, ready to send. Photos only.", "conversations"},
+        {"text_style", "Bold and italic text", "Select words you typed and pick Bold or Italic in the menu that pops up (it can be behind the three dots). Pick it again to undo. They're special Unicode letters, so they show on any phone, but screen readers may read them oddly.", "conversations"},
         {"external_browser", "Open web links externally", "Opens web links (http and https) in your default browser. Other link types work as before.", "links_bubbles"},
         {"bubbles", "Allow chat bubbles", "Choose Stock, Chat heads or Native Bubbles below. Native Bubbles needs Android 11 or newer, a supported account and notification permission. Restart Messenger after changing.", "links_bubbles"},
         {"analytics_uploads", "Stop analytics uploads", "Stops Messenger's background services from uploading usage statistics. It still records them on your phone, and they can upload after you turn this off.", "privacy"},
         {"attribution_uploads", "Stop ad attribution uploads", "Stops the job that reads your phone's advertising ID and sends it to Meta with your ad tracking setting. The ID itself doesn't change.", "privacy"},
         {"ad_events", "Stop inbox and ad link logging", "Stops two reports Messenger logs. One says which part of your chat list was on screen, which Messenger files under inbox ads. The other says which ad brought you in when a link from an ad opens a chat.", "privacy"},
-        {"message_log", "Keep a message log", "Saves each message when its notification arrives, so you can read it after it's unsent. Works in encrypted chats. Stays on your phone.", "privacy"},
+        {"mqtt_telemetry", "Stop MQTT logging", "Stops the health reports and push logging Messenger sends over its live connection (MQTT). Messages, calls and active status share that connection and keep working.", "privacy"},
+        {"message_log", "Keep a message log", "Saves each message when its notification arrives, so you can read it after it's unsent. Works in encrypted chats. Stays on your phone. In a chat with disappearing messages on, Messenger leaves the words out of its notification, so the log only shows that a message came.", "privacy"},
         {"allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, such as view-once photos and Quicksnap, and stops screenshot notices. It doesn't add replay or saving.", "privacy"},
-        {"hide_read_receipts", "Hide read receipts", "Stops Messenger from telling people you read their message. Opened encrypted chats can stay unread here. Replying or switching this off may notify them. Group chats aren't tested. Messenger's own Read receipts setting under Privacy & safety marks chats read without Seen.", "privacy"},
+        {"hide_read_receipts", "Hide read receipts", "Opening a chat no longer tells people you read their message, and the chat stays unread here. Marking it read yourself or replying marks it read and shows Seen, like Messenger does. Group chats aren't tested. Messenger's own Read receipts setting under Privacy & safety marks chats read without Seen.", "privacy"},
         {"keep_unsent", "Keep unsent messages", "Keeps messages on screen after someone unsends them, in chats where it works. Encrypted chats aren't supported and group chats aren't tested. Your own unsends may be limited.", "privacy"},
         {"anonymous_stories", "View stories anonymously", "Opens other people's stories without adding you to their viewer list. Messenger still marks them as seen on your side.", "privacy"},
         {"save_stories", "Save any story", "Adds Save to the More options menu on other people's stories, so you can keep the photo or video on your phone.", "privacy"},
@@ -507,12 +513,13 @@ public final class SettingsActivity extends Activity {
                 groups.add(group);
             }
             LinearLayout row = controlRow(spec[0], text.control(spec, 1), text.control(spec, 2), true);
-            if ("bubbles".equals(spec[0]) || OwnFont.KEY.equals(spec[0]) || MessageLog.KEY.equals(spec[0])) {
+            if ("bubbles".equals(spec[0]) || OwnFont.KEY.equals(spec[0]) || MessageLog.KEY.equals(spec[0]) || AutoReply.KEY.equals(spec[0])) {
                 // Below the row, where TalkBack reaches them: the row's label column hides its descendants.
                 LinearLayout wrapper = ui.column();
                 ui.add(wrapper, row, 0);
                 if ("bubbles".equals(spec[0])) addBubbleModes(wrapper);
                 else if (OwnFont.KEY.equals(spec[0])) addFontFile(wrapper);
+                else if (AutoReply.KEY.equals(spec[0])) addAutoReplyActions(wrapper);
                 else addMessageLogActions(wrapper);
                 row = wrapper;
             }
@@ -770,6 +777,7 @@ public final class SettingsActivity extends Activity {
     private LinearLayout controlRow(String key, String title, String description, boolean divided) {
         boolean available = Settings.available(key);
         if (!available) description += " " + text.format(CameraActivity.KEY.equals(key) ? "camera_unsupported"
+            : TextStyleActivity.KEY.equals(key) ? "text_style_unsupported"
             : "bubbles".equals(key) && Build.VERSION.SDK_INT >= 30 ? "bubble_unsupported" : "unavailable");
         LinearLayout row = ui.row();
         LinearLayout labels = ui.column();
@@ -874,7 +882,8 @@ public final class SettingsActivity extends Activity {
         boolean failed = failedAt > 0 && failedAt >= used;
         // A control that keeps its first answer for the run says so until a restart, even with its switch now off.
         Boolean held = Settings.heldUntilRestart(key);
-        String status = held != null ? text.get(("meta_ai".equals(key) ? "meta_ai_tab_pending_" : "restart_pending_") + (held ? "off" : "on"))
+        String status = held != null ? text.get(("meta_ai".equals(key) ? "meta_ai_tab_pending_" : Settings.BOTTOM_TABS.contains(key) ? key + "_pending_"
+                : "restart_pending_") + (held ? "off" : "on"))
             : paused ? text.get("changes_paused") : failed ? formatSince(failedAt, "error_now", "error_ago")
             : used == 0 ? text.get("keep_unsent".equals(key) ? "unsent_not_active" : "not_active") : formatSince(used, "active_now", "active_ago");
         if (!status.contentEquals(label.getText())) label.setText(status);
@@ -1076,6 +1085,8 @@ public final class SettingsActivity extends Activity {
                     .append(", scope=").append(text.control(spec, 2))
                     .append('\n');
             }
+            String lateStart = HostScreens.lateStart;
+            summary.append("Late start: ").append(lateStart == null ? "not needed" : lateStart).append('\n');
             String dataDir = getApplicationInfo().dataDir;
             summary.append("Analytics stores: ").append(dataDir == null ? "unreadable" : analyticsStores(new java.io.File(dataDir))).append('\n');
             summary.append("Facebook caller checks: ").append(MessengerSignature.callerSummary()).append('\n');
@@ -1383,13 +1394,132 @@ public final class SettingsActivity extends Activity {
         LinearLayout card = ui.column();
         card.setBackground(ui.shape(ui.surface, ui.line, 8));
         card.setPadding(ui.dp(12), ui.dp(10), ui.dp(12), ui.dp(10));
-        String who = entry.thread == null || entry.thread.isEmpty() ? text.get("message_log_unknown_thread") : entry.thread;
+        // Messenger's chat key means nothing to a reader, so an entry without a name reads as an unknown chat.
+        String who = entry.sender.isEmpty() ? (entry.chat.isEmpty() ? text.get("message_log_unknown_thread") : entry.chat)
+            : entry.chat.isEmpty() ? entry.sender : text.get("message_log_in_group", entry.sender, entry.chat);
         card.addView(ui.text(who + "  ·  " + formatSince(entry.time, "message_log_now", "message_log_ago"), 12, ui.muted, false));
         ui.add(card, ui.text(entry.text == null || entry.text.isEmpty() ? text.get("message_log_no_text") : entry.text, 15, ui.text, false), 4);
         LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
         params.topMargin = ui.dp(8);
         card.setLayoutParams(params);
         return card;
+    }
+
+    /** One button under the auto reply switch that opens the replies. */
+    private void addAutoReplyActions(LinearLayout content) {
+        LinearLayout actions = ui.row();
+        Button edit = ui.button(text.get("auto_reply_edit"));
+        edit.setTag("auto_reply_edit");
+        edit.setOnClickListener(clicked -> showAutoReplies());
+        actions.addView(edit);
+        ui.add(content, actions, 8);
+    }
+
+    /** Each reply is a words field and a reply field. Save keeps the ones with a reply and closes; Close drops edits. */
+    private void showAutoReplies() {
+        SharedPreferences prefs = Settings.preferences;
+        if (prefs == null) return;
+        Dialog dialog = new Dialog(this);
+        LinearLayout frame = ui.column();
+        frame.setBackgroundColor(ui.background);
+        frame.setPadding(ui.dp(20), ui.dp(20), ui.dp(20), ui.dp(16));
+        frame.setLayoutDirection(text.layoutDirection());
+        frame.setAccessibilityPaneTitle(text.get("auto_reply_title"));
+        frame.addView(ui.text(text.get("auto_reply_title"), 20, ui.text, true));
+        ui.add(frame, ui.text(text.get("auto_reply_hint"), 13, ui.muted, false), 4);
+        ScrollView scroll = new ScrollView(this);
+        LinearLayout list = ui.column();
+        list.setPadding(0, ui.dp(4), 0, ui.dp(8));
+        scroll.addView(list);
+        for (AutoReply.Rule rule : AutoReply.rules(prefs)) list.addView(autoReplyCard(list, rule));
+        if (list.getChildCount() == 0) list.addView(autoReplyCard(list, new AutoReply.Rule("", "")));
+        frame.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
+        android.widget.CheckBox groups = new android.widget.CheckBox(this);
+        groups.setTag("auto_reply_groups");
+        groups.setText(text.get("auto_reply_groups"));
+        groups.setTextColor(ui.text);
+        groups.setMinHeight(ui.dp(48));
+        groups.setChecked(prefs.getBoolean(AutoReply.GROUPS, false));
+        ui.add(frame, groups, 4);
+        LinearLayout buttons = ui.row();
+        buttons.setGravity(android.view.Gravity.END | android.view.Gravity.CENTER_VERTICAL);
+        Button add = ui.button(text.get("auto_reply_add"));
+        add.setTag("auto_reply_add");
+        add.setOnClickListener(clicked -> {
+            if (list.getChildCount() >= AutoReply.MAX_RULES) {
+                feedback(text.get("auto_reply_full", AutoReply.MAX_RULES), Toast.LENGTH_SHORT);
+                return;
+            }
+            View card = autoReplyCard(list, new AutoReply.Rule("", ""));
+            list.addView(card);
+            card.findViewWithTag("auto_reply_when").requestFocus();
+        });
+        buttons.addView(add);
+        Button save = ui.button(text.get("auto_reply_save"));
+        save.setTag("auto_reply_save");
+        save.setOnClickListener(clicked -> {
+            List<AutoReply.Rule> rules = new ArrayList<>();
+            for (int i = 0; i < list.getChildCount(); i++) {
+                View card = list.getChildAt(i);
+                rules.add(new AutoReply.Rule(((EditText) card.findViewWithTag("auto_reply_when")).getText().toString(),
+                    ((EditText) card.findViewWithTag("auto_reply_reply")).getText().toString()));
+            }
+            int kept = AutoReply.save(prefs, rules, groups.isChecked());
+            feedback(kept == 0 ? text.get("auto_reply_saved_none") : text.get("auto_reply_saved", kept), Toast.LENGTH_SHORT);
+            dialog.dismiss();
+        });
+        LinearLayout.LayoutParams spaced = new LinearLayout.LayoutParams(-2, -2);
+        spaced.setMarginStart(ui.dp(8));
+        buttons.addView(save, spaced);
+        Button close = ui.button(text.get("message_log_close"));
+        close.setOnClickListener(clicked -> dialog.dismiss());
+        LinearLayout.LayoutParams closeParams = new LinearLayout.LayoutParams(-2, -2);
+        closeParams.setMarginStart(ui.dp(8));
+        buttons.addView(close, closeParams);
+        ui.add(frame, buttons, 8);
+        dialog.setContentView(frame);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(ui.background));
+            dialog.getWindow().setLayout(-1, -1);
+        }
+        dialog.show();
+    }
+
+    private View autoReplyCard(LinearLayout list, AutoReply.Rule rule) {
+        LinearLayout card = ui.column();
+        card.setBackground(ui.shape(ui.surface, ui.line, 8));
+        card.setPadding(ui.dp(12), ui.dp(10), ui.dp(12), ui.dp(6));
+        card.addView(replyField("auto_reply_when", text.get("auto_reply_when"), rule.when, AutoReply.MAX_WHEN_CHARS, true));
+        ui.add(card, replyField("auto_reply_reply", text.get("auto_reply_reply"), rule.reply, AutoReply.MAX_REPLY_CHARS, false), 8);
+        LinearLayout row = ui.row();
+        row.setGravity(android.view.Gravity.END);
+        Button remove = ui.button(text.get("auto_reply_remove"));
+        remove.setOnClickListener(clicked -> list.removeView(card));
+        row.addView(remove);
+        ui.add(card, row, 4);
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(-1, -2);
+        params.topMargin = ui.dp(8);
+        card.setLayoutParams(params);
+        return card;
+    }
+
+    private EditText replyField(String tag, String hint, String value, int max, boolean singleLine) {
+        EditText field = new EditText(this);
+        field.setTag(tag);
+        // The hint labels the field; a content description would make TalkBack skip what was typed.
+        field.setHint(hint);
+        field.setText(value);
+        field.setTextSize(15);
+        field.setSingleLine(singleLine);
+        field.setFilters(new InputFilter[] {new InputFilter.LengthFilter(max)});
+        field.setHighlightColor((ui.accent & 0x00ffffff) | 0x55000000);
+        tintTextHandles(field);
+        field.setTextColor(ui.text);
+        field.setHintTextColor(ui.muted);
+        field.setMinHeight(ui.dp(48));
+        field.setPadding(ui.dp(12), ui.dp(8), ui.dp(12), ui.dp(8));
+        field.setBackground(ui.interactive(ui.surface, ui.outline, 8));
+        return field;
     }
 
     private void clearMessageLog() {

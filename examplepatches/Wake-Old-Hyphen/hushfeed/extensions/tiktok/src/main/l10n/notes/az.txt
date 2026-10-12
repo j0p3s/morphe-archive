@@ -1,4 +1,44 @@
-## Unreleased
+## 0.71.3 (2026-10-11)
+
+* **TikTok:** LIVE-ı status panelinin altında göstərin açıq olanda sonrakı otaqlarda da saatın altındakı kölgə qalır. Əvvəllər ilk bir neçə LIVE-dan sonra zolaq yenə açıq görünürdü (#137).
+
+* **TikTok:** Tako qabarcığını gizlədin indi lent videolarının sağ alt küncündəki Tako qabarcığını da gizlədir. Bəzi hesablarda profil düyməsinin üstündəki qabarcıq əvəzinə o görünür (#115).
+
+* **TikTok:** Feature Gate Lab-da yeni Profil banneri hazır ayarı var. O, profilin qalanını yeni görünüşə keçirmədən TikTok-un Edit profile səhifəsində Add background seçimini açır (#80).
+
+* **TikTok:** TikTok qaranlıq rejimdə olanda Favoritlər düyməsini basıb saxlayanda açılan kolleksiyalar pəncərəsi artıq ağ yox, qaranlıqdır. Hushfeed parametrləri > Tətbiq bölməsindəki Qaranlıq Favoritlər pəncərəsi onu söndürür (#142).
+
+## 0.71.2 (2026-10-11)
+
+* **TikTok:** LIVE otaqlarında status panelini gizlədin və LIVE-ı status panelinin altında göstərin artıq axtarışda yaradıcının kartının altındakı önizləmədən açılan LIVE-da da işləyir. TikTok həmin LIVE-ı açılmış videolar üçün istifadə etdiyi səhifənin içində açır, açarlar ora çatmırdı (#137).
+
+## 0.71.1 (2026-10-11)
+
+* **TikTok:** Təmiz ekranda başlıqları saxlayın açıq olanda, təmiz ekrandakı başlıq artıq aşağı kənara düşmür, TikTok-un idarəetmə düymələri gizlənməzdən əvvəl göstərdiyi yerdə qalır (#141). Hələ heç bir başlıq görünməyibsə, köhnə yerində qalır.
+
+* **TikTok:** LIVE-ı status panelinin altında göstərin açıq olanda saatın altındakı zolaq yenə otağın yuxarı hissəsinin qalanı kimi kölgəli olur. TikTok-un panel üçün qara zolaq saxladığı telefonlarda o, aşağıdakı yayımdan açıq görünürdü (#137).
+
+## 0.71.0 (2026-10-11)
+
+* **TikTok:** İki dəfə toxunma Hushfeed-in hərəkətlərindən birinə qoyulubsa və Long-press controls yamağı tətbiq olunubsa, barmağın bir az çox qaldığı ikinci toxunuş artıq TikTok-un uzun basma menyusunu da açmır, yəni paylaşım paneli şərhlərin üstündə açılmır. (#63)
+
+* **TikTok:** LIVE idarəetmələri üçün Hushfeed ayarları > Oxutma altında üçüncü açar var, Daha çox LIVE otağında keyfiyyət seçimi təklif et. TikTok LIVE menyusunda Video keyfiyyəti seçimini yalnız yayım bunu istədikdə və ya TikTok hesabın üçün yeni keyfiyyət seçicisini açdıqda göstərir, ona görə bəzi otaqlarda keyfiyyət seçmək mümkün deyildi. Açar açıq olanda belə otaqların çoxu yeni seçicini alır (yalnız səsli otaqlar almır), növbəti otaq isə TikTok bağlanana qədər sonuncu seçdiyin keyfiyyətdə açılır. Standart olaraq bağlıdır. (#57)
+
+* **TikTok:** Profil şəbəkəsində tarixləri göstərin və İştirak dərəcəsini göstərin indi TikTok 47.1.4-ün şəbəkələrində işləyir, həm profilin videolarında, həm də Sevimlilərdə və bəyənilən videolarda. Bu versiya hər xananın baxış sayını patçın çatmadığı yerdə yazır, ona görə orada nə tarix, nə də dərəcə görünürdü.
+
+* **TikTok:** Bloklanmış yaradıcılar, bloklanmış sözlər, baxış və bəyənmə aralıqları və LIVE videoları gizlədin, Hekayələri gizlədin kimi açarlar indi İzlədiklərim tabında da işləyir. TikTok 47.1.4-də o tabdan yalnız reklamlar və məkan nişanlı videolar çıxırdı, ona görə blokladığınız yaradıcı orada yenə görünə bilirdi.
+
+* **TikTok:** Bu dilləri avtomatik tərcümə etməyin sırasına dil kodu olmayan söz yazanda indi sadəcə "dil kodu deyil" mesajı çıxır. Əvvəl heç bir videonun uyğun gəlməyəcəyi barədə xəbərdarlıq edirdi. Bu, başlıq dili filtrinin xəbərdarlığıdır və yalnız mətni tərcüməsiz saxlayan siyahıya uyğun gəlmir (#121).
+
+* **TikTok:** Build təfərrüatları indi yalnız TikTok-un resurslarını dəyişən yamaları da adlandırır, məsələn Change app name, Custom launcher icon və Trust user certificates. Yamanın özü göstərilir, onun seçimlərində seçdiyiniz ad və ya şəkil heç vaxt göstərilmir.
+
+* **TikTok:** Diaqnostikanı qeyd edin açıq olanda qeyd indi hər video üçün bir dəfə TikTok-un onunla irəliləmə çubuğu üçün neçə önizləmə şəkli göndərdiyini yazır. Çubuğu sürüşdürəndə önizləmə görünmürsə, diaqnostika ixracı videonun belə şəkillərlə gəlib-gəlmədiyini göstərir (#140).
+
+* **TikTok:** Build təfərrüatları və tam jurnal ixracı indi quruluşunda TikTok-un kodunu dəyişən hər yamağı qısa adı ilə sadalayır, Comment send fix və Network request report kimi açarı olmayanlar da daxil.
+
+* **TikTok:** Yadda saxlanan və ya avtomatik Təmiz ekran indi axtarışdan açdığınız videonu da təmizləyir. TikTok həmin videonu açılan səhifəyə artıq oynayarkən ötürür, Təmiz ekran isə orada heç vaxt gəlməyən başlanğıcı gözləyirdi, ona görə düymələr və TikTok-un axtarış çubuğu qalırdı (#84).
+
+* **TikTok:** Video örtüklərini gizlədin və lent mətn ölçüləri indi keçid TikTok-u arxasında Sizin üçün lenti olmadan birbaşa axtarışda və ya videoda açanda da işləyir. Əvvəl belə açılan videolarda bütün örtüklər və TikTok-un öz mətn ölçüsü qalırdı (#84).
 
 * **TikTok:** TikTok brauzerində xarici səhifələri qoruyun indi LIVE-ların və Mağazanın açdığı tapmaca CAPTCHA-nı TikTok-un öz səhifəsi sayır, buna görə tapmacanın TikTok ilə əlaqəsi qalır (#87). O, TikTok-un öz serverlərindən yüklənir, sadəcə açarın tanımadığı ünvandan.
 
@@ -44,7 +84,7 @@
 
 * **TikTok:** Diaqnostika hesabatında yeni Storage bölməsi var. O, TikTok yaddaşındakı ən böyük qovluqları göstərir, beləliklə hesabat yeri nəyin doldurduğunu göstərə bilir (#70). Yalnız qovluq adlarını yazır, fayl adlarını yox, hesab nömrələrini isə gizlədir.
 
-* **TikTok:** Axtarışdan və ya profildən açılmış təmizlənmiş videoda geri düyməsinə basmaq artıq Clear display-i söndürmək sayılmır. Eyni videonu yenidən açanda o da başqaları kimi təmizlənir, yadda saxlanmış Clear display isə açıq qalır (#84).
+* **TikTok:** Təmizlənmiş videoda geri düyməsinə basmaq və ya oradan paylaşma panelini açmaq artıq Clear display-i söndürmək sayılmır. Eyni videonu yenidən açanda o da başqaları kimi təmizlənir, yadda saxlanmış Clear display isə açıq qalır (#84).
 
 * **TikTok:** Remove LIVE extras indi başqasının LIVE-ına qonaq kimi qoşulmaq üçün faylları da sildiyini deyir, ona görə onunla səsli və ya videolu qoşulmaq işləməyə bilər (#132). LIVE-lara qoşulursunuzsa, onu seçməyin.
 

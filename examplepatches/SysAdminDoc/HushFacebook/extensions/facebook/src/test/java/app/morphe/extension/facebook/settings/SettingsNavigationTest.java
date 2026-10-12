@@ -62,9 +62,12 @@ import org.robolectric.shadows.ShadowPackageManager;
 import org.robolectric.shadows.ShadowSigningInfo;
 import org.robolectric.shadows.ShadowToast;
 
-/** Exercises the actual dialog host and its filtered view of the original preference model. */
+/**
+ * Exercises the actual dialog host and its filtered view of the original preference model, on
+ * Android 11 and on Android 17 (sdk 37).
+ */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 30, qualifiers = "w390dp-h844dp-night-xhdpi")
+@Config(sdk = {30, 37}, qualifiers = "w390dp-h844dp-night-xhdpi")
 @SuppressWarnings("deprecation")
 public class SettingsNavigationTest {
     @Rule public final SettingsContextRule settings = new SettingsContextRule();
@@ -1028,7 +1031,8 @@ public class SettingsNavigationTest {
         page = page(dialog);
         Map<String, Object> before = savedValues();
         page.navigation.navigate("Privacy");
-        List<String> expected = new ArrayList<>(Arrays.asList("Lock Facebook", "Lock after"));
+        // Save crashes to Downloads belongs to no patch, so every build has it.
+        List<String> expected = new ArrayList<>(Arrays.asList("Lock Facebook", "Lock after", "Save crashes to Downloads"));
         expected.addAll(ADS_MAP);
         assertEquals(expected, titles());
 
@@ -1061,10 +1065,10 @@ public class SettingsNavigationTest {
         page.navigation.open(page.findPreference(Settings.TAP_TO_PLAY.key));
         recreate();
         assertTrue(contains(Settings.TAP_TO_PLAY.key));
-        // Playback: Tap to play and Only the first reel waits, Resume long videos, Default playback quality and its
-        // Playback quality, Reels quality and Stories quality lists, Picture-in-picture, Turn off HDR brightness,
-        // Keep the progress bar and Show a reel's time.
-        assertEquals(11, list().getCount());
+        // Playback: Tap to play and Only the first reel waits, Resume long videos, Frame step, Default playback
+        // quality and its Playback quality, Reels quality and Stories quality lists, Picture-in-picture, Turn off
+        // HDR brightness, Keep the progress bar and Show a reel's time.
+        assertEquals(12, list().getCount());
         page.navigation.back();
         findSearch(dialog.getView()).setText("other apps");
         recreate();

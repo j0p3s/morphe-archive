@@ -21,7 +21,7 @@ private const val EXTENSION_CLASS = "Lapp/morphe/extension/iscreen/patches/TempU
 @Suppress("unused")
 val tempUserPatch = bytecodePatch(
     name = "Temp user",
-    description = "Log in as subscribed temp user",
+    description = "Log in as subscribed temp user.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_ISCREEN)

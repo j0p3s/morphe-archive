@@ -34,7 +34,7 @@
 | App | Package | Target Version | Variant | Download Source | Guide |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | Instagram | `com.instagram.android` | 447.0.0.55.81 | APKM bundle | [APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-447-0-0-55-81-release/) | [Instagram Guide](docs/apps/instagram.md) |
-| X | `com.twitter.android` | 12.33.0-prod.01 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/x-corp/twitter/x-12-33-0-prod-01-release/) | [X Guide](docs/apps/twitter.md) |
+| X | `com.twitter.android` | 12.33.1-prod.01 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/x-corp/twitter/x-12-33-1-prod-01-release/) | [X Guide](docs/apps/twitter.md) |
 | Moovit | `com.tranzmate` | 5.201.1.1809 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/moovit/moovit-bus-train-live-info/moovit-your-transit-tracker-5-201-1-1809-release/) | [Moovit Guide](docs/apps/moovit.md) |
 | PowerPoint | `com.microsoft.office.powerpoint` | 16.0.20527.20034 | APKM bundle | [APKMirror](https://www.apkmirror.com/apk/microsoft-corporation/powerpoint/microsoft-powerpoint-16-0-20527-20034-release/) | [PowerPoint Guide](docs/apps/powerpoint.md) |
 | Lightroom | `com.adobe.lrmobile` | 11.6.01 | APK (`arm64-v8a`, PairIP-free variant) | [Uptodown](https://adobe-lightroom-mobile.uptodown.com/android) | [Lightroom Guide](docs/apps/lrmobile.md) |
@@ -84,7 +84,7 @@
 </details>
 
 <details>
-<summary>Lightroom&nbsp;&nbsp;•&nbsp;&nbsp;<b>4 patches</b></summary>
+<summary>Lightroom&nbsp;&nbsp;•&nbsp;&nbsp;<b>5 patches</b></summary>
 <br>
 
 **Supported versions:**
@@ -97,7 +97,8 @@
 | **Block Telemetry & Trackers** | Neutralizes Google AppMeasurement and Firebase Crashlytics dispatchers, strips advertising permissions, and injects analytics opt-out flags. |  |
 | **Lightroom Background Sync** | Disables WorkManager background sync services, scheduled jobs, and boot receiver. The WorkManager startup initializer is intentionally preserved because removing it prevents application boot. WARNING: Disabling WorkManager can affect background photo uploads, syncing, and exports. |  |
 | **Lightroom Junk Cleaner** | Purges non-functional build metadata, compiler properties, and duplicate license files from the APK root and META-INF. |  |
-| **Unlock Premium Features** | Enables app features locked behind subscription paywalls by activating the internal Limited-Time Premium Unlock (LTPU) gate. |  |
+| **Sideload Install Support** | Ensures compatibility for sideloaded lab installs by allowing local installer source checks to report success and completing Play Integrity token requests. Required for sideloaded lab installs: without it the app routes to the Play Store. |  |
+| **Unlock Premium Features** | Enables app features locked behind subscription paywalls by activating the internal Limited-Time Premium Unlock (LTPU) gate. Requires Sideload Install Support (applied automatically as dependency). |  |
 
 </details>
 
@@ -165,12 +166,12 @@
 </details>
 
 <details>
-<summary>X&nbsp;&nbsp;•&nbsp;&nbsp;<b>20 patches</b></summary>
+<summary>X&nbsp;&nbsp;•&nbsp;&nbsp;<b>15 patches</b></summary>
 <br>
 
 **Supported versions:**
 
-| 12.33.0-prod.01 |
+| 12.33.1-prod.01 |
 | :---: |
 
 | Patch | Description | Options |
@@ -178,22 +179,17 @@
 | **Block Telemetry & Trackers** | Neutralizes Google AppMeasurement and Firebase Performance Trace dispatchers, and strips advertising identifiers. |  |
 | **Block Update Screen** | Blocks the 'This app is out of date' screen and suppresses in-app update prompts on launch |  |
 | **Control Video Auto Scroll** | Prevents automatic scrolling to the next video in immersive view |  |
-| **Customize UI** | Toggle navigation and timeline UI elements | • Inline Action Bar<br>• Navigation Bar<br>• Grok Tab<br>• Reply Sorting<br>• Explore Tabs<br>• Notification Tabs<br>• Profile Tabs<br>• Search Suggestions<br>• Search Tab Items<br>• Side Bar Items<br>• Timeline Top Bar<br>• Top Bar Extra |
+| **DM Debloat** | Hide call buttons and composer actions in direct message conversations | • Hide DM Audio Call<br>• Hide DM Video Call |
 | **Drawer Items** | Hide individual items in the navigation drawer | • Hide Profile<br>• Hide Premium<br>• Hide Communities<br>• Hide Bookmarks<br>• Hide Lists<br>• Hide Spaces<br>• Hide Creator Studio<br>• Hide Get Grok<br>• Hide Help Center |
-| **Hide Banner** | Hides new post banner |  |
-| **Hide Discover More** | Hides Discover more recommendations in tweet reply threads |  |
-| **Hide Elements** | Hide badges, buttons, metrics and served UI elements | • Hide Badges<br>• Hide Bookmark<br>• Hide Community Badges<br>• Hide Community Notes<br>• Hide FAB<br>• Hide FAB Menu<br>• Hide Followed By<br>• Hide Hidden Replies<br>• Hide Immersive Player<br>• Hide Post Metrics<br>• Hide View Count |
-| **Hide Live Threads** | Hides live threads |  |
-| **Hide Nudge Button** | Hides follow/subscribe/follow back buttons on posts |  |
-| **Hide Promote Button** | Hides promote button under self posts |  |
-| **Hide Recommendation Items** | Hides recommendation items such as Who to follow and Today's news in timeline, search, and replies |  |
-| **Hide Recommended Users** | Hides recommended users popup shown when following someone |  |
+| **Navigation UI** | Bottom navigation, FAB, tabs and bars | • Hide Badges<br>• Hide FAB Menu<br>• Navigation Bar<br>• Grok Tab<br>• Explore Tabs<br>• Search Tab Items<br>• Side Bar Items |
 | **No Shortened URL** | Expands t.co shortened URLs, removing the click-tracking intermediary |  |
 | **Pause Search Suggestions** | Stops persisting search suggestions locally without breaking search |  |
+| **Post & Profile UI** | Post actions, profile header and Grok surfaces | • Hide Grok Post Action<br>• Hide Profile Grok Button<br>• Profile Tabs |
 | **Remove Ads** | Removes promoted posts, trends and ads from timeline |  |
-| **Remove Premium Upsell** | Removes premium upsell surfaces |  |
+| **Remove Premium Upsell** | Removes premium upsell surfaces | • Hide Profile Get Verified |
 | **Share Links** | Custom sharing domain, handle custom links and legacy share links | • Custom Sharing Domain<br>• Custom Sharing Domain<br>• Handle Custom Links<br>• Legacy Share Links |
 | **Show Sensitive Media** | Displays sensitive media directly without requiring tap to reveal |  |
+| **Timeline UI** | Timeline surfaces: posts, threads, banners, recommendations and video entry points | • Hide Banner<br>• Hide Promote Button<br>• Hide Nudge Button<br>• Hide Recommendation Items<br>• Hide Discover More<br>• Hide Recommended Users<br>• Hide Live Threads<br>• Hide Community Notes<br>• Hide Post Metrics<br>• Hide View Count<br>• Inline Action Bar<br>• Timeline Add Tab<br>• Timeline Top Bar<br>• Hide Live Banner |
 | **X MLKit Vision Slimmer** | Disables MLKit component discovery and registrars. WARNING: this breaks in-app QR and barcode scanning. |  |
 
 </details>

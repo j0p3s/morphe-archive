@@ -220,6 +220,8 @@ Download as video	Video olarak indir
 Download as photo	Fotoğraf olarak indir
 Download on stories	Hikayelerde indir
 Adds Download to the menu of anyone's story, photo or video, saved at your download quality. Off or paused, Instagram's own menu returns.	Herkesin hikayesinin menüsüne İndir ekler, fotoğraf ya da video, indirme kalitende kaydedilir. Kapalıyken veya duraklatıldığında Instagram'ın kendi menüsü geri gelir.
+Upload stories at full quality	Hikayeleri tam kalitede yükle
+Video stories you post are sent up to 1080 pixels wide instead of 720, as they are with Instagram's own Upload at highest quality setting on. Photo stories stay as they are.	Paylaştığın video hikayeler 720 yerine en fazla 1080 piksel genişliğinde gönderilir, Instagram'ın kendi En yüksek kalitede yükle ayarı açıkken olduğu gibi. Fotoğraf hikayeler olduğu gibi kalır.
 Download feed videos	Akıştaki videoları indir
 Adds Download to the menu of a post in your feed with a video. Uses the quality below. Off or paused, Instagram's own menu returns.	Akışındaki videolu bir gönderinin menüsüne İndir ekler. Aşağıdaki kaliteyi kullanır. Kapalıyken veya duraklatıldığında Instagram'ın kendi menüsü geri gelir.
 Playback	Oynatma
@@ -760,6 +762,9 @@ Red	Kırmızı
 Orange	Turuncu
 Green	Yeşil
 Teal	Camgöbeği
+# context: Layout switch; it puts HushGram's logo on the screen Android shows while Instagram starts
+HushGram launch screen	HushGram açılış ekranı
+Shows HushGram's logo instead of Instagram's on the screen you see while Instagram starts, on Android 13 and newer. It shows from the next start.	Instagram açılırken gördüğün ekranda Instagram'ın logosu yerine HushGram'ın logosunu gösterir. Android 13 ve sonrasında çalışır. Bir sonraki açılıştan itibaren görünür.
 # context: Downloads switch under Download feed videos; it adds Download cover to a feed video post's menu
 Download video covers	Video kapaklarını indir
 Adds Download cover to the menu of a feed post with a video, and of a carousel showing one. It saves the still picture shown before the video plays, at its largest size.	Videolu bir akış gönderisinin ve video gösteren bir karuselin menüsüne Kapağı indir ekler. Video oynatılmadan önce görünen hareketsiz görüntüyü en büyük boyutunda kaydeder.
@@ -767,6 +772,18 @@ Adds Download cover to the menu of a feed post with a video, and of a carousel s
 Download button on feed posts	Akış gönderilerinde indirme düğmesi
 Puts a download icon in the row under a post, left of Save, so one tap saves it without opening the menu. On a carousel it asks for this page or all of them.	Bir gönderinin altındaki satıra, Kaydet'in soluna bir indirme simgesi koyar, böylece tek dokunuşla menüyü açmadan kaydedebilirsin. Karuselde yalnızca bu sayfayı mı yoksa hepsini mi istediğini sorar.
 Nothing to download on this post	Bu gönderide indirilecek bir şey yok
+# context: Downloads switch; a hold with two or three fingers on a feed post or a reel saves it
+Hold to download	Basılı tutarak indir
+Hold two fingers still on a feed post's picture or video, or on a reel, and it saves what's under them, the same as Download in the menu. Instagram's one-finger long press stays as it was. Needs Download feed videos or photos, and Download on reels for reels.	Bir akış gönderisinin fotoğrafı ya da videosu veya bir reel üzerinde iki parmağınızı kıpırdatmadan tutun, altındaki şey menüdeki İndir ile aynı şekilde kaydedilir. Instagram'ın tek parmakla uzun basması olduğu gibi kalır. Akıştaki videoları indir veya Akıştaki fotoğrafları indir açık olmalı, reels için de Reels'te indir.
+# context: Downloads list under Hold to download; how many fingers the hold takes
+Fingers	Parmak sayısı
+# context: Downloads list under Hold to download; how long the fingers stay down before it saves
+Hold time	Basılı tutma süresi
+Two fingers	İki parmak
+Three fingers	Üç parmak
+Half a second	Yarım saniye
+1 second	1 saniye
+1.5 seconds	1,5 saniye
 Use HushGram's setting names	HushGram'ın ayar adlarını kullan
 MetaConfig shows names from HushGram's own list in place of numbers. The list comes from Instagram 447, so a few newer settings still show as numbers. A list you import is used instead.	MetaConfig sayılar yerine HushGram'ın kendi listesindeki adları gösterir. Liste Instagram 447'den geldiği için daha yeni birkaç ayar yine sayı olarak görünür. İçe aktardığın bir liste varsa onun yerine o kullanılır.
 Import setting names	Ayar adlarını içe aktar
@@ -843,6 +860,8 @@ Ghost mode button on Home's header	Ana sayfa üstünde Hayalet modu düğmesi
 Adds a ghost button at the top of Home, next to Messages when it's there and at the end of the buttons when it isn't. Tap it to turn Ghost mode on or off. Restart Instagram to see the change.	Ana sayfanın üstüne bir hayalet düğmesi ekler. Mesajlar oradaysa onun yanına, değilse düğmelerin sonuna gelir. Hayalet modunu açıp kapatmak için dokun. Değişikliği görmek için Instagram'ı yeniden başlat.
 Search button on Home's header	Ana sayfa üstünde Ara düğmesi
 Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works with the Search tab hidden too, unless you swipe between your tabs. Restart Instagram to see the change.	Ana sayfanın üstüne, Ara sekmesi gibi aramayı açan bir büyüteç ekler. Ara sekmesi gizliyken de çalışır, sekmeler arasında kaydırıyorsan çalışmaz. Değişikliği görmek için Instagram'ı yeniden başlat.
+Center the logo on Home's header	Ana sayfa üstündeki logoyu ortala
+Puts Instagram's logo in the middle of the top of Home, even with header buttons hidden or added. A feed's name shown there is centered too. Restart Instagram to see the change.	Üstteki düğmeler gizlenmiş ya da eklenmiş olsa bile Instagram logosunu Ana sayfanın üstünde ortaya koyar. Orada gösterilen akış adı da ortalanır. Değişikliği görmek için Instagram'ı yeniden başlat.
 Search isn't on your tab bar, so this button can't open it here. If Hide the Search tab is on, turn it off and restart Instagram.	Ara sekme çubuğunda değil, bu yüzden bu düğme onu burada açamaz. Ara sekmesini gizle açıksa kapat ve Instagram'ı yeniden başlat.
 Tab order	Sekme sırası
 The tab bar keeps Instagram's order.	Sekme çubuğu Instagram'ın sırasını korur.
@@ -890,3 +909,65 @@ Full screen Home	Tam ekran Ana sayfa
 Hides the status bar and the navigation bar while Home shows. Swipe in from the edge to bring them back for a moment.	Ana sayfa görünürken durum çubuğunu ve gezinme çubuğunu gizler. Kısa süreliğine geri getirmek için kenardan içeri kaydır.
 Hide Notes on profile pictures	Profil fotoğraflarındaki Notları gizle
 Takes the Notes bubble off profile pictures, yours included. Notes in Messages stay as they are.	Notlar balonunu profil fotoğraflarından kaldırır, seninki dahil. Mesajlar'daki Notlar olduğu gibi kalır.
+# context: the line that opens a category's page in HushGram settings, under the page title
+How you open HushGram, and how this screen is laid out.	HushGram'ı nasıl açtığın ve bu ekranın düzeni.
+Hide ads and share less about yourself with Instagram.	Reklamları gizle ve Instagram'la kendin hakkında daha az şey paylaş.
+Choose what Home shows and how it behaves.	Ana Sayfa'nın ne gösterdiğini ve nasıl davrandığını seç.
+Take Meta AI out of search, your feed, reels and profiles.	Meta AI'ı aramadan, akışından, reels'ten ve profillerden çıkar.
+Tidy up the Search tab and what it remembers.	Ara sekmesini ve hatırladıklarını düzenle.
+Keep your chats private and your inbox clear of extras.	Sohbetlerini gizli, gelen kutunu da fazlalıklardan uzak tut.
+Choose what reels show, and how they play and scroll.	Reels'in ne gösterdiğini, nasıl oynatılıp kaydırıldığını seç.
+Choose which stories you see and what people see you do.	Hangi hikayeleri göreceğini ve başkalarının senin yaptıklarından neyi göreceğini seç.
+Choose how videos start, sound and look.	Videoların nasıl başlayacağını, sesini ve görünümünü seç.
+Take buttons you don't use off posts and the share sheet.	Kullanmadığın düğmeleri gönderilerden ve paylaşım sayfasından kaldır.
+Copy, save or hide comments.	Yorumları kopyala, kaydet ya da gizle.
+See who follows you back, and clear extras off profiles.	Seni kimin geri takip ettiğini gör ve profillerdeki fazlalıkları kaldır.
+Change how Instagram looks, from its colors to its emoji.	Instagram'ın görünüşünü, renklerinden emojilerine kadar değiştir.
+Pick your tabs, their order and how the bar looks.	Sekmelerini, sıralarını ve çubuğun görünümünü seç.
+Group Instagram's notifications so they don't pile up.	Instagram bildirimlerini birikmesinler diye grupla.
+Keep Instagram's saved photos and videos from filling your phone.	Instagram'ın sakladığı fotoğraf ve videoların telefonunu doldurmasını önle.
+Save photos, videos and more, and choose where they go.	Fotoğraf, video ve daha fazlasını kaydet, nereye gideceklerini seç.
+Stop background work Instagram doesn't need.	Instagram'ın ihtiyaç duymadığı arka plan işlerini durdur.
+Stop Instagram from saying this version is too old.	Instagram'ın bu sürümün çok eski olduğunu söylemesini engelle.
+Instagram's own testing tools. Change them only if you know what they do.	Instagram'ın kendi test araçları. Yalnızca ne yaptıklarını biliyorsan değiştir.
+Chosen when you patched. Patch again to change them.	Yamalarken seçildi. Değiştirmek için yeniden yamala.
+Save your HushGram choices to a file, or bring them back.	HushGram seçimlerini bir dosyaya kaydet ya da geri getir.
+Your version, the source code and licenses.	Sürümün, kaynak kodu ve lisanslar.
+Open settings with a long press on your profile's menu	Profilinin menüsüne uzun basarak ayarları aç
+A long press on the menu button, the three lines at the top right of your own profile, opens HushGram. A tap still opens Instagram's menu, and other profiles stay the same.	Kendi profilinin sağ üstündeki üç çizgili menü düğmesine uzun basmak HushGram'ı açar. Dokunmak yine Instagram'ın menüsünü açar ve diğer profiller aynı kalır.
+Hide the top bar on the Reels tab	Reels sekmesindeki üst çubuğu gizle
+Takes away the row at the top of the Reels tab, with the Reels title, the camera button and anything else Instagram puts there. Reels you open from a profile, a post or a chat keep theirs. The camera still opens from Home.	Reels sekmesinin en üstündeki satırı, Reels başlığı, kamera düğmesi ve Instagram'ın oraya koyduğu diğer her şeyle birlikte kaldırır. Bir profilden, gönderiden veya sohbetten açtığın reels'ler bu satırı korur. Kamera Ana sayfadan açılmaya devam eder.
+Hide the Save button on reels	Reels'te Kaydet düğmesini gizle
+Takes the Save button out of the column of buttons beside a reel, and the count under it. Posts in your feed keep theirs.	Kaydet düğmesini reel'in yanındaki düğme sütunundan ve altındaki sayıyı kaldırır. Akışındaki gönderiler kendi düğmesini korur.
+Unlock with	Kilidi şununla aç
+Phone lock	Telefon kilidi
+HushGram PIN	HushGram PIN'i
+A PIN you set here unlocks your messages, in place of your screen lock. It can't be recovered, only cleared by clearing Instagram's storage.	Burada belirlediğin PIN, ekran kilidi yerine mesajlarının kilidini açar. Geri alınamaz, ancak Instagram'ın depolamasını temizleyerek kaldırılır.
+Your fingerprint, face or screen lock unlocks your messages.	Telefonunun parmak izi, yüz veya ekran kilidi mesajlarının kilidini açar.
+Set or change the 4 to 8 digit PIN. It stays on this phone and isn't in a backup.	4 ile 8 haneli PIN'i belirle veya değiştir. Bu telefonda kalır, yedeğe girmez.
+PIN saved.	PIN kaydedildi.
+PIN	PIN
+Enter your PIN	PIN'ini gir
+Forgot PIN?	PIN'i unuttun mu?
+Wrong PIN. Try again.	PIN yanlış. Tekrar dene.
+Too many tries. Wait %1$d seconds.	Çok fazla deneme. %1$d saniye bekle.
+New PIN	Yeni PIN
+Confirm PIN	PIN'i onayla
+Set a PIN	PIN belirle
+Use 4 to 8 digits.	4 ile 8 rakam kullan.
+The PINs don't match.	PIN'ler eşleşmiyor.
+Could not save the PIN.	PIN kaydedilemedi.
+The PIN can't be recovered. To remove it, clear Instagram's storage in Android's app settings. That signs you out and resets HushGram's settings. A saved settings backup brings the rest back, but not the PIN.	PIN geri alınamaz. Kaldırmak için Android uygulama ayarlarında Instagram'ın depolamasını temizle. Bu, oturumunu kapatır ve HushGram ayarlarını sıfırlar. Kayıtlı bir ayar yedeği geri kalanı getirir, ama PIN'i getirmez.
+Open app info	Uygulama bilgisini aç
+Hide 'Are you interested' questions	'Bu gönderiyle ilgileniyor musun?' sorularını gizle
+Hides the bubble under a post that asks 'Are you interested in this post?' with Not interested and Interested buttons. Nothing is answered for you.	Bir gönderinin altında 'Bu gönderiyle ilgileniyor musun?' diye soran, İlgilenmiyorum ve İlgileniyorum düğmeleri olan balonu gizler. Senin yerine hiçbir şey yanıtlanmaz.
+Show when someone was last active	Son aktif olma saatini tam göster
+Under a name in your messages and in a chat, the exact time they were last on, like Active at 3:42 PM, replaces Active 3h ago. Active now stays as it is.	Mesajlarındaki isimlerin altında ve sohbette, 3 sa. önce aktifti yerine 15:42'de aktifti gibi en son aktif olduğu tam saat görünür. Şu an aktif olduğu gibi kalır.
+Active at %1$s	%1$s'de aktifti
+Active yesterday at %1$s	Dün %1$s'de aktifti
+Active %1$s at %2$s	%1$s %2$s'de aktifti
+Rounded corners on posts	Gönderilerde yuvarlak köşeler
+Rounds the corners of a post's photo, video and carousel pages in Home and Following. Posts you scroll to after a change show it. Stories, profiles, Explore and Reels stay as they were.	Ana Sayfa ve Takip Edilenler'de bir gönderinin fotoğraf, video ve kaydırmalı albüm sayfalarının köşelerini yuvarlar. Bir değişiklikten sonra kaydırdığın gönderilerde görünür. Hikayeler, profiller, Keşfet ve Reels olduğu gibi kalır.
+Corner size	Köşe boyutu
+Large	Büyük
+Small	Küçük

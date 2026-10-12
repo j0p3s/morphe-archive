@@ -63,8 +63,11 @@ val hideSuggestedPostsPatch = bytecodePatch(
     name = "Hide suggested posts",
     description = "Removes posts from accounts you don't follow, suggested accounts, surveys and shopping rows " +
         "from Home. It also takes shop tiles out of Explore and the shopping bag off posts with tagged products. " +
-        "Posts from accounts you follow stay. Extra switches can also hide all videos, photos, carousels, posts " +
-        "you've liked or posts from accounts you pick. On by default. Turn it off in HushGram settings > Feed.",
+        "Posts from accounts you follow stay. Extra switches can also hide the 'Are you interested in this post?' " +
+        "question, all videos, photos, carousels, posts " +
+        "you've liked or posts from accounts you pick. A post's menu has Hide posts from this account to add one " +
+        "to that list, and those posts leave Home on the next refresh. On by default. Turn it off in HushGram " +
+        "settings > Feed.",
 ) {
     category("Feed")
     dependsOn(settingsPatch)
@@ -77,6 +80,8 @@ val hideSuggestedPostsPatch = bytecodePatch(
         // indicator moved stops the patch with Home's filter not yet written.
         val exploreShops = findExploreShopSections()
         val productTags = findProductTagIndicator()
+        // Where Home's row builder adds the "Are you interested in this post?" row, found with the rest.
+        val interest = findInterestQuestion()
         // Asking for For you's next page after a page the switches left short (#52), found before the
         // show check changes. A build without it waits for the scroll as Instagram has it.
         val nextPage = homeNextPageOrWarn()
@@ -87,6 +92,7 @@ val hideSuggestedPostsPatch = bytecodePatch(
         nextPage?.write(this)
         exploreShops.write(this)
         productTags.write(this)
+        interest.write(this)
         // The post type switches are found whole before their part changes anything, so a build
         // where Home's reads or a post's type moved gets the rest of the patch alone.
         homeFeedTypesOrWarn()?.let {
@@ -272,27 +278,27 @@ private fun BytecodePatchContext.publicGetter(type: String, field: String, retur
  * factory from a post (taking a Media and answering an item) writes. On 450 that's the field the
  * item's parser fills from "media_or_ad", where a post from an account you follow, a suggested
  * post and an ad all come. The item's other post fields hold other units' posts. It has to be a
- * public instance field of a public class, since the extension reads it.
+ * public instance field of a public class, since the extension reads it. A failure names [patch].
  */
-internal fun BytecodePatchContext.itemPost(itemType: String): FieldReference {
+internal fun BytecodePatchContext.itemPost(itemType: String, patch: String = PATCH): FieldReference {
     val item = classDefBy(itemType)
-    if (!AccessFlags.PUBLIC.isSet(item.accessFlags)) throw PatchException("$PATCH: $itemType isn't public, so the extension can't reach it")
+    if (!AccessFlags.PUBLIC.isSet(item.accessFlags)) throw PatchException("$patch: $itemType isn't public, so the extension can't reach it")
     val factories = item.methods.filter {
         AccessFlags.STATIC.isSet(it.accessFlags) && it.returnType == itemType &&
             it.parameterTypes.map(Any::toString) == listOf(MEDIA)
     }
     val factory = factories.singleOrNull()
-        ?: throw PatchException("$PATCH: expected one static method of $itemType making one from a post, found ${factories.size}")
+        ?: throw PatchException("$patch: expected one static method of $itemType making one from a post, found ${factories.size}")
     val writes = factory.implementation?.instructions?.toList().orEmpty()
         .filter { it.opcode == Opcode.IPUT_OBJECT }
         .map { (it as ReferenceInstruction).reference as FieldReference }
         .filter { it.definingClass == itemType && it.type == MEDIA }
         .distinctBy { it.name }
     val post = writes.singleOrNull()
-        ?: throw PatchException("$PATCH: expected $itemType's factory from a post to keep it in one field, found ${writes.map { it.name }}")
+        ?: throw PatchException("$patch: expected $itemType's factory from a post to keep it in one field, found ${writes.map { it.name }}")
     val field = item.fields.singleOrNull { it.name == post.name && it.type == MEDIA }
     if (field == null || !AccessFlags.PUBLIC.isSet(field.accessFlags) || AccessFlags.STATIC.isSet(field.accessFlags)) {
-        throw PatchException("$PATCH: $itemType's post field ${post.name} isn't a public instance field")
+        throw PatchException("$patch: $itemType's post field ${post.name} isn't a public instance field")
     }
     return post
 }

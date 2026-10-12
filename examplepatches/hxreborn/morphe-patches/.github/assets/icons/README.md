@@ -22,6 +22,8 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `allinonecalculator.png` | All-In-One Calculator (`all.in.one.calculator`) | allinonecalculator.com | APK 3.4.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `allvideoplayer.png` | All Video Player App (`com.allformatplayer.streamvideoplayer`) | Legend eSolution | APK 1.4, `res/drawable-xhdpi-v4/small_logo.png` |
 | `alpinequest.png` | AlpineQuest (`psyberia.alpinequest.free`) | Psyberia | APK 2.4.0e, `res/drawable-xxxhdpi-v4/core_icon_free_round.png` |
+| `devcheck.png` | DevCheck (`flar2.devcheck`) | flar2 | APK 6.57, adaptive icon `res/mipmap-xxxhdpi-v4/ic_launcher_background.webp` under `ic_launcher_foreground.webp` |
+| `psiphon.png` | Psiphon (`com.psiphon3.subscription`) | Psiphon Inc. | APK 2.5.11, `res/mipmap-xxhdpi-v4/ic_launcher.webp` (square icon cut to a circle) |
 | `projectivy.png` | Projectivy Launcher (`com.spocky.projengmenu`) | Spocky | APK 4.71, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml` |
 | `forus.png` | ForusApp (`com.myvitale.forus`) | MyVitale | APK 3.0.15, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `showly.png` | Showly (`com.michaldrabik.showly2`) | Michał Drabik / Trakt | APK 3.70.0, `mipmap/ic_launcher_round`, xxxhdpi |

@@ -15,7 +15,7 @@ object Constants {
             AppTarget(version = "1.17.1", versionCode = 230011701, minSdk = 23),
             AppTarget(version = "1.16.9", versionCode = 230011609, minSdk = 23),
             AppTarget(version = "1.16.7", versionCode = 230011607, minSdk = 23),
-            AppTarget(version = "1.16.5", versionCode = 230011605, minSdk = 23)
+            AppTarget(version = "1.16.5", versionCode = 230011605, minSdk = 23),
         )
     )
 }

@@ -2,7 +2,6 @@ package app.morphe.patches.kabbik.user
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.patch.bytecodePatch
-import app.morphe.patches.all.misc.fix.changepackageinstaller.changePackageInstallerPatch
 import app.morphe.patches.kabbik.extension.sharedExtensionPatch
 import app.morphe.patches.kabbik.shared.Constants.COMPATIBILITY_KABBIK
 import app.morphe.util.matchSingle
@@ -20,18 +19,20 @@ val tempUserPatch = bytecodePatch(
 ) {
     compatibleWith(COMPATIBILITY_KABBIK)
 
-    dependsOn(sharedExtensionPatch, changePackageInstallerPatch())
+    dependsOn(sharedExtensionPatch)
 
     execute {
-        with(KabbikApplicationOnCreateFingerprint.matchSingle()) {
-            method.addInstruction(
+        KabbikApplicationOnCreateFingerprint.matchSingle().method.apply {
+            addInstruction(
                 0, BuilderInstruction35c(
-                    Opcode.INVOKE_STATIC, 0, 0, 0, 0, 0, 0, ImmutableMethodReference(
-                        EXTENSION_CLASS,
-                        originalMethod.name,
-                        originalMethod.parameters,
-                        originalMethod.returnType
-                    )
+                    Opcode.INVOKE_STATIC,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    ImmutableMethodReference(EXTENSION_CLASS, name, parameters, returnType),
                 )
             )
         }

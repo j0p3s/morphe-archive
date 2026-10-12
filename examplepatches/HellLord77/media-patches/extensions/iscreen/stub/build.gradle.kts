@@ -1,7 +1,6 @@
 dependencies {
     api(libs.gson)
     api(libs.okhttp)
-    api(libs.retrofit)
 }
 
 plugins {

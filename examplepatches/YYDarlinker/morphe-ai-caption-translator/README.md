@@ -11,6 +11,8 @@
 - Displays captions with adjustable size, background opacity and vertical position. Caption placement uses the video’s physical center, independently of the app’s LTR/RTL interface direction.
 - Supports multiple API profiles, model selection, custom translation requirements, translation caching and exportable diagnostics. Its settings are localized into 14 languages.
 - Optionally remembers your caption selection across videos for the current app session, with or without AI translation.
+- When the video already has its own subtitles in the language you select, shows them directly in the AI caption style without a translation request. Uploaded subtitles keep their authored line breaks, including two-row subtitles; only auto-generated subtitles have sentence breaks and page turns optimized locally.
+- When a video has several subtitle tracks, translates the one in the spoken language first (human-made before automatic, then human-made English) rather than whichever track YouTube preselects.
 
 You need a video with an available subtitle track and an API service that supports the project’s chat-completion protocol. **This is not an audio transcription service.** Original subtitle selections do not make translation API calls.
 
@@ -18,17 +20,17 @@ You need a video with an available subtitle track and an API service that suppor
 
 | Component | Recommendation | Historical compatibility |
 | --- | --- | --- |
-| Official Morphe Patches | **1.45.0**, the latest stable release checked for this release | Compatibility scope starts at **1.42.0**; use an official version that supports your chosen YouTube APK |
-| Original YouTube APK | **21.16.256** | **21.13.164**, **21.07.247** |
+| Official Morphe Patches | **1.47.0**, the latest stable release checked for this release | Compatibility scope starts at **1.42.0**; use an official version that supports your chosen YouTube APK |
+| Original YouTube APK | **21.20.405** | **21.16.256**, **21.13.164**, **21.07.247** |
 | Android | **9 or later** | minSdk 28 |
 
-The recommended combination is **official 1.45.0 + YouTube 21.16.256**. YouTube 21.07.247 is a historical target in official 1.42.0/1.43.0; it is absent from the current official stable list. Do not combine an older APK with an official bundle that no longer supports it. Experimental YouTube versions are not stable compatibility claims for this addon. See [compatibility and verification boundaries](docs/COMPATIBILITY.md).
+The recommended combination is **official 1.47.0 + YouTube 21.20.405**. YouTube 21.16.256 remains a stable target of official 1.44.0 through 1.47.0. YouTube 21.13.164 is absent from official 1.47.0, and 21.07.247 is only a historical target of official 1.42.0/1.43.0; neither is in the current official stable list. Do not combine an older APK with an official bundle that no longer supports it. Experimental YouTube versions are not stable compatibility claims for this addon. See [compatibility and verification boundaries](docs/COMPATIBILITY.md).
 
 ## Install
 
 1. Install [Morphe Manager](https://github.com/MorpheApp/morphe-manager/releases/latest) and enable **Expert mode** in its settings.
 2. [Add Anchored AI Captions to Morphe](https://morphe.software/add-source?github=YYDarlinker/morphe-ai-caption-translator). Alternatively, add the repository URL `https://github.com/YYDarlinker/morphe-ai-caption-translator` under **Patch sources → Add → Remote**.
-3. Select an **original, unpatched YouTube APK** from the supported versions above. Prefer 21.16.256.
+3. Select an **original, unpatched YouTube APK** from the supported versions above. Prefer 21.20.405.
 4. Keep the compatible official default patch selection, including its captions/settings/player support. In this source’s tab, select **AI caption translator**. Select **Remember caption selection** only if you want it.
 5. Let Morphe patch, sign and install the app. Follow Morphe’s GmsCore instructions if your selected official patches require it.
 
@@ -39,10 +41,10 @@ Do not select the old AI-caption addon or another overlapping caption-memory pat
 1. Open **YouTube → Settings → Morphe → Video → AI caption translation**.
 2. Set your API address, API key and model. Use **Test API** to check the configuration. You can save separate named profiles for different services.
 3. Open **Automatic translation languages** in the same settings page and check the languages you want to add to YouTube’s Auto-translate list.
-4. Enable AI captions. In a video’s subtitle menu, choose **Auto-translate → your target language**. That selection uses your configured AI service to translate the available source subtitles.
+4. Enable AI captions. In a video’s subtitle menu, choose **Auto-translate → your target language**. If the video already has subtitles in that language, they are displayed directly; otherwise, your configured AI service translates the preferred source track.
 5. Adjust caption size and background using the live preview if needed. You can customize translation requirements; your custom text is preserved when the interface language changes.
 
-Turning AI off returns translation to YouTube’s native behavior. Selecting an original/manual/auto-generated source track displays its original text without translation API requests. The menu toggle visibility settings for regular videos and Shorts are independent of the engine switch.
+Turning AI off returns translation to YouTube’s native behavior. Selecting an original/manual/auto-generated source track displays its original text without translation API requests; uploaded subtitles keep their authored line breaks, while auto-generated subtitles are re-paged locally without a network call or model. Bracketed furigana readings are removed from text sent for translation to avoid repetition. The menu toggle visibility settings for regular videos and Shorts are independent of the engine switch.
 
 ## Costs, privacy and limits
 
@@ -61,15 +63,15 @@ Turning AI off returns translation to YouTube’s native behavior. Selecting an 
 ## Available patches
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.4.0](https://github.com/YYDarlinker/morphe-ai-caption-translator/releases/tag/v1.4.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;2 patches total
+> **[v1.5.2](https://github.com/YYDarlinker/morphe-ai-caption-translator/releases/tag/v1.5.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;2 patches total
 <details open>
 <summary>📦 YouTube&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 21.16.256 | 21.13.164 | 21.07.247 |
-| :---: | :---: | :---: |
+| 21.20.405 | 21.16.256 | 21.13.164 | 21.07.247 |
+| :---: | :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|

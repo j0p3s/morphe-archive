@@ -1,3 +1,22 @@
+## [3.56.1](https://github.com/crimera/piko-newx/compare/v3.56.0...v3.56.1) (2026-10-12)
+
+### 🐛 Bug Fixes
+* **Twitter - newx:** show the page background behind the profile Photos grid ([94d42e6](https://github.com/crimera/piko/commit/94d42e6c87ea157f8b41fe7effe3c92c426cd5ad))
+* **Twitter:** remove share as image patch from the default patches ([02c906f](https://github.com/crimera/piko/commit/02c906fa51d75cfb9b41c44a918d5cd400b798d8))
+
+## [3.56.0](https://github.com/crimera/piko-newx/compare/v3.55.0...v3.56.0) (2026-10-11)
+
+### ✨ New Features
+* **Twitter:** add thumbnail on download notification ([3bb54b6](https://github.com/crimera/piko/commit/3bb54b6501fe496f9d92e4b04ded0f75c923c57c))
+
+## [3.55.0](https://github.com/crimera/piko-newx/compare/v3.54.2...v3.55.0) (2026-10-11)
+
+### 🐛 Bug Fixes
+* **Twitter - newx:** retry and fall back for blank profile Photos thumbnails ([8a6fa06](https://github.com/crimera/piko/commit/8a6fa0679b0bc637139b43480fafe57ea69e5cb9))
+
+### ✨ New Features
+* **Twitter:** support 12.33.1-prod.01 ([6f55fc0](https://github.com/crimera/piko/commit/6f55fc09d02817c69415111593824f2f5da26cf8))
+
 ## [3.54.2](https://github.com/crimera/piko-newx/compare/v3.54.1...v3.54.2) (2026-10-10)
 
 ### 🐛 Bug Fixes

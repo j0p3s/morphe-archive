@@ -1,4 +1,44 @@
-## Unreleased
+## 0.71.3 (2026-10-11)
+
+* **TikTok:** LIVE'ı durum çubuğunun altında göster açıkken sonraki odalar da saatin altındaki gölgeyi koruyor. Önceden ilk birkaç LIVE'dan sonra şerit yine açık görünüyordu (#137).
+
+* **TikTok:** Tako balonunu gizle artık akış videolarının sağ alt köşesindeki Tako balonunu da gizliyor. Bazı hesaplar bu balonu profil düğmesinin üzerindeki yerine görüyor (#115).
+
+* **TikTok:** Feature Gate Lab'de yeni bir Profil afişi hazır ayarı var. Profilin geri kalanını yeni düzene geçirmeden TikTok'un Edit profile sayfasında Add background seçeneğini açıyor (#80).
+
+* **TikTok:** Favoriler düğmesine basılı tutunca açılan koleksiyon penceresi, TikTok karanlık moddayken artık beyaz değil koyu. Hushfeed ayarları > Uygulama içindeki Koyu Favoriler penceresi bunu kapatır (#142).
+
+## 0.71.2 (2026-10-11)
+
+* **TikTok:** LIVE odalarında durum çubuğunu gizle ve LIVE'ı durum çubuğunun altında göster artık aramada bir içerik üreticinin kartının altındaki önizlemeden açılan LIVE'da da çalışıyor. TikTok bu LIVE'ı açılan videolar için kullandığı sayfanın içinde açıyor, anahtarlar oraya ulaşmıyordu (#137).
+
+## 0.71.1 (2026-10-11)
+
+* **TikTok:** Temiz ekranda altyazıları koru açıkken, temiz ekrandaki altyazı artık alt kenara inmek yerine TikTok'un kontroller kaybolmadan önce gösterdiği yerde duruyor (#141). Henüz hiç altyazı görünmediyse eski yerinde kalır.
+
+* **TikTok:** LIVE'ı durum çubuğunun altında göster açıkken saatin altındaki şerit yine odanın üst kısmının geri kalanı gibi gölgeli. TikTok'un çubuk için siyah şerit ayırdığı telefonlarda bu şerit alttaki yayından daha açık görünüyordu (#137).
+
+## 0.71.0 (2026-10-11)
+
+* **TikTok:** Çift dokunma Hushfeed'in eylemlerinden birine ayarlıysa ve Long-press controls yamada varsa, parmağın biraz fazla kaldığı ikinci dokunuş artık TikTok'un uzun basma menüsünü de açmıyor, yani paylaşım paneli artık yorumların üstünde açılmıyor. (#63)
+
+* **TikTok:** LIVE kontrolleri'nin Hushfeed ayarları > Oynatma altında üçüncü bir anahtarı var, Daha fazla LIVE odasında kalite seçimi sun. TikTok bir LIVE'ın menüsünde Video kalitesini yalnızca yayın bunu istediğinde ya da TikTok hesabın için yeni kalite seçicisini açtığında gösteriyor, bu yüzden bazı odalarda kalite seçilemiyordu. Anahtar açıkken bu odaların çoğu yeni seçiciyi alır (yalnızca sesli odalar hariç) ve sonraki oda, TikTok kapanana kadar en son seçtiğin kalitede açılır. Varsayılan olarak kapalı. (#57)
+
+* **TikTok:** Profil ızgarasında tarihleri göster ve Etkileşim oranını göster artık TikTok 47.1.4'ün ızgaralarında çalışıyor, hem bir profilin videolarında hem de Favorilerde ve beğenilen videolarda. Bu sürüm her hücrenin izlenme sayısını yamanın ulaşmadığı bir yerde yazıyor, bu yüzden orada ne tarih ne de oran görünüyordu.
+
+* **TikTok:** Engellenen içerik üreticileri, engellenen kelimeler, izlenme ve beğeni aralıkları ve CANLI videolarını gizle, Hikayeleri gizle gibi anahtarlar artık Takip Edilenler sekmesinde de çalışıyor. TikTok 47.1.4'te o sekmeden yalnızca reklamlar ve konum etiketli videolar kalkıyordu, bu yüzden engellediğin bir içerik üreticisi orada yine çıkabiliyordu.
+
+* **TikTok:** Bu dilleri otomatik çevirme satırında dil kodu olmayan bir kelime artık sadece "dil kodu değil" mesajı alıyor. Önceden hiçbir videonun eşleşmeyeceği uyarısı çıkıyordu. Bu, açıklama dili filtresinin uyarısı ve yalnızca metni çevrilmeden bırakan bir listeye uymuyor (#121).
+
+* **TikTok:** Derleme ayrıntıları artık yalnızca TikTok'un kaynaklarını değiştiren yamaları da adlandırıyor, örneğin Change app name, Custom launcher icon ve Trust user certificates. Yamanın kendisi listelenir, seçeneklerinde seçtiğin ad ya da resim asla listelenmez.
+
+* **TikTok:** Tanılamayı günlüğe kaydet açıkken günlük artık her video için bir kez TikTok'un onunla birlikte ilerleme çubuğu için kaç önizleme resmi gönderdiğini yazıyor. Çubuğu sürüklerken önizleme görünmüyorsa, tanılama dışa aktarımı videonun hiç önizleme resmiyle gelip gelmediğini gösterir (#140).
+
+* **TikTok:** Derleme ayrıntıları ve tam günlük dışa aktarımı artık derlemende TikTok'un kodunu değiştiren her yamayı kısa bir adla listeliyor, Comment send fix ve Network request report gibi anahtarı olmayanlar da dahil.
+
+* **TikTok:** Hatırlanan ya da otomatik Temiz ekran artık aramadan açtığın videoyu da temizliyor. TikTok o videoyu açılan sayfaya zaten oynarken veriyor, Temiz ekran ise orada hiç gelmeyen bir başlangıcı bekliyordu, bu yüzden düğmeler ve TikTok'un arama çubuğu kalıyordu (#84).
+
+* **TikTok:** Video katmanlarını gizle ve akış metin boyutları artık bir bağlantı TikTok'u arkasında Sana Özel akışı olmadan doğrudan aramada veya bir videoda başlattığında da çalışıyor. Önceden bu şekilde açılan videolar tüm katmanları ve TikTok'un kendi metin boyutunu koruyordu (#84).
 
 * **TikTok:** TikTok tarayıcısındaki harici sayfaları koru artık LIVE'ların ve Mağaza'nın açtığı yapboz CAPTCHA'sını TikTok'un kendi sayfası sayıyor, böylece yapboz TikTok ile bağlantısını koruyor (#87). TikTok'un kendi sunucularından yükleniyor, sadece anahtarın tanımadığı bir adresten.
 
@@ -44,7 +84,7 @@
 
 * **TikTok:** Tanılama raporunda TikTok depolamasındaki en büyük klasörleri listeleyen yeni bir Storage bölümü var. Böylece rapor, alanı neyin doldurduğunu gösterebiliyor (#70). Sadece klasör adlarını yazıyor, dosya adlarını asla, hesap numaralarını da gizliyor.
 
-* **TikTok:** Aramadan ya da bir profilden açılan temizlenmiş bir videoda geriye basmak artık Clear display'i kapatmak sayılmıyor. Aynı videoyu yeniden açınca o da diğerleri gibi temizleniyor ve hatırlanan Clear display açık kalıyor (#84).
+* **TikTok:** Temizlenmiş bir videoda geriye basmak ya da oradan paylaşım panelini açmak artık Clear display'i kapatmak sayılmıyor. Aynı videoyu yeniden açınca o da diğerleri gibi temizleniyor ve hatırlanan Clear display açık kalıyor (#84).
 
 * **TikTok:** Remove LIVE extras artık başkasının LIVE yayınına konuk olarak katılma dosyalarını da kaldırdığını söylüyor. Yani bu yamayla sesli ya da görüntülü katılım çalışmayabilir (#132). LIVE yayınlarına katılıyorsan bu yamayı seçme.
 

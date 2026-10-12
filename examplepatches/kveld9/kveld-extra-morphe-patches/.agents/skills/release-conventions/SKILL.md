@@ -1,9 +1,9 @@
 ---
 name: release-conventions
-description: Semantic release and CI/CD lifecycle, conventional commit standards, release pipeline chain (release.yml and .releaserc), and git branching strategy.
+description: Release pipeline and commit conventions (semantic-release types, release.yml and .releaserc chain, main-only branching). Use when choosing a commit type or scope, or when reasoning about releases, CHANGELOG or generated catalog files.
 ---
 
-<!-- Mirror: this skill also exists in brave-origin-patches/.agents/skills (hardlinked to its .claude/skills). When editing shared core guidance, replicate the change there. -->
+<!-- Mirror: this skill also exists in kveld-morphe-patches/.agents/skills (.claude/skills is a symlink to .agents/skills in each repo). When editing shared core guidance, replicate the change there. -->
 
 # Semantic Release & CI/CD Lifecycle
 
@@ -44,7 +44,7 @@ When commits are pushed to `main`, the automated release pipeline executes:
 7. **GitHub Release & Asset Publishing**: Attaches compiled standalone Morphe Patch Package (`patches/build/libs/patches-*.mpp`) to the GitHub Release (`@semantic-release/github`).
 8. **Build Provenance Attestation**: Attests build provenance for `patches/build/libs/patches-*.mpp` via `actions/attest-build-provenance`.
 9. **Telegram Broadcast**: Dispatches release tag, version, and notes via `python3 .github/scripts/notify_telegram.py`.
-10. **Compilation Verification Fallback**: When semantic-release does not publish a new release (e.g. for `refactor`, `chore`, `docs`), CI executes `./gradlew :patches:buildAndroid clean --no-daemon` to ensure compilation integrity.
+10. **Compilation Verification Fallback**: When semantic-release does not publish a new release (e.g. for `refactor`, `chore`, `docs`), CI executes `./gradlew :patches:buildAndroid --no-daemon` to ensure compilation integrity.
 
 > **CRITICAL REMINDER**: Never manually edit or commit `patches-list.json`, `patches-bundle.json`, or `CHANGELOG.md`. These are generated, formatted, and committed strictly by CI during the automated release pipeline.
 

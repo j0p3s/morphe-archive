@@ -1,0 +1,149 @@
+package app.template.patches.steamlink.binary
+
+import app.template.patches.shared.PatchCategories
+import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.patch.rawResourcePatch
+import app.morphe.patcher.patch.stringOption
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
+import app.template.patches.shared.Constants.isNativeXrSteamLinkBuild
+
+// QSVLClientAudioNdk::Init(bool, int), immediately before
+// AAudioStreamBuilder_setInputPreset(builder, preset):
+//     ldr x0, [sp, #0x10]
+//     mov w1, #preset
+//
+// The surrounding instruction is intentionally part of the signature. It is
+// unique in the tested 5002244 library and also survives later Valve layouts,
+// unlike the file offset of the MOV instruction.
+private val INPUT_PRESET_PREFIX = byteArrayOf(
+    0xe0.toByte(), 0x0b, 0x40, 0xf9.toByte(),
+)
+
+private val SUPPORTED_PRESETS = mapOf(
+    "voice-communication" to 7,
+    "voice-recognition" to 6,
+    "unprocessed" to 9,
+    "voice-performance" to 10,
+)
+
+private data class NativeMicrophoneLayout(
+    val librarySize: Int,
+    val instructionOffset: Int,
+)
+
+private val NATIVE_MICROPHONE_LAYOUTS = mapOf(
+    // Independently traced QSVLClientAudioNdk::Init on each exact legacy base.
+    "5001812" to NativeMicrophoneLayout(2_220_872, 0xF4484),
+    "5001968" to NativeMicrophoneLayout(2_234_048, 0xEFDB4),
+    // SHA-256: 628821feab199d7712be8a51273eb9a21ec440a7c91aa6a768cc7307a4fe22f0.
+    // Symbol-derived QSVLClientAudioNdk::Init -> AAudioStreamBuilder_setInputPreset.
+    "5002363" to NativeMicrophoneLayout(2_292_008, 0xF44C0),
+)
+
+private fun hasExactMicrophoneLayout(version: String, code: String): Boolean =
+    isNativeXrSteamLinkBuild(version, code) ||
+        (version == "2.0.20" && code == "5001812") ||
+        (version == "2.0.21" && code == "5001968")
+
+private fun movW1Immediate(value: Int): ByteArray {
+    require(value in 0..0xffff)
+    val instruction = 0x52800001 or (value shl 5) // MOVZ W1, #value
+    return byteArrayOf(
+        instruction.toByte(),
+        (instruction ushr 8).toByte(),
+        (instruction ushr 16).toByte(),
+        (instruction ushr 24).toByte(),
+    )
+}
+
+private fun ByteArray.matchesAt(offset: Int, pattern: ByteArray): Boolean =
+    offset >= 0 && offset + pattern.size <= size &&
+        pattern.indices.all { this[offset + it] == pattern[it] }
+
+internal fun patchNativeMicrophonePreset(
+    bytes: ByteArray,
+    preset: String,
+    versionName: String,
+    versionCode: String,
+): ByteArray {
+    if (!hasExactMicrophoneLayout(versionName, versionCode)) return bytes.copyOf()
+    val selected = SUPPORTED_PRESETS[preset]
+        ?: throw PatchException("Unknown microphone input preset: $preset")
+    val layout = NATIVE_MICROPHONE_LAYOUTS[versionCode]
+        ?: throw PatchException("No verified microphone layout for Steam Link $versionName/$versionCode")
+    if (bytes.size != layout.librarySize) {
+        throw PatchException("Unsupported native microphone library size=${bytes.size}; expected ${layout.librarySize}")
+    }
+    verifyAddedLegacyNativeCode(bytes, versionName, versionCode)
+    if (!bytes.matchesAt(layout.instructionOffset - INPUT_PRESET_PREFIX.size, INPUT_PRESET_PREFIX) ||
+        SUPPORTED_PRESETS.values.none { bytes.matchesAt(layout.instructionOffset, movW1Immediate(it)) }
+    ) {
+        throw PatchException("Native microphone instruction did not match the verified layout at 0x${layout.instructionOffset.toString(16)}")
+    }
+    return bytes.copyOf().apply { movW1Immediate(selected).copyInto(this, layout.instructionOffset) }
+}
+
+@Suppress("unused")
+val microphoneInputPresetPatch = rawResourcePatch(
+    name = "Microphone input preset",
+    description = "Selects the Android AAudio microphone processing mode used by Steam Link. Galaxy XR testing found Voice Recognition clearer and louder than stock Voice Communication.",
+    default = false,
+) {
+    category(PatchCategories.TRACKING_AND_AUDIO)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
+
+    val preset by stringOption(
+        key = "preset",
+        default = "voice-recognition",
+        values = mapOf(
+            "Voice Recognition (Best from my tests)" to "voice-recognition",
+            "Voice Communication (Valve stock)" to "voice-communication",
+            "Voice Performance (quiet)" to "voice-performance",
+            "Unprocessed (quiet)" to "unprocessed",
+        ),
+        title = "Microphone mode",
+        description = "Voice Recognition was the clearest usable-level mode in Galaxy XR recordings. Voice Performance and Unprocessed were substantially quieter; Voice Communication sounded more processed.",
+        required = true,
+    )
+
+    execute {
+        val file = get("lib/arm64-v8a/libvrlink_scene.so")
+        val selected = SUPPORTED_PRESETS[preset]
+            ?: throw PatchException("Unknown microphone input preset: $preset")
+        val bytes = file.readBytes()
+        val matches = mutableListOf<Int>()
+
+        if (hasExactMicrophoneLayout(packageMetadata.versionName, packageMetadata.versionCode)) {
+            file.writeBytes(patchNativeMicrophonePreset(bytes, requireNotNull(preset),
+                packageMetadata.versionName, packageMetadata.versionCode))
+            return@execute
+        }
+
+        // A forced dependency must not run the legacy scanner on a mismatched modern base.
+        if (packageMetadata.versionCode in NATIVE_MICROPHONE_LAYOUTS ||
+            NATIVE_MICROPHONE_LAYOUTS.values.any { it.librarySize == bytes.size }) return@execute
+
+        for (offset in 0..bytes.size - INPUT_PRESET_PREFIX.size - 4) {
+            if (!bytes.matchesAt(offset, INPUT_PRESET_PREFIX)) continue
+            val instructionOffset = offset + INPUT_PRESET_PREFIX.size
+            if (SUPPORTED_PRESETS.values.any { bytes.matchesAt(instructionOffset, movW1Immediate(it)) }) {
+                matches += instructionOffset
+            }
+        }
+
+        if (matches.size != 1) {
+            if (!isSupportedVideoLibrarySize(bytes.size)) return@execute
+            throw PatchException(
+                "Expected one supported AAudio input-preset instruction, found ${matches.size}",
+            )
+        }
+
+        val instructionOffset = matches.single()
+        val replacement = movW1Immediate(selected)
+        if (bytes.matchesAt(instructionOffset, replacement)) return@execute
+
+        val result = bytes.copyOf()
+        replacement.copyInto(result, instructionOffset)
+        file.writeBytes(result)
+    }
+}

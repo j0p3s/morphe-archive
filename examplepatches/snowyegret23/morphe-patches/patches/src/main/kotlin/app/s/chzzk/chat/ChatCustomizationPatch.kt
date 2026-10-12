@@ -163,6 +163,11 @@ val chatCustomizationPatch = bytecodePatch(
             method.addInstructions(superIndex + 1, "invoke-static/range {p0 .. p0}, $SETTINGS->attach(Landroid/app/Activity;)V")
         }
 
+        val widthOwners = when (packageMetadata.versionName) {
+            "3.14.0" -> setOf("Low0;", "Lzp0;")
+            "3.14.10" -> setOf("Lpw0;", "Laq0;")
+            else -> error("Unsupported CHZZK version: ${packageMetadata.versionName}")
+        }
         var widthMethods = 0
         var fontMethods = 0
         var messageRows = 0
@@ -173,7 +178,7 @@ val chatCustomizationPatch = bytecodePatch(
                         ?.containsAll(listOf(280f.toRawBits(), 350f.toRawBits())) == true
             }
             for (candidate in widthCandidates) {
-                check(original.type in listOf("Low0;", "Lzp0;")) { "Unexpected chat width owner: ${original.type}" }
+                check(original.type in widthOwners) { "Unexpected chat width owner: ${original.type}" }
                 val method = mutableClassDefBy(original).methods.single { it == candidate }
                 method.implementation!!.instructions.withIndex()
                     .filter { (it.value as? NarrowLiteralInstruction)?.narrowLiteral in listOf(280f.toRawBits(), 350f.toRawBits()) }

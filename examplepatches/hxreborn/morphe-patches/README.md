@@ -15,7 +15,7 @@
 ## 🩹 Patches list
 
 <!-- PATCHES_START -->
-> **[v1.47.0](https://github.com/hxreborn/morphe-patches/releases/tag/v1.47.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;161 patches total
+> **[v1.48.0](https://github.com/hxreborn/morphe-patches/releases/tag/v1.48.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;165 patches total
 <a id="1weather"></a>
 <details>
 <summary><img src=".github/assets/icons/oneweather.png" width="18" align="top">&nbsp;&nbsp;1Weather&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
@@ -37,7 +37,7 @@
 
 <a id="all-video-player-app"></a>
 <details>
-<summary><img src=".github/assets/icons/allvideoplayer.png" width="18" align="top">&nbsp;&nbsp;All Video Player App&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
+<summary><img src=".github/assets/icons/allvideoplayer.png" width="18" align="top">&nbsp;&nbsp;All Video Player App&nbsp;&nbsp;•&nbsp;&nbsp;6 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -52,6 +52,7 @@
 | <a id="all-video-player-app-hide-ads"></a>[Hide ads](patches/src/main/kotlin/app/morphe/patches/allvideoplayer/ads/HideAdsPatch.kt) | Removes app open, interstitial and native ads, and the promoted apps list. |
 | <a id="all-video-player-app-remove-rating-prompts"></a>[Remove rating prompts](patches/src/main/kotlin/app/morphe/patches/allvideoplayer/rate/RemoveRatingPromptsPatch.kt) | Removes the prompts asking for a rating. |
 | <a id="all-video-player-app-resume-videos-opened-from-other-apps"></a>[Resume videos opened from other apps](patches/src/main/kotlin/app/morphe/patches/allvideoplayer/resume/ResumeExternalVideosPatch.kt) | Resumes videos opened from a file manager or gallery where playback stopped. |
+| <a id="all-video-player-app-skip-splash-delay"></a>[Skip splash delay](patches/src/main/kotlin/app/morphe/patches/allvideoplayer/splash/SkipSplashDelayPatch.kt) | Opens the app without waiting on the splash screen. |
 
 </details>
 
@@ -256,6 +257,22 @@
 | <a id="cxxdroid-amoled-dark-theme"></a>AMOLED dark theme | Adds an AMOLED option to Settings > Appearance > Editor theme (dark). Applies only while the Dark theme is active. |
 | <a id="cxxdroid-disable-tracking"></a>Disable tracking | Stops Firebase Analytics from collecting usage data. |
 | <a id="cxxdroid-unlock-premium"></a>Unlock premium | Unlocks premium and removes ads. |
+
+</details>
+
+<a id="devcheck"></a>
+<details>
+<summary><img src=".github/assets/icons/devcheck.png" width="18" align="top">&nbsp;&nbsp;DevCheck&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 6.57 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="devcheck-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/devcheck/misc/premium/UnlockPremiumPatch.kt) | Unlocks the Pro tools, tests, themes and colors. |
 
 </details>
 
@@ -622,6 +639,22 @@
 
 </details>
 
+<a id="my-apk"></a>
+<details>
+<summary><img src=".github/assets/icons/com.andatsoft.myapk.fwa.png" width="18" align="top">&nbsp;&nbsp;My APK&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 4.1.1 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="my-apk-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/myapk/premium/UnlockPremiumPatch.kt) | Unlocks premium and removes ads. |
+
+</details>
+
 <a id="mymoveset"></a>
 <details>
 <summary><img src=".github/assets/icons/mymoveset.png" width="18" align="top">&nbsp;&nbsp;MyMoveset&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
@@ -629,7 +662,7 @@
 
 **🎯 Supported versions:**
 
-| 1.3.2 |
+| 1.4.0 |
 | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
@@ -826,6 +859,22 @@
 | <a id="proton-vpn-unlock-custom-dns"></a>[Unlock custom DNS](patches/src/main/kotlin/app/morphe/patches/protonvpn/misc/customdns/UnlockCustomDnsPatch.kt) | Unlocks custom DNS on free plans. |
 | <a id="proton-vpn-unlock-profiles"></a>[Unlock profiles](patches/src/main/kotlin/app/morphe/patches/protonvpn/misc/profiles/UnlockProfilesPatch.kt) | Unlocks profiles on free plans and limits them to free locations. Profiles for other locations are hidden. |
 | <a id="proton-vpn-unlock-split-tunneling"></a>[Unlock split tunneling](patches/src/main/kotlin/app/morphe/patches/protonvpn/misc/splittunneling/UnlockSplitTunnelingPatch.kt) | Unlocks split tunneling on free plans. |
+
+</details>
+
+<a id="psiphon"></a>
+<details>
+<summary><img src=".github/assets/icons/psiphon.png" width="18" align="top">&nbsp;&nbsp;Psiphon&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 2.5.11 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="psiphon-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/psiphon/premium/UnlockPremiumPatch.kt) | Unlocks all regions. Removes ads and the upgrade button. |
 
 </details>
 

@@ -877,9 +877,24 @@ try {
     $swipeSite = 'Lfixture/SwipeContainer;->move(Lfixture/PositionConfig;)V'
     $swipeRule = "once-call $swipeHook in instance (Lfixture/PositionConfig;)V calling instance " +
         'Lfixture/SwipeContainer;->setEndPanelExtraParameter(Lfixture/PositionConfig;)V holding Lfixture/PositionConfig;->animate:Z'
-    Assert-True ($onceCallRules.Count -eq 8 -and $onceCallRules[0] -ceq $swapRule -and $onceCallRules[1] -ceq $allowRule -and
+    # The tab swipe check's two touch methods also each get a once-call, which leaves out the other
+    # rule's method but still counts a call in any other host method, holder or not.
+    $tabOnceRule = { param($Name) 'once-call Lapp/hushgram/extension/fixture/feed/TabSwipe;->input(Landroid/view/View;I)Z in instance (Landroid/view/MotionEvent;)Z ' +
+        "calling instance Lfixture/TabList;->$Name(Landroid/view/MotionEvent;)Z holding Lfixture/TabPager;->paging:Z" }
+    $tabInterceptOnceRule = & $tabOnceRule 'onInterceptTouchEvent'
+    $tabTouchOnceRule = & $tabOnceRule 'onTouchEvent'
+    # The token host's three, each picking its method by one thing Redex leaves alone. Their bad
+    # builds are with the home tab's below.
+    $tokenHookRoot = 'Lapp/hushgram/extension/fixture/misc/TokenHook;'
+    $tokenLiteralRule = "once-call $tokenHookRoot->literal(Ljava/lang/Object;)Ljava/lang/Object; in instance (Ljava/lang/Integer;)V holding const:0x1ce57a65 const:0x811116000d5cda"
+    $tokenCallRule = "once-call $tokenHookRoot->call(Ljava/lang/Object;)Ljava/lang/Object; in instance (Ljava/lang/Long;)V holding LX/*;->*(LX/*;)V"
+    $tokenFieldRule = "once-call $tokenHookRoot->field(Ljava/lang/Object;)Ljava/lang/Object; in instance (Ljava/lang/Short;)V holding LX/*;->A07:Ljava/util/List; LX/*;->*:Ljava/lang/String;"
+    $tokenLackRule = "once-call $tokenHookRoot->lack(Ljava/lang/Object;)Ljava/lang/Object; in instance (Ljava/lang/Byte;)V lacking static LX/*;->*(LX/*;)V holding fixture_token"
+    Assert-True ($onceCallRules.Count -eq 14 -and $onceCallRules[0] -ceq $swapRule -and $onceCallRules[1] -ceq $allowRule -and
         $onceCallRules[2] -ceq $tabRule -and $onceCallRules[3] -ceq $dmRule -and $onceCallRules[4] -ceq $inboxRule -and
-        $onceCallRules[5] -ceq $swipeRule -and $onceCallRules[6] -ceq $retryRule -and $onceCallRules[7] -ceq $navBindRule) `
+        $onceCallRules[5] -ceq $swipeRule -and $onceCallRules[6] -ceq $retryRule -and $onceCallRules[7] -ceq $tokenLiteralRule -and
+        $onceCallRules[8] -ceq $tokenCallRule -and $onceCallRules[9] -ceq $tokenFieldRule -and $onceCallRules[10] -ceq $tokenLackRule -and
+        $onceCallRules[11] -ceq $navBindRule -and $onceCallRules[12] -ceq $tabInterceptOnceRule -and $onceCallRules[13] -ceq $tabTouchOnceRule) `
         "The contract file has a once-call rule without exact negative coverage:`n$($onceCallRules -join "`n")"
     Assert-True (($good.Output -join "`n") -match [regex]::Escape("contract $swapRule`: once in $swapRun")) `
         "The good build's swap guard was not reported once in the swap runnable.`n$($good.Output -join "`n")"
@@ -977,13 +992,19 @@ try {
     $tabHeld = """default"" with the shape static $tabShape and a static call to $tabCall"
     $callingRules = @(Get-Content -LiteralPath $contracts | Where-Object { $_ -match '^\s*[a-z-]+-call\s.*\scalling\s' } |
         ForEach-Object { ($_.Trim() -split '\s+') -join ' ' })
-    Assert-True ($callingRules.Count -eq 11 -and $callingRules[0] -ceq $tabRule -and $callingRules[1] -ceq $providerRule -and
+    Assert-True ($callingRules.Count -eq 13 -and $callingRules[0] -ceq $tabRule -and $callingRules[1] -ceq $providerRule -and
         $callingRules[2] -ceq $swipeRule -and $callingRules[3] -ceq $retryRule -and $callingRules[4] -ceq $retryRouteRule -and
         $callingRules[5] -ceq ($navPlainRule -replace '^shared-call', 'start-call') -and
         $callingRules[6] -ceq ($navLithoRule -replace '^shared-call', 'start-call') -and
         $callingRules[7] -ceq $navPlainRule -and $callingRules[8] -ceq $navLithoRule -and
-        $callingRules[9] -ceq $tabInterceptRule -and $callingRules[10] -ceq $tabTouchRule) `
+        $callingRules[9] -ceq $tabInterceptRule -and $callingRules[10] -ceq $tabTouchRule -and
+        $callingRules[11] -ceq $tabInterceptOnceRule -and $callingRules[12] -ceq $tabTouchOnceRule) `
         "The contract file has a calling rule without exact negative coverage:`n$($callingRules -join "`n")"
+    # Each once-call passes with the hook in the other rule's method as well as its own.
+    foreach ($pair in @(@($tabInterceptOnceRule, $tabIntercept), @($tabTouchOnceRule, $tabTouch))) {
+        Assert-True (($good.Output -join "`n") -match [regex]::Escape("contract $($pair[0]): once in $($pair[1])")) `
+            "The good build's tab swipe check was not reported once in $($pair[1]) by its once-call.`n$($good.Output -join "`n")"
+    }
     Assert-True (($good.Output -join "`n") -match [regex]::Escape("contract $tabRule`: once in $tabHome")) `
         "The good build's home tab call was not reported once in the home tab, picked by its static check.`n$($good.Output -join "`n")"
     Assert-True (($good.Output -join "`n") -match [regex]::Escape("contract $retryRule`: once in $retrySite")) `
@@ -992,7 +1013,9 @@ try {
         "The good build's story retry did not preserve its null cancellation route.`n$($good.Output -join "`n")"
     $storyLoopCheck = 'Linstagram/features/stories/fragment/ReelViewerFragment;->A1K(Lcom/instagram/model/reels/ReelItem;)Z'
     $storyLoopSite = 'Linstagram/features/stories/fragment/ReelViewerFragment;->finished(Ljava/lang/Object;)V'
-    $storyLoopRule = "story-loop-call $storyLoopCheck in instance (Ljava/lang/Object;)V holding fixture_finished_story"
+    # The rule leaves the check's name as * and the guard's call is held to the class, parameters, registers and both call sites alone.
+    $storyLoopWild = $storyLoopCheck.Replace('->A1K(', '->*(')
+    $storyLoopRule = "story-loop-call $storyLoopWild in instance (Ljava/lang/Object;)V holding fixture_finished_story"
     $storyLoopRules = @(Get-Content -LiteralPath $contracts | Where-Object { $_ -match '^\s*story-loop-call\s' })
     Assert-True ($storyLoopRules.Count -eq 1 -and $storyLoopRules[0] -ceq $storyLoopRule) `
         'The native loop contract has no exact opcode, owner and operand fixtures.'
@@ -1181,6 +1204,15 @@ try {
         'bad-home-tab-hook-decoy' = 'contract'
         'bad-home-tab-check-gone' = 'contract'
         'bad-home-tab-check-instance' = 'contract'
+        'bad-token-literal-missing' = 'contract'
+        'bad-token-literal-decoy' = 'contract'
+        'bad-token-call-missing' = 'contract'
+        'bad-token-call-decoy' = 'contract'
+        'bad-token-field-missing' = 'contract'
+        'bad-token-field-decoy' = 'contract'
+        'bad-token-lack-missing' = 'contract'
+        'bad-token-lack-decoy' = 'contract'
+        'bad-token-site-moved' = 'contract'
         'bad-dm-visual-guard-late' = 'contract'
         'bad-navigation-plain-missing' = 'contract'
         'bad-navigation-litho-twice' = 'contract'
@@ -1188,6 +1220,7 @@ try {
         'bad-navigation-factory-missing' = 'contract'
         'bad-navigation-factory-twice' = 'contract'
         'bad-tab-swipe-third-holder' = 'contract'
+        'bad-tab-swipe-stray-caller' = 'contract'
         'bad-feed-sites-once' = 'contract'
         'bad-feed-sites-thrice' = 'contract'
         'bad-dm-visual-guard-twice' = 'contract'
@@ -1434,6 +1467,59 @@ try {
         Assert-True ($fails.Count -eq 1 -and $fails[0] -ceq $case.Value) `
             "$($case.Key) did not fail with its own home tab finding alone.`nExpected: $($case.Value)`nGot:`n$($fails -join "`n")"
     }
+    # A literal, a call written with LX/*;, two fields (the name kept, and the name as *) and a caller
+    # named two ways each pick their method alone. Leaving the hook out, or putting it in the pick's
+    # twin, fails the one rule. The twin of the literal holds one of its two literals, so the rule
+    # needs the wide one as well, and the site hook in another method fails the caller's name.
+    $tokenLiteralHook = 'Lapp/hushgram/extension/fixture/misc/TokenHook;->literal(Ljava/lang/Object;)Ljava/lang/Object;'
+    $tokenCallHook = 'Lapp/hushgram/extension/fixture/misc/TokenHook;->call(Ljava/lang/Object;)Ljava/lang/Object;'
+    $tokenFieldHook = 'Lapp/hushgram/extension/fixture/misc/TokenHook;->field(Ljava/lang/Object;)Ljava/lang/Object;'
+    $tokenLackHook = 'Lapp/hushgram/extension/fixture/misc/TokenHook;->lack(Ljava/lang/Object;)Ljava/lang/Object;'
+    $tokenSiteHook = 'Lapp/hushgram/extension/fixture/misc/TokenHook;->site(Ljava/lang/Object;)Ljava/lang/Object;'
+    $tokenOutput = $good.Output -join "`n"
+    foreach ($pick in @(
+            @($tokenLiteralHook, 'Lfixture/TokenHost;->literalPick(Ljava/lang/Integer;)V'),
+            @($tokenCallHook, 'Lfixture/TokenHost;->callPick(Ljava/lang/Long;)V'),
+            @($tokenFieldHook, 'Lfixture/TokenHost;->fieldPick(Ljava/lang/Short;)V'),
+            @($tokenLackHook, 'Lfixture/TokenHost;->lackPick(Ljava/lang/Byte;)V'))) {
+        Assert-True ($tokenOutput -match ('(?m)^\[diff\] contract once-call ' + [regex]::Escape($pick[0]) + '.*: once in ' + [regex]::Escape($pick[1]) + '$')) `
+            "The good build's $($pick[0]) was not reported once in $($pick[1]).`n$tokenOutput"
+    }
+    Assert-True ($tokenOutput -match ('(?m)^\[diff\] contract ' + [regex]::Escape($tokenSiteHook) + ': 1 call site, in Lfixture/TokenHost;->tokenSite\(')) `
+        "The good build's site hook was not reported in tokenSite.`n$tokenOutput"
+    foreach ($case in @(
+            @('bad-token-literal-missing', $tokenLiteralHook, 'literalPick', ''),
+            @('bad-token-literal-decoy', $tokenLiteralHook, 'literalPick', 'Lfixture/TokenHost;->literalHalf(Ljava/lang/Integer;)V'),
+            @('bad-token-call-missing', $tokenCallHook, 'callPick', ''),
+            @('bad-token-call-decoy', $tokenCallHook, 'callPick', 'Lfixture/TokenHost;->callTwin(Ljava/lang/Long;)V'),
+            @('bad-token-field-missing', $tokenFieldHook, 'fieldPick', ''),
+            @('bad-token-field-decoy', $tokenFieldHook, 'fieldPick', 'Lfixture/TokenHost;->fieldTwin(Ljava/lang/Short;)V'),
+            @('bad-token-lack-missing', $tokenLackHook, 'lackPick', ''),
+            @('bad-token-lack-decoy', $tokenLackHook, 'lackPick', 'Lfixture/TokenHost;->lackTwin(Ljava/lang/Byte;)V'))) {
+        $fails = @((Get-Findings $badResults[$case[0]]).Fails)
+        $expected = "[diff] FAIL: contract: $($case[1]) is not called in Lfixture/TokenHost;->$($case[2])("
+        Assert-True ($fails.Count -eq 1 -and $fails[0].StartsWith($expected, [System.StringComparison]::Ordinal) -and
+                ($case[3] -eq '' -or $fails[0].EndsWith("the host methods that call it: $($case[3])"))) `
+            "$($case[0]) did not fail only its own token rule.`nExpected: $expected $($case[3])`nGot:`n$($fails -join "`n")"
+    }
+    $siteFails = @((Get-Findings $badResults['bad-token-site-moved']).Fails)
+    Assert-True ($siteFails.Count -eq 1 -and $siteFails[0] -ceq ("[diff] FAIL: contract: $tokenSiteHook is called from " +
+            'Lfixture/TokenHost;->tokenElsewhere(Ljava/lang/Object;)V, not from other|tokenSite')) `
+        "bad-token-site-moved did not fail only the caller's name.`nGot:`n$($siteFails -join "`n")"
+    # HushGram's file may name things these ways only while the fixture does: a literal, a reference
+    # with LX/*; (the member named * or by its own name), and a caller named in more than one way.
+    $tokenKinds = [ordered]@{
+        'a literal' = '^\s*[a-z-]+-call\s.*\s(class-)?holding\s(\S+\s)*?const:0x'
+        'a call or field written with LX/*;' = '^\s*[a-z-]+-call\s.*\s(class-)?holding\s(\S+\s)*?LX/\*;->'
+        'a call the method must lack' = '^\s*[a-z-]+-call\s.*\slacking\s'
+        'a caller named in more than one way' = '^\s*single-call\s.*\sin\s\S+\|'
+    }
+    foreach ($kind in $tokenKinds.GetEnumerator()) {
+        $inReal = @(Get-Content -LiteralPath $realContracts | Where-Object { $_ -match $kind.Value }).Count
+        $inFixture = @(Get-Content -LiteralPath $contracts | Where-Object { $_ -match $kind.Value }).Count
+        Assert-True ($inReal -eq 0 -or $inFixture -ne 0) `
+            "HushGram's contract file picks by $($kind.Key), which the fixture doesn't exercise."
+    }
     # Each new fixture must fail only the contract it deliberately breaks.
     $inboxOne = 'with the shape static (L*;L*;L*;L*;)Z in a class holding "No section generator found for section type "'
     $newContractFails = [ordered]@{
@@ -1463,14 +1549,19 @@ try {
         'bad-story-retry-two-loops' = "[diff] FAIL: contract: 2 methods $retryMany, and exactly one must, so the rule can't say " +
             "which one calls ${retryHook}: $retrySite, Lfixture/StoryRetryQueue;->runAgain()V"
     }
-    # The check in a third method reading the paging field: each sibling rule still finds it there,
-    # since only the other sibling's own method is left out. The store read's filter once and three
-    # times: each is held to the two its rule says.
+    # The check in a third method reading the paging field: each sibling rule, shared-call and
+    # once-call alike, still finds it there, since only the other siblings' own methods are left out.
+    # The check in the list's own intercept, which reads no paging field: only the once-calls, which
+    # look at every caller, find it. The store read's filter once and three times: each is held to
+    # the two its rule says.
     $tabFlingFail = "[diff] FAIL: contract: $tabSwipeHook is called in $tabFling as well as in"
+    $tabStrayFail = "[diff] FAIL: contract: $tabSwipeHook is called in $(& $tabListCall 'onInterceptTouchEvent') as well as in"
+    $tabInterceptHeld = "$tabIntercept, the one method holding $(& $tabPagingHeld 'onInterceptTouchEvent')"
+    $tabTouchHeld = "$tabTouch, the one method holding $(& $tabPagingHeld 'onTouchEvent')"
     $siteFails = [ordered]@{
-        'bad-tab-swipe-third-holder' = @(
-            "$tabFlingFail $tabIntercept, the one method holding $(& $tabPagingHeld 'onInterceptTouchEvent')",
-            "$tabFlingFail $tabTouch, the one method holding $(& $tabPagingHeld 'onTouchEvent')")
+        'bad-tab-swipe-third-holder' = @("$tabFlingFail $tabInterceptHeld", "$tabFlingFail $tabTouchHeld",
+            "$tabFlingFail $tabInterceptHeld", "$tabFlingFail $tabTouchHeld")
+        'bad-tab-swipe-stray-caller' = @("$tabStrayFail $tabInterceptHeld", "$tabStrayFail $tabTouchHeld")
         'bad-feed-sites-once' = @("[diff] FAIL: contract: $feedHook has 1 call site in $feedRead, and must have exactly 2")
         'bad-feed-sites-thrice' = @("[diff] FAIL: contract: $feedHook has 3 call sites in $feedRead, and must have exactly 2")
     }
@@ -1499,7 +1590,7 @@ try {
     foreach ($fault in @('opcode', 'nonrange', 'owner', 'name', 'receiver', 'item', 'missing')) {
         $case = "bad-story-loop-$fault"
         $fails = @((Get-Findings $badResults[$case]).Fails)
-        $expected = "[diff] FAIL: contract: $storyLoopCheck in $storyLoopSite must be the guard's invoke-direct/range {p0 .. p1}, with the stock call preserved"
+        $expected = "[diff] FAIL: contract: $storyLoopWild in $storyLoopSite must be the guard's invoke-direct/range {p0 .. p1}, with the stock call preserved"
         Assert-True ($fails.Count -eq 1 -and $fails[0] -ceq $expected) `
             "$case did not fail only the native loop contract.`nExpected: $expected`nGot:`n$($fails -join "`n")"
     }

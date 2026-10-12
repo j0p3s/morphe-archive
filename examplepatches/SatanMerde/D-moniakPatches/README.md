@@ -14,16 +14,16 @@
     <img src="https://img.shields.io/github/stars/SatanMerde/D-moniakPatches?style=for-the-badge&logo=github&color=EAC54F" alt="GitHub Stars">
   </a>
   <a href="#-liste-des-patchs--patches-list">
-    <img src="https://img.shields.io/badge/Patches-457-8A2BE2?style=for-the-badge&logo=android&logoColor=white" alt="Total Patches">
+    <img src="https://img.shields.io/badge/Patches-459-8A2BE2?style=for-the-badge&logo=android&logoColor=white" alt="Total Patches">
   </a>
   <a href="#-patchs-validés--fonctionnels--tested--functional-patches">
-    <img src="https://img.shields.io/badge/Fonctionnels-13-00C853?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Functional Patches">
+    <img src="https://img.shields.io/badge/Fonctionnels-15-00C853?style=for-the-badge&logo=checkmarx&logoColor=white" alt="Functional Patches">
   </a>
   <a href="#-patchs-expérimentaux--en-développement--experimental-patches-ai-generated">
     <img src="https://img.shields.io/badge/Expérimentaux-444-FFA000?style=for-the-badge&logo=probot&logoColor=white" alt="Experimental Patches">
   </a>
   <a href="#-liste-des-patchs--patches-list">
-    <img src="https://img.shields.io/badge/Apps_Support%C3%A9es-91-3388FF?style=for-the-badge&logo=googleplay&logoColor=white" alt="Supported Apps">
+    <img src="https://img.shields.io/badge/Apps_Support%C3%A9es-95-3388FF?style=for-the-badge&logo=googleplay&logoColor=white" alt="Supported Apps">
   </a>
   <a href="https://github.com/SatanMerde/D-moniakPatches/releases/latest">
     <img src="https://img.shields.io/github/v/release/SatanMerde/D-moniakPatches?style=for-the-badge&logo=github&color=blueviolet" alt="Latest Release">
@@ -116,7 +116,7 @@ Un problème constaté ou vous souhaitez qu'un patch expérimental fonctionne en
 ## 🩹 Liste des patchs / Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.49.0](https://github.com/SatanMerde/D-moniakPatches/releases/tag/v1.49.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**457 patchs au total** (13 validés & fonctionnels • 444 expérimentaux)
+> **[v1.52.0](https://github.com/SatanMerde/D-moniakPatches/releases/tag/v1.52.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**459 patchs au total** (15 validés & fonctionnels • 444 expérimentaux)
 
 ---
 
@@ -148,6 +148,38 @@ Un problème constaté ou vous souhaitez qu'un patch expérimental fonctionne en
 </details>
 
 <details open>
+<summary>📦 FCTV33 (Mobile)&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 3.0.323 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| [Block Pre-Roll Video Ads & Interstitials - FCTV33 & RBTV+](#block-pre-roll-video-ads-interstitials-fctv33-rbtv) | Completely strips pre-roll video ads, loading countdown shades, direct link popups, and banner ads before live stream playback on FCTV33 & RBTV+ (Mobile & TV). |
+| [Unlock Permanent VIP & Activation - FCTV33 & RBTV+](#unlock-permanent-vip-activation-fctv33-rbtv) | Bypasses activation lock codes, unlocks free VIP status, and lifts channel access restrictions on FCTV33 & RBTV+. |
+
+</details>
+
+<details open>
+<summary>📦 FCTV33 (TV)&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 3.0.323 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| [Block Pre-Roll Video Ads & Interstitials - FCTV33 & RBTV+](#block-pre-roll-video-ads-interstitials-fctv33-rbtv) | Completely strips pre-roll video ads, loading countdown shades, direct link popups, and banner ads before live stream playback on FCTV33 & RBTV+ (Mobile & TV). |
+| [Unlock Permanent VIP & Activation - FCTV33 & RBTV+](#unlock-permanent-vip-activation-fctv33-rbtv) | Bypasses activation lock codes, unlocks free VIP status, and lifts channel access restrictions on FCTV33 & RBTV+. |
+
+</details>
+
+<details open>
 <summary>📦 Hungry Shark World&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
 
@@ -169,13 +201,13 @@ Un problème constaté ou vous souhaitez qu'un patch expérimental fonctionne en
 
 **🎯 Supported versions:**
 
-| 2.7.2 |
+| 2.72.0 |
 | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
 | [High Quality Audio Export & Audio Tools - Moises](#high-quality-audio-export-audio-tools-moises) | Bypasses client-side audio bitrate export caps (enabling 320kbps MP3 and WAV export options) and unlocks unlimited audio pitch shift, tempo changes, Smart Metronome, and chord detection in Moises (v2.7.2 recommandée). |
-| [Unlock Premium & Pro Features - Moises](#unlock-premium-pro-features-moises) | Hooks Google Play BillingClient, RevenueCat EntitlementInfo, and subscription data models in Moises (v2.7.2 recommandée) to unlock client-side Pro features, bypass startup upgrade paywalls, Smart Metronome, chord detection, and pitch/speed controls. |
+| [Unlock Premium & Pro Features - Moises](#unlock-premium-pro-features-moises) | Hooks Google Play BillingClient, RevenueCat EntitlementInfo, and subscription data models in Moises (v2.72.0 recommandée) to unlock client-side Pro features, bypass startup upgrade paywalls, Smart Metronome, chord detection, and pitch/speed controls. |
 
 </details>
 
@@ -192,6 +224,38 @@ Un problème constaté ou vous souhaitez qu'un patch expérimental fonctionne en
 |----------|----------------|
 | [Block Video Ads & Interstitials - Movix](#block-video-ads-interstitials-movix) | Strips video pre-roll and mid-roll ads, banner ads, and redirect popups across Movix movie and series player screens. |
 | [Unlock Premium Subscription - Movix](#unlock-premium-subscription-movix) | Bypasses Movix VIP/Premium subscription checks to unlock all premium and exclusive content, series, and movie libraries without an active paid subscription. |
+
+</details>
+
+<details open>
+<summary>📦 RBTV+ / RBLive (Mobile)&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 3.0.323 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| [Block Pre-Roll Video Ads & Interstitials - FCTV33 & RBTV+](#block-pre-roll-video-ads-interstitials-fctv33-rbtv) | Completely strips pre-roll video ads, loading countdown shades, direct link popups, and banner ads before live stream playback on FCTV33 & RBTV+ (Mobile & TV). |
+| [Unlock Permanent VIP & Activation - FCTV33 & RBTV+](#unlock-permanent-vip-activation-fctv33-rbtv) | Bypasses activation lock codes, unlocks free VIP status, and lifts channel access restrictions on FCTV33 & RBTV+. |
+
+</details>
+
+<details open>
+<summary>📦 RBTV+ / RBLive (TV)&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 3.0.323 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| [Block Pre-Roll Video Ads & Interstitials - FCTV33 & RBTV+](#block-pre-roll-video-ads-interstitials-fctv33-rbtv) | Completely strips pre-roll video ads, loading countdown shades, direct link popups, and banner ads before live stream playback on FCTV33 & RBTV+ (Mobile & TV). |
+| [Unlock Permanent VIP & Activation - FCTV33 & RBTV+](#unlock-permanent-vip-activation-fctv33-rbtv) | Bypasses activation lock codes, unlocks free VIP status, and lifts channel access restrictions on FCTV33 & RBTV+. |
 
 </details>
 

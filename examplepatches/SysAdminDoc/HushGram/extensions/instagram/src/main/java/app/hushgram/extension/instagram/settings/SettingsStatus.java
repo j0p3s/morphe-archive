@@ -84,6 +84,10 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean storyUploadQuality() {
+        return false;
+    }
+
     public static boolean storySeen() {
         return false;
     }
@@ -149,6 +153,11 @@ public final class SettingsStatus {
         return false;
     }
 
+    /** Rewritten by the Show when someone was last active patch. */
+    public static boolean lastActive() {
+        return false;
+    }
+
     public static boolean shareSheet() {
         return false;
     }
@@ -174,6 +183,10 @@ public final class SettingsStatus {
     }
 
     public static boolean accentColor() {
+        return false;
+    }
+
+    public static boolean launchScreen() {
         return false;
     }
 
@@ -443,6 +456,11 @@ public final class SettingsStatus {
 
     /** Rewritten by the Long press to zoom patch. */
     public static boolean longPressZoom() {
+        return false;
+    }
+
+    /** Rewritten by the Rounded post corners patch. */
+    public static boolean roundedPostCorners() {
         return false;
     }
 

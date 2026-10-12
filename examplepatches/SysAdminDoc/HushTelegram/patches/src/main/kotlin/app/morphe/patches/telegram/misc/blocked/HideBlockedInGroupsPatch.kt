@@ -5,13 +5,17 @@
 package app.morphe.patches.telegram.misc.blocked
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
+import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
+import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.telegram.misc.extension.EXTENSION_PACKAGE
 import app.morphe.patches.telegram.misc.extension.enableStatus
 import app.morphe.patches.telegram.misc.extension.requireStatusMethod
+import app.morphe.patches.telegram.misc.extension.requireThisIntact
 import app.morphe.patches.telegram.misc.extension.telegramExtensionPatch
 import app.morphe.patches.telegram.misc.extension.writeStub
 import app.morphe.patches.telegram.misc.localcontrols.controlBody
@@ -19,13 +23,16 @@ import app.morphe.patches.telegram.misc.localcontrols.controlHook
 import app.morphe.patches.telegram.misc.localcontrols.controlRef
 import app.morphe.patches.telegram.misc.localcontrols.controlShape
 import app.morphe.patches.telegram.misc.localcontrols.controlSingle
+import app.morphe.patches.telegram.misc.notifications.NOTIFICATIONS
 import app.morphe.patches.telegram.misc.settings.settingsPatch
 import app.morphe.util.ControlFlow
+import app.morphe.util.branchTarget
 import app.morphe.util.namedRegisters
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
+import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
 
 internal const val BLOCKED_SENDERS = "$EXTENSION_PACKAGE/misc/BlockedSenders;"
@@ -38,7 +45,16 @@ internal const val PEERS = "Lorg/telegram/messenger/support/LongSparseIntArray;"
 internal const val BLOCKED_PEERS = "Lorg/telegram/messenger/MessagesController;->blockePeers:$PEERS"
 internal const val POST = "Lorg/telegram/tgnet/TLRPC\$Message;->post:Z"
 internal const val TL_MESSAGE = "Lorg/telegram/tgnet/TLRPC\$Message;"
+internal const val SKIP_NOTIFICATION = "$BLOCKED_SENDERS->skipNotification(Ljava/lang/Object;Z)Z"
+internal const val IMPORTED_FORWARD = "$MESSAGE_OBJECT->isImportedForward()Z"
+private const val TTL_ACTION = "Lorg/telegram/tgnet/TLRPC\$TL_messageActionSetMessagesTTL;"
 private const val CONTROLLER = "Lorg/telegram/messenger/MessagesController;"
+internal const val BLOCKED_END = "$CONTROLLER->blockedEndReached:Z"
+internal const val BLOCKED_LOADING = "$CONTROLLER->loadingBlockedPeers:Z"
+internal const val BLOCKED_PAGE = "$CONTROLLER->getBlockedPeers(Z)V"
+internal const val HIDE_REPLY = "$BLOCKED_SENDERS->hideReply(Ljava/lang/Object;)Z"
+internal const val REPLY_MESSAGE = "$MESSAGE_OBJECT->replyMessageObject:$MESSAGE_OBJECT"
+internal const val VALID_REPLY = "hasValidReplyMessageObject()Z"
 
 /**
  * The extension calls that answer a message's type where the open chat tests it. Each patch puts
@@ -49,11 +65,14 @@ internal val TYPE_HOOKS = setOf(BLOCKED_TYPE, "$EXTENSION_PACKAGE/misc/MessageFi
 /** How soon after the type test the open chat's next check comes. */
 private const val NEXT_CHECK = 4
 
+/** How far after the imported-forward test the timer-change test comes. */
+private const val NEXT_SKIP = 8
+
 @Suppress("unused")
 val hideBlockedInGroupsPatch = bytecodePatch(
     name = "Hide blocked users in groups",
-    description = "Leaves messages from people you've blocked out of groups and supergroups you open. Nothing is " +
-        "deleted. Starts off. Turn it on in HushTelegram settings > Conversations.",
+    description = "Leaves messages from people you've blocked out of groups and supergroups you open, and keeps them " +
+        "from notifying you. Nothing is deleted. Starts off. Turn it on in HushTelegram settings > Conversations.",
     default = true,
 ) {
     category("Conversations")
@@ -61,8 +80,12 @@ val hideBlockedInGroupsPatch = bytecodePatch(
     compatibleWith(*AppCompatibilities.telegram())
     execute {
         val sites = resolveHideBlockedInGroups()
+        val (notify, answer) = resolveBlockedNotificationSkip()
+        val (reply, yes) = resolveBlockedReplyQuote()
         // Assembled on copies first, so a refusal leaves the app untouched.
         sites.forEach { (method, indices) -> insertTypeChecks(MutableMethod(ImmutableMethod.of(method)), indices, BLOCKED_TYPE) }
+        insertNotificationSkip(MutableMethod(ImmutableMethod.of(notify)), answer)
+        insertReplyCheck(MutableMethod(ImmutableMethod.of(reply)), yes)
         writeStub(BLOCKED_SENDERS, "chat", 3, """
             check-cast p0, $MESSAGE_OBJECT
             invoke-virtual {p0}, $MESSAGE_OBJECT->getDialogId()J
@@ -96,7 +119,32 @@ val hideBlockedInGroupsPatch = bytecodePatch(
             const/4 v0, 0x0
             return v0
         """)
+        // Telegram's own next page: what its Blocked users page asks for as it scrolls.
+        writeStub(BLOCKED_SENDERS, "loadMoreBlocked", 3, """
+            check-cast p0, $MESSAGE_OBJECT
+            iget v0, p0, $MESSAGE_OBJECT->currentAccount:I
+            invoke-static {v0}, $CONTROLLER->getInstance(I)$CONTROLLER
+            move-result-object v0
+            iget-boolean v1, v0, $BLOCKED_END
+            if-nez v1, :hush_done
+            iget-boolean v1, v0, $BLOCKED_LOADING
+            if-nez v1, :hush_done
+            const/4 v1, 0x0
+            invoke-virtual {v0, v1}, $BLOCKED_PAGE
+            const/4 v1, 0x1
+            return v1
+            :hush_done
+            const/4 v1, 0x0
+            return v1
+        """)
+        writeStub(BLOCKED_SENDERS, "quoted", 2, """
+            check-cast p0, $MESSAGE_OBJECT
+            iget-object v0, p0, $REPLY_MESSAGE
+            return-object v0
+        """)
         sites.forEach { (method, indices) -> insertTypeChecks(method, indices, BLOCKED_TYPE) }
+        insertNotificationSkip(notify, answer)
+        insertReplyCheck(reply, yes)
         enableStatus("hideBlockedInGroups")
     }
 }
@@ -113,6 +161,87 @@ internal fun insertTypeChecks(target: MutableMethod, reads: List<Int>, hook: Str
     }
 }
 
+/** After Telegram's imported-forward answer the extension may say to skip the notification too. */
+internal fun insertNotificationSkip(target: MutableMethod, answer: Int) {
+    val (skip) = target.controlBody()[answer].namedRegisters()
+    val (message) = target.controlBody()[answer - 1].namedRegisters()
+    target.addInstructions(answer + 1, """
+        invoke-static {v$message, v$skip}, $SKIP_NOTIFICATION
+        move-result v$skip
+    """)
+}
+
+/** Before the reply header's yes the extension may answer no, as for a reply to a deleted message. */
+internal fun insertReplyCheck(target: MutableMethod, yes: Int) {
+    val (answer) = target.controlBody()[yes].namedRegisters()
+    target.addInstructionsWithLabels(yes, """
+        invoke-static {p0}, $HIDE_REPLY
+        move-result v$answer
+        if-eqz v$answer, :hush_stock
+        const/4 v$answer, 0x0
+        return v$answer
+    """, ExternalLabel("hush_stock", target.getInstruction(yes)))
+}
+
+/**
+ * A message's answer to whether its reply header has a message to show. The chat's message cell
+ * asks it before it measures, draws or takes a tap on the header, and a reply to a deleted message
+ * gets no header from a no here. Returns the method and the index of its one `const/4 1` before
+ * the matching `return`.
+ */
+internal fun BytecodePatchContext.resolveBlockedReplyQuote(): Pair<MutableMethod, Int> {
+    controlHook(BLOCKED_SENDERS, "hideReply", listOf("Ljava/lang/Object;"), "Z")
+    controlHook(BLOCKED_SENDERS, "quoted", listOf("Ljava/lang/Object;"), "Ljava/lang/Object;")
+    val message = mutableClassDefByOrNull(MESSAGE_OBJECT)
+    controlShape(message != null && message.fields.any { "${it.definingClass}->${it.name}:${it.type}" == REPLY_MESSAGE && !AccessFlags.STATIC.isSet(it.accessFlags) },
+        "a message no longer keeps the message it replies to")
+    val valid = message!!.methods.filter { signature(it) == VALID_REPLY && callable(it, false) }.controlSingle("the reply header's check")
+    val body = valid.controlBody()
+    controlShape(body.any { it.opcode == Opcode.IGET_OBJECT && it.controlRef() == REPLY_MESSAGE }, "the reply header's check no longer looks at the message replied to")
+    val yes = body.indices.filter { at ->
+        body[at].opcode == Opcode.CONST_4 && (body[at] as NarrowLiteralInstruction).narrowLiteral == 1 &&
+            body.getOrNull(at + 1)?.opcode == Opcode.RETURN && body[at + 1].namedRegisters() == body[at].namedRegisters()
+    }.controlSingle("the reply header's yes")
+    val flow = ControlFlow.of(valid)
+    controlShape(yes > 0 && flow.normal.indices.filter { yes in flow.normal[it] } == listOf(yes - 1), "something jumps into the reply header's yes")
+    valid.requireThisIntact("the reply header's check", listOf(yes))
+    return valid to yes
+}
+
+/**
+ * NotificationsController's new-message loop first skips imported forwards, timer changes and
+ * silent joins, all by one jump to the same place. A message skipped there never notifies, and
+ * the chat's unread count is Telegram's as before. Returns the loop and the index of the
+ * imported-forward answer's move-result.
+ */
+internal fun BytecodePatchContext.resolveBlockedNotificationSkip(): Pair<MutableMethod, Int> {
+    controlHook(BLOCKED_SENDERS, "skipNotification", listOf("Ljava/lang/Object;", "Z"), "Z")
+    val notifications = mutableClassDefByOrNull(NOTIFICATIONS)
+    controlShape(notifications != null, "NotificationsController is missing")
+    val sites = notifications!!.methods.filter { it.name.contains("processNewMessages") }.flatMap { method ->
+        val body = method.controlBody()
+        body.indices.filter { at ->
+            body[at].opcode == Opcode.INVOKE_VIRTUAL && body[at].controlRef() == IMPORTED_FORWARD &&
+                body.getOrNull(at + 1)?.opcode == Opcode.MOVE_RESULT && body.getOrNull(at + 2)?.opcode == Opcode.IF_NEZ &&
+                body[at + 2].namedRegisters() == body[at + 1].namedRegisters()
+        }.map { method to it + 1 }
+    }
+    val (method, answer) = sites.controlSingle("the new-message notification skip")
+    val body = method.controlBody()
+    val (message) = body[answer - 1].namedRegisters()
+    val (skip) = body[answer].namedRegisters()
+    controlShape(message != skip && message <= 15 && skip <= 15, "the new-message notification skip can't be passed to the extension as it is")
+    val refuse: (String) -> Nothing = { why -> controlShape(false, "the new-message notification skip: $why"); error(why) }
+    val skipTo = body.branchTarget(answer + 1, refuse)
+    val timer = (answer + 2 until minOf(body.size - 1, answer + 2 + NEXT_SKIP)).firstOrNull {
+        body[it].opcode == Opcode.INSTANCE_OF && body[it].controlRef() == TTL_ACTION && body[it + 1].opcode == Opcode.IF_NEZ
+    }
+    controlShape(timer != null && body.branchTarget(timer + 1, refuse) == skipTo, "new messages no longer skip timer changes the way they skip imported forwards")
+    val flow = ControlFlow.of(method)
+    controlShape(flow.normal.indices.filter { answer + 1 in flow.normal[it] } == listOf(answer), "something jumps into the new-message notification skip")
+    return method to answer
+}
+
 /**
  * An open chat lists a message unless its type is negative, Telegram's mark for a message it
  * can't show: once when a page of messages loads (followed by the migrated-group check) and once
@@ -126,12 +255,17 @@ internal fun BytecodePatchContext.resolveHideBlockedInGroups(): List<Pair<Mutabl
     for (stub in listOf("chat", "sender")) controlHook(BLOCKED_SENDERS, stub, listOf("Ljava/lang/Object;"), "J")
     controlHook(BLOCKED_SENDERS, "post", listOf("Ljava/lang/Object;"), "Z")
     controlHook(BLOCKED_SENDERS, "blocked", listOf("Ljava/lang/Object;", "J"), "Z")
+    controlHook(BLOCKED_SENDERS, "loadMoreBlocked", listOf("Ljava/lang/Object;"), "Z")
     val sites = resolveOpenChatTypeReads()
 
     val controller = classDefByOrNull(CONTROLLER)
     controlShape(controller != null && controller.methods.any { signature(it) == "getInstance(I)$CONTROLLER" && callable(it, true) } &&
         controller.fields.any { "${it.definingClass}->${it.name}:${it.type}" == BLOCKED_PEERS && AccessFlags.PUBLIC.isSet(it.accessFlags) && !AccessFlags.STATIC.isSet(it.accessFlags) },
         "MessagesController no longer keeps the blocked list")
+    controlShape(controller!!.methods.any { signature(it) == "getBlockedPeers(Z)V" && callable(it, false) } &&
+        listOf(BLOCKED_END, BLOCKED_LOADING).all { wanted ->
+            controller.fields.any { "${it.definingClass}->${it.name}:${it.type}" == wanted && AccessFlags.PUBLIC.isSet(it.accessFlags) && !AccessFlags.STATIC.isSet(it.accessFlags) }
+        }, "MessagesController no longer loads the blocked list a page at a time")
     controlShape(classDefByOrNull(PEERS)?.methods?.any { signature(it) == "indexOfKey(J)I" && callable(it, false) } == true,
         "the blocked list can no longer be looked up")
     return sites

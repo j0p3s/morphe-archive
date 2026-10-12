@@ -470,7 +470,7 @@ test('conversion disabled has no codec bridge calls for audio uploads', async ()
     await upload.reactNativeCompressAndExtractData();assert.equal(calls,0);
 });
 
-const allFeatures = {picker:true, voice:true, copyBios:true, dashless:true, favouriteAnything:true, freeNitro:true, noTyping:true, quickDelete:true, noDelete:true, jumpToTop:true, hiddenChannels:true, pastelize:true, platformIndicators:true, reviewDB:true, readAll:true, quests:true, systemFont:true, systemEmoji:true, hideGift:true, hideQuestDock:true};
+const allFeatures = {picker:true, voice:true, copyBios:true, dashless:true, favouriteAnything:true, freeNitro:true, noTyping:true, quickDelete:true, noDelete:true, jumpToTop:true, hiddenChannels:true, pastelize:true, platformIndicators:true, reviewDB:true, readAll:true, quests:true, systemFont:true, systemEmoji:true, hideGift:true, hideQuestDock:true, gestures:true, hideCall:true};
 function reactHarness(b) {
     const React = {
         createElement(type, props, ...children) { return {type, props:{...props, ...(children.length ? {children:children.length === 1 ? children[0] : children} : {})}}; },
@@ -891,6 +891,18 @@ test('Hidden Channels caches READY names while toggle is off so enabling later s
     assert.equal(b.label(b.channels.hidden),'staff chat');
     assert.equal(b.label(b.channels.cat),'private');
 });
+test('Hidden Channels with the switch off walks a server\'s channels once, not on every list render',()=>{
+    const b=hiddenHarness();let reads=0;
+    const channels=new Proxy(b.channels,{ownKeys(t){reads++;return Reflect.ownKeys(t);}});
+    b.load({default:{getChannel:id=>b.channels[id],getMutableGuildChannelsForGuild:()=>channels}},null,2051);
+    b.load({default:{getCurrentUser:()=>({id:'me'})}},null,1378);
+    const store=b.load({default:{getChannels:()=>b.result}},null,4470).default;
+    for(let i=0;i<20;i++) assert.equal(store.getChannels('g'),b.result);
+    assert.equal(reads,1,'unchanged records are remembered once');
+    b.channels.hidden={...b.channels.hidden,name:'__hidden__'};
+    b.api.setSetting('hiddenChannels',true);store.getChannels('g');
+    assert.ok(reads>1);
+});
 test('Hidden Channels refuses message fetches for locked channels and preserves visible or disabled traffic', async () => {
     const b=hiddenHarness();b.api.setSetting('hiddenChannels',true);
     await b.actions.fetchMessages({channelId:'hidden'});assert.equal(b.fetched.length,0);assert.equal(b.alerts[0][0],'Locked channel');assert.match(b.alerts[0][1],/Created: Unavailable/);assert.match(b.alerts[0][1],/Last message: No messages yet/);
@@ -1111,6 +1123,36 @@ test('NoDelete archive is opt-in, account-scoped, restores original content and 
     b.api.setSetting('noDeleteSave',false);await flush();await flush();assert.equal(JSON.parse(b.getDisk()).messages.length,0);
     const other=await archiveHarness(saved,'different');assert.equal(other.store.getMessage('c','1'),undefined);
     const malformed=await archiveHarness('{broken');assert.equal(malformed.api.status.archive,'restore failed');assert.equal(malformed.store.getMessage('c','1'),undefined);
+});
+test('NoDelete replaces a damaged archive instead of blocking saving, and keeps one it could not read',async()=>{
+    // Damaged: newly kept messages are saved over it in this same session.
+    const b=boot(allFeatures);let disk='{broken';const writes=[],messages=new Map([['c:1',{id:'1',channel_id:'c',author:{id:'u'},content:'gone',state:'SENT'}]]);
+    b.load({default:{getMessage:(c,id)=>messages.get(c+':'+id),getMessages:()=>new MessageCollection(),emitChange(){}}},null,5057);
+    b.load({createMessageRecord:raw=>({...raw})},null,5059);b.load({default:{getCurrentUser:()=>({id:'owner'})}},null,1378);
+    const dispatch=b.load({default:{dispatch(){return undefined;}}},null,585).default;
+    b.load({default:native({fileExists:async path=>path.endsWith('venus-deleted-messages.json'),readFile:async()=>disk,
+        writeFile:async(dir,name,text)=>{writes.push(name);if(name==='venus-deleted-messages.json')disk=text;}})});
+    await flush();await flush();b.api.setSetting('noDelete',true);b.api.setSetting('noDeleteSave',true);await flush();await flush();
+    assert.equal(b.api.status.archive,'restore failed');assert.equal(disk,'{broken','nothing kept yet, so the file is left as it was');
+    dispatch.dispatch({type:'MESSAGE_DELETE',channelId:'c',id:'1'});await new Promise(r=>setTimeout(r,800));await flush();await flush();
+    assert.equal(JSON.parse(disk).messages[0].message.content,'gone');assert.equal(b.api.status.archive,'saved locally');
+    // Unreadable: the file is never overwritten, so a passing read error can't erase saved messages.
+    const u=boot(allFeatures);let kept='{"version":1}';
+    u.load({default:{getMessage:()=>undefined,getMessages:()=>new MessageCollection(),emitChange(){}}},null,5057);
+    u.load({createMessageRecord:raw=>({...raw})},null,5059);u.load({default:{getCurrentUser:()=>({id:'owner'})}},null,1378);
+    u.load({default:native({fileExists:async path=>path.endsWith('venus-deleted-messages.json'),readFile:async path=>{if(path.endsWith('venus-deleted-messages.json'))throw new Error('busy');return null;},
+        writeFile:async(dir,name,text)=>{if(name==='venus-deleted-messages.json')kept=text;}})});
+    await flush();await flush();u.api.setSetting('noDelete',true);u.api.setSetting('noDeleteSave',true);await flush();await flush();
+    await new Promise(r=>setTimeout(r,800));await flush();
+    assert.equal(u.api.status.archive,'restore failed');assert.equal(kept,'{"version":1}');
+});
+test('NoDelete archive text is built once per kept message and matches a full JSON.stringify',async()=>{
+    const raw={id:'1',channel_id:'c',author:{id:'u'},content:'saved'};
+    const saved=JSON.stringify({version:1,accountId:'owner',messages:[{id:'1',channelId:'c',message:raw}]});
+    const b=await archiveHarness(saved);
+    b.api.setSetting('noDeleteLimit',10);await new Promise(r=>setTimeout(r,800));await flush();await flush();
+    const disk=b.getDisk();assert.deepEqual(JSON.parse(disk),JSON.parse(saved));
+    assert.equal(disk,JSON.stringify(JSON.parse(disk)),'same text as JSON.stringify');
 });
 test('Hidden Channels mobile list facade handles named/default imports without changing real permission results',()=>{
     const b=hiddenHarness();b.api.setSetting('hiddenChannels',true);
@@ -1911,7 +1953,8 @@ test('Settings list is grouped, plugin names are gone and every row says what it
     const rows=settingsRows(b);
     assert.deepEqual(rows.map(([label])=>label),['Chat','Profiles and people','Servers and channels','More']);
     const titles=rows.flatMap(([,list])=>list);
-    assert.equal(titles.length,20);assert.equal(new Set(titles).size,20);
+    assert.equal(titles.length,22);assert.equal(new Set(titles).size,22);
+    assert.ok(titles.includes('Double-tap a message to reply'));
     for (const old of ['CopyBios','Dashless','FavouriteAnything','FreeNitro','Hidden Channels','JumpToTop','No typing','NoDelete','Pastelize',
         'PlatformIndicators','QuickDelete','Read All','Quest Completer','ReviewDB','Custom voice messages','File size on picker'])
         assert.ok(!titles.some(title=>title.includes(old)),'plugin name '+old+' still shown');
@@ -1928,7 +1971,7 @@ test('settings with more options have a switch and a separate button to their pa
     b.context.__r=id=>({6622:{FormSwitch},6631:{ChevronSmallRightIcon},1491:{useStackNavigation:()=>navigation},
         14239:{onRouteSettingOnPress:({navigation:nav,screen})=>nav.navigate(screen.route)}}[id]||null);
     const pages={VENUS_PASTELIZE:'pastelize',VENUS_FREENITRO:'freeNitro',VENUS_PLATFORMINDICATORS:'platformIndicators',VENUS_QUICKDELETE:'quickDelete',
-        VENUS_NODELETE:'noDelete',VENUS_READALL:'readAll',VENUS_REVIEWDB:'reviewDB',VENUS_QUESTS:'quests'};
+        VENUS_NODELETE:'noDelete',VENUS_READALL:'readAll',VENUS_REVIEWDB:'reviewDB',VENUS_QUESTS:'quests',VENUS_GESTURES:'gestures'};
     for (const [page,key] of Object.entries(pages)) {
         const row=b.registry[page+'_ROW'];
         assert.equal(row.type,'pressable');assert.equal(row.parent,'VENUS_PLUGINS');assert.equal(row.unsearchable,true);
@@ -2073,6 +2116,22 @@ test('Read All settings use Discord\'s native radio list with three choices',()=
     const group=nodes.find(n=>n.type===TableRadioGroup);assert.ok(group);assert.equal(group.props.value,'guilds');
     assert.equal(nodes.filter(n=>n.type===TableRadioRow).map(n=>n.props.label).join('|'),'Servers|Direct messages|Servers and DMs');
     group.props.onChange('both');assert.equal(b.api.settings.readAllMode,'both');
+});
+test('option page switches are greyed out while their main switch is off',()=>{
+    const b=settingsHarness();
+    function TableSwitchRow(){} function TableRowGroup(){}
+    b.context.__r=id=>({6621:{TableSwitchRow},5997:{TableRowGroup}}[id]||null);
+    const rows=key=>{const found=[];(function walk(n){if(!n||typeof n!=='object')return;if(Array.isArray(n))return n.forEach(walk);
+        if(n.type===TableSwitchRow)found.push(n);walk(n.props&&n.props.children);})(b.registry[key].screen.getComponent()());return found;};
+    const row=(key,setting)=>rows(key).find(n=>n.props.key===setting);
+    b.api.setSetting('gestures',false);assert.equal(row('VENUS_GESTURES','gestureTripleDelete').props.disabled,true,'Message tap gestures is off');
+    b.api.setSetting('gestures',true);assert.equal(row('VENUS_GESTURES','gestureTripleDelete').props.disabled,false);
+    b.api.setSetting('noDelete',false);assert.deepEqual(rows('VENUS_NODELETE').map(n=>n.props.disabled),[true,true]);
+    b.api.setSetting('noDelete',true);assert.deepEqual(rows('VENUS_NODELETE').map(n=>n.props.disabled),[false,false]);
+    assert.match(row('VENUS_NODELETE','noDeleteEdits').props.subLabel,/before it was edited/);
+    const input=()=>{let found;(function walk(n){if(!n||typeof n!=='object')return;if(Array.isArray(n))return n.forEach(walk);
+        if(n.props&&n.props.keyboardType==='number-pad')found=n;walk(n.props&&n.props.children);})(b.registry.VENUS_NODELETE.screen.getComponent()());return found;};
+    assert.equal(input().props.editable,true);b.api.setSetting('noDelete',false);assert.equal(input().props.editable,false,'the maximum box is read-only too');
 });
 test('Read All mode persists and an invalid saved mode falls back to Servers',async()=>{
     const b=boot(allFeatures);
@@ -2670,4 +2729,138 @@ test('the new switches sit in their groups with one-line titles',()=>{
     assert.deepEqual(rows.More.slice(0,2),['Force system font','Force system emojis']);
     assert.equal(b.registry.VENUS_SYSTEMEMOJI.useDescription,undefined);
     const only=settingsHarness({hideGift:true});assert.deepEqual(settingsRows(only),[['Chat',['Hide the gift button']]]);
+});
+
+function gestureHarness(features={gestures:true}) {
+    const b=boot(features);const calls=[];let me='me';
+    b.load({default:{getCurrentUser:()=>({id:me})}},null,1378);
+    const timers=[];b.context.setTimeout=(fn,ms)=>{timers.push(fn);return timers.length;};b.context.clearTimeout=id=>{timers[id-1]=null;};
+    const modules={11047:{default:o=>calls.push(['reply',o.message.id,o.actionSource])},
+        11032:{handleEdit:(m,c,ref,source)=>calls.push(['edit',m.id,source])},
+        11120:{default:(m,uid)=>m.author.id===uid&&m.state!=='SENDING'},
+        6880:{default:{deleteMessage:(c,id)=>{calls.push(['delete',id]);return Promise.resolve();}}}};
+    b.context.__r=id=>modules[id];
+    let reacted=0;const utils=b.load({handleAddDefaultDoubleTapReaction(){reacted++;return 'react';}},null,7414);
+    const tap=(m,c={id:'c'})=>utils.handleAddDefaultDoubleTapReaction(m,c);
+    const flushTimers=()=>{timers.splice(0).forEach(fn=>fn&&fn());};
+    // Discord builds one MessagesHandlers per chat and defines handleTapMessage on it in the constructor.
+    let singles=0;
+    class MessagesHandlers { constructor(){this.handleTapMessage=e=>{singles++;return 'tap:'+e.nativeEvent.messageId;};} get params(){return 'p';} }
+    const Wrapped=b.load({MessagesHandlers},null,10905).MessagesHandlers;const handlers=new Wrapped();
+    const single=m=>handlers.handleTapMessage({nativeEvent:{messageId:m.id,channelId:'c'}});
+    return {...b,calls,tap,single,handlers,flushTimers,reacted:()=>reacted,singles:()=>singles,setMe:id=>{me=id;}};
+}
+test('Message tap gestures: double-tap replies, edits your own, and is off by default',()=>{
+    const g=gestureHarness();const theirs={id:'1',author:{id:'other'}},mine={id:'2',author:{id:'me'},state:'SENT'};
+    assert.equal(g.tap(theirs),'react','starts off: Discord reacts as usual');assert.equal(g.reacted(),1);
+    g.api.setSetting('gestures',true);g.tap(theirs);assert.deepEqual(g.calls.at(-1),['reply','1','message_swipe']);assert.equal(g.reacted(),1);
+    g.tap(mine);assert.equal(g.calls.length,1,'waits briefly for a third tap');g.flushTimers();assert.deepEqual(g.calls.at(-1),['edit','2','message_swipe']);
+    g.api.setSetting('gestureOwn','reply');g.tap(mine);g.flushTimers();assert.deepEqual(g.calls.at(-1),['reply','2','message_swipe']);
+    assert.equal(g.api.setSetting('gestureOwn','react'),false);
+});
+test('Message tap gestures: three taps delete only your own message, once',()=>{
+    const g=gestureHarness();g.api.setSetting('gestures',true);const mine={id:'2',author:{id:'me'},state:'SENT'},theirs={id:'1',author:{id:'other'}};
+    g.tap(mine);g.tap(mine);g.flushTimers();assert.deepEqual(g.calls,[['delete','2']]);
+    g.tap(mine);g.flushTimers();assert.equal(g.calls.length,1,'the taps that deleted it are ignored');
+    g.tap(theirs);g.tap(theirs);assert.deepEqual(g.calls.slice(1).map(c=>c[0]),['reply','reply'],'never deletes someone else\'s message');
+    g.api.setSetting('gestureTripleDelete',false);const other={id:'3',author:{id:'me'},state:'SENT'};
+    g.tap(other);assert.deepEqual(g.calls.at(-1),['edit','3','message_swipe'],'no wait when three taps can\'t delete');
+});
+test('Message tap gestures: the third tap, which Discord reports as a single tap, deletes your own message',()=>{
+    // Android: tap, tap = handleAddDefaultDoubleTapReaction; Discord's tracker then starts over, so tap three
+    // reaches MessagesHandlers.handleTapMessage about 300 ms later. 1.6.0 opened the editor before it arrived.
+    const g=gestureHarness();g.api.setSetting('gestures',true);const mine={id:'2',author:{id:'me'},state:'SENT'},theirs={id:'1',author:{id:'other'}};
+    g.tap(mine);assert.equal(g.calls.length,0,'the editor waits for a third tap');
+    assert.equal(g.single(mine),undefined,'the third tap is used, not passed on');assert.deepEqual(g.calls,[['delete','2']]);
+    g.flushTimers();assert.equal(g.calls.length,1,'the editor never opens after deleting');
+    g.tap(mine);g.flushTimers();assert.equal(g.calls.length,1,'later taps on the deleted message are ignored');
+    assert.equal(g.single(theirs),'tap:1','other single taps reach Discord');assert.equal(g.singles(),1);
+    const other={id:'3',author:{id:'me'},state:'SENT'};g.tap(other);assert.equal(g.single(theirs),'tap:1','a tap on another message deletes nothing');
+    g.flushTimers();assert.deepEqual(g.calls.at(-1),['edit','3','message_swipe']);
+    g.tap(theirs);assert.equal(g.single(theirs),'tap:1');assert.deepEqual(g.calls.at(-1),['reply','1','message_swipe'],'someone else\'s message is never deleted');
+    g.api.setSetting('gestureTripleDelete',false);const four={id:'4',author:{id:'me'},state:'SENT'};g.tap(four);
+    assert.equal(g.single(four),'tap:4','with three taps off, a single tap is Discord\'s');assert.deepEqual(g.calls.at(-1),['edit','4','message_swipe']);
+    assert.equal(g.handlers.params,'p','Discord\'s own handler class still works');
+    const off=boot({});class Stock{};assert.equal(off.load({MessagesHandlers:Stock},null,10905).MessagesHandlers,Stock,'untouched without the patch');
+});
+test('Message tap gestures: a message you can\'t edit gets a reply, and the reaction tip is hidden',()=>{
+    const g=gestureHarness();g.api.setSetting('gestures',true);g.api.setSetting('gestureTripleDelete',false);
+    g.tap({id:'4',author:{id:'me'},state:'SENDING'});assert.deepEqual(g.calls.at(-1),['reply','4','message_swipe']);
+    const nudge=g.load({DoubleTapEmojiEditNudge:()=>'tip'},null,11105);assert.equal(nudge.DoubleTapEmojiEditNudge(),null);
+    g.api.setSetting('gestures',false);assert.equal(nudge.DoubleTapEmojiEditNudge(),'tip');
+    const off=boot({});const untouched={handleAddDefaultDoubleTapReaction(){return 'react';}};assert.equal(off.load(untouched,null,7414).handleAddDefaultDoubleTapReaction,untouched.handleAddDefaultDoubleTapReaction);
+});
+test('Hide call button removes Call from profiles, and Message takes the whole row',()=>{
+    const b=boot({hideCall:true});const {React,RN}=reactHarness(b);
+    function PhoneCallIcon(){} function ChatIcon(){} function Button(){} function IconButton(){}
+    let animated=0;RN.LayoutAnimation={Presets:{easeInEaseOut:'ease'},configureNext:p=>{assert.equal(p,'ease');animated++;}};
+    let refValue;React.useRef=v=>{if(refValue===undefined)refValue={current:v};return refValue;};
+    b.context.__r=id=>({7309:{PhoneCallIcon}}[id]||null);
+    const el=(type,props,...children)=>React.createElement(type,props,...children);
+    // Discord's two-button layout: each button in its own flex:1 slot, side by side.
+    const two=()=>el('View',{style:{flexDirection:'row',gap:12}},
+        el('View',{style:{flex:1}},el(Button,{text:'Message',icon:el(ChatIcon,{size:'md'}),grow:true})),
+        el('View',{style:{flex:1}},el(Button,{text:'Call',icon:el(PhoneCallIcon,{size:'md'}),grow:true})));
+    // With a friend button: Message and Call are icon buttons in one group.
+    const three=()=>el('View',null,el('View',{style:{flexGrow:1}},el(Button,{text:'Add Friend'})),
+        el('View',{style:{flexDirection:'row'}},el(IconButton,{icon:el(ChatIcon,{})}),el(IconButton,{icon:el(PhoneCallIcon,{})})));
+    let layout=two;const Buttons=b.load({default:function UserProfileContactButtons(){return layout();}},null,12696).default;
+    const types=n=>{const out=[];(function walk(v){if(!v||typeof v!=='object')return;if(Array.isArray(v))return v.forEach(walk);out.push(v.type);walk(v.props&&v.props.children);walk(v.props&&v.props.icon);})(n);return out;};
+    let tree=Buttons({});const row=tree.props.children;
+    assert.ok(!types(tree).includes(PhoneCallIcon),'no Call button');assert.ok(types(tree).includes(ChatIcon),'Message stays');
+    assert.ok(!Array.isArray(row)||row.length===1,'Call\'s slot is gone too, so Message\'s flex:1 slot fills the row');
+    layout=three;tree=Buttons({});assert.ok(!types(tree).includes(PhoneCallIcon));assert.equal(types(tree).filter(t=>t===IconButton).length,1);
+    assert.equal(animated,0,'nothing animates on first open');
+    b.api.setSetting('hideCall',false);layout=two;tree=Buttons({});assert.ok(types(tree).includes(PhoneCallIcon),'switched off: Call is back');
+    assert.equal(animated,1,'Message slides across when the setting changes');
+    const off=boot({});const stock={default:function C(){}};assert.equal(off.load(stock,null,12696).default,stock.default,'untouched without the patch');
+    const rows=Object.fromEntries(settingsRows(settingsHarness({hideCall:true})));assert.deepEqual(rows['Profiles and people'],['Hide the call button on profiles']);
+});
+function editHarness(saved) {
+    const b=boot(allFeatures);const store=new Map();let disk=saved;const writes=[];
+    store.set('c:1',{id:'1',channel_id:'c',author:{id:'u'},content:'first',timestamp:'2026-10-01T00:00:00.000Z',state:'SENT'});
+    b.load({default:{getMessage:(c,id)=>store.get(c+':'+id),getMessages:()=>new MessageCollection(),emitChange(){}}},null,5057);
+    b.load({createMessageRecord:raw=>({...raw})},null,5059);b.load({default:{getCurrentUser:()=>({id:'owner'})}},null,1378);
+    const flux={dispatch(event){if(event.type==='MESSAGE_UPDATE'&&event.message.edited_timestamp){const old=store.get(event.message.channel_id+':'+event.message.id);
+        store.set(event.message.channel_id+':'+event.message.id,{...old,content:event.message.content,editedTimestamp:event.message.edited_timestamp});}}};
+    const dispatch=b.load({default:flux},null,585).default;
+    class Rows{generate(row){return row.result;}}b.load({default:Rows},null,7378);
+    b.load(native({fileExists:async p=>p.endsWith('venus-deleted-messages.json')&&!!disk,readFile:async()=>disk,
+        writeFile:async(dir,name,text)=>{writes.push(name);if(name==='venus-deleted-messages.json')disk=text;}}));
+    const edit=(content,at)=>dispatch.dispatch({type:'MESSAGE_UPDATE',message:{id:'1',channel_id:'c',content,edited_timestamp:at||'2026-10-02T00:00:00.000Z'}});
+    const row=()=>new Rows().generate({rowType:1,message:{id:'1',channel_id:'c'},result:{message:{id:'1',channelId:'c',content:[{type:'text',content:store.get('c:1').content}]}}});
+    return {...b,dispatch,edit,row,store,getDisk:()=>disk,writes};
+}
+test('NoDelete shows what an edited message said before, in one quote above it',()=>{
+    const b=editHarness();b.api.setSetting('noDelete',true);
+    assert.equal(b.row().message.content.length,1,'nothing shown before any edit');
+    b.edit('second');b.edit('third');
+    const content=b.row().message.content;assert.equal(content.length,2);
+    const quote=content[0];assert.equal(quote.type,'blockQuote');
+    const lines=quote.content.filter(n=>n.type==='subtext');assert.equal(lines.length,2);
+    assert.equal(JSON.stringify(lines.map(l=>l.content[0].type)),'["s","s"]');assert.equal(JSON.stringify(lines.map(l=>l.content[0].content[0].content)),'["first","second"]');
+    assert.equal(quote.content[1].type,'br');assert.equal(JSON.stringify(content[1]),'{"type":"text","content":"third"}');
+    assert.equal(b.row().message.content[0],quote,'built once, reused on every render');
+});
+test('NoDelete ignores updates that are not edits, and forgets history when switched off',()=>{
+    const b=editHarness();b.api.setSetting('noDelete',true);
+    b.dispatch.dispatch({type:'MESSAGE_UPDATE',message:{id:'1',channel_id:'c',embeds:[{}]}});
+    b.dispatch.dispatch({type:'MESSAGE_UPDATE',message:{id:'1',channel_id:'c',content:'first',edited_timestamp:'x'}});
+    b.dispatch.dispatch({type:'MESSAGE_UPDATE',message:{id:'1',channel_id:'c',content:'no edit time'}});
+    assert.equal(b.row().message.content.length,1,'link previews, same text and kept-message updates are not edits');
+    b.edit('second');assert.equal(b.row().message.content.length,2);
+    b.api.setSetting('noDeleteEdits',false);assert.equal(b.row().message.content.length,1);
+    b.api.setSetting('noDeleteEdits',true);assert.equal(b.row().message.content.length,1,'history was forgotten, not hidden');
+    b.edit('third');b.api.setSetting('noDelete',false);b.api.setSetting('noDelete',true);assert.equal(b.row().message.content.length,1);
+});
+test('NoDelete saves edit history with Save permanently and restores it for the same account',async()=>{
+    const b=editHarness();await flush();await flush();b.api.setSetting('noDelete',true);b.api.setSetting('noDeleteSave',true);await flush();await flush();
+    b.edit('second');await new Promise(r=>setTimeout(r,800));await flush();await flush();
+    const disk=JSON.parse(b.getDisk());assert.equal(disk.edits[0].versions[0].content,'first');assert.equal(disk.messages.length,0);
+    const again=editHarness(b.getDisk());again.store.set('c:1',{...again.store.get('c:1'),content:'second'});
+    await flush();await flush();again.api.setSetting('noDelete',true);again.api.setSetting('noDeleteSave',true);await flush();await flush();await flush();
+    const content=again.row().message.content;assert.equal(content.length,2);assert.equal(content[0].content[0].content[0].content[0].content,'first');
+    // A file from before this release has no edits key and still loads.
+    const old=editHarness(JSON.stringify({version:1,accountId:'owner',messages:[]}));await flush();await flush();
+    old.api.setSetting('noDelete',true);old.api.setSetting('noDeleteSave',true);await flush();await flush();assert.equal(old.api.status.archive,'saved locally');
 });

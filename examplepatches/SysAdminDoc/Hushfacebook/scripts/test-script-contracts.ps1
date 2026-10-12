@@ -1929,7 +1929,8 @@ $factsScript = Join-Path $PSScriptRoot 'validate-release-facts.ps1'
 $factsRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("hushfacebook-facts-" + [guid]::NewGuid().ToString('N'))
 try {
     New-Item -ItemType Directory -Path $factsRoot -Force | Out-Null
-    foreach ($relative in @('patches-list.json', 'patches-bundle.json', 'gradle.properties', 'README.md', 'CHANGELOG.md')) {
+    foreach ($relative in @('patches-list.json', 'patches-bundle.json', 'gradle.properties', 'README.md', 'CHANGELOG.md',
+            'CONTRIBUTING.md')) {
         Copy-Item -LiteralPath (Join-Path $Root $relative) -Destination (Join-Path $factsRoot $relative)
     }
     New-Item -ItemType Directory -Path (Join-Path $factsRoot 'gradle') -Force | Out-Null
@@ -2294,6 +2295,27 @@ try {
     Assert-Throws { Invoke-Facts } '*README badge Manager floor*' 'A README badge showing an older Manager was accepted.'
     Reset-FactsFile 'README.md'
 
+    # CONTRIBUTING names the patcher and the floor too, and it described "the v0.8.0 bundle" two
+    # releases on with nothing reading it. A release named there, an older floor or another
+    # patcher is refused.
+    foreach ($case in @(
+            @{ Name = 'the bundle described by its release'; Pattern = '*describes the bundle by a release*'
+                Edit = { param($text) $text -replace '(?m)^The bundle uses Morphe patcher', 'The v0.8.0 bundle uses Morphe patcher' } },
+            @{ Name = 'an older Manager floor'; Pattern = '*Morphe Manager 1.20.0 or newer*'
+                Edit = { param($text) $text -replace ('Morphe Manager ' + [regex]::Escape($fixtureFloor) + ' or newer'), 'Morphe Manager 1.20.0 or newer' } },
+            @{ Name = 'another patcher'; Pattern = '*CONTRIBUTING patcher version*'
+                Edit = { param($text) $text -replace 'Morphe patcher \d+(?:\.\d+)+', 'Morphe patcher 1.0.0' } })) {
+        $unedited = Get-Content -LiteralPath (Join-Path $factsRoot 'CONTRIBUTING.md') -Raw
+        Set-FactsFile 'CONTRIBUTING.md' $case.Edit
+        try {
+            Assert-True ((Get-Content -LiteralPath (Join-Path $factsRoot 'CONTRIBUTING.md') -Raw) -cne $unedited) `
+                "The CONTRIBUTING case '$($case.Name)' changed nothing, so it proves nothing."
+            Assert-Throws { Invoke-Facts } $case.Pattern "A CONTRIBUTING.md with $($case.Name) was accepted."
+        } finally {
+            Reset-FactsFile 'CONTRIBUTING.md'
+        }
+    }
+
     # And each copy has to be there. The alt text and install step cases above name a stale floor,
     # which the stale-floor check refuses before the presence checks run, so neither presence check
     # was ever reached. An alt text with no version, or a step reworded past the stale-floor
@@ -2561,7 +2583,7 @@ try {
     }
 
     # The control: a file no gate reads runs no gate, so a marker below is the routing talking.
-    Invoke-Hook -Paths @('CONTRIBUTING.md')
+    Invoke-Hook -Paths @('LICENSE')
     Assert-True (-not (Test-Path -LiteralPath $factsMarker)) `
         'The release check ran for a push that changed nothing it reads.'
     Assert-True (-not (Test-Path -LiteralPath $toolingMarker)) `
@@ -2746,6 +2768,10 @@ try {
     Invoke-Hook -Paths @('.github/ISSUE_TEMPLATE/bug_report.yml')
     Assert-True (Test-Path -LiteralPath $factsMarker) `
         'A push that changed only the bug report form ran no release check.'
+
+    Invoke-Hook -Paths @('CONTRIBUTING.md')
+    Assert-True (Test-Path -LiteralPath $factsMarker) `
+        'A push that changed only CONTRIBUTING.md ran no release check, which holds its patcher and Manager floor.'
 
     Invoke-Hook -Paths @('patches-bundle.json')
     Assert-True (Test-Path -LiteralPath $factsMarker) 'An index change ran no release check.'
@@ -2949,8 +2975,9 @@ try {
     & git -C $hookRoot add extensions/facebook/src/main/java/FirstCommit.java
     & git -C $hookRoot commit --quiet -m 'code first'
     $firstCommit = (& git -C $hookRoot rev-parse HEAD).Trim()
-    Set-Content -LiteralPath (Join-Path $hookRoot 'CONTRIBUTING.md') -Encoding UTF8 -Value 'tip only'
-    & git -C $hookRoot add CONTRIBUTING.md
+    New-Item -ItemType Directory -Path (Join-Path $hookRoot 'docs') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $hookRoot 'docs/guide.md') -Encoding UTF8 -Value 'tip only'
+    & git -C $hookRoot add docs/guide.md
     & git -C $hookRoot commit --quiet -m 'docs tip'
     $newBranchHead = (& git -C $hookRoot rev-parse HEAD).Trim()
     # A stale local remote-tracking ref that already points at the code commit must not subtract
@@ -3023,20 +3050,20 @@ try {
     $phoneSerial = 'R5' + 'C' + 'ZZZZ9999'
     $phoneDoc = Join-Path $hookRoot 'docs/phone.md'
     New-Item -ItemType Directory -Path (Split-Path -Parent $phoneDoc) -Force | Out-Null
-    Set-Content -LiteralPath (Join-Path $hookRoot 'CONTRIBUTING.md') -Encoding UTF8 -Value "Fixtures live in ~/$notesFolder/fixtures."
+    Set-Content -LiteralPath (Join-Path $hookRoot 'docs/guide.md') -Encoding UTF8 -Value "Fixtures live in ~/$notesFolder/fixtures."
     Set-Content -LiteralPath $phoneDoc -Encoding UTF8 -Value "adb -s $phoneSerial install app.apk"
     Set-Content -LiteralPath (Join-Path $hookRoot '.gitignore') -Encoding UTF8 -Value "$notesFolder/"
-    & git -C $hookRoot add CONTRIBUTING.md docs/phone.md .gitignore
+    & git -C $hookRoot add docs/guide.md docs/phone.md .gitignore
     & git -C $hookRoot commit --quiet -m 'names the machine'
     $namingCommit = (& git -C $hookRoot rev-parse HEAD).Trim()
     Assert-Throws { & $prePushScript -Root $hookRoot -PushedRefs "refs/heads/main $namingCommit refs/heads/main $newBranchHead" 6> $null } `
-        "*$namingCommit*CONTRIBUTING.md*docs/phone.md*" 'A push of docs naming the machine and a phone went through.'
+        "*$namingCommit*docs/guide.md*docs/phone.md*" 'A push of docs naming the machine and a phone went through.'
     Assert-Throws { & $prePushScript -Root $hookRoot -ChangedPaths @('docs/phone.md') 6> $null } `
-        '*the working tree*CONTRIBUTING.md*docs/phone.md*' 'A run by hand passed a working tree whose docs name the machine.'
+        '*the working tree*docs/guide.md*docs/phone.md*' 'A run by hand passed a working tree whose docs name the machine.'
     # The control: the same files naming nothing, .gitignore still naming the folder, go through.
-    Set-Content -LiteralPath (Join-Path $hookRoot 'CONTRIBUTING.md') -Encoding UTF8 -Value 'Fixtures live in HUSHFACEBOOK_FIXTURE_DIR.'
+    Set-Content -LiteralPath (Join-Path $hookRoot 'docs/guide.md') -Encoding UTF8 -Value 'Fixtures live in HUSHFACEBOOK_FIXTURE_DIR.'
     Set-Content -LiteralPath $phoneDoc -Encoding UTF8 -Value 'adb -s $env:HUSHFACEBOOK_DEVICE_SERIAL install app.apk'
-    & git -C $hookRoot add CONTRIBUTING.md docs/phone.md
+    & git -C $hookRoot add docs/guide.md docs/phone.md
     & git -C $hookRoot commit --quiet -m 'names nothing'
     $cleanCommit = (& git -C $hookRoot rev-parse HEAD).Trim()
     $global:LASTEXITCODE = 0
@@ -3049,9 +3076,9 @@ try {
     # commit: the naming commit is refused while the tree holds the clean text, and the clean
     # commit goes through while the tree names the machine.
     Assert-Throws { & $prePushScript -Root $hookRoot -PushedRefs "refs/heads/main $namingCommit refs/heads/main $newBranchHead" 6> $null } `
-        "*${namingCommit}:CONTRIBUTING.md:1:*${namingCommit}:docs/phone.md:1:*" `
+        "*${namingCommit}:docs/guide.md:1:*${namingCommit}:docs/phone.md:1:*" `
         'A push of a commit naming the machine went through because the working tree does not.'
-    Set-Content -LiteralPath (Join-Path $hookRoot 'CONTRIBUTING.md') -Encoding UTF8 -Value "Fixtures live in ~/$notesFolder/fixtures."
+    Set-Content -LiteralPath (Join-Path $hookRoot 'docs/guide.md') -Encoding UTF8 -Value "Fixtures live in ~/$notesFolder/fixtures."
     Set-Content -LiteralPath $phoneDoc -Encoding UTF8 -Value "adb -s $phoneSerial install app.apk"
     try {
         $global:LASTEXITCODE = 0
@@ -3060,7 +3087,7 @@ try {
     } catch {
         throw "A push of a clean commit was stopped by what the working tree names: $($_.Exception.Message)"
     } finally {
-        & git -C $hookRoot checkout --quiet -- CONTRIBUTING.md docs/phone.md
+        & git -C $hookRoot checkout --quiet -- docs/guide.md docs/phone.md
     }
 
     # Every commit the push publishes, not only each ref's tip: a serial one commit adds and the
@@ -3072,8 +3099,8 @@ try {
     & git -C $hookRoot commit --quiet -m 'names the phone again'
     $servedSerial = (& git -C $hookRoot rev-parse HEAD).Trim()
     & git -C $hookRoot rm --quiet docs/phone.md
-    Set-Content -LiteralPath (Join-Path $hookRoot 'CONTRIBUTING.md') -Encoding UTF8 -Value 'Fixtures live in HUSHFACEBOOK_FIXTURE_DIR, not in docs.'
-    & git -C $hookRoot add CONTRIBUTING.md
+    Set-Content -LiteralPath (Join-Path $hookRoot 'docs/guide.md') -Encoding UTF8 -Value 'Fixtures live in HUSHFACEBOOK_FIXTURE_DIR, not in docs.'
+    & git -C $hookRoot add docs/guide.md
     & git -C $hookRoot commit --quiet -m 'drops the doc'
     $droppedSerial = (& git -C $hookRoot rev-parse HEAD).Trim()
     $scanRemote = Join-Path $hookRoot 'scan-remote.git'
@@ -3237,7 +3264,7 @@ try {
                 '*GITHUB_ACTOR*' "A push that changed $pin did not reach the build gates."
         }
         # And the control: a file the build branch has no interest in must not reach it.
-        & $prePushScript -Root $hookRoot -ChangedPaths @('CONTRIBUTING.md') 6> $null
+        & $prePushScript -Root $hookRoot -ChangedPaths @('LICENSE') 6> $null
         Assert-True ($LASTEXITCODE -eq 0 -or $null -eq $LASTEXITCODE) `
             'A file no gate reads was routed into the build gates.'
     } finally {
@@ -4295,7 +4322,7 @@ try {
     # release is held to the census, and .gitignore has to let the ledger be committed.
     $releaseFiles = @('patches-list.json', 'patches-bundle.json', 'gradle.properties', 'README.md', 'CHANGELOG.md',
         'gradle/libs.versions.toml', 'gradle/tooling-scopes.txt', '.github/ISSUE_TEMPLATE/bug_report.yml', '.gitignore',
-        'sources/facebook-sources.json', 'NOTICE', 'provenance.json')
+        'sources/facebook-sources.json', 'NOTICE', 'provenance.json', 'CONTRIBUTING.md')
     foreach ($relative in $releaseFiles) {
         $destination = Join-Path $releaseRepo $relative
         New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
@@ -4602,6 +4629,22 @@ try {
         ':run',
         'if exist "%APK%.xmltree" (type "%APK%.xmltree") else (type "%APK%")',
         'exit /b %errorlevel%') -join "`r`n") + "`r`n"), [System.Text.Encoding]::ASCII)
+    # The 16 KB check runs the zipalign beside aapt2. Aligned unless a case below says otherwise.
+    [System.IO.File]::WriteAllText((Join-Path $tools 'zipalign.cmd'), ((@(
+        '@echo off',
+        'if "%HUSHFACEBOOK_CONTRACT_ZIPALIGN%"=="old" goto old',
+        'echo Verifying alignment of patched.apk (4)...',
+        'if "%HUSHFACEBOOK_CONTRACT_ZIPALIGN%"=="bad" goto bad',
+        'echo   49152 lib/arm64-v8a/libstub.so (OK)',
+        'echo Verification succesful',
+        'exit /b 0',
+        ':bad',
+        'echo   49152 lib/arm64-v8a/libstub.so (BAD - 4096)',
+        'echo Verification FAILED',
+        'exit /b 1',
+        ':old',
+        'echo Unknown option -P',
+        'exit /b 1') -join "`r`n") + "`r`n"), [System.Text.Encoding]::ASCII)
     Set-Content -LiteralPath $stubJar -Value 'not a jar' -Encoding ASCII
     New-TestBundleArchive -Path (Join-Path $tools 'patched.apk') -Entries ([ordered]@{
         'AndroidManifest.xml' = 'binary manifest'; 'classes.dex' = "dex`n035" })
@@ -5115,6 +5158,22 @@ try {
         throw "build-release-receipt.ps1 refused the built bundle once its sources were older again: $($_.Exception.Message)"
     } finally {
         [System.IO.File]::WriteAllBytes($releaseReceipt, $builtReceiptBytes)
+    }
+
+    # The 16 KB alignment check, through the zipalign stand-in beside aapt2: a stored library off a
+    # 16 KB boundary stops the receipt and is named, and a zipalign too old for -P, which names no
+    # entry, stops it with its own words rather than an empty list of misses.
+    foreach ($alignment in @(
+            @{ Mode = 'bad'; Pattern = '*not 16 KB aligned (zipalign exit 1)*libstub.so (BAD - 4096)*' },
+            @{ Mode = 'old'; Pattern = "*zipalign exited 1*without naming an entry*the 16 KB check didn't run*Unknown option*" })) {
+        $env:HUSHFACEBOOK_CONTRACT_ZIPALIGN = $alignment.Mode
+        try {
+            Assert-Throws { Invoke-ReceiptBuilder -Fixtures @($allFixtures | Select-Object -First 1) } $alignment.Pattern `
+                "build-release-receipt.ps1 went ahead past a zipalign that answered '$($alignment.Mode)'."
+        } finally {
+            Remove-Item Env:\HUSHFACEBOOK_CONTRACT_ZIPALIGN -ErrorAction SilentlyContinue
+            [System.IO.File]::WriteAllBytes($releaseReceipt, $builtReceiptBytes)
+        }
     }
 
     # patch-for-device.ps1 on the same root and stand-ins. It held every run's report to the
@@ -5785,8 +5844,11 @@ try {
     Edit-ReleaseFile '.github/ISSUE_TEMPLATE/bug_report.yml' {
         param($text) $text.Replace("Morphe Manager $releaseFloor", "Morphe Manager $laterFloor")
     }
+    Edit-ReleaseFile 'CONTRIBUTING.md' {
+        param($text) $text.Replace("Morphe Manager $releaseFloor or newer", "Morphe Manager $laterFloor or newer")
+    }
     Invoke-FixtureGit -Root $releaseRepo -Arguments @('add', '--', 'gradle.properties', 'patches-list.json', 'CHANGELOG.md',
-        'gradle/libs.versions.toml', 'README.md', '.github/ISSUE_TEMPLATE/bug_report.yml') | Out-Null
+        'gradle/libs.versions.toml', 'README.md', '.github/ISSUE_TEMPLATE/bug_report.yml', 'CONTRIBUTING.md') | Out-Null
     Invoke-FixtureGit -Root $releaseRepo -Arguments @('commit', '-m', 'next release', '--quiet') | Out-Null
     $laterCommit = "$(Invoke-FixtureGit -Root $releaseRepo -Arguments @('rev-parse', 'HEAD') | Select-Object -First 1)".Trim()
     Invoke-FixtureGit -Root $releaseRepo -Arguments @('tag', "v$laterVersion", $laterCommit) | Out-Null

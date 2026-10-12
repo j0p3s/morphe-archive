@@ -41,7 +41,7 @@ public class BuildDetailsExportTest {
         // A failed preference commit rolls the filter back to "all" and logs an error the clear
         // below removes, and every later assertion then reads unrelated categories. Say so here.
         boolean interruptedBefore = Thread.currentThread().isInterrupted();
-        boolean saved = BaseSettings.DEBUG_LOG_FILTERS.save("downloads");
+        boolean saved = saveDownloadsFilter();
         assertTrue(saved ? "" : failedFilterSaveDetails(interruptedBefore), saved);
         LogBufferManager.clearLogBuffer();
         HookStatus.clear();
@@ -127,6 +127,30 @@ public class BuildDetailsExportTest {
             assertEquals("", Utils.getBuildMetadata());
             assertFalse(BuildDetails.report().contains("SIZE_SENTINEL"));
         }
+    }
+
+    /**
+     * Robolectric's SDK 23 SharedPreferencesImpl opens the prefs file, and when that fails tries
+     * mkdir on its folder and gives up with "Couldn't create ...". On Windows the open can fail
+     * for a moment (twice in full gates, never alone), and the commit then returns false and the
+     * save rolls back. Up to two more tries after a short wait, only when the failed try logged
+     * that line itself, tell the file hiccup apart from a save that can't land. A retry says so on
+     * stderr, so the test report shows it.
+     */
+    private static boolean saveDownloadsFilter() throws InterruptedException {
+        for (int attempt = 0; ; attempt++) {
+            long hiccupsBefore = fileHiccups();
+            if (BaseSettings.DEBUG_LOG_FILTERS.save("downloads")) return true;
+            if (fileHiccups() == hiccupsBefore || attempt >= 2) return false;
+            System.err.println("prefs file hiccup on save attempt " + (attempt + 1) + ", trying again");
+            Thread.sleep(250);
+        }
+    }
+
+    private static long fileHiccups() {
+        return ShadowLog.getLogsForTag("SharedPreferencesImpl").stream()
+                .filter(item -> item.msg != null && item.msg.startsWith("Couldn't create"))
+                .count();
     }
 
     private static String failedFilterSaveDetails(boolean interruptedBefore) {

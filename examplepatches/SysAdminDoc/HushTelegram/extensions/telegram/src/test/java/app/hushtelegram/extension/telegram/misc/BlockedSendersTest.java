@@ -20,6 +20,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowLooper;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk = 30)
@@ -32,6 +33,7 @@ public class BlockedSendersTest {
         SettingReadsForTests.mend(Settings.HIDE_BLOCKED_IN_GROUPS);
         Settings.HIDE_BLOCKED_IN_GROUPS.resetToDefault();
         HookStatus.clear();
+        BlockedSenders.resetPaging();
     }
 
     @Test public void offByDefaultEveryMessageKeepsItsType() {
@@ -53,6 +55,40 @@ public class BlockedSendersTest {
         assertFalse("a channel speaking in a group", BlockedSenders.listedInGroup(-42L, false, -1009876543210L));
         // The unpatched stub knows nobody is blocked, so the message keeps its type.
         assertEquals(3, BlockedSenders.type(new Object(), 3));
+    }
+
+    @Test public void aNotificationTelegramSkipsStaysSkippedAndOthersStillNotify() {
+        assertTrue("Telegram's own skip, switch off", BlockedSenders.skipNotification(new Object(), true));
+        assertFalse("switch off", BlockedSenders.skipNotification(new Object(), false));
+        Settings.HIDE_BLOCKED_IN_GROUPS.save(true);
+        assertTrue("Telegram's own skip, switch on", BlockedSenders.skipNotification(new Object(), true));
+        assertFalse("no message", BlockedSenders.skipNotification(null, false));
+        // The unpatched stub knows nobody is blocked, so the message notifies.
+        assertFalse(BlockedSenders.skipNotification(new Object(), false));
+        SettingReadsForTests.breakReads(Settings.HIDE_BLOCKED_IN_GROUPS);
+        assertFalse("an unreadable switch", BlockedSenders.skipNotification(new Object(), false));
+    }
+
+    @Test public void aReplyKeepsItsQuoteUnlessTheMessageQuotedIsABlockedPersonsInAGroup() {
+        assertFalse("switch off", BlockedSenders.hideReply(new Object()));
+        Settings.HIDE_BLOCKED_IN_GROUPS.save(true);
+        assertFalse("no message", BlockedSenders.hideReply(null));
+        // The unpatched stub has no message replied to, so the quote stays.
+        assertFalse(BlockedSenders.hideReply(new Object()));
+        SettingReadsForTests.breakReads(Settings.HIDE_BLOCKED_IN_GROUPS);
+        assertFalse("an unreadable switch", BlockedSenders.hideReply(new Object()));
+        String report = String.join("\n", HookStatus.report());
+        assertFalse(report, report.contains("reply quote hidden"));
+    }
+
+    @Test public void askingForMoreOfTheBlockedListRunsOnTheMainThreadAndFailsQuietly() {
+        BlockedSenders.topUp(new Object());
+        BlockedSenders.topUp(new Object());
+        ShadowLooper.idleMainLooper();
+        // The unpatched stub reports the list complete, so nothing was asked and nothing failed.
+        String report = String.join("\n", HookStatus.report());
+        assertFalse(report, report.contains("blocked list page asked"));
+        assertTrue(HookStatus.missing(FamilyNames.HIDE_BLOCKED_IN_GROUPS).isEmpty());
     }
 
     @Test public void pausingAnEarlyStartOrAnUnreadableSwitchKeepsTheMessage() {

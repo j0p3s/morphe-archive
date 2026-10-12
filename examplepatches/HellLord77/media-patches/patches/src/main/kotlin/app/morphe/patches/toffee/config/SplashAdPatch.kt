@@ -14,6 +14,6 @@ val splashAdPatch = bytecodePatch(
     compatibleWith(COMPATIBILITY_TOFFEE)
 
     execute {
-        SplashAdVisibilityGetterFingerprint.matchSingle().method.returnBoxedBooleanEarly(false)
+        GetSplashAdVisibilityFingerprint.matchSingle().method.returnBoxedBooleanEarly(false)
     }
 }

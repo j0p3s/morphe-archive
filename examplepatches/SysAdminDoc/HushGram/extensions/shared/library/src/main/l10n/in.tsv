@@ -220,6 +220,8 @@ Download as video	Unduh sebagai video
 Download as photo	Unduh sebagai foto
 Download on stories	Unduh di cerita
 Adds Download to the menu of anyone's story, photo or video, saved at your download quality. Off or paused, Instagram's own menu returns.	Menambahkan Unduh ke menu cerita siapa pun, foto atau video, disimpan dengan kualitas unduhan Anda. Saat nonaktif atau dijeda, menu asli Instagram kembali.
+Upload stories at full quality	Unggah cerita dengan kualitas penuh
+Video stories you post are sent up to 1080 pixels wide instead of 720, as they are with Instagram's own Upload at highest quality setting on. Photo stories stay as they are.	Cerita video yang Anda posting dikirim dengan lebar hingga 1080 piksel, bukan 720, seperti saat setelan Unggah dengan kualitas tertinggi milik Instagram aktif. Cerita foto tetap seperti semula.
 Download feed videos	Unduh video feed
 Adds Download to the menu of a post in your feed with a video. Uses the quality below. Off or paused, Instagram's own menu returns.	Menambahkan Unduh ke menu postingan berisi video di feed kamu. Memakai kualitas di bawah. Saat nonaktif atau dijeda, menu Instagram sendiri kembali.
 Playback	Pemutaran
@@ -760,6 +762,9 @@ Red	Merah
 Orange	Oranye
 Green	Hijau
 Teal	Hijau kebiruan
+# context: Layout switch; it puts HushGram's logo on the screen Android shows while Instagram starts
+HushGram launch screen	Layar pembuka HushGram
+Shows HushGram's logo instead of Instagram's on the screen you see while Instagram starts, on Android 13 and newer. It shows from the next start.	Menampilkan logo HushGram, bukan logo Instagram, di layar yang kamu lihat saat Instagram dimulai, di Android 13 dan yang lebih baru. Logo ini muncul mulai dari pembukaan berikutnya.
 # context: Downloads switch under Download feed videos; it adds Download cover to a feed video post's menu
 Download video covers	Unduh sampul video
 Adds Download cover to the menu of a feed post with a video, and of a carousel showing one. It saves the still picture shown before the video plays, at its largest size.	Menambahkan Unduh sampul ke menu postingan feed berisi video, dan ke carousel yang sedang menampilkan video. Ini menyimpan gambar diam yang tampil sebelum video diputar, dalam ukuran terbesarnya.
@@ -767,6 +772,18 @@ Adds Download cover to the menu of a feed post with a video, and of a carousel s
 Download button on feed posts	Tombol unduh di kiriman beranda
 Puts a download icon in the row under a post, left of Save, so one tap saves it without opening the menu. On a carousel it asks for this page or all of them.	Menaruh ikon unduh di baris di bawah kiriman, di sebelah kiri Simpan, sehingga satu ketukan menyimpannya tanpa membuka menu. Pada carousel, ia menanyakan halaman ini saja atau semuanya.
 Nothing to download on this post	Tidak ada yang bisa diunduh di kiriman ini
+# context: Downloads switch; a hold with two or three fingers on a feed post or a reel saves it
+Hold to download	Tahan untuk mengunduh
+Hold two fingers still on a feed post's picture or video, or on a reel, and it saves what's under them, the same as Download in the menu. Instagram's one-finger long press stays as it was. Needs Download feed videos or photos, and Download on reels for reels.	Tahan dua jari tanpa bergerak di foto atau video kiriman feed, atau di reel, dan yang ada di bawahnya disimpan, sama seperti Unduh di menu. Tekan lama dengan satu jari milik Instagram tetap seperti biasa. Perlu Unduh video feed atau Unduh foto feed, dan Unduh di reel untuk reel.
+# context: Downloads list under Hold to download; how many fingers the hold takes
+Fingers	Jari
+# context: Downloads list under Hold to download; how long the fingers stay down before it saves
+Hold time	Lama menahan
+Two fingers	Dua jari
+Three fingers	Tiga jari
+Half a second	Setengah detik
+1 second	1 detik
+1.5 seconds	1,5 detik
 Use HushGram's setting names	Gunakan nama pengaturan HushGram
 MetaConfig shows names from HushGram's own list in place of numbers. The list comes from Instagram 447, so a few newer settings still show as numbers. A list you import is used instead.	MetaConfig menampilkan nama dari daftar bawaan HushGram sebagai pengganti angka. Daftar ini berasal dari Instagram 447, jadi beberapa pengaturan yang lebih baru tetap tampil sebagai angka. Daftar yang kamu impor dipakai sebagai gantinya.
 Import setting names	Impor nama pengaturan
@@ -843,6 +860,8 @@ Ghost mode button on Home's header	Tombol mode hantu di header Beranda
 Adds a ghost button at the top of Home, next to Messages when it's there and at the end of the buttons when it isn't. Tap it to turn Ghost mode on or off. Restart Instagram to see the change.	Menambahkan tombol hantu di bagian atas Beranda, di samping Pesan jika ada, dan di ujung deretan tombol jika tidak ada. Ketuk untuk mengaktifkan atau menonaktifkan mode hantu. Mulai ulang Instagram untuk melihat perubahannya.
 Search button on Home's header	Tombol Cari di header Beranda
 Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works with the Search tab hidden too, unless you swipe between your tabs. Restart Instagram to see the change.	Menambahkan kaca pembesar di bagian atas Beranda yang membuka Cari, seperti tab Cari. Ini juga berfungsi saat tab Cari disembunyikan, kecuali kamu menggeser di antara tab. Mulai ulang Instagram untuk melihat perubahannya.
+Center the logo on Home's header	Tengahkan logo di header Beranda
+Puts Instagram's logo in the middle of the top of Home, even with header buttons hidden or added. A feed's name shown there is centered too. Restart Instagram to see the change.	Menempatkan logo Instagram di tengah bagian atas Beranda, meski tombol header disembunyikan atau ditambahkan. Nama feed yang tampil di sana juga ditengahkan. Mulai ulang Instagram untuk melihat perubahannya.
 Search isn't on your tab bar, so this button can't open it here. If Hide the Search tab is on, turn it off and restart Instagram.	Cari tidak ada di bilah tab kamu, jadi tombol ini tidak bisa membukanya di sini. Jika Sembunyikan tab Cari aktif, nonaktifkan lalu mulai ulang Instagram.
 Tab order	Urutan tab
 The tab bar keeps Instagram's order.	Bilah tab memakai urutan Instagram.
@@ -890,3 +909,65 @@ Full screen Home	Beranda layar penuh
 Hides the status bar and the navigation bar while Home shows. Swipe in from the edge to bring them back for a moment.	Menyembunyikan bilah status dan bilah navigasi saat Beranda ditampilkan. Geser dari tepi untuk menampilkannya kembali sebentar.
 Hide Notes on profile pictures	Sembunyikan Catatan di foto profil
 Takes the Notes bubble off profile pictures, yours included. Notes in Messages stay as they are.	Menghapus gelembung Catatan dari foto profil, termasuk milik Anda. Catatan di Pesan tetap seperti semula.
+# context: the line that opens a category's page in HushGram settings, under the page title
+How you open HushGram, and how this screen is laid out.	Cara kamu membuka HushGram dan tata letak layar ini.
+Hide ads and share less about yourself with Instagram.	Sembunyikan iklan dan bagikan lebih sedikit tentang dirimu ke Instagram.
+Choose what Home shows and how it behaves.	Pilih apa yang ditampilkan Beranda dan bagaimana perilakunya.
+Take Meta AI out of search, your feed, reels and profiles.	Hapus Meta AI dari pencarian, feed, reel, dan profil.
+Tidy up the Search tab and what it remembers.	Rapikan tab Cari dan apa yang diingatnya.
+Keep your chats private and your inbox clear of extras.	Jaga obrolanmu tetap pribadi dan kotak masukmu bebas dari tambahan.
+Choose what reels show, and how they play and scroll.	Pilih apa yang ditampilkan reel, serta cara memutar dan menggulirnya.
+Choose which stories you see and what people see you do.	Pilih cerita yang kamu lihat dan apa yang orang lain lihat dari aktivitasmu.
+Choose how videos start, sound and look.	Pilih cara video dimulai, bersuara, dan tampil.
+Take buttons you don't use off posts and the share sheet.	Hapus tombol yang tidak kamu pakai dari postingan dan lembar berbagi.
+Copy, save or hide comments.	Salin, simpan, atau sembunyikan komentar.
+See who follows you back, and clear extras off profiles.	Lihat siapa yang mengikuti balik kamu, dan hapus tambahan dari profil.
+Change how Instagram looks, from its colors to its emoji.	Ubah tampilan Instagram, dari warna hingga emoji.
+Pick your tabs, their order and how the bar looks.	Pilih tab, urutannya, dan tampilan bilahnya.
+Group Instagram's notifications so they don't pile up.	Kelompokkan notifikasi Instagram agar tidak menumpuk.
+Keep Instagram's saved photos and videos from filling your phone.	Cegah foto dan video simpanan Instagram memenuhi ponselmu.
+Save photos, videos and more, and choose where they go.	Simpan foto, video, dan lainnya, lalu pilih tempat penyimpanannya.
+Stop background work Instagram doesn't need.	Hentikan kerja latar belakang yang tidak dibutuhkan Instagram.
+Stop Instagram from saying this version is too old.	Cegah Instagram menyebut versi ini terlalu lama.
+Instagram's own testing tools. Change them only if you know what they do.	Alat uji milik Instagram sendiri. Ubah hanya jika kamu tahu fungsinya.
+Chosen when you patched. Patch again to change them.	Dipilih saat kamu menambal. Tambal ulang untuk mengubahnya.
+Save your HushGram choices to a file, or bring them back.	Simpan pilihan HushGram kamu ke file, atau pulihkan kembali.
+Your version, the source code and licenses.	Versimu, kode sumber, dan lisensi.
+Open settings with a long press on your profile's menu	Buka pengaturan dengan menekan lama menu profilmu
+A long press on the menu button, the three lines at the top right of your own profile, opens HushGram. A tap still opens Instagram's menu, and other profiles stay the same.	Menekan lama tombol menu, tiga garis di kanan atas profilmu sendiri, membuka HushGram. Mengetuknya tetap membuka menu Instagram, dan profil lain tetap sama.
+Hide the top bar on the Reels tab	Sembunyikan bilah atas di tab Reels
+Takes away the row at the top of the Reels tab, with the Reels title, the camera button and anything else Instagram puts there. Reels you open from a profile, a post or a chat keep theirs. The camera still opens from Home.	Menghapus baris di bagian atas tab Reels, berisi judul Reels, tombol kamera, dan apa pun yang ditaruh Instagram di sana. Reels yang kamu buka dari profil, postingan, atau chat tetap memilikinya. Kamera tetap bisa dibuka dari Beranda.
+Hide the Save button on reels	Sembunyikan tombol Simpan di reel
+Takes the Save button out of the column of buttons beside a reel, and the count under it. Posts in your feed keep theirs.	Menghapus tombol Simpan dari deretan tombol di samping reel, beserta angka di bawahnya. Postingan di feed-mu tetap punya tombolnya.
+Unlock with	Buka kunci dengan
+Phone lock	Kunci ponsel
+HushGram PIN	PIN HushGram
+A PIN you set here unlocks your messages, in place of your screen lock. It can't be recovered, only cleared by clearing Instagram's storage.	PIN yang kamu atur di sini membuka kunci pesanmu, menggantikan kunci layar. PIN tidak bisa dipulihkan, hanya bisa dihapus dengan menghapus penyimpanan Instagram.
+Your fingerprint, face or screen lock unlocks your messages.	Sidik jari, wajah, atau kunci layar ponselmu membuka kunci pesanmu.
+Set or change the 4 to 8 digit PIN. It stays on this phone and isn't in a backup.	Atur atau ubah PIN 4 sampai 8 angka. PIN tetap di ponsel ini dan tidak ikut dalam cadangan.
+PIN saved.	PIN disimpan.
+PIN	PIN
+Enter your PIN	Masukkan PIN
+Forgot PIN?	Lupa PIN?
+Wrong PIN. Try again.	PIN salah. Coba lagi.
+Too many tries. Wait %1$d seconds.	Terlalu banyak percobaan. Tunggu %1$d detik.
+New PIN	PIN baru
+Confirm PIN	Konfirmasi PIN
+Set a PIN	Atur PIN
+Use 4 to 8 digits.	Pakai 4 sampai 8 angka.
+The PINs don't match.	PIN tidak sama.
+Could not save the PIN.	PIN tidak bisa disimpan.
+The PIN can't be recovered. To remove it, clear Instagram's storage in Android's app settings. That signs you out and resets HushGram's settings. A saved settings backup brings the rest back, but not the PIN.	PIN tidak bisa dipulihkan. Untuk menghapusnya, hapus penyimpanan Instagram di pengaturan aplikasi Android. Kamu akan keluar dari akun dan pengaturan HushGram kembali ke awal. Cadangan pengaturan yang tersimpan mengembalikan sisanya, tapi tidak dengan PIN.
+Open app info	Buka info aplikasi
+Hide 'Are you interested' questions	Sembunyikan pertanyaan 'Apakah kamu tertarik'
+Hides the bubble under a post that asks 'Are you interested in this post?' with Not interested and Interested buttons. Nothing is answered for you.	Menyembunyikan gelembung di bawah postingan yang bertanya 'Apakah kamu tertarik dengan postingan ini?' dengan tombol Tidak tertarik dan Tertarik. Tidak ada yang dijawab untukmu.
+Show when someone was last active	Tampilkan waktu persis terakhir aktif
+Under a name in your messages and in a chat, the exact time they were last on, like Active at 3:42 PM, replaces Active 3h ago. Active now stays as it is.	Di bawah nama di pesan dan di dalam chat, waktu persis terakhir aktif, seperti Aktif pukul 15.42, menggantikan Aktif 3 jam lalu. Aktif sekarang tidak berubah.
+Active at %1$s	Aktif pukul %1$s
+Active yesterday at %1$s	Aktif kemarin pukul %1$s
+Active %1$s at %2$s	Aktif %1$s pukul %2$s
+Rounded corners on posts	Sudut membulat pada kiriman
+Rounds the corners of a post's photo, video and carousel pages in Home and Following. Posts you scroll to after a change show it. Stories, profiles, Explore and Reels stay as they were.	Membulatkan sudut foto, video, dan halaman carousel pada kiriman di Beranda dan Mengikuti. Kiriman yang kamu gulir setelah perubahan akan menampilkannya. Cerita, profil, Jelajahi, dan Reels tetap seperti semula.
+Corner size	Ukuran sudut
+Large	Besar
+Small	Kecil

@@ -8,6 +8,13 @@ import android.content.res.Configuration;
 final class WhatsNew {
     /** Newest first: {version, notes in English}. Notes are translated like any other text. */
     static final String[][] CHANGELOG = {
+            {"1.1.0", "• Supports LinkedIn 4.1.1259\n"
+                    + "• The settings now use your phone's language, and you can pick another one under "
+                    + "Other → Language\n"
+                    + "• Copy a diagnostic report under Other to paste into bug reports\n"
+                    + "• The \"Michii Patches\" app icon shortcut now always appears, at the top\n\n"
+                    + "Open the settings from the Me panel → Michii Patches, or long press the LinkedIn icon "
+                    + "→ Michii Patches."},
             {"1.0.1", "• The settings now use your phone's language (English, Indonesian, Spanish, Portuguese, "
                     + "French, German, Vietnamese, Thai, Turkish, Russian, or Japanese). You can pick another language "
                     + "under Other → Language.\n\n"

@@ -1094,15 +1094,25 @@ public final class Probe extends Instrumentation {
                         float y = Float.parseFloat(required(intent, "y"));
                         String gapText = intent.getStringExtra("gap");
                         long gap = gapText == null ? 90L : Long.parseLong(gapText);
+                        // How long the second touch stays down, for #63: a finger that rests on
+                        // the second tap also reaches the long press timers.
+                        String holdText = intent.getStringExtra("hold");
+                        long hold = holdText == null ? 30L : Long.parseLong(holdText);
                         android.app.Activity activity = (android.app.Activity) loader.loadClass(UTILS)
                                 .getMethod("getActivity").invoke(null);
                         if (activity == null) throw new IllegalStateException("no current activity");
                         android.view.View decor = activity.getWindow().getDecorView();
                         tap(decor, x, y);
-                        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
-                            tap(decor, x, y);
-                            Log.i(TAG, "ok doubletap at " + x + "," + y + " gap=" + gap + "ms on "
-                                    + activity.getClass().getSimpleName());
+                        android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+                        main.postDelayed(() -> {
+                            long down = android.os.SystemClock.uptimeMillis();
+                            touch(decor, down, down, android.view.MotionEvent.ACTION_DOWN, x, y);
+                            main.postDelayed(() -> {
+                                touch(decor, down, android.os.SystemClock.uptimeMillis(),
+                                        android.view.MotionEvent.ACTION_UP, x, y);
+                                Log.i(TAG, "ok doubletap at " + x + "," + y + " gap=" + gap + "ms hold="
+                                        + hold + "ms on " + activity.getClass().getSimpleName());
+                            }, hold);
                         }, gap);
                         break;
                     }
@@ -1528,8 +1538,13 @@ public final class Probe extends Instrumentation {
                                 .getMethod("getActivity").invoke(null);
                         if (activity == null) throw new IllegalStateException("no current activity");
                         android.content.res.Resources resources = activity.getResources();
-                        int strip = resources.getIdentifier("dlk", "id", activity.getPackageName());
-                        int text = resources.getIdentifier("dlr", "id", activity.getPackageName());
+                        // 47.1.4 renamed them to dm5 and dmb: -e strip dm5 -e text dmb.
+                        String stripName = intent.getStringExtra("strip");
+                        String textName = intent.getStringExtra("text");
+                        if (stripName == null) stripName = "dlk";
+                        if (textName == null) textName = "dlr";
+                        int strip = resources.getIdentifier(stripName, "id", activity.getPackageName());
+                        int text = resources.getIdentifier(textName, "id", activity.getPackageName());
                         StringBuilder out = new StringBuilder();
                         java.util.ArrayDeque<android.view.View> pending = new java.util.ArrayDeque<>(windowRoots());
                         while (!pending.isEmpty()) {
@@ -1578,10 +1593,14 @@ public final class Probe extends Instrumentation {
                                     ? ((java.lang.ref.Reference<?>) staticField(tools, "overlay")).get() : null;
                             if (line instanceof android.widget.TextView) {
                                 android.widget.TextView label = (android.widget.TextView) line;
+                                int[] where = new int[2];
+                                label.getLocationOnScreen(where);
                                 out.append(" overlay[shown=").append(label.isShown())
                                         .append(" vis=").append(label.getVisibility())
+                                        .append(" at=").append(where[0]).append(',').append(where[1])
                                         .append(" size=").append(label.getWidth()).append('x').append(label.getHeight())
-                                        .append(" chars=").append(label.getText().length()).append(']');
+                                        .append(" chars=").append(label.getText().length())
+                                        .append(" stripGap=").append(staticField(tools, "stripGap")).append(']');
                             } else {
                                 out.append(" overlay=none");
                             }
@@ -1596,8 +1615,8 @@ public final class Probe extends Instrumentation {
                             out.append(" overlay=unreadable");
                         }
                         // An id this build lacks must not read the same as no caption on screen.
-                        if (strip == 0) out.append(" dlk=missing");
-                        if (text == 0) out.append(" dlr=missing");
+                        if (strip == 0) out.append(' ').append(stripName).append("=missing");
+                        if (text == 0) out.append(' ').append(textName).append("=missing");
                         Log.i(TAG, "ok captionstate" + (out.length() == 0 ? " none" : out.toString()));
                         break;
                     }
@@ -1998,6 +2017,151 @@ public final class Probe extends Instrumentation {
                         Log.i(TAG, "ok like-targets");
                         break;
                     }
+                    case "padtop": {
+                        // Gives the first shown view with -e id <name> a top padding of -e value
+                        // pixels, to stand in for the strip TikTok keeps over a LIVE room on phones
+                        // that get it (#137). Prints the padding it had.
+                        String idName = required(intent, "id");
+                        int value = Integer.parseInt(required(intent, "value"));
+                        android.app.Activity activity = (android.app.Activity) loader.loadClass(UTILS)
+                                .getMethod("getActivity").invoke(null);
+                        if (activity == null) throw new IllegalStateException("no current activity");
+                        int id = activity.getResources().getIdentifier(idName, "id", activity.getPackageName());
+                        android.view.View found = null;
+                        java.util.ArrayDeque<android.view.View> queue = new java.util.ArrayDeque<>(windowRoots());
+                        while (!queue.isEmpty() && found == null) {
+                            android.view.View view = queue.removeFirst();
+                            if (id != 0 && view.getId() == id && view.isShown()) found = view;
+                            if (view instanceof android.view.ViewGroup) {
+                                android.view.ViewGroup group = (android.view.ViewGroup) view;
+                                for (int i = 0; i < group.getChildCount(); i++) queue.add(group.getChildAt(i));
+                            }
+                        }
+                        if (found == null) {
+                            Log.i(TAG, "ok padtop none for " + idName);
+                            break;
+                        }
+                        int before = found.getPaddingTop();
+                        found.setPadding(found.getPaddingLeft(), value, found.getPaddingRight(), found.getPaddingBottom());
+                        Log.i(TAG, "ok padtop " + idName + " " + before + " -> " + value);
+                        break;
+                    }
+                    case "topviews": {
+                        // Wide views across the top of the window, for the LIVE room's shade under
+                        // a see-through bar (#137): each view at least 80% of the window wide that
+                        // starts above -e below (default 400 px), with its place, padding, offset,
+                        // alpha and background. Technical fields only, no text.
+                        String belowText = intent.getStringExtra("below");
+                        int below = belowText == null ? 400 : Integer.parseInt(belowText);
+                        android.app.Activity activity = (android.app.Activity) loader.loadClass(UTILS)
+                                .getMethod("getActivity").invoke(null);
+                        if (activity == null) throw new IllegalStateException("no current activity");
+                        StringBuilder out = new StringBuilder();
+                        for (android.view.View root : windowRoots()) {
+                            out.append("root ").append(root.getClass().getSimpleName()).append('\n');
+                            topViews(root, 0, below, root.getWidth(), out, activity.getResources());
+                        }
+                        String text = out.toString();
+                        int pieces = 0;
+                        for (int at = 0; at < text.length(); at += 3000, pieces++) {
+                            Log.i(TAG, "topviews[" + pieces + "] "
+                                    + text.substring(at, Math.min(text.length(), at + 3000)));
+                        }
+                        Log.i(TAG, "ok topviews " + text.length() + " chars in " + pieces + " pieces");
+                        break;
+                    }
+                    case "liveroom": {
+                        // What the LIVE status bar code holds for each room in front (#137): the
+                        // view it lifted and how, its searches and relifts, the pages and layers it
+                        // changed. Technical fields only, read by reflection.
+                        android.app.Activity activity = (android.app.Activity) loader.loadClass(UTILS)
+                                .getMethod("getActivity").invoke(null);
+                        android.content.res.Resources resources = activity == null ? null : activity.getResources();
+                        Class<?> owner = loader.loadClass("app.morphe.extension.tiktok.feed.LiveStatusBar");
+                        Field hiddenField = owner.getDeclaredField("HIDDEN");
+                        hiddenField.setAccessible(true);
+                        Map<?, ?> hidden = (Map<?, ?>) hiddenField.get(null);
+                        StringBuilder out = new StringBuilder();
+                        for (Map.Entry<?, ?> entry : new java.util.HashMap<>(hidden).entrySet()) {
+                            Object room = entry.getValue();
+                            out.append("room of ").append(entry.getKey().getClass().getSimpleName());
+                            for (Field field : room.getClass().getDeclaredFields()) {
+                                if (java.lang.reflect.Modifier.isStatic(field.getModifiers())) continue;
+                                field.setAccessible(true);
+                                Object value = field.get(room);
+                                out.append("\n  ").append(field.getName()).append('=');
+                                if (value instanceof java.lang.ref.Reference) value = ((java.lang.ref.Reference<?>) value).get();
+                                if (value instanceof android.view.View) {
+                                    out.append(liveRoomView((android.view.View) value, resources));
+                                } else if (value instanceof Map) {
+                                    out.append(((Map<?, ?>) value).size()).append(" [");
+                                    for (Map.Entry<?, ?> item : ((Map<?, ?>) value).entrySet()) {
+                                        Object key = item.getKey();
+                                        out.append(key instanceof android.view.View ? liveRoomView((android.view.View) key, resources) : String.valueOf(key))
+                                                .append("->").append(item.getValue()).append("; ");
+                                    }
+                                    out.append(']');
+                                } else if (value != null && value.getClass().getName().endsWith("$Offset")) {
+                                    Field viewField = value.getClass().getDeclaredField("view");
+                                    Field paddingField = value.getClass().getDeclaredField("padding");
+                                    Field valueField = value.getClass().getDeclaredField("value");
+                                    viewField.setAccessible(true);
+                                    paddingField.setAccessible(true);
+                                    valueField.setAccessible(true);
+                                    Object view = ((java.lang.ref.Reference<?>) viewField.get(value)).get();
+                                    out.append("Offset(").append(paddingField.get(value) == Boolean.TRUE ? "padding " : "margin ")
+                                            .append(valueField.get(value)).append(" on ")
+                                            .append(view instanceof android.view.View ? liveRoomView((android.view.View) view, resources) : "gone")
+                                            .append(')');
+                                } else if (value instanceof Number || value instanceof Boolean || value == null) {
+                                    out.append(value);
+                                } else {
+                                    out.append('<').append(value.getClass().getSimpleName()).append('>');
+                                }
+                            }
+                            // What findShade makes of each layer in front now, and every gradient
+                            // under it with the values the search goes by.
+                            Field loweredField = room.getClass().getDeclaredField("lowered");
+                            loweredField.setAccessible(true);
+                            java.lang.reflect.Method findShade = owner.getDeclaredMethod("findShade", android.view.ViewGroup.class);
+                            findShade.setAccessible(true);
+                            for (Object key : new java.util.ArrayList<>(((Map<?, ?>) loweredField.get(room)).keySet())) {
+                                if (!(key instanceof android.view.ViewGroup) || !((android.view.View) key).isAttachedToWindow()) continue;
+                                android.view.ViewGroup layer = (android.view.ViewGroup) key;
+                                Object found = findShade.invoke(null, layer);
+                                out.append("\n  findShade(").append(liveRoomView(layer, resources)).append(")=")
+                                        .append(found instanceof android.view.View ? liveRoomView((android.view.View) found, resources) : "null");
+                                java.util.ArrayDeque<android.view.View> walk = new java.util.ArrayDeque<>();
+                                walk.add(layer);
+                                while (!walk.isEmpty()) {
+                                    android.view.View at = walk.poll();
+                                    if (at != layer && at.getBackground() instanceof android.graphics.drawable.GradientDrawable) {
+                                        int top = 0, depth = 0;
+                                        for (android.view.View up = at; up != layer && up.getParent() instanceof android.view.View; up = (android.view.View) up.getParent()) {
+                                            top += up.getTop();
+                                            depth++;
+                                        }
+                                        out.append("\n    gradient ").append(liveRoomView(at, resources)).append(" depth=").append(depth)
+                                                .append(" vis=").append(at.getVisibility()).append(" topIn=").append(top)
+                                                .append(" w=").append(at.getWidth()).append(" h=").append(at.getHeight())
+                                                .append(" layerPad=").append(layer.getPaddingTop()).append(" layerH=").append(layer.getHeight());
+                                    }
+                                    if (at instanceof android.view.ViewGroup) {
+                                        android.view.ViewGroup group = (android.view.ViewGroup) at;
+                                        for (int i = 0; i < group.getChildCount(); i++) walk.add(group.getChildAt(i));
+                                    }
+                                }
+                            }
+                            out.append('\n');
+                        }
+                        String text = out.toString();
+                        int pieces = 0;
+                        for (int at = 0; at < text.length(); at += 3000, pieces++) {
+                            Log.i(TAG, "liveroom[" + pieces + "] " + text.substring(at, Math.min(text.length(), at + 3000)));
+                        }
+                        Log.i(TAG, "ok liveroom " + hidden.size() + " rooms");
+                        break;
+                    }
                     case "windowviews": {
                         // Dialogs and bottom sheets can live in a separate WindowManager root.
                         // TikTok 47.0.3's comment sheet leaves MainActivity's own content view
@@ -2107,6 +2271,15 @@ public final class Probe extends Instrumentation {
             }
         }
 
+        private static void touch(android.view.View decor, long down, long at, int action, float x, float y) {
+            android.view.MotionEvent event = android.view.MotionEvent.obtain(down, at, action, x, y, 0);
+            try {
+                decor.dispatchTouchEvent(event);
+            } finally {
+                event.recycle();
+            }
+        }
+
         private String required(Intent intent, String name) {
             String value = intent.getStringExtra(name);
             if (value == null) throw new IllegalArgumentException("-e " + name + " is required");
@@ -2145,8 +2318,23 @@ public final class Probe extends Instrumentation {
             if (drawable instanceof android.graphics.drawable.ColorDrawable) {
                 out.append('#').append(Integer.toHexString(((android.graphics.drawable.ColorDrawable) drawable).getColor()));
             } else if (drawable instanceof android.graphics.drawable.GradientDrawable) {
-                android.content.res.ColorStateList colors = ((android.graphics.drawable.GradientDrawable) drawable).getColor();
+                android.graphics.drawable.GradientDrawable gradient = (android.graphics.drawable.GradientDrawable) drawable;
+                android.content.res.ColorStateList colors = gradient.getColor();
                 out.append('#').append(colors == null ? "none" : Integer.toHexString(colors.getDefaultColor()));
+                int[] stops = android.os.Build.VERSION.SDK_INT >= 24 ? gradient.getColors() : null;
+                if (stops != null) {
+                    out.append(" stops=");
+                    for (int i = 0; i < stops.length; i++) out.append(i == 0 ? "" : "/").append(Integer.toHexString(stops[i]));
+                    out.append(' ').append(gradient.getOrientation()).append(" alpha=").append(gradient.getAlpha());
+                }
+            } else if (drawable.getClass().getSimpleName().equals("BarShade")) {
+                try {
+                    java.lang.reflect.Method color = drawable.getClass().getDeclaredMethod("color");
+                    color.setAccessible(true);
+                    out.append(" paints=").append(Integer.toHexString((Integer) color.invoke(drawable)));
+                } catch (ReflectiveOperationException e) {
+                    out.append(" paints=?");
+                }
             } else if (drawable instanceof android.graphics.drawable.LayerDrawable && depth < 3) {
                 android.graphics.drawable.LayerDrawable layers = (android.graphics.drawable.LayerDrawable) drawable;
                 out.append('[');
@@ -2211,6 +2399,15 @@ public final class Probe extends Instrumentation {
                 }
             }
             return null;
+        }
+
+        /** A view for the liveroom action: class, id, place on screen and top padding. */
+        private static String liveRoomView(android.view.View view, android.content.res.Resources resources) {
+            int[] at = new int[2];
+            view.getLocationInWindow(at);
+            return view.getClass().getSimpleName() + " id=" + (resources == null ? view.getId() : idName(view, resources))
+                    + " at=" + at[0] + "," + at[1] + " h=" + view.getHeight() + " padTop=" + view.getPaddingTop()
+                    + " attached=" + view.isAttachedToWindow();
         }
 
         /** The resource entry name of a view's id, the raw number for an id without one. */
@@ -2299,6 +2496,34 @@ public final class Probe extends Instrumentation {
                 return state;
             } catch (Exception error) {
                 return getter + "=" + error.getClass().getSimpleName();
+            }
+        }
+
+        private static void topViews(android.view.View view, int depth, int below, int width, StringBuilder out,
+                android.content.res.Resources resources) {
+            if (view.getVisibility() == android.view.View.GONE) return;
+            int[] where = new int[2];
+            view.getLocationOnScreen(where);
+            if (where[1] < below && view.getWidth() * 10 >= width * 8) {
+                out.append(depth).append(' ').append(view.getClass().getName())
+                        .append(" id=").append(idName(view, resources))
+                        .append(" vis=").append(view.getVisibility())
+                        .append(" at=").append(where[0]).append(',').append(where[1])
+                        .append(" size=").append(view.getWidth()).append('x').append(view.getHeight())
+                        .append(" padTop=").append(view.getPaddingTop())
+                        .append(" ty=").append(view.getTranslationY())
+                        .append(" alpha=").append(view.getAlpha())
+                        .append(" bg=").append(describeDrawable(view.getBackground(), 0));
+                if (view instanceof android.widget.ImageView) {
+                    out.append(" img=").append(describeDrawable(((android.widget.ImageView) view).getDrawable(), 0));
+                }
+                out.append('\n');
+            }
+            if (view instanceof android.view.ViewGroup && depth < 30) {
+                android.view.ViewGroup group = (android.view.ViewGroup) view;
+                for (int i = 0; i < group.getChildCount(); i++) {
+                    topViews(group.getChildAt(i), depth + 1, below, width, out, resources);
+                }
             }
         }
 

@@ -126,6 +126,7 @@ final class SwitchLabels {
         if (setting == Settings.TAP_TO_PLAY) return L10n.t("Tap to play");
         if (setting == Settings.TAP_TO_PLAY_REELS_AFTER_FIRST) return L10n.t("Only the first reel waits");
         if (setting == Settings.RESUME_LONG_VIDEOS) return L10n.t("Resume long videos");
+        if (setting == Settings.FRAME_STEP) return L10n.t("Frame step");
         if (setting == Settings.DEFAULT_PLAYBACK_QUALITY) return L10n.t("Default playback quality");
         if (setting == Settings.PICTURE_IN_PICTURE) return L10n.t("Picture-in-picture");
         if (setting == Settings.TURN_OFF_HDR_BRIGHTNESS) return L10n.t("Turn off HDR brightness");
@@ -143,6 +144,7 @@ final class SwitchLabels {
         if (setting == Settings.SAVED_SHORTCUT) return L10n.t("Saved shortcut");
         if (setting == Settings.WATCH_HISTORY_SHORTCUT) return L10n.t("Watch history shortcut");
         if (setting == Settings.APP_LOCK) return L10n.t("Lock Facebook");
+        if (setting == Settings.SAVE_CRASH_FILE) return L10n.t("Save crashes to Downloads");
         if (setting == Settings.HIDE_MENU_UPGRADES) return L10n.t("Hide Upgrades");
         if (setting == Settings.HIDE_MENU_ALSO_FROM_META) return L10n.t("Hide Also from Meta");
         if (setting == Settings.HIDE_MENU_MUSE) return L10n.t("Hide the Muse card");

@@ -1,3 +1,62 @@
+## [2.3.0](https://github.com/bearinmindcat/morphe-patches/compare/v2.2.5...v2.3.0) (2026-10-12)
+
+### ✨ New Features
+
+* waze police and other alerts on the maps map (share alerts with maps in waze, waze alerts in maps) ([8a80669](https://github.com/bearinmindcat/morphe-patches/commit/8a80669d681bed8a8e1e0e15a5a28e7396d95490))
+
+## [2.2.5](https://github.com/bearinmindcat/morphe-patches/compare/v2.2.4...v2.2.5) (2026-10-11)
+
+### 🐛 Bug Fixes
+
+* location button re-centres after switching apps with the Android location source; issue [#40](https://github.com/bearinmindcat/morphe-patches/issues/40) ([e816969](https://github.com/bearinmindcat/morphe-patches/commit/e816969a089a3734fcfa631992f085b011c47872))
+
+## [2.2.4](https://github.com/bearinmindcat/morphe-patches/compare/v2.2.3...v2.2.4) (2026-10-11)
+
+### 🐛 Bug Fixes
+
+* compass heading and calibration without Google Play services location; issue [#41](https://github.com/bearinmindcat/morphe-patches/issues/41) ([885b566](https://github.com/bearinmindcat/morphe-patches/commit/885b5669494390017563fec6985df9764a37b3d7))
+
+## [2.2.3](https://github.com/bearinmindcat/morphe-patches/compare/v2.2.2...v2.2.3) (2026-10-11)
+
+### 🐛 Bug Fixes
+
+* customization menu in waze (switch the waze patches on and off from the side menu) ([456c27c](https://github.com/bearinmindcat/morphe-patches/commit/456c27c7e4829cdcb60d8a398860b668fce6d4d3))
+
+## [2.2.2](https://github.com/bearinmindcat/morphe-patches/compare/v2.2.1...v2.2.2) (2026-10-11)
+
+### 🐛 Bug Fixes
+
+* map skin & black night map are skipped when patching with morphe manager so waze can't crash ([7fef96a](https://github.com/bearinmindcat/morphe-patches/commit/7fef96ab5c10fdf1a510dfb8f8fd665e9c1ca68c))
+
+## [2.2.1](https://github.com/bearinmindcat/morphe-patches/compare/v2.2.0...v2.2.1) (2026-10-11)
+
+### 🐛 Bug Fixes
+
+* waze no longer crashes (map skin off by default, this was the cause lmfao) ([2b9aa52](https://github.com/bearinmindcat/morphe-patches/commit/2b9aa52062d76dafed5835d800b2f76487a6b76d))
+
+## [2.2.0](https://github.com/bearinmindcat/morphe-patches/compare/v2.1.0...v2.2.0) (2026-10-11)
+
+### ✨ New Features
+
+* adding alltrails patches ([8acb753](https://github.com/bearinmindcat/morphe-patches/commit/8acb75369f6d9bd5238609bcf58ea24d3c18240a))
+
+## [2.1.0](https://github.com/bearinmindcat/morphe-patches/compare/v2.0.0...v2.1.0) (2026-10-11)
+
+### ✨ New Features
+
+* added more misc waze features (for telemetry) & other misc items ([d56e9fe](https://github.com/bearinmindcat/morphe-patches/commit/d56e9fefd2d9d7e8c2e60cfec3b4ca512745df00))
+
+## [2.0.0](https://github.com/bearinmindcat/morphe-patches/compare/v1.7.13...v2.0.0) (2026-10-11)
+
+### ⚠ BREAKING CHANGES
+
+* the Customization screen is reorganised into sections, each with its own page, and the account sheet gains a Waze Features row; together with the new Waze patches the bundle is no longer a Google Maps-only source.
+
+### ✨ New Features
+
+* add waze patches for waze apk ([0b091ad](https://github.com/bearinmindcat/morphe-patches/commit/0b091adbf5fb89659285b30b41599e97fd8f90e9))
+* added waze features to google maps ([880da80](https://github.com/bearinmindcat/morphe-patches/commit/880da80a2ebed18e01e6d229b66f14cc8b763e71))
+
 ## [1.7.13](https://github.com/bearinmindcat/morphe-patches/compare/v1.7.12...v1.7.13) (2026-10-09)
 
 ### 🐛 Bug Fixes

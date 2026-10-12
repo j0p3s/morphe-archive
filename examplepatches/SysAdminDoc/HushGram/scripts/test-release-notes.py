@@ -3,8 +3,9 @@
 Manager draws the notes as cards (New, Fixes, Improvements) from the headings, scopes and version
 heading it reads. This ports the parts of its ChangelogParser that decide those (sections(),
 sectionKindOf(), SCOPED_BODY_RE, VERSION_HEADING, the commit link and image strippers and the
-scope matcher), builds the notes for the current Unreleased section as if it were dated, and holds
-them to what Manager would do with them.
+scope matcher), builds the notes for the current Unreleased section as if it were dated (the newest
+release's section while Unreleased is empty after a cut), and holds them to what Manager would do
+with them.
 
     py -3.13 -I scripts/test-release-notes.py
 
@@ -100,8 +101,11 @@ def manager_sections(content):
 
 def notes_for_unreleased():
     changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    section, _, _ = notes.read_section(changelog, None)
-    previous = re.search(r"^## (\d+\.\d+\.\d+) \(", changelog, re.M).group(1)
+    section, _, previous = notes.read_section(changelog, None)
+    if not any(notes.read_bullets(section).values()):
+        # Right after a release is cut, Unreleased is empty and the newest release is what ships.
+        newest = re.search(r"^## (\d+\.\d+\.\d+) \(", changelog, re.M).group(1)
+        section, _, previous = notes.read_section(changelog, newest)
     patches = notes.read_patches(ROOT / "patches-list.json")
     body, carried = notes.build_notes(section, "Validation: 1 runtime tests passed locally. All 2 patch tests passed too.",
                                       "9.9.9", "2026-01-02", previous, patches)
@@ -179,6 +183,15 @@ class ReleaseNotesTests(unittest.TestCase):
             self.assertEqual(self.body.count(bullet + "\n"), 1, bullet[:80])
 
 
+def words(count):
+    """A sentence of exactly this many words."""
+    return " ".join(["word"] * (count - 1) + ["end."])
+
+
+def feature(text):
+    return "\n### Features\n\n* **Instagram:** " + text + "\n"
+
+
 class RefusalTests(unittest.TestCase):
     SECTION = "\n### Features\n\n* **Instagram:** A new row.\n\n### Bug Fixes\n\n* **Instagram - Hide Meta AI:** A fix.\n"
     VALIDATION = "Validation: 1 runtime tests passed locally. All 1 patch tests passed too."
@@ -203,11 +216,23 @@ class RefusalTests(unittest.TestCase):
             "spaced hyphen": ("\n### Features\n\n* **Instagram:** A row - here.\n", "dash"),
             "commit link": ("\n### Features\n\n* **Instagram:** A row ([abc1234](https://x/commit/abc1234)).\n", "commit link"),
             "image": ("\n### Features\n\n* **Instagram:** A row ![x](y.png).\n", "image"),
+            "41 word bullet": (feature(words(41)), "runs 41 words"),
+            "41 words before a credit": (feature(words(41) + " Asked for in #1."), "runs 41 words"),
+            "credit that isn't last": (feature(words(39) + " Refs #89. More."), "runs 42 words"),
         }
         for name, (section, said) in cases.items():
             with self.subTest(name), self.assertRaises(notes.NotesError) as error:
                 self.build(section)
             self.assertIn(said, str(error.exception))
+
+    def test_forty_word_bullet_passes_with_or_without_a_credit(self):
+        for credit in ("", " Asked for in #12.", " Asked about in #5 and #6.", " Reported in #3.", " Reported on #3.",
+                       " Thanks to @name for #4.", " Fixes from @name.", " Refs #89.",
+                       " Thanks to @name for #4. Asked for in #80 and #100."):
+            with self.subTest(credit):
+                body, carried = self.build(feature(words(40) + credit))
+                self.assertEqual(carried, 1)
+                self.assertIn(words(40) + credit + "\n", body)
 
     def test_unknown_patch_scope(self):
         with self.assertRaises(notes.NotesError) as error:

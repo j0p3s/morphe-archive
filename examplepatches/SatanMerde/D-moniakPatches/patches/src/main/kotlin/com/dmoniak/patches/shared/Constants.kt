@@ -596,9 +596,9 @@ object Constants {
     val COMPATIBILITY_MOISES = Compatibility(
         packageName = "ai.moises",
         name = "Moises",
-        description = "Moises: The Musician's App by Moises Systems Inc. (v2.7.2 recommandée - versions 2.73+ protégées par Google Play PairIP)",
+        description = "Moises: The Musician's App by Moises Systems Inc. (v2.72.0 recommandée - versions 2.73+ protégées par Google Play PairIP)",
         appIconColor = 0x6C5CE7,
-        targets = listOf(AppTarget("2.7.2"))
+        targets = listOf(AppTarget("2.72.0"))
     )
 
     val COMPATIBILITY_YOUTUBE = Compatibility(
@@ -657,6 +657,38 @@ object Constants {
         appIconColor = 0xFF5722
     )
 
+    val COMPATIBILITY_FCTV = Compatibility(
+        packageName = "com.fctv77.app",
+        name = "FCTV33 (Mobile)",
+        description = "FCTV33: Live Football & Sports Streaming (Mobile)",
+        appIconColor = 0x1E88E5,
+        targets = listOf(AppTarget("3.0.323"))
+    )
+
+    val COMPATIBILITY_FCTV_TV = Compatibility(
+        packageName = "com.fctv77.tv",
+        name = "FCTV33 (TV)",
+        description = "FCTV33: Live Football & Sports Streaming (Android TV)",
+        appIconColor = 0x1E88E5,
+        targets = listOf(AppTarget("3.0.323"))
+    )
+
+    val COMPATIBILITY_RBLIVE = Compatibility(
+        packageName = "com.rblive.app",
+        name = "RBTV+ / RBLive (Mobile)",
+        description = "RBTV+ / RBLive: Live Football & Sports Streaming (Mobile)",
+        appIconColor = 0x1E88E5,
+        targets = listOf(AppTarget("3.0.323"))
+    )
+
+    val COMPATIBILITY_RBLIVE_TV = Compatibility(
+        packageName = "com.rblive.tv",
+        name = "RBTV+ / RBLive (TV)",
+        description = "RBTV+ / RBLive: Live Football & Sports Streaming (Android TV)",
+        appIconColor = 0x1E88E5,
+        targets = listOf(AppTarget("3.0.323"))
+    )
+
     // Aliases
     val COMPATIBILITY_ANGRY_BIRDS_CLASSIC = COMPATIBILITY_ANGRY_BIRDS
     val COMPATIBILITY_HIDE_ME = COMPATIBILITY_HIDEME
@@ -665,6 +697,10 @@ object Constants {
     val COMPATIBILITY_UNDERCOVER_GAME = COMPATIBILITY_UNDERCOVER
     val COMPATIBILITY_FREEFIRE_MAX = COMPATIBILITY_FREE_FIRE_MAX
     val COMPATIBILITY_FREEFIRE = COMPATIBILITY_FREE_FIRE
+    val COMPATIBILITY_FCTV33 = COMPATIBILITY_FCTV
+    val COMPATIBILITY_FCTV_ANDROID_TV = COMPATIBILITY_FCTV_TV
+    val COMPATIBILITY_RBTV = COMPATIBILITY_RBLIVE
+    val COMPATIBILITY_RBTV_TV = COMPATIBILITY_RBLIVE_TV
 }
 
 

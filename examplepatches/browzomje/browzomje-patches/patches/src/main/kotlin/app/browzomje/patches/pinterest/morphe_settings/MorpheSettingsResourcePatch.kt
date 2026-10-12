@@ -41,7 +41,7 @@ val morpheSettingsManifestPatch = resourcePatch(
             val activity = doc.createElement("activity")
             activity.setAttribute("android:name", MORPHE_SETTINGS_ACTIVITY)
             activity.setAttribute("android:exported", "true")
-            activity.setAttribute("android:label", "Morphe")
+            activity.setAttribute("android:label", "Morphe - browzomje")
             activity.setAttribute("android:theme", MORPHE_SETTINGS_THEME)
 
             val intentFilter = doc.createElement("intent-filter")
@@ -64,6 +64,23 @@ val morpheSettingsManifestPatch = resourcePatch(
 
             activity.appendChild(intentFilter)
             application.appendChild(activity)
+            val service = doc.createElement("service")
+            service.setAttribute("android:name", "app.browzomje.extension.pinterest.PinDownloadJob")
+            service.setAttribute("android:permission", "android.permission.BIND_JOB_SERVICE")
+            service.setAttribute("android:exported", "true")
+            application.appendChild(service)
+            val receiver = doc.createElement("receiver")
+            receiver.setAttribute("android:name", "app.browzomje.extension.pinterest.PinDownloadReceiver")
+            receiver.setAttribute("android:exported", "true")
+            val completionFilter = doc.createElement("intent-filter")
+            val completionAction = doc.createElement("action")
+            completionAction.setAttribute("android:name", "android.intent.action.DOWNLOAD_COMPLETE")
+            completionFilter.appendChild(completionAction)
+            receiver.appendChild(completionFilter)
+            application.appendChild(receiver)
+            val bootPermission = doc.createElement("uses-permission")
+            bootPermission.setAttribute("android:name", "android.permission.RECEIVE_BOOT_COMPLETED")
+            doc.documentElement.appendChild(bootPermission)
         }
     }
 }
@@ -158,7 +175,7 @@ val morpheSettingsLabelPatch = resourcePatch(
                     for (i in 0 until strings.length) {
                         val node = strings.item(i)
                         if (node.attributes?.getNamedItem("name")?.nodeValue == REUSED_STRING) {
-                            node.textContent = "Morphe"
+                            node.textContent = "Morphe - browzomje"
                             renamed++
                             break
                         }

@@ -35,9 +35,14 @@ The app icon shortcut is added the first time LinkedIn opens after patching.
 
 | App | Version |
 |---|---|
-| LinkedIn (`com.linkedin.android`) | **4.1.1255.1** (APKMirror variant *Android 10+*) |
+| LinkedIn (`com.linkedin.android`) | **4.1.1259** (recommended), **4.1.1255.1** (APKMirror variant *Android 10+*, the APK, not the bundle) |
 
 Other versions are marked experimental and may not work.
+
+> [!NOTE]
+> **Signing in with Google doesn't work** in patched LinkedIn, because Google checks the app's signature.
+> Sign in with your e-mail and password instead. If you signed up with Google and don't have a password,
+> set one first on [linkedin.com](https://www.linkedin.com/checkpoint/rp/request-password-reset) ("Forgot password").
 
 ### How to use these patches
 
@@ -50,14 +55,14 @@ Then patch LinkedIn with Morphe Manager. Do not share patched APKs; share this p
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.1.0-dev.1](https://github.com/heyymichii/michii-patches/releases/tag/v1.1.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;11 patches total
+> **[v1.1.0](https://github.com/heyymichii/michii-patches/releases/tag/v1.1.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;11 patches total
 <details open>
 <summary>📦 LinkedIn&nbsp;&nbsp;•&nbsp;&nbsp;11 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 4.1.1255.1 | 4.1.1258 |
+| 4.1.1255.1 | 4.1.1259 |
 | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |

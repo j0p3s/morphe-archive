@@ -53,6 +53,17 @@ public final class PairipMethodsTest {
     }
 
     @Test
+    public void resolvesArrayTypesWrittenWithBrackets() throws ReflectiveOperationException {
+        // when
+        final Method method = find("arrays", "java.lang.String[],int[][],byte[]");
+
+        // then
+        assertArrayEquals(new Class<?>[] { String[].class, int[][].class, byte[].class }, method.getParameterTypes());
+        assertEquals("1-2-3", method.invoke(new Target(), new String[] { "a" }, new int[][] { { 1 }, { 2 } },
+                new byte[] { 1, 2, 3 }));
+    }
+
+    @Test
     public void reachesPrivateMethods() throws ReflectiveOperationException {
         // when
         final Method method = find("hidden", "");
@@ -134,6 +145,10 @@ public final class PairipMethodsTest {
 
         String mixed(String text, int number, byte[] bytes) {
             return text + "-" + number + "-" + bytes.length;
+        }
+
+        String arrays(String[] items, int[][] grid, byte[] bytes) {
+            return items.length + "-" + grid.length + "-" + bytes.length;
         }
 
         private String hidden() {

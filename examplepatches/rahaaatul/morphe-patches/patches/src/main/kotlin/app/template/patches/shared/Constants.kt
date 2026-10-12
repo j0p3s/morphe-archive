@@ -7,7 +7,7 @@ import app.morphe.patcher.patch.SupportedAbi
 
 object Constants {
 
-val PRIVACYKIT_COMPATIBILITY = Compatibility(
+    val PRIVACYKIT_COMPATIBILITY = Compatibility(
         name = "Privacy Kit",
         packageName = "com.sal.privacykit",
         apkFileType = ApkFileType.APK,
@@ -23,16 +23,12 @@ val PRIVACYKIT_COMPATIBILITY = Compatibility(
         )
     )
 
-val PROTONVPN_COMPATIBILITY = Compatibility(
+    val PROTONVPN_COMPATIBILITY = Compatibility(
         name = "Proton VPN",
         packageName = "ch.protonvpn.android",
         apkFileType = ApkFileType.APK,
         appIconColor = 0x6D4AFF,
         targets = listOf(
-            AppTarget(version = "5.19.99.0", versionCode = 605199900),
-            AppTarget(version = "5.20.8.0", versionCode = 605200800),
-            AppTarget(version = "5.20.21.0", versionCode = 605202100),
-            AppTarget(version = "5.20.39.0", versionCode = 605203900),
             AppTarget(version = "5.20.57.0", versionCode = 605205700),
         )
     )

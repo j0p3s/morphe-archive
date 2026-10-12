@@ -10,10 +10,10 @@ Technical documentation and patch catalog for X (formerly Twitter) on Android.
 | :--- | :--- |
 | **Target App** | X (Twitter) |
 | **Package Name** | `com.twitter.android` |
-| **Target Version** | `12.33.0-prod.01` |
+| **Target Version** | `12.33.1-prod.01` |
 | **Target Package Format** | APKM (Split APK Bundle) |
 | **Primary Architecture** | `arm64-v8a` |
-| **Authoritative Source** | [APKMirror](https://www.apkmirror.com/apk/x-corp/twitter/x-12-33-0-prod-01-release/) |
+| **Authoritative Source** | [APKMirror](https://www.apkmirror.com/apk/x-corp/twitter/x-12-33-1-prod-01-release/) |
 
 ---
 
@@ -25,20 +25,15 @@ Technical documentation and patch catalog for X (formerly Twitter) on Android.
 | **X Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | Strips tracking and advertising permissions, disables measurement services and receivers, and injects opt-out metadata in `AndroidManifest.xml`. |
 | **Remove Premium Upsell** | `bytecodePatch` | `true` (Enabled) | None | Removes premium upsell surfaces. |
 | **Remove Ads** | `bytecodePatch` | `true` (Enabled) | None | Removes promoted posts, trends and ads from timeline. |
-| **Hide Banner** | `bytecodePatch` | `true` (Enabled) | None | Hides new post banner. |
-| **Hide Promote Button** | `bytecodePatch` | `true` (Enabled) | None | Hides promote button under self posts. |
-| **Hide Nudge Button** | `bytecodePatch` | `true` (Enabled) | None | Hides follow/subscribe/follow back buttons on posts. |
-| **Hide Recommendation Items** | `bytecodePatch` | `true` (Enabled) | None | Hides recommendation items such as Who to follow and Today's news in timeline, search, and replies. |
-| **Hide Discover More** | `bytecodePatch` | `true` (Enabled) | None | Hides Discover more recommendations in tweet reply threads. |
-| **Hide Recommended Users** | `bytecodePatch` | `true` (Enabled) | None | Hides recommended users popup shown when following someone. |
-| **Hide Live Threads** | `bytecodePatch` | `true` (Enabled) | None | Hides live threads. |
+| **Timeline UI** | `bytecodePatch` | `false` (Opt-in) | None | Timeline surfaces: posts, threads, banners, recommendations and video entry points with 14 patch-time boolean options. |
 | **No Shortened URL** | `bytecodePatch` | `false` (Opt-in) | None | Expands t.co shortened URLs, removing the click-tracking intermediary. |
 | **Pause Search Suggestions** | `bytecodePatch` | `false` (Opt-in) | None | Stops persisting search suggestions locally without breaking search. |
 | **Control Video Auto Scroll** | `bytecodePatch` | `false` (Opt-in) | None | Prevents automatic scrolling to the next video in immersive view. |
 | **Share Links** | `bytecodePatch` | `false` (Opt-in) | None | Custom sharing domain, handle custom links and legacy share links. |
-| **Customize UI** | `bytecodePatch` | `false` (Opt-in) | None | Toggle navigation and timeline UI elements with 11 patch-time boolean options. |
-| **Hide Elements** | `bytecodePatch` | `false` (Opt-in) | None | Hide badges, buttons, metrics and served UI elements with 11 patch-time boolean options. |
+| **Post & Profile UI** | `bytecodePatch` | `false` (Opt-in) | None | Post actions, profile header and Grok surfaces with 3 patch-time boolean options. |
+| **Navigation UI** | `bytecodePatch` | `false` (Opt-in) | None | Bottom navigation, FAB, tabs and bars with 7 patch-time boolean options. |
 | **Show Sensitive Media** | `bytecodePatch` | `false` (Opt-in) | None | Displays sensitive media directly without requiring tap to reveal. |
+| **DM Debloat** | `bytecodePatch` | `false` (Opt-in) | None | Hide call buttons in direct message conversations with 2 patch-time boolean options. |
 | **Block Update Screen** | `bytecodePatch` | `true` (Enabled) | None | Blocks the 'This app is out of date' screen and suppresses in-app update prompts on launch. |
 | **X MLKit Vision Slimmer** | `resourcePatch` | Opt-in | No | Disables MLKit discovery service + init provider and strips MLKit registrars. WARNING: breaks in-app QR/barcode scanning. |
 
@@ -110,6 +105,7 @@ The Dalvik bytecode layer neutralizes SDK event submission pipelines at executio
    - Injects immediate `return-void` at instruction index 0.
    - Prevents allocation of event payloads, dispatch thread creation, and background telemetry buffering.
    - Restricts hooks to stable, unobfuscated third-party SDK signatures, eliminating fragility across target app updates.
+   - Removes the bare `Object.getClass()` null check that R8 leaves after app-side calls to the obfuscated Firebase Performance `getInstance()` (static, no-arg method in `com/google/firebase/perf/` returning its own class). Purging `FirebasePerfRegistrar` makes `getInstance()` return `null`, which otherwise crashes the app when opening a post from a DM or a quoted post. The scan skips `com/google/firebase/` SDK classes, replaces only an unconsumed `getClass()` on the `move-result-object` register within 8 instructions, and fails the patch if no call site matches.
 
 3. **Telemetry & Zero-Zombie Standard**:
    - Emits structured diagnostic messages prefixed with `[X Telemetry]`.
@@ -162,27 +158,19 @@ The bytecode layer suppresses intrusive server-driven prompts, banners, and serv
    - Structured telemetry prefixed with `[<Patch Name>]` reports exact mutation counts under a zero-zombie policy (`error()` on unresolved targets).
 
 2. **Suppressed Surfaces**:
-   - **Hide Banner**:
-     - Target: `UrtShowInstructionsState` constructor (`com.x.urt.instructions`), resolved dynamically via indexed string `UrtShowInstructionsState(showInstructions=`.
-     - Transformation: Neutralizes constructor instructions by replacing `showInstructions` with `Collections.emptyList()` and zeroing all eligibility/visibility flags (`isEligibleToShowPill`, `isReadyToShow`, `isPillCurrentlyVisible`).
-   - **Hide Promote Button**:
-     - Target: Post presentation quick promote eligibility evaluator (`com.x.urt.items.post`), resolved dynamically via indexed strings `x_lite_quick_promote_enabled` and `x_lite_quick_promote_premium_paywall_enabled`.
-     - Transformation: Forces method return to `false` (`0`), suppressing self-post promote button rendering (`isQuickPromoteEligible`).
-   - **Hide Nudge Button**:
-     - Target: `FocalPostState` constructor (`com.x.urt.items.post`), resolved dynamically via indexed string `FocalPostState(timelinePostState=`.
-     - Transformation: Neutralizes constructor instructions by zeroing `followButtonState` (`null`), `isSubscribeEligible` (`false`), and stateful follow flags before field assignment, suppressing post follow/subscribe/follow back button rendering.
-   - **Hide Recommendation Items**:
-     - Target: Timeline presenter dispatch (`Lcom/x/urt/b;->a`), resolving item models implementing `Lcom/x/models/timelines/items/p0;`.
-     - Transformation: Intercepts timeline items whose `entryId` contains recommendation identifiers (`who-to-follow`, `who_to_follow`, `who-to-subscribe`, `stories`, `eventsummary`, `toptabsrpusermodule`, `community-to-join`) and returns the empty presenter (`Lcom/x/urt/b0;->a`) to suppress rendering.
-   - **Hide Discover More**:
-     - Target: Timeline presenter dispatch (`Lcom/x/urt/b;->a`), resolving item models implementing `Lcom/x/models/timelines/items/p0;`.
-     - Transformation: Intercepts timeline items whose `entryId` contains `discover` or `Discover` (heuristically covering `discover-more`, `discover_more`, `urt-discover`) and returns the empty presenter (`Lcom/x/urt/b0;->a`) to suppress rendering Discover more modules and recommendation items in tweet comment sections.
-   - **Hide Recommended Users**:
-     - Target: `ProfileFollowRecommendationResponse` constructors (`com.twitter.profile.api`), resolved dynamically via indexed string `ProfileFollowRecommendationResponse(style=`.
-     - Transformation: Neutralizes constructor instructions by zeroing `recommendedUsers` (`null`) before field assignment, preventing follow recommendation models from entering presenter state and suppressing recommended users popup rendering.
-   - **Hide Live Threads**:
-     - Target: `FleetlineApiResponse` constructor (`com.x.http.spaces`), resolved dynamically via indexed string `FleetlineApiResponse(threads=`.
-     - Transformation: Neutralizes constructor instructions by replacing `threads` with `Collections.emptyList()` before field assignment, suppressing live thread and space bar rendering at the top of the timeline.
+   - **Timeline UI**:
+     - Consolidates timeline suppression hooks under 14 configurable boolean options (`hideBanner`, `hidePromoteButton`, `hideNudgeButton`, `hideRecommendationItems`, `hideDiscoverMore`, `hideRecommendedUsers`, `hideLiveThreads`, `hideCommunityNotes`, `hidePostMetrics`, `hideViewCount`, `inlineActionBar`, `timelineAddTab`, `timelineTopBar`, `hideLiveBanner`).
+     - **Hide Banner**: Neutralizes `UrtShowInstructionsState` constructor instructions (`UrtShowInstructionsState(showInstructions=`) by replacing `showInstructions` with `Collections.emptyList()` and zeroing all eligibility/visibility flags (`isEligibleToShowPill`, `isReadyToShow`, `isPillCurrentlyVisible`).
+     - **Hide Promote Button**: Forces post presentation quick promote eligibility evaluator (`x_lite_quick_promote_enabled`, `x_lite_quick_promote_premium_paywall_enabled`) return to `false` (`0`), suppressing self-post promote button rendering.
+     - **Hide Nudge Button**: Neutralizes `FocalPostState` constructor (`FocalPostState(timelinePostState=`) instructions by zeroing `followButtonState` (`null`), `isSubscribeEligible` (`false`), and stateful follow flags before field assignment, suppressing post follow/subscribe/follow back button rendering.
+     - **Hide Recommendation Items**: Intercepts timeline presenter dispatch (`Lcom/x/urt/b;->a`) for item models whose `entryId` contains recommendation identifiers (`who-to-follow`, `who_to_follow`, `who-to-subscribe`, `stories`, `eventsummary`, `toptabsrpusermodule`, `community-to-join`) and returns the empty presenter (`Lcom/x/urt/b0;->a`).
+     - **Hide Discover More**: Intercepts timeline presenter dispatch (`Lcom/x/urt/b;->a` and `Lcom/x/postdetail/c0;->r`) for item models whose `entryId` contains `discover` or `Discover` and returns the empty presenter (`Lcom/x/urt/b0;->a`) in tweet reply threads.
+     - **Hide Recommended Users**: Neutralizes `ProfileFollowRecommendationResponse` constructors (`ProfileFollowRecommendationResponse(style=`) by zeroing `recommendedUsers` (`null`) before field assignment, preventing follow recommendation models from entering presenter state and suppressing recommended users popup rendering.
+     - **Hide Live Threads**: Neutralizes `FleetlineApiResponse` constructor (`FleetlineApiResponse(threads=`) by replacing `threads` with `Collections.emptyList()` before field assignment, suppressing live thread and space bar rendering at the top of the timeline.
+     - **Hide Live Banner**: Neutralizes feature switch `x_lite_livestream_pill_enabled` to `false` (`0`), suppressing the top-of-timeline livestream and broadcast pill docked beneath home tabs.
+     - **Community Notes & Inline Actions**: Neutralizes feature switches `birdwatch_consumption_enabled` and `android_ntab_display_options_inline_actions_enabled` to `false` (`0`).
+     - **Post Metrics & View Count**: Rewrites `Lcom/x/inlineactionbar/d;->invoke` to substitute `CountedPill` with `Countless` and injects filtering around view count invoke instructions.
+     - **Timeline Add Tab & Top Bar**: Zeroes conditional branch registers in `Lcom/x/home/tabbed/a;` (`f`, `i`, `j`) to hide the home timeline add tab button and follow button in top bars.
    - **No Shortened URL**:
      - Target: `ApiTimelineUrl` constructor (`com.x.android.core.fragment`), resolved dynamically via indexed string `ApiTimelineUrl(url=`, and `GraphqlUrlsEntity` constructor, resolved dynamically via indexed string `GraphqlUrlsEntity(display_url=`.
      - Transformation: Intercepts constructor field assignments and substitutes shortened `t.co` URLs with `expanded_url` when non-null (`if-eqz`), replacing the click-tracking redirect intermediary at parse time across timeline rich text and entity sets.
@@ -196,18 +184,21 @@ The bytecode layer suppresses intrusive server-driven prompts, banners, and serv
     - **Share Links**:
       - Target: Post share intent builder (`com.x.share.impl.x.c`), resolved dynamically via indexed strings `https://x.com/i/trending/`, `https://x.com/i/lists/`, `https://x.com/i/status/`, `image/*`, and canonical post URL model (`com.x.models.u5.getUrl`), resolved via `https://x.com/unavailable/status/`, `https://x.com/`, `/status/`.
       - Transformation: When `customSharingDomain` is enabled, substitutes `https://x.com/i/status/` and `https://x.com/` with `fxtwitter.com` (`https://fxtwitter.com/i/status/` and `https://fxtwitter.com/`) at string load sites. `handleCustomLinks` and `legacyShareLinks` boolean options are provided with runtime skips documenting the absence of stock custom-domain routing and post-11.4x upstream deprecation of author handles in share URLs.
-    - **Customize UI**:
-      - Target: Client-side navigation, tab, and UI feature switches across `com.x.explore.f`, `com.x.photoeditor.f2`, `com.x.urt.items.notification.w`, `com.x.main.y`, `com.x.main.landing.q`, and `com.x.android.main.helpers.j4`.
-      - Transformation: Neutralizes evaluation results for verified local feature switches (`android_ntab_display_options_inline_actions_enabled`, `android_x_lite_persistent_bottom_nav_enabled`, `android_rich_tabs_explore_tab_enabled`, `android_rich_tabs_search_tab_enabled`, `android_grok_bot_sidebar_enabled`, `x_lite_profile_connect_tabs_enabled`) to `false` (`0`) at call sites. Provides 11 patch-time boolean options (`inlineActionBar`, `navigationBar`, `replySorting`, `exploreTabs`, `notificationTabs`, `profileTabs`, `searchSuggestions`, `searchTabItems`, `sideBarItems`, `timelineTopBar`, `topBarExtra`), with explicit runtime skip telemetry for surfaces migrated or managed via URT/root Compose scaffolds.
-    - **Hide Elements**:
-      - Target: Client-side badges, secondary FAB menu, and community notes feature switches across `com.x.notifications.tab.j`, `com.x.composer.fab.k`, and `com.x.main.landing.q`.
-      - Transformation: Neutralizes evaluation results for verified local feature switches (`grok_android_tab_badge_enabled`, `birdwatch_consumption_enabled`, `android_compose_fab_expansion_enabled`) to `false` (`0`) at call sites. Provides 11 patch-time boolean options (`hideBadges`, `hideBookmark`, `hideCommunityBadges`, `hideCommunityNotes`, `hideFab`, `hideFabMenu`, `hideFollowedBy`, `hideHiddenReplies`, `hideImmersivePlayer`, `hidePostMetrics`, `hideViewCount`), with explicit runtime skip telemetry for served elements without client-side feature switch gates.
+    - **Post & Profile UI**:
+      - Target: Client-side Grok post and profile action switches and profile connect tabs switch (`grok_android_analyze_timelines_enabled`, `grok_android_imagine_cta_profile_enabled`, `x_lite_profile_connect_tabs_enabled`) across `com.x.main.landing.q` and `com.x.main.y`.
+      - Transformation: Neutralizes evaluation results for verified local feature switches to `false` (`0`). Provides 3 patch-time boolean options (`hideGrokPostAction`, `hideProfileGrokButton`, `profileTabs`).
+    - **Navigation UI**:
+      - Target: Client-side bottom navigation, Grok tab, rich explore/search tabs, sidebar, badges, and compose FAB expansion switches across `com.x.main.landing.d0`, `com.x.main.landing.q`, `com.x.explore.f`, and `com.x.notifications.tab.j`.
+      - Transformation: Neutralizes evaluation results for verified local navigation feature switches (`android_x_lite_persistent_bottom_nav_enabled`, `android_webview_grok_tab_enabled`, `android_rich_tabs_explore_tab_enabled`, `android_rich_tabs_search_tab_enabled`, `android_grok_bot_sidebar_enabled`, `grok_android_tab_badge_enabled`, `android_compose_fab_expansion_enabled`) to `false` (`0`) at call sites. Provides 7 patch-time boolean options (`hideBadges`, `hideFabMenu`, `navigationBar`, `grokTab`, `exploreTabs`, `searchTabItems`, `sideBarItems`).
     - **Show Sensitive Media**:
       - Target: `MediaVisibilityResults` constructors (`com.x.models.interstitial.h`), resolved dynamically via indexed string `MediaVisibilityResults(blurImageInterstitial=`.
       - Transformation: Injects an immediate `return-void` following the super constructor `<init>()V` at instruction index 1 across both constructors, permanently ensuring `blurImageInterstitial` remains `null`. This suppresses downstream sensitive media blur overlays and warning banners across post presentation and media visibility trees without modifying user settings or network payloads.
     - **Block Update Screen**:
       - Target: Startup version gate evaluator (`com.x.composer.work.l1`), resolved dynamically via indexed strings `min_android_xlite_version` and `x_lite_in_app_update_blocking_versions`, and Google Play in-app update controller (`com.x.android.appupdate.f`), resolved via indexed strings `x_lite_in_app_update_min_releases_behind` and `x_lite_in_app_update_cold_start_versions`.
       - Transformation: Injects an immediate `sget-object ... Lkotlin/Unit;` + `return-object` early-return hook at the `min_android_xlite_version` evaluation site, permanently bypassing version code thresholds, version blacklist matching, Decompose router `ForceUpdateArgs` stack substitution, and lifecycle DataStore persistence. Additionally injects an immediate `return-void` at instruction index 0 of Google Play in-app update check entrypoint, suppressing Play Store update bottom sheets and prompts on cold/warm startup.
+    - **DM Debloat**:
+      - Target: Client-side direct message calling and conversation surface gates across `com.x.calling.navigator.w` and `com.x.dm.root.o1`.
+      - Transformation: Neutralizes evaluation results for verified local feature switch `xcall_xchat_enabled` to `false` (`0`) at call sites when either audio or video call toggle is enabled, hiding both header buttons together through the unified xchat pipeline. WARNING: neutralizing this flag disables DM outgoing-call entrypoints, not just the header icons. Provides 2 patch-time boolean options (`hideDmAudioCall`, `hideDmVideoCall`).
 
 ### F. Evaluated Candidates & Architectural Boundaries
 

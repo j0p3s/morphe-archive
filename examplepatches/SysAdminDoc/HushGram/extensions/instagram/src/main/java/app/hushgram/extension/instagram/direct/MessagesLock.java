@@ -125,7 +125,7 @@ public final class MessagesLock {
         void ask(Activity activity, Runnable confirmed, Runnable notConfirmed);
     }
 
-    static volatile Asker asker = MessagesLock::askPhone;
+    static volatile Asker asker = MessagesLock::askConfigured;
     /** View ids by name, for tests whose app has none of Instagram's. */
     static volatile Map<String, Integer> idsForTests;
 
@@ -257,6 +257,21 @@ public final class MessagesLock {
             return;
         }
         ask(activity, then);
+    }
+
+    /**
+     * Runs [then] after the HushGram PIN is entered, every time, when a PIN is what unlocks the
+     * messages: a setting that weakens a lock (switching a lock off, changing the PIN or how to
+     * unlock) never takes the shortcut of an open session, and never the phone's lock. With no PIN
+     * in play it is {@link #confirmThen}, exactly as before.
+     */
+    public static void confirmPinThen(Activity activity, Runnable then) {
+        if (!PinLock.protects()) {
+            confirmThen(activity, then);
+            return;
+        }
+        if (activity == null) return;
+        PinLock.ask(activity, then, () -> { });
     }
 
     /**
@@ -543,10 +558,11 @@ public final class MessagesLock {
             ViewGroup window = (ViewGroup) decor;
             if (!switchedOn() && !ChatLocks.any() && !anyCover(window)) {
                 // Nothing to cover and nothing to take down. Before every frame, all that's left
-                // is learning which chat is open for Lock a chat, and that walks the whole window,
-                // so it waits IDLE_LOOK_MS between looks instead of running on each draw.
+                // is learning the open chat's name for Lock a chat, and that walks the whole window,
+                // so it waits IDLE_LOOK_MS between looks instead of running on each draw. With no
+                // chat open, or its name found, there's nothing to learn and nothing is walked.
                 long now = SystemClock.elapsedRealtime();
-                if (now - idleLookedAt < IDLE_LOOK_MS) {
+                if (!ChatLocks.wantsName() || now - idleLookedAt < IDLE_LOOK_MS) {
                     keepOutOfRecents(activity, false);
                     if (askedAt == 0) askedThisTime = false;
                     return;
@@ -640,10 +656,15 @@ public final class MessagesLock {
     static final long IDLE_LOOK_MS = 500;
     private static long idleLookedAt = Long.MIN_VALUE / 2;
 
-    /** Whether [window] has a cover at all, shown or not. */
+    /**
+     * Whether [window] has a cover that isn't taken down yet. A cover {@link #place} has set to GONE
+     * already gave the screen under it back, so it leaves nothing to do, and the window can go back
+     * to the idle look after a lock is turned off.
+     */
     private static boolean anyCover(ViewGroup window) {
         for (int i = window.getChildCount() - 1; i >= 0; i--) {
-            if (window.getChildAt(i) instanceof Cover) return true;
+            View child = window.getChildAt(i);
+            if (child instanceof Cover && child.getVisibility() != View.GONE) return true;
         }
         return false;
     }
@@ -894,6 +915,22 @@ public final class MessagesLock {
     }
 
     /**
+     * The one place every lock path asks through: the HushGram PIN while Unlock with says PIN and a
+     * PIN is set, else the phone's lock, exactly as before there was a choice.
+     */
+    private static void askConfigured(Activity activity, Runnable confirmed, Runnable notConfirmed) {
+        if (PinLock.active()) {
+            PinLock.ask(activity, confirmed, notConfirmed);
+            return;
+        }
+        askPhone(activity, confirmed, notConfirmed);
+    }
+
+    static Asker configuredAskerForTests() {
+        return MessagesLock::askConfigured;
+    }
+
+    /**
      * Android 11 and up ask in Instagram's own window, with the fingerprint or face and the PIN,
      * pattern or password as the fallback. Android 9 and 10 open the phone's own lock screen check
      * and read its answer through a small headless fragment: Android 10's prompt in the app's window
@@ -1052,7 +1089,8 @@ public final class MessagesLock {
         unfollow();
         anchors.clear();
         secured.clear();
-        asker = MessagesLock::askPhone;
+        asker = MessagesLock::askConfigured;
+        PinLock.resetForTests();
         idsForTests = null;
         idleLookedAt = Long.MIN_VALUE / 2;
         ChatLocks.resetForTests();

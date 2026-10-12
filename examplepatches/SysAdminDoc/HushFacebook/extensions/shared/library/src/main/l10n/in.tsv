@@ -365,7 +365,7 @@ Facebook will open on %1$s.	Facebook akan terbuka di %1$s.
 # context: switch title under Opening Facebook; Following is Facebook's feed of the friends, Pages and groups you follow, and Home is the tab
 Following feed on Home	Feed Diikuti di Beranda
 # context: summary of that switch; the ranked feed is the one Facebook orders for you, and the Feeds tab has its own filters
-Home shows the newest posts from friends, groups and Pages you follow, like All in the Feeds tab. The Feeds tab's filters don't change.	Beranda menampilkan postingan terbaru dari teman, grup, dan Halaman yang kamu ikuti, seperti Semua di tab Feeds. Filter di tab Feeds tidak berubah.
+Home shows the newest posts from friends, groups and Pages you follow, like All in the Feeds tab, or the filter you pick below. The Feeds tab's filters don't change.	Beranda menampilkan postingan terbaru dari teman, grup, dan Halaman yang kamu ikuti, seperti Semua di tab Feed atau filter yang kamu pilih di bawah. Filter di tab Feed tidak berubah.
 Jump to a section	Lompat ke bagian
 Go straight to one group of settings. Back returns to where you were.	Langsung ke satu kelompok setelan. Kembali membawamu ke tempat semula.
 # context: switch title under Downloads; on, every video save keeps to formats other apps accept
@@ -624,6 +624,10 @@ Type @ before Facebook suggests someone to tag in posts or comments. Your text s
 Resume long videos	Lanjutkan video panjang
 # context: summary of that switch; the seek bar is the bar under a video you drag to move through it; Reels is Facebook's name for its short videos
 Videos over two minutes pick up where you left off. Drag the bar to start elsewhere. Short reels, live videos and ads start as usual.	Video yang lebih dari dua menit dilanjutkan dari tempat kamu berhenti. Geser bilahnya untuk mulai dari tempat lain. Reel pendek, video langsung, dan iklan dimulai seperti biasa.
+# context: switch title under Playback; a frame is one still picture of a video
+Frame step	Langkah per frame
+# context: summary of that switch; Reels is Facebook's name for its short videos
+With a reel or video paused, tap its right side to step one frame forward and its left side to step one frame back. Tap the middle to play.	Saat reel atau video dijeda, ketuk sisi kanannya untuk maju satu frame dan sisi kirinya untuk mundur satu frame. Ketuk bagian tengah untuk memutar.
 # context: switch title under News feed, right below Hide AI-detected posts; on, posts their creator labelled as AI go too
 Also hide posts labeled as AI	Sembunyikan juga postingan berlabel AI
 Hide Meta AI in the feed	Sembunyikan Meta AI di feed
@@ -850,7 +854,7 @@ Shows the post's date under the poster's name instead of Facebook's rotating det
 # context: switch title under News feed; the Feeds header is the row at the top of the Feeds tab with Feeds, the menu and search, and the filters under it, All, Favorites, Friends, Groups and Pages
 Hide the Feeds header	Sembunyikan bagian atas Feed
 # context: description of that switch; the Feeds tab is where Facebook lists posts by those filters, and the title row is the one with the tab's name
-Shows the Feeds tab straight on its posts, without the title row or the filters. Restart Facebook to see the change.	Menampilkan tab Feeds langsung dengan postingannya, tanpa baris judul dan filter. Mulai ulang Facebook untuk melihat perubahannya.
+Shows the Feeds tab straight on its posts, without the title row or the filters. Restart Facebook to see the change.	Menampilkan tab Feed langsung dengan postingannya, tanpa baris judul dan filter. Mulai ulang Facebook untuk melihat perubahannya.
 # context: switch title under Reels and Watch; the prompt is Facebook's "Are you interested in this reel?" question on a reel
 Hide reel interest prompts	Sembunyikan pertanyaan minat di reel
 # context: description of that switch; the quoted text is Facebook's own prompt, so use Facebook's wording in your language if you know it
@@ -914,6 +918,13 @@ When Facebook opens on Feeds, the Feeds tab opens on the filter Facebook picks.	
 When Facebook opens on Feeds, the Feeds tab opens on %1$s. If your Feeds tab doesn't have it, it opens as usual.	Saat Facebook terbuka di Feed, tab Feed terbuka di %1$s. Jika tab Feed kamu tidak memilikinya, tab itu terbuka seperti biasa.
 The Feeds tab will open on the filter Facebook picks.	Tab Feed akan terbuka di filter yang dipilih Facebook.
 The Feeds tab will open on %1$s.	Tab Feed akan terbuka di %1$s.
+# context: title of the list under Following feed on Home that picks which Feeds tab filter Home shows
+Home shows	Beranda menampilkan
+Home shows the same posts as All in the Feeds tab.	Beranda menampilkan postingan yang sama dengan Semua di tab Feed.
+# context: %1$s is a Feeds tab filter's name, like Friends or Groups
+Home shows the same posts as %1$s in the Feeds tab. If Facebook doesn't have that feed, Home shows All.	Beranda menampilkan postingan yang sama dengan %1$s di tab Feed. Jika Facebook tidak punya feed itu, Beranda menampilkan Semua.
+# context: settings import preview; %1$s is the Following feed on Home switch, %2$s a Feeds tab filter
+With %1$s on, Home will show the same posts as %2$s in the Feeds tab.	Saat %1$s menyala, Beranda akan menampilkan postingan yang sama dengan %2$s di tab Feed.
 Saved	Tersimpan
 Saved shortcut	Pintasan Tersimpan
 Adds Saved to the menu you get by holding Facebook's icon, if there's room. Existing shortcuts stay.	Menambahkan Tersimpan ke menu yang muncul saat ikon Facebook ditekan lama, jika ada ruang. Pintasan yang ada tetap tersedia.
@@ -943,7 +954,12 @@ Stops the small vibrations Facebook makes when you tap or swipe. Your keyboard a
 Turn off screen transitions	Matikan transisi layar
 Tabs, the Menu and screens that open over Facebook appear at once instead of sliding in. Swiping between tabs still works.	Tab, Menu, dan layar yang terbuka di atas Facebook langsung muncul tanpa efek geser. Menggeser antar tab tetap berfungsi.
 Unlock app icons	Buka ikon aplikasi
-Lets you pick the app icons Facebook keeps for Facebook Plus on its App icon page. Your pick stays if you turn this off, so pick the blue one first to go back.	Memungkinkan memilih ikon aplikasi yang disediakan Facebook khusus untuk Facebook Plus di halaman Ikon aplikasi. Pilihan tetap berlaku meski ini dimatikan, jadi pilih ikon biru dulu untuk kembali.
+Lets you pick the app icons Facebook keeps for Facebook Plus, on Facebook's App icon page. Pick an app icon below opens it. Your pick stays if you turn this off, so pick the blue one first to go back.	Memungkinkan memilih ikon aplikasi yang disediakan Facebook khusus untuk Facebook Plus, di halaman Ikon aplikasi Facebook. Pilih ikon aplikasi di bawah membukanya. Pilihan tetap berlaku meski ini dimatikan, jadi pilih ikon biru dulu untuk kembali.
+# context: settings row under Appearance, right below the Unlock app icons switch; opens Facebook's own App icon page, so use Facebook's name for that page in this language
+Pick an app icon	Pilih ikon aplikasi
+Opens Facebook's App icon page, even on accounts where Facebook doesn't list it in Settings and privacy.	Membuka halaman Ikon aplikasi Facebook, juga di akun yang tidak menampilkannya di Pengaturan & privasi.
+# context: toast when the row above finds no App icon page in this Facebook build
+This Facebook build has no App icon page.	Versi Facebook ini tidak punya halaman Ikon aplikasi.
 # context: switch title under Playback; Android's own name for the floating video window
 Picture-in-picture	Gambar dalam gambar
 # context: summary of that switch
@@ -1127,6 +1143,8 @@ Hides posts that share a link to a website, with its preview card.	Menyembunyika
 Hides short posts shown as big text on a colored background.	Menyembunyikan postingan pendek yang tampil sebagai teks besar di atas latar berwarna.
 # context: switch title in Privacy: asks for the phone's own screen lock before Facebook shows
 Lock Facebook	Kunci Facebook
+Save crashes to Downloads	Simpan crash ke Download
+When Facebook crashes, the error goes in a text file in Download/Hushfacebook, so you can send it with a bug report even if Facebook won't open. Links and IDs are left out. The newest five are kept.	Saat Facebook crash, errornya disimpan sebagai file teks di Download/Hushfacebook, jadi kamu bisa mengirimnya bersama laporan bug meski Facebook tidak mau terbuka. Tautan dan ID tidak disertakan. Lima file terbaru disimpan.
 # context: summary of the Lock Facebook switch; the time below is the Lock after row under it
 Facebook asks for your fingerprint, face or screen lock at startup and when you return after the time below. Your phone needs a screen lock.	Facebook meminta sidik jari, wajah, atau kunci layar saat dibuka dan saat kamu kembali setelah waktu di bawah. Ponselmu perlu kunci layar.
 # context: toast when Lock Facebook is turned on and the phone has no screen lock to ask for

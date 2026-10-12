@@ -93,7 +93,7 @@ Before implementing any client-side compatibility or entitlement patch, answer a
 - Microsoft PowerPoint (`kveld-extra-morphe-patches`):
   `patches/src/main/kotlin/app/morphe/patches/powerpoint/BypassCodeTransparencyPatch.kt`
   `patches/src/main/kotlin/app/morphe/patches/powerpoint/RemoveSharedUserIdPatch.kt`
-- Xiaomi Earbuds (`brave-origin-patches`):
+- Xiaomi Earbuds (`kveld-morphe-patches`):
   `patches/src/main/kotlin/app/morphe/patches/xiaomi/earbuds/XiaomiEarbudsAntiTamperBypassPatch.kt`
 - Moovit (`kveld-extra-morphe-patches`):
   `patches/src/main/kotlin/app/morphe/patches/moovit/MoovitFixGoogleMapsPatch.kt`
@@ -125,11 +125,11 @@ Before implementing any client-side compatibility or entitlement patch, answer a
 - **CRITICAL GOOGLE PLAY BILLING CAUTION**:
   NEVER disable or remove `com.android.billingclient.api.ProxyBillingActivity` or `com.android.billingclient.api.ProxyBillingActivityV2`.
   Disabling Play Billing proxy activities causes unhandled `ActivityNotFoundException` crashes when payment flows are initialized.
-  *Caution*: In `brave-origin-patches`, `NokoPrintMultiStoreDebridgerPatch.kt` disabled `ProxyBillingActivity` and `ProxyBillingActivityV2`. DO NOT replicate or propagate this anti-pattern to any patch. Google Play Billing components must always remain enabled.
+  *Caution*: In `kveld-morphe-patches`, `NokoPrintMultiStoreDebridgerPatch.kt` disabled `ProxyBillingActivity` and `ProxyBillingActivityV2`. DO NOT replicate or propagate this anti-pattern to any patch. Google Play Billing components must always remain enabled.
 - Only suppress involuntary, trapped redirects that block legitimate on-device user operations.
 
 #### Verified Codebase Examples
-- NokoPrint (`brave-origin-patches`):
+- NokoPrint (`kveld-morphe-patches`):
   `patches/src/main/kotlin/app/morphe/patches/nokoprint/NokoPrintSkipWelcomeDialogPatch.kt`
   `patches/src/main/kotlin/app/morphe/patches/nokoprint/NokoPrintMultiStoreDebridgerPatch.kt`
 
@@ -199,7 +199,7 @@ Before implementing any client-side compatibility or entitlement patch, answer a
   `patches/src/main/kotlin/app/morphe/patches/moovit/MoovitSuppressPaywallsPatch.kt`
 - Microsoft PowerPoint (`kveld-extra-morphe-patches`):
   `patches/src/main/kotlin/app/morphe/patches/powerpoint/Unlock365FamilyPatch.kt`
-- Hevy (`brave-origin-patches`):
+- Hevy (`kveld-morphe-patches`):
   `patches/src/main/kotlin/app/morphe/patches/hevy/HevyUnlockProPatch.kt`
 
 ---
@@ -246,7 +246,7 @@ Before implementing any client-side compatibility or entitlement patch, answer a
    In permitted standalone utilities (hardware controllers, offline tools), ensure that stubbed account getters do NOT return `null` if the app subsequently accesses user properties. Return a valid placeholder object or stub individual property getters (e.g. `getUserId() -> "guest"`) to prevent unhandled `NullPointerException` crashes.
 
 #### Verified Codebase Examples
-- Xiaomi Earbuds (`brave-origin-patches`):
+- Xiaomi Earbuds (`kveld-morphe-patches`):
   `patches/src/main/kotlin/app/morphe/patches/xiaomi/earbuds/XiaomiEarbudsGuestOtaUnlockPatch.kt`
 - Microsoft PowerPoint (`kveld-extra-morphe-patches`):
   `patches/src/main/kotlin/app/morphe/patches/powerpoint/DisableLoginRequirementPatch.kt`

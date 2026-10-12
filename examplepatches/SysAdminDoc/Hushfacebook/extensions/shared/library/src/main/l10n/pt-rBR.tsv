@@ -352,7 +352,7 @@ Facebook will open on %1$s.	O Facebook vai abrir em %1$s.
 # context: switch title under Opening Facebook; Following is Facebook's feed of the friends, Pages and groups you follow, and Home is the tab
 Following feed on Home	Feed Seguindo na Página inicial
 # context: summary of that switch; the ranked feed is the one Facebook orders for you, and the Feeds tab has its own filters
-Home shows the newest posts from friends, groups and Pages you follow, like All in the Feeds tab. The Feeds tab's filters don't change.	O Início mostra as publicações mais recentes de amigos, grupos e Páginas que você segue, como Tudo na aba Feeds. Os filtros da aba Feeds não mudam.
+Home shows the newest posts from friends, groups and Pages you follow, like All in the Feeds tab, or the filter you pick below. The Feeds tab's filters don't change.	O Início mostra as publicações mais recentes de amigos, grupos e Páginas que você segue, como Tudo na aba Feeds ou o filtro que você escolher abaixo. Os filtros da aba Feeds não mudam.
 Jump to a section	Ir para uma seção
 Go straight to one group of settings. Back returns to where you were.	Vá diretamente para um grupo de configurações. Voltar leva você de volta ao ponto em que estava.
 Save videos other apps can open	Salvar vídeos que outros apps conseguem abrir
@@ -526,6 +526,8 @@ Tag suggestions only after @	Sugestões de marcação só depois de @
 Type @ before Facebook suggests someone to tag in posts or comments. Your text stays unchanged.	Digite @ para o Facebook sugerir quem marcar em publicações ou comentários. Seu texto não é alterado.
 Resume long videos	Retomar vídeos longos
 Videos over two minutes pick up where you left off. Drag the bar to start elsewhere. Short reels, live videos and ads start as usual.	Vídeos com mais de dois minutos continuam de onde você parou. Arraste a barra para começar em outro ponto. Reels curtos, vídeos ao vivo e anúncios começam como de costume.
+Frame step	Quadro a quadro
+With a reel or video paused, tap its right side to step one frame forward and its left side to step one frame back. Tap the middle to play.	Com um reel ou vídeo pausado, toque no lado direito para avançar um quadro e no lado esquerdo para voltar um quadro. Toque no meio para reproduzir.
 Also hide posts labeled as AI	Ocultar também publicações marcadas como IA
 Hide Meta AI in the feed	Ocultar a Meta AI no feed
 Hides Meta AI cards between posts and cards promoting the Vibes app. People's posts stay, whatever they say about AI.	Oculta os cartões da Meta AI entre as publicações e os que divulgam o app Vibes. As publicações das pessoas continuam, não importa o que digam sobre IA.
@@ -808,6 +810,13 @@ When Facebook opens on Feeds, the Feeds tab opens on the filter Facebook picks.	
 When Facebook opens on Feeds, the Feeds tab opens on %1$s. If your Feeds tab doesn't have it, it opens as usual.	Quando o Facebook abre em Feeds, a aba Feeds abre em %1$s. Se a sua aba Feeds não tiver esse filtro, ela abre como sempre.
 The Feeds tab will open on the filter Facebook picks.	A aba Feeds vai abrir no filtro que o Facebook escolher.
 The Feeds tab will open on %1$s.	A aba Feeds vai abrir em %1$s.
+# context: title of the list under Following feed on Home that picks which Feeds tab filter Home shows
+Home shows	O Início mostra
+Home shows the same posts as All in the Feeds tab.	O Início mostra as mesmas publicações que Tudo na aba Feeds.
+# context: %1$s is a Feeds tab filter's name, like Friends or Groups
+Home shows the same posts as %1$s in the Feeds tab. If Facebook doesn't have that feed, Home shows All.	O Início mostra as mesmas publicações que %1$s na aba Feeds. Se o Facebook não tiver esse feed, o Início mostra Tudo.
+# context: settings import preview; %1$s is the Following feed on Home switch, %2$s a Feeds tab filter
+With %1$s on, Home will show the same posts as %2$s in the Feeds tab.	Com %1$s ligado, o Início vai mostrar as mesmas publicações que %2$s na aba Feeds.
 Saved	Salvos
 Saved shortcut	Atalho para Salvos
 Adds Saved to the menu you get by holding Facebook's icon, if there's room. Existing shortcuts stay.	Adiciona Salvos ao menu que aparece ao segurar o ícone do Facebook, se houver espaço. Os atalhos existentes ficam.
@@ -837,7 +846,12 @@ Stops the small vibrations Facebook makes when you tap or swipe. Your keyboard a
 Turn off screen transitions	Desativar as transições de tela
 Tabs, the Menu and screens that open over Facebook appear at once instead of sliding in. Swiping between tabs still works.	As abas, o Menu e as telas que abrem sobre o Facebook aparecem na hora, sem deslizar. Deslizar entre abas continua funcionando.
 Unlock app icons	Desbloquear ícones do app
-Lets you pick the app icons Facebook keeps for Facebook Plus on its App icon page. Your pick stays if you turn this off, so pick the blue one first to go back.	Permite escolher na página Ícone do app os ícones que o Facebook reserva para o Facebook Plus. Sua escolha continua se você desativar isto, então escolha o azul antes para voltar.
+Lets you pick the app icons Facebook keeps for Facebook Plus, on Facebook's App icon page. Pick an app icon below opens it. Your pick stays if you turn this off, so pick the blue one first to go back.	Permite escolher os ícones que o Facebook reserva para o Facebook Plus, na página Ícone do app do Facebook. Escolher um ícone do app, aqui embaixo, abre essa página. Sua escolha continua se você desativar isto, então escolha o azul antes para voltar.
+# context: settings row under Appearance, right below the Unlock app icons switch; opens Facebook's own App icon page, so use Facebook's name for that page in this language
+Pick an app icon	Escolher um ícone do app
+Opens Facebook's App icon page, even on accounts where Facebook doesn't list it in Settings and privacy.	Abre a página Ícone do app do Facebook, mesmo em contas em que o Facebook não a mostra em Configurações e privacidade.
+# context: toast when the row above finds no App icon page in this Facebook build
+This Facebook build has no App icon page.	Esta versão do Facebook não tem a página Ícone do app.
 # context: switch title under Playback; Android's own name for the floating video window
 Picture-in-picture	Picture-in-picture
 # context: summary of that switch
@@ -1021,6 +1035,8 @@ Hides posts that share a link to a website, with its preview card.	Oculta public
 Hides short posts shown as big text on a colored background.	Oculta publicações curtas exibidas como texto grande sobre um fundo colorido.
 # context: switch title in Privacy: asks for the phone's own screen lock before Facebook shows
 Lock Facebook	Bloquear o Facebook
+Save crashes to Downloads	Salvar falhas em Downloads
+When Facebook crashes, the error goes in a text file in Download/Hushfacebook, so you can send it with a bug report even if Facebook won't open. Links and IDs are left out. The newest five are kept.	Quando o Facebook falha, o erro vai para um arquivo de texto em Download/Hushfacebook, para você enviar com um relatório de bug mesmo se o Facebook não abrir. Links e IDs ficam de fora. Os cinco mais recentes são mantidos.
 # context: summary of the Lock Facebook switch; the time below is the Lock after row under it
 Facebook asks for your fingerprint, face or screen lock at startup and when you return after the time below. Your phone needs a screen lock.	O Facebook pede sua digital, rosto ou bloqueio de tela ao abrir e quando você volta depois do tempo abaixo. O celular precisa de um bloqueio de tela.
 # context: toast when Lock Facebook is turned on and the phone has no screen lock to ask for

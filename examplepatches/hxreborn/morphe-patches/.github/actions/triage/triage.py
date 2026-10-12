@@ -36,7 +36,11 @@ OPTION_PATCHING_FAILED = "patchingfailed"
 OPTION_STOCK_FAILS_TOO = "theunpatchedappfailsthesameway"
 OPTION_NOT_TRIED = "ihavenottried"
 OPTIONS_RUNTIME_FAILURE = ("theappwillnotopenatall", "theappopensthencrashes")
-OPTIONS_PATCH_INEFFECTIVE = ("thepatchedfeatureisstilllocked", "thepatchhasnovisibleeffect")
+OPTIONS_PATCH_INEFFECTIVE = (
+    "thepatchedfeatureisstilllocked",
+    "thepatchhasnovisibleeffect",
+    "apatchismissingfromthelistinmanager",
+)
 
 body_path = Path(sys.argv[1])
 list_path = Path(sys.argv[2]) if len(sys.argv) > 2 else Path("patches-list.json")

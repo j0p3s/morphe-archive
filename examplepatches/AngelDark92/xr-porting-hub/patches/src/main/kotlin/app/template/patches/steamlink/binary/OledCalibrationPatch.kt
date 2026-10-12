@@ -1,0 +1,458 @@
+package app.template.patches.steamlink.binary
+
+import app.template.patches.shared.PatchCategories
+import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.patch.booleanOption
+import app.morphe.patcher.patch.floatSliderOption
+import app.morphe.patcher.patch.rawResourcePatch
+import app.morphe.patcher.patch.stringOption
+import app.template.patches.shared.Constants.COMPATIBILITIES_STEAM_LINK
+import java.security.MessageDigest
+import java.util.Locale
+
+private val SHADER_EXTENSION =
+    "#extension GL_OES_EGL_image_external_essl3 : enable".toByteArray(Charsets.US_ASCII)
+private val SHADER_VERSION = "#version 300 es\n".toByteArray(Charsets.US_ASCII)
+internal const val VIDEO_SHADER_SIZE = 1087
+internal const val VIDEO_LIBRARY_SIZE_5001712 = 2_221_072
+internal const val VIDEO_LIBRARY_SIZE_5002244 = 2_251_920
+internal const val VIDEO_LIBRARY_SIZE_5002363 = 2_292_008
+private const val VIDEO_LIBRARY_SHA256_5001712 =
+    "80b62797c7e26d6b67b0cca00693b076a336bdb48ebc1383a16cccb1616ed495"
+private const val VIDEO_LIBRARY_SHA256_5002244 =
+    "4b2fa5e1b5d9d5c938873f692b0e5e18159e1199dee1253dd6eccc8fa43dfa12"
+private const val VIDEO_LIBRARY_SHA256_5002363 =
+    "628821feab199d7712be8a51273eb9a21ec440a7c91aa6a768cc7307a4fe22f0"
+
+private val SRGB8_INSTRUCTION = byteArrayOf(0x69, 0x88.toByte(), 0x91.toByte(), 0x52)
+private val RGB10_A2_INSTRUCTION = byteArrayOf(0x29, 0x0b, 0x90.toByte(), 0x52)
+// MOV W9, #GL_RGBA16F (34842). Same guarded create-info field as the other formats.
+private val RGBA16F_INSTRUCTION = byteArrayOf(0x49, 0x03, 0x91.toByte(), 0x52)
+private val SWAPCHAIN_CONTEXT_BEFORE = byteArrayOf(
+    0xe1.toByte(), 0xa3.toByte(), 0x00, 0x91.toByte(),
+    0xe0.toByte(), 0x03, 0x14, 0xaa.toByte(),
+    0xe2.toByte(), 0x03, 0x1c, 0xaa.toByte(),
+    0xe8.toByte(), 0x22, 0x09, 0x9b.toByte(),
+)
+private val SWAPCHAIN_CONTEXT_AFTER = byteArrayOf(
+    0xe9.toByte(), 0x1b, 0x00, 0xf9.toByte(),
+    0x08, 0x21, 0x40, 0xb9.toByte(),
+    0xe8.toByte(), 0x3b, 0x00, 0xb9.toByte(),
+)
+internal val SWAPCHAIN_FORMAT_OFFSETS_5001712 = intArrayOf(0x10a9c4, 0x10aa34)
+internal val SWAPCHAIN_FORMAT_OFFSETS_5002244 = intArrayOf(0x10826c, 0x1082dc, 0x10834c)
+internal val SWAPCHAIN_FORMAT_OFFSETS_5002363 = intArrayOf(0x10c840, 0x10c8b0, 0x10c920)
+
+private data class VideoLibraryLayout(
+    val versionName: String,
+    val versionCode: Int,
+    val fileSize: Int,
+    val stockSha256: String,
+    val swapchainFormatOffsets: IntArray,
+)
+
+private val VIDEO_LIBRARY_LAYOUTS = listOf(
+    VideoLibraryLayout("2.0.20", 5001812, 2220872, "eebf7eabfb299ab7b9e5bba1612d4a32b27c51f451efc2bd206ba6fc6ac5205a", intArrayOf(0x10ab24, 0x10ab94)),
+    VideoLibraryLayout("2.0.21", 5001968, 2234048, "596b5680aa6c217daf5c151de517b1ad61b3999c6fd864ff59a718136ca40192", intArrayOf(0x106a94, 0x106b04)),
+
+    VideoLibraryLayout(
+        "2.0.20",
+        5001712,
+        VIDEO_LIBRARY_SIZE_5001712,
+        VIDEO_LIBRARY_SHA256_5001712,
+        SWAPCHAIN_FORMAT_OFFSETS_5001712,
+    ),
+    VideoLibraryLayout(
+        "2.0.22",
+        5002244,
+        VIDEO_LIBRARY_SIZE_5002244,
+        VIDEO_LIBRARY_SHA256_5002244,
+        SWAPCHAIN_FORMAT_OFFSETS_5002244,
+    ),
+    VideoLibraryLayout(
+        "2.0.23",
+        5002363,
+        VIDEO_LIBRARY_SIZE_5002363,
+        VIDEO_LIBRARY_SHA256_5002363,
+        SWAPCHAIN_FORMAT_OFFSETS_5002363,
+    ),
+)
+
+internal fun isSupportedVideoLibrarySize(size: Int): Boolean =
+    VIDEO_LIBRARY_LAYOUTS.any { it.fileSize == size }
+
+internal enum class VideoOutputPrecision(val optionValue: String) {
+    SRGB8_HIGHP("srgb8-highp"),
+    RGB10_A2_EXPERIMENTAL("rgb10-a2-experimental"),
+    RGBA16F_EXPERIMENTAL("rgba16f-experimental");
+
+    companion object {
+        fun fromOption(value: String?): VideoOutputPrecision =
+            entries.singleOrNull { it.optionValue == value }
+                ?: throw PatchException("Unknown video output precision: $value")
+    }
+}
+
+internal enum class VideoDitherMode(val optionValue: String) {
+    OFF("off"), LOW("low"), STANDARD("standard");
+
+    companion object {
+        fun fromOption(value: String?): VideoDitherMode =
+            entries.singleOrNull { it.optionValue == value }
+                ?: throw PatchException("Unknown OLED dithering mode: $value")
+    }
+}
+
+internal fun resolveVideoOutputPrecision(
+    selected: VideoOutputPrecision,
+    dither: VideoDitherMode,
+    use8BitOutputWhenDithering: Boolean,
+): VideoOutputPrecision =
+    if (use8BitOutputWhenDithering && dither != VideoDitherMode.OFF)
+        VideoOutputPrecision.SRGB8_HIGHP else selected
+
+// Existing option keys are retained. Both input declarations now select the same
+// VD-informed SDR foveal processing; input precision is negotiated by the host.
+// OFF and paddedVideoShader remain unchanged for existing calibration/blue-noise use.
+internal enum class FoveaMode(val optionValue: String) {
+    OFF("off"),
+    INPUT_10BIT("input-10bit"),
+    INPUT_8BIT("input-8bit");
+}
+
+internal fun resolveFoveaMode(input10Bit: Boolean, input8Bit: Boolean): FoveaMode = when {
+    input10Bit && input8Bit -> throw PatchException(
+        "Fovea VD-Like Input 10 bit and Fovea VD-Like Input 8 bit are mutually exclusive; " +
+            "select at most one",
+    )
+    input10Bit -> FoveaMode.INPUT_10BIT
+    input8Bit -> FoveaMode.INPUT_8BIT
+    else -> FoveaMode.OFF
+}
+
+// Defaults remain noise-free. Optional comparison dither is applied in calibrated
+// sRGB code space before EOTF, independently of the projection storage precision.
+private val HIGHP_SHADER_TEMPLATE = """#version 300 es
+#extension GL_OES_EGL_image_external_essl3 : enable
+precision highp float;
+in vec2 uvmask;
+in vec2 uv;
+out vec4 color;
+layout(location=2) uniform highp samplerExternalOES tex0;
+layout(location=3) uniform float fFadeAmount;
+layout(location=4) uniform vec3 UniReserved1;
+layout(location=5) uniform vec4 UniReserved2;
+layout(location=6) uniform vec4 UniDitherOffsets;
+const float DITHER_SCALE=DITHER_SCALE_VALUE;
+const float DITHER_ENABLE=0.;
+void main()
+{
+color=texture(tex0,uv);
+mat3 _valve1_d2020d709=mat3(
+1.04988847,.05442289,.00393458,
+-.04433306,.96052738,.01122383,
+-.005557,-.01509698,.98628952);
+vec3 c=_valve1_d2020d709*color.rgb;
+c=pow(clamp(c,0.,1.),vec3(GAMMA_VALUE));
+float y=dot(c,vec3(.2126,.7152,.0722));
+c=clamp(mix(vec3(y),c,SATURATION_VALUE),0.,1.);
+vec3 q=OUTPUT_CONVERSION;
+vec3 n=(fract(UniDitherOffsets.a*.43+UniDitherOffsets.rgb+
+vec3(gl_FragCoord.x*1.67+gl_FragCoord.y*1.127))-.5)*DITHER_SCALE*DITHER_ENABLE;
+n*=smoothstep(0.,DITHER_GUARD_VALUE,q)*smoothstep(0.,DITHER_GUARD_VALUE,1.-q);
+color.rgb=clamp(q+n,0.,1.)*fFadeAmount;
+""".trimStart('\n')
+
+// Compact foveal weight from uvmask, using the same 4-section geometry as Valve's masked
+// alpha suffix. 1.0 at a section centre (the fovea), 0.0 at the section edges (periphery).
+// Well-defined everywhere: d components are in [0, .5] so dot(d,d) is in [0, .5] and
+// clamp(1. - dot(d,d)*4., 0., 1.) stays in [0, 1]; unlike the exact masked-suffix pow curve it
+// never produces a negative argument (which would yield NaN at the section edges).
+private val FOVEA_WEIGHT_LINES =
+    "vec2 d=abs(fract(uvmask*vec2(1.,4.))-.5);\n" +
+    "float f=clamp(1.-dot(d,d)*4.,0.,1.);\n"
+
+internal fun paddedVideoShader(
+    gamma: Float,
+    saturation: Float,
+    outputPrecision: VideoOutputPrecision,
+    dither: VideoDitherMode = VideoDitherMode.OFF,
+    foveaGate: Boolean = false,
+): ByteArray {
+    val gammaValue = String.format(Locale.US, "%.2f", gamma)
+    val saturationValue = String.format(Locale.US, "%.2f", saturation)
+    val (ditherScale, ditherGuard, outputConversion) = when (outputPrecision) {
+        VideoOutputPrecision.SRGB8_HIGHP -> Triple(".00392", ".0157", "c")
+        VideoOutputPrecision.RGB10_A2_EXPERIMENTAL, VideoOutputPrecision.RGBA16F_EXPERIMENTAL ->
+            Triple(
+                ".00073",
+                ".00391",
+                "mix(c/12.92,pow((c+.055)/1.055,vec3(2.4)),step(vec3(.04045),c))",
+            )
+    }
+    var template = if (dither == VideoDitherMode.OFF) HIGHP_SHADER_TEMPLATE else {
+        val convertedQ = if (outputPrecision == VideoOutputPrecision.SRGB8_HIGHP) "q" else
+            "mix(q/12.92,pow((q+.055)/1.055,vec3(2.4)),step(vec3(.04045),q))"
+        HIGHP_SHADER_TEMPLATE
+            .replace("const float DITHER_ENABLE=0.;", "const float DITHER_ENABLE=1.;")
+            .replace("vec3 q=OUTPUT_CONVERSION;", "vec3 q=c;")
+            .replace("color.rgb=clamp(q+n,0.,1.)*fFadeAmount;",
+                "q=clamp(q+n,0.,1.);color.rgb=$convertedQ*fFadeAmount;")
+    }
+    if (foveaGate) {
+        // Legacy pixel weight in both layers: insert the compact uvmask-derived weight
+        // and scale the noise n by it. With dither OFF the weight multiplies zero, so the 8-bit
+        // neutral path stays byte-exact to the calibrated output apart from the (unused) gate.
+        val noiseAnchor = "vec3 n=(fract(UniDitherOffsets.a*.43+UniDitherOffsets.rgb+\n"
+        require(noiseAnchor in template) {
+            "Fovea gate anchor missing from the video shader template"
+        }
+        template = template
+            .replace(noiseAnchor, FOVEA_WEIGHT_LINES + noiseAnchor)
+            .replace("*DITHER_SCALE*DITHER_ENABLE;", "*DITHER_SCALE*DITHER_ENABLE*f;")
+    }
+    val src = template
+        .replace("GAMMA_VALUE", gammaValue)
+        .replace("SATURATION_VALUE", saturationValue)
+        .replace("DITHER_SCALE_VALUE", when (dither) {
+            VideoDitherMode.OFF -> ditherScale
+            VideoDitherMode.LOW -> ".00196"
+            VideoDitherMode.STANDARD -> ".00392"
+        })
+        .replace("DITHER_GUARD_VALUE", if (dither == VideoDitherMode.OFF) ditherGuard else ".0157")
+        .replace("OUTPUT_CONVERSION", outputConversion)
+        .toByteArray(Charsets.US_ASCII)
+    if (src.size > VIDEO_SHADER_SIZE) {
+        throw PatchException("Calibration shader exceeds $VIDEO_SHADER_SIZE bytes (${src.size})")
+    }
+    return src.copyOf(VIDEO_SHADER_SIZE).apply {
+        for (i in src.size until VIDEO_SHADER_SIZE) this[i] = ' '.code.toByte()
+    }
+}
+
+internal fun isOledCalibrationShader(prefix: ByteArray): Boolean {
+    val text = prefix.toString(Charsets.US_ASCII)
+    val gamma = Regex("c=pow\\(clamp\\(c,0\\.,1\\.\\),vec3\\(([0-9]+\\.[0-9]{2})\\)\\);").find(text)
+        ?.groupValues?.get(1)?.toFloatOrNull() ?: return false
+    val saturation = Regex("c=clamp\\(mix\\(vec3\\(y\\),c,([0-9]+\\.[0-9]{2})\\),0\\.,1\\.\\);").find(text)
+        ?.groupValues?.get(1)?.toFloatOrNull() ?: return false
+    return gamma in .5f..2.5f && saturation in 0f..3f &&
+        prefix.contentEquals(paddedVideoShader(gamma, saturation, VideoOutputPrecision.SRGB8_HIGHP))
+}
+
+private fun ByteArray.indicesOfSubarray(pattern: ByteArray): List<Int> {
+    if (pattern.isEmpty() || size < pattern.size) return emptyList()
+    val matches = mutableListOf<Int>()
+    outer@ for (i in 0..size - pattern.size) {
+        for (j in pattern.indices) if (this[i + j] != pattern[j]) continue@outer
+        matches += i
+    }
+    return matches
+}
+
+internal fun findVideoShader(bytes: ByteArray): Int {
+    val extensionMatches = bytes.indicesOfSubarray(SHADER_EXTENSION)
+    if (extensionMatches.size != 1) {
+        throw PatchException("Expected one video GLSL extension marker, found ${extensionMatches.size}")
+    }
+    val extensionPos = extensionMatches.single()
+    val searchStart = (extensionPos - 32).coerceAtLeast(0)
+    val shaderPos = (searchStart..extensionPos).firstOrNull { pos ->
+        pos + SHADER_VERSION.size <= bytes.size &&
+            bytes.copyOfRange(pos, pos + SHADER_VERSION.size).contentEquals(SHADER_VERSION)
+    } ?: throw PatchException("Video GLSL version directive not found before extension marker")
+    if (shaderPos + VIDEO_SHADER_SIZE >= bytes.size || bytes[shaderPos + VIDEO_SHADER_SIZE] != 0.toByte()) {
+        throw PatchException(
+            "Video GLSL block at 0x${shaderPos.toString(16)} lacks expected " +
+                "$VIDEO_SHADER_SIZE-byte NUL boundary",
+        )
+    }
+    return shaderPos
+}
+
+private fun ByteArray.matchesAt(offset: Int, expected: ByteArray): Boolean =
+    offset >= 0 && offset + expected.size <= size &&
+        expected.indices.all { this[offset + it] == expected[it] }
+
+private fun ByteArray.sha256(): String =
+    MessageDigest.getInstance("SHA-256").digest(this).joinToString("") { "%02x".format(it) }
+
+internal fun setProjectionSwapchainFormat(
+    bytes: ByteArray,
+    outputPrecision: VideoOutputPrecision,
+    versionName: String,
+    versionCode: String,
+): ByteArray {
+    val layout = VIDEO_LIBRARY_LAYOUTS.singleOrNull {
+        it.versionName == versionName && it.versionCode.toString() == versionCode
+    } ?: return bytes.copyOf()
+    if (bytes.size != layout.fileSize) {
+        throw PatchException(
+            "Unsupported libvrlink_scene.so size=${bytes.size}, sha256=${bytes.sha256()} for " +
+                "Steam Link $versionName/$versionCode; expected size=${layout.fileSize}, " +
+                "stockSha256=${layout.stockSha256}",
+        )
+    }
+
+    val states = layout.swapchainFormatOffsets.map { offset ->
+        if (!bytes.matchesAt(offset - SWAPCHAIN_CONTEXT_BEFORE.size, SWAPCHAIN_CONTEXT_BEFORE) ||
+            !bytes.matchesAt(offset + SRGB8_INSTRUCTION.size, SWAPCHAIN_CONTEXT_AFTER)
+        ) {
+            throw PatchException(
+                "Swapchain format context precondition failed at 0x${offset.toString(16)}",
+            )
+        }
+        when {
+            bytes.matchesAt(offset, SRGB8_INSTRUCTION) -> VideoOutputPrecision.SRGB8_HIGHP
+            bytes.matchesAt(offset, RGB10_A2_INSTRUCTION) -> VideoOutputPrecision.RGB10_A2_EXPERIMENTAL
+            bytes.matchesAt(offset, RGBA16F_INSTRUCTION) -> VideoOutputPrecision.RGBA16F_EXPERIMENTAL
+            else -> throw PatchException(
+                "Unsupported swapchain format instruction at 0x${offset.toString(16)}",
+            )
+        }
+    }
+    val recognizedOffsets = (
+        bytes.indicesOfSubarray(SWAPCHAIN_CONTEXT_BEFORE + SRGB8_INSTRUCTION + SWAPCHAIN_CONTEXT_AFTER) +
+            bytes.indicesOfSubarray(SWAPCHAIN_CONTEXT_BEFORE + RGB10_A2_INSTRUCTION + SWAPCHAIN_CONTEXT_AFTER) +
+            bytes.indicesOfSubarray(SWAPCHAIN_CONTEXT_BEFORE + RGBA16F_INSTRUCTION + SWAPCHAIN_CONTEXT_AFTER)
+        ).map { it + SWAPCHAIN_CONTEXT_BEFORE.size }.sorted()
+    if (recognizedOffsets != layout.swapchainFormatOffsets.sorted()) {
+        throw PatchException(
+            "Swapchain format context offsets for $versionName/$versionCode were " +
+                recognizedOffsets.joinToString { "0x${it.toString(16)}" } +
+                "; expected " + layout.swapchainFormatOffsets.joinToString { "0x${it.toString(16)}" },
+        )
+    }
+    if (states.distinct().size != 1) {
+        throw PatchException("Mixed projection swapchain format state: ${states.joinToString()}")
+    }
+
+    val replacement = when (outputPrecision) {
+        VideoOutputPrecision.SRGB8_HIGHP -> SRGB8_INSTRUCTION
+        VideoOutputPrecision.RGB10_A2_EXPERIMENTAL -> RGB10_A2_INSTRUCTION
+        VideoOutputPrecision.RGBA16F_EXPERIMENTAL -> RGBA16F_INSTRUCTION
+    }
+    return bytes.copyOf().apply {
+        layout.swapchainFormatOffsets.forEach { replacement.copyInto(this, it) }
+    }
+}
+
+// Guarded A/B generator is pinned to its decoded 2.0.22/5002244 source.
+internal fun setProjectionSwapchainFormat(
+    bytes: ByteArray,
+    outputPrecision: VideoOutputPrecision,
+): ByteArray = setProjectionSwapchainFormat(bytes, outputPrecision, "2.0.22", "5002244")
+
+@Suppress("unused")
+val oledCalibrationPatch = rawResourcePatch(
+    name = "OLED color calibration",
+    description = "OLED calibration with optional VD-informed SDR foveal processing and a separate foveal gamma adjustment, always with 8-bit sRGB output. The VD options bypass the calibration profile on the fovea while retaining Valve's decoder colour correction. Foveal gamma can darken that layer in any mode. Exact builds 5001712, 5001812, 5001968, 5002244, and 5002363; visible improvement requires headset verification.",
+    default = false,
+) {
+    category(PatchCategories.IMAGE_QUALITY)
+    compatibleWith(*COMPATIBILITIES_STEAM_LINK.toTypedArray())
+
+    val profile by stringOption(
+        key = "profile",
+        default = "final-balanced",
+        values = mapOf(
+            "Initial tested (gamma 1.06, saturation 1.12)" to "initial",
+            "Final balanced tested (gamma 1.20, saturation 1.45)" to "final-balanced",
+            "Neutral comparison (gamma 1.00, saturation 1.00)" to "neutral",
+            "Custom gamma and saturation" to "custom",
+        ),
+        title = "Calibration profile",
+        description = "Selects gamma and saturation for both layers when the VD options are off, or for the base layer when a VD foveal option is on.",
+        required = true,
+    )
+
+    val gamma = floatSliderOption(
+        key = "gamma",
+        min = 0.50f,
+        max = 2.50f,
+        default = 1.20f,
+        step = 0.01f,
+        title = "Gamma",
+        description = "Used by Custom profile. Allowed range: 0.50 to 2.50.",
+        required = true,
+    )
+
+    val saturation = floatSliderOption(
+        key = "saturation",
+        min = 0.00f,
+        max = 3.00f,
+        default = 1.45f,
+        step = 0.01f,
+        title = "Saturation",
+        description = "Used by Custom profile. Allowed range: 0.00 to 3.00.",
+        required = true,
+    )
+
+    val foveaVdLike10Bit by booleanOption(
+        key = "foveaVdLike10Bit",
+        default = false,
+        title = "Fovea VD-Like Input 10 bit",
+        description = "VD-informed SDR processing for declared 10-bit input: use highp sampling, retain Valve's decoder colour correction, bypass the calibration profile on the foveal layer, and add no shader noise. The separate foveal gamma adjustment still applies. Output is 8-bit sRGB. Does not negotiate host depth or reproduce VD's raw-YUV decoder import. Mutually exclusive with the 8-bit option and separate blue-noise patch.",
+        required = true,
+    )
+
+    val foveaVdLike8Bit by booleanOption(
+        key = "foveaVdLike8Bit",
+        default = false,
+        title = "Fovea VD-Like Input 8 bit",
+        description = "Uses the same VD-informed SDR foveal processing for declared 8-bit input, retaining Valve's decoder colour correction while bypassing the calibration profile and adding no shader noise. The separate foveal gamma adjustment still applies. Output is 8-bit sRGB. Cannot recover precision already lost in the source. Mutually exclusive with the 10-bit option and separate blue-noise patch; does not negotiate host depth.",
+        required = true,
+    )
+
+    val fovealGamma = floatSliderOption(
+        key = "fovealGamma",
+        min = 1.00f,
+        max = 1.30f,
+        default = 1.00f,
+        step = 0.01f,
+        title = "Foveal gamma adjustment",
+        description = "Additional gamma on the foveal layer only, after its colour processing. 1.00 leaves it unchanged; higher values darken shadows and midtones. Try 1.02 first for a lighter foveal region. Works with either VD option or both off, before fade and optional blue-noise dithering. Background calibration and edge blending stay unchanged; this is manual compensation, not a verified seam fix.",
+        required = true,
+    )
+
+    execute {
+        // Shader and swapchain edits are coupled. On an unrecognized native layout, skip both
+        // rather than aborting the complete APK experiment or writing fixed offsets blindly.
+        val layout = VIDEO_LIBRARY_LAYOUTS.singleOrNull {
+            it.versionName == packageMetadata.versionName &&
+                it.versionCode.toString() == packageMetadata.versionCode
+        } ?: return@execute
+        val file = get("lib/arm64-v8a/libvrlink_scene.so")
+        val bytes = file.readBytes()
+        if (bytes.size != layout.fileSize) {
+            throw PatchException(
+                "Unsupported libvrlink_scene.so size=${bytes.size} for Steam Link " +
+                    "${packageMetadata.versionName}/${packageMetadata.versionCode}; " +
+                    "expected ${layout.fileSize}",
+            )
+        }
+        val shaderPos = findVideoShader(bytes)
+        val (selectedGamma, selectedSaturation) = when (profile) {
+            "initial" -> 1.06f to 1.12f
+            "final-balanced" -> 1.20f to 1.45f
+            "neutral" -> 1.00f to 1.00f
+            "custom" -> gamma.value!! to saturation.value!!
+            else -> throw PatchException("Unknown OLED calibration profile: $profile")
+        }
+        // VD uses the same SDR colour path for both codec depths. Keep the calibrated
+        // base program byte-identical, and change only the separately assembled foveal
+        // suffix. The former common-prefix uvmask weight was not layer isolation.
+        val foveaMode = resolveFoveaMode(foveaVdLike10Bit == true, foveaVdLike8Bit == true)
+        val precision = VideoOutputPrecision.SRGB8_HIGHP
+        val shaderPatched = bytes.copyOf().apply {
+            paddedVideoShader(selectedGamma, selectedSaturation, precision).copyInto(this, shaderPos)
+        }
+        file.writeBytes(
+            applyVdSdrFovea(
+                setProjectionSwapchainFormat(shaderPatched, precision,
+                    packageMetadata.versionName, packageMetadata.versionCode),
+                packageMetadata.versionName, packageMetadata.versionCode, foveaMode, fovealGamma.value!!,
+            ),
+        )
+    }
+}

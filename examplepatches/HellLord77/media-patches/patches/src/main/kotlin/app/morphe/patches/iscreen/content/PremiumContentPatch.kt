@@ -7,7 +7,7 @@ import app.morphe.util.returnEarly
 @Suppress("unused")
 val premiumContentPatch = bytecodePatch(
     name = "Free premium content",
-    description = "Spoofs premium content to be free",
+    description = "Spoofs premium content to be free.",
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_ISCREEN)

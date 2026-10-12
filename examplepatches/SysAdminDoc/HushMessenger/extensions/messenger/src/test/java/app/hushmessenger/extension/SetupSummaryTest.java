@@ -68,7 +68,7 @@ public class SetupSummaryTest {
             assertTrue(text.contains("\nAndroid API: " + Build.VERSION.SDK_INT + "\nPaused: false\nSafe mode: false\n"));
             assertTrue(text.contains("people: installed=true, selected=true, active=true,"));
             assertTrue(text.contains("stories: installed=false, selected=true, active=false,"));
-            assertTrue(text.matches("(?s).*\nAnalytics stores: none\nFacebook caller checks: trusted=\\d+, signer_differs=\\d+, meta_signed_build=\\d+, not_family=\\d+, error=\\d+\n"));
+            assertTrue(text.matches("(?s).*\nLate start: (not needed|\\d+ ms on [^\n]+)\nAnalytics stores: none\nFacebook caller checks: trusted=\\d+, signer_differs=\\d+, meta_signed_build=\\d+, not_family=\\d+, error=\\d+\n"));
             assertEquals(ExpectedTotals.SETUP_LINES, text.split("\n").length);
             assertFalse(text.contains("private-"));
             assertFalse(text.contains("account-secret"));
@@ -173,7 +173,7 @@ public class SetupSummaryTest {
             for (String[] control : SettingsActivity.CONTROLS)
                 assertTrue(control[0], report.contains(", scope=" + control[2] + "\n"));
             assertTrue(report.matches("(?s).*hide_read_receipts: installed=true, selected=true, active=true, last_active=\\d+s ago, scope=.*"));
-            assertTrue(report.contains("Replying or switching this off may notify them."));
+            assertTrue(report.contains("Marking it read yourself or replying marks it read and shows Seen"));
             assertTrue(report.contains("Group chats aren't tested. Messenger's own Read receipts setting under Privacy & safety"));
             assertTrue(report.contains("Encrypted chats aren't supported and group chats aren't tested."));
             assertTrue(report.contains("It doesn't add replay or saving."));

@@ -2,23 +2,35 @@
 
 Every HushTelegram release, newest first.
 
-## Unreleased
+## 0.0.13 (2026-10-11)
+
+The seventh release, with 68 patches for telegram.org's Telegram 13.0.1 and the official Telegram beta 13.0.1.
+
+* **Telegram:** New Black and white launch logo patch. With AMOLED black on and your phone in dark mode, the launch screen on Android 13 and up shows Telegram's own logo in white on black, with its usual animation, instead of the app icon. It's left out of the default selection because it has Morphe rebuild Telegram's resources, so pick it in Expert mode.
+
+* **Telegram:** New Hide Contacts tab switch on the Chat list page. Turn it on and the Contacts tab is gone from the bar at the bottom of the main screen after a restart, and a swipe no longer lands on its page. Calls or Settings stays as you had it, and the new message button on the chat list still opens your contacts. It starts off.
+
+* **Telegram:** Ask before sending a sticker now covers the stickers Telegram suggests above the keyboard when you type an emoji, in a chat and in a story's reply bar. Those went out on one tap before. A sticker that costs stars still gets Telegram's own question only.
+
+* **Telegram:** Hide blocked users in groups now keeps a blocked person's new messages in a group from notifying you too, not just out of the chat when you open it. It also reads your whole blocked list now. Telegram only loads the first 20 people until you scroll its Blocked users page, so anyone past them used to slip through. And when someone else replies to a blocked person, their reply now shows without the quote of what was said, the way a reply to a deleted message looks.
+
+* **Tooling:** The source ledger is caught up with the October 11 audit (new sources, moved pins, 397 forks), and the census is fresh again. Sources hosted somewhere other than GitHub or GitLab now get their own list with the version an index last showed, so the audit stops flagging one it can't read and speaks up again when a new version appears.
 
 * **Tooling:** The settings screen's code is split into one method per page, and patch helpers nothing called anymore are gone. The release script keeps gh's warnings out of what it publishes, and the release receipt stops on a clone git can't open instead of reading it as a copy with no history.
 
-* **Settings:** A wording pass. Pause is explained the same way everywhere, Import settings says what a file holds, and errors that left you guessing now say what to do next: download a damaged file again, update HushTelegram for a file from a newer one, or open an export that couldn't be checked.
+* **Telegram:** A wording pass. Pause is explained the same way everywhere, Import settings says what a file holds, and errors that left you guessing now say what to do next: download a damaged file again, update HushTelegram for a file from a newer one, or open an export that couldn't be checked.
 
 * **Telegram:** With Debug logging on, what HushTelegram writes to Android's log goes through the same redaction as an exported report, so tokens and keys in a message or an error stay out of it.
 
-* **Patching:** The App name option turns down direction marks and zero-width characters, which could flip or hide the name under the icon. Emoji built with zero-width joiners still work, and so do Persian, Kurdish and Indic names that need the zero-width non-joiner.
+* **Telegram:** The App name option turns down direction marks and zero-width characters, which could flip or hide the name under the icon. Emoji built with zero-width joiners still work, and so do Persian, Kurdish and Indic names that need the zero-width non-joiner.
 
-* **Settings:** Export diagnostic report says "Preparing the diagnostic report" while it builds the report and takes no second tap until the copy or the file is done. The back arrow and the name at the top use the page's own white, and the back arrow shows when a keyboard is on it.
+* **Telegram:** Export diagnostic report says "Preparing the diagnostic report" while it builds the report and takes no second tap until the copy or the file is done. The back arrow and the name at the top use the page's own white, and the back arrow shows when a keyboard is on it.
 
-* **Settings:** A keyboard or D-pad now stops on the status card and on the paused page's status line, where Enter presses their Pause, Resume or Undo button, and a ring shows which row it's on. The two Export diagnostic report choices read as buttons to a screen reader, and a ring marks the one a keyboard is on.
+* **Telegram:** A keyboard or D-pad gets into the list as soon as settings opens, stops on the status card and on the paused page's status line, where Enter presses their Pause, Resume or Undo button, and a ring shows which row it's on. The two Export diagnostic report choices read as buttons to a screen reader, and a ring marks the one a keyboard is on.
 
 * **Telegram:** HushTelegram's own dialogs in a chat (Message details, Forward to, the Ask before questions) now go light or dark with Telegram's theme. Before, they followed the phone's dark mode, so they could come out white over Telegram's Night theme.
 
-* **Settings:** Import settings now lists every switch the file changes and which way it goes, like "Hide ads turns off", under the count. A file someone shared with you can't quietly turn off Stop usage reports anymore.
+* **Telegram:** Import settings now lists every switch the file changes and which way it goes, like "Hide ads turns off", under the count. A file someone shared with you can't quietly turn off Stop usage reports anymore.
 
 * **Telegram:** When Telegram turns down the API ID your build signs in with, the phone number screen now says so, with a button that opens the guide to using your own ID. Before, it just sat there after you tapped the arrow. This covers API_ID_PUBLISHED_FLOOD, the built-in ID being refused, and API_ID_INVALID, a registered ID or hash with a typo in it. Reported in #11 and #3.
 
@@ -32,7 +44,7 @@ Every HushTelegram release, newest first.
 
 * **Telegram:** A new Save downloaded files switch on the Playback page, off by default, puts a copy of each file and song you download in Download/Telegram on your phone, the folder Telegram's own Save to Downloads uses. File managers, music players and other apps can open them there. It covers documents and songs. Photos and videos already have Telegram's Save to gallery settings, and GIFs, voice messages and round videos stay in Telegram. So does anything from a secret chat, self-destructing media, and chats or messages that don't allow saving. A file that's already there with the same name and size isn't copied twice. A name with hidden text-direction marks in it, or one too long for the file system, is cleaned up so the copy still lands. On Android 9, and on Android 10 when Telegram has storage access, Telegram's own folder is already open to other apps, so nothing is copied. Asked for in #7.
 
-* **Telegram:** A new UnifiedPush notifications switch on the Notifications page, off by default, is for phones where Firebase notifications don't come through. Install a UnifiedPush app like ntfy, turn the switch on, and Telegram signs up the address that app gives it, through the Simple push type Telegram's own API has for this. Telegram's servers call that address when something arrives, the app wakes Telegram, and Telegram fetches the message itself, so only the wake-up passes through the UnifiedPush app. The Push app row under the switch shows how the sign-up is going. The sign-up reaches ntfy even if you haven't opened it since installing it. With more than one UnifiedPush app installed and no ntfy among them, you pick which one gets the sign-up. Turning it off ends the sign-up and has Telegram ask Firebase again right away. Uninstalling the UnifiedPush app does the same at the next start. The switch isn't in settings backups, so a file someone shared can't route your wake-ups through another app. Asked for in #5.
+* **Telegram:** A new UnifiedPush notifications switch on the Notifications page, off by default, is for phones where Firebase notifications don't come through. Install a UnifiedPush app like ntfy, turn the switch on, and Telegram signs up the address that app gives it, through the Simple push type Telegram's own API has for this. Telegram's servers call that address when something arrives, the app wakes Telegram, and Telegram fetches the message itself, so only the wake-up passes through the UnifiedPush app. The Push app row under the switch shows how the sign-up is going, and reads it again when you come back to Telegram, so a sign-up the app ended while you were away shows as ended. The sign-up reaches ntfy even if you haven't opened it since installing it. With more than one UnifiedPush app installed and no ntfy among them, you pick which one gets the sign-up. Turning it off ends the sign-up and has Telegram ask Firebase again right away. Uninstalling the UnifiedPush app does the same at the next start. The switch isn't in settings backups, so a file someone shared can't route your wake-ups through another app. Asked for in #5.
 
 * **Telegram:** Translate with an outside service can now use an AI service with your own key instead of Google's web translate. Tap Translation service under the switch and fill in the address, model and key. Anything that takes OpenAI's chat format works, like OpenAI, OpenRouter, DeepSeek, Groq or Gemini's OpenAI address. The key stays on your phone: it isn't in settings backups, the diagnostic report or the log, and it only goes over https (plain http is allowed just for a model server on the phone itself). A message already in your language stays as it is, and if the service turns your key down you'll get a toast that says so. A redirect from the service isn't followed, so the text and the key only ever go to the address you typed. Use Google in the same dialog goes back and forgets the key. Asked for in #2.
 
@@ -80,9 +92,13 @@ Every HushTelegram release, newest first.
 
 * **Tooling:** The selection matrix expects the Firebase crash and session report switches only on a build that ships those SDKs, which is Telegram Beta. It also rebuilds the one call Turn off beta debug logs adds to Telegram's startup settings the way the patcher adds it, so a default build no longer fails there, while a call in the wrong place, on the wrong register or added twice still does. With HushTelegram icon and name in the selection, it expects the app and Telegram's default launcher entry to point at the icon that patch adds, and nothing else in the manifest to change.
 
+* **Tooling:** The selection matrix no longer fails every selection that includes Save downloaded files. That patch has the patcher rewrite one of Telegram's classes, which drops two values set to zero and false, and a field left without a value starts at zero or false anyway. The check now reads those as the same, and a real value that goes missing still fails it.
+
 * **Tooling:** The source audit reads the Morphe Patch Tracker again. The tracker now names some bundles twice in different case, like `ImmortalZeus:dev` and `immortalzeus:dev`, and PowerShell couldn't hold both, so the whole source failed. Files like that are now read with case kept, and both bundles count.
 
 * **Tooling:** The source audit reads Jman's bundle index again. It moved to `Jman-Github/Patch-Bundle-Registry`, and the bundle list and patch catalog the audit used to read are gone. The audit now reads the registry's own snapshot: the newest generation, every latest bundle that targets Telegram, and the Telegram patches in each. The ledger points at the registry and at HushTelegram's listing there.
+
+* **Tooling:** Awesome Morphe lists HushTelegram now, so the ledger records the listing and the release check stops calling it pending.
 
 ## 0.0.12 (2026-10-09)
 

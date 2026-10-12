@@ -218,7 +218,17 @@ public class DexDiff {
      *       that don't load them may call it too. For a filter the patches put in more than one of
      *       the app's methods, each picked by a rule of its own, such as the one every link parser
      *       passes its link through: once-call would count the other parsers' calls against it.
-     *   <li>Any of those five with "class-holding" in place of "holding": the strings are held by
+     *   <li>A token after "holding" or "class-holding" may also be a literal, written
+     *       {@code const:0x} and its value in hex (unsigned, 32 bits for a narrow constant and 64
+     *       for a wide one), held by a method that loads it; a method reference, held by a method
+     *       that calls it; or a field or method reference with Redex's class names written LX/*;,
+     *       such as {@code LX/*;->*(LX/*;Z)V} (the member of such a class named *, so any name) or
+     *       {@code LX/*;->A07:Ljava/util/List;} (the member's own name kept), held by a method
+     *       that reads, writes or calls any member those match. For code Redex renames from one
+     *       build to the next while its literals, types and the names it keeps stay.
+     *   <li>"single-call" may name more than one caller method, joined by |, and a story-loop-call
+     *       rule may write its native method's name as *, which keeps the class, parameters,
+     *       return, registers and both call sites it is held to.     *   <li>Any of those five with "class-holding" in place of "holding": the strings are held by
      *       the method's class, its methods loading every one of them between them (a field
      *       reference by one reading or writing it), and the method is the one with the shape
      *       among the methods with code of every such class outside the bundle's own code. Exactly
@@ -237,6 +247,12 @@ public class DexDiff {
      *       stays as written. For a method that shares its strings and its shape with a sibling
      *       that doesn't make the call, as the story player's resume does with a stub beside it,
      *       and the home tab's static method with a few others taking a session.
+     *   <li>Any of those five with "lacking [static|instance] &lt;method reference&gt;" after the calling
+     *       clause, or where that would go: a method has the rule's shape only when it makes no call
+     *       matching that reference, written and matched as calling is. For a method whose twin makes
+     *       every call it does and one more, as Accent color's second theme color read has the first
+     *       one's resolver call and none of its Redex-named checks, and sits in a different class from
+     *       one build to the next.
      *   <li>A once-call or shared-call rule with "sites &lt;n&gt;" after its calling clause, or where
      *       that would go, and before "holding" or "class-holding": its method calls the method
      *       reference exactly n times, 2 or more, rather than once. For a filter the patch puts on
@@ -311,15 +327,22 @@ public class DexDiff {
         final int sites;
         /** The same rules: whether asking a string pool for one of its strings counts as loading it ("pooled"). */
         final boolean pooled;
+        /** The same rules: a call its method must not make, written as [call] is, or null. */
+        final String lack;
+        /** The same rules: whether the call it must not make is an invoke-static, or null when the rule doesn't say. */
+        final Boolean lackStatic;
         /** [call] as a regular expression, or null. */
         private final java.util.regex.Pattern callMatch;
+        /** [lack] as a regular expression, or null. */
+        private final java.util.regex.Pattern lackMatch;
 
         Contract(String kind, String callee, String target) {
-            this(kind, callee, target, null, null, List.of(), null, null, false, null, null, 1, false);
+            this(kind, callee, target, null, null, List.of(), null, null, false, null, null, null, null, 1, false);
         }
 
         Contract(String kind, String callee, String target, String after, String replaced, List<String> strings,
-                Boolean isStatic, String shape, boolean byClass, String call, Boolean callStatic, int sites, boolean pooled) {
+                Boolean isStatic, String shape, boolean byClass, String call, Boolean callStatic, String lack,
+                Boolean lackStatic, int sites, boolean pooled) {
             this.kind = kind;
             this.callee = callee;
             this.target = target;
@@ -331,9 +354,12 @@ public class DexDiff {
             this.byClass = byClass;
             this.call = call;
             this.callStatic = callStatic;
+            this.lack = lack;
+            this.lackStatic = lackStatic;
             this.sites = sites;
             this.pooled = pooled;
             this.callMatch = call == null ? null : java.util.regex.Pattern.compile(callPattern(call));
+            this.lackMatch = lack == null ? null : java.util.regex.Pattern.compile(callPattern(lack));
         }
 
         /** Whether this rule picks its method by strings and a shape: start-call, next-call, sole-call, once-call and shared-call. */
@@ -357,6 +383,11 @@ public class DexDiff {
                 if (callStatic != null) b.append(callStatic ? "static " : "instance ");
                 b.append(call);
             }
+            if (lack != null) {
+                b.append(" lacking ");
+                if (lackStatic != null) b.append(lackStatic ? "static " : "instance ");
+                b.append(lack);
+            }
             if (sites != 1) b.append(" sites ").append(sites);
             if (pooled) b.append(" pooled");
             List<String> written = new ArrayList<>();
@@ -373,19 +404,19 @@ public class DexDiff {
                 descriptor.append(')').append(m.getReturnType());
                 if (!descriptor.toString().matches(shapePattern(shape))) return false;
             }
-            return call == null || makesCall(m);
+            return (call == null || makesCall(m, callMatch, callStatic)) && (lack == null || !makesCall(m, lackMatch, lackStatic));
         }
 
-        /** Whether [m] makes an invoke of the kind [callStatic] asks for whose method reference matches [call]. */
-        private boolean makesCall(Method m) {
+        /** Whether [m] makes an invoke of the kind [wantStatic] asks for whose method reference matches [match]. */
+        private static boolean makesCall(Method m, java.util.regex.Pattern match, Boolean wantStatic) {
             if (m.getImplementation() == null) return false;
             for (Instruction i : m.getImplementation().getInstructions()) {
                 if (!i.getOpcode().name.startsWith("invoke") || !(i instanceof ReferenceInstruction)) continue;
                 Reference r = ((ReferenceInstruction) i).getReference();
                 if (!(r instanceof MethodReference)) continue;
                 boolean staticCall = i.getOpcode() == Opcode.INVOKE_STATIC || i.getOpcode() == Opcode.INVOKE_STATIC_RANGE;
-                if (callStatic != null && staticCall != callStatic) continue;
-                if (callMatch.matcher(r.toString()).matches()) return true;
+                if (wantStatic != null && staticCall != wantStatic) continue;
+                if (match.matcher(r.toString()).matches()) return true;
             }
             return false;
         }
@@ -494,6 +525,17 @@ public class DexDiff {
             if (at >= parts.length || !isCallReference(parts[at])) return null;
             call = parts[at++];
         }
+        String lack = null;
+        Boolean lackStatic = null;
+        if (at < parts.length && parts[at].equals("lacking")) {
+            at++;
+            if (at < parts.length && (parts[at].equals("static") || parts[at].equals("instance"))) {
+                lackStatic = parts[at].equals("static");
+                at++;
+            }
+            if (at >= parts.length || !isCallReference(parts[at])) return null;
+            lack = parts[at++];
+        }
         int sites = 1;
         if (at < parts.length && parts[at].equals("sites")) {
             at++;
@@ -510,7 +552,7 @@ public class DexDiff {
         for (String s : Arrays.asList(parts).subList(at + 1, parts.length)) strings.add(unescape(s));
         if (strings.isEmpty() || new TreeSet<>(strings).size() != strings.size()) return null;
         return new Contract(kind, parts[1], String.join(" ", strings), after, replaced, strings, isStatic, shape, byClass,
-                call, callStatic, sites, pooled);
+                call, callStatic, lack, lackStatic, sites, pooled);
     }
 
     private static List<Contract> readContracts(File file) throws Exception {
@@ -528,7 +570,7 @@ public class DexDiff {
                 Contract picked = readPicked(parts);
                 if (picked == null) {
                     throw new IllegalArgumentException("Invalid contract line " + lineNumber + ": expected " + form
-                            + " [in [static|instance] <(parameters)return>] [calling [static|instance] <method reference>]"
+                            + " [in [static|instance] <(parameters)return>] [calling [static|instance] <method reference>] [lacking [static|instance] <method reference>]"
                             + (form.startsWith("once-call") || form.startsWith("shared-call") ? " [sites <2 or more>]" : "")
                             + " [pooled] holding or class-holding <string> [<string> ...]");
                 }
@@ -555,7 +597,7 @@ public class DexDiff {
                         + " or start-call <method reference>, next-call <method reference> after <method reference>,"
                         + " sole-call <method reference> replacing <method reference>,"
                         + " once-call <method reference> or shared-call <method reference>, each then"
-                        + " [in [static|instance] <(parameters)return>] [calling [static|instance] <method reference>]"
+                        + " [in [static|instance] <(parameters)return>] [calling [static|instance] <method reference>] [lacking [static|instance] <method reference>]"
                         + " [sites <2 or more>, once-call and shared-call only] [pooled] holding or class-holding <string> [<string> ...]");
             }
             String kind = firstCallTyped ? TYPED_FIRST_CALL : firstCallOutside ? OUTSIDE_FIRST_CALL : parts[0];
@@ -1481,6 +1523,7 @@ public class DexDiff {
             classPicks = true;
             pickStrings.addAll(storyStoreMarkers);
         }
+        TokenKinds tokenKinds = new TokenKinds(pickStrings);
         MultiDexContainer<? extends DexFile> container =
                 DexFileFactory.loadDexContainer(apk, Opcodes.getDefault());
         if (!pooledStrings.isEmpty()) {
@@ -1513,7 +1556,7 @@ public class DexDiff {
                     if (!typeNamedClasses.isEmpty()) recordTypeNamed(cd, m, typeNamedClasses);
                     if (picksHere) {
                         Set<String> asked = pools.isEmpty() ? null : new HashSet<>();
-                        Set<String> held = recordHolders(s, m, pickRules, pickStrings, pools, asked, holders);
+                        Set<String> held = recordHolders(s, m, pickRules, pickStrings, tokenKinds, pools, asked, holders);
                         if (classMethods != null) classMethods.add(new ClassMethod(s, m, held, asked));
                     }
                     if ((callSites.isEmpty() && noCallSites.isEmpty() && hookCallers.isEmpty())
@@ -1539,9 +1582,9 @@ public class DexDiff {
             }
         }
         // The method each picking rule claims, its one holder of the rule's shape, by the method the
-        // rule names. A start-call or shared-call rule doesn't count another rule's claim for the same
-        // method as somewhere else the hook went: the list ViewPager2 makes calls TabSwipe.input in
-        // both of its touch methods, each claimed by a rule of its own told apart by the call it makes.
+        // rule names. No rule counts another rule's claim for the same method as somewhere else the
+        // hook went: the list ViewPager2 makes calls TabSwipe.input in both of its touch methods, each
+        // claimed by a rule of its own told apart by the call it makes.
         Map<String, Map<Contract, String>> claims = new HashMap<>();
         for (Contract contract : pickRules) {
             List<String> shaped = new ArrayList<>();
@@ -1635,13 +1678,21 @@ public class DexDiff {
                 contractFindings.add("contract: " + contract.callee + " has " + sites.size()
                         + " call sites, and must have exactly one, in " + contract.target
                         + (sites.isEmpty() ? "" : ": " + String.join(", ", sites)));
-            } else if (!sites.get(0).contains("->" + contract.target + "(")) {
+            } else if (!callerNamed(sites.get(0), contract.target)) {
                 contractFindings.add("contract: " + contract.callee + " is called from " + sites.get(0)
                         + ", not from " + contract.target);
             }
         }
         if (!contractFindings.isEmpty()) out.put("contract", contractFindings);
         return out;
+    }
+
+    /** Whether a call site's method is named by a single-call rule's name, or by one of its names joined by |. */
+    private static boolean callerNamed(String site, String names) {
+        for (String name : names.split("\\|")) {
+            if (site.contains("->" + name + "(")) return true;
+        }
+        return false;
     }
 
     /** Where a method calls a start-call rule's method: not at all, first thing, or later. */
@@ -1686,13 +1737,103 @@ public class DexDiff {
         }
     }
 
+    /** What a literal token of a rule is written with: this, then the value in hex. */
+    static final String LITERAL_PREFIX = "const:0x";
+
+    /** Redex's class names, which change from one build to the next. */
+    private static final java.util.regex.Pattern REDEX_CLASS = java.util.regex.Pattern.compile("LX/[0-9A-Za-z_$]+;");
+    private static final Map<String, String> WILDCARDED = new HashMap<>();
+
+    /**
+     * A field or method reference with Redex's class names written LX/*; and, for a member of such
+     * a class, its name written *: what a rule token can say about a member whose names change
+     * from one build to the next while its types stay. Anything else stays as it is.
+     */
+    static String wildcarded(String reference) {
+        if (!reference.contains("LX/")) return reference;
+        String known = WILDCARDED.get(reference);
+        if (known != null) return known;
+        int arrow = reference.indexOf("->");
+        int open = reference.indexOf('(', arrow);
+        int colon = reference.lastIndexOf(':');
+        String owner = reference.substring(0, arrow);
+        String general;
+        if (open > 0) {
+            String name = reference.substring(arrow + 2, open);
+            general = redexWildcarded(owner) + "->" + (owner.startsWith("LX/") ? "*" : name)
+                    + redexWildcarded(reference.substring(open));
+        } else {
+            String name = reference.substring(arrow + 2, colon);
+            general = redexWildcarded(owner) + "->" + (owner.startsWith("LX/") ? "*" : name) + ":"
+                    + redexWildcarded(reference.substring(colon + 1));
+        }
+        WILDCARDED.put(reference, general);
+        return general;
+    }
+
+    /**
+     * The same with the member's name kept: a reference to a member of a Redex class written
+     * LX/*; with its own name, for a name Redex keeps from one build to the next, such as a
+     * lambda's {@code $t} or a field its build numbers the same.
+     */
+    static String ownerWildcarded(String reference) {
+        return reference.contains("LX/") ? redexWildcarded(reference) : reference;
+    }
+
+    private static String redexWildcarded(String text) {
+        return REDEX_CLASS.matcher(text).replaceAll("LX/*;");
+    }
+
+    /**
+     * The token a literal instruction is held by: {@code const:0x} and the value in hex, as an
+     * unsigned 32-bit value for a narrow constant and an unsigned 64-bit one for a wide one. Null
+     * for an instruction that is no literal.
+     */
+    static String literalToken(Instruction i) {
+        if (i instanceof WideLiteralInstruction) {
+            return LITERAL_PREFIX + Long.toHexString(((WideLiteralInstruction) i).getWideLiteral());
+        }
+        if (i instanceof NarrowLiteralInstruction) {
+            return LITERAL_PREFIX + Long.toHexString(((NarrowLiteralInstruction) i).getNarrowLiteral() & 0xffffffffL);
+        }
+        return null;
+    }
+
+    /**
+     * What the rules' tokens ask a method to hold besides a string or a field: a literal, a method
+     * it calls, or a reference written with Redex's names wildcarded. Worked out once, so a method
+     * is only read for the kinds some rule uses.
+     */
+    private static final class TokenKinds {
+        final boolean literals;
+        final boolean references;
+        final boolean wildcards;
+
+        TokenKinds(Set<String> tokens) {
+            boolean literals = false;
+            boolean references = false;
+            boolean wildcards = false;
+            for (String token : tokens) {
+                if (token.startsWith(LITERAL_PREFIX)) literals = true;
+                if (token.contains("->") && token.indexOf('(') > token.indexOf("->")) references = true;
+                if (token.contains("LX/*;") || token.contains("->*")) wildcards = true;
+            }
+            this.literals = literals;
+            this.references = references;
+            this.wildcards = wildcards;
+        }
+    }
+
     /**
      * Adds [m] to each holding rule whose strings it loads, every one of them, a field reference by
-     * reading or writing the field, and for a pooled rule a string it asks one of [pools] for, which
-     * go into [asked]. Answers what it loads of [wanted] itself, or null for none.
+     * reading or writing the field, a literal by loading it, a method reference by calling it, a
+     * reference written with wildcards by a member such a reference matches, and for a pooled rule
+     * a string it asks one of [pools] for, which go into [asked]. Answers what it loads of [wanted]
+     * itself, or null for none.
      */
     private static Set<String> recordHolders(String s, Method m, List<Contract> rules, Set<String> wanted,
-            Map<String, Map<Integer, String>> pools, Set<String> asked, Map<Contract, List<Holder>> holders) {
+            TokenKinds kinds, Map<String, Map<Integer, String>> pools, Set<String> asked,
+            Map<Contract, List<Holder>> holders) {
         if (m.getImplementation() == null) return null;
         Set<String> held = null;
         Instruction before = null;
@@ -1700,13 +1841,34 @@ public class DexDiff {
             String pooled = asked == null ? null : pooledString(before, i, pools);
             before = i;
             if (pooled != null) asked.add(pooled);
+            if (kinds.literals) {
+                String literal = literalToken(i);
+                if (literal != null && wanted.contains(literal)) {
+                    if (held == null) held = new HashSet<>();
+                    held.add(literal);
+                }
+            }
             if (!(i instanceof ReferenceInstruction)) continue;
             Reference r = ((ReferenceInstruction) i).getReference();
+            boolean invoke = r instanceof MethodReference && i.getOpcode().name.startsWith("invoke");
             String loaded = r instanceof StringReference ? ((StringReference) r).getString()
-                    : r instanceof FieldReference ? r.toString() : null;
-            if (loaded == null || !wanted.contains(loaded)) continue;
-            if (held == null) held = new HashSet<>();
-            held.add(loaded);
+                    : r instanceof FieldReference || invoke && kinds.references ? r.toString() : null;
+            if (loaded != null && wanted.contains(loaded)) {
+                if (held == null) held = new HashSet<>();
+                held.add(loaded);
+            }
+            if (kinds.wildcards && (r instanceof FieldReference || invoke)) {
+                String general = wildcarded(r.toString());
+                if (!general.equals(loaded) && wanted.contains(general)) {
+                    if (held == null) held = new HashSet<>();
+                    held.add(general);
+                }
+                String named = ownerWildcarded(r.toString());
+                if (!named.equals(loaded) && !named.equals(general) && wanted.contains(named)) {
+                    if (held == null) held = new HashSet<>();
+                    held.add(named);
+                }
+            }
         }
         if (held == null && (asked == null || asked.isEmpty())) return null;
         for (Contract rule : rules) {
@@ -1809,7 +1971,7 @@ public class DexDiff {
      * method pick. Then each kind asks its own questions: start-call that no other holder calls it,
      * leaving out the claimed ones, and that the call comes first; shared-call the same about other
      * holders, and that the method calls it once there, or as many times as the rule's sites says;
-     * once-call that no other host method calls it and that the method calls it once there, or as
+     * once-call that no other host method calls it, leaving out the claimed ones, and that the method calls it once there, or as
      * many times as sites says; next-call that it's the method's one call there, right after the call it pairs
      * with and on the same register; sole-call that it's the method's one call, that the call it
      * stands in for is gone, and that it reads what that call read in [clean]. A class-holding rule
@@ -1852,7 +2014,9 @@ public class DexDiff {
         // among those that hold them all themselves, so the one guard Instagram's batch of watched
         // reels puts in each of its record methods passes. A holder another rule for the same call
         // picks is that rule's to check. A next-call, sole-call or once-call hook belongs to one
-        // method, so a second call anywhere is one too many.
+        // method, so a call in any other host method is one too many, unless another rule for the
+        // same call picks that method: HushGram's hidden like count hook goes in seven row methods,
+        // each held to one call by a rule of its own, and a call in an eighth still fails all seven.
         List<String> elsewhere = new ArrayList<>();
         if (contract.kind.equals("start-call") || contract.kind.equals("shared-call")) {
             for (Holder holder : holders) {
@@ -1860,7 +2024,9 @@ public class DexDiff {
                         && !callSites(instructions(holder.m), contract.callee).isEmpty()) elsewhere.add(holder.method);
             }
         } else {
-            for (String caller : callers) if (!caller.equals(only.method)) elsewhere.add(caller);
+            for (String caller : callers) {
+                if (!caller.equals(only.method) && !claimed.contains(caller)) elsewhere.add(caller);
+            }
         }
         if (sites.isEmpty()) {
             System.out.println("[diff] " + rule + ": not called in " + only.method
@@ -1943,6 +2109,9 @@ public class DexDiff {
                 || !method.getReturnType().equals("V") || body.size() < prefix.length) return false;
         for (int i = 0; i < prefix.length; i++) if (body.get(i).getOpcode() != prefix[i]) return false;
         MethodReference check = calledMethod(body.get(7));
+        // A rule may leave the native check's name as * where Instagram renamed it between builds; its
+        // class, parameters, return, registers and the two call sites are checked all the same.
+        if (check != null && callee.contains("->*(")) callee = callee.replace("->*(", "->" + check.getName() + "(");
         int self = method.getImplementation().getRegisterCount() - 2;
         if (check == null || !check.toString().equals(callee) || !check.getDefiningClass().equals(method.getDefiningClass())
                 || !check.getReturnType().equals("Z") || !check.getParameterTypes().equals(List.of("Lcom/instagram/model/reels/ReelItem;"))
@@ -2119,7 +2288,10 @@ public class DexDiff {
                 : "with the shape " + (rule.isStatic == null ? "" : rule.isStatic ? "static " : "instance ") + rule.shape;
         String call = rule.call == null ? null
                 : (rule.callStatic == null ? "a call to " : rule.callStatic ? "a static call to " : "an instance call to ") + rule.call;
+        String lacks = rule.lack == null ? null
+                : (rule.lackStatic == null ? "no call to " : rule.lackStatic ? "no static call to " : "no instance call to ") + rule.lack;
         String how = call == null ? shape : shape == null ? "with " + call : shape + " and " + call;
+        if (lacks != null) how = how == null ? "with " + lacks : how + " and " + lacks;
         String holding = rule.pooled ? "holding or asking a string pool for " : "holding ";
         if (rule.byClass) return (how == null ? "" : how + " ") + (many ? "sit in" : "in") + " a class " + holding + strings;
         return (many ? rule.pooled ? "hold or ask a string pool for " : "hold " : holding) + strings + (how == null ? "" : " " + how);

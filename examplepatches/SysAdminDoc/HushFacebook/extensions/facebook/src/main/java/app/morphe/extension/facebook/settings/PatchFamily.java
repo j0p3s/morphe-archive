@@ -119,6 +119,8 @@ public enum PatchFamily {
             Settings.TAP_TO_PLAY, Settings.TAP_TO_PLAY_REELS_AFTER_FIRST),
     RESUME_LONG_VIDEOS(FamilyNames.RESUME_LONG_VIDEOS, "resumeLongVideos", null,
             Settings.RESUME_LONG_VIDEOS),
+    FRAME_STEP(FamilyNames.FRAME_STEP, "frameStep", null,
+            Settings.FRAME_STEP),
     PLAYBACK_QUALITY(FamilyNames.PLAYBACK_QUALITY, "defaultPlaybackQuality", null,
             Settings.DEFAULT_PLAYBACK_QUALITY),
     PICTURE_IN_PICTURE(FamilyNames.PICTURE_IN_PICTURE, "pictureInPicture", null,
@@ -267,7 +269,7 @@ public enum PatchFamily {
      */
     static final List<BooleanSetting> ENTRY_SWITCHES = Collections.unmodifiableList(
             java.util.Arrays.asList(Settings.CHECK_FOR_RELEASES, Settings.SAVED_SHORTCUT,
-                    Settings.WATCH_HISTORY_SHORTCUT, Settings.APP_LOCK));
+                    Settings.WATCH_HISTORY_SHORTCUT, Settings.APP_LOCK, Settings.SAVE_CRASH_FILE));
 
     /**
      * The switches the download patches share and none of them owns: each shapes what every

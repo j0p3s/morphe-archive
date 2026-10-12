@@ -14,11 +14,12 @@ object Constants {
         apkFileType = ApkFileType.APK,
         appIconColor = 0x0A66C2,
         targets = listOf(
+            // Morphe recommends the newest supported version, so keep the newest tested one last.
             AppTarget(
                 version = "4.1.1255.1"
             ),
             AppTarget(
-                version = "4.1.1258"
+                version = "4.1.1259"
             ),
             AppTarget(
                 version = null,

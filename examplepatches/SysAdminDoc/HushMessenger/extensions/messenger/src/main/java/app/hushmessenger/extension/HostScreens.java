@@ -93,10 +93,19 @@ public final class HostScreens {
         if (started || failed) return;
         Application app = application;
         if (app == null || app.getBaseContext() == null || !app.getPackageName().equals(Application.getProcessName())) return;
+        long began = android.os.SystemClock.elapsedRealtime();
         start(app);
+        boolean publish = started && hosted(app);
+        if (lateStart == null) lateStart = (android.os.SystemClock.elapsedRealtime() - began) + " ms on " + Thread.currentThread().getName();
         // The first hook to ask runs this, often on the UI thread, and the shortcut calls are three trips to Android.
-        if (started && hosted(app)) shortcutWork.execute(() -> publishShortcuts(app));
+        if (publish) shortcutWork.execute(() -> publishShortcuts(app));
     }
+
+    /**
+     * How long the late start held up the hook that asked first, and on which thread, for Copy setup. Null when
+     * SettingsProvider started settings, which is every install but Root Mount.
+     */
+    static volatile String lateStart;
 
     /** Where the Root Mount shortcuts get published. Tests run it in place. */
     static java.util.concurrent.Executor shortcutWork = work -> {
@@ -166,6 +175,9 @@ public final class HostScreens {
         // A native crash in the loader only counts from Android 11, where the exit history records it.
         if (started && !failed && Settings.installed.contains(OwnFont.KEY)
                 && context.getPackageName().equals(Application.getProcessName())) OwnFont.warmUp();
+        // After CrashGuard too: Bold and Italic sit in every text field's menu, so safe mode has to take them out.
+        if (started && !failed && Settings.installed.contains(TextStyleActivity.KEY)
+                && context.getPackageName().equals(Application.getProcessName())) TextStyleActivity.watch();
     }
 
     /** The settings provider's authority is the package name plus this, on a clone install too. */

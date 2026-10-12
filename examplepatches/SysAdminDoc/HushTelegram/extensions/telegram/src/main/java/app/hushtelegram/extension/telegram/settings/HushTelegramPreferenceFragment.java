@@ -186,6 +186,7 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         super.onResume();
         SettingsBackupPreference.onPageResumed(this);
         showSupportedLinks();
+        showPushApp();
         if (localNotificationStatus != null) localNotificationStatus.setSummary(FirebasePush.localStatus(getContext()).summary());
     }
 
@@ -365,6 +366,12 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
                     PatchFamily.DISABLE_ARCHIVE_PULL.coverageSummary(L10n.t("Pulling down the chat list no longer opens the archive. Use Archived chats in "
                             + "the list's menu instead. Restart Telegram to see the change."))));
         }
+        if (build.contains(PatchFamily.HIDE_CONTACTS_TAB)) {
+            on(pages, PatchFamily.HIDE_CONTACTS_TAB).addPreference(toggle(context, Settings.HIDE_CONTACTS_TAB, L10n.t("Hide Contacts tab"),
+                    PatchFamily.HIDE_CONTACTS_TAB.coverageSummary(L10n.t("The Contacts tab leaves the bar at the bottom of the main screen, and "
+                            + "swiping doesn't open its page either. The Calls or Settings tab stays as Telegram has it, and the chat "
+                            + "list's new message button still opens your contacts. Restart Telegram to see the change."))));
+        }
     }
 
     /** The Conversations page: in a chat, its menus, sending, translation, hidden and kept messages. */
@@ -419,7 +426,7 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         if (build.contains(PatchFamily.HIDE_BLOCKED_IN_GROUPS)) {
             on(pages, PatchFamily.HIDE_BLOCKED_IN_GROUPS).addPreference(toggle(context, Settings.HIDE_BLOCKED_IN_GROUPS, L10n.t("Hide blocked users in groups"),
                     PatchFamily.HIDE_BLOCKED_IN_GROUPS.coverageSummary(L10n.t("Messages from people you've blocked are left out of groups and supergroups you "
-                            + "open. Nothing is deleted. Private chats and channel posts stay as they are."))));
+                            + "open, and don't notify you. Nothing is deleted. Private chats and channel posts stay as they are."))));
         }
         if (build.contains(PatchFamily.HIDE_BY_KEYWORD)) {
             PreferenceCategory page = on(pages, PatchFamily.HIDE_BY_KEYWORD);
@@ -1110,6 +1117,16 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
             return true;
         });
         return row;
+    }
+
+    /**
+     * The push app can end the sign-up, or be removed, while Telegram is in the background, so the
+     * row reads its state again on the way back.
+     */
+    private void showPushApp() {
+        if (getPreferenceScreen() == null) return;
+        Preference row = findPreference(UnifiedPushPicker.KEY);
+        if (row != null) row.setSummary(UnifiedPush.status(row.getContext(), Settings.UNIFIED_PUSH.savedValue()));
     }
 
     /** Which UnifiedPush app the sign-up goes to, and how it's going. Tapping it picks another app. */

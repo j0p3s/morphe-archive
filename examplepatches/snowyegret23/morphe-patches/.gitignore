@@ -1,4 +1,5 @@
 _external/
+_analysis/
 .gradle/
 .kotlin/
 **/build/

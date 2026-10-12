@@ -86,6 +86,7 @@ import app.morphe.extension.facebook.comments.MetaAiSummaries;
 import app.morphe.extension.facebook.composer.TagSuggestionsForTests;
 import app.morphe.extension.facebook.media.HdrBrightnessForTests;
 import app.morphe.extension.facebook.media.PictureInPictureForTests;
+import app.morphe.extension.facebook.media.FrameStepForTests;
 import app.morphe.extension.facebook.media.ProgressBar;
 import app.morphe.extension.facebook.media.QualityChoiceForTests;
 import app.morphe.extension.facebook.media.ReelSpeedForTests;
@@ -142,9 +143,11 @@ import app.morphe.extension.shared.settings.PauseForTests;
  * <p>Each probe is one hook with its switch on. It must change Facebook's behaviour while
  * Hushfacebook runs, which is the control, and leave it alone while paused. A family that gains a
  * switch without a probe here fails the first test.
+ *
+ * <p>Also at sdk 37, Android 17, which reaches Samsung phones from One UI 9.
  */
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 30)
+@Config(sdk = {30, 37})
 public class PausedHooksTest {
     @Rule public final SettingsContextRule settingsContext = new SettingsContextRule();
 
@@ -230,6 +233,8 @@ public class PausedHooksTest {
         probes.put(Settings.WATCH_HISTORY_SHORTCUT, WatchHistoryShortcutTest::aStartPublishes);
         // A cold start on a phone with a screen lock covers Facebook and asks for it.
         probes.put(Settings.APP_LOCK, AppLockForTests::aStartLocks);
+        // A crash that ends the app writes its file to Downloads.
+        probes.put(Settings.SAVE_CRASH_FILE, app.morphe.extension.shared.settings.preference.CrashFileForTests::aCrashWritesAFile);
         return probes;
     }
 
@@ -489,6 +494,8 @@ public class PausedHooksTest {
                 () -> TapToPlay.showReelPlayButton(false)));
         // A long video left at 5:00 is saved, and its next start seeks back there.
         probes.put(PatchFamily.RESUME_LONG_VIDEOS, Collections.singletonList(ResumePlaybackForTests::resumesALongVideo));
+        // A tap on the right third of a video you paused steps it a frame.
+        probes.put(PatchFamily.FRAME_STEP, Collections.singletonList(FrameStepForTests::stepsAPausedVideo));
         // A new video's first choice plays the chosen quality rather than Facebook's.
         probes.put(PatchFamily.PLAYBACK_QUALITY, Collections.singletonList(QualityChoiceForTests::playsTheChosenQuality));
         // The repository's answer for one of Meta's families, a variable-font builder's, and React
@@ -568,9 +575,11 @@ public class PausedHooksTest {
                 TabBarScrollAway::slidesAway));
         // Facebook's dark mode controller answers dark where it answered light.
         probes.put(PatchFamily.FORCE_DARK_MODE, Collections.singletonList(ForceDarkModeForTests::forcesDark));
-        // A request for a post's comments that names no order asks for the chosen one.
-        probes.put(PatchFamily.DEFAULT_COMMENT_ORDER,
-                Collections.singletonList(DefaultCommentOrderForTests::asksForTheChosenOrder));
+        // A request for a post's comments that names no order asks for the chosen one, and with
+        // All comments chosen, the menu its answer draws is picked in.
+        probes.put(PatchFamily.DEFAULT_COMMENT_ORDER, Arrays.asList(
+                DefaultCommentOrderForTests::asksForTheChosenOrder,
+                DefaultCommentOrderForTests::picksInTheMenu));
         // A comment sheet's summary and the one under a post get a no from their sockets' checks.
         probes.put(PatchFamily.META_AI_SUMMARIES, Arrays.asList(
                 () -> MetaAiSummaries.holds(MetaAiSummaries.SHEET_SUMMARY),
@@ -659,7 +668,8 @@ public class PausedHooksTest {
                 HdrBrightnessForTests::keepsAnHdrWindowInTheUsualRange, HdrBrightnessForTests::holdsTheHeadroom,
                 HdrBrightnessForTests::answersTheScreenAsShowingNoHdr));
         // A reel's bar is kept full size, and a full-screen video sets no fade timer.
-        probes.put(PatchFamily.PROGRESS_BAR, Arrays.asList(ProgressBar::keepsReelBar, ProgressBar::keepsControls));
+        probes.put(PatchFamily.PROGRESS_BAR, Arrays.asList(ProgressBar::keepsReelBar, ProgressBar::keepsControls,
+                ProgressBar::liftsFooter, ProgressBar::noFadedBar));
         // A tab asked for shows without its slide.
         probes.put(PatchFamily.SCREEN_TRANSITIONS, Collections.singletonList(() -> !ScreenTransitionsForTests.slides()));
         // The app icon benefit is answered yes, at the provider's check and at the picker's own look,

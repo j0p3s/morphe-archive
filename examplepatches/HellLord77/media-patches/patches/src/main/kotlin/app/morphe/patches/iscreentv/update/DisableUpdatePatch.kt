@@ -8,7 +8,7 @@ import app.morphe.util.returnBoxedBooleanEarly
 @Suppress("unused")
 val disableUpdatePatch = bytecodePatch(
     name = "Disable update",
-    description = "Disables force update",
+    description = "Disables forced update.",
     default = true,
 ) {
     compatibleWith(COMPATIBILITY_ISCREENTV)

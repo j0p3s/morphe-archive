@@ -70,13 +70,14 @@ public class RowChevronTest {
     private static final Set<String> OPENS_SOMETHING = new LinkedHashSet<>(Arrays.asList(
             "Jump to a section", "Reels in the feed", "Reels that play by themselves", "The Reels tab",
             "Everything except Marketplace",
-            "Tab to open on", "Feeds opens on", "Keep seen posts hidden for", "Words to hide", "Words that keep a post", "People, Pages and sites to hide", "Comment order", "Hide reaction counts", "Playback quality", "Reels quality", "Stories quality", "Font file", "Download quality", "Save to", "Save folder",
+            "Tab to open on", "Feeds opens on", "Home shows", "Keep seen posts hidden for", "Words to hide", "Words that keep a post", "People, Pages and sites to hide", "Comment order", "Hide reaction counts", "Playback quality", "Reels quality", "Stories quality", "Font file", "Download quality", "Save to", "Save folder",
             "Video subfolder", "Photo subfolder",
             "Video file name", "Photo file name", "When you tap Download", "App to send to", "Share sheet items to hide", "Supported links", "Meta App Manager", "Messenger", "Instagram",
             "Quiet hours start", "Quiet hours end", "Lock after",
             "Ads in the feed", "Ads on profiles", "Ads in Stories", "Ads in Reels", "Ads in search results",
             "Ads in Marketplace", "Ads in Instant Games", "Usage statistics uploads", "Reel watch history", "Text size", "Accent color", "Hide posts with more reactions than",
             "Export settings", "Import settings",
+            "Pick an app icon",
             "Export diagnostic report", "Facebook's Whitehat settings", "Source code and issues", "Licenses"));
 
     /** Built by the first show(), after a test has set the text size it wants. */

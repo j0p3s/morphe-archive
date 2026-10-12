@@ -61,6 +61,9 @@ public class NeutralDefaultsSettingsTest {
     /** Stands in for the presence status enum. */
     enum StockPresence { OFFLINE, ACTIVE, IDLE }
 
+    /** Stands in for the share type an upload is prepared for. */
+    enum StockShareType { FEED, STORY }
+
     /** Stands in for someone else's posts tab, resumed with its grid. */
     public static final class StockPostsTab {
         private final android.os.Bundle arguments = new android.os.Bundle();
@@ -95,7 +98,7 @@ public class NeutralDefaultsSettingsTest {
 
     @Before public void prepare() {
         RuntimeEnvironment.getApplication().getApplicationInfo().targetSdkVersion = 36;
-        initiallyOff = new BooleanSetting[]{Settings.ASK_BEFORE_CALL, Settings.HIDE_REEL_COMMENT_BAR, Settings.HIDE_REEL_COMMENT_BAR_EVERYWHERE, Settings.COPY_COMMENTS, Settings.COPY_COMMENT_AUTHORS, Settings.SAVE_COMMENT_PHOTOS, Settings.SAVE_PROFILE_PICTURES, Settings.VIEW_PROFILE_PICTURES, Settings.COPY_PROFILE_TEXT, Settings.HIDE_FEED_VIDEOS, Settings.HIDE_FEED_PHOTOS, Settings.HIDE_FEED_CAROUSELS, Settings.HIDE_FEED_LIKED, Settings.DOWNLOAD_VOICE_MESSAGES, Settings.HIDE_COMMENTS, Settings.HIDE_SHARE_BUTTON, Settings.CHANGE_LIKE_ANIMATION,
+        initiallyOff = new BooleanSetting[]{Settings.ASK_BEFORE_CALL, Settings.HIDE_REEL_COMMENT_BAR, Settings.HIDE_REEL_COMMENT_BAR_EVERYWHERE, Settings.HIDE_REELS_TOP_BAR, Settings.HIDE_REEL_SAVE_BUTTON, Settings.HIDE_FEED_INTEREST, Settings.COPY_COMMENTS, Settings.COPY_COMMENT_AUTHORS, Settings.SAVE_COMMENT_PHOTOS, Settings.SAVE_PROFILE_PICTURES, Settings.VIEW_PROFILE_PICTURES, Settings.COPY_PROFILE_TEXT, Settings.HIDE_FEED_VIDEOS, Settings.HIDE_FEED_PHOTOS, Settings.HIDE_FEED_CAROUSELS, Settings.HIDE_FEED_LIKED, Settings.DOWNLOAD_VOICE_MESSAGES, Settings.HIDE_COMMENTS, Settings.HIDE_SHARE_BUTTON, Settings.CHANGE_LIKE_ANIMATION,
                 Settings.ASK_BEFORE_LIKE, Settings.ASK_BEFORE_REFRESH,
                 Settings.HIDE_HIGHLIGHTS, Settings.HIDE_THREADS_BUTTON, Settings.HIDE_PROFILE_NOTES, Settings.PROFILE_POSTS_LIST, Settings.HIDE_NOTES_ROW, Settings.HIDE_INBOX_SUGGESTIONS, Settings.HIDE_INSTANTS,
                 Settings.STOP_SWIPE_TO_CREATE, Settings.STOP_REELS_SCROLLING, Settings.REEL_CAP, Settings.FIND_REEL_ORIGIN, Settings.FULL_RESOLUTION_PHOTOS, Settings.ASK_FOR_LARGER_PHOTOS,
@@ -104,16 +107,16 @@ public class NeutralDefaultsSettingsTest {
                 Settings.HIDE_SCREENSHOTS,
                 Settings.ALLOW_SCREENSHOTS,
                 Settings.KEEP_IN_CHAT,
-                Settings.VIEW_LIVE_ANONYMOUSLY, Settings.NOTO_EMOJI, Settings.ACCENT_COLOR,
-                Settings.DONT_SEND_REEL_WATCH_HISTORY, Settings.BLOCK_STORY_AUTO_ADVANCE, Settings.START_STORIES_WITH_SOUND, Settings.START_FEED_VIDEOS_WITH_SOUND, Settings.LONG_PRESS_TO_ZOOM, Settings.FULL_SCREEN_REELS, Settings.FULL_SCREEN_HOME, Settings.SHOW_STORY_TIME,
+                Settings.VIEW_LIVE_ANONYMOUSLY, Settings.NOTO_EMOJI, Settings.ACCENT_COLOR, Settings.LAUNCH_SCREEN,
+                Settings.DONT_SEND_REEL_WATCH_HISTORY, Settings.BLOCK_STORY_AUTO_ADVANCE, Settings.START_STORIES_WITH_SOUND, Settings.UPLOAD_STORIES_AT_FULL_QUALITY, Settings.START_FEED_VIDEOS_WITH_SOUND, Settings.LONG_PRESS_TO_ZOOM, Settings.ROUNDED_POST_CORNERS, Settings.FULL_SCREEN_REELS, Settings.FULL_SCREEN_HOME, Settings.SHOW_STORY_TIME,
                 Settings.SHOW_STORY_MENTIONS, Settings.SHOW_POST_TIME, Settings.SHOW_HIDDEN_LIKE_COUNTS, Settings.BACK_LEAVES_HOME, Settings.LOOP_STORIES, Settings.VIEW_STORIES_ANONYMOUSLY,
-                Settings.SPOOF_LOCATION, Settings.READ_WITHOUT_SEEN_RECEIPT, Settings.HIDE_TYPING, Settings.HIDE_ACTIVE_STATUS,
+                Settings.SPOOF_LOCATION, Settings.READ_WITHOUT_SEEN_RECEIPT, Settings.HIDE_TYPING, Settings.HIDE_ACTIVE_STATUS, Settings.SHOW_LAST_ACTIVE,
                 Settings.HIDE_FEED_REELS, Settings.START_ON_FOLLOWING, Settings.HIDE_EXPLORE_GRID,
                 Settings.HIDE_SHARE_SHEET_GROUP, Settings.HIDE_REPOST_BUTTON, Settings.REMOVE_BOTTOM_SPACE,
                 Settings.HIDE_PROFILE_SUGGESTIONS, Settings.HIDE_REELS_SUGGESTIONS, Settings.HIDE_PAID_PARTNERSHIP_REELS, Settings.HIDE_REEL_FOLLOW_BUTTON,
                 Settings.HIDE_REEL_CHIPS, Settings.HIDE_REEL_SOCIAL_FOOTER, Settings.TURN_OFF_DOUBLE_TAP_LIKE,
-                Settings.HIDE_REELS_TAB, Settings.SHOW_REELS_TAB, Settings.HIDE_SEARCH_TAB, Settings.HIDE_CREATE_TAB, Settings.HIDE_PROFILE_TAB, Settings.HIDE_HOME_CREATE_BUTTON, Settings.HIDE_HOME_NOTIFICATIONS_BUTTON, Settings.SEARCH_BUTTON_ON_HOME, Settings.GHOST_BUTTON_ON_HOME, Settings.REEL_SEEK_BAR, Settings.BLUR_REEL_BARS, Settings.KEEP_REEL_AUTO_SCROLL,
-                Settings.DOWNLOAD_VIDEOS, Settings.TAP_TO_PLAY, Settings.KEEP_REELS_MUTED,
+                Settings.HIDE_REELS_TAB, Settings.SHOW_REELS_TAB, Settings.HIDE_SEARCH_TAB, Settings.HIDE_CREATE_TAB, Settings.HIDE_PROFILE_TAB, Settings.HIDE_HOME_CREATE_BUTTON, Settings.HIDE_HOME_NOTIFICATIONS_BUTTON, Settings.SEARCH_BUTTON_ON_HOME, Settings.GHOST_BUTTON_ON_HOME, Settings.CENTER_HOME_LOGO, Settings.REEL_SEEK_BAR, Settings.BLUR_REEL_BARS, Settings.KEEP_REEL_AUTO_SCROLL,
+                Settings.DOWNLOAD_VIDEOS, Settings.HOLD_TO_DOWNLOAD, Settings.TAP_TO_PLAY, Settings.KEEP_REELS_MUTED,
                 Settings.GLASS_TAB_BAR, Settings.SAVED_ON_PROFILE, Settings.STOP_HEARTBEAT, Settings.STOP_UPLOAD_ALARM};
         restoreDefaults();
         BaseSettings.SAFE_MODE.save(false);
@@ -123,10 +126,10 @@ public class NeutralDefaultsSettingsTest {
                 PatchFamily.PROFILE_HIGHLIGHTS, PatchFamily.THREADS_BUTTON, PatchFamily.PROFILE_NOTES, PatchFamily.PROFILE_POSTS_LIST, PatchFamily.NOTES_ROW, PatchFamily.INBOX_SUGGESTIONS, PatchFamily.INSTANTS, PatchFamily.SWIPE_TO_CREATE,
                 PatchFamily.REEL_SCROLLING, PatchFamily.REEL_ORIGIN, PatchFamily.STORY_RING, PatchFamily.FULL_RESOLUTION, PatchFamily.HOME_FEED, PatchFamily.FEED_SUGGESTIONS,
                 PatchFamily.TAB_SWIPE, PatchFamily.HDR_BOOST, PatchFamily.RECENT_SEARCHES, PatchFamily.DATA_SAVER, PatchFamily.MEDIA_CACHE, PatchFamily.NOTIFICATION_GROUPS, PatchFamily.MESSAGES_LOCK, PatchFamily.SCREENSHOT_REPORTS, PatchFamily.SCREENSHOT_BLOCK, PatchFamily.KEEP_IN_CHAT, PatchFamily.LIVE_SEEN,
-                PatchFamily.EMOJI_STYLE, PatchFamily.ACCENT_COLOR,
-                PatchFamily.REEL_WATCH_HISTORY, PatchFamily.STORY_AUTO_ADVANCE, PatchFamily.STORY_SOUND, PatchFamily.FEED_SOUND, PatchFamily.LONG_PRESS_ZOOM, PatchFamily.FULL_SCREEN_BARS, PatchFamily.STORY_TIME, PatchFamily.STORY_MENTIONS,
+                PatchFamily.EMOJI_STYLE, PatchFamily.ACCENT_COLOR, PatchFamily.LAUNCH_SCREEN,
+                PatchFamily.REEL_WATCH_HISTORY, PatchFamily.STORY_AUTO_ADVANCE, PatchFamily.STORY_SOUND, PatchFamily.STORY_UPLOAD_QUALITY, PatchFamily.FEED_SOUND, PatchFamily.LONG_PRESS_ZOOM, PatchFamily.ROUNDED_POST_CORNERS, PatchFamily.FULL_SCREEN_BARS, PatchFamily.STORY_TIME, PatchFamily.STORY_MENTIONS,
                 PatchFamily.POST_TIME, PatchFamily.HIDDEN_LIKE_COUNTS, PatchFamily.BACK_LEAVES_HOME, PatchFamily.STORY_LOOP, PatchFamily.STORY_SEEN, PatchFamily.SPOOF_LOCATION,
-                PatchFamily.THREAD_SEEN, PatchFamily.TYPING, PatchFamily.ACTIVE_STATUS, PatchFamily.FEED_REELS, PatchFamily.FOLLOWING_FEED,
+                PatchFamily.THREAD_SEEN, PatchFamily.TYPING, PatchFamily.ACTIVE_STATUS, PatchFamily.LAST_ACTIVE, PatchFamily.FEED_REELS, PatchFamily.FOLLOWING_FEED,
                 PatchFamily.EXPLORE_GRID, PatchFamily.SHARE_SHEET, PatchFamily.REPOST_BUTTON, PatchFamily.BOTTOM_SPACE,
                 PatchFamily.PROFILE_SUGGESTIONS, PatchFamily.REELS_SUGGESTIONS, PatchFamily.PAID_PARTNERSHIP_REELS, PatchFamily.DOUBLE_TAP_LIKE,
                 PatchFamily.REELS_TAB, PatchFamily.REEL_SEEK_BAR, PatchFamily.REEL_BLUR_BARS, PatchFamily.REEL_TAP_AND_VOLUME, PatchFamily.REEL_AUTO_SCROLL,
@@ -246,7 +249,7 @@ public class NeutralDefaultsSettingsTest {
         assertSame(sections, NotesRow.sections(sections));
         java.util.List<Object> units = java.util.Arrays.asList(new StockUnit(), new StockUnit());
         assertSame(units, InboxSuggestions.units(units));
-        assertSame(units, app.hushgram.extension.instagram.reels.PaidPartnershipReels.page(units));
+        assertSame(units, app.hushgram.extension.instagram.reels.PaidPartnershipReels.page(units, "clips_viewer_clips_tab"));
         assertFalse(Instants.hide());
         assertTrue(app.hushgram.extension.instagram.feed.CommentsButton.feedState(1));
         assertTrue(app.hushgram.extension.instagram.share.ShareButton.feedState(1));
@@ -289,6 +292,7 @@ public class NeutralDefaultsSettingsTest {
         assertFalse(app.hushgram.extension.instagram.reels.ReelWatchHistory.holdBack());
         assertFalse(app.hushgram.extension.instagram.stories.StoryAdvance.hold());
         assertFalse(app.hushgram.extension.instagram.stories.StoryLoop.loop(0));
+        assertFalse(app.hushgram.extension.instagram.stories.StoryUploadQuality.fullQuality(StockShareType.STORY));
         Object batch = new Object();
         assertSame(batch, app.hushgram.extension.instagram.stories.StorySeen.toSend(null, batch));
         assertFalse(app.hushgram.extension.instagram.feed.FollowingFeed.flag(0));

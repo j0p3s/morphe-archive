@@ -140,11 +140,18 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "emoji_typeface" -> method.validateEmojiTypeface()
             EMOJI_DRAWER -> method.validateEmojiDrawer()
             EMOJI_SEARCH -> method.validateEmojiSearch()
+            AI_MENTIONS -> method.validateAiMentions()
+            AI_COMMANDS -> method.validateAiCommands()
+            AI_SEARCH_HINT -> method.validateAiSearchHint()
+            XHE_AUDIO -> method.validateXheAudio()
             DISAPPEARING_SWIPE -> method.validateDisappearingSwipe()
+            HIDE_READ_RECEIPTS -> method.validateChatSeen()
+            REPLY_READ -> method.validateReplyRead()
             ANALYTICS_UPLOADS -> method.validateAnalyticsUpload()
             ATTRIBUTION_UPLOADS -> method.validateAttributionUpload()
             AD_EVENTS -> method.validateAdEvent()
-            MESSAGE_LOG -> method.validateMessageLog()
+            MQTT_TELEMETRY -> method.validateMqttTelemetry()
+            MESSAGE_LOG, AUTO_REPLY -> method.validateMessageLog()
             "original_photo" -> method.validateOriginalPhoto()
             ORIGINAL_VIDEO -> method.validateOriginalVideo()
             SYSTEM_CAMERA -> method.validateSystemCamera()
@@ -175,23 +182,32 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "facebook" -> method.injectSwitch("hideFacebook", "0x0")
             "ai_menu", "ai_fab", "ai_toolbar", "ai_search", "ai_search_chip" -> method.injectSwitch("hideMetaAi", "0x0")
             "ai_tab" -> method.injectSwitch("hideMetaAiTab", "0x0")
+            TAB_PEOPLE -> method.injectSwitch("hidePeopleTab", "0x0")
+            TAB_NOTIFICATIONS -> method.injectSwitch("hideNotificationsTab", "0x0")
             "typing" -> method.injectSwitch("suppressTyping", "0x0")
             "bubbles" -> method.injectSwitch("enableBubbles", "0x1")
             "bubble_mode" -> method.injectNativeBubbleMode()
             APP_ICONS -> method.injectAppIconGate()
             "allow_screenshot" -> method.injectSwitch("allowScreenshot", "0x0")
-            "hide_read_receipts", "read_mailbox" -> method.injectSwitch("hideReadReceipts", "0x0")
+            HIDE_READ_RECEIPTS -> method.injectChatSeen()
+            REPLY_READ -> method.injectReplyRead()
             "keep_unsent" -> method.injectKeepUnsent()
             "unsent_indicator" -> method.injectUnsentIndicator()
             "delta_unsent" -> method.injectDeltaUnsent()
             "emoji_typeface" -> method.injectEmojiTypeface()
             EMOJI_DRAWER -> method.injectEmojiDrawer()
             EMOJI_SEARCH -> method.injectEmojiSearch()
+            AI_MENTIONS -> method.injectAiMentions()
+            AI_COMMANDS -> method.injectAiCommands()
+            AI_SEARCH_HINT -> method.injectAiSearchHint()
+            XHE_AUDIO -> method.injectXheAudio()
             DISAPPEARING_SWIPE -> method.injectDisappearingSwipe()
             ANALYTICS_UPLOADS -> method.injectAnalyticsUpload()
             ATTRIBUTION_UPLOADS -> method.injectAttributionUpload()
             AD_EVENTS -> method.injectAdEvent()
+            MQTT_TELEMETRY -> method.injectMqttTelemetry()
             MESSAGE_LOG -> method.injectMessageLog()
+            AUTO_REPLY -> method.injectAutoReply()
             "original_photo" -> method.injectOriginalPhoto()
             ORIGINAL_VIDEO -> method.injectOriginalVideo()
             SYSTEM_CAMERA -> method.injectSystemCamera()
@@ -306,11 +322,15 @@ val hideSubtabsPatch = controlPatch("subtabs", "Hide inbox tabs", "Hides the Hom
 @Suppress("unused")
 val hideFacebookPatch = controlPatch("facebook", "Hide Facebook shortcuts", "Hides Facebook buttons, profile and sharing shortcuts, and Also from Meta in the Menu tab. Handy if you only use Messenger.", "Navigation")
 @Suppress("unused")
-val hideMetaAiPatch = controlPatch("meta_ai", "Hide Meta AI", "Hides the Meta AI floating button, toolbar button, tab, menu entries and AI in search. Restart Messenger to see the tab go.", "Navigation", "ai_menu", "ai_fab", "ai_toolbar", "ai_tab", "ai_search", "ai_search_chip")
+val hideMetaAiPatch = controlPatch("meta_ai", "Hide Meta AI", "Hides the Meta AI floating button, toolbar button, tab and menu entries, plus AI in search and in @ suggestions. Restart Messenger to see the tab go.", "Navigation", "ai_menu", "ai_fab", "ai_toolbar", "ai_tab", "ai_search", "ai_search_chip", AI_MENTIONS, AI_COMMANDS, AI_SEARCH_HINT)
 @Suppress("unused")
 val hideMomentsPatch = controlPatch("moments", "Hide Chat Moments", "Hides Chat Moments in the menu.", "Navigation")
 @Suppress("unused")
 val hideReelsBadgePatch = controlPatch("reels_badge", "Hide Reels badge", "Hides the Reels notification badge.", "Navigation")
+@Suppress("unused")
+val hidePeopleTabPatch = controlPatch("tab_people", "Hide People tab", "Hides the People tab in the bar at the bottom. Restart Messenger to see the tab go.", "Navigation")
+@Suppress("unused")
+val hideNotificationsTabPatch = controlPatch("tab_notifications", "Hide Notifications tab", "Hides the Notifications tab in the bar at the bottom. Restart Messenger to see the tab go.", "Navigation")
 @Suppress("unused")
 val hideAiStickersPatch = controlPatch("ai_stickers", "Hide AI sticker tools", "Hides the Generate AI sticker buttons, the AI sticker tab and AI sticker suggestions.", "Stickers", "ai_stickers", "ai_sticker_cell")
 @Suppress("unused")
@@ -346,11 +366,17 @@ val originalPhotoPatch = controlPatch("original_photo", "Send photos at original
 val originalVideoPatch = controlPatch("original_video", "Send videos without re-encoding",
     "Sends a video as the original file instead of a recompressed copy, when Messenger allows it. Videos over 25 MB, edited videos and some formats are still compressed.", "Conversations")
 @Suppress("unused")
+val xheAudioPatch = controlPatch("xhe_audio", "Fix shared videos with xHE-AAC sound",
+    "Messenger can't send a video whose only sound is xHE-AAC, which Facebook and Instagram now use. When you share one into Messenger from another app, its sound is converted to regular AAC first, so it sends. The picture isn't touched.", "Conversations")
+@Suppress("unused")
 val disappearingSwipePatch = controlPatch("disappearing_swipe", "Turn off the swipe up for disappearing messages",
     "Swiping up at the bottom of a chat no longer turns on disappearing messages, so a scroll can't set the timer by accident. You can still change it in the chat's settings.", "Conversations")
 @Suppress("unused")
 val keepMessageLogPatch = controlPatch("message_log", "Keep a message log",
     "Saves each message when its notification arrives, so you can still read it if it's unsent. Works in end-to-end encrypted chats too. Stays on your phone.", "Privacy")
+@Suppress("unused")
+val autoReplyPatch = controlPatch("auto_reply", "Auto reply",
+    "Answers messages with replies you write in HushMessenger settings, when they have words you pick or any message at all. Replies go out through Messenger's own notification reply, encrypted chats too, at most once every five minutes per chat.", "Conversations")
 @Suppress("unused")
 val systemCameraPatch = controlPatch("system_camera", "Use the phone's camera app",
     "The camera button in a chat opens your phone's own camera app. The photo then opens in Messenger's editor, ready to send. Photos only.", "Conversations",
@@ -365,9 +391,12 @@ val stopAttributionUploadsPatch = controlPatch("attribution_uploads", "Stop ad a
 val stopAdEventsPatch = controlPatch("ad_events", "Stop inbox and ad link logging",
     "Stops two reports Messenger logs. One says which part of your chat list was on screen, which Messenger files under inbox ads. The other says which ad brought you in when a link from an ad opens a chat.", "Privacy")
 @Suppress("unused")
+val stopMqttLoggingPatch = controlPatch("mqtt_telemetry", "Stop MQTT logging",
+    "Stops the health reports and push logging Messenger sends over its live connection (MQTT). Messages, calls and active status share that connection and keep working.", "Privacy")
+@Suppress("unused")
 val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, such as view-once photos and Quicksnap, and stops screenshot notices. It doesn't add replay or saving.", "Privacy", "allow_screenshot", "screenshot_viewers")
 @Suppress("unused")
-val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Stops Messenger from telling people you read their message. Encrypted chats you open can stay unread on this phone. Replying or switching this off may notify the sender. Group chats aren't tested. Messenger's own Read receipts setting under Privacy & safety marks chats read without showing Seen.", "Privacy", "hide_read_receipts", "read_mailbox")
+val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Opening a chat no longer tells people you read their message, and the chat stays unread on this phone. Marking it read yourself or replying in it marks it read and shows Seen, like Messenger does. Group chats aren't tested. Messenger's own Read receipts setting under Privacy & safety marks chats read without showing Seen.", "Privacy", HIDE_READ_RECEIPTS, REPLY_READ)
 @Suppress("unused")
 val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Keeps messages on screen after someone unsends them, in chats where it works. Encrypted chats aren't supported, and group chats aren't tested.", "Privacy", "keep_unsent", "unsent_indicator", "delta_unsent")
 @Suppress("unused")
@@ -513,6 +542,39 @@ val chatAnimationPatch = bytecodePatch(
         legacy.injectLegacyChatAnimation()
         recordControl("chat_animation")
         chatAnimationApplied = true
+    }
+}
+
+private var textStyleApplied = false
+
+private val textStyleResources = resourcePatch(description = "Record HushMessenger capability: $TEXT_STYLE") {
+    dependsOn(settingsResources)
+    execute {
+        textStyleApplied = false
+        document("AndroidManifest.xml").use { it.requireFeatureAbsent(TEXT_STYLE) }
+    }
+    finalize {
+        if (textStyleApplied) document("AndroidManifest.xml").use {
+            it.addFeature(TEXT_STYLE)
+            it.addTextStyle()
+        }
+    }
+}
+
+@Suppress("unused")
+val textStylePatch = bytecodePatch(
+    name = "Bold and italic text",
+    description = "Adds Bold and Italic to the menu that shows when you select words you typed. They're special Unicode letters, so they show on any phone, but screen readers may read them oddly. Starts off. Turn it on in HushMessenger settings > Controls.",
+    default = true,
+) {
+    category("Conversations")
+    compatibleWith(MessengerTarget.COMPATIBILITY)
+    dependsOn(settingsExtension, textStyleResources)
+    execute {
+        // Only the manifest changes. Recording it here lets a Root Mount install, which can't add the menu entries,
+        // show the switch as unavailable instead of hiding it.
+        recordControl(TEXT_STYLE)
+        textStyleApplied = true
     }
 }
 

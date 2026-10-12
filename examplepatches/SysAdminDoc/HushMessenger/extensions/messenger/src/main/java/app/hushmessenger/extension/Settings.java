@@ -10,6 +10,7 @@ import android.view.Window;
 import android.view.WindowManager;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -160,6 +161,34 @@ public final class Settings {
     public static boolean hideFacebook() { return enabled("facebook"); }
     public static boolean hideMetaAi() { return enabled("meta_ai"); }
 
+    /**
+     * The @ suggestion list asks a cached plugin state before it adds the Meta AI or imagine row, and skips the row when
+     * that state is Messenger's own disabled marker. With the switch on the state reads as that marker. The cache itself
+     * isn't written, so Off, Pause and safe mode bring the rows back on the next keystroke.
+     */
+    public static Object hideMetaAiRow(Object state, Object disabled) {
+        try {
+            return hideMetaAi() ? disabled : state;
+        } catch (RuntimeException error) {
+            hookFailed("meta_ai", "Can't hide Meta AI in @ suggestions", error);
+            return state;
+        }
+    }
+
+    /**
+     * The inbox search bar reads "Ask Meta AI or search" when Messenger's Meta AI search check is true. With the switch on
+     * the check reads false, the answer accounts without Meta AI in search get, so the bar shows the plain hint.
+     */
+    public static boolean metaAiSearchHint(boolean original) {
+        if (!original) return false;
+        try {
+            return !hideMetaAi();
+        } catch (RuntimeException error) {
+            hookFailed("meta_ai", "Can't change the search hint", error);
+            return true;
+        }
+    }
+
     /** First answer this process gave for the Meta AI tab, or null before the bottom bar asked. */
     static volatile Boolean metaAiTab;
 
@@ -179,6 +208,21 @@ public final class Settings {
     }
 
     private static final Object META_AI_TAB = new Object();
+
+    /** Bottom tabs with a switch of their own, held for the run like the Meta AI tab. */
+    static final List<String> BOTTOM_TABS = Collections.unmodifiableList(Arrays.asList("tab_people", "tab_notifications"));
+    /** First answer this process gave for each of {@link #BOTTOM_TABS}, by key, once the bottom bar asked. */
+    static final ConcurrentHashMap<String, Boolean> bottomTabs = new ConcurrentHashMap<>();
+
+    public static boolean hidePeopleTab() { return hideBottomTab("tab_people"); }
+    public static boolean hideNotificationsTab() { return hideBottomTab("tab_notifications"); }
+
+    private static boolean hideBottomTab(String key) {
+        // computeIfAbsent runs once per key, so two first askers can't get different answers.
+        boolean hidden = bottomTabs.computeIfAbsent(key, Settings::wouldUse);
+        if (hidden) activeAt.put(key, System.currentTimeMillis());
+        return hidden;
+    }
 
     /** First answer this process gave for the emoji drawer, or null before Messenger asked. */
     static volatile Boolean oldEmojiDrawer;
@@ -210,7 +254,7 @@ public final class Settings {
      */
     static Boolean heldUntilRestart(String key) {
         Boolean held = "meta_ai".equals(key) ? metaAiTab : "emoji_drawer".equals(key) ? oldEmojiDrawer
-            : OwnFont.KEY.equals(key) ? customFont : null;
+            : OwnFont.KEY.equals(key) ? customFont : bottomTabs.get(key);
         return held == null || held == wouldUse(key) ? null : held;
     }
 
@@ -259,6 +303,35 @@ public final class Settings {
     public static boolean stopAttributionUploads() { return enabled("attribution_uploads"); }
     /** Asked before the inbox visibility event and the ad deep link's entry event are logged; true drops that one event. */
     public static boolean stopAdEvents() { return enabled("ad_events"); }
+
+    static final String MQTT_TELEMETRY = "mqtt_telemetry";
+    /** The topics Messenger publishes its own connection logging on. Messages, typing and presence use other topics. */
+    static final Set<String> MQTT_TELEMETRY_TOPICS = Collections.unmodifiableSet(new HashSet<>(Arrays.asList("/mqtt_health_stats", "/fbns_exp_logging")));
+    /**
+     * Asked before every publish on Messenger's MQTT connection. True drops a logging publish as if the connection were
+     * down, which the health report's senders shrug off. Every other topic, and every topic while the switch is off,
+     * goes out as before. A failure here sends the publish, since this sits in front of every message too.
+     */
+    public static boolean dropMqttPublish(String topic) {
+        try {
+            return topic != null && MQTT_TELEMETRY_TOPICS.contains(topic) && enabled(MQTT_TELEMETRY);
+        } catch (RuntimeException error) {
+            hookFailed(MQTT_TELEMETRY, "Can't check an MQTT publish", error);
+            return false;
+        }
+    }
+    /**
+     * Messenger's config can make the keepalive send the health report instead of a plain ping. With the switch on the
+     * keepalive keeps to the plain ping, so the connection stays up without the report.
+     */
+    public static boolean mqttHealthKeepalive(boolean healthReport) {
+        try {
+            return healthReport && !enabled(MQTT_TELEMETRY);
+        } catch (RuntimeException error) {
+            hookFailed(MQTT_TELEMETRY, "Can't check the MQTT keepalive", error);
+            return healthReport;
+        }
+    }
     /** Asked each time a chat's swipe up for disappearing messages could start; true keeps the gesture from starting. */
     public static boolean blockDisappearingSwipe() { return enabled("disappearing_swipe"); }
     /** Messenger's own original-upload check allows 25 MB, so a bigger video keeps its re-encode. */
@@ -277,6 +350,12 @@ public final class Settings {
 
     /** The notification hook hands the message here; the log stores it off this thread and swallows its own failures. */
     public static void recordReceivedMessage(String text, String thread) { MessageLog.record(text, thread); }
+
+    /** The same notification hook asks this for an auto reply: on, not paused, and with at least one reply written. */
+    public static boolean autoReplyWanted() { return AutoReply.wanted(); }
+
+    /** Hands an incoming message to the auto reply, which answers it off this thread. */
+    public static void autoReplyTo(String text, String thread) { AutoReply.received(text, thread); }
     /**
      * The chat camera button's intent, right before Messenger starts it. With the switch on it opens the capture screen,
      * which uses the phone's camera app. Off, Pause, safe mode and an install without the capture screen get Messenger's.
@@ -350,6 +429,10 @@ public final class Settings {
             Context context = appContext;
             return context == null || CameraActivity.captureIntent(context) != null;
         }
+        if (TextStyleActivity.KEY.equals(key)) {
+            Context context = appContext;
+            return context == null || TextStyleActivity.present(context);
+        }
         if (!"bubbles".equals(key)) return true;
         if (Build.VERSION.SDK_INT < 30) return false;
         if (!HostScreens.started) HostScreens.initializeLate();
@@ -377,7 +460,23 @@ public final class Settings {
     public static void setScreenshotFlags(Window window, int flags, int mask) {
         window.setFlags(allowScreenshot() ? flags & ~WindowManager.LayoutParams.FLAG_SECURE : flags, mask);
     }
-    public static boolean hideReadReceipts() { return enabled("hide_read_receipts"); }
+    /** How long after you send something the open chat may mark itself read, which shows Seen as stock Messenger does. */
+    static final long REPLY_READ_MS = 5_000;
+    static volatile long lastSentAt;
+
+    /**
+     * Hide read receipts: whether the open chat skips the job that marks it read and sends Seen. Right after you send
+     * something from it, the job runs, since a reply shows you read the chat anyway.
+     */
+    public static boolean hideChatSeen() {
+        if (!wouldUse("hide_read_receipts")) return false;
+        long since = System.currentTimeMillis() - lastSentAt;
+        if (since >= 0 && since < REPLY_READ_MS) return false;
+        return enabled("hide_read_receipts");
+    }
+
+    /** The composer's send event, built each time you send from a chat. */
+    public static void noteMessageSent() { lastSentAt = System.currentTimeMillis(); }
     public static boolean keepUnsent() { return wouldUse("keep_unsent"); }
     public static boolean viewStoriesAnonymously() { return enabled("anonymous_stories"); }
     public static boolean saveAnyStory() { return enabled("save_stories"); }
