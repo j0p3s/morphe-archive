@@ -73,7 +73,6 @@ Ads and privacy	Iklan dan privasi
 Back	Kembali
 Before you sign in	Sebelum Anda masuk
 Cancel	Batal
-Changing these	Mengubah pilihan ini
 Clear diagnostic data	Hapus data diagnostik
 Copy a quick report or save the full one to %1$s. Links, IDs, cookies and sign-in details are left out. Check it for other private text before you share it.	Salin laporan singkat atau simpan laporan lengkap ke %1$s. Tautan, ID, cookie, dan data masuk tidak disertakan. Periksa apakah ada teks pribadi lain sebelum membagikannya.
 Copy a short report to the clipboard.	Salin laporan singkat ke papan klip.
@@ -120,7 +119,7 @@ Not saved: the file is over 512 MB	Tidak disimpan: file lebih dari 512 MB
 OK	Oke
 Pause HushGram	Jeda HushGram
 Pause and diagnostics	Jeda dan diagnostik
-Re-signed build fix	Perbaikan build yang ditandatangani ulang
+Instagram accepts this build	Instagram menerima build ini
 Record patch activity and show errors for a bug report. Leave off during normal use.	Catat aktivitas patch dan tampilkan kesalahan untuk laporan bug. Matikan saat penggunaan biasa.
 Remove build expired popup	Hapus popup build kedaluwarsa
 Retry	Coba lagi
@@ -153,7 +152,6 @@ The file %1$s couldn't be removed. Delete it from %2$s to turn HushGram back on.
 The setting couldn't finish updating. Its saved value is shown.	Pengaturan ini tidak dapat selesai diperbarui. Nilai yang tersimpan ditampilkan.
 There's no diagnostic data to clear.	Tidak ada data diagnostik yang dapat dihapus.
 There's no diagnostic data to put back.	Tidak ada data diagnostik yang dapat dikembalikan.
-They're chosen in Morphe Manager when you patch, and Pause doesn't turn them off. Patch again to change them.	Semua ini dipilih di Morphe Manager saat Anda menambal, dan Jeda tidak mematikannya. Tambal ulang untuk mengubahnya.
 Try again, or go back to Instagram.	Coba lagi, atau kembali ke Instagram.
 Updates	Pembaruan
 Version	Versi
@@ -263,6 +261,8 @@ Hide the Reels tab	Sembunyikan tab Reels
 Takes Reels off the tab bar. Reels in your feed and reels people send you still open. Restart Instagram to see the change.	Menghapus Reels dari bilah tab. Reels di feed kamu dan reels yang dikirim orang lain tetap bisa dibuka. Mulai ulang Instagram untuk melihat perubahannya.
 Show the Reels tab	Tampilkan tab Reels
 Puts Reels back on the tab bar if Instagram left it off yours. Hide the Reels tab wins if both are on. Restart Instagram to see the change.	Mengembalikan Reels ke bilah tab jika Instagram tidak menampilkannya di akun Anda. Sembunyikan tab Reels lebih diutamakan jika keduanya aktif. Mulai ulang Instagram untuk melihat perubahannya.
+Show the Messages tab	Tampilkan tab Pesan
+Puts Messages on the tab bar, before Profile, if Instagram left it off yours. Tab order can move it. Restart Instagram to see the change.	Menambahkan Pesan ke bilah tab, sebelum Profil, jika Instagram tidak menampilkannya di akun Anda. Urutan tab bisa memindahkannya. Mulai ulang Instagram untuk melihat perubahannya.
 Keep the reel speed	Pertahankan kecepatan reel
 Keep a seek bar	Tetap tampilkan bilah putar
 Instagram's seek bar stays under every reel, short ones too, with the time played and the reel's length above it. Ads keep Instagram's own rules.	Bilah putar Instagram tetap ada di bawah setiap reel, termasuk yang pendek, dengan waktu yang sudah diputar dan durasi reel di atasnya. Iklan tetap mengikuti aturan Instagram.
@@ -305,6 +305,8 @@ Removes the Blend invite button from reels. Everything else on a reel stays.	Men
 Explore	Jelajahi
 Hide the Explore grid	Sembunyikan kisi Jelajahi
 Hides the grid of posts and reels under the Search tab's bar. Search, recent searches and results stay.	Menyembunyikan kisi postingan dan reel di bawah kolom tab Pencarian. Pencarian, pencarian terbaru, dan hasilnya tetap ada.
+Hide suggested accounts in search	Sembunyikan akun yang disarankan di pencarian
+Leaves the Suggested for you accounts out of what shows when you tap the search bar. Recent searches stay.	Menghapus akun Disarankan untuk kamu dari yang muncul saat kamu mengetuk kolom pencarian. Pencarian terbaru tetap ada.
 Messages	Pesan
 Hide the notes row	Sembunyikan baris catatan
 Takes the row of notes off the top of your messages, the Map bubble in it too. Your chats, search and requests stay.	Menghapus baris catatan dari bagian atas pesan, termasuk gelembung Peta di dalamnya. Chat, pencarian, dan permintaan pesan tetap ada.
@@ -327,6 +329,8 @@ Hide the Stories tray	Sembunyikan baris Cerita
 Takes the whole row of stories off the top of Home, Your story included. Stories still open from a profile or a message.	Menghapus seluruh baris cerita di atas Beranda, termasuk Cerita Anda. Cerita tetap bisa dibuka dari profil atau pesan.
 Hide the Music for you card	Sembunyikan kartu Musik untuk Anda
 Keeps Instagram's Music for you card from turning up between the stories you watch. The stories themselves stay.	Mencegah kartu Musik untuk Anda dari Instagram muncul di antara cerita yang Anda tonton. Ceritanya sendiri tetap ada.
+Hide Suggested for you between stories	Sembunyikan Disarankan untuk kamu di antara cerita
+Leaves out the Suggested for you cards of accounts to follow that Instagram puts between the stories you tap through. The stories themselves stay.	Menghapus kartu Disarankan untuk kamu berisi akun untuk diikuti yang diselipkan Instagram di antara cerita yang kamu ketuk. Ceritanya sendiri tetap ada.
 Download feed photos	Unduh foto feed
 The same Download on a photo post, and on a carousel showing a photo. Saves the largest size Instagram has.	Opsi Unduh yang sama di postingan foto, dan di carousel yang sedang menampilkan foto. Menyimpan ukuran terbesar yang dimiliki Instagram.
 the start-up fix for x86 devices	perbaikan saat mulai untuk perangkat x86
@@ -336,7 +340,7 @@ Opens Instagram's own developer options, where you can look at and change its hi
 Pure black dark mode	Mode gelap hitam pekat
 Instagram's dark mode uses pure black instead of its near-black gray. Menus, sheets and buttons keep their own grays.	Mode gelap Instagram memakai hitam pekat, bukan abu-abu yang hampir hitam. Menu, lembar, dan tombol tetap memakai abu-abunya sendiri.
 the pure black dark mode	mode gelap hitam pekat
-Version code raised	Kode versi dinaikkan
+No Play Store updates	Tanpa pembaruan Play Store
 Google Play won't offer Meta's updates over this build. To go back to the normal Instagram, uninstall this one first, which deletes Instagram's data on this phone. Later HushGram builds need Change version code too, or they won't install over this one.	Google Play tidak akan menawarkan pembaruan Meta untuk build ini. Untuk kembali ke Instagram biasa, copot dulu yang ini, yang menghapus data Instagram di ponsel ini. Build HushGram berikutnya juga perlu Change version code, kalau tidak tidak bisa dipasang di atas yang ini.
 the raised version code	kode versi yang dinaikkan
 Sharing	Berbagi
@@ -372,6 +376,10 @@ Follows you	Mengikuti kamu
 Doesn't follow you	Tidak mengikuti kamu
 Hide suggested people	Sembunyikan orang yang disarankan
 Takes Suggested for you and the Discover people button off profiles, yours included. Bios, counts, posts and follower lists stay.	Menghapus Disarankan untuk kamu dan tombol Temukan orang dari profil, termasuk profilmu. Bio, jumlah, postingan, dan daftar pengikut tetap ada.
+Hide Suggested for you on follow lists	Sembunyikan Disarankan untuk kamu di daftar ikuti
+Leaves the Suggested for you section off the bottom of the followers and following lists. Every account in the list stays.	Menghapus bagian Disarankan untuk kamu dari bawah daftar pengikut dan yang diikuti. Semua akun di daftar tetap ada.
+Hide Complete your profile	Sembunyikan Lengkapi profil
+Takes the Complete your profile cards, like Add bio and Find people to follow, off your own profile. Your bio, counts and posts stay.	Menghapus kartu Lengkapi profil, seperti Tambahkan bio dan Temukan orang untuk diikuti, dari profilmu sendiri. Bio, jumlah, dan postinganmu tetap ada.
 Hide highlights	Sembunyikan sorotan
 Takes the row of story highlights off profiles, yours included. Bios, counts and posts stay, and so does Add to highlight on your stories.	Menghapus baris sorotan cerita dari profil, termasuk profilmu. Bio, jumlah, dan postingan tetap ada, begitu juga Tambahkan ke sorotan di ceritamu.
 Hide the Threads button	Sembunyikan tombol Threads
@@ -391,7 +399,7 @@ HushGram remembers where you stopped in up to 200 videos for 30 days. Tap to cle
 Remembered playback positions restored.	Posisi pemutaran tersimpan dipulihkan.
 Undo has expired.	Waktu untuk memulihkan telah habis.
 You cleared the remembered playback positions.	Kamu menghapus posisi pemutaran tersimpan.
-Could not update the remembered playback positions.	Tidak dapat memperbarui posisi pemutaran tersimpan.
+Couldn't update the remembered playback positions.	Tidak dapat memperbarui posisi pemutaran tersimpan.
 Settings backup	Cadangan pengaturan
 Export HushGram settings	Ekspor pengaturan HushGram
 Choose a file for your installed patches' settings. Accounts and history stay on this device.	Pilih file untuk pengaturan patch yang terpasang. Akun dan riwayat tetap di perangkat ini.
@@ -502,7 +510,7 @@ Diagnostic report saved.	Laporan diagnostik disimpan.
 Choose a file for the settings export.	Pilih file untuk mengekspor pengaturan.
 Exporting HushGram settings...	Mengekspor pengaturan HushGram...
 Settings export canceled.	Ekspor pengaturan dibatalkan.
-Show a Reel seek thumb	Tampilkan pegangan penggeser Reel
+Round handle on the seek bar	Tampilkan pegangan penggeser Reel
 Adds a white round handle to the seek bar that you can drag. Ads keep their own bar.	Menambahkan gagang bundar putih pada bilah geser yang bisa kamu seret. Iklan tetap memakai bilahnya sendiri.
 Bigger seek bar on reels	Bilah geser lebih besar di Reel
 Makes the seek bar thicker, with a round white handle and the time above it, over a soft dark fade so it shows on any video. Drag it to seek. It also keeps the bar on short reels.	Membuat bilah geser lebih tebal, dengan pegangan putih bulat dan waktu di atasnya, di atas gradasi gelap lembut agar terlihat di video apa pun. Seret untuk mencari posisi. Bilah juga tetap tampil di Reel pendek.
@@ -572,8 +580,6 @@ Don't report screenshots	Jangan laporkan tangkapan layar
 Ghost mode	Mode hantu
 Ghost mode is off, and so is each of its switches.	Mode hantu nonaktif, begitu pula setiap sakelarnya.
 Ghost mode is on, and so is each of its switches.	Mode hantu aktif, begitu pula setiap sakelarnya.
-Ghost mode is on. Tap to turn it off.	Mode hantu aktif. Ketuk untuk menonaktifkannya.
-Ghost mode is off. Tap to turn it on.	Mode hantu nonaktif. Ketuk untuk mengaktifkannya.
 Instagram doesn't notice when you take a screenshot, so whoever sent you a disappearing photo or video isn't told. Your screenshots save as usual.	Instagram tidak tahu saat Anda mengambil tangkapan layar, jadi pengirim foto atau video sementara tidak diberi tahu. Tangkapan layar Anda tersimpan seperti biasa.
 Keep in chat	Simpan di chat
 Lives you watch don't put you on the host's viewer list, so they aren't told you're there. Commenting or reacting still shows you. The viewer count you see stops updating, and a live that ends can keep looking live until you leave it.	Siaran langsung yang Anda tonton tidak menaruh Anda di daftar penonton host, jadi mereka tidak tahu Anda ada di sana. Berkomentar atau bereaksi tetap menampilkan Anda. Jumlah penonton yang Anda lihat berhenti diperbarui, dan siaran langsung yang sudah berakhir bisa tetap tampak langsung sampai Anda keluar.
@@ -588,7 +594,11 @@ Photos and videos sent as view once or replayable stay in the chat so you can op
 Adds Download cover under Download. It saves the still picture a reel shows before it plays, at its largest size.	Menambahkan Unduh sampul di bawah Unduh. Ini menyimpan gambar diam yang ditampilkan reel sebelum diputar, dalam ukuran terbesarnya.
 After 20 reels, swiping in Reels stops until Instagram has been in the background for 15 minutes. A reel you open from a message or a post still plays.	Setelah 20 reel, menggeser di Reels berhenti sampai Instagram berada di latar belakang selama 15 menit. Reel yang Anda buka dari pesan atau postingan tetap diputar.
 Find the reel you came from	Temukan reel asal Anda
-Open a creator's profile from a reel, then their Reels tab, and it scrolls to that reel and outlines it for a moment.	Buka profil kreator dari sebuah reel, lalu tab Reels-nya, dan tab itu bergulir ke reel tersebut dan menandainya sebentar.
+Open a creator's profile from a reel, then their Reels tab, and it scrolls to that reel and outlines it for a moment. Stop looking ends the search where it is.	Buka profil kreator dari sebuah reel, lalu tab Reels-nya, dan tab itu bergulir ke reel tersebut dan menandainya sebentar. Berhenti mencari menghentikan pencarian di posisinya saat itu.
+Wait for a tap to find it	Tunggu ketukan untuk mencarinya
+When the reel isn't on the first screen, the Reels tab shows a Find the reel button instead of scrolling on its own.	Jika reel tidak ada di layar pertama, tab Reels menampilkan tombol Cari reel alih-alih menggulir sendiri.
+Find the reel	Cari reel
+Stop looking	Berhenti mencari
 Couldn't find the reel you came from	Reel asal Anda tidak ditemukan
 Clear saved copies now	Hapus salinan tersimpan sekarang
 Clear the media cache	Bersihkan cache media
@@ -624,7 +634,7 @@ Nothing in the row of stories at the top of Home loads, your own story included,
 Open categories as pages	Buka kategori sebagai halaman
 Settings shows a list of its categories, and a tap opens one on its own page. Search still looks through all of them.	Pengaturan menampilkan daftar kategorinya, dan satu ketukan membuka satu kategori di halamannya sendiri. Pencarian tetap mencari di semuanya.
 Hide the HushGram row in Instagram's menu	Sembunyikan baris HushGram di menu Instagram
-While a tab long press opens HushGram, Instagram's Settings and activity screen leaves out the HushGram row. Turn the long press off and the row comes back.	Selama menekan lama tab membuka HushGram, layar Pengaturan dan aktivitas Instagram tidak menampilkan baris HushGram. Matikan tekan lama itu dan barisnya kembali.
+While a tab long press or the long press on your profile's menu opens HushGram, Instagram's Settings and activity screen leaves out the HushGram row. Turn those long presses off and the row comes back.	Selama menekan lama tab atau menu profilmu membuka HushGram, layar Pengaturan dan aktivitas Instagram tidak menampilkan baris HushGram. Matikan tekan lama itu dan barisnya kembali.
 Stop loading stories	Berhenti memuat cerita
 Takes the Comment button and the comment count off the posts in your feed.	Menghapus tombol Komentar dan jumlah komentar dari postingan di feed Anda.
 Takes the memories, recaps, follow anniversaries and birthday cards Instagram makes out of the row of stories at the top of Home. Stories people post stay.	Menghapus kenangan, rangkuman, peringatan mengikuti, dan kartu ulang tahun buatan Instagram dari baris cerita di bagian atas Beranda. Cerita yang diposting orang tetap ada.
@@ -799,7 +809,7 @@ That file has no setting names in it. Nothing changed.	File itu tidak berisi nam
 Couldn't remove the setting names. Try again.	Tidak bisa menghapus nama pengaturan. Coba lagi.
 Couldn't save the setting names. Nothing changed.	Tidak bisa menyimpan nama pengaturan. Tidak ada yang berubah.
 On this Instagram build it covers %1$d of %2$d routes. The diagnostic report lists the rest.	Pada build Instagram ini, fitur ini mencakup %1$d dari %2$d jalur. Laporan diagnostik mencantumkan sisanya.
-Hide Accounts to follow	Sembunyikan Akun untuk diikuti
+Hide suggested accounts in Messages	Sembunyikan akun yang disarankan di Pesan
 Takes the accounts Instagram suggests off the bottom of your messages. Your chats and follow requests stay. Restart Instagram to see the change.	Menghapus akun yang disarankan Instagram dari bagian bawah pesan kamu. Chat dan permintaan mengikuti tetap ada. Mulai ulang Instagram untuk melihat perubahannya.
 A light tick each time the highlight slides past a tab, so it follows the bar as you tap or swipe between screens.	Getaran halus setiap kali sorotan melewati sebuah tab, jadi mengikuti bilah saat kamu mengetuk atau menggeser antar layar.
 Blur behind the tab bar	Blur di belakang bilah tab
@@ -862,7 +872,11 @@ Search button on Home's header	Tombol Cari di header Beranda
 Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works with the Search tab hidden too, unless you swipe between your tabs. Restart Instagram to see the change.	Menambahkan kaca pembesar di bagian atas Beranda yang membuka Cari, seperti tab Cari. Ini juga berfungsi saat tab Cari disembunyikan, kecuali kamu menggeser di antara tab. Mulai ulang Instagram untuk melihat perubahannya.
 Center the logo on Home's header	Tengahkan logo di header Beranda
 Puts Instagram's logo in the middle of the top of Home, even with header buttons hidden or added. A feed's name shown there is centered too. Restart Instagram to see the change.	Menempatkan logo Instagram di tengah bagian atas Beranda, meski tombol header disembunyikan atau ditambahkan. Nama feed yang tampil di sana juga ditengahkan. Mulai ulang Instagram untuk melihat perubahannya.
-Search isn't on your tab bar, so this button can't open it here. If Hide the Search tab is on, turn it off and restart Instagram.	Cari tidak ada di bilah tab kamu, jadi tombol ini tidak bisa membukanya di sini. Jika Sembunyikan tab Cari aktif, nonaktifkan lalu mulai ulang Instagram.
+Center the name on profiles	Tengahkan nama di profil
+Puts the username in the middle of the bar at the top of a profile, yours and other people's. The buttons stay where they are.	Menempatkan nama pengguna di tengah bilah atas profil, milikmu dan milik orang lain. Tombol tetap di tempatnya.
+Search isn't on your tab bar, so this button can't open it here.	Cari tidak ada di bilah tab kamu, jadi tombol ini tidak bisa membukanya di sini.
+To open Search here, turn off Hide the Search tab and restart.	Untuk membuka Cari di sini, nonaktifkan Sembunyikan tab Cari lalu mulai ulang.
+Restart Instagram to bring Search back to your tab bar.	Mulai ulang Instagram agar Cari kembali ke bilah tab kamu.
 Tab order	Urutan tab
 The tab bar keeps Instagram's order.	Bilah tab memakai urutan Instagram.
 Tabs go in this order: %1$s. Restart Instagram to see the change.	Tab diurutkan seperti ini: %1$s. Mulai ulang Instagram untuk melihat perubahannya.
@@ -897,12 +911,19 @@ Frosted	Buram
 Standard	Standar
 Compact	Ringkas
 Tall	Tinggi
+Space under the tab bar	Ruang di bawah bilah tab
+A little more	Sedikit lebih banyak
+More	Lebih banyak
 Hide the tab bar as you scroll	Sembunyikan bilah tab saat menggulir
 Scrolling a list down slides the pill out of the way. Scrolling up, reaching the top, or changing tab brings it back. Restart Instagram after changing it.	Menggulir daftar ke bawah menggeser pil keluar dari jalan. Menggulir ke atas, mencapai bagian atas, atau berpindah tab akan memunculkannya lagi. Mulai ulang Instagram setelah mengubahnya.
 Start feed videos with sound	Mulai video feed dengan suara
 The first video on Home plays with its sound on, the same as tapping its speaker. Your phone's ringer and volume still count, so on silent or with the volume down, it stays quiet.	Video pertama di Beranda diputar dengan suara menyala, sama seperti mengetuk speakernya. Mode dering dan volume ponsel tetap berlaku, jadi saat senyap atau volume dimatikan, video tetap tanpa suara.
 Long press a photo to zoom	Tekan lama foto untuk memperbesar
 Press and hold a photo in a feed to see it twice as big around your finger, and slide to look around. Let go to close it. While this is on, it takes the place of Instagram's own long press on a photo.	Tekan dan tahan foto di feed untuk melihatnya dua kali lebih besar di sekitar jarimu, lalu geser untuk melihat sekeliling. Lepaskan untuk menutupnya. Selama ini aktif, fitur ini menggantikan tekan lama bawaan Instagram pada foto.
+Keep the zoom open	Biarkan zoom tetap terbuka
+The zoom stays up after you let go. Drag to look around, pinch to zoom from 1x to 4x, and tap or press Back to close it.	Zoom tetap terbuka setelah kamu melepas jari. Geser untuk melihat sekeliling, cubit untuk memperbesar dari 1x hingga 4x, lalu ketuk atau tekan Kembali untuk menutupnya.
+# context: what TalkBack reads for the zoomed photo left open over the feed
+Zoomed photo	Foto yang diperbesar
 Full screen Reels	Reels layar penuh
 Hides the status bar and the navigation bar while Reels shows. Swipe in from the edge to bring them back for a moment. Back and the keyboard work as usual.	Menyembunyikan bilah status dan bilah navigasi saat Reels ditampilkan. Geser dari tepi untuk menampilkannya kembali sebentar. Tombol Kembali dan keyboard tetap berfungsi seperti biasa.
 Full screen Home	Beranda layar penuh
@@ -930,7 +951,7 @@ Save photos, videos and more, and choose where they go.	Simpan foto, video, dan 
 Stop background work Instagram doesn't need.	Hentikan kerja latar belakang yang tidak dibutuhkan Instagram.
 Stop Instagram from saying this version is too old.	Cegah Instagram menyebut versi ini terlalu lama.
 Instagram's own testing tools. Change them only if you know what they do.	Alat uji milik Instagram sendiri. Ubah hanya jika kamu tahu fungsinya.
-Chosen when you patched. Patch again to change them.	Dipilih saat kamu menambal. Tambal ulang untuk mengubahnya.
+Chosen when you patched, so Pause leaves them on. Patch again to change them.	Dipilih saat kamu menambal, jadi Jeda tidak mematikannya. Tambal ulang untuk mengubahnya.
 Save your HushGram choices to a file, or bring them back.	Simpan pilihan HushGram kamu ke file, atau pulihkan kembali.
 Your version, the source code and licenses.	Versimu, kode sumber, dan lisensi.
 Open settings with a long press on your profile's menu	Buka pengaturan dengan menekan lama menu profilmu
@@ -938,6 +959,12 @@ A long press on the menu button, the three lines at the top right of your own pr
 Hide the top bar on the Reels tab	Sembunyikan bilah atas di tab Reels
 Takes away the row at the top of the Reels tab, with the Reels title, the camera button and anything else Instagram puts there. Reels you open from a profile, a post or a chat keep theirs. The camera still opens from Home.	Menghapus baris di bagian atas tab Reels, berisi judul Reels, tombol kamera, dan apa pun yang ditaruh Instagram di sana. Reels yang kamu buka dari profil, postingan, atau chat tetap memilikinya. Kamera tetap bisa dibuka dari Beranda.
 Hide the Save button on reels	Sembunyikan tombol Simpan di reel
+Burn-in guard	Pelindung burn-in
+Dim when idle	Redupkan saat diam
+Dim when idle and shift	Redupkan saat diam dan geser
+On the Reels screen, the buttons, caption and bars fade after 5 seconds without a touch. A touch brings them back.	Di layar Reels, tombol, keterangan, dan bilah memudar setelah 5 detik tanpa sentuhan. Sentuhan mengembalikannya.
+On the Reels screen, the buttons, caption and bars fade after 5 seconds without a touch, and the screen moves a step every 2 minutes. A touch brings them back.	Di layar Reels, tombol, keterangan, dan bilah memudar setelah 5 detik tanpa sentuhan, dan layar bergeser sedikit setiap 2 menit. Sentuhan mengembalikannya.
+Off. It can fade a reel's buttons while the screen sits untouched, so they don't burn into an OLED screen.	Nonaktif. Bisa meredupkan tombol reel saat layar tidak disentuh, agar tidak membekas di layar OLED.
 Takes the Save button out of the column of buttons beside a reel, and the count under it. Posts in your feed keep theirs.	Menghapus tombol Simpan dari deretan tombol di samping reel, beserta angka di bawahnya. Postingan di feed-mu tetap punya tombolnya.
 Unlock with	Buka kunci dengan
 Phone lock	Kunci ponsel
@@ -956,10 +983,10 @@ Confirm PIN	Konfirmasi PIN
 Set a PIN	Atur PIN
 Use 4 to 8 digits.	Pakai 4 sampai 8 angka.
 The PINs don't match.	PIN tidak sama.
-Could not save the PIN.	PIN tidak bisa disimpan.
+Couldn't save the PIN.	PIN tidak bisa disimpan.
 The PIN can't be recovered. To remove it, clear Instagram's storage in Android's app settings. That signs you out and resets HushGram's settings. A saved settings backup brings the rest back, but not the PIN.	PIN tidak bisa dipulihkan. Untuk menghapusnya, hapus penyimpanan Instagram di pengaturan aplikasi Android. Kamu akan keluar dari akun dan pengaturan HushGram kembali ke awal. Cadangan pengaturan yang tersimpan mengembalikan sisanya, tapi tidak dengan PIN.
 Open app info	Buka info aplikasi
-Hide 'Are you interested' questions	Sembunyikan pertanyaan 'Apakah kamu tertarik'
+Hide 'Are you interested?' bubbles	Sembunyikan pertanyaan 'Apakah kamu tertarik'
 Hides the bubble under a post that asks 'Are you interested in this post?' with Not interested and Interested buttons. Nothing is answered for you.	Menyembunyikan gelembung di bawah postingan yang bertanya 'Apakah kamu tertarik dengan postingan ini?' dengan tombol Tidak tertarik dan Tertarik. Tidak ada yang dijawab untukmu.
 Show when someone was last active	Tampilkan waktu persis terakhir aktif
 Under a name in your messages and in a chat, the exact time they were last on, like Active at 3:42 PM, replaces Active 3h ago. Active now stays as it is.	Di bawah nama di pesan dan di dalam chat, waktu persis terakhir aktif, seperti Aktif pukul 15.42, menggantikan Aktif 3 jam lalu. Aktif sekarang tidak berubah.
@@ -971,3 +998,20 @@ Rounds the corners of a post's photo, video and carousel pages in Home and Follo
 Corner size	Ukuran sudut
 Large	Besar
 Small	Kecil
+# context: a toast shown once when safe mode has paused HushGram on its own after crashes at start
+HushGram paused itself because Instagram kept crashing as it started. Its switches stay off until you turn it back on in HushGram settings.	HushGram menjeda dirinya sendiri karena Instagram terus berhenti mendadak saat dibuka. Sakelarnya tetap nonaktif sampai Anda mengaktifkannya lagi di Pengaturan HushGram.
+# context: a toast when a save couldn't reach Instagram's servers or the connection dropped
+Download failed. Check your connection and try again.	Unduhan gagal. Periksa koneksi lalu coba lagi.
+# context: a toast when a save arrived incomplete or couldn't be written to the phone
+Download didn't finish. Check your connection and free storage, then try again.	Unduhan tidak selesai. Periksa koneksi dan ruang penyimpanan yang tersisa, lalu coba lagi.
+Some changes apply when Instagram restarts. Tap to restart it now.	Beberapa perubahan berlaku saat Instagram dimulai ulang. Ketuk untuk memulai ulang sekarang.
+A save or an export is still running. Restart once it's done.	Penyimpanan atau ekspor masih berjalan. Mulai ulang setelah selesai.
+Couldn't restart Instagram. Close it and open it again.	Tidak dapat memulai ulang Instagram. Tutup lalu buka lagi.
+Already saved. Download again within 30 seconds for a copy.	Sudah disimpan. Unduh lagi dalam 30 detik untuk salinan.
+Already saved %1$d. Download again within 30 seconds for those.	Sudah disimpan %1$d. Unduh lagi dalam 30 detik untuk yang itu.
+Skip what's already saved	Lewati yang sudah disimpan
+Remembers what you save while it's on, so a post, carousel page, reel or story isn't saved twice. Save all skips the pages you already have. Download again within 30 seconds to save another copy. A file you deleted or moved saves again.	Mengingat apa yang kamu simpan selama ini aktif, jadi postingan, halaman carousel, reel, atau cerita tidak tersimpan dua kali. Simpan semua melewati halaman yang sudah kamu punya. Unduh lagi dalam 30 detik untuk menyimpan salinan lain. File yang kamu hapus atau pindahkan akan disimpan lagi.
+Clear download history	Hapus riwayat unduhan
+Forgets everything Skip what's already saved remembers, for all your accounts. Your saved files stay.	Melupakan semua yang diingat Lewati yang sudah disimpan, untuk semua akunmu. File yang sudah kamu simpan tetap ada.
+Download history cleared.	Riwayat unduhan dihapus.
+Couldn't clear the download history. Try again.	Tidak bisa menghapus riwayat unduhan. Coba lagi.

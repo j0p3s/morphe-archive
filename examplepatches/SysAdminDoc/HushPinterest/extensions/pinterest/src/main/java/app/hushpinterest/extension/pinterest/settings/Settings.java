@@ -54,8 +54,9 @@ public class Settings extends BaseSettings {
 
     public static final BooleanSetting HIDE_SHOPPING =
             new BooleanSetting("hushpinterest_hide_shopping", FALSE);
+    /** Its row asks for a restart after turning it off, so a change brings up the restart row. */
     public static final BooleanSetting DISABLE_ANALYTICS =
-            new BooleanSetting("hushpinterest_disable_analytics", TRUE);
+            new BooleanSetting("hushpinterest_disable_analytics", TRUE, true);
     public static final BooleanSetting STRIP_LINK_TRACKING =
             new BooleanSetting("hushpinterest_strip_link_tracking", TRUE);
     public static final BooleanSetting PLAIN_PIN_LINKS =
@@ -70,6 +71,15 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting SAVE_IN_PINTEREST_FOLDER =
             new BooleanSetting("hushpinterest_save_in_pinterest_folder", FALSE);
+    /**
+     * Download pins' network limits: a download queued while one is on waits in Android's Downloads
+     * for a network Android counts as unmetered, or one that isn't roaming. Android keeps the limit
+     * a download was queued with, so switching one never changes a download already queued.
+     */
+    public static final BooleanSetting DOWNLOAD_UNMETERED_ONLY =
+            new BooleanSetting("hushpinterest_download_unmetered_only", FALSE);
+    public static final BooleanSetting DOWNLOAD_NO_ROAMING =
+            new BooleanSetting("hushpinterest_download_no_roaming", FALSE);
     public static final BooleanSetting DOWNLOAD_BOARD =
             new BooleanSetting("hushpinterest_download_board", FALSE);
     public static final BooleanSetting LONG_PRESS_DOWNLOAD =
@@ -78,8 +88,9 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushpinterest_external_browser", FALSE);
     public static final BooleanSetting SYSTEM_SHARE =
             new BooleanSetting("hushpinterest_system_share", FALSE);
+    /** Its row says a change shows after Pinterest restarts, so a change brings up the restart row. */
     public static final BooleanSetting HIDE_SCREENSHOT_SHARE =
-            new BooleanSetting("hushpinterest_hide_screenshot_share", FALSE);
+            new BooleanSetting("hushpinterest_hide_screenshot_share", FALSE, true);
     public static final BooleanSetting HIDE_SEARCH_HISTORY =
             new BooleanSetting("hushpinterest_hide_search_history", FALSE);
     public static final BooleanSetting HIDE_NAV_CREATE =
@@ -90,6 +101,12 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushpinterest_hide_nav_search", FALSE);
     public static final BooleanSetting HIDE_HEADER_BUTTONS =
             new BooleanSetting("hushpinterest_hide_header_buttons", FALSE);
+    public static final BooleanSetting BLACK_BOTTOM_BAR =
+            new BooleanSetting("hushpinterest_black_bottom_bar", FALSE);
+    public static final BooleanSetting HIDE_CLOSEUP_BACK =
+            new BooleanSetting("hushpinterest_hide_closeup_back", FALSE);
+    public static final BooleanSetting HIDE_CLOSEUP_LENS =
+            new BooleanSetting("hushpinterest_hide_closeup_lens", FALSE);
     public static final BooleanSetting HIDE_PIN_MENU_COLLAGE =
             new BooleanSetting("hushpinterest_hide_pin_menu_collage", FALSE);
     public static final BooleanSetting HIDE_PIN_MENU_VISUAL_SEARCH =
@@ -114,10 +131,11 @@ public class Settings extends BaseSettings {
     /**
      * Firebase gets Pinterest's own certificate fingerprint when it signs this install up for push
      * notifications ({@link app.hushpinterest.extension.pinterest.notifications.PushNotifications}). On to
-     * start: a patched build gets no push notifications at all without it.
+     * start: a patched build gets no push notifications at all without it. A change applies the
+     * next time Pinterest starts, so it brings up the restart row.
      */
     public static final BooleanSetting FIX_PUSH_NOTIFICATIONS =
-            new BooleanSetting("hushpinterest_fix_push_notifications", TRUE);
+            new BooleanSetting("hushpinterest_fix_push_notifications", TRUE, true);
 
     /**
      * Once a day, when Pinterest starts, ask api.github.com whether a newer HushPinterest release is

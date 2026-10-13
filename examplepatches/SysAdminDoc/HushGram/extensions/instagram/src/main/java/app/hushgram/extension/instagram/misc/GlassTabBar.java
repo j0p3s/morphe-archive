@@ -25,6 +25,7 @@ import android.graphics.RenderNode;
 import android.graphics.Shader;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.RippleDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -100,6 +101,9 @@ public final class GlassTabBar {
     static final String SWIPE_PAGER = "swipeable_tab_view_pager";
     /** The root of the Reels viewer, in the Reels tab and wherever a reel opens over another tab. */
     static final String REELS_ROOT = "root_clips_layout";
+    /** The strip Instagram lays over a reel's seek bar to widen it for touches, and the seek bar. */
+    static final String TOUCH_STRIP = "clips_expanded_touch_view";
+    static final String SCRUBBER = "scrubber";
 
     private static final java.util.HashMap<String, Integer> IDS = new java.util.HashMap<>();
 
@@ -172,6 +176,73 @@ public final class GlassTabBar {
         int changed = 0;
         for (int i = 0; i < group.getChildCount(); i++) changed += liftReels(group.getChildAt(i), bar, id, wanted, given, depth + 1);
         return changed;
+    }
+
+    /**
+     * Moves [strip], the strip Instagram lays over a reel's seek bar ({@link #TOUCH_STRIP}), so its bottom
+     * edge is the bottom edge of the seek bar ([scrubber]) showing in the one of [viewers] it lies across,
+     * or of that viewer when no seek bar shows. Returns whether it moved.
+     *
+     * <p>Instagram places the strip by how far the reel stops above the bottom of the screens, measured
+     * as it lays them out. Back from another screen (HushGram's settings, say) it measures while its own
+     * margin under the screens is back on for a frame, with the viewer's margin from a floating pill
+     * counted too: the strip sat a bar's height too high, over the reel's More button and name, and took
+     * their taps. Measured before a viewer was kept above the pill, it sits over the pill's top instead.
+     * A strip anchored from the top, or not laid out yet, is left alone.
+     */
+    static boolean stripOnTheReel(View strip, Iterable<View> viewers, int scrubber, Rect scratch) {
+        if (strip == null || !strip.isShown() || !strip.isLaidOut() || strip.isLayoutRequested()) return false;
+        if (!(strip.getLayoutParams() instanceof FrameLayout.LayoutParams)) return false;
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) strip.getLayoutParams();
+        if ((params.gravity & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.BOTTOM) return false;
+        int[] at = new int[2];
+        strip.getLocationOnScreen(at);
+        int left = at[0], right = at[0] + strip.getWidth(), bottom = at[1] + strip.getHeight();
+        View viewer = null;
+        int widest = 0;
+        for (View candidate : viewers) {
+            if (candidate == null || !candidate.isShown() || candidate.isLayoutRequested()
+                    || !candidate.getGlobalVisibleRect(scratch)) continue;
+            int across = Math.min(right, scratch.right) - Math.max(left, scratch.left);
+            if (across > widest) {
+                widest = across;
+                viewer = candidate;
+            }
+        }
+        if (viewer == null) return false;
+        View seekBar = scrubber == 0 ? null : shownWithId(viewer, scrubber, scratch, 0);
+        View anchor = seekBar != null ? seekBar : viewer;
+        anchor.getLocationOnScreen(at);
+        int off = bottom - (at[1] + anchor.getHeight());
+        if (off == 0 || params.bottomMargin + off < 0) return false;
+        params.bottomMargin += off;
+        strip.setLayoutParams(params);
+        return true;
+    }
+
+    /** Whether [drawable] is a ripple with nothing in it but its mask: a touch's feedback, which draws nothing at rest. */
+    static boolean touchFeedbackOnly(Drawable drawable) {
+        if (!(drawable instanceof RippleDrawable)) return false;
+        RippleDrawable ripple = (RippleDrawable) drawable;
+        for (int i = 0; i < ripple.getNumberOfLayers(); i++) {
+            if (ripple.getId(i) != android.R.id.mask) return false;
+        }
+        return true;
+    }
+
+    /** The view with [id] under [view] that shows on screen, or null. Pages scrolled off the screen are skipped. */
+    @Nullable
+    private static View shownWithId(View view, int id, Rect scratch, int depth) {
+        if (depth > 60 || view.getVisibility() != View.VISIBLE) return null;
+        boolean onScreen = view.getGlobalVisibleRect(scratch);
+        if (view.getId() == id) return onScreen ? view : null;
+        if (!onScreen || !(view instanceof ViewGroup)) return null;
+        ViewGroup group = (ViewGroup) view;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            View found = shownWithId(group.getChildAt(i), id, scratch, depth + 1);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     /**
@@ -251,6 +322,8 @@ public final class GlassTabBar {
      */
     static final int FIT_GAP_DP = 1;
     static final int BLUR_DP = 18;
+    static final int CORNER_DP = 12;
+    static final int HIGHLIGHT_CORNER_DP = 8;
     /** The selected tab's capsule sits 4dp in from the pill's top and bottom and stands 4dp past its slot. */
     static final int HIGHLIGHT_INSET_DP = 4;
     static final int HIGHLIGHT_GROW_DP = 4;
@@ -286,6 +359,10 @@ public final class GlassTabBar {
     static final String COUNT_REELS_LIFTED = "Reels viewer kept above the pill";
     /** Counted each time a video in a SurfaceView shows up under the bar, with none there before, and is kept out of the blur. */
     static final String COUNT_VIDEO_LEFT_OUT = "Video kept out of the blur";
+    /** Counted each time a tab's own background, Instagram's selected tab capsule, is taken off under the pill. */
+    static final String COUNT_TAB_BACKGROUND = "Tab's own capsule taken off";
+    /** Counted each time Instagram's touch strip for a reel's seek bar is moved back onto the seek bar. */
+    static final String COUNT_STRIP_KEPT = "Seek bar's touch strip kept on the reel";
 
     static final String TAG = "HushGlass";
     private static final boolean DIAGNOSE = false;
@@ -398,6 +475,14 @@ public final class GlassTabBar {
         return Math.min(originalPx + Math.round(TALL_EXTRA_DP * density), limit);
     }
 
+    /**
+     * How much higher a floating pill sits, with the bar that much taller so the pill and its tabs keep
+     * their size: [lift]'s dp, or 0 for a pill that doesn't float or no choice read.
+     */
+    static int liftPx(GlassLift lift, boolean floating, float density) {
+        return floating && lift != null ? Math.round(lift.dp * density) : 0;
+    }
+
     /** The selected tab's capsule: a quarter of white on dark glass, a sixth of grey on light. */
     static int highlight(int base) {
         return isDark(base) ? 0x40ffffff : 0x2a787880;
@@ -481,6 +566,8 @@ public final class GlassTabBar {
         private final HapticStyle hapticStyle;
         private final GlassOpacity opacity;
         private final GlassHeight height;
+        /** How much higher the pill sits, in pixels: the room under a floating pill. */
+        private final int lift;
         /** Hides the bar while a list scrolls down, when that switch is on; otherwise null. */
         @Nullable private final GlassScrollHide scrollHide;
         /** Whether this slide has had its tick: one tick for a change of tab, however many tabs the capsule crosses. */
@@ -507,6 +594,8 @@ public final class GlassTabBar {
         private final Misses misses = new Misses();
         /** The Reels viewers kept above a floating pill, with the margin each was given. */
         private final WeakHashMap<View, Integer> lifted = new WeakHashMap<>();
+        /** Instagram's touch strip for the seek bar, found once: Instagram keeps one and moves it between reels. */
+        @Nullable private WeakReference<View> stripRef;
         private long reelsLookedAt = Long.MIN_VALUE / 2;
         /** The stretch of the bar, in its own coordinates, under the Reels viewers kept above it, as of the last frame. */
         private int reelsLeft, reelsRight;
@@ -522,6 +611,7 @@ public final class GlassTabBar {
             this.hapticStyle = Settings.GLASS_TAB_BAR_HAPTIC_STYLE.get();
             this.opacity = Settings.GLASS_TAB_BAR_OPACITY.get();
             this.height = Settings.GLASS_TAB_BAR_HEIGHT.get();
+            this.lift = liftPx(Settings.GLASS_TAB_BAR_LIFT.get(), floating, density);
             this.scrollHide = Settings.GLASS_TAB_BAR_HIDE_ON_SCROLL.get()
                     ? new GlassScrollHide(bar, () -> !HushgramPause.isPaused()) : null;
             this.base = baseColor(bar.getBackground());
@@ -565,7 +655,7 @@ public final class GlassTabBar {
 
         /** How far a compact pill is drawn in from the top and bottom, beyond the gap. */
         private int pillInset() {
-            return pillInsetPx(height, bar.getHeight(), gap(), density);
+            return pillInsetPx(height, bar.getHeight() - lift, gap(), density);
         }
 
         /** The colour Instagram gave the bar, or white or black by the theme when it wasn't a plain one. */
@@ -582,16 +672,28 @@ public final class GlassTabBar {
                 base = baseColor(background);
                 bar.setBackground(pill);
             }
+            // Instagram's newer bar marks the selected tab with a dark capsule, that tab's own
+            // background. The pill draws its own capsule, and theirs would sit on top of it. A bare
+            // ripple is the tab's touch feedback, not a capsule, and stays.
+            for (int i = 0; i < bar.getChildCount(); i++) {
+                View tab = bar.getChildAt(i);
+                Drawable own = tab.getBackground();
+                if (own == null || touchFeedbackOnly(own)) continue;
+                tab.setBackground(null);
+                HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_TAB_BACKGROUND);
+                diagnose("tab background taken off: " + own.getClass().getName(), null);
+            }
             View parent = bar.getParent() instanceof View ? (View) bar.getParent() : null;
             int width = parent != null && parent.getWidth() > 0 ? parent.getWidth()
                     : bar.getResources().getDisplayMetrics().widthPixels;
             outer = outerPx(width, density);
 
-            // Height: the bar's own, which is what Instagram keeps every screen's own controls above.
+            // Height: the bar's own, which is what Instagram keeps every screen's own controls above, and
+            // the room asked for under a floating pill.
             ViewGroup.LayoutParams params = bar.getLayoutParams();
             if (params != null && params.height > 0) {
                 if (originalBarHeight < 0) originalBarHeight = params.height;
-                int wanted = barHeightPx(height, originalBarHeight, density);
+                int wanted = barHeightPx(height, originalBarHeight, density) + lift;
                 if (params.height != wanted) {
                     params.height = wanted;
                     bar.setLayoutParams(params);
@@ -609,7 +711,7 @@ public final class GlassTabBar {
             int left = originalLeft + outer + dp(INNER_DP);
             int right = originalRight + outer + dp(INNER_DP);
             int above = originalTop + gap();
-            int under = originalBottom + gap();
+            int under = originalBottom + gap() + lift;
             if (left != bar.getPaddingLeft() || right != bar.getPaddingRight()
                     || above != bar.getPaddingTop() || under != bar.getPaddingBottom()) {
                 bar.setPadding(left, above, right, under);
@@ -682,6 +784,25 @@ public final class GlassTabBar {
             int wanted = bar.getVisibility() == View.VISIBLE ? params.height : 0;
             if (reelsAboveTheBar(holder, bar, id(holder.getContext(), REELS_ROOT), wanted, lifted) > 0) {
                 HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_REELS_LIFTED);
+            }
+            keepTheStripOnTheReel(holder);
+        }
+
+        /** Keeps Instagram's touch strip on the seek bar of the reel above the pill ({@link #stripOnTheReel}). */
+        private void keepTheStripOnTheReel(View holder) {
+            if (lifted.isEmpty()) return;
+            if (holder.isLayoutRequested()) {
+                // A margin changed this frame, so the reel and the strip are where they were. Look again after the layout.
+                bar.postInvalidateDelayed(REELS_LOOK_MS);
+                return;
+            }
+            View strip = stripRef == null ? null : stripRef.get();
+            if (strip == null || !strip.isAttachedToWindow()) {
+                strip = find(holder, TOUCH_STRIP);
+                stripRef = strip == null ? null : new WeakReference<>(strip);
+            }
+            if (strip != null && stripOnTheReel(strip, lifted.keySet(), id(holder.getContext(), SCRUBBER), reelsRect)) {
+                HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_STRIP_KEPT);
             }
         }
 
@@ -824,7 +945,7 @@ public final class GlassTabBar {
                 float left = outer;
                 float top = gap() + pillInset();
                 float right = bar.getWidth() - outer;
-                float bottomEdge = bar.getHeight() - gap() - pillInset();
+                float bottomEdge = bar.getHeight() - lift - gap() - pillInset();
                 if (right - left <= 0 || bottomEdge - top <= 0) return false;
                 into.set(left, top, right, bottomEdge);
                 return true;
@@ -832,7 +953,7 @@ public final class GlassTabBar {
 
             private void drawPill(@NonNull Canvas canvas) {
                 if (!pillBounds(rect)) return;
-                float radius = rect.height() / 2f;
+                float radius = dp(CORNER_DP);
                 boolean dark = isDark(base);
 
                 // The content stops above the bar, so the bar's own colour fills round the pill.
@@ -906,7 +1027,7 @@ public final class GlassTabBar {
                 capsule.set(nowLeft, rect.top + inset, nowRight, rect.bottom - inset);
                 tick((nowLeft + nowRight) / 2f);
                 fill.setColor(highlight(base));
-                float capsuleRadius = capsule.height() / 2f;
+                float capsuleRadius = dp(HIGHLIGHT_CORNER_DP);
                 canvas.drawRoundRect(capsule, capsuleRadius, capsuleRadius, fill);
                 if (progress < 1f) invalidateSelf();
             }
@@ -1016,7 +1137,7 @@ public final class GlassTabBar {
                 try {
                     float scale = 1f / DOWNSAMPLE;
                     float pad = dp(BLUR_DP);
-                    float radius = area.height() / 2f;
+                    float radius = dp(CORNER_DP);
                     float wide = area.width() + 2 * pad;
                     float tall = area.height() + 2 * pad;
                     int width = Math.max(1, (int) Math.ceil(wide * scale));

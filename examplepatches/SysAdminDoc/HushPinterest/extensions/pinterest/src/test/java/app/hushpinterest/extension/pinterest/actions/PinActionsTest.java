@@ -70,6 +70,8 @@ public class PinActionsTest {
         Settings.EXTERNAL_BROWSER.save(false);
         Settings.DOWNLOAD_PINS.save(false);
         Settings.SAVE_IN_PINTEREST_FOLDER.resetToDefault();
+        Settings.DOWNLOAD_UNMETERED_ONLY.resetToDefault();
+        Settings.DOWNLOAD_NO_ROAMING.resetToDefault();
         DownloadFolder.PICKED.resetToDefault();
         PatchFamilyForTests.capabilities(null);
         PauseForTests.resume();
@@ -221,7 +223,30 @@ public class PinActionsTest {
         assertEquals("Downloads destination", expected, request.getDestination());
         assertEquals(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED, request.getNotificationVisibility());
         assertTrue(request.getRequestHeaders().isEmpty());
+        // With both network limits off, Android's own defaults apply, as they did before the limits.
+        assertTrue(request.getAllowedOverMetered());
+        assertTrue(request.getAllowedOverRoaming());
         assertNull(Shadows.shadowOf(activity).getNextStartedActivity());
+    }
+
+    /** Each network limit reaches the request on its own, and both start off. */
+    @Test public void networkLimitsReachASinglePinsRequest() throws Exception {
+        assertFalse(Settings.DOWNLOAD_UNMETERED_ONLY.savedValue());
+        assertFalse(Settings.DOWNLOAD_NO_ROAMING.savedValue());
+        Method await = Utils.class.getDeclaredMethod("awaitBackgroundTasksForTests");
+        await.setAccessible(true);
+        ShadowDownloadManager downloads = Shadows.shadowOf((DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE));
+        boolean[][] limits = {{true, false}, {false, true}, {true, true}};
+        for (int i = 0; i < limits.length; i++) {
+            Settings.DOWNLOAD_UNMETERED_ONLY.save(limits[i][0]);
+            Settings.DOWNLOAD_NO_ROAMING.save(limits[i][1]);
+            assertTrue(PinDownloads.start(pin, activity));
+            await.invoke(null);
+            assertEquals(i + 1, downloads.getRequestCount());
+            ShadowDownloadManager.ShadowRequest request = Shadow.extract(downloads.getRequest(i));
+            assertEquals("metered allowed", !limits[i][0], request.getAllowedOverMetered());
+            assertEquals("roaming allowed", !limits[i][1], request.getAllowedOverRoaming());
+        }
     }
 
     /** #5: the folder switch sends the download to the folder Pinterest's own image save uses. */
@@ -293,7 +318,21 @@ public class PinActionsTest {
         // A saved value that no longer reads as a folder keeps Download.
         DownloadFolder.PICKED.save("Music/Pins");
         assertNull(DownloadFolder.current());
-        assertEquals("Download started, but its history couldn't be saved. Check DCIM.", PinDownloads.startedMessage(false, "DCIM"));
+        assertEquals("Download started, but history wasn't saved. Check DCIM.", PinDownloads.startedMessage(false, "DCIM"));
+    }
+
+    /**
+     * A picked folder with # or % in its name keeps the download. DownloadManager's service reads
+     * the destination back from its text form, where a raw # starts a fragment and a raw % an escape.
+     */
+    @Test public void aFolderNamedWithAHashOrPercentSurvivesTheRequestsTextForm() {
+        DownloadFolder.PICKED.save("Pictures/Art #2 100%");
+        PinMedia.Source source = new PinMedia.Source("https://i.pinimg.com/originals/pin.jpg", "image/jpeg", ".jpg");
+        Uri destination = Shadow.<ShadowDownloadManager.ShadowRequest>extract(PinDownloads.request(source, "pin.jpg")).getDestination();
+        // The JVM's external storage path has the host's separators in it, so only the tail is fixed.
+        String path = Uri.parse(destination.toString()).getPath();
+        assertTrue(path, path.endsWith("Pictures/Art #2 100%/pin.jpg"));
+        assertEquals("Pictures/Art #2 100%", DownloadFolder.of(destination.toString()));
     }
 
     @Test public void aStandInSizeQueuesTheOriginalTheMediaHostHasOrElseItself() throws Exception {
@@ -382,7 +421,7 @@ public class PinActionsTest {
         assertFalse(PinDownloads.start(Map.of("id", "123", "videos", Map.of("video_list", Map.of(
                 "hls", Map.of("url", "https://v.pinimg.com/master.m3u8")))), activity));
         Shadows.shadowOf(Looper.getMainLooper()).idle();
-        assertEquals("Pinterest only offered a streaming video for this pin, not a file that can be downloaded.", ShadowToast.getTextOfLatestToast());
+        assertEquals("Pinterest only streams this video. There's no file to download.", ShadowToast.getTextOfLatestToast());
         ShadowToast.reset();
         assertFalse(PinDownloads.start(Map.of("id", "123"), activity));
         Shadows.shadowOf(Looper.getMainLooper()).idle();

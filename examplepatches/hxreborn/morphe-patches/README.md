@@ -15,7 +15,7 @@
 ## 🩹 Patches list
 
 <!-- PATCHES_START -->
-> **[v1.48.0](https://github.com/hxreborn/morphe-patches/releases/tag/v1.48.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;165 patches total
+> **[v1.49.1](https://github.com/hxreborn/morphe-patches/releases/tag/v1.49.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;169 patches total
 <a id="1weather"></a>
 <details>
 <summary><img src=".github/assets/icons/oneweather.png" width="18" align="top">&nbsp;&nbsp;1Weather&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
@@ -301,8 +301,8 @@
 
 **🎯 Supported versions:**
 
-| 9.2 |
-| :---: |
+| 9.2 | 9.3 |
+| :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -409,7 +409,7 @@
 
 <a id="imo"></a>
 <details>
-<summary><img src=".github/assets/icons/imo.png" width="18" align="top">&nbsp;&nbsp;imo&nbsp;&nbsp;•&nbsp;&nbsp;16 patches</summary>
+<summary><img src=".github/assets/icons/imo.png" width="18" align="top">&nbsp;&nbsp;imo&nbsp;&nbsp;•&nbsp;&nbsp;17 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -422,6 +422,7 @@
 | <a id="imo-amoled-dark-theme"></a>[AMOLED dark theme](patches/src/main/kotlin/app/morphe/patches/imo/misc/theme/AmoledThemePatch.kt) | Replaces the dark theme background with pure black. |
 | <a id="imo-disable-analytics"></a>[Disable analytics](patches/src/main/kotlin/app/morphe/patches/imo/misc/analytics/DisableAnalyticsPatch.kt) | Blocks usage statistics sent to imo, AppsFlyer, Firebase and Facebook, and the advertising ID upload. |
 | <a id="imo-disable-update-check"></a>[Disable update check](patches/src/main/kotlin/app/morphe/patches/imo/misc/update/DisableUpdateCheckPatch.kt) | Removes the forced update screen and the update prompts. |
+| <a id="imo-gmscore-support"></a>GmsCore support | Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed. |
 | <a id="imo-hide-voice-club-tab"></a>[Hide Voice Club tab](patches/src/main/kotlin/app/morphe/patches/imo/misc/tabs/HideVoiceClubTabPatch.kt) | Removes the Voice Club tab from the home screen. |
 | <a id="imo-hide-ads"></a>[Hide ads](patches/src/main/kotlin/app/morphe/patches/imo/ads/HideAdsPatch.kt) | Removes splash, chat list, story and end-of-call ads, and skips the ad consent form. |
 | <a id="imo-hide-invite-prompts"></a>[Hide invite prompts](patches/src/main/kotlin/app/morphe/patches/imo/misc/invite/HideInvitePromptsPatch.kt) | Hides the invite friends dialog, the invite entry in the chat list and the call sharing banner. |
@@ -602,7 +603,7 @@
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
-| <a id="memoneet-gmscore-support"></a>[GmsCore support](patches/src/main/kotlin/app/morphe/patches/memoneet/misc/gms/GmsCoreSupportPatch.kt) | Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed. |
+| <a id="memoneet-gmscore-support"></a>[GmsCore support](patches/src/main/kotlin/app/morphe/patches/shared/misc/gms/GetCredentialGmsCoreSupportPatch.kt) | Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed. |
 | <a id="memoneet-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/memoneet/misc/premium/UnlockPremiumPatch.kt) | Unlocks the premium question banks, notes, test series, previous-year papers and shop plans, with no energy cost or ads. Signing in requires GmsCore support. |
 
 </details>
@@ -679,8 +680,8 @@
 
 **🎯 Supported versions:**
 
-| 3.4.12 | 3.4.13 |
-| :---: | :---: |
+| 3.4.12 | 3.4.13 | 3.4.14 |
+| :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -781,8 +782,8 @@
 
 **🎯 Supported versions:**
 
-| 4.71 | 4.70 |
-| :---: | :---: |
+| 4.72 | 4.71 | 4.70 |
+| :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -919,8 +920,8 @@
 
 **🎯 Supported versions:**
 
-| 2.2.8 | 2.2.9 |
-| :---: | :---: |
+| 2.2.8 | 2.2.9 | 2.2.91 |
+| :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -1019,8 +1020,8 @@
 
 **🎯 Supported versions:**
 
-| Android V1.78.51 | Android V1.78.49 | Android V1.78.47 |
-| :---: | :---: | :---: |
+| Android V1.78.52 | Android V1.78.51 | Android V1.78.49 | Android V1.78.47 |
+| :---: | :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -1099,6 +1100,24 @@
 
 </details>
 
+<a id="storywise"></a>
+<details>
+<summary><img src=".github/assets/icons/storywise.png" width="18" align="top">&nbsp;&nbsp;Storywise&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 1.0.3 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="storywise-gmscore-support"></a>GmsCore support | Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed. |
+| <a id="storywise-remove-forced-update"></a>[Remove forced update](patches/src/main/kotlin/app/morphe/patches/storywise/misc/update/RemoveForcedUpdatePatch.kt) | Removes the update screen that blocks the app when a newer build is published. |
+| <a id="storywise-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/storywise/misc/premium/UnlockPremiumPatch.kt) | Unlocks locked lessons, quizzes and the full Report Card without a pass. The server caps the AI tutor at five questions a day and withholds lectures and live sessions. Signing in requires GmsCore support. |
+
+</details>
+
 <a id="symfonium"></a>
 <details>
 <summary><img src=".github/assets/icons/symfonium.png" width="18" align="top">&nbsp;&nbsp;Symfonium&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
@@ -1150,6 +1169,22 @@
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
 | <a id="trainline-hide-ads"></a>[Hide ads](patches/src/main/kotlin/app/morphe/patches/trainline/ads/HideAdsPatch.kt) | Removes the adverts shown between search results. |
+
+</details>
+
+<a id="video-editor"></a>
+<details>
+<summary><img src=".github/assets/icons/videoeditor.png" width="18" align="top">&nbsp;&nbsp;Video Editor&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 1.621.196 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="video-editor-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/videoeditor/UnlockPremiumPatch.kt) | Unlocks Pro features. |
 
 </details>
 

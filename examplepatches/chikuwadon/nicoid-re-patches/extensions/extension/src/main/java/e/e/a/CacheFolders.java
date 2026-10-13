@@ -11,7 +11,7 @@ import android.widget.Toast;
 import java.io.*;
 import java.util.*;
 
-/** App-private storage by default, or an explicitly granted SAF folder. */
+/** Video cache requires an explicitly granted folder; auxiliary app data remains private. */
 public final class CacheFolders {
     static volatile Context context;
     private static final String KEY="cache_tree_uri", PREFIX="/@nicoid-cache/", SUFFIX="/nicoid/nicoid_cache";
@@ -23,8 +23,9 @@ public final class CacheFolders {
     public static String privateRoot(Context c){init(c);File base=c.getExternalFilesDir(null);return (base==null?c.getFilesDir():base).getAbsolutePath();}
     public static String root(Context c) {
         init(c);String tree=prefs().getString(KEY,"");
-        if(tree.isEmpty()){File folder=new File(privateRoot(c),"nicoid/nicoid_cache");if(!folder.isDirectory())folder.mkdirs();return privateRoot(c);}
-        String key=key(tree);prefs().edit().putString("cache_tree_"+key,tree).apply();return PREFIX+key;
+        if(tree.isEmpty())return PREFIX+"unselected";
+        String key=key(tree),bookmark="cache_tree_"+key;
+        if(!tree.equals(prefs().getString(bookmark,"")))prefs().edit().putString(bookmark,tree).apply();return PREFIX+key;
     }
     private static String key(String tree) {
         try{byte[] bytes=java.security.MessageDigest.getInstance("SHA-256").digest(tree.getBytes("UTF-8"));StringBuilder s=new StringBuilder();for(byte b:bytes)s.append(String.format(java.util.Locale.ROOT,"%02x",b&255));return s.toString();}catch(Exception e){throw new IllegalStateException(e);}
@@ -39,48 +40,32 @@ public final class CacheFolders {
         String name=path.substring(start+SUFFIX.length());if(name.startsWith("/"))name=name.substring(1);
         if(name.contains("/")||name.equals("..")||name.equals("."))throw new FileNotFoundException("Invalid cache path");return name;
     }
-    private static final class Index {long refreshed;final Map<String,Uri> files=new HashMap<>();}
-    private static final Map<String,Index> indexes=new LinkedHashMap<String,Index>(8,.75f,true){protected boolean removeEldestEntry(Map.Entry<String,Index> e){return size()>8;}};
-    static synchronized void forget(File f){try{Index i=indexes.get(tree(f).toString());if(i!=null)i.files.remove(relative(f));}catch(IOException ignored){}}
-    static synchronized void remember(File f,Uri uri){try{Index i=indexes.get(tree(f).toString());if(i!=null)i.files.put(relative(f),uri);}catch(IOException ignored){}}
-    static synchronized Uri document(File f,boolean create) throws IOException {
-        Uri tree=tree(f),parent=DocumentsContract.buildDocumentUriUsingTree(tree,DocumentsContract.getTreeDocumentId(tree));String name=relative(f);
-        if(name.isEmpty())return parent;
-        Index index=indexes.get(tree.toString());long now=SystemClock.elapsedRealtime();
-        if(index==null||now-index.refreshed>2000){index=new Index();for(Entry e:cacheChildren(parent,tree))index.files.put(e.name,e.uri);index.refreshed=now;indexes.put(tree.toString(),index);}
-        Uri found=index.files.get(name);if(found!=null)return found;
-        if(!create)return null;
-        String id=videoId(name);String physical=physicalName(name);
-        if(id!=null){Uri directory=null;for(Entry e:children(parent,tree))if(e.name.equals(id)&&DocumentsContract.Document.MIME_TYPE_DIR.equals(e.mime))directory=e.uri;
-            if(directory==null)directory=DocumentsContract.createDocument(context.getContentResolver(),parent,DocumentsContract.Document.MIME_TYPE_DIR,id);
-            if(directory==null)throw new IOException("Cannot create video cache folder");parent=directory;
-            boolean hidden=false;for(Entry e:children(parent,tree))if(e.name.equals(".nomedia"))hidden=true;
-            if(!hidden)DocumentsContract.createDocument(context.getContentResolver(),parent,"application/octet-stream",".nomedia");
-        }
-        Uri made=DocumentsContract.createDocument(context.getContentResolver(),parent,mime(physical),physical);
-        if(made==null)throw new IOException("Cannot create cache file");index.files.put(name,made);return made;
+    private static final Map<String,DirectoryIndex<Uri>> indexes=new LinkedHashMap<String,DirectoryIndex<Uri>>(8,.75f,true){protected boolean removeEldestEntry(Map.Entry<String,DirectoryIndex<Uri>> e){return size()>8;}};
+    private static DirectoryIndex<Uri> index(Uri tree){synchronized(indexes){DirectoryIndex<Uri> index=indexes.get(tree.toString());if(index==null){Uri root=DocumentsContract.buildDocumentUriUsingTree(tree,DocumentsContract.getTreeDocumentId(tree));index=new DirectoryIndex<>(root,new DirectoryIndex.Provider<Uri>(){
+        public List<DirectoryIndex.Item<Uri>> children(Uri parent)throws IOException{List<DirectoryIndex.Item<Uri>> out=new ArrayList<>();for(Entry e:CacheFolders.children(parent,tree))out.add(item(e));return out;}
+        public Uri create(Uri parent,String name,boolean directory)throws IOException{try{return DocumentsContract.createDocument(context.getContentResolver(),parent,directory?DocumentsContract.Document.MIME_TYPE_DIR:mime(name),name);}catch(RuntimeException e){throw new IOException("Cannot create cache document",e);}}
+        public DirectoryIndex.Item<Uri> stat(Uri uri,String name)throws IOException{return rawStat(uri,name);}
+        public long now(){return SystemClock.elapsedRealtime();}
+    });indexes.put(tree.toString(),index);}return index;}}
+    private static DirectoryIndex.Item<Uri> item(Entry e){return new DirectoryIndex.Item<>(e.name,e.uri,DocumentsContract.Document.MIME_TYPE_DIR.equals(e.mime),e.size,e.time);}
+    static void forget(File f){try{index(tree(f)).forget(relative(f));}catch(IOException ignored){}}
+    static void remember(File f,Uri uri){try{index(tree(f)).remember(relative(f),uri);}catch(IOException ignored){}}
+    static void changed(File f){if(!virtual(f))return;try{index(tree(f)).changed(relative(f));}catch(IOException ignored){}}
+    static Uri document(File f,boolean create)throws IOException{return index(tree(f)).document(relative(f),create);}
+    static void cleanupVideoFolder(File f)throws IOException{
+        String id=videoId(relative(f));if(id==null)return;Uri tree=tree(f);DirectoryIndex<Uri> index=index(tree);Uri directory=index.directory(id);if(directory==null)return;
+        for(Entry child:children(directory,tree))if(!".nomedia".equals(child.name))return;
+        if(DocumentsContract.deleteDocument(context.getContentResolver(),directory))index.removeDirectory(id);
     }
-    static void cleanupVideoFolder(File f) throws IOException {
-        String id=videoId(relative(f));if(id==null)return;
-        Uri tree=tree(f),root=DocumentsContract.buildDocumentUriUsingTree(tree,DocumentsContract.getTreeDocumentId(tree));
-        for(Entry e:children(root,tree))if(id.equals(e.name)&&DocumentsContract.Document.MIME_TYPE_DIR.equals(e.mime)){
-            List<Entry> remaining=children(e.uri,tree);
-            for(Entry child:remaining)if(!".nomedia".equals(child.name))return;
-            if(DocumentsContract.deleteDocument(context.getContentResolver(),e.uri))synchronized(CacheFolders.class){indexes.remove(tree.toString());}
-            return;
-        }
-    }
-    static String videoId(String name){java.util.regex.Matcher m=java.util.regex.Pattern.compile("^((?:sm|so|nm|ss)[0-9]+)(?:[._].*)?$").matcher(name);return m.matches()?m.group(1):null;}
+    private static final java.util.regex.Pattern VIDEO_ID=java.util.regex.Pattern.compile("^((?:sm|so|nm|ss)[0-9]+)(?:[._].*)?$");
+    static String videoId(String name){java.util.regex.Matcher m=VIDEO_ID.matcher(name);return m.matches()?m.group(1):null;}
     static String physicalName(String name){return videoId(name)!=null&&name.endsWith(".mp4")?name.substring(0,name.length()-4)+".complete":name;}
-    static List<Entry> cacheChildren(Uri parent,Uri tree)throws IOException{LinkedHashMap<String,Entry> result=new LinkedHashMap<>();List<Entry> all=children(parent,tree);
-        for(Entry e:all)if(!DocumentsContract.Document.MIME_TYPE_DIR.equals(e.mime)&&videoId(e.name)!=null)result.put(e.name,e);
-        for(Entry e:all)if(DocumentsContract.Document.MIME_TYPE_DIR.equals(e.mime)&&e.name.matches("(?:sm|so|nm|ss)[0-9]+"))for(Entry child:children(e.uri,tree)){if(child.name.equals(".nomedia"))continue;if(child.name.endsWith(".complete"))child.name=child.name.substring(0,child.name.length()-9)+".mp4";result.put(child.name,child);}
-        return new ArrayList<>(result.values());
-    }
+    static List<Entry> cacheChildren(Uri parent,Uri tree)throws IOException{List<Entry> out=new ArrayList<>();for(DirectoryIndex.Item<Uri> item:index(tree).all())out.add(entry(item));return out;}
+    private static Entry entry(DirectoryIndex.Item<Uri> item){Entry e=new Entry();e.uri=item.ref;e.name=DirectoryIndex.logical(item.name);e.mime=item.directory?DocumentsContract.Document.MIME_TYPE_DIR:mime(e.name);e.size=item.size;e.time=item.time;return e;}
     private static final Map<String,String> comments=new LinkedHashMap<String,String>(4,.75f,true){protected boolean removeEldestEntry(Map.Entry<String,String> e){return size()>4;}};
     public static boolean comments(String folder,String id,String json){if(json!=null&&json.length()<2000000)synchronized(comments){comments.put(id,json);}return saveComments(folder,id);}
-    static void exportComments(String folder,String id){String json;synchronized(comments){json=comments.get(id);}if(json==null)return;try(OutputStream out=new CacheOutputStream(new CacheFile(folder,id+".comments.json"))){out.write(json.getBytes("UTF-8"));}catch(IOException e){android.util.Log.w("nicoid-cache","Cannot save cached comments",e);}}
-    public static boolean saveComments(String folder,String id){return new CacheFile(folder,id+".json").exists()||new CacheFile(folder,id+".mp4").exists()||new CacheFile(folder,id+".ncache").exists();}
+    static void exportComments(String folder,String id){String json;synchronized(comments){json=comments.get(id);}if(json==null)return;CacheComments.save(folder,id,json);}
+    public static boolean saveComments(String folder,String id){return CacheComments.video(folder,id);}
     static String mime(String n){return n.endsWith(".m3u8")?"application/vnd.apple.mpegurl":n.endsWith(".json")?"application/json":n.endsWith(".mp4")?"video/mp4":"application/octet-stream";}
     static final class Entry {Uri uri;String name,mime;long size,time;}
     static List<Entry> children(Uri parent,Uri tree) throws IOException {
@@ -91,19 +76,19 @@ public final class CacheFolders {
             while(cursor.moveToNext()){Entry e=new Entry();e.uri=DocumentsContract.buildDocumentUriUsingTree(tree,cursor.getString(0));e.name=cursor.getString(1);e.mime=cursor.getString(2);e.size=cursor.getLong(3);e.time=cursor.getLong(4);result.add(e);}
         }catch(RuntimeException e){throw new IOException("Cache folder unavailable",e);}return result;
     }
-    static Entry stat(File f) throws IOException {
-        Uri u=document(f,false);if(u==null){CachePackIndex.Entry packed=CachePack.entry(f);if(packed==null)return null;Entry e=new Entry();e.name=f.getName();e.mime=mime(e.name);e.size=packed.size;e.time=packed.time;return e;}Entry e=new Entry();e.uri=u;e.name=f.getName();
+    private static DirectoryIndex.Item<Uri> rawStat(Uri u,String name)throws IOException{
         try(Cursor c=context.getContentResolver().query(u,new String[]{"mime_type","_size","last_modified"},null,null,null)){
-            if(c==null||!c.moveToFirst()){forget(f);return null;}e.mime=c.getString(0);e.size=c.getLong(1);e.time=c.getLong(2);return e;
+            if(c==null||!c.moveToFirst())return null;return new DirectoryIndex.Item<>(name,u,DocumentsContract.Document.MIME_TYPE_DIR.equals(c.getString(0)),c.getLong(1),c.getLong(2));
         }catch(RuntimeException x){throw new IOException(x);}
     }
+    static Entry stat(File f)throws IOException{DirectoryIndex.Item<Uri> item=index(tree(f)).stat(relative(f));if(item!=null)return entry(item);CachePackIndex.Entry packed=CachePack.entry(f);if(packed==null)return null;Entry e=new Entry();e.name=f.getName();e.mime=mime(e.name);e.size=packed.size;e.time=packed.time;return e;}
     static ParcelFileDescriptor open(File f,boolean write,boolean append) throws FileNotFoundException {
         try {
             if(!virtual(f)){
                 if(write){File parent=f.getParentFile();if(parent!=null&&!parent.isDirectory()&&!parent.mkdirs())throw new IOException("Cannot create cache directory");}
                 return ParcelFileDescriptor.open(f,write?ParcelFileDescriptor.MODE_WRITE_ONLY|ParcelFileDescriptor.MODE_CREATE|(append?ParcelFileDescriptor.MODE_APPEND:ParcelFileDescriptor.MODE_TRUNCATE):ParcelFileDescriptor.MODE_READ_ONLY);
             }
-            Uri uri=document(f,write);if(uri==null)throw new IOException("Missing cached file");ParcelFileDescriptor fd=context.getContentResolver().openFileDescriptor(uri,write?(append?"wa":"wt"):"r");if(fd==null)throw new IOException("Cannot open cached file");return fd;
+            Uri uri=document(f,write);if(write)changed(f);if(uri==null)throw new IOException("Missing cached file");ParcelFileDescriptor fd=context.getContentResolver().openFileDescriptor(uri,write?(append?"wa":"wt"):"r");if(fd==null)throw new IOException("Cannot open cached file");return fd;
         }catch(IOException|RuntimeException e){FileNotFoundException failure=new FileNotFoundException(e.getMessage());failure.initCause(e);throw failure;}
     }
     public static void settings(PreferenceActivity a) {
@@ -114,10 +99,10 @@ public final class CacheFolders {
     private static PreferenceGroup parent(PreferenceGroup group,Preference p){for(int i=0;i<group.getPreferenceCount();i++){Preference child=group.getPreference(i);if(child==p)return group;if(child instanceof PreferenceGroup){PreferenceGroup found=parent((PreferenceGroup)child,p);if(found!=null)return found;}}return null;}
     public static void summary(PreferenceActivity a) {
         init(a);Preference p=a.findPreference("cache_dir");if(p==null)return;String tree=prefs().getString(KEY,"");
-        String label=tree.isEmpty()?UiStrings.translate("アプリ専用フォルダー（デフォルト）"):DocumentsContract.getTreeDocumentId(Uri.parse(tree));p.setSummary(UiStrings.translate("保存先: ")+label);
+        String label=tree.isEmpty()?UiStrings.translate("未指定（フォルダーを選択してください）"):DocumentsContract.getTreeDocumentId(Uri.parse(tree));p.setSummary(UiStrings.translate("保存先: ")+label);
     }
     private static Activity activity(Context c){while(c instanceof ContextWrapper){if(c instanceof Activity)return (Activity)c;Context next=((ContextWrapper)c).getBaseContext();if(next==c)break;c=next;}return c instanceof Activity?(Activity)c:null;}
-    private static boolean ready(){try{String s=prefs().getString(KEY,"");if(s.isEmpty()){File folder=new File(privateRoot(context),"nicoid/nicoid_cache");return (folder.isDirectory()||folder.mkdirs())&&folder.canWrite();}Uri tree=Uri.parse(s);Uri root=DocumentsContract.buildDocumentUriUsingTree(tree,DocumentsContract.getTreeDocumentId(tree));children(root,tree);return true;}catch(Exception e){return false;}}
+    private static boolean ready(){try{String s=prefs().getString(KEY,"");if(s.isEmpty())return false;Uri tree=Uri.parse(s);Uri root=DocumentsContract.buildDocumentUriUsingTree(tree,DocumentsContract.getTreeDocumentId(tree));children(root,tree);return true;}catch(Exception e){return false;}}
     public static ComponentName startService(Context c,Intent intent) {return service(c,intent,false);}
     public static ComponentName startForegroundService(Context c,Intent intent) {return service(c,intent,true);}
     private static ComponentName service(Context c,Intent intent,boolean foreground) {
@@ -127,24 +112,22 @@ public final class CacheFolders {
         }
         return foreground&&Build.VERSION.SDK_INT>=26?c.startForegroundService(intent):c.startService(intent);
     }
-    static void location(Activity a,Intent pending) {
-        init(a);
-        AlertDialog dialog=new AlertDialog.Builder(PlaybackSession.dialogContext(a))
-            .setTitle(UiStrings.translate("キャッシュ保存先"))
-            .setSingleChoiceItems(new String[]{UiStrings.translate("アプリ専用フォルダー（デフォルト）"),UiStrings.translate("共有ストレージ・SDカードのフォルダーを選択")},prefs().getString(KEY,"").isEmpty()?0:1,(d,which)->{
-                d.dismiss();
-                if(which==1){choose(a,pending);return;}
-                String before=prefs().getString(KEY,"");
-                if(!prefs().edit().remove(KEY).commit()||!ready()){
-                    prefs().edit().putString(KEY,before).commit();
-                    Toast.makeText(a,UiStrings.translate("保存先を使用できません。別のフォルダーを選択してください"),Toast.LENGTH_LONG).show();return;
-                }
-                if(a instanceof PreferenceActivity)summary((PreferenceActivity)a);
-                if(pending!=null)service(a,pending,Build.VERSION.SDK_INT>=26);
-                if(!before.isEmpty())offerCopy(a,before);
-            }).setNegativeButton(UiStrings.translate("キャンセル"),null).create();
-        dialog.show();UiDialogs.style(dialog);
+    static void location(Activity a,Intent pending) {init(a);choose(a,pending);}
+    public static boolean workerReady(Context c){init(c);return ready();}
+    public static void startActivity(Context c,Intent intent){
+        init(c);if(pageRequest(intent)&&!ready()){Activity a=activity(c);if(a!=null)choose(a,new Intent(intent));else Toast.makeText(c,UiStrings.translate("設定でキャッシュ保存先を選択してください"),Toast.LENGTH_LONG).show();return;}
+        c.startActivity(intent);
     }
+    private static boolean replaceHost(Intent pending){return pending!=null&&pending.getBooleanExtra("nicoid_cache_replace_picker_host",false);}
+    public static boolean page(Activity a){
+        init(a);if(ready()){
+            String previous=a.getIntent().getStringExtra("nicoid_cache_copy_from");
+            if(previous!=null){a.getIntent().removeExtra("nicoid_cache_copy_from");MAIN.post(()->{if(!a.isFinishing())offerCopy(a,previous);});}
+            return true;
+        }
+        choose(a,new Intent().setClassName(a,"com.sauzask.nicoid.NicoidCacheManagerActivity").putExtra("nicoid_cache_replace_picker_host",true));return false;
+    }
+    private static boolean pageRequest(Intent pending){ComponentName c=pending==null?null:pending.getComponent();return c!=null&&c.getClassName().equals("com.sauzask.nicoid.NicoidCacheManagerActivity");}
     static void choose(Activity a,Intent pending) {
         // Defer until the current click/fragment callback has finished.
         MAIN.post(()->{
@@ -171,7 +154,7 @@ public final class CacheFolders {
             if(Build.VERSION.SDK_INT>=26)i.putExtra(DocumentsContract.EXTRA_INITIAL_URI,Uri.parse("content://com.android.externalstorage.documents/document/primary%3AMovies"));
             try{startActivityForResult(i,41);}catch(ActivityNotFoundException e){picking=false;Toast.makeText(getActivity(),UiStrings.translate("フォルダー選択画面を開けませんでした"),1).show();}}
         @Override public void onActivityResult(int request,int result,Intent data){
-            super.onActivityResult(request,result,data);if(request!=41)return;picking=false;Activity a=getActivity();if(a==null||result!=Activity.RESULT_OK||data==null||data.getData()==null){pending=null;return;}
+            super.onActivityResult(request,result,data);if(request!=41)return;picking=false;Activity a=getActivity();if(a==null||result!=Activity.RESULT_OK||data==null||data.getData()==null){boolean finish=replaceHost(pending);pending=null;if(finish&&a!=null)a.finish();return;}
             init(a);try{
                 Uri tree=data.getData();int flags=data.getFlags()&(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
                 if(flags!=(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION))throw new IOException("Read/write grant required");
@@ -181,24 +164,24 @@ public final class CacheFolders {
                 if(probe==null)throw new IOException("Folder is not writable");if(!DocumentsContract.deleteDocument(a.getContentResolver(),probe))throw new IOException("Folder is not writable");
                 String before=prefs().getString(KEY,"");if(!prefs().edit().putString(KEY,tree.toString()).putString("cache_tree_"+key(tree.toString()),tree.toString()).commit())throw new IOException("Cannot save folder grant");
                 if(a instanceof PreferenceActivity)summary((PreferenceActivity)a);
-                Intent download=pending;pending=null;if(download!=null)service(a,download,Build.VERSION.SDK_INT>=26);
-                if(!tree.toString().equals(before))offerCopy(a,before);
-            }catch(Exception e){Toast.makeText(a,UiStrings.translate("保存先を使用できません。別のフォルダーを選択してください"),1).show();}
+                Intent next=pending;pending=null;if(pageRequest(next)){if(!tree.toString().equals(before))next.putExtra("nicoid_cache_copy_from",before);boolean finish=replaceHost(next);next.removeExtra("nicoid_cache_replace_picker_host");a.startActivity(next);if(finish)a.finish();}else{if(next!=null)service(a,next,Build.VERSION.SDK_INT>=26);if(!tree.toString().equals(before))offerCopy(a,before);}
+            }catch(Exception e){Toast.makeText(a,UiStrings.translate("保存先を使用できません。別のフォルダーを選択してください"),1).show();if(pageRequest(pending)){boolean finish=replaceHost(pending);pending=null;if(finish)a.finish();}}
         }
     }
+    static void invalidateSummary(Context c){new File(privateRoot(c),"nicoid/cachelist.json").delete();}
     static void offerCopy(Activity a,String previous) {
-        File old=previous.isEmpty()?new File(privateRoot(a),"nicoid/nicoid_cache"):new CacheFile(PREFIX+key(previous)+SUFFIX);
+        File old=previous.isEmpty()?new File(privateRoot(a),"nicoid/nicoid_cache"):new CacheFile(PREFIX+key(previous)+SUFFIX);File[] existing=old.listFiles();boolean found=false;if(existing!=null)for(File f:existing)if(videoId(f.getName())!=null&&f.isFile()&&CacheComments.copyable(f)){found=true;break;}if(!found)return;
         AlertDialog dialog=new AlertDialog.Builder(PlaybackSession.dialogContext(a)).setTitle(UiStrings.translate("既存キャッシュをコピー"))
             .setMessage(UiStrings.translate("以前の保存先からコピーします。元のファイルは削除しません"))
             .setPositiveButton(UiStrings.translate("コピー"),(d,w)->copy(a,old))
-            .setNegativeButton(UiStrings.translate("後で"),null).create();dialog.show();PlaybackSession.styleDialog(dialog);
+            .setNegativeButton(UiStrings.translate("後で"),null).create();UiDialogs.show(dialog);
     }
     private static int copyOrder(String name){return name.endsWith(".json")?2:name.endsWith(".mp4")?1:0;}
     private static void copy(Activity a,File old) {
-        String destination=root(a)+SUFFIX;ProgressDialog progress=new ProgressDialog(a);progress.setMessage(UiStrings.translate("キャッシュをコピー中"));progress.setCancelable(false);progress.show();
-        android.widget.ProgressBar bar=progress.findViewById(android.R.id.progress);if(bar!=null){android.util.TypedValue color=new android.util.TypedValue();bar.getContext().getTheme().resolveAttribute(0x7f03005e,color,true);int tint=color.resourceId==0?color.data:bar.getResources().getColor(color.resourceId);bar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(tint));}
-        new Thread(()->{boolean ok=false;try{File[] files=old.listFiles();if(files==null)throw new IOException("Cannot list old cache");Arrays.sort(files,(x,y)->Integer.compare(copyOrder(x.getName()),copyOrder(y.getName())));for(File f:files){if(!f.isFile())continue;File dest=new CacheFile(destination,f.getName());if(dest.exists())continue;File temp=new CacheFile(destination,f.getName()+".copy-"+UUID.randomUUID());
+        String destination=root(a)+SUFFIX;Context dialogContext=PlaybackSession.dialogContext(a);android.widget.LinearLayout content=new android.widget.LinearLayout(dialogContext);content.setGravity(android.view.Gravity.CENTER_VERTICAL);int pad=PanelUi.dp(dialogContext,24);content.setPadding(pad,pad,pad,pad);content.setBackgroundColor(UiDialogs.surface(dialogContext));android.widget.ProgressBar spinner=new android.widget.ProgressBar(dialogContext);content.addView(spinner,new android.widget.LinearLayout.LayoutParams(PanelUi.dp(dialogContext,40),PanelUi.dp(dialogContext,40)));android.widget.TextView message=PanelUi.text(dialogContext,UiStrings.translate("キャッシュをコピー中"),16);message.setPadding(pad,0,0,0);content.addView(message,new android.widget.LinearLayout.LayoutParams(0,-2,1));AlertDialog progress=new AlertDialog.Builder(dialogContext).setView(content).setCancelable(false).create();UiDialogs.show(progress);
+        android.widget.ProgressBar bar=spinner;if(bar!=null){android.util.TypedValue color=new android.util.TypedValue();bar.getContext().getTheme().resolveAttribute(0x7f03005e,color,true);int tint=color.resourceId==0?color.data:bar.getResources().getColor(color.resourceId);bar.setIndeterminateTintList(android.content.res.ColorStateList.valueOf(tint));}
+        new Thread(()->{boolean ok=false;try{File[] files=old.listFiles();if(files==null)throw new IOException("Cannot list old cache");Arrays.sort(files,(x,y)->Integer.compare(copyOrder(x.getName()),copyOrder(y.getName())));for(File f:files){if(!f.isFile()||!CacheComments.copyable(f))continue;File dest=new CacheFile(destination,f.getName());if(dest.exists())continue;File temp=new CacheFile(destination,f.getName()+".copy-"+UUID.randomUUID());
             boolean complete=false;try(InputStream in=virtual(f)?new CacheInputStream(f):new FileInputStream(f);OutputStream out=new CacheOutputStream(temp)){byte[] b=new byte[65536];int n;while((n=in.read(b))!=-1)out.write(b,0,n);complete=true;}finally{if(!complete)temp.delete();}if(!temp.renameTo(dest)){temp.delete();throw new IOException("Cannot finalize cache copy");}}
-            ok=true;}catch(Exception e){android.util.Log.w("nicoid-cache","Cache copy failed",e);}boolean success=ok;MAIN.post(()->{if(!a.isFinishing()){progress.dismiss();Toast.makeText(a,UiStrings.translate(success?"キャッシュのコピーが完了しました":"コピーに失敗しました。元のファイルは保持されています"),1).show();}});},"nicoid-cache-copy").start();
+            CacheComments.clean(destination,new CacheFile(destination).listFiles());ok=true;}catch(Exception e){android.util.Log.w("nicoid-cache","Cache copy failed",e);}boolean success=ok;MAIN.post(()->{if(!a.isFinishing()){progress.dismiss();if(success&&a.getClass().getName().equals("com.sauzask.nicoid.NicoidCacheManagerActivity"))a.recreate();Toast.makeText(a,UiStrings.translate(success?"キャッシュのコピーが完了しました":"コピーに失敗しました。元のファイルは保持されています"),1).show();}});},"nicoid-cache-copy").start();
     }
 }

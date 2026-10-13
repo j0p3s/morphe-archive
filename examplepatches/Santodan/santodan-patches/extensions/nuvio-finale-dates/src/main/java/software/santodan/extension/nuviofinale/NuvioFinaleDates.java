@@ -31,6 +31,7 @@ public final class NuvioFinaleDates {
     private static final String PREFS = "santodan_nuvio_finale_dates";
     private static final String LIBRARY = "library";
     private static final String COLLECTIONS = "collections";
+    private static final String ONLY_AIRING = "only_airing";
     // Scope belongs to each captured card/restart lambda, never to a shared media model.
     private static final ThreadLocal<String> CONTEXT = new ThreadLocal<>();
     private static final ThreadLocal<java.util.ArrayDeque<String>> STACK =
@@ -68,11 +69,15 @@ public final class NuvioFinaleDates {
     public static void enterContext(Object lambda) { enter(CARDS.getOrDefault(lambda, "")); }
 
     public static void renderSettings(Object composer) {
-        renderSetting(composer, LIBRARY, "Show finale dates in library");
-        renderSetting(composer, COLLECTIONS, "Show finale dates in collections");
+        renderSetting(composer, LIBRARY, "Show finale dates in library",
+            "Show the latest known scheduled episode date on series posters (dd-MMM-yy).");
+        renderSetting(composer, COLLECTIONS, "Show finale dates in collections",
+            "Show the latest known scheduled episode date on series posters (dd-MMM-yy).");
+        renderSetting(composer, ONLY_AIRING, "Only show dates for series still airing",
+            "Hide finale dates in library and collections once the latest scheduled episode has aired.");
     }
 
-    private static void renderSetting(Object composer, String key, String title) {
+    private static void renderSetting(Object composer, String key, String title, String description) {
         try {
             Log.d(TAG, "renderSettings reached composer=" + composer.getClass().getName());
             ClassLoader loader = composer.getClass().getClassLoader();
@@ -93,7 +98,7 @@ public final class NuvioFinaleDates {
                 "invoke".equals(method.getName()) ? kotlinUnit(loader) : objectMethod(proxy, method, args));
             Method row = findStatic(Class.forName(NuvioRuntimeLayout.name("sa.eb"), false, loader), "m", 13);
             row.invoke(null, title,
-                "Show the latest known scheduled episode date on series posters (dd-MMM-yy).",
+                description,
                 stateValue(state), toggle, null, noop, false, null, 0L, false, composer, 0, 1008);
             Log.d(TAG, "renderSettings row rendered");
         } catch (Throwable error) {
@@ -121,7 +126,7 @@ public final class NuvioFinaleDates {
                 if (cached > 0L) { finale = cached; FINALES.put(id, finale); }
             }
             fetchFinaleAsync(id);
-            if (finale != null) PREPARED_BADGE.set(
+            if (finale != null && (!enabled(ONLY_AIRING) || finale > System.currentTimeMillis())) PREPARED_BADGE.set(
                 new SimpleDateFormat("dd-MMM-yy", Locale.getDefault()).format(new Date(finale)));
         } catch (Throwable error) { Log.e(TAG, "finale badge preparation failed", error); }
     }
@@ -141,9 +146,9 @@ public final class NuvioFinaleDates {
             Object boxScope = staticField(Class.forName("e0.v", false, loader), "a").get(null);
             Object[] style = badgeStyle(loader, boxScope, composer);
             // Compose packs sp as a unit tag followed by the float's bits.
-            long fontSize = 0x100000000L | (Float.floatToRawIntBits(14f) & 0xffffffffL);
+            long fontSize = ((Number) style[2]).longValue();
             method.invoke(null, badge, style[0], style[1], fontSize, null, null, 0L, null, 0L,
-                0, false, 0, 0, null, style[2], composer, 0, 0, 65520);
+                0, false, 0, 0, null, style[3], composer, 0, 0, 65520);
         } catch (Throwable error) {
             Log.e(TAG, "badge compose failed", error);
             // Keep the host card usable if badge rendering fails.
@@ -151,39 +156,9 @@ public final class NuvioFinaleDates {
     }
 
     private static Object[] badgeStyle(ClassLoader loader, Object boxScope, Object composer) throws Exception {
-        Method compositionLocal = findMethod(composer.getClass(), "j", 1);
-        // Compose's sRGB Color representation stores ARGB in the upper 32 bits.
-        long content = 0xffffffff00000000L;
-        long background = 0xff1976d200000000L;
-
-        Class<?> typographyOwner = Class.forName("x5.i2", false, loader);
-        Object typography = compositionLocal.invoke(composer, staticField(typographyOwner, "a").get(null));
-        Object textStyle = field(typography, "o").get(typography);
-
-        float horizontal = 6f;
-        float vertical = 3f;
-
-        Class<?> modifierOwner = Class.forName("w1.n", false, loader);
-        Object modifier = staticField(modifierOwner, "b").get(null);
-        Object bottomCenter = staticField(Class.forName("w1.b", false, loader), "h").get(null);
-        modifier = findMethod(boxScope.getClass(), "a", 2).invoke(boxScope, modifier, bottomCenter);
-        Class<?> modifierType = Class.forName("w1.q", false, loader);
-        java.lang.reflect.Constructor<?> layerConstructor = Class.forName("w1.v", false, loader)
-            .getDeclaredConstructor(float.class);
-        layerConstructor.setAccessible(true);
-        Object layer = layerConstructor.newInstance(10f);
-        modifier = modifierType.getMethod("d", modifierType).invoke(modifier, layer);
-        modifier = findStatic(Class.forName("e0.b", false, loader), "u", 2)
-            .invoke(null, modifier, Float.valueOf(horizontal));
-        Object shape = staticField(Class.forName(NuvioRuntimeLayout.name("ba.d3"), false, loader), "a").get(null);
-        modifier = findStatic(Class.forName("a2.j", false, loader), "b", 2)
-            .invoke(null, modifier, shape);
-        Object rectangle = staticField(Class.forName("d2.g0", false, loader), "b").get(null);
-        modifier = findStatic(Class.forName("y.l", false, loader), "g", 3)
-            .invoke(null, modifier, Long.valueOf(background), rectangle);
-        modifier = findStatic(Class.forName("e0.b", false, loader), "v", 3)
-            .invoke(null, modifier, Float.valueOf(horizontal), Float.valueOf(vertical));
-        return new Object[]{modifier, Long.valueOf(content), textStyle};
+        return (Object[]) findStatic(Class.forName("software.santodan.extension.nuviomenu.NuvioDateLabelStyle",
+            false, loader), "build", 5).invoke(null, loader, boxScope, composer,
+                NuvioRuntimeLayout.name("ba.d3"), PREFS);
     }
 
     private static void fetchFinale(String id) {

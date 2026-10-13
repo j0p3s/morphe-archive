@@ -11,6 +11,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLa
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
 import app.morphe.patches.pinterest.misc.extension.EXTENSION_PACKAGE
 import app.morphe.patches.pinterest.misc.extension.enableCapability
@@ -24,24 +25,82 @@ import app.morphe.patches.shared.compat.AppCompatibilities
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation
+import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
+import org.w3c.dom.Element
 
 private const val PATCH = "Download pins"
 private const val DOWNLOADS = "$EXTENSION_PACKAGE/actions/PinDownloads;"
+
+/** Title resource of Pinterest's own Download image row in the pin menu. */
+internal const val NATIVE_DOWNLOAD_TITLE = "save_to_device"
+
+/** The provider Share file hands a saved video out through, so Android's share sheet can show a frame of it. */
+internal const val SHARE_PREVIEW_PROVIDER = "app.hushpinterest.extension.pinterest.actions.SharePreviewProvider"
+
+/** Its authority, after the package name, the way the manifest declares it and the release receipt expects it. */
+internal const val SHARE_PREVIEW_AUTHORITY = ".hushpinterest.share"
+
+/**
+ * Checks the extension has [SHARE_PREVIEW_PROVIDER] before the manifest names it. Android creates
+ * a declared provider before the app starts, so a missing class would crash every launch.
+ */
+internal val sharePreviewPreflightPatch = bytecodePatch {
+    dependsOn(pinterestExtensionPatch)
+    execute {
+        val previewType = "L" + SHARE_PREVIEW_PROVIDER.replace('.', '/') + ";"
+        if (classDefByOrNull(previewType)?.superclass != "Landroid/content/ContentProvider;") {
+            throw PatchException("$PATCH: the extension has no share preview provider to declare")
+        }
+    }
+}
+
+/**
+ * Declares [SHARE_PREVIEW_PROVIDER]. It isn't exported, so another app reads an address there only
+ * through the read grant a share hands it.
+ */
+internal val sharePreviewProviderPatch = resourcePatch {
+    dependsOn(sharePreviewPreflightPatch)
+    execute {
+        document("AndroidManifest.xml").use { document ->
+            val application = document.getElementsByTagName("application").item(0) as? Element
+                ?: throw PatchException("$PATCH: AndroidManifest.xml has no application element")
+            val packageName = document.documentElement.getAttribute("package")
+            if (packageName.isEmpty()) throw PatchException("$PATCH: AndroidManifest.xml names no package")
+            val authority = packageName + SHARE_PREVIEW_AUTHORITY
+            val providers = document.getElementsByTagName("provider")
+            val declared = (0 until providers.length).map { providers.item(it) as Element }
+            if (declared.any { it.getAttribute("android:name") == SHARE_PREVIEW_PROVIDER }) return@use
+            if (declared.any { provider -> provider.getAttribute("android:authorities").split(';').any { it.trim() == authority } }) {
+                throw PatchException("$PATCH: another provider already claims $authority")
+            }
+            application.appendChild(document.createElement("provider").apply {
+                setAttribute("android:name", SHARE_PREVIEW_PROVIDER)
+                setAttribute("android:authorities", authority)
+                setAttribute("android:exported", "false")
+                setAttribute("android:grantUriPermissions", "true")
+            })
+        }
+    }
+}
 
 @Suppress("unused")
 val downloadPinsPatch = bytecodePatch(
     name = PATCH,
     description = "Adds downloads for a pin, or for several pins you select in a grid. Saves the original image or " +
-        "the highest-quality video Pinterest supplies to your phone. Downloads go to the Download folder. Turn on " +
+        "the highest-quality video Pinterest supplies to your phone. When it saves an image, Pinterest's own " +
+        "Download image row is hidden. Downloads go to the Download folder. Turn on " +
         "Save in Pinterest's folder to keep them in Pictures/100PINT/Pins with Pinterest's own saves, or use Pick a " +
         "download folder to choose any folder inside Pictures, DCIM, Download or Documents. Starts off. " +
         "Turn it on in HushPinterest settings > Pin actions.",
 ) {
     category("Downloads")
-    dependsOn(settingsPatch, pinterestExtensionPatch)
+    dependsOn(settingsPatch, pinterestExtensionPatch, sharePreviewProviderPatch)
     compatibleWith(*AppCompatibilities.pinterest())
     execute {
         requireStatusMethod("downloadPins")
@@ -94,6 +153,38 @@ val downloadPinsPatch = bytecodePatch(
                     Opcode.NEW_INSTANCE, Opcode.CONST_4, Opcode.INVOKE_DIRECT, Opcode.IGET_OBJECT, Opcode.INVOKE_VIRTUAL, Opcode.RETURN_VOID,
                 )
         } ?: throw PatchException("$PATCH: no unique native presenter dismissal event")
+        // Pinterest's own Download image row: its title id goes straight into the layout's row factory,
+        // whose result is marked so the extension can fold it when Download pin is in the same menu.
+        val layoutInit = layout.methods.singleOrNull { it.name == "<init>" && it.implementation != null }
+            ?: throw PatchException("$PATCH: no single native menu layout constructor")
+        val initInstructions = layoutInit.implementation!!.instructions.toList()
+        val nativeRows = initInstructions.withIndex().mapNotNull { (index, instruction) ->
+            val title = (instruction as? ReferenceInstruction)?.reference as? FieldReference
+            if (instruction.opcode != Opcode.SGET || title?.name != NATIVE_DOWNLOAD_TITLE || title.type != "I") {
+                return@mapNotNull null
+            }
+            val id = (instruction as OneRegisterInstruction).registerA
+            val call = (index + 1 until minOf(index + 8, initInstructions.size)).firstOrNull { next ->
+                val candidate = initInstructions[next]
+                val factory = (candidate as? ReferenceInstruction)?.reference as? MethodReference
+                factory?.definingClass == layout.type && factory.returnType == "Landroid/widget/RelativeLayout;" &&
+                    factory.parameterTypes.getOrNull(0)?.toString() == layout.type &&
+                    factory.parameterTypes.getOrNull(1)?.toString() == "I" &&
+                    when (candidate) {
+                        is FiveRegisterInstruction -> candidate.registerD == id
+                        is RegisterRangeInstruction -> candidate.startRegister + 1 == id
+                        else -> false
+                    }
+            } ?: return@mapNotNull null
+            val result = initInstructions.getOrNull(call + 1)
+            if (result?.opcode != Opcode.MOVE_RESULT_OBJECT) return@mapNotNull null
+            call + 2 to (result as OneRegisterInstruction).registerA
+        }
+        val (nativeAt, nativeRegister) = nativeRows.singleOrNull()
+            ?: throw PatchException("$PATCH: no unique native Download image row (${nativeRows.size} found)")
+        if (mutableClassDefBy(DOWNLOADS).methods.count { it.name == "nativeRow" && AccessFlags.STATIC.isSet(it.accessFlags) } != 1) {
+            throw PatchException("$PATCH: missing extension hook nativeRow")
+        }
         val bridgeNames = listOf("hushDownloadPin", "hushDownloadMenu", "hushDownloadOrigin", "hushDownloadCloseup", "hushDismissDownload")
         if (menu.methods.any { it.name in bridgeNames }) throw PatchException("$PATCH: download bridges already exist")
         // Resolve every host dependency and verify all stubs before changing host code.
@@ -182,6 +273,8 @@ val downloadPinsPatch = bytecodePatch(
             move-result-object v0
             return-object v0
         """)
+        layoutInit.addInstructions(nativeAt,
+            "invoke-static/range { v$nativeRegister .. v$nativeRegister }, $DOWNLOADS->nativeRow(Landroid/view/View;)V")
         create.addInstructions(assignment + 1, "invoke-static/range { p0 .. p0 }, $DOWNLOADS->attach(Ljava/lang/Object;)V")
         enableCapability("pinDownloads")
         enableStatus("downloadPins")

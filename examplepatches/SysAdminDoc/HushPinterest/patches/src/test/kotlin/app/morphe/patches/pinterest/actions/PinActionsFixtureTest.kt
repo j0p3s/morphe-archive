@@ -13,6 +13,8 @@ import app.morphe.Fixtures
 import app.morphe.PatchContexts
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
+import app.morphe.patches.pinterest.ads.pinModel
+import app.morphe.patches.pinterest.ads.serializedFields
 import app.morphe.patches.pinterest.misc.extension.EXTENSION_PACKAGE
 import app.morphe.patches.pinterest.misc.extension.SETTINGS_STATUS
 import com.android.tools.smali.dexlib2.Opcode
@@ -22,6 +24,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
@@ -43,6 +46,26 @@ private const val SENDABLE_TYPE = "Lcom/pinterest/sendshare/model/SendableObject
 /** Resolves and applies the real native action targets in each declared build. */
 @Category(FixtureTests::class)
 class PinActionsFixtureTest {
+    // Save list reads a pin's title and source link by these JSON names, through the same lookup as the downloads.
+    @Test
+    fun `the pin model in each declared build serializes its title and source link as text`() {
+        val builds = Fixtures.declaredBuilds()
+        assertTrue("no declared build to read", builds.isNotEmpty())
+        for (build in builds) {
+            val models = mutableMapOf<String, Map<String, String>>()
+            FixtureDex.forEach(build) { dex ->
+                for (classDef in dex.classes) {
+                    if (classDef.type.startsWith("Lcom/pinterest/api/model/")) models[classDef.type] = serializedFields(classDef)
+                }
+            }
+            val pin = pinModel(models)
+            assertNotNull("${build.name}: no single pin model", pin)
+            for (name in listOf("id", "title", "link")) {
+                assertEquals("${build.name}: $pin field $name", "Ljava/lang/String;", models.getValue(pin!!)[name])
+            }
+        }
+    }
+
     @Test
     fun `all action hooks use the real pin menu Visit dispatcher and chooser in each declared build`() {
         for (build in Fixtures.declaredBuilds()) {
@@ -65,6 +88,21 @@ class PinActionsFixtureTest {
             }
             assertTrue("${build.name} menu hook", attach > 0)
             assertEquals("${build.name} hook must follow native layout assignment", Opcode.IPUT_OBJECT, instructions[attach - 1].opcode)
+            val layout = context.mutableClassDefBy(menu.fields.single { it.name == "modalView" }.type)
+            val built = layout.methods.single { it.name == "<init>" && it.implementation != null }.implementation!!.instructions.toList()
+            val marks = built.withIndex().filter { (_, instruction) ->
+                (instruction as? ReferenceInstruction)?.reference?.toString() ==
+                    "$EXTENSION_PACKAGE/actions/PinDownloads;->nativeRow(Landroid/view/View;)V"
+            }.map { it.index }
+            assertEquals("${build.name} Pinterest's Download image row is marked once", 1, marks.size)
+            val mark = marks.single()
+            assertEquals("${build.name} mark reads the row result", Opcode.MOVE_RESULT_OBJECT, built[mark - 1].opcode)
+            assertTrue("${build.name} mark follows the native row factory",
+                ((built[mark - 2] as ReferenceInstruction).reference as MethodReference).returnType == "Landroid/widget/RelativeLayout;")
+            assertTrue("${build.name} marked row is the Download image title", references(built.subList(maxOf(0, mark - 9), mark - 2))
+                .any { it.endsWith("->$NATIVE_DOWNLOAD_TITLE:I") })
+            assertEquals("${build.name} mark passes the row register", (built[mark - 1] as OneRegisterInstruction).registerA,
+                (built[mark] as RegisterRangeInstruction).startRegister)
             val downloads = context.mutableClassDefBy("$EXTENSION_PACKAGE/actions/PinDownloads;")
             val closeup = menu.methods.single { it.name == "hushDownloadCloseup" }.implementation!!.instructions.toList()
             assertEquals(listOf(Opcode.IGET_BOOLEAN, Opcode.RETURN), closeup.map { it.opcode })

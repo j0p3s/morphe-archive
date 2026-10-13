@@ -17,6 +17,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import android.app.Activity;
@@ -119,6 +120,37 @@ public class ReportChoicesTest {
         assertEquals("Diagnostic report copied to the clipboard.", ShadowToast.getTextOfLatestToast());
     }
 
+    @Test
+    public void nameOnlyChoicesKeepTheirItemTextAndResetRecycledDetails() {
+        ChoiceCards adapter = new ChoiceCards(ScreenColors.DEFAULT,
+                new String[]{"Downloads", "Another folder"}, new String[]{"A description", ""});
+        android.widget.LinearLayout parent = new android.widget.LinearLayout(activity());
+        ChoiceCards.Card card = (ChoiceCards.Card) adapter.getView(0, null, parent);
+        assertEquals(View.VISIBLE, card.detail.getVisibility());
+        assertSame(card, adapter.getView(1, card, parent));
+        assertEquals("Another folder", adapter.getItem(1));
+        assertEquals(View.GONE, card.detail.getVisibility());
+        adapter.getView(0, card, parent);
+        assertEquals(View.VISIBLE, card.detail.getVisibility());
+        assertEquals("A description", card.detail.getText().toString());
+    }
+
+    /** A chevron says a tap opens something. Copy acts at once, so only Save, which opens the picker, has one. */
+    @Test
+    public void copyActsAtOnceSoOnlySaveShowsAChevron() throws Exception {
+        AlertDialog dialog = openChoices();
+        ListView list = dialog.getListView();
+        assertEquals(View.INVISIBLE, ((ChoiceCards.Card) list.getChildAt(0)).arrow.getVisibility());
+        assertEquals(View.VISIBLE, ((ChoiceCards.Card) list.getChildAt(1)).arrow.getVisibility());
+        ChoiceCards adapter = new ChoiceCards(ScreenColors.DEFAULT, new String[]{"Acts", "Opens"},
+                new String[]{"", ""}, new boolean[]{false, true});
+        android.widget.LinearLayout parent = new android.widget.LinearLayout(activity());
+        ChoiceCards.Card card = (ChoiceCards.Card) adapter.getView(0, null, parent);
+        assertEquals(View.INVISIBLE, card.arrow.getVisibility());
+        assertSame(card, adapter.getView(1, card, parent));
+        assertEquals("a recycled card gets the next choice's chevron back", View.VISIBLE, card.arrow.getVisibility());
+    }
+
     @Test @Config(sdk = {29, 30})
     public void saveChoiceAndPreferenceNameTheWritersDirectory() throws Exception {
         SettingsDialog settings = SettingsL10nTest.show(activity());
@@ -196,11 +228,12 @@ public class ReportChoicesTest {
             InsetDrawable inset = (InsetDrawable) ((RippleDrawable) card.getBackground()).getDrawable(0);
             Rect insets = new Rect();
             inset.getPadding(insets);
-            assertEquals(new Rect(dp(16), dp(4), dp(16), dp(4)), insets);
+            assertEquals(new Rect(dp(16), dp(3), dp(16), dp(3)), insets);
             assertTrue(inset.getDrawable() instanceof GradientDrawable);
-            assertTrue("less than 48 dp to tap", card.getHeight() - 2 * dp(4) >= dp(48));
+            assertEquals(dp(12), ((GradientDrawable) inset.getDrawable()).getCornerRadius(), 0.01f);
+            assertTrue("less than 48 dp to tap", card.getHeight() - 2 * dp(3) >= dp(48));
             // The text sits inside the card's surface, clear of its edge.
-            Rect surface = new Rect(dp(16), dp(4), card.getWidth() - dp(16), card.getHeight() - dp(4));
+            Rect surface = new Rect(dp(16), dp(3), card.getWidth() - dp(16), card.getHeight() - dp(3));
             for (TextView text : new TextView[]{((ChoiceCards.Card) card).name, ((ChoiceCards.Card) card).detail}) {
                 assertEquals("\"" + text.getText() + "\" was cut off", 0, cutOff(text));
                 if (text.getLineCount() > 1) wrapped++;

@@ -8,6 +8,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.robolectric.Shadows.shadowOf;
 
@@ -51,6 +52,7 @@ import app.hushgram.extension.instagram.settings.PatchFamily;
 import app.hushgram.extension.instagram.settings.Settings;
 import app.hushgram.extension.shared.SettingsContextRule;
 import app.hushgram.extension.shared.Utils;
+import app.hushgram.extension.shared.ui.Dim;
 import app.hushgram.extension.shared.diagnostics.HookStatus;
 import app.hushgram.extension.shared.settings.BaseSettings;
 import app.hushgram.extension.shared.settings.HushgramPause;
@@ -150,6 +152,7 @@ public class StoryMentionsTest {
         StoryMentions.readsForTests = null;
         StoryMentions.picturesForTests = null;
         StoryMentions.headerIdForTests = 0;
+        StoryMentions.titleIdForTests = 0;
         StoryMentions.resetForTests();
         Settings.SHOW_STORY_MENTIONS.resetToDefault();
         BaseSettings.PAUSED.save(false);
@@ -388,6 +391,76 @@ public class StoryMentionsTest {
     public void aProfileLinkKeepsTheUsernameWhole() {
         assertEquals("https://www.instagram.com/a.b_c/", StoryMentions.profileLink("a.b_c").toString());
         assertEquals("https://www.instagram.com/a%2Fb/", StoryMentions.profileLink("a/b").toString());
+    }
+
+    /**
+     * #151: with the name in a row of its own, the pill goes at the end of that row, so the column
+     * doesn't grow and the name stays where Instagram put it.
+     */
+    @Test
+    public void withTheNameInARowThePillGoesAtTheEndOfIt() {
+        LinearLayout row = new LinearLayout(activity);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        TextView title = new TextView(activity);
+        title.setId(View.generateViewId());
+        title.setText("someone");
+        TextView time = new TextView(activity);
+        time.setText("2h");
+        row.addView(title);
+        row.addView(time);
+        header.removeAllViews();
+        header.addView(row);
+        StoryMentions.titleIdForTests = title.getId();
+
+        bind(ANA, BO);
+
+        StoryMentions.Pill pill = pill();
+        assertNotNull(pill);
+        assertSame("the pill isn't in the name's row", row, pill.getParent());
+        assertEquals("the pill goes after the time", row.getChildCount() - 1, row.indexOfChild(pill));
+        assertEquals("the column grew", 1, header.getChildCount());
+        bind(BO);
+        assertSame("a later story made a second pill", pill, pill());
+        assertEquals("1 mention", pill.getText().toString());
+    }
+
+    /**
+     * The pill is drawn small, and a finger gets the room around it, up to the 48dp Android asks of
+     * a target. A tap on the name just above it is still Instagram's.
+     */
+    @Test
+    public void aTapJustAboveThePillTapsItButNotOnTheName() {
+        bind(ANA);
+        StoryMentions.Pill pill = pill();
+        // Robolectric's text measures the pill 47 px tall at any size, all but a whole target,
+        // so it gets the 22dp a phone draws it at.
+        pill.getLayoutParams().height = Dim.dp(22);
+        float[] center = layOut(pill);
+        int target = Dim.dp(StoryMentions.MIN_TARGET_DP);
+        assertTrue("the pill is drawn smaller than a target", pill.getHeight() < target);
+        int[] at = new int[2];
+        pill.getLocationInWindow(at);
+        int pillTop = at[1];
+        int pillRight = at[0] + pill.getWidth();
+        View name = header.getChildAt(0);
+        name.getLocationInWindow(at);
+        int nameBottom = at[1] + name.getHeight();
+        // Straight above the pill: the name runs the column's whole width, so its own middle is
+        // far to the side of a pill that starts at the left.
+        float nameX = center[0];
+        assertTrue("the name isn't above the pill", at[0] <= nameX && nameX < at[0] + name.getWidth());
+        assertTrue("no room between the name and the pill", nameBottom < pillTop);
+        float onName = nameBottom - 1;
+        assertTrue("the name is out of the pill's reach, so this proves nothing: pill top " + pillTop + ", height "
+                        + pill.getHeight() + ", target " + target + ", name bottom " + nameBottom + ", x " + nameX + " of " + pillRight,
+                pillTop - onName < (target - pill.getHeight()) / 2f && nameX < pillRight);
+
+        assertFalse("a tap on the name went to the pill",
+                StoryMentions.touch(activity, event(MotionEvent.ACTION_DOWN, nameX, onName)));
+        float between = pillTop - 1;
+        assertTrue(StoryMentions.touch(activity, event(MotionEvent.ACTION_DOWN, center[0], between)));
+        assertTrue(StoryMentions.touch(activity, event(MotionEvent.ACTION_UP, center[0], between)));
+        assertNotNull("the tap didn't open the list", ShadowDialog.getLatestDialog());
     }
 
     private void bind(Account... mentioned) {

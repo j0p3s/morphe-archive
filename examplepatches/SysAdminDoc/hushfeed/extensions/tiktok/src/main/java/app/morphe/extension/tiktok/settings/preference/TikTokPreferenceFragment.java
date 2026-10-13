@@ -214,6 +214,26 @@ public class TikTokPreferenceFragment extends AbstractPreferenceFragment {
         }
     }
 
+    /** Import a font file, whose picker answers the page that asked. */
+    public static void openImportedFontPicker() {
+        if (activeFragment != null && activeFragment.isAdded()) {
+            ImportedFontPreference.pickFile(activeFragment);
+        } else {
+            SettingsActionBanner.showNotice(Utils.getContext(), L10n.t(
+                    "Reopen Hushfeed settings, then choose the file"));
+        }
+    }
+
+    /**
+     * Owes a restart for a file the next start reads rather than a setting, the way turning
+     * Hushfeed back on owes one for its marker file, and says so on the page open now.
+     */
+    static void noteFileRestartPending(String key) {
+        AbstractPreferenceFragment.restartPending.add(key);
+        TikTokPreferenceFragment open = active();
+        if (open != null) open.refreshRestartPending();
+    }
+
     /** Save or Restore seen history, whose picker answers the page that asked. */
     public static void openSeenHistoryFilePicker(int request) {
         if (activeFragment != null && activeFragment.isAdded()) {
@@ -639,8 +659,7 @@ public class TikTokPreferenceFragment extends AbstractPreferenceFragment {
             list.setCacheColorHint(SettingsUi.background());
             list.setDivider(null);
             list.setDividerHeight(0);
-            int side = getRequestedSection() == null && getRequestedHub() == null
-                    && !isSearchRequested() ? 24 : 16;
+            int side = 16;
             list.setPadding(SettingsUi.dp(getActivity(), side), 0,
                     SettingsUi.dp(getActivity(), side), SettingsUi.dp(getActivity(), 24));
             list.setClipToPadding(false);
@@ -1229,7 +1248,7 @@ public class TikTokPreferenceFragment extends AbstractPreferenceFragment {
         search.setKey("action_search_settings");
         search.setOrder(-900);
         screen.addPreference(search);
-        screen.addPreference(SectionHeadingPreference.compact(context, "Customize"));
+        screen.addPreference(SectionHeadingPreference.compact(context, "Your experience"));
 
         if (FeedFilterPreferenceCategory.isAvailable()
                 || FeedNavigationPreferenceCategory.isAvailable()
@@ -1272,6 +1291,7 @@ public class TikTokPreferenceFragment extends AbstractPreferenceFragment {
         screen.addPreference(SettingsHeaderPreference.caption(context, hub.description));
         switch (hub) {
             case FEED_LAYOUT:
+                screen.addPreference(new SectionHeadingPreference(context, "Shape your feed"));
                 if (FeedFilterPreferenceCategory.isAvailable()) {
                     addMenu(screen, Section.FEED_FILTER, SettingsMenuPreference.Icon.FILTER);
                 }
@@ -1283,6 +1303,7 @@ public class TikTokPreferenceFragment extends AbstractPreferenceFragment {
                 }
                 break;
             case COMMENTS_INBOX:
+                screen.addPreference(new SectionHeadingPreference(context, "Conversations"));
                 if (CommentsPreferenceCategory.isAvailable()) {
                     addMenu(screen, Section.COMMENTS, SettingsMenuPreference.Icon.COMMENTS);
                 }
@@ -1291,6 +1312,7 @@ public class TikTokPreferenceFragment extends AbstractPreferenceFragment {
                 }
                 break;
             case DOWNLOADS_SHARING:
+                screen.addPreference(new SectionHeadingPreference(context, "Save and send"));
                 if (DownloadsPreferenceCategory.isAvailable()) {
                     addMenu(screen, Section.DOWNLOADS, SettingsMenuPreference.Icon.DOWNLOADS);
                 }
@@ -1303,8 +1325,10 @@ public class TikTokPreferenceFragment extends AbstractPreferenceFragment {
                 // home header carries a compact state label that opens this page.
                 SettingsStatusPreference status = new SettingsStatusPreference(context,
                         DebugPreferenceCategory.isAvailable() ? () -> openSection(Section.DIAGNOSTICS) : null);
+                status.setOrder(-850);
                 status.setTurnBackOnAction(this::turnHushfeedBackOn);
                 screen.addPreference(status);
+                screen.addPreference(new SectionHeadingPreference(context, "App controls"));
                 if (ExtensionPreferenceCategory.isAvailable()) {
                     addMenu(screen, Section.BEHAVIOR, SettingsMenuPreference.Icon.BEHAVIOR);
                 }
@@ -1319,6 +1343,7 @@ public class TikTokPreferenceFragment extends AbstractPreferenceFragment {
                 screen.addPreference(pauseRow(context));
                 break;
             case ABOUT:
+                screen.addPreference(new SectionHeadingPreference(context, "About"));
                 screen.addPreference(new BuildDetailsPreference(context));
                 addReleaseNotes(context, screen);
                 screen.addPreference(new MorpheTikTokAboutPreference(context));
@@ -1463,7 +1488,10 @@ public class TikTokPreferenceFragment extends AbstractPreferenceFragment {
 
         PreferenceCategory category = createCategory(context, screen, section);
         flattenCategory(screen, category);
-        if (section == Section.BACKUP) SettingsBackupPreference.addTo(this, screen);
+        if (section == Section.BACKUP) {
+            screen.addPreference(new SectionHeadingPreference(context, "Your settings"));
+            SettingsBackupPreference.addTo(this, screen);
+        }
     }
 
     void refreshBackupSettings() { updateUIToSettingValues(); }
@@ -1679,6 +1707,7 @@ public class TikTokPreferenceFragment extends AbstractPreferenceFragment {
         if (ImportSeenVideoHistoryPreference.onResult(this, requestCode, resultCode, data)) return;
         if (SeenHistoryFilePreference.onResult(this, requestCode, resultCode, data)) return;
         if (SettingsBackupPreference.onResult(this, requestCode, resultCode, data)) return;
+        if (ImportedFontPreference.onResult(this, requestCode, resultCode, data)) return;
         if (requestCode != REQUEST_DOWNLOAD_PATH_FOLDER) {
             return;
         }

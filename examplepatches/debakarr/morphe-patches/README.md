@@ -19,6 +19,17 @@ On a listing screen four floating buttons appear (they only show while a listing
 
 Everything starts off and is remembered. Amazon's **Ranked** panel can also **load 5 more result pages** itself (it runs in a WebView, so it fetches with the page's own session); on Flipkart, Myntra and Meesho the list holds the pages *you scroll to*, because those apps' next-page requests carry private cursors and headers that cannot be replayed safely.
 
+**In each app's own Sort menu too:** the apps' Sort lists now also contain **Most rated** and **Top rated**, so you can pick them where you would pick "Price - low to high". They switch the same modes as the floating sort button, and the button follows what you pick.
+
+| App | Where |
+|---|---|
+| Amazon | Filters → **Sort by** |
+| Flipkart | **Sort & Filter** → **Sort** tab |
+| Myntra | the **Sort** sheet at the bottom |
+| Meesho | the **Sort** sheet |
+
+The apps' servers cannot sort by rating count, so choosing one of these loads the app's default order (or popularity) and the page is then ranked on the phone — the same as the floating button. Picking any other sort turns the mode back off. Flipkart caches its Filters page: if the new entries don't show after an update, open the filters once more after the cache expires or clear the app's data.
+
 > The Ranked list uses each app's own numbers; it is not a verdict on the product.
 
 ## Patches
@@ -78,7 +89,7 @@ Products in `catalogs[]` / `products[]` are sorted by `catalog_reviews_summary.r
 
 > **Infinite scroll (Flipkart, Myntra, Meesho):** each page is sorted as it arrives, so on its own a well-rated item on page 3 cannot move above page 1 — use **Ranked** for the cross-page order. To make each page's sort cover more, Meesho requests 100 items per page and Myntra 60 while a sort is on. Flipkart's next-page cursor is an opaque token, so its page size can't be changed. Amazon's WebView patch re-sorts everything loaded so far.
 
-> **Verified on a device (Redmi 3S, Android 13):** **Flipkart 9.15**, **Amazon India 32.18.0.300**, **Myntra 4.2609.30** and **Meesho 29.6** — the sort modes, 4★+, Hide ads, the Ranked list across pages (e.g. 111 of 137 on Flipkart; Amazon's "Load 5 more pages" took one search from 20 to 120 products), and tapping a row to open the product in the app. Field names were confirmed against real responses: Meesho's average is `catalog_reviews_summary.average_rating`, and its product link code is the base-36 of the catalog's `hero_pid` (not its `id`); Myntra's V2 tiles keep the full name in `onLongPress.modalData.productName` and prices as strings like `₹558`. Flipkart row titles are the brand plus the app's own description text, so they follow the app's language. Where a field is missing the row shows less, never a made-up number. Not tested: Meesho 29.5, Flipkart 9.13, Amazon (`com.amazon.mShop.android.shopping`) 32.13 and 32.16.
+> **Verified on a device (Redmi 3S, Android 13):** **Flipkart 9.15**, **Amazon India 32.18.0.300**, **Myntra 4.2609.30** and **Meesho 29.6** — the sort modes, 4★+, Hide ads, the Ranked list across pages (e.g. 111 of 137 on Flipkart; Amazon's "Load 5 more pages" took one search from 20 to 120 products), and tapping a row to open the product in the app. Field names were confirmed against real responses: Meesho's average is `catalog_reviews_summary.average_rating`, and its product link code is the base-36 of the catalog's `hero_pid` (not its `id`); Myntra's V2 tiles keep the full name in `onLongPress.modalData.productName` and prices as strings like `₹558`. Flipkart row titles are the brand plus the app's own description text, so they follow the app's language. Where a field is missing the row shows less, never a made-up number. Also checked later: **Flipkart 9.13** (downloaded, patched with the released v1.9.0 bundle, every hook resolved; the renamed copy launches, the Sort tab shows *Most rated* / *Top rated*, and choosing *Most rated* sorts) and **Meesho 29.5** (the renamed copy's Sort sheet shows both entries and sorting works). Not tested: Amazon (`com.amazon.mShop.android.shopping`) 32.13 and 32.16.
 
 ## Install next to the original app
 
@@ -126,6 +137,9 @@ export ANDROID_HOME=~/android-sdk GITHUB_ACTOR=<user> GITHUB_TOKEN=$(gh auth tok
 # Release (via GitHub Actions)
 gh workflow run release.yml --ref main
 ```
+
+The full workflow — patching an APK, installing it next to the original on a phone, verifying it, debugging with REA,
+and releasing — is in **[DEVELOPMENT.md](DEVELOPMENT.md)**.
 
 ## License
 

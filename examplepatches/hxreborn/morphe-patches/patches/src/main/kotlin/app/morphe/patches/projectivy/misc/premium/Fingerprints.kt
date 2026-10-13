@@ -14,7 +14,47 @@
 package app.morphe.patches.projectivy.misc.premium
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.fieldAccess
+import app.morphe.patcher.methodCall
+import com.android.tools.smali.dexlib2.AccessFlags
+import com.android.tools.smali.dexlib2.Opcode
 
 internal object PtApplicationMarkerFingerprint : Fingerprint(
     strings = listOf("ptutils"),
 )
+
+internal object PremiumCheckFingerprint : Fingerprint(
+    classFingerprint = PtApplicationMarkerFingerprint,
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
+    returnType = "Z",
+    parameters = emptyList(),
+    filters = listOf(
+        methodCall(
+            definingClass = "this",
+            parameters = listOf("Z"),
+            returnType = "Z",
+            opcode = Opcode.INVOKE_STATIC,
+        ),
+    ),
+)
+
+internal object TrialStateSetterFingerprint : Fingerprint(
+    classFingerprint = PtApplicationMarkerFingerprint,
+    returnType = "V",
+    filters = listOf(
+        methodCall(
+            definingClass = "Ljava/lang/System;",
+            name = "currentTimeMillis",
+        ),
+    ),
+)
+
+internal const val ACCESSIBILITY_SERVICE_CLASS =
+    "Lcom/spocky/projengmenu/services/ProjectivyAccessibilityService;"
+
+internal object AccessibilityServiceByteInitFingerprint : Fingerprint(
+    definingClass = ACCESSIBILITY_SERVICE_CLASS,
+    name = "<clinit>",
+    filters = listOf(fieldAccess(type = "B", opcode = Opcode.SPUT_BYTE)),
+)
+

@@ -25,6 +25,7 @@ import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.preference.SwitchPreference;
 
@@ -255,7 +256,7 @@ final class SettingsNavigation extends BaseAdapter {
         Preference row = new HushTelegramPreferenceFragment.Row(context);
         row.setTitle(title);
         row.setSummary(summary);
-        row.setIcon(SettingsIcons.icon(context, icon, palette().summary));
+        row.setIcon(SettingsIcons.icon(context, icon, palette().heading));
         row.setPersistent(false);
         return row;
     }
@@ -305,6 +306,7 @@ final class SettingsNavigation extends BaseAdapter {
         pageStatusHeight = 0;
         query = text;
         route = "";
+        host.showSearchHeading(query);
         rebuild();
         showAt(query.isEmpty() ? homePosition : 0, query.isEmpty() ? homeOffset : 0);
     }
@@ -444,7 +446,10 @@ final class SettingsNavigation extends BaseAdapter {
             split |= owner != null && PatchFamily.Group.of(owner) != null;
         }
         if (!split) {
-            for (Preference row : rows) visible.add(row);
+            for (Preference row : rows) {
+                visible.add(row);
+                if ("local_notification_status".equals(row.getKey())) cards.put(row, row);
+            }
             return;
         }
         for (int i = 0; i < count; i++) {
@@ -573,17 +578,47 @@ final class SettingsNavigation extends BaseAdapter {
             Object group = group(item);
             boolean first = position == 0 || group(getItem(position - 1)) != group;
             boolean last = position + 1 == getCount() || group(getItem(position + 1)) != group;
-            palette().paintSurface(row, item, first, last);
-            if (MORE.equals(route)) {
+            palette().paintSurface(row, item, first, last, item == screen.getPreference(0), item == support);
+            if (isNavigation(item)) {
+                // Keep the accurate page summaries in the searchable model, while this index
+                // stays compact enough to scan all seven destinations at a glance.
+                TextView summary = row.findViewById(android.R.id.summary);
+                if (summary != null) summary.setVisibility(View.GONE);
                 row.setMinimumHeight(dp(56));
-                row.setPaddingRelative(dp(34), dp(12), dp(34), dp(12));
+                row.setPaddingRelative(dp(36), dp(first ? 12 : 8), dp(36), dp(last ? 12 : 8));
+                ImageView icon = row.findViewById(android.R.id.icon);
+                if (icon != null) {
+                    icon.setPadding(dp(7), dp(7), dp(7), dp(7));
+                    icon.getLayoutParams().width = dp(40);
+                    icon.getLayoutParams().height = dp(40);
+                    if (icon.getParent() instanceof View) {
+                        ViewGroup.LayoutParams size = ((View) icon.getParent()).getLayoutParams();
+                        size.width = dp(56);
+                        if (size instanceof LinearLayout.LayoutParams) {
+                            ((LinearLayout.LayoutParams) size).gravity = android.view.Gravity.CENTER_VERTICAL;
+                        }
+                    }
+                }
             }
         }
         if (item == screen.getPreference(0)) {
+            row.setPaddingRelative(dp(36), dp(16), dp(36), dp(16));
             TextView title = row.findViewById(android.R.id.title);
             if (title != null) title.setTypeface(android.graphics.Typeface.create("sans-serif-medium", 0));
         }
-        if (item == screen.getPreference(0)) bindStatus(row);
+        if (item == screen.getPreference(0)) {
+            bindStatus(row);
+        }
+        if (item == support) {
+            row.setMinimumHeight(dp(48));
+            row.setPaddingRelative(dp(30), dp(12), dp(30), dp(12));
+            View icon = row.findViewById(android.R.id.icon);
+            if (icon != null && icon.getParent() instanceof View) ((View) icon.getParent()).setVisibility(View.GONE);
+            TextView summary = row.findViewById(android.R.id.summary);
+            if (summary != null) summary.setVisibility(View.GONE);
+            TextView title = row.findViewById(android.R.id.title);
+            if (title != null) title.setTextColor(palette().heading);
+        }
         if (item == pageStatus) {
             row.setMinimumHeight(Math.max(row.getMinimumHeight(), pageStatusHeight));
             if (pageAction) bindAction(row, HushTelegramPause.isPaused(), HushTelegramPause.pausesNextStart(screen.getContext()), true);
@@ -591,12 +626,20 @@ final class SettingsNavigation extends BaseAdapter {
         return row;
     }
 
+    private boolean isNavigation(Preference item) {
+        if (item == more) return true;
+        for (Section section : sections) if (item == section.link) return true;
+        return false;
+    }
+
     private void bindStatus(View row) {
         boolean nextPaused = HushTelegramPause.pausesNextStart(screen.getContext());
         boolean paused = HushTelegramPause.isPaused();
         TextView summary = row.findViewById(android.R.id.summary);
         if (!paused && !nextPaused && ReleaseCheck.statusLine() == null) {
-            summary.setText(L10n.t("Your switches are working."));
+            summary.setText(AbstractPreferenceFragment.restartPending.isEmpty()
+                    ? L10n.t("Your switches are working.")
+                    : L10n.t("A change here applies after Telegram restarts."));
         } else if (paused && nextPaused && HushTelegramPause.reason() == HushTelegramPause.Reason.SWITCH
                 && !markerLeft()) {
             // A marker Resume couldn't remove keeps the card's own line, which says what to do.
@@ -612,20 +655,24 @@ final class SettingsNavigation extends BaseAdapter {
     private void bindAction(View row, boolean paused, boolean nextPaused, boolean pageStatusAction) {
         ViewGroup frame = row.findViewById(android.R.id.widget_frame);
         frame.removeAllViews();
+        // Some platform preference templates give this frame MATCH_PARENT height. That measures
+        // the button against the shorter text column and clips its 48dp target on Android 13.
+        ViewGroup.LayoutParams frameSize = frame.getLayoutParams();
+        frameSize.height = ViewGroup.LayoutParams.WRAP_CONTENT;
+        frame.setLayoutParams(frameSize);
         Button action = new Button(screen.getContext());
         action.setText(paused != nextPaused ? L10n.t("Undo") : nextPaused ? L10n.t("Resume") : L10n.t("Pause"));
         action.setAllCaps(false);
         action.setTextSize(14);
-        action.setTextColor(palette().heading);
-        // Clear until it's pressed or a keyboard puts focus on it, which then shows.
-        action.setBackground(new android.graphics.drawable.RippleDrawable(
-                android.content.res.ColorStateList.valueOf(ScreenColors.half(palette().accent)), null,
-                new android.graphics.drawable.ColorDrawable(android.graphics.Color.WHITE)));
+        action.setTextColor(palette().onAccent);
+        action.setBackground(new android.graphics.drawable.InsetDrawable(
+                palette().control(action, palette().accent, ScreenColors.BUTTON_RADIUS, false),
+                0, dp(6), 0, dp(6)));
         action.setMinWidth(dp(48));
         action.setMinHeight(dp(48));
         action.setMinimumWidth(dp(48));
         action.setMinimumHeight(dp(48));
-        action.setPadding(0, 0, 0, 0);
+        action.setPadding(dp(14), 0, dp(14), 0);
         action.setTag(STATUS_ACTION);
         action.setOnClickListener(ignored -> {
             if (pageStatusAction) pageStatusHeight = Math.max(pageStatusHeight, row.getHeight());

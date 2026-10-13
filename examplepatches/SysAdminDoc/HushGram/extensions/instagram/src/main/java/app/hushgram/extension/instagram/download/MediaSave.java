@@ -135,28 +135,42 @@ public final class MediaSave {
         }
     }
 
-    /** Each selected page ends exactly once. Cancelled and unattempted pages count as skipped. */
+    /**
+     * Each selected page ends exactly once. Cancelled and unattempted pages count as skipped, and
+     * pages Skip what's already saved passed over count as skipped and as [already].
+     */
     public static final class BatchResult {
         public final int saved;
         public final int failed;
         public final int skipped;
         public final int lower;
         public final boolean cancelled;
+        /** Of [skipped], the pages left out because they were saved before (#150). */
+        public final int already;
 
         BatchResult(int saved, int failed, int skipped, int lower, boolean cancelled) {
+            this(saved, failed, skipped, lower, cancelled, 0);
+        }
+
+        BatchResult(int saved, int failed, int skipped, int lower, boolean cancelled, int already) {
             this.saved = saved;
             this.failed = failed;
             this.skipped = skipped;
             this.lower = lower;
             this.cancelled = cancelled;
+            this.already = already;
         }
 
         String message(Context application) {
             String text = cancelled
                     ? L10n.f(application, "Carousel canceled. Saved %1$d. Failed %2$d. Skipped %3$d.", saved, failed, skipped)
                     : L10n.f(application, "Saved %1$d. Failed %2$d. Skipped %3$d.", saved, failed, skipped);
-            return lower == 0 ? text : text + "\n" + L10n.f(application,
-                    "%1$d saved in lower quality than on Instagram.", lower);
+            if (lower > 0) text += "\n" + L10n.f(application, "%1$d saved in lower quality than on Instagram.", lower);
+            if (already > 0) {
+                text += "\n" + L10n.f(application,
+                        "Already saved %1$d. Download again within 30 seconds for those.", already);
+            }
+            return text;
         }
     }
 
@@ -186,6 +200,8 @@ public final class MediaSave {
             if (snapshot.isEmpty()) return false;
             Context application = ready(context);
             if (application == null) return false;
+            // Read on the tap: the account in front now is the one asking, even for a save that waits.
+            String owner = DownloadHistory.ownerIfOn();
             synchronized (WAITING) {
                 if (batchTurn) {
                     if (WAITING.size() >= MAX_WAITING) {
@@ -195,7 +211,7 @@ public final class MediaSave {
                     }
                     WAITING.add(() -> {
                         // Whoever asked has moved on, so a waiting save that can't start says so itself.
-                        boolean started = startBatch(application, snapshot, completion);
+                        boolean started = startBatch(application, snapshot, owner, completion);
                         if (!started) Feedback.show(application, L10n.t(application, "Download failed"), true);
                         return started;
                     });
@@ -206,7 +222,7 @@ public final class MediaSave {
                 }
                 batchTurn = true;
             }
-            if (startBatch(application, snapshot, completion)) return true;
+            if (startBatch(application, snapshot, owner, completion)) return true;
             nextBatch();
             return false;
         } catch (Throwable failure) {
@@ -245,14 +261,22 @@ public final class MediaSave {
         }
     }
 
-    /** Starts saving [snapshot] now and answers whether it started. */
-    private static boolean startBatch(Context application, List<Item> snapshot, Consumer<BatchResult> completion) {
+    /**
+     * Starts saving [snapshot] now and answers whether it started. [owner] is the account part of
+     * the history's keys ({@link DownloadHistory#owner}) read when it was asked for, or null when
+     * Skip what's already saved was off then: pages saved before are passed over only with it.
+     */
+    private static boolean startBatch(Context application, List<Item> snapshot, String owner,
+            Consumer<BatchResult> completion) {
         try {
             DownloadQuality quality = quality();
             boolean compatible = compatibleSaves();
             BatchResult[] outcome = new BatchResult[1];
+            List<String> passedOver = new ArrayList<>();
+            // The pages the check let through, each held until the carousel ends.
+            List<String> held = new ArrayList<>();
             boolean started = launch(application, false, snapshot.size(), save -> {
-                int saved = 0, failed = 0, skipped = 0, lower = 0;
+                int saved = 0, failed = 0, skipped = 0, lower = 0, already = 0;
                 boolean cancelled = false;
                 for (int index = 0; index < snapshot.size(); index++) {
                     if (save.cancelled()) {
@@ -262,6 +286,17 @@ public final class MediaSave {
                     }
                     Item page = snapshot.get(index);
                     if (page == null) { skipped++; continue; }
+                    String key = DownloadHistory.key(owner, page.details,
+                            page.video ? DownloadHistory.Kind.VIDEO : DownloadHistory.Kind.PHOTO);
+                    if (DownloadHistory.saved(application, key)) {
+                        skipped++;
+                        already++;
+                        passedOver.add(key);
+                        final int number = index + 1;
+                        info(() -> "carousel page " + number + " skipped: already saved");
+                        continue;
+                    }
+                    if (key != null) held.add(key);
                     save.page(index + 1, page.video);
                     if (save.cancelled()) {
                         skipped += snapshot.size() - index;
@@ -269,9 +304,10 @@ public final class MediaSave {
                         break;
                     }
                     Downloader.Result result;
+                    MediaStoreWriter writer = null;
                     try {
                         observeDetails(page.details);
-                        MediaStoreWriter writer = new MediaStoreWriter(application, page.video, page.details);
+                        writer = new MediaStoreWriter(application, page.video, page.details);
                         Job job = page.music != null
                                 ? (into, progress) -> MusicVideo.save(application, page.picture, page.music, into,
                                         policyFor(application), cap(), progress)
@@ -279,32 +315,39 @@ public final class MediaSave {
                                 ? singleJob(application, page.renditions, page.video, !page.video, quality)
                                 : (into, progress) -> saveDash(application, "the carousel page", page.manifest,
                                         page.renditions, into, progress, quality, compatible);
-                        result = job == null ? Downloader.Result.fail(Downloader.Status.WRITE_ERROR, "nothing to save")
+                        result = job == null ? Downloader.Result.fail(Downloader.Status.BUILD_ERROR, "nothing to save")
                                 : job.run(writer, save);
                     } catch (Throwable failure) {
                         failure(() -> "a carousel page could not be saved", failure);
-                        result = Downloader.Result.fail(Downloader.Status.WRITE_ERROR, "the page could not be saved");
+                        result = Downloader.Result.fail(Downloader.Status.BUILD_ERROR, "the page could not be saved");
                     }
                     final int number = index + 1;
                     final Downloader.Result ended = result;
                     info(() -> "carousel page " + number + " finished: " + ended);
-                    if (result.ok()) { saved++; if (result.lower) lower++; }
-                    else if (result.status == Downloader.Status.CANCELLED) {
+                    if (result.ok()) {
+                        saved++;
+                        if (result.lower) lower++;
+                        DownloadHistory.record(application, key, writer, page.details);
+                    } else if (result.status == Downloader.Status.CANCELLED) {
                         skipped += snapshot.size() - index;
                         cancelled = true;
                         break;
                     } else failed++;
                 }
-                outcome[0] = new BatchResult(saved, failed, skipped, lower, cancelled || save.cancelled());
+                outcome[0] = new BatchResult(saved, failed, skipped, lower, cancelled || save.cancelled(), already);
             }, save -> {
                 BatchResult result = outcome[0] != null ? outcome[0]
                         : save.cancelled() ? new BatchResult(0, 0, snapshot.size(), 0, true)
                         : new BatchResult(0, snapshot.size(), 0, 0, false);
                 outcome[0] = result;
+                DownloadHistory.release(held);
+                // Asked again within the time the message gives, the pages passed over are saved.
+                DownloadHistory.offerAgain(passedOver);
                 // The settings can show the complete outcome when Android clips a long toast.
                 SaveControl.batchFinished(result);
                 info(() -> "carousel finished: saved " + result.saved + ", failed " + result.failed
-                        + ", skipped " + result.skipped + (result.cancelled ? ", cancelled" : ""));
+                        + ", skipped " + result.skipped + (result.already > 0 ? ", already saved " + result.already : "")
+                        + (result.cancelled ? ", cancelled" : ""));
                 Feedback.show(application, result.message(application), true);
             }, () -> {
                 try {
@@ -430,7 +473,8 @@ public final class MediaSave {
      * Save a picture by the sizes the app states for it: the largest of [renditions] on Meta's
      * media servers. For a picture whose address names its size, such as a profile picture, which
      * {@link #savePhoto}'s ranking takes for a thumbnail's and turns down. A rendition with no
-     * stated size loses to any with one.
+     * stated size loses to any with one, and between two with none the size the address names
+     * decides, so a list that starts with its smallest doesn't save that (#155).
      *
      * @return whether a save started. Never throws.
      */
@@ -441,14 +485,14 @@ public final class MediaSave {
             List<Rendition> found = metaOnly(usable(renditions));
             Rendition chosen = null;
             for (Rendition rendition : found) {
-                if (chosen == null || pixels(rendition) > pixels(chosen)) chosen = rendition;
+                if (chosen == null || biggerPicture(rendition, chosen)) chosen = rendition;
             }
             if (chosen == null) {
                 failure(() -> "nothing to save: no picture address on Meta's media servers", null);
                 return false;
             }
             saving(false, chosen, found, null, Dash.SINGLE_FILE, null);
-            return start(safe, false, details, fileJob(safe, chosen.url, Downloader.Kind.IMAGE)) != null;
+            return startPicture(safe, details, fileJob(safe, chosen.url, Downloader.Kind.IMAGE)) != null;
         } catch (Throwable t) {
             failure(() -> "the picture save could not start", t);
             return false;
@@ -495,6 +539,16 @@ public final class MediaSave {
 
     private static long pixels(Rendition rendition) {
         return (long) rendition.width * rendition.height;
+    }
+
+    /**
+     * Whether [a] is a bigger picture than [b] for {@link #savePictureBySize}: by the sizes the app
+     * states, and when neither states one, by the size each address names. A tie keeps [b].
+     */
+    static boolean biggerPicture(Rendition a, Rendition b) {
+        long stated = pixels(a) - pixels(b);
+        if (stated != 0) return stated > 0;
+        return pixels(a) == 0 && RenditionPicker.qualityOf(a.url) > RenditionPicker.qualityOf(b.url);
     }
 
     // ---------------------------------------------------------------- internals
@@ -953,7 +1007,7 @@ public final class MediaSave {
             final int found = renditions.size();
             failure(() -> "nothing to save: the manifest gave no track and none of the " + found
                 + " addresses was a video file on Meta's media servers", null);
-            return Downloader.Result.fail(Downloader.Status.WRITE_ERROR, "nothing to save");
+            return Downloader.Result.fail(Downloader.Status.BUILD_ERROR, "nothing to save");
         }
         DashManifest.Track better = better(tracks, RenditionPicker.qualityOf(video), quality);
         saving(true, video, meta, quality, dash, better);
@@ -1132,26 +1186,53 @@ public final class MediaSave {
 
     /** As above, naming the video from whatever of the post [details] holds and the file name asks for. */
     static Thread start(Context application, boolean video, PostDetails details, Job job) {
-        return start(application, video, false, details, job);
+        return start(application, video, false, details,
+                video ? DownloadHistory.Kind.VIDEO : DownloadHistory.Kind.PHOTO, job);
     }
 
     /** As above, for a sound recording, which goes to the phone's audio files. */
     static Thread startAudio(Context application, PostDetails details, Job job) {
-        return start(application, false, true, details, job);
+        return start(application, false, true, details, DownloadHistory.Kind.AUDIO, job);
     }
 
-    private static Thread start(Context application, boolean video, boolean audio, PostDetails details, Job job) {
+    /**
+     * As above, for a picture saved by its stated size, such as a video's cover, which Skip what's
+     * already saved keeps apart from the video and from a photo of the same post.
+     */
+    static Thread startPicture(Context application, PostDetails details, Job job) {
+        return start(application, false, false, details, DownloadHistory.Kind.PICTURE, job);
+    }
+
+    private static Thread start(Context application, boolean video, boolean audio, PostDetails details,
+            DownloadHistory.Kind kind, Job job) {
         final PostDetails known = details == null ? PostDetails.NONE : details;
-        return launch(application, video, audio, 0, save -> {
-            observeDetails(known);
-            MediaStoreWriter writer = audio ? MediaStoreWriter.forAudio(application, known)
-                : new MediaStoreWriter(application, video, known);
-            Downloader.Result result = job.run(writer, save);
-            boolean cancelled = result.status == Downloader.Status.CANCELLED;
-            if (result.ok() || cancelled) info(() -> "save finished: " + result);
-            else failure(() -> "save finished: " + result, null);
-            Feedback.show(application, message(application, result.status, writer.savedLocation(), result.lower),
-                    !result.ok() && !cancelled);
+        // Read on the tap, for the account in front now. Null with Skip what's already saved off,
+        // or for a save that doesn't know the media's id: it's saved as it always was.
+        final String key = DownloadHistory.key(DownloadHistory.ownerIfOn(), known, kind);
+        return launch(application, video, audio, 0, key != null, save -> {
+            if (key != null && DownloadHistory.saved(application, key)) {
+                info(() -> "save skipped: already saved");
+                DownloadHistory.offerAgain(Collections.singletonList(key));
+                Feedback.show(application, L10n.t(application,
+                        "Already saved. Download again within 30 seconds for a copy."), true);
+                return;
+            }
+            try {
+                if (key != null) announce(application, save);
+                observeDetails(known);
+                MediaStoreWriter writer = audio ? MediaStoreWriter.forAudio(application, known)
+                    : new MediaStoreWriter(application, video, known);
+                Downloader.Result result = job.run(writer, save);
+                boolean cancelled = result.status == Downloader.Status.CANCELLED;
+                if (result.ok() || cancelled) info(() -> "save finished: " + result);
+                else failure(() -> "save finished: " + result, null);
+                if (result.ok()) DownloadHistory.record(application, key, writer, known);
+                Feedback.show(application, message(application, result.status, writer.savedLocation(), result.lower),
+                        !result.ok() && !cancelled);
+            } finally {
+                // The check let this save through and held its key, so a double tap saves it once.
+                DownloadHistory.release(key);
+            }
         }, save -> {}, () -> {});
     }
 
@@ -1160,11 +1241,29 @@ public final class MediaSave {
     /** Atomically admits one logical save and retires it for every normal result. */
     private static Thread launch(Context application, boolean video, int pages, Work work,
             Consumer<SaveControl.Save> finishing, Runnable finished) {
-        return launch(application, video, false, pages, work, finishing, finished);
+        return launch(application, video, false, pages, false, work, finishing, finished);
     }
 
-    private static Thread launch(Context application, boolean video, boolean audio, int pages, Work work,
-            Consumer<SaveControl.Save> finishing, Runnable finished) {
+    /**
+     * The start's toast. With no notification to cancel it from, the list of saves in the settings
+     * is the only way to stop it, so the start says where that is, for long enough to read.
+     */
+    private static void announce(Context application, SaveControl.Save save) {
+        save.reveal();
+        if (save.manager != null) {
+            Feedback.show(application, L10n.t(application, "Saving..."), false);
+        } else {
+            Feedback.show(application,
+                L10n.t(application, "Saving... You can cancel from Downloads in HushGram settings."), true);
+        }
+    }
+
+    /**
+     * As above. [quiet] leaves the start's toast to [work], for a save that may turn out to be
+     * one already saved and should say only that.
+     */
+    private static Thread launch(Context application, boolean video, boolean audio, int pages, boolean quiet,
+            Work work, Consumer<SaveControl.Save> finishing, Runnable finished) {
         int running;
         do {
             running = IN_FLIGHT.get();
@@ -1175,19 +1274,13 @@ public final class MediaSave {
         } while (!IN_FLIGHT.compareAndSet(running, running + 1));
         SaveControl.Save save;
         try {
-            save = audio ? SaveControl.beginAudio(application) : SaveControl.begin(application, video, pages);
+            // A quiet save shows its notification once announce() says it's going ahead.
+            save = SaveControl.begin(application, video && !audio, audio, pages, !quiet);
         } catch (Throwable failure) {
             IN_FLIGHT.decrementAndGet();
             throw failure;
         }
-        // With no notification to cancel it from, the list of saves in the settings is the only way
-        // to stop it, so the start says where that is, for long enough to read.
-        if (save.manager != null) {
-            Feedback.show(application, L10n.t(application, "Saving..."), false);
-        } else {
-            Feedback.show(application,
-                L10n.t(application, "Saving... You can cancel from Downloads in HushGram settings."), true);
-        }
+        if (!quiet) announce(application, save);
 
         Thread worker = new Thread(() -> {
             String marker = null;
@@ -1261,6 +1354,10 @@ public final class MediaSave {
                 return L10n.t(application, "Not saved: the file is over 512 MB");
             case CANCELLED:
                 return L10n.t(application, "Save canceled");
+            case NETWORK_ERROR:
+                return L10n.t(application, "Download failed. Check your connection and try again.");
+            case WRITE_ERROR:
+                return L10n.t(application, "Download didn't finish. Check your connection and free storage, then try again.");
             default:
                 return L10n.t(application, "Download failed");
         }

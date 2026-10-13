@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "patches": [
     {
       "name": "Install alongside original",
@@ -350,6 +350,37 @@
                 "ARMEABI_V7A": 80110582,
                 "X86_64": 80110582,
                 "X86": 80110582
+              },
+              "isExperimental": false,
+              "minSdk": null,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Unlock preview (free AR)",
+      "description": "Unlocks Meshy's AR preview, model decrypt/export and sharing by reporting an active pro entitlement to the JS layer.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "ai.meshy.app",
+          "name": "Meshy",
+          "description": null,
+          "apkFileType": "XAPK",
+          "appIconColor": "#6C5CE7",
+          "signatures": null,
+          "targets": [
+            {
+              "version": "1.5.0",
+              "versionCodes": {
+                "ARM64_V8A": 54,
+                "ARMEABI_V7A": 54,
+                "X86_64": 54,
+                "X86": 54
               },
               "isExperimental": false,
               "minSdk": null,

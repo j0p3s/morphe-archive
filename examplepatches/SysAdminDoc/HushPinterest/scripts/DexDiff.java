@@ -273,11 +273,11 @@ public class DexDiff {
             "once-call", "once-call <method reference>");
 
     private static final Map<String, Integer> MUTATION_COLUMNS = Map.ofEntries(
-            Map.entry("feed", 4), Map.entry("views", 3), Map.entry("guard", 2), Map.entry("refresh", 2),
+            Map.entry("feed", 4), Map.entry("views", 3), Map.entry("guard", 2), Map.entry("refresh", 2), Map.entry("draw", 2),
             Map.entry("navigation", 2), Map.entry("menu", 2), Map.entry("downloads", 2), Map.entry("comments", 5),
-            Map.entry("links", 6), Map.entry("analytics", 5), Map.entry("answers", 4), Map.entry("imageOrder", 1), Map.entry("closeupImage", 2), Map.entry("topicSuggestions", 2), Map.entry("boardMenu", 1), Map.entry("settings", 3),
+            Map.entry("links", 6), Map.entry("analytics", 5), Map.entry("answers", 4), Map.entry("imageOrder", 1), Map.entry("closeupImage", 2), Map.entry("topicSuggestions", 2), Map.entry("boardMenu", 1), Map.entry("settings", 4),
             Map.entry("longPress", 2), Map.entry("surveyPrompts", 2), Map.entry("pinInvites", 2), Map.entry("browserId", 2),
-            Map.entry("firebaseCertificate", 1));
+            Map.entry("firebaseCertificate", 1), Map.entry("closeupButtons", 3));
 
     /**
      * A start-call, next-call, sole-call or once-call line: its method reference, the next-call's
@@ -2652,21 +2652,43 @@ public class DexDiff {
                 if (refresh != null) prefix(m, refresh, List.of(parameter(m, -1)), false);
                 else if (name.equals("setVisibility")) prefix(m, visibility, List.of(parameter(m, 0)), true);
                 else prefix(m, measure, List.of(parameter(m, 0), parameter(m, 1)), true);
-                if (!clean.methods.containsKey(m.toString())) {
-                    List<Instruction> retained = retained(m, edits.get(m.toString()));
-                    if (retained.size() != 2 || !retained.get(0).getOpcode().name.startsWith("invoke-super")
-                            || retained.get(1).getOpcode() != Opcode.RETURN_VOID
-                            || !(reference(retained.get(0)) instanceof MethodReference)) {
-                        fail(m + " lost its inherited original behavior"); continue;
-                    }
-                    MethodReference call = (MethodReference) reference(retained.get(0));
-                    List<Integer> args = new ArrayList<>();
-                    for (int p = parameter(m, -1); p < m.getImplementation().getRegisterCount(); p++) args.add(p);
-                    if (!call.getDefiningClass().equals(cd.getSuperclass()) || !call.getName().equals(name)
-                            || !descriptor(call).equals(shape) || !arguments(retained.get(0)).equals(args))
-                        fail(m + " invokes the wrong inherited implementation");
-                }
+                inherited(cd, m, name, shape);
             }
+        }
+
+        /** An override the patch added does nothing but its claimed hooks and the superclass's own call. */
+        void inherited(ClassDef cd, Method m, String name, String shape) {
+            if (clean.methods.containsKey(m.toString())) return;
+            List<Instruction> retained = retained(m, edits.get(m.toString()));
+            if (retained.size() != 2 || !retained.get(0).getOpcode().name.startsWith("invoke-super")
+                    || retained.get(1).getOpcode() != Opcode.RETURN_VOID
+                    || !(reference(retained.get(0)) instanceof MethodReference)) {
+                fail(m + " lost its inherited original behavior"); return;
+            }
+            MethodReference call = (MethodReference) reference(retained.get(0));
+            List<Integer> args = new ArrayList<>();
+            for (int p = parameter(m, -1); p < m.getImplementation().getRegisterCount(); p++) args.add(p);
+            if (!call.getDefiningClass().equals(cd.getSuperclass()) || !call.getName().equals(name)
+                    || !descriptor(call).equals(shape) || !arguments(retained.get(0)).equals(args))
+                fail(m + " invokes the wrong inherited implementation");
+        }
+
+        /**
+         * A view whose dispatchDraw starts with the hook on the view itself and then draws as before.
+         * It has a method of its own, so it can't collide with an onMeasure refresh on the same class.
+         */
+        void draw(Contract c) {
+            String type = c.strings.get(1);
+            String shape = "(Landroid/graphics/Canvas;)V";
+            ClassDef cd = clean.classes.get(type);
+            if (cd == null) { fail("missing view " + type); capability(c.callee, false); return; }
+            boolean overridable = canOverride(type, "dispatchDraw", shape);
+            Method m = overridable ? actual(type + "->dispatchDraw" + shape) : null;
+            if (m != null) {
+                prefix(m, c.strings.get(0), List.of(parameter(m, -1)), false);
+                inherited(cd, m, "dispatchDraw", shape);
+            }
+            capability(c.callee, overridable);
         }
 
         void feed(Contract c) {
@@ -3156,6 +3178,27 @@ public class DexDiff {
                 remove(m, at, at + 1);
             }
             String downloads = BASE + "actions/PinDownloads;";
+            // Pinterest's own Download image row is marked once, straight off its row factory's result.
+            ClassDef layout = menuLayout();
+            if (layout != null) {
+                List<Method> inits = new ArrayList<>();
+                for (Method candidate : layout.getMethods()) if (candidate.getName().equals("<init>") && candidate.getImplementation() != null) inits.add(candidate);
+                Method init = actual(unique(inits, "download menu constructor"));
+                List<Integer> marks = calls(init, downloads + "->nativeRow(Landroid/view/View;)V", 1);
+                if (init != null && marks.size() == 1) {
+                    int at = marks.get(0);
+                    List<Instruction> body = instructions(init);
+                    boolean titled = false;
+                    for (int i = Math.max(0, at - 9); i < at - 2; i++) if (reference(body.get(i)) instanceof FieldReference title
+                            && title.getName().equals("save_to_device")) titled = true;
+                    if (at < 2 || body.get(at - 1).getOpcode() != Opcode.MOVE_RESULT_OBJECT
+                            || !(reference(body.get(at - 2)) instanceof MethodReference factory)
+                            || !factory.getReturnType().equals("Landroid/widget/RelativeLayout;")
+                            || !arguments(body.get(at)).equals(List.of(firstRegister(body.get(at - 1)))) || !titled)
+                        fail("download row mark is not on Pinterest's own Download image row");
+                    remove(init, at, at + 1);
+                }
+            }
             bridge(downloads + "->menuPin(Ljava/lang/Object;)Ljava/lang/Object;", PIN_MENU, "hushDownloadPin", "()Ljava/lang/Object;");
             bridge(downloads + "->menuView(Ljava/lang/Object;)Landroid/view/ViewGroup;", PIN_MENU, "hushDownloadMenu", "()Landroid/view/ViewGroup;");
             bridge(downloads + "->menuOrigin(Ljava/lang/Object;)Landroid/view/View;", PIN_MENU, "hushDownloadOrigin", "()Landroid/view/View;");
@@ -3193,7 +3236,6 @@ public class DexDiff {
                 }
             }
             Method row = actual(downloads + "->menuRow(Landroid/view/ViewGroup;Ljava/lang/String;)Landroid/view/View;");
-            ClassDef layout = menuLayout();
             if (row != null && layout != null) {
                 List<Instruction> body = instructions(row);
                 List<Method> factories = new ArrayList<>();
@@ -3792,7 +3834,11 @@ public class DexDiff {
 
         /** True when the instruction at [at] can be reached only by falling through from [from]. */
         boolean onlyFrom(Method m, int at, int from) {
-            FeatureFlow graph = flow(m);
+            return onlyFrom(flow(m), at, from);
+        }
+
+        /** [onlyFrom] on a graph built outside the cache, which keys by signature and so can't hold a clean method too. */
+        static boolean onlyFrom(FeatureFlow graph, int at, int from) {
             for (int k = 0; k < graph.normal.size(); k++) {
                 if (k != from && graph.normal.get(k).contains(at)) return false;
                 if (graph.handlers.get(k).contains(at)) return false;
@@ -4265,6 +4311,149 @@ public class DexDiff {
             return inherited;
         }
 
+        static final String CLOSEUP_BACK_ID = "closeup_back_button", CLOSEUP_LENS_ID = "flashlight_search_button";
+        static final String FIND_VIEW = "Landroid/view/View;->findViewById(I)Landroid/view/View;";
+        static final String GET_CLASS = "Ljava/lang/Object;->getClass()Ljava/lang/Class;";
+
+        /** Where a closeup button is handed over: in front of clean instruction [at] of [method], with [register]. */
+        record ButtonSite(Method method, int at, int register, String view, boolean found, String hook) {}
+
+        /**
+         * The closeup's back arrow and visual search (lens) buttons. Every clean method reading the R
+         * field named for a button's id hands the button over where the patch finds it. Found: the id,
+         * findViewById with it and move-result-object, then the hook with that register, reached only
+         * from the move-result, and the check-cast after it, past a getClass null check, names the
+         * button's class. Built: a method answering one of the APK's own framework views through a
+         * single return-object, with the hook on the answered register as the only way into the
+         * return. Each button class then gains, or starts its own, setVisibility with the visibility
+         * hook taking the view and the request and answering into the request.
+         */
+        void closeupButtons(Contract c) {
+            String backHook = c.strings.get(0), lensHook = c.strings.get(1), visibilityHook = c.strings.get(2);
+            List<ButtonSite> sites = new ArrayList<>();
+            boolean back = buttonSites(CLOSEUP_BACK_ID, backHook, sites), lens = buttonSites(CLOSEUP_LENS_ID, lensHook, sites);
+            if (!back) fail("nothing finds the closeup's back arrow");
+            if (!lens) fail("nothing builds the closeup's visual search button");
+            Map<Method, List<ButtonSite>> byMethod = new LinkedHashMap<>();
+            for (ButtonSite site : sites) byMethod.computeIfAbsent(site.method(), k -> new ArrayList<>()).add(site);
+            boolean handed = back && lens;
+            for (Map.Entry<Method, List<ButtonSite>> entry : byMethod.entrySet()) {
+                Method m = actual(entry.getKey());
+                List<ButtonSite> here = entry.getValue();
+                here.sort((a, b) -> Integer.compare(a.at(), b.at()));
+                for (String hook : List.of(backHook, lensHook)) {
+                    long expected = here.stream().filter(s -> s.hook().equals(hook)).count();
+                    if (expected > 0) calls(m, hook, (int) expected);
+                }
+                if (m == null) { handed = false; continue; }
+                List<Instruction> body = instructions(m), was = instructions(entry.getKey());
+                for (int n = 0; n < here.size(); n++) {
+                    ButtonSite site = here.get(n);
+                    int at = site.at() + n;
+                    boolean placed = at + 1 < body.size() && site.hook().equals(String.valueOf(reference(body.get(at))))
+                            && arguments(body.get(at)).equals(List.of(site.register()))
+                            && body.get(at + 1).getOpcode() == was.get(site.at()).getOpcode()
+                            && onlyFrom(m, at + 1, at) && (!site.found() || onlyFrom(m, at, at - 1));
+                    if (!placed) { fail(site.hook() + " doesn't hand over the button in front of instruction " + site.at() + " of " + m); handed = false; }
+                    else remove(m, at, at + 1);
+                }
+            }
+            boolean held = !sites.isEmpty();
+            Set<String> views = new TreeSet<>();
+            for (ButtonSite site : sites) views.add(site.view());
+            for (String type : views) {
+                ClassDef cd = clean.classes.get(type);
+                if (cd == null || !frameworkView(type) || !canOverride(type, "setVisibility", "(I)V")) {
+                    fail("the button class " + type + " isn't a view whose setVisibility can be overridden"); held = false; continue;
+                }
+                Method m = actual(type + "->setVisibility(I)V");
+                List<Integer> calls = calls(m, visibilityHook, 1);
+                if (m == null || calls.size() != 1) { held = false; continue; }
+                List<Instruction> body = instructions(m);
+                boolean prefix = calls.get(0) == 0 && body.size() > 2
+                        && arguments(body.get(0)).equals(List.of(parameter(m, -1), parameter(m, 0)))
+                        && isMoveResult(body.get(1).getOpcode()) && firstRegister(body.get(1)) == parameter(m, 0);
+                if (!prefix) { fail(visibilityHook + " does not pass the button and its request, in place, first in " + m); held = false; continue; }
+                remove(m, 0, 2);
+                inherited(cd, m, "setVisibility", "(I)V");
+            }
+            capability(c.callee, handed && held);
+        }
+
+        /** Adds each site where [id]'s button is found or built to [sites]. True when there's at least one. */
+        boolean buttonSites(String id, String hook, List<ButtonSite> sites) {
+            int before = sites.size();
+            for (Method m : clean.methods.values()) {
+                if (m.getDefiningClass().startsWith(OWN) || m.getImplementation() == null) continue;
+                List<Instruction> body = instructions(m);
+                List<Integer> reads = new ArrayList<>();
+                for (int k = 0; k < body.size(); k++) if (readsId(body.get(k), id)) reads.add(k);
+                if (reads.isEmpty()) continue;
+                List<ButtonSite> found = new ArrayList<>();
+                for (int k : reads) {
+                    ButtonSite site = foundButton(m, body, k, hook);
+                    if (site != null) found.add(site);
+                }
+                if (!found.isEmpty()) { sites.addAll(found); continue; }
+                List<Integer> returns = new ArrayList<>();
+                for (int k = 0; k < body.size(); k++) if (body.get(k).getOpcode() == Opcode.RETURN_OBJECT) returns.add(k);
+                String type = m.getReturnType();
+                if (returns.size() != 1 || !clean.classes.containsKey(type) || !frameworkView(type)) continue;
+                int at = returns.get(0), button = firstRegister(body.get(at));
+                if (tiedToId(body, reads, button)) sites.add(new ButtonSite(m, at, button, type, false, hook));
+            }
+            return sites.size() > before;
+        }
+
+        /** The view in [button] takes the id: setId with it, or a constructor argument whose own constructor took it. */
+        static boolean tiedToId(List<Instruction> body, List<Integer> reads, int button) {
+            Set<Integer> ids = new HashSet<>(), holders = new HashSet<>();
+            for (int k : reads) ids.add(firstRegister(body.get(k)));
+            // [reads] come in body order, so the first is the earliest.
+            for (int k = reads.get(0) + 1; k < body.size(); k++) {
+                Instruction call = body.get(k);
+                if (!(call instanceof FiveRegisterInstruction || call instanceof RegisterRangeInstruction)
+                        || !(reference(call) instanceof MethodReference method)) continue;
+                List<Integer> registers = callRegisters(call);
+                if (registers.isEmpty()) continue;
+                List<Integer> passed = registers.subList(1, registers.size());
+                boolean takesId = passed.stream().anyMatch(ids::contains);
+                if (method.getName().equals("setId") && method.getParameterTypes().size() == 1
+                        && method.getParameterTypes().get(0).toString().equals("I") && registers.get(0) == button && takesId) return true;
+                if (!method.getName().equals("<init>")) continue;
+                if (takesId) holders.add(registers.get(0));
+                if (registers.get(0) == button && passed.stream().anyMatch(holders::contains)) return true;
+            }
+            return false;
+        }
+
+        static boolean readsId(Instruction i, String id) {
+            return i.getOpcode() == Opcode.SGET && reference(i) instanceof FieldReference f && f.getName().equals(id) && f.getType().equals("I");
+        }
+
+        ButtonSite foundButton(Method m, List<Instruction> body, int read, String hook) {
+            if (read + 2 >= body.size() || !(body.get(read + 1) instanceof FiveRegisterInstruction find)
+                    || find.getOpcode() != Opcode.INVOKE_VIRTUAL || !FIND_VIEW.equals(String.valueOf(reference(find)))
+                    || find.getRegisterCount() != 2 || find.getRegisterD() != firstRegister(body.get(read))
+                    || body.get(read + 2).getOpcode() != Opcode.MOVE_RESULT_OBJECT) return null;
+            int button = firstRegister(body.get(read + 2)), next = read + 3;
+            if (next < body.size() && body.get(next) instanceof FiveRegisterInstruction check && check.getOpcode() == Opcode.INVOKE_VIRTUAL
+                    && check.getRegisterCount() == 1 && check.getRegisterC() == button && GET_CLASS.equals(String.valueOf(reference(check)))) next++;
+            if (next >= body.size() || body.get(next).getOpcode() != Opcode.CHECK_CAST || firstRegister(body.get(next)) != button) {
+                fail(m + " finds the button without casting it to its class");
+                return null;
+            }
+            return new ButtonSite(m, read + 3, button, String.valueOf(reference(body.get(next))), true, hook);
+        }
+
+        /** True when the first ancestor of [type] outside the clean target is one of Android's view classes. */
+        boolean frameworkView(String type) {
+            Set<String> seen = new HashSet<>();
+            String at = type;
+            while (clean.classes.containsKey(at) && seen.add(at)) at = clean.classes.get(at).getSuperclass();
+            return at != null && !at.equals(type) && (at.startsWith("Landroid/view/") || at.startsWith("Landroid/widget/"));
+        }
+
         static final String SURVEY_DECLINE = "SURVEY_IN_BROWSER_PROMPT_DECLINE_BUTTON", SURVEY_DECLINE_COUNTER = "%s_%s_%d_%d";
         static final String ALERT_DISMISS_REASON = "Lcom/pinterest/component/alert/AlertContainer$a;";
         static final String FUNCTION1 = "Lkotlin/jvm/functions/Function1;";
@@ -4723,8 +4912,10 @@ public class DexDiff {
             }
             Method create = actual(inherited(c.strings.get(1), "onCreate", "(Landroid/os/Bundle;)V"));
             if (create != null) prefix(create, entry + "->onActivityCreate(Landroid/app/Activity;)V", List.of(parameter(create, -1)), false);
-            Method intent = actual(inherited(c.strings.get(1), "onNewIntent", "(Landroid/content/Intent;)V"));
-            if (intent != null) {
+            Set<String> intentMethods = new HashSet<>();
+            for (String activity : List.of(c.strings.get(1), c.strings.get(3))) {
+                Method intent = actual(inherited(activity, "onNewIntent", "(Landroid/content/Intent;)V"));
+                if (intent == null || !intentMethods.add(intent.toString())) continue;
                 String hook = entry + "->onNewIntent(Landroid/app/Activity;Landroid/content/Intent;)V";
                 List<Integer> sites = calls(intent, hook, 1);
                 if (sites.size() == 1) {
@@ -4740,6 +4931,45 @@ public class DexDiff {
                 String answer = name.equals("pushDynamicShortcut") || name.equals("removeAllDynamicShortcuts") ? "V" : "Z";
                 replacement(manager + "->" + name + "(" + parameters + ")" + answer, entry + "->" + name + "(" + manager + parameters + ")" + answer, null, true);
             }
+            greetingHeader(entry + "->onGreetingHeader(Landroid/view/View;)V");
+        }
+
+        static final String GREETING_HEADER_ID = "home_feed_greeting_header_view";
+
+        record HeaderSite(Method method, int at, int register) {}
+
+        /**
+         * The home feed header goes to the settings entry right after Pinterest finds it (its R field
+         * read, findViewById with it, move-result-object), so the Pinterest logo's long press opens the
+         * screen. The patch hooks only a single such site that nothing else branches into, and leaves
+         * a build without one as it was. Found in the clean target, never from the hook.
+         */
+        void greetingHeader(String hook) {
+            List<HeaderSite> sites = new ArrayList<>();
+            for (Method m : clean.methods.values()) {
+                if (m.getDefiningClass().startsWith(OWN) || m.getImplementation() == null) continue;
+                List<Instruction> body = instructions(m);
+                for (int k = 0; k + 2 < body.size(); k++) {
+                    if (!readsId(body.get(k), GREETING_HEADER_ID) || !(body.get(k + 1) instanceof FiveRegisterInstruction find)
+                            || find.getOpcode() != Opcode.INVOKE_VIRTUAL || !FIND_VIEW.equals(String.valueOf(reference(find)))
+                            || find.getRegisterCount() != 2 || find.getRegisterD() != firstRegister(body.get(k))
+                            || body.get(k + 2).getOpcode() != Opcode.MOVE_RESULT_OBJECT) continue;
+                    sites.add(new HeaderSite(m, k + 3, firstRegister(body.get(k + 2))));
+                }
+            }
+            if (sites.size() != 1 || !onlyFrom(new FeatureFlow(sites.get(0).method()), sites.get(0).at(), sites.get(0).at() - 1)) return;
+            HeaderSite site = sites.get(0);
+            Method m = actual(site.method());
+            List<Integer> at = calls(m, hook, 1);
+            if (m == null || at.size() != 1) return;
+            int k = at.get(0);
+            List<Instruction> body = instructions(m), was = instructions(site.method());
+            if (k != site.at() || !arguments(body.get(k)).equals(List.of(site.register())) || k + 1 >= body.size()
+                    || body.get(k + 1).getOpcode() != was.get(site.at()).getOpcode() || !onlyFrom(m, k + 1, k) || !onlyFrom(m, k, k - 1)) {
+                fail(hook + " doesn't hand over the home feed header in front of instruction " + site.at() + " of " + m);
+                return;
+            }
+            remove(m, k, k + 1);
         }
 
         List<String> normalized(Method m, FeatureEdits e) {
@@ -4834,6 +5064,7 @@ public class DexDiff {
                     case "views": views(c); break;
                     case "guard": simpleGuard(c); break;
                     case "refresh": refresh(c); break;
+                    case "draw": draw(c); break;
                     case "navigation": navigation(c); break;
                     case "menu": menu(c); break;
                     case "downloads": downloads(c); break;
@@ -4847,6 +5078,7 @@ public class DexDiff {
                     case "imageOrder": imageOrder(c); break;
                     case "closeupImage": closeupImage(c); break;
                     case "topicSuggestions": topicSuggestions(c); break;
+                    case "closeupButtons": closeupButtons(c); break;
                     case "boardMenu": boardMenu(c); break;
                     case "surveyPrompts": surveyPrompts(c); break;
                     case "pinInvites": pinInvites(c); break;

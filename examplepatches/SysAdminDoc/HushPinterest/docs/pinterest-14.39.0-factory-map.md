@@ -1,6 +1,6 @@
 # Pinterest Android app map for 14.39.0
 
-The [signed-in factory audit](pinterest-14.39.0-audit.md) extends this map with native settings, advertising delivery, tracking boundaries, all 27 patch mappings and specific patch opportunities. Privacy filtering covers selected known paths, and ordinary account and content requests still reach Pinterest. See the [privacy reference](pinterest-14.39.0-privacy.md) for exact coverage.
+The [signed-in factory audit](pinterest-14.39.0-audit.md) extends this map with native settings, advertising delivery, tracking boundaries, all 29 patch mappings and specific patch opportunities. Privacy filtering covers selected known paths, and ordinary account and content requests still reach Pinterest. See the [privacy reference](pinterest-14.39.0-privacy.md) for exact coverage.
 
 Last checked: 2026-10-10, against Pinterest 14.39.0. This guide maps the original Pinterest package HushPinterest patches, which has been 14.39.0 since the October 10 port. It records static APK facts and the reverse-engineering anchors that are useful when patches move to a new release. Where an obfuscated name changed, the 14.38.0 name follows in parentheses so the two builds can be compared.
 
@@ -113,6 +113,7 @@ The bottom-navigation enum declares five tab types: Create, Home, Notifications,
 | Comments | Two dedicated pin-closeup comments module resource pairs | Anchor to the comments modules, not the whole closeup container or video module. |
 | Analytics requests | Retrofit-style service method annotations for named telemetry paths | The analytics patch finds annotated endpoints and selected launch tasks. Keep auth, feed, messaging, and media requests out of that set. |
 | Profile and About links | The stable `website_link` string and the `BUSINESS_PROFILE_WEBSITE_LINK` element constant, then a bound `websiteUrlView` listener | Confirms the outbound URL is the website button, not a sign-in or account route. |
+| Home feed logo | Layout `home_feed_greeting_header_view` holds the Pinterest wordmark, ImageView `home_feed_greeting_header_logotype`, with no listener or content description. Its controller's bind `q21/e.a(View)` is the only method reading the R field `home_feed_greeting_header_view` (R ids live in `e22/d`), behind experiment `hfp_global_nav_greeting_header_android` | HushPinterest settings hands the header to the extension right after that `findViewById`, and the logo gets a long press that opens the settings. Found by the R field name, not the class. |
 
 The image request field names are endpoint-specific. A request field accepted by one Pinterest API is not automatically valid for another. In 14.38.0 testing, the feed failed when `originals` was added to its pin request; `orig` is the accepted field for that path. Keep readers tolerant when useful, but verify each request against the real endpoint before changing its requested fields.
 
@@ -131,14 +132,15 @@ Most features have two parts:
 
 Manifest-only changes have no runtime switch and remain in the installed APK until it is patched again. Runtime switches and Pause cannot undo manifest edits. `SettingsBackup.ALLOWLIST` is the authority for which settings can be imported or exported; account data, credentials, logs, and signing keys are not settings-backup content.
 
-The 26 source catalog entries are grouped here by the code that owns them:
+The 29 source catalog entries are grouped here by the code that owns them:
 
 | Patch area | Patch names | Main source |
 |---|---|---|
 | Feed and ads | Hide ads; Hide AI-labeled pins; Hide shopping and product pins | `patches/.../ads/`; runtime filters in `extensions/pinterest/.../ads/` |
 | Privacy | Disable analytics; Strip link tracking; Hide advertising ID; Remove ad tracking permissions; Spoof signature for Google sign-in | `patches/.../privacy/`; runtime hooks in `extensions/pinterest/.../privacy/` |
 | Pin actions | Download pins; Download board; Long-press download; Open links in your browser; System share sheet | `patches/.../actions/`; runtime transfer and routing under `extensions/pinterest/.../actions/` |
-| Interface | Filter pin menu; Hide comments; Hide header buttons; Hide navigation buttons; Hide save toasts; Hide search history; Hide survey prompts; Hide topic suggestions; No screenshot share menu; Original-quality images; Quiet email reminders; Disable update nag | `patches/.../ui/`; runtime UI controls under `extensions/pinterest/.../ui/` |
+| Interface | AMOLED black; Filter pin menu; Hide closeup buttons; Hide comments; Hide header buttons; Hide navigation buttons; Hide save toasts; Hide search history; Hide survey prompts; Hide topic suggestions; No screenshot share menu; Original-quality images; Quiet email reminders; Disable update nag | `patches/.../ui/`; runtime UI controls under `extensions/pinterest/.../ui/` |
+| Notifications | Fix push notifications | `patches/.../notifications/`; the certificate answer in `extensions/pinterest/.../notifications/` and the readiness report in `extensions/pinterest/.../settings/PushReadiness.java` |
 | Settings wiring | HushPinterest settings | `patches/.../misc/settings/` and `extensions/pinterest/.../settings/` |
 
 The inventory is the current `patches-list.json` source catalog. The README is the user-facing feature list. Read the specific patch source and fixture test before relying on a table summary; those files are the implementation authority.

@@ -1,0 +1,371 @@
+# Turkish for HushTumblr: the English key, a tab, the translation. One row per string.
+# After editing, run python scripts/gen-l10n.py from the repository root.
+%1$d item in that file isn't a setting this version of HushTumblr knows, so it'll be left out.	O dosyadaki %1$d öğe, HushTumblr'ın bu sürümünün tanıdığı ayarlardan değil, bu yüzden atlanacak.
+%1$d items in that file aren't settings this version of HushTumblr knows, so they'll be left out.	O dosyadaki %1$d öğe, HushTumblr'ın bu sürümünün tanıdığı ayarlardan değil, bu yüzden atlanacak.
+%1$d switch will change.	%1$d anahtar değişecek.
+%1$d switches will change.	%1$d anahtar değişecek.
+%1$s. It was set when you patched, so Pause can't turn it off. To rule it out, patch again and leave out that patch.	%1$s. Yamaladığında ayarlandığı için Duraklatma bunu kapatamaz. Bunu elemek için yeniden yamala ve o yamayı dışarıda bırak.
+%1$s. They were set when you patched, so Pause can't turn them off. To rule one out, patch again and leave out the patch in brackets after it.	%1$s. Yamaladığında ayarlandıkları için Duraklatma bunları kapatamaz. Birini elemek için yeniden yamala ve onun ardından parantez içinde yazan yamayı dışarıda bırak.
+A diagnostic report is already being saved.	Bir tanılama raporu zaten kaydediliyor.
+A file named %1$s in %2$s paused HushTumblr.	%2$s içindeki %1$s adlı bir dosya HushTumblr'ı duraklattı.
+About	Hakkında
+Android 11 and older don't say which links open here. Tap to open this app's settings, then Open by default.	Android 11 ve öncesi burada hangi bağlantıların açıldığını bildirmez. Bu uygulamanın ayarlarını açmak için dokunun, ardından Varsayılan olarak aç'a gidin.
+Back	Geri
+Cancel	İptal
+Clear diagnostic data	Tanılama verilerini temizle
+Copy quick report	Hızlı raporu kopyala
+Couldn't import the settings, and couldn't put back the ones you had. Check the switches on this screen.	Ayarlar içe aktarılamadı ve önceki ayarların geri yüklenemedi. Bu ekrandaki anahtarları kontrol et.
+Couldn't import the settings. Nothing was changed.	Ayarlar içe aktarılamadı. Hiçbir şey değiştirilmedi.
+Couldn't open that file. Nothing was changed.	Bu dosya açılamadı. Hiçbir şey değiştirilmedi.
+Couldn't open the file picker. Try again.	Dosya seçici açılamadı. Tekrar dene.
+Couldn't put back the diagnostic data. Try again.	Tanılama verileri geri getirilemedi. Tekrar dene.
+Couldn't save the settings file. Try again.	Ayar dosyası kaydedilemedi. Tekrar dene.
+Couldn't start that. Try again in a moment.	Bu işlem başlatılamadı. Birazdan tekrar dene.
+Couldn't start the report export. Try again shortly.	Rapor dışa aktarımı başlatılamadı. Birazdan tekrar dene.
+Couldn't turn HushTumblr back on. Try again.	HushTumblr yeniden açılamadı. Tekrar dene.
+Debug logging	Hata ayıklama günlüğü
+Diagnostic data cleared. Tap again to put it back.	Tanılama verileri temizlendi. Geri getirmek için tekrar dokun.
+Diagnostic data put back.	Tanılama verileri geri getirildi.
+Diagnostic report copied to the clipboard.	Tanılama raporu panoya kopyalandı.
+Clears the saved log and patch check results that a report would include.	Bir raporun içereceği kayıtlı günlüğü ve yama kontrol sonuçlarını temizler.
+Every switch but Debug logging acts as if it were off, and what was set when you patched stays in. Your settings stay as they are.	Hata ayıklama günlüğü dışındaki her anahtar kapalıymış gibi davranır, yamaladığında ayarlananlar ise devrede kalır. Ayarların olduğu gibi kalır.
+Export diagnostic report	Tanılama raporunu dışa aktar
+Export settings	Ayarları dışa aktar
+Turns off every HushTumblr switch except Debug logging the next time Tumblr starts. What you chose when you patched stays, and your choices are saved.	Tumblr bir sonraki açılışında Hata ayıklama günlüğü dışındaki tüm HushTumblr anahtarlarını kapatır. Yamalarken seçtiklerin kalır ve tercihlerin kayıtlı kalır.
+Links, updates, backup and more	Bağlantılar, güncellemeler, yedekleme ve daha fazlası
+Save your switches to a file. They cover all the accounts in this Tumblr app. Pause and Debug logging aren't included, and neither is the release check.	Anahtarlarını bir dosyaya kaydet. Anahtarlar bu Tumblr uygulamasındaki tüm hesaplar için geçerlidir. Duraklatma ve Hata ayıklama günlüğü dahil edilmez, sürüm denetimi de edilmez.
+Settings exported. The app holding the file wouldn't let HushTumblr read it back, so it wasn't checked.	Ayarlar dışa aktarıldı. Dosyayı tutan uygulama HushTumblr'ın onu geri okumasına izin vermedi, bu yüzden kontrol edilmedi.
+The app holding that file is taking too long, so HushTumblr stopped waiting. Nothing was changed.	O dosyayı tutan uygulama çok uzun sürüyor, bu yüzden HushTumblr beklemeyi bıraktı. Hiçbir şey değiştirilmedi.
+The app holding the last settings file still hasn't answered. Try again later.	Son ayar dosyasını tutan uygulama hâlâ yanıt vermedi. Daha sonra tekrar dene.
+The app holding the settings file is taking too long, so HushTumblr stopped waiting. That app may still finish saving it, so check the file before you rely on it.	Ayar dosyasını tutan uygulama çok uzun sürüyor, bu yüzden HushTumblr beklemeyi bıraktı. O uygulama kaydetmeyi yine de bitirebilir, bu yüzden dosyaya güvenmeden önce onu kontrol et.
+The file %1$s couldn't be removed. Delete it from %2$s, then tap Resume again.	%1$s dosyası kaldırılamadı. Onu %2$s içinden sil, sonra yeniden Devam et'e dokun.
+The settings file was saved, but it doesn't read back as what was written. Save it again as a new file.	Ayar dosyası kaydedildi, ancak geri okunduğunda yazılanla aynı değil. Yeni bir dosya olarak tekrar kaydet.
+Until you resume, every switch but Debug logging acts as if it were off. Changes made when you patched stay in.	Devam ettirene kadar Hata ayıklama günlüğü dışındaki her anahtar kapalıymış gibi davranır. Yamaladığında ayarlananlar devrede kalır.
+Full report saved to %1$s	Tam rapor şuraya kaydedildi: %1$s
+GPL-3.0, with the notices of the projects this is built on	GPL-3.0, üzerine kurulduğu projelerin lisans bildirimleriyle
+HushTumblr is on	HushTumblr açık
+HushTumblr is paused	HushTumblr duraklatıldı
+HushTumblr settings	HushTumblr ayarları
+HushTumblr settings couldn't open	HushTumblr ayarları açılamadı
+Import	İçe aktar
+Import settings	Ayarları içe aktar
+Importing settings	Ayarlar içe aktarılıyor
+Licenses	Lisanslar
+Links	Bağlantılar
+OK	Tamam
+Pause HushTumblr	HushTumblr'ı duraklat
+Reading the settings file	Ayar dosyası okunuyor
+Retry	Yeniden dene
+Save full report	Tam raporu kaydet
+# The release check: its switch and Check now row under Updates, the status card's line about a newer release, and what a failed try says.
+Check for new HushTumblr releases	Yeni HushTumblr sürümlerini denetle
+Once a day, when Tumblr starts, checks GitHub for a newer HushTumblr and tells you at the top of these settings. Nothing is downloaded.	Günde bir kez, Tumblr açılırken GitHub'da daha yeni bir HushTumblr olup olmadığına bakar ve bunu bu ayarların en üstünde söyler. Hiçbir şey indirilmez.
+Check now	Şimdi denetle
+Asks GitHub for the newest release right now, even with the switch above off.	Yukarıdaki anahtar kapalı olsa bile GitHub'a en yeni sürümü hemen sorar.
+Checking GitHub now.	GitHub şu anda denetleniyor.
+HushTumblr %1$s is out. Update it in Morphe Manager.	HushTumblr %1$s çıktı. Morphe Manager'da güncelle.
+You have the newest HushTumblr release.	En yeni HushTumblr sürümünü kullanıyorsun.
+The newest HushTumblr release is %1$s.	En yeni HushTumblr sürümü %1$s.
+Couldn't reach GitHub. Try again later.	GitHub'a ulaşılamadı. Daha sonra tekrar dene.
+GitHub is turning away checks from this network for now. Try again later.	GitHub şu an bu ağdan gelen sorguları geri çeviriyor. Daha sonra tekrar dene.
+GitHub sent back something HushTumblr couldn't read. Try again later.	GitHub, HushTumblr'ın okuyamadığı bir yanıt gönderdi. Daha sonra tekrar dene.
+Saving the settings file	Ayar dosyası kaydediliyor
+Set when you patched	Yamaladığında ayarlananlar
+Settings couldn't open	Ayarlar açılamadı
+Settings couldn't refresh completely. Reopen settings and try again.	Ayarlar tamamen yenilenemedi. Ayarları yeniden açıp tekrar dene.
+Settings exported.	Ayarlar dışa aktarıldı.
+Settings imported. %1$d switch changed.	Ayarlar içe aktarıldı. %1$d anahtar değişti.
+Settings imported. %1$d switches changed.	Ayarlar içe aktarıldı. %1$d anahtar değişti.
+Source code and issues	Kaynak kodu ve sorunlar
+Stays in while paused	Duraklatılsa da devrede kalır
+Tap to turn it back on.	Yeniden açmak için dokun.
+That file is too large to be a settings file. Nothing was changed.	Bu dosya bir ayar dosyası olamayacak kadar büyük. Hiçbir şey değiştirilmedi.
+That file isn't readable text, so it may have been damaged on the way. Nothing was changed.	Bu dosya okunabilir bir metin değil, aktarım sırasında hasar görmüş olabilir. Hiçbir şey değiştirilmedi.
+That file lists a setting twice, so there's no telling which value to use. Nothing was changed.	Bu dosyada bir ayar iki kez geçiyor, bu yüzden hangi değerin kullanılacağı belli değil. Hiçbir şey değiştirilmedi.
+That isn't a HushTumblr settings file. Nothing was changed.	Bu bir HushTumblr ayar dosyası değil. Hiçbir şey değiştirilmedi.
+That settings file holds a value HushTumblr can't read. Nothing was changed.	Bu ayar dosyasında HushTumblr'ın okuyamadığı bir değer var. Hiçbir şey değiştirilmedi.
+That settings file is damaged or only partly downloaded. Nothing was changed.	Bu ayar dosyası hasarlı ya da yalnızca bir kısmı indirilmiş. Hiçbir şey değiştirilmedi.
+That settings file was written by a newer HushTumblr than this one. Nothing was changed.	Bu ayar dosyası, HushTumblr'ın bu sürümünden daha yeni bir sürümüyle oluşturulmuş. Hiçbir şey değiştirilmedi.
+The diagnostic report couldn't be saved yet. Try again in a moment.	Tanılama raporu henüz kaydedilemedi. Birazdan tekrar dene.
+The diagnostic report couldn't be saved. Try again.	Tanılama raporu kaydedilemedi. Tekrar dene.
+The file %1$s couldn't be removed. Delete it from %2$s to turn HushTumblr back on.	%1$s dosyası kaldırılamadı. HushTumblr'ı yeniden açmak için onu %2$s içinden sil.
+The setting couldn't finish updating. Its saved value is shown.	Ayarın güncellenmesi tamamlanamadı. Kayıtlı değeri gösteriliyor.
+There's no diagnostic data to clear.	Temizlenecek tanılama verisi yok.
+There's no diagnostic data to put back.	Geri getirilecek tanılama verisi yok.
+This phone has no file picker, so there's no way to choose a file here.	Bu telefonda dosya seçici yok, bu yüzden burada dosya seçmenin bir yolu yok.
+Version	Sürüm
+Record patch activity and show errors for a bug report. Leave off during normal use.	Hata raporu için yama etkinliğini kaydeder ve hataları gösterir. Normal kullanımda kapalı bırakın.
+You paused HushTumblr.	HushTumblr'ı duraklattın.
+Your switches already match that file, so nothing will change.	Anahtarların zaten o dosyayla aynı, bu yüzden hiçbir şey değişmeyecek.
+Copy a short report to the clipboard.	Kısa raporu panoya kopyalar.
+Settings imported.	Ayarlar içe aktarıldı.
+No app on this phone can open the link. The address is %1$s.	Bu telefondaki hiçbir uygulama bağlantıyı açamıyor. Adres: %1$s.
+Pause, backup and diagnostics	Duraklatma, yedekleme ve tanılama
+Updates	Güncellemeler
+Jump to a section	Bir bölüme git
+Go straight to one group of settings. Back returns to where you were.	Doğrudan bir ayar grubuna git. Geri, bulunduğun yere döndürür.
+Browse settings	Ayarları keşfet
+More settings	Diğer ayarlar
+# context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
+Support HushTumblr	HushTumblr'ı destekle
+# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
+Buy me a coffee on Ko-fi	Ko-fi'de bana bir kahve ısmarla
+No matching settings	Eşleşen ayar yok
+%1$d setting found	%1$d ayar bulundu
+%1$d settings found	%1$d ayar bulundu
+Try a different word or clear the search.	Başka bir kelime deneyin veya aramayı temizleyin.
+Search settings	Ayarlarda ara
+Clear search	Aramayı temizle
+Your switches are working.	Anahtarların çalışıyor.
+Pause	Duraklat
+Resume	Devam et
+Undo	Geri al
+
+# context: Links section, the Supported links row. It reads Android's own per-app selection of Tumblr's web addresses (Android 12 and later) and opens Android's Open by default page for this app. Use the phone's own names for Open supported links, Open by default and App info.
+Supported links	Desteklenen bağlantılar
+Opening supported links is off for this app in Android's settings. Tap to turn it on.	“Desteklenen bağlantıları aç” Android ayarlarında bu uygulama için kapalı. Açmak için dokunun.
+Android didn't say which links open here. Tap to check in Android's settings.	Android burada hangi bağlantıların açıldığını bildirmedi. Android ayarlarında kontrol etmek için dokunun.
+Selecting links by hand	Bağlantıları elle seçme
+
+A change here applies after Tumblr restarts.	Buradaki bir değişiklik Tumblr yeniden başladıktan sonra geçerli olur.
+Android verified this app for Tumblr's web addresses, so their links open here.	Android bu uygulamayı Tumblr'ın web adresleri için doğruladı, bu yüzden bağlantıları burada açılır.
+Android's settings for this app didn't open. Open App info from Tumblr's icon, then Open by default.	Bu uygulamanın Android ayarları açılamadı. Tumblr simgesinden Uygulama bilgileri'ni, ardından Varsayılan olarak aç'ı açın.
+HushTumblr %1$s on Tumblr %2$s	Tumblr %2$s üzerinde HushTumblr %1$s
+HushTumblr %1$s supports Tumblr %2$s.	HushTumblr %1$s, Tumblr %2$s sürümlerini destekler.
+HushTumblr pauses when Tumblr restarts.	HushTumblr, Tumblr yeniden başladığında duraklatılır.
+HushTumblr turns back on when Tumblr restarts.	HushTumblr, Tumblr yeniden başladığında tekrar açılır.
+It supports Tumblr %1$s.	Tumblr %1$s sürümlerini destekler.
+None of Tumblr's web addresses are selected for this app, so their links open elsewhere. Tap to select them in Android's settings.	Tumblr'ın web adreslerinden hiçbiri bu uygulama için seçili değil, bu yüzden bağlantıları başka yerde açılır. Android ayarlarında seçmek için dokunun.
+Only some of Tumblr's web addresses are selected for this app, and links to the rest open elsewhere. Tap to select them in Android's settings.	Tumblr'ın web adreslerinden yalnızca bazıları bu uygulama için seçili ve diğerlerinin bağlantıları başka yerde açılır. Android ayarlarında seçmek için dokunun.
+Saved. Restart Tumblr to apply this change.	Kaydedildi. Bu değişikliği uygulamak için Tumblr'ı yeniden başlat.
+# context: Immutable hook coverage shown when a patch has missing targets.
+This build doesn't include the parts that handle %1$s.	Bu sürüm %1$s ile ilgilenen parçaları içermiyor.
+This build handles %1$s. It's missing the parts for %2$s.	Bu sürüm %1$s ile ilgileniyor. %2$s için parçalar eksik.
+Tumblr crashed or froze within a minute of starting three times in a row, so HushTumblr paused itself.	Tumblr açıldıktan sonraki bir dakika içinde üst üste üç kez çöktü veya dondu, bu yüzden HushTumblr kendini duraklattı.
+Tumblr's web addresses are selected for this app in Android's settings, so their links open here.	Tumblr'ın web adresleri Android ayarlarında bu uygulama için seçili, bu yüzden bağlantıları burada açılır.
+Try again, or go back to Tumblr.	Tekrar dene veya Tumblr'a geri dön.
+Release notes	Sürüm notları
+Read HushTumblr releases on GitHub. Nothing is downloaded here.	HushTumblr sürümlerini GitHub'da oku. Burada hiçbir şey indirilmez.
+Update instructions	Güncelleme talimatları
+Open the installation steps on GitHub.	GitHub'daki kurulum adımlarını aç.
+Your choices are saved. Tap Resume, then restart Tumblr.	Tercihleriniz kayıtlı. Devam et'e dokunun, sonra Tumblr'ı yeniden başlatın.
+No HushTumblr release is out yet.	Henüz bir HushTumblr sürümü yayınlanmadı.
+Accounts	Hesaplar
+Every switch here applies to all the accounts in this Tumblr app, not only the one you have open.	Buradaki her anahtar yalnızca açık olan hesap için değil, bu Tumblr uygulamasındaki tüm hesaplar için geçerlidir.
+Privacy	Gizlilik
+Disable analytics	Analizleri devre dışı bırak
+Firebase and Google Analytics collection is turned off	Firebase ve Google Analytics veri toplama kapalı
+Hide advertising ID	Reklam kimliğini gizle
+Remove ad tracking permissions	Reklam izleme izinlerini kaldır
+Tumblr can no longer use Google's ad ID permission or Android's ad services. This was set when you patched. Patch again without it to bring them back.	Tumblr artık Google'ın reklam kimliği iznini veya Android'in reklam hizmetlerini kullanamaz. Bu, yamalarken ayarlandı. Geri getirmek için bu yama olmadan yeniden yamala.
+Tumblr's access to the ad ID and Android's ad services is removed	Tumblr'ın reklam kimliğine ve Android reklam hizmetlerine erişimi kaldırıldı
+Spoof signature for Google sign-in	Google ile oturum açma için imzayı taklit et
+Tells Android this is the original Tumblr, so Google sign-in can work with microG-RE or the XSpoofSignatures module. Stock Google Play services ignores it. This was set when you patched. Patch again without it to take it out.	Android'e bunun orijinal Tumblr olduğunu söyler; böylece Google ile giriş microG-RE veya XSpoofSignatures modülüyle çalışabilir. Normal Google Play hizmetleri bunu yok sayar. Bu, yamalarken ayarlandı. Kaldırmak için bu yama olmadan yeniden yamala.
+Tumblr's original signature is added to the app	Tumblr'ın orijinal imzası uygulamaya eklendi
+%1$s (%2$s to %3$s)	%1$s (%2$s yerine %3$s)
+Your choice is saved, but this build doesn't include the patch for it.	Seçimin kaydedildi ama bu sürüm onun yamasını içermiyor.
+Undoing import	İçe aktarma geri alınıyor
+Import undone. Your earlier switches are back.	İçe aktarma geri alındı. Önceki anahtar ayarlarınız geri geldi.
+Undo ended because a saved switch changed.	Kayıtlı bir anahtar değiştiği için geri alma sona erdi.
+There's no import to undo.	Geri alınacak içe aktarma yok.
+Couldn't undo the import. Your imported switches are unchanged.	İçe aktarma geri alınamadı. İçe aktarılan anahtarlarınız değişmedi.
+Couldn't undo the import or restore the imported switches. Check the switches on this screen.	İçe aktarma geri alınamadı ve içe aktarılan anahtarlar geri yüklenemedi. Bu ekrandaki anahtarları kontrol edin.
+Restore the switches from before the last import. Editing a switch or restarting Tumblr ends Undo.	Son içe aktarmadan önceki anahtarları geri yükleyin. Bir anahtarı düzenlemek veya Tumblr'ı yeniden başlatmak geri almayı sona erdirir.
+Undo import	İçe aktarmayı geri al
+Choose a settings file. Review each switch's name and old and new values before importing. Your choices apply to all accounts in this Tumblr app.	Bir ayar dosyası seçin. İçe aktarmadan önce her anahtarın adını, eski ve yeni değerlerini inceleyin. Seçimleriniz bu Tumblr uygulamasındaki tüm hesaplara uygulanır.
+On	Açık
+Off	Kapalı
+Copy a quick report or save the full one to %1$s. Links, IDs, cookies and sign-in tokens are left out. Check it for other private text before you share it.	Hızlı bir rapor kopyalayın veya tam raporu %1$s konumuna kaydedin. Bağlantılar, kimlikler, çerezler ve giriş belirteçleri dışarıda bırakılır. Paylaşmadan önce diğer özel metinleri kontrol edin.
+Save the full report in %1$s.	Tam raporu %1$s konumuna kaydedin.
+Fix push notifications	Anlık bildirimleri düzelt
+Setup and backup guide	Kurulum ve yedekleme rehberi
+Optional help with sign-in, supported links, patch choices and backups.	Giriş, desteklenen bağlantılar, yama seçimleri ve yedeklemeler için isteğe bağlı yardım.
+Installed patches and switches	Yüklü yamalar ve anahtarlar
+Pick the patches in Morphe Manager when you patch the app. The switches here only control patches that are in your build. Changing a switch doesn't add or remove a patch. Pause keeps your saved choices, but anything set while patching stays in the app.	Uygulamayı yamalarken yamaları Morphe Manager'da seç. Buradaki anahtarlar yalnızca sürümünde bulunan yamaları kontrol eder. Bir anahtarı değiştirmek yama eklemez veya kaldırmaz. Duraklat kayıtlı seçimlerini korur, ama yamalarken ayarlanan her şey uygulamada kalır.
+Sign in to your existing account	Mevcut hesabınıza giriş yapın
+Tumblr password help	Tumblr parola yardımı
+Android may not trust a patched app's links on its own. You can choose the web addresses in Android's Open by default settings.	Android, yamalı bir uygulamanın bağlantılarına kendiliğinden güvenmeyebilir. Web adreslerini Android'in Varsayılan olarak aç ayarlarından seçebilirsin.
+Open link settings	Bağlantı ayarlarını aç
+Back up before changing builds	Derlemeyi değiştirmeden önce yedekleyin
+An update signed with the same key keeps the app's data. A build signed with a different key can't update this one, and Android may refuse to install an older version. If an update is refused, keep the installed app and its data.	Aynı anahtarla imzalanmış bir güncelleme uygulamanın verilerini korur. Farklı bir anahtarla imzalanmış bir sürüm bunu güncelleyemez ve Android daha eski bir sürümü kurmayı reddedebilir. Güncelleme reddedilirse kurulu uygulamayı ve verilerini koru.
+Tumblr's data export is separate from Export settings. Tumblr's help page explains how to request your personal data from the account you're already using.	Tumblr'ın veri dışa aktarımı, Ayarları dışa aktar işleminden ayrıdır. Tumblr'ın yardım sayfası, zaten kullandığınız hesaptan kişisel verilerinizi nasıl talep edeceğinizi açıklar.
+Tumblr data export help	Tumblr veri dışa aktarım yardımı
+Couldn't open the setup guide. Try again.	Kurulum rehberi açılamadı. Tekrar deneyin.
+# context: Tumblr's own settings, named on the HushTumblr page so the reader can find them.
+Tumblr's own settings	Tumblr'ın kendi ayarları
+Finding them	Nerede bulunur
+Notifications	Bildirimler
+In Tumblr: %1$s	Tumblr'da: %1$s
+# Rows added for HushTumblr.
+Ad tracking	Reklam takibi
+Android sends tumblr.com links to a patched Tumblr only after you select those addresses for it. Selecting them sends their links here. Your other link settings stay as they are.	Android, tumblr.com bağlantılarını yamalı Tumblr'a ancak bu adresleri onun için seçtikten sonra gönderir. Adresleri seçersen bağlantıları buraya gelir. Diğer bağlantı ayarların aynı kalır.
+Export settings saves HushTumblr's switches. It doesn't include your Tumblr account, posts, downloaded files or Morphe Manager's signing key. Keep the settings file and a backup of Manager's signing key somewhere you can find them.	Ayarları dışa aktar, HushTumblr'ın anahtarlarını kaydeder. Tumblr hesabın, gönderilerin, indirilen dosyalar ve Morphe Manager'ın imza anahtarı dahil değildir. Ayar dosyasını ve Manager'ın imza anahtarının yedeğini bulabileceğin bir yerde sakla.
+If you joined through Google or don't know your Tumblr password, ask for a password reset on Tumblr's login screen. Enter the email already linked to that account, then use the reset link sent to your email to set a Tumblr password. It's separate from your Google password.	Google üzerinden kaydolduysanız veya Tumblr parolanızı bilmiyorsanız, Tumblr'ın giriş ekranından parola sıfırlama isteyin. Bu hesaba zaten bağlı e-posta adresini girin, ardından e-postanıza gönderilen bağlantıyla bir Tumblr parolası belirleyin. Bu parola Google parolanızdan ayrıdır.
+Lets a patched Tumblr sign up for push notifications when Google would turn it away.	Google geri çevirecekken yamalı Tumblr'ın anlık bildirimlere kaydolmasını sağlar.
+Open Tumblr's settings from the gear on your account tab. HushTumblr doesn't change any of these.	Tumblr ayarlarını hesap sekmenizdeki dişli simgesinden açın. HushTumblr bunların hiçbirini değiştirmez.
+Push alerts	Anlık uyarılar
+Tumblr and the ad companies inside it see an empty advertising ID with ad tracking limited, as if you deleted your ad ID in Android settings.	Tumblr ve içindeki reklam şirketleri, reklam takibi sınırlı olarak boş bir reklam kimliği görür. Reklam kimliğini Android ayarlarından silmişsin gibi olur.
+Use the email on your Tumblr account and a Tumblr password. Google sign-in may not work, because this patched app is signed with a different key. Push notifications haven't been tested.	Tumblr hesabındaki e-postayı ve bir Tumblr parolasını kullan. Bu yamalı uygulama farklı bir anahtarla imzalandığı için Google ile giriş çalışmayabilir. Anlık bildirimler test edilmedi.
+# context: the Feed page and its Hide ads switch.
+Feed	Akış
+Hide ads	Reklamları gizle
+Takes ads and paid Blaze posts out of your dashboard and other feeds. Ad requests stop after Tumblr restarts.	Reklamları ve ücretli Blaze gönderilerini panondan ve diğer akışlardan kaldırır. Reklam istekleri Tumblr yeniden başladıktan sonra durur.
+# context: the Disable analytics switch on the Privacy page.
+Stops Tumblr's own tracking and ad measurement. Firebase and Google's analytics collection stay off until you patch again without it.	Tumblr'ın kendi izlemesini ve reklam ölçümünü durdurur. Firebase ve Google Analytics veri toplama, bu yama olmadan yeniden yamalayana kadar kapalı kalır.
+# context: the Hide the ad-free banner switch on the Feed page.
+Hide the ad-free banner	Reklamsız gezinme banner'ını gizle
+Hides the dashboard banner that asks you to pay for Ad-Free Browsing.	Panoda reklamsız gezinme için ödeme yapmanı isteyen banner'ı gizler.
+# context: the Interface page and its Hide Tumblr TV switch. Tumblr TV is Tumblr's product name.
+Interface	Arayüz
+Hide Tumblr TV	Tumblr TV'yi gizle
+Takes the Tumblr TV tab out of the bottom bar, and keeps sign-up from sending you there.	Tumblr TV sekmesini alt çubuktan kaldırır ve kayıt olduktan sonra seni oraya göndermesini engeller.
+# context: the Hide the Communities tab switch on the Interface page. Communities is Tumblr's name for its group spaces.
+Hide the Communities tab	Topluluklar sekmesini gizle
+Takes the Communities tab out of the bottom bar and stops Communities tips in the post editor.	Topluluklar sekmesini alt çubuktan kaldırır ve gönderi düzenleyicideki Topluluklar ipuçlarını durdurur.
+# context: the Hide Blaze prompts switch on the Interface page. Blaze is Tumblr's paid post promotion.
+Hide Blaze prompts	Blaze önerilerini gizle
+Hides the Blaze buttons, banners and the nudge to promote a post after you share it.	Blaze düğmelerini, banner'larını ve bir gönderiyi paylaştıktan sonra tanıtmanı öneren uyarıyı gizler.
+# context: the Skip review prompts switch on the Interface page. It stops Tumblr's rate-this-app pop-up.
+# context: the Skip review prompts switch on the Interface page. It stops Tumblr's "What do you think of the Tumblr app?" pop-up.
+Skip review prompts	Değerlendirme isteklerini atla
+Stops the pop-up that asks what you think of the Tumblr app and then asks for a rating or feedback.	Tumblr uygulaması hakkında ne düşündüğünü soran ve ardından puan ya da geri bildirim isteyen açılır pencereyi durdurur.
+# context: the Turn off screenshot sharing switch on the Interface page. Tumblr watches for screenshots and offers to save the post as an image.
+Turn off screenshot sharing	Ekran görüntüsü paylaşımını kapat
+Stops Tumblr watching for screenshots and offering to save the post as an image.	Tumblr ekran görüntülerini izlemeyi ve gönderiyi resim olarak kaydetmeyi önermeyi bırakır.
+# context: the Disable update prompts switch on the Updates page. Tumblr asks Google Play for a newer version and opens Play's update prompt.
+Disable update prompts	Güncelleme uyarılarını kapat
+Stops Tumblr asking Google Play for a newer Tumblr and showing Play's update prompt.	Tumblr, Google Play'e daha yeni bir sürüm olup olmadığını sormayı ve Play'in güncelleme uyarısını göstermeyi bırakır.
+# context: the three suggestion card switches on the Feed page. Watch it is the name of Tumblr TV's rows in the dashboard; keep it in English.
+Hide suggested blogs	Önerilen blogları gizle
+Takes the blogs Tumblr suggests you follow, and their headings, out of your dashboard and other feeds.	Tumblr'ın takip etmeni önerdiği blogları ve başlıklarını panondan ve diğer akışlardan kaldırır.
+Hide suggested communities	Önerilen toplulukları gizle
+Takes the communities Tumblr suggests you join, and their headings, out of your dashboard and other feeds.	Tumblr'ın katılmanı önerdiği toplulukları ve başlıklarını panondan ve diğer akışlardan kaldırır.
+Hide Watch it rows	Watch it satırlarını gizle
+Takes Tumblr TV's Watch it rows and video hub cards, and their headings, out of your dashboard and other feeds.	Tumblr TV'nin Watch it satırlarını ve video kartlarını, başlıklarıyla birlikte panondan ve diğer akışlardan kaldırır.
+# context: the Posts page and its two switches. Posts is the page's title in HushTumblr settings; Follow is the label on Tumblr's own button, so use the word Tumblr shows in your language.
+Posts	Gönderiler
+Hide hashtags	Hashtag'leri gizle
+Hide the Follow button	Takip et düğmesini gizle
+Takes the Follow button out of the header of posts from blogs you don't follow yet.	Henüz takip etmediğin blogların gönderilerinin başlığındaki Takip et düğmesini kaldırır.
+Takes the tags off the bottom of posts in your dashboard and other feeds, and keeps the source link.	Panondaki ve diğer akışlardaki gönderilerin altındaki etiketleri kaldırır, kaynak bağlantısını bırakır.
+# context: the switch for Tumblr's Premium diamond and TumblrMart button on the Interface page. TumblrMart and Premium are Tumblr's names; keep them. The last two are parts named in "This build handles %1$s."
+Hide the diamond and TumblrMart	Elmas ve TumblrMart'ı gizle
+Hides the Premium diamond on your dashboard, Explore and notifications when you return to them. Open screens keep their TumblrMart button until Tumblr restarts.	Panoya, Keşfet ekranına ve bildirimlere döndüğünüzde Premium elmasını gizler. Açık ekranlar Tumblr yeniden başlatılana kadar TumblrMart düğmesini korur.
+the Premium diamond	Premium elması
+TumblrMart buttons	TumblrMart düğmeleri
+# context: the footer under a post, with its like, reblog, comment, share and Save buttons and their counts. Use the words Tumblr shows in your language for notes and for each button.
+Hide note counts	Not sayılarını gizle
+Takes the like, reblog and comment counts off the footer under posts, and keeps the buttons.	Gönderilerin altındaki beğeni, RB ve yorum sayılarını kaldırır, düğmeler kalır.
+Hide the like button	Beğen düğmesini gizle
+Takes the like button out of the footer under posts, and the reactions off community posts.	Gönderilerin altındaki beğen düğmesini ve topluluk gönderilerindeki tepkileri kaldırır.
+Hide the reblog button	RB düğmesini gizle
+Takes the reblog button out of the footer under posts.	Gönderilerin altındaki RB düğmesini kaldırır.
+Hide the comment button	Yorum düğmesini gizle
+Takes the comment button out of the footer under posts.	Gönderilerin altındaki yorum düğmesini kaldırır.
+Hide the share button	Paylaş düğmesini gizle
+Takes the share button out of the footer under posts.	Gönderilerin altındaki paylaş düğmesini kaldırır.
+Hide the Save button	Kaydet düğmesini gizle
+Takes the Save button out of the footer under posts, when Tumblr shows one.	Tumblr gösterdiğinde gönderilerin altındaki kaydet düğmesini kaldırır.
+# context: the bottom bar's unread badges, the small dots and numbers on the Dashboard, Communities and Notifications tabs, one switch per tab. Use Tumblr's own names for the tabs in your language.
+Hide unread dots	Okunmadı noktalarını gizle
+Hide the Dashboard count	Pano sayacını gizle
+Hides the unread count on the bottom bar's Dashboard tab. One already showing goes when Tumblr next updates its counts.	Alt çubuktaki Pano sekmesinin okunmadı sayısını gizler. Zaten görünen sayı, Tumblr sayıları bir sonraki güncellediğinde kaybolur.
+Hide the Communities count	Topluluklar sayacını gizle
+Hides the unread count on the bottom bar's Communities tab. One already showing goes when Tumblr next updates its counts.	Alt çubuktaki Topluluklar sekmesinin okunmadı sayısını gizler. Zaten görünen sayı, Tumblr sayıları bir sonraki güncellediğinde kaybolur.
+Hide the Notifications count	Bildirimler sayacını gizle
+Hides the unread count on the bottom bar's Notifications tab. One already showing goes when Tumblr next updates its counts.	Alt çubuktaki Bildirimler sekmesinin okunmadı sayısını gizler. Zaten görünen sayı, Tumblr sayıları bir sonraki güncellediğinde kaybolur.
+# Post filters on the Feed page, and the word list
+Hide reblogs	Yeniden blogları gizle
+Takes reblogs out of your dashboard and other feeds, and keeps the posts people made themselves.	Yeniden blogları panondan ve diğer akışlardan kaldırır, kişilerin kendi yaptığı gönderileri bırakır.
+Hide video posts	Video gönderilerini gizle
+Takes posts with a video anywhere in them, the reblogged part included, out of your dashboard and other feeds.	Yeniden bloglanan kısım dahil herhangi bir yerinde video olan gönderileri panondan ve diğer akışlardan kaldırır.
+Hide photo posts	Fotoğraf gönderilerini gizle
+Takes posts with pictures and no video, the reblogged part included, out of your dashboard and other feeds.	Yeniden bloglanan kısım dahil, resim olan ama video olmayan gönderileri panondan ve diğer akışlardan kaldırır.
+Hide text posts	Metin gönderilerini gizle
+Takes posts with no pictures or video, the reblogged part included, out of your dashboard and other feeds.	Yeniden bloglanan kısım dahil, resim ya da video olmayan gönderileri panondan ve diğer akışlardan kaldırır.
+Hide posts with these words	Bu kelimeleri içeren gönderileri gizle
+Takes posts out of your feeds when a hidden word matches one of the selected fields below.	Gizlenen bir sözcük aşağıdaki seçili alanlardan biriyle eşleştiğinde gönderileri akışlarınızdan kaldırır.
+Words to hide	Gizlenecek kelimeler
+One word or phrase a line	Her satıra bir kelime ya da ifade
+Save	Kaydet
+The list is empty. Tap to add words or phrases.	Liste boş. Kelime ya da ifade eklemek için dokun.
+Looks for: %1$s	Aranan: %1$s
+# context: Dark background color turns the background of Tumblr's Dark Mode palette (Settings > Appearance) black, or a dark color chosen when the app was patched. Use Tumblr's own name for the Dark Mode palette in your language.
+Dark background color	Koyu arka plan rengi
+Makes newly opened Dark Mode screens black, or the dark color picked when patching. Open screens keep their colors until Tumblr restarts.	Yeni açılan Karanlık Mod ekranlarını siyah veya yama sırasında seçilen koyu renkte gösterir. Açık ekranlar Tumblr yeniden başlatılana kadar renklerini korur.
+# context: the bottom bar's tabs. Hide the Explore tab and Hide the Notifications tab take one tab's button off the bar; Reorder the bottom bar puts the tabs in an order chosen in a list where a tap moves a tab one place up. Use Tumblr's own names for the tabs in your language.
+Hide the Explore tab	Keşfet sekmesini gizle
+Takes the Explore and search button off the bottom bar.	Keşfet ve arama düğmesini alt çubuktan kaldırır.
+Hide the Notifications tab	Bildirimler sekmesini gizle
+Takes the Notifications button off the bottom bar.	Bildirimler düğmesini alt çubuktan kaldırır.
+Reorder the bottom bar	Alt çubuğu yeniden sırala
+Puts the bottom bar's tabs in the order set below.	Alt çubuktaki sekmeleri aşağıda seçilen sıraya koyar.
+Tab order	Sekme sırası
+Tap a tab to move it up	Yukarı taşımak için bir sekmeye dokun
+Tumblr's order	Tumblr'ın sırası
+The bottom bar keeps Tumblr's order.	Alt çubuk Tumblr'ın sırasını korur.
+Tabs go in this order: %1$s.	Sekmeler şu sırada olur: %1$s.
+Dashboard	Pano
+Explore	Keşfet
+Tumblr TV	Tumblr TV
+Communities	Topluluklar
+Account	Hesap
+# context: with Hide note counts on, these stand in for "3 comments" on a community post's comment button and for "12 notes" at the top of a post's notes. Tumblr's own word is used when the app has one; these are the fallback. Use Tumblr's own words in your language.
+Comments	Yorumlar
+Notes	Notlar
+# context: the import preview of a settings file. The first is what an empty Words to hide list reads as; the second names Words to hide or Tab order when the file's value for it can't be used.
+None	Yok
+%1$s: the value in that file can't be used, so it'll be left out.	%1$s: o dosyadaki değer kullanılamıyor, bu yüzden atlanacak.
+Your saved lists are too large for a settings backup. Shorten them before exporting. The existing file wasn't changed.	Kaydedilen listeler ayar yedeği için çok büyük. Dışa aktarmadan önce kısaltın. Mevcut dosya değiştirilmedi.
+This list is too large for a settings backup. Shorten it before saving. Your draft is still here.	Bu liste ayar yedeği için çok büyük. Kaydetmeden önce kısaltın. Taslağınız hâlâ burada.
+Couldn't save the words. Your earlier list is unchanged. Try again.	Kelimeler kaydedilemedi. Önceki listeniz değişmedi. Tekrar deneyin.
+Couldn't save the tab order. Your earlier order is unchanged. Try again.	Sekme sırası kaydedilemedi. Önceki sıra değişmedi. Tekrar deneyin.
+%1$s moved to position %2$d of %3$d.	%1$s, %3$d sekme içinde %2$d. sıraya taşındı.
+Filter activity notifications	Etkinlik bildirimlerini filtrele
+Hide ask notifications	Soru bildirimlerini gizle
+Hide boop notifications	Boop bildirimlerini gizle
+Hide follow notifications	Takip bildirimlerini gizle
+Hide likes	Beğenileri gizle
+Hide mention notifications	Bahsetme bildirimlerini gizle
+Hide reblog notifications	Yeniden bloglama bildirimlerini gizle
+Hide reply notifications	Yanıt bildirimlerini gizle
+Hides these from newly loaded activity pages. Push notifications keep Tumblr's settings.	Yeni yüklenen etkinlik sayfalarında bunları gizler. Anlık bildirimler Tumblr ayarlarını kullanmaya devam eder.
+Keep tagged reblogs	Etiketli yeniden bloglamaları tut
+When reblogs are hidden, keep ones with tags. Other post filters still apply.	Yeniden bloglamalar gizlenirken etiketli olanları tutar. Diğer gönderi filtreleri uygulanmaya devam eder.
+Match current post text	Geçerli gönderi metninde eşleştir
+Match reblog trail text	Yeniden bloglama zinciri metninde eşleştir
+Match current post tags	Geçerli gönderi etiketlerinde eşleştir
+Match post summaries	Gönderi özetlerinde eşleştir
+Hidden and allowed words use the same selected fields. Other post filters still apply.	Gizlenen ve izin verilen sözcükler aynı seçili alanları kullanır. Diğer gönderi filtreleri uygulanmaya devam eder.
+Allowed words	İzin verilen sözcükler
+Allowed words keep a post when the word filter would hide it. Other filters still apply.	İzin verilen sözcükler, sözcük filtresinin gizleyeceği gönderiyi tutar. Diğer filtreler uygulanmaya devam eder.
+Posts matching a hidden word in the selected fields are hidden. Case doesn't matter, and only whole words count.	Seçili alanlarda gizlenen bir sözcükle eşleşen gönderiler gizlenir. Büyük küçük harf ayrımı yapılmaz ve yalnızca tam sözcükler sayılır.
+Show post timestamps	Gönderi zamanlarını göster
+Shows Tumblr's own timestamps on newly drawn post cards.	Yeni çizilen gönderi kartlarında Tumblr'ın kendi zamanlarını gösterir.
+Restart Tumblr to apply these settings.	Bu ayarları uygulamak için Tumblr'ı yeniden başlat.
+Visible image descriptions	Görünür resim açıklamaları
+Shows author-provided image descriptions below images.	Yazarın sağladığı resim açıklamalarını resimlerin altında gösterir.
+photo image descriptions	fotoğraf açıklamaları
+gallery image descriptions	galeri açıklamaları
+Mute posts locally	Gönderileri bu cihazda sustur
+Add posts to a private list from their menu. Originals and their reblogs stay hidden for this account.	Gönderileri menülerinden özel bir listeye ekleyin. Asıl gönderiler ve yeniden paylaşımları bu hesap için gizli kalır.
+Mute this post locally	Bu gönderiyi bu cihazda sustur
+Manage muted posts	Susturulan gönderileri yönet
+Unmute posts or clear this account's private list	Gönderilerin susturmasını kaldırın veya bu hesabın özel listesini temizleyin
+Couldn't update muted posts	Susturulan gönderiler güncellenemedi
+Post muted locally	Gönderi bu cihazda susturuldu
+Muted posts restored	Susturulan gönderiler geri yüklendi
+Couldn't restore muted posts	Susturulan gönderiler geri yüklenemedi
+Muted posts aren't available for this account yet	Susturulan gönderiler bu hesap için henüz kullanılamıyor
+Stored only on this device for this Tumblr account. Tap a post to unmute it. Up to 500 posts are kept per account.	Yalnızca bu cihazda ve bu Tumblr hesabı için saklanır. Susturmayı kaldırmak için bir gönderiye dokunun. Hesap başına en fazla 500 gönderi saklanır.
+Post	Gönderi
+No muted posts	Susturulan gönderi yok
+Clear muted posts	Susturulan gönderileri temizle
+Post unmuted	Gönderinin susturması kaldırıldı
+Muted posts cleared	Susturulan gönderiler temizlendi
+Reveal allowed mature content	İzin verilen yetişkin içeriğini göster
+Removes the tap-to-reveal blur only when Tumblr confirms this account may view the content.	Dokunarak kaldırılan bulanıklığı yalnızca Tumblr bu hesabın içeriği görebileceğini doğruladığında kaldırır.
+Show mutual markers	Karşılıklı takip işaretlerini göster
+Marks blogs that follow your primary blog when you follow them.	Ana bloğunu takip eden ve senin de takip ettiğin blogları işaretler.
+Mutual	Karşılıklı
+Done	Bitti

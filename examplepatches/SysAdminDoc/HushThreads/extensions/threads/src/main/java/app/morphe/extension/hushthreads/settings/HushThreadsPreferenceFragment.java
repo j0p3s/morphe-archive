@@ -18,6 +18,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.ListPreference;
 import android.preference.Preference;
@@ -114,7 +115,7 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
     @Nullable
     AlertDialog importPreview;
 
-    /** The page's other dialogs that may still be on screen: the sections and Licenses. */
+    /** The page's other dialogs that may still be on screen, including the report chooser. */
     private final List<Dialog> shownDialogs = new ArrayList<>();
 
     /**
@@ -259,9 +260,11 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
                 feed.addPreference(toggle(context, Settings.BLOCK_RETURN_REFRESH,
                         L10n.t("Keep feed position on return"),
                         L10n.t("Returning to Threads within ten minutes keeps your place. Pull to refresh still works.")));
-                feed.addPreference(toggle(context, Settings.RETURN_REFRESH_NO_LIMIT,
+                SwitchPreference noLimit = toggle(context, Settings.RETURN_REFRESH_NO_LIMIT,
                         L10n.t("No time limit"),
-                        L10n.t("With the switch above on, your place stays however long you're away. Pull to refresh and a fresh start still load new posts.")));
+                        L10n.t("With the switch above on, your place stays however long you're away. Pull to refresh and a fresh start still load new posts."));
+                feed.addPreference(noLimit);
+                noLimit.setDependency(Settings.BLOCK_RETURN_REFRESH.key);
             }
             if (build.contains(PatchFamily.VIDEO_AUTOPLAY)) {
                 feed.addPreference(toggle(context, Settings.DISABLE_VIDEO_AUTOPLAY, L10n.t("Tap to play videos"),
@@ -396,12 +399,12 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
             if (build.contains(PatchFamily.REMOVE_SHARE_TARGETS)) {
                 patched.addPreference(mark(info(context, L10n.t("Share sheet entry removed"),
                         L10n.t("Threads doesn't show up when you share from other apps. Sharing from Threads to other "
-                                + "apps still works.")), SettingsIcons.BLOCK));
+                                + "apps still works.")), SettingsIcons.SHARE));
             }
             if (build.contains(PatchFamily.TRUST_USER_CERTIFICATES)) {
                 patched.addPreference(mark(info(context, L10n.t("User certificates trusted"),
                         L10n.t("Threads accepts security certificates you added to your phone. Its own checks on "
-                            + "Meta's certificates are unchanged, so a proxy still can't read most of its traffic.")), SettingsIcons.TOOLS));
+                            + "Meta's certificates are unchanged, so a proxy still can't read most of its traffic.")), SettingsIcons.PATCHED));
             }
             patched.addPreference(info(context, L10n.t("Changing these"),
                     L10n.t("They're chosen in Morphe Manager when you patch, and Pause doesn't turn them off. "
@@ -412,7 +415,7 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
         PreferenceCategory hushthreads = category(screen, L10n.t("Pause, backup and diagnostics"));
         hushthreads.addPreference(mark(toggle(context, BaseSettings.PAUSED, L10n.t("Pause HushThreads"),
                 L10n.t("Turns off every HushThreads switch except Debug logging the next time Threads starts. What "
-                    + "you chose when you patched stays, and your choices are saved.")), SettingsIcons.PATCHED));
+                    + "you chose when you patched stays, and your choices are saved.")), SettingsIcons.PAUSE));
         String stays = PatchFamily.staysWhilePausedSummary(build);
         // Morphe Manager can export the patch choices and the signing key, not these switches.
         hushthreads.addPreference(mark(new BackupRow(this, context, SettingsBackupPreference.EXPORT,
@@ -429,10 +432,9 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
                 L10n.t("Record patch activity and show errors for a bug report. Leave off during normal use.")), SettingsIcons.BUG));
         // Both rows come without a title of their own: Hushfeed's gave them one from string
         // resources that Threads' APK doesn't have, and untitled they showed as blank rows.
-        ExportDiagnosticReportPreference export = new ExportRow(context);
+        ExportDiagnosticReportPreference export = new ExportRow(this, context);
         export.setTitle(L10n.t("Export diagnostic report"));
-        export.setSummary(L10n.t("Copy a quick report or save the full one to Download/Morphe. Links, IDs, cookies "
-                + "and sign-in tokens are left out. Check it for other private text before you share it."));
+        export.setSummary(reportSummary(context));
         hushthreads.addPreference(mark(export, SettingsIcons.LICENSE));
         ClearLogBufferPreference clear = new ClearRow(context);
         clear.setTitle(L10n.t("Clear diagnostic data"));
@@ -539,8 +541,28 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
         if (getView() == null || activity == null || activity.isFinishing() || activity.isDestroyed()) return;
         AlertDialog dialog = builder.show();
         ScreenColors.dialog(dialog);
+        trackDialog(dialog);
+    }
+
+    /** A manually created dialog must leave with the view that owns it. */
+    private void trackDialog(Dialog dialog) {
         shownDialogs.add(dialog);
         dialog.setOnDismissListener(shownDialogs::remove);
+    }
+
+    /** Android 9 saves reports in the app's own folder rather than the shared Downloads folder. */
+    private static String reportSummary(Context context) {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+                ? L10n.t(context, "Copy a quick report or save the full one in Threads' own Downloads folder. "
+                        + "Links, IDs, cookies and sign-in tokens are left out. Check it for other private text before you share it.")
+                : L10n.t(context, "Copy a quick report or save the full one to Download/Morphe. Links, IDs, cookies "
+                        + "and sign-in tokens are left out. Check it for other private text before you share it.");
+    }
+
+    private static String reportFileSummary(Context context) {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+                ? L10n.t(context, "Save the full report in Threads' own Downloads folder.")
+                : L10n.t(context, "Save the full report in Download/Morphe.");
     }
 
     /** The section headings on the page, in order. */
@@ -719,6 +741,7 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
         Row row = new Row(context);
         row.setKey(CHECK_NOW);
         row.setTitle(L10n.t("Check now"));
+        row.setIcon(SettingsIcons.icon(context, SettingsIcons.OPENING, ScreenColors.DEFAULT.heading));
         row.setPersistent(false);
         // The tap starts the check and the row says how it went: nothing opens, so no chevron.
         row.actsAtOnce = true;
@@ -741,6 +764,7 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
         Row row = new Row(context);
         row.setKey(SUPPORTED_LINKS);
         row.setTitle(L10n.t("Supported links"));
+        row.setIcon(SettingsIcons.icon(context, SettingsIcons.LINKS, ScreenColors.DEFAULT.heading));
         row.setPersistent(false);
         row.setSummary(SupportedLinks.summary(SupportedLinks.read(context)));
         row.setOnPreferenceClickListener(p -> {
@@ -856,6 +880,23 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
         preference.setKey(setting.key);
         preference.setTitle(title);
         preference.setSummary(summary);
+        String icon = SettingsIcons.SETTINGS;
+        if (setting == Settings.HIDE_ADS) icon = SettingsIcons.BLOCK;
+        else if (setting == Settings.HIDE_SUGGESTED_USERS) icon = SettingsIcons.PERSON;
+        else if (setting == Settings.BLOCK_RETURN_REFRESH) icon = SettingsIcons.BOOKMARK;
+        else if (setting == Settings.RETURN_REFRESH_NO_LIMIT) icon = SettingsIcons.CLOCK;
+        else if (setting == Settings.DISABLE_VIDEO_AUTOPLAY || setting == Settings.DOWNLOAD_COMPATIBLE) icon = SettingsIcons.PLAY;
+        else if (setting == Settings.MAX_IMAGE_QUALITY) icon = SettingsIcons.PHOTO;
+        else if (setting == Settings.SANITIZE_SHARING_LINKS) icon = SettingsIcons.LINKS;
+        else if (setting == Settings.OPEN_LINKS_EXTERNALLY) icon = SettingsIcons.OPENING;
+        else if (setting == Settings.DISABLE_ANALYTICS) icon = SettingsIcons.ANALYTICS;
+        else if (setting == Settings.DISABLE_SCREENSHOT_DETECTION) icon = SettingsIcons.SCREENSHOT;
+        else if (setting == Settings.SAVE_MEDIA) icon = SettingsIcons.DOWNLOADS;
+        else if (setting == Settings.PURE_BLACK) icon = SettingsIcons.MOON;
+        else if (setting == Settings.HIDE_INSTAGRAM_BUTTON) icon = SettingsIcons.CAMERA;
+        else if (setting == Settings.HIDE_GHOST_POST_BUBBLES) icon = SettingsIcons.CHAT;
+        else if (setting == Settings.CHECK_FOR_RELEASES) icon = SettingsIcons.UPDATES;
+        mark(preference, icon);
         return preference;
     }
 
@@ -870,6 +911,7 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
         preference.setSummary(summary);
         preference.setSelectable(false);
         preference.setPersistent(false);
+        mark(preference, SettingsIcons.ABOUT);
         return preference;
     }
 
@@ -942,8 +984,11 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
     }
 
     static final class ExportRow extends ExportDiagnosticReportPreference {
-        ExportRow(Context context) {
+        private final HushThreadsPreferenceFragment page;
+
+        ExportRow(HushThreadsPreferenceFragment page, Context context) {
             super(context);
+            this.page = page;
         }
 
         /** The two choices as cards, each saying what it does under its name. */
@@ -954,7 +999,7 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
                     new CharSequence[]{L10n.t(getContext(), "Copy quick report"),
                             L10n.t(getContext(), "Save full report")},
                     new CharSequence[]{L10n.t(getContext(), "Copy a short report to the clipboard."),
-                            L10n.t(getContext(), "Save the full report in Download/Morphe.")});
+                            reportFileSummary(getContext())});
         }
 
         /**
@@ -970,6 +1015,7 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
                 list.setSelector(new ColorDrawable(Color.TRANSPARENT));
             }
             ScreenColors.dialog(dialog);
+            page.trackDialog(dialog);
         }
 
         @Override
@@ -984,6 +1030,12 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
     static final class ClearRow extends ClearLogBufferPreference {
         ClearRow(Context context) {
             super(context);
+        }
+
+        @Override
+        public CharSequence getTitle() {
+            return LogBufferManager.canUndoClear()
+                    ? L10n.t(getContext(), "Restore diagnostic data") : super.getTitle();
         }
 
         @Override

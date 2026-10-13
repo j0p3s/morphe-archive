@@ -8,7 +8,18 @@ package app.hushpinterest.extension.pinterest.actions;
 
 import static org.junit.Assert.*;
 import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.DownloadManager;
+import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Looper;
+import android.view.View;
+import android.widget.ListView;
+import android.widget.ScrollView;
+import android.widget.TextView;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -16,18 +27,27 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
+import org.robolectric.RuntimeEnvironment;
 import org.robolectric.Shadows;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.GraphicsMode;
 import org.robolectric.annotation.Implementation;
 import org.robolectric.annotation.Implements;
+import org.robolectric.shadow.api.Shadow;
+import org.robolectric.shadows.ShadowActivity;
+import org.robolectric.shadows.ShadowAlertDialog;
+import org.robolectric.shadows.ShadowDownloadManager;
 import org.robolectric.shadows.ShadowToast;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import app.hushpinterest.extension.pinterest.NativeDialogCapture;
 import app.hushpinterest.extension.pinterest.settings.PatchFamily;
 import app.hushpinterest.extension.pinterest.settings.PatchFamilyForTests;
 import app.hushpinterest.extension.pinterest.settings.Settings;
@@ -89,6 +109,7 @@ public class BoardDownloadsTest {
         PatchFamilyForTests.capabilities(null);
         PauseForTests.resume();
         Utils.setActivity(null);
+        RuntimeEnvironment.setFontScale(1f);
     }
 
     private static Map<String, Object> pin(String id, String board) {
@@ -140,6 +161,312 @@ public class BoardDownloadsTest {
         for (int board = 2; board <= BoardDownloads.BOARDS + 1; board++) assertEquals(3, BoardDownloads.loaded(String.valueOf(board)).size());
     }
 
+    /** A kept pin is its id and resolved media, never Pinterest's model, and a board batch still saves from it. */
+    @Test public void keptPinsHoldOnlyTheirResolvedMediaAndStillDownload() throws Exception {
+        List<Object> models = page("77", 100, 2);
+        assertTrue(BoardDownloads.record(models));
+        List<Object> kept = BoardDownloads.loaded("77");
+        assertEquals(Arrays.asList("100", "101"), ids(kept));
+        for (int i = 0; i < kept.size(); i++) {
+            assertNotSame(models.get(i), kept.get(i));
+            assertTrue(kept.get(i) instanceof PinMedia.Resolution);
+            assertEquals("https://i.pinimg.com/originals/" + (100 + i) + ".jpg", PinMedia.source(kept.get(i)).url);
+        }
+
+        assertTrue(BoardDownloads.start("77"));
+        settle();
+        // The board asks which kind to queue, every pin to begin with.
+        AlertDialog choice = ShadowAlertDialog.getLatestAlertDialog();
+        assertEquals(0, choice.getListView().getCheckedItemPosition());
+        choice.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        settle();
+        assertFalse(GridDownloads.running());
+        ShadowDownloadManager downloads = Shadows.shadowOf((DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE));
+        assertEquals(2, downloads.getRequestCount());
+        for (long id = 0; id < 2; id++) {
+            assertEquals("https://i.pinimg.com/originals/" + (100 + id) + ".jpg",
+                    Shadow.<ShadowDownloadManager.ShadowRequest>extract(downloads.getRequest(id)).getUri().toString());
+        }
+    }
+
+    private static void settle() throws Exception {
+        for (int i = 0; i < 10; i++) {
+            Utils.awaitBackgroundTasksForTests();
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+        }
+    }
+
+    private static Map<String, Object> video(String id, String file, String board) {
+        return Map.of("id", id, "images", Map.of(), "board", Map.of("id", board),
+                "videos", Map.of("video_list", Map.of("V_720P", Map.of("url", "https://v1.pinimg.com/videos/mc/" + file))));
+    }
+
+    /** What the board chooser offers, from the media each kept pin was resolved to. */
+    private AlertDialog openChooser(List<Object> pins) throws Exception {
+        assertTrue(BoardDownloads.record(pins));
+        assertTrue(BoardDownloads.start("77"));
+        settle();
+        return ShadowAlertDialog.getLatestAlertDialog();
+    }
+
+    /**
+     * Videos only: the image pins stay out, and Download history is read again on Queue pins, so a
+     * video that finished while the choice was open is skipped rather than saved twice.
+     */
+    @Test public void theBoardOffersEachKindAndRereadsHistoryWhenItQueues() throws Exception {
+        List<Object> pins = page("77", 100, 2);
+        pins.add(video("102", "102.mp4", "77"));
+        pins.add(video("103", "hls/103.m3u8", "77"));
+        AlertDialog choice = openChooser(pins);
+        android.widget.ListView kinds = choice.getListView();
+        assertEquals(Arrays.asList("All (4)\nUnsupported: 1", "Images (2)\nUnsupported: 0", "Videos (2)\nUnsupported: 1"),
+                Arrays.asList(kinds.getAdapter().getItem(0).toString(), kinds.getAdapter().getItem(1).toString(),
+                        kinds.getAdapter().getItem(2).toString()));
+        assertEquals(0, kinds.getCheckedItemPosition());
+        assertTrue(choice.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled());
+        kinds.performItemClick(kinds.getChildAt(2), 2, 2);
+        assertEquals(2, kinds.getCheckedItemPosition());
+
+        DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+        long finished = manager.enqueue(new DownloadManager.Request(android.net.Uri.parse("https://v1.pinimg.com/videos/mc/102.mp4")));
+        assertTrue(DownloadLedger.record(activity, finished, "102"));
+        choice.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        settle();
+
+        assertEquals("only the request made before Queue pins", 1, Shadows.shadowOf(manager).getRequestCount());
+        String summary = Shadows.shadowOf(ShadowAlertDialog.getLatestAlertDialog()).getMessage().toString();
+        assertTrue(summary, summary.contains("Unsupported: 1"));
+        assertTrue(summary, summary.contains("Skipped because they're already in Download history: 1"));
+        List<DownloadLedger.Job> history = new DownloadLedger(activity).reconcile();
+        assertEquals(Arrays.asList("103", "102"), history.stream().map(job -> job.pinId).collect(java.util.stream.Collectors.toList()));
+    }
+
+    /** With every loaded pin already in Download history there's nothing to queue, but Save list still works. */
+    @Test public void aBoardWithNothingNewStillOffersSaveList() throws Exception {
+        DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+        for (String id : new String[]{"100", "101"}) {
+            long job = manager.enqueue(new DownloadManager.Request(Uri.parse("https://i.pinimg.com/originals/" + id + ".jpg")));
+            assertTrue(DownloadLedger.record(activity, job, id));
+        }
+        AlertDialog choice = openChooser(page("77", 100, 2));
+        assertNotNull("the chooser opens even with nothing new", choice);
+        assertTrue(choice.isShowing());
+        assertEquals("All (0)\nUnsupported: 0", choice.getListView().getAdapter().getItem(0).toString());
+        assertFalse(choice.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled());
+        assertTrue(choice.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled());
+        assertEquals(2, BoardDownloads.listed("77", GridDownloads.Filter.ALL).size());
+        assertEquals("nothing queued", 2, Shadows.shadowOf(manager).getRequestCount());
+    }
+
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "en-rUS-w390dp-h844dp-night-xhdpi")
+    public void theBoardExplanationKeepsTheChoicesAndActionsReachableAtTwiceTheTextSize() throws Exception {
+        RuntimeEnvironment.setFontScale(2f);
+        assertEquals(2f, activity.getResources().getConfiguration().fontScale, 0f);
+        DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+        for (String id : new String[]{"100", "101"}) {
+            long job = manager.enqueue(new DownloadManager.Request(Uri.parse("https://i.pinimg.com/originals/" + id + ".jpg")));
+            assertTrue(DownloadLedger.record(activity, job, id));
+        }
+        AlertDialog choice = openChooser(page("77", 100, 2));
+        NativeDialogCapture.capture("board-picker-known-large-text", activity.findViewById(android.R.id.content), choice);
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        View decor = choice.getWindow().getDecorView();
+        ListView kinds = choice.getListView();
+        assertEquals(ListView.CHOICE_MODE_SINGLE, kinds.getChoiceMode());
+        assertEquals(0, kinds.getCheckedItemPosition());
+        assertEquals(3, kinds.getCount());
+        assertTrue("the explanation left no room for the choices", kinds.getHeight() > 0);
+        int[] at = new int[2];
+        for (int which : new int[]{AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEUTRAL, AlertDialog.BUTTON_NEGATIVE}) {
+            View button = choice.getButton(which);
+            button.getLocationInWindow(at);
+            assertTrue(button + " has no height", button.getHeight() > 0);
+            assertTrue(button + " is below the dialog", at[1] + button.getHeight() <= decor.getHeight());
+            android.graphics.Rect shown = new android.graphics.Rect();
+            assertTrue(button + " isn't visible", button.getGlobalVisibleRect(shown));
+            assertEquals(button + " is clipped", button.getHeight(), shown.height());
+        }
+        TextView explanation = visibleMessage(decor);
+        assertNotNull(explanation);
+        assertTrue(explanation.getText().toString().contains("Every pin loaded from this board is already in Download history."));
+        assertTrue(explanation.getText().toString().contains("To include more, scroll further down the board first."));
+        assertFalse(choice.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled());
+        assertTrue(choice.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled());
+        kinds.performItemClick(kinds.getAdapter().getView(2, null, kinds), 2, kinds.getItemIdAtPosition(2));
+        assertEquals(2, kinds.getCheckedItemPosition());
+        assertFalse(choice.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled());
+        assertEquals("reading and selecting must not queue", 2, Shadows.shadowOf(manager).getRequestCount());
+    }
+
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "en-rUS-w640dp-h360dp-land-night-xhdpi")
+    public void aShortLandscapeBoardChooserScrollsItsFullExplanationAndEveryKindAtTwiceTheTextSize() throws Exception {
+        RuntimeEnvironment.setFontScale(2f);
+        assertEquals(2f, activity.getResources().getConfiguration().fontScale, 0f);
+        assertEquals(1280, activity.getResources().getDisplayMetrics().widthPixels);
+        assertEquals(720, activity.getResources().getDisplayMetrics().heightPixels);
+        DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+        for (String id : new String[]{"100", "101"}) {
+            long job = manager.enqueue(new DownloadManager.Request(Uri.parse("https://i.pinimg.com/originals/" + id + ".jpg")));
+            assertTrue(DownloadLedger.record(activity, job, id));
+        }
+        AlertDialog choice = openChooser(Arrays.asList(pin("100", "77"), video("101", "101.mp4", "77")));
+        View decor = choice.getWindow().getDecorView();
+        layoutInCurrentViewport(choice);
+        NativeDialogCapture.assertReadable(decor);
+        ListView kinds = choice.getListView();
+        assertEquals(ListView.CHOICE_MODE_SINGLE, kinds.getChoiceMode());
+        assertEquals(0, kinds.getCheckedItemPosition());
+        assertEquals(3, kinds.getCount());
+        assertTrue("the header starved the native choice list", kinds.getHeight() > 0);
+        for (int which : new int[]{AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEUTRAL, AlertDialog.BUTTON_NEGATIVE}) {
+            assertWholeInWindow(choice.getButton(which));
+        }
+
+        TextView explanation = visibleMessage(decor);
+        assertNotNull(explanation);
+        assertTrue(explanation.getText().toString().contains("Every pin loaded from this board is already in Download history."));
+        assertTrue(explanation.getText().toString().endsWith("To include more, scroll further down the board first."));
+        View ancestor = explanation;
+        while (ancestor.getParent() instanceof View && !(ancestor instanceof ScrollView)) ancestor = (View) ancestor.getParent();
+        assertTrue("the full explanation has no scrolling viewport", ancestor instanceof ScrollView);
+        ScrollView guidance = (ScrollView) ancestor;
+        assertTrue("the short window didn't exercise overflow", guidance.getChildAt(0).getHeight() > guidance.getHeight());
+        for (int line = 0; line < explanation.getLineCount(); line++) {
+            android.graphics.Rect wanted = new android.graphics.Rect();
+            explanation.getLayout().getLineBounds(line, wanted);
+            wanted.offset(explanation.getCompoundPaddingLeft(), explanation.getCompoundPaddingTop());
+            android.view.ViewGroup content = (android.view.ViewGroup) guidance.getChildAt(0);
+            content.offsetDescendantRectToMyCoords(explanation, wanted);
+            guidance.requestChildRectangleOnScreen(content, wanted, true);
+            int[] textAt = new int[2], viewportAt = new int[2];
+            explanation.getLocationInWindow(textAt);
+            guidance.getLocationInWindow(viewportAt);
+            int top = textAt[1] + explanation.getCompoundPaddingTop() + explanation.getLayout().getLineTop(line);
+            int bottom = textAt[1] + explanation.getCompoundPaddingTop() + explanation.getLayout().getLineBottom(line);
+            assertTrue("explanation line " + line + " can't scroll into view", top >= viewportAt[1]
+                    && bottom <= viewportAt[1] + guidance.getHeight());
+        }
+        assertTrue("the explanation never scrolled", guidance.getScrollY() > 0);
+
+        for (int position = 0; position < kinds.getCount(); position++) {
+            kinds.setSelection(position);
+            layoutInCurrentViewport(choice);
+            View row = kinds.getChildAt(position - kinds.getFirstVisiblePosition());
+            assertNotNull("kind " + position + " can't be reached by scrolling", row);
+            assertWholeInWindow(row);
+            assertTrue(kinds.performItemClick(row, position, kinds.getItemIdAtPosition(position)));
+            assertEquals(position, kinds.getCheckedItemPosition());
+            assertFalse("known pins became queueable", choice.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled());
+            assertTrue("a loaded kind lost Save list", choice.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled());
+        }
+        assertEquals("reading and selecting queued a request", 2, Shadows.shadowOf(manager).getRequestCount());
+        assertEquals(Arrays.asList("100", "101"), ids(BoardDownloads.loaded("77")));
+        assertEquals(java.util.Set.of("100", "101"), DownloadLedger.downloadedPinIds(activity));
+        assertTrue(Settings.DOWNLOAD_PINS.get());
+        assertTrue(Settings.DOWNLOAD_BOARD.get());
+        assertFalse(GridDownloads.running());
+    }
+
+    /** Use this test's real landscape viewport, not the portrait capture helper's fixed canvas. */
+    private void layoutInCurrentViewport(AlertDialog dialog) {
+        android.util.DisplayMetrics metrics = activity.getResources().getDisplayMetrics();
+        View decor = dialog.getWindow().getDecorView();
+        int width = Math.min(metrics.widthPixels, dialog.getWindow().getAttributes().width);
+        for (int pass = 0; pass < 2; pass++) {
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+            decor.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec(metrics.heightPixels, View.MeasureSpec.AT_MOST));
+            decor.layout(0, 0, decor.getMeasuredWidth(), decor.getMeasuredHeight());
+        }
+        assertTrue("dialog exceeds the short viewport", decor.getHeight() <= metrics.heightPixels);
+    }
+
+    private static void assertWholeInWindow(View view) {
+        android.graphics.Rect shown = new android.graphics.Rect();
+        assertTrue(view + " has no height", view.getHeight() > 0);
+        assertTrue(view + " is outside the dialog", view.getGlobalVisibleRect(shown));
+        assertEquals(view + " is clipped vertically", view.getHeight(), shown.height());
+        assertEquals(view + " is clipped horizontally", view.getWidth(), shown.width());
+    }
+
+    private static TextView visibleMessage(View view) {
+        if (view.getVisibility() != View.VISIBLE) return null;
+        if (view instanceof TextView && view.getId() == android.R.id.message) return (TextView) view;
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                TextView found = visibleMessage(group.getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    @Test public void aKindWithNoNewPinsCantBeQueued() throws Exception {
+        AlertDialog choice = openChooser(page("77", 100, 2));
+        android.widget.ListView kinds = choice.getListView();
+        assertEquals("Videos (0)\nUnsupported: 0", kinds.getAdapter().getItem(2).toString());
+        kinds.performItemClick(kinds.getChildAt(2), 2, 2);
+        assertFalse(choice.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled());
+        assertFalse("no video loaded, so there's no list of them", choice.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled());
+        kinds.performItemClick(kinds.getChildAt(1), 1, 1);
+        assertTrue(choice.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled());
+        assertTrue(choice.getButton(AlertDialog.BUTTON_NEUTRAL).isEnabled());
+    }
+
+    /**
+     * Save list names every loaded pin of the kind chosen, Download history's too, with the title
+     * and checked link each carried when it loaded, and downloads nothing.
+     */
+    @Test public void saveListHasTheKindsLoadedPinsAsTheyWereWhenTheyLoaded() throws Exception {
+        PinListProvider.install();
+        Map<String, Object> titled = new HashMap<>(pin("100", "77"));
+        titled.put("title", "Rye bread");
+        titled.put("link", "https://example.com/rye");
+        List<Object> pins = new ArrayList<>(Arrays.asList(titled, pin("101", "77"), video("102", "102.mp4", "77")));
+        DownloadManager manager = (DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE);
+        long saved = manager.enqueue(new DownloadManager.Request(Uri.parse("https://i.pinimg.com/originals/101.jpg")));
+        assertTrue(DownloadLedger.record(activity, saved, "101"));
+        AlertDialog choice = openChooser(pins);
+        titled.put("title", "Changed after it loaded");
+        android.widget.ListView kinds = choice.getListView();
+        kinds.performItemClick(kinds.getChildAt(1), 1, 1);
+        choice.getButton(AlertDialog.BUTTON_NEUTRAL).performClick();
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
+
+        ShadowActivity.IntentForResult started = Shadows.shadowOf(activity).getNextStartedActivityForResult();
+        assertEquals(Intent.ACTION_CREATE_DOCUMENT, started.intent.getAction());
+        Uri file = PinListProvider.put("board.json", null);
+        Shadows.shadowOf(activity).receiveResult(started.intent, Activity.RESULT_OK, new Intent().setData(file));
+        settle();
+        assertEquals("Saved a list of 2 pins.", ShadowToast.getTextOfLatestToast());
+        JSONObject list = new JSONObject(new String(PinListProvider.get(file), StandardCharsets.UTF_8));
+        assertEquals("board_loaded_pins", list.getString("scope"));
+        JSONArray listed = list.getJSONArray("pins");
+        assertEquals(2, listed.length());
+        assertEquals("100", listed.getJSONObject(0).getString("id"));
+        assertEquals("Rye bread", listed.getJSONObject(0).getString("title"));
+        assertEquals("https://example.com/rye", listed.getJSONObject(0).getString("source_link"));
+        assertEquals("101", listed.getJSONObject(1).getString("id"));
+        assertEquals("missing", listed.getJSONObject(1).getString("source_link_status"));
+        assertEquals("only the request made before Save list", 1, Shadows.shadowOf(manager).getRequestCount());
+    }
+
+    /** Switched off while the choice is open, the board forgets its pins and Queue pins says why nothing starts. */
+    @Test public void queueingAfterTheSwitchWentOffStartsNothing() throws Exception {
+        AlertDialog choice = openChooser(page("77", 100, 2));
+        Settings.DOWNLOAD_BOARD.save(false);
+        BoardDownloads.record(page("77", 200, 2));
+        choice.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        settle();
+        assertEquals("Resume HushPinterest, turn on Download pins and Download board.",
+                ShadowToast.getTextOfLatestToast());
+        assertEquals(0, Shadows.shadowOf((DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE)).getRequestCount());
+        assertFalse(GridDownloads.running());
+    }
+
     @Test public void switchedOffOrPausedItKeepsNothingAndForgetsWhatItHad() {
         BoardDownloads.record(page("77", 100, 5));
         Settings.DOWNLOAD_BOARD.save(false);
@@ -176,7 +503,7 @@ public class BoardDownloadsTest {
         Shadows.shadowOf(Looper.getMainLooper()).idle();
         assertEquals(Arrays.asList(1), chosen);
         assertEquals(1, screen.dismissed);
-        assertEquals("No pins from this board have loaded yet. Scroll through the board, then try again.",
+        assertEquals("This board's pins haven't loaded yet. Scroll it and try again.",
                 ShadowToast.getTextOfLatestToast());
     }
 

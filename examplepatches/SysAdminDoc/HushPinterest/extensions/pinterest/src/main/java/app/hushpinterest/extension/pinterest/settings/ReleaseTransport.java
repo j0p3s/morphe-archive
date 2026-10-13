@@ -18,35 +18,25 @@ import androidx.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.CookieHandler;
-import java.net.CookieManager;
-import java.net.CookieStore;
-import java.net.HttpCookie;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Collections;
-import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 /**
- * The release check's connection, through the platform's HttpURLConnection. It's the only code in
- * the extension that opens one.
+ * The release check's connection, through the platform's HttpURLConnection.
  *
  * <p>{@link ReleaseCheck} decides what may be asked and reads what comes back. This sends one GET
  * and hands back the answer: no redirect followed, no cache, the connection closed after it, and
- * no cookie.
- *
- * <p>The cookie is the part HttpURLConnection doesn't let a caller turn off. It puts on every
- * request whatever the process's default CookieHandler offers for the address, and an app can
- * make a java.net.CookieManager that default when it builds an HttpURLConnection request
- * handler of its own. So the handler is asked first what it would add.
- * Whatever a CookieManager keeps for api.github.com is dropped, since only an answer from there
- * could have left it, and a handler that would still add a cookie stops the request before it goes
- * out. What an answer stores is dropped again when the exchange closes.
+ * no cookie ({@link NoCookies}). Whatever a CookieManager keeps for api.github.com is dropped,
+ * since only an answer from there could have left it, and a handler that would still add a cookie
+ * stops the request before it goes out. What an answer stores is dropped again when the exchange
+ * closes. The request goes out when the check asks for its status, and closing the exchange then
+ * disconnects it, which ends a wait for headers or for the body.
  */
 final class ReleaseTransport implements ReleaseCheck.Transport {
+    /** The most any one connect or read waits. Each gets less when less of the whole check is left. */
     static final int CONNECT_TIMEOUT_MS = 10_000;
     static final int READ_TIMEOUT_MS = 10_000;
 
@@ -58,7 +48,7 @@ final class ReleaseTransport implements ReleaseCheck.Transport {
     }
 
     @Override
-    public ReleaseCheck.Exchange get(URL url, Map<String, String> headers) throws IOException {
+    public ReleaseCheck.Exchange get(URL url, Map<String, String> headers, int timeoutMs) throws IOException {
         URI uri;
         try {
             uri = url.toURI();
@@ -74,17 +64,19 @@ final class ReleaseTransport implements ReleaseCheck.Transport {
             connection.setRequestMethod("GET");
             connection.setInstanceFollowRedirects(false);
             connection.setUseCaches(false);
-            connection.setConnectTimeout(CONNECT_TIMEOUT_MS);
-            connection.setReadTimeout(READ_TIMEOUT_MS);
+            // Never 0, which HttpURLConnection reads as no timeout at all.
+            int left = Math.max(1, timeoutMs);
+            connection.setConnectTimeout(Math.min(CONNECT_TIMEOUT_MS, left));
+            connection.setReadTimeout(Math.min(READ_TIMEOUT_MS, left));
             // Nothing is left open in the pool for the rest of Pinterest's run.
             connection.setRequestProperty("Connection", "close");
             for (Map.Entry<String, String> header : headers.entrySet()) {
                 connection.setRequestProperty(header.getKey(), header.getValue());
             }
-            return new Answer(connection, uri, connection.getResponseCode());
+            return new Answer(connection, uri);
         } catch (IOException | RuntimeException failure) {
             connection.disconnect();
-            forget(CookieHandler.getDefault(), uri);
+            NoCookies.forget(CookieHandler.getDefault(), uri);
             throw failure;
         }
     }
@@ -95,52 +87,26 @@ final class ReleaseTransport implements ReleaseCheck.Transport {
      */
     @Nullable
     static String cookieRefusal(@Nullable CookieHandler handler, URI uri) {
-        if (handler == null) return null;
-        forget(handler, uri);
-        Map<String, List<String>> added;
-        try {
-            added = handler.get(uri, Collections.<String, List<String>>emptyMap());
-        } catch (IOException | RuntimeException failure) {
-            return "the phone's cookie handler couldn't be asked";
-        }
-        if (added == null) return null;
-        for (Map.Entry<String, List<String>> header : added.entrySet()) {
-            String name = header.getKey();
-            List<String> values = header.getValue();
-            if (name == null || values == null || !name.toLowerCase(Locale.ROOT).startsWith("cookie")) continue;
-            for (String value : values) {
-                if (value != null && !value.trim().isEmpty()) return "the phone's cookie handler would add a cookie";
-            }
-        }
-        return null;
-    }
-
-    /** Drops what a CookieManager keeps for [uri]. Nothing but an answer from that host could have put it there. */
-    static void forget(@Nullable CookieHandler handler, URI uri) {
-        if (!(handler instanceof CookieManager)) return;
-        try {
-            CookieStore store = ((CookieManager) handler).getCookieStore();
-            for (HttpCookie cookie : store.get(uri)) store.remove(uri, cookie);
-        } catch (RuntimeException ignored) {
-            // The check before a request still stops one that would carry a cookie.
-        }
+        NoCookies.forget(handler, uri);
+        return NoCookies.refusal(handler, uri);
     }
 
     /** The answer on one connection, closed with it. */
     private static final class Answer implements ReleaseCheck.Exchange {
         private final HttpURLConnection connection;
         private final URI uri;
-        private final int status;
+        private volatile boolean closed;
 
-        Answer(HttpURLConnection connection, URI uri, int status) {
+        Answer(HttpURLConnection connection, URI uri) {
             this.connection = connection;
             this.uri = uri;
-            this.status = status;
         }
 
         @Override
-        public int status() {
-            return status;
+        public int status() throws IOException {
+            // A connection disconnected before it was sent would connect afresh when asked.
+            if (closed) throw new IOException("closed before it was sent");
+            return connection.getResponseCode();
         }
 
         @Nullable
@@ -161,12 +127,13 @@ final class ReleaseTransport implements ReleaseCheck.Transport {
 
         @Override
         public void close() {
+            closed = true;
             try {
                 connection.disconnect();
             } catch (Throwable ignored) {
                 // Nothing useful to do.
             }
-            forget(CookieHandler.getDefault(), uri);
+            NoCookies.forget(CookieHandler.getDefault(), uri);
         }
     }
 }

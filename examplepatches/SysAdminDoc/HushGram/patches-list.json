@@ -1,5 +1,5 @@
 {
-  "version": "v0.0.9",
+  "version": "v0.0.10",
   "appNames": {
     "com.instagram.android": "Instagram"
   },
@@ -339,7 +339,7 @@
     },
     {
       "name": "Clean up Reels",
-      "description": "Hides extra buttons and prompts on reels, such as Follow, Edits, templates, Meta AI, Ray-Ban Meta glasses, friends' activity, the Add a comment bar, the Save button and the Reels tab's top bar. Each one has its own switch. Starts off. Turn it on in HushGram settings > Reels.",
+      "description": "Hides extra buttons and prompts on reels, such as Follow, Edits, templates, Meta AI, Ray-Ban Meta glasses, friends' activity, the Add a comment bar, the Save button and the Reels tab's top bar. Each one has its own switch, and Burn-in guard can dim a reel's buttons while you aren't touching the screen. Starts off. Turn it on in HushGram settings > Reels.",
       "category": "Reels",
       "use": true,
       "dependencies": [
@@ -898,7 +898,7 @@
     },
     {
       "name": "Find the reel you came from",
-      "description": "Open a creator's profile from a reel, then their Reels tab, and it scrolls to that reel and outlines it for a moment. Starts off. Turn it on in HushGram settings > Reels.",
+      "description": "Open a creator's profile from a reel, then their Reels tab, and it scrolls to that reel and outlines it for a moment. Stop looking ends the search, and Wait for a tap to find it holds it until you tap Find the reel. Starts off. Turn it on in HushGram settings > Reels.",
       "category": "Reels",
       "use": true,
       "dependencies": [
@@ -1120,7 +1120,7 @@
     },
     {
       "name": "Hide Meta AI",
-      "description": "Removes Meta AI from Instagram's search bars, messages, home top bar, reels menus, share sheet and feed. Each part has its own switch, and some start on. Starts off. Turn it on in HushGram settings > Meta AI.",
+      "description": "Removes Meta AI from Instagram's search bars, messages, home top bar, reels menus, share sheet and feed. Each part has its own switch. The search one and the Meta AI posts one start on, the rest start off. Change them in HushGram settings > Meta AI.",
       "category": "Interface",
       "use": true,
       "dependencies": [
@@ -1490,7 +1490,7 @@
     },
     {
       "name": "Hide suggested people on profiles",
-      "description": "Takes Suggested for you and the Discover people button off profiles. Bios, counts, posts and follower lists stay. Starts off. Turn it on in HushGram settings > Profiles.",
+      "description": "Takes Suggested for you and the Discover people button off profiles. Bios, counts and posts stay. Two more switches take Suggested for you off the followers and following lists and the Complete your profile cards off your own profile. Starts off. Turn it on in HushGram settings > Profiles.",
       "category": "Profiles",
       "use": true,
       "dependencies": [
@@ -1564,7 +1564,7 @@
     },
     {
       "name": "Hide suggested stories",
-      "description": "Removes stories from accounts you don't follow from the row at the top of Home. More switches hide rewinds and memories, or the whole row. Starts off. Turn it on in HushGram settings > Stories.",
+      "description": "Removes stories from accounts you don't follow from the row at the top of Home. More switches hide rewinds and memories, or the whole row. Starts on. Turn it off in HushGram settings > Stories.",
       "category": "Stories",
       "use": true,
       "dependencies": [
@@ -1638,7 +1638,7 @@
     },
     {
       "name": "Hide the Explore grid",
-      "description": "Empties the grid of posts and reels on the Search tab. Search, recent searches and results stay. Starts off. Turn it on in HushGram settings > Explore.",
+      "description": "Empties the grid of posts and reels on the Search tab. Search, recent searches and results stay. A second switch hides the suggested accounts that show when you tap the search bar. Starts off. Turn it on in HushGram settings > Explore.",
       "category": "Interface",
       "use": true,
       "dependencies": [
@@ -1675,7 +1675,7 @@
     },
     {
       "name": "Hide the Reels tab",
-      "description": "Takes the Reels tab off the tab bar. Reels in your feed and reels people send you still open. A second switch, Show the Reels tab, puts it back after Home when Instagram built your bar without one, and Hide wins if both are on. Restart Instagram to see the change. Starts off. Turn it on in HushGram settings > Reels. Under Tab bar, switches do the same for Search, Create and Profile, switches take the Create and notifications buttons off Home's header, others add a Search button and a Ghost mode button to it or put Instagram's logo in its middle, a list puts the tabs in your order, and another picks the tab Instagram opens on.",
+      "description": "Takes the Reels tab off the tab bar. Reels in your feed and reels people send you still open. A second switch, Show the Reels tab, puts it back after Home when Instagram built your bar without one, and Hide wins if both are on. Restart Instagram to see the change. Starts off. Turn it on in HushGram settings > Reels. Under Tab bar, switches do the same for Search, Create and Profile, another puts Messages on the bar when Instagram left it off, switches take the Create and notifications buttons off Home's header, others add a Search button and a Ghost mode button to it or put Instagram's logo in its middle, one centers the name at the top of profiles, a list puts the tabs in your order, and another picks the tab Instagram opens on.",
       "category": "Reels",
       "use": true,
       "dependencies": [
@@ -1972,7 +1972,7 @@
     },
     {
       "name": "HushGram settings",
-      "description": "Adds a HushGram settings page to Instagram. Open it by pressing and holding Instagram's icon, or from the top of Settings and activity. Turn features on or off there, pause HushGram and save diagnostics. Works as soon as you patch it in, with no switch.",
+      "description": "Adds a HushGram settings page to Instagram. Open it by long-pressing the Instagram logo at the top of your feed or Instagram's icon, or from the top of Settings and activity. Turn features on or off there, pause HushGram and save diagnostics. Works as soon as you patch it in, with no switch.",
       "category": "Settings",
       "use": true,
       "dependencies": [
@@ -2008,7 +2008,7 @@
     },
     {
       "name": "Install next to Instagram",
-      "description": "Installs this build as a second Instagram beside your normal one, with its own data and sign-in. Pick its package name and app name in the patch's options. Works as soon as you patch it in, with no switch.",
+      "description": "Installs this build as a second Instagram beside your normal one, with its own data and sign-in. Pick its package name and app name in the patch's options, and whether its icon gets a HushGram badge. Works as soon as you patch it in, with no switch.",
       "category": "Updates",
       "use": false,
       "dependencies": [
@@ -2058,6 +2058,15 @@
           "required": true,
           "type": "kotlin.String",
           "default": "Instagram Clone",
+          "values": null
+        },
+        {
+          "key": "markIcon",
+          "title": "Mark the icon",
+          "description": "Puts a small HushGram badge on the second Instagram's home screen icon, so the two are easy to tell apart. Instagram's other icons you can pick in its settings get it too.",
+          "required": false,
+          "type": "kotlin.Boolean",
+          "default": false,
           "values": null
         }
       ]
@@ -2249,7 +2258,7 @@
     },
     {
       "name": "Long press to zoom",
-      "description": "Press and hold a photo in a feed to see it twice as big around your finger, and let go to close it. Pinch to zoom still works. While its switch is on, it takes the place of Instagram's own long press on a photo. Starts off. Turn it on in HushGram settings > Feed.",
+      "description": "Press and hold a photo in a feed to see it twice as big around your finger, and let go to close it. Pinch to zoom still works. Keep the zoom open leaves it up after you let go, to drag and pinch from 1x to 4x until a tap or Back closes it. While its switch is on, it takes the place of Instagram's own long press on a photo. Starts off. Turn it on in HushGram settings > Feed.",
       "category": "Feed",
       "use": true,
       "dependencies": [

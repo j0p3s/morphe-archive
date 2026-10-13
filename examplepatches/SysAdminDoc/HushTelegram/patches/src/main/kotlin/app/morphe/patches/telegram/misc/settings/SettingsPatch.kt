@@ -72,6 +72,17 @@ internal const val SETTINGS_ALIAS_NAME = "app.hushtelegram.extension.telegram.se
 internal const val APPLICATION_PREFERENCES = "android.intent.action.APPLICATION_PREFERENCES"
 
 /**
+ * Puts [code] in front of each return-void at the return's own label, so a branch that lands on
+ * a return runs it too. The last first, so each earlier index still points at its return. Returns
+ * how many there were.
+ */
+internal fun MutableMethod.beforeEveryReturn(code: String): Int {
+    val returns = implementation!!.instructions.withIndex().filter { it.value.opcode == Opcode.RETURN_VOID }.map { it.index }
+    returns.asReversed().forEach { addInstructionsAtControlFlowLabel(it, code) }
+    return returns.size
+}
+
+/**
  * The first class in [type]'s hierarchy, as far as the APK carries it, that declares this
  * method with a body.
  */
@@ -474,8 +485,9 @@ internal fun BytecodePatchContext.resolveNativeSettings(): NativeSettingsPlan? {
         clickBody.indices.none { it != idRead && clickAt in clickFlow.normal[it] || clickAt in clickFlow.exceptional[it] },
         "click identity or scratch register changed")
     val payload = clickBody.filterIsInstance<SwitchPayload>().nativeSingle("click switch")
-    // Telegram 13.0 added identity 25, the Wallet row.
-    nativeShape(payload.switchElements.map { it.key } == (1..25).toList(), "ordinary click identities changed")
+    // Telegram 13.0 added identity 25, the Wallet row, and the 13.0.2 beta added 26, its audio recorder settings.
+    nativeShape(payload.switchElements.map { it.key }.let { it == (1..25).toList() || it == (1..26).toList() },
+        "ordinary click identities changed")
     val addresses = IntArray(clickBody.size + 1)
     clickBody.indices.forEach { addresses[it + 1] = addresses[it] + clickBody[it].codeUnits }
     var present: String? = null
@@ -683,16 +695,9 @@ val settingsPatch = bytecodePatch(
         // extension registers activity lifecycle callbacks there, and that's only safe once Telegram
         // has set itself up.
         val applicationOnCreate = declaredInHierarchy(TELEGRAM_APPLICATION, "onCreate")
-        val returns = applicationOnCreate.implementation!!.instructions.withIndex()
-            .filter { it.value.opcode == Opcode.RETURN_VOID }
-            .map { it.index }
-        if (returns.isEmpty()) throw PatchException("$TELEGRAM_APPLICATION.onCreate never returns")
-        returns.asReversed().forEach { index ->
-            applicationOnCreate.addInstruction(
-                index,
-                "invoke-static/range { p0 .. p0 }, $ENTRY->onApplicationCreate(Landroid/content/Context;)V",
-            )
-        }
+        val hooked = applicationOnCreate.beforeEveryReturn(
+            "invoke-static/range { p0 .. p0 }, $ENTRY->onApplicationCreate(Landroid/content/Context;)V")
+        if (hooked == 0) throw PatchException("$TELEGRAM_APPLICATION.onCreate never returns")
 
         activityCreate.addInstruction(
             0,

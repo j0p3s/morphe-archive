@@ -77,6 +77,7 @@ public class MessagesLockTimerTest {
     @Before
     public void enable() {
         MessagesLock.resetForTests();
+        ChatAccounts.signInForTests(MessagesLockTest.ME);
         Map<String, Integer> ids = new HashMap<String, Integer>() {
             @Override public Integer get(Object key) {
                 lookups++;
@@ -109,7 +110,7 @@ public class MessagesLockTimerTest {
 
     /** The inbox and a chat on one screen, the chat showing [name] as its first text, or no text at all. */
     private Activity screen(String name) {
-        Activity activity = Robolectric.buildActivity(Activity.class).setup().get();
+        Activity activity = MessagesLockTest.focused().get();
         FrameLayout root = new FrameLayout(activity);
         FrameLayout frame = new FrameLayout(activity);
         frame.setId(FRAME);
@@ -233,7 +234,7 @@ public class MessagesLockTimerTest {
     @Test
     public void theFrameListenerGoesWhenTheScreenDoes() {
         MessagesLock.watch(RuntimeEnvironment.getApplication());
-        ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup();
+        ActivityController<Activity> controller = MessagesLockTest.focused();
         View decor = controller.get().getWindow().getDecorView();
         int resumed = frameListeners(decor);
 

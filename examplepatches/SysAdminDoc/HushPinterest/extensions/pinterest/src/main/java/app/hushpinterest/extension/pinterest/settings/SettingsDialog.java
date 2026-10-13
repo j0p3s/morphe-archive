@@ -19,7 +19,6 @@ import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.Fragment;
 import android.app.FragmentManager;
-import android.graphics.Color;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
@@ -67,6 +66,8 @@ public final class SettingsDialog extends DialogFragment {
     static final String MOUNT_BACK = "hushpinterest_mount_back";
     private static final String MOUNT_FAILED_STATE = "hushpinterest_mount_failed";
     private static final String REPLACE_CHILD_STATE = "hushpinterest_replace_failed_child";
+    /** The argument naming the page the screen opens on: a route of {@link SettingsNavigation}. */
+    static final String START_PAGE = "hushpinterest_start_page";
 
     /** Thrown once before mounting, so a test reaches recovery even when no child exists. */
     static volatile RuntimeException failNextMount;
@@ -96,6 +97,26 @@ public final class SettingsDialog extends DialogFragment {
         if (!isAdded() || getView() == null || getDialog() == null || !getDialog().isShowing()) return;
         mountPage(true);
     };
+
+    /**
+     * The screen, opening on [page] when nothing saved says otherwise: the page a restart from the
+     * restart row left. Null or empty opens the first page.
+     */
+    static SettingsDialog onPage(@Nullable String page) {
+        SettingsDialog dialog = new SettingsDialog();
+        if (page != null && !page.isEmpty()) {
+            Bundle arguments = new Bundle();
+            arguments.putString(START_PAGE, page);
+            dialog.setArguments(arguments);
+        }
+        return dialog;
+    }
+
+    /** The page this screen was asked to open on, or "" for the first page. */
+    String startPage() {
+        Bundle arguments = getArguments();
+        return arguments == null ? "" : arguments.getString(START_PAGE, "");
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -148,20 +169,21 @@ public final class SettingsDialog extends DialogFragment {
         LinearLayout bar = new LinearLayout(getContext());
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        int pad = dp(16);
+        int pad = dp(ScreenColors.SIDE_DP);
         // Start and end, not left and right: in a right-to-left language the bar is mirrored.
         bar.setPaddingRelative(dp(4), dp(12), pad, dp(12));
 
         android.widget.ImageButton back = new android.widget.ImageButton(getContext());
-        android.graphics.drawable.Drawable arrow = SettingsIcons.icon(getContext(), SettingsIcons.BACK, Color.WHITE);
+        android.graphics.drawable.Drawable arrow = SettingsIcons.icon(getContext(), SettingsIcons.BACK, ScreenColors.DEFAULT.title);
         arrow.setBounds(0, 0, dp(24), dp(24));
         arrow.setLayoutDirection(rightToLeft() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
         back.setImageDrawable(arrow);
         back.setPadding(dp(12), dp(12), dp(12), dp(12));
-        back.setBackgroundColor(Color.TRANSPARENT);
+        back.setBackground(ScreenColors.iconButtonBackground(back));
         back.setMinimumWidth(dp(48));
         back.setMinimumHeight(dp(48));
         back.setContentDescription(L10n.t(getContext(), "Back"));
+        back.setTooltipText(back.getContentDescription());
         // A screen reader calls it a button, as it would the back arrow of any other screen.
         back.setAccessibilityDelegate(new View.AccessibilityDelegate() {
             @Override
@@ -181,9 +203,9 @@ public final class SettingsDialog extends DialogFragment {
         TextView title = new TextView(getContext());
         pageTitle = title;
         title.setText("HushPinterest");
-        title.setTextColor(Color.WHITE);
+        title.setTextColor(ScreenColors.DEFAULT.title);
         title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
         title.setPaddingRelative(dp(8), 0, 0, 0);
         title.setAccessibilityHeading(true);
         bar.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
@@ -216,36 +238,41 @@ public final class SettingsDialog extends DialogFragment {
         ScreenColors palette = ScreenColors.DEFAULT;
         searchBox = new LinearLayout(getContext());
         searchBox.setGravity(Gravity.CENTER_VERTICAL);
-        android.graphics.drawable.GradientDrawable surface = new android.graphics.drawable.GradientDrawable();
-        surface.setColor(palette.card);
-        surface.setCornerRadius(dp(10));
-        surface.setStroke(dp(1), palette.outline);
-        searchBox.setBackground(surface);
+        ScreenColors.searchContainer(searchBox);
         searchBox.setPaddingRelative(dp(16), 0, 0, 0);
         ImageView icon = new ImageView(getContext());
         icon.setImageDrawable(SettingsIcons.icon(getContext(), SettingsIcons.SEARCH, palette.summary));
         icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         searchBox.addView(icon, new LinearLayout.LayoutParams(dp(24), dp(24)));
         search = new EditText(getContext());
+        // The hint is the field's label. A content description on top of it replaces what's typed
+        // in a screen reader's reading of the field.
         search.setHint(L10n.t("Search settings"));
-        search.setContentDescription(L10n.t("Search settings"));
         search.setSingleLine(true);
         search.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         search.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         search.setImeOptions(android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH);
+        search.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
         search.setBackground(null);
         search.setTextColor(palette.title);
         search.setHintTextColor(palette.summary);
+        ScreenColors.searchField(search);
         search.setPaddingRelative(dp(12), dp(12), 0, dp(12));
         search.setMinimumHeight(dp(52));
         searchBox.addView(search, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         android.widget.ImageButton clear = new android.widget.ImageButton(getContext());
         clear.setImageDrawable(SettingsIcons.icon(getContext(), SettingsIcons.CLOSE, palette.summary));
-        clear.setBackgroundColor(Color.TRANSPARENT);
+        clear.setBackground(ScreenColors.iconButtonBackground(clear));
         clear.setPadding(dp(12), dp(12), dp(12), dp(12));
         clear.setContentDescription(L10n.t("Clear search"));
+        clear.setTooltipText(clear.getContentDescription());
         clear.setVisibility(View.INVISIBLE);
-        clear.setOnClickListener(ignored -> search.setText(""));
+        // The button disappears once the field is empty, so focus goes back to the field rather
+        // than being dropped with it.
+        clear.setOnClickListener(ignored -> {
+            search.setText("");
+            search.requestFocus();
+        });
         searchBox.addView(clear, new LinearLayout.LayoutParams(dp(48), dp(48)));
         search.addTextChangedListener(new TextWatcher() {
             @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) { }
@@ -264,7 +291,7 @@ public final class SettingsDialog extends DialogFragment {
         });
         LinearLayout.LayoutParams layout = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
-        layout.setMargins(dp(16), 0, dp(16), dp(12));
+        layout.setMargins(dp(ScreenColors.SIDE_DP), 0, dp(ScreenColors.SIDE_DP), dp(8));
         root.addView(searchBox, layout);
         // Typed letters alone tell a screen reader nothing about the list below, so the count is
         // spoken from a polite live region, once the typing has settled.

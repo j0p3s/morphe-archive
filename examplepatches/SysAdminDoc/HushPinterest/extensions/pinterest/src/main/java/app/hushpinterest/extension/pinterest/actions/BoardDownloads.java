@@ -7,7 +7,11 @@
 package app.hushpinterest.extension.pinterest.actions;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.Context;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
@@ -22,6 +26,7 @@ import java.util.Map;
 import java.util.Set;
 
 import app.hushpinterest.extension.pinterest.settings.FamilyNames;
+import app.hushpinterest.extension.pinterest.settings.HushDialogs;
 import app.hushpinterest.extension.pinterest.settings.PatchFamily;
 import app.hushpinterest.extension.pinterest.settings.Settings;
 import app.hushpinterest.extension.shared.L10n;
@@ -34,7 +39,10 @@ import app.hushpinterest.extension.shared.diagnostics.HookStatus;
  *
  * <p>The pins come from the lists {@code FeedFilter} already sees. A list whose pins nearly all
  * name one board is a page of that board, so its pins are kept here under that board's id, in
- * memory only, for a few boards and a bounded number of pins each. Nothing asks Pinterest for more:
+ * memory only, for a few boards and a bounded number of pins each. A kept pin is only its id, the
+ * media resolved from it and its Save list entry (title and checked source link), never
+ * Pinterest's model, so a full set of boards doesn't hold every
+ * one of those models, and all they reach, in memory. Nothing asks Pinterest for more:
  * a board that wasn't scrolled to its end gives what loaded, and the result says so. Each pin goes
  * through {@link PinDownloads}, the path the grid selection uses, one batch at a time.
  */
@@ -50,10 +58,21 @@ public final class BoardDownloads {
     /** A list belongs to a board when at least this share of its pins, in tenths, names it. */
     private static final int SHARE_IN_TENTHS = 9;
 
-    private static final LinkedHashMap<String, LinkedHashMap<String, Object>> LOADED =
-            new LinkedHashMap<String, LinkedHashMap<String, Object>>(8, 0.75f, true) {
+    /** A kept pin: the media resolved from it, and its entry for Save list. */
+    private static final class Kept {
+        final PinMedia.Resolution media;
+        final PinManifest.Entry entry;
+
+        Kept(PinMedia.Resolution media, PinManifest.Entry entry) {
+            this.media = media;
+            this.entry = entry;
+        }
+    }
+
+    private static final LinkedHashMap<String, LinkedHashMap<String, Kept>> LOADED =
+            new LinkedHashMap<String, LinkedHashMap<String, Kept>>(8, 0.75f, true) {
                 @Override
-                protected boolean removeEldestEntry(Map.Entry<String, LinkedHashMap<String, Object>> eldest) {
+                protected boolean removeEldestEntry(Map.Entry<String, LinkedHashMap<String, Kept>> eldest) {
                     return size() > BOARDS;
                 }
             };
@@ -155,7 +174,7 @@ public final class BoardDownloads {
             if (board == null) return false;
             boolean kept = false;
             synchronized (LOADED) {
-                LinkedHashMap<String, Object> loaded = LOADED.get(board);
+                LinkedHashMap<String, Kept> loaded = LOADED.get(board);
                 if (loaded == null) {
                     loaded = new LinkedHashMap<>();
                     LOADED.put(board, loaded);
@@ -164,7 +183,11 @@ public final class BoardDownloads {
                     String id = PinMedia.id(item);
                     if (id == null || !board.equals(boardOf(item))) continue;
                     if (loaded.containsKey(id) || loaded.size() < PINS) {
-                        loaded.put(id, item);
+                        // PinDownloads takes the resolved media in place of the pin.
+                        PinMedia.Resolution media = PinMedia.resolve(item);
+                        PinManifest.Entry entry = PinManifest.entry(item);
+                        if (media == null || entry == null) continue;
+                        loaded.put(id, new Kept(media, entry));
                         kept = true;
                     }
                 }
@@ -176,12 +199,26 @@ public final class BoardDownloads {
         }
     }
 
-    /** The pins kept for [board], oldest first. */
+    /** The pins kept for [board], oldest first, as their resolved media. */
     static List<Object> loaded(String board) {
+        List<Object> pins = new ArrayList<>();
         synchronized (LOADED) {
-            LinkedHashMap<String, Object> loaded = board == null ? null : LOADED.get(board);
-            return loaded == null ? new ArrayList<>() : new ArrayList<>(loaded.values());
+            LinkedHashMap<String, Kept> loaded = board == null ? null : LOADED.get(board);
+            if (loaded != null) for (Kept pin : loaded.values()) pins.add(pin.media);
         }
+        return pins;
+    }
+
+    /** Save list's entries for the pins kept for [board] that [filter] shows, oldest first. */
+    static List<PinManifest.Entry> listed(String board, GridDownloads.Filter filter) {
+        List<PinManifest.Entry> entries = new ArrayList<>();
+        synchronized (LOADED) {
+            LinkedHashMap<String, Kept> loaded = board == null ? null : LOADED.get(board);
+            if (loaded != null) for (Kept pin : loaded.values()) {
+                if (filter.shows(PinMedia.kind(pin.media))) entries.add(pin.entry);
+            }
+        }
+        return entries;
     }
 
     static void forget() {
@@ -275,7 +312,7 @@ public final class BoardDownloads {
         start(board);
     }
 
-    /** Queues every pin kept for [board] that Download history doesn't already have. */
+    /** Offers every pin kept for [board] that Download history doesn't already have, by kind, then queues the choice. */
     static boolean start(String board) {
         if (!active()) return false;
         try {
@@ -287,7 +324,7 @@ public final class BoardDownloads {
             }
             List<Object> pins = loaded(board);
             if (pins.isEmpty()) {
-                Utils.showToastLong(L10n.t("No pins from this board have loaded yet. Scroll through the board, then try again."));
+                Utils.showToastLong(L10n.t("This board's pins haven't loaded yet. Scroll it and try again."));
                 return false;
             }
             Context app = activity.getApplicationContext();
@@ -295,7 +332,7 @@ public final class BoardDownloads {
             // Download history is read from disk, so it's read off the main thread.
             boolean scheduled = Utils.runOnBackgroundThread(() -> {
                 Set<String> history = DownloadLedger.downloadedPinIds(app);
-                Utils.runOnMainThread(() -> queue(host.get(), pins, history));
+                Utils.runOnMainThread(() -> offer(host.get(), board, pins, history));
             });
             if (!scheduled) failed(new IllegalStateException("Worker unavailable"));
             return scheduled;
@@ -305,22 +342,132 @@ public final class BoardDownloads {
         }
     }
 
-    private static void queue(Activity activity, List<Object> pins, Set<String> history) {
+    private static String note() {
+        return L10n.f("Only the pins Pinterest has loaded for this board so far are included, up to %d. "
+                + "To include more, scroll further down the board first.", PINS);
+    }
+
+    /** Moves the [pins] [filter] shows that Download history doesn't have into [fresh], and answers how many it has. */
+    private static int split(List<Object> pins, Set<String> history, GridDownloads.Filter filter, List<Object> fresh) {
+        int known = 0;
+        for (Object pin : pins) {
+            if (!filter.shows(PinMedia.kind(PinMedia.resolve(pin)))) continue;
+            if (history.contains(PinMedia.id(pin))) known++;
+            else fresh.add(pin);
+        }
+        return known;
+    }
+
+    /**
+     * Asks whether to queue every new pin, or only the images or only the videos, with how many
+     * of each can't be saved. All is chosen to begin with, which is what the board saved before
+     * there was a choice. With nothing new, Queue pins starts off and Save list still works.
+     */
+    private static void offer(Activity activity, String board, List<Object> pins, Set<String> history) {
         try {
             if (!active() || activity == null || activity.isFinishing() || activity.isDestroyed()) return;
             List<Object> fresh = new ArrayList<>();
-            int known = 0;
-            for (Object pin : pins) {
-                if (history.contains(PinMedia.id(pin))) known++;
-                else fresh.add(pin);
+            int known = split(pins, history, GridDownloads.Filter.ALL, fresh);
+            GridDownloads.Filter[] filters = GridDownloads.Filter.values();
+            int[] counts = new int[filters.length];
+            CharSequence[] names = new CharSequence[filters.length];
+            for (GridDownloads.Filter filter : filters) {
+                int unsupported = 0;
+                for (Object pin : fresh) {
+                    PinMedia.Resolution media = PinMedia.resolve(pin);
+                    if (!filter.shows(PinMedia.kind(media))) continue;
+                    counts[filter.ordinal()]++;
+                    if (media == null || media.source == null) unsupported++;
+                }
+                names[filter.ordinal()] = filter.label(counts[filter.ordinal()]) + "\n" + L10n.f("Unsupported: %d", unsupported);
             }
-            String note = L10n.f("Only the pins Pinterest has loaded for this board so far are included, up to %d. "
-                + "To include more, scroll further down the board first.", PINS);
-            if (fresh.isEmpty()) {
-                Utils.showToastLong(L10n.t("Every pin loaded from this board is already in Download history.") + "\n\n" + note);
+            AlertDialog.Builder builder = HushDialogs.builder(activity);
+            String heading = L10n.t("Download board");
+            LinearLayout header = new LinearLayout(builder.getContext());
+            header.setOrientation(LinearLayout.VERTICAL);
+            int side = Math.round(24 * activity.getResources().getDisplayMetrics().density);
+            header.setPaddingRelative(side, side * 3 / 4, side, 0);
+            TextView title = new TextView(builder.getContext());
+            title.setText(heading);
+            title.setAccessibilityHeading(true);
+            header.addView(title);
+            TextView details = new TextView(builder.getContext());
+            details.setId(android.R.id.message);
+            details.setPaddingRelative(0, side / 3, 0, 0);
+            String skipped = fresh.isEmpty() ? L10n.t("Every pin loaded from this board is already in Download history.")
+                    : known == 0 ? null : L10n.f("Skipped because they're already in Download history: %d", known);
+            details.setText((skipped == null ? "" : skipped + "\n\n") + note());
+            header.addView(details);
+            ScrollView guidance = new ScrollView(builder.getContext()) {
+                @Override protected void onMeasure(int width, int height) {
+                    // AlertDialog measures a custom title before it reserves room for its list.
+                    // Bound the whole header so large text still leaves choices and actions visible.
+                    int limit = getResources().getDisplayMetrics().heightPixels / 3;
+                    if (MeasureSpec.getMode(height) != MeasureSpec.UNSPECIFIED) {
+                        limit = Math.min(limit, MeasureSpec.getSize(height));
+                    }
+                    super.onMeasure(width, MeasureSpec.makeMeasureSpec(limit, MeasureSpec.AT_MOST));
+                }
+            };
+            guidance.setScrollbarFadingEnabled(false);
+            guidance.addView(header);
+            int[] chosen = {GridDownloads.Filter.ALL.ordinal()};
+            AlertDialog picker = builder
+                    // Keep the explanation above the native list so it can't take the list's space twice.
+                    .setCustomTitle(guidance)
+                    .setSingleChoiceItems(names, chosen[0], (dialog, which) -> {
+                        chosen[0] = which;
+                        ((AlertDialog) dialog).getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(counts[which] > 0);
+                        ((AlertDialog) dialog).getButton(AlertDialog.BUTTON_NEUTRAL)
+                                .setEnabled(!listed(board, filters[which]).isEmpty());
+                    })
+                    .setPositiveButton(L10n.t("Queue pins"), (dialog, which) -> confirm(activity, board, filters[chosen[0]]))
+                    // The list has every loaded pin of the kind, Download history's too: it's a list, not a download.
+                    .setNeutralButton(L10n.t("Save list"),
+                            (dialog, which) -> PinManifest.export(activity, listed(board, filters[chosen[0]]), true))
+                    .setNegativeButton(L10n.t("Cancel"), null).create();
+            HushDialogs.prepareChoices(picker);
+            picker.setTitle(heading);
+            HushDialogs.paintControls(header);
+            HushDialogs.paintTitle(title);
+            picker.show();
+            picker.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(counts[chosen[0]] > 0);
+            HushDialogs.paint(picker);
+        } catch (Throwable failure) {
+            failed(failure);
+        }
+    }
+
+    /** The board's kept pins and Download history are read again, since either can change while the choice is open. */
+    private static void confirm(Activity activity, String board, GridDownloads.Filter filter) {
+        Context app = activity.getApplicationContext();
+        WeakReference<Activity> host = new WeakReference<>(activity);
+        boolean scheduled = Utils.runOnBackgroundThread(() -> {
+            Set<String> history = DownloadLedger.downloadedPinIds(app);
+            List<Object> pins = loaded(board);
+            Utils.runOnMainThread(() -> queue(host.get(), pins, history, filter));
+        });
+        if (!scheduled) failed(new IllegalStateException("Worker unavailable"));
+    }
+
+    private static void queue(Activity activity, List<Object> pins, Set<String> history, GridDownloads.Filter filter) {
+        try {
+            if (!active()) {
+                Utils.showToastLong(L10n.t("Resume HushPinterest, turn on Download pins and Download board."));
                 return;
             }
-            if (GridDownloads.queue(activity, fresh, L10n.t("Download board"), note, known, false)) {
+            if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+            if (pins.isEmpty()) {
+                Utils.showToastLong(L10n.t("This board's pins haven't loaded yet. Scroll it and try again."));
+                return;
+            }
+            List<Object> fresh = new ArrayList<>();
+            int known = split(pins, history, filter, fresh);
+            if (fresh.isEmpty()) {
+                Utils.showToastLong(L10n.t("Download history already has each pin chosen from this board."));
+                return;
+            }
+            if (GridDownloads.queue(activity, fresh, L10n.t("Download board"), note(), known, false)) {
                 HookStatus.counted(FamilyNames.DOWNLOAD_BOARD, "board download started");
             } else {
                 Utils.showToastLong(L10n.t("A pin selection is still being saved."));
@@ -332,6 +479,6 @@ public final class BoardDownloads {
 
     private static void failed(Throwable failure) {
         HookStatus.threw(FamilyNames.DOWNLOAD_BOARD, "start board download", failure);
-        Utils.showToastLong(L10n.t("Couldn't start the board download. Open the board menu and try again."));
+        Utils.showToastLong(L10n.t("Couldn't start the board download. Try again from its menu."));
     }
 }

@@ -2709,7 +2709,7 @@ try {
     $savedNewBranchActor = $env:GITHUB_ACTOR
     $savedNewBranchToken = $env:GITHUB_TOKEN
     try {
-        $env:PATH = Split-Path -Parent (Get-Command git).Source
+        $env:PATH = Split-Path -Parent (Get-Command git -CommandType Application -TotalCount 1).Source
         $env:GITHUB_ACTOR = $null
         $env:GITHUB_TOKEN = $null
         Assert-Throws { & $prePushScript -Root $hookRoot -PushedRefs $newBranchRefs 6> $null } `
@@ -3916,17 +3916,33 @@ Write-Host '[scripts] shared helper contracts passed'
 function New-FakeBuildQueue {
     param([string]$Path, [string]$Log)
     $quotedLog = "'" + $Log.Replace("'", "''") + "'"
+    # Concurrent device builds write here from separate processes. Windows PowerShell 5.1's
+    # Add-Content throws "Stream was not readable." when another process has the file open, so each
+    # line is appended under a mutex named for this log.
+    $lockName = "'hushpinterest-fake-queue-" + [guid]::NewGuid().ToString('N') + "'"
     Set-Content -LiteralPath $Path -Encoding ASCII -Value @(
         'param([switch]$Status, [string]$Label, [string]$Priority, [string]$Run)',
+        'function Write-FakeQueueLine {',
+        '    param([string]$Line)',
+        "    `$lock = New-Object System.Threading.Mutex(`$false, $lockName)",
+        '    $held = $false',
+        '    try {',
+        '        try { $held = $lock.WaitOne() } catch [System.Threading.AbandonedMutexException] { $held = $true }',
+        "        [System.IO.File]::AppendAllText($quotedLog, `$Line + [Environment]::NewLine)",
+        '    } finally {',
+        '        if ($held) { $lock.ReleaseMutex() }',
+        '        $lock.Dispose()',
+        '    }',
+        '}',
         'function Enter-BuildQueue {',
         '    param([string]$Label = ''build'', [string]$Priority)',
         '    if (-not $Priority) { $Priority = if ($env:BUILD_QUEUE_PRIORITY -eq ''release'') { ''release'' } else { ''normal'' } }',
-        "    Add-Content -LiteralPath $quotedLog -Value ""enter `$Priority `$Label""",
+        '    Write-FakeQueueLine "enter $Priority $Label"',
         '    return [pscustomobject]@{ slot = 0; label = $Label }',
         '}',
         'function Exit-BuildQueue {',
         '    param($Ticket)',
-        "    Add-Content -LiteralPath $quotedLog -Value ""exit `$(`$Ticket.label)""",
+        '    Write-FakeQueueLine "exit $($Ticket.label)"',
         '}',
         'function Get-BuildQueueMask {',
         '    param([int]$Slot)',
@@ -4403,6 +4419,13 @@ try {
                 "              A: $androidName`"android.intent.action.APPLICATION_PREFERENCES`" (Raw: `"android.intent.action.APPLICATION_PREFERENCES`")",
                 '            E: category (line=63)',
                 "              A: $androidName`"android.intent.category.DEFAULT`" (Raw: `"android.intent.category.DEFAULT`")")
+        }
+        if ($Patched -and $releaseNames -ccontains 'Download pins') {
+            $provider = 'app.hushpinterest.extension.pinterest.actions.SharePreviewProvider'
+            $lines += @('        E: provider (line=70)', "          A: $androidName`"$provider`" (Raw: `"$provider`")",
+                '          A: http://schemas.android.com/apk/res/android:exported(0x01010010)=false',
+                "          A: http://schemas.android.com/apk/res/android:authorities(0x01010018)=`"$Package.hushpinterest.share`" (Raw: `"$Package.hushpinterest.share`")",
+                '          A: http://schemas.android.com/apk/res/android:grantUriPermissions(0x0101001b)=true')
         }
         return ($lines -join "`n") + "`n"
     }
@@ -5349,8 +5372,12 @@ try {
                     $ErrorActionPreference = 'Stop'
                     try {
                         $output = @(& $Script @Arguments 6> $null)
-                        [pscustomobject]@{ Success = $true; Paths = $output; Reason = '' }
-                    } catch { [pscustomobject]@{ Success = $false; Paths = @(); Reason = $_.Exception.Message } }
+                        [pscustomobject]@{ Success = $true; Paths = $output; Reason = ''; Trace = '' }
+                    } catch {
+                        # Where it threw, so a failure that only shows up now and then can be traced.
+                        [pscustomobject]@{ Success = $false; Paths = @(); Reason = $_.Exception.Message
+                            Trace = "$($_.Exception.GetType().FullName) $($_.InvocationInfo.PositionMessage) $($_.ScriptStackTrace)" }
+                    }
                 } -ArgumentList $patchScript, $jobArgs
             }
             $answers = @($jobs | Wait-Job | Receive-Job)

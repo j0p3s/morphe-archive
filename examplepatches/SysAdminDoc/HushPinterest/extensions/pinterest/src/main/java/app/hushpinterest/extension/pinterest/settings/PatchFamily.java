@@ -61,7 +61,8 @@ public enum PatchFamily {
     /** Signature spoofing metadata added to the manifest when patching: no switch either. */
     SPOOF_SIGNATURE(FamilyNames.SPOOF_SIGNATURE, "spoofSignature",
             "Pinterest's original signature is added to the app"),
-    DOWNLOAD_PINS(FamilyNames.DOWNLOAD_PINS, "downloadPins", null, Settings.DOWNLOAD_PINS, Settings.SAVE_IN_PINTEREST_FOLDER),
+    DOWNLOAD_PINS(FamilyNames.DOWNLOAD_PINS, "downloadPins", null, Settings.DOWNLOAD_PINS, Settings.SAVE_IN_PINTEREST_FOLDER,
+            Settings.DOWNLOAD_UNMETERED_ONLY, Settings.DOWNLOAD_NO_ROAMING),
     DOWNLOAD_BOARD(FamilyNames.DOWNLOAD_BOARD, "downloadBoard", null, Settings.DOWNLOAD_BOARD),
     LONG_PRESS_DOWNLOAD(FamilyNames.LONG_PRESS_DOWNLOAD, "longPressDownload", null, Settings.LONG_PRESS_DOWNLOAD),
     EXTERNAL_BROWSER(FamilyNames.EXTERNAL_BROWSER, "externalBrowser", null, Settings.EXTERNAL_BROWSER),
@@ -71,6 +72,9 @@ public enum PatchFamily {
     HIDE_NAVIGATION_BUTTONS(FamilyNames.HIDE_NAVIGATION_BUTTONS, "hideNavigationButtons", null,
             Settings.HIDE_NAV_CREATE, Settings.HIDE_NAV_NOTIFICATIONS, Settings.HIDE_NAV_SEARCH),
     HIDE_HEADER_BUTTONS(FamilyNames.HIDE_HEADER_BUTTONS, "hideHeaderButtons", null, Settings.HIDE_HEADER_BUTTONS),
+    AMOLED_BLACK(FamilyNames.AMOLED_BLACK, "amoledBlack", null, Settings.BLACK_BOTTOM_BAR),
+    HIDE_CLOSEUP_BUTTONS(FamilyNames.HIDE_CLOSEUP_BUTTONS, "hideCloseupButtons", null,
+            Settings.HIDE_CLOSEUP_BACK, Settings.HIDE_CLOSEUP_LENS),
     HIDE_PIN_MENU_ITEMS(FamilyNames.HIDE_PIN_MENU_ITEMS, "hidePinMenuItems", null,
             Settings.HIDE_PIN_MENU_COLLAGE, Settings.HIDE_PIN_MENU_VISUAL_SEARCH, Settings.HIDE_PIN_MENU_PIN_BOOST),
     HIDE_COMMENTS(FamilyNames.HIDE_COMMENTS, "hideComments", null, Settings.HIDE_COMMENTS),
@@ -132,8 +136,9 @@ public enum PatchFamily {
     static final Set<PatchFamily> ACTIONS_PAGE = Collections.unmodifiableSet(EnumSet.of(DOWNLOAD_PINS, DOWNLOAD_BOARD,
             LONG_PRESS_DOWNLOAD, SYSTEM_SHARE));
     static final Set<PatchFamily> INTERFACE_PAGE = Collections.unmodifiableSet(EnumSet.of(HIDE_SCREENSHOT_SHARE,
-            HIDE_SEARCH_HISTORY, HIDE_NAVIGATION_BUTTONS, HIDE_HEADER_BUTTONS, HIDE_PIN_MENU_ITEMS,
-            HIDE_COMMENTS, HIDE_TOPIC_SUGGESTIONS, QUIET_EMAIL_REMINDER, HIDE_SURVEY_PROMPTS, HIDE_SAVE_TOASTS, ORIGINAL_IMAGES));
+            HIDE_SEARCH_HISTORY, HIDE_NAVIGATION_BUTTONS, HIDE_HEADER_BUTTONS, AMOLED_BLACK, HIDE_CLOSEUP_BUTTONS,
+            HIDE_PIN_MENU_ITEMS, HIDE_COMMENTS, HIDE_TOPIC_SUGGESTIONS, QUIET_EMAIL_REMINDER, HIDE_SURVEY_PROMPTS,
+            HIDE_SAVE_TOASTS, ORIGINAL_IMAGES));
 
     /** Each independent hook, its owning family and the flag set only after it was inserted. */
     public enum Capability {
@@ -158,6 +163,8 @@ public enum PatchFamily {
         SEARCH_HISTORY(HIDE_SEARCH_HISTORY, "searchHistory", "Hide search history"),
         NAVIGATION_BUTTONS(HIDE_NAVIGATION_BUTTONS, "navigationButtons", "Hide navigation buttons"),
         HEADER_BUTTONS(HIDE_HEADER_BUTTONS, "headerButtons", "Hide header buttons"),
+        BOTTOM_BAR(AMOLED_BLACK, "blackBottomBar", "Black bottom bar"),
+        CLOSEUP_BUTTONS(HIDE_CLOSEUP_BUTTONS, "closeupButtons", "Hide closeup buttons"),
         PIN_MENU_ITEMS(HIDE_PIN_MENU_ITEMS, "pinMenuItems", "Filter pin menu"),
         COMMENTS(HIDE_COMMENTS, "comments", "Hide comments"),
         TOPIC_SUGGESTIONS(HIDE_TOPIC_SUGGESTIONS, "topicSuggestions", "Hide topic suggestions"),
@@ -333,7 +340,7 @@ public enum PatchFamily {
                 "%1$s. It was set when you patched, so Pause can't turn it off. To rule it out, patch again "
                         + "and leave out that patch.",
                 "%1$s. They were set when you patched, so Pause can't turn them off. To rule one out, patch "
-                        + "again and leave out the patch in brackets after it.",
+                        + "again and leave out the patch in parentheses after it.",
                 L10n.join(parts)));
     }
 

@@ -21,10 +21,10 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.InsetDrawable;
 import android.graphics.drawable.RippleDrawable;
+import android.graphics.drawable.StateListDrawable;
 import android.os.Build;
 import android.preference.Preference;
 import android.preference.PreferenceCategory;
-import android.preference.PreferenceGroup;
 import android.preference.TwoStatePreference;
 import android.util.TypedValue;
 import android.view.View;
@@ -62,9 +62,12 @@ final class ScreenColors {
     final int accent;
     /** A switch that's off. */
     final int switchOff;
-    /** Grouped preference rows and their edge. */
+    /** Preference cards and their edge. */
     final int card;
     final int outline;
+    final int iconTile;
+    final int statusCard;
+    final int selection;
     /** Text on the filled primary dialog action. */
     final int onAccent;
 
@@ -84,6 +87,9 @@ final class ScreenColors {
         switchOff = 0xFF858D9C;
         card = 0xFF11151D;
         outline = 0xFF252B36;
+        iconTile = 0xFF172B45;
+        statusCard = 0xFF0C192B;
+        selection = 0xFF142441;
         onAccent = Color.WHITE;
     }
 
@@ -119,7 +125,7 @@ final class ScreenColors {
         if (title != null) {
             title.setTextColor(dimmedWhenDisabled(this.title));
             title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-            title.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+            title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
             if (title.getParent() instanceof View) {
                 View text = (View) title.getParent();
                 text.setPadding(0, 0, 0, 0);
@@ -138,61 +144,128 @@ final class ScreenColors {
                     {-android.R.attr.state_enabled}, {android.R.attr.state_checked}, {}};
             Switch toggle = (Switch) widget;
             GradientDrawable thumb = new GradientDrawable();
-            thumb.setShape(GradientDrawable.OVAL);
-            thumb.setSize(dp(row, 20), dp(row, 20));
-            thumb.setColor(Color.WHITE);
+            thumb.setCornerRadius(dp(row, 6));
+            thumb.setSize(dp(row, 22), dp(row, 22));
+            thumb.setColor(onAccent);
             GradientDrawable track = new GradientDrawable();
-            track.setCornerRadius(dp(row, 12));
-            track.setSize(dp(row, 42), dp(row, 24));
-            track.setColor(Color.WHITE);
+            track.setCornerRadius(dp(row, 8));
+            track.setSize(dp(row, 46), dp(row, 26));
+            track.setColor(onAccent);
             toggle.setThumbDrawable(thumb);
             toggle.setTrackDrawable(track);
-            toggle.setSwitchMinWidth(dp(row, 44));
+            toggle.setSwitchMinWidth(dp(row, 46));
             toggle.setThumbTintList(new ColorStateList(states, new int[]{half(onAccent), half(offThumb()), onAccent, offThumb()}));
             toggle.setTrackTintList(new ColorStateList(states, new int[]{half(accent), half(switchOff), accent, switchOff}));
+            // Long titles use the whole column, with the switch beside the description.
+            ViewGroup frame = row.findViewById(android.R.id.widget_frame);
+            if (title != null && summary != null && title.getParent() instanceof android.widget.RelativeLayout
+                    && frame != null && frame.getParent() != title.getParent()) {
+                android.widget.RelativeLayout column = (android.widget.RelativeLayout) title.getParent();
+                ((ViewGroup) frame.getParent()).removeView(frame);
+                android.widget.RelativeLayout.LayoutParams place = new android.widget.RelativeLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                place.addRule(android.widget.RelativeLayout.ALIGN_PARENT_END);
+                place.addRule(android.widget.RelativeLayout.BELOW, android.R.id.title);
+                place.topMargin = dp(row, 4);
+                column.addView(frame, place);
+                android.widget.RelativeLayout.LayoutParams description =
+                        (android.widget.RelativeLayout.LayoutParams) summary.getLayoutParams();
+                description.setMarginEnd(dp(row, 58));
+                summary.setLayoutParams(description);
+            }
         }
         paintChevron(row, preference);
         ImageView icon = row.findViewById(android.R.id.icon);
         if (icon != null && preference.getIcon() != null) {
             ViewGroup.LayoutParams imageSize = icon.getLayoutParams();
-            imageSize.width = dp(row, 24);
-            imageSize.height = dp(row, 24);
+            imageSize.width = dp(row, 50);
+            imageSize.height = dp(row, 50);
             icon.setLayoutParams(imageSize);
+            icon.setPadding(dp(row, 11), dp(row, 11), dp(row, 11), dp(row, 11));
+            GradientDrawable tile = new GradientDrawable();
+            tile.setColor(iconTile);
+            tile.setCornerRadius(dp(row, 12));
+            icon.setBackground(tile);
+            icon.setImageTintList(dimmedWhenDisabled(heading));
             if (icon.getParent() instanceof ViewGroup) {
                 ViewGroup frame = (ViewGroup) icon.getParent();
                 frame.setPaddingRelative(0, 0, dp(row, 16), 0);
                 ViewGroup.LayoutParams size = frame.getLayoutParams();
-                size.width = dp(row, 40);
+                size.width = dp(row, 66);
+                if (size instanceof LinearLayout.LayoutParams && (preference instanceof TwoStatePreference
+                        || preference.getParent() instanceof PreferenceCategory)) {
+                    ((LinearLayout.LayoutParams) size).gravity = android.view.Gravity.TOP;
+                }
                 frame.setLayoutParams(size);
             }
         }
-        PreferenceGroup parent = preference.getParent();
-        boolean grouped = parent instanceof PreferenceCategory;
-        boolean first = !grouped || parent.getPreference(0) == preference;
-        boolean last = !grouped || parent.getPreference(parent.getPreferenceCount() - 1) == preference;
-        paintSurface(row, preference, first, last);
+        paintSurface(row, preference);
     }
 
-    /** Group boundaries follow the visible rows, including a filtered search result. */
-    void paintSurface(View row, Preference preference, boolean first, boolean last) {
-        float radius = dp(row, 10);
-        GradientDrawable surface = new GradientDrawable();
-        surface.setColor(card);
-        surface.setStroke(dp(row, 1), outline);
-        surface.setCornerRadii(new float[]{
-                first ? radius : 0, first ? radius : 0,
-                first ? radius : 0, first ? radius : 0,
-                last ? radius : 0, last ? radius : 0,
-                last ? radius : 0, last ? radius : 0});
-        Drawable inset = new InsetDrawable(surface, dp(row, 16), first ? dp(row, 6) : -dp(row, 1),
-                dp(row, 16), last ? dp(row, 6) : 0);
+    /** Each setting keeps its own card when a page or search filters the model. */
+    void paintSurface(View row, Preference preference) {
+        paintSurface(row, preference, 5);
+    }
+
+    void paintSurface(View row, Preference preference, int topGap) {
+        Drawable surface = controlSurface(row, card, 12, outline);
+        Drawable inset = new InsetDrawable(surface, dp(row, 16), dp(row, topGap), dp(row, 16), dp(row, 5));
         row.setBackground(preference.isSelectable()
                 ? new RippleDrawable(ColorStateList.valueOf(half(accent)), inset, null) : inset);
         // Explicit padding after the inset background prevents its padding from moving the text.
-        int vertical = preference.getIcon() == null ? 20 : 12;
-        row.setPaddingRelative(dp(row, 34), dp(row, vertical + (first ? 6 : 0)),
-                dp(row, 34), dp(row, vertical + (last ? 6 : 0)));
-        row.setMinimumHeight(dp(row, 72));
+        row.setPaddingRelative(dp(row, 28), dp(row, 16 + topGap), dp(row, 28), dp(row, 21));
+        row.setMinimumHeight(dp(row, 86));
+    }
+
+    /** The overview's status is the only accented card. */
+    void paintStatus(View row) {
+        Drawable surface = controlSurface(row, statusCard, 12, accent);
+        row.setBackground(new RippleDrawable(ColorStateList.valueOf(half(accent)),
+                new InsetDrawable(surface, dp(row, 16), dp(row, 10), dp(row, 16), dp(row, 10)), null));
+        row.setPaddingRelative(dp(row, 32), dp(row, 30), dp(row, 28), dp(row, 30));
+    }
+
+    /** An outlined action with the same 48dp touch height as the rest of the screen. */
+    void paintStatusAction(Button action) {
+        Drawable surface = controlSurface(action, statusCard, 8, heading);
+        RippleDrawable background = new RippleDrawable(ColorStateList.valueOf(half(accent)), surface, null);
+        background.setLayerInsetRelative(0, 0, dp(action, 6), 0, dp(action, 6));
+        action.setBackground(background);
+        action.setPaddingRelative(dp(action, 16), 0, dp(action, 16), 0);
+    }
+
+    /** Keep keyboard selection visible after replacing a framework background. */
+    Drawable controlSurface(View view, int fill, int radius, int border) {
+        return controlSurface(view, fill, radius, border, heading);
+    }
+
+    private Drawable controlSurface(View view, int fill, int radius, int border, int focus) {
+        StateListDrawable states = new StateListDrawable();
+        states.addState(new int[]{-android.R.attr.state_enabled}, surface(view, fill, radius, border, 1));
+        for (int state : new int[]{android.R.attr.state_focused, android.R.attr.state_selected}) {
+            states.addState(new int[]{state}, surface(view, fill, radius, focus, 2));
+        }
+        states.addState(new int[]{android.R.attr.state_hovered}, surface(view, fill, radius, focus, 1));
+        states.addState(new int[]{}, surface(view, fill, radius, border, 1));
+        return states;
+    }
+
+    private GradientDrawable surface(View view, int fill, int radius, int border, int width) {
+        GradientDrawable surface = new GradientDrawable();
+        surface.setColor(fill);
+        surface.setCornerRadius(dp(view, radius));
+        surface.setStroke(dp(view, width), border);
+        return surface;
+    }
+
+    void paintInlineAction(View action) {
+        action.setBackground(new RippleDrawable(ColorStateList.valueOf(half(accent)),
+                controlSurface(action, Color.TRANSPARENT, 8, Color.TRANSPARENT), null));
+    }
+
+    private static ColorStateList pressedRipple(int color) {
+        return new ColorStateList(new int[][]{{android.R.attr.state_pressed}, {}},
+                new int[]{half(color), Color.TRANSPARENT});
     }
 
     /** A section title. */
@@ -362,11 +435,9 @@ final class ScreenColors {
             size.width = ViewGroup.LayoutParams.MATCH_PARENT;
             title.setLayoutParams(size);
         }
-        GradientDrawable surface = new GradientDrawable();
-        surface.setColor(primary ? accent : Color.TRANSPARENT);
-        surface.setCornerRadius(dp(row, 8));
-        if (primary) surface.setStroke(dp(row, 1), accent);
-        row.setBackground(new RippleDrawable(ColorStateList.valueOf(half(primary ? onAccent : accent)),
+        Drawable surface = controlSurface(row, primary ? accent : Color.TRANSPARENT, 8,
+                primary ? accent : Color.TRANSPARENT, primary ? onAccent : heading);
+        row.setBackground(new RippleDrawable(pressedRipple(primary ? Color.BLACK : accent),
                 new InsetDrawable(surface, dp(row, 16), dp(row, 4), dp(row, 16), dp(row, 4)), null));
         row.setMinimumHeight(dp(row, 56));
         row.setPadding(dp(row, 32), dp(row, 8), dp(row, 32), dp(row, 8));
@@ -447,17 +518,16 @@ final class ScreenColors {
             Button button = dialog.getButton(which);
             if (button == null) continue;
             boolean primary = which == AlertDialog.BUTTON_POSITIVE;
-            GradientDrawable surface = new GradientDrawable();
-            surface.setColor(primary ? accent : this.dialog);
-            surface.setCornerRadius(dp(button, 8));
-            if (primary) surface.setStroke(dp(button, 1), accent);
-            RippleDrawable background = new RippleDrawable(ColorStateList.valueOf(half(primary ? onAccent : accent)),
-                    surface, null);
+            Drawable surface = controlSurface(button, primary ? accent : this.dialog, 8,
+                    primary ? accent : outline, primary ? onAccent : heading);
+            // Focus already has an outline. A white focus ripple lightens the filled action until
+            // its label and outline lose contrast, so the ripple only appears while pressed.
+            RippleDrawable background = new RippleDrawable(pressedRipple(primary ? Color.BLACK : accent), surface, null);
             // The framework button's own insets: the 48dp touch height keeps a 36dp fill, clear of
             // the dialog's edge like every Material button.
             background.setLayerInsetRelative(0, dp(button, 4), dp(button, 6), dp(button, 4), dp(button, 6));
             button.setBackground(background);
-            button.setTextColor(primary ? onAccent : secondaryActionText());
+            button.setTextColor(dimmedWhenDisabled(primary ? onAccent : secondaryActionText()));
             button.setAllCaps(false);
             button.setMinHeight(dp(button, 48));
             button.setPaddingRelative(dp(button, 16), dp(button, 6), dp(button, 16), dp(button, 6));
@@ -472,14 +542,15 @@ final class ScreenColors {
      */
     void paintField(EditText field) {
         field.setHintTextColor(summary);
-        GradientDrawable outline = new GradientDrawable();
-        outline.setColor(dialog);
-        outline.setCornerRadius(dp(field, 8));
-        outline.setStroke(dp(field, 2), accent);
         field.setBackgroundTintList(null);
-        field.setBackground(outline);
+        field.setBackground(controlSurface(field, dialog, 8, accent));
         field.setPaddingRelative(dp(field, 12), dp(field, 10), dp(field, 12), dp(field, 10));
         field.setTextColor(title);
+        paintTextEditing(field);
+    }
+
+    /** Search and dialog fields use the same selection, cursor and handle colors. */
+    void paintTextEditing(EditText field) {
         field.setHighlightColor(half(accent));
         // Android 9 has no way to set the cursor or the handles from code, so they keep the teal.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) paintCursorAndHandles(field);

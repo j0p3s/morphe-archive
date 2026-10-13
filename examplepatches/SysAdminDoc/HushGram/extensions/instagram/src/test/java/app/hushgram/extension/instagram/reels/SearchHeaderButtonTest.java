@@ -31,6 +31,7 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.shadows.ShadowLooper;
 import org.robolectric.shadows.ShadowToast;
 
+import app.hushgram.extension.instagram.download.FeedDownloadButton;
 import app.hushgram.extension.instagram.settings.GhostHeaderButton;
 import app.hushgram.extension.instagram.settings.Settings;
 import app.hushgram.extension.shared.SettingsContextRule;
@@ -38,6 +39,7 @@ import app.hushgram.extension.shared.diagnostics.HookStatus;
 import app.hushgram.extension.shared.settings.BaseSettings;
 import app.hushgram.extension.shared.settings.HushgramPause;
 import app.hushgram.extension.shared.settings.PauseForTests;
+import app.hushgram.extension.shared.settings.preference.AbstractPreferenceFragment;
 import instagram.features.feed.mainfeed.actionbar.MainFeedActionBar;
 
 /** The Search button on Home's header: where it goes, what its tap opens, and when it stays out. */
@@ -138,7 +140,9 @@ public class SearchHeaderButtonTest {
         SearchHeaderButton.Magnifier icon = (SearchHeaderButton.Magnifier) button.getDrawable();
         float density = activity.getResources().getDisplayMetrics().density;
         assertEquals("the ghost button's size", Math.round(24 * density), icon.getIntrinsicWidth());
-        assertEquals("the ghost button's color in light mode", 0xFF262626, icon.color());
+        // The header's own themed context, not the activity's: on SDK 36 the two themes differ.
+        assertEquals("Instagram's icon color for the theme, as the ghost and download buttons use",
+                FeedDownloadButton.iconColor(header.getContext()), icon.color());
 
         SearchHeaderButton.place(header);
         assertSame(button, searchIn(end));
@@ -223,14 +227,32 @@ public class SearchHeaderButtonTest {
         ReelsTab.tabs(BUILT);
         SearchHeaderButton.pagingForTests = on -> on == activity ? 1 : 0;
 
-        placed().performClick();
+        ImageView button = placed();
+        button.performClick();
         ShadowLooper.idleMainLooper();
 
         assertTrue("no switch was asked for", switched.isEmpty());
         assertTrue(report(), report().contains(SearchHeaderButton.SWIPING + " 1"));
-        assertEquals("Search isn't on your tab bar, so this button can't open it here. "
-                + "If Hide the Search tab is on, turn it off and restart Instagram.", String.valueOf(ShadowToast.getTextOfLatestToast()));
+        // Android 12 and newer show two lines of a toast, so the toast is what to do and nothing else.
+        assertEquals("To open Search here, turn off Hide the Search tab and restart.",
+                String.valueOf(ShadowToast.getTextOfLatestToast()));
         assertSame(Tab.FEED, ReelsTab.tab(Tab.SEARCH));
+
+        // Search off this bar with the switch already off: there's nothing to turn off, so it only says why.
+        Settings.HIDE_SEARCH_TAB.save(false);
+        button.performClick();
+        ShadowLooper.idleMainLooper();
+        assertTrue("no switch was asked for", switched.isEmpty());
+        assertEquals("Search isn't on your tab bar, so this button can't open it here.",
+                String.valueOf(ShadowToast.getTextOfLatestToast()));
+
+        // Turned off since Instagram started: Search is back after a restart, so that's what it says.
+        AbstractPreferenceFragment.restartPending.add(Settings.HIDE_SEARCH_TAB.key);
+        button.performClick();
+        ShadowLooper.idleMainLooper();
+        assertTrue("no switch was asked for", switched.isEmpty());
+        assertEquals("Restart Instagram to bring Search back to your tab bar.",
+                String.valueOf(ShadowToast.getTextOfLatestToast()));
     }
 
     @Test public void swipingTabsWithSearchOnTheBarStillSelectIt() {

@@ -1,0 +1,35 @@
+/*
+ * Copyright (C) 2026 hxreborn
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+package app.morphe.patches.storywise.misc.update
+
+import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.patch.resourcePatch
+import app.morphe.patches.shared.compat.AppCompatibilities
+import app.morphe.patches.shared.misc.requireArm64
+import app.morphe.patches.shared.replaceMasked
+
+private const val DART_AOT_LIBRARY = "lib/arm64-v8a/libapp.so"
+
+private val BUILD_COMPARISON = "4a010054a0835ef880002037".hexToByteArray()
+private val BUILD_COMPARISON_MASK = "1f0000ffffffffff1f00f8ff".hexToByteArray()
+private val BRANCH_TO_UP_TO_DATE = "0a000014".hexToByteArray()
+
+@Suppress("unused")
+val removeForcedUpdatePatch = resourcePatch(
+    name = "Remove forced update",
+    description = "Removes the update screen that blocks the app when a newer build is published.",
+) {
+    compatibleWith(AppCompatibilities.STORYWISE)
+    availability(requireArm64)
+
+    execute {
+        val library = get(DART_AOT_LIBRARY)
+        if (!library.exists()) throw PatchException("Could not find $DART_AOT_LIBRARY")
+
+        if (!library.replaceMasked(BUILD_COMPARISON, BUILD_COMPARISON_MASK, mapOf(0 to BRANCH_TO_UP_TO_DATE))) {
+            throw PatchException("Could not find the build comparison in $DART_AOT_LIBRARY")
+        }
+    }
+}

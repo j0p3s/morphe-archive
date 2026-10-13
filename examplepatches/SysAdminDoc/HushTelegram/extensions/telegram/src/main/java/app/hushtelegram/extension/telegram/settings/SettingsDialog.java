@@ -14,7 +14,7 @@ package app.hushtelegram.extension.telegram.settings;
 
 import android.app.Dialog;
 import android.app.DialogFragment;
-import android.graphics.Color;
+import android.content.Context;
 import android.graphics.Typeface;
 import android.os.Build;
 import android.os.Bundle;
@@ -48,6 +48,23 @@ import app.hushtelegram.extension.shared.Logger;
  */
 @SuppressWarnings("deprecation") // Framework fragments are what the shared preference code builds on.
 public final class SettingsDialog extends DialogFragment {
+    private Context settingsContext;
+
+    @Override
+    public Context getContext() {
+        Context base = super.getContext();
+        if (base == null) return null;
+        if (!(settingsContext instanceof android.view.ContextThemeWrapper)
+                || ((android.view.ContextThemeWrapper) settingsContext).getBaseContext() != base)
+            settingsContext = HushTelegramPreferenceFragment.themed(base);
+        return settingsContext;
+    }
+
+    @Override
+    public void onDetach() {
+        settingsContext = null;
+        super.onDetach();
+    }
     /**
      * The preference list's container. Fixed, because the child manager saves the page with this
      * id and puts it back into a view with the same id after rotation or process recreation. A
@@ -56,8 +73,10 @@ public final class SettingsDialog extends DialogFragment {
      * carries an id.
      */
     static final int CONTAINER_ID = 0x48464301;
+    static final String PAGE_TITLE = "hushtelegram_page_title";
 
     private TextView pageTitle;
+    private TextView introduction;
     private LinearLayout searchBox;
     private EditText search;
     private TextView results;
@@ -80,7 +99,7 @@ public final class SettingsDialog extends DialogFragment {
         // What the framework's own onCreateDialog builds, with Back first taking the list back to
         // where it was before a section jump. Dialog's back callback on Android 13 and newer ends
         // in onBackPressed as well, so this covers the gesture and the key alike.
-        Dialog dialog = new Dialog(getActivity(), getTheme()) {
+        Dialog dialog = new Dialog(getContext(), getTheme()) {
             @Override
             public void onBackPressed() {
                 HushTelegramPreferenceFragment page = page();
@@ -112,14 +131,14 @@ public final class SettingsDialog extends DialogFragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup parent, Bundle savedInstanceState) {
         LinearLayout root = new LinearLayout(getContext());
         root.setOrientation(LinearLayout.VERTICAL);
+        root.setLayoutDirection(getResources().getConfiguration().getLayoutDirection());
         root.setBackgroundColor(ScreenColors.DEFAULT.background);
 
         LinearLayout bar = new LinearLayout(getContext());
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        int pad = dp(16);
         // Start and end, not left and right: in a right-to-left language the bar is mirrored.
-        bar.setPaddingRelative(dp(4), dp(12), pad, dp(12));
+        bar.setPaddingRelative(dp(8), 0, dp(20), 0);
 
         android.widget.ImageButton back = new android.widget.ImageButton(getContext());
         android.graphics.drawable.Drawable arrow = SettingsIcons.icon(getContext(), SettingsIcons.BACK, ScreenColors.DEFAULT.title);
@@ -127,9 +146,7 @@ public final class SettingsDialog extends DialogFragment {
         arrow.setLayoutDirection(rightToLeft() ? View.LAYOUT_DIRECTION_RTL : View.LAYOUT_DIRECTION_LTR);
         back.setImageDrawable(arrow);
         back.setPadding(dp(12), dp(12), dp(12), dp(12));
-        // A round ripple, which also shows where a keyboard's focus is.
-        back.setBackground(new android.graphics.drawable.RippleDrawable(
-                android.content.res.ColorStateList.valueOf(ScreenColors.half(ScreenColors.DEFAULT.accent)), null, null));
+        back.setBackground(ScreenColors.DEFAULT.control(back, ScreenColors.DEFAULT.background, ScreenColors.BUTTON_RADIUS, false));
         back.setMinimumWidth(dp(48));
         back.setMinimumHeight(dp(48));
         back.setContentDescription(L10n.t(getContext(), "Back"));
@@ -149,17 +166,34 @@ public final class SettingsDialog extends DialogFragment {
         });
         bar.addView(back, new LinearLayout.LayoutParams(dp(48), dp(48)));
 
-        TextView title = new TextView(getContext());
-        pageTitle = title;
-        title.setText("HushTelegram");
-        title.setTextColor(ScreenColors.DEFAULT.title);
-        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
-        title.setPaddingRelative(dp(8), 0, 0, 0);
-        title.setAccessibilityHeading(true);
-        bar.addView(title, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
+        TextView brand = new TextView(getContext());
+        brand.setText("HushTelegram");
+        brand.setAllCaps(true);
+        brand.setTextColor(ScreenColors.DEFAULT.heading);
+        brand.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        brand.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+        brand.setLetterSpacing(0.08f);
+        brand.setPaddingRelative(dp(4), 0, 0, 0);
+        brand.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        bar.addView(brand, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         root.addView(bar);
 
+        pageTitle = new TextView(getContext());
+        pageTitle.setTag(PAGE_TITLE);
+        pageTitle.setText("HushTelegram");
+        pageTitle.setTextColor(ScreenColors.DEFAULT.title);
+        pageTitle.setTypeface(Typeface.create("sans-serif", Typeface.BOLD));
+        pageTitle.setTextSize(TypedValue.COMPLEX_UNIT_SP, 28);
+        pageTitle.setAccessibilityHeading(true);
+        pageTitle.setPaddingRelative(dp(22), dp(4), dp(20), dp(16));
+        root.addView(pageTitle);
+        introduction = new TextView(getContext());
+        introduction.setText(L10n.t("A quieter space, your way."));
+        introduction.setTextColor(ScreenColors.DEFAULT.summary);
+        introduction.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        introduction.setPaddingRelative(dp(22), 0, dp(20), dp(14));
+        introduction.setVisibility(View.GONE);
+        root.addView(introduction);
         buildSearch(root);
 
         FrameLayout container = new FrameLayout(getContext());
@@ -189,8 +223,8 @@ public final class SettingsDialog extends DialogFragment {
         searchBox.setGravity(Gravity.CENTER_VERTICAL);
         android.graphics.drawable.GradientDrawable surface = new android.graphics.drawable.GradientDrawable();
         surface.setColor(palette.card);
-        surface.setCornerRadius(dp(10));
-        surface.setStroke(dp(1), palette.outline);
+        surface.setCornerRadius(dp(ScreenColors.CARD_RADIUS));
+        surface.setStroke(dp(1), palette.fieldBorder);
         searchBox.setBackground(surface);
         searchBox.setPaddingRelative(dp(16), 0, 0, 0);
         ImageView icon = new ImageView(getContext());
@@ -207,12 +241,15 @@ public final class SettingsDialog extends DialogFragment {
         search.setBackground(null);
         search.setTextColor(palette.title);
         search.setHintTextColor(palette.summary);
+        palette.paintSelection(search);
+        search.setOnFocusChangeListener((view, focused) ->
+                surface.setStroke(dp(focused ? 2 : 1), focused ? palette.accent : palette.fieldBorder));
         search.setPaddingRelative(dp(12), dp(12), 0, dp(12));
-        search.setMinimumHeight(dp(52));
+        search.setMinimumHeight(dp(48));
         searchBox.addView(search, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1));
         android.widget.ImageButton clear = new android.widget.ImageButton(getContext());
         clear.setImageDrawable(SettingsIcons.icon(getContext(), SettingsIcons.CLOSE, palette.summary));
-        clear.setBackgroundColor(Color.TRANSPARENT);
+        clear.setBackground(palette.control(clear, palette.card, ScreenColors.BUTTON_RADIUS, false));
         clear.setPadding(dp(12), dp(12), dp(12), dp(12));
         clear.setContentDescription(L10n.t("Clear search"));
         clear.setVisibility(View.INVISIBLE);
@@ -234,7 +271,7 @@ public final class SettingsDialog extends DialogFragment {
         });
         LinearLayout.LayoutParams layout = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT);
-        layout.setMargins(dp(16), 0, dp(16), dp(12));
+        layout.setMargins(dp(20), 0, dp(20), dp(8));
         root.addView(searchBox, layout);
         // Typed letters alone tell a screen reader nothing about the list below, so the count is
         // spoken from a polite live region, once the typing has settled.
@@ -273,7 +310,7 @@ public final class SettingsDialog extends DialogFragment {
     }
 
     void showPage(CharSequence title, boolean home, String query) {
-        pageTitle.setText(title);
+        showHeading(title, home, query);
         searchBox.setVisibility(home ? View.VISIBLE : View.GONE);
         settingSearch = true;
         if (!search.getText().toString().equals(query)) search.setText(query);
@@ -284,6 +321,16 @@ public final class SettingsDialog extends DialogFragment {
         }
     }
 
+    void showSearchHeading(String query) {
+        showHeading(null, true, query);
+    }
+
+    private void showHeading(CharSequence title, boolean home, String query) {
+        pageTitle.setText(home ? L10n.t(query.isEmpty() ? "Your Telegram." : "Search settings") : title);
+        introduction.setVisibility(home && query.isEmpty() ? View.VISIBLE : View.GONE);
+        pageTitle.setPaddingRelative(dp(22), dp(4), dp(20), dp(home && query.isEmpty() ? 6 : 16));
+    }
+
     /** How many settings the search shows, or -1 when there is no search. */
     void showResults(int count) {
         results.removeCallbacks(showFound);
@@ -292,6 +339,10 @@ public final class SettingsDialog extends DialogFragment {
             results.setText("");
             return;
         }
+        if (results.getVisibility() == View.GONE) {
+            results.setMinimumHeight(results.getLineHeight());
+            results.setVisibility(View.INVISIBLE);
+        }
         found = count;
         results.postDelayed(showFound, 600);
     }
@@ -299,6 +350,12 @@ public final class SettingsDialog extends DialogFragment {
     private void hideKeyboard() {
         android.view.inputmethod.InputMethodManager keyboard = getContext().getSystemService(android.view.inputmethod.InputMethodManager.class);
         if (keyboard != null) keyboard.hideSoftInputFromWindow(search.getWindowToken(), 0);
+    }
+
+    @Override
+    public void onDestroyView() {
+        if (results != null) results.removeCallbacks(showFound);
+        super.onDestroyView();
     }
 
     @Override

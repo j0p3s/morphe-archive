@@ -24,11 +24,13 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.GraphicsMode;
 import org.robolectric.shadows.ShadowActivity;
 import org.robolectric.shadows.ShadowAlertDialog;
 import org.robolectric.shadows.ShadowLooper;
 import org.robolectric.shadows.ShadowToast;
 
+import app.hushpinterest.extension.pinterest.NativeDialogCapture;
 import app.hushpinterest.extension.pinterest.actions.DownloadFolder;
 import app.hushpinterest.extension.shared.SettingsContextRule;
 
@@ -94,11 +96,11 @@ public class DownloadFolderPreferenceTest {
             assertFalse("the folder just picked is the one that's used", Settings.SAVE_IN_PINTEREST_FOLDER.savedValue());
             assertEquals("Pictures/Art", DownloadFolder.current());
             assertEquals("Downloads will be saved in Pictures/Art.", ShadowToast.getTextOfLatestToast());
-            assertEquals("Saving downloads in Pictures/Art. Tap to pick another folder or go back to Download.", row.getSummary());
+            assertEquals("Saving downloads in Pictures/Art. Tap to pick another folder or go back to the Download folder.", row.getSummary());
             // Turning Pinterest's folder back on wins, and the row says so.
             Settings.SAVE_IN_PINTEREST_FOLDER.save(true);
             assertEquals(DownloadFolder.PINTEREST, DownloadFolder.current());
-            assertEquals("Pictures/Art is picked, but Save in Pinterest's folder is on, so downloads go there.", row.getSummary());
+            assertEquals("Pictures/Art is picked, but Save in Pinterest's folder is on, so downloads go to Pictures/100PINT/Pins.", row.getSummary());
         });
     }
 
@@ -108,7 +110,7 @@ public class DownloadFolderPreferenceTest {
             ShadowActivity.IntentForResult started = pickAnother(activity, row);
             answer(activity, started, Activity.RESULT_OK, tree("primary:Music/Pins"));
             assertEquals("DCIM/Pins", DownloadFolder.PICKED.get());
-            assertEquals("Pick a folder inside Pictures, DCIM, Download or Documents on the phone's own storage.",
+            assertEquals("Pick a folder in Pictures, DCIM, Download or Documents.",
                     ShadowToast.getTextOfLatestToast());
             ShadowToast.reset();
             answer(activity, pickAnother(activity, row), Activity.RESULT_CANCELED, null);
@@ -123,20 +125,44 @@ public class DownloadFolderPreferenceTest {
             answer(activity, pickAnother(activity, row), Activity.RESULT_OK, tree("primary:Download"));
             assertEquals("", DownloadFolder.PICKED.get());
             assertNull(DownloadFolder.current());
-            assertEquals("Downloads will be saved in Download.", ShadowToast.getTextOfLatestToast());
+            assertEquals("Downloads will be saved in the Download folder.", ShadowToast.getTextOfLatestToast());
 
             DownloadFolder.PICKED.save("Pictures/Art");
             row.getOnPreferenceClickListener().onPreferenceClick(row);
             AlertDialog menu = ShadowAlertDialog.getLatestAlertDialog();
             ListView items = menu.getListView();
             assertEquals("Pick another folder", items.getAdapter().getItem(0).toString());
-            assertEquals("Save in Download again", items.getAdapter().getItem(1).toString());
+            assertEquals("Use Download again", items.getAdapter().getItem(1).toString());
             shadowOf(menu).clickOnItem(1);
             ShadowLooper.idleMainLooper();
             assertEquals("", DownloadFolder.PICKED.get());
-            assertEquals("Downloads will be saved in Download.", ShadowToast.getTextOfLatestToast());
+            assertEquals("Downloads will be saved in the Download folder.", ShadowToast.getTextOfLatestToast());
             assertNull("going back opened no picker", shadowOf(activity).getNextStartedActivityForResult());
             assertEquals("Saves downloads in a folder you pick inside Pictures, DCIM, Download or Documents.", row.getSummary());
+        });
+    }
+
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "en-rUS-w390dp-h844dp-night-xhdpi")
+    public void nativeFolderChoicesStayReadableAndBackPreservesThePickedFolder() throws Exception {
+        DownloadFolder.PICKED.save("Pictures/Art references");
+        onRow((activity, row) -> {
+            row.getOnPreferenceClickListener().onPreferenceClick(row);
+            ShadowLooper.idleMainLooper();
+            AlertDialog menu = ShadowAlertDialog.getLatestAlertDialog();
+            assertNotNull(menu);
+            assertEquals(2, menu.getListView().getAdapter().getCount());
+            assertEquals("Pick another folder", menu.getListView().getAdapter().getItem(0).toString());
+            assertEquals("Use Download again", menu.getListView().getAdapter().getItem(1).toString());
+            assertEquals("Cancel", menu.getButton(AlertDialog.BUTTON_NEGATIVE).getText().toString());
+            assertTrue(menu.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled());
+            SettingsDialog settings = (SettingsDialog) activity.getFragmentManager().findFragmentByTag("hushpinterest_settings");
+            NativeDialogCapture.capture("download-folder-choices", settings.getView(), menu);
+            menu.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertFalse(menu.isShowing());
+            assertEquals("Pictures/Art references", DownloadFolder.PICKED.get());
+            assertNull("Back opened an external picker", shadowOf(activity).getNextStartedActivityForResult());
         });
     }
 

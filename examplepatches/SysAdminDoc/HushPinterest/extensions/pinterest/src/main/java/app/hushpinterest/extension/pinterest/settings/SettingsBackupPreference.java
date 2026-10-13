@@ -28,13 +28,22 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.AssetFileDescriptor;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.CancellationSignal;
 import android.os.Build;
 import android.os.OperationCanceledException;
 import android.preference.Preference;
+import android.text.SpannableString;
+import android.text.Spanned;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.RelativeSizeSpan;
+import android.text.style.TypefaceSpan;
+import android.util.TypedValue;
 import android.view.View;
+import android.view.ViewGroup;
+import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 
@@ -219,7 +228,7 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             page.startActivityForResult(intent, action);
         } catch (ActivityNotFoundException missing) {
             Logger.printInfo(() -> "No file picker for the settings file");
-            Utils.showToastLong(L10n.t("This phone has no file picker, so there's no way to choose a file here."));
+            Utils.showToastLong(L10n.t("This phone has no file picker, so a file can't be chosen."));
         } catch (RuntimeException error) {
             Logger.printInfo(() -> "Could not open the file picker: " + error.getClass().getSimpleName());
             Utils.showToastLong(L10n.t("Couldn't open the file picker. Try again."));
@@ -257,8 +266,7 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             }
         });
         if (!accepted) notStarted(run);
-        else watch(run, L10n.t("The app holding the settings file is taking too long, so HushPinterest stopped waiting. "
-                + "That app may still finish saving it, so check the file before you rely on it."));
+        else watch(run, L10n.t("The file's app is too slow. Check the file before you use it."));
     }
 
     /**
@@ -282,15 +290,13 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             back = read(resolver, uri, run);
         } catch (SettingsBackup.Rejected refused) {
             if (refused.reason == SettingsBackup.Reason.UNREADABLE) {
-                return L10n.t("Settings exported. The app holding the file wouldn't let HushPinterest read it back, "
-                        + "so it wasn't checked.");
+                return L10n.t("Settings exported, but the app holding it blocked the check.");
             }
             back = null;
         }
         if (new String(bytes, StandardCharsets.UTF_8).equals(back)) return L10n.t("Settings exported.");
         Logger.printInfo(() -> "Settings export read back differently");
-        return L10n.t("The settings file was saved, but it doesn't read back as what was written. "
-                + "Save it again as a new file.");
+        return L10n.t("Settings file saved but reads back wrong. Save it as a new file.");
     }
 
     private static void readForPreview(HushPinterestPreferenceFragment page, Uri uri) {
@@ -311,8 +317,7 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             }
         });
         if (!accepted) notStarted(run);
-        else watch(run, L10n.t("The app holding that file is taking too long, so HushPinterest stopped waiting. "
-                + "Nothing was changed."));
+        else watch(run, L10n.t("The file's app is too slow. Nothing was changed."));
     }
 
     /** The file's text, opened through its app with [run]'s cancel signal and held where the screen can close it. */
@@ -332,19 +337,19 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
     static String refusal(SettingsBackup.Reason reason) {
         switch (reason) {
             case SIZE:
-                return L10n.t("That file is too large to be a settings file. Nothing was changed.");
+                return L10n.t("That file is too large for a settings file. Nothing was changed.");
             case ENCODING:
-                return L10n.t("That file isn't readable text, so it may have been damaged on the way. Nothing was changed.");
+                return L10n.t("That file isn't readable text. Nothing was changed.");
             case DAMAGED:
-                return L10n.t("That settings file is damaged or only partly downloaded. Nothing was changed.");
+                return L10n.t("That file is damaged or partly downloaded. Nothing was changed.");
             case DUPLICATE:
-                return L10n.t("That file lists a setting twice, so there's no telling which value to use. Nothing was changed.");
+                return L10n.t("That file lists a setting twice. Nothing was changed.");
             case FORMAT:
                 return L10n.t("That isn't a HushPinterest settings file. Nothing was changed.");
             case SCHEMA:
-                return L10n.t("That settings file was written by a newer HushPinterest than this one. Nothing was changed.");
+                return L10n.t("That file is from a newer HushPinterest. Nothing was changed.");
             case VALUE:
-                return L10n.t("That settings file holds a value HushPinterest can't read. Nothing was changed.");
+                return L10n.t("A value in that file can't be read. Nothing was changed.");
             default:
                 return L10n.t("Couldn't open that file. Nothing was changed.");
         }
@@ -421,6 +426,8 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             case "hushpinterest_hide_ad_id": return L10n.t("Hide advertising ID");
             case "hushpinterest_download_pins": return L10n.t("Download pins");
             case "hushpinterest_save_in_pinterest_folder": return L10n.t("Save in Pinterest's folder");
+            case "hushpinterest_download_unmetered_only": return L10n.t("Download on unmetered networks only");
+            case "hushpinterest_download_no_roaming": return L10n.t("No downloads while roaming");
             case "hushpinterest_download_board": return L10n.t("Download board");
             case "hushpinterest_long_press_download": return L10n.t("Long-press download");
             case "hushpinterest_external_browser": return L10n.t("Open links in your browser");
@@ -431,6 +438,9 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             case "hushpinterest_hide_nav_notifications": return L10n.t("Hide Notifications button");
             case "hushpinterest_hide_nav_search": return L10n.t("Hide Search button");
             case "hushpinterest_hide_header_buttons": return L10n.t("Hide header buttons");
+            case "hushpinterest_black_bottom_bar": return L10n.t("Black bottom bar");
+            case "hushpinterest_hide_closeup_back": return L10n.t("Hide back arrow on pins");
+            case "hushpinterest_hide_closeup_lens": return L10n.t("Hide lens button on pins");
             case "hushpinterest_hide_pin_menu_collage": return L10n.t("Hide collage menu items");
             case "hushpinterest_hide_pin_menu_visual_search": return L10n.t("Hide Search image menu item");
             case "hushpinterest_hide_pin_menu_pin_boost": return L10n.t("Hide Promote pin menu item");
@@ -470,7 +480,7 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
                 .setMessage(previewMessage(snapshot))
                 .setOnCancelListener(dialog -> answered(page));
         if (switches == 0) {
-            builder.setPositiveButton(L10n.t("OK"), (dialog, which) -> answered(page));
+            builder.setPositiveButton(L10n.t("Close"), (dialog, which) -> answered(page));
         } else {
             builder.setPositiveButton(L10n.t("Import"), (dialog, which) -> {
                 Bundle chosen = page.pendingImport;
@@ -479,8 +489,57 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             });
             builder.setNegativeButton(L10n.t("Cancel"), (dialog, which) -> answered(page));
         }
-        page.importPreview = builder.show();
+        page.importPreview = builder.create();
+        page.importPreview.create();
+        framePreview(page.importPreview);
         ScreenColors.dialog(page.importPreview);
+        page.importPreview.show();
+    }
+
+    /** Keeps the native message and its scroll behavior, with the changes on one framed card. */
+    private static void framePreview(AlertDialog dialog) {
+        TextView message = dialog.findViewById(android.R.id.message);
+        if (message == null) return;
+        Context context = dialog.getContext();
+        GradientDrawable surface = new GradientDrawable();
+        surface.setColor(ScreenColors.DEFAULT.card);
+        surface.setStroke(dp(context, 1), ScreenColors.DEFAULT.outline);
+        surface.setCornerRadius(dp(context, ScreenColors.RADIUS_DP));
+        message.setBackground(surface);
+        int padding = dp(context, ScreenColors.CONTENT_DP);
+        message.setPaddingRelative(padding, padding, padding, padding);
+        message.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        message.setSingleLine(false);
+        message.setMaxLines(Integer.MAX_VALUE);
+        message.setEllipsize(null);
+        message.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+        message.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+        message.setLineSpacing(dp(context, 2), 1);
+        SpannableString text = new SpannableString(message.getText());
+        int headingEnd = text.toString().indexOf("\n\n");
+        if (headingEnd < 0) headingEnd = text.length();
+        text.setSpan(new ForegroundColorSpan(ScreenColors.DEFAULT.heading), 0, headingEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new TypefaceSpan("sans-serif-medium"), 0, headingEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        text.setSpan(new RelativeSizeSpan(16f / 14f), 0, headingEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        message.setText(text);
+        if (message.getParent() instanceof View) {
+            View body = (View) message.getParent();
+            int side = dp(context, ScreenColors.SIDE_DP);
+            body.setPaddingRelative(side, dp(context, 8), side, dp(context, 8));
+        }
+        ViewGroup.LayoutParams size = message.getLayoutParams();
+        size.width = ViewGroup.LayoutParams.MATCH_PARENT;
+        if (size instanceof ViewGroup.MarginLayoutParams) {
+            ViewGroup.MarginLayoutParams margins = (ViewGroup.MarginLayoutParams) size;
+            margins.setMarginStart(0);
+            margins.setMarginEnd(0);
+        }
+        message.setLayoutParams(size);
+    }
+
+    private static int dp(Context context, int value) {
+        return Math.round(TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, value,
+                context.getResources().getDisplayMetrics()));
     }
 
     private static void answered(HushPinterestPreferenceFragment page) {
@@ -506,8 +565,7 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
                             + (failure.rolledBack ? ", rolled back" : ", not rolled back"));
                     Utils.showToastLong(failure.rolledBack
                             ? L10n.t("Couldn't import the settings. Nothing was changed.")
-                            : L10n.t("Couldn't import the settings, and couldn't put back the ones you had. "
-                                    + "Check the switches on this screen."));
+                            : L10n.t("Couldn't import or put back your old switches. Check them here."));
                 } finally {
                     Utils.runOnMainThread(() -> {
                         AbstractPreferenceFragment.settingImportInProgress = false;
@@ -553,7 +611,7 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
                             + (failure.rolledBack ? ", rolled back" : ", not rolled back"));
                     Utils.showToastLong(failure.rolledBack
                             ? L10n.t("Couldn't undo the import. Your imported switches are unchanged.")
-                            : L10n.t("Couldn't undo the import or restore the imported switches. Check the switches on this screen."));
+                            : L10n.t("Couldn't undo the import or restore it. Check the switches here."));
                 } finally {
                     Utils.runOnMainThread(() -> {
                         AbstractPreferenceFragment.settingImportInProgress = false;
@@ -647,7 +705,7 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
     private static boolean stillStalled() {
         Run held = stalled;
         if (held == null || held.ended) return false;
-        Utils.showToastLong(L10n.t("The app holding the last settings file still hasn't answered. Try again later."));
+        Utils.showToastLong(L10n.t("The app with the last settings file hasn't answered. Try later."));
         return true;
     }
 

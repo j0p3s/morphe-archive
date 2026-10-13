@@ -1,5 +1,34 @@
 # Santodan Patches
 
+## NuvioTV launcher channels
+
+The independent Android TV launcher channels patch supports beta.4/beta.5.
+It adds per-profile, opt-in catalog/list/Library/Upcoming switches in the shared
+Layout menu. Runtime hooks capture the initialized Hilt component, observe Home,
+cancel Home observation onCleared, and observe the singleton library repository.
+Native repositories supply catalogs and authenticated tracking-provider list data.
+The publisher uses `santodan-launcher/` IDs, which cannot be mistaken for the native
+Continue Watching channel by its package-prefix orphan recovery. TvProvider
+queries filter channel/package IDs in memory, preserve row IDs and visibility,
+and update programs only when their persisted values change. See
+`docs/NuvioLauncherChannels.md` for source/refresh limits and TV checks.
+Beta.5 settings use nested native `sa.kc.a` collapsible sections for Catalogs and
+Tracking lists and their sources. `Source.sourceId`/`sourceName` persist grouping
+without changing existing channel keys or selected preference values. Upcoming
+artwork dates are rendered on two workers, keyed by image/date/style and exposed
+through a dedicated read-only artwork provider. Its manifest authority follows
+side-by-side package renaming. Only hashed PNG filenames are accepted; directory
+queries and writes are rejected. Rendering failure retains remote images plus date text. Shared date-style
+and airing-series preference listeners refresh published artwork, including finale
+cache updates. Run `verifyNuvioLauncherUi` and `verifyNuvioLauncherDates` for the
+beta.5 grouped menu and date rules; publisher verification covers date removal.
+The beta.5 native `l9.k.a` cached Next Up aired predicate delegates to the installed
+airing-series bridge when present. This prevents future-finale Upcoming entries
+from also appearing in the native Continue Watching preview channel.
+Run `verifyNuvioLauncherChannels`, `verifyNuvioLauncherPublisher`,
+`verifyNuvioLauncherBundle`, `verifyNuvioNextEpisodeBundle`, and
+`verifyNuvioSettingsMenuRuntime`; the shared menu now covers 512 selections.
+
 An independent patch bundle for **Morphe Desktop**, targeting MEO Android TV,
 NuvioTV, Reddit, Pillo, and Peafowl Theme Maker.
 
@@ -135,7 +164,10 @@ Use `SantodanAiring:D` for diagnostics.
 **NuvioTV - Finale dates in library and collections** adds independent opt-in switches
 under Layout > Santodan-Patches (beta4/beta5). It reuses the Upcoming badge style and latest known
 catalog episode date, including past dates, with `dd-MMM-yy` formatting and its own
-preferences and runtime.
+preferences and runtime. The disabled-by-default **Only show dates for series still airing**
+switch filters both locations to latest known scheduled dates strictly after the current
+instant. Past dates and the exact release instant are hidden when enabled; unknown
+dates remain unlabelled. Existing library/collection switches still apply independently.
 Library uses `ba.n3.m`; collection row cards use `ba.q1.o`, both MetaPreview fields.
 `ba.i1` scopes the library/collection calls. Card and restart lambdas capture that
 scope so recomposition retains the right setting and other catalog rows stay unaffected.
@@ -143,14 +175,37 @@ Only poster images are hooked; collection logos are excluded. Unknown/non-IMDb I
 and movies are skipped. Dates refresh asynchronously with a six-hour persistent cache.
 Use `SantodanFinale:D` for diagnostics. Verify both switches independently on device.
 
+All three date runtimes delegate their native TV appearance controls and Compose
+modifier construction to `nuviomenu.NuvioDateLabelStyle` in the existing shared settings
+dependency. `DateLabelStyle` validates choices and packs Compose Color/TextUnit values.
+All date patches use preference scope `santodan_nuvio_date_label_style` with `date_label_`
+keys. The shared menu renders one appearance section only when a date patch is installed.
+Nine positions map
+to `w1.b.a` through `i`. Label and font use Playback's native percentage sliders
+(`sa.o3.y0` / `sa.p3.y0`) from 50% to 200%, step 10. At 100%, padding reads native
+`va.l0.a.e/d` and font size reads the native labelSmall TextStyle's `a.b` TextUnit.
+Background/font colors use the native subtitle swatch/opacity dialog (`q`) and color
+rows (`r`). Both use the subtitle text-color palette; label backgrounds additionally
+offer transparency. Packed colors, including
+alpha, persist separately from legacy palette indexes. The appearance section uses
+`sa.kc.a`, native action rows (`sa.eb.a` / `sa.db.a`), and single-choice dialogs (`j`)
+with native `sa.mb` / `sa.lb` picker options.
+The native `j` picker requires explicit 420 dp width and 320 dp maximum height;
+R8 removes those default-mask branches. Passing zero sizes creates an empty overlay.
+One shared Compose revision refreshes visible badges after edits/reset. Reset preserves
+the patch's enable/filter switches.
+Run `:patches:verifyNuvioDateLabelStyleRuntime`, movie runtime, badge composition,
+and beta4/beta5 DEX checks; test TV dialog focus, card positions and colors on device.
+
 Beta4 runtime patches share an unnamed settings-menu dependency. It inserts one keyed
 lazy item in Layout's native section list, rendered with `sa.kc.a` as **Santodan-Patches**.
 The menu discovers installed runtime bridges independently and uses their existing
 preferences and Compose controls. Native non-focusable section labels (`sa.kc.e`)
 group merged progress, its strategy, remaining episodes, and airing-series settings
 under **Continue Watching**, and library/collection finale-date switches under **UI**.
-The three stream-preloading switches appear under **Streams**. Empty groups are omitted.
-The menu runtime check covers all 256 bridge selections.
+The three stream-preloading switches appear under **Streams**, and launcher-channel
+selections appear under **Android TV launcher**. Empty groups are omitted.
+The menu runtime check covers all 512 bridge selections.
 Old beta4 injected settings rows and merged picker
 choices are removed; beta2 retains its original UI. Merged controls register `o9.a1`
 and capture the initialized `p8.e` component. If the coordinator has not been created,
@@ -227,6 +282,17 @@ not be labelled as proof of a cache hit. Timeouts stop the preload consumer; nat
 search-session producers retain their own lifecycle.
 
 Merged watched badges must follow the same per-show provider winner as progress.
+Await each authenticated provider's native AUTOMATIC refresh (`y` on beta2, `o` on
+beta4/beta5) before sampling its projection. Some refresh implementations only signal
+background work, so retain progress/seed/watched-item flow observers and schedule a
+new merge when their values change. Playback still defers merges. Detail episode
+collectors must switch to the per-show winner after each snapshot publication even
+if the collector was opened before the first merge completed. Remaining-count cache
+`count_v4_` records the card's seed signature; invalidate on seed changes, reject
+obsolete asynchronous estimates and retry the current seed without the old cooldown.
+Run `:patches:verifyNuvioProviderRefreshRuntime` and
+`:patches:verifyNuvioRemainingSyncRuntime` for delayed synchronization, cancellation,
+live provider routing and the Rage of Bahamut episode-8 to episode-20 count race.
 Prime each provider's Next Up flow before reading progress, then read Next Up again after watched-history and alias loading completes. Simkl may refresh its projection during the later getters; publishing the initial seed list can discard cached cards using a stale snapshot. `Provider snapshot` logs initial/refreshed seed counts; focused `Show seed` / `Show merge selection` logs diagnose the reported Rage of Bahamut / Virgin Soul entry without dumping the full library. Playback deferral checks also guard the final seed read.
 On beta4/beta5, the optional **Show merged progress provider** setting uses the persisted merge origins to draw a 24dp local provider icon at the bottom-right of Continue Watching posters. Read the card's `x` WatchProgress, or the concrete `y.a` NextUpInfo, by content type and ID; never match titles or infer provenance from the carrier provider. Unknown origins stay unbadged. The icon uses a separate Compose group, native Box alignment, and the existing Coil loader with bundled raw SVGs or the Nuvio launcher artwork. This adds no tracking-provider or artwork network calls. Run `:patches:verifyNuvioProviderBadge` and beta4/beta5 DEX checks, including coexistence with remaining-episode badges.
 The proxy's `g(Continuation)` supplies the coherent bulk watched episode map;

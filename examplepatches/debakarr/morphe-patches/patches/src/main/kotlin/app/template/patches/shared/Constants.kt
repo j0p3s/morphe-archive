@@ -54,4 +54,14 @@ object Constants {
             AppTarget(version = "29.5", versionCode = 868),
         )
     )
+
+    // Meshy (ai.meshy.app) ships as a split-APK install (base.apk + ABI split),
+    // matching the XAPK convention used by the other targets here.
+    val MESHY_COMPATIBILITY = Compatibility(
+        name = "Meshy",
+        packageName = "ai.meshy.app",
+        appIconColor = 0x6C5CE7,
+        apkFileType = ApkFileType.XAPK,
+        targets = listOf(AppTarget(version = "1.5.0", versionCode = 54)),
+    )
 }

@@ -127,6 +127,29 @@ public class FeedFilterTest {
         }
     }
 
+    /** A search filter chip like 14.39.0's q8: no JSON names, only text and lists. */
+    static final class Chip {
+        final String id = "chip";
+        final String label = "Curly";
+        final List<String> values = Arrays.asList("3a", "3b");
+    }
+
+    /** A dynamic story that also carries search chips (z5.V), which no renderer draws as the module's row. */
+    static final class ChipModule {
+        @Json("id") String id = "chips";
+        @Json("story_type") String storyType = "search_results";
+        List<Object> objects;
+        ArrayList<Chip> chips = new ArrayList<>(Arrays.asList(new Chip()));
+
+        ChipModule(Object... objects) {
+            this.objects = Arrays.asList(objects);
+        }
+
+        @Override public String toString() {
+            return id;
+        }
+    }
+
     /** The story model that names its list and wraps each entry, holding one model and no JSON names. */
     static final class Wrapper {
         final Pin pin;
@@ -227,6 +250,25 @@ public class FeedFilterTest {
         assertTrue(String.join("\n", HookStatus.report()), String.join("\n", HookStatus.report()).contains("promoted pin removed"));
     }
 
+    /**
+     * A list that can't be read all the way through is shown as it was, so the report must not
+     * count the ad the loop had already found: nothing was taken out of what Pinterest shows.
+     */
+    @Test
+    public void aListThatFailsPartwayIsShownAsItWasAndCountsNoRemoval() {
+        Settings.HIDE_AI_PINS.save(false);
+        List<Object> page = new ArrayList<Object>(Arrays.asList(plain, promoted, labeled, ideas)) {
+            @Override public Object get(int index) {
+                if (index == 2) throw new IllegalStateException("unreadable");
+                return super.get(index);
+            }
+        };
+        assertSame(page, FeedFilter.filter(page));
+        assertEquals("[plain, promoted, labeled, ideas]", new ArrayList<>(page).toString());
+        assertFalse(report(), report().contains("promoted pin removed"));
+        assertTrue(report(), report().contains("list filter"));
+    }
+
     @Test
     public void bothSwitchesTakeTheLabeledPinsToo() {
         Settings.HIDE_AI_PINS.save(true);
@@ -248,6 +290,21 @@ public class FeedFilterTest {
         List<Object> empty = new ArrayList<>();
         assertSame(empty, FeedFilter.filter(empty));
         assertNull(FeedFilter.filter(null));
+    }
+
+    @Test
+    public void anItemThatCantBeReadStaysAndTheRestOfThePageIsStillFiltered() {
+        Settings.HIDE_AI_PINS.save(true);
+        Pin broken = new Pin("broken");
+        broken.aiDisclosures = new ArrayList<Integer>() {
+            @Override public boolean isEmpty() {
+                throw new IllegalStateException("host list changed while it was read");
+            }
+        };
+        List<Object> page = new ArrayList<>(Arrays.asList(plain, promoted, broken, labeled, ideas));
+        assertEquals("[plain, broken, ideas]", FeedFilter.filter(page).toString());
+        assertTrue(report(), report().contains("item filter"));
+        assertTrue(report(), report().contains("java.lang.IllegalStateException"));
     }
 
     @Test
@@ -351,6 +408,14 @@ public class FeedFilterTest {
     }
 
     @Test
+    public void searchChipsDontKeepAModuleWhosePinsAreGone() {
+        ChipModule module = new ChipModule(promoted, thirdParty);
+        assertEquals("[plain, ideas]", FeedFilter.filter(new ArrayList<>(Arrays.asList(plain, module, ideas))).toString());
+        assertEquals(1, module.chips.size());
+        assertTrue(report(), report().contains("module left empty removed"));
+    }
+
+    @Test
     public void bothSwitchesTakeLabeledPinsOutOfAModuleToo() {
         Settings.HIDE_AI_PINS.save(true);
         Module module = new Module("module", plain, labeled, promoted, emptyLabels);
@@ -406,8 +471,9 @@ public class FeedFilterTest {
         Module module = new Module("module", plain, promoted, "a note", adData);
         String line = ModuleItems.describe(module);
         assertTrue(line, line.startsWith("Module ideas_for_you; "));
-        assertTrue(line, line.contains("objects 4: Pin Pin[is_promoted=true] Pin[ad_data=set]"));
-        assertTrue(line, line.contains("images 2:"));
+        assertTrue(line, line.contains("objects 4: Pin Pin[is_promoted=true] (java.lang.String) Pin[ad_data=set]"));
+        assertTrue(line, line.contains("images 2: (java.lang.String) (java.lang.String)"));
+        assertFalse("an entry's own text stays out: " + line, line.contains("a note") || line.contains("a.jpg"));
         assertFalse("a promotion id's value stays out: " + line, ModuleItems.describe(new Module("ids", promotionId)).contains("123"));
     }
 

@@ -9,13 +9,13 @@ import android.app.AlertDialog;
 import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.Intent;
-import android.content.res.TypedArray;
+import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.Typeface;
-import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.text.TextUtils;
 import android.util.LruCache;
@@ -47,6 +47,7 @@ import java.util.WeakHashMap;
 import app.hushgram.extension.instagram.download.InstagramMedia;
 import app.hushgram.extension.instagram.download.PictureFetch;
 import app.hushgram.extension.instagram.settings.FamilyNames;
+import app.hushgram.extension.instagram.settings.ScreenColors;
 import app.hushgram.extension.instagram.settings.Settings;
 import app.hushgram.extension.shared.L10n;
 import app.hushgram.extension.shared.Utils;
@@ -58,8 +59,9 @@ import app.hushgram.extension.shared.ui.Dim;
  *
  * <p>Instagram's story viewer gives each of its pages the story it shows in one place, its item
  * binder's bindMedia step. The patch calls {@link #bind} right after that, with the page and the
- * story. Once Instagram has bound the page's header, a pill goes under the name in it saying how
- * many accounts the story mentions, from the story's own list of mentions, so a mention sticker
+ * story. Once Instagram has bound the page's header, a pill goes after the name and time in it
+ * (under the name when they share no row) saying how many accounts the story mentions, from the
+ * story's own list of mentions, so a mention sticker
  * that's hidden, shrunk or dragged off screen still counts. A story with none gets no pill.
  * Tapping the pill lists the accounts with their pictures, names and usernames, and tapping one
  * opens that profile through Instagram's own handling of a link to it. The story viewer takes every
@@ -82,10 +84,17 @@ public final class StoryMentions {
      */
     static final long[] TRIES = {0, 250, 750};
 
+    /** The id of the header's name, whose row the pill goes at the end of when it has one. */
+    static final String TITLE = "reel_viewer_title";
+
     /** Set by tests that have no Instagram resources: the header column's id. */
     static int headerIdForTests;
     /** The header column's id in this app, or -1 before the first lookup. */
     private static volatile int headerId = -1;
+    /** Set by tests that have no Instagram resources: the name's id. */
+    static int titleIdForTests;
+    /** The name's id in this app, or -1 before the first lookup. */
+    private static volatile int titleId = -1;
 
     /** Set by tests: fetches a profile picture instead of the network. */
     @Nullable static PictureSource picturesForTests;
@@ -281,8 +290,10 @@ public final class StoryMentions {
             }
             Context context = header.getContext();
             if (pill == null) {
-                pill = newPill(context, header.getOrientation() == LinearLayout.HORIZONTAL);
-                header.addView(pill);
+                LinearLayout row = titleRow(header);
+                LinearLayout into = row != null ? row : header;
+                pill = newPill(context, into.getOrientation() == LinearLayout.HORIZONTAL);
+                into.addView(pill);
                 anyPill = true;
             }
             String text = label(context, people.size());
@@ -321,12 +332,40 @@ public final class StoryMentions {
         return null;
     }
 
+    /** The pill already in [header], in the name's row or in the column itself, or null. */
     @Nullable
     static Pill pillIn(ViewGroup header) {
-        for (int i = 0; i < header.getChildCount(); i++) {
-            if (header.getChildAt(i) instanceof Pill) return (Pill) header.getChildAt(i);
+        LinearLayout row = titleRow(header);
+        if (row != null) {
+            Pill inRow = pillAmong(row);
+            if (inRow != null) return inRow;
+        }
+        return pillAmong(header);
+    }
+
+    @Nullable
+    private static Pill pillAmong(ViewGroup group) {
+        for (int i = 0; i < group.getChildCount(); i++) {
+            if (group.getChildAt(i) instanceof Pill) return (Pill) group.getChildAt(i);
         }
         return null;
+    }
+
+    /**
+     * The row the name sits in, when it's a row of its own inside the header's column, so the pill
+     * goes at the end of it, after the name and the time. Under the name, the pill made the column
+     * taller, and on each story with mentions the name moved up toward the progress bars (#151).
+     * Null when the name sits in the column itself or isn't there, and the pill goes under it.
+     */
+    @Nullable
+    static LinearLayout titleRow(ViewGroup header) {
+        int id = titleId(header.getContext());
+        if (id == 0) return null;
+        View title = header.findViewById(id);
+        ViewParent parent = title == null ? null : title.getParent();
+        if (!(parent instanceof LinearLayout) || parent == header) return null;
+        LinearLayout row = (LinearLayout) parent;
+        return row.getOrientation() == LinearLayout.HORIZONTAL ? row : null;
     }
 
     /** The header's id, looked up once: a name lookup on every story frame adds up. */
@@ -334,6 +373,13 @@ public final class StoryMentions {
         if (headerIdForTests != 0) return headerIdForTests;
         if (headerId == -1) headerId = context.getResources().getIdentifier(HEADER, "id", context.getPackageName());
         return headerId;
+    }
+
+    /** The name's id, looked up once like the header's. */
+    private static int titleId(Context context) {
+        if (titleIdForTests != 0) return titleIdForTests;
+        if (titleId == -1) titleId = context.getResources().getIdentifier(TITLE, "id", context.getPackageName());
+        return titleId;
     }
 
     /**
@@ -401,6 +447,7 @@ public final class StoryMentions {
         scroll.addView(rows);
         dialog.setView(scroll);
         dialog.show();
+        ScreenColors.dialog(dialog);
         HookStatus.counted(FamilyNames.STORY_MENTIONS, LIST_SHOWN);
         return dialog;
     }
@@ -410,18 +457,20 @@ public final class StoryMentions {
         LinearLayout row = new LinearLayout(themed);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setMinimumHeight(Dim.dp(56));
-        row.setPadding(Dim.dp(24), Dim.dp(6), Dim.dp(24), Dim.dp(6));
-        int secondary;
-        TypedArray theme = themed.obtainStyledAttributes(
-                new int[]{android.R.attr.selectableItemBackground, android.R.attr.textColorSecondary});
-        try {
-            Drawable touch = theme.getDrawable(0);
-            if (touch != null) row.setBackground(touch);
-            secondary = theme.getColor(1, Color.GRAY);
-        } finally {
-            theme.recycle();
-        }
+        row.setMinimumHeight(Dim.dp(64));
+        row.setPadding(Dim.dp(16), Dim.dp(10), Dim.dp(16), Dim.dp(10));
+        ScreenColors colors = ScreenColors.DEFAULT;
+        int secondary = colors.summary;
+        GradientDrawable surface = new GradientDrawable();
+        surface.setColor(colors.card);
+        surface.setCornerRadius(Dim.dp(12));
+        surface.setStroke(Dim.dp(1), colors.outline);
+        row.setBackground(new RippleDrawable(ColorStateList.valueOf(ScreenColors.half(colors.heading)), surface, null));
+        LinearLayout.LayoutParams place = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT);
+        place.setMargins(Dim.dp(16), Dim.dp(4), Dim.dp(16), Dim.dp(4));
+        row.setLayoutParams(place);
+        row.setFocusable(true);
 
         ImageView picture = new ImageView(themed);
         int size = Dim.dp(40);
@@ -452,6 +501,7 @@ public final class StoryMentions {
             TextView name = new TextView(themed);
             name.setText(person.fullName);
             name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            name.setTextColor(colors.title);
             name.setTypeface(Typeface.DEFAULT_BOLD);
             name.setSingleLine(true);
             name.setEllipsize(TextUtils.TruncateAt.END);
@@ -460,7 +510,7 @@ public final class StoryMentions {
         TextView username = new TextView(themed);
         username.setText(handle);
         username.setTextSize(TypedValue.COMPLEX_UNIT_SP, person.fullName != null ? 14 : 16);
-        if (person.fullName != null) username.setTextColor(secondary);
+        username.setTextColor(person.fullName != null ? secondary : colors.title);
         username.setSingleLine(true);
         username.setEllipsize(TextUtils.TruncateAt.END);
         names.addView(username);
@@ -560,14 +610,40 @@ public final class StoryMentions {
         Window window = activity == null ? null : activity.getWindow();
         View decor = window == null ? null : window.peekDecorView();
         if (decor == null) return null;
-        int[] at = new int[2];
         for (Pill pill : PILLS) {
             if (!pill.isShown() || pill.getWidth() == 0 || pill.getRootView() != decor) continue;
-            pill.getLocationInWindow(at);
-            if (x >= at[0] && x < at[0] + pill.getWidth() && y >= at[1] && y < at[1] + pill.getHeight()) return pill;
+            if (holds(pill, x, y, 0, 0)) return pill;
+            // The pill is drawn about 22dp tall. A finger gets room around it, up to the 48dp
+            // Android asks of a target, but only room: never past the row or column the pill is
+            // in, and never on the name or anything else next to it, which are Instagram's taps.
+            int padX = Math.max(0, Dim.dp(MIN_TARGET_DP) - pill.getWidth()) / 2;
+            int padY = Math.max(0, Dim.dp(MIN_TARGET_DP) - pill.getHeight()) / 2;
+            if (!holds(pill, x, y, padX, padY) || !(pill.getParent() instanceof ViewGroup)) continue;
+            ViewGroup parent = (ViewGroup) pill.getParent();
+            if (holds(parent, x, y, 0, 0) && !onAnother(parent, pill, x, y)) return pill;
         }
         return null;
     }
+
+    /** Whether [view]'s box in its window, grown by [padX] and [padY] on each side, holds [x], [y]. */
+    private static boolean holds(View view, float x, float y, int padX, int padY) {
+        int[] at = new int[2];
+        view.getLocationInWindow(at);
+        return x >= at[0] - padX && x < at[0] + view.getWidth() + padX
+                && y >= at[1] - padY && y < at[1] + view.getHeight() + padY;
+    }
+
+    /** Whether [x], [y] is on a view showing in [parent] other than [pill]. */
+    private static boolean onAnother(ViewGroup parent, View pill, float x, float y) {
+        for (int i = 0; i < parent.getChildCount(); i++) {
+            View child = parent.getChildAt(i);
+            if (child != pill && child.getVisibility() == View.VISIBLE && holds(child, x, y, 0, 0)) return true;
+        }
+        return false;
+    }
+
+    /** The smallest box a tap on the pill is taken from, in dp. */
+    static final int MIN_TARGET_DP = 48;
 
     private static boolean beyondSlop(Pill pill, float x, float y) {
         int slop = ViewConfiguration.get(pill.getContext()).getScaledTouchSlop();

@@ -1,0 +1,99 @@
+name: Release
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Release
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_ACTOR: ${{ github.actor }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Java
+        uses: actions/setup-java@v6.0.0
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Read version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+
+      # Order matters: buildAndroid merges classes.dex into the .mpp by mutating the jar output
+      # in place. A later Gradle invocation that re-runs :patches:jar (e.g. through generatePatchesList)
+      # rewrites the .mpp WITHOUT the dex, which makes the Morphe Manager unable to load any patches.
+      - name: Build patch list
+        run: ./gradlew :patches:generatePatchesList -Pversion=${{ steps.version.outputs.version }} --no-daemon
+
+      - name: Build Android bundle
+        run: ./gradlew :patches:buildAndroid -Pversion=${{ steps.version.outputs.version }} --no-daemon
+
+      - name: Copy bundle to dist
+        run: |
+          mkdir -p dist
+          cp "patches/build/libs/patches-${{ steps.version.outputs.version }}.mpp" \
+             "dist/patches-${{ steps.version.outputs.version }}.mpp"
+
+      - name: Verify DEX is bundled
+        run: |
+          unzip -l "dist/patches-${{ steps.version.outputs.version }}.mpp" | grep -q "classes.dex"
+          echo "classes.dex verified in dist/patches-${{ steps.version.outputs.version }}.mpp"
+
+      - name: Update metadata and README
+        run: |
+          VER="${{ steps.version.outputs.version }}"
+          REPO="${{ github.repository }}"
+          # Ensure the patches-list version always matches the release tag.
+          jq --arg v "$VER" '.version=$v' patches-list.json > tmp && mv tmp patches-list.json
+          # Write the bundle metadata the Morphe Manager expects.
+          # created_at must NOT carry a timezone suffix (e.g. trailing Z): the manager deserializes
+          # it as kotlinx.datetime.LocalDateTime and a 'Z' makes the whole bundle source fail.
+          jq -n \
+            --arg v "$VER" \
+            --arg dl "https://github.com/${REPO}/releases/download/${GITHUB_REF_NAME}/patches-${VER}.mpp" \
+            --arg ca "$(date +%Y-%m-%dT%H:%M:%S)" \
+            '{version:$v, created_at:$ca, description:"", download_url:$dl, signature_download_url:""}' \
+            > patches-bundle.json
+          # Update the patches section of the README.
+          python3 .github/scripts/generate_patches_readme.py "$REPO" "$GITHUB_REF_NAME" patches-list.json README.md
+
+      - name: Commit generated files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add patches-list.json patches-bundle.json README.md
+          if ! git diff --cached --quiet; then
+            git commit -m "chore: update release metadata for ${GITHUB_REF_NAME} [skip ci]"
+            # The tag can be behind main (e.g. the metadata [skip ci] commit from a
+            # previous release). Integrate remote main before pushing so a fast-forward
+            # is always possible; failures here are non-fatal to avoid losing the run.
+            git fetch origin main 2>/dev/null || true
+            if [ -n "$(git log HEAD..FETCH_HEAD --oneline)" ]; then
+              git rebase FETCH_HEAD 2>/dev/null || git rebase --abort
+            fi
+          fi
+          git push origin HEAD:main 2>/dev/null || true
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: "X Patches for Morphe ${{ github.ref_name }}"
+          files: dist/patches-${{ steps.version.outputs.version }}.mpp

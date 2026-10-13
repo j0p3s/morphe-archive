@@ -1,3 +1,66 @@
+## [1.14.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.13.0...v1.14.0) (2026-10-13)
+
+### Bug Fixes
+
+* **twitter:** demote braze anchors to best-effort ([1581b35](https://github.com/kveld9/kveld-extra-morphe-patches/commit/1581b35c26c4263fdc515c9c7eb53c6ddeb903db))
+* **twitter:** extend telemetry neutralization to braze and sentry surfaces ([c95d687](https://github.com/kveld9/kveld-extra-morphe-patches/commit/c95d68759da292992ddd3201675b8e53a1ad63f6))
+* **twitter:** reject quote and backslash in Custom Fonts paths ([423b2d3](https://github.com/kveld9/kveld-extra-morphe-patches/commit/423b2d378d9e908bc47abd8d448041cea3e6682c))
+* **twitter:** resolve nullable fingerprint matches via matchAll ([ea5f7db](https://github.com/kveld9/kveld-extra-morphe-patches/commit/ea5f7dbbbe833a7d6dccf58aeffe48bf833a4b6a))
+* **twitter:** select first safe dispatcher per anchor ([330a22e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/330a22e4829db04aca241aaedff87b2d3a2dd885))
+
+### New Features
+
+* **twitter:** add background and companion-surface slimmer ([0527f06](https://github.com/kveld9/kveld-extra-morphe-patches/commit/0527f065afd93713369e129beb2fdd2c897411c1))
+* **twitter:** add Custom Deep Links patch ([399f3d4](https://github.com/kveld9/kveld-extra-morphe-patches/commit/399f3d4a9c310f337e7d197a1b17e8cdd50ce287))
+* **twitter:** add Custom Fonts patch with text font support ([4826150](https://github.com/kveld9/kveld-extra-morphe-patches/commit/4826150d2d11a0782937307411a893152cea97b6))
+* **twitter:** add emoji font option to Custom Fonts ([16ed849](https://github.com/kveld9/kveld-extra-morphe-patches/commit/16ed849515bc8b2881ea19c7cf50a53cc6b7d25e))
+* **twitter:** add Hide FAB option to Navigation UI ([046da1f](https://github.com/kveld9/kveld-extra-morphe-patches/commit/046da1fb0a79b8d3811bb42715bf449d07d2dc69))
+* **twitter:** add Round Off Numbers patch ([588d05b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/588d05bc2836855b789d4a329c96324e748d7aff))
+
+## [1.13.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.12.5...v1.13.0) (2026-10-12)
+
+### New Features
+
+* **capcut:** add bypass geoblock region restriction patch ([665c9f9](https://github.com/kveld9/kveld-extra-morphe-patches/commit/665c9f94f7c7d8d980229d023f5f9b5ca906e23b))
+
+## [1.12.5](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.12.4...v1.12.5) (2026-10-12)
+
+### Bug Fixes
+
+* **twitter:** stop blanket early-return in profile Grok Imagine hook ([43b339d](https://github.com/kveld9/kveld-extra-morphe-patches/commit/43b339d064a6e63627295ef934cbd47d7fd01792))
+
+## [1.12.4](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.12.3...v1.12.4) (2026-10-12)
+
+### Bug Fixes
+
+* **twitter:** collapse DM call toggles into a single hideDmCalls option ([5148fbc](https://github.com/kveld9/kveld-extra-morphe-patches/commit/5148fbc2eb9131417837bb649d27ee3d2e636075))
+* **twitter:** disambiguate Share Links custom domain toggle title ([6a419dd](https://github.com/kveld9/kveld-extra-morphe-patches/commit/6a419dd82f0c8b3002c30fe2e8362dbb50dcdce4))
+* **twitter:** remove Dynamic Color patch ([63c09b8](https://github.com/kveld9/kveld-extra-morphe-patches/commit/63c09b873fb86e98572848a673e63efbeead0dce))
+
+## [1.12.3](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.12.2...v1.12.3) (2026-10-12)
+
+### Bug Fixes
+
+* **twitter:** re-anchor Dynamic Color to M3 ColorScheme slots in theme/d ([565363b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/565363bf1cb991753af37387b8cbddde8f8fe656))
+
+## [1.12.2](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.12.1...v1.12.2) (2026-10-12)
+
+### Bug Fixes
+
+* **twitter:** stop overriding J1 accent load in lights-out Dynamic Color case ([940067a](https://github.com/kveld9/kveld-extra-morphe-patches/commit/940067a0eabb30f097d8b492263c5a8653594428))
+
+## [1.12.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.12.0...v1.12.1) (2026-10-12)
+
+### Bug Fixes
+
+* **twitter:** use dead wide pair v8/v9 as scratch in Dynamic Color lights-out hook ([c03b6b1](https://github.com/kveld9/kveld-extra-morphe-patches/commit/c03b6b1acec3732caf933406a9035670c4ec0d36))
+
+## [1.12.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.11.2...v1.12.0) (2026-10-12)
+
+### New Features
+
+* **twitter:** add Dynamic Color patch with Compose-anchored Monet palette ([28bd24e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/28bd24e649e9af50b818122899517232ff8c1c51))
+
 ## [1.11.2](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.11.1...v1.11.2) (2026-10-12)
 
 ### Bug Fixes

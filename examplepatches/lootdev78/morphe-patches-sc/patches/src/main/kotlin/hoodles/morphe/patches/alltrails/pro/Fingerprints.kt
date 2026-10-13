@@ -1,0 +1,18 @@
+/**
+ * Copyright 2026 Hoo-dles
+ * https://github.com/hoo-dles/morphe-patches
+ */
+
+package hoodles.morphe.patches.alltrails.pro
+
+import app.morphe.patcher.Fingerprint
+
+object IsProFingerprint : Fingerprint(
+    name = "isPro",
+    returnType = "Z"
+)
+
+object GetSubscriptionTierFingerprint : Fingerprint(
+    name = "getSubscriptionTier",
+    returnType = "Ljava/lang/String;"
+)

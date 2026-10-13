@@ -7,12 +7,21 @@ import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
-import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.originisland.patches.shared.Constants.COMPATIBILITY_YOUTUBE_MUSIC
+import app.originisland.patches.shared.mediasession.MediaBrowserServiceGetCurrentBrowserInfoFingerprint
+import app.originisland.patches.shared.mediasession.MediaBrowserServiceOnGetRootFingerprint
+import app.originisland.patches.shared.mediasession.MediaBrowserServiceOnLoadChildrenFingerprint
+import app.originisland.patches.shared.mediasession.MediaBrowserServiceOnLoadChildrenWithOptionsFingerprint
+import app.originisland.patches.shared.mediasession.MediaSessionCallbackOnCustomActionFingerprint
+import app.originisland.patches.shared.mediasession.MediaSessionCallbackOnPlayFromMediaIdFingerprint
+import app.originisland.patches.shared.mediasession.MediaSessionCallbackOnSetRatingFingerprint
+import app.originisland.patches.shared.mediasession.MediaSessionConstructorFingerprint
+import app.originisland.patches.shared.mediasession.MediaSessionSetMetadataFingerprint
+import app.originisland.patches.shared.mediasession.MediaSessionSetPlaybackStateFingerprint
+import app.originisland.patches.shared.mediasession.addMusicCardHook
+import app.originisland.patches.shared.mediasession.indicesOfCalls
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
-import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
-import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import org.w3c.dom.Element
 
 private const val EXTENSION_PACKAGE = "Lapp/originisland/extension/"
@@ -44,6 +53,21 @@ private val musicCardServiceResourcePatch = resourcePatch {
                 .firstOrNull { it.getAttribute("android:name") == MUSIC_BROWSER_SERVICE }
                 ?: throw PatchException("Could not find $MUSIC_BROWSER_SERVICE")
 
+            // A copy of the app that is installed under another package asks the app for its
+            // downloads, and has to be allowed to see it for that.
+            val manifest = document.documentElement
+            val queries = manifest.getElementsByTagName("queries").item(0) as? Element
+                ?: (manifest.appendChild(document.createElement("queries")) as Element)
+            queries.appendChild(
+                document.createElement("intent").apply {
+                    appendChild(
+                        document.createElement("action").apply {
+                            setAttribute("android:name", MUSIC_CARD_SERVICE_ACTION)
+                        }
+                    )
+                }
+            )
+
             browserService.appendChild(
                 document.createElement("intent-filter").apply {
                     appendChild(
@@ -72,12 +96,6 @@ val originIslandMusicCardPatch = bytecodePatch(
     extendWith("extensions/extension.mpe")
 
     execute {
-        fun MutableMethod.indicesOfCalls(definingClass: String, name: String) =
-            implementation!!.instructions.withIndex().filter { (_, instruction) ->
-                val reference = (instruction as? ReferenceInstruction)?.reference as? MethodReference
-                reference?.definingClass == definingClass && reference.name == name
-            }.map { it.index }
-
         // The app only lets allowlisted clients connect to its media browser service.
         // The card is answered before the app is asked, with a root of the platform,
         // so that it loads the playlist through the platform as well.
@@ -161,6 +179,26 @@ val originIslandMusicCardPatch = bytecodePatch(
             }
         }
 
+        // The app makes its session before it has anything to play.
+        MediaSessionConstructorFingerprint.matchAll().forEach { match ->
+            match.method.apply {
+                if (definingClass.startsWith(EXTENSION_PACKAGE) ||
+                    definingClass.startsWith(MORPHE_EXTENSION_PACKAGE)
+                ) return@forEach
+
+                indicesOfCalls(MEDIA_SESSION_CLASS, "<init>").reversed().forEach { index ->
+                    val sessionRegister = (getInstruction(index) as? FiveRegisterInstruction)?.registerC
+                        ?: return@forEach
+
+                    addInstructions(
+                        index + 1,
+                        "invoke-static/range { v$sessionRegister .. v$sessionRegister }, " +
+                                "$EXTENSION_CLASS->onSessionCreated($MEDIA_SESSION_CLASS)V"
+                    )
+                }
+            }
+        }
+
         // The app tells if a song is liked with a custom action of its playback state,
         // which it keeps up to date better than the rating of its metadata.
         MediaSessionSetPlaybackStateFingerprint.matchAll().forEach { match ->
@@ -182,6 +220,12 @@ val originIslandMusicCardPatch = bytecodePatch(
             }
         }
 
+        // The card opens some apps to have them play, if they are not running.
+        MusicActivityOnResumeFingerprint.method.addInstructions(
+            0,
+            "invoke-static/range { p0 .. p0 }, $EXTENSION_CLASS->onActivityResume(Landroid/app/Activity;)V"
+        )
+
         MediaSessionCallbackOnSetRatingFingerprint.matchAll().forEach { match ->
             match.method.addInstructions(
                 0,
@@ -193,21 +237,9 @@ val originIslandMusicCardPatch = bytecodePatch(
         }
 
         // These hooks handle what the music card sends and let the app handle everything else.
-        // Only the parameter registers are used, since the methods may have no locals.
-        fun MutableMethod.addMusicCardHook(parameters: String, extensionMethod: String) =
-            addInstructionsWithLabels(
-                0,
-                """
-                    invoke-static/range { $parameters }, $EXTENSION_CLASS->$extensionMethod
-                    move-result-object p1
-                    if-nez p1, :original
-                    return-void
-                """,
-                ExternalLabel("original", getInstruction(0))
-            )
-
         MediaSessionCallbackOnCustomActionFingerprint.matchAll().forEach { match ->
             match.method.addMusicCardHook(
+                EXTENSION_CLASS,
                 "p1 .. p2",
                 "onCustomAction(Ljava/lang/String;Landroid/os/Bundle;)Ljava/lang/String;"
             )
@@ -215,6 +247,7 @@ val originIslandMusicCardPatch = bytecodePatch(
 
         MediaSessionCallbackOnPlayFromMediaIdFingerprint.matchAll().forEach { match ->
             match.method.addMusicCardHook(
+                EXTENSION_CLASS,
                 "p1 .. p2",
                 "onPlayFromMediaId(Ljava/lang/String;Landroid/os/Bundle;)Ljava/lang/String;"
             )
@@ -226,6 +259,7 @@ val originIslandMusicCardPatch = bytecodePatch(
 
         MediaBrowserServiceOnLoadChildrenFingerprint.matchAll().forEach { match ->
             match.method.addMusicCardHook(
+                EXTENSION_CLASS,
                 "p0 .. p2",
                 "onLoadChildren($onLoadChildrenParameters)Ljava/lang/String;"
             )
@@ -233,6 +267,7 @@ val originIslandMusicCardPatch = bytecodePatch(
 
         MediaBrowserServiceOnLoadChildrenWithOptionsFingerprint.matchAll().forEach { match ->
             match.method.addMusicCardHook(
+                EXTENSION_CLASS,
                 "p0 .. p3",
                 "onLoadChildren(${onLoadChildrenParameters}Landroid/os/Bundle;)Ljava/lang/String;"
             )

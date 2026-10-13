@@ -193,62 +193,20 @@ public class SettingsPagesTest {
         }
     }
 
-    @Test public void anUnvalidatedCaptchaSwitchStaysUnavailableOnAMountedPage() throws Exception {
-        assertUnavailableCaptchaRow(null);
-    }
-
-    @Test @Config(sdk = 29)
-    public void theUnavailableCaptchaRowRendersInDarkTheme() throws Exception {
-        assertUnavailableCaptchaRow("dark");
-    }
-
-    @Test @Config(sdk = 29, qualifiers = "w480dp-h960dp-notnight-mdpi")
-    public void theUnavailableCaptchaRowRendersInLightTheme() throws Exception {
-        assertUnavailableCaptchaRow("light");
-    }
-
-    private void assertUnavailableCaptchaRow(String theme) throws Exception {
+    /** Hide CAPTCHA popups is a switch again, for its own setting, with the old notice row gone. */
+    @Test public void theCaptchaRowSwitchesItsOwnSetting() throws Exception {
         try (var owner = Robolectric.buildActivity(PageActivity.class).setup().visible()) {
             Activity activity = owner.get();
             Utils.setContext(activity);
-            for (boolean saved : new boolean[]{false, true}) {
-                Settings.HIDE_CAPTCHA_POPUPS.save(saved);
-                TikTokPreferenceFragment page = attachSection(activity, "INTERFACE");
-                Preference row = page.findPreference("hushfeed_captcha_unavailable");
-                assertNotNull(row);
-                assertFalse(row.isEnabled());
-                assertFalse(row.isSelectable());
-                assertFalse(row instanceof android.preference.SwitchPreference);
-                assertNull(app.morphe.extension.shared.settings.Setting
-                        .getSettingFromPath(row.getKey()));
-                assertEquals(L10n.t(activity,
-                        "Unavailable on these TikTok builds. All verification challenges stay visible."),
-                        String.valueOf(row.getSummary()));
-                assertEquals(saved, Settings.HIDE_CAPTCHA_POPUPS.savedValue());
-                if (theme != null) {
-                    ListView list = page.getView().findViewById(android.R.id.list);
-                    int position = positionOf(list, row.getKey());
-                    assertTrue("the unavailable row isn't in the mounted list", position >= 0);
-                    list.setSelectionFromTop(position, 70);
-                    Shadows.shadowOf(Looper.getMainLooper()).idle();
-                    View rendered = list.getChildAt(position - list.getFirstVisiblePosition());
-                    assertNotNull(rendered);
-                    assertNull("an informational row must not advertise navigation",
-                            rendered.findViewWithTag("hushfeed_chevron"));
-                    UiCapture.save(page.getView(), "pages/" + theme
-                            + "/captcha-unavailable-saved-" + saved + ".png");
-                }
-                Settings.HIDE_CAPTCHA_POPUPS.save(!saved);
-                refreshAvailability(page);
-                assertFalse("a stored-value refresh re-enabled the information row", row.isEnabled());
-                assertEquals(!saved, Settings.HIDE_CAPTCHA_POPUPS.savedValue());
-                app.morphe.extension.shared.settings.PausedProcess.set(true);
-                refreshAvailability(page);
-                assertFalse("Pause re-enabled the information row", row.isEnabled());
-                app.morphe.extension.shared.settings.PausedProcess.set(false);
-            }
+            TikTokPreferenceFragment page = attachSection(activity, "INTERFACE");
+            assertNull(page.findPreference("hushfeed_captcha_unavailable"));
+            Preference row = page.findPreference(Settings.HIDE_CAPTCHA_POPUPS.key);
+            assertNotNull(row);
+            assertTrue(row instanceof android.preference.SwitchPreference);
+            assertTrue(row.isEnabled());
+            assertSame(Settings.HIDE_CAPTCHA_POPUPS,
+                    app.morphe.extension.shared.settings.Setting.getSettingFromPath(row.getKey()));
         } finally {
-            app.morphe.extension.shared.settings.PausedProcess.set(false);
             Settings.HIDE_CAPTCHA_POPUPS.resetToDefault();
         }
     }
@@ -481,7 +439,10 @@ public class SettingsPagesTest {
             assertTrue("Search is not above the first destination",
                     preferenceIndex(screen, search) < preferenceIndex(screen, menuRows(home).get(0)));
             TextView heading = home.getView().findViewWithTag("hushfeed_page_title");
-            assertEquals("Settings", heading.getText().toString());
+            assertEquals("Make it yours.", heading.getText().toString());
+            TextView subtitle = home.getView().findViewWithTag("hushfeed_home_subtitle");
+            assertNotNull("the home introduction is missing", subtitle);
+            assertEquals("Your feed. Your rules.", subtitle.getText().toString());
 
             View status = home.getView().findViewWithTag("hushfeed_compact_status");
             assertNotNull("the compact status is missing", status);
@@ -645,6 +606,13 @@ public class SettingsPagesTest {
                 String name = "pages/" + theme + "/" + SECTIONS[i].toLowerCase(java.util.Locale.ROOT);
                 UiCapture.save(page.getView(), name + ".png");
                 ListView list = page.getView().findViewById(android.R.id.list);
+                if ("PRIVACY".equals(SECTIONS[i])) {
+                    int root = positionOf(list, Settings.HIDE_ROOT.key);
+                    assertTrue("the root privacy control is missing", root > 0);
+                    list.setSelectionFromTop(Math.max(0, root - 2), 70);
+                    Shadows.shadowOf(Looper.getMainLooper()).idle();
+                    UiCapture.save(page.getView(), name + "-device.png");
+                }
                 if ("SHARE".equals(SECTIONS[i])) {
                     for (int row = 0; row < list.getCount(); row++) {
                         Object item = list.getAdapter().getItem(row);
@@ -688,7 +656,7 @@ public class SettingsPagesTest {
             Activity activity = owner.get();
             Utils.setContext(activity);
             float radius = app.morphe.extension.tiktok.settings.preference.SettingsUi
-                    .dp(activity, 10);
+                    .dp(activity, app.morphe.extension.tiktok.settings.preference.SettingsUi.RADIUS_SETTINGS_CARD);
 
             for (boolean[] ends : new boolean[][]{{true, false}, {false, true},
                     {true, true}, {false, false}}) {
@@ -820,9 +788,7 @@ public class SettingsPagesTest {
     }
 
     @Test public void aLongPageTitleLeavesRoomForThePageAtAnyTextScale() throws Exception {
-        // 40sp against a 2x text scale is 80sp of page title. The two-times-text capture showed
-        // "Kommentare und Uebersetzung" on five lines taking 85% of the screen, with the first
-        // card of the page below the fold.
+        // Display headings cap their rendered growth so that the page stays reachable at 2x.
         try (var owner = Robolectric.buildActivity(PageActivity.class).setup().visible()) {
             Activity activity = owner.get();
             Utils.setContext(activity);
@@ -830,17 +796,17 @@ public class SettingsPagesTest {
             float original = configuration.fontScale;
             try {
                 configuration.fontScale = 1.0f;
-                assertEquals("the ordinary scale should be untouched", 40,
+                assertEquals("the ordinary scale should match the display heading", 34,
                         app.morphe.extension.tiktok.settings.preference.SettingsHeaderPreference
                                 .headingSizeSp(activity));
 
                 configuration.fontScale = 2.0f;
                 int large = app.morphe.extension.tiktok.settings.preference
                         .SettingsHeaderPreference.headingSizeSp(activity);
-                assertTrue("the title still fills the screen at 2x: " + large, large <= 26);
-                assertTrue("the title shrank past readable: " + large, large >= 24);
+                assertTrue("the title still fills the screen at 2x: " + large, large <= 22);
+                assertTrue("the title shrank past readable: " + large, large >= 20);
                 assertTrue("the rendered height grew by more than a third",
-                        large * 2.0f <= 40 * 1.35f);
+                        large * 2.0f <= 34 * 1.35f);
             } finally {
                 configuration.fontScale = original;
             }
@@ -2070,7 +2036,12 @@ assertEquals(View.LAYOUT_DIRECTION_RTL, configuration.getLayoutDirection());
         int minTouch = Math.round(minTouchDp * list.getResources().getDisplayMetrics().density);
         for (int i = 0; i < list.getChildCount(); i++) {
             View row = list.getChildAt(i);
-            assertTrue("row " + i + " is smaller than its touch target", row.getHeight() >= minTouch);
+            Object item = list.getAdapter().getItem(i + list.getFirstVisiblePosition());
+            // Section labels have heading semantics, not a touch action. Keep the target floor
+            // for every selectable preference, including disabled actions, and unknown rows.
+            if (!(item instanceof Preference) || ((Preference) item).isSelectable()) {
+                assertTrue("row " + i + " is smaller than its touch target", row.getHeight() >= minTouch);
+            }
             TextView title = row.findViewById(android.R.id.title);
             if (title != null && title.getLayout() != null) assertTextFits(title);
             TextView summary = row.findViewById(android.R.id.summary);
@@ -2464,7 +2435,7 @@ assertEquals(View.LAYOUT_DIRECTION_RTL, configuration.getLayoutDirection());
             Activity activity = owner.get();
             Utils.setContext(activity);
             android.preference.PreferenceScreen screen = attachSection(activity, "PLAYBACK").getPreferenceScreen();
-            for (String title : new String[]{"Silence the feed while comments are open", "Stay on the video in full screen"}) {
+            for (String title : new String[]{"Pause the video while comments are open", "Stay on the video in full screen"}) {
                 String heading = null;
                 for (int index = 0; index < screen.getPreferenceCount(); index++) {
                     Preference row = screen.getPreference(index);

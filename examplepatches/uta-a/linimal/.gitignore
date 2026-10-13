@@ -1,0 +1,69 @@
+# Local reference inputs and analysis output. Never commit APK/APKM content.
+/line-apk/
+/reference/local/
+/analysis/
+/decompiled/
+/apktool-out/
+
+# Decompiler output. JADX writes /base/ with sources/ and resources/, apktool writes smali trees.
+# Decompiled LINE sources are analysis-only artifacts and are never committed.
+/base/
+/jadx-out/
+/jadx/
+/sources/
+/smali/
+/smali_classes*/
+/unpacked/
+
+# Android packages and patched artifacts.
+*.apk
+*.apkm
+*.apks
+*.aab
+*.xapk
+*.idsig
+*.mpe
+*.mpp
+
+# Gradle and build output.
+.gradle/
+**/build/
+out/
+
+# Android and IDE local configuration.
+/local.properties
+/gradle.local.properties
+/.idea/
+*.iml
+.vscode/
+
+# Signing material.
+*.keystore
+*.jks
+*.p12
+*.pfx
+*.pem
+*.key
+*.csr
+*.der
+*.cer
+*.crt
+key.properties
+signing.properties
+keystore.properties
+
+# Secrets and local environment files.
+.env
+.env.*
+!.env.example
+*.secret
+*.secrets
+credentials.properties
+secrets.properties
+
+# Logs and crash reports.
+*.log
+hs_err_pid*
+
+# OS files.
+.DS_Store

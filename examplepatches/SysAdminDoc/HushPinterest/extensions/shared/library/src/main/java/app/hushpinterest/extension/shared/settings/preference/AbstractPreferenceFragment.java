@@ -625,8 +625,16 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
 
     private static volatile RestartFeedbackPresenter restartFeedbackPresenter;
 
-    public static void setRestartFeedbackPresenter(RestartFeedbackPresenter presenter) {
+    public static synchronized void setRestartFeedbackPresenter(RestartFeedbackPresenter presenter) {
         restartFeedbackPresenter = presenter;
+    }
+
+    /**
+     * Takes [presenter] away if it's still the one set. A screen that closes after a newer one
+     * opened leaves the newer one's presenter in place.
+     */
+    public static synchronized void clearRestartFeedbackPresenter(RestartFeedbackPresenter presenter) {
+        if (restartFeedbackPresenter == presenter) restartFeedbackPresenter = null;
     }
 
     protected CharSequence initializationErrorTitle(@Nullable Context context) {
@@ -650,7 +658,7 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
     }
 
     protected CharSequence preferenceChangeRecoveryFailedMessage(@Nullable Context context) {
-        return L10n.t(context, "Settings couldn't refresh completely. Reopen settings and try again.");
+        return L10n.t(context, "Settings didn't fully refresh. Reopen them and try again.");
     }
 
     public static void showRestartDialog(Context context) {

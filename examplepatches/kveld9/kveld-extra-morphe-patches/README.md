@@ -33,13 +33,13 @@
 
 | App | Package | Target Version | Variant | Download Source | Guide |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| Instagram | `com.instagram.android` | 447.0.0.55.81 | APKM bundle | [APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-447-0-0-55-81-release/) | [Instagram Guide](docs/apps/instagram.md) |
-| X | `com.twitter.android` | 12.33.1-prod.01 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/x-corp/twitter/x-12-33-1-prod-01-release/) | [X Guide](docs/apps/twitter.md) |
-| Moovit | `com.tranzmate` | 5.201.1.1809 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/moovit/moovit-bus-train-live-info/moovit-your-transit-tracker-5-201-1-1809-release/) | [Moovit Guide](docs/apps/moovit.md) |
-| PowerPoint | `com.microsoft.office.powerpoint` | 16.0.20527.20034 | APKM bundle | [APKMirror](https://www.apkmirror.com/apk/microsoft-corporation/powerpoint/microsoft-powerpoint-16-0-20527-20034-release/) | [PowerPoint Guide](docs/apps/powerpoint.md) |
-| Lightroom | `com.adobe.lrmobile` | 11.6.01 | APK (`arm64-v8a`, PairIP-free variant) | [Uptodown](https://adobe-lightroom-mobile.uptodown.com/android) | [Lightroom Guide](docs/apps/lrmobile.md) |
-| CapCut | `com.lemon.lvoverseas` | 19.7.0 | APK (`arm64-v8a`, `armeabi-v7a`, `nodpi`) | [APKMirror](https://www.apkmirror.com/apk/bytedance-pte-ltd/capcut/capcut-video-editor-19-7-0-release) | [CapCut Guide](docs/apps/capcut.md) |
-| Copilot | `com.microsoft.office.officehubrow` | 16.0.20527.20022 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/microsoft-corporation/microsoft-copilot/microsoft-copilot-16-0-20527-20022-release/) | [Copilot Guide](docs/apps/officehub.md) |
+| Instagram | `com.instagram.android` | 447.0.0.55.81 | APKM bundle | [APKMirror](https://www.apkmirror.com/apk/instagram/instagram-instagram/instagram-447-0-0-55-81-release/) | Instagram Guide |
+| X | `com.twitter.android` | 12.33.1-prod.01 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/x-corp/twitter/x-12-33-1-prod-01-release/) | X Guide |
+| Moovit | `com.tranzmate` | 5.201.1.1809 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/moovit/moovit-bus-train-live-info/moovit-your-transit-tracker-5-201-1-1809-release/) | Moovit Guide |
+| PowerPoint | `com.microsoft.office.powerpoint` | 16.0.20527.20034 | APKM bundle | [APKMirror](https://www.apkmirror.com/apk/microsoft-corporation/powerpoint/microsoft-powerpoint-16-0-20527-20034-release/) | PowerPoint Guide |
+| Lightroom | `com.adobe.lrmobile` | 11.6.01 | APK (`arm64-v8a`, PairIP-free variant) | [Uptodown](https://adobe-lightroom-mobile.uptodown.com/android) | Lightroom Guide |
+| CapCut | `com.lemon.lvoverseas` | 19.7.0 | APK (`arm64-v8a`, `armeabi-v7a`, `nodpi`) | [APKMirror](https://www.apkmirror.com/apk/bytedance-pte-ltd/capcut/capcut-video-editor-19-7-0-release) | CapCut Guide |
+| Copilot | `com.microsoft.office.officehubrow` | 16.0.20527.20022 | APKM bundle (`arm64-v8a`) | [APKMirror](https://www.apkmirror.com/apk/microsoft-corporation/microsoft-copilot/microsoft-copilot-16-0-20527-20022-release/) | Copilot Guide |
 
 ## Patches
 
@@ -64,7 +64,7 @@
 </details>
 
 <details>
-<summary>CapCut&nbsp;&nbsp;•&nbsp;&nbsp;<b>6 patches</b></summary>
+<summary>CapCut&nbsp;&nbsp;•&nbsp;&nbsp;<b>7 patches</b></summary>
 <br>
 
 **Supported versions:**
@@ -76,6 +76,7 @@
 |----------|----------------|-----------|
 | **Block Telemetry & Trackers** | Neutralizes Google AppMeasurement event dispatchers. |  |
 | **Bypass Effects Region Restriction** | Fixes effects, transitions, and templates failing to load (ByteDance Shark WAF block) by spoofing device_platform to 'windows' and resetting deviceId in effect requests. |  |
+| **Bypass GeoBlock Region Restriction** | Forces CapCut GeoBlock config lists (cert, dock, entrance, page, scheme) to empty so region-blocked surfaces stay enabled. Server-refused content may still fail to load. |  |
 | **Locale Slimmer** | Strips unselected language string tables, resources, and asset JSON files from the APK. Base fallback and English are always preserved. | • Locales to keep |
 | **Native Bloat Slimmer** | Strips non-essential companion native libraries by zeroing bytes in-situ. Always zeroes AppLovin ad crash reporter. WARNING: Stripping speech recognition and synthesis engines (libspeech*.so) disables voice recognition, voiceover captions, and speech-to-text features. | • Trim Speech Engines (Breaks Voice Features) |
 | **Screen Density Slimmer** | Strips unselected screen density assets and purges non-phone UI mode qualifiers. Launcher icons, nodpi/anydpi, and single-density orphans are always preserved. | • Target screen density |
@@ -166,7 +167,7 @@
 </details>
 
 <details>
-<summary>X&nbsp;&nbsp;•&nbsp;&nbsp;<b>15 patches</b></summary>
+<summary>X&nbsp;&nbsp;•&nbsp;&nbsp;<b>19 patches</b></summary>
 <br>
 
 **Supported versions:**
@@ -176,20 +177,24 @@
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
-| **Block Telemetry & Trackers** | Neutralizes Google AppMeasurement and Firebase Performance Trace dispatchers, and strips advertising identifiers. |  |
+| **Block Telemetry & Trackers** | Neutralizes Google AppMeasurement, Firebase Performance, Braze marketing SDK, and strips advertising identifiers. |  |
 | **Block Update Screen** | Blocks the 'This app is out of date' screen and suppresses in-app update prompts on launch |  |
 | **Control Video Auto Scroll** | Prevents automatic scrolling to the next video in immersive view |  |
-| **DM Debloat** | Hide call buttons and composer actions in direct message conversations | • Hide DM Audio Call<br>• Hide DM Video Call |
+| **Custom Deep Links** | Registers intent filters to open custom links directly in the app | • Custom Link Hosts |
+| **Custom Fonts** | Applies custom typography to post and profile text | • Custom Font Path<br>• Custom Emoji Font Path |
+| **DM Debloat** | Hide call buttons and composer actions in direct message conversations | • Hide DM Calls |
 | **Drawer Items** | Hide individual items in the navigation drawer | • Hide Profile<br>• Hide Premium<br>• Hide Communities<br>• Hide Bookmarks<br>• Hide Lists<br>• Hide Spaces<br>• Hide Creator Studio<br>• Hide Get Grok<br>• Hide Help Center |
-| **Navigation UI** | Bottom navigation, FAB, tabs and bars | • Hide Badges<br>• Hide FAB Menu<br>• Navigation Bar<br>• Grok Tab<br>• Explore Tabs<br>• Search Tab Items<br>• Side Bar Items |
+| **Navigation UI** | Bottom navigation, FAB, tabs and bars | • Hide Badges<br>• Hide FAB<br>• Hide FAB Menu<br>• Navigation Bar<br>• Grok Tab<br>• Explore Tabs<br>• Search Tab Items<br>• Side Bar Items |
 | **No Shortened URL** | Expands t.co shortened URLs, removing the click-tracking intermediary |  |
 | **Pause Search Suggestions** | Stops persisting search suggestions locally without breaking search |  |
 | **Post & Profile UI** | Post actions, profile header and Grok surfaces | • Hide Grok Post Action<br>• Hide Profile Grok Button<br>• Profile Tabs |
 | **Remove Ads** | Removes promoted posts, trends and ads from timeline |  |
 | **Remove Premium Upsell** | Removes premium upsell surfaces | • Hide Profile Get Verified |
-| **Share Links** | Custom sharing domain, handle custom links and legacy share links | • Custom Sharing Domain<br>• Custom Sharing Domain<br>• Handle Custom Links<br>• Legacy Share Links |
+| **Round Off Numbers** | Enable or disable rounding off numbers | • Show Full Numbers |
+| **Share Links** | Custom sharing domain, handle custom links and legacy share links | • Enable Custom Domain<br>• Custom Sharing Domain<br>• Handle Custom Links<br>• Legacy Share Links |
 | **Show Sensitive Media** | Displays sensitive media directly without requiring tap to reveal |  |
 | **Timeline UI** | Timeline surfaces: posts, threads, banners, recommendations and video entry points | • Hide Banner<br>• Hide Promote Button<br>• Hide Nudge Button<br>• Hide Recommendation Items<br>• Hide Discover More<br>• Hide Recommended Users<br>• Hide Live Threads<br>• Hide Community Notes<br>• Hide Post Metrics<br>• Hide View Count<br>• Inline Action Bar<br>• Timeline Add Tab<br>• Timeline Top Bar<br>• Hide Live Banner |
+| **X Background Slimmer** | Disables background WorkManager services, home screen widgets, and Cast/NFC companion services to reduce background resource consumption. |  |
 | **X MLKit Vision Slimmer** | Disables MLKit component discovery and registrars. WARNING: this breaks in-app QR and barcode scanning. |  |
 
 </details>

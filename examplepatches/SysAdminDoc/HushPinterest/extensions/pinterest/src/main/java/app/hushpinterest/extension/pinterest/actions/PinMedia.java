@@ -17,6 +17,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import app.hushpinterest.extension.pinterest.ads.ModelFields;
+import app.hushpinterest.extension.pinterest.privacy.PlainPinLinks;
 
 /** Resolves public media and metadata Pinterest already supplied with a pin, without inspecting a file. */
 final class PinMedia {
@@ -29,6 +30,8 @@ final class PinMedia {
     }
 
     static String id(Object pin) {
+        // Download board keeps a loaded pin as its resolved media, which only a verified pin has.
+        if (pin instanceof Resolution) return ((Resolution) pin).id;
         Object id = field(pin, "id");
         if (!(id instanceof String) || !((String) id).matches("[0-9]{1,30}")) return null;
         // Boards and people also have numeric ids. A pin declares both media model fields,
@@ -60,10 +63,15 @@ final class PinMedia {
         }
     }
 
+    /**
+     * True for Pinterest's own hosts: pin.it, any pinterest.com subdomain and the country sites
+     * Pinterest claims. A host that only starts with "pinterest." (pinterest.evil.example) isn't
+     * one, so a link there still leaves for the browser.
+     */
     static boolean pinterestUri(URI uri) {
         String host = uri.getHost().toLowerCase(java.util.Locale.ROOT).replaceFirst("\\.$", "");
-        return host.equals("pin.it") || host.endsWith(".pin.it") ||
-                host.matches("(?:[a-z0-9-]+\\.)*pinterest\\.[a-z.]+");
+        return host.equals("pin.it") || host.endsWith(".pin.it") || host.endsWith(".pinterest.com") ||
+                PlainPinLinks.pinterestSite(host);
     }
 
     static URI mediaUri(String url) {
@@ -81,6 +89,7 @@ final class PinMedia {
 
     /** Null means the model isn't a verified pin; a known pin can carry a specific refusal. */
     static Resolution resolve(Object pin) {
+        if (pin instanceof Resolution) return (Resolution) pin;
         String id = id(pin);
         if (id == null) return null;
         Object videoList = field(field(pin, "videos"), "video_list");
@@ -207,6 +216,19 @@ final class PinMedia {
     }
 
     enum Refusal { IMAGE_MISSING, IMAGE_TYPE, PUBLIC_LINK, MP4_MISSING, ADAPTIVE_VIDEO }
+
+    /** What a batch chooser filters by. */
+    enum Kind { IMAGE, VIDEO }
+
+    /**
+     * A video when Pinterest supplied one or said the pin is one, otherwise an image, read from the
+     * same supplied fields a download uses and never from a file or a thumbnail. Null for no pin.
+     */
+    static Kind kind(Resolution media) {
+        if (media == null) return null;
+        if (media.source != null) return media.source.mime.startsWith("video/") ? Kind.VIDEO : Kind.IMAGE;
+        return media.refusal == Refusal.MP4_MISSING || media.refusal == Refusal.ADAPTIVE_VIDEO ? Kind.VIDEO : Kind.IMAGE;
+    }
 
     static final class Resolution {
         final String id;

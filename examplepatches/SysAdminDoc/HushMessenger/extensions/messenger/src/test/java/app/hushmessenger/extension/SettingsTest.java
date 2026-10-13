@@ -162,7 +162,7 @@ public class SettingsTest {
             assertTrue(spoken.contains("Encrypted chats aren't supported"));
             assertTrue(spoken.contains("group chats aren't tested"));
             assertTrue(spoken.contains("Your own unsends may be limited"));
-            assertEquals("No unsent message seen since Messenger started",
+            assertEquals("On. No unsent message received yet",
                 ((android.widget.TextView) root.findViewWithTag("active_keep_unsent")).getText().toString());
         }
         assertEquals("[unsent] original text", Settings.labelKeptUnsent("original text", "retained-message"));
@@ -381,6 +381,35 @@ public class SettingsTest {
         java.util.ArrayList<Object> qrOnly = new java.util.ArrayList<>(java.util.List.of(qrCode));
         Settings.addMenuSettingsEntry(qrOnly);
         assertEquals(java.util.List.of(qrCode), qrOnly);
+    }
+
+    /** #22: both menus lose the row only while Hide the Menu row is on and the long-press shortcut has proved itself. */
+    @Test public void hideTheMenuRowNeedsTheShortcutToHaveOpenedSettingsAndStillBeThere() {
+        var application = RuntimeEnvironment.getApplication();
+        java.util.List<Object> side = java.util.List.of(new Object(), new Object());
+        try {
+            HostScreensTest.answerControlsShortcut(true);
+            Settings.preferences.edit().putBoolean("hide_menu_row", true).commit();
+            assertEquals("not opened from the shortcut yet", 2, menuRows(application).size());
+            Settings.noteShortcutUsed();
+            assertEquals(1, menuRows(application).size());
+            assertSame(side, Settings.addMenuDrawerEntry(side));
+            HostScreensTest.answerControlsShortcut(false);
+            assertEquals("the shortcut went missing", 2, menuRows(application).size());
+            HostScreensTest.answerControlsShortcut(true);
+            Settings.preferences.edit().putBoolean("hide_menu_row", false).commit();
+            assertEquals(2, menuRows(application).size());
+            assertTrue(Settings.hookErrors.isEmpty());
+        } finally {
+            HostScreens.controlsShortcut = null;
+        }
+    }
+
+    private static java.util.ArrayList<Object> menuRows(Context context) {
+        java.util.ArrayList<Object> rows = new java.util.ArrayList<>(
+            java.util.List.of(new FolderRow(context, new FakeSettingsFolderKey(), null, null, "Settings")));
+        Settings.addMenuSettingsEntry(rows);
+        return rows;
     }
 
     @Test public void menuSettingsRowLeavesListsItCannotLabelAlone() {

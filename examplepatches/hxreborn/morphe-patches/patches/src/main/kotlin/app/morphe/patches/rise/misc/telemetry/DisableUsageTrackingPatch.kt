@@ -7,9 +7,7 @@ package app.morphe.patches.rise.misc.telemetry
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.compat.AppCompatibilities
-
-private const val USAGE_EVENT_FACTORY_CLASS =
-    "Lcom/risesci/nyx/RiseHealthKit/ApplicationUsageEvent\$Factory;"
+import app.morphe.util.matchSingle
 
 @Suppress("unused")
 val disableUsageTrackingPatch = bytecodePatch(
@@ -20,8 +18,7 @@ val disableUsageTrackingPatch = bytecodePatch(
     compatibleWith(AppCompatibilities.RISE)
 
     execute {
-        mutableClassDefBy(USAGE_EVENT_FACTORY_CLASS)
-            .methods.single { it.name == "map" && it.returnType == "Ljava/util/List;" }
+        UsageEventMapFingerprint.matchSingle().method
             .addInstructions(
                 0,
                 """

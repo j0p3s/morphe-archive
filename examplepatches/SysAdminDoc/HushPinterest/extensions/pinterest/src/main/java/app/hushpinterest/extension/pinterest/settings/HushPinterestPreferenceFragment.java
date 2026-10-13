@@ -54,8 +54,10 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -71,6 +73,7 @@ import app.hushpinterest.extension.shared.settings.preference.ClearLogBufferPref
 import app.hushpinterest.extension.shared.settings.preference.ExportDiagnosticReportPreference;
 import app.hushpinterest.extension.shared.settings.preference.ImmediateAction;
 import app.hushpinterest.extension.shared.settings.preference.LogBufferManager;
+import app.hushpinterest.extension.shared.settings.preference.QuickSetups;
 
 /**
  * The preference list, built in code rather than from an XML resource so the bundle adds no
@@ -102,6 +105,8 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
     static final String UPDATE_INSTRUCTIONS_URL = SOURCE_URL + "#install";
     /** The Supported links row's key. It stores nothing either. */
     static final String SUPPORTED_LINKS = "action_supported_links";
+    /** The Android notification settings row's key, under Notifications. It stores nothing. */
+    static final String NOTIFICATION_SETTINGS = "action_notification_settings";
 
     /** Thrown by the next initialize() and then cleared: how a test reaches the recovery page. */
     static volatile RuntimeException failNextInitialization;
@@ -175,6 +180,7 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         super.onResume();
         SettingsBackupPreference.onPageResumed(this);
         showSupportedLinks();
+        showNotificationReadiness();
     }
 
     @Override
@@ -204,7 +210,17 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         Context context = getContext();
         if (context == null) return;
         if (statusCard != null) showStatus(statusCard, context);
-        if (checkNowRow != null) checkNowRow.setSummary(ReleaseCheck.checkNowSummary());
+        if (checkNowRow != null) {
+            String result = ReleaseCheck.checkNowSummary();
+            checkNowRow.setSummary(result);
+            // Spoken as well as shown, but only for a check the user asked for: the daily check
+            // that settings starts on its own ends the same way, and nobody is waiting on that.
+            View page = getView();
+            if (announceCheckResult && page != null && result != null) {
+                announceCheckResult = false;
+                page.announceForAccessibility(result);
+            }
+        }
     }
 
     /**
@@ -261,36 +277,40 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
             if (build.contains(PatchFamily.HIDE_AI_PINS)) {
                 feed.addPreference(mark(toggle(context, Settings.HIDE_AI_PINS, L10n.t("Hide AI-labeled pins"),
                         PatchFamily.HIDE_AI_PINS.coverageSummary(L10n.t("Removes pins that Pinterest labels as made "
-                            + "or changed with AI from the same places. "
+                            + "or changed with AI from your home feed, search, related pins and boards. "
                             + "AI images without the label still show."))), SettingsIcons.BLOCK));
             }
             patchToggle(feed, context, build, PatchFamily.HIDE_SHOPPING, Settings.HIDE_SHOPPING,
-                    L10n.t("Hide shopping and product pins"), L10n.t("Hides shoppable pins, shopping stories and "
-                        + "featured boards."), SettingsIcons.BLOCK);
+                    L10n.t("Hide shopping and product pins"), L10n.t("Hides product pins, shopping stories, featured "
+                        + "boards and Shop the look under pins. Visit and Paid link stay."), SettingsIcons.BLOCK);
         }
 
         if (!Collections.disjoint(build, PatchFamily.PRIVACY_PAGE)) {
             PreferenceCategory privacy = category(screen, L10n.t("Privacy"));
             patchToggle(privacy, context, build, PatchFamily.DISABLE_ANALYTICS, Settings.DISABLE_ANALYTICS,
-                    L10n.t("Disable analytics"), L10n.t("Stops Pinterest from sending usage reports and running its "
-                        + "analytics tasks. Google's analytics collection stays off "
+                    L10n.t("Disable analytics"), L10n.t("Stops usage reports and analytics tasks. Restart after turning "
+                        + "off or pausing. Google's analytics stays off "
                         + "until you patch again without Disable analytics."), SettingsIcons.BLOCK);
+            // Its own hooks: a build where Pinterest's invite logger or direct share wasn't found has no row
+            // for Plain pin links, and then the row above it doesn't point at a switch that isn't there.
+            boolean plainLinks = build.contains(PatchFamily.STRIP_LINK_TRACKING) && PatchFamily.Capability.PLAIN_PIN_LINKS.installed();
             patchToggle(privacy, context, build, PatchFamily.STRIP_LINK_TRACKING, Settings.STRIP_LINK_TRACKING,
-                    L10n.t("Strip link tracking"), L10n.t("Removes tracking tags from links you copy or share. "
-                        + "Short pin.it links stay as Pinterest made them unless Plain pin links is on."), SettingsIcons.LINKS);
-            // Its own hooks: a build where Pinterest's invite logger or direct share wasn't found has no row for it.
-            if (build.contains(PatchFamily.STRIP_LINK_TRACKING) && PatchFamily.Capability.PLAIN_PIN_LINKS.installed()) {
+                    L10n.t("Strip link tracking"), plainLinks
+                        ? L10n.t("Removes tracking tags from copied and shared links. "
+                            + "Short pin.it links stay unchanged unless Plain pin links is on.")
+                        : L10n.t("Removes tracking tags from copied and shared links. "
+                            + "Short pin.it links stay unchanged."), SettingsIcons.LINKS);
+            if (plainLinks) {
                 privacy.addPreference(mark(toggle(context, Settings.PLAIN_PIN_LINKS, L10n.t("Plain pin links"),
-                        L10n.t("Copied and shared pin.it links become the pin's own pinterest.com link, so they don't say who shared them. "
-                                + "Pin links from Pinterest's country sites become that same link too. "
-                                + "When HushPinterest doesn't know the pin yet, a copied link is checked with Pinterest in the background and swapped in a moment later.")),
+                        L10n.t("Replaces short and country-site pin links with pinterest.com links that don't identify who shared them. "
+                                + "Unknown copied short links change only if a background check finds the pin. "
+                                + "Sharing doesn't wait for that check.")),
                         SettingsIcons.LINKS));
             }
             patchToggle(privacy, context, build, PatchFamily.HIDE_ADVERTISING_ID, Settings.HIDE_ADVERTISING_ID,
-                    L10n.t("Hide advertising ID"), L10n.t("Pinterest sees an empty advertising ID with ad tracking "
-                        + "limited, as if you deleted your ad ID in Android "
-                        + "settings. Pinterest also stops keeping its browser ID in Google's Block Store, "
-                        + "where it would outlast a reinstall."), SettingsIcons.BLOCK);
+                    L10n.t("Hide advertising ID"), L10n.t("Shows an empty ad ID with tracking limited, as if you deleted "
+                        + "it in Android. Also stops Google's Block Store from keeping Pinterest's browser ID across reinstalls."),
+                        SettingsIcons.BLOCK);
             // A patch-time fact with no switch: an explanation, so it takes the info mark.
             if (build.contains(PatchFamily.REMOVE_AD_TRACKING_PERMISSIONS)) {
                 privacy.addPreference(mark(info(context, L10n.t("Remove ad tracking permissions"),
@@ -300,9 +320,8 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
             }
             if (build.contains(PatchFamily.SPOOF_SIGNATURE)) {
                 privacy.addPreference(mark(info(context, L10n.t("Spoof signature for Google sign-in"),
-                        L10n.t("Tells Android this is the original Pinterest, so Google sign-in can work with "
-                            + "microG-RE or the XSpoofSignatures module. Stock Google Play services ignores it. "
-                            + "This was set when you patched. Patch again without it to take it out.")),
+                        L10n.t("Helps Google sign-in only with microG-RE or XSpoofSignatures. Stock Google Play services "
+                            + "ignores it. Set when patching. Patch again without it to remove it.")),
                         SettingsIcons.ABOUT));
             }
         }
@@ -315,18 +334,27 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
             if (build.contains(PatchFamily.DOWNLOAD_PINS)) {
                 // Download pins' second switch, drawn like Plain pin links: Pause turns it off with the first.
                 actions.addPreference(mark(toggle(context, Settings.SAVE_IN_PINTEREST_FOLDER, L10n.t("Save in Pinterest's folder"),
-                        L10n.t("Saves downloads in Pictures/100PINT/Pins, the folder Pinterest's own image saves use, instead of "
-                            + "Download.")), SettingsIcons.DOWNLOADS));
+                        L10n.t("Saves to Pictures/100PINT/Pins with Pinterest's own images, instead of the Download folder.")),
+                        SettingsIcons.DOWNLOADS));
                 actions.addPreference(mark(new DownloadFolderPreference(this, context), SettingsIcons.DOWNLOADS));
+                // Android holds each download to the limits it was queued with, so the summaries say "new".
+                actions.addPreference(mark(toggle(context, Settings.DOWNLOAD_UNMETERED_ONLY,
+                        L10n.t("Download on unmetered networks only"),
+                        L10n.t("New downloads wait for an unmetered network, usually home Wi-Fi. Metered Wi-Fi and most "
+                            + "hotspots don't qualify. Queued downloads keep their original rule.")),
+                        SettingsIcons.DOWNLOADS));
+                actions.addPreference(mark(toggle(context, Settings.DOWNLOAD_NO_ROAMING, L10n.t("No downloads while roaming"),
+                        L10n.t("New downloads avoid roaming data. They wait for Wi-Fi or your home mobile network. "
+                            + "Queued downloads keep their original rule.")),
+                        SettingsIcons.DOWNLOADS));
                 actions.addPreference(mark(new DownloadHistoryPreference(context), SettingsIcons.DOWNLOADS));
             }
             patchToggle(actions, context, build, PatchFamily.DOWNLOAD_BOARD, Settings.DOWNLOAD_BOARD,
-                    L10n.t("Download board"), L10n.t("Adds Download board to a board's menu. It saves the pins Pinterest "
-                        + "has loaded for that board so far and skips any already in Download history. Download pins "
-                        + "has to be on too."), SettingsIcons.DOWNLOADS);
+                    L10n.t("Download board"), L10n.t("Downloads up to 500 loaded pins, skipping those in Download history. "
+                        + "Needs Download pins on. Scroll the board to load more."), SettingsIcons.DOWNLOADS);
             patchToggle(actions, context, build, PatchFamily.LONG_PRESS_DOWNLOAD, Settings.LONG_PRESS_DOWNLOAD,
-                    L10n.t("Long-press download"), L10n.t("Adds a Download button to the round menu you get when you "
-                        + "hold a pin. Slide onto it and let go to save the pin. Download pins has to be on too."),
+                    L10n.t("Long-press download"), L10n.t("Adds Download to a grid pin's long-press menu. Slide onto it "
+                        + "and release. Needs Download pins on."),
                     SettingsIcons.DOWNLOADS);
             patchToggle(actions, context, build, PatchFamily.SYSTEM_SHARE, Settings.SYSTEM_SHARE,
                     L10n.t("System share sheet"), L10n.t("Sharing a pin link opens Android's own share menu."), SettingsIcons.EXPORT);
@@ -355,6 +383,19 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
                     L10n.t("Hide header buttons"),
                     L10n.t("Hides the small icon buttons at the end of the top bar. Back, text buttons and account "
                         + "controls stay. The change shows the next time the bar updates."), SettingsIcons.BLOCK);
+            patchToggle(ui, context, build, PatchFamily.AMOLED_BLACK, Settings.BLACK_BOTTOM_BAR,
+                    L10n.t("Black bottom bar"),
+                    L10n.t("In dark mode, paints the bottom bar pure black to match the page, which also saves a "
+                        + "little battery on OLED screens. Light mode stays as it is. The change shows the next time "
+                        + "the bar redraws."), SettingsIcons.DARK_MODE);
+            patchToggle(ui, context, build, PatchFamily.HIDE_CLOSEUP_BUTTONS, Settings.HIDE_CLOSEUP_BACK,
+                    L10n.t("Hide back arrow on pins"),
+                    L10n.t("Hides the back arrow that floats over a pin you open. Your phone's back gesture or button "
+                        + "still leaves the pin. The change shows on the next pin you open."), SettingsIcons.BLOCK);
+            patchToggle(ui, context, build, PatchFamily.HIDE_CLOSEUP_BUTTONS, Settings.HIDE_CLOSEUP_LENS,
+                    L10n.t("Hide lens button on pins"),
+                    L10n.t("Hides the visual search button in the corner of a pin you open. Search image in the pin "
+                        + "menu still works. The change shows on the next pin you open."), SettingsIcons.BLOCK);
             patchToggle(ui, context, build, PatchFamily.HIDE_PIN_MENU_ITEMS, Settings.HIDE_PIN_MENU_COLLAGE,
                     L10n.t("Hide collage menu items"),
                     L10n.t("Hides Add to collage and Remix collage in pin menus you open from now on. A menu that's "
@@ -381,11 +422,11 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
             patchToggle(ui, context, build, PatchFamily.HIDE_SURVEY_PROMPTS, Settings.HIDE_SURVEY_PROMPTS,
                     L10n.t("Hide survey prompts"),
                     L10n.t("Turns down Pinterest's \"Got a minute?\" survey invite before it pops up, the way Maybe later "
-                        + "does, so that survey doesn't come back. Advertiser sponsored polls don't pop up either. An "
+                        + "does, so that survey doesn't come back. Advertiser-sponsored polls don't pop up either. An "
                         + "invite that's already open stays."), SettingsIcons.BELL);
             patchToggle(ui, context, build, PatchFamily.HIDE_SAVE_TOASTS, Settings.HIDE_SAVE_TOASTS,
                     L10n.t("Hide save toasts"),
-                    L10n.t("Saving a pin no longer pops up \"Saved to\" your board or a suggestion to follow its creator. The pin is still saved."), SettingsIcons.BELL);
+                    L10n.t("Saving a pin no longer shows the \"Saved to\" message or a suggestion to follow its creator. The pin is still saved."), SettingsIcons.BELL);
             patchToggle(ui, context, build, PatchFamily.ORIGINAL_IMAGES, Settings.ORIGINAL_IMAGES,
                     L10n.t("Original-quality images"),
                     L10n.t("Shows the original image instead of the large size in pin closeups and collages, when "
@@ -396,7 +437,7 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         // here only for the addresses selected on the app's Open by default page.
         PreferenceCategory links = category(screen, L10n.t("Links"));
         patchToggle(links, context, build, PatchFamily.EXTERNAL_BROWSER, Settings.EXTERNAL_BROWSER,
-                L10n.t("Open links in your browser"), L10n.t("Open pin Visit links and profile websites in your browser."), SettingsIcons.LINKS);
+                L10n.t("Open links in your browser"), L10n.t("Opens a pin's Visit link and profile websites in your browser."), SettingsIcons.LINKS);
         links.addPreference(mark(supportedLinksRow(context), SettingsIcons.LINKS));
         // An explanation, not a control: the info mark says so, as it does for Version on About.
         links.addPreference(mark(info(context, L10n.t("Selecting links by hand"),
@@ -413,6 +454,7 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
                     L10n.t("Fix push notifications"),
                     L10n.t("Lets a patched Pinterest sign up for push notifications, which it can't do on its own. A "
                         + "change applies the next time Pinterest starts."), SettingsIcons.BELL);
+            notifications.addPreference(mark(notificationSettingsRow(context), SettingsIcons.BELL));
         }
 
         // In every build: where Pinterest keeps its own controls for what no switch here covers. The
@@ -497,7 +539,7 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
             } catch (ActivityNotFoundException | SecurityException missing) {
                 // No browser, or none switched on. Uncaught, Android's exception closed Pinterest.
                 Logger.printInfo(() -> "No app opened the source code link");
-                Utils.showToastLong(L10n.f("No app on this phone can open the link. The address is %1$s.",
+                Utils.showToastLong(L10n.f("No app can open %1$s.",
                         L10n.isolate(SOURCE_ADDRESS)));
             }
             return true;
@@ -550,13 +592,15 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
      * shows once the view is gone or the activity is finishing: the dialog would come up over a
      * window that's gone.
      */
-    private void show(AlertDialog.Builder builder) {
+    @Nullable
+    private AlertDialog show(AlertDialog.Builder builder) {
         Activity activity = getActivity();
-        if (getView() == null || activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+        if (getView() == null || activity == null || activity.isFinishing() || activity.isDestroyed()) return null;
         AlertDialog dialog = builder.show();
         ScreenColors.dialog(dialog);
         shownDialogs.add(dialog);
         dialog.setOnDismissListener(shownDialogs::remove);
+        return dialog;
     }
 
     /** The section headings on the page, in order. */
@@ -648,8 +692,8 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
             String folder = L10n.isolate(markerFolder(context.getPackageName()));
             // The switches stay as they were until the file goes, so say when they still pause.
             String left = BaseSettings.PAUSED.savedValue() || BaseSettings.SAFE_MODE.savedValue()
-                    ? L10n.f("The file %1$s couldn't be removed. Delete it from %2$s, then tap Resume again.", file, folder)
-                    : L10n.f("The file %1$s couldn't be removed. Delete it from %2$s to turn HushPinterest back on.",
+                    ? L10n.f("Delete %1$s from %2$s, then tap Resume again.", file, folder)
+                    : L10n.f("Delete %1$s from %2$s to turn HushPinterest back on.",
                     file, folder);
             statusCard.setSummary(left);
             // Resume can be tapped on a category page too, where the card isn't in view.
@@ -699,6 +743,8 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         row.actsAtOnce = true;
         row.setSummary(ReleaseCheck.checkNowSummary());
         row.setOnPreferenceClickListener(p -> {
+            // Set before the check starts, so the result is announced even when it lands at once.
+            announceCheckResult = true;
             if (!ReleaseCheck.checkNow()) Utils.showToastLong(L10n.t("Couldn't start that. Try again in a moment."));
             p.setSummary(ReleaseCheck.checkNowSummary());
             return true;
@@ -706,6 +752,9 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         checkNowRow = row;
         return row;
     }
+
+    /** True from a tap on Check now until the next result is spoken. The automatic check stays quiet. */
+    private boolean announceCheckResult;
 
     /** Fixed project pages. Neither a release's body nor its html_url can choose the destination. */
     private Preference releaseLink(Context context, String key, String title, String summary, String url) {
@@ -720,7 +769,7 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
             } catch (ActivityNotFoundException | SecurityException missing) {
                 Logger.printInfo(() -> "No app opened the release help link");
                 String address = url.substring(url.indexOf("://") + 3);
-                Utils.showToastLong(L10n.f("No app on this phone can open the link. The address is %1$s.",
+                Utils.showToastLong(L10n.f("No app can open %1$s.",
                         L10n.isolate(address)));
             }
             return true;
@@ -762,16 +811,93 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
             }
         }
         Logger.printInfo(() -> "No settings page opened for supported links");
-        Utils.showToastLong(L10n.t("Android's settings for this app didn't open. Open App info from Pinterest's icon, "
-                + "then Open by default."));
+        Utils.showToastLong(L10n.t("Couldn't show Open by default. It's in Pinterest's App info."));
     }
 
-    /** A switch whose change waits for a restart: the card says what the next start brings. */
+    /**
+     * What Android lets this app show, and the way to its notification page (PushReadiness), so
+     * nobody has to find it by hand. The page opens over Pinterest, so the row reads the answer again
+     * on the way back. The tap changes no permission or setting itself.
+     */
+    private Preference notificationSettingsRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(NOTIFICATION_SETTINGS);
+        row.setTitle(L10n.t("Android notification settings"));
+        row.setPersistent(false);
+        row.setSummary(PushReadiness.summary(PushReadiness.notificationsEnabled(context)));
+        row.setOnPreferenceClickListener(p -> {
+            openNotificationSettings(context);
+            return true;
+        });
+        return row;
+    }
+
+    private void showNotificationReadiness() {
+        if (getPreferenceScreen() == null) return;
+        Preference row = findPreference(NOTIFICATION_SETTINGS);
+        if (row != null) row.setSummary(PushReadiness.summary(PushReadiness.notificationsEnabled(row.getContext())));
+    }
+
+    private void openNotificationSettings(Context context) {
+        for (Intent page : PushReadiness.settingsIntents(context)) {
+            try {
+                startActivity(page);
+                return;
+            } catch (ActivityNotFoundException | SecurityException missing) {
+                // A phone without the notification page still has App info, which leads there.
+            }
+        }
+        Logger.printInfo(() -> "No settings page opened for notifications");
+        Utils.showToastLong(L10n.t("Couldn't show Notifications. It's in Pinterest's App info."));
+    }
+
+    /**
+     * A switch whose change waits for a restart: the card says what the next start brings, and the
+     * restart row comes, goes or counts again.
+     */
     @Override
     protected void onRestartPendingChanged() {
         Preference card = statusCard;
         Context context = getContext();
         if (card != null && context != null) showStatus(card, context);
+        if (navigation != null) navigation.restartChanged();
+    }
+
+    /**
+     * Quick setups: Quiet, Privacy or Back to defaults, each changing its switches at once
+     * ({@link QuickSetupKeys}), then a toast saying how many changed. A switch that needs a restart
+     * brings up the restart row the way a tap on it would.
+     */
+    void showQuickSetups() {
+        Context context = getContext();
+        if (context == null) return;
+        List<Map<BooleanSetting, Boolean>> choices = Arrays.asList(
+                QuickSetupKeys.quiet(), QuickSetupKeys.privacy(), QuickSetupKeys.defaults());
+        CharSequence[] names = {L10n.t("Quiet"), L10n.t("Privacy"), L10n.t("Back to defaults")};
+        CharSequence[] details = {
+                L10n.t("Hides ads, suggestions, nags and pop-ups."),
+                L10n.t("Strips tracking from links and stops usage reports and the ad ID."),
+                L10n.t("Puts every feature switch back the way it started.")};
+        AlertDialog dialog = show(new AlertDialog.Builder(themed(context))
+                .setTitle(L10n.t("Quick setups"))
+                .setAdapter(new ChoiceCards(ScreenColors.DEFAULT, names, details, new boolean[]{false, false, false}),
+                        (shown, which) -> applyQuickSetup(choices.get(which)))
+                .setNegativeButton(L10n.t("Cancel"), null));
+        ListView list = dialog == null ? null : dialog.getListView();
+        if (list != null) {
+            // The cards bring their own spacing and press ripple, as in the diagnostic report's choices.
+            list.setDivider(null);
+            list.setSelector(new ColorDrawable(Color.TRANSPARENT));
+        }
+    }
+
+    /** Applies one Quick setups choice to the switches on this page and says how many changed. */
+    int applyQuickSetup(Map<BooleanSetting, Boolean> values) {
+        PreferenceScreen screen = getPreferenceScreen();
+        if (screen == null) return 0;
+        int changed = QuickSetups.apply(screen, values);
+        Utils.showToastLong(L10n.quantity(changed, "Changed %1$d setting", "Changed %1$d settings", changed));
+        return changed;
     }
 
     /**
@@ -820,7 +946,7 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         } catch (ActivityNotFoundException | SecurityException missing) {
             // No browser, or none switched on. Uncaught, Android's exception closed Pinterest.
             Logger.printInfo(() -> "No app opened the support link");
-            Utils.showToastLong(L10n.f("No app on this phone can open the link. The address is %1$s.",
+            Utils.showToastLong(L10n.f("No app can open %1$s.",
                     L10n.isolate(SUPPORT_ADDRESS)));
         }
     }
@@ -962,11 +1088,13 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         @Override
         protected ListAdapter choices(Context dialogContext) {
             ScreenColors colors = ScreenColors.DEFAULT;
+            // Copy acts at once; only Save opens the file picker, so only it carries the chevron.
             return new ChoiceCards(colors,
                     new CharSequence[]{L10n.t(getContext(), "Copy quick report"),
                             L10n.t(getContext(), "Save full report")},
                     new CharSequence[]{L10n.t(getContext(), "Copy a short report to the clipboard."),
-                            fullReportSummary()});
+                            fullReportSummary()},
+                    new boolean[]{false, true});
         }
 
         /**
@@ -1111,7 +1239,7 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         show(new AlertDialog.Builder(context)
                 .setTitle(L10n.t("Licenses"))
                 .setView(scroll)
-                .setPositiveButton(L10n.t("OK"), null));
+                .setPositiveButton(L10n.t("Close"), null));
     }
 
     /**

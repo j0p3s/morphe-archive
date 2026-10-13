@@ -189,7 +189,10 @@ internal object AppCompatibilities {
         signatures = setOf(
             "96cdac84105ee04a12a48110d37ec60888aa8fbff8220345888d7f9c12c2f3fa",
         ),
-        targets = listOf(AppTarget(version = "9.2", versionCode = 86, minSdk = 25)),
+        targets = listOf(
+            AppTarget(version = "9.2", versionCode = 86, minSdk = 25),
+            AppTarget(version = "9.3", versionCode = 87, minSdk = 32),
+        ),
     )
 
     val ECHOGRAM = Compatibility(
@@ -420,6 +423,7 @@ internal object AppCompatibilities {
         targets = listOf(
             AppTarget(version = "3.4.12", versionCode = 4197422, minSdk = 24),
             AppTarget(version = "3.4.13", versionCode = 4197423, minSdk = 24),
+            AppTarget(version = "3.4.14", versionCode = 4197424, minSdk = 24),
         ),
     )
 
@@ -503,6 +507,7 @@ internal object AppCompatibilities {
         apkFileType = ApkFileType.APK,
         appIconColor = 0xF08029,
         targets = listOf(
+            AppTarget(version = "4.72", versionCode = 97, minSdk = 23),
             AppTarget(version = "4.71", versionCode = 95, minSdk = 23),
             AppTarget(version = "4.70", versionCode = 92, minSdk = 23),
         ),
@@ -585,6 +590,7 @@ internal object AppCompatibilities {
         targets = listOf(
             AppTarget(version = "2.2.8", versionCode = 77, minSdk = 33),
             AppTarget(version = "2.2.9", versionCode = 78, minSdk = 33),
+            AppTarget(version = "2.2.91", versionCode = 82, minSdk = 33),
         ),
     )
 
@@ -655,6 +661,7 @@ internal object AppCompatibilities {
         apkFileType = ApkFileType.APKS,
         appIconColor = 0x8E58FF,
         targets = listOf(
+            AppTarget(version = "Android V1.78.52", minSdk = 26),
             AppTarget(version = "Android V1.78.51", minSdk = 26),
             AppTarget(version = "Android V1.78.49", minSdk = 26),
             AppTarget(version = "Android V1.78.47", minSdk = 26),
@@ -705,6 +712,17 @@ internal object AppCompatibilities {
         targets = listOf(AppTarget(version = "5.23.0", versionCode = 299, minSdk = 24)),
     )
 
+    val STORYWISE = Compatibility(
+        name = "Storywise",
+        packageName = "com.storywise.storywise",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0xD9543D,
+        signatures = setOf(
+            "a8434fb26c0ef24c8bffe4cca13ad81322adfb580854db3a7adf7ee783a60512",
+        ),
+        targets = listOf(AppTarget(version = "1.0.3", versionCode = 34, minSdk = 24)),
+    )
+
     val SYMFONIUM = Compatibility(
         name = "Symfonium",
         packageName = "app.symfonik.music.player",
@@ -744,6 +762,17 @@ internal object AppCompatibilities {
             AppTarget(version = "415.0.0.182623", versionCode = 1282623, minSdk = 26),
             AppTarget(version = "415.0.0.182626", versionCode = 1282626, minSdk = 26),
         ),
+    )
+
+    val VIDEO_EDITOR = Compatibility(
+        name = "Video Editor",
+        packageName = "videoeditor.videomaker.videoeditorforyoutube",
+        apkFileType = ApkFileType.APKS,
+        appIconColor = 0xFF9800,
+        signatures = setOf(
+            "97c78f212f647fc96059ef8b81f239bc047be8f285ae59486a53a5e1ed09349a",
+        ),
+        targets = listOf(AppTarget(version = "1.621.196", versionCode = 196, minSdk = 26)),
     )
 
     val VLLO = Compatibility(

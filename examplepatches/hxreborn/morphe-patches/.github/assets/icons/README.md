@@ -62,6 +62,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `hinducalendar.png` | Hindu Calendar (`com.alokmandavgane.hinducalendar`) | Alok Mandavgane | APK 9.3.0, adaptive icon `res/drawable-v26/ic_launcher_vector.xml` |
 | `walp.png` | WalP - Stock HD Wallpapers (`com.stresscodes.wallp`) | Stress Codes | APK 10.2.1, adaptive icon `res/mipmap-anydpi/ic_launcher.xml` |
 | `vllo.png` | VLLO (`com.darinsoft.vimo`) | vimosoft | APK 13.7.4, adaptive icon `res/mipmap-anydpi-v26/vllo_icon.xml` |
+| `videoeditor.png` | Video Editor (`videoeditor.videomaker.videoeditorforyoutube`) | InShot Inc. | APK 1.621.196, `res/mipmap-xxxhdpi-v4/ic_launcher.png` (square icon cut to a circle) |
 | `terabox.png` | TeraBox (`com.dubox.drive`) | Flextech Inc. | APK 4.26.0, adaptive icon `res/drawable-anydpi-v26/ic_element_appicon_netdisk_new.xml` |
 | `echogram.png` | Echogram (`com.liori.echogram`) | Illuzion Apps | APK 1.0.7.0, `res/mipmap-xxxhdpi-v4/ic_launcher.png` |
 | `echoequalizer.png` | Echo Equalizer (`com.hapibits.soundlift`) | HapiBits | APK 9.2, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
@@ -87,6 +88,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `audiolab.png` | AudioLab (`com.hitrolab.audioeditor`) | HitroLab | APK 1.3.33, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `imo.png` | imo (`com.imo.android.imoim`) | imo.im | APK 2026.08.1041, adaptive icon `res/drawable-anydpi-v26/b63.xml`, cut to a circle |
 | `steezy.png` | STEEZY (`co.steezy.app`) | STEEZY | APK 5.23.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
+| `storywise.png` | Storywise (`com.storywise.storywise`) | Storywise | APK 1.0.3, `res/mipmap-xxxhdpi-v4/launcher_icon.png`, cut to a circle |
 | `sqcom.png` | SQCOM (`com.sqcom.shangqing`) | Shenzhen SHANGQING INDUSTRIAL CO., LTD | APK 1.1.0, `mipmap/wd_path_executor` (round icon), xxxhdpi |
 
 Showly's icon is also published under GPLv3 in [`trakt/showly`](https://github.com/trakt/showly),

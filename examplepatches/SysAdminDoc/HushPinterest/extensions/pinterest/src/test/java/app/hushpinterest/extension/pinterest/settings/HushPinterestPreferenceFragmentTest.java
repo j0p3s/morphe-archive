@@ -103,6 +103,8 @@ public class HushPinterestPreferenceFragmentTest {
         ROW_TITLES.put(PatchFamily.HIDE_SEARCH_HISTORY, "Hide search history");
         ROW_TITLES.put(PatchFamily.HIDE_NAVIGATION_BUTTONS, "Hide Create button");
         ROW_TITLES.put(PatchFamily.HIDE_HEADER_BUTTONS, "Hide header buttons");
+        ROW_TITLES.put(PatchFamily.AMOLED_BLACK, "Black bottom bar");
+        ROW_TITLES.put(PatchFamily.HIDE_CLOSEUP_BUTTONS, "Hide back arrow on pins");
         ROW_TITLES.put(PatchFamily.HIDE_PIN_MENU_ITEMS, "Hide collage menu items");
         ROW_TITLES.put(PatchFamily.HIDE_COMMENTS, "Hide comments");
         ROW_TITLES.put(PatchFamily.HIDE_TOPIC_SUGGESTIONS, "Hide topic suggestions");
@@ -220,7 +222,7 @@ public class HushPinterestPreferenceFragmentTest {
                 if (!Collections.disjoint(build, PatchFamily.ACTIONS_PAGE)) expected.add("Pin actions");
                 if (!Collections.disjoint(build, PatchFamily.INTERFACE_PAGE)) expected.add("Interface");
                 expected.addAll(EVERY_BUILD);
-                // Its one switch is the page, so it comes with the patch, right after Links.
+                // The page holds only that patch's switch and its Android settings row, so it comes with the patch, right after Links.
                 if (build.contains(PatchFamily.FIX_PUSH_NOTIFICATIONS)) expected.add(expected.indexOf("Links") + 1, "Notifications");
                 if (!expected.equals(sections)) wrong.add(build + ": sections " + sections);
             }
@@ -239,8 +241,8 @@ public class HushPinterestPreferenceFragmentTest {
                 + "panels that only hold ads.",
                     String.valueOf(page.findPreference(Settings.HIDE_ADS.key).getSummary()));
             assertEquals("Hide AI-labeled pins", String.valueOf(page.findPreference(Settings.HIDE_AI_PINS.key).getTitle()));
-            assertEquals("Removes pins that Pinterest labels as made or changed with AI from the same places. AI "
-                + "images without the label still show.",
+            assertEquals("Removes pins that Pinterest labels as made or changed with AI from your home feed, search, "
+                + "related pins and boards. AI images without the label still show.",
                     String.valueOf(page.findPreference(Settings.HIDE_AI_PINS.key).getSummary()));
             // Hide ads was always in Manager's default selection and ships on. Hide AI-labeled pins
             // joined it later, so it starts off and a default build shows Pinterest's own feed.
@@ -428,6 +430,29 @@ public class HushPinterestPreferenceFragmentTest {
         }
         assertTrue(bold.toString(), bold.containsAll(Arrays.asList(
                 "HushPinterest NOTICE", "Morphe: Project Name Restriction", "Trademarks", "Material Design icons")));
+    }
+
+    /** Download pins' network limits sit between its folder and history rows and start off. */
+    @Test
+    public void downloadNetworkLimitsFollowTheFolderRowAndStartOff() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        PatchFamily.capabilitiesForTests = EnumSet.allOf(PatchFamily.Capability.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            List<Preference> rows = new ArrayList<>();
+            collect(page.getPreferenceScreen(), rows);
+            int folder = indexOfKey(rows, "action_download_folder");
+            assertTrue(folder >= 0);
+            assertEquals(folder + 1, indexOfKey(rows, Settings.DOWNLOAD_UNMETERED_ONLY.key));
+            assertEquals(folder + 2, indexOfKey(rows, Settings.DOWNLOAD_NO_ROAMING.key));
+            assertEquals(folder + 3, indexOfKey(rows, "action_download_history"));
+            SwitchPreference unmetered = (SwitchPreference) page.findPreference(Settings.DOWNLOAD_UNMETERED_ONLY.key);
+            SwitchPreference roaming = (SwitchPreference) page.findPreference(Settings.DOWNLOAD_NO_ROAMING.key);
+            assertFalse(unmetered.isChecked());
+            assertFalse(roaming.isChecked());
+            // Unmetered isn't the same as Wi-Fi, and the summary says so.
+            assertTrue(String.valueOf(unmetered.getSummary()).contains("Metered Wi-Fi"));
+        }
     }
 
     private static int indexOfKey(List<Preference> rows, String key) {

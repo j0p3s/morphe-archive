@@ -17,12 +17,20 @@ import app.morphe.patches.pinterest.misc.extension.PatchLogCapture
 import app.morphe.patches.pinterest.misc.extension.SETTINGS_STATUS
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.ClassDef
+import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
+import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import com.android.tools.smali.dexlib2.immutable.ImmutableClassDef
+import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
+import com.android.tools.smali.dexlib2.immutable.ImmutableMethodImplementation
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction35c
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction3rc
+import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference
 import java.io.File
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -35,13 +43,14 @@ import org.junit.experimental.categories.Category
 class UiFixtureTest {
     private val patches = listOf(
         hideScreenshotSharePatch, hideSearchHistoryPatch, hideNavigationButtonsPatch, hideHeaderButtonsPatch,
-        hidePinMenuItemsPatch, hideCommentsPatch, quietEmailReminderPatch, disableUpdateNagPatch,
+        hidePinMenuItemsPatch, hideCommentsPatch, quietEmailReminderPatch, disableUpdateNagPatch, amoledBlackPatch,
     )
     private val flags = listOf(
         "hideScreenshotShare" to "screenshotShare", "hideSearchHistory" to "searchHistory",
         "hideNavigationButtons" to "navigationButtons", "hideHeaderButtons" to "headerButtons",
         "hidePinMenuItems" to "pinMenuItems", "hideComments" to "comments",
         "quietEmailReminder" to "emailReminder", "disableUpdateNag" to "updateNag",
+        "amoledBlack" to "blackBottomBar",
     )
 
     @Test fun `every interface family matches each supported vendor build without a warning`() {
@@ -112,11 +121,27 @@ class UiFixtureTest {
             assertTrue(nav.methods.single { it.name == "onMeasure" }.calls().any {
                 it.definingClass == INTERFACE_CONTROLS && it.name == "refreshNavigation"
             })
+            // Its own dispatchDraw, so it can't share the onMeasure prefix Hide navigation buttons adds.
+            val drawn = context.mutableClassDefBy(BOTTOM_BAR).methods.single {
+                it.name == "dispatchDraw" && it.parameters() == listOf("Landroid/graphics/Canvas;")
+            }.instructions()
+            val paint = (drawn[0] as ReferenceInstruction).reference as MethodReference
+            assertEquals("${build.name}: the bar paints before it draws its tab row", AMOLED_BLACK to "bottomBar",
+                paint.definingClass to paint.name)
+            assertEquals(listOf(Opcode.INVOKE_STATIC_RANGE, Opcode.INVOKE_SUPER_RANGE, Opcode.RETURN_VOID), drawn.map { it.opcode })
+            assertEquals("${build.name}: the bar still draws through its own superclass",
+                classes.single { it.type == BOTTOM_BAR }.superclass,
+                ((drawn[1] as ReferenceInstruction).reference as MethodReference).definingClass)
             val original = classes.flatMap { it.methods }.single { "inAppUpdateManager" in it.strings() }
             val modified = context.mutable(original)
             assertEquals("the shared coroutine's other task must keep its dispatcher", original.instructions()[0].opcode,
                 modified.instructions()[0].opcode)
             assertEquals(1, modified.calls().count { it.definingClass == UI_HOOKS && it.name == "disableUpdateNag" })
+            val called = modified.instructions().map { ((it as? ReferenceInstruction)?.reference as? MethodReference) }
+            val guard = called.indexOfFirst { it?.definingClass == UI_HOOKS && it.name == "disableUpdateNag" }
+            val prompt = called.indexOfFirst { it?.definingClass?.startsWith(PLAY_CORE_UPDATES) == true }
+            assertTrue("${build.name}: the update hook runs before Play Core's update call ($guard, $prompt)",
+                guard >= 0 && prompt > guard)
         }
     }
 
@@ -131,11 +156,61 @@ class UiFixtureTest {
         }
     }
 
+    @Test fun `an update anchor that no longer comes before Play Core's call refuses with the coroutine untouched`() {
+        val classes = read(Fixtures.declaredBuilds().last())
+        val owner = classes.single { type -> type.methods.any { "inAppUpdateManager" in it.strings() } }
+        val coroutine: (Method) -> Boolean = { "inAppUpdateManager" in it.strings() }
+        val isPrompt: (Instruction) -> Boolean = {
+            ((it as? ReferenceInstruction)?.reference as? MethodReference)?.definingClass?.startsWith(PLAY_CORE_UPDATES) == true
+        }
+        // Retargeting a call keeps its size, so every branch offset still holds.
+        fun retarget(instruction: Instruction, owner: String): Instruction {
+            val call = ((instruction as ReferenceInstruction).reference as MethodReference)
+            val moved = ImmutableMethodReference(owner, call.name, call.parameterTypes, call.returnType)
+            return when (instruction) {
+                is FiveRegisterInstruction -> ImmutableInstruction35c(instruction.opcode, instruction.registerCount,
+                    instruction.registerC, instruction.registerD, instruction.registerE, instruction.registerF,
+                    instruction.registerG, moved)
+                is RegisterRangeInstruction -> ImmutableInstruction3rc(instruction.opcode, instruction.startRegister,
+                    instruction.registerCount, moved)
+                else -> throw AssertionError("unexpected call format ${instruction.opcode}")
+            }
+        }
+        // A build that reaches Play Core before it reads the update manager. Branches are relative, so
+        // they survive the shift; the try ranges don't, and the patch must refuse before reading them.
+        val earlyPrompt = replace(owner, coroutine, keepTries = false) { body ->
+            listOf(ImmutableInstruction35c(Opcode.INVOKE_STATIC, 0, 0, 0, 0, 0, 0,
+                ImmutableMethodReference("${PLAY_CORE_UPDATES}Moved;", "prompt", emptyList(), "V"))) + body
+        }
+        val noPrompt = replace(owner, coroutine) { body ->
+            body.map { if (isPrompt(it)) retarget(it, "Lhush/test/NotPlayCore;") else it }
+        }
+        for ((reason, changed) in listOf("Play Core called before the anchor" to earlyPrompt, "no Play Core call" to noPrompt)) {
+            val context = PatchContexts.of(ExtensionDex.classes() + classes.filter { it.type != owner.type } + changed)
+            val failure = assertThrows(reason, PatchException::class.java) { disableUpdateNagPatch.execute(context) }
+            assertTrue("$reason: ${failure.message}", failure.message.orEmpty().contains("no longer comes before"))
+            assertEquals(reason, 0, context.mutableClassDefBy(owner.type).methods.single(coroutine).calls()
+                .count { it.definingClass == UI_HOOKS })
+            assertFlag(context, "disableUpdateNag", false)
+        }
+    }
+
+    private fun replace(owner: ClassDef, which: (Method) -> Boolean, keepTries: Boolean = true,
+                        change: (List<Instruction>) -> List<Instruction>) =
+        ImmutableClassDef(owner.type, owner.accessFlags, owner.superclass, owner.interfaces, owner.sourceFile,
+            owner.annotations, owner.fields, owner.methods.map { method ->
+                val implementation = method.implementation
+                if (!which(method) || implementation == null) method else ImmutableMethod(method.definingClass, method.name,
+                    method.parameters, method.returnType, method.accessFlags, method.annotations, method.hiddenApiRestrictions,
+                    ImmutableMethodImplementation(implementation.registerCount, change(implementation.instructions.toList()),
+                        if (keepTries) implementation.tryBlocks else null, null))
+            })
+
     private fun read(build: File): List<ClassDef> {
         val anchors = setOf("sg_android_new_screenshot_api_14", "BottomNavTabModel(type=",
             "BottomNavBar tab insertion out of range", "confirmEmailButton", "inAppUpdateManager",
             "unifiedCommentsModulePresenterFactory", "CommentsZone(isVisible=")
-        val required = (SEARCH_HISTORY_VIEWS + COMMENT_PREVIEW + HEADER_BAR + PIN_MENU +
+        val required = (SEARCH_HISTORY_VIEWS + COMMENT_PREVIEW + HEADER_BAR + BOTTOM_BAR + PIN_MENU +
             "Lcom/pinterest/activity/pin/view/modules/PinCloseupVideoModule;").toSet()
         val found = mutableMapOf<String, ClassDef>()
         FixtureDex.forEach(build) { dex ->

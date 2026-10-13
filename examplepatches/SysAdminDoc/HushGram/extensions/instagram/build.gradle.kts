@@ -244,7 +244,9 @@ tasks.register("verifyAndroidBoundaries") {
             "app.hushgram.extension.instagram.profile.ProfileSuggestionsTest" to listOf(
                 "offPausedAndUnreadyLeaveInstagramsAnswers[28]", "offPausedAndUnreadyLeaveInstagramsAnswers[37]",
                 "aButtonHiddenEarlierComesBackWhenTheSwitchGoesOff[28]", "aButtonHiddenEarlierComesBackWhenTheSwitchGoesOff[37]",
-                "aButtonThatThrowsIsLeftAndReported[28]", "aButtonThatThrowsIsLeftAndReported[37]"),
+                "aButtonThatThrowsIsLeftAndReported[28]", "aButtonThatThrowsIsLeftAndReported[37]",
+                "theFollowListSectionGoesOnlyWithItsOwnSwitch[28]", "theFollowListSectionGoesOnlyWithItsOwnSwitch[37]",
+                "aThrowingFollowListSwitchFailsOpenAndIsReported[28]", "aThrowingFollowListSwitchFailsOpenAndIsReported[37]"),
             "app.hushgram.extension.instagram.profile.ProfileHighlightsTest" to listOf(
                 "withTheSwitchOnTheRowIsLeftOut[28]", "withTheSwitchOnTheRowIsLeftOut[37]",
                 "offToStartAndOffKeepsTheRow[28]", "offToStartAndOffKeepsTheRow[37]",
@@ -487,6 +489,18 @@ tasks.register("verifyAndroidBoundaries") {
                 "pausedHushGramLeavesTheSoundAlone[28]", "pausedHushGramLeavesTheSoundAlone[37]",
                 "beforeTheSettingsAreReadyItIsInstagramsOwnSound[28]", "beforeTheSettingsAreReadyItIsInstagramsOwnSound[37]",
                 "withoutAViewerItSaysNo[28]", "withoutAViewerItSaysNo[37]"),
+            "app.hushgram.extension.instagram.settings.FollowListSuggestionsSettingsTest" to listOf(
+                "theSwitchIsUnderProfilesAfterSuggestedPeopleAndStartsOff[28]", "theSwitchIsUnderProfilesAfterSuggestedPeopleAndStartsOff[37]",
+                "aSavedSwitchAnswersOffWhilePaused[28]", "aSavedSwitchAnswersOffWhilePaused[37]",
+                "missingPatchHasNoSwitch[28]", "missingPatchHasNoSwitch[37]"),
+            "app.hushgram.extension.instagram.settings.SearchSuggestionsSettingsTest" to listOf(
+                "theSwitchIsUnderExploreAfterTheGridAndStartsOff[28]", "theSwitchIsUnderExploreAfterTheGridAndStartsOff[37]",
+                "aSavedSwitchAnswersOffWhilePaused[28]", "aSavedSwitchAnswersOffWhilePaused[37]",
+                "missingPatchHasNoSwitch[28]", "missingPatchHasNoSwitch[37]"),
+            "app.hushgram.extension.instagram.settings.StorySuggestionsSettingsTest" to listOf(
+                "theSwitchIsUnderStoriesAfterTheMusicCardAndStartsOff[28]", "theSwitchIsUnderStoriesAfterTheMusicCardAndStartsOff[37]",
+                "aSavedSwitchAnswersOffWhilePaused[28]", "aSavedSwitchAnswersOffWhilePaused[37]",
+                "missingPatchHasNoSwitch[28]", "missingPatchHasNoSwitch[37]"),
             "app.hushgram.extension.instagram.settings.MusicCardSettingsTest" to listOf(
                 "theSwitchIsUnderStoriesAfterTheTrayAndStartsOff[28]", "theSwitchIsUnderStoriesAfterTheTrayAndStartsOff[37]",
                 "aSavedSwitchAnswersOffWhilePaused[28]", "aSavedSwitchAnswersOffWhilePaused[37]",
@@ -551,7 +565,8 @@ tasks.register("verifyAndroidBoundaries") {
                 "turningTheSwitchOffBringsTheBarsBack[28]", "turningTheSwitchOffBringsTheBarsBack[37]",
                 "pausingTheActivityBringsTheBarsBackAndForgetsIt[28]", "pausingTheActivityBringsTheBarsBackAndForgetsIt[37]",
                 "theWindowsOwnFlagsAreKeptAndPutBack[28]", "theWindowsOwnFlagsAreKeptAndPutBack[37]",
-                "aScreenWithNoTabBarAndNoViewerIsLeftAlone[28]", "aScreenWithNoTabBarAndNoViewerIsLeftAlone[37]"),
+                "aScreenWithNoTabBarAndNoViewerIsLeftAlone[28]", "aScreenWithNoTabBarAndNoViewerIsLeftAlone[37]",
+                "hiddenBarsLeaveNoSpaceBehind[28]", "hiddenBarsLeaveNoSpaceBehind[37]"),
             "app.hushgram.extension.instagram.settings.FullScreenBarsSettingsTest" to listOf(
                 "reelsIsUnderReelsAndHomeIsUnderFeedAndBothStartOff[28]", "reelsIsUnderReelsAndHomeIsUnderFeedAndBothStartOff[37]",
                 "savedSwitchesAnswerOffWhilePaused[28]", "savedSwitchesAnswerOffWhilePaused[37]",
@@ -616,7 +631,10 @@ tasks.register("verifyAndroidBoundaries") {
                 "lockedMessageNotificationsSayOnlyThatAMessageCame[28]", "lockedMessageNotificationsSayOnlyThatAMessageCame[37]",
                 "offUnreadyAndUnlockedLeaveEverythingToInstagram[28]", "offUnreadyAndUnlockedLeaveEverythingToInstagram[37]",
                 "theInboxIsCoveredAndThePhoneAskedOnce[28]", "theInboxIsCoveredAndThePhoneAskedOnce[37]",
+                "aRightToLeftLayoutKeepsTheCoverOverTheMessages[28]", "aRightToLeftLayoutKeepsTheCoverOverTheMessages[37]",
+                "thePhoneIsAskedOnlyWhileInstagramHasTheFocus[28]", "thePhoneIsAskedOnlyWhileInstagramHasTheFocus[37]",
                 "confirmedOpensUntilInstagramLeavesTheScreen[28]", "confirmedOpensUntilInstagramLeavesTheScreen[37]",
+                "aScreenDestroyedWhileAskingEndsTheAsk[28]", "aScreenDestroyedWhileAskingEndsTheAsk[37]",
                 "aChatIsCoveredTooAndNothingElseIs[28]", "aChatIsCoveredTooAndNothingElseIs[37]",
                 "lockAllOfInstagramCoversTheWholeScreen[28]", "lockAllOfInstagramCoversTheWholeScreen[37]",
                 "lockAgainWaitsAsLongAsYouPicked[28]", "lockAgainWaitsAsLongAsYouPicked[37]",

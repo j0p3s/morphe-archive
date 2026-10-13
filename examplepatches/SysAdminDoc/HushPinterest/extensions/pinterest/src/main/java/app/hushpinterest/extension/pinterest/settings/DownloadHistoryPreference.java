@@ -8,11 +8,13 @@ package app.hushpinterest.extension.pinterest.settings;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
 import android.os.Bundle;
 import android.preference.DialogPreference;
 import android.text.format.DateFormat;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -42,7 +44,7 @@ public final class DownloadHistoryPreference extends DialogPreference {
         setTitle(L10n.t(context, "Download history"));
         setSummary(L10n.t(context, "Check recent downloads started by HushPinterest."));
         setDialogTitle(getTitle());
-        setNegativeButtonText(L10n.t(context, "Back"));
+        setNegativeButtonText(L10n.t(context, "Close"));
         setPositiveButtonText(L10n.t(context, "Open Downloads"));
     }
 
@@ -132,9 +134,13 @@ public final class DownloadHistoryPreference extends DialogPreference {
             message.setId(android.R.id.message);
             message.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
             message.setTextColor(ScreenColors.DEFAULT.summary);
+            message.setSingleLine(false);
+            message.setMaxLines(Integer.MAX_VALUE);
+            message.setEllipsize(null);
+            message.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+            message.setLineSpacing(dp(2), 1);
             message.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-            int inset = dp(24);
-            message.setPaddingRelative(inset, dp(12), inset, dp(12));
+            messageStyle(true);
             content.addView(message, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             list.setId(android.R.id.list);
             list.setDivider(null);
@@ -149,6 +155,15 @@ public final class DownloadHistoryPreference extends DialogPreference {
         }
 
         boolean alive() { return session == this && dialog != null && dialog.isShowing(); }
+
+        void messageStyle(boolean empty) {
+            int inset = dp(ScreenColors.SIDE_DP);
+            int vertical = dp(empty ? 24 : 12);
+            message.setPaddingRelative(inset, vertical, inset, vertical);
+            message.setMinHeight(empty ? dp(144) : 0);
+            message.setGravity(empty ? Gravity.CENTER : Gravity.START | Gravity.CENTER_VERTICAL);
+            message.setTextAlignment(empty ? View.TEXT_ALIGNMENT_CENTER : View.TEXT_ALIGNMENT_VIEW_START);
+        }
 
         void working() {
             busy = true;
@@ -172,6 +187,7 @@ public final class DownloadHistoryPreference extends DialogPreference {
                     }
                     list.setAdapter(new ChoiceCards(ScreenColors.DEFAULT, names, details));
                     list.setVisibility(jobs.isEmpty() ? View.GONE : View.VISIBLE);
+                    messageStyle(jobs.isEmpty());
                     message.setText(L10n.t(getContext(), found == null ? "Couldn't check Downloads. Try again."
                             : jobs.isEmpty() ? "No HushPinterest downloads in this history."
                             : jobs.stream().anyMatch(job -> job.id < 0)
@@ -181,6 +197,7 @@ public final class DownloadHistoryPreference extends DialogPreference {
                     HookStatus.threw(FamilyNames.DOWNLOAD_PINS, "show native download history", failure);
                     jobs = Collections.emptyList();
                     list.setVisibility(View.GONE);
+                    messageStyle(true);
                     message.setText(L10n.t(getContext(), "Couldn't check Downloads. Try again."));
                 } finally {
                     busy = false;
@@ -195,45 +212,83 @@ public final class DownloadHistoryPreference extends DialogPreference {
 
         void showJob(DownloadLedger.Job job) {
             if (!alive() || busy || jobDialog != null) return;
-            boolean retry = job.canRetry() && retryEnabled();
+            boolean enabled = retryEnabled();
+            boolean retry = job.canRetry() && enabled;
             List<CharSequence> names = new ArrayList<>();
             List<CharSequence> details = new ArrayList<>();
             List<Runnable> actions = new ArrayList<>();
+            // Which choices open something else (the chevron): Open file, Share file, Set as and
+            // Open pin do, the two that change the history act at once.
+            List<Boolean> opens = new ArrayList<>();
             if (retry) {
                 names.add(L10n.t(getContext(), "Retry download"));
                 details.add(L10n.t(getContext(), "Starts a new download. Android manages it."));
                 actions.add(() -> change(job.id, true));
+                opens.add(false);
             }
-            if (job.canSetAs() && retryEnabled()) {
+            if (job.canOpen() && enabled) {
+                names.add(L10n.t(getContext(), "Open file"));
+                details.add(L10n.t(getContext(), "Opens the saved file in an app that can show it."));
+                actions.add(() -> DownloadLedger.openFile(getContext(), job));
+                opens.add(true);
+                names.add(L10n.t(getContext(), "Share file"));
+                details.add(L10n.t(getContext(), "Sends the saved file to another app."));
+                actions.add(() -> DownloadLedger.shareFile(getContext(), job));
+                opens.add(true);
+            }
+            if (job.canSetAs() && enabled) {
                 names.add(L10n.t(getContext(), "Set as wallpaper"));
                 details.add(L10n.t(getContext(), "Opens Android's Set as options for this saved image."));
                 actions.add(() -> DownloadLedger.setAs(getContext(), job));
+                opens.add(true);
             }
             names.add(L10n.t(getContext(), "Open pin"));
-            details.add(L10n.t(getContext(), "Open the pin again to get a fresh download link."));
+            details.add(job.state == DownloadLedger.State.FAILED
+                    ? L10n.t(getContext(), "Open the pin again to get a fresh download link.") : null);
             actions.add(() -> DownloadLedger.reopenPin(getContext(), job));
+            opens.add(true);
             names.add(L10n.t(getContext(), "Remove from history"));
             details.add(L10n.t(getContext(), "Removes this history entry. Files and active downloads are kept."));
             actions.add(() -> change(job.id, false));
+            opens.add(false);
+            boolean[] chevrons = new boolean[opens.size()];
+            for (int i = 0; i < chevrons.length; i++) chevrons[i] = opens.get(i);
 
             LinearLayout header = new LinearLayout(getContext());
             header.setOrientation(LinearLayout.VERTICAL);
-            header.setPaddingRelative(dp(24), dp(20), dp(24), dp(12));
+            header.setPaddingRelative(dp(ScreenColors.SIDE_DP), dp(20), dp(ScreenColors.SIDE_DP), dp(12));
             TextView title = new TextView(getContext());
             title.setText(pinName(job));
             title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+            title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
             title.setTextColor(ScreenColors.DEFAULT.title);
+            title.setSingleLine(false);
+            title.setMaxLines(Integer.MAX_VALUE);
+            title.setEllipsize(null);
+            title.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+            title.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
             title.setAccessibilityHeading(true);
             header.addView(title);
             TextView status = new TextView(getContext());
             status.setId(android.R.id.message);
             status.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            status.setSingleLine(false);
+            status.setMaxLines(Integer.MAX_VALUE);
+            status.setEllipsize(null);
+            status.setTextDirection(View.TEXT_DIRECTION_FIRST_STRONG);
+            status.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);
+            status.setLineSpacing(dp(2), 1);
+            status.setPaddingRelative(0, dp(6), 0, 0);
             String guidance = "";
-            if (job.canRetry() && !retryEnabled()) {
-                guidance = L10n.t(getContext(), Utils.settingsReady()
-                        && PatchFamily.Capability.PIN_DOWNLOADS.installed()
-                        ? "Resume HushPinterest and turn on Download pins to retry."
-                        : "Open the pin again to get a fresh download link.");
+            if (!enabled && (job.canRetry() || job.canOpen() || job.canSetAs())) {
+                if (!PatchFamily.Capability.PIN_DOWNLOADS.installed()) {
+                    guidance = L10n.f(getContext(), "This build doesn't include the parts that handle %1$s.",
+                            L10n.t(getContext(), "Download pins"));
+                } else {
+                    guidance = L10n.t(getContext(), job.canRetry()
+                            ? "Resume HushPinterest and turn on Download pins to retry."
+                            : "Resume HushPinterest and turn on Download pins to use this.");
+                }
             }
             status.setText(detail(job) + (guidance.isEmpty() ? "" : "\n" + guidance));
             status.setTextColor(ScreenColors.DEFAULT.summary);
@@ -241,14 +296,14 @@ public final class DownloadHistoryPreference extends DialogPreference {
             try {
                 AlertDialog opened = new AlertDialog.Builder(getContext()).setCustomTitle(header)
                         .setAdapter(new ChoiceCards(ScreenColors.DEFAULT, names.toArray(new CharSequence[0]),
-                                details.toArray(new CharSequence[0])), (choice, position) -> {
+                                details.toArray(new CharSequence[0]), chevrons), (choice, position) -> {
                             if (!alive() || busy || jobDialog != choice) return;
                             if (position >= 0 && position < actions.size()) actions.get(position).run();
                         })
                         .setPositiveButton(L10n.t(getContext(), "Open Downloads"), (choice, which) -> {
                             if (alive() && jobDialog == choice) DownloadLedger.openDownloads(getContext());
                         })
-                        .setNegativeButton(L10n.t(getContext(), "Back"), null).create();
+                        .setNegativeButton(L10n.t(getContext(), "Cancel"), null).create();
                 jobDialog = opened;
                 opened.setOnDismissListener(ignored -> { if (jobDialog == opened) jobDialog = null; });
                 opened.create();

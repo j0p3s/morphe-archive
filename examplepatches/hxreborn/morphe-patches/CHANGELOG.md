@@ -1,3 +1,34 @@
+## [1.49.1](https://github.com/hxreborn/morphe-patches/compare/v1.49.0...v1.49.1) (2026-10-13)
+
+### Bug Fixes
+
+* **imo - GmsCore support:** list GmsCore accounts for chat backup ([22b5e02](https://github.com/hxreborn/morphe-patches/commit/22b5e02de2444004bb6ef2c522628ccfc4c9395b))
+
+## [1.49.0](https://github.com/hxreborn/morphe-patches/compare/v1.48.0...v1.49.0) (2026-10-13)
+
+### Bug Fixes
+
+* **Projectivy Launcher - Unlock premium:** clear the premium prompt on 4.72 ([9951427](https://github.com/hxreborn/morphe-patches/commit/9951427e1a82296c2f5329060abeb604f4c0b044))
+* **Projectivy Launcher - Unlock premium:** restore backups and key codes on 4.72 ([b6e9a93](https://github.com/hxreborn/morphe-patches/commit/b6e9a93d34ae7bafeab302d5155919a8802726d1))
+* **RISE - Disable telemetry:** stop Sentry on builds that rename its classes ([b3738db](https://github.com/hxreborn/morphe-patches/commit/b3738db02e2e7994f51f0c3315d0f518dd173ab1))
+* **RISE - Disable usage tracking:** stop usage uploads on builds that rename the event mapper ([d2b158f](https://github.com/hxreborn/morphe-patches/commit/d2b158ffce58c4cc8262f667a11f7e77069f656b))
+
+### New Features
+
+* **imo - GmsCore support:** back up chats to Google Drive ([c2d1505](https://github.com/hxreborn/morphe-patches/commit/c2d1505344b550a73c580f83e997fde8390f9733)), closes [#196](https://github.com/hxreborn/morphe-patches/issues/196)
+* **Storywise - GmsCore support:** sign in with a Google account ([27feb9b](https://github.com/hxreborn/morphe-patches/commit/27feb9b3eebc56b664ebe4cb0426bf28f84a3b47))
+* **Storywise - Remove forced update:** skip the update screen at launch ([0bd9d5a](https://github.com/hxreborn/morphe-patches/commit/0bd9d5a227e6ebd5fa7b19ee7ddb23bfbed79348))
+* **Storywise - Unlock premium:** unlock lessons, quizzes, report card ([3eafd8d](https://github.com/hxreborn/morphe-patches/commit/3eafd8d9516e5dcf056c94291120cfcc0c5143ba)), closes [#195](https://github.com/hxreborn/morphe-patches/issues/195)
+* **Video Editor - Unlock premium:** unlock Pro features ([6b1b11c](https://github.com/hxreborn/morphe-patches/commit/6b1b11cf273193c20570c5fe9666640758801520)), closes [#192](https://github.com/hxreborn/morphe-patches/issues/192)
+
+### Updated App Support
+
+* **Echo Equalizer:** add support for `9.3` ([13075dd](https://github.com/hxreborn/morphe-patches/commit/13075dd6b92cefea92db4286a798010874599650))
+* **Notesnook:** add support for `3.4.14` ([17e6f04](https://github.com/hxreborn/morphe-patches/commit/17e6f04a0715f38d9d5f50b42a5cf149eba327eb))
+* **Projectivy Launcher:** add support for `4.72` ([2749906](https://github.com/hxreborn/morphe-patches/commit/2749906b521dbb90cc6906bdcb4bbbd9f5504fd8))
+* **Quranify:** add support for `2.2.91` ([bbf6e6d](https://github.com/hxreborn/morphe-patches/commit/bbf6e6d970c8cda1f177d3d6406d344468a0c519))
+* **RISE:** add support for `Android V1.78.52` ([5510b70](https://github.com/hxreborn/morphe-patches/commit/5510b70c885eef8c33aeab5d1f5941aade503e70))
+
 ## [1.48.0](https://github.com/hxreborn/morphe-patches/compare/v1.47.0...v1.48.0) (2026-10-12)
 
 ### New Features

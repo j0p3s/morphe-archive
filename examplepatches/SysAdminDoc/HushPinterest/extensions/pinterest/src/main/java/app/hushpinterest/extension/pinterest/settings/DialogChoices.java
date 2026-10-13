@@ -15,15 +15,16 @@ package app.hushpinterest.extension.pinterest.settings;
 
 import android.content.res.ColorStateList;
 import android.database.DataSetObserver;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.StateListDrawable;
+import android.graphics.Typeface;
+import android.graphics.drawable.InsetDrawable;
+import android.graphics.drawable.RippleDrawable;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.CheckedTextView;
 import android.widget.ListAdapter;
 
-/** Styles the framework's real single-choice rows without replacing their selection behavior. */
+/** Styles native radio and checkbox rows without replacing their selection behavior. */
 final class DialogChoices extends BaseAdapter {
     private final ListAdapter source;
     private final ScreenColors colors;
@@ -49,26 +50,33 @@ final class DialogChoices extends BaseAdapter {
         if (row instanceof CheckedTextView) {
             CheckedTextView choice = (CheckedTextView) row;
             float density = row.getResources().getDisplayMetrics().density;
-            choice.setTextColor(colors.title);
+            choice.setEnabled(source.isEnabled(position));
+            choice.setTextColor(ScreenColors.dimmedWhenDisabled(colors.title));
             choice.setTextSize(16);
+            choice.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
             choice.setSingleLine(false);
             choice.setMaxLines(Integer.MAX_VALUE);
-            choice.setMinHeight(Math.round(48 * density));
-            ColorStateList indicator = new ColorStateList(new int[][]{{android.R.attr.state_checked}, {}},
-                    new int[]{colors.accent, colors.summary});
+            choice.setMinHeight(Math.round((48 + 2 * ScreenColors.GAP_DP) * density));
+            ColorStateList indicator = new ColorStateList(new int[][]{
+                    {-android.R.attr.state_enabled, android.R.attr.state_checked},
+                    {-android.R.attr.state_enabled}, {android.R.attr.state_checked}, {}},
+                    new int[]{ScreenColors.half(colors.accent), ScreenColors.half(colors.summary),
+                            colors.accent, colors.summary});
             choice.setCheckMarkTintList(indicator);
-            // Material's framework layout uses a start drawable for its radio indicator.
+            // Material's framework layout uses a start drawable for its radio indicator. Only a
+            // drawable with states is an indicator: a row's picture keeps its own colours.
             for (android.graphics.drawable.Drawable drawable : choice.getCompoundDrawablesRelative()) {
-                if (drawable != null) drawable.mutate().setTintList(indicator);
+                if (drawable != null && drawable.isStateful()) drawable.mutate().setTintList(indicator);
             }
-            StateListDrawable background = new StateListDrawable();
-            background.addState(new int[]{android.R.attr.state_checked}, new ColorDrawable((colors.accent & 0xFFFFFF) | 0x22000000));
-            background.addState(new int[]{}, new ColorDrawable(android.graphics.Color.TRANSPARENT));
-            choice.setBackground(background);
+            choice.setCompoundDrawablePadding(Math.round(ScreenColors.CONTENT_DP * density));
+            int side = Math.round(ScreenColors.SIDE_DP * density);
+            int gap = Math.round(ScreenColors.GAP_DP * density);
+            choice.setBackground(new RippleDrawable(ColorStateList.valueOf(ScreenColors.half(colors.accent)),
+                    new InsetDrawable(colors.choiceSurface(choice), side, gap, side, gap), null));
             // Rounding both sides up at densities such as 450dpi exceeds the measured 48dp row.
-            int verticalPadding = (int) (8 * density);
-            choice.setPaddingRelative(Math.round(20 * density), verticalPadding,
-                    Math.round(20 * density), verticalPadding);
+            int verticalPadding = (int) (12 * density) + gap;
+            choice.setPaddingRelative(side + Math.round(ScreenColors.CONTENT_DP * density), verticalPadding,
+                    side + Math.round(ScreenColors.CONTENT_DP * density), verticalPadding);
         }
         return row;
     }

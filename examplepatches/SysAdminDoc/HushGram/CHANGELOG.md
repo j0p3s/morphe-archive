@@ -4,15 +4,129 @@ Every HushGram release, newest first.
 
 ## Unreleased
 
-### Bug Fixes
+### HushGram v0.0.10
 
-* **Instagram - Glass tab bar:** A feed video you start with a tap plays where it is. On some phones it dropped to the bottom of the screen, under the bar, and left black where it should have played. Reported in #136.
+#### Features
 
-* **Instagram - Glass tab bar:** The pill stays glass over videos. Before, any video on screen turned it flat and nearly solid until the video scrolled away, so the blur, opacity and edge kept dropping out as you scrolled a feed of videos. On some phones a video right under the pill shows through the tint without the blur. Reported in #144.
+* **Instagram - HushGram settings:** Long-press the Instagram logo at the top of your feed to open HushGram settings. A tap on the logo still does what Instagram made it do, and the long press works while HushGram is paused. Where Instagram has a long press of its own on the logo, Instagram's comes first. The icon shortcut and the row in Settings and activity still open them too.
 
-* **Instagram - Glass tab bar:** With Show content behind the tab bar on, Reels stops at the top of the bar again, over black, the way it does with Instagram's own bar. Its seek bar, caption and buttons aren't hidden under the pill anymore, and Home and Profile on the pill work from Reels. Before, a tap on the lower half of the pill went to the reel instead. Refs #65.
+* **Instagram - Install next to Instagram:** New Mark the icon option, off by default. It puts a small HushGram badge on the second Instagram's home screen icon, and on the other icons Instagram lets you pick. Asked for in #145.
 
-* **Instagram - Keep a seek bar on Reels:** Bigger seek bar on reels really is bigger now, about twice Instagram's line, and it runs through the round handle. It's white only as far as the reel has played. Before, it came out as thin as Instagram's, and once a reel had loaded the whole line turned white. Reported in #10.
+* **Instagram - Hide the Reels tab:** New Center the name on profiles switch under Tab bar, off by default. The username at the top of a profile sits in the middle, and the buttons stay put. Asked for in #140.
+
+* **Instagram - Clean up Reels:** New Burn-in guard, off by default. It fades a reel's buttons and bars after 5 idle seconds, and can also move the screen a step every 2 minutes. Asked for in #162.
+
+* **Instagram - Long press to zoom:** New Keep the zoom open choice under it, off by default. The zoom stays up after you let go, so you can drag around and pinch from 1x to 4x. A tap or Back closes it. Asked for in #149.
+
+* **Instagram - Hide suggested people on profiles:** A new switch under Profiles, Hide Suggested for you on follow lists, leaves that section off the bottom of followers and following lists. Every account in the list stays. Asked for in #139.
+
+* **Instagram - Hide suggested people on profiles:** Another new switch under Profiles, Hide Complete your profile, takes those cards (Add bio, Find people to follow and the rest) off your own profile. Your bio, counts and posts stay. Asked for in #159.
+
+* **Instagram - Hide suggested stories:** A new switch under Stories, Hide Suggested for you between stories, leaves out the cards of accounts to follow that Instagram slips between the stories you tap through. Asked for in #154.
+
+* **Instagram - Hide the Explore grid:** A new switch under Explore, Hide suggested accounts in search, keeps Suggested for you accounts out of what shows when you tap the search bar. Your recent searches stay. Asked for in #143.
+
+* **Instagram - Find the reel you came from:** A Stop looking button shows while the grid scrolls, and tapping it leaves the grid where it is. A new switch, Wait for a tap to find it, holds the search until you tap Find the reel. Off by default. Asked for in #30.
+
+* **Instagram - Glass tab bar:** New Space under the tab bar choice after Show content behind the tab bar. A little more or More lifts the floating pill higher off the bottom of the screen, and it keeps its size. Starts on Standard. Asked for in #87.
+
+* **Instagram - Hide the Reels tab:** New switch under Tab bar, Show the Messages tab, off by default. If Instagram left Messages off your tab bar, it goes back on before Profile, and Tab order can move it. Asked for in #160.
+
+* **Instagram - Lock your messages:** Locked and hidden chats belong to the account you picked them on. A group two of your accounts share can be locked on one and left open on the other.
+
+* **Instagram - Lock your messages:** Each account's settings list shows only its own chats, and a message notification follows the account it was sent to, whichever account is open.
+
+* **Instagram - Download any video:** New switch under Downloads, Skip what's already saved, off by default. Something you saved isn't saved twice unless you ask again within 30 seconds. It remembers your newest 15,000 saves, and Clear download history forgets the list. Asked for in #150.
+
+#### Improvements
+
+* **Instagram - HushGram settings:** Settings now use clearer category descriptions, a rounded search field and pink icon tiles. Dialogs share the same styling, and controls stay readable at larger text sizes.
+
+* **Instagram - HushGram settings:** When HushGram pauses itself because Instagram kept crashing at start, a message now says so on the first screen. Every switch is off until it's turned back on, so Ghost mode and the locks would otherwise stop without a word.
+
+* **Instagram - HushGram settings:** The two About rows are in Korean now, and two error messages read like the rest ("Couldn't" rather than "Could not"). Four Korean rows that spelled HushGram or Instagram wrong are fixed.
+
+* **Instagram - HushGram settings:** Set when you patched uses plain names now. Re-signed build fix is Instagram accepts this build, and Version code raised is No Play Store updates. The last row only repeated the intro, so it's gone.
+
+* **Instagram - HushGram settings:** Three switches have clearer names. Hide Accounts to follow is now Hide suggested accounts in Messages, Hide 'Are you interested' questions is Hide 'Are you interested?' bubbles, and Show a Reel seek thumb is Round handle on the seek bar.
+
+* **Instagram - HushGram settings:** The Before you sign in notice puts Tap to hide this on its own line, so a translated notice no longer runs it into the last sentence.
+
+* **Instagram - HushGram settings:** Recommended flags no longer shows Keep Reels auto scroll between sessions next to the Keep auto scroll on setting, unless you'd already set it. Then it stays so you can set it back.
+
+* **Instagram - HushGram settings:** When a change only takes effect after a restart, the card at the top of HushGram settings says so, and a tap restarts Instagram for you. Nothing restarts without that tap. Asked for in #146.
+
+* **Instagram - Glass tab bar:** The bar has 12dp corners now instead of fully round ends, and the highlight behind the selected tab has 8dp corners. Tabs still respond in the same places.
+
+* **Instagram - Hide the Reels tab:** TalkBack reads the Ghost mode button on Home's header as "Ghost mode" with an on or off state, the way it reads a switch, instead of a sentence about what tapping does.
+
+* **Tooling:** Unreleased version headings now work with both the changelog checker and the release notes generator. Full-screen patch checks also verify control flow when jumps need a wider encoding.
+
+* **Tooling:** The build moves to Gradle 9.8.1, fixing three high severity advisories in 9.8.0 (GHSA-xwqc-3h47-hg64, GHSA-mvvg-497x-hmj8, GHSA-j5m7-59rp-24f5). The dependency audit now checks Gradle itself too. Gradle only runs at build time, so the bundle was never affected.
+
+* **Instagram:** The context HushGram shares between its features is always Instagram's application now, never a screen. A closed screen can't be held in memory through it, whatever hands it in.
+
+* **Instagram - Lock your messages:** Chats locked or hidden before this update stay that way on every account until you unlock them there. Their old names stay hidden until you open the chat again.
+
+* **Instagram - Accent color:** Links take the color you picked on accounts that still have Instagram's older look too, mentions, hashtags and bio links included, and so does the pale blue behind a selected pill. Asked for in #8.
+
+* **Tooling:** The README is much shorter now, a user guide with the install steps, the settings, every patch and the supported builds. The long version, with every caveat and the build internals, is in the repository history.
+
+#### Bug Fixes
+
+* **Instagram - Hide Meta AI:** A reel opened from search results plays the one you tapped again. With Hide Meta AI in search and Home's bar on, results below Meta AI's summary opened an earlier reel. The summary card is still hidden, it's just folded away now instead of being taken out of the results. Reported in #152.
+
+* **Instagram - Glass tab bar:** Feed videos started with a tap stay in place. On some phones they dropped behind the tab bar, leaving a black gap. Reported in #136.
+
+* **Instagram - Turn off HDR brightness boosts:** Instagram now hears that the screen has no extra brightness to spare. On phones that report spare HDR brightness, it drew some reels for that extra brightness and gave ordinary reels its own HDR look, so they still lit up with the switch on. Reported in #85.
+
+* **Instagram - Glass tab bar:** The bar keeps its glass appearance over videos. Its opacity and edge no longer change as videos scroll past. Video directly beneath the bar may show through without blur on some phones. Reported in #144.
+
+* **Instagram - Glass tab bar:** With Show content behind the tab bar on, Reels stops above the bar again. Its seek bar, caption and buttons stay visible and take taps, and Home and Profile respond across the full pill. Refs #65, reported in #163 and #136.
+
+* **Instagram - Keep a seek bar on Reels:** Bigger seek bar on reels now draws at about twice the standard thickness and runs through the handle. Only the played portion turns white. Reported in #10.
+
+* **Instagram - Full screen Reels and Home:** Reels and Home now use the space left by hidden system bars. The empty strips at the top and bottom are gone. Reported in #147 and #14.
+
+* **Instagram - HushGram settings:** The HushGram row can now hide when settings opens through a long press on your profile's menu. Turning off both long press entries, or pausing HushGram, brings it back. Reported in #148.
+
+* **Instagram - HushGram settings:** Importing a settings file no longer fails because of one choice this version can't use. That choice, or a sharing domain, place or tab order that doesn't check out, is skipped and counted while the rest applies.
+
+* **Instagram - Lock your messages:** The unlock prompt now waits until Instagram is the thing you're looking at. The cover still goes up right away, but pulling down the notification shade or swiping home doesn't bring the prompt up over them. Reported in #153.
+
+* **Instagram - See who a story mentions:** The mentions pill sits at the end of the name and time row, not under the name, so the header keeps its height on stories with mentions. A tap around the pill opens the list too. Reported in #151.
+
+* **Instagram - Hide suggested posts:** Hide 'Are you interested' questions now also catches the bubble Instagram adds from a second part of its feed code, when the question comes without a subtitle. Reported in #131.
+
+* **Instagram - Lock your messages:** With the phone in a right-to-left language like Arabic or Hebrew, the cover stays over the messages. It used to slide to the right edge on a new layout, which could leave part of the inbox showing.
+
+* **Instagram - View stories anonymously:** The Mark as seen button in a story's header is easier to hit. Its touch area is wider, and the header is no taller for it.
+
+* **Instagram - Hide the Reels tab:** The Ghost mode and Search buttons on Home's header take Instagram's own icon color. With Instagram's dark mode set differently from the phone's, they could come out dark on dark or white on white.
+
+* **Instagram:** A failed download says what to check when it can tell. A dropped connection points to the connection, and a file cut short or not stored points to the connection and free storage. Anything else says "Download failed".
+
+* **Instagram - Lock your messages:** If the HushGram PIN dialog goes away without an answer, say because Instagram closed the screen behind it, Unlock on the cover asks again right away. Before, it did nothing for about a minute.
+
+* **Instagram:** The Hide suggested stories and Hide Meta AI descriptions said they start off, but their main switches start on. They now say which switches start on, and a test checks every description's "Starts on" and "Starts off".
+
+* **Instagram - Lock your messages:** A message notification that arrives without its own small icon now loses its text like any other, instead of showing the message.
+
+* **Instagram - Lock your messages:** A chat no longer keeps a placeholder name it saw before the chat loaded. The real name replaces it.
+
+* **Instagram - Download any reel:** When Instagram gives no sizes for a cover, Download cover now goes by the size each address names, so a thumbnail listed first doesn't save in place of the full picture. From #155.
+
+* **Instagram - Lock your messages:** Turning the phone while its own screen lock check is up no longer loses your answer. Unlocking there opens your messages, where it used to ask again. A setting you were changing at the time takes one more tap.
+
+* **Instagram - Glass tab bar:** Picking a new look, height or Space under the tab bar now says it needs a restart, and the card at the top of HushGram's settings offers one. Before, the pick seemed to do nothing until Instagram started again.
+
+* **Instagram - Glass tab bar:** On accounts where Instagram puts a dark capsule behind the selected tab, that capsule no longer sits on top of the glass bar's own highlight.
+
+* **Instagram - Glass tab bar:** With Show content behind the tab bar on, a reel's More button and name keep working after a visit to HushGram's settings. The strip Instagram adds to make the seek bar easier to grab used to land on top of them, so taps there did nothing.
+
+* **Instagram - Hide the Reels tab:** When Search is off a tab bar you swipe across, the note the button shows now fits on screen and says what to turn off, or that a restart brings Search back when you've just turned Hide the Search tab off. Android used to cut it off halfway.
+
+* **Instagram - Download any video:** Save all's result shows each of its lines in turn, so the lower quality and already saved notes aren't cut off on Android 12 and newer.
 
 ## 0.0.9 (2026-10-11)
 

@@ -81,17 +81,19 @@ foreach ($package in Get-SourcePackages) {
 # candidate and a historical reference. None changes a source's adoption status or the commit in
 # an adopted provenance rule.
 $browz = @($entries | Where-Object { $_.id -eq 'browzomje' })[0]
-Assert-True ($browz.branches[0].name -eq 'main' -and $browz.branches[0].commit -eq '9dd5c671148f8849966c6369e2a009d5ffb92d45' -and
-    $browz.patchCounts.'com.pinterest' -eq 28 -and @($browz.features).Count -eq 24 -and $browz.disposition -eq 'candidate') `
-    'browzomje must keep its pinned main commit and its 28 Pinterest patches, as a candidate and not an adopted source.'
+Assert-True ($browz.branches[0].name -eq 'main' -and $browz.branches[0].commit -eq '81ca49405abb37241b9dd5a1dd5da313dc3a694c' -and
+    @($browz.branches | Where-Object { $_.name -eq 'dev' -and $_.commit -eq '44c965ef82066bd03fd507b9eca077b2adde78b6' }).Count -eq 1 -and
+    $browz.patchCounts.'com.pinterest' -eq 31 -and $browz.targetVersions.'com.pinterest' -contains '14.39.0' -and
+    @($browz.features).Count -eq 24 -and $browz.disposition -eq 'candidate') `
+    'browzomje must keep its pinned main and dev commits and its 31 Pinterest patches, as a candidate and not an adopted source.'
 $oyasumi = @($entries | Where-Object { $_.id -eq 'oyasumi' })[0]
 Assert-True ($oyasumi.branches.Count -eq 1 -and $oyasumi.branches[0].name -eq 'dev' -and
-    $oyasumi.branches[0].commit -eq '4d6329b9c8a0dcbf7f00cc97cf2e8601224e8dba' -and $oyasumi.patchCounts.'com.pinterest' -eq 13 -and
-    $oyasumi.targetVersions.'com.pinterest' -contains '14.38.0' -and $oyasumi.reason -like '*dev branch only*' -and
-    $oyasumi.reason -like '*v0.6.0-dev.24*' -and $oyasumi.reason -like '*Stable v0.5.3*' -and
+    $oyasumi.branches[0].commit -eq '1875509177dca5fa4181cce5614202547a2dea6d' -and $oyasumi.patchCounts.'com.pinterest' -eq 13 -and
+    $oyasumi.targetVersions.'com.pinterest' -contains '14.38.0' -and $oyasumi.reason -like '*Historical only*' -and
+    $oyasumi.reason -like '*4d6329b*' -and $oyasumi.reason -like '*1875509 removed the com.pinterest target*' -and
     $oyasumi.watchPaths -contains 'extensions/extension/src/main/java/app/oyasumi/extension' -and
-    $oyasumi.disposition -eq 'candidate') `
-    'oyasumi must distinguish thirteen dev Pinterest patches from stable v0.5.3, without claiming adoption.'
+    $oyasumi.disposition -eq 'rejected') `
+    'oyasumi removed its Pinterest target, so it must stay a rejected historical reference to the thirteen patches reviewed at 4d6329b.'
 $mubelotix = @($entries | Where-Object { $_.id -eq 'mubelotix' })[0]
 Assert-True ($mubelotix.repository -ceq 'https://github.com/Mubelotix/my-morphe-patches' -and
     $mubelotix.branches[0].commit -eq '8b6f75e226634c6a0b4031bba6cda1de7db146a0' -and
@@ -105,6 +107,11 @@ Assert-True ($mubelotix.repository -ceq 'https://github.com/Mubelotix/my-morphe-
 $stale = @($entries | Where-Object { $_.id -in @('binarymend', 'satanmerde') })
 Assert-True ($stale.Count -eq 2 -and @($stale | Where-Object { $_.disposition -ne 'rejected' }).Count -eq 0) `
     'binarymend and satanmerde have no usable anchors and must stay rejected.'
+$sabopura = @($entries | Where-Object { $_.id -eq 'sabopura' })[0]
+Assert-True ($sabopura.upstream -eq 'https://github.com/binarymend/morphe-patches' -and $sabopura.lineage -eq 'sabopura' -and
+    $sabopura.branches[0].commit -eq '1946e5488963d485530d07017ae4179c6be3d21a' -and $sabopura.patchCounts.'com.pinterest' -eq 3 -and
+    $sabopura.license.sha256 -eq '230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809' -and $sabopura.disposition -eq 'candidate') `
+    'sabopura must keep its reviewed commit, its CRLF GPL-3.0 hash and its Binarymend upstream, as a candidate.'
 $nagramRepository = 'https://github.com/authorisation/xterest'
 $nagram = @($ledger.outOfScope | Where-Object { $_.repository -eq $nagramRepository })[0]
 Assert-True ($nagram.reference.kind -eq 'historical' -and $nagram.reference.branch -eq 'main' -and
@@ -208,10 +215,10 @@ $sourcesDoc = if ($haveSourcesDoc) { [IO.File]::ReadAllText($sourcesDocPath) } e
 if ($haveSourcesDoc) {
     $docProblems = @(Test-SourcesDoc $sourcesDoc)
     Assert-True ($docProblems.Count -eq 0) ($docProblems -join ' | ')
-    Assert-True ($sourcesDoc.Contains('28 Pinterest patches') -and
+    Assert-True ($sourcesDoc.Contains('31 Pinterest patches') -and
         $sourcesDoc.Contains($browz.branches[0].commit.Substring(0, 7)) -and $sourcesDoc.Contains($oyasumi.branches[0].commit.Substring(0, 7)) -and
         $sourcesDoc.Contains($mubelotix.branches[0].commit.Substring(0, 7)) -and
-        $sourcesDoc.Contains($nagram.reference.commit.Substring(0, 7)) -and $sourcesDoc.Contains('dev branch only') -and
+        $sourcesDoc.Contains($nagram.reference.commit.Substring(0, 7)) -and $sourcesDoc.Contains('4d6329b') -and
         $sourcesDoc.Contains('pinterest org:Xposed-Modules-Repo') -and $sourcesDoc.Contains('incomplete_results=false')) `
         'The source document lost a pin, release distinction or bounded search evidence.'
 } else {
@@ -553,10 +560,18 @@ function New-FakeAnswers {
             'alpha:stable' = @{ repo_url = 'https://github.com/fixture-owner/alpha-patches'; apps = @(@{ package = 'com.pinterest'; patches = @(@{ name = 'Hide ads' }) }) }
         } | ConvertTo-Json -Depth 8) }
         jmanSources = @{ Status = 200; Content = '{"alpha-stable":{"patches":"https://api.github.com/repos/fixture-owner/alpha-patches"},"gamma-stable":{"patches":"https://gitlab.com/api/v4/projects/fixture-group%2Fgamma-patches"}}' }
-        jmanCatalog = @{ Status = 200; Content = ("# Catalog`n| [Alpha](#alpha) | 1 | 1 | Generated |`n### X Alpha Bundle Patch List:`n" +
-            "| **Name** | **Description** | **Compatible Apps** | **Compatible Versions** |`n|---|---|---|---|`n" +
-            "| ${tick}Hide ads${tick} | ${tick}Removes ads.${tick} | ${tick}Pinterest${tick} | ${tick}14.38.0${tick} |`n" +
-            "### X Gamma Bundle Patch List:`n| ${tick}Open links outside${tick} | ${tick}d${tick} | ${tick}Pinterest${tick} | ${tick}Any${tick} |`n") }
+        jmanManifest = @{ Status = 200; Content = '{"schema_version":1,"snapshot":"snapshots/0abc"}' }
+        # Alpha's and gamma's current bundles name Pinterest; alpha's older one and a bundle for
+        # another app stay out, the way Jman's snapshot lists every release of every source.
+        jmanAppBundles = @{ Status = 200; Content = ('[{"id":"a1","is_latest":true,"packages":["com.pinterest"],"detail_file":"bundles/a1.json"},' +
+            '{"id":"a0","is_latest":false,"packages":["com.pinterest"],"detail_file":"bundles/a0.json"},' +
+            '{"id":"c1","is_latest":true,"packages":["com.example","com.pinterest"],"detail_file":"bundles/c1.json"},' +
+            '{"id":"e1","is_latest":true,"packages":["com.example"],"detail_file":"bundles/e1.json"}]') }
+        jmanDetails = @{
+            a1 = @{ Status = 200; Content = '{"version":"v1.0.0","download_url":"https://github.com/fixture-owner/alpha-patches/releases/download/v1.0.0/patches-1.0.0.mpp"}' }
+            c1 = @{ Status = 200; Content = '{"version":"v2.0.0","download_url":"https://gitlab.com/fixture-group/gamma-patches/-/releases/v2.0.0/downloads/patches.mpp"}' }
+            d1 = @{ Status = 200; Content = '{"version":"v0.1.0","download_url":"https://files.example.net/delta/patches-0.1.0.mpp"}' }
+        }
         archive = @{ Status = 200; Content = '{"name":"patches-list.json"}' }
         searchHits = @(
             @{ repository = @{ full_name = 'fixture-owner/alpha-patches' }; path = 'patches/Alpha.kt'; sha = $blobKnown }
@@ -609,8 +624,10 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
             '^https://morphe-patches\.software/data/bundles\.json$' { $answer = $a.directory; break }
             '^https://raw\.githubusercontent\.com/nvbangg/awesome-morphe/main/data/hashes\.json$' { $answer = $a.awesome; break }
             '^https://raw\.githubusercontent\.com/drnx64/morphe-track-patches/main/data/bundles\.json$' { $answer = $a.tracker; break }
-            '^https://raw\.githubusercontent\.com/Jman-Github/ReVanced-Patch-Bundles/bundles/patch-bundles/bundle-sources\.json$' { $answer = $a.jmanSources; break }
-            '^https://raw\.githubusercontent\.com/Jman-Github/ReVanced-Patch-Bundles/bundles/patch-bundles/PATCH-LIST-CATALOG\.md$' { $answer = $a.jmanCatalog; break }
+            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/config/sources\.json$' { $answer = $a.jmanSources; break }
+            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/database/manifest\.json$' { $answer = $a.jmanManifest; break }
+            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/database/snapshots/0abc/app-bundles\.json$' { $answer = $a.jmanAppBundles; break }
+            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/database/snapshots/0abc/bundles/([a-z0-9]+)\.json$' { $answer = $a.jmanDetails[$Matches[1]]; break }
             '^https://api\.github\.com/repos/rushiforai/morphe-archive/contents/examplepatches/SysAdminDoc/HushPinterest/patches-list\.json$' { $answer = $a.archive; break }
             '^https://api\.github\.com/search/code\?q=([^&]+)&per_page=100&page=1$' {
                 $query = [Uri]::UnescapeDataString($Matches[1])
@@ -730,9 +747,10 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
 
     # Schema/date failures must stop the actual audit before the stand-in receives a request.
     foreach ($invalid in @(
-        @{ Json = $fixtureLedgerText.Replace('"schemaVersion": 1', '"schemaVersion": 2'); Detail = '*schema*'; Name = 'unsupported schema' },
-        @{ Json = $fixtureLedgerText.Replace('"checkedAt": "2026-09-01"', '"checkedAt": "2026-02-30"'); Detail = '*census.checkedAt*date*'; Name = 'impossible census date' },
-        @{ Json = $fixtureLedgerText.Replace('"lastChecked": "2026-09-01"', '"lastChecked": "2026-09-26"'); Detail = '*lastChecked*after today*'; Name = 'future source verification' }
+        # Windows PowerShell's ConvertTo-Json puts two spaces after a colon, so match any spacing.
+        @{ Json = $fixtureLedgerText -replace '"schemaVersion":\s*1\b', '"schemaVersion": 2'; Detail = '*schema*'; Name = 'unsupported schema' },
+        @{ Json = $fixtureLedgerText -replace '"checkedAt":\s*"2026-09-01"', '"checkedAt": "2026-02-30"'; Detail = '*census.checkedAt*date*'; Name = 'impossible census date' },
+        @{ Json = $fixtureLedgerText -replace '"lastChecked":\s*"2026-09-01"', '"lastChecked": "2026-09-26"'; Detail = '*lastChecked*after today*'; Name = 'future source verification' }
     )) {
         Assert-True ($invalid.Json -cne $fixtureLedgerText) "The $($invalid.Name) case did not change its input."
         [IO.File]::WriteAllText($fixtureLedgerPath, $invalid.Json)
@@ -886,9 +904,17 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
     Assert-Drift 'license-added' '*beta-module*now has a licence (MIT*' 'An unlicensed source that gained a licence'
     $fakeForge.Answers = New-FakeAnswers
 
-    $tick = [string][char]96 * 3
-    $fakeForge.Answers.jmanCatalog.Content += "### X Delta Bundle Patch List:`n| ${tick}Hide replies${tick} | ${tick}d${tick} | ${tick}Pinterest${tick} | ${tick}Any${tick} |`n"
-    Assert-Drift 'index-unresolved' "*Jman's catalog lists Pinterest patches under 'Delta'*" 'A Jman section no repository stands behind'
+    $fakeForge.Answers.jmanAppBundles.Content = $fakeForge.Answers.jmanAppBundles.Content.TrimEnd(']') +
+        ',{"id":"d1","is_latest":true,"packages":["com.pinterest"],"detail_file":"bundles/d1.json"}]'
+    Assert-Drift 'index-unresolved' "*Jman's index lists a Pinterest bundle (v0.1.0) whose download address names no repository*" 'A Jman bundle no repository stands behind'
+    $fakeForge.Answers = New-FakeAnswers
+
+    # The tracker's keys can differ only in case, which ConvertFrom-Json alone refuses.
+    $fakeForge.Answers.tracker.Content = $fakeForge.Answers.tracker.Content.TrimEnd().TrimEnd('}') +
+        ',"Alpha:stable":{"repo_url":"https://github.com/fixture-owner/alpha-patches","apps":[{"package":"com.pinterest","patches":[{"name":"Hide ads"}]}]}}'
+    $caseKeys = Invoke-Audit
+    Assert-True ($caseKeys.ExitCode -eq 0) ("Tracker keys differing only in case failed the audit: " +
+        (@($caseKeys.Report.findings | ForEach-Object { "$($_.kind): $($_.detail)" }) -join ' | '))
     $fakeForge.Answers = New-FakeAnswers
 
     # An index still spelling a source by its old name is that source, not an addition.

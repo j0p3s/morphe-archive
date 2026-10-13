@@ -1,0 +1,18 @@
+[versions]
+morphe-patcher = "1.13.0"
+#noinspection GradleDependency
+smali = "d92701d947"
+gson = "2.14.0"
+annotation = "1.9.1"
+guava = "33.5.0-jre"
+
+[libraries]
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+annotation = { module = "androidx.annotation:annotation", version.ref = "annotation" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
+# Gradle plugins adds the dependency during build, this declaration is here only for dependabot to provide updates.
+#noinspection UnusedVersionCatalogEntry
+morphe-patcher = { module = "app.morphe:morphe-patcher", version.ref = "morphe-patcher" }
+
+[plugins]
+android-library = { id = "com.android.library" }

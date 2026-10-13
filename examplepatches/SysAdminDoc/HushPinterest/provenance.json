@@ -100,6 +100,7 @@
         "extensions/pinterest/src/main/java/app/hushpinterest/extension/pinterest/settings/DialogChoices.java",
         "extensions/pinterest/src/main/java/app/hushpinterest/extension/pinterest/settings/FamilyNames.java",
         "extensions/pinterest/src/main/java/app/hushpinterest/extension/pinterest/settings/HushPinterestPreferenceFragment.java",
+        "extensions/pinterest/src/main/java/app/hushpinterest/extension/pinterest/settings/NoCookies.java",
         "extensions/pinterest/src/main/java/app/hushpinterest/extension/pinterest/settings/PatchFamily.java",
         "extensions/pinterest/src/main/java/app/hushpinterest/extension/pinterest/settings/ReleaseCheck.java",
         "extensions/pinterest/src/main/java/app/hushpinterest/extension/pinterest/settings/ReleaseTransport.java",
@@ -141,6 +142,7 @@
         "extensions/pinterest/src/main/java/app/hushpinterest/extension/pinterest/settings/SetupGuidancePreference.java",
         "extensions/pinterest/src/main/java/app/hushpinterest/extension/pinterest/settings/PushReadiness.java",
         "extensions/pinterest/src/main/java/app/hushpinterest/extension/pinterest/settings/NativeControls.java",
+        "extensions/pinterest/src/main/java/app/hushpinterest/extension/pinterest/settings/HushDialogs.java",
         "patches/src/main/kotlin/app/morphe/patches/pinterest/actions/**"
       ],
       "origin": "original",

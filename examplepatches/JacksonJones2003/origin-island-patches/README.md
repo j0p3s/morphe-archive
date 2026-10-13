@@ -1,7 +1,7 @@
 # Origin Island Patches
 
-Patches for use with Morphe that make YouTube Music work with the OriginOS music card,
-the player on the Origin Island and the lock screen of vivo and iQOO phones.
+Patches for use with Morphe that make YouTube Music and YouTube work with the OriginOS music
+card, the player on the Origin Island and the lock screen of vivo and iQOO phones.
 
 > [!NOTE]
 > This project was made entirely by Claude, the AI model of Anthropic: the reverse engineering,
@@ -21,7 +21,7 @@ risk. See the [license](LICENSE) for details.
 ## Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.1.0](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.1.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;1 patches total
+> **[v1.3.0](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.3.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;2 patches total
 <details open>
 <summary>📦 YouTube Music&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
 <br>
@@ -37,6 +37,21 @@ risk. See the [license](LICENSE) for details.
 
 </details>
 
+<details open>
+<summary>📦 YouTube&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 21.38.123 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| [Origin Island music card](#origin-island-music-card) | Lets the OriginOS music card on the lock screen and Origin Island like videos, show the captions of a video as its lyrics, and show what plays next as the playlist. |  |
+
+</details>
+
 <!-- PATCHES_END -->
 
 ## Origin Island music card (YouTube Music)
@@ -49,6 +64,7 @@ vivo supports:
 - the playlist shows the queue, and plays the song that is tapped
 - the favorites list shows the playlists of the library, and plays the one that is tapped
 - the download list shows the downloaded playlists and mixes, and plays the one that is tapped
+- a list with nothing in it says so, instead of loading until the card reports a network error
 - synced lyrics are shown, if the **Third-party lyrics** patch of Morphe is applied and enabled
 
 ### Using it
@@ -64,6 +80,22 @@ YouTube Music has to be signed in, since it does not accept likes otherwise.
 
 The favorites list can take a few seconds to load the first time after YouTube Music is
 started, while YouTube Music loads the library.
+
+### A copy under a package the card knows
+
+The card only lists the apps of a list of its own to pick from while nothing plays, and
+YouTube Music is not one of them. A second, patched copy of YouTube Music that is installed
+under the package of one that is, such as `com.luna.music`, can be picked there. For such a
+copy the patch does the following:
+
+- the card opens the copy to have it play, and the copy then resumes what it last played
+  and moves out of view again
+- if YouTube Music is installed under its own package and patched as well, the copy has it
+  play instead, and shows its downloads in the download list. A copy cannot read the
+  downloads of YouTube Music, so YouTube Music plays the ones that are tapped
+
+The card only offers the lists of an app it has no list support built in for while that
+app plays, so the playlist button of a copy stays disabled until something plays.
 
 ### How it works
 
@@ -89,9 +121,68 @@ The patch opts YouTube Music into that path and translates between the two:
   the app, has the app take that connection for Android Auto, and answers the card with the
   playlists and the downloads it finds. The card plays them from their own media ids
 - lyrics: sends the lyrics the Third-party lyrics patch loaded to the card in the LRC format
+- a copy under another package: the card opens some apps with an extra in the intent to have
+  them play, which the main activity of YouTube Music is made to act on. The copy reaches
+  YouTube Music through its media browser service, which is made to answer a patched copy
 
 Reverse engineered from `com.vivo.musicwidgetmix` 17.0.8.3 (OriginOS 7)
 and tested with YouTube Music 9.40.51.
+
+## Origin Island music card (YouTube)
+
+Makes the OriginOS music card work with YouTube the way it does with the music apps vivo
+supports:
+
+- the heart button likes the video that plays, and shows if it is liked
+- the captions of the video are shown as synced lyrics
+- the playlist shows what plays next, and plays the video that is tapped: the videos of the
+  playlist or mix a video is played from, or otherwise the video autoplay continues with
+  and the videos YouTube suggests for the video
+- a video that was closed in YouTube stays on the card, paused where it was closed. The play
+  button plays it again from there, also while YouTube is not in view, and the heart button
+  still likes it
+
+### Using it
+
+1. Add this patch source to Morphe Manager, next to the official Morphe patches:
+   https://morphe.software/add-source?github=JacksonJones2003/origin-island-patches
+2. Patch YouTube in Expert mode, and enable **Origin Island music card** on the tab of this
+   source together with the Morphe patches you normally use.
+3. Restart the phone once after installing. The card only looks for apps that support these
+   features when it starts.
+
+YouTube has to be signed in, since it does not accept likes otherwise.
+
+The captions shown are the ones in the language of the phone, if the video has them, and
+otherwise the ones YouTube would show, which can be made by speech recognition. A video
+without captions has no lyrics. The card reads the time of a line with two digits for the
+minutes, so the lyrics end after 100 minutes of a video.
+
+### How it works
+
+The card finds YouTube the same way as YouTube Music, through the action the patch declares
+on the media browser service of YouTube. The session of YouTube tells less than the one of
+YouTube Music, so the patch reads the rest from inside the app:
+
+- which video plays: the session does not tell. The media session callback of YouTube reads
+  the id of the video to rate it, which the patch makes a getter of
+- heart button: YouTube likes the video for a thumb rating, so the heart rating sent by the
+  card is turned into one. If a video is liked is kept by YouTube in an entity of its own,
+  which the patch reads as YouTube reads or changes it
+- lyrics: the player response of a video lists its caption tracks. The patch loads the track
+  from the address in that list, the way YouTube does to show captions, and sends the lines
+  to the card in the LRC format
+- playlist: the watch next response of a video has its playlist, the video autoplay
+  continues with and the videos YouTube suggests. The card is answered with these, and the
+  video that is tapped is played from its address, as YouTube does for a voice assistant
+- a closed video: YouTube has nothing to play or to like once a video is closed, and answers
+  the play button with an error. The patch keeps the metadata of the video on the session,
+  with a paused playback state, plays the video again from its address, and has YouTube like
+  the video by its id. YouTube opens to play a video from an address unless it plays in the
+  background already, which Android does not let an app do that is not in view, so the patch
+  has YouTube play the video without opening then
+
+Tested with YouTube 21.38.123.
 
 ## Building locally
 

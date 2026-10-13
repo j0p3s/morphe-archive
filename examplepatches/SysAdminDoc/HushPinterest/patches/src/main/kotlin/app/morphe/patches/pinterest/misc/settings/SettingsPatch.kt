@@ -39,6 +39,9 @@ internal const val ENTRY = "$EXTENSION_PACKAGE/settings/SettingsEntry;"
  */
 internal const val MAIN_ACTIVITY = "Lcom/pinterest/activity/PinterestActivity;"
 
+/** The manifest-named home activity that receives requests after the no-history launcher finishes. */
+internal const val HOME_ACTIVITY = "Lcom/pinterest/activityLibrary/activity/task/activity/MainActivity;"
+
 /** [MAIN_ACTIVITY] as the manifest writes it. */
 internal const val MAIN_ACTIVITY_NAME = "com.pinterest.activity.PinterestActivity"
 
@@ -122,19 +125,22 @@ internal val settingsManifestPatch = resourcePatch {
 }
 
 /**
- * Makes the HushPinterest screen reachable two ways. From the home screen, a long-press shortcut on
- * Pinterest's launcher icon opens Pinterest with an extra; from Android's App info page for Pinterest,
- * "Additional settings in the app" opens it with [APPLICATION_PREFERENCES]. Pinterest's launcher
- * activity reports its intent, and the screen opens over the next Pinterest activity to resume.
- * Every name hooked here is a manifest component or a framework override or call. It also has
+ * Makes the HushPinterest screen reachable three ways. Inside Pinterest, a long press on the
+ * Pinterest logo at the top of the home feed opens it (see [hookLogoLongPress]). From the home
+ * screen, a long-press shortcut on Pinterest's launcher icon opens Pinterest with an extra; from
+ * Android's App info page for Pinterest, "Additional settings in the app" opens it with
+ * [APPLICATION_PREFERENCES]. The launcher reports its startup intent, and both it and the home activity
+ * report new intents. The screen opens over the next Pinterest activity to resume. Apart from the
+ * logo's header, found by its R field, every name hooked here is a manifest component or a framework
+ * override or call. It also has
  * HushPinterest's messages show as Pinterest's own toasts, which only fills in extension stubs.
  */
 @Suppress("unused")
 val settingsPatch = bytecodePatch(
     name = "HushPinterest settings",
     description = "Adds a HushPinterest page to Pinterest where you turn features on or off, pause HushPinterest, " +
-        "back up your settings and read the licenses. Open it by long-pressing the Pinterest icon. Works " +
-        "as soon as you patch it in, with no switch.",
+        "back up your settings and read the licenses. Open it by long-pressing the Pinterest logo at the top " +
+        "of your home feed or Pinterest's app icon. Works as soon as you patch it in, with no switch.",
     default = true,
 ) {
     category("Settings")
@@ -161,10 +167,17 @@ val settingsPatch = bytecodePatch(
             0,
             "invoke-static/range { p0 .. p0 }, $ENTRY->onActivityCreate(Landroid/app/Activity;)V",
         )
-        declaredInHierarchy(MAIN_ACTIVITY, "onNewIntent", "Landroid/content/Intent;").addInstruction(
-            0,
-            "invoke-static/range { p0 .. p1 }, $ENTRY->onNewIntent(Landroid/app/Activity;Landroid/content/Intent;)V",
-        )
+        // The no-history launcher disappears after startup. Warm requests can go straight to the
+        // home activity, whose own override is outside the launcher's inheritance chain.
+        listOf(MAIN_ACTIVITY, HOME_ACTIVITY)
+            .map { declaredInHierarchy(it, "onNewIntent", "Landroid/content/Intent;") }
+            .distinct()
+            .forEach { method ->
+                method.addInstruction(
+                    0,
+                    "invoke-static/range { p0 .. p1 }, $ENTRY->onNewIntent(Landroid/app/Activity;Landroid/content/Intent;)V",
+                )
+            }
 
         // Pinterest pushes its own shortcuts at rank 0, and the newest push goes first, so the
         // shortcut above could end up last, where a launcher that shows only a few cuts it off.
@@ -175,5 +188,10 @@ val settingsPatch = bytecodePatch(
         // HushPinterest's messages as Pinterest's own toasts. Only the extension's stubs change,
         // and a build whose toast code reads differently keeps Android toasts.
         routeToastsToPinterest()
+
+        // The Pinterest logo at the top of the home feed: once Pinterest finds the header it sits
+        // in, the extension gives the logo a long press that opens the screen. A build that finds
+        // the header differently keeps its logo as it was.
+        hookLogoLongPress()
     }
 }

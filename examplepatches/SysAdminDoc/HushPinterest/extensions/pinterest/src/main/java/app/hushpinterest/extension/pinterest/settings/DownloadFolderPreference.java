@@ -12,6 +12,8 @@ import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.preference.Preference;
 import android.provider.DocumentsContract;
@@ -86,9 +88,9 @@ public final class DownloadFolderPreference extends Preference {
             return L10n.t("Saves downloads in a folder you pick inside Pictures, DCIM, Download or Documents.");
         }
         if (DownloadFolder.PINTEREST.equals(DownloadFolder.current()) && !DownloadFolder.PINTEREST.equals(picked)) {
-            return L10n.f("%s is picked, but Save in Pinterest's folder is on, so downloads go there.", picked);
+            return L10n.f("%1$s is picked, but Save in Pinterest's folder is on, so downloads go to %2$s.", picked, DownloadFolder.PINTEREST);
         }
-        return L10n.f("Saving downloads in %s. Tap to pick another folder or go back to Download.", picked);
+        return L10n.f("Saving downloads in %s. Tap to pick another folder or go back to the Download folder.", picked);
     }
 
     private void tapped() {
@@ -99,13 +101,19 @@ public final class DownloadFolderPreference extends Preference {
         try {
             AlertDialog dialog = new AlertDialog.Builder(HushPinterestPreferenceFragment.themed(getContext()))
                     .setTitle(getTitle())
-                    .setItems(new CharSequence[]{L10n.t("Pick another folder"), L10n.t("Save in Download again")}, (shown, which) -> {
+                    .setAdapter(new ChoiceCards(ScreenColors.DEFAULT,
+                            new CharSequence[]{L10n.t("Pick another folder"), L10n.t("Use Download again")},
+                            new CharSequence[]{"", ""}, new boolean[]{true, false}), (shown, which) -> {
                         if (which == 0) pick(page);
                         else forget();
                     })
-                    .setNegativeButton(L10n.t("Back"), null)
-                    .show();
+                    .setNegativeButton(L10n.t("Cancel"), null)
+                    .create();
+            dialog.create();
+            dialog.getListView().setDivider(null);
+            dialog.getListView().setSelector(new ColorDrawable(Color.TRANSPARENT));
             ScreenColors.dialog(dialog);
+            dialog.show();
         } catch (RuntimeException failure) {
             Logger.printInfo(() -> "Could not show the folder choices: " + failure.getClass().getSimpleName());
             pick(page);
@@ -121,7 +129,7 @@ public final class DownloadFolderPreference extends Preference {
             page.startActivityForResult(intent, PICK);
         } catch (ActivityNotFoundException missing) {
             Logger.printInfo(() -> "No folder picker");
-            Utils.showToastLong(L10n.t("This phone has no folder picker, so there's no way to choose a folder here."));
+            Utils.showToastLong(L10n.t("This phone has no folder picker, so a folder can't be chosen."));
         } catch (RuntimeException error) {
             Logger.printInfo(() -> "Could not open the folder picker: " + error.getClass().getSimpleName());
             Utils.showToastLong(L10n.t("Couldn't open the folder picker. Try again."));
@@ -139,7 +147,7 @@ public final class DownloadFolderPreference extends Preference {
         if (tree == null) return true; // Cancelled: nothing changes.
         String folder = DownloadFolder.fromTree(tree);
         if (folder == null) {
-            Utils.showToastLong(L10n.t("Pick a folder inside Pictures, DCIM, Download or Documents on the phone's own storage."));
+            Utils.showToastLong(L10n.t("Pick a folder in Pictures, DCIM, Download or Documents."));
             return true;
         }
         if (folder.equals(DownloadFolder.DOWNLOAD)) {
@@ -160,7 +168,7 @@ public final class DownloadFolderPreference extends Preference {
     private static void forget() {
         DownloadFolder.PICKED.save("");
         refreshRows();
-        Utils.showToastLong(DownloadFolder.current() == null ? L10n.t("Downloads will be saved in Download.")
+        Utils.showToastLong(DownloadFolder.current() == null ? L10n.t("Downloads will be saved in the Download folder.")
                 : L10n.f("Downloads will be saved in %s.", DownloadFolder.current()));
     }
 

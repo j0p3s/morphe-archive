@@ -22,10 +22,14 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.ResolveInfo;
+import android.content.res.Configuration;
 import android.content.res.Resources;
+import android.graphics.Color;
+import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Environment;
 import android.view.View;
+import android.widget.LinearLayout;
 
 import org.junit.After;
 import org.junit.Rule;
@@ -73,6 +77,8 @@ import app.hushpinterest.extension.pinterest.privacy.AdvertisingId;
 import app.hushpinterest.extension.pinterest.notifications.PushNotificationsTest;
 import app.hushpinterest.extension.pinterest.privacy.LinkTracking;
 import app.hushpinterest.extension.pinterest.privacy.PlainPinLinks;
+import app.hushpinterest.extension.pinterest.ui.AmoledBlack;
+import app.hushpinterest.extension.pinterest.ui.CloseupButtons;
 import app.hushpinterest.extension.pinterest.ui.InterfaceControls;
 import app.hushpinterest.extension.pinterest.ui.UiHooks;
 import app.hushpinterest.extension.pinterest.ui.UiHooksForTests;
@@ -179,6 +185,22 @@ public class PausedHooksTest {
         return row.getVisibility() == View.GONE;
     }
 
+    /** A closeup button handed over: true when it went GONE. */
+    private static boolean hidesCloseupButton(boolean back) {
+        View button = new View(RuntimeEnvironment.getApplication());
+        if (back) CloseupButtons.backArrow(button);
+        else CloseupButtons.lens(button);
+        return button.getVisibility() == View.GONE;
+    }
+
+    /** A closeup button handed over that Pinterest then shows: true when it was kept GONE. */
+    private static boolean keepsCloseupButtonHidden(boolean back) {
+        View button = new View(RuntimeEnvironment.getApplication());
+        if (back) CloseupButtons.backArrow(button);
+        else CloseupButtons.lens(button);
+        return CloseupButtons.visibility(button, View.VISIBLE) != View.VISIBLE;
+    }
+
     /** A topic suggestion row Pinterest binds and then measures: true when the measure folded. */
     private static boolean foldsTopicRow() {
         View row = new View(RuntimeEnvironment.getApplication());
@@ -245,6 +267,10 @@ public class PausedHooksTest {
                 () -> AdvertisingId.skipBrowserId("pid")));
         probes.put(Settings.DOWNLOAD_PINS, Collections.singletonList(PausedHooksTest::queuesPinDownload));
         probes.put(Settings.SAVE_IN_PINTEREST_FOLDER, Collections.singletonList(PausedHooksTest::savesInPinterestsFolder));
+        probes.put(Settings.DOWNLOAD_UNMETERED_ONLY, Collections.singletonList(
+                () -> queuesWithDownloadPins(request -> !request.getAllowedOverMetered())));
+        probes.put(Settings.DOWNLOAD_NO_ROAMING, Collections.singletonList(
+                () -> queuesWithDownloadPins(request -> !request.getAllowedOverRoaming())));
         probes.put(Settings.DOWNLOAD_BOARD, Collections.singletonList(() -> BoardDownloads.record(Collections.singletonList(BOARD_PIN))));
         probes.put(Settings.LONG_PRESS_DOWNLOAD, Collections.singletonList(PausedHooksTest::addsLongPressDownload));
         probes.put(Settings.EXTERNAL_BROWSER, Collections.singletonList(() -> withActivity(activity -> {
@@ -288,6 +314,9 @@ public class PausedHooksTest {
             InterfaceControls.headerButtons(header);
             return header.getVisibility() != View.INVISIBLE;
         }));
+        probes.put(Settings.BLACK_BOTTOM_BAR, Collections.singletonList(PausedHooksTest::paintsBottomBarBlack));
+        probes.put(Settings.HIDE_CLOSEUP_BACK, Arrays.asList(() -> hidesCloseupButton(true), () -> keepsCloseupButtonHidden(true)));
+        probes.put(Settings.HIDE_CLOSEUP_LENS, Arrays.asList(() -> hidesCloseupButton(false), () -> keepsCloseupButtonHidden(false)));
         probes.put(Settings.HIDE_PIN_MENU_COLLAGE, Collections.singletonList(() -> hidesMenuItem("overflow_menu_add_to_collage")));
         probes.put(Settings.HIDE_PIN_MENU_VISUAL_SEARCH, Collections.singletonList(() -> hidesMenuItem("contextmenu_visual_search_image")));
         probes.put(Settings.HIDE_PIN_MENU_PIN_BOOST, Collections.singletonList(() -> hidesMenuItem("overflow_menu_pin_boost")));
@@ -360,6 +389,23 @@ public class PausedHooksTest {
         }
     }
 
+    /**
+     * A network limit only narrows what Download pins queues, so its probe turns that switch on for its
+     * own run, like the folder's. It answers whether a download was queued and [limited] says it took the limit.
+     */
+    private static boolean queuesWithDownloadPins(Function<ShadowDownloadManager.ShadowRequest, Boolean> limited) {
+        boolean pins = Settings.DOWNLOAD_PINS.savedValue();
+        if (!pins) Settings.DOWNLOAD_PINS.save(true);
+        try {
+            return withActivity(activity -> {
+                ShadowDownloadManager.ShadowRequest request = queuedDownload(activity);
+                return request != null && limited.apply(request);
+            });
+        } finally {
+            if (!pins) Settings.DOWNLOAD_PINS.save(false);
+        }
+    }
+
     /** Starts a pin download and returns the request it queued, or null when none was. */
     private static ShadowDownloadManager.ShadowRequest queuedDownload(Activity activity) {
         ShadowDownloadManager manager = Shadows.shadowOf((DownloadManager) activity.getSystemService(Context.DOWNLOAD_SERVICE));
@@ -411,6 +457,21 @@ public class PausedHooksTest {
     }
 
     /** Supplies a real header resource name without borrowing an ID from another application. */
+    /** A dark-mode bar whose tab row has Pinterest's gray fill turns black. */
+    private static boolean paintsBottomBarBlack() {
+        Context context = RuntimeEnvironment.getApplication();
+        Configuration night = new Configuration(context.getResources().getConfiguration());
+        night.uiMode = Configuration.UI_MODE_NIGHT_YES | (night.uiMode & ~Configuration.UI_MODE_NIGHT_MASK);
+        LinearLayout bar = new LinearLayout(context.createConfigurationContext(night));
+        LinearLayout tabs = new LinearLayout(bar.getContext());
+        GradientDrawable fill = new GradientDrawable();
+        fill.setColor(0xFF33332E);
+        tabs.setBackground(fill);
+        bar.addView(tabs);
+        AmoledBlack.bottomBar(bar);
+        return fill.getColor().getDefaultColor() == Color.BLACK;
+    }
+
     private static View namedView(String name) {
         Context context = RuntimeEnvironment.getApplication();
         Resources original = context.getResources();

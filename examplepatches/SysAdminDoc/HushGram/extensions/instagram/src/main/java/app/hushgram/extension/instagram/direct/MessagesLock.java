@@ -13,8 +13,9 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
 import android.graphics.Rect;
+import android.graphics.Typeface;
+import android.graphics.drawable.Icon;
 import android.hardware.biometrics.BiometricManager;
 import android.hardware.biometrics.BiometricPrompt;
 import android.os.Build;
@@ -47,6 +48,7 @@ import java.util.WeakHashMap;
 import androidx.annotation.RequiresApi;
 
 import app.hushgram.extension.instagram.settings.FamilyNames;
+import app.hushgram.extension.instagram.settings.ScreenColors;
 import app.hushgram.extension.instagram.settings.Settings;
 import app.hushgram.extension.shared.L10n;
 import app.hushgram.extension.shared.Logger;
@@ -120,6 +122,12 @@ public final class MessagesLock {
     /** Marks a notification this class wrote, so it isn't hidden twice. */
     static final String HIDDEN_EXTRA = "hushgram_lock_hidden";
 
+    /**
+     * The small icon of a copy whose message came without one: Android's own chat icon, which every
+     * phone has and which draws as a status bar icon should, unlike Instagram's colored app icon.
+     */
+    static final int NO_ICON = android.R.drawable.stat_notify_chat;
+
     /** Asks the phone's lock, then runs one of the two. Tests put a fake in. */
     interface Asker {
         void ask(Activity activity, Runnable confirmed, Runnable notConfirmed);
@@ -135,12 +143,15 @@ public final class MessagesLock {
     private static volatile boolean watching;
     private static int started;
     private static long askedAt;
+    /** The screen the open ask belongs to. Its dialog goes with it without a word when it's destroyed. */
+    private static WeakReference<Activity> askedBy = new WeakReference<>(null);
     private static boolean askedThisTime;
     /** What the activity in front was last told about the recent apps picture, and when. */
     private static Boolean keptOutOfRecents;
     private static long toldRecentsAt;
     private static WeakReference<Activity> watched = new WeakReference<>(null);
     private static ViewTreeObserver.OnPreDrawListener drawListener;
+    private static ViewTreeObserver.OnWindowFocusChangeListener focusListener;
     /** Each window's screens as last found in it, so one activity's frames never move another's. */
     private static final Map<View, Map<String, WeakReference<View>>> anchors = new WeakHashMap<>();
     /** Windows this class marked secure, so it only ever takes away a mark it put there. */
@@ -356,17 +367,20 @@ public final class MessagesLock {
 
     /** A copy written over one already in the shade alerts only once, so it doesn't ring again. */
     private static Notification hide(Context context, Notification original, boolean alertOnce) {
-        // Android refuses a notification with no small icon when it's posted, so a copy of one
-        // that has none fails here, before anything is posted.
-        if (original.getSmallIcon() == null) throw new IllegalArgumentException("the notification has no small icon");
         Notification.Builder builder = new Notification.Builder(context, original.getChannelId());
+        // Android refuses a notification with no small icon when it's posted. One that came without
+        // any still loses its text, under the phone's own chat icon, rather than going as it is.
+        Icon icon = original.getSmallIcon();
+        if (icon != null) builder.setSmallIcon(icon);
+        else builder.setSmallIcon(NO_ICON);
         Bundle marked = new Bundle();
         marked.putBoolean(HIDDEN_EXTRA, true);
-        // Its chat stays on the copy, so what is in the shade can still be matched to the chat.
+        // Its chat and account stay on the copy, so what is in the shade can still be matched to the chat.
         String chat = ChatLocks.idsOf(original);
         if (chat != null) marked.putString(ChatLocks.CHAT_EXTRA, chat);
-        builder.setSmallIcon(original.getSmallIcon())
-                .setContentTitle(appName(context))
+        String account = ChatLocks.accountOf(original);
+        if (account != null) marked.putString(ChatLocks.ACCOUNT_EXTRA, account);
+        builder.setContentTitle(appName(context))
                 .setContentText(L10n.t("New message"))
                 .setContentIntent(original.contentIntent)
                 .setDeleteIntent(original.deleteIntent)
@@ -403,7 +417,7 @@ public final class MessagesLock {
      * The lock just came back: each message notification Instagram has in the shade, posted while
      * the messages were open, is written over with a copy that says only that a message came. The
      * copy keeps its place, its group and where a tap goes, and doesn't ring again. One that can't
-     * be written over (no small icon, a channel deleted since) is reported and the rest still are.
+     * be written over (a channel deleted since) is reported and the rest still are.
      */
     static void hideShade() {
         hideShade(switchedOn());
@@ -481,7 +495,17 @@ public final class MessagesLock {
 
         @Override public void onActivityCreated(Activity activity, Bundle state) { }
         @Override public void onActivitySaveInstanceState(Activity activity, Bundle state) { }
-        @Override public void onActivityDestroyed(Activity activity) { }
+        @Override public void onActivityDestroyed(Activity activity) {
+            // Android drops a destroyed screen's dialog without dismissing it, so the PIN ask never
+            // hears back. Over all the same, or the cover's Unlock would wait out ASK_TIMEOUT_MS.
+            // The phone's own check outlasts a turn of the screen and answers the screen that comes
+            // back, so that ask isn't over and a second one shouldn't start.
+            if (askedAt != 0 && askedBy.get() == activity
+                    && !(activity.isChangingConfigurations() && Answer.waiting())) {
+                askedAt = 0;
+                askedBy = new WeakReference<>(null);
+            }
+        }
     }
 
     /** Instagram left the screen: locked now, or once it's been away as long as Lock again says. */
@@ -513,7 +537,11 @@ public final class MessagesLock {
         if (wasOpen && (switchedOn() || ChatLocks.any())) hideShade();
     }
 
-    /** Checks the activity in front before each of its frames, so a cover is in place before the messages draw. */
+    /**
+     * Checks the activity in front before each of its frames, so a cover is in place before the
+     * messages draw, and again when its window gets the focus back, since the phone's lock is only
+     * asked while it has it.
+     */
     static void follow(Activity activity) {
         unfollow();
         try {
@@ -523,8 +551,14 @@ public final class MessagesLock {
                 check(activity);
                 return true;
             };
-            activity.getWindow().getDecorView().getViewTreeObserver().addOnPreDrawListener(listener);
+            ViewTreeObserver.OnWindowFocusChangeListener focus = hasFocus -> {
+                if (hasFocus) check(activity);
+            };
+            ViewTreeObserver observer = activity.getWindow().getDecorView().getViewTreeObserver();
+            observer.addOnPreDrawListener(listener);
             drawListener = listener;
+            observer.addOnWindowFocusChangeListener(focus);
+            focusListener = focus;
             check(activity);
         } catch (Throwable t) {
             HookStatus.threw(FamilyNames.MESSAGES_LOCK, SCREEN, t);
@@ -534,12 +568,16 @@ public final class MessagesLock {
     private static void unfollow() {
         Activity activity = watched.get();
         ViewTreeObserver.OnPreDrawListener listener = drawListener;
+        ViewTreeObserver.OnWindowFocusChangeListener focus = focusListener;
         drawListener = null;
+        focusListener = null;
         watched = new WeakReference<>(null);
-        if (activity == null || listener == null) return;
+        if (activity == null || (listener == null && focus == null)) return;
         try {
             ViewTreeObserver observer = activity.getWindow().getDecorView().getViewTreeObserver();
-            if (observer.isAlive()) observer.removeOnPreDrawListener(listener);
+            if (!observer.isAlive()) return;
+            if (listener != null) observer.removeOnPreDrawListener(listener);
+            if (focus != null) observer.removeOnWindowFocusChangeListener(focus);
         } catch (Throwable t) {
             HookStatus.threw(FamilyNames.MESSAGES_LOCK, SCREEN, t);
         }
@@ -550,7 +588,8 @@ public final class MessagesLock {
      * are locked, or over the whole screen with Lock all of Instagram, and takes them away otherwise.
      * Each window has covers of its own, so a second activity coming up never touches the covers of
      * the one under it. The first time one shows after Instagram comes back, the phone's lock is
-     * asked once; a cancel leaves the cover with its Unlock button.
+     * asked once, as soon as Instagram's window has the focus; a cancel leaves the cover with its
+     * Unlock button.
      */
     static void check(Activity activity) {
         try {
@@ -588,7 +627,10 @@ public final class MessagesLock {
                 if (askedAt == 0) askedThisTime = false;
                 return;
             }
-            if (!askedThisTime) {
+            // Asked only while Instagram's window has the focus, so the prompt never comes up under
+            // the notification shade or over the home screen a home gesture is heading to (#153).
+            // The cover is up either way, and the focus coming back checks again.
+            if (!askedThisTime && decor.hasWindowFocus()) {
                 askedThisTime = true;
                 HookStatus.counted(FamilyNames.MESSAGES_LOCK, COVERED);
                 ask(activity, null);
@@ -622,7 +664,9 @@ public final class MessagesLock {
         boolean moved = false;
         if (cover == null) {
             cover = buildCover(activity, name);
-            window.addView(cover, new FrameLayout.LayoutParams(area.width(), area.height(), Gravity.TOP | Gravity.START));
+            // LEFT, not START: the area is in screen coordinates, and in a right-to-left layout START
+            // would put the cover against the right edge, where the window's next layout leaves it.
+            window.addView(cover, new FrameLayout.LayoutParams(area.width(), area.height(), Gravity.TOP | Gravity.LEFT));
             moved = true;
         }
         if (cover.getVisibility() != View.VISIBLE) {
@@ -802,11 +846,10 @@ public final class MessagesLock {
 
     private static Cover buildCover(Activity activity, String screen) {
         boolean wholeApp = APP.equals(screen);
-        boolean dark = Utils.isDarkModeEnabled();
-        int text = dark ? Color.WHITE : Color.BLACK;
+        ScreenColors colors = ScreenColors.DEFAULT;
         Cover cover = new Cover(activity, screen);
         cover.setTag(COVER_TAG);
-        cover.setBackgroundColor(dark ? Color.BLACK : Color.WHITE);
+        cover.setBackgroundColor(colors.background);
         // Takes every touch, so nothing under it can be scrolled or opened.
         cover.setClickable(true);
         cover.setFocusable(true);
@@ -822,27 +865,25 @@ public final class MessagesLock {
 
         ImageView icon = new ImageView(activity);
         icon.setImageResource(android.R.drawable.ic_lock_lock);
-        icon.setColorFilter(text);
-        int size = dp(activity, 48);
+        icon.setColorFilter(colors.heading);
+        icon.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        int size = dp(activity, 72);
         column.addView(icon, new LinearLayout.LayoutParams(size, size));
 
         TextView title = new TextView(activity);
         title.setText(wholeApp ? L10n.t("Instagram is locked") : L10n.t("Your messages are locked"));
-        title.setTextColor(text);
-        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        title.setTextColor(colors.title);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 20);
+        title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         title.setGravity(Gravity.CENTER);
-        title.setPadding(0, dp(activity, 12), 0, dp(activity, 12));
+        title.setPadding(0, dp(activity, 24), 0, dp(activity, 32));
         column.addView(title, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         cover.title = title;
 
         TextView unlock = new TextView(activity);
         unlock.setText(L10n.t("Unlock"));
-        // Instagram's blue reads on black, but on white it's about 3:1, so a darker blue takes over there.
-        unlock.setTextColor(dark ? Color.rgb(0, 149, 246) : Color.rgb(0, 100, 224));
-        unlock.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-        unlock.setGravity(Gravity.CENTER);
-        unlock.setPadding(dp(activity, 24), dp(activity, 12), dp(activity, 24), dp(activity, 12));
+        ScreenColors.styleAction(unlock, true);
         // A finger's worth of height, and a button to a screen reader and a keyboard.
         unlock.setMinHeight(dp(activity, 48));
         unlock.setFocusable(true);
@@ -853,7 +894,7 @@ public final class MessagesLock {
             }
         });
         unlock.setOnClickListener(v -> ask(activity, null));
-        column.addView(unlock, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,
+        column.addView(unlock, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         return cover;
     }
@@ -902,11 +943,14 @@ public final class MessagesLock {
         long now = SystemClock.elapsedRealtime();
         if (askedAt != 0 && now - askedAt < ASK_TIMEOUT_MS) return;
         askedAt = now;
+        askedBy = new WeakReference<>(activity);
         try {
             asker.ask(activity, () -> {
                 askedAt = 0;
                 open = true;
-                if (then != null) then.run();
+                // What follows (a settings change, a new PIN) belongs to the screen that asked. Turned
+                // while the phone's check was up, that screen is gone and its dialog can't show.
+                if (then != null && !activity.isDestroyed()) then.run();
             }, () -> askedAt = 0);
         } catch (Throwable t) {
             askedAt = 0;
@@ -1030,8 +1074,10 @@ public final class MessagesLock {
      * Instagram's included.
      */
     public static final class Answer extends Fragment {
-        private static final String TAG = "hushgram_messages_lock";
-        private static final int REQUEST = 0x4847;
+        static final String TAG = "hushgram_messages_lock";
+        static final int REQUEST = 0x4847;
+        /** Saved with the fragment: the phone's check was started and is still open. */
+        private static final String ASKED = "asked";
         private static Runnable pendingConfirmed;
         private static Runnable pendingNotConfirmed;
         private Intent intent;
@@ -1047,11 +1093,26 @@ public final class MessagesLock {
             manager.beginTransaction().add(answer, TAG).commitNowAllowingStateLoss();
         }
 
+        /** Whether the phone's check was started from here and hasn't answered yet. */
+        static boolean waiting() {
+            return pendingConfirmed != null || pendingNotConfirmed != null;
+        }
+
         @Override
         public void onCreate(Bundle state) {
             super.onCreate(state);
+            // Brought back with its activity (a rotation or a theme change while the phone's check
+            // was up): that check is still open and answers this fragment, so wait for it.
+            if (state != null && state.getBoolean(ASKED)) return;
             if (intent != null) startActivityForResult(intent, REQUEST);
             else finish(false);
+        }
+
+        @Override
+        public void onSaveInstanceState(Bundle state) {
+            super.onSaveInstanceState(state);
+            // A fragment that saves nothing comes back with no state at all, as if it were new.
+            state.putBoolean(ASKED, true);
         }
 
         @Override
@@ -1083,6 +1144,7 @@ public final class MessagesLock {
         watching = false;
         started = 0;
         askedAt = 0;
+        askedBy = new WeakReference<>(null);
         askedThisTime = false;
         keptOutOfRecents = null;
         toldRecentsAt = 0;

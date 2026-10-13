@@ -495,7 +495,7 @@ public class MediaSaveTest {
         MediaSave.capForTests = 100_000;
         Downloader.Result result = saveDash(video, audio);
 
-        assertEquals("WRITE_ERROR (the tracks could not be joined)", result.toString());
+        assertEquals("BUILD_ERROR (the tracks could not be joined)", result.toString());
         assertEquals("the sound track wasn't fetched", 1, server.hits("/a40.mp4"));
         assertNothingWasCreated("a pair that fits, with nothing described to join", result);
 
@@ -759,9 +759,27 @@ public class MediaSaveTest {
         assertFalse("the save never finished", worker.isAlive());
         Shadows.shadowOf(Looper.getMainLooper()).idle();
 
+        // The ledger that refuses the row refuses the save's own job record first, so the save
+        // ends before any fetch, with the plain failure rather than a fetch or write status's hint.
         assertEquals("Download failed", ShadowToast.getTextOfLatestToast());
         assertTrue("the unlisted row was left in the gallery", gallery.rows.isEmpty());
         assertEquals(0, published.size());
+    }
+
+    /**
+     * A failed save says what to check when the failure tells: the connection, or that and free
+     * storage. Nothing to save, or a file that couldn't be put together, asks for neither.
+     */
+    @Test
+    public void aFailedSaveSaysWhatToCheckWhenItKnows() {
+        assertEquals("Download failed. Check your connection and try again.",
+                MediaSave.message(context, Downloader.Status.NETWORK_ERROR, null, false));
+        assertEquals("Download didn't finish. Check your connection and free storage, then try again.",
+                MediaSave.message(context, Downloader.Status.WRITE_ERROR, null, false));
+        assertEquals("the server's own refusal", "Download failed",
+                MediaSave.message(context, Downloader.Status.HTTP_ERROR, null, false));
+        assertEquals("nothing to save, or tracks that wouldn't join", "Download failed",
+                MediaSave.message(context, Downloader.Status.BUILD_ERROR, null, false));
     }
 
     /**

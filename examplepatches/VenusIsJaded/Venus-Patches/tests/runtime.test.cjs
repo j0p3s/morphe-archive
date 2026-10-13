@@ -71,11 +71,16 @@ Promise.all([
         }
     });
 
-function boot(features = {picker:true, voice:true}, ready = true) {
+const OLD_ON = ['picker','copyBios','dashless','favouriteAnything','freeNitro','noTyping','jumpToTop','pastelize','platformIndicators','readAll',
+    'hideGift','hideQuestDock','systemEmoji','hideCall','validUser','youBarSettings','splitMessages'];
+function boot(features = {picker:true, voice:true}, ready = true, oldDefaults = true) {
     const warnings = [];
     const context = vm.createContext({console: {warn: (...args) => warnings.push(args)}});
     const source = raw.replace('/*__FEATURES__*/', JSON.stringify(features));
     vm.runInContext(source, context);
+    // Every feature starts off since 1.9.0. These tests were written for the old defaults, so they start from
+    // them; 'every feature starts off' checks the real ones.
+    if (oldDefaults) for (const key of OLD_ON) if (key in context.__venusPatches.settings) context.__venusPatches.settings[key] = true;
     const factories = new Map();
     context.__d = (factory, id) => factories.set(id, factory);
     function load(exports, factory, explicitId) {
@@ -470,7 +475,7 @@ test('conversion disabled has no codec bridge calls for audio uploads', async ()
     await upload.reactNativeCompressAndExtractData();assert.equal(calls,0);
 });
 
-const allFeatures = {picker:true, voice:true, copyBios:true, dashless:true, favouriteAnything:true, freeNitro:true, noTyping:true, quickDelete:true, noDelete:true, jumpToTop:true, hiddenChannels:true, pastelize:true, platformIndicators:true, reviewDB:true, readAll:true, quests:true, systemFont:true, systemEmoji:true, hideGift:true, hideQuestDock:true, gestures:true, hideCall:true};
+const allFeatures = {picker:true, voice:true, copyBios:true, dashless:true, favouriteAnything:true, freeNitro:true, noTyping:true, quickDelete:true, noDelete:true, jumpToTop:true, hiddenChannels:true, pastelize:true, platformIndicators:true, reviewDB:true, readAll:true, quests:true, systemFont:true, systemEmoji:true, hideGift:true, hideQuestDock:true, gestures:true, hideCall:true, validUser:true, youBarSettings:true, splitMessages:true, translate:true};
 function reactHarness(b) {
     const React = {
         createElement(type, props, ...children) { return {type, props:{...props, ...(children.length ? {children:children.length === 1 ? children[0] : children} : {})}}; },
@@ -557,8 +562,10 @@ test('new plugin preferences persist and late restores cannot overwrite edits', 
     b.load(native({fileExists:async()=>true,readFile:()=>new Promise(resolve=>complete=resolve),writeFile:async(...args)=>writes.push(args)}));
     await flush();b.api.setSetting('stickers',false);
     complete('{"emojis":false,"stickers":true,"copyBios":false,"hyperlinks":false,"forceLinks":true}');await flush();
+    // Options removed in 1.10.0 are ignored when an older settings file is read.
+    assert.equal('forceLinks' in b.api.settings,false);
     assert.equal(b.api.settings.stickers,false);assert.equal(b.api.settings.emojis,false);
-    assert.equal(b.api.settings.copyBios,false);assert.equal(b.api.settings.hyperlinks,false);assert.equal(b.api.settings.forceLinks,true);
+    assert.equal(b.api.settings.copyBios,false);assert.equal(b.api.settings.hyperlinks,false);
     assert.equal(JSON.parse(writes.at(-1)[2]).stickers,false);
 });
 test('unselected plugin factories remain completely unwrapped', () => {
@@ -636,10 +643,10 @@ test('emoji sharing ignores code blocks, inline code, escaped tokens, unknown an
     b.actions.sendMessage('channel',message);assert.equal(b.sent[0][1],message);
     b.actions.sendMessage('missing',{content:'<:x:2>'});assert.equal(b.sent[1][1].content,'<:x:2>');
 });
-test('emoji links honor live Nitro changes, forcing and plain-link options without rewriting originals', () => {
+test('emoji links honor live Nitro changes and the short-link option without rewriting originals', () => {
     const b=nitroHarness();const message={content:'<:x:2>'};
-    b.user.premiumType=2;b.actions.sendMessage('channel',message);assert.equal(b.sent.at(-1)[1],message);
-    b.api.setSetting('forceLinks',true);b.api.setSetting('hyperlinks',false);
+    b.user.premiumType=2;b.actions.sendMessage('channel',message);assert.equal(b.sent.at(-1)[1],message,'Nitro: sent as a real emoji');
+    b.user.premiumType=null;b.api.setSetting('hyperlinks',false);
     b.actions.sendMessage('channel',message);assert.match(b.sent.at(-1)[1].content,/^https:\/\/cdn.discordapp.com\/emojis\/2.webp/);
     b.api.setSetting('emojis',false);b.actions.sendMessage('channel',message);assert.equal(b.sent.at(-1)[1],message);
 });
@@ -735,13 +742,13 @@ test('immutable function export hooks retain the Metro module marker and stock d
 });
 
 
-test('attachment tools and all five ports live in Plugins, never General', () => {
+test('attachment tools and all five ports live in Features, never About', () => {
     const b=settingsHarness();
     const general=b.registry.VENUS_GENERAL.screen.getComponent()().props.node;
-    assert.equal(general.sections.length,1);assert.equal(general.sections[0].label,'About');
+    assert.deepEqual(Array.from(general.sections,s=>s.label),['Venus Patches','Links']);
     for (const id of ['PICKER','VOICE','NOTYPING','NODELETE','JUMPTOTOP','HIDDENCHANNELS','QUICKDELETE'])
         assert.equal(b.registry['VENUS_'+id].parent,'VENUS_PLUGINS');
-    for (const key of ['quickDelete','quickDeleteEmbeds','noDelete','hiddenChannels']) assert.equal(b.api.settings[key],false);
+    for (const key of ['quickDelete','noDelete','hiddenChannels']) assert.equal(b.api.settings[key],false);
 });
 test('unselected new plugins do not wrap any optional factory or expose switches', () => {
     const b=boot({});const factory=()=>{};
@@ -760,7 +767,7 @@ test('No typing restores both original methods and receiver when switched off', 
     assert.equal(patched.startTyping('123'),'start');assert.equal(patched.stopTyping('456'),'stop');
     assert.deepEqual(calls,[['123'],['456']]);
 });
-test('QuickDelete uses exact localized strings, independent switches and stock fallback', () => {
+test('QuickDelete uses exact localized strings, one switch for messages and link previews, and stock fallback', () => {
     const b=boot(allFeatures);let shown=0,confirmed=0;
     const tokens={AMvpS4:'message', 'vXZ+Fo':'embed'};const translations={message:'Supprimer le message ?',embed:'Supprimer cet aperçu ?'};
     b.load({t:tokens,intl:{string:key=>translations[key]}},null,1127);
@@ -771,9 +778,8 @@ test('QuickDelete uses exact localized strings, independent switches and stock f
     assert.equal(action.show(message),'confirmed');assert.equal(confirmed,1);
     const other={body:'Delete channel',onConfirm(){throw Error('must not confirm');}};assert.equal(action.show(other),other);
     const substring={body:'Unrelated '+translations.message,onConfirm(){throw Error('unsafe matching');}};assert.equal(action.show(substring),substring);
-    const embed={body:translations.embed,onConfirm(){confirmed++;}};action.show(embed);assert.equal(confirmed,1);
-    b.api.setSetting('quickDeleteEmbeds',true);action.show(embed);assert.equal(confirmed,2);
-    b.api.setSetting('quickDelete',false);action.show(message);assert.equal(confirmed,2);assert.equal(shown,5);
+    const embed={body:translations.embed,onConfirm(){confirmed++;}};action.show(embed);assert.equal(confirmed,2,'link previews skip asking too');
+    b.api.setSetting('quickDelete',false);action.show(message);action.show(embed);assert.equal(confirmed,2);assert.equal(shown,5);
     translations.embed='';assert.equal(action.show(embed),embed);
 });
 function deletionHarness() {
@@ -1300,7 +1306,8 @@ test('Pastelize respects source role colors and unknown members, and colors webh
     const webhook={...row,message:{webhookId:'hook'},result:{message:{...message,referencedMessage:{message:{authorId:'reply',content:[],guildId:'g'}}}}};
     seeds.length=0;result=rows.generate(webhook);assert.equal(seeds.includes('Name'),true);assert.equal(seeds.includes('reply'),true);
     assert.notEqual(result.message.referencedMessage.message.roleColor,undefined);
-    b.api.setSetting('pastelWebhookName',false);seeds.length=0;rows.generate(webhook);assert.equal(seeds.includes('hook'),true);
+    // A webhook without a name falls back to its ID.
+    seeds.length=0;rows.generate({...webhook,result:{message:{...webhook.result.message,username:''}}});assert.equal(seeds.includes('hook'),true);
     b.api.setSetting('pastelAll',true);assert.notEqual(rows.generate(row).message.roleColor,null);
     assert.equal(message.content[0].content[0].colorString,undefined);
 });
@@ -1340,11 +1347,11 @@ async function loadedReviews(b,userId) {
 }
 test('ReviewDB settings: Account and Settings groups with native rows',()=>{
     const b=reviewHarness();b.api.setSetting('reviewDB',true);const tree=b.Settings();
-    assert.deepEqual(walkElements(tree,n=>n.type==='RowGroup').map(n=>n.props.title),['Account','Settings']);
+    assert.deepEqual(walkElements(tree,n=>n.type==='RowGroup').map(n=>n.props.title),['Account','Display']);
     const login=walkElements(tree,n=>n.props.label==='Sign in to ReviewDB')[0];assert.equal(login.type,'NativeRow');assert.equal(login.props.arrow,true);assert.equal(login.props.disabled,false);
     const logout=walkElements(tree,n=>n.props.label==='Sign out of ReviewDB')[0];assert.equal(logout.props.disabled,true);assert.match(logout.props.subLabel,/Authorized Apps/);
     // The main switch lives on the Settings list row, not repeated on its page.
-    assert.deepEqual(walkElements(tree,n=>n.type==='SwitchRow').map(n=>n.props.label),['Profile-colored send button','Show the be-respectful note']);
+    assert.deepEqual(walkElements(tree,n=>n.type==='SwitchRow').map(n=>n.props.label),['Show the be-respectful note']);
     assert.equal(walkElements(tree,n=>n.type==='Stack')[0].props.spacing,24);
 });
 test('ReviewDB OAuth follows the traced 347.12 order: dismissOAuthModal BEFORE callback still signs in',async()=>{
@@ -1918,9 +1925,9 @@ test('NoDelete outline colors are computed once and still follow a replaced proc
 });
 test('enabled() feature lookup stays correct for every setting',()=>{
     const b=boot({freeNitro:true,pastelize:true,quickDelete:true,noDelete:true,platformIndicators:true,reviewDB:true});
-    for (const key of ['emojis','stickers','hyperlinks','forceLinks','pastelAll','quickDeleteEmbeds','noDeleteSave','piDmHeader','reviewWarning'])
+    for (const key of ['emojis','stickers','hyperlinks','pastelAll','pastelContent','noDeleteSave','piDmHeader','reviewWarning'])
         assert.equal(b.api.setSetting(key,!b.api.settings[key]),true,key);
-    for (const key of ['picker','voice','dashless','hiddenChannels']) assert.equal(b.api.setSetting(key,true),false,key);
+    for (const key of ['picker','voice','dashless','hiddenChannels','forceLinks','quickDeleteEmbeds','pastelWebhookName','reviewThemedSend']) assert.equal(b.api.setSetting(key,true),false,key);
 });
 
 // ---- 1.3.5 regressions ----
@@ -1947,22 +1954,47 @@ function settingsRows(b) {
     const node=b.registry.VENUS_PLUGINS.screen.getComponent()().props.node;
     return JSON.parse(JSON.stringify(node.sections.map(section=>[section.label,section.settings.map(id=>b.registry[id].useTitle())])));
 }
-test('Settings list is grouped, plugin names are gone and every row says what it does',()=>{
+test('Features list is grouped, plugin names are gone and every row says what it does',()=>{
     const b=settingsHarness();
-    assert.equal(b.registry.VENUS_PLUGINS.useTitle(),'Settings');assert.equal(b.registry.VENUS_GENERAL.useTitle(),'About');
+    assert.equal(b.registry.VENUS_PLUGINS.useTitle(),'Features');assert.equal(b.registry.VENUS_GENERAL.useTitle(),'About');
     const rows=settingsRows(b);
-    assert.deepEqual(rows.map(([label])=>label),['Chat','Profiles and people','Servers and channels','More']);
+    assert.deepEqual(rows.map(([label])=>label),['Messages','Sending','People','Servers','Appearance','Quests']);
     const titles=rows.flatMap(([,list])=>list);
-    assert.equal(titles.length,22);assert.equal(new Set(titles).size,22);
-    assert.ok(titles.includes('Double-tap a message to reply'));
+    assert.equal(titles.length,26);assert.equal(new Set(titles).size,26);
+    assert.ok(titles.includes('Double-tap to reply'));assert.ok(titles.includes('Send Nitro stickers and emojis as links'));
     for (const old of ['CopyBios','Dashless','FavouriteAnything','FreeNitro','Hidden Channels','JumpToTop','No typing','NoDelete','Pastelize',
         'PlatformIndicators','QuickDelete','Read All','Quest Completer','ReviewDB','Custom voice messages','File size on picker'])
         assert.ok(!titles.some(title=>title.includes(old)),'plugin name '+old+' still shown');
-    assert.ok(titles.includes('Send audio files as voice messages'));
-    // Simple settings are just their name: no empty second line.
-    assert.equal(b.registry.VENUS_SYSTEMFONT.useTitle(),'Force system font');assert.equal(b.registry.VENUS_SYSTEMFONT.useDescription,undefined);
-    for (const [,list] of rows) for (const title of list) assert.ok(title.length<=48,'too long for one row: '+title);
+    assert.ok(titles.includes('Send audio as voice messages'));
+    // Every row says what it does in one or two short sentences, and has its own icon.
+    const ids=b.registry.VENUS_PLUGINS.screen.getComponent()().props.node.sections.flatMap(s=>s.settings);
+    for (const id of ids) {
+        const row=b.registry[id], text=row.useDescription && row.useDescription();
+        assert.ok(text && text.length<=130,'missing or long description: '+id);assert.equal(typeof row.IconComponent,'function',id);
+    }
+    assert.equal(new Set(ids.map(id=>b.registry[id].IconComponent)).size,26,'each feature has its own icon');
+    for (const [,list] of rows) for (const title of list) assert.ok(title.length<=40,'too long for one row: '+title);
     assert.match(b.registry.VENUS_VERSION.useTitle(),/^Venus Patches \d/);
+});
+test('row icons are Discord\'s own, loaded when drawn, with a fallback',()=>{
+    const b=settingsHarness();function TrashIcon(props){return {icon:'trash',props};}
+    const Icon=b.registry.VENUS_NODELETE_ROW.IconComponent;
+    b.context.__r=()=>null;assert.equal(Icon({size:'md'}).type,b.original.ACCOUNT.IconComponent,'missing module: the Account icon');
+    b.context.__r=id=>id===4791?{TrashIcon}:null;assert.equal(Icon({size:'md'}).type,TrashIcon);
+    assert.equal(b.registry.VENUS_NODELETE.IconComponent,Icon,'its page uses the same icon');
+});
+test('About shows the version, features on, status and links',()=>{
+    const b=settingsHarness();const opened=[];
+    const general=b.registry.VENUS_GENERAL.screen.getComponent()().props.node;
+    assert.deepEqual(JSON.parse(JSON.stringify(general.sections)),[{label:'Venus Patches',settings:['VENUS_VERSION','VENUS_STATUS']},
+        {label:'Links',settings:['VENUS_LINK_CHANGES','VENUS_LINK_ISSUES','VENUS_LINK_SOURCE']}]);
+    assert.match(b.registry.VENUS_VERSION.useDescription(),/^\d+ of 26 features on/);
+    b.api.setSetting('dashless',false);const before=Number(b.registry.VENUS_VERSION.useDescription().split(' ')[0]);
+    b.api.setSetting('dashless',true);assert.equal(Number(b.registry.VENUS_VERSION.useDescription().split(' ')[0]),before+1);
+    assert.equal(b.registry.VENUS_STATUS.useTitle(),'Status');
+    b.load({View:'View',Text:'Text',Modal:'Modal',Linking:{openURL:url=>{opened.push(url);return Promise.resolve();}}},null,17);
+    b.registry.VENUS_LINK_ISSUES.onPress();assert.equal(opened[0],'https://github.com/VenusIsJaded/Venus-Patches/issues/new/choose');
+    assert.equal(b.registry.VENUS_LINK_SOURCE.withArrow,true);
 });
 test('settings with more options have a switch and a separate button to their page',()=>{
     const b=settingsHarness();
@@ -1970,7 +2002,7 @@ test('settings with more options have a switch and a separate button to their pa
     const navigated=[];const navigation={navigate:route=>navigated.push(route)};
     b.context.__r=id=>({6622:{FormSwitch},6631:{ChevronSmallRightIcon},1491:{useStackNavigation:()=>navigation},
         14239:{onRouteSettingOnPress:({navigation:nav,screen})=>nav.navigate(screen.route)}}[id]||null);
-    const pages={VENUS_PASTELIZE:'pastelize',VENUS_FREENITRO:'freeNitro',VENUS_PLATFORMINDICATORS:'platformIndicators',VENUS_QUICKDELETE:'quickDelete',
+    const pages={VENUS_PASTELIZE:'pastelize',VENUS_FREENITRO:'freeNitro',VENUS_PLATFORMINDICATORS:'platformIndicators',VENUS_TRANSLATE:'translate',
         VENUS_NODELETE:'noDelete',VENUS_READALL:'readAll',VENUS_REVIEWDB:'reviewDB',VENUS_QUESTS:'quests',VENUS_GESTURES:'gestures'};
     for (const [page,key] of Object.entries(pages)) {
         const row=b.registry[page+'_ROW'];
@@ -1988,7 +2020,7 @@ test('settings with more options have a switch and a separate button to their pa
     }
     assert.equal(b.registry.VENUS_PASTELALL.parent,'VENUS_PASTELIZE');assert.equal(b.registry.VENUS_EMOJIS.parent,'VENUS_FREENITRO');
     const pastel=b.registry.VENUS_PASTELIZE.screen.getComponent()().props.node;
-    assert.equal(JSON.stringify(pastel.sections.map(x=>x.settings)),JSON.stringify([['VENUS_PASTELALL','VENUS_PASTELWEBHOOKNAME','VENUS_PASTELCONTENT']]));
+    assert.equal(JSON.stringify(pastel.sections.map(x=>x.settings)),JSON.stringify([['VENUS_PASTELALL','VENUS_PASTELCONTENT']]));
 });
 test('emoji and sticker links have one main switch on the Settings list',()=>{
     const b=nitroHarness();
@@ -2024,7 +2056,7 @@ test('options are greyed out while their main switch is off',()=>{
 });
 test('unselected settings hide their rows and empty groups',()=>{
     const b=settingsHarness({copyBios:true});
-    assert.deepEqual(settingsRows(b),[['Profiles and people',['Select and copy profile bios']]]);
+    assert.deepEqual(settingsRows(b),[['People',['Copy profile bios']]]);
     assert.equal(b.registry.VENUS_SYSTEMFONT,undefined);assert.equal(b.registry.VENUS_PASTELIZE_ROW,undefined);
 });
 test('NoDelete does not rewrite an already erased archive for every deletion',async()=>{
@@ -2679,8 +2711,13 @@ test('Force system emojis is saved, starts on and offers to reopen Discord throu
     b.api.setSetting('systemFont',true);await flush();assert.equal(alerts.length,2);assert.equal(alerts[1][0],"Use your phone's font");
     assert.equal(boot({}).api.setSetting('systemEmoji',false),false);
 });
-test('Force system emojis draws only Unicode emojis with the phone font in React Native',()=>{
-    const b=boot({systemEmoji:true});const seen=[];
+// Discord drawing its emojis at launch reads the saved setting; these start from one saved with emojis on.
+async function emojiOn() {
+    const b=boot({systemEmoji:true});b.load({default:native({fileExists:async()=>true,readFile:async()=>JSON.stringify({systemEmoji:true})})});
+    await flush();await flush();await flush();return b;
+}
+test('Force system emojis draws only Unicode emojis with the phone font in React Native',async()=>{
+    const b=await emojiOn();const seen=[];
     const Emoji=function Emoji(props){seen.push(props);return 'emoji';};
     const exports=b.load({default:Object.freeze({$$typeof:Symbol.for('react.memo'),type:Emoji})},null,6552);
     const render=props=>exports.default.type(props);
@@ -2725,10 +2762,10 @@ test('Hide Quests promotion gives Discord its own empty-dock answer and unmounts
 });
 test('the new switches sit in their groups with one-line titles',()=>{
     const b=settingsHarness();const rows=Object.fromEntries(settingsRows(b));
-    assert.ok(rows.Chat.includes('Hide the gift button'));assert.ok(rows['Servers and channels'].includes('Hide the Quests promotion'));
-    assert.deepEqual(rows.More.slice(0,2),['Force system font','Force system emojis']);
-    assert.equal(b.registry.VENUS_SYSTEMEMOJI.useDescription,undefined);
-    const only=settingsHarness({hideGift:true});assert.deepEqual(settingsRows(only),[['Chat',['Hide the gift button']]]);
+    assert.ok(rows.Appearance.includes('Hide the gift button'));assert.ok(rows.Quests.includes('Hide the Quests banner'));
+    assert.deepEqual(rows.Appearance.slice(0,2),["Use your phone's font","Use your phone's emojis"]);
+    assert.match(b.registry.VENUS_SYSTEMEMOJI.useDescription(),/reopens/);
+    const only=settingsHarness({hideGift:true});assert.deepEqual(settingsRows(only),[['Appearance',['Hide the gift button']]]);
 });
 
 function gestureHarness(features={gestures:true}) {
@@ -2814,7 +2851,7 @@ test('Hide call button removes Call from profiles, and Message takes the whole r
     b.api.setSetting('hideCall',false);layout=two;tree=Buttons({});assert.ok(types(tree).includes(PhoneCallIcon),'switched off: Call is back');
     assert.equal(animated,1,'Message slides across when the setting changes');
     const off=boot({});const stock={default:function C(){}};assert.equal(off.load(stock,null,12696).default,stock.default,'untouched without the patch');
-    const rows=Object.fromEntries(settingsRows(settingsHarness({hideCall:true})));assert.deepEqual(rows['Profiles and people'],['Hide the call button on profiles']);
+    const rows=Object.fromEntries(settingsRows(settingsHarness({hideCall:true})));assert.deepEqual(rows.Appearance,['Hide the call button']);
 });
 function editHarness(saved) {
     const b=boot(allFeatures);const store=new Map();let disk=saved;const writes=[];
@@ -2863,4 +2900,457 @@ test('NoDelete saves edit history with Save permanently and restores it for the 
     // A file from before this release has no edits key and still loads.
     const old=editHarness(JSON.stringify({version:1,accountId:'owner',messages:[]}));await flush();await flush();
     old.api.setSetting('noDelete',true);old.api.setSetting('noDeleteSave',true);await flush();await flush();assert.equal(old.api.status.archive,'saved locally');
+});
+
+// ---- 1.7.1 regressions ----
+test('QuickDelete link previews ask again once QuickDelete itself is off',()=>{
+    const b=boot(allFeatures);let confirmed=0;
+    const translations={message:'Delete Message',embed:'Remove all embeds'};
+    b.load({t:{AMvpS4:'message','vXZ+Fo':'embed'},intl:{string:key=>translations[key]}},null,1127);
+    const action=b.load({default:{show(value){return value;}}},null,5205).default;
+    const embed={body:translations.embed,onConfirm(){confirmed++;}};
+    b.api.setSetting('quickDelete',true);b.api.setSetting('quickDeleteEmbeds',true);
+    action.show(embed);assert.equal(confirmed,1);
+    b.api.setSetting('quickDelete',false);assert.equal(action.show(embed),embed);assert.equal(confirmed,1);
+});
+test('NoDelete maximum of 0 becomes the lowest allowed, not 512',()=>{
+    const b=deletionHarness();b.api.setSetting('noDelete',true);b.api.setSetting('noDeleteLimit','20');
+    b.api.setSetting('noDeleteLimit','0');assert.equal(b.api.settings.noDeleteLimit,1);
+    b.api.setSetting('noDeleteLimit',-5);assert.equal(b.api.settings.noDeleteLimit,1);
+    b.api.setSetting('noDeleteLimit','abc');assert.equal(b.api.settings.noDeleteLimit,512);
+});
+test('Quest Completer saved on starts even when Discord connects before settings load', async () => {
+    const b = boot({quests:true});
+    const timers = [];
+    b.context.setTimeout = (fn, ms) => { timers.push(ms); return timers.length; };
+    b.context.clearTimeout = () => {};
+    const subs = new Map();
+    b.load({default:{subscribe:(event, fn) => subs.set(event, fn), dispatch(){}}}, null, 585);
+    let release;
+    const saved = new Promise(resolve => { release = resolve; });
+    b.load({default:native({fileExists:async () => true, readFile:() => saved})});
+    subs.get('CONNECTION_OPEN')({user:{id:'1'}});
+    assert.equal(timers.length, 0);
+    release(JSON.stringify({quests:true}));
+    await flush(); await flush(); await flush();
+    assert.equal(b.api.settings.quests, true);
+    assert.deepEqual(timers, [8000]);
+});
+test('Force system emojis also draws keycap emojis with the phone font',async()=>{
+    const b=await emojiOn();const seen=[];
+    const Emoji=function Emoji(props){seen.push(props);return 'emoji';};
+    const exports=b.load({default:Emoji},null,6552);
+    for (const name of ['1\uFE0F\u20E3','#\uFE0F\u20E3','*\u20E3']) {exports.default({name});assert.equal(seen.at(-1).forceTextEmoji,true,name);}
+    for (const name of ['12','emoji_1','1','#']) {const props={name};exports.default(props);assert.equal(seen.at(-1),props,name);}
+});
+test('Read All says the DMs could not be cleared instead of "Nothing unread"',()=>{
+    const b=readAllHarness();b.context.__r=(old=>id=>id===6532?null:old(id))(b.context.__r);
+    b.api.setSetting('readAllMode','both');pressReadAll(b);
+    assert.equal(b.calls.guilds.length,1);
+    assert.match(b.calls.toasts.at(-1),/^Couldn't mark as read: .*\(2 servers were marked as read\)$/);
+    b.api.setSetting('readAllMode','dms');pressReadAll(b);
+    assert.doesNotMatch(b.calls.toasts.at(-1),/Nothing unread|servers were/);
+});
+test('Force system emojis matches Discord\'s native emojis when saved settings are damaged',async()=>{
+    const b=boot({systemEmoji:true});const seen=[];
+    const Emoji=function Emoji(props){seen.push(props);return 'emoji';};
+    const exports=b.load({default:Emoji},null,6552);
+    b.load({default:native({fileExists:async()=>true,readFile:async()=>'{broken'})});
+    await flush();await flush();await flush();
+    assert.equal(b.api.status.storage,'read failed (defaults)');
+    const props={name:'\u{1F600}'};exports.default(props);assert.equal(seen.at(-1),props);
+});
+test('Hidden Channels hands the channel list the same renamed record each time',()=>{
+    const b=boot(allFeatures);b.api.setSetting('hiddenChannels',true);
+    b.load({Permissions:{VIEW_CHANNEL:1024}},null,1086);
+    const record=Object.freeze({id:'c1',guild_id:'g',type:0,name:'hidden'});
+    b.load({default:{getChannel:id=>id==='c1'?record:null,getBasicChannel:()=>null}},null,2051);
+    b.load({default:{can:()=>false,canBasicChannel:()=>false}},null,4472);
+    let list;
+    b.context.__d((g,r,importDefault,importAll,module)=>{module.exports={store:importDefault(2051)};},6952,[]);
+    const module={exports:{}};
+    b.factories.get(6952)(b.context,()=>{},id=>id===2051?{default:{getChannel:id=>id==='c1'?record:null,getBasicChannel:()=>null}}:{},()=>{},module,module.exports,[]);
+    list=module.exports.store.default||module.exports.store;
+    const first=list.getChannel('c1'),second=list.getChannel('c1');
+    assert.notEqual(first,record);assert.equal(first,second);assert.equal(first.id,'c1');
+});
+test('Message tap gestures: switching gestures off while waiting for a third tap does nothing',()=>{
+    const g=gestureHarness();g.api.setSetting('gestures',true);const mine={id:'2',author:{id:'me'},state:'SENT'};
+    g.tap(mine);g.api.setSetting('gestures',false);g.flushTimers();assert.equal(g.calls.length,0);
+    g.api.setSetting('gestures',true);g.tap(mine);g.flushTimers();assert.deepEqual(g.calls.at(-1),['edit','2','message_swipe']);
+});
+test('NoDelete forgets kept messages and edit history of a server you leave, but not after an outage',()=>{
+    const b=deletionHarness();b.api.setSetting('noDelete',true);
+    const channels={a:{id:'a',guild_id:'g1'},b:{id:'b',guild_id:'g2'}};
+    b.load({default:{getChannel:id=>channels[id],getBasicChannel:()=>null}},null,2051);
+    b.messages.set('a:1',{content:'one'});b.messages.set('b:2',{content:'two'});
+    b.dispatch.dispatch({type:'MESSAGE_DELETE',channelId:'a',id:'1'});b.dispatch.dispatch({type:'MESSAGE_DELETE',channelId:'b',id:'2'});
+    assert.equal(b.messages.size,2);
+    b.dispatch.dispatch({type:'GUILD_DELETE',guild:{id:'g1',unavailable:true}});
+    b.events.length=0;b.api.setSetting('noDelete',false);
+    const removed=b.events.map(e=>e.channelId);assert.deepEqual(removed.sort(),['a','b'],'an outage keeps both');
+    b.api.setSetting('noDelete',true);b.messages.set('a:1',{content:'one'});b.messages.set('b:2',{content:'two'});
+    b.dispatch.dispatch({type:'MESSAGE_DELETE',channelId:'a',id:'1'});b.dispatch.dispatch({type:'MESSAGE_DELETE',channelId:'b',id:'2'});
+    b.dispatch.dispatch({type:'GUILD_DELETE',guild:{id:'g1'}});
+    b.events.length=0;b.api.setSetting('noDelete',false);
+    assert.deepEqual(b.events.map(e=>e.channelId),['b'],'leaving g1 forgets only its channel');
+});
+test('Force system font does not reopen Discord when the setting could not be saved',async()=>{
+    const b=boot({systemFont:true});const requests=[],alerts=[];let failing=false;
+    b.load({View:'View',Text:'Text',Modal:'Modal',Alert:{alert:(...args)=>alerts.push(args)}},null,17);
+    b.context.setTimeout=(fn)=>{fn();return 0;};
+    b.load(native({writeFile:async()=>{if(failing)throw new Error('disk full');},fileExists:async uri=>{requests.push(uri);return false;}}));
+    await flush();await flush();
+    b.api.setSetting('systemFont',true);await flush();await flush();
+    failing=true;alerts[0][2][1].onPress();await flush();await flush();await flush();
+    assert.equal(requests.filter(uri=>uri.startsWith('venus-font-v1:')).length,0,'no reopen');
+    assert.equal(alerts.at(-1)[0],"Couldn't save the setting");
+});
+test('sticker link text escapes spoiler, strikethrough and heading markup',()=>{
+    const b=nitroHarness();b.stickers['20'].name='||boo|| ~~x~~ #1';
+    b.actions.sendStickers('channel',['20'],{content:''});
+    assert.match(b.sent.at(-1)[2].content,/^\[\\\|\\\|boo\\\|\\\| \\~\\~x\\~\\~ \\#1\]\(https:\/\/media\.discordapp\.net\/stickers\/20\.png\?size=160\)$/);
+});
+test('file size badge shows a known size at once and never the old photo\'s size on a reused tile',async()=>{
+    const b=boot({picker:true});const {React,RN}=reactHarness(b);
+    let state, effect;
+    React.useState=init=>{if(state===undefined)state=typeof init==='function'?init():init;return [state,fn=>{state=typeof fn==='function'?fn(state):fn;}];};
+    React.useEffect=fn=>{effect=fn;};
+    b.load({default:native({getSize:async uri=>uri==='file://a'?2048:4096})});await flush();await flush();
+    await b.api.getSize('file://a');
+    function Pressable(props){return props;}Pressable.displayName='Pressable';
+    const tile=b.load({default:Pressable},null,414).default;
+    const badgeOf=uri=>tile({children:[{props:{localImageSource:{uri}}}]}).children.props.children[1];
+    const render=badge=>badge.type(badge.props);
+    const first=render(badgeOf('file://a'));assert.equal(first.props.children.props.children,'2 KB','cached size, first frame');
+    const style=first.props.style;
+    assert.equal(render(badgeOf('file://b')),null,'a reused tile hides the old size until the new one is read');
+    effect();await flush();await flush();
+    assert.equal(render(badgeOf('file://b')).props.children.props.children,'4 KB');
+    assert.equal(render(badgeOf('file://b')).props.style,style,'one shared style object');
+});
+
+// Fix unknown mentions, profile bar settings button and long messages.
+function validHarness(users = {}) {
+    const b=boot({validUser:true});
+    const timers=[];b.context.setTimeout=(fn,ms)=>{timers.push(fn);return timers.length;};
+    const run=async()=>{for (let i=0;i<50 && timers.length;i++){timers.shift()();await flush();await flush();}};
+    const known=new Map(Object.entries(users));const subs={};const dispatched=[];
+    const dispatcher={subscribe(type,fn){(subs[type]||(subs[type]=[])).push(fn);},dispatch(event){dispatched.push(event);
+        if (event.type==='USER_UPDATE') known.set(event.user.id,event.user);(subs[event.type]||[]).forEach(fn=>fn(event));}};
+    b.load({default:{getUser:id=>known.get(id),getCurrentUser:()=>({id:'me'})}},null,1378);
+    b.load({default:dispatcher},null,585);
+    const asked=[];let answer=id=>{known.set(id,{id,username:'u'+id});return Promise.resolve({id});};
+    b.context.__r=id=>id===7630?{getUser:userId=>{asked.push(userId);return answer(userId);}}:null;
+    return {...b,dispatcher,dispatched,known,asked,run,setAnswer:fn=>{answer=fn;},subs};
+}
+test('Fix unknown mentions looks up unknown people automatically and redraws the message',async()=>{
+    const b=validHarness({'11111111111111111':{id:'11111111111111111'}});
+    const message={id:'m1',channel_id:'c',content:'hi <@22222222222222222> and <@!11111111111111111>',
+        embeds:[{description:'<@33333333333333333>'}],components:[{type:17,components:[{type:10,content:'<@44444444444444444>'}]}]};
+    b.dispatcher.dispatch({type:'MESSAGE_CREATE',channelId:'c',message});
+    await b.run();
+    assert.deepEqual(b.asked,['22222222222222222','33333333333333333','44444444444444444'],'only unknown people, once each');
+    const updates=b.dispatched.filter(e=>e.type==='MESSAGE_UPDATE');
+    assert.equal(updates.length,2);assert.equal(updates[0].message.content,message.content+'\u200b');
+    assert.equal(updates[1].message.content,message.content);assert.equal(updates[1].message.id,'m1');
+    // Its own redraw isn't checked again, and the same people are never asked for twice.
+    b.dispatcher.dispatch({type:'LOAD_MESSAGES_SUCCESS',channelId:'c',messages:[{id:'m2',content:'<@22222222222222222>'}]});
+    await b.run();assert.equal(b.asked.length,3);
+});
+test('Fix unknown mentions marks deleted accounts and retries other errors later',async()=>{
+    const b=validHarness();
+    b.setAnswer(id=>Promise.reject(id==='55555555555555555'?{status:404,body:{code:10013}}:{status:500}));
+    b.dispatcher.dispatch({type:'MESSAGE_CREATE',message:{id:'m',channel_id:'c',content:'<@55555555555555555> <@66666666666666666>'}});
+    await b.run();
+    assert.equal(b.known.get('55555555555555555').username,'Deleted User');
+    assert.equal(b.known.has('66666666666666666'),false);
+    b.dispatcher.dispatch({type:'MESSAGE_CREATE',message:{id:'n',channel_id:'c',content:'<@66666666666666666>'}});
+    await b.run();assert.equal(b.asked.filter(id=>id==='66666666666666666').length,2,'a failed lookup is tried again');
+});
+test('Fix unknown mentions does nothing while switched off',async()=>{
+    const b=validHarness();b.api.setSetting('validUser',false);
+    b.dispatcher.dispatch({type:'MESSAGE_CREATE',message:{id:'m',channel_id:'c',content:'<@22222222222222222>'}});
+    await b.run();assert.deepEqual(b.asked,[]);
+    const off=boot({});const subs=[];off.load({default:{subscribe:t=>subs.push(t),dispatch(){}}},null,585);assert.deepEqual(subs,[]);
+});
+test('profile bar gets a settings button next to the notifications bell',()=>{
+    const b=boot({youBarSettings:true});const {React}=reactHarness(b);React.Fragment='Fragment';
+    function YouBarButton(){} function SettingsIcon(){} const opened=[];
+    b.context.__r=id=>({16031:{default:YouBarButton},6799:{SettingsIcon},14615:{YOU_BAR_BUTTON_ICON_SIZE:20},6801:{openUserSettings:options=>opened.push(options)}})[id];
+    function Bell(){return 'bell';}
+    const memo={$$typeof:Symbol.for('react.memo'),type:Bell,compare:null};
+    const exports=b.load({default:memo},null,16032);
+    assert.equal(exports.default.$$typeof,Symbol.for('react.memo'));
+    const tree=exports.default.type({hasNameplate:true});
+    assert.equal(tree.type,'Fragment');assert.equal(tree.props.children[0],'bell');
+    const extra=tree.props.children[1];const button=extra.type(extra.props);
+    assert.equal(button.type,YouBarButton);assert.equal(button.props.accessibilityLabel,'Venus settings');
+    assert.equal(button.props.icon.type,SettingsIcon);assert.equal(button.props.hasNameplate,true);
+    button.props.onPress();assert.equal(opened.length,1);assert.equal(opened[0],undefined,'no Venus page yet: Discord\'s settings');
+    b.context.__venusPatches.status.menu=true;button.props.onPress();assert.deepEqual(JSON.parse(JSON.stringify(opened[1])),{screen:'VENUS_PLUGINS'},'opens Venus settings, not Discord\'s');
+    b.api.setSetting('youBarSettings',false);assert.equal(extra.type(extra.props),null);
+    const again=exports.default.type({});assert.equal(again.type,'Fragment','same shape when off, so the bell never remounts');
+});
+function splitHarness(premium=false) {
+    const b=boot({splitMessages:true});const sent=[];
+    const timers=[];b.context.setTimeout=(fn)=>{timers.push(fn);return 1;};
+    const run=async()=>{for (let i=0;i<50;i++){await flush();if(!timers.length)break;timers.shift()();}await flush();};
+    const constants=b.load({MAX_MESSAGE_LENGTH:2000,MAX_MESSAGE_LENGTH_PREMIUM:4000,OTHER:1},null,1086);
+    b.load({default:{getCurrentUser:()=>({id:'me',premiumType:premium?2:0}),getUser(){}}},null,1378);
+    b.load({default:{getChannel:()=>({id:'c',rateLimitPerUser:0})}},null,2051);
+    const actions=b.load({default:{sendMessage(channel,message,a,b2){sent.push([channel,message,a,b2]);return Promise.resolve();}}},null,6880).default;
+    const length=b.load({default:()=>premium?4000:2000,getMaxMessageLength:()=>premium?4000:2000},null,8602);
+    return {...b,sent,actions,constants,length,run};
+}
+test('long messages are split into parts within the limit, code blocks kept closed',async()=>{
+    const b=splitHarness();
+    assert.equal(b.length.getMaxMessageLength(),1<<30);assert.equal(b.constants.MAX_MESSAGE_LENGTH,1<<30);assert.equal(b.constants.OTHER,1);
+    const lines=Array.from({length:300},(_,i)=>'line number '+i+' with some words');
+    const content=lines.slice(0,100).join('\n')+'\n```js\n'+lines.slice(100).join('\n')+'\n```';
+    b.actions.sendMessage('c',{content,tts:false,invalidEmojis:[]},true,{messageReference:{message_id:'r'}});
+    await b.run();
+    assert.ok(b.sent.length>=4,'several parts: '+b.sent.length);
+    for (const [,message] of b.sent) { assert.ok(message.content.length<=2000,'part too long: '+message.content.length);
+        assert.equal((message.content.match(/```/g)||[]).length%2,0,'code block left open'); }
+    assert.equal(b.sent[0][3].messageReference.message_id,'r','the reply stays on the first part');
+    assert.equal(JSON.stringify(b.sent[1][3]),'{}');
+    const joined=b.sent.map(([,m])=>m.content).join('\n').replace(/\n```\n```js\n/g,'\n');
+    for (const line of lines) assert.ok(joined.includes(line),'lost: '+line);
+});
+test('short messages, premium limits and the off switch are left alone',async()=>{
+    const b=splitHarness(true);const msg={content:'x'.repeat(3500)};
+    b.actions.sendMessage('c',msg);await b.run();assert.equal(b.sent.length,1);assert.equal(b.sent[0][1],msg);
+    b.api.setSetting('splitMessages',false);
+    assert.equal(b.length.getMaxMessageLength(),4000);assert.equal(b.constants.MAX_MESSAGE_LENGTH,2000);
+    const big={content:'y '.repeat(5000)};b.actions.sendMessage('c',big);await b.run();assert.equal(b.sent.at(-1)[1],big);
+    const off=boot({});const stock={MAX_MESSAGE_LENGTH:2000};assert.equal(off.load(stock,null,1086).MAX_MESSAGE_LENGTH,2000);
+});
+test('the three new switches sit in their groups',()=>{
+    const rows=Object.fromEntries(settingsRows(settingsHarness()));
+    assert.ok(rows.Sending.includes('Send long messages'));
+    assert.ok(rows.People.includes('Fix unknown mentions'));
+    assert.ok(rows.Appearance.includes('Venus button on profile bar'));
+});
+
+// Translate messages: a fake Google Translate, a Flux dispatcher that records redraws, and the row generator.
+function translateHarness({answer, locale='en-US', system='de-DE', on=true}={}) {
+    const b=boot({translate:true});const {React}=reactHarness(b);
+    const timers=[];b.context.setTimeout=(fn,ms)=>{timers.push(fn);return timers.length;};b.context.clearTimeout=()=>{};
+    const requests=[];
+    // Google's batch answer: one [text, language] pair per q=.
+    let reply=answer || (texts=>texts.map(t=>[t.replace(/hola/g,'hello').replace(/perro/g,'dog').replace(/amigo/g,'friend'),'es']));
+    b.context.fetch=async(url,options)=>{
+        const texts=options.body.split('&').map(p=>decodeURIComponent(p.slice(2)));requests.push({url,texts,options});
+        const result=reply(texts,url);
+        if (result && result.status) return {ok:false,status:result.status,json:async()=>({})};
+        return {ok:true,status:200,json:async()=>result};
+    };
+    b.load({default:{getCurrentUser:()=>({id:'me'}),getUser(){}}},null,1378);
+    b.load({default:{locale,systemLocale:system}},null,2115);
+    const dispatched=[];const subs={};
+    b.load({default:{dispatch(e){dispatched.push(e);},subscribe(t,fn){(subs[t]||(subs[t]=[])).push(fn);}}},null,585);
+    class Rows{generate(row){return row.result;}}b.load({default:Rows},null,7378);
+    // Switching on asks for a redraw a moment later: let that happen before the test's messages exist.
+    if (on) { b.api.setSetting('translate',true); while (timers.length) timers.shift()(); }
+    const run=async()=>{for (let i=0;i<40;i++){await flush();if(!timers.length)break;timers.shift()();}await flush();await flush();};
+    const row=(id,content,raw,author='them')=>new Rows().generate({rowType:1,message:{id,channel_id:'c',content:raw,author:{id:author}},
+        result:{message:{id,channelId:'c',authorId:author,content}}}).message;
+    return {...b,React,requests,dispatched,subs,run,row,timers,setReply:fn=>{reply=fn;}};
+}
+const T=text=>({type:'text',content:text});
+test('Translate messages translates other languages in batches and keeps mentions, emojis and formatting',async()=>{
+    const b=translateHarness();
+    const mention={type:'mention',userId:'1',content:[T('@Ana')]};const emoji={type:'customEmoji',id:'9',name:'wave'};
+    const first=[T('hola '),mention,T(', mi '),{type:'strong',content:[T('perro')]},T(' '),emoji];
+    assert.equal(b.row('1',first,'hola <@1>, mi **perro** <:wave:9>').content,first,'original until the translation arrives');
+    b.row('2',[T('hola amigo')],'hola amigo');
+    await b.run();
+    assert.equal(b.requests.length,1,'both messages in one request');
+    assert.match(b.requests[0].url,/^https:\/\/translate\.googleapis\.com\/translate_a\/t\?client=dict-chrome-ex&sl=auto&tl=en$/);
+    assert.equal(b.requests[0].options.credentials,'omit');
+    assert.deepEqual(b.requests[0].texts,['hola amigo','hola <a i=0/>, mi <g i=1>perro</g> <a i=2/>'],'newest first');
+    // Each translated message is redrawn once, with a zero-width space that is then taken out again.
+    const updates=b.dispatched.filter(e=>e.type==='MESSAGE_UPDATE');
+    assert.deepEqual(updates.map(e=>e.message.content),['hola amigo\u200b','hola <@1>, mi **perro** <:wave:9>\u200b','hola amigo','hola <@1>, mi **perro** <:wave:9>']);
+    const shown=b.row('1',first,'hola <@1>, mi **perro** <:wave:9>').content;
+    assert.equal(shown[1],mention,'the very same mention node');assert.equal(shown[5],emoji);
+    assert.deepEqual(JSON.parse(JSON.stringify(shown.slice(0,5))),[T('hello '),{type:'mention',userId:'1',content:[T('@Ana')]},T(', mi '),{type:'strong',content:[T('dog')]},T(' ')]);
+    assert.equal(shown.at(-1).type,'subtext');assert.equal(shown.at(-1).content[0].content,'Translated from Spanish');
+    assert.equal(b.row('1',first,'hola <@1>, mi **perro** <:wave:9>').content,shown,'built once, reused on every render');
+    // The redraw's zero-width space never asks for a new translation.
+    b.row('1',[T('hola '),mention,T(', mi '),{type:'strong',content:[T('perro')]},T(' \u200b'),emoji],'x');await b.run();
+    assert.equal(b.requests.length,1);
+});
+test('Translate messages leaves your own messages, your language, short text and broken answers alone',async()=>{
+    const b=translateHarness({answer:texts=>texts.map(t=>t==='good morning everyone'?[t,'en']:t.startsWith('bonjour')?['hello <a i=0/> <a i=0/>','fr']:[t.toUpperCase(),'es'])});
+    b.row('1',[T('hola amigo')],'hola amigo','me');
+    b.row('2',[T('ok'),{type:'emoji',name:'x'}],'ok :x:');
+    b.row('3',[T('good morning everyone')],'good morning everyone');
+    const broken=[T('bonjour '),{type:'mention',userId:'5'}];b.row('4',broken,'bonjour <@5>');
+    await b.run();
+    assert.deepEqual(b.requests.flatMap(r=>r.texts).sort(),['bonjour <a i=0/>','good morning everyone'],'own messages and "ok" are never sent');
+    assert.equal(b.row('3',[T('good morning everyone')],'good morning everyone').content.length,1,'already English');
+    assert.equal(b.row('4',broken,'bonjour <@5>').content,broken,'a doubled mention means the original is shown');
+    assert.equal(b.dispatched.filter(e=>e.type==='MESSAGE_UPDATE').length,0,'nothing changed, so nothing is redrawn');
+    b.row('3',[T('good morning everyone')],'good morning everyone');await b.run();assert.equal(b.requests.length,1,'never asked again');
+});
+test('Translate messages follows Discord\'s or the phone\'s language, and the note and original options',async()=>{
+    const b=translateHarness({locale:'zh-TW',system:'pt-BR'});
+    b.row('1',[T('hola amigo')],'hola amigo');await b.run();
+    assert.match(b.requests[0].url,/tl=zh-TW$/);
+    b.api.setSetting('translateTarget','phone');assert.equal(b.api.settings.translateTarget,'phone');
+    assert.equal(b.api.setSetting('translateTarget','klingon'),false);
+    await b.run();
+    b.row('1',[T('hola amigo')],'hola amigo');await b.run();assert.match(b.requests.at(-1).url,/tl=pt$/);
+    b.api.setSetting('translateNote',false);await b.run();
+    assert.deepEqual(JSON.parse(JSON.stringify(b.row('1',[T('hola amigo')],'hola amigo').content)),[T('hello friend')],'no note');
+    b.api.setSetting('translateOriginal',true);await b.run();
+    const content=b.row('1',[T('hola amigo')],'hola amigo').content;
+    assert.equal(content.at(-2).content[0].content,'Translated from Spanish. Original:');
+    assert.deepEqual(JSON.parse(JSON.stringify(content.at(-1))),{type:'blockQuote',content:[T('hola amigo')]});
+});
+test('Translate messages waits and tries the other server when Google says to slow down',async()=>{
+    let calls=0;const b=translateHarness({answer:(texts,url)=>(++calls===1?{status:429}:texts.map(t=>['hello friend','es']))});
+    b.row('1',[T('hola amigo')],'hola amigo');await b.run();
+    assert.equal(b.requests.length,2);
+    assert.match(b.requests[0].url,/^https:\/\/translate\.googleapis\.com\//);assert.match(b.requests[1].url,/^https:\/\/clients5\.google\.com\//);
+    assert.equal(JSON.stringify(b.row('1',[T('hola amigo')],'hola amigo').content[0]),JSON.stringify(T('hello friend')));
+});
+test('Translate messages starts off, sends nothing while off and redraws when switched on or off',async()=>{
+    const b=translateHarness({on:false});
+    assert.equal(b.api.settings.translate,false,'starts off');
+    const content=[T('hola amigo')];
+    assert.equal(b.row('1',content,'hola amigo').content,content);await b.run();assert.equal(b.requests.length,0);
+    b.api.setSetting('translate',true);await b.run();
+    assert.deepEqual(b.dispatched.filter(e=>e.type==='MESSAGE_UPDATE').map(e=>e.message.content),['hola amigo\u200b','hola amigo'],'switching on redraws what was on screen');
+    b.row('1',content,'hola amigo');await b.run();assert.equal(b.requests.length,1);
+    b.api.setSetting('translate',false);await b.run();
+    assert.equal(b.row('1',content,'hola amigo').content,content,'switched off: the original again');
+    const off=boot({});const unpatched=[];off.load({default:{dispatch(){},subscribe:t=>unpatched.push(t)}},null,585);assert.deepEqual(unpatched,[]);
+});
+test('Translate messages has a settings row with its own page in Messages',()=>{
+    const b=settingsHarness();const rows=Object.fromEntries(settingsRows(b));
+    assert.ok(rows.Messages.includes('Translate messages'));
+    assert.equal(b.registry.VENUS_TRANSLATE.useTitle(),'Translate messages');
+});
+test('Pastelize colors the text of the message a reply quotes when Color message text is on (#45)',()=>{
+    const b=boot(allFeatures);const {RN}=reactHarness(b);RN.processColor=hex=>parseInt(hex.slice(1),16)|0xff000000;
+    b.load(seed=>Array.from(seed).reduce((a,c)=>a+c.charCodeAt(0),0),null,1252);
+    class Rows{generate(row){return row.result;}}b.load({default:Rows},null,7378);const rows=new Rows();
+    // Discord gives every message, quoted ones too, its theme text color.
+    const quoted={authorId:'111',username:'Ana',roleColor:null,textColor:-1,content:[{type:'text',content:'Hi'}]};
+    const row={rowType:1,message:{},result:{message:{authorId:'222',username:'Bo',roleColor:null,textColor:-1,content:[],referencedMessage:{state:'LOADED',message:quoted}}}};
+    let reply=rows.generate(row).message.referencedMessage.message;
+    assert.equal('textColor' in reply,false,'off: the preview keeps Discord\'s own reply color');
+    assert.equal(typeof reply.roleColor,'number','the quoted name is still pastel');
+    b.api.setSetting('pastelContent',true);
+    const shown=rows.generate(row).message;reply=shown.referencedMessage.message;
+    assert.equal(typeof reply.textColor,'number');assert.notEqual(reply.textColor,-1);
+    assert.equal(reply.textColor,rows.generate({...row,result:{message:{...quoted}}}).message.textColor,'the same color as that person\'s own messages');
+    assert.notEqual(shown.textColor,reply.textColor,'each person keeps their own color');
+    assert.equal(quoted.textColor,-1,'Discord\'s record is never changed');
+    b.api.setSetting('pastelize',false);
+    reply=rows.generate(row).message.referencedMessage.message;
+    assert.equal('textColor' in reply,false,'switched off: Discord\'s reply color again');assert.equal(reply.roleColor,null);
+});
+test('every feature starts off, and its options keep their own defaults',()=>{
+    const b=boot(allFeatures,true,false);const s=b.api.settings;
+    for (const key of Object.keys(allFeatures)) if (key in s) assert.equal(s[key],false,key+' starts off');
+    for (const key of ['emojis','stickers','hyperlinks','noDeleteEdits','piDmHeader','piUserList','piProfile','reviewWarning','questsVideo','gestureTripleDelete','translateNote'])
+        assert.equal(s[key],true,key+' is on once its feature is');
+});
+// The translator, three requests at a time and saving what it translated, against a fake Google and a fake phone.
+function fastHarness({answer, disk=null}={}) {
+    const b=boot({translate:true});reactHarness(b);
+    const timers=[];b.context.setTimeout=(fn,ms)=>{timers.push({fn,ms});return timers.length;};b.context.clearTimeout=()=>{};
+    const requests=[], pending=[];let saved=disk;const writes=[];
+    b.context.fetch=(url,options)=>new Promise((resolve,reject)=>{
+        const texts=options.body.split('&').map(p=>decodeURIComponent(p.slice(2)));const request={url,texts,resolve,reject};requests.push(request);
+        const reply=answer&&answer(request,requests.length);
+        if (reply==='hang') return pending.push(request);
+        if (reply&&reply.status) return resolve({ok:false,status:reply.status,json:async()=>({})});
+        resolve({ok:true,status:200,json:async()=>texts.map(t=>[t.replace(/hola/g,'hello').replace(/amigo/g,'friend'),'es'])});
+    });
+    b.load({default:native({fileExists:async p=>p.endsWith('venus-translations.json')&&saved!==null,readFile:async p=>p.endsWith('venus-translations.json')?saved:'{}',
+        writeFile:async(dir,name,text)=>{writes.push(name);if(name==='venus-translations.json')saved=text;}})});
+    b.load({default:{getCurrentUser:()=>({id:'me'}),getUser(){}}},null,1378);
+    b.load({default:{locale:'en-US',systemLocale:'en-US'}},null,2115);
+    const dispatched=[];b.load({default:{dispatch(e){dispatched.push(e);},subscribe(){}}},null,585);
+    class Rows{generate(row){return row.result;}}b.load({default:Rows},null,7378);
+    const run=async(rounds=60)=>{for (let i=0;i<rounds;i++){await flush();if(!timers.length)break;timers.shift().fn();}await flush();await flush();};
+    const row=(id,text)=>new Rows().generate({rowType:1,message:{id,channel_id:'c',content:text,author:{id:'them'}},
+        result:{message:{id,channelId:'c',authorId:'them',content:[{type:'text',content:text}]}}}).message.content;
+    return {...b,requests,pending,run,row,timers,dispatched,writes,getDisk:()=>saved};
+}
+test('Translate messages sends up to three requests at once and a slow one never holds up the rest',async()=>{
+    const b=fastHarness({answer:(request,n)=>n===1?'hang':null});
+    await flush();await flush();b.api.setSetting('translate',true);await b.run(5);
+    // 200 messages: 5 batches of 40, never more than three in flight while the first hangs.
+    for (let i=0;i<200;i++) b.row('m'+i,'hola amigo numero '+i);
+    await b.run();
+    assert.ok(b.requests.length>=4,'kept going past the stuck request: '+b.requests.length);
+    assert.ok(b.requests.every(r=>r.texts.length<=40));
+    assert.equal(JSON.stringify(b.row('m199','hola amigo numero 199')[0]),JSON.stringify({type:'text',content:'hello friend numero 199'}),'newest translated first, without waiting for the stuck one');
+});
+test('Translate messages tries the other server at once after a timeout and does not give up',async()=>{
+    const b=fastHarness({answer:(request,n)=>n===1?{status:503}:null});
+    await flush();await flush();b.api.setSetting('translate',true);await b.run(5);
+    b.row('1','hola amigo');await b.run();
+    assert.equal(b.requests.length,2);assert.match(b.requests[1].url,/clients5\.google\.com/);
+    const waits=b.timers.map(t=>t.ms);assert.ok(!waits.some(ms=>ms>=15000),'a network error waits a moment, not 15 seconds');
+    assert.equal(b.row('1','hola amigo')[0].content,'hello friend');
+});
+test('Translate messages keeps translations on the phone, so a chat opened after a restart shows them at once',async()=>{
+    const first=fastHarness();await flush();await flush();first.api.setSetting('translate',true);await first.run(5);
+    first.row('1','hola amigo');await first.run();assert.equal(first.requests.length,1);
+    const disk=first.getDisk();assert.ok(disk,'saved');const saved=JSON.parse(disk);assert.deepEqual(saved.entries,[['en','hola amigo','hello friend','es']]);
+    const again=fastHarness({disk});await flush();await flush();again.api.setSetting('translate',true);await again.run(5);
+    assert.equal(again.row('1','hola amigo')[0].content,'hello friend','straight from the phone');await again.run();
+    assert.equal(again.requests.length,0,'nothing sent to Google again');
+    const broken=fastHarness({disk:'{not json'});await flush();await flush();broken.api.setSetting('translate',true);await broken.run(5);
+    broken.row('1','hola amigo');await broken.run();assert.equal(broken.requests.length,1,'a damaged file is ignored');
+});
+// ---- 1.10.0 settings overhaul ----
+function pageNodes(tree){const out=[];(function walk(n){if(!n||typeof n!=='object')return;if(Array.isArray(n))return n.forEach(walk);out.push(n);walk(n.props&&n.props.children);})(tree);return out;}
+test('Clear kept messages removes kept deletions from chat and the saved file, after asking',async()=>{
+    const b=deletionHarness();const {RN}=reactHarness(b);const alerts=[];RN.Alert={alert:(...args)=>alerts.push(args)};
+    b.context.__r=id=>({5916:{TableRow:'Row'}}[id]||null);
+    const registry=b.load({SETTING_RENDERER_CONFIG:{ACCOUNT:{type:'route',IconComponent(){}}}},null,14130).SETTING_RENDERER_CONFIG;
+    b.api.setSetting('noDelete',true);
+    const page=()=>registry.VENUS_NODELETE.screen.getComponent()();
+    const clear=()=>pageNodes(page()).find(n=>n.type==='Row'&&n.props.label==='Clear kept messages');
+    assert.equal(clear().props.disabled,true,'nothing to clear yet');
+    b.messages.set('c:1',{content:'one',state:'SENT'});b.messages.set('c:2',{content:'two',state:'SENT'});
+    b.dispatch.dispatch({type:'MESSAGE_DELETE',channelId:'c',id:'1'});b.dispatch.dispatch({type:'MESSAGE_DELETE',channelId:'c',id:'2'});
+    assert.equal(b.messages.size,2,'kept');
+    assert.ok(pageNodes(page()).some(n=>typeof n.props.children==='string'&&/^2 deleted messages and 0 edited messages kept/.test(n.props.children)));
+    const row=clear();assert.equal(row.props.disabled,false);assert.equal(row.props.variant,'danger');
+    row.props.onPress();assert.equal(alerts.length,1);assert.equal(alerts[0][0],'Clear kept messages?');assert.equal(b.messages.size,2,'nothing removed before confirming');
+    alerts[0][2].find(button=>button.text==='Clear').onPress();
+    assert.equal(b.messages.size,0,'gone from chat');assert.equal(b.events.at(-1).type,'MESSAGE_DELETE_BULK');
+    b.dispatch.dispatch({type:'MESSAGE_DELETE',channelId:'c',id:'1'});assert.equal(b.messages.size,0,'and not kept again');
+    assert.equal(clear().props.disabled,true);
+});
+test('Clear saved translations forgets them on the phone and translates the screen again',async()=>{
+    const b=fastHarness();const {RN}=reactHarness(b);const alerts=[];RN.Alert={alert:(...args)=>alerts.push(args)};
+    b.context.__r=id=>({5916:{TableRow:'Row'}}[id]||null);
+    const registry=b.load({SETTING_RENDERER_CONFIG:{ACCOUNT:{type:'route',IconComponent(){}}}},null,14130).SETTING_RENDERER_CONFIG;
+    const clear=()=>pageNodes(registry.VENUS_TRANSLATE.screen.getComponent()()).find(n=>n.type==='Row'&&n.props.label==='Clear saved translations');
+    assert.equal(clear().props.disabled,true);assert.equal(clear().props.subLabel,'Nothing saved yet.');
+    await flush();await flush();b.api.setSetting('translate',true);await b.run(5);
+    b.row('1','hola amigo');await b.run();
+    assert.match(clear().props.subLabel,/^1 translation kept on this phone/);
+    clear().props.onPress();alerts[0][2].find(button=>button.text==='Clear').onPress();await flush();await flush();
+    assert.equal(b.getDisk(),'{"version":1,"entries":[]}','the saved file is emptied');
+    const before=b.requests.length;b.row('1','hola amigo');await b.run();assert.equal(b.requests.length,before+1,'translated again');
+});
+test('choice pages use Discord\'s radio list: tap gestures, Read all and Translate',()=>{
+    const b=settingsHarness();function TableRadioGroup(){} function TableRadioRow(){}
+    b.context.__r=id=>({5995:{TableRadioGroup},5994:{TableRadioRow}}[id]||null);
+    const radios=key=>pageNodes(b.registry[key].screen.getComponent()()).filter(n=>n.type===TableRadioGroup);
+    const [own]=radios('VENUS_GESTURES');assert.equal(own.props.title,'Double-tap your own message');assert.equal(own.props.value,'edit');
+    own.props.onChange('reply');assert.equal(b.api.settings.gestureOwn,'reply');
+    assert.equal(radios('VENUS_READALL')[0].props.title,'When you tap Read all');
+    const [target]=radios('VENUS_TRANSLATE');assert.equal(target.props.title,'Translate into');target.props.onChange('phone');assert.equal(b.api.settings.translateTarget,'phone');
 });

@@ -14,7 +14,7 @@
     if (features.freeNitro) selectModules([1378, 2051, 5772, 5815, 4491, 13528, 6756, 6880]);
     if (features.noTyping) selectModules([11348]);
     if (features.quickDelete) selectModules([5205, 1127]);
-    if (features.noDelete) selectModules([585, 5057, 5059, 1378, 6880, 7378]);
+    if (features.noDelete) selectModules([585, 5057, 5059, 1378, 2051, 6880, 7378]);
     if (features.jumpToTop) selectModules([11642, 11643, 11644, 8838, 9804, 10418, 15746, 6880, 2051]);
     if (features.hiddenChannels) selectModules([1086, 1097, 1113, 2051, 4470, 6952, 4472, 4990, 6880, 585, 1378, 15859, 5410]);
     if (features.pastelize) selectModules([7378, 1252, 2111]);
@@ -27,16 +27,24 @@
     if (features.systemEmoji) selectModules([6552]);
     if (features.gestures) selectModules([7414, 11105, 1378, 10905]);
     if (features.hideCall) selectModules([12696]);
-    const revision = "1.7.0";
+    if (features.validUser) selectModules([585, 1378]);
+    if (features.youBarSettings) selectModules([16032]);
+    if (features.splitMessages) selectModules([1086, 1378, 2051, 6880, 8602]);
+    if (features.translate) selectModules([585, 1378, 2115, 7378]);
+    const revision = "1.10.0";
     // Module 120 owns setUpDefaltReactNativeEnvironment in this exact asset.
     // Defer every feature hook until that initializer returns successfully.
     let environmentReady = false;
     const deferred = new Map();
-    const settings = { picker: true, voice: false, copyBios: true, dashless: true, favouriteAnything: true, freeNitro: true, emojis: true, stickers: true, hyperlinks: true, forceLinks: false,
-        noTyping: true, quickDelete: false, quickDeleteEmbeds: false, noDelete: false, noDeleteSave: false, noDeleteLimit: 512, noDeleteEdits: true,
-        jumpToTop: true, hiddenChannels: false, pastelize:true, pastelAll:false, pastelWebhookName:true, pastelContent:false, platformIndicators:true, piDmHeader:true, piUserList:true, piProfile:true, piHideMobile:true, reviewDB:false, reviewThemedSend:true, reviewWarning:true, readAll:true, readAllMode:"guilds",
+    // Every feature starts off: nothing changes in Discord until you turn it on. Options inside a feature keep
+    // their own defaults, so turning a feature on does what it says straight away.
+    const settings = { picker: false, voice: false, copyBios: false, dashless: false, favouriteAnything: false, freeNitro: false, emojis: true, stickers: true, hyperlinks: true,
+        noTyping: false, quickDelete: false, noDelete: false, noDeleteSave: false, noDeleteLimit: 512, noDeleteEdits: true,
+        jumpToTop: false, hiddenChannels: false, pastelize:false, pastelAll:false, pastelContent:false, platformIndicators:false, piDmHeader:true, piUserList:true, piProfile:true, piHideMobile:true, reviewDB:false, reviewWarning:true, readAll:false, readAllMode:"guilds",
         quests:false, questsVideo:true, questsPlay:true, questsActivity:true, questsEnroll:true, systemFont:false,
-        hideGift:true, hideQuestDock:true, systemEmoji:true, gestures:false, gestureOwn:"edit", gestureTripleDelete:true, hideCall:true };
+        hideGift:false, hideQuestDock:false, systemEmoji:false, gestures:false, gestureOwn:"edit", gestureTripleDelete:true, hideCall:false,
+        validUser:false, youBarSettings:false, splitMessages:false,
+        translate:false, translateTarget:"discord", translateNote:true, translateOriginal:false };
     const status = { picker: false, attachment: false, request: false, menu: false, conversion: false, audioError: "", storage: "waiting" };
     const listeners = new Set();
     const dirty = new Set();
@@ -57,6 +65,8 @@
     const READ_ALL_MODES = ["guilds", "dms", "both"];
     // What double-tapping your own message does: edit it, or reply like anyone else's.
     const GESTURE_OWN_MODES = ["edit", "reply"];
+    // Which language Translate messages translates into: Discord's own language, or the phone's.
+    const TRANSLATE_TARGETS = ["discord", "phone"];
     // A sub-option (piProfile, reviewWarning, pastelAll...) must also wake components that
     // subscribed to its plugin: those pages and badges read several of its settings at once.
     const notify = key => {
@@ -75,13 +85,15 @@
     const enabled = key => {
         let feature = featureTable.get(key);
         if (feature === undefined) featureTable.set(key, feature = featureFor(key));
-        return features[feature] && settings[key] && (feature !== "freeNitro" || settings.freeNitro);
+        // An option only counts while its main switch is on too. Only FreeNitro checked that, so
+        // "Removing link previews" kept skipping the question after QuickDelete itself was turned off.
+        return !!(features[feature] && settings[key] && (feature === key || settings[feature]));
     };
 
     // The font Discord started with; the native side reads the same saved setting at launch.
     let fontInUse = false;
     // Emojis are the same: the native side reads the saved setting once at launch, and so does this.
-    let emojiInUse = true;
+    let emojiInUse = false;
     function settingsSnapshot() {
         return JSON.stringify(features.reviewDB && reviewToken && reviewAccount ? Object.assign({}, settings, {reviewAuth:{account:reviewAccount, token:reviewToken}}) : settings);
     }
@@ -105,7 +117,8 @@
         }
         Promise.resolve().then(persist);
     }
-    function deleteLimit(value) { const n = Math.floor(Number(value)); return Number.isFinite(n) && n > 0 ? Math.min(MAX_DELETED, n) : 512; }
+    // Typing 0 in the maximum box used to jump it to 512; anything below 1 now means the lowest, 1.
+    function deleteLimit(value) { const n = Math.floor(Number(value)); return Number.isFinite(n) ? Math.max(1, Math.min(MAX_DELETED, n)) : 512; }
     function setSetting(key, value) {
         if (!owns(settings, key) || !features[featureFor(key)]) return false;
         if (key === "readAllMode") {
@@ -117,6 +130,11 @@
             if (!GESTURE_OWN_MODES.includes(value)) return false;
             if (settings.gestureOwn === value && status.storage !== "loading" && status.storage !== "waiting") return true;
             settings.gestureOwn = value; dirty.add(key); save(); notify(key); return true;
+        }
+        if (key === "translateTarget") {
+            if (!TRANSLATE_TARGETS.includes(value)) return false;
+            if (settings.translateTarget === value && status.storage !== "loading" && status.storage !== "waiting") return true;
+            settings.translateTarget = value; dirty.add(key); save(); notify(key); translateChanged(); return true;
         }
         if (key === "noDeleteLimit") {
             const limit = deleteLimit(value);
@@ -135,6 +153,7 @@
         // it used to write an empty file, so turning it back on lost every saved message.
         if (key === "noDelete" && !value) { clearDeleted(true, settings.noDeleteSave); archiveRestored = false; }
         if (key === "hiddenChannels") {hiddenViews.clear();}
+        if (key === "gestures" && !value && features.gestures) gestureCancel();
         if ((key === "noDeleteEdits" || key === "noDelete") && !value && edits.size) { edits.clear(); persistDeleted(); }
         settings[key] = value;
         if (key === "noDeleteSave") { if (value) restoreDeleted(); else archiveRestored = false; persistDeleted(); }
@@ -148,6 +167,8 @@
         if (key === "systemEmoji" && features.systemEmoji && status.storage !== "loading" && status.storage !== "waiting" && value !== emojiInUse) later(() => askRestart("emoji"), 0);
         save();
         notify(key);
+        if (features.translate && key === "translate" && value) translateRestore();
+        if (features.translate && featureFor(key) === "translate") later(translateChanged, 0);
         return true;
     }
     function initFiles(module) {
@@ -170,7 +191,8 @@
                 if (!loaded || typeof loaded !== "object" || Array.isArray(loaded)) throw new Error("Invalid preferences");
                 for (const key of Object.keys(settings))
                     if (!dirty.has(key) && typeof loaded[key] === typeof settings[key] && (key !== "readAllMode" || READ_ALL_MODES.includes(loaded[key])) &&
-                        (key !== "gestureOwn" || GESTURE_OWN_MODES.includes(loaded[key])))
+                        (key !== "gestureOwn" || GESTURE_OWN_MODES.includes(loaded[key])) &&
+                        (key !== "translateTarget" || TRANSLATE_TARGETS.includes(loaded[key])))
                         settings[key] = key === "noDeleteLimit" ? deleteLimit(loaded[key]) : loaded[key];
                 const auth = loaded.reviewAuth;
                 // Restore a saved ReviewDB sign-in (a ReviewDB token, never the Discord token).
@@ -184,9 +206,16 @@
             // Persist edits made while the asynchronous restore was in flight.
             if (dirty.size) save();
             restoreDeleted();
-            if (features.quests && !enabled("quests")) questsStop();
+            if (features.quests) { if (!enabled("quests")) questsStop(); else questsLoaded(); }
+            // Saved translations are read as soon as Discord starts, so the first chat you open already has them.
+            if (enabled("translate")) translateRestore();
             notify("*");
-        }).catch(() => { status.storage = "read failed (defaults)"; if (dirty.size) save(); notify("*"); });
+        }).catch(() => {
+            // The native side reads the same file at launch and falls back to Discord's font and emojis when it
+            // can't. Assuming the phone's emojis here drew React Native emojis one way and chat the other.
+            status.storage = "read failed (defaults)"; fontInUse = false; emojiInUse = false;
+            if (dirty.size) save(); notify("*");
+        });
     }
 
     function formatSize(bytes) {
@@ -254,23 +283,28 @@
             return () => listeners.delete(entry);
         }, [key]);
     }
+    // A size already read and still fresh, without starting a read.
+    function knownSize(uri) {
+        const entry = typeof uri === "string" && sizeCache.get(uri);
+        return entry && entry.done && entry.expires > Date.now() ? entry.value : null;
+    }
+    // One style object for every badge, not two per photo tile per render.
+    const BADGE_STYLE = { position: "absolute", top: 3, left: 3, borderRadius: 4, backgroundColor: "#17181ccc", paddingHorizontal: 4, paddingVertical: 2 };
+    const BADGE_TEXT = { color: "white", fontSize: 10, fontWeight: "700", includeFontPadding: false };
+    const PICKER_WRAP = { position: "relative" };
     function SizeBadge(props) {
         useSettings("picker");
-        const [bytes, update] = React.useState(null);
+        // The picker recycles tiles while scrolling: a size it already knows shows straight away, with no blank first frame.
+        const [state, update] = React.useState(() => ({uri:props.uri, bytes:knownSize(props.uri)}));
+        const bytes = state && state.uri === props.uri ? state.bytes : knownSize(props.uri);
         React.useEffect(() => {
             let live = true;
-            update(null);
-            if (enabled("picker")) getSize(props.uri).then(value => { if (live) update(value); });
+            const uri = props.uri;
+            if (enabled("picker")) getSize(uri).then(value => { if (live) update(old => old && old.uri === uri && old.bytes === value ? old : {uri, bytes:value}); });
             return () => { live = false; };
         }, [props.uri, settings.picker]);
         if (!enabled("picker") || bytes === null || !RN) return null;
-        return el(RN.View, {
-            pointerEvents: "none",
-            style: { position: "absolute", top: 3, left: 3, borderRadius: 4,
-                backgroundColor: "#17181ccc", paddingHorizontal: 4, paddingVertical: 2 }
-        }, el(RN.Text, {
-            style: { color: "white", fontSize: 10, fontWeight: "700", includeFontPadding: false }
-        }, formatSize(bytes)));
+        return el(RN.View, { pointerEvents: "none", style: BADGE_STYLE }, el(RN.Text, { style: BADGE_TEXT }, formatSize(bytes)));
     }
     function pickerProps(props) {
         if (!enabled("picker") || !React || !RN || !props) return props;
@@ -278,7 +312,7 @@
         const uri = first && first.props && first.props.localImageSource && first.props.localImageSource.uri;
         if (typeof uri !== "string") return props;
         return Object.assign({}, props, { children: el(RN.View, {
-            style: { position: "relative" }, pointerEvents: "box-none"
+            style: PICKER_WRAP, pointerEvents: "box-none"
         }, props.children, el(SizeBadge, { uri })) });
     }
     function pickerComponent(component) {
@@ -319,12 +353,13 @@
     const audioName = /\.(mp3|mp2|mpga|m4a|m4b|aac|wav|wave|flac|ogg|oga|opus|amr|awb|3ga|3gp|3gpp|aif|aiff|aifc|wma|ac3|eac3|caf|weba|alac)$/i;
     // Audio-only extensions: some providers label these voice notes video/mp4, video/3gpp or video/webm.
     const audioOnlyName = /\.(mp3|m4a|m4b|aac|wav|flac|oga|opus|amr|awb|3ga|weba|aif|aiff|aifc|caf)$/i;
+    const AUDIO_APPLICATION_TYPES = new Set(["application/ogg","application/x-ogg","application/x-flac","application/x-wav","application/x-opus"]);
     function isAudio(upload) {
         if (!upload || upload.spoiler) return false;
         const item = upload.item || {};
         const mime = String(upload.mimeType || item.mimeType || "").toLowerCase().split(";")[0].trim();
         const name = String(upload.filename || item.filename || "");
-        if (mime.startsWith("audio/") || ["application/ogg","application/x-ogg","application/x-flac","application/x-wav","application/x-opus"].includes(mime)) return true;
+        if (mime.startsWith("audio/") || AUDIO_APPLICATION_TYPES.has(mime)) return true;
         if (mime.startsWith("video/")) return audioOnlyName.test(name);
         if (mime && mime !== "application/octet-stream" && mime !== "binary/octet-stream") return false;
         return audioName.test(name);
@@ -389,9 +424,11 @@
         prototype.reactNativeCompressAndExtractData = patched;
         wrapped.set(orig, patched);
         wrapped.set(patched, patched);
-        for (const key of ["cancel", "delete"]) {
+        // One function scope per method: Hermes's native eval can lower loop-local const to var (see readSize),
+        // and then both wrappers called the last method, so cancelling an upload deleted it instead.
+        function stopFirst(key) {
             const method = prototype[key];
-            if (typeof method !== "function") continue;
+            if (typeof method !== "function") return;
             prototype[key] = function () {
                 const job = conversions.get(this);
                 if (job) {
@@ -401,6 +438,7 @@
                 return method.apply(this, arguments);
             };
         }
+        stopFirst("cancel"); stopFirst("delete");
         status.conversion = true;
     }
     function attachmentPayload(orig, self, args) {
@@ -447,7 +485,7 @@
 
     // Native setting nodes use Discord's own themed rows, navigation and back stack.
     let SettingsList;
-    const featureFor = key => key === "reviewThemedSend" || key === "reviewWarning" ? "reviewDB" : key === "emojis" || key === "stickers" || key === "hyperlinks" || key === "forceLinks" ? "freeNitro" : key === "quickDeleteEmbeds" ? "quickDelete" : key === "noDeleteSave" || key === "noDeleteLimit" || key === "noDeleteEdits" ? "noDelete" : /^pi[A-Z]/.test(key) ? "platformIndicators" : ["pastelAll","pastelWebhookName","pastelContent"].includes(key) ? "pastelize" : key === "readAllMode" ? "readAll" : /^quests[A-Z]/.test(key) ? "quests" : /^gesture[A-Z]/.test(key) ? "gestures" : key;
+    const featureFor = key => key === "reviewWarning" ? "reviewDB" : key === "emojis" || key === "stickers" || key === "hyperlinks" ? "freeNitro" : key === "noDeleteSave" || key === "noDeleteLimit" || key === "noDeleteEdits" ? "noDelete" : /^pi[A-Z]/.test(key) ? "platformIndicators" : key === "pastelAll" || key === "pastelContent" ? "pastelize" : key === "readAllMode" ? "readAll" : /^quests[A-Z]/.test(key) ? "quests" : /^gesture[A-Z]/.test(key) ? "gestures" : /^translate[A-Z]/.test(key) ? "translate" : key;
     function section(label, keys) { return { label, settings: keys }; }
     // Plain-language status for General -> About; the raw values stay in status for diagnostics.
     function aboutText() {
@@ -461,6 +499,38 @@
         if (archive) lines.push(archive);
         if (status.audioError) lines.push("Last problem: " + status.audioError);
         return lines.join("\n");
+    }
+    // Discord's own icon for each feature row, from its design system. Resolved when a row first draws, never
+    // while Discord builds its settings, and the Account icon stands in if one ever goes missing.
+    const FEATURE_ICONS = {noDelete:[4791, "TrashIcon"], translate:[14958, "LanguageIcon"], gestures:[8216, "ReactionIcon"],
+        quickDelete:[6026, "CircleXIcon"], jumpToTop:[10827, "ArrowLargeUpIcon"], favouriteAnything:[9716, "StarIcon"],
+        freeNitro:[8119, "NitroWheelIcon"], voice:[12236, "WaveformIcon"], splitMessages:[7340, "PaperIcon"], noTyping:[10813, "KeyboardIcon"],
+        picker:[10140, "AttachmentIcon"], pastelize:[14795, "PaintPaletteIcon"], platformIndicators:[14470, "LaptopPhoneIcon"],
+        validUser:[5405, "AtIcon"], copyBios:[4780, "CopyIcon"], reviewDB:[7358, "ThumbsUpIcon"], readAll:[15161, "DoubleCheckmarkIcon"],
+        hiddenChannels:[5410, "LockIcon"], dashless:[15125, "HashmarkIcon"], systemFont:[15207, "LettersIcon"], systemEmoji:[8719, "ChatSmileIcon"],
+        hideGift:[10528, "GiftIcon"], hideCall:[7309, "PhoneCallIcon"], youBarSettings:[6799, "SettingsIcon"], quests:[14519, "QuestsIcon"],
+        hideQuestDock:[6384, "EyeSlashIcon"]};
+    const venusIcons = new Map();
+    function venusIcon(id, name, fallback) {
+        const slot = id + ":" + name;
+        if (venusIcons.has(slot)) return venusIcons.get(slot);
+        let found;
+        function VenusIcon(props) {
+            const Icon = found || (found = inspectedExport(id, name)) || fallback;
+            return Icon ? el(Icon, props) : null;
+        }
+        venusIcons.set(slot, VenusIcon);
+        return VenusIcon;
+    }
+    const REPO = "https://github.com/VenusIsJaded/Venus-Patches";
+    function openLink(url) {
+        try { if (RN && RN.Linking && typeof RN.Linking.openURL === "function") RN.Linking.openURL(url).catch(() => {}); } catch (_) {}
+    }
+    // "5 of 26 features on": main switches only, and only the features that were patched in.
+    function featureSummary() {
+        const keys = Object.keys(FEATURE_ICONS).filter(key => features[key]);
+        const on = keys.filter(key => settings[key]).length;
+        return keys.length ? on + " of " + keys.length + " features on. Turn them on or off in Features." : "No features were patched in.";
     }
     function settingsPage(sections) {
         const node = { type: "list", sections };
@@ -488,9 +558,13 @@
             "Discord needs to reopen to change the " + (font ? "font" : "emojis") + " everywhere.", [
             {text:"Later", style:"cancel"},
             {text:"Reopen now", onPress:() => {
-                // Write the setting first, so the reopened Discord starts with it.
-                Promise.resolve().then(() => files && files.writeFile("documents", PREFS, settingsSnapshot(), "utf8"))
-                    .then(() => files && (font ? files.fileExists("venus-font-v1:restart") : files.getVideoDimensions("venus-emoji-v1:restart"))).catch(() => {});
+                // Write the setting first, so the reopened Discord starts with it. If it can't be saved, Discord used to
+                // reopen anyway with the old setting; now it stays open and says so.
+                if (!files) return;
+                Promise.resolve().then(() => files.writeFile("documents", PREFS, settingsSnapshot(), "utf8")).then(
+                    () => Promise.resolve(font ? files.fileExists("venus-font-v1:restart") : files.getVideoDimensions("venus-emoji-v1:restart")).catch(() => {}),
+                    () => { status.storage = "save failed (session only)"; notify();
+                        try { RN.Alert.alert("Couldn't save the setting", "Discord didn't reopen, so nothing changed. Try again in a moment."); } catch (_) {} });
             }}]);
     }
     // A main-list row with its own switch and a separate button that opens more options.
@@ -508,13 +582,15 @@
             button:{width:36, height:36, borderRadius:18, alignItems:"center", justifyContent:"center", backgroundColor:"#ffffff14"}}));
         return rowStyles;
     }
-    let stackNavigation;
+    let stackNavigation, trailingSwitch, trailingChevron;
     function SubpageTrailing(props) {
         useSettings(props.setting);
         // Discord's own themed colors; the icon takes its themed default color itself.
         let styles; try { styles = subpageStyles()(); } catch (_) { styles = null; }
         styles = styles || {divider:{}, button:{}};
-        const FormSwitch = inspectedExport(6622, "FormSwitch"), Chevron = inspectedExport(6631, "ChevronSmallRightIcon");
+        // Kept once found; a missing one is looked up again next render, in case its module loads later.
+        const FormSwitch = trailingSwitch || (trailingSwitch = inspectedExport(6622, "FormSwitch"));
+        const Chevron = trailingChevron || (trailingChevron = inspectedExport(6631, "ChevronSmallRightIcon"));
         const Press = RN.Pressable || RN.TouchableOpacity || RN.View;
         const on = !!settings[props.setting];
         return el(RN.View, {style:{flexDirection:"row", alignItems:"center"}},
@@ -528,21 +604,36 @@
         if (!registry || !registry.ACCOUNT || registry.VENUS_GENERAL) return registry;
         const next = Object.assign({}, registry);
         const icon = registry.ACCOUNT.IconComponent;
-        function route(key, title, sections, parent) {
+        function route(key, title, sections, parent, IconComponent) {
             const page = settingsPage(sections);
-            next[key] = { type: "route", parent, useTitle: () => title, IconComponent: icon,
+            next[key] = { type: "route", parent, useTitle: () => title, IconComponent: IconComponent || icon,
                 screen: { route: key, getComponent: () => page } };
         }
-        next.VENUS_VERSION = { type: "static", parent: "VENUS_GENERAL", useTitle: () => "Venus Patches " + revision,
-            useDescription: function () { useSettings(); return aboutText(); } };
-        route("VENUS_GENERAL", "About", [section("About", ["VENUS_VERSION"])]);
-        // The Settings list: no plugin names, just what each switch does, grouped by where it shows up.
+        // About: the version and how many features are on, whether settings are saved, and where to get help.
+        next.VENUS_VERSION = { type: "static", parent: "VENUS_GENERAL", IconComponent: venusIcon(16292, "SparklesIcon", icon),
+            useTitle: () => "Venus Patches " + revision, useDescription: function () { useSettings(); return featureSummary(); } };
+        next.VENUS_STATUS = { type: "static", parent: "VENUS_GENERAL", IconComponent: venusIcon(4788, "CircleInformationIcon", icon),
+            useTitle: () => "Status", useDescription: function () { useSettings(); return aboutText(); } };
+        const links = [];
+        function link(id, title, hint, url, iconId, iconName) {
+            links.push(id);
+            next[id] = { type: "pressable", parent: "VENUS_GENERAL", unsearchable: true, withArrow: true, useTitle: () => title,
+                useDescription: () => hint, onPress: () => openLink(url), IconComponent: venusIcon(iconId, iconName, icon) };
+        }
+        link("VENUS_LINK_CHANGES", "What's new", "Changes in each release.", REPO + "/blob/main/CHANGELOG.md", 16292, "SparklesIcon");
+        link("VENUS_LINK_ISSUES", "Report a problem", "Opens a new issue on GitHub.", REPO + "/issues/new/choose", 15329, "BugIcon");
+        link("VENUS_LINK_SOURCE", "Source code", "Venus Patches on GitHub. Free and open source (GPL-3.0).", REPO, 8041, "LinkExternalSmallIcon");
+        route("VENUS_GENERAL", "About", [section("Venus Patches", ["VENUS_VERSION", "VENUS_STATUS"]), section("Links", links)], undefined,
+            venusIcon(4788, "CircleInformationIcon", icon));
+        // The features list: each row says what it does, grouped by where you'll notice it.
         const P = "VENUS_PLUGINS";
-        const groups = {chat:[], people:[], servers:[], extras:[]};
+        const groups = {messages:[], sending:[], people:[], servers:[], appearance:[], quests:[]};
+        const iconFor = key => { const found = FEATURE_ICONS[key]; return found ? venusIcon(found[0], found[1], icon) : icon; };
         function toggle(group, key, title, hint) {
             if (!features[key]) return;
             const id = "VENUS_" + key.toUpperCase(); groups[group].push(id);
             next[id] = settingNode(key, title, hint, P);
+            next[id].IconComponent = iconFor(key);
         }
         // A switch plus a button to its own page. Tapping the row opens the page too; the page keeps
         // a short title in Discord's header, read from its route node like any Discord settings page.
@@ -551,8 +642,8 @@
             if (!features[key]) return;
             // Option pages are built only for patched settings, so unpatched ones leave no nodes behind.
             if (typeof page === "function" && !page.prototype) page = page();
-            if (Array.isArray(page)) route(id, pageTitle, page, P);
-            else { route(id, pageTitle, [], P); next[id].screen.getComponent = () => page; }
+            if (Array.isArray(page)) route(id, pageTitle, page, P, iconFor(key));
+            else { route(id, pageTitle, [], P, iconFor(key)); next[id].screen.getComponent = () => page; }
             const screen = next[id].screen, rowId = id + "_ROW";
             const open = () => {
                 const navigation = navigators.get(rowId);
@@ -561,7 +652,7 @@
                 catch (_) { try { navigation.navigate(screen.route); } catch (__) {} }
             };
             groups[group].push(rowId);
-            next[rowId] = { type: "pressable", parent: P, unsearchable: true, useTitle: () => title, onPress: open,
+            next[rowId] = { type: "pressable", parent: P, unsearchable: true, useTitle: () => title, onPress: open, IconComponent: iconFor(key),
                 useTrailing: function () {
                     // Called as a hook by Discord's row, so it can read the settings stack it's in.
                     // Resolved once, so the row always calls the same number of hooks.
@@ -572,50 +663,57 @@
             if (hint) next[rowId].useDescription = () => hint;
         }
         // Option IDs are the ones earlier releases used, so nothing that points at them moves.
-        const OPTION_IDS = {emojis:"VENUS_EMOJIS", stickers:"VENUS_STICKERS", hyperlinks:"VENUS_HYPERLINKS", forceLinks:"VENUS_FORCELINKS", quickDeleteEmbeds:"VENUS_QUICKDELETE_EMBEDS", pastelAll:"VENUS_PASTELALL", pastelWebhookName:"VENUS_PASTELWEBHOOKNAME", pastelContent:"VENUS_PASTELCONTENT", piDmHeader:"VENUS_PI_DM", piUserList:"VENUS_PI_LIST", piProfile:"VENUS_PI_PROFILE", piHideMobile:"VENUS_PI_MOBILE"};
+        const OPTION_IDS = {emojis:"VENUS_EMOJIS", stickers:"VENUS_STICKERS", hyperlinks:"VENUS_HYPERLINKS", pastelAll:"VENUS_PASTELALL", pastelContent:"VENUS_PASTELCONTENT", piDmHeader:"VENUS_PI_DM", piUserList:"VENUS_PI_LIST", piProfile:"VENUS_PI_PROFILE", piHideMobile:"VENUS_PI_MOBILE"};
         const option = (key, title, hint, parent) => {
             const id = OPTION_IDS[key], owner = featureFor(key), node = settingNode(key, title, hint, parent);
-            // Greyed out while the main switch on the Settings list is off.
+            // Greyed out while the main switch on the features list is off.
             node.useIsDisabled = function () { useSettings(owner); return !settings[owner]; };
             next[id] = node; return id;
         };
-        withOptions("chat", "noDelete", "VENUS_NODELETE", "Keep deleted messages, outlined in red", "Yours too. Also keeps what edited messages said before. Delete a kept message again to hide it.", "Deleted messages", NoDeleteSettings);
-        toggle("chat", "voice", "Send audio files as voice messages", "An audio file sent on its own becomes a real voice message with Discord's waveform. If it can't be converted, it's sent as a file. Needs Android 10 or newer.");
-        withOptions("chat", "freeNitro", "VENUS_FREENITRO", "Send emojis and stickers you can't use as links", "Custom and animated emojis and stickers you can't use are sent as image links. They aren't real Nitro emojis.", "Emoji and sticker links",
-            () => [section("Send as links", [option("emojis", "Emojis", "Custom emojis from other servers, and animated ones, without Nitro.", "VENUS_FREENITRO"),
-                option("stickers", "Stickers", "Stickers from other servers. Animated stickers may not move.", "VENUS_FREENITRO")]),
-             section("Links", [option("hyperlinks", "Show the name instead of the link", "Chat shows the emoji or sticker name as a link, instead of the whole link.", "VENUS_FREENITRO"),
-                option("forceLinks", "Always send links", "Even for emojis and stickers you could send normally.", "VENUS_FREENITRO")])]);
-        toggle("chat", "noTyping", "Hide that you're typing", "Others don't see \"typing...\" for you. You still see when they type.");
-        withOptions("chat", "quickDelete", "VENUS_QUICKDELETE", "Delete messages without asking", "Skips \"are you sure?\" when you delete a message. It can't be undone.", "Instant delete",
-            () => [section("Also skip asking", [option("quickDeleteEmbeds", "Removing link previews", "Also skip it when you remove a link preview from your own message.", "VENUS_QUICKDELETE")])]);
-        toggle("chat", "jumpToTop", "Add a jump to first message button", "In every chat, and in the menu when you hold a channel or thread.");
-        toggle("chat", "picker", "Show file sizes when attaching", "Shows each photo and video's size in the attachment picker.");
-        toggle("chat", "favouriteAnything", "Favourite any image or video", "Adds the favourite star to any image or video in the media viewer, like GIFs.");
-        toggle("chat", "hideGift", "Hide the gift button", "Removes the Nitro gift button next to the message box.");
-        withOptions("chat", "gestures", "VENUS_GESTURES", "Double-tap a message to reply", "Your own messages open for editing, and three taps delete them. Double-tap no longer reacts.", "Message tap gestures", GestureSettings);
-        withOptions("people", "pastelize", "VENUS_PASTELIZE", "Give names soft pastel colors", "Names and mentions without a role color get a color picked from their user ID, so each person always has the same one.", "Pastel names",
-            () => [section("Options", [option("pastelAll", "Color every name", "Also replace role colors with each person's pastel color.", "VENUS_PASTELIZE"),
-                option("pastelWebhookName", "Color webhooks by name", "Pick a webhook's color from its name, so webhooks with the same name match. Off: from its ID.", "VENUS_PASTELIZE"),
-                option("pastelContent", "Color message text", "Color what they write too, in a lighter shade of their name color.", "VENUS_PASTELIZE")])]);
-        withOptions("people", "platformIndicators", "VENUS_PLATFORMINDICATORS", "Show which devices people are on", "Desktop, mobile, web, console or VR icons, colored by status.", "Device icons",
-            () => [section("Show icons", [option("piDmHeader", "On the DM top bar", "Next to the name at the top of a DM.", "VENUS_PLATFORMINDICATORS"),
-                option("piUserList", "In lists", "In the member list, friends, DMs and voice.", "VENUS_PLATFORMINDICATORS"),
+        // Messages
+        withOptions("messages", "noDelete", "VENUS_NODELETE", "Keep deleted messages", "Deleted messages stay in chat, outlined in red. Also shows what edited messages said before.", "Deleted messages", NoDeleteSettings);
+        withOptions("messages", "translate", "VENUS_TRANSLATE", "Translate messages", "Messages in other languages show in yours. Their text is sent to Google Translate.", "Translate messages", TranslateSettings);
+        withOptions("messages", "gestures", "VENUS_GESTURES", "Double-tap to reply", "Double-tap a message to reply, or your own to edit it, instead of reacting.", "Tap gestures", GestureSettings);
+        toggle("messages", "quickDelete", "Skip delete confirmation", "Messages and link previews are removed right away, with no \"Are you sure?\". It can't be undone.");
+        toggle("messages", "jumpToTop", "Jump to first message", "A button to go straight to the start of a chat, channel or thread.");
+        toggle("messages", "favouriteAnything", "Favourite any image or video", "Star any image or video in the media viewer to keep it in your GIF favourites.");
+        // Sending
+        withOptions("sending", "freeNitro", "VENUS_FREENITRO", "Send Nitro stickers and emojis as links", "Stickers and emojis you'd need Nitro for are sent as a link, which shows up in chat as the sticker or emoji image.", "Nitro stickers and emojis",
+            () => [section("Send as links", [option("emojis", "Emojis", "Emojis from other servers, and animated emojis.", "VENUS_FREENITRO"),
+                option("stickers", "Stickers", "Stickers from other servers. Animated ones may not move.", "VENUS_FREENITRO")]),
+             section("Link style", [option("hyperlinks", "Short links", "The link shows as the emoji or sticker's name instead of a long web address.", "VENUS_FREENITRO")])]);
+        toggle("sending", "voice", "Send audio as voice messages", "An audio file sent on its own becomes a real voice message, with a waveform. Needs Android 10 or newer.");
+        toggle("sending", "splitMessages", "Send long messages", "Type past the character limit. Long messages are sent in parts, split between lines or words.");
+        toggle("sending", "noTyping", "Hide typing indicator", "Others won't see when you're typing. You still see when they are.");
+        toggle("sending", "picker", "Show file sizes when attaching", "Each photo and video in the attachment picker shows its size.");
+        // People
+        withOptions("people", "pastelize", "VENUS_PASTELIZE", "Pastel name colors", "Names without a role color get a soft pastel color, always the same for each person.", "Pastel names",
+            () => [section("Colors", [option("pastelAll", "Replace role colors", "Every name uses its pastel color, even with a role color.", "VENUS_PASTELIZE"),
+                option("pastelContent", "Color message text", "What people write is colored too, in a lighter shade of their name.", "VENUS_PASTELIZE")])]);
+        withOptions("people", "platformIndicators", "VENUS_PLATFORMINDICATORS", "Show device indicators", "Desktop, mobile, web, console or VR icons next to names, colored by status.", "Device indicators",
+            () => [section("Show icons", [option("piDmHeader", "In DMs", "Next to the name at the top of a DM.", "VENUS_PLATFORMINDICATORS"),
+                option("piUserList", "In lists", "Member list, friends, DM list and voice channels.", "VENUS_PLATFORMINDICATORS"),
                 option("piProfile", "On profiles", "Next to the name on a profile.", "VENUS_PLATFORMINDICATORS")]),
-             section("Avatars", [option("piHideMobile", "Plain status dot", "Hide Discord's phone badge on avatars, since the icons already show mobile.", "VENUS_PLATFORMINDICATORS")])]);
-        toggle("people", "copyBios", "Select and copy profile bios", "Hold a bio to select and copy part of it. Links still work.");
-        withOptions("people", "reviewDB", "VENUS_REVIEWDB", "Show and write reviews of users and servers", "From the community ReviewDB service. Opening a profile's or server's reviews sends its ID to ReviewDB.", "Reviews", ReviewSettings);
-        withOptions("servers", "readAll", "VENUS_READALL", "Add a Read all button to the server list", "Under Direct Messages. Choose what it clears, or hold it to choose once.", "Read all", ReadAllSettings);
-        toggle("servers", "hiddenChannels", "Show channels you can't open, with a lock", "Shows their name, and when they were made and last used. You still can't read them or join locked voice channels.");
-        toggle("servers", "dashless", "Show spaces instead of dashes in channel names", "Only changes how names look, not the channels.");
-        toggle("people", "hideCall", "Hide the call button on profiles", "Message stretches across to fill the space.");
-        toggle("servers", "hideQuestDock", "Hide the Quests promotion", "Hides the Quest banner above your profile bar. Quests still work.");
-        toggle("extras", "systemFont", "Force system font", "");
-        toggle("extras", "systemEmoji", "Force system emojis", "");
-        withOptions("extras", "quests", "VENUS_QUESTS", "Complete Quests automatically", "Video, Play and Activity Quests, in the background while Discord is open. You still claim rewards.", "Quests", QuestSettings);
-        const sections = [section("Chat", groups.chat), section("Profiles and people", groups.people),
-            section("Servers and channels", groups.servers), section("More", groups.extras)].filter(entry => entry.settings.length);
-        route(P, "Settings", sections);
+             section("Avatars", [option("piHideMobile", "Hide the phone badge", "Avatars show a plain status dot, since the icons already show mobile.", "VENUS_PLATFORMINDICATORS")])]);
+        toggle("people", "validUser", "Fix unknown mentions", "@unknown-user mentions are looked up and show the person's name.");
+        toggle("people", "copyBios", "Copy profile bios", "Hold a bio to select and copy its text. Links still work.");
+        withOptions("people", "reviewDB", "VENUS_REVIEWDB", "User and server reviews", "Read and write reviews on profiles and servers, from the community ReviewDB service.", "Reviews", ReviewSettings);
+        // Servers
+        withOptions("servers", "readAll", "VENUS_READALL", "Read all button", "A button under Direct Messages that marks everything as read. Hold it to choose what.", "Read all", ReadAllSettings);
+        toggle("servers", "hiddenChannels", "Show hidden channels", "Channels you can't open appear with a lock. Only their name and dates show, not messages.");
+        toggle("servers", "dashless", "Spaces in channel names", "Shows \"general chat\" instead of \"general-chat\". Only changes how names look.");
+        // Appearance
+        toggle("appearance", "systemFont", "Use your phone's font", "Replaces Discord's font everywhere. Discord reopens to apply it. Needs Android 9 or newer.");
+        toggle("appearance", "systemEmoji", "Use your phone's emojis", "In chat, reactions and the emoji picker. Discord reopens to apply it.");
+        toggle("appearance", "hideGift", "Hide the gift button", "Removes the Nitro gift button from the message bar.");
+        toggle("appearance", "hideCall", "Hide the call button", "Removes Call from people's profiles. Message fills the space.");
+        toggle("appearance", "youBarSettings", "Venus button on profile bar", "A shortcut to Venus, next to the notifications bell.");
+        // Quests
+        withOptions("quests", "quests", "VENUS_QUESTS", "Complete Quests automatically", "Finishes video, Play and Activity Quests in the background. You still claim the rewards.", "Quests", QuestSettings);
+        toggle("quests", "hideQuestDock", "Hide the Quests banner", "Removes the Quest promotion above your profile bar. Quests still work.");
+        const sections = [section("Messages", groups.messages), section("Sending", groups.sending), section("People", groups.people),
+            section("Servers", groups.servers), section("Appearance", groups.appearance), section("Quests", groups.quests)].filter(entry => entry.settings.length);
+        route(P, "Features", sections, undefined, venusIcon(14478, "PuzzlePieceIcon", icon));
         status.menu = true;
         return next;
     }
@@ -658,6 +756,7 @@
             return props.selectable === true ? props : Object.assign({}, props, { selectable: true });
         }, 0);
     }
+    const DASHLESS_TYPES = new Set([0, 5, 15, 16]);
     function channelLabel(orig, self, args) {
         const channel=args[0];
         let next=args;
@@ -668,7 +767,7 @@
             next[0]=cloneWith(cloneWith(channel,"name",hiddenName(channel)),"isObfuscated",()=>false);
         }
         const name=orig.apply(self,next);
-        return enabled("dashless") && channel && [0, 5, 15, 16].includes(channel.type) && typeof name === "string" ? name.replace(/-/g, " ") : name;
+        return enabled("dashless") && channel && DASHLESS_TYPES.has(channel.type) && typeof name === "string" ? name.replace(/-/g, " ") : name;
     }
     const videoPattern = /\.(mp4|webm|mov|avi|mkv|flv|wmv|m4v|gifv)(?:[?#]|$)/i;
     const video = uri => typeof uri === "string" && videoPattern.test(uri);
@@ -747,7 +846,8 @@
     }
     function shareLink(name, uri) {
         // Escape Markdown without permitting forged mentions or link syntax in sticker names.
-        return settings.hyperlinks && name ? "[" + String(name).replace(/([\\\[\]()*_`<>@])/g, "\\$1").replace(/[\r\n]/g, " ") + "](" + uri + ")" : uri;
+        // ~ | # too: a sticker called ||surprise|| or ~~old~~ turned the link text into a spoiler or strikethrough.
+        return settings.hyperlinks && name ? "[" + String(name).replace(/([\\\[\]()*_`<>@~|#])/g, "\\$1").replace(/[\r\n]/g, " ") + "](" + uri + ")" : uri;
     }
     function emojiMessage(message, channelId) {
         if (!enabled("emojis") || !message || typeof message.content !== "string" || !message.content.includes("<") || !emojiStore || !channelStore) return message;
@@ -760,7 +860,7 @@
             if (!id) return match;
             const emoji = emojiStore.getCustomEmojiById(id);
             if (!emoji || emoji.available === false || !emoji.guildId) return match;
-            if (!settings.forceLinks && (everywhere || emoji.guildId === channel.guild_id) && (!(animation || emoji.animated) || animated)) return match;
+            if ((everywhere || emoji.guildId === channel.guild_id) && (!(animation || emoji.animated) || animated)) return match;
             converted.add(id);
             const uri = "https://cdn.discordapp.com/emojis/" + id + (animation || emoji.animated ? ".gif" : ".webp") + "?size=48&quality=lossless";
             return shareLink(name, uri);
@@ -784,7 +884,7 @@
         return shareLink(sticker.name, "https://media.discordapp.net/stickers/" + sticker.id + (sticker.format_type === 4 ? ".gif" : ".png") + "?size=160");
     }
     function nativeSticker(sticker, channel, user) {
-        return !settings.forceLinks && sticker && sticker.available !== false &&
+        return sticker && sticker.available !== false &&
             (!sticker.guild_id || sticker.guild_id === channel.guild_id || capability("canUseCustomStickersEverywhere", user));
     }
     function sendStickers(orig, self, args) {
@@ -843,18 +943,22 @@
         if (trimmed === "Hidden channel (name unavailable)" || trimmed === "Hidden category (name unavailable)") return null;
         return channel.name;
     }
-    function rememberChannelName(channel, accountId, knownName) {
+    // guildId: for gateway channel lists, whose entries don't carry their server. It used to copy every channel
+    // of every server on READY just to add guild_id.
+    function rememberChannelName(channel, accountId, knownName, guildId) {
         // Directory scans pass the account once; don't ask UserStore again for every channel.
         let owner = accountId;
         if (typeof owner !== "string") { const current = userStore && userStore.getCurrentUser(); owner = current && current.id; }
         if (hiddenAccount !== owner) {hiddenNames.clear();hiddenAccount = owner;}
+        if (!channel) return;
+        const guild = guildId || channel.guild_id;
         const name = knownName || receivedName(channel);
-        if (!channel || !channel.guild_id || !channel.id || !name) return;
+        if (!guild || !channel.id || !name) return;
         const known = hiddenNames.get(channel.id);
         // READY replays thousands of unchanged names: don't churn the cache for them.
-        if (known && known.guild === channel.guild_id && known.name === name) return;
+        if (known && known.guild === guild && known.name === name) return;
         if (hiddenNames.size >= 4096 && !known) hiddenNames.delete(hiddenNames.keys().next().value);
-        hiddenNames.set(channel.id,{guild:channel.guild_id,name});
+        hiddenNames.set(channel.id,{guild,name});
     }
     function hiddenName(channel) {
         // Basic records can retain names absent from full/obfuscated records. Never
@@ -900,13 +1004,13 @@
         function rememberGuild(guild) {
             if (!guild || !guild.id) return;
             for (const key of ["channels","threads"]) if (Array.isArray(guild[key]))
-                guild[key].forEach(channel => rememberChannelName(Object.assign({guild_id:guild.id},channel),owner));
+                guild[key].forEach(channel => rememberChannelName(channel,owner,undefined,channel && channel.guild_id || guild.id));
         }
         if (GUILD_EVENTS.has(event.type)) rememberGuild(event.guild);
         if (READY_EVENTS.has(event.type) && Array.isArray(event.guilds)) event.guilds.forEach(rememberGuild);
         if (BATCH_EVENTS.has(event.type)) {
             for (const key of ["channels","threads"]) if (Array.isArray(event[key]))
-                event[key].forEach(channel => rememberChannelName(Object.assign({guild_id:event.guildId},channel),owner));
+                event[key].forEach(channel => rememberChannelName(channel,owner,undefined,channel && channel.guild_id || event.guildId));
         }
         // Real unobfuscated names arrive inside message mention_channels (fn34524/fn35281):
         // harvest them so mentioned hidden channels resolve even when stores are redacted.
@@ -932,7 +1036,7 @@
             const label = token && locale.intl.string(token);
             return typeof label === "string" && label.length > 3 && texts.some(text => text === label);
         }
-        if (enabled("quickDelete") && matches("AMvpS4") || enabled("quickDeleteEmbeds") && matches("vXZ+Fo"))
+        if (enabled("quickDelete") && (matches("AMvpS4") || matches("vXZ+Fo")))
             return popup.onConfirm();
         return orig.apply(self, args);
     }
@@ -983,9 +1087,12 @@
             // Edit history rides in the same file. Older releases ignore the extra key, so nothing breaks either way.
             const history = [];
             if (settings.noDeleteSave && settings.noDeleteEdits) edits.forEach(entry => { const text = editText(entry); if (text) history.push(text); });
-            archivePending = "{\"version\":1,\"accountId\":" + JSON.stringify(settings.noDeleteSave && user ? user.id : null) +
+            const text = "{\"version\":1,\"accountId\":" + JSON.stringify(settings.noDeleteSave && user ? user.id : null) +
                 ",\"messages\":[" + parts.join(",") + "]" + (history.length ? ",\"edits\":[" + history.join(",") + "]" : "") + "}";
-            if (archivePending.length > ARCHIVE_BYTES) throw new Error("Deleted message archive exceeds 32 MB");
+            // A file this big can never be read back. It used to stay queued, so a write already in progress
+            // saved it anyway right after, and kept up to 32 MB of text in memory until the next deletion.
+            if (text.length > ARCHIVE_BYTES) throw new Error("Deleted message archive exceeds 32 MB");
+            archivePending = text;
         } catch (_) { status.archive = "save failed"; notify(); return; }
         if (archiveWriting) return;
         archiveWriting = true;
@@ -1180,6 +1287,17 @@
         // The store's own MESSAGE_UPDATE change re-renders; never emitChange mid-dispatch.
         return orig.call(self,{type:"MESSAGE_UPDATE",message:{id:event.id,channel_id:event.channelId,content:message.content || ""}}) || true;
     }
+    // Kept messages and edit history of channels that are gone for good.
+    function forgetChannels(ids) {
+        let dropped = false;
+        ids.forEach(id => {
+            const bucket = deletedByChannel.get(id);
+            if (bucket) { Array.from(bucket.keys()).forEach(dropDeleted); dropped = true; }
+        });
+        if (dropped) invalidateDeleted();
+        for (const [key, entry] of edits) if (ids.has(entry.channelId)) { edits.delete(key); dropped = true; }
+        if (dropped) persistDeleted();
+    }
     function dispatchEvent(orig, self, args) {
         const event = args[0];
         if (!event) return orig.apply(self, args);
@@ -1188,12 +1306,15 @@
         if (features.noDelete && RESTORE_EVENTS.has(event.type)) Promise.resolve().then(restoreDeleted);
         // Views are keyed by the store's own ChannelMessages identity, so unrelated events
         // (typing, presence, reactions) no longer force a re-merge and re-sort of every chat.
-        if (event.type === "CHANNEL_DELETE") {
-            const id = event.channel && event.channel.id || event.channelId || event.id, bucket = deletedByChannel.get(id);
-            if (bucket) { Array.from(bucket.keys()).forEach(dropDeleted); invalidateDeleted(); persistDeleted(); }
-            let dropped = false;
-            for (const [key, entry] of edits) if (entry.channelId === id) { edits.delete(key); dropped = true; }
-            if (dropped) persistDeleted();
+        if (event.type === "CHANNEL_DELETE") forgetChannels(new Set([event.channel && event.channel.id || event.channelId || event.id]));
+        // Leaving a server (not an outage, which says unavailable) used to keep its kept messages and edit history
+        // in memory and in the saved file for good, where nothing could ever show or remove them.
+        if (event.type === "GUILD_DELETE" && event.guild && event.guild.id && !event.guild.unavailable && (deleted.size || edits.size)) {
+            const ids = new Set(), guild = event.guild.id;
+            const inGuild = channelId => { const channel = receivedChannel(channelId); return !!(channel && channel.guild_id === guild); };
+            deletedByChannel.forEach((bucket, channelId) => { if (inGuild(channelId)) ids.add(channelId); });
+            edits.forEach(entry => { if (!ids.has(entry.channelId) && inGuild(entry.channelId)) ids.add(entry.channelId); });
+            if (ids.size) forgetChannels(ids);
         }
         if (!enabled("noDelete")) return orig.apply(self, args);
         if (event.type === "MESSAGE_UPDATE" && settings.noDeleteEdits) rememberEdit(event.message);
@@ -1230,7 +1351,7 @@
         entry.versions.push({content:before.length > MAX_VERSION_TEXT ? before.slice(0, MAX_VERSION_TEXT) + "\u2026" : before,
             at:at && typeof at.toISOString === "function" ? at.toISOString() : typeof at === "string" ? at : null});
         if (entry.versions.length > MAX_VERSIONS) entry.versions.splice(0, entry.versions.length - MAX_VERSIONS);
-        entry.text = undefined; entry.view = undefined;
+        entry.text = undefined; entry.view = undefined; entry.joined = undefined;
         edits.set(key, entry);
         persistDeleted();
     }
@@ -1251,7 +1372,11 @@
         if (!edits.size || !settings.noDeleteEdits || !message || !Array.isArray(message.content)) return message;
         const entry = edits.get(deletedKey(channelId, id));
         if (!entry || !entry.versions.length) return message;
-        return Object.assign({}, message, {content:[editHistoryNodes(entry)].concat(message.content)});
+        // Rows are generated again for every change in the chat; reuse the joined content while neither side changed.
+        const view = editHistoryNodes(entry), joined = entry.joined;
+        const content = joined && joined.view === view && joined.source === message.content ? joined.value :
+            (entry.joined = {view, source:message.content, value:[view].concat(message.content)}).value;
+        return Object.assign({}, message, {content});
     }
     function deleteMessage(orig, self, args) {
         const key = deletedKey(args[0], args[1]), event = deleted.get(key);
@@ -1304,7 +1429,7 @@
         if (typeof importer !== "function") return importer;
         return function () {
             const result = importer.apply(this,arguments);
-            if (!result || ![2051,4472].includes(arguments[0])) return result;
+            if (!result || arguments[0] !== 2051 && arguments[0] !== 4472) return result;
             const real = result.default || result;
             if (arguments[0] === 2051) {
                 const methods=new Map();
@@ -1353,10 +1478,20 @@
         const channel = typeof value === "string" ? receivedChannel(value) : value;
         return !!(channel && channel.type !== 4 && hiddenMetadata(channel));
     }
+    // Channel records are immutable and replaced on change, so one renamed copy per record and name is reused.
+    // A new copy on every lookup gave the channel list a different object each render, and copied every property.
+    const renamedChannels = new WeakMap();
+    function renamedChannel(channel, name) {
+        if (name === channel.name) return channel;
+        const known = renamedChannels.get(channel);
+        if (known && known.name === name) return known.value;
+        const value = cloneWith(channel,"name",name);
+        renamedChannels.set(channel, {name, value});
+        return value;
+    }
     function displayChannel(channel) {
         if (!hiddenMetadata(channel)) return channel;
-        const name = hiddenName(channel);
-        return name === channel.name ? channel : cloneWith(channel,"name",name);
+        return renamedChannel(channel, hiddenName(channel));
     }
     function hiddenDirectory(orig, self, args) {
         const result = orig.apply(self, args), guild = args[0];
@@ -1418,7 +1553,7 @@
                 ids.add(channel.id);
                 const name = names.get(channel);
                 // Hidden names were resolved for the signature above; reuse them instead of asking again.
-                const shown = name === undefined ? displayChannel(channel) : name === channel.name ? channel : cloneWith(channel,"name",name);
+                const shown = name === undefined ? displayChannel(channel) : renamedChannel(channel, name);
                 added.push({channel:shown,comparator:channel.position || 0});
             });
             if (!added.length && !renamed) return;
@@ -1642,11 +1777,13 @@
         const hex = "#" + [component(0),component(8),component(4)].map(value => value.toString(16).padStart(2,"0")).join("");
         return {hex, value:RN.processColor(hex)};
     }
+    // Every chat row runs this: the content array is only copied once a node actually changes.
     function pastelMentions(content, guildId) {
         if (!Array.isArray(content)) return content;
-        let changed = false;
-        const next = content.map(node => {
-            if (!node || typeof node !== "object") return node;
+        let next = null;
+        for (let i = 0; i < content.length; i++) {
+            const node = content[i];
+            if (!node || typeof node !== "object") continue;
             let result = node;
             if (node.type === "mention" && node.userId && (!node.colorString || settings.pastelAll) &&
                 (!guildId || guildMembers && guildMembers.getMember(guildId,node.userId))) {
@@ -1657,28 +1794,40 @@
                 const children = pastelMentions(node.content,guildId);
                 if (children !== node.content) result = Object.assign({},result,{content:children});
             }
-            if (result !== node) changed = true;
-            return result;
-        });
-        return changed ? next : content;
+            if (result !== node) { if (!next) next = content.slice(); next[i] = result; }
+        }
+        return next || content;
     }
     function pastelMessage(message, source) {
         if (!message || !message.authorId) return message;
         if (message.guildId && (!guildMembers || !guildMembers.getMember(message.guildId,message.authorId)) && !(source && source.webhookId)) return message;
-        let next = Object.assign({},message,{shouldShowRoleOnName:true}), seed;
-        if (source && source.webhookId) seed = settings.pastelWebhookName ? message.username : source.webhookId;
+        let seed;
+        if (source && source.webhookId) seed = message.username || source.webhookId;
         else if (!(source && source.colorString != null ? source.colorString : message.roleColor) || settings.pastelAll) seed = message.authorId;
         const color = seed && pastelColor(seed,0.75,0.6);
-        if (color) next = Object.assign({},message,{roleColor:color.value,usernameColor:color.value,colorString:color.value,shouldShowRoleOnName:true});
+        // One copy of the row's message, with every change in it.
+        const changes = color ? {roleColor:color.value,usernameColor:color.value,colorString:color.value,shouldShowRoleOnName:true} : {shouldShowRoleOnName:true};
         const content = pastelMentions(message.content,message.guildId);
-        if (content !== message.content) next = Object.assign({},next,{content});
+        if (content !== message.content) changes.content = content;
         // Native MessageView applies Message.textColor via TextView.setTextColor (348.10 bridge field).
         // Never wrap content in a link node: that made the text blue, tappable and show "usernameOnClick".
         if (color && settings.pastelContent) {
             const text = pastelColor(seed,0.85,0.75);
-            if (text) next = Object.assign({},next,{textColor:text.value});
+            if (text) changes.textColor = text.value;
         }
-        return next;
+        return Object.assign({},message,changes);
+    }
+    // The replied-to message above a reply. Discord's reply preview never read textColor, so "Color message text"
+    // didn't reach replies (#45); the Pastelize patch now has it paint the reply text with it. Discord gives every
+    // message a textColor, so the reply's own is dropped unless Pastelize colored it: otherwise the preview keeps
+    // Discord's usual reply color, exactly as before, also while Pastelize is switched off.
+    function pastelReply(reply) {
+        const shown = enabled("pastelize") ? pastelMessage(reply,null) : reply;
+        if (enabled("pastelContent") && shown !== reply && shown.textColor != null && shown.textColor !== reply.textColor) return shown;
+        if (shown.textColor == null) return shown;
+        const plain = Object.assign({},shown);
+        delete plain.textColor;
+        return plain;
     }
     // Read All: a ReadAllNotificationsButton port for the mobile server bar (GuildsBar 15920,
     // useGuildsBarProps 15929). The button lives in the SEPARATOR row, below the DM button and
@@ -1712,14 +1861,18 @@
         if (!enabled("readAll") || !READ_ALL_MODES.includes(mode)) return;
         const api=readAllExports(), ui=reviewUI();
         let guilds=0, dms=0;
+        // Unread servers or DMs with no way to clear them used to say "Nothing unread".
+        const unavailable=() => { throw new Error("Discord's read states haven't loaded yet. Try again in a moment."); };
         try {
             if (mode!=="dms") {
                 const ids=unreadGuildIds(api);
-                if (ids.length && typeof api.markGuilds==="function") { api.markGuilds(ids, api.sections && api.sections.GUILD_LIST); guilds=ids.length; }
+                if (ids.length && typeof api.markGuilds!=="function") unavailable();
+                if (ids.length) { api.markGuilds(ids, api.sections && api.sections.GUILD_LIST); guilds=ids.length; }
             }
             if (mode!=="guilds") {
                 const ids=unreadDmIds(api);
-                if (ids.length && api.readActions && typeof api.readActions.bulkAck==="function" && api.reads) {
+                if (ids.length && !(api.readActions && typeof api.readActions.bulkAck==="function" && api.reads)) unavailable();
+                if (ids.length) {
                     const type=api.readTypes && api.readTypes.CHANNEL != null ? api.readTypes.CHANNEL : 0;
                     // A DM without a known last message can't be acknowledged; sending it anyway
                     // made the whole request fail. Discord's own /read-states/ack-bulk takes 100 at a time.
@@ -1728,7 +1881,11 @@
                     dms=acks.length;
                 }
             }
-        } catch (error) { reviewToast(ui,"Couldn't mark as read: "+String(error && error.message || error)); return; }
+        } catch (error) {
+            // What was already cleared stays cleared; say so instead of only the error.
+            const done=guilds ? " ("+guilds+(guilds===1 ? " server was" : " servers were")+" marked as read)" : "";
+            reviewToast(ui,"Couldn't mark as read: "+String(error && error.message || error)+done); return;
+        }
         const parts=[];
         if (guilds) parts.push(guilds+(guilds===1 ? " server" : " servers"));
         if (dms) parts.push(dms+(dms===1 ? " DM" : " DMs"));
@@ -1881,20 +2038,20 @@
         if (!settings.gestureTripleDelete || !gestureOwn(message)) { gestureAct(message, channel); return; }
         gesture.pending = message; gesture.channel = channel; gesture.pendingAt = now;
         gesture.timer = later(() => { gesture.timer = undefined; const waiting = gesture.pending; gesture.pending = null; gesture.channel = null;
-            if (waiting === message) gestureAct(message, channel); }, GESTURE_TRIPLE_MS);
+            // Switching gestures off while it waited used to still open the editor (or reply) a moment later.
+            if (waiting === message && enabled("gestures")) gestureAct(message, channel); }, GESTURE_TRIPLE_MS);
     }
     function GestureSettings() {
         useSettings("gestures");
         const ui = reviewUI();
         if (!RN) return null;
-        const Group = ui.TableRowGroup || RN.View, on = enabled("gestures");
-        const choices = [["edit", "Edit it", "Opens it for editing, if Discord lets you edit it. Otherwise you reply."],
-            ["reply", "Reply to it", "Starts a reply, like double-tapping anyone else's message."]];
+        const on = enabled("gestures");
         const groups = [
-            el(Group, {key:"own", title:"Double-tap your own message"}, choices.map(([value, label, subLabel]) => ui.TableRow &&
-                el(ui.TableRow, {key:value, label:(settings.gestureOwn === value ? "\u2713 " : "") + label, subLabel, disabled:!on, onPress:() => setSetting("gestureOwn", value)}))),
-            el(Group, {key:"triple", title:"Tap three times"},
-                switchRow(ui.TableSwitchRow, "gestureTripleDelete", "Delete your own message", "Tap one of your messages three times quickly to delete it, without asking. Someone else's message is never deleted."))];
+            radioGroup(ui, "own", "Double-tap your own message", "gestureOwn", on, [["edit", "Edit it", "Opens it for editing, when Discord lets you."],
+                ["reply", "Reply to it", "Same as someone else's message."]]),
+            el(ui.TableRowGroup || RN.View, {key:"triple", title:"Triple-tap"},
+                switchRow(ui.TableSwitchRow, "gestureTripleDelete", "Triple-tap to delete", "Tap your own message three times to delete it, with no confirmation. Never affects other people's messages.")),
+            footnote("note", "Double-tapping no longer adds a reaction. Hold a message to react instead.")];
         return settingsBody(ui, groups);
     }
     // Quest Completer: finds unfinished Quests and completes them in the background, with no screen.
@@ -2308,6 +2465,11 @@
         dispatcher.subscribe("CONNECTION_OPEN", questsConnected);
         dispatcher.subscribe("LOGOUT", () => { questsReset(); quest.user = null; });
     }
+    // Discord can connect before the saved settings finish loading. Quest Completer was still off at that
+    // moment, so it never started until the next reconnect. Start it now if Discord is already connected.
+    function questsLoaded() {
+        if (quest.user && quest.refetchTimer === undefined && !quest.running) questsStart(8000);
+    }
     function questsSettingChanged(key, value) {
         if (key === "quests" && !value) { questsStop(); return; }
         if (!enabled("quests")) return;
@@ -2323,33 +2485,31 @@
         questsSchedule(1000);
     }
     function questStatusText() {
-        if (!enabled("quests")) return "Off.";
+        if (!enabled("quests")) return "Turned off. Switch it on in Features to start.";
         const lines = [quest.completed ? "Completed " + quest.completed + (quest.completed === 1 ? " Quest" : " Quests") + " since Discord opened." : "Waiting for new Quests."];
         if (quest.running) lines.push("Now: " + quest.running.name + ".");
         if (quest.last) lines.push("Last: " + quest.last);
         if (quest.error) lines.push(quest.error);
         return lines.join("\n");
     }
-    // Settings page: three switches and a plain-language status line.
-    const QUEST_NOTE = "Rewards still need claiming yourself. Stream Quests need a real stream, so they're skipped. Discord may pause Quests on accounts that complete them automatically.";
+    // Settings page: the Quest types, a status card and what to know.
+    const QUEST_NOTE = "You still claim rewards yourself. Stream Quests need a real stream, so they're skipped. Discord may pause Quests on accounts that complete them automatically.";
     function QuestSettings() {
         // Every status change (start, finish, error) already notifies "quests"; no 5-second redraw timer.
         useSettings("quests");
         const ui = reviewUI();
         if (!RN) return null;
-        const Group = ui.TableRowGroup || RN.View, Switch = ui.TableSwitchRow, Text = inspectedExport(4833, "Text");
+        const Group = ui.TableRowGroup || RN.View, Switch = ui.TableSwitchRow;
         const toggle = (key, label, subLabel) => switchRow(Switch, key, label, subLabel);
-        const text = questStatusText();
         const groups = [
+            statusCard("status", questStatusText()),
             el(Group, {key:"types", title:"Quests to complete"},
-                toggle("questsVideo", "Video Quests", "Reports the video as watched, at normal speed, without playing it."),
-                toggle("questsPlay", "Play Quests", "Counts time for the game without installing or starting it."),
-                toggle("questsActivity", "Activity Quests", "Counts time in an Activity without starting one."),
-                toggle("questsEnroll", "Accept new Quests", "Accept Quests you haven't started, one at a time. Off: only Quests you accepted yourself.")),
-            el(Group, {key:"status", title:"Status"}, el(RN.View, {style:{padding:12}},
-                Text ? el(Text, {variant:"text-sm/medium", color:"text-default"}, text) : el(RN.Text, {style:{color:"#dbdee1", fontSize:14}}, text))),
-            el(RN.View, {key:"note", style:{paddingHorizontal:4}},
-                Text ? el(Text, {variant:"text-xs/medium", color:"text-muted"}, QUEST_NOTE) : el(RN.Text, {style:{color:"#949ba4", fontSize:12}}, QUEST_NOTE))];
+                toggle("questsVideo", "Video Quests", "Reported as watched at normal speed, without playing the video."),
+                toggle("questsPlay", "Play Quests", "Play time counts without installing or opening the game."),
+                toggle("questsActivity", "Activity Quests", "Activity time counts without starting the Activity.")),
+            el(Group, {key:"enroll", title:"New Quests"},
+                toggle("questsEnroll", "Accept new Quests", "Accepts Quests you haven't started, one at a time. Off: only Quests you accept yourself.")),
+            footnote("note", QUEST_NOTE)];
         return settingsBody(ui, groups);
     }
     // Shared by the Read All, ReviewDB and NoDelete pages: Discord's spacing, scrolling and switch rows.
@@ -2363,23 +2523,46 @@
         const owner=featureFor(key);
         return Switch ? el(Switch,{key,label,subLabel,value:settings[key],disabled:owner!==key && !settings[owner],onValueChange:value=>setSetting(key,value)}) : null;
     }
+    // One choice from a few: Discord's radio list (TableRadioGroup 5995 / TableRadioRow 5994), or check-marked rows.
+    function radioGroup(ui,key,title,setting,on,choices) {
+        const RadioGroup=inspectedExport(5995,"TableRadioGroup"), RadioRow=inspectedExport(5994,"TableRadioRow");
+        if (RadioGroup && RadioRow) return el(RadioGroup,{key,title,value:settings[setting],onChange:value => setSetting(setting,value)},
+            choices.map(([value,label,subLabel]) => el(RadioRow,{key:value,value,label,subLabel,disabled:!on})));
+        return el(ui.TableRowGroup || RN.View,{key,title},choices.map(([value,label,subLabel]) => ui.TableRow &&
+            el(ui.TableRow,{key:value,label:(settings[setting]===value ? "\u2713 " : "")+label,subLabel,disabled:!on,onPress:() => setSetting(setting,value)})));
+    }
+    // Small muted text under a page's groups: what else to know, without a row of its own.
+    function footnote(key,text) {
+        const Text=inspectedExport(4833,"Text");
+        return el(RN.View,{key,style:{paddingHorizontal:16}},
+            Text ? el(Text,{variant:"text-xs/medium",color:"text-muted"},text) : el(RN.Text,{style:{color:"#949ba4",fontSize:12}},text));
+    }
+    // A rounded card with live status, in the theme's card colors.
+    function statusCard(key,text) {
+        const ui=reviewUI(), Text=inspectedExport(4833,"Text"), c=ui.colors;
+        const style={borderRadius:16,paddingHorizontal:16,paddingVertical:14,backgroundColor:c && c.CARD_BACKGROUND_DEFAULT || "#ffffff0f"};
+        return el(RN.View,{key,style},
+            Text ? el(Text,{variant:"text-sm/medium",color:"text-default"},text) : el(RN.Text,{style:{color:"#dbdee1",fontSize:14}},text));
+    }
+    // A full-width row that does something once, like clearing what a feature saved.
+    function actionRow(ui,key,label,subLabel,onPress,disabled,danger) {
+        return ui.TableRow ? el(ui.TableRow,{key,label,subLabel,onPress,disabled:!!disabled,variant:danger ? "danger" : undefined}) : null;
+    }
+    function confirmAction(title,body,confirmText,onConfirm) {
+        const ui=reviewUI();
+        if (ui.alerts && typeof ui.alerts.show==="function") try { ui.alerts.show({title,body,confirmText,cancelText:"Cancel",onConfirm}); return; } catch (_) {}
+        if (RN && RN.Alert) RN.Alert.alert(title,body,[{text:"Cancel",style:"cancel"},{text:confirmText,style:"destructive",onPress:onConfirm}]);
+    }
+    function count(n,word) { return n+" "+word+(n===1 ? "" : "s"); }
     // Settings page: Discord's own radio list (TableRadioGroup 5995 / TableRadioRow 5994).
     function ReadAllSettings() {
         useSettings("readAll");
         const ui=reviewUI();
         if (!React || !RN) return null;
-        const Group=ui.TableRowGroup || RN.View, Switch=ui.TableSwitchRow;
-        const RadioGroup=inspectedExport(5995,"TableRadioGroup"), RadioRow=inspectedExport(5994,"TableRadioRow");
-        const choices=[["guilds","Servers","Mark every unread server as read."],["dms","Direct messages","Mark every unread DM and group DM as read."],
-            ["both","Servers and DMs","Mark everything as read in one tap."]];
-        const on=enabled("readAll");
-        const picker=RadioGroup && RadioRow ?
-            el(RadioGroup,{key:"mode",title:"When you tap Read all",value:settings.readAllMode,onChange:value => setSetting("readAllMode",value)},
-                choices.map(([value,label,subLabel]) => el(RadioRow,{key:value,value,label,subLabel,disabled:!on}))) :
-            el(Group,{key:"mode"},choices.map(([value,label]) => ui.TableRow &&
-                el(ui.TableRow,{key:value,label:(settings.readAllMode===value ? "\u2713 " : "")+label,disabled:!on,onPress:() => setSetting("readAllMode",value)})));
         const groups=[
-            picker];
+            radioGroup(ui,"mode","When you tap Read all","readAllMode",enabled("readAll"),[["guilds","Servers","Marks every unread server as read."],
+                ["dms","Direct messages","Marks every unread DM and group DM as read."],["both","Servers and DMs","Marks everything as read in one tap."]]),
+            footnote("note","Hold the button to pick just once, without changing this.")];
         return settingsBody(ui,groups);
     }
     const deletedHighlight = {};
@@ -2387,15 +2570,20 @@
         const result = orig.apply(self,args), row = args[0];
         if (!result || !row || row.rowType !== 1 || !result.message) return result;
         let message = result.message;
-        if (enabled("pastelize")) {
-            message = pastelMessage(message,row.message);
-            if (message.referencedMessage && message.referencedMessage.message) message = Object.assign({},message,{referencedMessage:
-                Object.assign({},message.referencedMessage,{message:pastelMessage(message.referencedMessage.message,null)})});
+        if (enabled("pastelize")) message = pastelMessage(message,row.message);
+        if (features.pastelize && message.referencedMessage && message.referencedMessage.message) {
+            const reply = pastelReply(message.referencedMessage.message);
+            if (reply !== message.referencedMessage.message) message = Object.assign({},message,{referencedMessage:Object.assign({},message.referencedMessage,{message:reply})});
         }
         let next = message === result.message ? result : Object.assign({},result,{message});
         const source = row.message || message;
         const channelId = source.channel_id || source.channelId || message.channelId;
         const id = source.id || message.id;
+        // Before edit history, so the crossed-out old versions above it stay as they were written.
+        if (enabled("translate")) {
+            const shown = translateRow(next.message, source, channelId, id);
+            if (shown !== next.message) next = Object.assign({},next,{message:shown});
+        } else if (features.translate) translateSeen(source, channelId, id, null);
         if (edits.size && enabled("noDelete")) {
             const shown = withEditHistory(next.message, channelId, id);
             if (shown !== next.message) next = Object.assign({},next,{message:shown});
@@ -2436,13 +2624,17 @@
         }
         return clients || null;
     }
-    function platformKey(userId) {
-        const clients = presenceStore && platformClients(userId);
-        return clients ? Object.keys(clients).map(key => key + ":" + clients[key]).join(",") : "";
+    function clientsKey(clients) {
+        if (!clients) return "";
+        let key = "";
+        for (const name in clients) key += name + ":" + clients[name] + ",";
+        return key;
     }
+    function platformKey(userId) { return clientsKey(presenceStore && platformClients(userId)); }
     // One listener per store for every badge on screen, not two per badge. Each change works
     // out a person's clients once, however many badges show them, and wakes only those badges.
     const platformSubs = new Map(), platformStores = new Set();
+    // PresenceStore changes for every presence update of anyone: the key is built without temporary arrays.
     function platformChanged() {
         platformSubs.forEach((entry, userId) => {
             const key = platformKey(userId);
@@ -2744,12 +2936,12 @@
         const groups=[
             el(Group,{key:"auth",title:"Account"},
                 el(ui.TableRow,{key:"login",label:pending ? "Signing in..." : authenticated ? "Signed in to ReviewDB" : "Sign in to ReviewDB",
-                    arrow:true,disabled:!enabled("reviewDB") || authenticated || pending,onPress:authenticateReviews,subLabel:reviewAuthError || (authenticated ? undefined : "Needed to post, delete or report reviews. Your Discord token is never used.")}),
+                    arrow:true,disabled:!enabled("reviewDB") || authenticated || pending,onPress:authenticateReviews,subLabel:reviewAuthError || (authenticated ? undefined : "Needed to post, delete or report reviews. Never uses your Discord token.")}),
                 el(ui.TableRow,{key:"logout",label:"Sign out of ReviewDB",variant:authenticated ? "danger" : undefined,disabled:!authenticated,onPress:clearReviewAuth,
                     subLabel:"ReviewDB stays in Discord's Authorized Apps until you remove it there."})),
-            el(Group,{key:"settings",title:"Settings"},
-                toggle("reviewThemedSend","Profile-colored send button","Color the review send button with the profile's theme colors."),
-                toggle("reviewWarning","Show the be-respectful note","Show ReviewDB's reminder to be respectful above reviews."))];
+            el(Group,{key:"settings",title:"Display"},
+                toggle("reviewWarning","Show the be-respectful note","ReviewDB's reminder to be kind, shown above reviews.")),
+            footnote("note","Reviews come from manti.vendicated.dev. Opening reviews sends that profile's or server's ID to ReviewDB.")];
         return settingsBody(ui,groups);
     }
     function NoDeleteSettings() {
@@ -2763,21 +2955,35 @@
         const toggle=(key,label,subLabel) => switchRow(Switch,key,label,subLabel);
         // An emptied field keeps the current maximum instead of silently resetting it to 512.
         const commit=() => { if (draft) setSetting("noDeleteLimit",draft); setDraft(String(settings.noDeleteLimit)); };
-        const Text=inspectedExport(4833,"Text");
-        const hint="How many deleted messages to keep, from 1 to "+MAX_DELETED+". Now: "+settings.noDeleteLimit+". When it's full, the oldest is removed first.";
         const onText=text => setDraft(String(text).replace(/[^0-9]/g,"").slice(0,4));
         const inputProps={value:draft,keyboardType:"number-pad",maxLength:4,placeholder:"512",onBlur:commit,onSubmitEditing:commit,returnKeyType:"done",
             // Read-only while NoDelete is off, like the switches above it.
             editable:!!settings.noDelete,isDisabled:!settings.noDelete};
         // Discord's TextInput reports text via onChange(text); RN's via onChangeText.
-        const input=ui.TextInput ? el(ui.TextInput,Object.assign({label:"Maximum saved messages",onChange:onText},inputProps)) :
+        const input=ui.TextInput ? el(ui.TextInput,Object.assign({label:"Keep up to",onChange:onText},inputProps)) :
             el(RN.TextInput,Object.assign({onChangeText:onText,style:{fontSize:16,padding:12}},inputProps));
+        const kept=deleted.size, changed=edits.size;
+        const summary=!settings.noDelete ? "Turned off. Switch it on in Features to start." :
+            kept || changed ? count(kept,"deleted message")+" and "+count(changed,"edited message")+" kept"+(settings.noDeleteSave ? ", saved on this phone." : " until Discord restarts.") :
+            "Nothing kept yet. Deleted messages will show here.";
         const groups=[
-            el(Group,{key:"edits",title:"Edited messages"},toggle("noDeleteEdits","Show what messages said before","Saves what a message said before it was edited, and shows it faded and crossed out above it. Covers edits made while Discord is open, up to 10 per message.")),
-            el(Group,{key:"save",title:"Saving"},toggle("noDeleteSave","Save permanently","Keep deleted messages and what edited messages said before after Discord restarts. Saved only on this phone, for your account. Off: cleared when Discord restarts.")),
-            el(Group,{key:"limit",title:"Maximum saved messages"},el(RN.View,{style:{padding:12,gap:8}},input,
-                Text ? el(Text,{variant:"text-xs/medium",color:"text-muted"},hint) : el(RN.Text,{style:{color:"#949ba4",fontSize:12}},hint)))];
+            statusCard("status",summary),
+            el(Group,{key:"edits",title:"Edited messages"},toggle("noDeleteEdits","Show edit history","What a message said before it was edited, faded and crossed out above it. Up to 10 versions each.")),
+            el(Group,{key:"save",title:"Storage"},toggle("noDeleteSave","Keep after restarting","Deleted and edited messages survive closing Discord. Saved only on this phone, for this account.")),
+            el(Group,{key:"limit",title:"Limit"},el(RN.View,{style:{padding:12,gap:8}},input)),
+            footnote("limit-note","From 1 to "+MAX_DELETED+". When full, the oldest is removed first."),
+            el(Group,{key:"clear",title:"Manage"},actionRow(ui,"clear","Clear kept messages","Removes every deleted message and edit history Venus kept, from chat and from this phone.",
+                () => confirmAction("Clear kept messages?","Every deleted message and edit history Venus kept is removed. This can't be undone.","Clear",forgetKept),!kept && !changed,true)),
+            footnote("note","Delete a kept message again to hide just that one.")];
         return settingsBody(ui,groups,{keyboardShouldPersistTaps:"handled"});
+    }
+    // Clear kept messages: every kept deletion leaves chat and the saved file, and so does edit history.
+    // Removals go through Discord's own dispatch, bound before Venus hooked it, so they aren't kept again.
+    function forgetKept() {
+        const events=Array.from(deleted.values());
+        deleted.clear(); deletedByChannel.clear(); edits.clear(); invalidateDeleted();
+        dispatchRemovals(events); persistDeleted(); notify("noDelete");
+        reviewToast(reviewUI(),"Kept messages cleared");
     }
     function authenticateReviews() {
         if (!enabled("reviewDB") || reviewAuthState==="exchanging") return;
@@ -2920,7 +3126,7 @@
                 value:text,onChange:setText,maxLength:1000}) :
             el(RN.TextInput,{style:[{flex:1,fontSize:16},styles.text],editable:authenticated,placeholder,placeholderTextColor:styles.placeholder.color,
                 value:text,onChangeText:setText,maxLength:1000});
-        const color=settings.reviewThemedSend && theme && theme.primaryColor || "#5865f2";
+        const color=theme && theme.primaryColor || "#5865f2";
         return el(RN.View,{style:{flexDirection:"row",alignItems:"center",gap:8,paddingHorizontal:8,paddingVertical:4}},
             el(RN.View,{style:{flex:1}},input),
             el(RN.Pressable,{accessibilityRole:"button",accessibilityLabel:props.shouldEdit ? "Update review" : "Send review",disabled:!canSend,onPress:send,
@@ -3037,20 +3243,18 @@
     // flex:1 slot, or as icon buttons next to a friend button. Its disableCalls prop only greys Call out, so
     // the Call button and the slot it sat in are left out of what it renders. Message's slot then takes the
     // whole row, and the change animates when the setting flips while a profile is open.
-    function isCallButton(node) {
-        const icon = node && node.props && node.props.icon, Phone = inspectedExport(7309, "PhoneCallIcon");
-        return !!(Phone && icon && icon.type === Phone);
-    }
-    function withoutCall(node, depth) {
+    // The icon is looked up once per render, not once for every element in the row.
+    function withoutCall(node, depth, Phone) {
         if (!node || typeof node !== "object" || depth > 12) return node;
         if (Array.isArray(node)) {
             let changed = false;
-            const next = node.map(child => { const value = withoutCall(child, depth + 1); if (value !== child) changed = true; return value; });
+            const next = node.map(child => { const value = withoutCall(child, depth + 1, Phone); if (value !== child) changed = true; return value; });
             return changed ? next.filter(child => child !== null) : node;
         }
         if (!node.props) return node;
-        if (isCallButton(node)) return null;
-        const children = node.props.children, next = withoutCall(children, depth + 1);
+        const icon = node.props.icon;
+        if (icon && icon.type === Phone) return null;
+        const children = node.props.children, next = withoutCall(children, depth + 1, Phone);
         if (next === children) return node;
         // A slot that only held the Call button goes too, so nothing keeps half the row.
         if (next === null || Array.isArray(next) && !next.length) return null;
@@ -3065,7 +3269,9 @@
             try { if (animate && animate.Presets) animate.configureNext(animate.Presets.easeInEaseOut); } catch (_) {}
         }
         const rendered = orig.apply(self, args);
-        return hidden ? withoutCall(rendered, 0) : rendered;
+        if (!hidden) return rendered;
+        const Phone = inspectedExport(7309, "PhoneCallIcon");
+        return Phone ? withoutCall(rendered, 0, Phone) : rendered;
     }
     // Discord's own "no Quest to show" answer, so the dock, the space kept for it and its tracking all go away together.
     let noQuestDock = null;
@@ -3091,8 +3297,10 @@
     // React Native emojis (reaction lists, statuses, the emoji grid) draw a Unicode emoji with the phone's
     // font when forceTextEmoji is set. Only Unicode emojis: custom ones have a CDN picture and a word for a name.
     function systemEmojiProps(props) {
+        // A word is a custom emoji's name. Keycaps (#\uFE0F\u20E3, 1\uFE0F\u20E3...) start with a digit or # but
+        // are Unicode emojis too, and used to keep Discord's picture.
         if (!emojiInUse || !features.systemEmoji || !props || props.forceTextEmoji || typeof props.name !== "string" || !props.name ||
-            /[A-Za-z0-9_:]/.test(props.name)) return props;
+            /[A-Za-z_:]/.test(props.name) || /[0-9#*]/.test(props.name) && !/^[0-9#*]\uFE0F?\u20E3$/.test(props.name)) return props;
         const src = props.src, uri = src && typeof src === "object" ? src.uri : src;
         if (uri != null && !(typeof uri === "string" && /^asset:/.test(uri))) return props;
         return Object.assign({}, props, {forceTextEmoji:true});
@@ -3138,11 +3346,676 @@
         }
         return hookExport(exports, key, operation);
     }
+    // Fix unknown mentions (based on ValidUser by fshin, o.oer and kmmiio99o): a mention of someone Discord hasn't
+    // loaded shows as @unknown-user. Instead of a "Fix mentions" button on every message, messages are checked as
+    // they arrive or load. Unknown IDs are looked up one at a time with Discord's own getUser (GET /users/:id, which
+    // adds the user to UserStore), and each affected message is redrawn so the mention shows the name.
+    const MENTION_ID = /<@!?(\d{17,20})>/g;
+    const VALID_EVENTS = ["MESSAGE_CREATE", "MESSAGE_UPDATE", "LOAD_MESSAGES_SUCCESS", "LOAD_MESSAGES_AROUND_SUCCESS", "LOCAL_MESSAGES_LOADED"];
+    const valid = {dispatcher:null, queue:[], queued:new Set(), tried:new Set(), waiting:new Map(), running:false, refreshing:new Set(), generation:0};
+    function mentionIds(text, out) {
+        // Most text has no mention at all: one indexOf, no regex run.
+        if (typeof text !== "string" || text.indexOf("<@") < 0) return;
+        MENTION_ID.lastIndex = 0;
+        let match;
+        while ((match = MENTION_ID.exec(text))) out.add(match[1]);
+    }
+    function componentIds(components, out, depth) {
+        if (!Array.isArray(components) || depth > 6) return;
+        for (const component of components) if (component) {
+            mentionIds(component.content, out);
+            componentIds(component.components, out, depth + 1);
+        }
+    }
+    // Every place a raw (server-shaped) message can mention someone: text, embeds, components and forwards.
+    function messageMentionIds(message, out) {
+        mentionIds(message.content, out);
+        if (Array.isArray(message.embeds)) for (const embed of message.embeds) if (embed) {
+            mentionIds(embed.title, out); mentionIds(embed.description, out);
+            mentionIds(embed.rawTitle, out); mentionIds(embed.rawDescription, out);
+            if (embed.footer) mentionIds(embed.footer.text, out);
+            if (Array.isArray(embed.fields)) for (const field of embed.fields) if (field) {
+                mentionIds(field.name, out); mentionIds(field.value, out); mentionIds(field.rawName, out); mentionIds(field.rawValue, out);
+            }
+        }
+        componentIds(message.components, out, 0);
+        const snapshots = message.message_snapshots || message.messageSnapshots;
+        if (Array.isArray(snapshots)) for (const snapshot of snapshots) {
+            const inner = snapshot && snapshot.message;
+            if (inner) { mentionIds(inner.content, out); componentIds(inner.components, out, 0); }
+        }
+        return out;
+    }
+    function knownUser(id) { try { return !!(userStore && userStore.getUser(id)); } catch (_) { return true; } }
+    function validInit(dispatcher) {
+        if (valid.dispatcher || !dispatcher || typeof dispatcher.subscribe !== "function") return;
+        valid.dispatcher = dispatcher;
+        VALID_EVENTS.forEach(type => dispatcher.subscribe(type, validEvent));
+        dispatcher.subscribe("LOGOUT", validReset);
+    }
+    function validReset() {
+        valid.generation++; valid.queue.length = 0; valid.queued.clear(); valid.tried.clear(); valid.waiting.clear(); valid.running = false;
+    }
+    // One reused set per check: a channel load hands over 50 messages at once.
+    const validScratch = new Set();
+    function validEvent(event) {
+        if (!enabled("validUser") || !event || !userStore) return;
+        const channelId = event.channelId;
+        if (event.message) validMessage(event.message, event.message.channel_id || channelId);
+        if (Array.isArray(event.messages)) for (const message of event.messages) validMessage(message, message && message.channel_id || channelId);
+    }
+    function validMessage(message, channelId) {
+        if (!message || !message.id || !channelId || valid.refreshing.has(message.id)) return;
+        validScratch.clear();
+        messageMentionIds(message, validScratch);
+        if (!validScratch.size) return;
+        const missing = [];
+        validScratch.forEach(id => { if (!valid.tried.has(id) && !knownUser(id)) missing.push(id); });
+        validScratch.clear();
+        if (!missing.length) return;
+        // Remember the raw message so it can be redrawn once its people are known.
+        const key = channelId + ":" + message.id;
+        let entry = valid.waiting.get(key);
+        if (!entry) {
+            if (valid.waiting.size >= 300) valid.waiting.delete(valid.waiting.keys().next().value);
+            valid.waiting.set(key, entry = {channelId, id:message.id, ids:new Set()});
+        }
+        entry.content = typeof message.content === "string" ? message.content : "";
+        entry.embeds = Array.isArray(message.embeds) ? message.embeds : null;
+        entry.components = Array.isArray(message.components) ? message.components : null;
+        missing.forEach(id => {
+            entry.ids.add(id);
+            if (!valid.queued.has(id)) { valid.queued.add(id); valid.queue.push(id); }
+        });
+        // Never dispatch in the middle of Discord's own dispatch.
+        if (!valid.running) { valid.running = true; later(validNext, 250); }
+    }
+    function deletedUser(id) {
+        return {id, username:"Deleted User", global_name:null, discriminator:"0000", avatar:null, avatar_decoration_data:null, bot:false, system:false, public_flags:0};
+    }
+    function validNext() {
+        const generation = valid.generation;
+        if (!enabled("validUser")) { valid.running = false; return; }
+        const id = valid.queue.shift();
+        if (id === undefined) { valid.running = false; return; }
+        valid.queued.delete(id);
+        if (valid.tried.size >= 5000) valid.tried.delete(valid.tried.values().next().value);
+        valid.tried.add(id);
+        const getUser = inspectedExport(7630, "getUser");
+        let wait = 400;
+        Promise.resolve().then(() => {
+            if (knownUser(id)) return;
+            if (typeof getUser !== "function") throw new Error("getUser unavailable");
+            return getUser(id);
+        }).catch(error => {
+            const code = error && (error.status || error.statusCode), body = error && error.body;
+            // Only a real "Unknown User" answer means the account is gone; anything else is retried later.
+            if (code === 404 || body && body.code === 10013) {
+                if (valid.dispatcher) valid.dispatcher.dispatch({type:"USER_UPDATE", user:deletedUser(id)});
+            } else {
+                valid.tried.delete(id);
+                if (code === 429) {
+                    const retry = Number(body && body.retry_after);
+                    wait = Math.min(60000, Math.max(1000, Number.isFinite(retry) ? retry * 1000 : 5000));
+                    if (!valid.queued.has(id)) { valid.queued.add(id); valid.queue.unshift(id); }
+                }
+            }
+        }).then(() => {
+            if (generation !== valid.generation) return;
+            validRefresh();
+            later(validNext, wait);
+        });
+    }
+    // Redraw each waiting message whose people are all known now. Discord keeps a row until its message record
+    // changes, so its text is changed for a moment (a zero-width space) and then put back, like ValidUser does.
+    function validRefresh() {
+        if (!valid.dispatcher) return;
+        for (const [key, entry] of Array.from(valid.waiting)) {
+            let pending = false;
+            entry.ids.forEach(id => { if (!knownUser(id) && (valid.queued.has(id) || !valid.tried.has(id))) pending = true; });
+            if (pending) continue;
+            valid.waiting.delete(key);
+            if (!Array.from(entry.ids).some(knownUser)) continue;
+            validRedraw(entry);
+        }
+    }
+    function validRedraw(entry) {
+        const dispatch = message => { try { valid.dispatcher.dispatch({type:"MESSAGE_UPDATE", message}); } catch (_) {} };
+        const restore = {id:entry.id, channel_id:entry.channelId};
+        if (entry.content) restore.content = entry.content;
+        else {
+            if (entry.embeds && entry.embeds.length) restore.embeds = entry.embeds;
+            if (entry.components && entry.components.length) restore.components = entry.components;
+        }
+        valid.refreshing.add(entry.id);
+        if (entry.content) {
+            dispatch({id:entry.id, channel_id:entry.channelId, content:entry.content + "\u200b"});
+            later(() => { dispatch(restore); valid.refreshing.delete(entry.id); }, 120);
+        } else {
+            // New embed and component arrays make a new record by themselves.
+            if (restore.embeds || restore.components) dispatch(restore);
+            valid.refreshing.delete(entry.id);
+        }
+    }
+
+    // Settings button on the profile bar ("You bar"), next to the notifications bell. Same button Discord uses for
+    // its own bar buttons (YouBarButton 16031), with Discord's settings icon, opening Discord's own settings.
+    let youBarParts = null;
+    function YouBarSettingsButton(props) {
+        useSettings("youBarSettings");
+        if (!enabled("youBarSettings") || !RN) return null;
+        // Looked up once they've all loaded, not on every render of the bar.
+        if (!youBarParts) {
+            const Button = inspectedExport(16031, "default"), Icon = inspectedExport(6799, "SettingsIcon");
+            if (!Button || !Icon) return null;
+            const size = inspectedExport(14615, "YOU_BAR_BUTTON_ICON_SIZE") || 20;
+            youBarParts = {Button, Icon, style:{width:size, height:size}};
+        }
+        const nameplate = !!(props && props.hasNameplate);
+        return el(youBarParts.Button, {hasNameplate:nameplate, hasBadge:false, accessibilityLabel:"Venus settings", onPress:openSettings,
+            icon:el(youBarParts.Icon, {size:"custom", style:youBarParts.style, color:nameplate ? "white" : undefined})});
+    }
+    // Opens Venus settings, not Discord's. openUserSettings (6801) opens the settings navigator on the screen it's
+    // given, and every settings route node, VENUS_PLUGINS too, is one of that navigator's screens (14239
+    // getSettingScreens), so Back goes to Discord's settings like when you open Venus from there.
+    function openSettings() {
+        const screen = status.menu ? "VENUS_PLUGINS" : undefined;
+        const open = inspectedExport(6801, "openUserSettings");
+        try { if (typeof open === "function") { open(screen ? {screen} : undefined); return; } } catch (_) {}
+        try { const ref = inspectedExport(4695, "getRootNavigationRef"); const nav = ref && ref(); if (nav) nav.navigate("settings", screen ? {screen} : undefined); } catch (_) {}
+    }
+    function youBarButtons(orig, self, args) {
+        // Always the same shape, so switching it on or off never remounts the bell.
+        return el(React.Fragment, null, orig.apply(self, args), el(YouBarSettingsButton, {hasNameplate:args[0] && args[0].hasNameplate}));
+    }
+
+    // Send messages longer than the limit (based on SplitLargeMessages by sunnie): the message box accepts
+    // any length, and a long message is sent as several, each within Discord's limit.
+    const SPLIT_UNLIMITED = 1 << 30;
+    const realLimits = {normal:2000, premium:4000};
+    function messageLimit() {
+        const user = currentUser();
+        if (!user) return realLimits.normal;
+        try {
+            const premium = inspectedExport(4491, "default");
+            const check = premium && premium.canUseIncreasedMessageLength;
+            if (typeof check === "function") return check.call(premium, user) ? realLimits.premium : realLimits.normal;
+        } catch (_) {}
+        return user.premiumType === 2 ? realLimits.premium : realLimits.normal;
+    }
+    // Splits at the last line break, else the last space, else anywhere. A code block cut in two is closed at
+    // the end of one part and opened again, with its language, at the start of the next.
+    const FENCE = /```([^\s`]{0,20})/g;
+    function splitContent(text, limit) {
+        const chunks = [];
+        let rest = text, prefix = "";
+        while (prefix.length + rest.length > limit) {
+            const budget = limit - prefix.length - 4;
+            if (budget < 16) return null;
+            let cut = rest.lastIndexOf("\n", budget);
+            if (cut < budget / 2) { const space = rest.lastIndexOf(" ", budget); if (space > cut) cut = space; }
+            if (cut <= 0) cut = budget;
+            const code = rest.charCodeAt(cut - 1);
+            if (code >= 0xD800 && code <= 0xDBFF) cut--;
+            let piece = prefix + rest.slice(0, cut);
+            rest = rest.slice(cut);
+            if (rest[0] === "\n" || rest[0] === " ") rest = rest.slice(1);
+            let open = false, language = "", match;
+            FENCE.lastIndex = 0;
+            while ((match = FENCE.exec(piece))) { open = !open; if (open) language = match[1]; }
+            if (open) { piece += "\n```"; prefix = "```" + language + "\n"; } else prefix = "";
+            if (piece.trim()) chunks.push(piece);
+        }
+        const last = prefix + rest;
+        if (last.trim() && last.trim() !== prefix.trim()) chunks.push(last);
+        return chunks;
+    }
+    function splitSend(orig, self, args) {
+        const channelId = args[0], message = args[1];
+        // Hot path: every send that fits goes straight through after one length check.
+        if (!message || typeof message.content !== "string" || message.content.length <= 2000 || !enabled("splitMessages")) return orig.apply(self, args);
+        const limit = messageLimit();
+        if (message.content.length <= limit) return orig.apply(self, args);
+        const chunks = splitContent(message.content, limit);
+        if (!chunks || chunks.length < 2) return orig.apply(self, args);
+        const first = Array.from(args); first[1] = Object.assign({}, message, {content:chunks[0]});
+        const result = orig.apply(self, first);
+        const channel = channelStore && channelStore.getChannel(channelId);
+        const slowmode = channel && Number(channel.rateLimitPerUser) || 0;
+        const gap = Math.max(1000, slowmode * 1000 + 500);
+        // The rest follow one at a time, without the reply, after the first one is sent.
+        let chain = Promise.resolve(result).catch(() => {});
+        chunks.slice(1).forEach(content => {
+            chain = chain.then(() => new Promise(resolve => later(resolve, gap))).then(() => {
+                if (!enabled("splitMessages")) return;
+                return orig.call(self, channelId, {content, tts:false, invalidEmojis:message.invalidEmojis || [],
+                    validNonShortcutEmojis:message.validNonShortcutEmojis || []}, undefined, {});
+            }).catch(() => {});
+        });
+        return result;
+    }
+    // useMessageMaxLength (8602): the message box, its counter and the "too long" check all ask it.
+    function maxLengthModule(exports) {
+        const big = (orig, self, args) => { const value = orig.apply(self, args); return enabled("splitMessages") ? SPLIT_UNLIMITED : value; };
+        exports = hookExport(exports, "getMaxMessageLength", big);
+        return hookExport(exports, "default", (orig, self, args) => {
+            if (React) useSettings("splitMessages");
+            return big(orig, self, args);
+        });
+    }
+    // Constants (1086): DraftStore keeps drafts up to the premium limit + 500. Read live, so it follows the switch.
+    function lengthConstants(exports) {
+        if (!exports) return exports;
+        for (const [key, slot] of [["MAX_MESSAGE_LENGTH", "normal"], ["MAX_MESSAGE_LENGTH_PREMIUM", "premium"]]) {
+            const descriptor = Object.getOwnPropertyDescriptor(exports, key);
+            if (!descriptor || !("value" in descriptor) || typeof descriptor.value !== "number" || !descriptor.configurable) continue;
+            realLimits[slot] = descriptor.value;
+            const value = descriptor.value;
+            Object.defineProperty(exports, key, {configurable:true, enumerable:descriptor.enumerable,
+                get:() => enabled("splitMessages") ? SPLIT_UNLIMITED : value, set:() => {}});
+        }
+        return exports;
+    }
+
+    // Translate messages: every message on screen that isn't in your language is shown translated, with a note
+    // saying from what. Google Translate's free, keyless endpoint (the one its browser extension uses) translates
+    // and detects the language in one go, and takes many messages per request: messages are sent in batches, only
+    // once each, and only when they're drawn. Mentions, emojis, links, code and timestamps are never sent as text:
+    // they're replaced by numbered tags the translator keeps in place, and put back as they were.
+    const TRANSLATE_HOSTS = ["https://translate.googleapis.com", "https://clients5.google.com"];
+    const TRANSLATE_PATH = "/translate_a/t?client=dict-chrome-ex&sl=auto&tl=";
+    // Per request: Google accepts more, but smaller requests fail less and look like the extension's.
+    const TRANSLATE_BATCH = 40, TRANSLATE_BATCH_CHARS = 6000, TRANSLATE_MAX_TEXT = 4500, TRANSLATE_CACHE = 2000;
+    // Up to three requests at once, each with its own timeout: one slow answer no longer holds up the rest.
+    // Translations are saved on the phone, so a chat opened again after a restart needs no request at all.
+    const TRANSLATE_PARALLEL = 3, TRANSLATE_TIMEOUT_MS = 8000, TRANSLATE_FILE = "venus-translations.json", TRANSLATE_SAVED = 1500, TRANSLATE_SAVED_BYTES = 2 * 1024 * 1024;
+    // Formatting whose words are translated. Every other node (mentions, emojis, links, code, timestamps) is kept as it is.
+    const TRANSLATE_GROUPS = new Set(["strong", "em", "u", "s", "spoiler", "blockQuote", "subtext", "heading", "paragraph", "link"]);
+    // Letters of any script, but not digits, punctuation or emojis (surrogates): those need no translating.
+    const TRANSLATE_LETTER = /[A-Za-z\u00C0-\u024F\u0370-\u1FFF\u2C00-\uD7FF\uF900-\uFDFF\uFE70-\uFEFF\uFF21-\uFF5A\uFF66-\uFFDC]/g;
+    const LANGUAGE_NAMES = {af:"Afrikaans", ar:"Arabic", bg:"Bulgarian", bn:"Bengali", ca:"Catalan", cs:"Czech", cy:"Welsh", da:"Danish", de:"German",
+        el:"Greek", en:"English", eo:"Esperanto", es:"Spanish", et:"Estonian", fa:"Persian", fi:"Finnish", fil:"Filipino", tl:"Filipino", fr:"French",
+        ga:"Irish", gl:"Galician", gu:"Gujarati", he:"Hebrew", hi:"Hindi", hr:"Croatian", hu:"Hungarian", hy:"Armenian", id:"Indonesian", is:"Icelandic",
+        it:"Italian", ja:"Japanese", jv:"Javanese", ka:"Georgian", kk:"Kazakh", km:"Khmer", ko:"Korean", la:"Latin", lt:"Lithuanian", lv:"Latvian",
+        mk:"Macedonian", ml:"Malayalam", mn:"Mongolian", mr:"Marathi", ms:"Malay", my:"Burmese", ne:"Nepali", nl:"Dutch", no:"Norwegian", pa:"Punjabi",
+        pl:"Polish", pt:"Portuguese", ro:"Romanian", ru:"Russian", sk:"Slovak", sl:"Slovenian", sq:"Albanian", sr:"Serbian", sv:"Swedish", sw:"Swahili",
+        ta:"Tamil", te:"Telugu", th:"Thai", tr:"Turkish", uk:"Ukrainian", ur:"Urdu", uz:"Uzbek", vi:"Vietnamese", zh:"Chinese"};
+    let localeStore = null;
+    const translate = {dispatcher:null, cache:new Map(), queue:[], shown:new Map(), timer:undefined, active:0,
+        host:0, pausedUntil:0, failures:0, translated:0, error:"", generation:0, version:0, layouts:new WeakMap(), refreshing:new Set(),
+        restored:false, restoring:false, saveTimer:undefined, saving:false};
+    function translateInit(dispatcher) {
+        if (translate.dispatcher || !dispatcher || typeof dispatcher.dispatch !== "function") return;
+        translate.dispatcher = dispatcher;
+        if (typeof dispatcher.subscribe === "function") dispatcher.subscribe("LOGOUT", () => {
+            translate.generation++; translate.cache.clear(); translate.queue.length = 0; translate.shown.clear();
+            // Another account's messages must never be shown from this one's translations.
+            if (files) Promise.resolve().then(() => files.writeFile("documents", TRANSLATE_FILE, "{\"version\":1,\"entries\":[]}", "utf8")).catch(() => {});
+        });
+    }
+    // Saved translations: only finished ones, newest last, read once when Discord opens. A damaged file is ignored.
+    function translateRestore() {
+        if (translate.restored || translate.restoring || !files || !features.translate) return;
+        let constants;
+        try { constants = typeof files.getConstants === "function" ? files.getConstants() : files; } catch (_) { constants = null; }
+        const directory = constants && constants.DocumentsDirPath;
+        if (typeof directory !== "string") { translate.restored = true; return; }
+        const path = directory.replace(/\/$/, "") + "/" + TRANSLATE_FILE, generation = translate.generation;
+        translate.restoring = true;
+        Promise.resolve().then(() => files.fileExists(path)).then(exists => exists ? files.readFile(path, "utf8") : null).then(text => {
+            if (!text || text.length > TRANSLATE_SAVED_BYTES || generation !== translate.generation) return;
+            const saved = JSON.parse(text);
+            if (!saved || saved.version !== 1 || !Array.isArray(saved.entries)) return;
+            let restored = 0;
+            saved.entries.slice(-TRANSLATE_SAVED).forEach(item => {
+                if (!Array.isArray(item) || item.length !== 4 || !item.every(part => typeof part === "string")) return;
+                const [target, text, translated, language] = item, key = translateKey(target, text), known = translate.cache.get(key);
+                if (known && known.state !== "queued") return;
+                if (known) { known.state = "done"; known.translated = translated; known.language = language; known.layout = null; known.restored = true; restored++; return; }
+                translateRemember(key, {state:"done", text, target, translated, language, layout:null, ids:new Set(), restored:true});
+                restored++;
+            });
+            if (restored) translateChanged();
+        }).catch(() => {}).then(() => { translate.restoring = false; translate.restored = true; if (enabled("translate")) translateSchedule(0); });
+    }
+    function translatePersist() {
+        if (!files || translate.saveTimer !== undefined) return;
+        translate.saveTimer = later(() => {
+            translate.saveTimer = undefined;
+            if (translate.saving) { translatePersist(); return; }
+            const entries = [];
+            translate.cache.forEach(entry => { if (entry.state === "done" && typeof entry.translated === "string") entries.push([entry.target, entry.text, entry.translated, entry.language || ""]); });
+            let text = JSON.stringify({version:1, entries:entries.slice(-TRANSLATE_SAVED)});
+            // Too big to read back: keep the newest half instead.
+            if (text.length > TRANSLATE_SAVED_BYTES) text = JSON.stringify({version:1, entries:entries.slice(-Math.floor(TRANSLATE_SAVED / 2))});
+            translate.saving = true;
+            Promise.resolve().then(() => files.writeFile("documents", TRANSLATE_FILE, text, "utf8")).catch(() => {}).then(() => { translate.saving = false; });
+        }, 3000, false);
+    }
+    // Discord's language (Settings -> Language) or the phone's, as a Google language code.
+    function localeCode(kind) {
+        let value = null;
+        try { value = localeStore && (kind === "phone" ? localeStore.systemLocale : localeStore.locale); } catch (_) {}
+        if (typeof value !== "string" || !/^[A-Za-z]{2,3}([-_][A-Za-z0-9]{2,8})*$/.test(value)) value = kind === "phone" ? localeCode("discord") : "en-US";
+        return value.replace("_", "-");
+    }
+    function translateTarget() {
+        const locale = localeCode(settings.translateTarget === "phone" ? "phone" : "discord");
+        const parts = locale.split("-"), base = parts[0].toLowerCase();
+        if (base === "zh") return /^(TW|HK|MO|Hant)$/i.test(parts[1] || "") ? "zh-TW" : "zh-CN";
+        if (base === "nb" || base === "nn") return "no";
+        return base;
+    }
+    // "iw" and "zh-CN" from Google, "he" and "zh-TW" from Discord: the same language either way.
+    function languageBase(code) {
+        const base = String(code || "").split("-")[0].toLowerCase();
+        return ({iw:"he", jw:"jv", nb:"no", nn:"no", tl:"fil"})[base] || base;
+    }
+    let languageNames;
+    function languageName(code) {
+        const base = languageBase(code);
+        if (languageNames === undefined) {
+            languageNames = null;
+            try { if (global.Intl && typeof global.Intl.DisplayNames === "function") languageNames = new global.Intl.DisplayNames(["en"], {type:"language"}); } catch (_) {}
+        }
+        try { const name = languageNames && languageNames.of(code); if (typeof name === "string" && name && name !== code) return name; } catch (_) {}
+        return LANGUAGE_NAMES[base] || String(code || "another language");
+    }
+    function escapeTranslate(text) { return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+    // The row's content as text to translate: plain text stays text, formatting becomes <g i=N>...</g> around
+    // the words it covers, and everything that must not change (mentions, emojis, code...) becomes <a i=N/>.
+    // Worked out once per content array: rows are generated again for every change in the chat.
+    function translateLayout(content) {
+        let layout = translate.layouts.get(content);
+        if (layout !== undefined) return layout;
+        const nodes = [];
+        let letters = 0, lines = false, failed = false;
+        function walk(list, depth) {
+            let out = "";
+            if (depth > 8) { failed = true; return out; }
+            for (const node of list) {
+                if (!node || typeof node !== "object") continue;
+                if (node.type === "text" && typeof node.content === "string") {
+                    // A zero-width space is how a message is redrawn: never let it make a new translation.
+                    const text = node.content.replace(/\u200b/g, "");
+                    const found = text.match(TRANSLATE_LETTER);
+                    if (found) letters += found.length;
+                    out += escapeTranslate(text);
+                } else if (node.type === "br" || node.type === "newline") { lines = true; out += "\n"; }
+                else if (TRANSLATE_GROUPS.has(node.type) && Array.isArray(node.content)) {
+                    const index = nodes.push(node) - 1;
+                    out += "<g i=" + index + ">" + walk(node.content, depth + 1) + "</g>";
+                } else { const index = nodes.push(node) - 1; out += "<a i=" + index + "/>"; }
+            }
+            return out;
+        }
+        const text = Array.isArray(content) ? walk(content, 0) : "";
+        // Nothing to translate: emojis, links, code or a word or two of letters ("ok", "xd").
+        layout = failed || letters < 3 || text.length > TRANSLATE_MAX_TEXT ? null : {text, nodes, lines};
+        translate.layouts.set(content, layout);
+        return layout;
+    }
+    function unescapeTranslate(text) { return text.replace(/&#39;|&#x27;/g, "'").replace(/&quot;/g, "\""); }
+    // The translation back as Discord's own nodes. Every tag must come back exactly once and nested the same way,
+    // or the original is shown: a mention can never be lost, doubled or turned into text.
+    const TRANSLATE_TAG = /<a\s+i\s*=\s*"?(\d+)"?\s*\/>|<g\s+i\s*=\s*"?(\d+)"?\s*>|<\/g\s*>/g;
+    function translateNodes(translated, layout) {
+        const used = new Set(), root = [], stack = [{children:root, index:-1}];
+        const text = value => {
+            if (!value) return;
+            const children = stack[stack.length - 1].children;
+            if (!layout.lines) { children.push({type:"text", content:value}); return; }
+            value.split("\n").forEach((part, i) => { if (i) children.push({type:"br"}); if (part) children.push({type:"text", content:part}); });
+        };
+        TRANSLATE_TAG.lastIndex = 0;
+        let last = 0, match;
+        while ((match = TRANSLATE_TAG.exec(translated))) {
+            text(unescapeTranslate(translated.slice(last, match.index)));
+            last = TRANSLATE_TAG.lastIndex;
+            if (match[1] !== undefined || match[2] !== undefined) {
+                const index = Number(match[1] !== undefined ? match[1] : match[2]), node = layout.nodes[index];
+                const group = match[2] !== undefined;
+                // A tag must come back as what it was sent as: <g> for formatting around words, <a/> for the rest.
+                if (!node || used.has(index) || group !== (TRANSLATE_GROUPS.has(node.type) && Array.isArray(node.content))) return null;
+                used.add(index);
+                if (group) stack.push({children:[], index});
+                else stack[stack.length - 1].children.push(node);
+            } else {
+                if (stack.length < 2) return null;
+                const done = stack.pop();
+                stack[stack.length - 1].children.push(Object.assign({}, layout.nodes[done.index], {content:done.children}));
+            }
+        }
+        text(unescapeTranslate(translated.slice(last)));
+        if (stack.length !== 1 || used.size !== layout.nodes.length) return null;
+        return root;
+    }
+    function translateKey(target, text) { return target + "\u0000" + text; }
+    function translateRemember(key, entry) {
+        if (translate.cache.has(key)) translate.cache.delete(key);
+        else if (translate.cache.size >= TRANSLATE_CACHE) translate.cache.delete(translate.cache.keys().next().value);
+        translate.cache.set(key, entry);
+    }
+    // MessageRowGenerator hook: a translated message's content, note and (if asked) original, or the message as it is.
+    // Translations are kept by text, but drawn per message: "hi @A" and "hi @B" share one translation, not one mention.
+    function translateRow(message, source, channelId, id) {
+        if (!message || !Array.isArray(message.content) || !source || typeof source.content !== "string" || !channelId || !id) return message;
+        const author = source.author && source.author.id || message.authorId, me = currentUser();
+        // Your own messages are already in a language you read.
+        if (me && author === me.id) return message;
+        const layout = translateLayout(message.content);
+        if (!layout) return message;
+        const target = translateTarget(), key = translateKey(target, layout.text);
+        translateSeen(source, channelId, id, key);
+        let entry = translate.cache.get(key);
+        if (!entry) {
+            entry = {state:"queued", text:layout.text, layout, target, ids:new Set()};
+            translateRemember(key, entry);
+            // Newest first: the message that just arrived, or the bottom of a chat you opened, is what you're reading.
+            translate.queue.unshift(key);
+            translateSchedule(60);
+        }
+        if (entry.state === "queued" || entry.state === "sending") { entry.ids.add(id); return message; }
+        if (entry.state !== "done") return message;
+        if (layout.view === undefined || layout.viewOf !== entry || layout.viewVersion !== translate.version) {
+            layout.viewOf = entry; layout.viewVersion = translate.version;
+            layout.view = translateView(entry, layout, message.content);
+        }
+        return layout.view ? Object.assign({}, message, {content:layout.view}) : message;
+    }
+    // Messages drawn lately, so switching on or changing an option can redraw them. Never while a redraw has
+    // its zero-width space in, or that space would be put back for good.
+    function translateSeen(source, channelId, id, key) {
+        if (!source || typeof source.content !== "string" || !source.content || !channelId || !id || translate.refreshing.has(id)) return;
+        let entry = translate.shown.get(id);
+        if (entry) translate.shown.delete(id);
+        else if (translate.shown.size >= 300) translate.shown.delete(translate.shown.keys().next().value);
+        if (!entry) entry = {channelId, id, raw:"", key:null};
+        entry.raw = source.content; entry.key = key || entry.key;
+        translate.shown.set(id, entry);
+    }
+    function translateView(entry, layout, original) {
+        let view = translateNodes(entry.translated, layout);
+        if (!view) return null;
+        if (settings.translateNote || settings.translateOriginal) view = view.concat([{type:"br"}, {type:"subtext", content:[{type:"text",
+            content:"Translated from " + languageName(entry.language) + (settings.translateOriginal ? ". Original:" : "")}]}]);
+        // A quote can't hold a quote or a code block, so those originals just follow on the next line.
+        if (settings.translateOriginal) view = view.concat(layout.nodes.some(node => node.type === "blockQuote" || node.type === "codeBlock") ?
+            [{type:"br"}].concat(original) : [{type:"blockQuote", content:original}]);
+        return view;
+    }
+    function translateSchedule(ms) {
+        if (translate.timer !== undefined || translate.active >= TRANSLATE_PARALLEL || !translate.queue.length) return;
+        // The first request waits for the saved translations, so nothing on screen is asked for twice.
+        if (!translate.restored) { if (!files) translate.restored = true; else { translateRestore(); if (!translate.restored) return; } }
+        const wait = Math.max(ms, translate.pausedUntil - Date.now());
+        translate.timer = later(() => { translate.timer = undefined; translateNext(); }, wait, false);
+    }
+    // Drops what is no longer worth asking for: switched off, target changed, or long gone from the cache.
+    function translateBatch() {
+        const keys = [], target = translateTarget();
+        let chars = 0;
+        // After a batch failed more than once, try smaller ones: one bad text can't keep the rest waiting.
+        const most = translate.failures > 1 ? Math.max(1, TRANSLATE_BATCH >> Math.min(5, translate.failures - 1)) : TRANSLATE_BATCH;
+        while (translate.queue.length && keys.length < most) {
+            const key = translate.queue[0], entry = translate.cache.get(key);
+            if (!entry || entry.state !== "queued" || entry.target !== target) { translate.queue.shift(); if (entry && entry.state === "queued") translate.cache.delete(key); continue; }
+            const size = encodeURIComponent(entry.text).length;
+            if (keys.length && chars + size > TRANSLATE_BATCH_CHARS) break;
+            translate.queue.shift(); keys.push(key); chars += size;
+        }
+        return {keys, target};
+    }
+    async function translateRequest(texts, target, host) {
+        if (typeof global.fetch !== "function") throw new Error("networking is unavailable");
+        const controller = typeof global.AbortController === "function" ? new global.AbortController() : null;
+        let timer;
+        const body = texts.map(text => "q=" + encodeURIComponent(text)).join("&");
+        const url = TRANSLATE_HOSTS[(host === undefined ? translate.host : host) % TRANSLATE_HOSTS.length] + TRANSLATE_PATH + encodeURIComponent(target);
+        const task = Promise.resolve().then(async () => {
+            const response = await global.fetch(url, Object.assign({method:"POST", credentials:"omit",
+                headers:{accept:"application/json", "content-type":"application/x-www-form-urlencoded;charset=UTF-8"}, body},
+                controller ? {signal:controller.signal} : {}));
+            if (!response.ok) { const error = new Error("HTTP " + response.status); error.status = response.status; throw error; }
+            const result = await response.json();
+            if (!Array.isArray(result)) throw new Error("unreadable answer");
+            // One text comes back as [text, language] in an array of one; several as one pair each.
+            return texts.map((_, i) => {
+                const item = result[i];
+                if (Array.isArray(item)) return {text:String(item[0] == null ? "" : item[0]), language:typeof item[1] === "string" ? item[1] : ""};
+                if (typeof item === "string") return {text:item, language:""};
+                return null;
+            });
+        });
+        const timeout = new Promise((resolve, reject) => {
+            if (global.setTimeout) timer = global.setTimeout(() => { reject(new Error("no answer")); if (controller) controller.abort(); }, TRANSLATE_TIMEOUT_MS);
+        });
+        try { return await Promise.race([task, timeout]); }
+        finally { if (timer !== undefined && global.clearTimeout) global.clearTimeout(timer); }
+    }
+    function translateNext() {
+        if (!enabled("translate")) return;
+        // translateSchedule's timer already waited out any pause.
+        while (translate.active < TRANSLATE_PARALLEL && translate.queue.length) {
+            const {keys, target} = translateBatch();
+            if (!keys.length) break;
+            translateSend(keys, target);
+        }
+        if (translate.queue.length) translateSchedule(0);
+    }
+    function translateSend(keys, target) {
+        const generation = translate.generation, host = translate.host;
+        translate.active++;
+        keys.forEach(key => { translate.cache.get(key).state = "sending"; });
+        translateRequest(keys.map(key => translate.cache.get(key).text), target, host).then(results => {
+            if (generation !== translate.generation) return;
+            translate.failures = 0; translate.error = "";
+            const redraw = new Set();
+            keys.forEach((key, i) => {
+                const entry = translate.cache.get(key), result = results[i];
+                if (!entry) return;
+                const ids = entry.ids; entry.ids = new Set();
+                // Missing from the answer: asked for again, not given up on.
+                if (!result) { entry.state = "queued"; translate.queue.push(key); return; }
+                // Already in your language, or given back unchanged: nothing to show, and it's never asked for again.
+                if (result.text === entry.text || result.language && languageBase(result.language) === languageBase(target)) { entry.state = "same"; entry.layout = null; return; }
+                // A translation that lost, doubled or moved a mention or emoji out of its formatting is never shown.
+                if (!translateNodes(result.text, entry.layout)) { entry.state = "failed"; entry.layout = null; return; }
+                entry.translated = result.text; entry.language = result.language; entry.state = "done"; entry.layout = null; translate.translated++;
+                // Only rows that change are redrawn: one in your language looks the same as before.
+                ids.forEach(id => redraw.add(id));
+            });
+            translateRedraw(redraw);
+            translatePersist();
+        }, error => {
+            if (generation !== translate.generation) return;
+            // Back in front, in the same order, and on the other Google server next time.
+            keys.slice().reverse().forEach(key => { const entry = translate.cache.get(key); if (entry) { entry.state = "queued"; translate.queue.unshift(key); } });
+            translate.failures++;
+            if (translate.host === host) translate.host++;
+            // Asked to slow down: wait 15 s, longer each time, up to 10 minutes. A timeout or a dropped connection
+            // is usually the network: the other server is tried in a moment, and only after a few in a row does it wait.
+            const limited = error && error.status === 429;
+            const wait = limited ? Math.min(600000, 15000 * Math.pow(2, Math.min(6, translate.failures - 1))) :
+                translate.failures < 3 ? 500 * translate.failures : Math.min(120000, 5000 * Math.pow(2, Math.min(5, translate.failures - 3)));
+            translate.pausedUntil = Math.max(translate.pausedUntil, Date.now() + wait);
+            translate.error = translate.failures < 3 && !limited ? "" : (limited ? "Google Translate asked to slow down" : "Google Translate isn't answering (" + String(error && error.message || error) + ")") +
+                ". Trying again in " + Math.max(1, Math.round(wait / 1000)) + " s.";
+        }).then(() => {
+            translate.active--;
+            if (generation === translate.generation && translate.queue.length) translateSchedule(translate.failures ? 0 : 30);
+            notify("translate");
+        });
+    }
+    // Discord keeps a row until its message record changes, so its text is changed for a moment (a zero-width
+    // space) and then put back, like Fix unknown mentions does. The translation ignores that space.
+    function translateRedraw(ids) {
+        if (!translate.dispatcher) return;
+        const entries = [];
+        ids.forEach(id => {
+            const entry = translate.shown.get(id);
+            if (entry && typeof entry.raw === "string" && entry.raw && !translate.refreshing.has(id)) entries.push(entry);
+        });
+        if (!entries.length) return;
+        const dispatch = message => { try { translate.dispatcher.dispatch({type:"MESSAGE_UPDATE", message}); } catch (_) {} };
+        entries.forEach(entry => { translate.refreshing.add(entry.id); dispatch({id:entry.id, channel_id:entry.channelId, content:entry.raw + "\u200b"}); });
+        later(() => entries.forEach(entry => { dispatch({id:entry.id, channel_id:entry.channelId, content:entry.raw}); translate.refreshing.delete(entry.id); }), 120);
+    }
+    // Switched on or off, or a different language or option: redraw what's on screen.
+    // Only messages that are (or were) shown translated are redrawn.
+    function translateChanged() {
+        translate.version++;
+        if (enabled("translate")) translateSchedule(0);
+        // Messages known to be in your language, or that failed, look the same either way.
+        const ids = new Set();
+        translate.shown.forEach((entry, id) => { const cached = entry.key && translate.cache.get(entry.key);
+            if (!cached || cached.state !== "same" && cached.state !== "failed") ids.add(id); });
+        translateRedraw(ids);
+    }
+    function translateStatus() {
+        if (translate.error) return translate.error;
+        const waiting = translate.queue.length;
+        return (translate.translated ? "Translated " + translate.translated + " message" + (translate.translated === 1 ? "" : "s") + " since Discord opened." : "Nothing translated yet since Discord opened.") +
+            (waiting ? " " + waiting + " waiting." : "");
+    }
+    function TranslateSettings() {
+        useSettings("translate");
+        const ui = reviewUI();
+        if (!React || !RN) return null;
+        const Group = ui.TableRowGroup || RN.View, Switch = ui.TableSwitchRow, on = enabled("translate");
+        const name = kind => languageName(localeCode(kind));
+        let saved = 0; translate.cache.forEach(entry => { if (entry.state === "done") saved++; });
+        const groups = [
+            statusCard("status", on ? translateStatus() : "Turned off. Switch it on in Features to start."),
+            radioGroup(ui, "target", "Translate into", "translateTarget", on, [["discord", "Discord's language", name("discord") + ". Change it in Discord's Language settings."],
+                ["phone", "Your phone's language", name("phone") + "."]]),
+            el(Group, {key:"show", title:"Display"},
+                switchRow(Switch, "translateNote", "Show the original language", "A small \"Translated from Spanish\" line under each translation."),
+                switchRow(Switch, "translateOriginal", "Show the original text", "The untranslated message, in a quote under the translation.")),
+            el(Group, {key:"clear", title:"Manage"}, actionRow(ui, "clear", "Clear saved translations",
+                saved ? count(saved, "translation") + " kept on this phone, so chats you reopen show them at once." : "Nothing saved yet.",
+                () => confirmAction("Clear saved translations?", "Messages on screen will be translated again.", "Clear", translateForget), !saved, true)),
+            footnote("note", "Only messages on screen are sent to Google Translate, once each, without your Discord account. Your own messages and ones already in your language are left as they are.")];
+        return settingsBody(ui, groups);
+    }
+    // Clear saved translations: forgets every translation, on the phone too, and translates what's on screen again.
+    function translateForget() {
+        translate.generation++; translate.cache.clear(); translate.queue.length = 0; translate.translated = 0; translate.error = "";
+        if (files) Promise.resolve().then(() => files.writeFile("documents", TRANSLATE_FILE, "{\"version\":1,\"entries\":[]}", "utf8")).catch(() => {});
+        translateChanged(); notify("translate");
+        reviewToast(reviewUI(), "Saved translations cleared");
+    }
     function activatePlugins(id, exports) {
+        if ((features.validUser || features.splitMessages || features.translate) && id === 1378 && exports && exports.default) userStore = exports.default;
+        if (features.translate && id === 2115 && exports && exports.default) localeStore = exports.default;
+        if (features.translate && id === 585 && exports && exports.default) translateInit(exports.default);
+        if (features.splitMessages && id === 8602) return maxLengthModule(exports);
+        if (features.youBarSettings && id === 16032) return hookComponent(exports, youBarButtons);
+        if (features.validUser && id === 585 && exports && exports.default) validInit(exports.default);
         // MurmurHashV3 is CommonJS (module.exports=function), not an ES default export.
         if (features.pastelize && id === 1252) pastelHash = typeof exports === "function" ? exports : exports.default;
         if (features.pastelize && id === 2111) guildMembers = exports.default;
-        if ((features.pastelize || features.noDelete) && id === 7378 && exports.default && exports.default.prototype) hookExport(exports.default.prototype,"generate",messageRow);
+        if ((features.pastelize || features.noDelete || features.translate) && id === 7378 && exports.default && exports.default.prototype) hookExport(exports.default.prototype,"generate",messageRow);
         if (features.platformIndicators && id === 4877) presenceStore = exports.default;
         if (features.platformIndicators && id === 4855) sessionsStore = exports.default;
         if (features.platformIndicators && id === 10603) {
@@ -3270,12 +4143,15 @@
             let actions = exports.default;
             if (!actions) return exports;
             if (features.noDelete) actions = hookExport(actions, "deleteMessage", deleteMessage);
+            // Split Large Messages wraps FreeNitro's hook (added below), so every part still gets its emoji links.
+            const splitLater = features.splitMessages;
             if (features.hiddenChannels) actions = hookExport(actions, "fetchMessages", hiddenFetch);
             if (features.freeNitro) {
                 actions = hookExport(actions, "sendMessage", sendMessage);
                 actions = hookExport(actions, "_sendMessage", sendMessage);
                 actions = hookExport(actions, "sendStickers", sendStickers);
             }
+            if (splitLater) actions = hookExport(actions, "sendMessage", splitSend);
             msgActions = actions;
             return replaceValue(exports, "default", actions);
         }
@@ -3407,6 +4283,8 @@
                 const result = factory.apply(this, factoryArgs);
                 const module = arguments[4]; // Verified Metro factory ABI in Discord 348.10.
                 if (module && module.exports) {
+                    // Before anything reads them: DraftStore keeps its length cap from the moment it loads.
+                    if (features.splitMessages && id === 1086) { try { lengthConstants(module.exports); } catch (_) {} }
                     if (id === 120) {
                         const initialize = module.exports.default;
                         let initializing = false;

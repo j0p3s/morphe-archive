@@ -2,6 +2,24 @@
 
 Changes in the source build, then released versions.
 
+## Unreleased
+
+* **Threads:** Moves the source build to Threads 451.0.0.51.80. Sharing, saved media, autoplay and dark backgrounds follow the new build's layout. The published download stays on Threads 450 until release.
+* **Threads:** Search, buttons and choices show a visible focus outline. Switches and actions use the same corner scale as the settings cards.
+* **Threads:** Download and report choosers close when their page is removed. Diagnostic exports describe the right folder on Android 9, and clearing logs offers Restore diagnostic data while recovery is available.
+* **Threads:** Both backup actions explain why they're unavailable during an import or export.
+* **Threads:** Link status checks the post domains declared by Threads. Unrelated chat and login domains no longer make working post links appear disabled. Reports still list every declared domain.
+* **Threads:** The logo's long press has an action label in the app's language for screen readers.
+* **Tooling:** Source updates can keep an Unreleased changelog while Manager serves the previous release. The published release's date and history remain required.
+* **Tooling:** The signed-app check now requires the logo's settings action exactly once and rejects missing, duplicated or misdirected calls.
+
+* **Threads:** Redesigned all 11 settings pages with separate cards and blue icons. Search and Pause stay at the top of the home page, and long descriptions wrap without hiding controls. About and diagnostic exports retain the full build details.
+* **Threads:** No time limit is dimmed until Keep feed position on return is on. Its saved choice stays intact when that switch is off.
+* **Threads:** Downloads has a Saves section that says when nothing is in progress. Active saves still show progress and Cancel.
+* **Threads:** Long-press the Threads logo at the top of your home feed to open HushThreads settings right over the feed. It works while HushThreads is paused, and a plain tap on the logo does what it always did.
+* **Tooling:** Updated the signed-app check for the redesigned settings. About and reports still have to carry the exact bundle identity.
+* **Docs:** The README is much shorter now and keeps to what you need to install and use HushThreads. The long version, with every build and test note, is still in the repository history.
+
 ## 0.0.13 (2026-10-10)
 
 * **Threads:** This release patches Threads 450.0.0.51.78 only, the newest stable version. 449.0.0.54.82 and 448.0.0.54.85 aren't offered any more, so if you're still on one of them, update Threads to 450 before you patch. From here on each release moves to the newest stable Threads and drops the one before.

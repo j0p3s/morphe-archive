@@ -207,6 +207,13 @@ switch ($Stage) {
             Write-ReleaseStep "$commit already went out through the release gate at $($done.finishedAt). Run -Stage build next."
             return
         }
+        $hookRecord = Join-Path $Root "build/release-stages/gate-hook/$commit.json"
+        if ($remote -ceq $commit -and (Test-Path -LiteralPath $hookRecord -PathType Leaf)) {
+            # The gate passed and origin took the push, but the run stopped before it wrote its marker.
+            Set-ReleaseStageMarker $Root $Version 'gate' $commit ((Get-Date) - $started).TotalMinutes
+            Write-ReleaseStep "$commit passed the release gate on an earlier run and origin already has it. Run -Stage build next."
+            return
+        }
         if ($remote -ceq $commit) {
             throw ("origin's main is already at $commit, but not through -Stage gate, so the release gate never " +
                 'built its bundle or patched the fixtures with it. Undo the prepare commit (git reset --keep HEAD~1 after ' +
@@ -219,9 +226,16 @@ switch ($Stage) {
             }
         }
         Write-ReleaseStep "pushing $commit through the release gate: the full suite, the bundle and every declared fixture patched with it"
+        # A record left from an earlier attempt would make a refusal now read as a passed gate.
+        Remove-Item -LiteralPath $hookRecord -Force -ErrorAction SilentlyContinue
         try {
             Invoke-ReleasePush -Root $Root -ReleaseGate
         } catch {
+            if (Test-Path -LiteralPath $hookRecord -PathType Leaf) {
+                throw ("The release gate passed $commit, but the push itself failed: the network dropped, or origin " +
+                    "rejected it. Read git's output above. Once the cause is fixed, run -Stage gate again. If origin took " +
+                    'it after all, that run goes straight on.')
+            }
             throw ("The release gate refused $commit. Read its output above. Fix the cause in a commit of its own: " +
                 'undo the prepare commit with git reset --keep HEAD~1, commit the fix, then prepare again.')
         }
@@ -246,7 +260,36 @@ switch ($Stage) {
             return
         }
         Invoke-ReleaseQuiet { & gh release view $tag -R $Repository --json tagName } | Out-Null
-        if ($LASTEXITCODE -eq 0) { throw "$tag is already on GitHub, and the assets here don't match it ($built). Nothing was rebuilt." }
+        if ($LASTEXITCODE -eq 0) {
+            $names = @(Get-ReleaseUploadNames $Version) + @('SHA256SUMS.txt', 'SHA256SUMS.txt.asc')
+            $present = @($names | Where-Object { Test-Path -LiteralPath (Join-Path $assets $_) -PathType Leaf })
+            if ($present.Count -gt 0) { throw "$tag is already on GitHub, and the assets here don't match it ($built). Nothing was rebuilt." }
+            # A fresh checkout or a cleaned build folder after the upload: a rebuild would sign new bytes,
+            # so take back what GitHub holds and check it the same way.
+            Write-ReleaseStep "$tag is already on GitHub and $assets is empty, so its signed assets come back from there"
+            $download = Join-Path ([IO.Path]::GetTempPath()) ('hushpinterest-assets-' + [guid]::NewGuid().ToString('N'))
+            # The folder was empty, so whatever goes wrong below leaves it empty again: a partial copy
+            # would read as local assets that don't match and refuse every later run.
+            try {
+                $patterns = @($names | ForEach-Object { '-p'; $_ })
+                Invoke-ReleaseNative 'gh release download' { & gh release download $tag -R $Repository -D $download @patterns }
+                # gh only fails when no pattern matches, so a release missing one asset still gets here.
+                $missing = @($names | Where-Object { -not (Test-Path -LiteralPath (Join-Path $download $_) -PathType Leaf) })
+                if ($missing.Count -gt 0) { throw "$tag on GitHub has no $($missing -join ', '). Nothing was rebuilt." }
+                New-Item -ItemType Directory -Force -Path $assets | Out-Null
+                foreach ($name in $names) { Copy-Item -LiteralPath (Join-Path $download $name) -Destination $assets }
+                $built = Test-ReleaseAssets -Root $Root -Version $Version -Commit $commit -TrustedPublicKeyPath $signing.PublicKey `
+                    -TrustedFingerprint $signing.Fingerprint -Gpg $Gpg
+                if ($built -ne $true) { throw "$tag's assets on GitHub don't verify for $commit ($built). Nothing was rebuilt." }
+            } catch {
+                Remove-Item -LiteralPath $assets -Recurse -Force -ErrorAction SilentlyContinue
+                throw
+            } finally {
+                if (Test-Path -LiteralPath $download) { Remove-Item -LiteralPath $download -Recurse -Force -ErrorAction SilentlyContinue }
+            }
+            Write-ReleaseStep "$tag's signed assets from GitHub verify for $commit. Run -Stage publish next."
+            return
+        }
 
         Invoke-ReleaseGradle -Root $Root -Tasks @(':patches:buildAndroid') -Job 'release bundle'
         $bundle = Get-ReleaseBundlePath -Root $Root -Version $Version

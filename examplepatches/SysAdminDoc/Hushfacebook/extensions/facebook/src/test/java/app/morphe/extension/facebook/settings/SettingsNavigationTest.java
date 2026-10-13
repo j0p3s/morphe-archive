@@ -76,6 +76,13 @@ public class SettingsNavigationTest {
     private HushfacebookPreferenceFragment page;
 
     @Before public void open() {
+        // Retained outcomes belong to one process. Give each capture a fresh launch.
+        org.robolectric.util.ReflectionHelpers.setStaticField(
+                app.morphe.extension.facebook.download.SaveControl.class, "lastOutcome", null);
+        Class<?> export = app.morphe.extension.shared.settings.preference.ExportDiagnosticReportPreference.class;
+        Object exportState = org.robolectric.util.ReflectionHelpers.getStaticField(export, "state");
+        org.robolectric.util.ReflectionHelpers.setStaticField(export, "state",
+                exportState.getClass().getEnumConstants()[0]);
         PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
         PatchFamily.inBuildForTests.remove(PatchFamily.MATERIAL_YOU_THEME);
         PauseForTests.resume();
@@ -325,11 +332,19 @@ public class SettingsNavigationTest {
         app.morphe.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending.add(
                 Settings.MARKETPLACE_ONLY.key);
         page.navigation.navigate("Opening Facebook");
-        layout(dialog.getView());
+        // Keep the viewport shorter than the page, so a skipped status row cannot be exposed
+        // merely because ListView pulls short content down to fill the available space.
+        layout(dialog.getView(), 1200);
         line = (Preference) list().getItemAtPosition(0);
         assertEquals("A change here applies after Facebook restarts.", String.valueOf(line.getTitle()));
+        assertFalse("The restart status must remain read-only", list().getAdapter().isEnabled(0));
+        assertEquals("The opening page must start at its status line", 0, list().getFirstVisiblePosition());
+        TextView boundTitle = list().getChildAt(0).findViewById(android.R.id.title);
+        assertEquals("The first bound view must match the opening page's status line", line.getTitle(), boundTitle.getText());
         android.view.ViewGroup frame = list().getChildAt(0).findViewById(android.R.id.widget_frame);
-        assertTrue("a restart line offered an action", frame == null || frame.getChildCount() == 0);
+        assertTrue("a restart line offered an action: " + (frame == null ? "no frame" : frame.getChildCount()
+                + " children, " + (frame.getChildCount() == 0 ? "none" : frame.getChildAt(0))),
+                frame == null || frame.getChildCount() == 0);
         page.navigation.back();
         page.navigation.navigate("Playback");
         assertEquals("a restart owed elsewhere was said here", categoryCount("Playback"), list().getCount());
@@ -407,7 +422,7 @@ public class SettingsNavigationTest {
         TextView summary = list().getChildAt(0).findViewById(android.R.id.summary);
         String[] lines = summary.getText().toString().split("\n", 2);
         assertEquals("Tap Resume, then restart Facebook.", lines[0]);
-        assertEquals(HushfacebookPreferenceFragment.overviewBuildDetails(), lines[1]);
+        assertEquals(HushfacebookPreferenceFragment.overviewBuildDetails().replace('\n', ' '), lines[1]);
     }
 
     /**
@@ -520,11 +535,15 @@ public class SettingsNavigationTest {
             float density = root.getResources().getDisplayMetrics().density;
             int width = Math.round(root.getResources().getConfiguration().screenWidthDp * density);
             int height = Math.round(root.getResources().getConfiguration().screenHeightDp * density);
-            android.view.ViewGroup bar = (android.view.ViewGroup) ((android.view.ViewGroup) root).getChildAt(0);
-            TextView title = (TextView) bar.getChildAt(1);
+            TextView title = findHeading(root);
+            assertNotNull("The page title must remain an accessibility heading", title);
+            View back = findDescribed(root, L10n.t("Back"));
+            assertNotNull("The back action must remain available", back);
+            android.view.ViewGroup bar = (android.view.ViewGroup) back.getParent();
+            android.view.ViewGroup heading = (android.view.ViewGroup) title.getParent();
             EditText search = findSearch(root);
-            android.view.ViewGroup searchBox = (android.view.ViewGroup) search.getParent();
-            View clear = searchBox.getChildAt(2);
+            View clear = findDescribed(root, L10n.t("Clear search"));
+            assertNotNull("The search must retain its clear action", clear);
             for (int pass = 0; pass < 3; pass++) {
                 root.measure(View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
                         View.MeasureSpec.makeMeasureSpec(height, View.MeasureSpec.EXACTLY));
@@ -543,18 +562,27 @@ public class SettingsNavigationTest {
             assertEquals("The app name must not break inside the word", 1, title.getLineCount());
             assertTrue("The whole title must fit", title.getPaint().measureText(title.getText().toString())
                     <= title.getWidth() - title.getCompoundPaddingLeft() - title.getCompoundPaddingRight());
+            if (root.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL) {
+                assertEquals("The Latin app name must align with the heading's right edge in RTL",
+                        title.getWidth() - title.getCompoundPaddingLeft() - title.getCompoundPaddingRight(),
+                        title.getLayout().getLineRight(0), 1f);
+            }
             assertTrue("The whole search hint must fit", search.getPaint().measureText(search.getHint().toString())
                     <= search.getWidth() - search.getCompoundPaddingLeft() - search.getCompoundPaddingRight());
             assertEquals(L10n.t("Search settings"), search.getContentDescription().toString());
             assertTrue(search.isFocusable());
-            View back = bar.getChildAt(0);
             assertEquals(L10n.t("Back"), back.getContentDescription().toString());
             assertTrue(back.getWidth() >= 48 * density && back.getHeight() >= 48 * density);
+            assertTrue("The page title must sit below the back toolbar", heading.getTop() >= bar.getBottom());
+            assertTrue("The search must sit below the page title", search.getTop() + ((View) search.getParent()).getTop()
+                    >= heading.getBottom());
             if (scale == 1f) {
-                assertEquals(24 * density, title.getTextSize(), 0.1f);
+                assertEquals(32 * density, title.getTextSize(), 0.1f);
                 assertEquals(View.INVISIBLE, clear.getVisibility());
-                assertEquals(4 * density, bar.getPaddingStart(), 0.1f);
-                assertEquals(16 * density, bar.getPaddingEnd(), 0.1f);
+                assertEquals(8 * density, bar.getPaddingStart(), 0.1f);
+                assertEquals(20 * density, bar.getPaddingEnd(), 0.1f);
+                assertEquals(20 * density, heading.getPaddingStart(), 0.1f);
+                assertEquals(20 * density, heading.getPaddingEnd(), 0.1f);
             }
             search.setText("video");
             assertEquals(View.VISIBLE, clear.getVisibility());
@@ -568,6 +596,30 @@ public class SettingsNavigationTest {
         } finally {
             RuntimeEnvironment.setFontScale(1f);
         }
+    }
+
+    private static TextView findHeading(View view) {
+        if (view instanceof TextView && view.isAccessibilityHeading()) return (TextView) view;
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                TextView found = findHeading(group.getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
+
+    private static View findDescribed(View view, String description) {
+        if (view.getContentDescription() != null && description.contentEquals(view.getContentDescription())) return view;
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                View found = findDescribed(group.getChildAt(i), description);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     /**
@@ -788,6 +840,46 @@ public class SettingsNavigationTest {
         assertEquals(10, list().getCount());
         assertFalse(contains(HushfacebookPreferenceFragment.MISSING_RESTORE_TRUST));
         assertFalse(contains(HushfacebookPreferenceFragment.MISSING_DEFAULTS));
+    }
+
+    /** A re-signed clone checks its own key, not that of Meta's Facebook installed beside it. */
+    @Test public void aCloneBesideStockFacebookIsCheckedForItsOwnKey() {
+        controller.close();
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        PatchFamily.inBuildForTests.remove(PatchFamily.MATERIAL_YOU_THEME);
+        PatchFamily.inBuildForTests.remove(PatchFamily.RESTORE_TRUST);
+        install("com.facebook.katana", metaCertificate());
+        install(CloneActivity.PACKAGE, new Signature("308201a0b1c2d3"));
+        ActivityController<CloneActivity> clone = Robolectric.buildActivity(CloneActivity.class).setup().visible();
+        try {
+            dialog = SettingsL10nTest.show(clone.get());
+            page = page(dialog);
+            assertEquals(1, position(HushfacebookPreferenceFragment.MISSING_RESTORE_TRUST));
+        } finally {
+            clone.close();
+        }
+        controller = Robolectric.buildActivity(Activity.class).setup().visible();
+    }
+
+    /** Pausing turns the controls off, but the build still needs patching again, so the warning stays. */
+    @Test public void pauseLeavesTheMissingRestoreScreensWarningUp() {
+        controller.close();
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        PatchFamily.inBuildForTests.remove(PatchFamily.MATERIAL_YOU_THEME);
+        PatchFamily.inBuildForTests.remove(PatchFamily.RESTORE_TRUST);
+        PauseForTests.pause(HushfacebookPause.Reason.SWITCH);
+        controller = Robolectric.buildActivity(Activity.class).setup().visible();
+        dialog = SettingsL10nTest.show(controller.get());
+        page = page(dialog);
+
+        assertEquals(1, position(HushfacebookPreferenceFragment.MISSING_RESTORE_TRUST));
+        assertEquals("Profiles, photos and posts won't open",
+                String.valueOf(((Preference) list().getItemAtPosition(1)).getTitle()));
+    }
+
+    public static class CloneActivity extends Activity {
+        static final String PACKAGE = "com.facebook.katana.hushfacebook";
+        @Override public String getPackageName() { return PACKAGE; }
     }
 
     /**
@@ -1067,8 +1159,8 @@ public class SettingsNavigationTest {
         assertTrue(contains(Settings.TAP_TO_PLAY.key));
         // Playback: Tap to play and Only the first reel waits, Resume long videos, Frame step, Default playback
         // quality and its Playback quality, Reels quality and Stories quality lists, Picture-in-picture, Turn off
-        // HDR brightness, Keep the progress bar and Show a reel's time.
-        assertEquals(12, list().getCount());
+        // HDR brightness, Keep the progress bar, Show a reel's time and Tap the bar to seek.
+        assertEquals(13, list().getCount());
         page.navigation.back();
         findSearch(dialog.getView()).setText("other apps");
         recreate();
@@ -1154,51 +1246,185 @@ public class SettingsNavigationTest {
     /** All pages are rendered with the same viewport as the design reference. */
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     public void renderEveryPageAndSearchOffscreen() throws Exception {
-        capture("00-overview");
+        renderPagesAndSearch("");
+    }
+
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    public void renderEveryPageAndSearchInMaterialDarkOffscreen() throws Exception {
+        PatchFamily.inBuildForTests.add(PatchFamily.MATERIAL_YOU_THEME);
+        recreate();
+        assertFalse(ScreenColors.shown.light);
+        renderPagesAndSearch("material-dark-");
+    }
+
+    @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(qualifiers = "w390dp-h844dp-notnight-xhdpi")
+    public void renderEveryPageAndSearchInMaterialLightOffscreen() throws Exception {
+        PatchFamily.inBuildForTests.add(PatchFamily.MATERIAL_YOU_THEME);
+        recreate();
+        assertTrue(ScreenColors.shown.light);
+        renderPagesAndSearch("material-light-");
+    }
+
+    private void renderPagesAndSearch(String prefix) throws Exception {
+        capture(prefix + "00-overview");
         for (Preference section : page.sections()) {
             page.navigation.open(section);
-            capture(section.getTitle().toString().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z]+", "-"));
+            String name = section.getTitle().toString().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z]+", "-");
+            capture(prefix + name);
+            if ("pause-backup-and-diagnostics".equals(name)) {
+                TextView title = findHeading(dialog.getView());
+                assertEquals(TextView.AUTO_SIZE_TEXT_TYPE_NONE, title.getAutoSizeTextType());
+                float scaledDensity = title.getResources().getDisplayMetrics().scaledDensity;
+                assertEquals(28 * scaledDensity, title.getTextSize(), 0.1f);
+                assertTrue("Long category headings must wrap instead of shrinking", title.getLineCount() > 1);
+            }
+            assertUncutText(dialog.getView());
+            list().setSelection(list().getCount() - 1);
+            capture(prefix + name + "-end");
+            assertEquals("the last setting is reachable on " + section.getTitle(),
+                    list().getCount() - 1, list().getLastVisiblePosition());
+            assertUncutText(dialog.getView());
         }
         page.navigation.navigate("more");
-        capture("more-settings");
+        capture(prefix + "more-settings");
         page.navigation.back();
         findSearch(dialog.getView()).setText("video");
         ShadowLooper.idleMainLooper(1, java.util.concurrent.TimeUnit.SECONDS);
-        capture("search-results");
+        capture(prefix + "search-results");
         findSearch(dialog.getView()).setText("noSuchSetting987654");
         ShadowLooper.idleMainLooper(1, java.util.concurrent.TimeUnit.SECONDS);
-        capture("search-empty");
+        capture(prefix + "search-empty");
         page.navigation.back();
         page.navigation.navigate("Downloads");
         ValueRows.QualityRow quality = (ValueRows.QualityRow) page.findPreference(Settings.DOWNLOAD_QUALITY.key);
         quality.showDialog(null);
-        captureDialog("dialog-quality", (AlertDialog) quality.getDialog());
+        captureDialog(prefix + "dialog-quality", (AlertDialog) quality.getDialog());
         quality.getDialog().dismiss();
         ValueRows.FolderRow folder = (ValueRows.FolderRow) page.findPreference(Settings.SAVE_FOLDER.key);
         folder.showDialog(null);
-        captureDialog("dialog-folder", (AlertDialog) folder.getDialog());
+        captureDialog(prefix + "dialog-folder", (AlertDialog) folder.getDialog());
         folder.getDialog().dismiss();
         ValueRows.FileNameRow name = (ValueRows.FileNameRow) page.findPreference(Settings.FILENAME_TEMPLATE.key);
         name.showDialog(null);
-        captureDialog("dialog-file-name", (AlertDialog) name.getDialog());
+        captureDialog(prefix + "dialog-file-name", (AlertDialog) name.getDialog());
         name.getDialog().dismiss();
         page.navigation.navigate("Pause, backup and diagnostics");
         Preference export = page.findPreference("action_export_diagnostic_report");
         export.getOnPreferenceClickListener().onPreferenceClick(export);
         AlertDialog report = (AlertDialog) org.robolectric.shadows.ShadowDialog.getLatestDialog();
-        captureDialog("dialog-report", report);
+        captureDialog(prefix + "dialog-report", report);
         report.dismiss();
         page.pendingImport = SettingsBackup.parse("{\"format\":\"hushfacebook-settings\",\"schema\":1,\"settings\":{\"hushfacebook_tap_to_play\":false}}").toBundle();
         SettingsBackupPreference.onPageResumed(page);
-        captureDialog("dialog-import", page.importPreview);
+        captureDialog(prefix + "dialog-import", page.importPreview);
         page.importPreview.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
         page.navigation.navigate("About");
         Preference about = page.sections().get(page.sections().size() - 1);
         Preference licenses = ((PreferenceCategory) about).getPreference(2);
         licenses.getOnPreferenceClickListener().onPreferenceClick(licenses);
         AlertDialog notice = (AlertDialog) org.robolectric.shadows.ShadowDialog.getLatestDialog();
-        captureDialog("dialog-licenses", notice);
+        captureDialog(prefix + "dialog-licenses", notice);
         notice.dismiss();
+        renderControlStates(prefix);
+    }
+
+    private void renderControlStates(String prefix) throws Exception {
+        while (page.navigation.back()) { }
+        EditText search = findSearch(dialog.getView());
+        search.setText("");
+        search.requestFocus();
+        capture(prefix + "state-search-focused");
+        search.clearFocus();
+        page.navigation.navigate("Opening Facebook");
+        capture(prefix + "state-dependent-disabled");
+        page.navigation.navigate("Downloads");
+        ValueRows.QualityRow quality = (ValueRows.QualityRow) page.findPreference(Settings.DOWNLOAD_QUALITY.key);
+        quality.showDialog(null);
+        AlertDialog choices = (AlertDialog) quality.getDialog();
+        int checked = choices.getListView().getCheckedItemPosition();
+        ShadowLooper.idleMainLooper();
+        Object choiceRoot = org.robolectric.util.ReflectionHelpers.callInstanceMethod(
+                choices.getWindow().getDecorView(), "getViewRootImpl");
+        assertNotNull("the choice window has not attached", choiceRoot);
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod(choiceRoot, "ensureTouchMode",
+                org.robolectric.util.ReflectionHelpers.ClassParameter.from(boolean.class, false));
+        assertFalse("directional navigation is still in touch mode", choices.getListView().isInTouchMode());
+        assertTrue(choices.getListView().requestFocus());
+        choices.getListView().dispatchKeyEvent(new android.view.KeyEvent(
+                android.view.KeyEvent.ACTION_DOWN, android.view.KeyEvent.KEYCODE_DPAD_DOWN));
+        choices.getListView().dispatchKeyEvent(new android.view.KeyEvent(
+                android.view.KeyEvent.ACTION_UP, android.view.KeyEvent.KEYCODE_DPAD_DOWN));
+        captureDialog(prefix + "state-choice-focused", choices);
+        assertTrue("the choice list lost navigation focus", choices.getListView().hasFocus());
+        assertNotNull("no choice has navigation focus", choices.getListView().getSelectedView());
+        assertTrue("the focused choice has no selected state", choices.getListView().getSelectedView().isSelected());
+        assertEquals("moving focus must not change the saved choice", checked,
+                choices.getListView().getCheckedItemPosition());
+        choices.dismiss();
+        ValueRows.FolderRow folder = (ValueRows.FolderRow) page.findPreference(Settings.SAVE_FOLDER.key);
+        folder.showDialog(null);
+        AlertDialog editor = (AlertDialog) folder.getDialog();
+        folder.getEditText().requestFocus();
+        captureDialog(prefix + "state-field-focused", editor);
+        folder.getEditText().clearFocus();
+        editor.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(false);
+        captureDialog(prefix + "state-save-disabled", editor);
+        editor.getButton(AlertDialog.BUTTON_POSITIVE).setEnabled(true);
+        assertTrue(editor.getButton(AlertDialog.BUTTON_POSITIVE).requestFocusFromTouch());
+        captureDialog(prefix + "state-save-focused", editor);
+        assertTrue(editor.getButton(AlertDialog.BUTTON_POSITIVE).hasFocus());
+        editor.dismiss();
+        int save = app.morphe.extension.facebook.download.SavesForTests.begin(controller.get().getApplicationContext(), true);
+        try {
+            app.morphe.extension.facebook.download.SavesForTests.joining(save);
+            capture(prefix + "state-save-joining");
+            assertTrue(app.morphe.extension.facebook.download.SavesForTests.publishing(save));
+            capture(prefix + "state-save-publishing");
+        } finally { app.morphe.extension.facebook.download.SavesForTests.end(save); }
+        capture(prefix + "state-save-failed");
+        page.navigation.navigate("News feed");
+        ValueRows.SourcesRow sources = (ValueRows.SourcesRow) page.findPreference(Settings.HIDDEN_SOURCES.key);
+        sources.showDialog(null);
+        sources.getEditText().setText(new String(new char[app.morphe.extension.facebook.feed.PostSources.MAX_LENGTH + 1]).replace('\0', 'x'));
+        AlertDialog sourceEditor = (AlertDialog) sources.getDialog();
+        sourceEditor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+        assertTrue("a rejected draft must stay open", sourceEditor.isShowing());
+        captureDialog(prefix + "state-sources-invalid", sourceEditor);
+        sourceEditor.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
+        page.navigation.navigate("Appearance");
+        capture(prefix + "state-font-choice");
+        page.navigation.navigate("Pause, backup and diagnostics");
+        java.util.concurrent.CountDownLatch entered = new java.util.concurrent.CountDownLatch(1);
+        java.util.concurrent.CountDownLatch release = new java.util.concurrent.CountDownLatch(1);
+        app.morphe.extension.shared.settings.preference.LogBufferManager.registerReportSection(
+                new app.morphe.extension.shared.settings.preference.LogBufferManager.ReportSection() {
+                    @Override public String title() { return "VISUAL CHECK"; }
+                    @Override public List<String> lines() {
+                        entered.countDown();
+                        try {
+                            if (!release.await(15, java.util.concurrent.TimeUnit.SECONDS))
+                                throw new IllegalStateException("export capture did not release its worker");
+                        } catch (InterruptedException interrupted) {
+                            Thread.currentThread().interrupt();
+                            throw new IllegalStateException(interrupted);
+                        }
+                        return java.util.Collections.emptyList();
+                    }
+                });
+        Preference export = page.findPreference("action_export_diagnostic_report");
+        export.getOnPreferenceClickListener().onPreferenceClick(export);
+        AlertDialog chooser = (AlertDialog) org.robolectric.shadows.ShadowDialog.getLatestDialog();
+        try {
+            chooser.getListView().performItemClick(null, 0, 0);
+            assertTrue("report worker never entered", entered.await(10, java.util.concurrent.TimeUnit.SECONDS));
+            assertFalse(export.isEnabled());
+            capture(prefix + "state-report-copying");
+        } finally { release.countDown(); chooser.dismiss(); }
+        app.morphe.extension.shared.Utils.awaitBackgroundTasksForTests();
+        ShadowLooper.idleMainLooper();
+        assertTrue(export.isEnabled());
+        capture(prefix + "state-report-copied");
     }
 
     @Test public void fileNameExampleUsesTheSameFormatterAndCancelKeepsTheSavedTemplate() {
@@ -1311,9 +1537,7 @@ public class SettingsNavigationTest {
         canvas.drawColor(0x99000000);
         canvas.translate((780 - content.getWidth()) / 2f, (1688 - content.getHeight()) / 2f);
         content.draw(canvas);
-        try (FileOutputStream out = new FileOutputStream(new File("build/reports/settings-design", name + ".png"))) {
-            assertTrue(image.compress(Bitmap.CompressFormat.PNG, 100, out));
-        }
+        writeCapture(image, name);
         image.recycle();
     }
 
@@ -1324,10 +1548,20 @@ public class SettingsNavigationTest {
         layout(root);
         Bitmap image = Bitmap.createBitmap(780, 1688, Bitmap.Config.ARGB_8888);
         root.draw(new Canvas(image));
-        try (FileOutputStream out = new FileOutputStream(new File(folder, name + ".png"))) {
-            assertTrue(image.compress(Bitmap.CompressFormat.PNG, 100, out));
-        }
+        writeCapture(image, name);
         image.recycle();
+    }
+
+    private static void writeCapture(Bitmap image, String name) throws Exception {
+        File folder = new File("build/reports/settings-design");
+        File sdk = new File(folder, "sdk-" + android.os.Build.VERSION.SDK_INT);
+        assertTrue(sdk.isDirectory() || sdk.mkdirs());
+        // The flat names remain convenient for documentation. Each SDK also keeps its own proof.
+        for (File file : new File[]{new File(folder, name + ".png"), new File(sdk, name + ".png")}) {
+            try (FileOutputStream out = new FileOutputStream(file)) {
+                assertTrue(image.compress(Bitmap.CompressFormat.PNG, 100, out));
+            }
+        }
     }
 
     private static void layout(View root) {
@@ -1393,10 +1627,14 @@ public class SettingsNavigationTest {
     }
 
     private static void installSelf(Signature certificate) {
+        install(RuntimeEnvironment.getApplication().getPackageName(), certificate);
+    }
+
+    private static void install(String packageName, Signature certificate) {
         Context context = RuntimeEnvironment.getApplication();
         ShadowPackageManager packages = shadowOf(context.getPackageManager());
         PackageInfo info = new PackageInfo();
-        info.packageName = context.getPackageName();
+        info.packageName = packageName;
         ApplicationInfo app = new ApplicationInfo();
         app.packageName = info.packageName;
         app.uid = Process.myUid();

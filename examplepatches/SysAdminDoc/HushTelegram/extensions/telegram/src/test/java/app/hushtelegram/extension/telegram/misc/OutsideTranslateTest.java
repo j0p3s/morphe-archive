@@ -13,11 +13,13 @@ import app.hushtelegram.extension.shared.settings.PauseForTests;
 import app.hushtelegram.extension.shared.settings.SettingReadsForTests;
 import app.hushtelegram.extension.telegram.settings.FamilyNames;
 import app.hushtelegram.extension.telegram.settings.Settings;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.After;
 import org.junit.Before;
@@ -26,10 +28,12 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.Implementation;
+import org.robolectric.annotation.Implements;
 import org.robolectric.shadows.ShadowLooper;
 
 @RunWith(RobolectricTestRunner.class)
-@Config(sdk = 30)
+@Config(sdk = 30, shadows = OutsideTranslateTest.HeaderHost.class)
 public class OutsideTranslateTest {
     @Rule public final SettingsContextRule settingsContext = new SettingsContextRule();
 
@@ -71,6 +75,7 @@ public class OutsideTranslateTest {
         Settings.OUTSIDE_TRANSLATE.resetToDefault();
         HookStatus.clear();
         OutsideTranslate.resetForTests();
+        HeaderHost.refreshed = 0;
         app.hushtelegram.extension.shared.Utils.getContext().getSharedPreferences("hushtelegram_outside_translate", 0).edit().clear().commit();
     }
 
@@ -81,6 +86,7 @@ public class OutsideTranslateTest {
         HookStatus.clear();
         if (originalFetcher != null) OutsideTranslate.fetcher = originalFetcher;
         if (originalExecutor != null) OutsideTranslate.executor = originalExecutor;
+        OutsideTranslate.clock = System::currentTimeMillis;
     }
 
     @Test public void offByDefaultChangesNothingAndSendsNothing() {
@@ -104,6 +110,7 @@ public class OutsideTranslateTest {
         assertTrue(OutsideTranslate.showMessage(message, message));
         assertEquals(1, message.applied);
         assertTrue(message.shown.startsWith("Hello, world\n\n"));
+        assertTrue(message.shown.endsWith("(Translated. Open the message menu for the original.)"));
         // A message already showing it isn't laid out again, and its answer still skips Telegram's own check.
         assertTrue(OutsideTranslate.showMessage(message, message));
         assertEquals(1, message.applied);
@@ -156,6 +163,34 @@ public class OutsideTranslateTest {
         assertEquals(1, fetches.get());
         assertEquals(0, message.applied);
         assertEquals(0, message.refreshed);
+    }
+
+    @Test public void aFailureWhoseWaitIsOverIsForgottenWhenTheNextOneLands() {
+        long[] now = {1_000_000L};
+        OutsideTranslate.clock = () -> now[0];
+        Settings.OUTSIDE_TRANSLATE.save(true);
+        OutsideTranslate.toggleChat(10);
+        OutsideTranslate.fetcher = (target, text) -> {
+            fetches.incrementAndGet();
+            throw new java.io.IOException("offline");
+        };
+        Fake first = new Fake();
+        OutsideTranslate.showMessage(first, first);
+        now[0] += 59_999L;
+        Fake second = new Fake();
+        second.id = 2;
+        second.original = "Пока, мир";
+        OutsideTranslate.showMessage(second, second);
+        assertEquals("both still wait", 2, OutsideTranslate.failuresForTests());
+        now[0] += 1L;
+        Fake third = new Fake();
+        third.id = 3;
+        third.original = "Доброе утро";
+        OutsideTranslate.showMessage(third, third);
+        assertEquals("the first one's minute is up, so only the newer two are kept", 2, OutsideTranslate.failuresForTests());
+        // The forgotten text is asked again, as it would have been anyway.
+        OutsideTranslate.showMessage(first, first);
+        assertEquals(4, fetches.get());
     }
 
     @Test public void aMessageThatIsNotEligibleIsNeverSent() {
@@ -329,6 +364,87 @@ public class OutsideTranslateTest {
         assertFalse(OutsideTranslate.headerClick(new Object(), OutsideTranslate.HEADER_ITEM + 1));
     }
 
+    @Test public void theChatMenuLabelFollowsSavedStateWithoutAddingDuplicates() {
+        Settings.OUTSIDE_TRANSLATE.save(true);
+        OutsideTranslate.toggleChat(42);
+        OutsideTranslate.resetForTests();
+        Chat chat = new Chat(42);
+        OutsideTranslate.headerMenu(chat);
+        OutsideTranslate.headerMenu(chat);
+        assertEquals(1, chat.items.size());
+        HeaderItem item = chat.items.get(0);
+        assertEquals("Stop translating this chat", item.text);
+        assertEquals(OutsideTranslate.HEADER_ITEM, item.id);
+        OutsideTranslate.toggleChat(42);
+        OutsideTranslate.headerMenu(chat);
+        assertEquals("Translate this chat", item.text);
+        assertEquals(1, chat.items.size());
+        assertEquals(0, fetches.get());
+    }
+
+    @Test public void clickingTheChatActionUpdatesItsLabelAndRefreshesMessages() {
+        Settings.OUTSIDE_TRANSLATE.save(true);
+        Chat chat = new Chat(42);
+        OutsideTranslate.headerMenu(chat);
+        assertEquals("Translate this chat", chat.items.get(0).text);
+        assertTrue(OutsideTranslate.headerClick(chat, OutsideTranslate.HEADER_ITEM));
+        assertTrue(OutsideTranslate.chatOn(42));
+        assertEquals("Stop translating this chat", chat.items.get(0).text);
+        assertTrue(OutsideTranslate.headerClick(chat, OutsideTranslate.HEADER_ITEM));
+        assertFalse(OutsideTranslate.chatOn(42));
+        assertEquals("Translate this chat", chat.items.get(0).text);
+        assertEquals(1, chat.items.size());
+        assertEquals(2, HeaderHost.refreshed);
+        assertEquals(0, fetches.get());
+    }
+
+    @Test public void aMissingNativeItemAndADisabledSwitchDoNotAddChatActions() {
+        Chat chat = new Chat(42);
+        OutsideTranslate.headerMenu(chat);
+        assertTrue(chat.items.isEmpty());
+        Settings.OUTSIDE_TRANSLATE.save(true);
+        chat.hasTranslateItem = false;
+        OutsideTranslate.headerMenu(chat);
+        assertTrue(chat.items.isEmpty());
+        assertEquals(0, fetches.get());
+    }
+
+    @Test public void nativeLabelFailureDoesNotInterruptAToggleAndFailedInsertionCanRetry() {
+        Settings.OUTSIDE_TRANSLATE.save(true);
+        Chat chat = new Chat(42);
+        chat.failAdd = true;
+        OutsideTranslate.headerMenu(chat);
+        assertTrue(chat.items.isEmpty());
+        chat.failAdd = false;
+        OutsideTranslate.headerMenu(chat);
+        assertEquals(1, chat.items.size());
+        chat.items.get(0).failText = true;
+        assertTrue(OutsideTranslate.headerClick(chat, OutsideTranslate.HEADER_ITEM));
+        assertTrue(OutsideTranslate.chatOn(42));
+        assertEquals(1, HeaderHost.refreshed);
+        chat.items.get(0).failText = false;
+        OutsideTranslate.headerMenu(chat);
+        assertEquals("Stop translating this chat", chat.items.get(0).text);
+        assertEquals(1, chat.items.size());
+        assertEquals(0, fetches.get());
+    }
+
+    @Test public void rememberingANativeItemCannotKeepItsOwningChatAlive() throws Exception {
+        Settings.OUTSIDE_TRANSLATE.save(true);
+        Chat chat = new Chat(42);
+        OutsideTranslate.headerMenu(chat);
+        java.lang.reflect.Field field = OutsideTranslate.class.getDeclaredField("HEADERS");
+        field.setAccessible(true);
+        Object remembered = ((Map<?, ?>) field.get(null)).get(chat);
+        assertTrue("The native item owns its chat and must only be referenced weakly", remembered instanceof WeakReference);
+        assertSame(chat, ((HeaderItem) ((WeakReference<?>) remembered).get()).owner);
+        ((WeakReference<?>) remembered).clear();
+        OutsideTranslate.headerMenu(chat);
+        assertTrue(OutsideTranslate.headerClick(chat, OutsideTranslate.HEADER_ITEM));
+        assertEquals(1, chat.items.size());
+        assertEquals(1, HeaderHost.refreshed);
+    }
+
     @Test public void theChatsThatAreOnAreRememberedOnThePhone() {
         assertTrue(OutsideTranslate.toggleChat(42));
         OutsideTranslate.resetForTests();
@@ -392,5 +508,42 @@ public class OutsideTranslateTest {
 
     @Test public void theTargetIsTheAppLanguageOrThePhones() {
         assertFalse(OutsideTranslate.target().isEmpty());
+    }
+
+    private static final class Chat {
+        final long dialog;
+        final List<HeaderItem> items = new ArrayList<>();
+        boolean hasTranslateItem = true;
+        boolean failAdd;
+        Chat(long dialog) { this.dialog = dialog; }
+    }
+
+    private static final class HeaderItem {
+        final Chat owner;
+        final int id;
+        String text;
+        boolean failText;
+        HeaderItem(Chat owner, int id, String text) { this.owner = owner; this.id = id; this.text = text; }
+    }
+
+    @Implements(value = OutsideTranslate.class, isInAndroidSdk = false)
+    public static class HeaderHost {
+        static int refreshed;
+        @Implementation protected static boolean hasTranslateItem(Object chat) { return ((Chat) chat).hasTranslateItem; }
+        @Implementation protected static long chatDialog(Object chat) { return ((Chat) chat).dialog; }
+        @Implementation protected static Object chatOf(Object delegate) { return delegate; }
+        @Implementation protected static Object addHeaderItem(Object chat, int id, int icon, String text) {
+            Chat owner = (Chat) chat;
+            if (owner.failAdd) throw new IllegalStateException("native menu unavailable");
+            HeaderItem item = new HeaderItem(owner, id, text);
+            owner.items.add(item);
+            return item;
+        }
+        @Implementation protected static void setHeaderText(Object item, String text) {
+            HeaderItem nativeItem = (HeaderItem) item;
+            if (nativeItem.failText) throw new IllegalStateException("native label unavailable");
+            nativeItem.text = text;
+        }
+        @Implementation protected static void notifyDialog(long dialog) { refreshed++; }
     }
 }

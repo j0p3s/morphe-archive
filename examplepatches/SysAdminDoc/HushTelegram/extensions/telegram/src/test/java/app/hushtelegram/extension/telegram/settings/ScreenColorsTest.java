@@ -135,11 +135,11 @@ public class ScreenColorsTest {
     @Test
     public void theBlackPagesRatios() {
         ScreenColors page = ScreenColors.DEFAULT;
-        assertEquals(19.24, contrast(page.title, page.background), 0.01);
-        assertEquals(9.50, contrast(page.summary, page.background), 0.01);
-        assertEquals(8.58, contrast(page.heading, page.background), 0.01);
-        assertEquals(4.85, contrast(page.onAccent, page.accent), 0.01);
-        assertEquals(3.34, contrast(page.offThumb(), page.switchOff), 0.01);
+        assertEquals(19.22, contrast(page.title, page.background), 0.01);
+        assertEquals(10.20, contrast(page.summary, page.background), 0.01);
+        assertEquals(12.49, contrast(page.heading, page.background), 0.01);
+        assertEquals(10.46, contrast(page.onAccent, page.accent), 0.01);
+        assertEquals(4.76, contrast(page.offThumb(), page.switchOff), 0.01);
     }
 
     /**
@@ -189,14 +189,14 @@ public class ScreenColorsTest {
                 int drawn = title.getCurrentTextColor();
                 int enabledColor = drawn | 0xFF000000;
                 assertTrue("\"" + title.getText() + "\" is " + Integer.toHexString(drawn),
-                        enabledColor == colors.title || enabledColor == colors.heading);
-                assertEquals(title.getText().toString(),
-                        title.isEnabled() || !title.getTextColors().isStateful() ? 255 : 0x61, Color.alpha(drawn));
+                        enabledColor == colors.title || enabledColor == colors.heading
+                                || enabledColor == colors.summary || enabledColor == ScreenColors.DISABLED_TEXT);
+                assertEquals(title.getText().toString(), 255, Color.alpha(drawn));
                 assertTrue(contrast(enabledColor, colors.background) >= TEXT);
                 titles++;
                 TextView summary = row.findViewById(android.R.id.summary);
                 if (summary != null && summary.getVisibility() == View.VISIBLE) {
-                    int expected = summary.isEnabled() ? colors.summary : (colors.summary & 0x00FFFFFF) | 0x61000000;
+                    int expected = summary.isEnabled() ? colors.summary : ScreenColors.DISABLED_TEXT;
                     assertEquals(expected, summary.getCurrentTextColor());
                 }
                 View widget = row.findViewById(android.R.id.switch_widget);
@@ -273,7 +273,7 @@ public class ScreenColorsTest {
      * end padding on the icon itself and leaves out the -4dp start margin preference_material gives
      * the icon's frame, which it nests in a line of its own. On an S25 the padding squeezed the
      * glyph to a third of its box and the text started 11px right of its neighbors'. Painted, both
-     * shapes draw a full 24dp icon inside its line and start their text at the same place.
+     * shapes draw a full 24dp glyph in a 40dp tile and start their text at the same place.
      */
     @Test
     public void samsungsLargeTextSwitchRowKeepsItsIconAndTextEdge() {
@@ -323,9 +323,10 @@ public class ScreenColorsTest {
             row.layout(0, 0, 1080, row.getMeasuredHeight());
 
             String which = samsungLarge ? "the large-text row" : "the standard row";
-            assertEquals(which + " pads its icon", 0, icon.getPaddingStart() + icon.getPaddingEnd()
+            assertEquals(which + " pads its icon tile", 32 * dp, icon.getPaddingStart() + icon.getPaddingEnd()
                     + icon.getPaddingTop() + icon.getPaddingBottom());
-            assertEquals(which + "'s icon box", 24 * dp, icon.getWidth());
+            assertEquals(which + "'s icon tile", 40 * dp, icon.getWidth());
+            assertEquals(which + "'s glyph", 24 * dp, icon.getWidth() - icon.getPaddingLeft() - icon.getPaddingRight());
             assertTrue(which + " moves its icon past the edge of the line that clips it", frame.getLeft() >= 0);
             int x = 0;
             for (View at = title; at != row; at = (View) at.getParent()) x += at.getLeft();

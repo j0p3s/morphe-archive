@@ -1,3 +1,66 @@
+## 1.8.5 (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* **nicoid:** Initialize an unspecified upload-date range to today's date instead of reusing an old saved range.
+* **nicoid:** Keep video-duration text fields, slider handles and unlimited-range controls in sync.
+* **nicoid:** Preserve existing cached comments when replacement fails and recover interrupted updates.
+* **nicoid:** Correct transfer-size estimates for HLS segments with implicit byte-range offsets.
+* **nicoid:** Handle malformed local playlist data without crashing or overwriting the stored snapshot.
+
+### 🔧 Improvements
+
+* **nicoid:** Limit cache-file lookups to the relevant video folder, reuse metadata and refresh it after writes.
+* **nicoid:** Keep playlist lists and scroll positions during selection, reuse video rows and save changes in the background.
+* **nicoid:** Reduce repeated thumbnail-cache scans while retaining expiry and storage limits.
+* **nicoid:** Verify implementation ownership and packaged helper behavior to prevent source changes from being masked by older overrides.
+
+## 1.8.4 (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* **nicoid:** Remove the obsolete ad-removal purchase option from settings and keep its purchase functionality disabled.
+* **nicoid:** Restore patch version information when the settings entry is missing.
+* **nicoid:** Reject fractional, incorrectly typed and overflowing numeric values when importing settings.
+* **nicoid:** Recover cached comments from the legacy file when the compressed copy is unreadable.
+* **nicoid:** Stop additional comment-history requests after the player closes or the video changes, and avoid retaining unused player instances.
+
+### 🔧 Improvements
+
+* **nicoid:** Avoid rewriting unchanged cache-folder settings and repeatedly compiling cache filename patterns.
+* **nicoid:** Remove duplicate legacy comment files without recompressing an existing valid copy.
+* **nicoid:** Reuse parsed search conditions and remove unused search-dialog adapter initialization.
+* **nicoid:** Ensure updated helper implementations are included in the patch and expand regression checks for settings, storage and playback integration.
+
+## 1.8.3 (2026-10-13)
+
+### ✨ New Features
+
+* **nicoid:** Add settings export and import for backups.
+* **nicoid:** Add configurable search ranges for upload dates and video duration, with date pickers, duration sliders and second-precision input.
+* **nicoid:** Add optional double-tap seeking during popup playback, using the normal playback seek interval. Show a dedicated close button when enabled. Disabled by default.
+
+### 🐛 Bug Fixes
+
+* **nicoid:** Fix comment posting for official-channel videos by selecting the designated posting thread and correct watch identity. ([#44](https://github.com/chikuwadon/nicoid-re-patches/issues/44))
+* **nicoid:** Fix crashes when opening the cache list or downloading cached videos, and prompt for a storage folder when none is selected. ([#49](https://github.com/chikuwadon/nicoid-re-patches/issues/49))
+* **nicoid:** Restore cache playback, reuse completed downloads and allow normal pause and resume without starting another download. ([#53](https://github.com/chikuwadon/nicoid-re-patches/issues/53))
+* **nicoid:** Fix incorrect row removal and crashes when unfollowing users, and enable long-press unfollowing for official channels. ([#60](https://github.com/chikuwadon/nicoid-re-patches/issues/60))
+* **nicoid:** Preserve full video details when reopening the Shorts information popup. ([#61](https://github.com/chikuwadon/nicoid-re-patches/issues/61))
+* **nicoid:** Restore uploader names in account watch history.
+* **nicoid:** Fix upload-date and video-duration filters not being applied to search results.
+* **nicoid:** Restore formatted upload dates, uploader names and statistic icons in the cache list.
+* **nicoid:** Fix clipped search-range labels and inconsistent dark-theme colors in search and cache-copy dialogs.
+
+### 🔧 Improvements
+
+* **nicoid:** Require an explicitly selected folder for video caches instead of using app-private storage.
+* **nicoid:** Set upload-date presets relative to today: today only, one week ago, one month ago or one year ago through today.
+* **nicoid:** Compress cached comments and remove orphan comment files to reduce unnecessary storage use.
+* **nicoid:** Mark cache entries without completed video data as incomplete, and preserve statistic icons during progress updates.
+* **nicoid:** Refine search buttons, popup close-button sizing and play/pause icon outlines.
+* **nicoid:** Remove the experimental cache acceleration feature.
+
 ## 1.8.2 (2026-10-11)
 
 ### ✨ New Features
@@ -180,7 +243,7 @@
 
 ### 🐛 Bug Fixes
 
-* **nicoid:** Restore playback controls in landscape tablet mode. (#26)
+* **nicoid:** Restore playback controls in landscape tablet mode. ([#26](https://github.com/chikuwadon/nicoid-re-patches/issues/26))
 
 ### 🔧 Improvements
 

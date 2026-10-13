@@ -112,9 +112,6 @@ class FreeRegisterProvider internal constructor(
         method.findFreeRegisters(index, numberOfFreeRegistersNeeded, registersToExclude)
     )
 
-    private val originallyExcludedRegisters = registersToExclude
-    private val allocatedFreeRegisters = mutableListOf<Int>()
-
     /**
      * Returns a free register and removes it from the available list.
      *
@@ -125,9 +122,7 @@ class FreeRegisterProvider internal constructor(
         if (freeRegisters.isEmpty()) {
             throw IllegalStateException("No free registers available")
         }
-        val register = freeRegisters.removeFirst()
-        allocatedFreeRegisters.add(register)
-        return register
+        return freeRegisters.removeFirst()
     }
 
     /**
@@ -143,38 +138,6 @@ class FreeRegisterProvider internal constructor(
         }
         return register
     }
-
-    /**
-     * Returns all registers that have been allocated via [getFreeRegister].
-     * This does not include the originally excluded registers.
-     *
-     * @return List of registers that have been allocated, in allocation order
-     */
-    fun getAllocatedFreeRegisters(): List<Int> = allocatedFreeRegisters.toList()
-
-    /**
-     * Returns all registers that are considered "in use" or unsafe to use. This includes the
-     * excluded registers originally passed in, all registers that are unsuitable to use
-     * (registers are read from by the original code), and all free registers previously provided
-     * by this class using [getFreeRegister].
-     *
-     * @return List of all registers that are unsafe to use at this time.
-     */
-    fun getUsedAndUnAvailableRegisters(): List<Int> {
-        val allRegisters = 0 until method.implementation!!.registerCount
-        return (allocatedFreeRegisters + originallyExcludedRegisters + (allRegisters - freeRegisters.toSet()))
-            .distinct()
-    }
-
-    /**
-     * @return The number of free registers still available.
-     */
-    fun availableCount(): Int = freeRegisters.size
-
-    /**
-     * Checks if there are any free registers available.
-     */
-    fun hasFreeRegisters(): Boolean = freeRegisters.isNotEmpty()
 
     internal companion object {
         val conditionalBranchOpcodes: EnumSet<Opcode> = EnumSet.of(
@@ -455,8 +418,8 @@ private fun Method.findFreeRegistersInternal(
             // the same shape as a conditional branch with more than two arms: a register is free
             // at the switch when it is free down every arm and down the fall-through, so the
             // answer is the intersection of all of them. R8 turns a chain of string comparisons
-            // into one of these, so a method that is an if-else chain in one Facebook build is a
-            // packed switch in the next and nothing about the patch has changed.
+            // into one of these, so a method that is an if-else chain in one build is a packed
+            // switch in the next and nothing about the patch has changed.
             val paths = switchPathIndices(instruction, i, offsetArray)
             if (paths == null) {
                 // A payload this could not read. Fall back to the old leaf-node answer rather

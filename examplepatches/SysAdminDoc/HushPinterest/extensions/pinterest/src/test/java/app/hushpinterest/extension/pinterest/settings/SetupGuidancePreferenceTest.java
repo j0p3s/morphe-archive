@@ -16,6 +16,7 @@ import android.content.pm.verify.domain.DomainVerificationManager;
 import android.content.pm.verify.domain.DomainVerificationUserState;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Rect;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Process;
@@ -92,7 +93,9 @@ public class SetupGuidancePreferenceTest {
         RuntimeEnvironment.setFontScale(1f);
     }
 
-    @Test public void guidanceIsOptionalAndOpeningOrDismissingItChangesNoSavedChoices() throws Exception {
+    @Test
+    @Config(qualifiers = "w390dp-h844dp-xhdpi")
+    public void guidanceIsOptionalAndOpeningOrDismissingItChangesNoSavedChoices() throws Exception {
         show();
         Settings.HIDE_ADS.save(!Settings.HIDE_ADS.defaultValue);
         Map<String, ?> before = new LinkedHashMap<>(Setting.preferences.preferences.getAll());
@@ -123,9 +126,11 @@ public class SetupGuidancePreferenceTest {
         assertTrue(copy.contains("Changing a switch doesn't add or remove a patch."));
         assertTrue(copy.contains("anything set while patching stays in the app"));
         assertTrue(copy.contains("email on your Pinterest account and a Pinterest password"));
-        assertTrue(copy.contains("Google sign-in isn't supported, because this patched app is signed with a different key"));
+        assertTrue(copy.contains("Google sign-in doesn't work with stock Google Play services, because this patched app is signed with a different key"));
         assertTrue(copy.contains("Pinterest no longer offers Facebook login"));
-        assertTrue(copy.contains("Push notifications haven't been tested"));
+        // The guide agrees with the Notifications page: the patch is on by default and signs the app up.
+        assertTrue(copy.contains("The Fix push notifications patch, on by default, lets this app sign up for push notifications."));
+        assertFalse(copy.contains("haven't been tested"));
         assertTrue(copy.contains("choose Forgot your password on Pinterest's login page"));
         assertTrue(copy.contains("email already linked to that account"));
         assertTrue(copy.contains("reset link sent to your email to set a Pinterest password"));
@@ -224,7 +229,7 @@ public class SetupGuidancePreferenceTest {
         GuideActivity.refused.add(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
         button(guide, "Open link settings").performClick();
         ShadowLooper.idleMainLooper();
-        assertEquals("Android's settings for this app didn't open. Open App info from Pinterest's icon, then Open by default.", ShadowToast.getTextOfLatestToast());
+        assertEquals("Couldn't show Open by default. It's in Pinterest's App info.", ShadowToast.getTextOfLatestToast());
         assertTrue(guide.isShowing());
         assertNull(shadowOf(controller.get()).getNextStartedActivity());
     }
@@ -314,10 +319,18 @@ public class SetupGuidancePreferenceTest {
         scroll.setSmoothScrollingEnabled(false);
         scroll.fullScroll(View.FOCUS_DOWN);
         Button last = button(guide, "Pinterest data export help");
-        assertTrue(last.getBottom() <= scroll.getScrollY() + scroll.getHeight());
+        Rect lastBounds = new Rect();
+        last.getDrawingRect(lastBounds);
+        scroll.offsetDescendantRectToMyCoords(last, lastBounds);
+        assertTrue("reaching the last action didn't scroll the guide", scroll.getScrollY() > 0);
+        assertTrue("the last action starts above the visible guide", lastBounds.top >= scroll.getScrollY() + scroll.getPaddingTop());
+        assertTrue("the last action extends below the visible guide",
+                lastBounds.bottom <= scroll.getScrollY() + scroll.getHeight() - scroll.getPaddingBottom());
         last.performClick();
         assertEquals("https://help.pinterest.com/en/article/download-your-pinterest-data", GuideActivity.attempts.get(0).getDataString());
         assertTrue(guide.getButton(AlertDialog.BUTTON_NEGATIVE).isEnabled());
+        assertEquals("the guide only shows, so it closes", L10n.t(guide.getContext(), "Close"),
+                guide.getButton(AlertDialog.BUTTON_NEGATIVE).getText().toString());
         capture(guide, "setup-guide-large-rtl-api" + Build.VERSION.SDK_INT, true);
     }
 

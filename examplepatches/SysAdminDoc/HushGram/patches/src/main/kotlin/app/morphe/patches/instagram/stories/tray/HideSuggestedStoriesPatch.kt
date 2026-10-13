@@ -77,17 +77,19 @@ internal val SUGGESTED_REELS = listOf("SUGGESTED_USER", "SUGGESTED_USER_REEL", "
 
 /**
  * The reel types of the cards Instagram makes for the tray, which StoriesTray drops on their own
- * switches: a rewind, then memories, your week, the year in review, follow anniversaries and birthdays.
+ * switches: a rewind, then memories, your week, the year in review, follow anniversaries and
+ * birthdays, and the empty story state's cards of accounts to follow.
  */
 internal val MADE_REELS = listOf(
     "HIGHLIGHT_REWIND_REEL", "MEMORY_REEL", "MY_WEEK_REEL", "END_OF_YEAR", "FOLLOW_VERSARIES", "BIRTHDAY_HIGHLIGHTS",
+    "EMPTY_STORY_STATE_REEL",
 )
 
 @Suppress("unused")
 val hideSuggestedStoriesPatch = bytecodePatch(
     name = "Hide suggested stories",
     description = "Removes stories from accounts you don't follow from the row at the top of Home. More switches " +
-        "hide rewinds and memories, or the whole row. Starts off. Turn it on in HushGram settings > Stories.",
+        "hide rewinds and memories, or the whole row. Starts on. Turn it off in HushGram settings > Stories.",
 ) {
     category("Stories")
     dependsOn(settingsPatch, instagramExtensionPatch)
@@ -98,8 +100,10 @@ val hideSuggestedStoriesPatch = bytecodePatch(
         guardTray(findTrayRowBuild())
         guardTray(findFloatingTrayShow())
         val parse = findTrayItemParse()
+        val netegoCheck = findStoryNetegoCheck()
         hookTrayParser(parse, findTrayRemaining(parse.site))
         hideMusicCard()
+        hideStorySuggestions(netegoCheck)
         enableStatus("storiesTray")
     }
 }

@@ -1,0 +1,124 @@
+package com.example.util.simpletimetracker.feature_views;
+
+import android.content.Context;
+import android.content.res.ColorStateList;
+import android.content.res.TypedArray;
+import android.util.AttributeSet;
+import android.widget.FrameLayout;
+import androidx.appcompat.widget.AppCompatImageView;
+import androidx.appcompat.widget.AppCompatTextView;
+import androidx.core.view.ViewCompat;
+import com.example.util.simpletimetracker.feature_views.databinding.IconViewLayoutBinding;
+import com.example.util.simpletimetracker.feature_views.extension.ViewExtensionsKt;
+import com.example.util.simpletimetracker.feature_views.viewData.RecordTypeIcon;
+import kotlin.jvm.internal.DefaultConstructorMarker;
+import kotlin.jvm.internal.Intrinsics;
+
+/* JADX INFO: compiled from: IconView.kt */
+/* JADX INFO: loaded from: classes.dex */
+public final class IconView extends FrameLayout {
+    private final IconViewLayoutBinding binding;
+    private RecordTypeIcon itemIcon;
+    private float itemIconAlpha;
+    private int itemIconColor;
+
+    /* JADX WARN: 'this' call moved to the top of the method (can break code semantics) */
+    public IconView(Context context, AttributeSet attributeSet) {
+        this(context, attributeSet, 0, 4, null);
+        Intrinsics.checkNotNullParameter(context, "context");
+    }
+
+    public /* synthetic */ IconView(Context context, AttributeSet attributeSet, int i, int i2, DefaultConstructorMarker defaultConstructorMarker) {
+        this(context, (i2 & 2) != 0 ? null : attributeSet, (i2 & 4) != 0 ? 0 : i);
+    }
+
+    /* JADX WARN: 'super' call moved to the top of the method (can break code semantics) */
+    public IconView(Context context, AttributeSet attributeSet, int i) {
+        super(context, attributeSet, i);
+        Intrinsics.checkNotNullParameter(context, "context");
+        IconViewLayoutBinding iconViewLayoutBindingInflate = IconViewLayoutBinding.inflate(ViewExtensionsKt.getLayoutInflater(this), this);
+        Intrinsics.checkNotNullExpressionValue(iconViewLayoutBindingInflate, "inflate(...)");
+        this.binding = iconViewLayoutBindingInflate;
+        int[] IconView = R$styleable.IconView;
+        Intrinsics.checkNotNullExpressionValue(IconView, "IconView");
+        TypedArray typedArrayObtainStyledAttributes = context.obtainStyledAttributes(attributeSet, IconView, i, 0);
+        int i2 = R$styleable.IconView_itemIcon;
+        if (typedArrayObtainStyledAttributes.hasValue(i2)) {
+            setItemIcon(new RecordTypeIcon.Image(typedArrayObtainStyledAttributes.getResourceId(i2, R$drawable.unknown)));
+        }
+        int i3 = R$styleable.IconView_itemIconText;
+        if (typedArrayObtainStyledAttributes.hasValue(i3)) {
+            String string = typedArrayObtainStyledAttributes.getString(i3);
+            setItemIcon(new RecordTypeIcon.Text(string == null ? "" : string));
+        }
+        int i4 = R$styleable.IconView_itemIconColor;
+        if (typedArrayObtainStyledAttributes.hasValue(i4)) {
+            setItemIconColor(typedArrayObtainStyledAttributes.getColor(i4, -1));
+        }
+        int i5 = R$styleable.IconView_itemIconAlpha;
+        if (typedArrayObtainStyledAttributes.hasValue(i5)) {
+            setItemIconAlpha(typedArrayObtainStyledAttributes.getFloat(i5, 1.0f));
+        }
+        typedArrayObtainStyledAttributes.recycle();
+        this.itemIcon = new RecordTypeIcon.Image(0);
+        this.itemIconAlpha = 1.0f;
+    }
+
+    public final RecordTypeIcon getItemIcon() {
+        return this.itemIcon;
+    }
+
+    public final void setItemIcon(RecordTypeIcon value) {
+        Intrinsics.checkNotNullParameter(value, "value");
+        if (value instanceof RecordTypeIcon.Image) {
+            setImageIcon(((RecordTypeIcon.Image) value).getIconId());
+        } else if (value instanceof RecordTypeIcon.Text) {
+            setTextIcon(((RecordTypeIcon.Text) value).getText());
+        }
+        this.itemIcon = value;
+    }
+
+    public final int getItemIconColor() {
+        return this.itemIconColor;
+    }
+
+    public final void setItemIconColor(int i) {
+        ViewCompat.setBackgroundTintList(this.binding.ivIconViewImage, ColorStateList.valueOf(i));
+        this.binding.tvIconViewEmoji.setTextColor(i);
+        this.itemIconColor = i;
+    }
+
+    public final float getItemIconAlpha() {
+        return this.itemIconAlpha;
+    }
+
+    public final void setItemIconAlpha(float f) {
+        this.binding.ivIconViewImage.setAlpha(f);
+        this.binding.tvIconViewEmoji.setAlpha(f);
+        this.itemIconAlpha = f;
+    }
+
+    private final void setImageIcon(int i) {
+        IconViewLayoutBinding iconViewLayoutBinding = this.binding;
+        iconViewLayoutBinding.ivIconViewImage.setBackgroundResource(i);
+        iconViewLayoutBinding.ivIconViewImage.setTag(Integer.valueOf(i));
+        AppCompatImageView ivIconViewImage = iconViewLayoutBinding.ivIconViewImage;
+        Intrinsics.checkNotNullExpressionValue(ivIconViewImage, "ivIconViewImage");
+        ViewExtensionsKt.setVisible(ivIconViewImage, true);
+        AppCompatTextView tvIconViewEmoji = iconViewLayoutBinding.tvIconViewEmoji;
+        Intrinsics.checkNotNullExpressionValue(tvIconViewEmoji, "tvIconViewEmoji");
+        ViewExtensionsKt.setVisible(tvIconViewEmoji, false);
+    }
+
+    private final void setTextIcon(String str) {
+        IconViewLayoutBinding iconViewLayoutBinding = this.binding;
+        iconViewLayoutBinding.tvIconViewEmoji.setText(str);
+        AppCompatTextView tvIconViewEmoji = iconViewLayoutBinding.tvIconViewEmoji;
+        Intrinsics.checkNotNullExpressionValue(tvIconViewEmoji, "tvIconViewEmoji");
+        ViewExtensionsKt.setVisible(tvIconViewEmoji, true);
+        AppCompatImageView ivIconViewImage = iconViewLayoutBinding.ivIconViewImage;
+        Intrinsics.checkNotNullExpressionValue(ivIconViewImage, "ivIconViewImage");
+        ViewExtensionsKt.setVisible(ivIconViewImage, false);
+    }
+}
+

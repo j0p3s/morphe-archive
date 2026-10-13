@@ -48,6 +48,13 @@ sourceSets["test"].java.srcDir("../extensions/pillo-weight-import/src/main/java"
 sourceSets["test"].java.srcDir("../extensions/pillo-local-backup/src/main/java")
 sourceSets["test"].java.srcDir("../extensions/pillo-weight-summary/src/main/java")
 
+tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileTestKotlin") {
+    source(file("../extensions/nuvio-launcher-channels/src/main/java/software/santodan/extension/nuviolauncher/LauncherModels.kt"))
+    source(file("../extensions/nuvio-launcher-channels/src/main/java/software/santodan/extension/nuviolauncher/LauncherDates.kt"))
+    source(file("../extensions/nuvio-merged-progress/src/main/java/software/santodan/extension/nuviomerged/NuvioProviderRefresh.kt"))
+    source(file("../extensions/nuvio-merged-progress/src/main/java/software/santodan/extension/nuviomerged/NuvioSourceContinuation.java"))
+}
+
 // The Morphe patch runtime targets Java 11. Pin Java sources explicitly so
 // local builds remain reproducible even when Gradle runs on a newer JDK.
 tasks.withType<org.gradle.api.tasks.compile.JavaCompile>().configureEach {
@@ -63,6 +70,7 @@ tasks.withType<org.gradle.api.tasks.testing.Test>().configureEach {
 
 // Exercise the exact Android runtime accessor table against original app DEX files.
 tasks.named<org.gradle.api.tasks.compile.JavaCompile>("compileTestJava") {
+    source(file("../extensions/nuvio-merged-progress/src/main/java/software/santodan/extension/nuviomerged/NuvioSourceContinuation.java"))
     source(file("../extensions/nuvio-remaining-episodes/src/main/java/software/santodan/extension/nuvioremaining/NuvioBadgeComposition.java"))
     source(file("../extensions/nuvio-airing-series/src/main/java/software/santodan/extension/nuvioairing/NuvioBadgeComposition.java"))
     source(file("../extensions/nuvio-movie-release-dates/src/main/java/software/santodan/extension/nuviomovierelease/MovieReleaseDate.java"))
@@ -77,6 +85,61 @@ tasks.named<org.gradle.api.tasks.compile.JavaCompile>("compileTestJava") {
 }
 
 tasks {
+    register<JavaExec>("verifyNuvioLauncherUi") {
+        dependsOn("testClasses", ":extensions:nuvio-launcher-channels:compileReleaseKotlin")
+        classpath = sourceSets["test"].runtimeClasspath + files(
+            project(":extensions:nuvio-launcher-channels").layout.buildDirectory.dir("intermediates/built_in_kotlinc/release/compileReleaseKotlin/classes"))
+        mainClass.set("santodan.patches.VerifyNuvioLauncherUi")
+        args(file("${layout.buildDirectory.get()}/verification/launcher-ui").absolutePath)
+    }
+    register<JavaExec>("verifyNuvioLauncherDates") {
+        dependsOn("testClasses")
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("santodan.patches.VerifyNuvioLauncherDatesKt")
+    }
+    register<JavaExec>("verifyNuvioLauncherPublisher") {
+        dependsOn("testClasses", ":extensions:nuvio-launcher-channels:compileReleaseKotlin")
+        classpath = sourceSets["test"].runtimeClasspath + files(
+            project(":extensions:nuvio-launcher-channels").layout.buildDirectory.dir("intermediates/built_in_kotlinc/release/compileReleaseKotlin/classes"))
+        mainClass.set("santodan.patches.VerifyNuvioLauncherPublisher")
+        args(file("${layout.buildDirectory.get()}/verification/launcher-publisher").absolutePath)
+    }
+    register<JavaExec>("verifyNuvioLauncherBundle") {
+        dependsOn("testClasses", "buildAndroid")
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("santodan.patches.VerifyNuvioLauncherBundleKt")
+        maxHeapSize = "4g"
+        args(file("../../OriginalApps/NuvioTV-1.1.0-beta5.apk").absolutePath,
+            file("${layout.buildDirectory.get()}/libs/patches-${project.version}.mpp").absolutePath,
+            file("${layout.buildDirectory.get()}/verification/nuvio-launcher-bundle").absolutePath)
+    }
+    register<JavaExec>("verifyNuvioLauncherChannels") {
+        dependsOn("testClasses")
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("santodan.patches.VerifyNuvioLauncherChannelsKt")
+        args(file("../../.inspect-nuvio-beta4").absolutePath, file("../../.inspect-nuvio-beta5").absolutePath)
+    }
+    register<JavaExec>("verifyNuvioDateLabelStyleRuntime") {
+        dependsOn("testClasses")
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("santodan.patches.VerifyNuvioDateLabelStyleRuntime")
+        doFirst { file("${layout.buildDirectory.get()}/verification").mkdirs() }
+        args(file("../extensions/nuvio-settings-menu/src/main/java/software/santodan/extension/nuviomenu").absolutePath,
+            file("${layout.buildDirectory.get()}/verification").absolutePath)
+    }
+    register<JavaExec>("verifyNuvioRemainingSyncRuntime") {
+        dependsOn("testClasses")
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("santodan.patches.VerifyNuvioRemainingSyncRuntime")
+        doFirst { file("${layout.buildDirectory.get()}/verification").mkdirs() }
+        args(file("../extensions/nuvio-remaining-episodes/src/main/java/software/santodan/extension/nuvioremaining").absolutePath,
+            file("${layout.buildDirectory.get()}/verification").absolutePath)
+    }
+    register<JavaExec>("verifyNuvioProviderRefreshRuntime") {
+        dependsOn("testClasses")
+        classpath = sourceSets["test"].runtimeClasspath
+        mainClass.set("santodan.patches.VerifyNuvioProviderRefreshRuntimeKt")
+    }
     register<JavaExec>("verifyPilloWeightSummaryBundle") {
         dependsOn("testClasses", "buildAndroid")
         classpath = sourceSets["test"].runtimeClasspath

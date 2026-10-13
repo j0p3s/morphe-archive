@@ -14,11 +14,15 @@
 package app.morphe.patches.projectivy.misc.premium
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
+import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
+import app.morphe.patcher.extensions.InstructionExtensions.instructions
+import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.util.matchSingle
 import app.morphe.util.returnEarly
-import com.android.tools.smali.dexlib2.AccessFlags
+import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 
 @Suppress("unused")
 val unlockPremiumPatch = bytecodePatch(
@@ -28,17 +32,23 @@ val unlockPremiumPatch = bytecodePatch(
     compatibleWith(AppCompatibilities.PROJECTIVY)
 
     execute {
-        val methods = PtApplicationMarkerFingerprint.matchSingle().classDef.methods
+        PremiumCheckFingerprint.matchSingle().method.returnEarly(true)
 
-        methods.single {
-            AccessFlags.STATIC.isSet(it.accessFlags) &&
-                it.returnType == "Z" &&
-                it.parameterTypes.isEmpty()
-        }.returnEarly(true)
+        val trialStateSetter = TrialStateSetterFingerprint.matchSingle().method
+        if (trialStateSetter.parameterTypes.lastOrNull()?.toString() != "Z") {
+            throw PatchException("Trial state setter does not end in a boolean parameter")
+        }
+        trialStateSetter.addInstruction(0, "const/4 p1, 0x0")
 
-        // Force the billing state setter to mark premium as active.
-        methods.singleOrNull {
-            it.parameterTypes == listOf("Lcom/spocky/projengmenu/PTApplication;", "Z")
-        }?.addInstruction(0, "const/4 p1, 0x0")
+        if (classDefBy(ACCESSIBILITY_SERVICE_CLASS).staticFields.any { it.type == "B" }) {
+            val initializer = AccessibilityServiceByteInitFingerprint.matchSingle()
+            val method = initializer.method
+            if (method.instructions.count { it.opcode == Opcode.SPUT_BYTE } != 1) {
+                throw PatchException("Accessibility service initializer stores more than one byte field")
+            }
+            val index = initializer.instructionMatches.first().index
+            val register = method.getInstruction<OneRegisterInstruction>(index).registerA
+            method.addInstruction(index, "const/4 v$register, 0x0")
+        }
     }
 }

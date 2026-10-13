@@ -59,7 +59,12 @@ public final class SortByRatingsHelper {
 
     /** Meesho: rewrites a Moshi-bound response body (hooked in the Retrofit converter). */
     public static String processMeeshoResponse(String json) {
-        return MeeshoListing.process(json);
+        return MeeshoListing.process(MeeshoSortMenu.rewriteResponse(json));
+    }
+
+    /** Meesho: the app is writing its chosen SortOption into a request (hooked in the Moshi adapter). */
+    public static void meeshoSortWritten(Object sortOption) {
+        MeeshoSortMenu.onSortWritten(sortOption);
     }
 
     /**
@@ -74,6 +79,16 @@ public final class SortByRatingsHelper {
     /** Myntra: rewrites a response body before it is handed to React Native. */
     public static String processMyntraResponse(String json) {
         return MyntraListing.process(json);
+    }
+
+    /** Flipkart: the page URI of a page fetch the app is sending (hooked in addURIAndActionHeaders). */
+    public static void flipkartPageUri(String uri) {
+        FlipkartSortMenu.onPageUri(uri);
+    }
+
+    /** Myntra: the layout-engine page request the app is sending (hooked in LayoutEngineModule). */
+    public static void myntraPageRequest(Object request) {
+        MyntraSortMenu.onPageRequest(request);
     }
 
     /** Myntra: rewrites a raw response body (React Native blob responses). */
@@ -158,6 +173,8 @@ public final class SortByRatingsHelper {
      */
     public static String processFlipkartResponseJson(String json) {
         if (json == null || json.length() < 10) return json;
+        // Our entries in Flipkart's own Sort tab (independent of the floating buttons).
+        json = FlipkartSortMenu.rewriteResponse(json);
 
         // New ATLAS search/browse feed: products live in rows
         // (RESPONSE.slots[].widget.data.dlsData.{horizontalListData_0,gridData_0}.value),

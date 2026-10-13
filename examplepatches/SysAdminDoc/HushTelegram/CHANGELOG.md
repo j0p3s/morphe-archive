@@ -2,6 +2,52 @@
 
 Every HushTelegram release, newest first.
 
+## Unreleased
+
+Working version 0.0.17.
+
+* **Telegram:** All 15 settings pages now share blue-black cards and cyan controls on an AMOLED background. Editors and dialogs use the same restrained corners. Switch explanations keep their full width at larger text sizes.
+
+* **Telegram:** Closing settings also closes the diagnostic report chooser. Dialogs on wide displays reserve enough space for their actions at the actual dialog width.
+
+* **Tooling:** Build notes now name both the source and published catalog APKs required by the push checks.
+
+* **Tooling:** The README is a lot shorter now and sticks to installing and using HushTelegram, with the patch table in the order of the settings pages. The long version, with its version history and build check notes, is still in the repository history at commit 0cbd721.
+
+* **Telegram:** Moved to Telegram 13.0.2, telegram.org's build (version code 71759) and the official beta (71809). The beta added an audio recorder settings entry, and HushTelegram leaves it alone.
+
+* **Telegram:** The New Year look switch now says what the snow needs. Telegram only draws it while Background rotation is on under Power saving, and it leaves that off on most phones that aren't high end. Refs #14.
+
+* **Telegram:** When your UnifiedPush app is uninstalled or ends the sign-up itself, Telegram is told to ask Firebase for a token again, the same way turning the switch off does. Before, Telegram's servers could keep sending to an address nothing answered. A phone without Google services has no Firebase to fall back on, so pick another UnifiedPush app there.
+
+* **Telegram:** An API ID or hash pasted with a stray space or line break is trimmed, and two empty fields keep Telegram's own pair instead of stopping the patch.
+
+* **Telegram:** When translation keeps failing, for example offline, old failures are forgotten once their one-minute wait is over instead of piling up until the service changes.
+
+* **Telegram:** HushTelegram's startup hook goes in at each return's own label in Telegram's app start, so a branch that jumps straight to a return still runs it.
+
+* **Telegram:** Settings controls share visible focus outlines, readable disabled text and 48dp touch targets. Cards, switches and dialogs use the same corner scale. Dialog headings are exposed to accessibility services. Search updates its heading as you type and keeps the keyboard open when you clear it.
+
+* **Telegram:** Filter and translation editors keep labels visible and show errors beside the field that needs attention. Validation scrolls its explanation into view, without a second popup covering the form. Dialog actions stay visible at the largest text size. Translation fields share one style, the keyboard's Done action saves, and API keys are masked and stay out of saved view state. Failed sticker-size saves keep the picker open.
+
+* **Telegram:** Notifications show a compact local status with a button for the full details and Android's notification settings. Import previews name changed filter lists and show the old and new sticker size. Both backup actions explain when they're busy, and cleared logs offer Undo while recovery is available.
+
+* **Telegram:** Quick forward destinations wrap long names inside a scrollable dialog. Clipboard and message actions explain failures, and pending actions respect Pause. Whole-chat translation now changes its menu label when you switch it on or off. Refs #8.
+
+* **Tooling:** Refreshed all 15 settings screenshots from the patched app. Native checks cover the settings pages and editor recovery at 200% text in German, Portuguese and mirrored layouts. Shared dialogs were checked in both themes. The source-origin ledger includes the new form helper, and the README patch table matches the shipped descriptions.
+
+* **Tooling:** Resource patches no longer require XML parser features missing from Android. DTDs, XInclude and external entities are refused before any resource changes are written. Android parser checks cover ordinary UTF-8 and UTF-16 resources and confirm refusals make no file changes or network requests. Refs #6.
+
+* **Telegram:** Settings now mirror correctly in right-to-left languages, including Back and the preference list. Telegram's host layout settings stay unchanged.
+
+* **Tooling:** Native navigation checks stop when device lease ownership is lost. Recovery is tied to the original device and preserves settings that were absent before the check. Bounded main-thread callbacks keep the checks usable while the settings page animates. All 12 Android 9 and Android 16 cases passed, including cancelled Back gestures, keyboard dismissal, rotation, mirrored layouts and 200% text. Settings and permission grants were restored exactly.
+
+* **Tooling:** Added the native settings navigation runner and its host checks. Reopening Telegram's existing activity uses a bounded wait, and switch checks read the actual accessibility row. Settings snapshots accept device-specific provider names while keeping recovery limited to the required settings.
+
+* **Tooling:** Verified the original sign-in reporter's successful recovery with registered credentials. Delivery without another signed-in Telegram session still needs a separate check.
+
+* **Tooling:** Refreshed the settings screenshots and added a visual reference for every page. Checked navigation and search on a patched build, including Pause and Resume from a keyboard.
+
 ## 0.0.13 (2026-10-11)
 
 The seventh release, with 68 patches for telegram.org's Telegram 13.0.1 and the official Telegram beta 13.0.1.

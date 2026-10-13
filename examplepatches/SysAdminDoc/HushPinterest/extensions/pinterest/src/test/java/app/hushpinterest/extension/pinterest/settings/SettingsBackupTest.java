@@ -235,10 +235,12 @@ public class SettingsBackupTest {
                 Collections.emptyList(), notSwitches);
         assertEquals(Arrays.asList(Settings.HIDE_ADS, Settings.HIDE_AI_PINS,
                         Settings.HIDE_SHOPPING, Settings.DISABLE_ANALYTICS, Settings.STRIP_LINK_TRACKING, Settings.PLAIN_PIN_LINKS,
-                        Settings.HIDE_ADVERTISING_ID, Settings.DOWNLOAD_PINS, Settings.SAVE_IN_PINTEREST_FOLDER, Settings.DOWNLOAD_BOARD, Settings.LONG_PRESS_DOWNLOAD,
+                        Settings.HIDE_ADVERTISING_ID, Settings.DOWNLOAD_PINS, Settings.SAVE_IN_PINTEREST_FOLDER,
+                        Settings.DOWNLOAD_UNMETERED_ONLY, Settings.DOWNLOAD_NO_ROAMING, Settings.DOWNLOAD_BOARD, Settings.LONG_PRESS_DOWNLOAD,
                         Settings.EXTERNAL_BROWSER, Settings.SYSTEM_SHARE,
                         Settings.HIDE_SCREENSHOT_SHARE, Settings.HIDE_SEARCH_HISTORY,
                         Settings.HIDE_NAV_CREATE, Settings.HIDE_NAV_NOTIFICATIONS, Settings.HIDE_NAV_SEARCH, Settings.HIDE_HEADER_BUTTONS,
+                        Settings.BLACK_BOTTOM_BAR, Settings.HIDE_CLOSEUP_BACK, Settings.HIDE_CLOSEUP_LENS,
                         Settings.HIDE_PIN_MENU_COLLAGE, Settings.HIDE_PIN_MENU_VISUAL_SEARCH,
                         Settings.HIDE_PIN_MENU_PIN_BOOST, Settings.HIDE_COMMENTS, Settings.HIDE_TOPIC_SUGGESTIONS,
                         Settings.QUIET_EMAIL_REMINDER, Settings.HIDE_SURVEY_PROMPTS, Settings.HIDE_SAVE_TOASTS, Settings.ORIGINAL_IMAGES,
@@ -468,8 +470,7 @@ public class SettingsBackupTest {
                 shownPreview().getButton(AlertDialog.BUTTON_POSITIVE).performClick();
                 settle();
             }
-            assertEquals("Couldn't import the settings, and couldn't put back the ones you had. "
-                    + "Check the switches on this screen.", ShadowToast.getTextOfLatestToast());
+            assertEquals("Couldn't import or put back your old switches. Check them here.", ShadowToast.getTextOfLatestToast());
             assertEquals(false, store().get(Settings.HIDE_ADS.key));
             assertFalse(Settings.HIDE_ADS.savedValue());
             assertFalse("the screen shows a switch the store doesn't hold", row.isChecked());
@@ -1351,7 +1352,7 @@ public class SettingsBackupTest {
                 ShadowToast.reset();
                 click(page.findPreference(row));
                 ShadowLooper.idleMainLooper();
-                assertEquals(row, "This phone has no file picker, so there's no way to choose a file here.",
+                assertEquals(row, "This phone has no file picker, so a file can't be chosen.",
                         ShadowToast.getTextOfLatestToast());
                 assertTrue(row + " stayed out of reach", page.findPreference(row).isEnabled());
             }
@@ -1407,7 +1408,7 @@ public class SettingsBackupTest {
             AlertDialog preview = shownPreview();
             assertEquals("Your switches already match that file, so nothing will change.",
                     String.valueOf(shadowOf(preview).getMessage()));
-            assertEquals("OK", String.valueOf(preview.getButton(AlertDialog.BUTTON_POSITIVE).getText()));
+            assertEquals("Close", String.valueOf(preview.getButton(AlertDialog.BUTTON_POSITIVE).getText()));
             assertFalse(preview.getButton(AlertDialog.BUTTON_NEGATIVE).isShown());
             preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
             settle();
@@ -1689,15 +1690,12 @@ public class SettingsBackupTest {
 
     // ---- The app holding the file ------------------------------------------------------------
 
-    private static final String EXPORT_TIMEOUT = "The app holding the settings file is taking too long, so HushPinterest "
-            + "stopped waiting. That app may still finish saving it, so check the file before you rely on it.";
-    private static final String IMPORT_TIMEOUT =
-            "The app holding that file is taking too long, so HushPinterest stopped waiting. Nothing was changed.";
-    private static final String STALLED = "The app holding the last settings file still hasn't answered. Try again later.";
+    private static final String EXPORT_TIMEOUT = "The file's app is too slow. Check the file before you use it.";
+    private static final String IMPORT_TIMEOUT = "The file's app is too slow. Nothing was changed.";
+    private static final String STALLED = "The app with the last settings file hasn't answered. Try later.";
     private static final String MISMATCH =
-            "The settings file was saved, but it doesn't read back as what was written. Save it again as a new file.";
-    private static final String UNCHECKED = "Settings exported. The app holding the file wouldn't let HushPinterest "
-            + "read it back, so it wasn't checked.";
+            "Settings file saved but reads back wrong. Save it as a new file.";
+    private static final String UNCHECKED = "Settings exported, but the app holding it blocked the check.";
 
     /**
      * An app that turns "wt" down gets "w", which here keeps the old file's longer tail. The file is

@@ -20,6 +20,7 @@ import android.app.Application;
 import android.app.FragmentManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
@@ -32,28 +33,37 @@ import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.view.View;
 
 import androidx.annotation.RequiresApi;
 
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import app.hushpinterest.extension.pinterest.actions.DownloadLedger;
 import app.hushpinterest.extension.pinterest.ui.PinterestToasts;
 import app.hushpinterest.extension.shared.L10n;
 import app.hushpinterest.extension.shared.Logger;
+import app.hushpinterest.extension.shared.ResourceType;
+import app.hushpinterest.extension.shared.ResourceUtils;
 import app.hushpinterest.extension.shared.Utils;
+import app.hushpinterest.extension.shared.settings.preference.ReopenSettingsAfterRestart;
 
 /**
  * How the HushPinterest screen is reached.
  *
+ * <p>Inside Pinterest, a long press on the Pinterest logo at the top of the home feed opens it over
+ * that screen (see {@link #onGreetingHeader}).
+ *
  * <p>From the home screen, a long-press shortcut on Pinterest's launcher icon opens Pinterest's launcher
  * activity with {@link #EXTRA_OPEN_SETTINGS}. From Android's App info page for Pinterest, "Additional
  * settings in the app" opens it too: the patch adds an activity alias for
- * {@link Intent#ACTION_APPLICATION_PREFERENCES} that points at the same launcher activity. Every
- * Pinterest activity reports its intent here from {@code onCreate} and {@code onNewIntent}, and the
+ * {@link Intent#ACTION_APPLICATION_PREFERENCES} that points at the same launcher activity. The launcher
+ * reports its startup intent here, and both it and the home activity report {@code onNewIntent}. The
  * next Pinterest activity to resume shows the screen as a full screen dialog. The shortcut is kept
  * first among Pinterest's own, because a launcher shows only the first few, and some launchers have no
  * shortcut menu at all.
@@ -70,11 +80,23 @@ public final class SettingsEntry {
     static final String LAUNCHER_ACTIVITY = "com.pinterest.activity.PinterestActivity";
     private static final String DIALOG_TAG = "hushpinterest_settings";
 
+    /** The Pinterest logo in the home feed's greeting header, by its resource name. */
+    static final String LOGO_ID = "home_feed_greeting_header_logotype";
+    private static final View.OnLongClickListener LOGO_PRESS = SettingsEntry::openFromLogo;
+    /** Logos that already open the screen, so a header bound again doesn't read ours as Pinterest's. */
+    private static final Set<View> watchedLogos = Collections.newSetFromMap(new WeakHashMap<>());
+
     /** A request older than this is dropped rather than opened over some later screen. */
     private static final long REQUEST_LIFETIME_MS = 30_000;
 
     private static volatile boolean openPending;
     private static volatile long requestedAt;
+    /**
+     * The page the next open lands on, or null for the first page. Set by a restart from the
+     * restart row, kept while the screen is opened again over a later activity, and dropped
+     * once the person closes it or asks for it another way.
+     */
+    private static volatile String requestedPage;
     private static volatile boolean callbacksRegistered;
     /** The activity the screen was last shown over, while the person hasn't closed it. */
     private static WeakReference<Activity> host;
@@ -92,7 +114,8 @@ public final class SettingsEntry {
      * startup. Watches every Pinterest activity, so a pending open lands on whichever one resumes
      * next: signed out, the launcher hands straight over to the login screen. Also where the
      * release check, when it's on, asks at most once a day, on a worker. From here on HushPinterest's
-     * messages use Pinterest's own toasts where they can.
+     * messages use Pinterest's own toasts where they can. A start that the settings screen's
+     * restart row asked for opens the screen again, on the page it was on.
      */
     public static void onApplicationCreate(Context context) {
         PinterestToasts.install();
@@ -102,6 +125,7 @@ public final class SettingsEntry {
                 ((Application) context).registerActivityLifecycleCallbacks(new OpenWhenResumed());
                 callbacksRegistered = true;
             }
+            ReopenSettingsAfterRestart.reopenIfPending(SettingsEntry::reopenOn);
         } catch (Exception ex) {
             Logger.printException(() -> "Settings entry: could not watch activities", ex);
         }
@@ -284,7 +308,7 @@ public final class SettingsEntry {
         }
     }
 
-    /** Injected at the start of every Pinterest activity's {@code onCreate}. */
+    /** Injected at the start of Pinterest's launcher activity's {@code onCreate}. */
     public static void onActivityCreate(Activity activity) {
         try {
             noteIntent(activity.getIntent());
@@ -293,13 +317,76 @@ public final class SettingsEntry {
         }
     }
 
-    /** Injected at the start of every Pinterest activity's {@code onNewIntent}. */
+    /** Injected at the start of the launcher and home activities' {@code onNewIntent}. */
     public static void onNewIntent(Activity activity, Intent intent) {
         try {
             noteIntent(intent);
         } catch (Exception ex) {
             Logger.printException(() -> "Settings entry: onNewIntent failure", ex);
         }
+    }
+
+    /**
+     * Injected right after Pinterest finds the home feed's greeting header, with that header, which
+     * is null on a home screen without one. The Pinterest logo in it gets a long press that opens
+     * the screen. Pinterest gives the logo no tap or long press of its own; in a build where it
+     * does, the logo stays Pinterest's. It works while HushPinterest is paused, since it's a way
+     * back in.
+     */
+    public static void onGreetingHeader(View header) {
+        try {
+            if (header == null) return;
+            int id = ResourceUtils.getIdentifier(header.getContext(), ResourceType.ID, LOGO_ID);
+            View logo = id == 0 ? null : header.findViewById(id);
+            if (logo == null) {
+                Logger.printDebug(() -> "Settings entry: the home feed header has no Pinterest logo");
+                return;
+            }
+            watchLogo(logo);
+        } catch (Throwable t) {
+            Logger.printException(() -> "Settings entry: could not watch the Pinterest logo", t);
+        }
+    }
+
+    static void watchLogo(View logo) {
+        synchronized (watchedLogos) {
+            if (watchedLogos.contains(logo)) return;
+            if (logo.isLongClickable() || logo.hasOnClickListeners()) {
+                Logger.printInfo(() -> "Settings entry: Pinterest handles presses on its logo here, so they stay Pinterest's");
+                return;
+            }
+            logo.setOnLongClickListener(LOGO_PRESS);
+            watchedLogos.add(logo);
+        }
+        Logger.printInfo(() -> "Settings entry: a long press on the Pinterest logo opens the settings");
+    }
+
+    /** The logo's long press: the screen over the logo's own activity. False leaves the press as it was. */
+    static boolean openFromLogo(View logo) {
+        try {
+            Activity activity = activityOf(logo.getContext());
+            if (activity == null) {
+                Logger.printInfo(() -> "Settings entry: the Pinterest logo isn't in an activity");
+                return false;
+            }
+            requestedAt = SystemClock.elapsedRealtime();
+            requestedPage = null;
+            Logger.printInfo(() -> "Settings requested by a long press on the Pinterest logo");
+            return open(activity);
+        } catch (Throwable t) {
+            Logger.printException(() -> "Settings entry: the long press on the Pinterest logo failed", t);
+            return false;
+        }
+    }
+
+    private static Activity activityOf(Context context) {
+        while (context instanceof ContextWrapper) {
+            if (context instanceof Activity) return (Activity) context;
+            Context base = ((ContextWrapper) context).getBaseContext();
+            if (base == context) break;
+            context = base;
+        }
+        return null;
     }
 
     static final class OpenWhenResumed implements Application.ActivityLifecycleCallbacks {
@@ -382,7 +469,7 @@ public final class SettingsEntry {
                 return false;
             }
             closedByUser = false;
-            new SettingsDialog().show(fragments, DIALOG_TAG);
+            SettingsDialog.onPage(requestedPage).show(fragments, DIALOG_TAG);
             host = new WeakReference<>(activity);
             Logger.printInfo(() -> "Settings opened over " + name);
             return true;
@@ -396,6 +483,7 @@ public final class SettingsEntry {
     static void onClosedByUser() {
         closedByUser = true;
         host = null;
+        requestedPage = null;
     }
 
     /**
@@ -417,8 +505,23 @@ public final class SettingsEntry {
 
     private static void request(String from) {
         requestedAt = SystemClock.elapsedRealtime();
+        requestedPage = null;
         openPending = true;
         Logger.printInfo(() -> "Settings requested by " + from);
+    }
+
+    /**
+     * The screen again after the restart row restarted Pinterest, on [page], over the first
+     * Pinterest screen to resume: the same open the logo's long press and the shortcut lead to.
+     */
+    static void reopenOn(String page) {
+        request("a restart from the settings screen");
+        requestedPage = page;
+    }
+
+    /** The page the next open lands on. Package-visible for tests. */
+    static String requestedPage() {
+        return requestedPage;
     }
 
     /**
@@ -429,12 +532,12 @@ public final class SettingsEntry {
         final int size = 432; // Adaptive icon canvas: 108dp at xxxhdpi.
         Bitmap bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
-        canvas.drawColor(Color.BLACK);
+        canvas.drawColor(ScreenColors.DEFAULT.background);
         Paint disc = new Paint(Paint.ANTI_ALIAS_FLAG);
-        disc.setColor(0xFF236BE7);
+        disc.setColor(ScreenColors.DEFAULT.accent);
         canvas.drawCircle(size / 2f, size / 2f, size * 0.30f, disc);
         Paint text = new Paint(Paint.ANTI_ALIAS_FLAG);
-        text.setColor(Color.WHITE);
+        text.setColor(ScreenColors.DEFAULT.onAccent);
         text.setTextAlign(Paint.Align.CENTER);
         text.setTypeface(Typeface.DEFAULT_BOLD);
         text.setTextSize(size * 0.24f);

@@ -1,0 +1,8 @@
+File folder = new File(this.context.getExternalFilesDir(null), "custom_icons");
+if (!folder.exists()) folder.mkdirs();
+File[] files = folder.listFiles((d, name) -> name.endsWith(".xml"));
+if (files != null) {
+    for (File f : files) {
+        linkedHashMap.put("xml:" + f.getName(), R.drawable.app_unknown);
+    }
+}
