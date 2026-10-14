@@ -26,7 +26,7 @@ Or
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.10.0](https://github.com/mich111discord/MightyMichs-Patches/releases/tag/v1.10.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;40 patches total
+> **[v1.11.0](https://github.com/mich111discord/MightyMichs-Patches/releases/tag/v1.11.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;40 patches total
 <details open>
 <summary>📦 SofaScore&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
@@ -49,13 +49,13 @@ Or
 
 **🎯 Supported versions:**
 
-| 8.8.9 |
-| :---: |
+| 7.0.58 | 8.0.8 | 8.8.8 |
+| :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
-| [Enable Prime (Experimental)](#enable-prime-experimental) | Enables Nova Launcher Prime WARNING: May cause crashes.  |  |
 | [Remove Internet permission (Nova)](#remove-internet-permission-nova) | Removes INTERNET permission from Nova Launcher and disables network-only entry points so Nova does not crash. |  |
+| [Unlock Prime](#unlock-prime) | Unlocks Nova Launcher Prime by bypassing the static (isPrime) gate. WARNING: May cause crashes. |  |
 
 </details>
 
@@ -308,7 +308,7 @@ Or
 
 **🎯 Supported versions:**
 
-| 1.2.9.3 |
+| 1.3.4 |
 | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
@@ -323,7 +323,7 @@ Or
 
 **🎯 Supported versions:**
 
-| null |
+| 7.102.0 |
 | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |

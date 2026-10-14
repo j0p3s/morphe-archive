@@ -21,9 +21,9 @@ risk. See the [license](LICENSE) for details.
 ## Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.3.0](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.3.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;2 patches total
+> **[v1.4.0](https://github.com/JacksonJones2003/origin-island-patches/releases/tag/v1.4.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;3 patches total
 <details open>
-<summary>📦 YouTube Music&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<summary>📦 YouTube Music&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -33,6 +33,7 @@ risk. See the [license](LICENSE) for details.
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
+| [Lyrics in player](#lyrics-in-player) | Shows the line of the lyrics that is sung below the title of the queue in the player. Requires the Third-party lyrics patch. |  |
 | [Origin Island music card](#origin-island-music-card) | Lets the OriginOS music card on the lock screen and Origin Island like songs, switch between repeat and shuffle, show the playlist, the playlists of the library and the downloads, and show the lyrics of the Third-party lyrics patch. |  |
 
 </details>
@@ -183,6 +184,27 @@ YouTube Music, so the patch reads the rest from inside the app:
   has YouTube play the video without opening then
 
 Tested with YouTube 21.38.123.
+
+## Lyrics in player (YouTube Music)
+
+Shows the line of the lyrics that is sung in the player, below the title of the queue at the
+bottom of it:
+
+- a new line swoops in from below, and each word lights up, swells and shimmers as it is sung
+- until the first line is sung, the artist and who wrote the lyrics are named, or where the
+  lyrics are from if that is not known
+- the line is hidden while the queue is pulled up
+
+The lyrics are those of the **Third-party lyrics** patch of Morphe, which has to be applied
+and enabled. Words are only brought out one by one for lyrics that have a time for each word,
+which depends on where that patch found them. Other lyrics are shown a line at a time.
+
+### How it works
+
+The line is a view of its own that is added to the player from the main activity, found by
+the names of the views of YouTube Music, so that nothing of the player has to be patched. It
+is drawn over the header of the queue, which YouTube Music keeps below the title, unseen,
+until the queue is pulled up. The position of the song is read from the media session.
 
 ## Building locally
 

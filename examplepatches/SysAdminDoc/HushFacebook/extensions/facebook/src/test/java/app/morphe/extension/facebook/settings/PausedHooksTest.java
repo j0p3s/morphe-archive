@@ -53,6 +53,7 @@ import app.morphe.extension.facebook.ads.ReelsAdFilter;
 import app.morphe.extension.facebook.ads.SearchAdFilterForTests;
 import app.morphe.extension.facebook.chats.ChatListForTests;
 import app.morphe.extension.facebook.chats.MessengerCardForTests;
+import app.morphe.extension.facebook.chats.MessengerHandoffForTests;
 import app.morphe.extension.facebook.chats.MessengerIconForTests;
 import app.morphe.extension.facebook.chats.OriginalChatMediaForTests;
 import app.morphe.extension.facebook.chats.ReadReceipts;
@@ -207,7 +208,7 @@ public class PausedHooksTest {
     private enum StoryTool { TEXT_BASE, IMAGINE }
 
     /** Stands in for Facebook's enum of share sheet items, named the same way. */
-    private enum ShareItem { SHARE_NOW, SHARE_TO_THREADS }
+    private enum ShareItem { SHARE_NOW, SHARE_TO_HATCH, SHARE_TO_THREADS }
 
     @After
     public void restore() {
@@ -354,7 +355,8 @@ public class PausedHooksTest {
                     return !section.items.contains(reel);
                 }));
         // A story whose own words hold a phrase from the hide list, and one drawn as a photo, which
-        // the kinds of post switches read without any list. Paused, the list reads empty too.
+        // the kinds of post switches read without any list. Paused, the list reads empty too. The
+        // last is a story that shares another, with no words on either.
         // Saved here, with the context, so a probe run without one reads it rather than loading it.
         Settings.HIDDEN_WORDS.save("spoiler");
         Settings.HIDE_POSTS_OVER_REACTIONS.save(app.morphe.extension.facebook.feed.ReactionCeiling.K1);
@@ -362,7 +364,8 @@ public class PausedHooksTest {
                 () -> FeedGuardForTests.hidesByWords(Category.ORGANIC, new GraphQLStory(),
                         FeedGuardForTests.postText("Big SPOILER inside")),
                 () -> FeedGuardForTests.hidesPhotoPost(Category.ORGANIC),
-                () -> FeedGuardForTests.hidesPopularPost(Category.ORGANIC)));
+                () -> FeedGuardForTests.hidesPopularPost(Category.ORGANIC),
+                () -> FeedGuardForTests.hidesRepost(Category.ORGANIC)));
         // A story with a bumper is answered as one without, so no strip is drawn and no room kept, and a
         // header whose title plugin would add "Follow" is told it has nothing to add.
         probes.put(PatchFamily.POST_PROMPTS, Arrays.asList(
@@ -571,12 +574,13 @@ public class PausedHooksTest {
         probes.put(PatchFamily.HIDDEN_TABS, Collections.singletonList(HiddenTabsForTests::hidesTheTab));
         // Facebook's own override of where the tab bar goes reads YES, for the bottom, where it read NO.
         // With the bar at the bottom, Facebook's check of whether it slides away answers yes. The top
-        // bar's entry is told to move 0. (A kept bottom bar has its own test: with every switch on,
-        // the slide wins over it.)
+        // bar's entry is told to move 0 and fade by 0. (A kept bottom bar has its own test: with every
+        // switch on, the slide wins over it.)
         probes.put(PatchFamily.BOTTOM_TAB_BAR, Arrays.asList(
                 () -> BottomTabBar.override(TriState.NO.ordinal()) == TriState.YES.ordinal(),
                 TabBarScrollAway::slidesAway,
-                () -> TabBarScrollAway.topBarOffset("app_header_container", -120) == 0));
+                () -> TabBarScrollAway.topBarOffset("app_header_container", -120) == 0,
+                () -> TabBarScrollAway.topBarFade("app_header_container", 1f) == 0f));
         // Facebook's dark mode controller answers dark where it answered light.
         probes.put(PatchFamily.FORCE_DARK_MODE, Collections.singletonList(ForceDarkModeForTests::forcesDark));
         // A request for a post's comments that names no order asks for the chosen one, and with
@@ -611,8 +615,13 @@ public class PausedHooksTest {
         probes.put(PatchFamily.CHAT_LIST, Arrays.asList(
                 ChatListForTests::dropsTheNotesTiles,
                 ChatListForTests::hidesAPromotion));
-        // With Messenger installed, a tap on the top bar's Messenger icon opens Messenger instead of Chats.
-        probes.put(PatchFamily.MESSENGER_ICON, Collections.singletonList(MessengerIconForTests::opensMessenger));
+        // With Messenger installed, a tap on the top bar's Messenger icon opens Messenger instead of
+        // Chats, and an incoming call's push, its ring and a new message are left to Messenger.
+        probes.put(PatchFamily.MESSENGER_ICON, Arrays.asList(
+                MessengerIconForTests::opensMessenger,
+                MessengerHandoffForTests::dropsACallPush,
+                MessengerHandoffForTests::dropsARing,
+                MessengerHandoffForTests::dropsAMessage));
         // The Menu's Upgrades and Also from Meta groups build nothing, in the section Facebook
         // draws and in the one carrying what the server sends.
         probes.put(PatchFamily.MENU_PROMOTIONS, Arrays.asList(
@@ -621,7 +630,7 @@ public class PausedHooksTest {
                 MenuSectionsForTests::hidesServerUpgrades,
                 MenuSectionsForTests::hidesServerAlsoFromMeta));
         // Edits' header flag and both shapes of its pill request, the Threads cross-posting
-        // onboarding and the share sheet's Threads item, the Meta Verified sheet and label, an avatar
+        // onboarding and the share sheet's Threads and Muse items, the Meta Verified sheet and label, an avatar
         // sticker upsell, Imagine's post button, composer capability and Create story tile, and the
         // other Meta AI post buttons, with the deep dive under a caption.
         probes.put(PatchFamily.META_UPSELLS, Arrays.asList(

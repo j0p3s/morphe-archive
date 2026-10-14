@@ -42,7 +42,7 @@ family|muteRootPosts|Mute posts locally|rootPostMutes
 family|revealAllowedMatureContent|Reveal allowed mature content|accountSafeMatureReveal
 family|hideAdFreeBanner|Hide the ad-free banner|adFreeBannerFlags
 family|hideTumblrTv|Hide Tumblr TV|tumblrTvFlags
-family|hideCommunitiesTab|Hide the Communities tab|communitiesTabFlags
+family|hideCommunitiesTab|Hide the Communities tab|communitiesTabFlags,communitiesTabButton
 family|hideBlazePrompts|Hide Blaze prompts|blazePromptFlags
 family|turnOffScreenshotSharing|Turn off screenshot sharing|screenshotSharingFlags
 family|disableUpdatePrompts|Disable update prompts|updatePromptFlags
@@ -95,6 +95,11 @@ mutation|analyticsFlags,adFreeBannerFlags,tumblrTvFlags,communitiesTabFlags,blaz
 # Each timeline page's items, first thing in both constructors, and the card and post families
 # that need the hook for the capability their own bridge backs.
 mutation|timelineAds|timelineList|Lapp/hushtumblr/extension/tumblr/timeline/TimelineFilter;->filter(Ljava/util/List;)Ljava/util/List;|Lcom/tumblr/rumblr/model/Timeline;-><init>(Ljava/util/List;Lcom/tumblr/rumblr/model/PaginationLink;)V|Lcom/tumblr/rumblr/response/timeline/TimelineResponse;-><init>(Ljava/util/List;Lcom/tumblr/rumblr/model/PaginationLink;Ljava/util/Map;)V|hideSuggestedBlogs,hideSuggestedCommunities,hideWatchItRows,hideReblogs,hideVideoPosts,hidePhotoPosts,hideTextPosts,hidePostsWithWords,muteRootPosts
+# What a timeline fragment does with a page that came back empty: the hook asked right after
+# the fragment's own isEmpty(), the fragment, the page links and the link type their next-page
+# getter answers with, then every family whose filter can empty a page. The switch-and-return
+# block around the hook is held to the members Tumblr's own method names.
+mutation|settings|timelinePaging|Lapp/hushtumblr/extension/tumblr/timeline/TimelinePaging;->onPage(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Z)I|Lcom/tumblr/ui/fragment/TimelineFragment;|Lcom/tumblr/timeline/model/link/TimelinePaginationLink;|Lcom/tumblr/timeline/model/link/Link;|hideAds,hideSuggestedBlogs,hideSuggestedCommunities,hideWatchItRows,hideReblogs,hideVideoPosts,hidePhotoPosts,hideTextPosts,hidePostsWithWords,muteRootPosts
 # The carousel stub, the carousel model and the key its Moshi adapter writes the items under.
 mutation|suggestedBlogCards,suggestedCommunityCards,watchItRows|timelineCarousel|Lapp/hushtumblr/extension/tumblr/timeline/TimelineFilter;->carouselItems(Ljava/lang/Object;)Ljava/util/List;|Lcom/tumblr/rumblr/model/carousel/Carousel;|elements
 # model>interface>method:key, one per bridge: each interface method calls the getter the model's
@@ -118,9 +123,12 @@ mutation|postTags|postTags|Lapp/hushtumblr/extension/tumblr/ui/PostParts;->hideT
 mutation|noteCounts|noteCounts|Lapp/hushtumblr/extension/tumblr/ui/PostFooter;->noteCount(I)I|Lapp/hushtumblr/extension/tumblr/ui/PostFooter;->communityCommentsText(Ljava/lang/String;)Ljava/lang/String;|Lapp/hushtumblr/extension/tumblr/ui/PostFooter;->textCount(Ljava/lang/String;)Ljava/lang/String;|Lapp/hushtumblr/extension/tumblr/ui/PostFooter;->notesTitle(Ljava/lang/String;)Ljava/lang/String;|Lapp/hushtumblr/extension/tumblr/ui/PostFooter;->communityReactionsText(Ljava/lang/String;I)Ljava/lang/String;
 # The badge hook and the view id only the bottom bar looks up.
 mutation|unreadDots|unreadDots|Lapp/hushtumblr/extension/tumblr/ui/BottomBar;->unreadBadge(Landroid/widget/TextView;)Landroid/widget/TextView;|Lcom/tumblr/R$id;->dashboard_badge
-mutation|exploreTab,notificationsTab,tabOrder|bottomBarTabs|Lapp/hushtumblr/extension/tumblr/ui/BottomBarTabs;->arrangeTabs(Ljava/util/List;)V|Lapp/hushtumblr/extension/tumblr/ui/BottomBarTabs;->arrangeBar(Landroid/view/ViewGroup;)V|Lcom/tumblr/R$id;->dashboard_badge
-# The activity and Compose theme hooks, and the card surface attribute only the Compose colors read.
-mutation|themeBackground|darkBackground|Lapp/hushtumblr/extension/tumblr/ui/DarkBackground;->onActivityTheme(Landroid/app/Activity;)V|Lapp/hushtumblr/extension/tumblr/ui/DarkBackground;->onComposeTheme(Landroid/content/res/Resources$Theme;)V|Lcom/tumblr/themes/R$attr;->themeMainContentBackgroundColor
+# The tab list and bar hooks. Hide the Communities tab hides its button through the bar hook too,
+# and keeps its feature switch capability for the post editor's tips.
+mutation|exploreTab,notificationsTab,tabOrder,communitiesTabButton|bottomBarTabs|Lapp/hushtumblr/extension/tumblr/ui/BottomBarTabs;->arrangeTabs(Ljava/util/List;)V|Lapp/hushtumblr/extension/tumblr/ui/BottomBarTabs;->arrangeBar(Landroid/view/ViewGroup;)V|Lcom/tumblr/R$id;->dashboard_badge
+# The activity and Compose theme hooks, the card surface attribute only the Compose colors read,
+# and the two hooks the Dark palette's design colors hand their page and panel grays to.
+mutation|themeBackground|darkBackground|Lapp/hushtumblr/extension/tumblr/ui/DarkBackground;->onActivityTheme(Landroid/app/Activity;)V|Lapp/hushtumblr/extension/tumblr/ui/DarkBackground;->onComposeTheme(Landroid/content/res/Resources$Theme;)V|Lcom/tumblr/themes/R$attr;->themeMainContentBackgroundColor|Lapp/hushtumblr/extension/tumblr/ui/DarkBackground;->designPage(J)J|Lapp/hushtumblr/extension/tumblr/ui/DarkBackground;->designPanel(J)J
 # The diamond's question, the TumblrMart button hook, the two search bar room hooks and the
 # preference only the diamond's class names.
 mutation|premiumDiamond,tumblrMartButtons|storeButtons|Lapp/hushtumblr/extension/tumblr/ui/StoreButtons;->hideDiamond(Landroid/view/View;Landroid/view/View;)Z|Lapp/hushtumblr/extension/tumblr/ui/StoreButtons;->hideTumblrMart(Landroid/view/View;)V|Lapp/hushtumblr/extension/tumblr/ui/StoreButtons;->tumblrMartRoom(I)I|Lapp/hushtumblr/extension/tumblr/ui/StoreButtons;->diamondRoom(I)I|arg_has_clicked_on_premium_diamond

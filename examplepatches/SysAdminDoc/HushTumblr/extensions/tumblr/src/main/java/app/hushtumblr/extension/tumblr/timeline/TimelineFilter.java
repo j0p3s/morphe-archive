@@ -43,8 +43,15 @@ import app.hushtumblr.extension.tumblr.rootmute.RootPostMutes;
  * blogs"). A heading goes with the item right after it, and one that ends a page goes too while a
  * card switch is on, since its card may be the first item of the next page.
  *
+ * <p>A blog or community card is a suggestion only in a feed. A search lists the same kinds of card
+ * as its results, through the same two constructors, so those two switches act only on a page
+ * {@link PageSource} knows for a feed and leave a page of search results, cards and headings, alone.
+ *
  * <p>The post switches (reblogs, video, photo and text posts, and the word list) are
  * {@link PostRules}'. A heading never goes with a post they take out.
+ *
+ * <p>A page that loses every item comes back empty, and Tumblr takes an empty page for the end of
+ * a feed. {@link TimelinePaging} is told, so the fragment showing the page loads the next one.
  */
 public final class TimelineFilter {
     private TimelineFilter() {}
@@ -76,11 +83,14 @@ public final class TimelineFilter {
             "BLOG_CARD", "COMPACT_BLOG_CARD", "BLOG_ROW", "TINY_BLOG_CAROUSEL_CARD")));
 
     /**
-     * Communities Tumblr suggests you join. A community's own header card isn't here: it heads that
+     * Communities Tumblr suggests you join: the card a feed shows, alone or in a carousel. A
+     * {@code COMMUNITY_ROW} isn't one. It's a line in a list of communities, the ones under a
+     * category of Communities' Browse page or in a search's Communities tab. Browse loads through
+     * the dashboard's own response, so only the kind tells its list from a feed, and with rows in
+     * here a category came up empty. A community's own header card isn't here either: it heads that
      * community's page.
      */
-    static final Set<String> COMMUNITY_TYPES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
-            "COMMUNITY_CARD", "COMMUNITY_ROW")));
+    static final Set<String> COMMUNITY_TYPES = Collections.singleton("COMMUNITY_CARD");
 
     /** Tumblr TV's "Watch it" rows and the video hub cards in them. */
     static final Set<String> WATCH_IT_TYPES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
@@ -90,6 +100,12 @@ public final class TimelineFilter {
     /** Containers that hold other items. Each is judged by its first item. */
     static final Set<String> CAROUSEL_TYPES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             "CAROUSEL", "AVATAR_CAROUSEL")));
+
+    /** What a blog or community card left in a page of search results is counted as. For the report. */
+    static final String KEPT_RESULT = "card kept in search results";
+
+    /** What one left in a page {@link PageSource} doesn't know is counted as. For the report. */
+    static final String KEPT_UNKNOWN = "card kept on an unknown page";
 
     /** Tumblr's model methods, found the first time an item is read. */
     @Nullable
@@ -125,9 +141,12 @@ public final class TimelineFilter {
             // From the end, so a run of headings all go with the item after the last of them.
             for (int i = size - 1; i >= 0; i--) {
                 if (removedBy[i] != null) continue;
-                String with = i + 1 < size ? removedBy[i + 1] : rules.cardOwner();
+                boolean last = i + 1 == size;
+                String with = last ? rules.cardOwner() : removedBy[i + 1];
                 // A heading over a run of posts heads the rest of them too, so it stays.
                 if (with == null || isPostRemoval(with) || !isTitle(items.get(i), rules.owner())) continue;
+                // Asked only of a heading, since it can read the call stack.
+                if (last && (with = rules.pageEndOwner()) == null) continue;
                 removedBy[i] = with;
                 heading[i] = true;
                 any = true;
@@ -138,6 +157,8 @@ public final class TimelineFilter {
                 if (removedBy[i] == null) kept.add(items.get(i));
                 else HookStatus.counted(removedBy[i], heading[i] ? "heading removed" : removal(removedBy[i]));
             }
+            // Tumblr takes an empty page for the end of the feed, so the fragment is told to go on.
+            if (kept.isEmpty()) TimelinePaging.emptied(removedBy[0]);
             return kept;
         } catch (Throwable failure) {
             HookStatus.threw(rules.owner(), "timeline filter", failure);
@@ -165,6 +186,9 @@ public final class TimelineFilter {
         /** The post switches, or null when none is on. */
         @Nullable
         final PostRules posts;
+        /** What this page was parsed for, a {@link PageSource} constant, or null until it's asked. */
+        @Nullable
+        private Integer source;
 
         private Rules(boolean ads, boolean blogs, boolean communities, boolean watchIt, boolean mutes,
                       @Nullable PostRules posts) {
@@ -226,6 +250,38 @@ public final class TimelineFilter {
             return null;
         }
 
+        /**
+         * The card switch a heading that ends this page goes with, or null to keep it. Its card may
+         * start the next page, which holds for a blog or community card only in a feed.
+         */
+        @Nullable
+        String pageEndOwner() {
+            if ((blogs || communities) && source() == PageSource.FEED) {
+                return blogs ? FamilyNames.HIDE_SUGGESTED_BLOGS : FamilyNames.HIDE_SUGGESTED_COMMUNITIES;
+            }
+            return watchIt ? FamilyNames.HIDE_WATCH_IT_ROWS : null;
+        }
+
+        /** What this page was parsed for, read off the call stack the first time it matters. */
+        private int source() {
+            Integer known = source;
+            if (known == null) source = known = PageSource.now();
+            return known;
+        }
+
+        /**
+         * [family] when this page is a feed, where its cards are suggestions. On a page of search
+         * results the cards are the results, and on a page {@link PageSource} doesn't know they
+         * might be, so there the card stays and the report says which it was.
+         */
+        @Nullable
+        private String suggestion(String family) {
+            int from = source();
+            if (from == PageSource.FEED) return family;
+            HookStatus.counted(family, from == PageSource.RESULTS ? KEPT_RESULT : KEPT_UNKNOWN);
+            return null;
+        }
+
         /** The patch name of the first switch that takes [item] out, or null to keep it. */
         @Nullable
         String removes(Object item) {
@@ -241,8 +297,10 @@ public final class TimelineFilter {
         @Nullable
         String family(@Nullable String kind) {
             if (kind == null) return null;
-            if (blogs && BLOG_TYPES.contains(kind)) return FamilyNames.HIDE_SUGGESTED_BLOGS;
-            if (communities && COMMUNITY_TYPES.contains(kind)) return FamilyNames.HIDE_SUGGESTED_COMMUNITIES;
+            if (blogs && BLOG_TYPES.contains(kind)) return suggestion(FamilyNames.HIDE_SUGGESTED_BLOGS);
+            if (communities && COMMUNITY_TYPES.contains(kind)) {
+                return suggestion(FamilyNames.HIDE_SUGGESTED_COMMUNITIES);
+            }
             if (watchIt && WATCH_IT_TYPES.contains(kind)) return FamilyNames.HIDE_WATCH_IT_ROWS;
             return null;
         }

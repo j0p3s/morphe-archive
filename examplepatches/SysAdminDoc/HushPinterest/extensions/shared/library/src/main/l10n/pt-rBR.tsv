@@ -33,7 +33,6 @@ Export diagnostic report	Exportar relatório de diagnóstico
 Export settings	Exportar configurações
 Turns off every HushPinterest switch except Debug logging the next time Pinterest starts. What you chose when you patched stays, and your choices are saved.	Desliga todas as opções do HushPinterest, menos o Registro de depuração, na próxima vez que o Pinterest abrir. O que você escolheu ao aplicar os patches continua, e suas escolhas ficam salvas.
 Hide ads	Ocultar anúncios
-Links, updates, backup and more	Links, atualizações, backup e mais
 Save your switches to a file. They cover all the accounts in this Pinterest app. Pause and Debug logging aren't included, and neither is the release check.	Salve suas opções em um arquivo. Elas valem para todas as contas deste app do Pinterest. Pausa e Registro de depuração não são incluídos, nem a verificação de novas versões.
 Settings exported, but the app holding it blocked the check.	Configurações exportadas, mas o app do arquivo impediu a conferência.
 The file's app is too slow. Nothing was changed.	O app do arquivo está lento demais. Nada foi alterado.
@@ -107,8 +106,6 @@ Browse settings	Explorar configurações
 More settings	Mais configurações
 # context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
 Support HushPinterest	Apoie o HushPinterest
-# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
-Buy me a coffee on Ko-fi	Me pague um café no Ko-fi
 No matching settings	Nenhuma configuração encontrada
 %1$d setting found	%1$d configuração encontrada
 %1$d settings found	%1$d configurações encontradas
@@ -447,6 +444,12 @@ Queue pins	Adicionar Pins à fila
 Download history already has each pin chosen from this board.	O Histórico de downloads já tem cada Pin escolhido desta pasta.
 Resume HushPinterest, turn on Download pins and Download board.	Retome o HushPinterest e ative Baixar Pins e Baixar pasta.
 Save list	Salvar lista
+# context: Save list, the title of the choice between a bookmarks file and a JSON file, and the two rows under it
+Save list as	Salvar lista como
+Bookmarks file (HTML)	Arquivo de favoritos (HTML)
+Imports into browsers and bookmark apps.	Dá para importar em navegadores e apps de favoritos.
+JSON file	Arquivo JSON
+Keeps every detail, for other tools.	Guarda todos os detalhes, para outras ferramentas.
 This list has only the pins Pinterest had loaded for the board when it was saved, up to %d, of the kind chosen. Pins further down the board aren't in it.	Esta lista tem só os Pins do tipo escolhido que o Pinterest tinha carregado da pasta quando ela foi salva, até %d. Pins mais abaixo na pasta não estão nela.
 This list has only the pins chosen from those on screen when it was saved.	Esta lista tem só os Pins escolhidos entre os que estavam na tela quando ela foi salva.
 A source link is "missing" when the pin had none, and "omitted" when it couldn't be kept exactly as given, such as a link with tracking details or one to a private network.	Um link de origem é "missing" quando o Pin não tinha nenhum, e "omitted" quando não pôde ser mantido exatamente como veio, como um link com dados de rastreamento ou um para uma rede privada.
@@ -477,6 +480,11 @@ Couldn't check the file, so these are still the details Pinterest supplied.	Não
 Black bottom bar	Barra inferior preta
 In dark mode, paints the bottom bar pure black to match the page, which also saves a little battery on OLED screens. Light mode stays as it is. The change shows the next time the bar redraws.	No modo escuro, pinta a barra inferior de preto puro para combinar com a página, o que também economiza um pouco de bateria em telas OLED. O modo claro continua como está. A mudança aparece na próxima vez que a barra for redesenhada.
 AMOLED dark theme	Tema escuro AMOLED
+# context: two more AMOLED black switches on the Interface page, one for the comments sheet and one for a pin's three-dot menu
+Black comments	Comentários em preto
+In dark mode, paints the comments sheet and its reply bar pure black. Light mode stays as it is. The change shows the next time you open comments.	No modo escuro, pinta de preto puro o painel de comentários e sua barra de resposta. O modo claro continua como está. A mudança aparece na próxima vez que você abrir os comentários.
+Black pin menu	Menu do pin em preto
+In dark mode, paints a pin's menu pure black. Light mode stays as it is. The change shows the next time you open the menu.	No modo escuro, pinta de preto puro o menu de um pin. O modo claro continua como está. A mudança aparece na próxima vez que você abrir o menu.
 # context: the two Hide closeup buttons switches on the Interface page. Pinterest calls the lens button's menu entry Search image.
 Hide back arrow on pins	Ocultar seta de voltar nos pins
 Hides the back arrow that floats over a pin you open. Your phone's back gesture or button still leaves the pin. The change shows on the next pin you open.	Oculta a seta de voltar que flutua sobre um pin que você abre. O gesto ou botão de voltar do seu celular ainda tira você do pin. A mudança aparece no próximo pin que você abrir.
@@ -500,7 +508,9 @@ Opens a GitHub report with your versions and settings filled in. Add what happen
 # context: home page row under the status card, and the title of the dialog it opens
 Quick setups	Configurações rápidas
 # context: that row's summary
-Turn on a set of switches in one tap, or put every switch back the way it started.	Ative um conjunto de opções com um toque ou volte todas as opções ao estado inicial.
+Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Ative um conjunto de opções com um toque ou volte todas as opções ao estado inicial. Toque e segure esta linha para ocultá-la.
+# context: toast after a long press hides the Quick setups row; names the page whose row brings it back
+Quick setups hidden. Show it from Pause, backup and diagnostics.	Configurações rápidas ocultas. Traga de volta em Pausa, backup e diagnóstico.
 # context: Quick setups choice that turns on the switches that hide ads, suggestions and nags
 Quiet	Tranquilo
 # context: what Quiet does, under its name
@@ -515,3 +525,23 @@ Puts every feature switch back the way it started.	Volta cada opção de recurso
 Changed %1$d setting	%1$d configuração alterada
 # context: the same toast for any other count, zero included; %1$d is how many
 Changed %1$d settings	%1$d configurações alteradas
+# context: row on the Pause, backup and diagnostics page, and the title of its list of choices: the language HushPinterest's own pages, menus and messages use. Pinterest's language isn't changed
+HushPinterest language	Idioma do HushPinterest
+# context: row on the Pause, backup and diagnostics page that shows or hides the Quick setups row on the settings home page
+Quick setups on the home page	Configurações rápidas na página inicial
+# context: that row's summary while the Quick setups row is on the home page
+Shown. Tap to hide it.	Visíveis. Toque para ocultar.
+# context: that row's summary while the Quick setups row is hidden
+Hidden. Tap to show it again.	Ocultas. Toque para mostrar de novo.
+# context: the first language choice and the row's line while it's in force: HushPinterest uses whatever language Pinterest is in
+Same as Pinterest	O mesmo do Pinterest
+# context: the second language choice and the row's line while it's in force: the English language, by its name in this language
+English	Inglês
+# context: the whole toast after a Quick setups choice when exactly one switch didn't take its new value and still shows the value it had; %1$d is how many switches changed, %2$d how many didn't. A toast holds two lines, so keep it short
+%1$d changed. %2$d setting is still on its saved value.	Alteradas: %1$d. %2$d configuração continua com o valor salvo.
+# context: the same toast when any other number of switches didn't change
+%1$d changed. %2$d settings are still on their saved values.	Alteradas: %1$d. %2$d configurações continuam com o valor salvo.
+# context: the whole toast after a Quick setups choice when exactly one switch didn't change and the page may not show what's saved for it until the settings are opened again; %1$d is how many switches changed, %2$d how many didn't. A toast holds two lines, so keep it short
+%1$d changed. %2$d setting didn't. Reopen settings and try again.	Alteradas: %1$d. Sem mudar: %2$d. Reabra as configurações e tente de novo.
+# context: the same toast when any other number of switches didn't change
+%1$d changed. %2$d settings didn't. Reopen settings and try again.	Alteradas: %1$d. Sem mudar: %2$d. Reabra as configurações e tente de novo.

@@ -29,6 +29,7 @@ import android.content.Context;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.SystemClock;
 import android.provider.MediaStore;
 import android.util.AtomicFile;
 import android.database.Cursor;
@@ -103,7 +104,7 @@ public final class LogBufferManager {
     private static final Object CRASH_FILE_LOCK = new Object();
     private static final Object CLEAR_UNDO_LOCK = new Object();
     private static final AtomicBoolean FILE_EXPORT_RUNNING = new AtomicBoolean();
-    private static ClearSnapshot lastClear;
+    private static volatile ClearSnapshot lastClear;
 
     /** Everything the clear row removes, kept in memory until its next tap. */
     private static final class ClearSnapshot {
@@ -760,7 +761,9 @@ public final class LogBufferManager {
 
     public static void clearLogBuffer() {
         boolean restorable;
+        long held;
         synchronized (CLEAR_UNDO_LOCK) {
+            long began = SystemClock.elapsedRealtime();
             Context context = Utils.getContext();
             ClearSnapshot removed = new ClearSnapshot(
                     new ArrayList<>(logBuffer),
@@ -772,7 +775,11 @@ public final class LogBufferManager {
             clearCrashReports(context);
             lastClear = removed.isEmpty() ? null : removed;
             restorable = lastClear != null;
+            held = SystemClock.elapsedRealtime() - began;
         }
+        // Every line logged meanwhile waits on this lock, and the crash files are read and deleted
+        // under it. Said once the lock is free, so the line isn't part of what it measures.
+        Logger.printDebug(() -> "Diagnostic data clear held its lock for " + held + " ms");
         Utils.showToastShort(restorable
                 ? say(clearedMessage, L10n.t("Diagnostic data cleared. Tap again to put it back."))
                 : say(nothingToClearMessage, L10n.t("There's no diagnostic data to clear.")));
@@ -780,15 +787,17 @@ public final class LogBufferManager {
 
     /** True while the clear row's next tap can restore what its previous tap removed. */
     public static boolean canUndoClear() {
-        synchronized (CLEAR_UNDO_LOCK) {
-            return lastClear != null;
-        }
+        // Settings rows are built on the main thread. A status read must not wait for the
+        // generation lock while a worker restores and syncs the crash files.
+        return lastClear != null;
     }
 
     /** Restores the most recent clear while retaining events and hook findings recorded since. */
     public static UndoResult undoClear() {
         UndoResult result;
+        long held;
         synchronized (CLEAR_UNDO_LOCK) {
+            long began = SystemClock.elapsedRealtime();
             ClearSnapshot saved = lastClear;
             if (saved == null) {
                 result = UndoResult.NOTHING_TO_RESTORE;
@@ -806,7 +815,10 @@ public final class LogBufferManager {
                     result = UndoResult.FAILED;
                 }
             }
+            held = SystemClock.elapsedRealtime() - began;
         }
+        UndoResult ended = result;
+        Logger.printDebug(() -> "Diagnostic data undo (" + ended + ") held its lock for " + held + " ms");
 
         if (result == UndoResult.RESTORED) {
             Utils.showToastShort(say(restoredMessage, L10n.t("Diagnostic data put back.")));

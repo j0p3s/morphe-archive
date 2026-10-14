@@ -179,9 +179,11 @@ public class PausedHooksTest {
         // The Tumblr TV tab's flag answers off.
         probes.put(Settings.HIDE_TUMBLR_TV, Collections.singletonList(
                 () -> !FeatureSwitches.isEnabled(FeatureSwitchesTest.flag("TUMBLR_TV_MOBILE_NAV"), true)));
-        // The Communities tab's flag answers off.
-        probes.put(Settings.HIDE_COMMUNITIES_TAB, Collections.singletonList(
-                () -> !FeatureSwitches.isEnabled(FeatureSwitchesTest.flag("COMMUNITIES_TAB_BAR_ITEM"), true)));
+        // The Communities tab's button goes when the bar is built, and the post editor's Communities
+        // tips flag answers off. The tab's own flag is left to Tumblr (FeatureSwitches).
+        probes.put(Settings.HIDE_COMMUNITIES_TAB, Arrays.asList(
+                BottomBarTabsForTests::hidesTheCommunitiesTab,
+                () -> !FeatureSwitches.isEnabled(FeatureSwitchesTest.flag("COMMUNITIES_TOOLTIPS"), true)));
         // The Blaze button in your blog's header answers off.
         probes.put(Settings.HIDE_BLAZE_PROMPTS, Collections.singletonList(
                 () -> !FeatureSwitches.isEnabled(FeatureSwitchesTest.flag("BLAZE_DASHBOARD_ENTRYPOINT_IN_USER_BLOG_HEADER"), true)));
@@ -239,8 +241,10 @@ public class PausedHooksTest {
         TextSettings.HIDDEN_WORDS.save(TimelineItems.PROBE_WORD);
         probes.put(Settings.HIDE_POSTS_WITH_WORDS, Collections.singletonList(() -> withSwitch(
                 Settings.WORDS_CURRENT_TEXT, TimelineItems::aPageLosesItsPostWithAHiddenWord)));
-        // A theme on the Dark palette gets the patch's background style.
-        probes.put(Settings.DARK_BACKGROUND, Collections.singletonList(DarkBackgroundForTests::paintsATheme));
+        // A theme on the Dark palette gets the patch's background style, and the design system's
+        // page gray comes back as the style's color.
+        probes.put(Settings.DARK_BACKGROUND, Arrays.asList(
+                DarkBackgroundForTests::paintsATheme, DarkBackgroundForTests::paintsTheDesignColors));
         // The Explore tab's button goes when the bar is built.
         probes.put(Settings.HIDE_EXPLORE_TAB, Collections.singletonList(BottomBarTabsForTests::hidesTheExploreTab));
         // The Notifications tab's button goes when the bar is built.
@@ -270,7 +274,7 @@ public class PausedHooksTest {
     }
 
     private static List<BooleanSetting> dependentSwitches() {
-        return Arrays.asList(Settings.KEEP_TAGGED_REBLOGS, Settings.WORDS_CURRENT_TEXT,
+        return Arrays.asList(Settings.KEEP_TAGGED_REBLOGS, Settings.KEEP_REBLOGS_WITH_CONTENT, Settings.WORDS_CURRENT_TEXT,
                 Settings.WORDS_REBLOG_TRAIL, Settings.WORDS_TAGS, Settings.WORDS_SUMMARY);
     }
 
@@ -463,6 +467,7 @@ public class PausedHooksTest {
     }
 
     @Test
+    @Config(sdk = {30, 37})
     public void everyHookASwitchRunsTakesTumblrsOwnPathWhilePaused() {
         for (BooleanSetting setting : settingsSwitches()) setting.save(true);
         Map<BooleanSetting, List<Probe>> probes = probes();
@@ -523,7 +528,7 @@ public class PausedHooksTest {
         TextSettings.HIDDEN_WORDS.save(TimelineItems.PROBE_WORD);
         TextSettings.ALLOWED_WORDS.save("");
         for (BooleanSetting option : dependentSwitches()) {
-            boolean retention = option == Settings.KEEP_TAGGED_REBLOGS;
+            boolean retention = option == Settings.KEEP_TAGGED_REBLOGS || option == Settings.KEEP_REBLOGS_WITH_CONTENT;
             BooleanSetting parent = retention ? Settings.HIDE_REBLOGS : Settings.HIDE_POSTS_WITH_WORDS;
             List<?> page = Collections.singletonList(new TimelineObject(new OptionPost(option), false));
             parent.save(true);
@@ -555,6 +560,7 @@ public class PausedHooksTest {
         @Override public TimelineObjectType getTimelineObjectType() { return TimelineObjectType.POST; }
         @Override public List<?> hushContent() {
             return option == Settings.WORDS_CURRENT_TEXT ? Collections.singletonList(new TextBlock(TimelineItems.PROBE_WORD))
+                    : option == Settings.KEEP_REBLOGS_WITH_CONTENT ? Collections.singletonList(new TextBlock("added"))
                     : Collections.emptyList();
         }
         @Override public List<?> hushTrail() {
@@ -566,7 +572,9 @@ public class PausedHooksTest {
                     : option == Settings.KEEP_TAGGED_REBLOGS ? Collections.singletonList("personal") : Collections.emptyList();
         }
         @Override public String hushSummary() { return option == Settings.WORDS_SUMMARY ? TimelineItems.PROBE_WORD : null; }
-        @Override public String hushRebloggedFrom() { return option == Settings.KEEP_TAGGED_REBLOGS ? "100" : null; }
+        @Override public String hushRebloggedFrom() {
+            return option == Settings.KEEP_TAGGED_REBLOGS || option == Settings.KEEP_REBLOGS_WITH_CONTENT ? "100" : null;
+        }
     }
 
     /**
@@ -604,6 +612,7 @@ public class PausedHooksTest {
     }
 
     @Test
+    @Config(sdk = {30, 37})
     public void pausedEverySwitchAnswersOffAndKeepsWhatWasSaved() {
         List<BooleanSetting> switches = settingsSwitches();
         assertFalse("found no switches to check", switches.isEmpty());

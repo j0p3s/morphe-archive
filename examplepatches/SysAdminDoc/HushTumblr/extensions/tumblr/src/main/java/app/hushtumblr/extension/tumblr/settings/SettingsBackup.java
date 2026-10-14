@@ -125,6 +125,7 @@ public final class SettingsBackup {
             Settings.HIDE_NOTIFICATIONS_COUNT,
             Settings.HIDE_REBLOGS,
             Settings.KEEP_TAGGED_REBLOGS,
+            Settings.KEEP_REBLOGS_WITH_CONTENT,
             Settings.HIDE_NOTIFICATION_LIKES,
             Settings.HIDE_NOTIFICATION_REBLOGS,
             Settings.HIDE_NOTIFICATION_REPLIES,
@@ -691,8 +692,9 @@ public final class SettingsBackup {
             }
         }
         if ((Integer) schema < 3 && ordered.containsKey(Settings.HIDE_REBLOGS)) {
-            // Old Hide reblogs backups had no tagged-reblog exception.
+            // Old Hide reblogs backups had no exceptions.
             ordered.put(Settings.KEEP_TAGGED_REBLOGS, false);
+            ordered.put(Settings.KEEP_REBLOGS_WITH_CONTENT, false);
         }
         if ((Integer) schema < 3 && (ordered.containsKey(Settings.HIDE_POSTS_WITH_WORDS)
                 || texts.containsKey(TextSettings.HIDDEN_WORDS))) {
@@ -710,7 +712,7 @@ public final class SettingsBackup {
      * Writes the switches and text settings a file changes, all of them in one preference commit.
      * A setting the file doesn't name, or names with a value that failed its check, is left as it is.
      *
-     * @return how many switches changed, the number the toast gives. Text settings aren't counted.
+     * @return how many settings changed, including word lists and tab order, for result feedback.
      * @throws ApplyFailed when the commit failed. {@link Setting#saveAll} puts the switches
      *                     back, live and stored; {@link ApplyFailed#rolledBack} says whether that
      *                     worked for every one of them.
@@ -724,11 +726,7 @@ public final class SettingsBackup {
             write(changes);
             pendingUndo = new Undo(before, current());
             undoExpired = false;
-            int switches = 0;
-            for (Setting<?> setting : changes.keySet()) {
-                if (setting instanceof BooleanSetting) switches++;
-            }
-            return switches;
+            return changes.size();
         }
     }
 

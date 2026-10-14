@@ -65,6 +65,7 @@ import java.util.regex.Pattern;
 import app.hushpinterest.extension.shared.L10n;
 import app.hushpinterest.extension.shared.Logger;
 import app.hushpinterest.extension.shared.Utils;
+import app.hushpinterest.extension.shared.settings.AppLanguage;
 import app.hushpinterest.extension.shared.settings.BaseSettings;
 import app.hushpinterest.extension.shared.settings.BooleanSetting;
 import app.hushpinterest.extension.shared.settings.HushPinterestPause;
@@ -107,6 +108,10 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
     static final String SUPPORTED_LINKS = "action_supported_links";
     /** The Android notification settings row's key, under Notifications. It stores nothing. */
     static final String NOTIFICATION_SETTINGS = "action_notification_settings";
+    /** The HushPinterest language row's key. The choice is saved by its own setting, not under this name. */
+    static final String LANGUAGE = "action_hushpinterest_language";
+    /** The row that shows or hides Quick setups on the home page. The choice is saved by its own setting. */
+    static final String QUICK_SETUPS_HOME = "action_quick_setups_home";
 
     /** Thrown by the next initialize() and then cleared: how a test reaches the recovery page. */
     static volatile RuntimeException failNextInitialization;
@@ -213,12 +218,11 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         if (checkNowRow != null) {
             String result = ReleaseCheck.checkNowSummary();
             checkNowRow.setSummary(result);
-            // Spoken as well as shown, but only for a check the user asked for: the daily check
+            // Read as well as shown, but only for a check the user asked for: the daily check
             // that settings starts on its own ends the same way, and nobody is waiting on that.
-            View page = getView();
-            if (announceCheckResult && page != null && result != null) {
+            if (announceCheckResult && result != null) {
                 announceCheckResult = false;
-                page.announceForAccessibility(result);
+                sayCheckResult(result);
             }
         }
     }
@@ -383,11 +387,24 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
                     L10n.t("Hide header buttons"),
                     L10n.t("Hides the small icon buttons at the end of the top bar. Back, text buttons and account "
                         + "controls stay. The change shows the next time the bar updates."), SettingsIcons.BLOCK);
-            patchToggle(ui, context, build, PatchFamily.AMOLED_BLACK, Settings.BLACK_BOTTOM_BAR,
-                    L10n.t("Black bottom bar"),
-                    L10n.t("In dark mode, paints the bottom bar pure black to match the page, which also saves a "
-                        + "little battery on OLED screens. Light mode stays as it is. The change shows the next time "
-                        + "the bar redraws."), SettingsIcons.DARK_MODE);
+            // Each of the three has its own hook and its own switch, so a build where Pinterest's bottom bar,
+            // comments or pin menu wasn't found has no row for it, and the rows it does have keep their own words.
+            if (build.contains(PatchFamily.AMOLED_BLACK) && PatchFamily.Capability.BOTTOM_BAR.installed()) {
+                ui.addPreference(mark(toggle(context, Settings.BLACK_BOTTOM_BAR, L10n.t("Black bottom bar"),
+                        L10n.t("In dark mode, paints the bottom bar pure black to match the page, which also saves a "
+                            + "little battery on OLED screens. Light mode stays as it is. The change shows the next time "
+                            + "the bar redraws.")), SettingsIcons.DARK_MODE));
+            }
+            if (build.contains(PatchFamily.AMOLED_BLACK) && PatchFamily.Capability.BLACK_COMMENTS.installed()) {
+                ui.addPreference(mark(toggle(context, Settings.BLACK_COMMENTS, L10n.t("Black comments"),
+                        L10n.t("In dark mode, paints the comments sheet and its reply bar pure black. Light mode stays "
+                            + "as it is. The change shows the next time you open comments.")), SettingsIcons.DARK_MODE));
+            }
+            if (build.contains(PatchFamily.AMOLED_BLACK) && PatchFamily.Capability.BLACK_PIN_MENU.installed()) {
+                ui.addPreference(mark(toggle(context, Settings.BLACK_PIN_MENU, L10n.t("Black pin menu"),
+                        L10n.t("In dark mode, paints a pin's menu pure black. Light mode stays as it is. The change "
+                            + "shows the next time you open the menu.")), SettingsIcons.DARK_MODE));
+            }
             patchToggle(ui, context, build, PatchFamily.HIDE_CLOSEUP_BUTTONS, Settings.HIDE_CLOSEUP_BACK,
                     L10n.t("Hide back arrow on pins"),
                     L10n.t("Hides the back arrow that floats over a pin you open. Your phone's back gesture or button "
@@ -489,6 +506,8 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         hushpinterest.addPreference(mark(toggle(context, BaseSettings.PAUSED, L10n.t("Pause HushPinterest"),
                 L10n.t("Turns off every HushPinterest switch except Debug logging the next time Pinterest starts. "
                     + "What you chose when you patched stays, and your choices are saved.")), SettingsIcons.PATCHED));
+        hushpinterest.addPreference(mark(languageRow(context), SettingsIcons.SETTINGS));
+        hushpinterest.addPreference(mark(quickSetupsHomeRow(context), SettingsIcons.TOOLS));
         String stays = PatchFamily.staysWhilePausedSummary(build);
         // Morphe Manager can export the patch choices and the signing key, not these switches.
         hushpinterest.addPreference(mark(new BackupRow(this, context, SettingsBackupPreference.EXPORT,
@@ -743,8 +762,10 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         row.actsAtOnce = true;
         row.setSummary(ReleaseCheck.checkNowSummary());
         row.setOnPreferenceClickListener(p -> {
-            // Set before the check starts, so the result is announced even when it lands at once.
+            // Set before the check starts, so the result is read even when it lands at once.
             announceCheckResult = true;
+            // Cleared, so an answer worded like the last one is still a change to read.
+            sayCheckResult(null);
             if (!ReleaseCheck.checkNow()) Utils.showToastLong(L10n.t("Couldn't start that. Try again in a moment."));
             p.setSummary(ReleaseCheck.checkNowSummary());
             return true;
@@ -753,8 +774,17 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         return row;
     }
 
-    /** True from a tap on Check now until the next result is spoken. The automatic check stays quiet. */
+    /** True from a tap on Check now until the next result is read. The automatic check stays quiet. */
     private boolean announceCheckResult;
+
+    /**
+     * Hands a tapped check's result to the screen's live status, which a screen reader reads once
+     * without moving focus. The row that shows it is built again on every change, so its own text
+     * is never a change to read.
+     */
+    private void sayCheckResult(@Nullable String result) {
+        if (getParentFragment() instanceof SettingsDialog) ((SettingsDialog) getParentFragment()).showCheckResult(result);
+    }
 
     /** Fixed project pages. Neither a release's body nor its html_url can choose the destination. */
     private Preference releaseLink(Context context, String key, String title, String summary, String url) {
@@ -891,13 +921,136 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         }
     }
 
-    /** Applies one Quick setups choice to the switches on this page and says how many changed. */
+    /**
+     * Applies one Quick setups choice to the switches on this page, says how many changed and
+     * answers that count. A switch whose change didn't land isn't in it. The one toast then counts
+     * those as well, and says whether the page shows their saved values again or has to be opened
+     * again first. It's the only word on the run: no switch shows a toast of its own, and each
+     * text fits the two lines a toast gets.
+     */
     int applyQuickSetup(Map<BooleanSetting, Boolean> values) {
         PreferenceScreen screen = getPreferenceScreen();
         if (screen == null) return 0;
-        int changed = QuickSetups.apply(screen, values);
-        Utils.showToastLong(L10n.quantity(changed, "Changed %1$d setting", "Changed %1$d settings", changed));
-        return changed;
+        QuickSetups.Outcome outcome = QuickSetups.apply(screen, values);
+        String message;
+        if (outcome.failed == 0) {
+            message = L10n.quantity(outcome.accepted, "Changed %1$d setting", "Changed %1$d settings", outcome.accepted);
+        } else if (outcome.settled) {
+            message = L10n.quantity(outcome.failed, "%1$d changed. %2$d setting is still on its saved value.",
+                    "%1$d changed. %2$d settings are still on their saved values.", outcome.accepted, outcome.failed);
+        } else {
+            message = L10n.quantity(outcome.failed, "%1$d changed. %2$d setting didn't. Reopen settings and try again.",
+                    "%1$d changed. %2$d settings didn't. Reopen settings and try again.", outcome.accepted, outcome.failed);
+        }
+        Utils.showToastLong(message);
+        return outcome.accepted;
+    }
+
+    /**
+     * HushPinterest's own language: Pinterest's, or English whatever Pinterest is in. It's the
+     * extension's own state, so it works while paused and stays out of settings files and Quick
+     * setups. The row's line names the choice in force.
+     */
+    private Preference languageRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(LANGUAGE);
+        row.setTitle(L10n.t("HushPinterest language"));
+        row.setSummary(languageName(BaseSettings.HUSH_LANGUAGE.savedValue()));
+        row.setPersistent(false);
+        row.setOnPreferenceClickListener(p -> {
+            showLanguages();
+            return true;
+        });
+        return row;
+    }
+
+    /**
+     * Whether Quick setups sits on the home page. A tap flips it; a long press on the home row
+     * hides it too. Like the language it's the screen's own state, so it works while paused and
+     * stays out of settings files.
+     */
+    private Preference quickSetupsHomeRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(QUICK_SETUPS_HOME);
+        row.setTitle(L10n.t("Quick setups on the home page"));
+        row.setSummary(quickSetupsHomeSummary());
+        row.setPersistent(false);
+        // A tap changes it at once, so the row goes without a chevron.
+        row.actsAtOnce = true;
+        row.setOnPreferenceClickListener(p -> {
+            setQuickSetupsHidden(!BaseSettings.HIDE_QUICK_SETUPS.savedValue());
+            return true;
+        });
+        return row;
+    }
+
+    private static String quickSetupsHomeSummary() {
+        return BaseSettings.HIDE_QUICK_SETUPS.savedValue()
+                ? L10n.t("Hidden. Tap to show it again.") : L10n.t("Shown. Tap to hide it.");
+    }
+
+    /** The home row's long press: Quick setups leaves the home page, and a toast says where it comes back from. */
+    void hideQuickSetups() {
+        if (setQuickSetupsHidden(true)) {
+            Utils.showToastLong(L10n.t("Quick setups hidden. Show it from Pause, backup and diagnostics."));
+        }
+    }
+
+    /**
+     * Saves whether Quick setups is hidden and redraws the rows that show it. False when the
+     * choice couldn't be saved, which a toast says, and then nothing on screen changes.
+     */
+    boolean setQuickSetupsHidden(boolean hidden) {
+        if (!BaseSettings.HIDE_QUICK_SETUPS.save(hidden)) {
+            Utils.showToastLong(L10n.t("The setting couldn't finish updating. Its saved value is shown."));
+            return false;
+        }
+        Preference row = findPreference(QUICK_SETUPS_HOME);
+        if (row != null) row.setSummary(quickSetupsHomeSummary());
+        if (navigation != null) navigation.quickSetupsChanged();
+        return true;
+    }
+
+    private static String languageName(AppLanguage language) {
+        return language == AppLanguage.EN ? L10n.t("English") : L10n.t("Same as Pinterest");
+    }
+
+    /** The two choices, the one in force marked. A tap on one applies it and closes the list. */
+    void showLanguages() {
+        Context context = getContext();
+        if (context == null) return;
+        AppLanguage[] choices = {AppLanguage.DEFAULT, AppLanguage.EN};
+        CharSequence[] names = {languageName(AppLanguage.DEFAULT), languageName(AppLanguage.EN)};
+        show(new AlertDialog.Builder(themed(context))
+                .setTitle(L10n.t("HushPinterest language"))
+                .setSingleChoiceItems(names, BaseSettings.HUSH_LANGUAGE.savedValue() == AppLanguage.EN ? 1 : 0,
+                        (shown, which) -> {
+                            shown.dismiss();
+                            chooseLanguage(choices[which]);
+                        })
+                .setNegativeButton(L10n.t("Cancel"), null));
+    }
+
+    /**
+     * Saves [language] and draws the screen again in it at once: {@link L10n} reads the choice for
+     * every string from here on, and every row on show was built before it. Pinterest's own language
+     * is never set, so its screens and the words these rows quote from it stay as they are.
+     */
+    void chooseLanguage(AppLanguage language) {
+        if (BaseSettings.HUSH_LANGUAGE.savedValue() == language) return;
+        if (!BaseSettings.HUSH_LANGUAGE.save(language)) {
+            Utils.showToastLong(L10n.t("The setting couldn't finish updating. Its saved value is shown."));
+            return;
+        }
+        Context context = getContext();
+        // The launcher shortcut's label is HushPinterest's too.
+        if (context != null) SettingsEntry.relabelIfStale(context);
+        if (getParentFragment() instanceof SettingsDialog) {
+            ((SettingsDialog) getParentFragment()).languageChanged();
+            return;
+        }
+        Preference row = findPreference(LANGUAGE);
+        if (row != null) row.setSummary(languageName(language));
     }
 
     /**

@@ -1,5 +1,69 @@
 ## Unreleased
 
+* **TikTok:** Sembunyikan video yang sudah kamu tonton kini juga bekerja di Mengikuti, tanpa menggeser video yang sedang diputar.
+
+* **TikTok:** Video yang sedang diputar di Untuk Anda atau Mengikuti tidak lagi hilang saat melewati Usia maksimum kiriman atau saat Sembunyikan video yang sudah kamu tonton menghitungnya.
+
+* **TikTok:** Tampilkan waktu hingga detik punya dua opsi sendiri: Tampilkan zona waktu, aktif seperti sebelumnya, dan Tanggal singkat (#147).
+
+* **TikTok:** Pilih video untuk disimpan dari grid profil kini juga berfungsi di dalam koleksi Favorit, termasuk Pilih semua (#27).
+
+* **TikTok:** Simpan foto asli yang hanya sebagian berhasil kini menawarkan Coba lagi di samping Buka. Itu hanya mencoba lagi foto yang gagal.
+
+* **TikTok:** Pengaturan cepat bisa disembunyikan dari beranda pengaturan dengan menekan lama kartunya. Baris Pengaturan cepat di Beranda pada Cadangkan dan pulihkan memunculkannya lagi.
+
+* **TikTok:** Ruang LIVE bisa menampilkan tombol Rekam (mati secara default, di pengaturan Pemutaran). Tombol ini menyimpan apa yang kamu tonton sejak diketuk sampai kamu mengetuk Berhenti atau keluar dari ruang (#37).
+
+* **TikTok:** Saat Sembunyikan bilah komentar di video yang dibuka aktif, bilah progres tidak lagi melintasi keterangan di video yang kamu buka dari profil atau pencarian. Keterangan dan cakram musik naik secukupnya agar tidak tertutup (#153).
+
+* **TikTok:** Laporan diagnostik tidak lagi menandai bilah komentar sebagai hilang saat kamu berada di feed utama (#153).
+
+* **TikTok:** Bagian penyimpanan di laporan diagnostik tidak lagi menampilkan sebagian ID akunmu sebagai nama folder (#70).
+
+* **TikTok:** Saat Sembunyikan bilah komentar di video yang dibuka aktif, postingan foto di grid yang dibuka tidak lagi berakhir di atas pita hitam di bagian bawah (#153).
+
+* **TikTok:** Saat Tampilkan LIVE di bawah bilah status aktif, panel di atas ruang pertama feed LIVE kini dimulai di bawah jam dan tidak lagi tertutup bilah status (#137).
+
+* **TikTok:** LIVE di feed Untuk Anda tidak lagi menampilkan baris Service+ dari LIVE yang sudah kamu lewati (#94).
+
+* **TikTok:** Sakelar baru mempertahankan kualitas LIVE yang kamu pilih setelah TikTok dimulai ulang (#57).
+
+* **TikTok:** Sakelar baru menambahkan layar bersih, yang hanya menyisakan siarannya, ke menu setiap ruang LIVE (#57).
+
+* **TikTok:** Nama tampilan kreator yang kembali setelah negara atau @nama pengguna tidak lagi terpotong (#127).
+
+* **TikTok:** Tema gelap AMOLED kini juga membuat kartu di halaman pengaturan TikTok sendiri menjadi hitam (#152).
+
+* **TikTok:** Feature Gate Lab punya dua preset baru: Komentar berjalan di atas video dan Beberapa foto dalam satu komentar (#98).
+
+* **TikTok:** Sakelar baru di halaman Feed screen, Bilah bawah transparan, membiarkan video menjangkau bagian bawah layar dan menghapus latar bilah tab. Awalnya mati (#145).
+
+* **TikTok:** Feature Gate Lab punya preset baru, Terjemahan otomatis chat LIVE. Preset ini mengaktifkan opsi Terjemahkan komentar di bawah Bagikan di ruang LIVE (#98).
+
+* **TikTok:** Aktifkan Pilih video untuk disimpan dari grid profil di setelan Hushfeed > Unduhan, dan setiap video di grid profil, Disukai, atau Favorit akan punya lingkaran. Pilih hingga 50, ketuk Simpan, dan semuanya disimpan satu per satu dengan hitungan dan Batal (#27).
+
+* **TikTok:** Pilih video untuk disimpan dari grid profil kini punya tombol Pilih semua. Tombol ini memilih hingga 50 postingan yang sudah dimuat daftar, melewati video yang sudah disimpan saat Periksa video yang sudah disimpan aktif, jadi seluruh daftar tersimpan bertahap, masing-masing melanjutkan dari tempat yang sebelumnya berhenti (#27).
+
+* **TikTok:** Saat Sembunyikan video yang sudah kamu tonton aktif dan catatannya penuh, setiap video yang kamu tonton tidak lagi memeriksa semua 10.000 baris untuk membuang yang tertua. Sekarang itu hanya terjadi sekali setiap 256 video (#84).
+
+## 0.72.0 (2026-10-13)
+
+* **TikTok:** Laporan diagnostik punya bagian baru berisi pengaturan yang diubah. Bagian ini menyebut setiap pengaturan yang tidak lagi di nilai bawaannya, sehingga laporan menunjukkan sakelar mana yang aktif. Teks yang kamu ketik di sebuah pengaturan tidak pernah disertakan (#149).
+
+* **TikTok:** Menambahkan catatan penyiapan emulator Android 17 untuk alat SDK yang salah membaca versi minor API.
+
+* **TikTok:** Setiap halaman pengaturan kini ada langsung di halaman utama pengaturan, di bawah judul singkat, cukup satu ketukan. Jeda Hushfeed dan status lengkap ada di dekat akhir, di bawah Hushfeed.
+
+* **TikTok:** Sakelar baru di Pop-up, Sembunyikan peringatan Periksa sumbermu, menghapus spanduk Periksa sumbermu di bagian atas beberapa video dan peringatan yang ditampilkan TikTok saat kamu membagikannya.
+
+* **TikTok:** Pencarian pengaturan kini memungkinkanmu menyalakan atau mematikan sakelar langsung di hasil. Sakelar yang melakukan lebih dari itu tetap membuka halamannya.
+
+* **TikTok:** Pengaturan cepat ada di bawah kolom pencarian. Tenang, Privasi, dan Kembalikan default cukup sekali ketuk, memberi tahu berapa pengaturan yang berubah, dan menawarkan Urungkan.
+
+* **TikTok:** Halaman utama pengaturan kini diakhiri Laporkan masalah, yang membuka laporan GitHub dengan versi dan sakelarmu sudah terisi, dan Dukung Hushfeed, yang membuka Ko-fi.
+
+* **TikTok:** Memulai ulang TikTok dari baris mulai ulang atau banner kini membawamu kembali ke halaman pengaturan Hushfeed tempatmu tadi.
+
 * **TikTok:** Pengaturan Hushfeed punya tampilan baru, dengan menu halaman utama dalam satu kelompok dan ikon merah muda. Panel membulat dan sakelar berbentuk pil juga hadir di Feature Gate Lab dan editor daftar kreator tersembunyi. Teks besar dan mode terang tetap mudah dibaca.
 
 * **TikTok:** Pemeriksaan cakupan menu profil, kasus uji register tinggi, dan proyek uji penandatanganan sudah diperbaiki. Uji penandatanganan juga menerima opsi D8 dalam urutan apa pun.
@@ -126,7 +190,25 @@
 
 * **TikTok:** Pelapor awal mengonfirmasi bahwa tanggal postingan mengikuti Ukuran teks kreator (#66).
 
-## 0.71.3 (2026-10-11)
+* **TikTok:** Cadangan yang dipulihkan dengan pola nama file atau folder unduhan yang sangat panjang tidak lagi membuat halaman pengaturan macet.
+
+* **TikTok:** Panah Kembali di halaman pengaturan yang dibuka dari "Tampilkan sakelarnya" sekarang keluar dari pengaturan, tidak lagi diam saja.
+
+* **TikTok:** "Sembunyikan koneksi VPN" sekarang menyebut TikTok tetap bisa melihat alamat IP VPN, dan "Blokir ID iklan" menyebut menghapus, bukan mereset.
+
+* **TikTok:** "Lupakan video tersimpan" dan "Tambahkan aplikasi ke Bagikan via" tidak lagi macet saat TikTok sedang sibuk. Keduanya memberi tahu, dan kamu bisa mencoba lagi.
+
+* **TikTok:** Pemeriksa patch kini memeriksa folder simpanannya sebelum mengosongkannya, dan menolak folder yang tidak dibuatnya.
+
+* **TikTok:** Saat TalkBack aktif, Untuk Kamu menyediakan tindakan Buka pengaturan Hushfeed, jadi pintasan tekan lama juga berfungsi dengan pembaca layar.
+
+* **TikTok:** Jika menyimpan font baru yang diimpor gagal atau TikTok tertutup di tengah jalan, font yang sebelumnya kamu pakai tetap ada dan tidak hilang.
+
+* **TikTok:** Berganti akun saat video diputar tidak lagi menyembunyikan video itu di akun tujuan. Video hanya dihitung sudah ditonton untuk akun yang menontonnya.
+
+* **TikTok:** Memutar ponsel atau mengganti mode gelap saat editor daftar terbuka kini mempertahankan pilihan dan ketikanmu, tidak mulai dari awal. Batal tetap tidak mengubah apa pun.
+
+* **TikTok:** Gambar ikon kini juga memeriksa data piksel PNG, jadi file yang rusak di dalamnya menghentikan patching dengan aman alih-alih masuk ke aplikasi.
 
 * **TikTok:** Tampilkan LIVE di bawah bilah status kini memenuhi tepi atas di setiap ruang tanpa pita hitam atau garis pucat (#137).
 

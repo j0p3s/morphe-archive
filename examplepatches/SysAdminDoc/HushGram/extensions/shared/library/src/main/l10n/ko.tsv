@@ -105,6 +105,7 @@ HushGram pauses when Instagram restarts.	Instagram을 다시 시작하면 HushGr
 HushGram saves	HushGram 저장
 HushGram settings	HushGram 설정
 HushGram settings couldn't open	HushGram 설정을 열 수 없습니다
+HushGram settings are locked	HushGram 설정이 잠겨 있습니다
 HushGram turns back on when Instagram restarts.	Instagram을 다시 시작하면 HushGram이 다시 실행됩니다
 Instagram crashed or froze within a minute of starting three times in a row, so HushGram paused itself.	Instagram이 시작한 지 1분 이내에 연속으로 세 번 충돌하거나 멈춰서 HushGram이 일시적으로 작동을 정지하였습니다
 Instagram stops showing the screen that says this version is too old. A patched build doesn't update on its own, so this keeps it usable.	Instagram에서 이 버전이 만료되었다라는 화면이 더 이상 표시되지 않습니다. 패치된 빌드는 자동으로 업데이트되지 않으므로, 이 설정을 통해 계속 사용할 수 있습니다
@@ -140,7 +141,7 @@ Saving... You can cancel from Downloads in HushGram settings.	저장 중... Hush
 Set when you patched	패치할 때 설정되는 기능
 Settings couldn't open	설정을 열 수 없습니다
 Settings couldn't refresh completely. Reopen settings and try again.	설정이 완전히 새로 고쳐지지 않았습니다. 설정을 다시 열고 다시 시도하세요
-Source code and issues	소스 코드 및 소스
+Source code and issues	소스 코드 및 이슈
 Hides sponsored posts, reels and stories. No empty gap is left where an ad would have been.	스폰서 게시물, 릴스, 스토리를 숨깁니다. 광고가 있던 자리에 빈 공간이 남지 않습니다.
 Stays in while paused	일시 정지 중에 유지되는 기능
 Removes tracking tags from links you copy or share, and opens bio links without Instagram's click tracker. The link still opens the same post, reel or profile.	복사하거나 공유하는 링크에서 추적 태그를 제거하고, 소개의 링크를 Instagram의 클릭 추적 없이 엽니다. 링크는 같은 게시물, 릴스, 프로필을 그대로 엽니다.
@@ -321,7 +322,7 @@ Couldn't mark as read	읽음으로 표시할 수 없습니다
 Hide that you're typing	입력 중 표시 숨기기
 People you're chatting with don't see the typing dots while you write, and you still see theirs.	메시지를 쓰는 동안 상대방에게 입력 중 표시가 보이지 않으며, 상대방의 입력 중 표시는 계속 볼 수 있습니다
 Hide your active status	활동 상태 숨기기
-People don't see Active now for you while you use Instagram, and you still see when they're active. Restart Instagram to see the change.	Instagram을 사용하는 동안 다른 사람에게 현재 활동 중으로 표시되지 않으며, 다른 사람의 활동 상태는 계속 볼 수 있습니다. 변경 사항을 보려면 Instagram을 다시 시작하세요.
+People don't see Active now for you while you use Instagram, and you still see when they're active. It takes effect the next time you come back to Instagram.	Instagram을 사용하는 동안 다른 사람에게 현재 활동 중으로 표시되지 않으며, 다른 사람의 활동 상태는 계속 볼 수 있습니다. 다음에 Instagram으로 돌아올 때부터 적용됩니다.
 Start Home on Following	팔로잉에서 홈 시작
 Opens Home on posts from accounts you follow instead of For you. Tap the top of Home to switch. Restart Instagram to see the change.	홈을 추천 대신 팔로우하는 계정의 게시물로 엽니다. 홈 상단을 탭하면 전환할 수 있습니다. 변경 사항을 보려면 Instagram을 다시 시작하세요.
 Hide suggested stories	추천 스토리 숨기기
@@ -429,7 +430,7 @@ Reopen the media and save again.	미디어를 다시 열고 저장하세요
 Search settings	설정 검색
 Clear search	검색 지우기
 No matching settings	일치하는 설정이 없습니다
-Try another word or clear the search.	다른 단어를 입력하거나 검색어를 지워보세요
+Try another word. Settings only appear for patches included in this install.	다른 단어를 입력해 보세요. 이 설치에 포함된 패치의 설정만 표시됩니다.
 Contacts, location setup, analytics	연락처, 위치 설정, 분석
 Save all	모두 저장
 Saving a carousel	캐러셀을 저장하는 중
@@ -1014,3 +1015,23 @@ Clear download history	다운로드 기록 지우기
 Forgets everything Skip what's already saved remembers, for all your accounts. Your saved files stay.	이미 저장한 항목 건너뛰기가 기억한 내용을 모든 계정에서 지웁니다. 저장된 파일은 그대로 남습니다.
 Download history cleared.	다운로드 기록을 지웠습니다.
 Couldn't clear the download history. Try again.	다운로드 기록을 지우지 못했습니다. 다시 시도하세요.
+Loading the picture...	사진을 불러오는 중...
+# context: the settings row right above Support HushGram that opens a new bug report on GitHub
+Report a problem	문제 신고하기
+Opens a GitHub report with your versions and settings filled in. Add what happened.	버전과 설정이 미리 채워진 GitHub 신고를 엽니다. 무슨 일이 있었는지 적어 주세요.
+# context: the settings row under Search, and the title of its dialog of one-tap choices
+Quick setups	빠른 설정
+Turn on a set of switches in one tap, or put every switch back the way it started.	한 번의 탭으로 여러 스위치를 켜거나 모든 스위치를 처음 상태로 되돌립니다.
+# context: a Quick setups choice that hides ads, suggestions and promotions
+Quiet	조용하게
+# context: a Quick setups choice that turns on the privacy switches
+Privacy	개인정보 보호
+# context: a Quick setups choice that puts every switch back the way it started
+Back to defaults	기본값으로 되돌리기
+Hides ads, suggested accounts and posts, surveys and promotions.	광고, 추천 계정과 게시물, 설문, 홍보를 숨깁니다.
+Hides your seen receipts, typing and active status. Allows screenshots and stops link tracking and usage reports.	읽음 표시, 입력 중 표시, 활동 상태를 숨깁니다. 스크린샷을 허용하고 링크 추적과 사용 보고를 막습니다.
+Puts every switch back the way it started. Your locks stay as they are.	모든 스위치를 처음 상태로 되돌립니다. 잠금은 그대로 유지됩니다.
+# context: toast after a Quick setups choice changed exactly one switch
+Changed %1$d setting	설정 %1$d개를 바꿨습니다
+# context: the same toast for any other count, zero included; %1$d is how many
+Changed %1$d settings	설정 %1$d개를 바꿨습니다

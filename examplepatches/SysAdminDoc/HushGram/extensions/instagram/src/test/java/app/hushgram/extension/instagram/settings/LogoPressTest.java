@@ -155,12 +155,39 @@ public class LogoPressTest {
         assertEquals(1, shown());
     }
 
+    /**
+     * Home's newer header keeps its logo in an image view with no listener of Instagram's; the
+     * patch hands that view over once, as the header finds it.
+     */
+    @Test public void theNewerHeadersLogoOpensHushGram() {
+        ImageView logo = new ImageView(activity);
+        ((ViewGroup) title.getParent()).addView(logo);
+        assertFalse(logo.isLongClickable());
+
+        SettingsEntry.watchLogo(logo);
+
+        assertTrue(logo.isLongClickable());
+        assertTrue(logo.performLongClick());
+        assertEquals(1, shown());
+        assertEquals("a tap on the older header's title came with it", 0, taps.get());
+    }
+
+    @Test public void noLogoViewIsLeftAlone() {
+        SettingsEntry.watchLogo(null);
+        assertEquals(0, shown());
+    }
+
     @Test public void aLogoNoLongerOnScreenLeavesThePressToInstagram() {
         AtomicInteger asked = new AtomicInteger();
         SettingsEntry.setLogoLongClickListener(title, instagrams(asked, false));
+        View.OnLongClickListener listener = shadowOf(title).getOnLongClickListener();
+        assertNotNull(listener);
         ((ViewGroup) title.getParent()).removeView(title);
+        assertNull("the real logo was removed from its header", title.getParent());
 
-        assertFalse(title.performLongClick());
+        // A callback already in flight can outlive removal. performLongClick also runs Android's
+        // unhandled context-menu fallback, which requires a parent that this view no longer has.
+        assertFalse(listener.onLongClick(title));
         assertEquals(1, asked.get());
         assertEquals(0, shown());
     }

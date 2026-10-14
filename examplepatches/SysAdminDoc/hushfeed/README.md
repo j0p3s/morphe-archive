@@ -1,7 +1,7 @@
 ![Hushfeed. Take back your feed with focused controls for filtering, gestures, playback, downloads and privacy.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="CHANGELOG.md"><img alt="version" src="https://img.shields.io/badge/version-0.71.3-6f42c1.svg" /></a>
+  <a href="CHANGELOG.md"><img alt="version" src="https://img.shields.io/badge/version-0.72.0-6f42c1.svg" /></a>
   <a href="LICENSE"><img alt="license" src="https://img.shields.io/badge/license-GPLv3-blue.svg" /></a>
   <a href="https://www.android.com/"><img alt="platform" src="https://img.shields.io/badge/platform-Android-3ddc84.svg" /></a>
   <a href="https://github.com/MorpheApp/morphe-manager"><img alt="Morphe" src="https://img.shields.io/badge/works%20with-Morphe-00b894.svg" /></a>
@@ -30,9 +30,9 @@ Most switches start off, so a freshly patched TikTok looks and works the way it 
 > [!IMPORTANT]
 > Hushfeed targets the global TikTok package, `com.zhiliaoapp.musically`, version [47.1.4](https://www.apkmirror.com/apk/tiktok-pte-ltd/tik-tok-including-musical-ly/tiktok-47-1-4-release/tiktok-47-1-4-2-android-apk-download/). Use that exact APK when patching. See [Supported target](#supported-target) for the build details.
 
-Hushfeed v0.71.2 contains 132 patches for TikTok 47.1.4. New in this one: a LIVE opened from the preview under a creator's card in search now gets the LIVE status bar switches too, and the caption you keep in Clear display stays at the height TikTok showed it. It needs Morphe Manager 1.34.0 or newer.
+Hushfeed v0.72.0 contains 134 patches for TikTok 47.1.4. New in this one: every Hushfeed settings page now sits on the main settings page, and holding For You at the top of the feed opens it. Settings search can flip a switch right in the results. Two patches are new, Show commenter handle and region and Profile background. It needs Morphe Manager 1.34.0 or newer.
 
-The main branch contains 134 patches, v0.71.2's 132 plus Profile background and Show commenter handle and region.
+The main branch contains 134 patches, the same set as v0.72.0.
 
 ## What it changes
 
@@ -65,21 +65,19 @@ The patches that take files out of TikTok do it while patching, so Pause and a s
 
 Besides the row at the top of TikTok's **Settings and privacy**, two shortcuts skip Profile and work while you're signed out: press and hold **For You** at the top of the feed, or long-press **Home** on the bottom bar. A quick tap on either still does what it always did. The Home shortcut needs **Feed tab navigation** selected along with **Settings** when you patch, and it's the one to use if you've hidden the tab names at the top of the feed.
 
-The home page has a search box, which finds any row by its title or description, and seven groups:
+The home page has a search box, which finds any row by its title or description and flips a plain switch right in the results. Under it, Quick setups turns on Quiet or Privacy, or puts every switch back to its default, in one tap with Undo. Every settings page sits right on the home page under a small heading, so nothing is more than one tap away:
 
-| Group | Pages and controls |
+| Heading | Pages |
 | --- | --- |
-| Feed & layout | Feed filter, Feed tabs and Feed screen |
-| Playback | Speed, quality and playback behavior |
-| Privacy | Tracking, device access and links |
-| Comments & inbox | Comments and Inbox |
-| Downloads & sharing | Downloads and Share sheet |
-| Screen time | Daily budgets, reminders and the hold |
-| App & advanced | App, Region, Backup and restore, Diagnostics, Feature Gate Lab and Pause Hushfeed |
+| Your feed | Feed filter, Feed tabs, Feed screen, Playback and Screen time |
+| Conversations | Comments and Inbox |
+| Saving and sharing | Downloads and Share sheet |
+| Privacy and app | Privacy, App, Region, Backup and restore, and Feature Gate Lab when it's installed |
+| Hushfeed | Status, Pause Hushfeed, Diagnostics, About Hushfeed, Report a problem and Support Hushfeed |
 
-About Hushfeed, at the bottom, has the build details and the license notices. A few pages you'll want to know about:
+The status chip next to the Hushfeed title scrolls down to the full status card. About Hushfeed has the build details and the license notices. **Report a problem** opens a GitHub bug report with your versions and the switches you have on filled in, and **Support Hushfeed** opens Ko-fi. A few pages you'll want to know about:
 
-- **Pause Hushfeed**, under App & advanced, turns the runtime features off from the next start and keeps every choice you made. [Is it Hushfeed?](#is-it-hushfeed-pause-it-and-see) lists what it can't reach.
+- **Pause Hushfeed**, under the Hushfeed heading, turns the runtime features off from the next start and keeps every choice you made. [Is it Hushfeed?](#is-it-hushfeed-pause-it-and-see) lists what it can't reach.
 - **Backup and restore** saves your settings and Feature Gate Lab rules to a JSON file. A backup from an older Hushfeed restores what it has and leaves the rest as you set it. Restore and reset keep one undo copy inside TikTok, but clearing TikTok's data takes that copy too, so back up to a file first.
 - **Import watch history**, under Feed filter > Seen videos, reads the JSON file from [your TikTok data download](https://support.tiktok.com/en/account-and-privacy/personalized-ads-and-data/requesting-your-data) so Hide already seen videos knows what you've watched. The file's dates don't name a time zone, so they're read in your phone's zone when you pick the file. It takes up to 2 MB and 10,000 entries.
 - **Diagnostics** exports a report you can attach to a bug, and the report stays on your phone until you share it. Its **Hook status** row says whether the hooks found what they need in your TikTok build. It hears from comments, comment translation, the inbox, the share sheet, the feed overlay, the bottom navigation and the story viewer, feed models, playback quality, sensitive warnings, CAPTCHA account state, the external browser, sticker saves and story saves. A switch can read on while its hook found nothing, and this row is how you'd know.
@@ -131,7 +129,7 @@ Simple mode in Morphe Manager selects 117 of these patches. Each row says what t
 
 | Patch | Description |
 |---|---|
-| `Advanced downloads` | Adds more ways to save: pick the video quality, save full-size photos, the sound on its own or a photo post as one video, hold a profile picture or story to save it, and save a story or a video's cover from the share sheet. Starts off. Turn it on in Hushfeed settings > Downloads. |
+| `Advanced downloads` | Adds more ways to save: pick the video quality, save full-size photos, the sound on its own or a photo post as one video, hold a profile picture or story to save it, save a story or a video's cover from the share sheet, and pick videos on a profile grid to save in one run. Starts off. Turn it on in Hushfeed settings > Downloads. |
 | `Allow Duet and Stitch` | Shows the Duet and Stitch buttons on videos whose creator turned them off, so you can still make one. TikTok may still refuse some videos or the upload. Starts off. Turn it on in Hushfeed settings > Share sheet. |
 | `Allow screenshots and Circle to Search` | Lets screenshots, screen recordings and Circle to Search work on TikTok screens that would otherwise come out black. Starts off. Turn it on in Hushfeed settings > App, then restart TikTok. |
 | `Always show publish date` | Shows the date a video was posted next to the creator's name, so you can tell how old it is. It can also show the exact time, or dates on profile grids. On by default. Turn it off in Hushfeed settings > Feed screen. |
@@ -206,7 +204,7 @@ Simple mode in Morphe Manager selects 117 of these patches. Each row says what t
 | `Keep the screen's refresh rate` | Stops TikTok slowing your screen down to the video's frame rate, so scrolling stays smooth on 90 or 120 Hz phones. Starts off. Turn it on in Hushfeed settings > App. |
 | `Lift text length limits` | Lets you write longer comments, repost notes and bios than the app normally allows. TikTok can still refuse one that's too long. Starts off. Turn it on in Hushfeed settings > Comments. |
 | `Limit background traffic` | Lets you stop TikTok loading upcoming videos ahead of time, which uses less data in the background, but videos may take a moment longer to start. Starts off. Turn it on in Hushfeed settings > App. |
-| `LIVE controls` | Stops a LIVE in the feed from opening by itself after a countdown, can show a LIVE's exact viewer count instead of a rounded one, and can offer a quality choice in more LIVE rooms. Starts off. Turn it on in Hushfeed settings > Playback. |
+| `LIVE controls` | Stops a LIVE in the feed from opening by itself after a countdown. It can show a LIVE's exact viewer count instead of a rounded one, offer a quality choice and clear screen in more LIVE rooms, and keep your quality pick after TikTok restarts. Starts off. Turn it on in Hushfeed settings > Playback. It also keeps a LIVE in the feed from showing the Service+ row of the LIVE before it, and can add a Record button to a LIVE room that saves what you watch from when you tap it. |
 | `Location access governor` | Gives TikTok no location when it asks, so it can't see where you are from your phone's location services. Starts off. Turn it on in Hushfeed settings > Privacy. |
 | `Long-press controls` | Lets a long press on a video like it, open the comments, copy the link, save the sound or the frame on screen, or set a sleep timer, and can give a creator's videos For You's full long-press menu. Starts off. Pick an action in Hushfeed settings > Feed screen. |
 | `Look like the store app` | Makes the patched app answer TikTok's checks as if it came from the Play Store, which can help when follows or likes undo themselves. TikTok has other checks, so it may not be enough. On once picked. Turn it off in Hushfeed settings > App. |
@@ -245,7 +243,7 @@ Simple mode in Morphe Manager selects 117 of these patches. Each row says what t
 | `Show the progress bar` | Shows the progress bar on videos where TikTok hides it, so you can see how long a video is and skip around. On by default. Turn it off in Hushfeed settings > Playback, where you can also show the time beside the bar or give it a bigger handle. A seek bar for video stories is there too. |
 | `Show the progress bar thumbnail` | Shows a small preview picture while you drag the progress bar, so you can find the part you want. On by default. Turn it off in Hushfeed settings > Playback. |
 | `SIM spoof` | Makes TikTok see the SIM country and carrier you choose. It may not change your region, since TikTok also goes by your internet connection and account. Starts off. Turn it on in Hushfeed settings > Region. |
-| `Skip content warnings` | Plays videos without the warning screen you'd have to tap through first, and can hide the Check sources banner on unverified videos. Starts off. Turn it on in Hushfeed settings > Feed screen. |
+| `Skip content warnings` | Plays videos without the warning screen you'd have to tap through first, and can hide the Check sources and Check your sources banners. Starts off. Turn it on in Hushfeed settings > Feed screen. |
 | `Skip first-launch setup` | Skips TikTok's setup screens on a fresh install, like the interest picker and the swipe tutorial. Sign-in and age screens still show. Its switch is on once picked, since setup runs before you can reach settings. Turn it off in Hushfeed settings > App. |
 | `Skip passkey sign-in` | Lets you sign in another way, like your password or a code by email or text, when TikTok wants a passkey. Password managers won't hand a passkey to a patched app, so that step can't finish here. With the switch on, TikTok treats your phone as one without passkeys. Starts off. Turn it on in Hushfeed settings > App. |
 | `Skip the splash ad` | Lets you stop the full-screen ad TikTok can show while it starts up. Starts off. Turn it on in Hushfeed settings > App. |
@@ -259,7 +257,7 @@ Simple mode in Morphe Manager selects 117 of these patches. Each row says what t
 | `Story controls` | Lets a story replay when it ends instead of moving on, and keeps a photo story on screen until you tap or swipe. Starts off. Turn it on in Hushfeed settings > Playback. |
 | `Subtitle tools` | Lets you make captions bigger, change their background and keep them in clear display, and save subtitle files with downloaded videos. Starts off. Turn it on in Hushfeed settings > Feed screen, and Downloads for subtitle files. |
 | `Swipe-left controls` | Lets a left swipe on a video open its comments or do nothing, instead of opening the creator's profile. Starts off. Pick an action in Hushfeed settings > Feed screen. |
-| `Translate comments` | Translates comments as they load, using TikTok's own translator, so you don't have to tap Translate on each one. Starts off. Turn it on in Hushfeed settings > Comments, where more rows list languages TikTok's automatic translation should leave alone, pick the language translations come out in, and add TikTok's translate button beside the comment count. Optional received-message and draft translation previews are under Inbox settings. |
+| `Translate comments` | Translates comments as they load, using TikTok's own translator, so you don't have to tap Translate on each one. Starts off. Turn it on in Hushfeed settings > Comments, where more rows list languages TikTok's automatic translation should leave alone, pick the language translations come out in, and add TikTok's translate button beside the comment count. |
 | `Trust user certificates` | Lets TikTok trust security certificates you install yourself, so a tool like mitmproxy can show what the app sends. The risk: anyone who gets a certificate onto your phone can read TikTok's traffic too. Use it only on a test phone. |
 | `Turn off haptics` | Stops the little vibrations TikTok makes when you tap or hold things. Your keyboard and your phone's own vibrations stay. Starts off. Turn it on in Hushfeed settings > App. |
 | `Turn off screen transitions` | Opens and closes TikTok's screens without the sliding animation, so moving around feels quicker. Swipes still follow your finger. Starts off. Turn it on in Hushfeed settings > App. |
@@ -293,7 +291,7 @@ Select Morphe's Clone app patch, with its Update permissions and Update provider
 
 ### Is it Hushfeed? Pause it and see
 
-**Hushfeed settings > App & advanced > Pause Hushfeed** turns off the runtime features from the next start. Your settings stay as they were, and turning Pause off brings them back after a restart. A diagnostic export made while paused says so at the top. If a problem stays while paused, compare with an official TikTok build before you blame any patch.
+**Hushfeed settings > Pause Hushfeed** (under the Hushfeed heading) turns off the runtime features from the next start. Your settings stay as they were, and turning Pause off brings them back after a restart. A diagnostic export made while paused says so at the top. If a problem stays while paused, compare with an official TikTok build before you blame any patch.
 
 Pausing turns off the screen-time budget as well, so with Wait a day to loosen the budget on, Pause is refused until the day starts over. App lock stays on, so pausing can't be used to get past it.
 
@@ -374,6 +372,8 @@ pwsh -File scripts/validate-release-facts.ps1
 
 The patch tests read the stock TikTok APKs from the folder `HUSHFEED_FIXTURE_DIR` names, which [CONTRIBUTING.md](CONTRIBUTING.md) covers along with the release steps. The finished bundle is `patches/build/release/patches-<version>.mpp`, with `bundle.sha256` beside it. Publish that one. The copy in `patches/build/libs` gets turned back into a plain jar by later Gradle tasks, and Morphe Manager then shows zero patches. Two clean builds of the same commit give the same file and checksum.
 
+For Android 17 emulator checks, use Android SDK Command-line Tools 23 and inspect the new AVD's `.ini` target before launching it. Tools 12 can misread `android-37.1` as `android-0` even when creation succeeds. A 16 KB image still needs actual TikTok launch and playback checks. Aligned APK entries alone don't prove it runs.
+
 To add a language to the settings screen, copy one of the tables under `extensions/tiktok/src/main/l10n/` (the tab separated `de.tsv` or the Weblate style `in.csv`) to your language code, translate the right column, then run `python scripts/gen-l10n.py` and `./gradlew :extensions:tiktok:test`. Use the code Android reports, so `in` rather than `id`. The tests fail on any settings text that's missing from a table.
 
 Where things live:
@@ -391,9 +391,9 @@ Hushfeed has no server of its own and collects nothing. Everything it adds runs 
 
 It goes online by itself for one job. When you save a video, a photo, a sound, subtitles, a sticker or a profile picture, it downloads that file over HTTPS from the address TikTok's own data holds for it. It won't fetch from an address on your own network, and those downloads connect directly even when Network proxy is on. Copy the full link for short links, which is off unless you turn it on, uses the same path to see where a vt.tiktok.com or vm.tiktok.com link leads. Network proxy, once you turn it on, also checks that your proxy answers when TikTok starts and when it comes back to the screen. Anything else, like translating a comment or blocking a creator, goes through TikTok's own code to TikTok's servers.
 
-The only web addresses written into Hushfeed's code are github.com for this project, gitlab.com and gnu.org for licence texts, tiktok.com for the share links TikTok itself uses, and music.youtube.com for the Find the sound on YouTube Music gesture. A test fails the build if another one turns up.
+The only web addresses written into Hushfeed's code are github.com for this project, ko-fi.com for the Support Hushfeed row, which opens in your browser only when you tap it, gitlab.com and gnu.org for licence texts, tiktok.com for the share links TikTok itself uses, and music.youtube.com for the Find the sound on YouTube Music gesture. A test fails the build if another one turns up.
 
-The diagnostic report and a feed capture stay on your phone until you copy or save them. They leave out web addresses, login tokens and cookies, device ids, the ids of videos, comments and messages, and creator names and handles. Read one through before you share it anyway.
+The diagnostic report and a feed capture stay on your phone until you copy or save them. They leave out web addresses, login tokens and cookies, device ids, the ids of videos, comments and messages, and creator names and handles. The report does name the Hushfeed settings you've changed, so a bug report shows which switches are on, but never the words, names or addresses you typed into one. Read one through before you share it anyway.
 
 ## Credits
 

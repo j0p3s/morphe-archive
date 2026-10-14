@@ -5,8 +5,10 @@
 package app.hushtelegram.extension.telegram.misc;
 
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
@@ -24,8 +26,11 @@ import java.io.OutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
@@ -45,9 +50,16 @@ import app.hushtelegram.extension.telegram.settings.Settings;
  *
  * <p>Only what Telegram would let you save by hand: a document or a song from a message. Photos and
  * videos have Telegram's own Save to gallery, and GIFs, voice and round videos stay put. Nothing
- * from a secret chat, self-destructing media, or a chat or message that doesn't allow saving. A
- * copy already there with the same name and size is left alone. On Android 9 and 10 with storage
- * access, Telegram's folder is already shared, so there's nothing to copy.
+ * from a secret chat, self-destructing media, or a chat or message that doesn't allow saving. On
+ * Android 9 and 10 with storage access, Telegram's folder is already shared, so there's nothing to
+ * copy.
+ *
+ * <p>Each document is copied once. A private list notes which Downloads entry holds it, under the
+ * downloader's name for it (data center and document ID), so another file that only shares its
+ * name and size still gets its own copy, and a copy deleted from Downloads is made again the next
+ * time the document downloads. Copies made before the list began are taken once by name and size,
+ * the way those versions matched them. A copy waiting its turn checks the switch when it starts
+ * and again before it's shown, so turning it off or pausing publishes nothing more.
  */
 public final class SaveDownloads {
     /** Where the copies go, as MediaStore writes it: the shared Download folder's Telegram folder. */
@@ -126,7 +138,7 @@ public final class SaveDownloads {
                 return;
             }
             String display = displayName(telegram.documentName(document), file.getName());
-            work.execute(() -> save(file, display));
+            work.execute(() -> save(file, display, name));
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.SAVE_DOWNLOADS, "download", failure);
         }
@@ -166,8 +178,36 @@ public final class SaveDownloads {
         return dot <= 0 || dot == name.length() - 1 ? "" : name.substring(dot + 1);
     }
 
-    static void save(File file, String name) {
+    static final String SAVED = "file saved to Download/Telegram";
+    static final String ALREADY_SAVED = "file already in Download/Telegram";
+    static final String DROPPED = "copy dropped, switched off or paused";
+
+    /** The private list of copies: the downloader's name for a document, to the Downloads entry holding it. */
+    static final String RECEIPTS = "hushtelegram_saved_downloads";
+    /** Years of saved files. Past it the oldest notes go, and those documents could be copied again. */
+    static final int MAX_RECEIPTS = 2000;
+    /** The list's start, kept beside the notes. No downloader name starts with '#'. */
+    static final String BEGAN = "#began";
+    /**
+     * Versions before the list skipped a copy when an entry of the same name and size was there.
+     * Their copies are matched that way once, only if added before the list began, so updating
+     * doesn't copy every saved file again. Entries added since are found by their notes alone.
+     */
+    static final String OLDER_COPY = MediaStore.MediaColumns.DISPLAY_NAME + "=? AND "
+            + MediaStore.MediaColumns.RELATIVE_PATH + "=? AND " + MediaStore.MediaColumns.SIZE + "=? AND "
+            + MediaStore.MediaColumns.DATE_ADDED + "<?";
+
+    /**
+     * @param name     the name the copy shows in Downloads
+     * @param document the downloader's name for the document, which no other document has
+     */
+    static void save(File file, String name, String document) {
         try {
+            // Turned off or paused while it waited behind other copies.
+            if (!wanted()) {
+                HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, DROPPED);
+                return;
+            }
             Context context = Utils.getContext();
             if (context == null || !file.isFile()) return;
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) {
@@ -178,11 +218,14 @@ public final class SaveDownloads {
                 HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, "file already in shared storage");
                 return;
             }
-            HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, copy(context.getContentResolver(), file, name)
-                    ? "file saved to Download/Telegram" : "file already in Download/Telegram");
+            HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, copy(context, file, name, document));
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.SAVE_DOWNLOADS, "copy", failure);
         }
+    }
+
+    private static boolean wanted() {
+        return Utils.settingsReady() && Settings.SAVE_DOWNLOADS.get();
     }
 
     /**
@@ -202,15 +245,26 @@ public final class SaveDownloads {
         return false;
     }
 
-    /** Copies into MediaStore's Downloads, hidden until it's whole. False when the same file is there already. */
+    /**
+     * Copies into MediaStore's Downloads, hidden until it's whole, and says what happened. An entry
+     * added after the list began is only ever matched by its note, since another file can share its
+     * name and size. One added before it is taken once by name and size, see {@link #OLDER_COPY}.
+     */
     @RequiresApi(Build.VERSION_CODES.Q)
-    private static boolean copy(ContentResolver resolver, File file, String name) throws IOException {
+    private static String copy(Context context, File file, String name, String document) throws IOException {
+        ContentResolver resolver = context.getContentResolver();
         Uri downloads = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
-        try (Cursor same = resolver.query(downloads, new String[]{MediaStore.MediaColumns._ID},
-                MediaStore.MediaColumns.DISPLAY_NAME + "=? AND " + MediaStore.MediaColumns.RELATIVE_PATH + "=? AND "
-                        + MediaStore.MediaColumns.SIZE + "=?",
-                new String[]{name, FOLDER, Long.toString(file.length())}, null)) {
-            if (same != null && same.moveToFirst()) return false;
+        SharedPreferences receipts = context.getSharedPreferences(RECEIPTS, Context.MODE_PRIVATE);
+        long earlier = receipts.getLong(document, -1);
+        if (earlier >= 0 && exists(resolver, ContentUris.withAppendedId(downloads, earlier))) return ALREADY_SAVED;
+        long began = began(receipts);
+        // A noted copy that's gone was deleted on purpose, so it's made again rather than matched.
+        if (earlier < 0) {
+            long older = olderCopy(resolver, receipts, name, file.length(), began);
+            if (older >= 0) {
+                remember(receipts, document, older);
+                return ALREADY_SAVED;
+            }
         }
         ContentValues values = new ContentValues();
         values.put(MediaStore.MediaColumns.DISPLAY_NAME, name);
@@ -227,10 +281,14 @@ public final class SaveDownloads {
                 byte[] buffer = new byte[64 * 1024];
                 for (int read; (read = in.read(buffer)) != -1; ) out.write(buffer, 0, read);
             }
+            // Turned off or paused while it was written: the hidden entry goes and nothing shows up.
+            if (!wanted()) {
+                resolver.delete(pending, null, null);
+                return DROPPED;
+            }
             values.clear();
             values.put(MediaStore.MediaColumns.IS_PENDING, 0);
             if (resolver.update(pending, values, null, null) != 1) throw new IOException("MediaStore didn't publish the file");
-            return true;
         } catch (IOException | RuntimeException failure) {
             try {
                 resolver.delete(pending, null, null);
@@ -239,6 +297,67 @@ public final class SaveDownloads {
             }
             throw failure;
         }
+        remember(receipts, document, ContentUris.parseId(pending));
+        return SAVED;
+    }
+
+    /** Whether the entry is still in MediaStore. Deleted from a file manager, it isn't. */
+    private static boolean exists(ContentResolver resolver, Uri entry) {
+        try (Cursor row = resolver.query(entry, new String[]{MediaStore.MediaColumns._ID}, null, null, null)) {
+            return row != null && row.moveToFirst();
+        }
+    }
+
+    /** When the list began, in MediaStore's seconds, written by the first copy that finds none. -1 if it can't be saved. */
+    private static long began(SharedPreferences receipts) {
+        long began = receipts.getLong(BEGAN, -1);
+        if (began >= 0) return began;
+        began = System.currentTimeMillis() / 1000;
+        return receipts.edit().putLong(BEGAN, began).commit() ? began : -1;
+    }
+
+    /**
+     * A copy of this name and size that a version without the list made, and no other document has
+     * taken yet. -1 if there's none, or if the list's start isn't saved and old and new can't be told apart.
+     */
+    @RequiresApi(Build.VERSION_CODES.Q)
+    private static long olderCopy(ContentResolver resolver, SharedPreferences receipts, String name, long size, long began) {
+        if (began < 0) return -1;
+        Map<String, ?> taken = notes(receipts);
+        try (Cursor rows = resolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                new String[]{MediaStore.MediaColumns._ID}, OLDER_COPY,
+                new String[]{name, FOLDER, Long.toString(size), Long.toString(began)}, null)) {
+            while (rows != null && rows.moveToNext()) {
+                long entry = rows.getLong(0);
+                if (!taken.containsValue(entry)) return entry;
+            }
+        }
+        return -1;
+    }
+
+    /** The notes alone, without the list's start. */
+    private static Map<String, ?> notes(SharedPreferences receipts) {
+        Map<String, ?> all = new HashMap<>(receipts.getAll());
+        all.remove(BEGAN);
+        return all;
+    }
+
+    /** Notes the entry holding [document], and drops the oldest notes past {@link #MAX_RECEIPTS}. */
+    private static void remember(SharedPreferences receipts, String document, long entry) {
+        Map<String, ?> all = notes(receipts);
+        SharedPreferences.Editor edit = receipts.edit().putLong(document, entry);
+        int over = all.size() + (all.containsKey(document) ? 0 : 1) - MAX_RECEIPTS;
+        if (over > 0) {
+            // MediaStore numbers entries in the order they're made, so the lowest are the oldest.
+            List<String> oldest = new ArrayList<>();
+            for (Map.Entry<String, ?> note : all.entrySet()) {
+                if (!note.getKey().equals(document) && note.getValue() instanceof Long) oldest.add(note.getKey());
+            }
+            oldest.sort(Comparator.comparingLong(key -> (Long) all.get(key)));
+            for (int i = 0; i < over && i < oldest.size(); i++) edit.remove(oldest.get(i));
+        }
+        // On the copy worker, so waiting for the disk costs Telegram nothing.
+        if (!edit.commit()) HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, "copy not noted, it may be copied again");
     }
 
     // Stubs. The patch gives each one Telegram's code; until then they do nothing.

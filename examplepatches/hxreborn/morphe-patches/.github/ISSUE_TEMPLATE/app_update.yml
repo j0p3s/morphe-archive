@@ -1,0 +1,132 @@
+name: 🔄 App update
+description: A supported app has a version newer than the ones this bundle targets.
+title: "[App Update]: "
+labels: ["app-update"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One request per app version.
+
+        - The README lists the supported versions under each app. A version listed there needs no request.
+        - Check the [open update requests](https://github.com/hxreborn/morphe-patches/issues?q=is%3Aissue+state%3Aopen+label%3Aapp-update) first. Yours may already be tracked.
+        - A listed version that no longer patches or works is a [bug report](https://github.com/hxreborn/morphe-patches/issues/new/choose), not an update.
+  - type: dropdown
+    id: app
+    attributes:
+      label: App
+      options:
+        # generated:apps
+        - "1Weather"
+        - "All Video Player App"
+        - "All-In-One Calculator"
+        - "AlpineQuest"
+        - "AnyTracker"
+        - "AtloMaps"
+        - "atvTools"
+        - "Audible"
+        - "AudioLab"
+        - "BetterSleep"
+        - "BlurWall"
+        - "Catzy"
+        - "Cx File Explorer"
+        - "Cxxdroid"
+        - "DevCheck"
+        - "DWG FastView"
+        - "Echo Equalizer"
+        - "Echogram"
+        - "Etsy"
+        - "Fast STL Viewer"
+        - "Fddb"
+        - "ForusApp"
+        - "Hindu Calendar"
+        - "imo"
+        - "Joyn"
+        - "Jujo"
+        - "Jvdroid"
+        - "Keepa"
+        - "Kick"
+        - "Klassik Radio+"
+        - "LED Blinker"
+        - "Lumo"
+        - "May: Beautiful Bullet Journal"
+        - "MedicNEET"
+        - "MemoNeet"
+        - "MovieBox"
+        - "Musixmatch"
+        - "My APK"
+        - "MyMoveset"
+        - "Notesnook"
+        - "One4Home Launcher"
+        - "Perplexity"
+        - "Photo Editor Pro"
+        - "Photone"
+        - "Pocket Whip"
+        - "Projectivy Launcher"
+        - "Proton Mail"
+        - "Proton Pass"
+        - "Proton VPN"
+        - "Psiphon"
+        - "Public"
+        - "Pydroid 3"
+        - "QR & Barcode Scanner"
+        - "Quranify"
+        - "Raindrop.io"
+        - "RateGlance"
+        - "ReadEra"
+        - "Realme Link"
+        - "Ringtone Maker"
+        - "RISE Sleep Tracker"
+        - "Rubber Bands"
+        - "Showly"
+        - "SQCOM"
+        - "STEEZY"
+        - "Storywise"
+        - "Symfonium"
+        - "TeraBox"
+        - "Trainline"
+        - "Video Editor"
+        - "VLLO"
+        - "VPN Super Unlimited Proxy"
+        - "vpnify"
+        - "WalP"
+        - "Yanosik"
+        - "Yi iot"
+        # /generated
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: New version
+      description: As shown on the download page or in the app's About screen.
+      placeholder: "5.20.57.0"
+    validations:
+      required: true
+  - type: input
+    id: apk-source
+    attributes:
+      label: APK source
+      description: |
+        Link to the stock build. APKMirror, APKPure, Uptodown or APKCombo. Not apkmod, Softonic,
+        HappyMod or anything else that repackages APKs.
+      placeholder: https://www.apkmirror.com/...
+    validations:
+      required: true
+  - type: dropdown
+    id: result
+    attributes:
+      label: Patching this version
+      options:
+        - Not tried
+        - Patching fails
+        - Patching works, the app misbehaves
+        - Patching works and so does the app
+    validations:
+      required: true
+  - type: textarea
+    id: error-logs
+    attributes:
+      label: Error logs
+      description: If patching failed, tap **Copy** on Morphe Manager's error dialog and paste it here.
+      render: shell

@@ -6,6 +6,7 @@
  */
 package app.hushgram.extension.instagram.settings;
 
+import android.app.Activity;
 import android.app.Dialog;
 import android.app.DialogFragment;
 import android.app.Fragment;
@@ -19,6 +20,7 @@ import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowInsets;
 import android.view.accessibility.AccessibilityNodeInfo;
@@ -29,6 +31,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
+import app.hushgram.extension.instagram.direct.MessagesLock;
 import app.hushgram.extension.shared.L10n;
 import app.hushgram.extension.shared.Logger;
 
@@ -46,12 +49,39 @@ public final class SettingsDialog extends DialogFragment {
      */
     static final int CONTAINER_ID = 0x48474301;
     private static final String PAGE_FAILED = "hushgram.page_failed";
+    /** The argument naming the category page the screen opens on, after Restart now. */
+    static final String START_PAGE = "hushgram_start_page";
     private boolean failed;
     private boolean loading;
     /** Put back over a screen that can't draw text yet, so closing without building anything. */
     private boolean closing;
     private Button retry;
     private TextView heading;
+    /** The lock's checks on this dialog's window while it's started. */
+    private Window lockWindow;
+    private ViewTreeObserver.OnPreDrawListener lockDraw;
+    private ViewTreeObserver.OnWindowFocusChangeListener lockFocus;
+
+    /**
+     * The screen, opening on the category page whose row has the key [page]. Null or a key no row
+     * has opens the first page, as the screen always does.
+     */
+    static SettingsDialog onPage(@androidx.annotation.Nullable String page) {
+        SettingsDialog dialog = new SettingsDialog();
+        if (page != null && !page.isEmpty()) {
+            Bundle arguments = new Bundle();
+            arguments.putString(START_PAGE, page);
+            dialog.setArguments(arguments);
+        }
+        return dialog;
+    }
+
+    /** The page this screen was asked to open on, or null. Only a fresh page reads it, not one put back. */
+    @androidx.annotation.Nullable
+    String startPage() {
+        Bundle arguments = getArguments();
+        return arguments == null ? null : arguments.getString(START_PAGE);
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -215,6 +245,83 @@ public final class SettingsDialog extends DialogFragment {
         if (closing) {
             dismissAllowingStateLoss();
             SettingsEntry.reopenOnceThemed(getActivity());
+        }
+    }
+
+    @Override
+    public void onStart() {
+        super.onStart();
+        watchLock();
+    }
+
+    @Override
+    public void onStop() {
+        unwatchLock();
+        super.onStop();
+    }
+
+    /**
+     * Kept open across a leave, or put back after a turn or a restart, these settings can outlast
+     * the unlock that let them open, and the lock's cover over Instagram is under this window. So
+     * this window is checked before each frame and when it gets the focus back, and covered while
+     * the lock is locked (Lock your messages and Lock all of Instagram).
+     */
+    private void watchLock() {
+        Dialog dialog = getDialog();
+        Activity activity = getActivity();
+        Window window = dialog == null ? null : dialog.getWindow();
+        if (window == null || activity == null || lockDraw != null) return;
+        try {
+            ViewTreeObserver.OnPreDrawListener draw = () -> {
+                guard(activity, window);
+                return true;
+            };
+            ViewTreeObserver.OnWindowFocusChangeListener focus = hasFocus -> {
+                if (hasFocus) guard(activity, window);
+            };
+            ViewTreeObserver observer = window.getDecorView().getViewTreeObserver();
+            observer.addOnPreDrawListener(draw);
+            observer.addOnWindowFocusChangeListener(focus);
+            lockDraw = draw;
+            lockFocus = focus;
+            lockWindow = window;
+            guard(activity, window);
+        } catch (Exception failure) {
+            Logger.printException(() -> "Settings: could not watch the lock", failure);
+        }
+    }
+
+    /**
+     * The lock's check on this window. While covered, whatever the page had open over itself is
+     * closed: a list or a row's choices left up across a leave would sit over the cover, and the
+     * hidden chats list would still name them and still show one again. It also holds the focus, so
+     * the lock's ask waits for it to go.
+     */
+    private void guard(Activity activity, Window window) {
+        if (!MessagesLock.guardSettings(activity, window)) return;
+        try {
+            Fragment page = getChildFragmentManager().findFragmentById(CONTAINER_ID);
+            if (page instanceof HushgramPreferenceFragment) ((HushgramPreferenceFragment) page).closeDialogs();
+        } catch (Exception failure) {
+            Logger.printException(() -> "Settings: could not close what was open over them", failure);
+        }
+    }
+
+    private void unwatchLock() {
+        Window window = lockWindow;
+        ViewTreeObserver.OnPreDrawListener draw = lockDraw;
+        ViewTreeObserver.OnWindowFocusChangeListener focus = lockFocus;
+        lockWindow = null;
+        lockDraw = null;
+        lockFocus = null;
+        if (window == null) return;
+        try {
+            ViewTreeObserver observer = window.getDecorView().getViewTreeObserver();
+            if (!observer.isAlive()) return;
+            if (draw != null) observer.removeOnPreDrawListener(draw);
+            if (focus != null) observer.removeOnWindowFocusChangeListener(focus);
+        } catch (Exception failure) {
+            Logger.printException(() -> "Settings: could not stop watching the lock", failure);
         }
     }
 

@@ -4,7 +4,12 @@ Changes in the source build, then released versions.
 
 ## Unreleased
 
-* **Threads:** Moves the source build to Threads 451.0.0.51.80. Sharing, saved media, autoplay and dark backgrounds follow the new build's layout. The published download stays on Threads 450 until release.
+* **Threads:** Pressing and holding the text of an opened post brings up Copy text again, the same as in your feed, so you get the whole post with its links. It had stopped doing anything on 451. A new `Copy text on long press` switch under Posts in HushThreads settings turns this on or off. It starts on and comes with every build.
+* **Tooling:** A fixture test checks on 451 that both of the post row's long press override checks and PostText's selection flag go through the extension, and that a jump straight to an override check or a selection flag written over before PostText copies it stops the patch.
+
+## 0.0.14 (2026-10-13)
+
+* **Threads:** This release patches Threads 451.0.0.51.80 only, the newest stable version. 450.0.0.51.78 isn't offered any more, so update Threads to 451 before you patch. Sharing, saved media, autoplay and dark backgrounds follow the new build's layout.
 * **Threads:** Search, buttons and choices show a visible focus outline. Switches and actions use the same corner scale as the settings cards.
 * **Threads:** Download and report choosers close when their page is removed. Diagnostic exports describe the right folder on Android 9, and clearing logs offers Restore diagnostic data while recovery is available.
 * **Threads:** Both backup actions explain why they're unavailable during an import or export.
@@ -12,6 +17,9 @@ Changes in the source build, then released versions.
 * **Threads:** The logo's long press has an action label in the app's language for screen readers.
 * **Tooling:** Source updates can keep an Unreleased changelog while Manager serves the previous release. The published release's date and history remain required.
 * **Tooling:** The signed-app check now requires the logo's settings action exactly once and rejects missing, duplicated or misdirected calls.
+* **Docs:** The README's Help section now explains why the regular Instagram app says "Sorry, we weren't able to load that website" for a post when your Threads is patched.
+* **Threads:** Flip a switch that needs a restart and a Restart row shows up at the top of settings. Tap it and Threads reopens on the page you were on. Importing a settings file that changes one of those switches brings up the same row.
+* **Threads:** The Support HushThreads row at the bottom of settings is just its name now, without the line of text under it.
 
 * **Threads:** Redesigned all 11 settings pages with separate cards and blue icons. Search and Pause stay at the top of the home page, and long descriptions wrap without hiding controls. About and diagnostic exports retain the full build details.
 * **Threads:** No time limit is dimmed until Keep feed position on return is on. Its saved choice stays intact when that switch is off.

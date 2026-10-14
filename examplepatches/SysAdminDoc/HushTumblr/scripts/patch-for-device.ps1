@@ -27,6 +27,11 @@
     HUSHTUMBLR_APPLY_RECORDS, else the default one in the temp folder; -NoReuse always patches.
     Nothing this script makes is kept there: it skips the resource table check.
 
+    The signed APK has to pass zipalign -c -P 16 -v 4, with the zipalign beside aapt2, and its
+    64-bit libraries have to be Tumblr's own bytes (Assert-PageAlignment). A kept APK is held to
+    that before it's signed as well. A library of Tumblr's that doesn't fit 16 KB pages is printed
+    as a warning naming it a target limitation, and is never rewritten.
+
 .EXAMPLE
     scripts/patch-for-device.ps1 -Serial $env:HUSHTUMBLR_DEVICE_SERIAL
 #>
@@ -176,8 +181,11 @@ $result = Join-Path $OutDir 'result.json'
 if (Test-Path -LiteralPath $out) { throw 'The new run already has an APK output.' }
 
 Write-Host "[device] $($names.Count) patches from $(Split-Path -Leaf $bundle) onto $(Split-Path -Leaf $Apk)"
+# Every APK the merge is made from, or the plain APK, has to carry Tumblr's declared signer
+# (Get-MergedApk), before anything is merged, signed or installed.
+$declaredSigners = @(Get-DeclaredSigners -PatchList $catalog -PackageName $target.PackageName)
 $patchInput = Get-MergedApk -Apk $Apk -Destination (Join-Path $OutDir 'stock-merged.apk') `
-    -Java $Java -DesktopJar $DesktopJar
+    -Java $Java -DesktopJar $DesktopJar -Aapt2 $Aapt2 -PackageName $target.PackageName -Signers $declaredSigners
 $stockManifest = Get-ApkManifestFacts -Apk $patchInput -Aapt2 $Aapt2
 
 # A gate run that patched this exact bundle onto this APK with these patches and passed every check,
@@ -203,6 +211,9 @@ if ($recorded) {
     if (-not (Test-Path -LiteralPath $apksigner -PathType Leaf)) {
         throw "No apksigner beside aapt2 at $apksigner to sign the kept APK. Pass -NoReuse to patch and sign with the CLI."
     }
+    # zipalign can't put an APK right once it's signed, so the kept one is held to the 16 KB layout
+    # before the signature goes on. The signed APK is held to it again below.
+    Assert-PageAlignment -Apk $recorded.PatchedApk -Stock $patchInput -Aapt2 $Aapt2 | Out-Null
     $savedPassword = [Environment]::GetEnvironmentVariable($passwordVariable, [EnvironmentVariableTarget]::Process)
     $preference = $ErrorActionPreference
     try {
@@ -279,6 +290,10 @@ $patchedManifest = Get-ApkManifestFacts -Apk $out -Aapt2 $Aapt2
 $manifestCheck = Test-ManifestDelta -Stock $stockManifest -Patched $patchedManifest `
     -SelectedPatchNames $manifestSelection -ApprovedManifestDelta $approvedChanges
 if (-not $manifestCheck.Valid) { throw "Patching changed an unapproved compiled manifest fact: $($manifestCheck.Reason)" }
+# What a phone with 16 KB pages needs of the signed APK: a ZIP layout zipalign -c -P 16 -v 4 passes
+# and 64-bit libraries that are still Tumblr's bytes (Assert-PageAlignment). A library of Tumblr's
+# own that doesn't fit is the target's limit, named here whatever the signature says.
+foreach ($limit in @(Assert-PageAlignment -Apk $out -Stock $patchInput -Aapt2 $Aapt2)) { Write-Warning "[device] $limit" }
 if ($recorded) {
     # Signing adds a signature block and leaves the dex alone, and these dex passed DexDiff and the
     # host reference check when the gate kept the run.
@@ -326,7 +341,7 @@ try {
     }
     foreach ($path in @((Join-Path $safeRun 'tmp'), (Join-Path $safeRun 'morphe-patch.args'),
             (Join-Path $safeRun 'stock-merged.apk'), (Join-Path $safeRun 'stock-merged.apk.source'),
-            (Join-Path $safeRun 'stock-merged.apk.xmltree'))) {
+            (Join-Path $safeRun 'stock-merged.apk.xmltree'), (Join-Path $safeRun 'stock-merged.apk.authentic.json'))) {
         $safePath = Resolve-WithinRoot -Path $path -Root $safeRun
         if (Test-Path -LiteralPath $safePath) { Remove-Item -LiteralPath $safePath -Recurse -Force }
     }

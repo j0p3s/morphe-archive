@@ -639,6 +639,9 @@ tasks.register("verifyAndroidBoundaries") {
                 "lockAllOfInstagramCoversTheWholeScreen[28]", "lockAllOfInstagramCoversTheWholeScreen[37]",
                 "lockAgainWaitsAsLongAsYouPicked[28]", "lockAgainWaitsAsLongAsYouPicked[37]",
                 "turningALockOnWaitsUntilYouLeave[28]", "turningALockOnWaitsUntilYouLeave[37]",
+                "turningALockOnKeepsTheScreenBehindSettingsOutOfRecentsAtOnce[28]", "turningALockOnKeepsTheScreenBehindSettingsOutOfRecentsAtOnce[37]",
+                "turningOnLockYourMessagesOpensNoChatLockedOnItsOwn[28]", "turningOnLockYourMessagesOpensNoChatLockedOnItsOwn[37]",
+                "turningOnLockAllOfInstagramOpensNoChatLockedOnItsOwn[28]", "turningOnLockAllOfInstagramOpensNoChatLockedOnItsOwn[37]",
                 "aPhoneWithoutAScreenLockLeavesTheMessagesOpenAndSaysWhy[28]", "aPhoneWithoutAScreenLockLeavesTheMessagesOpenAndSaysWhy[37]",
                 "pausedOrInSafeModeALockStillLocksAndCoversEverything[28]", "pausedOrInSafeModeALockStillLocksAndCoversEverything[37]",
                 "eachWindowKeepsItsOwnCovers[28]", "eachWindowKeepsItsOwnCovers[37]",
@@ -660,6 +663,11 @@ tasks.register("verifyAndroidBoundaries") {
                 "theChatsNameIsFoundForTheList[28]", "theChatsNameIsFoundForTheList[37]",
                 "theListReadsWhatWasSavedAndNothingElse[28]", "theListReadsWhatWasSavedAndNothingElse[37]",
                 "aListedChatStaysLockedWhilePausedAndWithoutContext[28]", "aListedChatStaysLockedWhilePausedAndWithoutContext[37]"),
+            "app.hushgram.extension.instagram.settings.SettingsRelockTest" to listOf(
+                "settingsLeftOpenAreCoveredWhenTheLockComesBack[28]", "settingsLeftOpenAreCoveredWhenTheLockComesBack[37]",
+                "aSettingsFileThatArrivesAfterTheLockCameBackWaitsForANewUnlock[28]", "aSettingsFileThatArrivesAfterTheLockCameBackWaitsForANewUnlock[37]",
+                "anUndoWhileLockedWaitsForANewUnlock[28]", "anUndoWhileLockedWaitsForANewUnlock[37]",
+                "aWriteWhileLockedNeverSwitchesALockOff[28]", "aWriteWhileLockedNeverSwitchesALockOff[37]"),
             "app.hushgram.extension.instagram.direct.HiddenChatsTest" to listOf(
                 "aHiddenChatLeavesTheInboxAndTheOthersStay[28]", "aHiddenChatLeavesTheInboxAndTheOthersStay[37]",
                 "anEmptyListChangesNothing[28]", "anEmptyListChangesNothing[37]",
@@ -1205,6 +1213,11 @@ android {
             // after NOTICE changes and the comparison never runs.
             it.inputs.file(rootProject.layout.projectDirectory.file("NOTICE"))
                 .withPropertyName("licenseNotice")
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+            // ReportProblemFormTest holds Report a problem's field ids to the bug form, which is
+            // outside this module too, so a renamed field there has to rerun it.
+            it.inputs.file(rootProject.layout.projectDirectory.file(".github/ISSUE_TEMPLATE/bug_report.yml"))
+                .withPropertyName("bugReportForm")
                 .withPathSensitivity(PathSensitivity.RELATIVE)
             // PatchStatusWiringTest reads each patch's enableStatus call from the patch sources, so
             // a patch-only change (a misspelled status name) has to rerun these tests too.

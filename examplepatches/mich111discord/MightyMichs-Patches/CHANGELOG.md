@@ -1,3 +1,15 @@
+## [1.11.0](https://github.com/mich111discord/MightyMichs-Patches/compare/v1.10.0...v1.11.0) (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* Added new options for nova launcher ([b36b511](https://github.com/mich111discord/MightyMichs-Patches/commit/b36b51198744277f529f66acdf52800455ceee70))
+* fixed nova launcher change name pachkage ([b45e5ee](https://github.com/mich111discord/MightyMichs-Patches/commit/b45e5ee7ef72e04e34f7b067a91d4ab062476bee))
+* fixed nova launcher internet patch (WARNING ⚠️ ITS NOT TESTED YET) ([188f22b](https://github.com/mich111discord/MightyMichs-Patches/commit/188f22bb4e92eabeadfffba58b6fc1562df9182e))
+
+### ✨ New Features
+
+* added suport for new arcplayer version ([6e7cc43](https://github.com/mich111discord/MightyMichs-Patches/commit/6e7cc435d92c60e30b407c7771eae3b2aca75d66))
+
 ## [1.10.0](https://github.com/mich111discord/MightyMichs-Patches/compare/v1.9.0...v1.10.0) (2026-10-09)
 
 ### 🐛 Bug Fixes

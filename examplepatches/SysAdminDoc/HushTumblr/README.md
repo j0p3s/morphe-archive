@@ -1,7 +1,7 @@
 ![HushTumblr. Tumblr, on your terms.](assets/readme-hero.png)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.0.3-92BFFF" alt="Version 0.0.3">
+  <img src="https://img.shields.io/badge/version-0.0.7-92BFFF" alt="Version 0.0.7">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%208%2B-3DDC84" alt="Platform Android 8+">
   <img src="https://img.shields.io/badge/Tumblr-46.5.0.109-001935" alt="Tumblr 46.5.0.109">
@@ -18,7 +18,7 @@
 
 [Morphe](https://morphe.software) patches for Tumblr on Android. Patch the Tumblr bundle in Morphe Manager and you get a quieter Tumblr with its own HushTumblr settings page. It can drop ads and paid Blaze posts, hide suggestions, filter posts by type or by your own words, and trim the bottom bar.
 
-The latest release is [v0.0.1](https://github.com/SysAdminDoc/HushTumblr/releases/tag/v0.0.1), with 36 patches. Add this repo to Morphe Manager as a patch source and it'll offer each new release when it comes out. Changes are listed in the [changelog](CHANGELOG.md).
+The latest release is [v0.0.7](https://github.com/SysAdminDoc/HushTumblr/releases/tag/v0.0.7), with 42 patches. Add this repo to Morphe Manager as a patch source and it'll offer each new release when it comes out. Changes are listed in the [changelog](CHANGELOG.md).
 
 **[Add HushTumblr to Morphe Manager](https://morphe.software/add-source?github=SysAdminDoc%2FHushTumblr)**
 
@@ -37,7 +37,9 @@ Sign in with your email and Tumblr password. Google's sign-in checks the app's s
 
 ## Settings
 
-Open Tumblr's Settings and tap **HushTumblr** at the bottom, or long-press the Tumblr icon. Switches apply without patching again, though a few, like Disable analytics, finish after Tumblr restarts. **Pause** sends every hook back to Tumblr's original path until you turn it off, and the same page backs up your choices.
+Long-press the Tumblr logo at the top of your dashboard. You can also tap **HushTumblr** at the bottom of Tumblr's Settings, or long-press the Tumblr icon. Switches apply without patching again, though a few, like Disable analytics, finish after Tumblr restarts, and a Restart row at the top of the page does that for you. **Pause** keeps your saved choices and makes the switches act as off, apart from Debug logging. Changes made while patching stay in the app. The same page backs up your settings.
+
+Development source 0.0.6 includes redesigned settings pages and worker-based saves. Local tests and both Android lints pass. The preview below shows the current settings pages.
 
 ![HushTumblr settings overview, Feed and Privacy pages](assets/settings-preview.png)
 
@@ -49,9 +51,9 @@ The source has 42 patches. Six came after v0.0.1 and aren't in a release yet: Fi
 |---|---|
 | `Dark background color` | Makes the background of Tumblr's Dark Mode palette black, which can save battery on OLED screens, or another dark color you pick when patching. Other palettes stay as they are. Starts off. Turn it on in Tumblr settings > HushTumblr > Interface. |
 | `Disable analytics` | Turns off Firebase crash reports and Google's analytics collection, and Tumblr's own tracking and ad measurement once it restarts. The Firebase and Google part stays until you patch again without it. On by default. Turn it off in Tumblr settings > HushTumblr > Privacy. |
-| `Disable update prompts` | Stops Tumblr asking Google Play for a newer version and showing Play's update prompt. Starts off. Turn it on in Tumblr settings > HushTumblr > More settings > Updates. |
-| `Filter activity notifications` | Hides selected likes, reblogs, replies, follows, mentions, asks and boops from the activity list as pages load. Each switch starts off. Choose them in Tumblr settings > HushTumblr > More settings > Notifications. |
-| `Fix push notifications` | Lets the patched app sign up for push notifications. Firebase can refuse a patched Tumblr whose request doesn't name Tumblr's original signature, so this sends its fingerprint. On by default. Turn it off in Tumblr settings > HushTumblr > More settings > Notifications. |
+| `Disable update prompts` | Stops Tumblr asking Google Play for a newer version and showing Play's update prompt. Starts off. Turn it on in Tumblr settings > HushTumblr > Updates. |
+| `Filter activity notifications` | Hides selected likes, reblogs, replies, follows, mentions, asks and boops from the activity list as pages load. Each switch starts off. Choose them in Tumblr settings > HushTumblr > Notifications. |
+| `Fix push notifications` | Lets the patched app sign up for push notifications. Firebase can refuse a patched Tumblr whose request doesn't name Tumblr's original signature, so this sends its fingerprint. On by default. Turn it off in Tumblr settings > HushTumblr > Notifications. |
 | `Hide Blaze prompts` | Hides the prompts to pay for Blaze, Tumblr's way to promote a post. That covers the Blaze buttons on your blog and dashboard, the nudge after you post, and the Blaze banners. Starts off. Turn it on in Tumblr settings > HushTumblr > Interface. |
 | `Hide Tumblr TV` | Takes the Tumblr TV tab out of the bottom bar, and stops sign-up from sending you there. Starts off. Turn it on in Tumblr settings > HushTumblr > Interface. |
 | `Hide Watch it rows` | Takes Tumblr TV's Watch it rows and video hub cards out of your dashboard and other feeds, along with their headings. Starts off. Turn it on in Tumblr settings > HushTumblr > Feed. |
@@ -91,13 +93,13 @@ These three have no switch:
 
 | Patch | What it does |
 |---|---|
-| `HushTumblr settings` | Adds a HushTumblr page where you turn features on or off, pause HushTumblr, back up your settings and read the licenses. Open it from Tumblr's Settings or by long-pressing the Tumblr icon. Works as soon as you patch it in, with no switch. |
+| `HushTumblr settings` | Adds a HushTumblr page where you turn features on or off, pause HushTumblr, back up your settings and read the licenses. Open it by long-pressing the Tumblr logo at the top of your dashboard, from Tumblr's Settings or by long-pressing the Tumblr icon. Works as soon as you patch it in, with no switch. |
 | `Remove ad tracking permissions` | Removes Google's advertising ID permission and Android's Privacy Sandbox ad services from Tumblr, so it can't use them. Google Play services then answers with zeros. Works as soon as you patch it in, with no switch. |
 | `Spoof signature for Google sign-in` | Helps Google sign-in work in the patched app by naming Tumblr's original signature. It only helps with microG-RE or the XSpoofSignatures module. Email sign-in doesn't need it. It isn't selected by default. Works as soon as you patch it in, with no switch. |
 
 ## Privacy
 
-HushTumblr collects nothing and has no server. The release check is off until you turn it on. Then it asks `api.github.com` for the latest release at most once a day, and when you tap **Check now**. Links to `github.com`, `gitlab.com`, `www.gnu.org`, `ko-fi.com` and `help.tumblr.com` open in your browser only when you tap them. Muted posts and word lists stay on your phone.
+HushTumblr collects nothing and has no server. The release check is off until you turn it on. Then it asks `api.github.com` for the latest release at most once a day, and when you tap **Check now**. Links to `github.com`, `gitlab.com`, `www.gnu.org`, `ko-fi.com` and `help.tumblr.com` open in your browser only when you tap them. **Report a problem** opens a GitHub issue form with your versions, phone model and the switches you have on filled in, and nothing is posted until you submit it there. Muted posts and word lists stay on your phone.
 
 ## Help
 
@@ -125,7 +127,7 @@ Every patch is checked against this exact build, and other versions aren't suppo
 Each release ships `SHA256SUMS.txt`, signed as `SHA256SUMS.txt.asc` with the HushTumblr release key. Its fingerprint is `2143 368A A5CE 6E5D FFEA  79CF BBC1 3768 83CF 3AB4` and the public key is [keys/hushtumblr-release.asc](keys/hushtumblr-release.asc). Morphe Manager doesn't check it, so that's up to you. The v0.0.1 bundle's line:
 
 ```text
-6d49cf32bd050f622ec7d859a34c4eabb1460d750febe07c8be0e3d48b205b7c  patches-0.0.1.mpp
+7ed0d301ab75a2fb6c7dd5b0aecb6dd541c7bad97d9b5c70d5dfc778219b8c0d  patches-0.0.7.mpp
 ```
 
 ```text

@@ -273,7 +273,7 @@ public class DexDiff {
             "once-call", "once-call <method reference>");
 
     private static final Map<String, Integer> MUTATION_COLUMNS = Map.ofEntries(
-            Map.entry("feed", 4), Map.entry("views", 3), Map.entry("guard", 2), Map.entry("refresh", 2), Map.entry("draw", 2),
+            Map.entry("feed", 4), Map.entry("views", 3), Map.entry("guard", 2), Map.entry("refresh", 2), Map.entry("draw", 2), Map.entry("drawWash", 4), Map.entry("builtView", 3),
             Map.entry("navigation", 2), Map.entry("menu", 2), Map.entry("downloads", 2), Map.entry("comments", 5),
             Map.entry("links", 6), Map.entry("analytics", 5), Map.entry("answers", 4), Map.entry("imageOrder", 1), Map.entry("closeupImage", 2), Map.entry("topicSuggestions", 2), Map.entry("boardMenu", 1), Map.entry("settings", 4),
             Map.entry("longPress", 2), Map.entry("surveyPrompts", 2), Map.entry("pinInvites", 2), Map.entry("browserId", 2),
@@ -2344,7 +2344,11 @@ public class DexDiff {
         static final String PIN_MENU = "Lcom/pinterest/feature/gridactions/modal/view/PinOverflowMenuModalImpl;";
         static final String TOAST_CONTAINER = "Lcom/pinterest/gestalt/toast/PinterestToastContainer;";
         static final String TOAST_VIEW = "Lcom/pinterest/gestalt/toast/BaseGestaltToast;";
-        static final Set<String> SAVE_TOAST_STRINGS = Set.of("saved_to", "saved_onto_board_bold", "pinned", "pinned_multiple", "pinned_multiple_to_board");
+        static final Set<String> SAVE_TOAST_STRINGS = Set.of("saved_to", "saved_onto_board_bold", "pinned", "pinned_multiple", "pinned_multiple_to_board",
+                "multi_board_save_saved_to_profile", "saved_onto_board", "saved_to_board_section", "saved_multiple_to_board_section", "pin_saved");
+        static final String TOAST_MAKE = "Landroid/widget/Toast;->makeText";
+        static final Set<String> TOAST_SHAPES = Set.of("(Landroid/content/Context;Ljava/lang/CharSequence;I)Landroid/widget/Toast;",
+                "(Landroid/content/Context;II)Landroid/widget/Toast;");
         final FeatureIndex clean;
         final FeatureIndex patched;
         final List<String> findings = new ArrayList<>();
@@ -2358,6 +2362,7 @@ public class DexDiff {
         final Map<String, List<Method>> callbacks = new HashMap<>();
         final Set<String> controlMethods = new HashSet<>();
         final Set<String> checkedControls = new HashSet<>();
+        List<Method> saveReaders;
         boolean featureControls;
 
         static int firstRegister(Instruction i) {
@@ -2676,19 +2681,98 @@ public class DexDiff {
         /**
          * A view whose dispatchDraw starts with the hook on the view itself and then draws as before.
          * It has a method of its own, so it can't collide with an onMeasure refresh on the same class.
+         * A drawWash rule names a second hook and view as well, checked by [wash].
          */
         void draw(Contract c) {
             String type = c.strings.get(1);
             String shape = "(Landroid/graphics/Canvas;)V";
             ClassDef cd = clean.classes.get(type);
-            if (cd == null) { fail("missing view " + type); capability(c.callee, false); return; }
+            // A build without the view, or without the one a drawWash rule washes, doesn't have this
+            // surface. The patch changes neither there and keeps its others, so only the flag is held to it.
+            boolean glass = c.strings.size() < 4 || clean.methods.containsKey(c.strings.get(3) + "->draw" + shape);
+            if (cd == null || !glass) { capability(c.callee, false); return; }
             boolean overridable = canOverride(type, "dispatchDraw", shape);
             Method m = overridable ? actual(type + "->dispatchDraw" + shape) : null;
             if (m != null) {
                 prefix(m, c.strings.get(0), List.of(parameter(m, -1)), false);
                 inherited(cd, m, "dispatchDraw", shape);
             }
-            capability(c.callee, overridable);
+            boolean washed = c.strings.size() < 4 || wash(c.strings.get(2), c.strings.get(3));
+            capability(c.callee, overridable && washed);
+        }
+
+        /**
+         * A view whose draw() washes its canvas with one color, once. The hook goes right in front of
+         * that wash: it takes the view and the color about to be used, and its answer goes back in
+         * the color's register for the wash to read.
+         */
+        boolean wash(String hook, String type) {
+            String canvas = "Landroid/graphics/Canvas;->drawColor(I)V";
+            Method draw = clean.methods.get(type + "->draw(Landroid/graphics/Canvas;)V");
+            if (draw == null) return false;
+            if (draw.getImplementation() == null || AccessFlags.STATIC.isSet(draw.getAccessFlags())) {
+                fail(type + " has a draw method with no body of its own to wash in"); return false;
+            }
+            List<Instruction> was = instructions(draw);
+            List<Integer> washes = callSites(was, canvas);
+            if (washes.size() != 1 || arguments(was.get(washes.get(0))).size() != 2) {
+                fail(type + " washes its canvas " + washes.size() + " times, expected one plain call"); return false;
+            }
+            int wash = washes.get(0), view = parameter(draw, -1), color = arguments(was.get(wash)).get(1);
+            for (int at = 0; at < wash; at++) if (writes(was.get(at), view)) {
+                fail(type + " writes over itself before it washes its canvas"); return false;
+            }
+            Method m = actual(draw);
+            List<Integer> sites = calls(m, hook, 1);
+            if (m == null || sites.size() != 1) return false;
+            List<Instruction> body = instructions(m);
+            int at = sites.get(0);
+            boolean inPlace = at == wash && at + 2 < body.size() && arguments(body.get(at)).equals(List.of(view, color))
+                    && body.get(at + 1).getOpcode() == Opcode.MOVE_RESULT && firstRegister(body.get(at + 1)) == color
+                    && callSites(body, canvas).equals(List.of(at + 2)) && arguments(body.get(at + 2)).equals(arguments(was.get(wash)));
+            if (!inPlace) { fail(hook + " does not answer the wash color in place in " + m); return false; }
+            remove(m, at, at + 2);
+            return true;
+        }
+
+        /**
+         * A view handed over as it leaves the one method that builds it. The rule names the hook, the
+         * method's name and what picks the method out: its class, or the id whose R field it reads.
+         * The method answers a view through a single return-object, and the hook sits right in front
+         * of that return with the answered register, as the only way into it.
+         */
+        void builtView(Contract c) {
+            String hook = c.strings.get(0), name = c.strings.get(1), anchor = c.strings.get(2);
+            List<Method> builders = new ArrayList<>();
+            for (Method m : clean.methods.values()) {
+                if (m.getDefiningClass().startsWith(OWN) || m.getImplementation() == null || !m.getName().equals(name)) continue;
+                if (anchor.startsWith("L") ? m.getDefiningClass().equals(anchor)
+                        : instructions(m).stream().anyMatch(i -> readsId(i, anchor))) builders.add(m);
+            }
+            // No builder at all is a surface this build doesn't have: the patch warns, keeps its
+            // others and leaves the capability off. Two builders are a build to look at.
+            if (builders.isEmpty()) { capability(c.callee, false); return; }
+            Method builder = unique(builders, "builder of the view for " + hook);
+            boolean shaped = false;
+            if (builder != null) {
+                String type = builder.getReturnType();
+                shaped = instructions(builder).stream().filter(i -> i.getOpcode() == Opcode.RETURN_OBJECT).count() == 1
+                        && (type.equals("Landroid/view/View;") || frameworkView(type));
+                if (!shaped) fail(builder + " doesn't answer a view through a single return");
+            }
+            Method m = shaped ? actual(builder) : null;
+            List<Integer> sites = calls(m, hook, 1);
+            boolean handed = false;
+            if (m != null && sites.size() == 1) {
+                List<Instruction> body = instructions(m);
+                int at = sites.get(0);
+                handed = at + 1 < body.size() && body.get(at + 1).getOpcode() == Opcode.RETURN_OBJECT
+                        && body.stream().filter(i -> i.getOpcode() == Opcode.RETURN_OBJECT).count() == 1
+                        && arguments(body.get(at)).equals(List.of(firstRegister(body.get(at + 1)))) && onlyFrom(m, at + 1, at);
+                if (!handed) fail(hook + " doesn't take the view " + m + " answers, right in front of its only return");
+                else remove(m, at, at + 1);
+            }
+            capability(c.callee, handed);
         }
 
         void feed(Contract c) {
@@ -2736,6 +2820,7 @@ public class DexDiff {
         }
 
         boolean simpleGuard(Contract c, String hook, String selector) {
+            if (selector.equals("androidToast")) return androidToast(hook);
             if (selector.equals("profileWebsite")) {
                 List<Method> headers = new ArrayList<>();
                 for (Method m : clean.holding("website_link")) if (m.getName().equals("onClick")
@@ -2771,6 +2856,7 @@ public class DexDiff {
             }
             List<Method> targets = new ArrayList<>();
             int before = 0;
+            boolean whole = true;
             if (selector.equals("share")) {
                 for (Method m : clean.methods.values()) {
                     if (m.getDefiningClass().startsWith(OWN) || m.getImplementation() == null || !m.getReturnType().equals("V")
@@ -2788,7 +2874,7 @@ public class DexDiff {
                 List<String> pins = new ArrayList<>();
                 if (menu != null) for (Field field : menu.getFields()) if (field.getName().equals("pin") && field.getType().startsWith("Lcom/pinterest/api/model/")) pins.add(field.getType());
                 if (pins.size() != 1) fail("Visit has no unique native pin model field"); else pin = pins.get(0);
-                for (Method m : clean.holding("android_client_tracking_params_consistency")) if (clean.texts.get(m.toString()).contains("_url")
+                for (Method m : clean.holding("com.pinterest.EXTRA_URL")) if (clean.texts.get(m.toString()).contains("_url")
                         && m.getReturnType().equals("V") && m.getParameterTypes().size() >= 2
                         && m.getParameterTypes().get(0).toString().equals("Ljava/lang/String;") && m.getParameterTypes().get(1).toString().equals(pin)) targets.add(m);
             } else if (selector.equals("screenshot")) {
@@ -2831,7 +2917,7 @@ public class DexDiff {
                             && ((MethodReference) reference(i)).getDefiningClass().equals(model)
                             && descriptor((MethodReference) reference(i)).equals("(" + TOAST_CONTAINER + ")" + TOAST_VIEW))) targets.add(m);
                 }
-                if (targets.size() == 1) saveToastStub(targets.get(0).getParameterTypes().get(0).toString());
+                if (targets.size() == 1) whole = saveToastStub(targets.get(0).getParameterTypes().get(0).toString());
             } else { fail("unknown guard selector " + selector); return false; }
             Method original = unique(targets, c.callee);
             Method m = actual(original);
@@ -2859,15 +2945,21 @@ public class DexDiff {
                 }
                 guard(m, hook, before, args, prep, selector.equals("email"), selector.equals("update"));
             }
-            return original != null;
+            return original != null && whole;
         }
 
         /**
          * The save toast stub: one instance check per concrete toast model that reads a save
-         * confirmation's text or names the follow suggestion, then false, then the shared true.
+         * confirmation's text or names the follow suggestion or the "more ideas" confirmation, then
+         * false, then the shared true. The message stub is the same for the toast models that show
+         * a text they were handed, and [textStub] checks the one for models that ask a field for
+         * their text. Answers whether this build has a toast of every kind: a save confirmation, the
+         * follow suggestion, one that asks for its text and one that's handed it. The patch sets
+         * the capability only then.
          */
-        void saveToastStub(String model) {
+        boolean saveToastStub(String model) {
             Set<String> expected = new TreeSet<>();
+            boolean saved = false, follow = false;
             for (ClassDef owner : clean.classes.values()) {
                 if (AccessFlags.ABSTRACT.isSet(owner.getAccessFlags()) || AccessFlags.INTERFACE.isSet(owner.getAccessFlags())
                         || owner.getType().equals(model)) continue;
@@ -2878,16 +2970,238 @@ public class DexDiff {
                 if (!toast) continue;
                 for (Method m : owner.getMethods()) for (Instruction i : instructions(m)) if (reference(i) instanceof FieldReference) {
                     FieldReference f = (FieldReference) reference(i);
-                    if (f.getType().equals("I") && SAVE_TOAST_STRINGS.contains(f.getName())
-                            || f.getName().equals("FollowUpsellToast") && f.getType().equals(f.getDefiningClass())) expected.add(owner.getType());
+                    boolean kind = f.getType().equals(f.getDefiningClass());
+                    boolean save = f.getType().equals("I") && SAVE_TOAST_STRINGS.contains(f.getName())
+                            || kind && f.getName().equals("BOARD_MORE_IDEAS_UPSELL_TOAST");
+                    boolean suggestion = kind && f.getName().equals("FollowUpsellToast");
+                    if (save || suggestion) expected.add(owner.getType());
+                    saved |= save;
+                    follow |= suggestion;
                 }
             }
-            Method stub = actual(BASE + "ui/UiHooks;->isSaveToast(Ljava/lang/Object;)Z");
+            instanceStub("isSaveToast", expected, "save toast");
+            Map<String, List<String>> texts = textToasts(model);
+            textStub(texts);
+            Set<String> told = new HashSet<>(expected);
+            for (String field : texts.keySet()) told.add(field.substring(0, field.indexOf("->")));
+            Set<String> messages = messageToasts(model, told);
+            instanceStub("isMessageToast", messages, "message toast");
+            return saved && follow && !texts.isEmpty() && !messages.isEmpty();
+        }
+
+        /**
+         * The stub for the toast models that ask a field for their text. For each of [texts] in turn:
+         * is the toast that model, and if it is, does its field hold one of the classes that read a
+         * save text. Then false, then the shared true. A model whose field holds anything else falls
+         * through to the next, so a removal shown by the same model is never called a save. With no
+         * such model the stub must still be the extension's own body, which answers false.
+         */
+        void textStub(Map<String, List<String>> texts) {
+            Method stub = actual(BASE + "ui/UiHooks;->isSaveTextToast(Ljava/lang/Object;)Z");
             if (stub == null) return;
             List<Instruction> body = instructions(stub);
+            if (texts.isEmpty()) {
+                if (body.size() != 2 || body.get(0).getOpcode() != Opcode.CONST_4 || ((NarrowLiteralInstruction) body.get(0)).getNarrowLiteral() != 0
+                        || body.get(1).getOpcode() != Opcode.RETURN || firstRegister(body.get(1)) != firstRegister(body.get(0)))
+                    fail("text toast stub names toasts this build doesn't have");
+                return;
+            }
+            int size = 4, input = parameter(stub, 0), at = 0;
+            for (List<String> sources : texts.values()) size += 4 + 2 * sources.size();
+            boolean shaped = body.size() == size;
+            Layout code = new Layout(stub.getImplementation());
+            for (Map.Entry<String, List<String>> text : texts.entrySet()) {
+                if (!shaped) break;
+                String model = text.getKey().substring(0, text.getKey().indexOf("->"));
+                List<String> sources = text.getValue();
+                int next = at + 4 + 2 * sources.size();
+                Instruction is = body.get(at), skip = body.get(at + 1), cast = body.get(at + 2), read = body.get(at + 3);
+                shaped = is.getOpcode() == Opcode.INSTANCE_OF && ((TwoRegisterInstruction) is).getRegisterB() == input
+                        && firstRegister(is) != input && model.equals(String.valueOf(reference(is)))
+                        && skip.getOpcode() == Opcode.IF_EQZ && firstRegister(skip) == firstRegister(is)
+                        && code.addresses.get(at + 1) + ((OffsetInstruction) skip).getCodeOffset() == code.addresses.get(next)
+                        && cast.getOpcode() == Opcode.CHECK_CAST && firstRegister(cast) == input && model.equals(String.valueOf(reference(cast)))
+                        && read.getOpcode() == Opcode.IGET_OBJECT && ((TwoRegisterInstruction) read).getRegisterB() == input
+                        && firstRegister(read) != input && text.getKey().equals(String.valueOf(reference(read)));
+                for (int k = 0; shaped && k < sources.size(); k++) {
+                    Instruction check = body.get(at + 4 + 2 * k), branch = body.get(at + 5 + 2 * k);
+                    shaped = check.getOpcode() == Opcode.INSTANCE_OF && ((TwoRegisterInstruction) check).getRegisterB() == firstRegister(read)
+                            && firstRegister(check) != firstRegister(read) && sources.get(k).equals(String.valueOf(reference(check)))
+                            && branch.getOpcode() == Opcode.IF_NEZ && firstRegister(branch) == firstRegister(check)
+                            && code.addresses.get(at + 5 + 2 * k) + ((OffsetInstruction) branch).getCodeOffset() == code.addresses.get(size - 2);
+                }
+                at = next;
+            }
+            if (shaped) for (int k = 0; k < 2; k++) {
+                Instruction literal = body.get(size - 4 + 2 * k), exit = body.get(size - 3 + 2 * k);
+                shaped &= literal.getOpcode() == Opcode.CONST_4 && ((NarrowLiteralInstruction) literal).getNarrowLiteral() == k
+                        && exit.getOpcode() == Opcode.RETURN && firstRegister(exit) == firstRegister(literal);
+            }
+            if (!shaped) fail("text toast stub doesn't ask each of " + texts + " in turn");
+        }
+
+        /** Pinterest's methods that read a save confirmation's text, found once. */
+        List<Method> saveReaders() {
+            if (saveReaders != null) return saveReaders;
+            saveReaders = new ArrayList<>();
+            for (Method m : clean.methods.values()) {
+                if (m.getDefiningClass().startsWith(OWN) || m.getImplementation() == null) continue;
+                for (Instruction i : m.getImplementation().getInstructions()) if (i.getOpcode() == Opcode.SGET
+                        && reference(i) instanceof FieldReference f && f.getType().equals("I") && SAVE_TOAST_STRINGS.contains(f.getName())) {
+                    saveReaders.add(m); break;
+                }
+            }
+            return saveReaders;
+        }
+
+        /** Whether [type] is [target] or extends it, as far as the clean build's own classes say. */
+        boolean inherits(String type, String target) {
+            Set<String> seen = new HashSet<>();
+            for (String at = type; at != null && seen.add(at); ) {
+                if (at.equals(target)) return true;
+                ClassDef cd = clean.classes.get(at);
+                at = cd == null ? null : cd.getSuperclass();
+            }
+            return false;
+        }
+
+        /**
+         * The toast models that ask an interface they hold in a public field for their text, where a
+         * class behind that interface reads a save text: each such field as smali names it, with
+         * those classes.
+         */
+        Map<String, List<String>> textToasts(String model) {
+            Map<String, Set<String>> sources = new HashMap<>();
+            for (Method reader : saveReaders()) {
+                ClassDef owner = clean.classes.get(reader.getDefiningClass());
+                if (owner == null || !AccessFlags.PUBLIC.isSet(owner.getAccessFlags()) || AccessFlags.ABSTRACT.isSet(owner.getAccessFlags())
+                        || AccessFlags.INTERFACE.isSet(owner.getAccessFlags()) || inherits(owner.getType(), model)) continue;
+                for (String type : owner.getInterfaces()) sources.computeIfAbsent(type, k -> new TreeSet<>()).add(owner.getType());
+            }
+            Map<String, List<String>> texts = new TreeMap<>();
+            String builder = "(" + TOAST_CONTAINER + ")" + TOAST_VIEW;
+            for (ClassDef owner : clean.classes.values()) {
+                if (!AccessFlags.PUBLIC.isSet(owner.getAccessFlags()) || AccessFlags.ABSTRACT.isSet(owner.getAccessFlags())
+                        || AccessFlags.INTERFACE.isSet(owner.getAccessFlags()) || owner.getType().equals(model)
+                        || owner.getType().startsWith(OWN) || !inherits(owner.getType(), model)) continue;
+                Set<String> asked = new HashSet<>();
+                for (Method m : owner.getMethods()) if (descriptor(m).equals(builder)) for (Instruction i : instructions(m))
+                    if (reference(i) instanceof MethodReference call && call.getReturnType().equals("Ljava/lang/CharSequence;")) asked.add(call.getDefiningClass());
+                for (Field f : owner.getFields()) if (asked.contains(f.getType()) && sources.containsKey(f.getType())
+                        && AccessFlags.PUBLIC.isSet(f.getAccessFlags()) && !AccessFlags.STATIC.isSet(f.getAccessFlags()))
+                    texts.put(owner.getType() + "->" + f.getName() + ":" + f.getType(), new ArrayList<>(sources.get(f.getType())));
+            }
+            return texts;
+        }
+
+        /**
+         * The public toast models a method that reads a save text builds, other than the ones
+         * [told] apart already, that keep a text in a field of their own or of a class they extend.
+         * The model HushPinterest's own messages are built with is never one.
+         */
+        Set<String> messageToasts(String model, Set<String> told) {
+            String own = null;
+            Method post = patched.methods.get(BASE + "ui/PinterestToasts;->post(Landroid/app/Activity;Ljava/lang/String;I)Z");
+            if (post != null) for (Instruction i : instructions(post)) if (i.getOpcode() == Opcode.NEW_INSTANCE) own = String.valueOf(reference(i));
+            Set<String> messages = new TreeSet<>();
+            for (Method reader : saveReaders()) for (Instruction i : instructions(reader)) {
+                if (i.getOpcode() != Opcode.NEW_INSTANCE) continue;
+                String type = String.valueOf(reference(i));
+                ClassDef owner = clean.classes.get(type);
+                if (owner == null || type.equals(model) || told.contains(type) || !inherits(type, model)
+                        || !AccessFlags.PUBLIC.isSet(owner.getAccessFlags()) || AccessFlags.ABSTRACT.isSet(owner.getAccessFlags())
+                        || own != null && inherits(own, type)) continue;
+                boolean text = false;
+                Set<String> seen = new HashSet<>();
+                for (ClassDef at = owner; at != null && !at.getType().equals(model) && seen.add(at.getType()); at = clean.classes.get(at.getSuperclass()))
+                    for (Field f : at.getFields()) if (!AccessFlags.STATIC.isSet(f.getAccessFlags())
+                            && (f.getType().equals("Ljava/lang/String;") || f.getType().equals("Ljava/lang/CharSequence;"))) text = true;
+                if (text) messages.add(type);
+            }
+            return messages;
+        }
+
+        /** True when the toast made at [at] goes into a register that the very next instruction shows. */
+        static boolean shownAtOnce(List<Instruction> body, int at) {
+            return at + 2 < body.size() && body.get(at + 1).getOpcode() == Opcode.MOVE_RESULT_OBJECT
+                    && body.get(at + 2).getOpcode() == Opcode.INVOKE_VIRTUAL
+                    && "Landroid/widget/Toast;->show()V".equals(String.valueOf(reference(body.get(at + 2))))
+                    && arguments(body.get(at + 2)).equals(List.of(firstRegister(body.get(at + 1))));
+        }
+
+        /**
+         * The Android toasts the screens that save a pin show. Each Toast.makeText call in a method
+         * that reads a save text, and in a static helper one of them hands a text to, goes to the
+         * stand-in of the same shape on the same registers when its toast is shown at once. Any
+         * other stays as it was. The rule runs once per shape and checks that shape's calls. Its
+         * answer is for both: some call was taken over and none was left because it couldn't be.
+         */
+        boolean androidToast(String hook) {
+            String original = TOAST_MAKE + hook.substring(hook.indexOf('('));
+            Map<String, Method> makers = new LinkedHashMap<>();
+            for (Method reader : saveReaders()) {
+                makers.put(reader.toString(), reader);
+                for (Instruction i : instructions(reader)) {
+                    if (!i.getOpcode().name().startsWith("INVOKE_STATIC") || !(reference(i) instanceof MethodReference)) continue;
+                    MethodReference call = (MethodReference) reference(i);
+                    if (call.getDefiningClass().startsWith(OWN) || !descriptor(call).equals("(Landroid/content/Context;Ljava/lang/CharSequence;I)V")) continue;
+                    Method helper = clean.methods.get(call.toString());
+                    if (helper != null && helper.getImplementation() != null && AccessFlags.STATIC.isSet(helper.getAccessFlags()))
+                        makers.put(helper.toString(), helper);
+                }
+            }
+            int sites = 0, unsure = 0, taken = 0;
+            for (Method maker : makers.values()) {
+                List<Instruction> was = instructions(maker);
+                List<Integer> originals = new ArrayList<>();
+                int left = 0;
+                for (int at = 0; at < was.size(); at++) {
+                    if (!was.get(at).getOpcode().name().startsWith("INVOKE_STATIC") || !(reference(was.get(at)) instanceof MethodReference)) continue;
+                    MethodReference call = (MethodReference) reference(was.get(at));
+                    if (!call.toString().startsWith(TOAST_MAKE + "(") || !TOAST_SHAPES.contains(descriptor(call))) continue;
+                    boolean shown = shownAtOnce(was, at);
+                    if (shown) sites++; else unsure++;
+                    if (!call.toString().equals(original)) continue;
+                    if (shown) originals.add(at); else left++;
+                }
+                if (originals.isEmpty()) continue;
+                taken += originals.size();
+                Method m = actual(maker);
+                List<Integer> hooked = calls(m, hook, originals.size());
+                if (m == null) continue;
+                List<Instruction> body = instructions(m);
+                if (callSites(body, original).size() != left) fail(original + " remains beside its stand-in in " + m);
+                for (int n = 0; n < Math.min(hooked.size(), originals.size()); n++) {
+                    Instruction old = was.get(originals.get(n));
+                    if (!arguments(body.get(hooked.get(n))).equals(arguments(old))) fail(hook + " changed its argument registers in " + m);
+                    edits.computeIfAbsent(m.toString(), k -> new FeatureEdits()).replacements.put(hooked.get(n), old);
+                }
+            }
+            if (taken > 0) {
+                Method stand = actual(hook);
+                if (stand != null) fallback(stand, original);
+            }
+            return sites > 0 && unsure == 0;
+        }
+
+        /**
+         * A stub that answers true for an instance of one of the [expected] classes: a check apiece,
+         * then false, then the shared true. With none expected it must still be the extension's own
+         * body, which answers false.
+         */
+        void instanceStub(String name, Set<String> expected, String what) {
+            Method stub = actual(BASE + "ui/UiHooks;->" + name + "(Ljava/lang/Object;)Z");
+            if (stub == null) return;
+            List<Instruction> body = instructions(stub);
+            if (expected.isEmpty()) {
+                if (body.size() != 2 || body.get(0).getOpcode() != Opcode.CONST_4 || ((NarrowLiteralInstruction) body.get(0)).getNarrowLiteral() != 0
+                        || body.get(1).getOpcode() != Opcode.RETURN || firstRegister(body.get(1)) != firstRegister(body.get(0)))
+                    fail(what + " stub names toasts this build doesn't have");
+                return;
+            }
             int n = (body.size() - 4) / 2, input = parameter(stub, 0);
             List<String> named = new ArrayList<>();
-            boolean shaped = expected.size() > 0 && body.size() == 2 * expected.size() + 4;
+            boolean shaped = body.size() == 2 * expected.size() + 4;
             Layout code = new Layout(stub.getImplementation());
             for (int k = 0; shaped && k < n; k++) {
                 Instruction check = body.get(2 * k), branch = body.get(2 * k + 1);
@@ -2902,7 +3216,7 @@ public class DexDiff {
                         && exit.getOpcode() == Opcode.RETURN && firstRegister(exit) == firstRegister(literal);
             }
             if (!shaped || !new TreeSet<>(named).equals(expected) || named.size() != expected.size())
-                fail("save toast stub names " + named + " instead of the save toast models " + expected);
+                fail(what + " stub names " + named + " instead of the " + what + " models " + expected);
         }
 
         /**
@@ -3289,8 +3603,7 @@ public class DexDiff {
                         List<Method> dismissals = new ArrayList<>();
                         ClassDef presenterType = presenter == null ? null : clean.classes.get(presenter.getType());
                         if (presenterType != null) for (Method method : presenterType.getMethods()) if (descriptor(method).equals("()V")
-                                && AccessFlags.PUBLIC.isSet(method.getAccessFlags()) && instructions(method).stream().map(Instruction::getOpcode).toList().equals(
-                                        List.of(Opcode.NEW_INSTANCE, Opcode.CONST_4, Opcode.INVOKE_DIRECT, Opcode.IGET_OBJECT, Opcode.INVOKE_VIRTUAL, Opcode.RETURN_VOID))) dismissals.add(method);
+                                && AccessFlags.PUBLIC.isSet(method.getAccessFlags()) && dismissal(instructions(method).stream().map(Instruction::getOpcode).toList())) dismissals.add(method);
                         if (dismissals.size() != 1 || body.size() != 4 || body.get(1).getOpcode() != Opcode.IF_EQZ
                                 || !dismissals.get(0).toString().equals(String.valueOf(reference(body.get(2))))
                                 || !arguments(body.get(2)).equals(List.of(firstRegister(body.get(0)))) || body.get(3).getOpcode() != Opcode.RETURN_VOID)
@@ -4221,51 +4534,89 @@ public class DexDiff {
         }
 
         static final String TOPIC_BINDER = "Presenter bound to BubblesListView must be of type BubblesListPresenter";
+        static final String TOPIC_ROW = "Lcom/pinterest/feature/search/typeahead/view/SearchTypeaheadAutoCompleteUpsellCell;";
 
         /**
          * Pinterest's topic suggestion row. The binder that logs the row's presenter error reads an
-         * int field of its own class from this and packed-switches on it, and that switch has no arm
-         * for the row, so the row runs from the fall-through: the row hook goes first there with the
-         * binder's view parameter, reached only from the switch, and the original first instruction
-         * follows it. The row's view, the one class implementing the interface that fall-through casts
-         * the parameter to, gains an onMeasure passing itself and each spec through the measure hook
-         * before its superclass measures. Both are found in the clean target, never from the hooks.
+         * int field of its own class from this and packed-switches on it. Every arm the switch starts,
+         * the fall-through or a case, begins by casting the binder's view parameter to an interface, and
+         * the row's arm casts it to the one TOPIC_ROW implements (the fall-through in 14.39.0, a case in
+         * 14.40.0). The row hook goes right after that cast with the view parameter, reached only from
+         * the cast. The row's view, the one class implementing that interface, gains an onMeasure
+         * passing itself and each spec through the measure hook before its superclass measures. Both
+         * are found in the clean target, never from the hooks.
          */
         void topicSuggestions(Contract c) {
             String rowHook = c.strings.get(0), measureHook = c.strings.get(1);
             List<Method> binders = new ArrayList<>();
             for (Method m : clean.holding(TOPIC_BINDER)) if (topicBinder(m)) binders.add(m);
             Method binder = unique(binders, "topic row binder");
+            ClassDef rowClass = clean.classes.get(TOPIC_ROW);
+            if (rowClass == null) fail("the topic row view " + TOPIC_ROW + " is missing");
             boolean row = false, measured = false;
-            if (binder != null) {
+            if (binder != null && rowClass != null) {
                 List<Instruction> was = instructions(binder);
                 int view = parameter(binder, 0);
-                Instruction start = was.get(2);
-                String face = start.getOpcode() == Opcode.CHECK_CAST && firstRegister(start) == view ? String.valueOf(reference(start)) : null;
-                if (face == null || writes(was.get(0), view) || writes(was.get(1), view)) {
-                    fail("the topic row binder " + binder + " no longer starts the row arm by casting its untouched view parameter");
-                    face = null;
+                List<Integer> arms = new ArrayList<>();
+                for (int start : topicArms(binder)) {
+                    Instruction cast = was.get(start);
+                    if (cast.getOpcode() == Opcode.CHECK_CAST && firstRegister(cast) == view
+                            && rowClass.getInterfaces().contains(String.valueOf(reference(cast)))) arms.add(start);
+                }
+                String face = null;
+                int arm = -1;
+                if (arms.size() != 1 || writes(was.get(0), view) || writes(was.get(1), view)) {
+                    fail("the topic row binder " + binder + " has no one arm casting its untouched view parameter to the row's interface");
+                } else {
+                    arm = arms.get(0);
+                    face = String.valueOf(reference(was.get(arm)));
                 }
                 Method m = actual(binder);
                 List<Integer> sites = calls(m, rowHook, 1);
                 if (face != null && m != null && sites.size() == 1) {
                     List<Instruction> body = instructions(m);
                     int at = sites.get(0);
-                    row = at == 2 && at + 1 < body.size() && body.get(1).getOpcode() == Opcode.PACKED_SWITCH
-                            && arguments(body.get(at)).equals(List.of(view))
-                            && body.get(at + 1).getOpcode() == Opcode.CHECK_CAST && firstRegister(body.get(at + 1)) == view
-                            && face.equals(String.valueOf(reference(body.get(at + 1))))
-                            && onlyFrom(m, at, at - 1) && onlyFrom(m, at + 1, at);
-                    if (!row) fail(rowHook + " does not take the view first on the topic row's switch fall-through in " + m);
+                    row = at == arm + 1 && arguments(body.get(at)).equals(List.of(view))
+                            && body.get(arm).getOpcode() == Opcode.CHECK_CAST && firstRegister(body.get(arm)) == view
+                            && face.equals(String.valueOf(reference(body.get(arm)))) && onlyFrom(m, at, arm);
+                    if (!row) fail(rowHook + " does not take the view right after the topic row arm's cast in " + m);
                     else remove(m, at, at + 1);
                 }
                 List<ClassDef> implementers = new ArrayList<>();
                 if (face != null) for (ClassDef cd : clean.classes.values())
                     if (!cd.getType().startsWith(OWN) && cd.getInterfaces().contains(face)) implementers.add(cd);
                 ClassDef rowView = face == null ? null : uniqueClass(implementers, "topic row view");
+                if (rowView != null && !rowView.getType().equals(TOPIC_ROW)) {
+                    fail("the topic row's interface " + face + " is implemented by " + rowView.getType() + ", not " + TOPIC_ROW);
+                    rowView = null;
+                }
                 if (rowView != null) measured = topicMeasure(rowView, measureHook);
             }
             capability(c.callee, row && measured);
+        }
+
+        /** Where the binder's switch starts an arm: right after the switch, then at each of its cases. */
+        List<Integer> topicArms(Method m) {
+            Layout layout = new Layout(m.getImplementation());
+            List<Integer> starts = new ArrayList<>(List.of(2));
+            int switchAt = layout.addresses.get(1);
+            Instruction payload = layout.byAddress.get(switchAt + ((OffsetInstruction) layout.instructions.get(1)).getCodeOffset());
+            if (payload instanceof SwitchPayload) for (SwitchElement element : ((SwitchPayload) payload).getSwitchElements()) {
+                int index = layout.addresses.indexOf(switchAt + element.getOffset());
+                if (index >= 0 && !starts.contains(index)) starts.add(index);
+            }
+            return starts;
+        }
+
+        /**
+         * The presenter's dismissal: a new event built from one or two constants (14.40.0 added its
+         * slide-out flag), then posted to the presenter's event bus.
+         */
+        boolean dismissal(List<Opcode> opcodes) {
+            int size = opcodes.size();
+            if (size < 6 || size > 7 || opcodes.get(0) != Opcode.NEW_INSTANCE) return false;
+            for (int at = 1; at < size - 4; at++) if (opcodes.get(at) != Opcode.CONST_4) return false;
+            return opcodes.subList(size - 4, size).equals(List.of(Opcode.INVOKE_DIRECT, Opcode.IGET_OBJECT, Opcode.INVOKE_VIRTUAL, Opcode.RETURN_VOID));
         }
 
         /** The topic row binder's shape, as the patch finds it. */
@@ -4325,7 +4676,7 @@ public class DexDiff {
          * from the move-result, and the check-cast after it, past a getClass null check, names the
          * button's class. Built: a method answering one of the APK's own framework views through a
          * single return-object, with the hook on the answered register as the only way into the
-         * return. Each button class then gains, or starts its own, setVisibility with the visibility
+         * return. Constructed: see constructedButtons. Each button class then gains, or starts its own, setVisibility with the visibility
          * hook taking the view and the request and answering into the request.
          */
         void closeupButtons(Contract c) {
@@ -4398,11 +4749,35 @@ public class DexDiff {
                 List<Integer> returns = new ArrayList<>();
                 for (int k = 0; k < body.size(); k++) if (body.get(k).getOpcode() == Opcode.RETURN_OBJECT) returns.add(k);
                 String type = m.getReturnType();
-                if (returns.size() != 1 || !clean.classes.containsKey(type) || !frameworkView(type)) continue;
-                int at = returns.get(0), button = firstRegister(body.get(at));
-                if (tiedToId(body, reads, button)) sites.add(new ButtonSite(m, at, button, type, false, hook));
+                if (returns.size() == 1 && clean.classes.containsKey(type) && frameworkView(type)) {
+                    int at = returns.get(0), button = firstRegister(body.get(at));
+                    if (tiedToId(body, reads, button)) { sites.add(new ButtonSite(m, at, button, type, false, hook)); continue; }
+                }
+                constructedButtons(m, body, reads, hook, sites);
             }
             return sites.size() > before;
+        }
+
+        /**
+         * Built in place: one of the APK's own framework views constructed from an argument whose own
+         * constructor took the id (the second closeup's lens in 14.40.0). The hook goes right after the
+         * view's constructor and, like a found button's, is reached only from there.
+         */
+        void constructedButtons(Method m, List<Instruction> body, List<Integer> reads, String hook, List<ButtonSite> sites) {
+            Set<Integer> ids = new HashSet<>(), holders = new HashSet<>();
+            for (int k : reads) ids.add(firstRegister(body.get(k)));
+            for (int k = reads.get(0) + 1; k < body.size(); k++) {
+                Instruction call = body.get(k);
+                if (!(call instanceof FiveRegisterInstruction || call instanceof RegisterRangeInstruction)
+                        || !(reference(call) instanceof MethodReference method) || !method.getName().equals("<init>")) continue;
+                List<Integer> registers = callRegisters(call);
+                if (registers.isEmpty()) continue;
+                List<Integer> passed = registers.subList(1, registers.size());
+                if (passed.stream().anyMatch(ids::contains)) { holders.add(registers.get(0)); continue; }
+                if (passed.stream().noneMatch(holders::contains)) continue;
+                String type = method.getDefiningClass();
+                if (clean.classes.containsKey(type) && frameworkView(type)) sites.add(new ButtonSite(m, k + 1, registers.get(0), type, true, hook));
+            }
         }
 
         /** The view in [button] takes the id: setId with it, or a constructor argument whose own constructor took it. */
@@ -4932,6 +5307,99 @@ public class DexDiff {
                 replacement(manager + "->" + name + "(" + parameters + ")" + answer, entry + "->" + name + "(" + manager + parameters + ")" + answer, null, true);
             }
             greetingHeader(entry + "->onGreetingHeader(Landroid/view/View;)V");
+            nativeSettings(entry);
+        }
+
+        /** The owned row and click are anchored in the clean native list, never a shared URL or safety label. */
+        void nativeSettings(String entry) {
+            List<Method> builders = clean.methods.values().stream().filter(m -> instructions(m).stream().anyMatch(i ->
+                    readsId(i, "settings_main_header_settings")) && instructions(m).stream().anyMatch(i ->
+                    readsId(i, "settings_main_header_account"))).toList();
+            if (builders.isEmpty()) return; // Framework-only verifier fixtures have no native settings model.
+            Method originalBuilder = unique(builders, "native settings list");
+            if (originalBuilder == null) return;
+            List<ClassDef> external = clean.classes.values().stream().filter(cd -> {
+                for (Method m : cd.getMethods()) if (m.getName().equals("<init>") && instructions(m).stream().anyMatch(i ->
+                        readsId(i, "settings_menu_teen_safety_resources"))) return true;
+                return false;
+            }).toList();
+            ClassDef externalClass = uniqueClass(external, "native external settings row");
+            if (externalClass == null) return;
+            String parent = externalClass.getSuperclass(), owned = BASE + "settings/NativeSettingsItem;";
+            ClassDef row = patched.classes.get(owned);
+            Method constructor = actual(owned + "-><init>()V"), viewType = actual(owned + "->getViewType()I");
+            if (row == null || !parent.equals(row.getSuperclass()) || !AccessFlags.PUBLIC.isSet(row.getAccessFlags())
+                    || !row.getInterfaces().containsAll(externalClass.getInterfaces())) {
+                fail("native settings row has no owned public identity with its native superclass"); return;
+            }
+            List<Instruction> viewBody = instructions(viewType);
+            if (viewBody.size() != 2 || !(viewBody.get(0) instanceof NarrowLiteralInstruction literal) || literal.getNarrowLiteral() != 13
+                    || viewBody.get(1).getOpcode() != Opcode.RETURN || firstRegister(viewBody.get(0)) != firstRegister(viewBody.get(1))) {
+                fail("owned settings row does not use native external-row view type 13");
+            }
+            calls(constructor, entry + "->nativeTitleId()I", 1);
+            List<Instruction> ctorBody = instructions(constructor);
+            if (ctorBody.size() != 9 || !ctorBody.get(5).getOpcode().name.startsWith("invoke-static")
+                    || !String.valueOf(reference(ctorBody.get(5))).equals(entry + "->nativeTitleId()I")
+                    || ctorBody.get(6).getOpcode() != Opcode.MOVE_RESULT || ctorBody.get(7).getOpcode() != Opcode.INVOKE_DIRECT
+                    || !(reference(ctorBody.get(7)) instanceof MethodReference baseInit) || !baseInit.getDefiningClass().equals(parent)
+                    || !baseInit.getName().equals("<init>") || baseInit.getParameterTypes().size() != 2
+                    || !baseInit.getParameterTypes().get(0).equals("I")
+                    || !arguments(ctorBody.get(7)).equals(List.of(parameter(constructor, -1), firstRegister(ctorBody.get(6)), firstRegister(ctorBody.get(3))))
+                    || ctorBody.get(8).getOpcode() != Opcode.RETURN_VOID) {
+                fail("native settings constructor doesn't supply its owned title to the native superclass");
+            }
+            Method builder = actual(originalBuilder);
+            List<Instruction> body = instructions(builder);
+            int header = -1;
+            for (int at = 0; at < body.size(); at++) if (readsId(body.get(at), "settings_main_header_account")) header = at;
+            int at = header + 4;
+            String init = owned + "-><init>()V";
+            List<Integer> constructors = callSites(body, init);
+            for (int site : constructors) claimed.add(builder + "@" + site);
+            if (header < 0 || at + 2 >= body.size() || constructors.size() != 1 || constructors.get(0) != at + 1
+                    || body.get(at).getOpcode() != Opcode.NEW_INSTANCE || !owned.equals(String.valueOf(reference(body.get(at))))
+                    || body.get(at + 1).getOpcode() != Opcode.INVOKE_DIRECT
+                    || !arguments(body.get(at + 1)).equals(List.of(firstRegister(body.get(at))))
+                    || body.get(at + 2).getOpcode() != Opcode.INVOKE_VIRTUAL
+                    || !"Ljava/util/ArrayList;->add(Ljava/lang/Object;)Z".equals(String.valueOf(reference(body.get(at + 2))))
+                    || !arguments(body.get(at + 2)).equals(List.of(arguments(body.get(header + 3)).get(0), firstRegister(body.get(at))))) {
+                fail("native settings row is missing, duplicated or detached from the guaranteed header");
+            } else remove(builder, at, at + 3);
+
+            List<Method> clickers = clean.methods.values().stream().filter(m -> instructions(m).stream().anyMatch(i ->
+                    reference(i) instanceof FieldReference field && field.getName().equals("TEEN_SAFETY_RESOURCES_LINK"))
+                    && instructions(m).stream().anyMatch(i -> i.getOpcode() == Opcode.INSTANCE_OF && parent.equals(String.valueOf(reference(i))))).toList();
+            Method oldClick = unique(clickers, "native external settings click");
+            if (oldClick == null) return;
+            Method click = actual(oldClick);
+            List<Integer> sites = calls(click, entry + "->open(Landroid/app/Activity;)Z", 1);
+            body = instructions(click);
+            int checkAt = -1;
+            for (int k = 0; k < body.size(); k++) if (body.get(k).getOpcode() == Opcode.INSTANCE_OF
+                    && parent.equals(String.valueOf(reference(body.get(k))))) checkAt = k;
+            at = checkAt + 2;
+            if (checkAt < 0 || at + 8 >= body.size() || sites.size() != 1 || sites.get(0) != at + 4) {
+                fail("owned settings click is not confined to the native external-row branch"); return;
+            }
+            int scratch = firstRegister(body.get(at));
+            Layout layout = new Layout(click.getImplementation());
+            Instruction guard = body.get(at + 1);
+            if (body.get(at).getOpcode() != Opcode.INSTANCE_OF || !owned.equals(String.valueOf(reference(body.get(at))))
+                    || ((TwoRegisterInstruction) body.get(at)).getRegisterB() != ((TwoRegisterInstruction) body.get(checkAt)).getRegisterB()
+                    || guard.getOpcode() != Opcode.IF_EQZ || firstRegister(guard) != scratch
+                    || layout.addresses.get(at + 1) + ((OffsetInstruction) guard).getCodeOffset() != layout.addresses.get(at + 7)
+                    || !"Landroidx/fragment/app/Fragment;->requireActivity()Landroidx/fragment/app/FragmentActivity;".equals(String.valueOf(reference(body.get(at + 2))))
+                    || !arguments(body.get(at + 2)).equals(arguments(instructions(oldClick).get(checkAt + 5)))
+                    || body.get(at + 3).getOpcode() != Opcode.MOVE_RESULT_OBJECT || firstRegister(body.get(at + 3)) != scratch
+                    || !arguments(body.get(at + 4)).equals(List.of(scratch))
+                    || body.get(at + 5).getOpcode() != Opcode.SGET_OBJECT || firstRegister(body.get(at + 5)) != scratch
+                    || !(reference(body.get(at + 5)) instanceof FieldReference unit) || !unit.getType().equals("Lkotlin/Unit;")
+                    || body.get(at + 6).getOpcode() != Opcode.RETURN_OBJECT || firstRegister(body.get(at + 6)) != scratch
+                    || body.get(at + 7).getOpcode() != Opcode.NOP) {
+                fail("owned settings click lost its identity guard, Activity argument or native fallback"); return;
+            }
+            remove(click, at, at + 8);
         }
 
         static final String GREETING_HEADER_ID = "home_feed_greeting_header_view";
@@ -5065,6 +5533,8 @@ public class DexDiff {
                     case "guard": simpleGuard(c); break;
                     case "refresh": refresh(c); break;
                     case "draw": draw(c); break;
+                    case "drawWash": draw(c); break;
+                    case "builtView": builtView(c); break;
                     case "navigation": navigation(c); break;
                     case "menu": menu(c); break;
                     case "downloads": downloads(c); break;

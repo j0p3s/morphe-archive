@@ -44,6 +44,8 @@ public final class RootPostMutes {
     private static volatile Session session;
     private static RootPostMuteStore store;
     private static long revision;
+    /** The generation of the session whose private read failed or never ran. Sessions start at 1, so 0 names none. */
+    private static volatile long unreadGeneration;
     static Consumer<Runnable> workerForTests;
     static File fileForTests;
 
@@ -183,20 +185,52 @@ public final class RootPostMutes {
             session = loading;
         }
         accountChanged();
-        submit(() -> {
-            synchronized (FILE_LOCK) {
-                if (!current(loading)) return;
-                try {
-                    if (store == null) store = read();
-                    publish(loading, store.roots(loading.account));
-                } catch (Exception unreadable) {
-                    // Keep the loading state. No untrusted document value reaches diagnostics.
-                }
-            }
-        });
+        // A worker with no room never runs the read, and nothing else would start one this session.
+        // The account counts as unread instead, which Manage muted posts says and offers to retry.
+        if (!submit(() -> { synchronized (FILE_LOCK) { load(loading); } })) unread(loading);
+    }
+
+    /** Call with FILE_LOCK held. A failed read leaves the account unloaded and the document as it is. */
+    private static boolean load(Session target) {
+        if (!current(target)) return false;
+        try {
+            if (store == null) store = read();
+            publish(target, store.roots(target.account));
+            return true;
+        } catch (Exception failed) {
+            // No untrusted document value reaches diagnostics. Only the fact of the failure is kept.
+            unread(target);
+            return false;
+        }
+    }
+
+    /**
+     * Records that [target]'s private read failed or never ran. An account that has since been
+     * replaced records nothing, so it can't hide what happened to the one that took its place.
+     */
+    private static void unread(Session target) {
+        synchronized (ACCOUNT_LOCK) { if (current(target)) unreadGeneration = target.generation; }
+    }
+
+    /**
+     * Reads again for an account whose read failed. This never writes, resets or deletes the
+     * document; AtomicFile still restores its own backup while opening it.
+     */
+    static void retry(Session target, Consumer<Boolean> done) {
+        if (target == null || !current(target)) { finish(done, false); return; }
+        if (!submit(() -> {
+            boolean loaded;
+            synchronized (FILE_LOCK) { loaded = load(target); }
+            finish(done, loaded);
+        })) finish(done, false);
     }
 
     static Session capture() { Session value = session; return value != null && value.loaded ? value : null; }
+    /** The current account when its private read failed or the worker refused it, else null. An account still loading isn't one. */
+    static Session unreadable() {
+        Session value = session;
+        return value != null && !value.loaded && value.generation == unreadGeneration ? value : null;
+    }
     static boolean current(Session value) {
         Session now = session;
         return value != null && now != null && now.generation == value.generation && now.account.equals(value.account);

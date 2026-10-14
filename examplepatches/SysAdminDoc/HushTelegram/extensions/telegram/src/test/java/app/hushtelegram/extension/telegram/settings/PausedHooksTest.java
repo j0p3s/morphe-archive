@@ -170,13 +170,18 @@ public class PausedHooksTest {
                 () -> app.hushtelegram.extension.telegram.misc.CallDebug.skipCallDebugUpload(true),
                 app.hushtelegram.extension.telegram.misc.CallDebug::skipCallLogFileUpload,
                 app.hushtelegram.extension.telegram.misc.CallDebug::skipCallLogUpload));
-        // An unsent message's link preview is never asked for, on any compose surface.
+        // An unsent message's link preview is never asked for, on any compose surface, its draft
+        // stays off Telegram's server, and what's typed in search's Chats tab stays here too.
         probes.put(PatchFamily.DISABLE_DRAFT_PREVIEWS, Arrays.asList(
                 app.hushtelegram.extension.telegram.misc.DraftPreviews::skipChatPreview,
                 app.hushtelegram.extension.telegram.misc.DraftPreviews::skipSharePreview,
                 app.hushtelegram.extension.telegram.misc.DraftPreviews::skipPollPreview,
                 app.hushtelegram.extension.telegram.misc.DraftPreviews::skipStoryLinkPreview,
-                app.hushtelegram.extension.telegram.misc.DraftPreviews::skipBotSharePreview));
+                app.hushtelegram.extension.telegram.misc.DraftPreviews::skipBotSharePreview,
+                () -> app.hushtelegram.extension.telegram.misc.LocalDrafts.keepOnPhone(new Object()),
+                app.hushtelegram.extension.telegram.misc.LocalSearch::keep,
+                () -> app.hushtelegram.extension.telegram.misc.LocalSearch.sent("cat") == null,
+                () -> !"none".equals(app.hushtelegram.extension.telegram.misc.LocalSearch.emptyText("none"))));
         // Search's Apps tab neither loads nor draws the Popular apps list.
         probes.put(PatchFamily.HIDE_POPULAR_APPS, Arrays.asList(
                 app.hushtelegram.extension.telegram.misc.PopularApps::skipLoad,
@@ -252,9 +257,10 @@ public class PausedHooksTest {
         // A swipe on a profile's photos goes back.
         probes.put(PatchFamily.SWIPE_BACK_ON_PROFILES, Collections.singletonList(
                 () -> !app.hushtelegram.extension.telegram.misc.SwipeBack.touchBlocks(true)));
-        // Your own number gets covered.
-        probes.put(PatchFamily.HIDE_PHONE_NUMBER, Collections.singletonList(
-                () -> app.hushtelegram.extension.telegram.misc.HidePhoneForTests.covers()));
+        // Your own number gets covered, and a new contact screen's share box starts clear.
+        probes.put(PatchFamily.HIDE_PHONE_NUMBER, Arrays.asList(
+                () -> app.hushtelegram.extension.telegram.misc.HidePhoneForTests.covers(),
+                () -> !app.hushtelegram.extension.telegram.misc.ContactShare.startsTicked(new Object(), true, true)));
         // Message times get their seconds.
         probes.put(PatchFamily.MESSAGE_SECONDS, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.MessageTimeForTests.addsSeconds()));
@@ -373,7 +379,8 @@ public class PausedHooksTest {
         probes.put(PatchFamily.STRIP_LINK_TRACKING, Arrays.asList(
                 () -> PROBE_URL.equals(LinkRouting.cleanOpenedUri(Uri.parse(TRACKED_URL), false, new boolean[1]).toString()),
                 () -> PROBE_URL.equals(LinkRouting.cleanShareIntent(new Intent(Intent.ACTION_SEND).setType("text/plain")
-                        .putExtra(Intent.EXTRA_TEXT, TRACKED_URL)).getStringExtra(Intent.EXTRA_TEXT))));
+                        .putExtra(Intent.EXTRA_TEXT, TRACKED_URL)).getStringExtra(Intent.EXTRA_TEXT)),
+                () -> !LinkRouting.addAutologinToken(true)));
         // telegram.org's build never asks the server whether a newer one is out.
         probes.put(PatchFamily.DISABLE_UPDATE_CHECKS, Collections.singletonList(UpdateChecks::skipUpdateCheck));
         probes.put(PatchFamily.REPAIR_FIREBASE_PUSH, Collections.singletonList(PausedHooksTest::firebaseHeaderChanged));

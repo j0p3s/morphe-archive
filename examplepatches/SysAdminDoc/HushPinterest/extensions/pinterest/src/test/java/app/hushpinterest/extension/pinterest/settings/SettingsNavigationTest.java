@@ -40,7 +40,9 @@ import java.util.TreeMap;
 import app.hushpinterest.extension.pinterest.NativeDialogCapture;
 import app.hushpinterest.extension.shared.L10n;
 import app.hushpinterest.extension.shared.SettingsContextRule;
+import app.hushpinterest.extension.shared.settings.AppLanguage;
 import app.hushpinterest.extension.shared.settings.BaseSettings;
+import app.hushpinterest.extension.shared.settings.BooleanSetting;
 import app.hushpinterest.extension.shared.settings.FailingStore;
 import app.hushpinterest.extension.shared.settings.HushPinterestPause;
 import app.hushpinterest.extension.shared.settings.PauseForTests;
@@ -84,6 +86,7 @@ public class SettingsNavigationTest {
         Settings.HIDE_ADS.resetToDefault();
         Settings.HIDE_AI_PINS.resetToDefault();
         BaseSettings.PAUSED.resetToDefault();
+        BaseSettings.HUSH_LANGUAGE.resetToDefault();
         app.hushpinterest.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending.remove(
                 Settings.HIDE_ADS.key);
         app.hushpinterest.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending.remove(
@@ -91,23 +94,34 @@ public class SettingsNavigationTest {
         PauseForTests.resume();
     }
 
+    /** The route IDs, which stay English whatever language the titles are in, in home page order. */
+    private static final String[] PAGES = {"Feed", "Privacy", "Pin actions", "Interface", "Links", "Notifications",
+            "Pinterest's own settings", "Updates", "Pause, backup and diagnostics", "About"};
+
     @Test @Config(sdk = {29, 30, 33, 36})
     public void homeAndEveryCategoryAreReachableWithoutRemovingTheModel() {
         assertNotNull(page.navigation);
-        // Status, Quick setups, Browse settings, four feature categories, More settings, Report a
-        // problem and Support HushPinterest.
-        assertEquals(10, list().getCount());
+        // Status, Quick setups, Browse settings and its four feature pages, More settings and its
+        // six pages, Report a problem and Support HushPinterest.
+        assertEquals(16, list().getCount());
         assertEquals(10, page.sections().size());
         int total = page.getPreferenceScreen().getRootAdapter().getCount();
         for (Preference section : page.sections()) {
-            assertTrue(page.navigation.open(section));
+            // Every page has its own row on the home page, so it's one tap away.
+            String row = null;
+            for (String id : PAGES) if (L10n.t(id).contentEquals(section.getTitle())) row = "section_" + id;
+            assertTrue(section.getTitle() + " has no row on the home page", row != null && contains(row));
+            tap(row);
+            assertEquals(String.valueOf(section.getTitle()), screenTitle());
             assertEquals(((PreferenceCategory) section).getPreferenceCount(), list().getCount());
             assertEquals(total, page.getPreferenceScreen().getRootAdapter().getCount());
             assertNotNull(page.findPreference(Settings.HIDE_ADS.key));
+            // And one Back from it: no page sits behind another.
             assertTrue(page.navigation.back());
-            while (page.navigation.back()) { }
+            assertEquals(16, list().getCount());
+            assertFalse(section.getTitle() + " wasn't opened from the home page", page.navigation.back());
         }
-        assertEquals(10, list().getCount());
+        assertEquals(16, list().getCount());
     }
 
     @Test public void theHomePageEndsWithSupportWhichOpensKoFi() {
@@ -116,9 +130,16 @@ public class SettingsNavigationTest {
         Preference row = (Preference) list().getItemAtPosition(last);
         assertEquals(HushPinterestPreferenceFragment.SUPPORT, row.getKey());
         assertEquals("Support HushPinterest", String.valueOf(row.getTitle()));
-        assertEquals("Buy me a coffee on Ko-fi", String.valueOf(row.getSummary()));
+        // The row is its name alone. It had "Buy me a coffee on Ko-fi" under it until that line was dropped.
+        assertNull("the support row has a line under its name again", row.getSummary());
         assertEquals("Report a problem", String.valueOf(((Preference) list().getItemAtPosition(last - 1)).getTitle()));
-        assertEquals("More settings", String.valueOf(((Preference) list().getItemAtPosition(last - 2)).getTitle()));
+        // More settings is a heading now, over its six pages, and About is the last of them.
+        assertEquals("About", String.valueOf(((Preference) list().getItemAtPosition(last - 2)).getTitle()));
+        Preference more = (Preference) list().getItemAtPosition(last - 8);
+        assertEquals("More settings", String.valueOf(more.getTitle()));
+        assertTrue("More settings is still a row to tap", more instanceof PreferenceCategory);
+        assertFalse(list().getAdapter().isEnabled(last - 8));
+        assertEquals("Links", String.valueOf(((Preference) list().getItemAtPosition(last - 7)).getTitle()));
         assertTrue(list().getAdapter().isEnabled(last));
 
         tap(HushPinterestPreferenceFragment.SUPPORT);
@@ -423,8 +444,12 @@ public class SettingsNavigationTest {
         PatchFamily.inBuildForTests = EnumSet.noneOf(PatchFamily.class);
         recreate();
         assertFalse(hasHomeRow("Feed"));
-        // Status, Quick setups, Browse settings, More settings, Report a problem and Support.
-        assertEquals(6, list().getCount());
+        // Status, Quick setups, More settings and the five pages every build has (Links,
+        // Pinterest's own settings, Updates, Pause, backup and diagnostics, About), Report a problem
+        // and Support. Browse settings has no page under it, so the heading isn't drawn.
+        assertEquals(10, list().getCount());
+        assertFalse("an empty Browse settings heading", titles().contains("Browse settings"));
+        assertEquals("More settings", String.valueOf(((Preference) list().getItemAtPosition(2)).getTitle()));
         PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
         PatchFamily.capabilitiesForTests = EnumSet.of(PatchFamily.Capability.FEED_ADS, PatchFamily.Capability.AD_VIEWS);
         recreate();
@@ -450,6 +475,13 @@ public class SettingsNavigationTest {
      * on every page, first on a page without a pause line and under the home page's status card.
      */
     @Test public void aPauseOrAChangeWaitingOnARestartBringsUpTheRestartRow() {
+        // A finger tap puts the window in touch mode. Out of it the list keeps its key selection
+        // in view, the new restart row, and the line above it scrolls off once the page is taller
+        // than the list.
+        Object root = org.robolectric.util.ReflectionHelpers.callInstanceMethod(
+                dialog.getDialog().getWindow().getDecorView(), "getViewRootImpl");
+        org.robolectric.util.ReflectionHelpers.callInstanceMethod(root, "ensureTouchMode",
+                org.robolectric.util.ReflectionHelpers.ClassParameter.from(boolean.class, true));
         page.navigation.navigate("Pause, backup and diagnostics");
         tap(BaseSettings.PAUSED.key);
         layout(dialog.getView());
@@ -482,7 +514,7 @@ public class SettingsNavigationTest {
         assertEquals(categoryCount("Links") + 1, list().getCount());
         while (page.navigation.back()) { }
         assertEquals(SettingsNavigation.RESTART, ((Preference) list().getItemAtPosition(1)).getKey());
-        assertEquals(11, list().getCount());
+        assertEquals(17, list().getCount());
 
         // Two changes are counted, and the row goes once neither is owed.
         app.hushpinterest.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending.add(
@@ -493,7 +525,7 @@ public class SettingsNavigationTest {
         app.hushpinterest.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending.clear();
         page.navigation.restartChanged();
         assertFalse(contains(SettingsNavigation.RESTART));
-        assertEquals(10, list().getCount());
+        assertEquals(16, list().getCount());
     }
 
     /** A switch that needs a restart brings the row up the moment it's flipped, and flipping it back takes it away. */
@@ -538,17 +570,64 @@ public class SettingsNavigationTest {
         assertEquals(categoryCount("Links"), list().getCount());
         assertEquals(View.GONE, ((View) findSearch(dialog.getView()).getParent()).getVisibility());
         assertTrue(page.navigation.back());
-        assertTrue("Back from a More settings page goes to More settings", contains("section_Links"));
+        assertTrue("Back from Links didn't go home", contains(SettingsNavigation.QUICK_SETUPS) && contains("section_Links"));
+        assertFalse(page.navigation.back());
 
-        // A page this build doesn't have opens the first page.
-        dialog.dismissAllowingStateLoss();
+        // A page this build doesn't have opens the first page. So does "more", which a restart from
+        // the More settings page left in its marker before that page's rows moved to the home page.
+        for (String gone : new String[] {"No such page", "more"}) {
+            dialog.dismissAllowingStateLoss();
+            ShadowLooper.idleMainLooper();
+            dialog = SettingsDialog.onPage(gone);
+            dialog.show(controller.get().getFragmentManager(), "hushpinterest_settings");
+            controller.get().getFragmentManager().executePendingTransactions();
+            ShadowLooper.idleMainLooper();
+            page = page(dialog);
+            assertEquals(gone, 16, list().getCount());
+            assertEquals(gone, "HushPinterest", screenTitle());
+            assertEquals(gone, View.VISIBLE, ((View) findSearch(dialog.getView()).getParent()).getVisibility());
+            assertFalse(gone, page.navigation.back());
+        }
+    }
+
+    /**
+     * A long press takes Quick setups off the home page for good, and the row on Pause, backup and
+     * diagnostics brings it back. No other row answers a long press.
+     */
+    @Test public void quickSetupsHidesOnALongPressAndComesBackFromItsRow() {
+        Preference row = (Preference) list().getItemAtPosition(1);
+        assertEquals(SettingsNavigation.QUICK_SETUPS, row.getKey());
+        assertTrue(String.valueOf(row.getSummary()), String.valueOf(row.getSummary()).endsWith(" Press and hold to hide this row."));
+        int home = list().getCount();
+        assertFalse("a long press on another row did something", list().getOnItemLongClickListener()
+                .onItemLongClick(list(), null, position("section_Feed"), 0));
+        assertTrue(list().getOnItemLongClickListener().onItemLongClick(list(), null, 1, 0));
         ShadowLooper.idleMainLooper();
-        dialog = SettingsDialog.onPage("No such page");
-        dialog.show(controller.get().getFragmentManager(), "hushpinterest_settings");
-        controller.get().getFragmentManager().executePendingTransactions();
-        ShadowLooper.idleMainLooper();
-        page = page(dialog);
-        assertEquals(10, list().getCount());
+        assertTrue(BaseSettings.HIDE_QUICK_SETUPS.savedValue());
+        assertEquals("Quick setups hidden. Show it from Pause, backup and diagnostics.", ShadowToast.getTextOfLatestToast());
+        assertFalse(contains(SettingsNavigation.QUICK_SETUPS));
+        assertEquals(home - 1, list().getCount());
+
+        // Back to defaults leaves it as it is (SettingsBackupTest keeps it out of settings files).
+        page.applyQuickSetup(QuickSetupKeys.defaults());
+        assertTrue(BaseSettings.HIDE_QUICK_SETUPS.savedValue());
+
+        tap("section_Pause, backup and diagnostics");
+        assertEquals("Hidden. Tap to show it again.",
+                String.valueOf(((Preference) list().getItemAtPosition(position(HushPinterestPreferenceFragment.QUICK_SETUPS_HOME))).getSummary()));
+        tap(HushPinterestPreferenceFragment.QUICK_SETUPS_HOME);
+        assertFalse(BaseSettings.HIDE_QUICK_SETUPS.savedValue());
+        assertEquals("Shown. Tap to hide it.",
+                String.valueOf(((Preference) list().getItemAtPosition(position(HushPinterestPreferenceFragment.QUICK_SETUPS_HOME))).getSummary()));
+        assertTrue(page.navigation.back());
+        assertEquals(SettingsNavigation.QUICK_SETUPS, ((Preference) list().getItemAtPosition(1)).getKey());
+        assertEquals(home, list().getCount());
+
+        // The same row hides it again.
+        tap("section_Pause, backup and diagnostics");
+        tap(HushPinterestPreferenceFragment.QUICK_SETUPS_HOME);
+        assertTrue(page.navigation.back());
+        assertFalse(contains(SettingsNavigation.QUICK_SETUPS));
     }
 
     /** Each Quick setups choice changes its switches through their rows and says how many changed. */
@@ -586,6 +665,233 @@ public class SettingsNavigationTest {
             for (app.hushpinterest.extension.shared.settings.BooleanSetting setting : QuickSetupKeys.DEFAULTS) {
                 setting.resetToDefault();
             }
+        }
+    }
+
+    /** What a Quick setups choice says it changed is what the rows, the settings and the store hold, reopened too. */
+    @Test public void aQuickSetupThatLandsAgreesWithTheRowsTheSettingsAndTheStore() {
+        try {
+            assertEquals(6, page.applyQuickSetup(QuickSetupKeys.quiet()));
+            assertEquals("Changed 6 settings", ShadowToast.getTextOfLatestToast());
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) assertHolds(setting, true);
+            recreate();
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) assertHolds(setting, true);
+
+            // Nothing is left to change, so nothing moves and the count is zero.
+            assertEquals(0, page.applyQuickSetup(QuickSetupKeys.quiet()));
+            assertEquals("Changed 0 settings", ShadowToast.getTextOfLatestToast());
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) assertHolds(setting, true);
+        } finally {
+            for (BooleanSetting setting : QuickSetupKeys.DEFAULTS) setting.resetToDefault();
+        }
+    }
+
+    /**
+     * One switch's change fails on its way into the setting, and the page's listener puts the saved
+     * value back. Quick setups counts the five that took their value rather than the six it tried,
+     * and its toast, the only one of the run, says the sixth is still on its saved value.
+     */
+    @Test public void aQuickSetupCountsOnlyTheSwitchesThatTookTheirValue() throws Exception {
+        BooleanSetting refused = Settings.HIDE_TOPIC_SUGGESTIONS;
+        try {
+            try (AutoCloseable ignored = unreadableOnce(refused.key)) {
+                assertEquals(5, page.applyQuickSetup(QuickSetupKeys.quiet()));
+            }
+            assertEquals("5 changed. 1 setting is still on its saved value.", ShadowToast.getTextOfLatestToast());
+            assertEquals("the switch showed a toast of its own as well", 1, ShadowToast.shownToastCount());
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) assertHolds(setting, setting != refused);
+            recreate();
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) assertHolds(setting, setting != refused);
+
+            // The same choice again changes the one that was left, and only that one.
+            assertEquals(1, page.applyQuickSetup(QuickSetupKeys.quiet()));
+            assertEquals("Changed 1 setting", ShadowToast.getTextOfLatestToast());
+            assertHolds(refused, true);
+        } finally {
+            for (BooleanSetting setting : QuickSetupKeys.DEFAULTS) setting.resetToDefault();
+        }
+    }
+
+    /**
+     * A switch whose new value never reaches the store is left showing it, with nothing saved and
+     * no word from the listener. It isn't counted, and the toast says to open the settings again,
+     * which is what puts the row back on the saved value.
+     */
+    @Test public void aSwitchShowingAValueTheStoreNeverTookIsNotCountedAndTheToastSaysToReopen() throws Exception {
+        BooleanSetting lost = Settings.HIDE_SAVE_TOASTS;
+        try {
+            dropWritesTo(lost.key);
+            assertEquals(5, page.applyQuickSetup(QuickSetupKeys.quiet()));
+            assertEquals("5 changed. 1 setting didn't. Reopen settings and try again.", ShadowToast.getTextOfLatestToast());
+            assertEquals(1, ShadowToast.shownToastCount());
+            // A change the listener had heard of and recovered would have its row back on the saved value.
+            assertTrue("the control: the row doesn't show the value that was lost",
+                    ((SwitchPreference) page.findPreference(lost.key)).isChecked());
+            assertFalse(lost.savedValue());
+            assertFalse(lost.persistedValue());
+            recreate();
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) assertHolds(setting, setting != lost);
+        } finally {
+            for (BooleanSetting setting : QuickSetupKeys.DEFAULTS) setting.resetToDefault();
+        }
+    }
+
+    /**
+     * A change the page's listener had to recover is still counted when the setting took it first:
+     * the row, the setting and the store all hold the value asked for, so the count is all the run
+     * says, in its one toast.
+     */
+    @Test public void aChangeTheListenerRecoveredIsCountedWhenItsValueLanded() {
+        try {
+            assertEquals(6, page.applyQuickSetup(QuickSetupKeys.quiet()));
+            ShadowToast.reset();
+            // Going back to a default has the setting clear its stored value, and the first of those writes is lost.
+            try (FailingStore store = FailingStore.install(FailingStore.Fault.LOST)) {
+                assertEquals(6, page.applyQuickSetup(QuickSetupKeys.defaults()));
+                // The lost write is the setting's own, and only the listener's recovery catches its failure.
+                assertTrue("the control: no write met the fault", store.editors.get() > 0);
+            }
+            assertEquals("Changed 6 settings", ShadowToast.getTextOfLatestToast());
+            assertEquals("the recovered switch showed a toast of its own as well", 1, ShadowToast.shownToastCount());
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) assertHolds(setting, setting.defaultValue);
+            recreate();
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) assertHolds(setting, setting.defaultValue);
+        } finally {
+            for (BooleanSetting setting : QuickSetupKeys.DEFAULTS) setting.resetToDefault();
+        }
+    }
+
+    /**
+     * Two switches fail in one Quick setups choice. Android queues only a few toasts for an app,
+     * so a toast from each of them could push out the one that counts the run. The run shows a
+     * single toast with both counts in it, short enough for the two lines a toast gets. A switch
+     * flipped by hand afterwards still says for itself that it couldn't change.
+     */
+    @Test public void aQuickSetupThatFailsOnSeveralSwitchesSaysSoOnceWithBothCounts() throws Exception {
+        BooleanSetting first = Settings.HIDE_TOPIC_SUGGESTIONS;
+        BooleanSetting second = Settings.HIDE_SAVE_TOASTS;
+        try {
+            try (AutoCloseable ignored = unreadableOnce(first.key, second.key)) {
+                assertEquals(4, page.applyQuickSetup(QuickSetupKeys.quiet()));
+            }
+            assertEquals("4 changed. 2 settings are still on their saved values.", ShadowToast.getTextOfLatestToast());
+            assertEquals("each switch that failed showed a toast of its own", 1, ShadowToast.shownToastCount());
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) assertHolds(setting, setting != first && setting != second);
+
+            ShadowToast.reset();
+            try (AutoCloseable ignored = unreadableOnce(first.key)) {
+                ((SwitchPreference) page.findPreference(first.key)).setChecked(true);
+            }
+            assertEquals("The setting couldn't finish updating. Its saved value is shown.", ShadowToast.getTextOfLatestToast());
+            assertHolds(first, false);
+        } finally {
+            for (BooleanSetting setting : QuickSetupKeys.DEFAULTS) setting.resetToDefault();
+        }
+    }
+
+    /**
+     * A switch that waits on a restart is put back on the value Pinterest runs with, and the
+     * setting's own clearing of its stored value fails, so the page's listener has to put the row
+     * and the store right. The change landed all the same: the restart it no longer needs comes
+     * off the row's count, and the switch's next flip is taken like any other.
+     */
+    @Test public void aRecoveredChangeThatLandedKeepsTheRestartCountAndItsNextFlipHolds() {
+        BooleanSetting share = Settings.HIDE_SCREENSHOT_SHARE;
+        SwitchPreference row = (SwitchPreference) page.findPreference(share.key);
+        SwitchPreference analytics = (SwitchPreference) page.findPreference(Settings.DISABLE_ANALYTICS.key);
+        try {
+            row.setChecked(true);
+            analytics.setChecked(!Settings.DISABLE_ANALYTICS.defaultValue);
+            assertEquals("Restart Pinterest to apply 2 changes", restartTitle());
+
+            ShadowToast.reset();
+            // Going back to a default has the setting clear its stored value, and that write is lost.
+            try (FailingStore ignored = FailingStore.install(FailingStore.Fault.LOST)) {
+                row.setChecked(false);
+            }
+            assertTrue("the control: the change didn't go through the listener's recovery",
+                    ShadowToast.showedToast("The setting couldn't finish updating. Its saved value is shown."));
+            assertHolds(share, false);
+            assertEquals("a restart the recovered change no longer needs is still counted",
+                    "Restart Pinterest to apply this change", restartTitle());
+
+            row.setChecked(true);
+            assertHolds(share, true);
+            assertEquals("Restart Pinterest to apply 2 changes", restartTitle());
+        } finally {
+            share.resetToDefault();
+            Settings.DISABLE_ANALYTICS.resetToDefault();
+        }
+    }
+
+    /** The restart row's title, which counts the changes a restart applies. */
+    private String restartTitle() {
+        ShadowLooper.idleMainLooper();
+        int at = position(SettingsNavigation.RESTART);
+        assertTrue("no restart row", at >= 0);
+        return String.valueOf(((Preference) list().getItemAtPosition(at)).getTitle());
+    }
+
+    /** [setting] answers [expected] in its row on the open page, in the typed setting and in the store. */
+    private void assertHolds(BooleanSetting setting, boolean expected) {
+        Preference row = page.findPreference(setting.key);
+        assertNotNull("no row for " + setting.key, row);
+        assertEquals(setting.key + " row", expected, ((SwitchPreference) row).isChecked());
+        assertEquals(setting.key + " setting", expected, setting.savedValue());
+        assertEquals(setting.key + " store", expected, setting.persistedValue());
+    }
+
+    /**
+     * Setting's store with its next typed read of each of [keys] failing: the read the page's
+     * listener makes before it takes a row's new value into the setting. Nothing reads a switch's
+     * key through this store sooner. The row's own write goes to the page's store, which this
+     * leaves alone, and a change to another switch reads only that switch's key. Closing it puts
+     * the store back.
+     */
+    private static AutoCloseable unreadableOnce(String... keys) throws Exception {
+        java.lang.reflect.Field field = app.hushpinterest.extension.shared.settings.preference.SharedPrefCategory.class
+                .getDeclaredField("preferences");
+        field.setAccessible(true);
+        android.content.SharedPreferences real = (android.content.SharedPreferences) field.get(Setting.preferences);
+        java.util.Set<String> unread = new java.util.HashSet<>(Arrays.asList(keys));
+        field.set(Setting.preferences, java.lang.reflect.Proxy.newProxyInstance(real.getClass().getClassLoader(),
+                new Class<?>[]{android.content.SharedPreferences.class}, (proxy, method, args) -> {
+                    if (method.getName().equals("getBoolean") && unread.remove(args[0])) {
+                        throw new IllegalStateException("injected read failure");
+                    }
+                    return passOn(method, real, args);
+                }));
+        return () -> field.set(Setting.preferences, real);
+    }
+
+    /**
+     * The open page's own store with every boolean written to [key] dropped, so a row is left
+     * showing a value that was never saved and the page's listener hears nothing. A page opened
+     * afterwards has the real store.
+     */
+    private void dropWritesTo(String key) throws Exception {
+        java.lang.reflect.Field field = android.preference.PreferenceManager.class.getDeclaredField("mSharedPreferences");
+        field.setAccessible(true);
+        android.content.SharedPreferences real = page.getPreferenceManager().getSharedPreferences();
+        field.set(page.getPreferenceManager(), java.lang.reflect.Proxy.newProxyInstance(real.getClass().getClassLoader(),
+                new Class<?>[]{android.content.SharedPreferences.class}, (proxy, method, args) -> {
+                    Object result = passOn(method, real, args);
+                    if (!method.getName().equals("edit")) return result;
+                    android.content.SharedPreferences.Editor editor = (android.content.SharedPreferences.Editor) result;
+                    return java.lang.reflect.Proxy.newProxyInstance(editor.getClass().getClassLoader(),
+                            new Class<?>[]{android.content.SharedPreferences.Editor.class}, (editorProxy, edit, values) -> {
+                                if (edit.getName().equals("putBoolean") && key.equals(values[0])) return editorProxy;
+                                Object staged = passOn(edit, editor, values);
+                                return staged instanceof android.content.SharedPreferences.Editor ? editorProxy : staged;
+                            });
+                }));
+    }
+
+    private static Object passOn(java.lang.reflect.Method method, Object target, Object[] args) throws Throwable {
+        try {
+            return method.invoke(target, args);
+        } catch (java.lang.reflect.InvocationTargetException failure) {
+            throw failure.getCause();
         }
     }
 
@@ -743,7 +1049,7 @@ public class SettingsNavigationTest {
         assertEquals("No matching settings", ((Preference) list().getItemAtPosition(0)).getTitle());
         assertTrue(page.navigation.back());
         assertEquals("", search.getText().toString());
-        assertEquals(10, list().getCount());
+        assertEquals(16, list().getCount());
     }
 
     /** A row with no summary used to carry the word "null" into the search text and come up for it. */
@@ -788,36 +1094,31 @@ public class SettingsNavigationTest {
         assertEquals("", search.getText().toString());
         assertEquals(View.INVISIBLE, clear.getVisibility());
         assertTrue("the field has focus after Clear", search.isFocused());
-        assertEquals(10, list().getCount());
+        assertEquals(16, list().getCount());
     }
 
     /**
-     * A tapped Check now changes its row's text when the check ends, and a screen reader hears that
-     * text too. The daily check settings starts on its own ends through the same listener and stays
-     * quiet, since nobody is waiting on it.
+     * A tapped Check now changes its row's text when the check ends, and a screen reader is handed
+     * that text too: it's written once into a polite live region that stays with the screen, so
+     * nothing takes focus and no announcement is sent. The daily check settings starts on its own
+     * ends through the same listener and stays quiet, since nobody is waiting on it.
      */
-    @Test public void aTappedCheckNowIsAnnouncedAndTheAutomaticCheckIsNot() throws Exception {
+    @Test @Config(sdk = {29, 36})
+    public void aTappedCheckNowIsReadOnceFromALiveStatusAndTheAutomaticCheckIsNot() throws Exception {
         android.view.accessibility.AccessibilityManager a11y = controller.get().getSystemService(android.view.accessibility.AccessibilityManager.class);
         org.robolectric.Shadows.shadowOf(a11y).setEnabled(true);
-        java.util.List<CharSequence> announced = new java.util.ArrayList<>();
-        android.view.ViewGroup container = (android.view.ViewGroup) page.getView().getParent();
-        container.setAccessibilityDelegate(new View.AccessibilityDelegate() {
-            @Override public boolean onRequestSendAccessibilityEvent(android.view.ViewGroup host, View child,
-                    android.view.accessibility.AccessibilityEvent event) {
-                if (event.getEventType() == android.view.accessibility.AccessibilityEvent.TYPE_ANNOUNCEMENT) {
-                    announced.addAll(event.getText());
-                }
-                return super.onRequestSendAccessibilityEvent(host, child, event);
-            }
-        });
+        TextView status = dialog.getView().findViewWithTag(SettingsDialog.CHECK_STATUS);
+        List<String> read = liveReadings(status);
+        View focused = focusOnTheList();
         Preference checkNow = page.findPreference(HushPinterestPreferenceFragment.CHECK_NOW);
 
-        // The automatic check ending: the row changes, nothing is spoken.
+        // The automatic check ending: the row changes, nothing is read.
         page.releaseCheckFinished();
         String idle = ReleaseCheck.checkNowSummary();
         assertNotNull("Check now always has something to say", idle);
         assertEquals(idle, String.valueOf(checkNow.getSummary()));
-        assertEquals("a check nobody tapped is not spoken", java.util.Collections.emptyList(), announced);
+        assertEquals("a check nobody tapped is not read", java.util.Collections.emptyList(), read);
+        assertEquals("", status.getText().toString());
 
         // A tap: the check runs against a GitHub that answers with a newer release.
         ReleaseCheck.Transport original = ReleaseCheck.transport;
@@ -827,14 +1128,109 @@ public class SettingsNavigationTest {
             assertTrue(checkNow.getOnPreferenceClickListener().onPreferenceClick(checkNow));
             ReleaseCheckForTests.settle();
             result = ReleaseCheck.checkNowSummary();
-            assertEquals(java.util.Collections.singletonList(result), announced);
+            assertEquals(java.util.Collections.singletonList(result), read);
             assertEquals(result, String.valueOf(checkNow.getSummary()));
             // The next automatic ending is quiet again.
             page.releaseCheckFinished();
-            assertEquals(1, announced.size());
+            assertEquals(1, read.size());
+            assertSame("the result took focus", focused, dialog.getDialog().getCurrentFocus());
+            assertNothingAnnounced(a11y);
         } finally {
             ReleaseCheck.transport = original;
             ReleaseCheckForTests.forget();
+        }
+    }
+
+    /**
+     * The changes a restart applies are counted in a polite live region that stays with the screen,
+     * because the restart row is a list row and can sit above what's in view. Each new count is read
+     * once, the list being drawn again with the same count says nothing, nothing takes focus and no
+     * announcement is sent.
+     */
+    @Test @Config(sdk = {29, 36})
+    public void theRestartCountIsReadOnceFromALiveStatusWithoutMovingFocus() {
+        android.view.accessibility.AccessibilityManager a11y = controller.get().getSystemService(android.view.accessibility.AccessibilityManager.class);
+        org.robolectric.Shadows.shadowOf(a11y).setEnabled(true);
+        TextView status = dialog.getView().findViewWithTag(SettingsDialog.RESTART_STATUS);
+        List<String> read = liveReadings(status);
+        assertEquals("", status.getText().toString());
+        View focused = focusOnTheList();
+        SwitchPreference share = (SwitchPreference) page.findPreference(Settings.HIDE_SCREENSHOT_SHARE.key);
+        SwitchPreference analytics = (SwitchPreference) page.findPreference(Settings.DISABLE_ANALYTICS.key);
+        assertNotNull("no Hide screenshot share row", share);
+        assertNotNull("no Disable analytics row", analytics);
+        String one = "Restart Pinterest to apply this change";
+        try {
+            share.setChecked(true);
+            ShadowLooper.idleMainLooper();
+            assertEquals(java.util.Collections.singletonList(one), read);
+            assertEquals("the line and the row say different things", one,
+                    String.valueOf(((Preference) list().getItemAtPosition(position(SettingsNavigation.RESTART))).getTitle()));
+
+            // A switch that needs no restart, and the list drawn again: the count is the same, so nothing more is read.
+            ((SwitchPreference) page.findPreference(Settings.HIDE_TOPIC_SUGGESTIONS.key)).setChecked(true);
+            page.navigation.restartChanged();
+            ShadowLooper.idleMainLooper();
+            assertEquals(1, read.size());
+
+            analytics.setChecked(!Settings.DISABLE_ANALYTICS.defaultValue);
+            ShadowLooper.idleMainLooper();
+            assertEquals(Arrays.asList(one, "Restart Pinterest to apply 2 changes"), read);
+
+            // One put back: the count that's left is read. The other put back: the row goes, and an empty line says nothing.
+            analytics.setChecked(Settings.DISABLE_ANALYTICS.defaultValue);
+            ShadowLooper.idleMainLooper();
+            assertEquals(Arrays.asList(one, "Restart Pinterest to apply 2 changes", one), read);
+            share.setChecked(false);
+            ShadowLooper.idleMainLooper();
+            assertEquals(3, read.size());
+            assertEquals("", status.getText().toString());
+            assertFalse(contains(SettingsNavigation.RESTART));
+            assertSame("the count took focus", focused, dialog.getDialog().getCurrentFocus());
+            assertNothingAnnounced(a11y);
+        } finally {
+            Settings.HIDE_SCREENSHOT_SHARE.resetToDefault();
+            Settings.DISABLE_ANALYTICS.resetToDefault();
+            Settings.HIDE_TOPIC_SUGGESTIONS.resetToDefault();
+        }
+    }
+
+    /**
+     * Asks the list to take input focus, as it has while a row in it is being read, and answers
+     * whatever holds focus then. Something has to: a focus that's nowhere can't be seen to stay put.
+     */
+    private View focusOnTheList() {
+        list().requestFocus();
+        View focused = dialog.getDialog().getCurrentFocus();
+        assertNotNull("nothing holds focus, so nothing could be seen to keep it", focused);
+        return focused;
+    }
+
+    /**
+     * What a screen reader is handed from [status] from here on: the line's words each time it sends
+     * the text change of a polite live region that's on show. An empty line says nothing.
+     */
+    private static List<String> liveReadings(TextView status) {
+        assertNotNull("no live status line", status);
+        assertEquals(View.ACCESSIBILITY_LIVE_REGION_POLITE, status.getAccessibilityLiveRegion());
+        assertTrue("a line that isn't on show sends nothing", status.isShown());
+        assertTrue("the line is left out of what a screen reader is given", status.isImportantForAccessibility());
+        List<String> read = new ArrayList<>();
+        status.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+            @Override public void sendAccessibilityEventUnchecked(View host, android.view.accessibility.AccessibilityEvent event) {
+                boolean textChanged = event.getEventType() == android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED
+                        && (event.getContentChangeTypes() & android.view.accessibility.AccessibilityEvent.CONTENT_CHANGE_TYPE_TEXT) != 0;
+                if (textChanged && host.isShown() && status.length() > 0) read.add(status.getText().toString());
+                super.sendAccessibilityEventUnchecked(host, event);
+            }
+        });
+        return read;
+    }
+
+    /** Nothing was sent as an announcement, which a screen reader may ignore and Android 16 deprecates. */
+    private static void assertNothingAnnounced(android.view.accessibility.AccessibilityManager a11y) {
+        for (android.view.accessibility.AccessibilityEvent event : org.robolectric.Shadows.shadowOf(a11y).getSentAccessibilityEvents()) {
+            assertNotEquals(android.view.accessibility.AccessibilityEvent.TYPE_ANNOUNCEMENT, event.getEventType());
         }
     }
 
@@ -846,6 +1242,8 @@ public class SettingsNavigationTest {
         summaryContains(Settings.HIDE_NAV_SEARCH.key, "Search in the bottom bar", "next time the bar updates");
         summaryContains(Settings.HIDE_HEADER_BUTTONS.key, "icon buttons at the end of the top bar", "next time the bar updates", "account controls stay");
         summaryContains(Settings.BLACK_BOTTOM_BAR.key, "In dark mode", "bottom bar pure black", "Light mode stays", "next time the bar redraws");
+        summaryContains(Settings.BLACK_COMMENTS.key, "In dark mode", "comments sheet and its reply bar pure black", "Light mode stays", "next time you open comments");
+        summaryContains(Settings.BLACK_PIN_MENU.key, "In dark mode", "a pin's menu pure black", "Light mode stays", "next time you open the menu");
         summaryContains(Settings.HIDE_CLOSEUP_BACK.key, "back arrow that floats over a pin", "back gesture or button", "next pin you open");
         summaryContains(Settings.HIDE_CLOSEUP_LENS.key, "visual search button", "Search image in the pin menu still works", "next pin you open");
         summaryContains(Settings.HIDE_PIN_MENU_COLLAGE.key, "Add to collage and Remix collage", "pin menus you open from now on", "already open won't change");
@@ -887,6 +1285,19 @@ public class SettingsNavigationTest {
             assertEquals(1, list().getCount());
             assertEquals("No matching settings", ((Preference) list().getItemAtPosition(0)).getTitle());
         }
+    }
+
+    @Test public void theAmoledWordsFindTheBlackSurfacesABuildWithoutTheBarStillHas() {
+        EnumSet<PatchFamily.Capability> withoutBar = EnumSet.allOf(PatchFamily.Capability.class);
+        withoutBar.remove(PatchFamily.Capability.BOTTOM_BAR);
+        PatchFamily.capabilitiesForTests = withoutBar;
+        recreate();
+        assertNull(page.findPreference(Settings.BLACK_BOTTOM_BAR.key));
+        findSearch(dialog.getView()).setText("theme amoled");
+        ShadowLooper.idleMainLooper(2, java.util.concurrent.TimeUnit.SECONDS);
+        assertTrue(contains(Settings.BLACK_COMMENTS.key));
+        assertTrue(contains(Settings.BLACK_PIN_MENU.key));
+        assertFalse(contains(Settings.BLACK_BOTTOM_BAR.key));
     }
 
     @Test public void alternateSearchWordsFindTheActualRowsInEveryShippedLanguage() {
@@ -969,16 +1380,18 @@ public class SettingsNavigationTest {
         page.navigation.back();
         layout(dialog.getView());
         assertEquals("Feed", focusedTitle(a11y));
-        page.navigation.navigate("more");
+        // About sits under the More settings heading, further down the home page than Feed. The
+        // list goes back to where it was scrolled when the row was tapped, so the row is there to
+        // take the focus.
+        list().setSelection(position("section_About"));
         layout(dialog.getView());
-        page.navigation.navigate("About");
+        tap("section_About");
         layout(dialog.getView());
+        assertEquals("About", screenTitle());
         page.navigation.back();
         layout(dialog.getView());
         assertEquals("About", focusedTitle(a11y));
-        page.navigation.back();
-        layout(dialog.getView());
-        assertEquals("More settings", focusedTitle(a11y));
+        assertEquals("HushPinterest", screenTitle());
     }
 
     /** The first text of the last row that took accessibility focus. */
@@ -1022,21 +1435,20 @@ public class SettingsNavigationTest {
         page.navigation.open(page.findPreference(Settings.HIDE_ADS.key));
         SettingsL10nTest.backOf(dialog).performClick();
         assertTrue(dialog.getDialog().isShowing());
-        assertEquals(10, list().getCount());
+        assertEquals(16, list().getCount());
         page.navigation.navigate("About");
         dialog.getDialog().onBackPressed();
-        // More settings: Links, Notifications, Pinterest's own settings, Updates, Pause, backup and diagnostics,
-        // and About.
-        assertEquals(6, list().getCount());
-        dialog.getDialog().onBackPressed();
-        assertEquals(10, list().getCount());
+        // About opens from the home page like every other page, so one Back is home again.
+        assertTrue(dialog.getDialog().isShowing());
+        assertEquals(16, list().getCount());
+        assertEquals("HushPinterest", screenTitle());
         dialog.getDialog().onBackPressed();
         ShadowLooper.idleMainLooper();
         assertFalse(controller.get().isFinishing());
     }
 
     // A window as short as the layouts below, 400 px, so the window's own layout leaves both the
-    // overview and More settings taller than the list and neither snaps back to the top.
+    // overview and the page opened from it taller than the list and neither snaps back to the top.
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "w390dp-h200dp-night-xhdpi")
     public void aNewPageStartsAtTheTopAfterThePreviousPageWasScrolled() {
@@ -1051,24 +1463,23 @@ public class SettingsNavigationTest {
             int homePosition = list().getFirstVisiblePosition();
             int homeOffset = list().getChildAt(0).getTop();
             assertTrue(homePosition > 0 || homeOffset < 0);
-            page.navigation.navigate("more");
-            layout(dialog.getView(), 400);
-            assertEquals(0, list().getFirstVisiblePosition());
-            assertEquals(list().getPaddingTop(), list().getChildAt(0).getTop());
-            list().scrollListBy(100);
-            int morePosition = list().getFirstVisiblePosition();
-            int moreOffset = list().getChildAt(0).getTop();
-            assertTrue(morePosition > 0 || moreOffset < 0);
             page.navigation.navigate("Pause, backup and diagnostics");
             // Preference updates can arrive after navigation but before the next layout.
             ((android.widget.BaseAdapter) page.getPreferenceScreen().getRootAdapter()).notifyDataSetChanged();
             layout(dialog.getView(), 400);
             assertEquals(0, list().getFirstVisiblePosition());
             assertEquals(list().getPaddingTop(), list().getChildAt(0).getTop());
+            list().scrollListBy(100);
+            assertTrue(list().getFirstVisiblePosition() > 0 || list().getChildAt(0).getTop() < 0);
+            // Back is home, where the list was left, and the next page starts at its top again.
             assertTrue(page.navigation.back());
             layout(dialog.getView(), 400);
-            assertEquals(morePosition, list().getFirstVisiblePosition());
-            assertEquals(moreOffset, list().getChildAt(0).getTop());
+            assertEquals(homePosition, list().getFirstVisiblePosition());
+            assertEquals(homeOffset, list().getChildAt(0).getTop());
+            page.navigation.navigate("About");
+            layout(dialog.getView(), 400);
+            assertEquals(0, list().getFirstVisiblePosition());
+            assertEquals(list().getPaddingTop(), list().getChildAt(0).getTop());
             assertTrue(page.navigation.back());
             layout(dialog.getView(), 400);
             assertEquals(homePosition, list().getFirstVisiblePosition());
@@ -1133,9 +1544,13 @@ public class SettingsNavigationTest {
             page.navigation.open(section);
             capture(section.getTitle().toString().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z]+", "-"));
         }
-        page.navigation.navigate("more");
-        capture("more-settings");
-        page.navigation.back();
+        // Back from the last page is home, which runs past a phone's height now that the More
+        // settings pages are listed on it.
+        assertTrue(page.navigation.back());
+        assertEquals(16, list().getCount());
+        list().setSelection(list().getCount() - 1);
+        capture("00-overview-bottom");
+        list().setSelectionFromTop(0, 0);
         findSearch(dialog.getView()).setText("links");
         ShadowLooper.idleMainLooper(1, java.util.concurrent.TimeUnit.SECONDS);
         capture("search-results");
@@ -1172,7 +1587,7 @@ public class SettingsNavigationTest {
         org.robolectric.RuntimeEnvironment.setFontScale(2f);
         try {
             recreate();
-            capture("large-rtl-overview");
+            captureWholeHome("large-rtl-overview");
             for (Preference section : page.sections()) {
                 page.navigation.open(section);
                 layout(dialog.getView());
@@ -1200,6 +1615,9 @@ public class SettingsNavigationTest {
         org.robolectric.RuntimeEnvironment.setFontScale(2f);
         try {
             recreate();
+            // The screen comes back on Feed, the page it was left on. One Back is home.
+            assertTrue("the screen didn't come back on the page it was left on", page.navigation.back());
+            captureWholeHome("pt-br-large-overview");
             for (Preference section : page.sections()) {
                 page.navigation.open(section);
                 layout(dialog.getView());
@@ -1215,6 +1633,22 @@ public class SettingsNavigationTest {
         } finally {
             org.robolectric.RuntimeEnvironment.setFontScale(1f);
         }
+    }
+
+    /**
+     * The home page from its status card to Support, a screen at a time: both headings and every
+     * page row keep their whole text, and the last rows are drawn as well as the first.
+     */
+    private void captureWholeHome(String name) throws Exception {
+        assertEquals(16, list().getCount());
+        for (int i = 0; i < list().getCount(); i++) {
+            list().setSelectionFromTop(i, 0);
+            layout(dialog.getView());
+            assertUncutText(dialog.getView());
+        }
+        capture(name + "-bottom");
+        list().setSelectionFromTop(0, 0);
+        capture(name);
     }
 
     private void captureWholeInterface(String name) throws Exception {
@@ -1240,6 +1674,163 @@ public class SettingsNavigationTest {
         assertNull(page.navigation);
         assertEquals(3, list().getCount());
         assertUncutText(dialog.getView());
+    }
+
+    /**
+     * English for HushPinterest is picked from its row and the open screen is drawn again in it at
+     * once: the same page, the same activity, no restart owed, and Pinterest still in Turkish. The
+     * choice is there after the screen is rebuilt, and following Pinterest again brings the Turkish
+     * back the same way.
+     */
+    @Test @Config(qualifiers = "tr-w390dp-h844dp-night-xhdpi")
+    public void pickingEnglishDrawsTheOpenPageAgainAtOnceAndPinterestStaysTurkish() throws Exception {
+        Map<String, String> turkish = SettingsL10nTest.TranslationsForTests.of("tr");
+        Activity activity = controller.get();
+        java.util.Locale phone = java.util.Locale.getDefault();
+        page.navigation.navigate("Pause, backup and diagnostics");
+        int rows = list().getCount();
+        assertEquals(turkish.get("Pause, backup and diagnostics"), screenTitle());
+        assertEquals(turkish.get("Pause HushPinterest"), titleOf(BaseSettings.PAUSED.key));
+        assertEquals(turkish.get("HushPinterest language"), titleOf(HushPinterestPreferenceFragment.LANGUAGE));
+        assertEquals(turkish.get("Same as Pinterest"), summaryOf(HushPinterestPreferenceFragment.LANGUAGE));
+
+        pickLanguage(1);
+        assertSame("the activity was recreated", activity, controller.get());
+        assertFalse(activity.isFinishing());
+        assertTrue(dialog.getDialog().isShowing());
+        assertEquals("Pause, backup and diagnostics", screenTitle());
+        assertEquals("the page changed under the choice", rows, list().getCount());
+        assertEquals("Pause HushPinterest", titleOf(BaseSettings.PAUSED.key));
+        assertEquals("HushPinterest language", titleOf(HushPinterestPreferenceFragment.LANGUAGE));
+        assertEquals("English", summaryOf(HushPinterestPreferenceFragment.LANGUAGE));
+        assertEquals("Back", String.valueOf(SettingsL10nTest.backOf(dialog).getContentDescription()));
+        assertEquals("Search settings", String.valueOf(findSearch(dialog.getView()).getHint()));
+        assertFalse("a language change asked for a restart", contains(SettingsNavigation.RESTART));
+        assertEquals(AppLanguage.EN, BaseSettings.HUSH_LANGUAGE.persistedValue());
+        // Pinterest's language and the phone's are where they were, and the rows are still built
+        // on Pinterest's own context, which is where a path's menu labels are read from.
+        assertEquals("tr", org.robolectric.RuntimeEnvironment.getApplication().getResources().getConfiguration()
+                .getLocales().get(0).getLanguage());
+        assertEquals("tr", activity.getResources().getConfiguration().getLocales().get(0).getLanguage());
+        assertEquals(phone, java.util.Locale.getDefault());
+        assertEquals("tr", page.findPreference(HushPinterestPreferenceFragment.LANGUAGE).getContext().getResources()
+                .getConfiguration().getLocales().get(0).getLanguage());
+
+        recreate();
+        assertEquals("Pause, backup and diagnostics", screenTitle());
+        assertEquals("English", summaryOf(HushPinterestPreferenceFragment.LANGUAGE));
+        while (page.navigation.back()) { }
+        assertTrue(titles().toString(), titles().contains("Quick setups"));
+        assertEquals("HushPinterest", screenTitle());
+
+        page.navigation.navigate("Pause, backup and diagnostics");
+        pickLanguage(0);
+        assertEquals(turkish.get("Pause, backup and diagnostics"), screenTitle());
+        assertEquals(turkish.get("Pause HushPinterest"), titleOf(BaseSettings.PAUSED.key));
+        assertEquals(turkish.get("Same as Pinterest"), summaryOf(HushPinterestPreferenceFragment.LANGUAGE));
+        assertEquals(turkish.get("Back"), String.valueOf(SettingsL10nTest.backOf(dialog).getContentDescription()));
+        assertFalse("following Pinterest left a choice in the store",
+                Setting.preferences.preferences.contains(BaseSettings.HUSH_LANGUAGE.key));
+        recreate();
+        assertEquals(turkish.get("Same as Pinterest"), summaryOf(HushPinterestPreferenceFragment.LANGUAGE));
+        app.hushpinterest.extension.shared.Utils.awaitBackgroundTasksForTests();
+    }
+
+    /**
+     * On a phone where Pinterest is already in English the two choices read the same, so Android has
+     * no configuration change to report. The choice is saved, shown and kept all the same, and the
+     * page stays where it was. Paused, the row still works: the choice is HushPinterest's own state.
+     */
+    @Test public void pickingEnglishWherePinterestIsEnglishIsSavedWithNoConfigurationChange() throws Exception {
+        BaseSettings.PAUSED.save(true);
+        PauseForTests.pause(HushPinterestPause.Reason.SWITCH);
+        recreate();
+        Activity activity = controller.get();
+        android.content.res.Configuration before = new android.content.res.Configuration(
+                activity.getResources().getConfiguration());
+        page.navigation.navigate("Pause, backup and diagnostics");
+        int rows = list().getCount();
+        assertEquals("Same as Pinterest", summaryOf(HushPinterestPreferenceFragment.LANGUAGE));
+
+        pickLanguage(1);
+        assertEquals("English", summaryOf(HushPinterestPreferenceFragment.LANGUAGE));
+        assertEquals("Pause, backup and diagnostics", screenTitle());
+        assertEquals(rows, list().getCount());
+        assertEquals(AppLanguage.EN, BaseSettings.HUSH_LANGUAGE.persistedValue());
+        assertEquals("a paused HushPinterest ignored its own language", AppLanguage.EN, BaseSettings.HUSH_LANGUAGE.get());
+        assertEquals("the phone's configuration changed", 0, before.diff(activity.getResources().getConfiguration()));
+        assertSame(activity, controller.get());
+        assertTrue("Pause was changed by the language", BaseSettings.PAUSED.savedValue());
+
+        recreate();
+        assertEquals("English", summaryOf(HushPinterestPreferenceFragment.LANGUAGE));
+        pickLanguage(0);
+        assertEquals("Same as Pinterest", summaryOf(HushPinterestPreferenceFragment.LANGUAGE));
+        assertEquals(AppLanguage.DEFAULT, BaseSettings.HUSH_LANGUAGE.persistedValue());
+        app.hushpinterest.extension.shared.Utils.awaitBackgroundTasksForTests();
+    }
+
+    /**
+     * English picked on a phone that reads right to left lays HushPinterest's screen and its dialogs
+     * out left to right, with the way back pointing left. Pinterest's own window keeps its direction,
+     * and following Pinterest again mirrors the screen back.
+     */
+    @Test @Config(qualifiers = "ar-rXB-ldrtl-w390dp-h844dp-night-xhdpi")
+    public void englishPickedOnARightToLeftPhoneLaysTheScreenOutLeftToRight() throws Exception {
+        page.navigation.navigate("Pause, backup and diagnostics");
+        layout(dialog.getView());
+        assertEquals("the control: Pinterest's direction before the choice", View.LAYOUT_DIRECTION_RTL,
+                SettingsL10nTest.backOf(dialog).getDrawable().getLayoutDirection());
+
+        pickLanguage(1);
+        layout(dialog.getView());
+        assertEquals("Pause HushPinterest", titleOf(BaseSettings.PAUSED.key));
+        assertEquals(View.LAYOUT_DIRECTION_LTR, dialog.getView().getLayoutDirection());
+        assertEquals(View.LAYOUT_DIRECTION_LTR, list().getLayoutDirection());
+        assertEquals(View.LAYOUT_DIRECTION_LTR, SettingsL10nTest.backOf(dialog).getDrawable().getLayoutDirection());
+        tap(HushPinterestPreferenceFragment.LANGUAGE);
+        AlertDialog choices = (AlertDialog) org.robolectric.shadows.ShadowDialog.getLatestDialog();
+        ShadowLooper.idleMainLooper();
+        assertEquals(View.LAYOUT_DIRECTION_LTR, choices.getListView().getLayoutDirection());
+        assertEquals("Android's own window direction was changed", View.LAYOUT_DIRECTION_RTL,
+                choices.getWindow().getDecorView().getLayoutDirection());
+        choices.dismiss();
+        assertEquals("Pinterest's direction changed", View.LAYOUT_DIRECTION_RTL,
+                controller.get().getResources().getConfiguration().getLayoutDirection());
+
+        pickLanguage(0);
+        layout(dialog.getView());
+        assertEquals(View.LAYOUT_DIRECTION_RTL, SettingsL10nTest.backOf(dialog).getDrawable().getLayoutDirection());
+        assertEquals(View.LAYOUT_DIRECTION_RTL, list().getLayoutDirection());
+        app.hushpinterest.extension.shared.Utils.awaitBackgroundTasksForTests();
+    }
+
+    /** Taps the language row, then the choice at [which] in its list. The page is a new one afterwards. */
+    private void pickLanguage(int which) {
+        tap(HushPinterestPreferenceFragment.LANGUAGE);
+        AlertDialog choices = (AlertDialog) org.robolectric.shadows.ShadowDialog.getLatestDialog();
+        ListView options = choices.getListView();
+        assertEquals("the choice in force isn't the marked one", 1 - which, options.getCheckedItemPosition());
+        assertTrue(options.performItemClick(options.getAdapter().getView(which, null, options), which,
+                options.getAdapter().getItemId(which)));
+        ShadowLooper.idleMainLooper();
+        assertFalse("the list of languages stayed open", choices.isShowing());
+        HushPinterestPreferenceFragment drawn = page(dialog);
+        assertNotSame("the page wasn't drawn again", page, drawn);
+        page = drawn;
+    }
+
+    private String screenTitle() {
+        android.view.ViewGroup bar = (android.view.ViewGroup) SettingsL10nTest.backOf(dialog).getParent();
+        return String.valueOf(((TextView) bar.getChildAt(1)).getText());
+    }
+
+    private String titleOf(String key) {
+        return String.valueOf(page.findPreference(key).getTitle());
+    }
+
+    private String summaryOf(String key) {
+        return String.valueOf(page.findPreference(key).getSummary());
     }
 
     private static void assertUncutText(View view) {

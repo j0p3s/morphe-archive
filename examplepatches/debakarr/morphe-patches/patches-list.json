@@ -359,37 +359,6 @@
         }
       ],
       "options": []
-    },
-    {
-      "name": "Unlock preview (free AR)",
-      "description": "Unlocks Meshy's AR preview, model decrypt/export and sharing by reporting an active pro entitlement to the JS layer.",
-      "default": false,
-      "dependencies": [],
-      "compatiblePackages": [
-        {
-          "packageName": "ai.meshy.app",
-          "name": "Meshy",
-          "description": null,
-          "apkFileType": "XAPK",
-          "appIconColor": "#6C5CE7",
-          "signatures": null,
-          "targets": [
-            {
-              "version": "1.5.0",
-              "versionCodes": {
-                "ARM64_V8A": 54,
-                "ARMEABI_V7A": 54,
-                "X86_64": 54,
-                "X86": 54
-              },
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            }
-          ]
-        }
-      ],
-      "options": []
     }
   ]
 }

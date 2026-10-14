@@ -8,7 +8,8 @@ import sys
 from pathlib import Path
 
 list_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("patches-list.json")
-forms = [Path(".github/ISSUE_TEMPLATE/bug_report.yml"), Path(".github/ISSUE_TEMPLATE/not_working.yml")]
+forms = [Path(".github/ISSUE_TEMPLATE/bug_report.yml"), Path(".github/ISSUE_TEMPLATE/not_working.yml"),
+         Path(".github/ISSUE_TEMPLATE/app_update.yml")]
 
 ABI_NAMES = {"ARM64_V8A": "arm64-v8a", "ARMEABI_V7A": "armeabi-v7a", "X86_64": "x86_64", "X86": "x86"}
 RECENT_RELEASES = 6

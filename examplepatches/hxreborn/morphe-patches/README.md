@@ -15,7 +15,7 @@
 ## 🩹 Patches list
 
 <!-- PATCHES_START -->
-> **[v1.49.1](https://github.com/hxreborn/morphe-patches/releases/tag/v1.49.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;169 patches total
+> **[v1.50.0](https://github.com/hxreborn/morphe-patches/releases/tag/v1.50.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;174 patches total
 <a id="1weather"></a>
 <details>
 <summary><img src=".github/assets/icons/oneweather.png" width="18" align="top">&nbsp;&nbsp;1Weather&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
@@ -262,7 +262,7 @@
 
 <a id="devcheck"></a>
 <details>
-<summary><img src=".github/assets/icons/devcheck.png" width="18" align="top">&nbsp;&nbsp;DevCheck&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<summary><img src=".github/assets/icons/devcheck.png" width="18" align="top">&nbsp;&nbsp;DevCheck&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -272,6 +272,7 @@
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
+| <a id="devcheck-hide-menu-items"></a>[Hide menu items](patches/src/main/kotlin/app/morphe/patches/devcheck/layout/menu/HideMenuItemsPatch.kt) | Hides Manage subscription, Share and About from the main menu. |
 | <a id="devcheck-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/devcheck/misc/premium/UnlockPremiumPatch.kt) | Unlocks the Pro tools, tests, themes and colors. |
 
 </details>
@@ -455,6 +456,23 @@
 
 </details>
 
+<a id="jujo"></a>
+<details>
+<summary><img src=".github/assets/icons/com.dev2a.junk_journal.png" width="18" align="top">&nbsp;&nbsp;Jujo&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 1.2.5 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="jujo-gmscore-support"></a>[GmsCore support](patches/src/main/kotlin/app/morphe/patches/shared/misc/gms/GetCredentialGmsCoreSupportPatch.kt) | Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed. |
+| <a id="jujo-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/jujo/misc/premium/UnlockPremiumPatch.kt) | Unlocks unlimited journals and widgets, premium templates, brushes, papers, stamp options, HD video export without a watermark, more pictures per page, longer PDF imports and sync for every journal. |
+
+</details>
+
 <a id="jvdroid"></a>
 <details>
 <summary><img src=".github/assets/icons/jvdroid.png" width="18" align="top">&nbsp;&nbsp;Jvdroid&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
@@ -603,7 +621,7 @@
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
-| <a id="memoneet-gmscore-support"></a>[GmsCore support](patches/src/main/kotlin/app/morphe/patches/shared/misc/gms/GetCredentialGmsCoreSupportPatch.kt) | Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed. |
+| <a id="memoneet-gmscore-support"></a>GmsCore support | Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed. |
 | <a id="memoneet-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/memoneet/misc/premium/UnlockPremiumPatch.kt) | Unlocks the premium question banks, notes, test series, previous-year papers and shop plans, with no energy cost or ads. Signing in requires GmsCore support. |
 
 </details>
@@ -876,6 +894,24 @@
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
 | <a id="psiphon-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/psiphon/premium/UnlockPremiumPatch.kt) | Unlocks all regions. Removes ads and the upgrade button. |
+
+</details>
+
+<a id="public"></a>
+<details>
+<summary><img src=".github/assets/icons/publicvideos.png" width="18" align="top">&nbsp;&nbsp;Public&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 3.3.4 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="public-disable-tracking"></a>[Disable tracking](patches/src/main/kotlin/app/morphe/patches/publicvideos/tracking/DisableTrackingPatch.kt) | Stops AppsFlyer, Flurry, comScore, Firebase Analytics and Facebook from collecting usage data. |
+| <a id="public-gmscore-support"></a>GmsCore support | Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed. |
+| <a id="public-hide-ads"></a>[Hide ads](patches/src/main/kotlin/app/morphe/patches/publicvideos/ads/HideAdsPatch.kt) | Removes ads from the feed, app open, interstitial and rewarded placements. |
 
 </details>
 

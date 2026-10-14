@@ -148,6 +148,34 @@ It's made for Telegram %1$s.	Rilis ini dibuat untuk Telegram %1$s.
 None of Telegram's web addresses are selected for this app, so their links open elsewhere. Tap to select them in Android's settings.	Tidak ada alamat web Telegram yang dipilih untuk aplikasi ini, jadi tautannya terbuka di tempat lain. Ketuk untuk memilihnya di pengaturan Android.
 Only some of Telegram's web addresses are selected for this app, and links to the rest open elsewhere. Tap to select them in Android's settings.	Hanya sebagian alamat web Telegram yang dipilih untuk aplikasi ini, dan tautan ke alamat lainnya terbuka di tempat lain. Ketuk untuk memilihnya di pengaturan Android.
 Saved. Restart Telegram to apply this change.	Tersimpan. Mulai ulang Telegram untuk menerapkan perubahan ini.
+# context: the restart row's title while one change waits for a restart; a tap restarts Telegram
+Restart Telegram to apply this change	Mulai ulang Telegram untuk menerapkan perubahan ini
+# context: the same row with several changes waiting; %1$d is how many
+Restart Telegram to apply %1$d changes	Mulai ulang Telegram untuk menerapkan %1$d perubahan
+# context: the restart row's summary; the settings screen comes back on the page it was on
+Telegram closes and reopens on this page.	Telegram ditutup lalu dibuka lagi di halaman ini.
+# context: home page row just above Support; a tap opens a new bug report on GitHub in a browser
+Report a problem	Laporkan masalah
+# context: that row's summary
+Opens a GitHub report with your versions and settings filled in. Add what happened.	Membuka laporan GitHub dengan versi dan pengaturan Anda yang sudah terisi. Tambahkan apa yang terjadi.
+# context: home page row under the status card, and the title of the dialog it opens
+Quick setups	Penyiapan cepat
+# context: that row's summary
+Turn on a set of switches in one tap, or put every switch back the way it started.	Nyalakan sekumpulan sakelar dengan sekali ketuk, atau kembalikan semua sakelar seperti semula.
+# context: Quick setups choice that turns on the switches that hide ads, suggestions and nags
+Quiet	Tenang
+# context: what Quiet does, under its name
+Hides ads, suggestions, stories, promotions and nags.	Menyembunyikan iklan, saran, cerita, promosi, dan pengingat yang mengganggu.
+# context: what the Privacy choice does, under its name; the phone number is the person's own, covered where Telegram shows it
+Stops usage reports, strips tracking from links and covers your own phone number on screen.	Menghentikan laporan penggunaan, menghapus pelacakan dari tautan, dan menutupi nomor telepon Anda sendiri di layar.
+# context: Quick setups choice that puts every feature switch back to its starting value
+Back to defaults	Kembali ke bawaan
+# context: what Back to defaults does, under its name
+Puts every feature switch back the way it started.	Mengembalikan setiap sakelar fitur seperti semula.
+# context: toast after a Quick setups choice changed exactly one switch
+Changed %1$d setting	%1$d pengaturan diubah
+# context: the same toast for any other count, zero included; %1$d is how many
+Changed %1$d settings	%1$d pengaturan diubah
 Ads in channels and search	Iklan di saluran dan pencarian
 Ads in channels	Iklan di saluran
 Ads in search	Iklan di pencarian
@@ -204,9 +232,15 @@ Open links externally	Buka tautan di luar aplikasi
 Opens normal web links in your browser. Telegram links, sign-in and payment pages keep working the way they did.	Membuka tautan web biasa di browser Anda. Tautan Telegram, halaman masuk, dan pembayaran tetap berfungsi seperti sebelumnya.
 Remove link tracking tags	Hapus tag pelacakan tautan
 Removes tracking tags like utm_source, gclid and fbclid from links you open or share. A link with any other tag is left unchanged.	Menghapus tag pelacakan seperti utm_source, gclid, dan fbclid dari tautan yang Anda buka atau bagikan. Tautan dengan tag lain tidak diubah.
+# context: Links page switch title. When on, links to the websites Telegram signs you in to automatically open without your account's sign-in token.
+No automatic sign-in on Telegram's sites	Tanpa masuk otomatis di situs Telegram
+# context: Summary under that switch. The token is what signs the account in on those sites without asking.
+Telegram adds a sign-in token for your account to links to some of its own websites. With this on, those links open without it, and you can sign in there yourself.	Telegram menambahkan token masuk untuk akun Anda ke tautan menuju beberapa situs webnya sendiri. Jika ini aktif, tautan itu terbuka tanpa token, dan Anda bisa masuk sendiri di sana.
 external browser routing	pengarahan ke browser eksternal
 opened link tracking	pelacakan tautan yang dibuka
 shared link tracking	pelacakan tautan yang dibagikan
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Strip link tracking that leaves the account's sign-in token off links to Telegram's websites.
+website sign-in tokens	token masuk situs web
 Stops usage reports to Telegram, like how long you read each channel post and what you tap on Premium screens. Messages and calls work as before.	Menghentikan laporan penggunaan ke Telegram, seperti berapa lama Anda membaca tiap kiriman kanal dan apa yang Anda ketuk di layar Premium. Pesan dan panggilan berfungsi seperti biasa.
 Firebase crash and session reports stop too, from the next time Telegram starts.	Laporan crash dan sesi Firebase juga berhenti, mulai saat Telegram dibuka berikutnya.
 Premium promo views	tampilan promosi Premium
@@ -220,12 +254,26 @@ Accounts	Akun
 Every switch here applies to all the accounts in this Telegram app, not only the one you have open.	Setiap sakelar di sini berlaku untuk semua akun di aplikasi Telegram ini, bukan hanya akun yang sedang Anda buka.
 No previews before sending	Tanpa pratinjau sebelum mengirim
 Telegram doesn't look up link previews for messages you haven't sent yet, including shares, polls, story links and bots. Sent messages still get one.	Telegram tidak mencari pratinjau tautan untuk pesan yang belum Anda kirim, termasuk berbagi, polling, tautan cerita, dan bot. Pesan yang sudah terkirim tetap mendapat pratinjau.
+# context: Privacy page switch title. When on, an unsent message stays only on this phone instead of syncing to the account's other devices.
+Keep drafts on this phone	Simpan draf di ponsel ini
+# context: Summary under that switch. Clearing a draft (emptying the text box) is still sent so other devices drop it too.
+A message you start but don't send stays on this phone and stops syncing to your other devices. Clearing a draft still clears it there.	Pesan yang Anda mulai tetapi tidak dikirim tetap di ponsel ini dan berhenti disinkronkan ke perangkat Anda yang lain. Menghapus draf tetap menghapusnya di sana.
+# context: Privacy page switch title. When on, text typed in the Chats tab of Telegram's main search is no longer sent to Telegram's server.
+Keep searches on this phone	Simpan pencarian di ponsel ini
+# context: Summary under that switch. Chats is the name of the first tab in Telegram's search, so use Telegram's own word for that tab in your language. Public accounts means people, bots and channels found by username.
+What you type in search's Chats tab isn't sent to Telegram. It finds the chats, contacts and recent searches on this phone, but not messages, public accounts or posts. The other tabs search as usual.	Yang kamu ketik di tab Obrolan pada pencarian tidak dikirim ke Telegram. Pencarian menemukan obrolan, kontak, dan pencarian terbaru di ponsel ini, tetapi tidak menemukan pesan, akun publik, atau postingan. Tab lain mencari seperti biasa.
+# context: Extra line under Telegram's "No results" message in the Chats tab of search, shown while Keep searches on this phone is on. It explains why nothing from Telegram's server turned up.
+Only chats and contacts on this phone were searched.	Hanya obrolan dan kontak di ponsel ini yang dicari.
 Draft link previews	Pratinjau tautan di draf
 chat drafts	draf chat
 share sheet comments	komentar di lembar berbagi
 poll links	tautan polling
 story links	tautan cerita
 bot shares	pesan yang dibagikan bot
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Draft link previews that keeps drafts off the server.
+draft syncing	sinkronisasi draf
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Draft link previews that keeps text typed in search's Chats tab from being sent to Telegram.
+search lookups	permintaan pencarian
 Camera only on tap	Kamera hanya saat diketuk
 Opening the attachment gallery doesn't start the camera or ask for camera access. Tap the camera tile to start it.	Membuka galeri lampiran tidak menyalakan kamera atau meminta akses kamera. Ketuk kotak kamera untuk menyalakannya.
 Gallery camera	Kamera galeri
@@ -241,7 +289,7 @@ Quiet contacts prompts	Senyapkan permintaan kontak
 After you say no to contacts access, the Contacts tab stops asking again and its warning badge goes away.	Setelah Anda menolak akses ke kontak, tab Kontak tidak meminta lagi dan lencana peringatannya hilang.
 
 New Year look all year	Tampilan Tahun Baru sepanjang tahun
-Shows Telegram's Santa hat and New Year snow all year, not only around New Year. Snow falls on the chat list's top bar and on chat backgrounds once Background rotation is on under Power saving.	Menampilkan topi Santa Telegram dan salju Tahun Baru sepanjang tahun, bukan hanya saat Tahun Baru. Salju turun di bilah atas daftar obrolan dan di latar obrolan setelah Rotasi latar aktif di bawah Penghemat daya.
+Shows Telegram's Santa hat and New Year snow all year, not only around New Year. Snow falls on the chat list's top bar and on chat backgrounds once Wallpaper rotation is on under Power Saving, in Effects in Chats.	Menampilkan topi Santa Telegram dan salju Tahun Baru sepanjang tahun, bukan hanya saat Tahun Baru. Salju turun di bilah atas daftar obrolan dan di latar obrolan setelah Rotasi latar aktif di Penghematan Daya, pada Efek dalam Obrolan.
 Use system font	Gunakan font sistem
 Bold, italic and code text use your phone's font instead of Telegram's built-in one. Restart Telegram to see the change.	Teks tebal, miring, dan kode memakai font ponsel Anda, bukan font bawaan Telegram. Mulai ulang Telegram untuk melihat perubahannya.
 AMOLED black	Hitam AMOLED
@@ -260,6 +308,12 @@ Swipe back on profiles	Geser kembali di profil
 Swiping right on a profile's photos or media tabs goes back, like the rest of the profile, instead of showing the previous photo or tab.	Menggeser ke kanan pada foto atau tab media profil akan kembali, seperti di bagian profil lainnya, bukan menampilkan foto atau tab sebelumnya.
 Hide phone number	Sembunyikan nomor telepon
 Your own phone number shows as dots in the side menu, Settings and your profile, which helps with screenshots. Others' numbers stay visible.	Nomor telepon Anda sendiri tampil sebagai titik-titik di menu samping, Pengaturan, dan profil Anda, yang berguna untuk tangkapan layar. Nomor orang lain tetap terlihat.
+# context: Privacy page switch title, under Hide phone number. When on, the box on Telegram's add contact screen that shares your own phone number with the new contact starts unticked.
+Don't share my number by default	Jangan bagikan nomorku secara default
+# context: Summary under that switch. The box is Telegram's own checkbox on the add contact screen, and the person can still tick it.
+When you add someone as a contact from their chat, Telegram ticks the box that shares your phone number with them. With this on, the box starts clear and your number goes only if you tick it.	Saat kamu menambahkan seseorang sebagai kontak dari obrolannya, Telegram mencentang kotak yang membagikan nomor teleponmu kepadanya. Jika ini aktif, kotak itu mulai kosong dan nomormu hanya dibagikan jika kamu mencentangnya sendiri.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Hide phone number that starts the add contact screen's share box unticked.
+number sharing on new contacts	berbagi nomor ke kontak baru
 Message times with seconds	Waktu pesan dengan detik
 Each message's time includes seconds, like 9:41:27 PM, so messages sent close together are easy to tell apart.	Waktu setiap pesan menyertakan detik, misalnya 21.41.27, sehingga pesan yang dikirim berdekatan mudah dibedakan.
 Allow chat blur on slower phones	Izinkan blur obrolan di ponsel yang lebih lambat
@@ -300,7 +354,10 @@ Clear kept messages	Hapus pesan yang disimpan
 Deletes the messages this phone kept after others deleted them, in every account, the way Telegram would have.	Menghapus pesan yang disimpan ponsel ini setelah orang lain menghapusnya, di setiap akun, seperti yang akan dilakukan Telegram.
 # context: the notice after that tap when nothing was kept
 There are no kept messages to clear.	Tidak ada pesan yang disimpan untuk dihapus.
-# context: the notice after that tap, with how many kept messages went
+# context: the notice right after that tap, while the kept messages are still being removed
+Removing %1$d kept message.	Menghapus %1$d pesan yang disimpan.
+Removing %1$d kept messages.	Menghapus %1$d pesan yang disimpan.
+# context: the notice once Telegram has finished removing them, with how many went
 Removed %1$d kept message.	%1$d pesan yang disimpan telah dihapus.
 Removed %1$d kept messages.	%1$d pesan yang disimpan telah dihapus.
 Ask before sending a sticker	Tanya dulu sebelum mengirim stiker
@@ -314,6 +371,10 @@ Translate this chat	Terjemahkan obrolan ini
 This chat will be translated	Obrolan ini akan diterjemahkan
 This chat shows the original messages	Obrolan ini menampilkan pesan asli
 Translation isn't available right now	Terjemahan tidak tersedia saat ini
+# context: a short toast when messages scroll by faster than the translation service answers; the newest skipped ones are asked for as answers come in, the others when they're shown again
+Lots to translate at once. The rest will follow.	Banyak yang diterjemahkan sekaligus. Sisanya akan menyusul.
+# context: Toast shown once after an update clears the translated chats saved before each choice belonged to a Telegram account.
+Turn chat translation on again. It's now set per account.	Nyalakan lagi terjemahan obrolan. Sekarang diatur per akun.
 Ask before sending a GIF	Tanya dulu sebelum mengirim GIF
 Asks Send or Cancel before a GIF you tap goes into a chat. Cancel drops it. Scheduled GIFs go out without asking.	Menanyakan Kirim atau Batal sebelum GIF yang Anda ketuk masuk ke obrolan. Batal membuangnya. GIF terjadwal terkirim tanpa bertanya.
 Ask before sending a voice or video message	Tanya dulu sebelum mengirim pesan suara atau video
@@ -505,6 +566,10 @@ Install a UnifiedPush app like ntfy, then come back here.	Pasang aplikasi Unifie
 %1$s. Turn the switch on to sign up with it.	%1$s. Nyalakan sakelar untuk mendaftar dengannya.
 %1$s ended the sign-up. Turn the switch off and on to sign up again.	%1$s mengakhiri pendaftaran. Matikan lalu nyalakan sakelar untuk mendaftar lagi.
 %1$s turned the sign-up down. Check that it allows UnifiedPush.	%1$s menolak pendaftaran. Periksa apakah aplikasi itu mengizinkan UnifiedPush.
+# context: the Push app row's summary when the UnifiedPush app (%1$s, its name) hands out a plain http address; Telegram only calls https
+%1$s gave an address without https, which Telegram's servers won't call.	%1$s memberi alamat tanpa https, dan server Telegram tidak akan memanggilnya.
+# context: the Push app row's summary while the UnifiedPush app (%1$s, its name) says its push server is temporarily down; the sign-up is kept
+The server behind %1$s is down for now. Wake-ups come back once it's up.	Server di balik %1$s sedang mati. Telegram dibangunkan lagi setelah server itu menyala.
 # context: the row's summary once signed up: Telegram's servers wake Telegram up through that app.
 Telegram's wake-ups come through %1$s.	Telegram dibangunkan lewat %1$s.
 Signing up with %1$s…	Mendaftar dengan %1$s…
@@ -548,6 +613,22 @@ Made Private, Groups, Channels and Bots folders.	Folder Pribadi, Grup, Kanal, da
 There were no folders from HushTelegram to remove.	Tidak ada folder dari HushTelegram yang perlu dihapus.
 # context: a short toast (two lines at most) after the switch went off. Folders the person renamed or changed are kept.
 Removed the folders HushTelegram made. Changed ones stay.	Folder buatan HushTelegram dihapus. Yang diubah tetap ada.
+# context: a short toast (two lines at most) when Telegram hasn't answered the new folder requests after two seconds, for example while offline.
+Asking Telegram to make your folders.	Meminta Telegram membuat foldermu.
+# context: a short toast (two lines at most) when Telegram hasn't answered the folder delete requests after two seconds, for example while offline.
+Asking Telegram to remove the folders.	Meminta Telegram menghapus folder tersebut.
+# context: a short toast (two lines at most) when Telegram's server made some of the folders and turned the others down.
+Made some folders. Telegram turned the rest down.	Sebagian folder dibuat. Telegram menolak sisanya.
+# context: a short toast (two lines at most) when Telegram's server turned down every folder, so the switch went back off.
+Telegram turned the folders down. Try again later.	Telegram menolak folder itu. Coba lagi nanti.
+# context: a short toast (two lines at most) when the folders were made but Telegram's server didn't take the order of the tabs.
+Made the folders. Telegram didn't save their order.	Folder dibuat. Telegram tidak menyimpan urutannya.
+# context: a short toast (two lines at most) when the switch was turned off but Telegram's server wouldn't delete some of the folders. The switch goes back on, and turning it off again asks only for those.
+Telegram kept some folders. Turn this off again to retry.	Telegram menyimpan sebagian folder. Matikan lagi untuk mengulang.
+# context: a short toast (two lines at most) when Telegram's server wouldn't delete any of the folders, so the switch went back on.
+Telegram didn't remove the folders. Try again in a moment.	Telegram tidak menghapus folder itu. Coba lagi sebentar lagi.
+# context: a short toast (two lines at most) when the folder switch is flipped while Telegram still hasn't answered the last flip.
+Telegram is still answering. Try again in a moment.	Telegram masih menjawab. Coba lagi sebentar lagi.
 Telegram refused this app's ID	Telegram menolak ID aplikasi ini
 Telegram turned down the API ID this app signs in with, so no login code was sent. Patch HushTelegram again with Use registered Telegram API credentials and your own ID from my.telegram.org/apps. The guide walks you through it.	Telegram menolak ID API yang dipakai aplikasi ini untuk masuk, jadi kode login tidak dikirim. Tambal ulang HushTelegram dengan Use registered Telegram API credentials dan ID Anda sendiri dari my.telegram.org/apps. Panduannya menjelaskan caranya.
 Telegram didn't accept the API ID and hash this app was patched with, so no login code was sent. Copy both again from my.telegram.org/apps and patch once more.	Telegram tidak menerima ID API dan hash yang dipakai saat menambal aplikasi ini, jadi kode login tidak dikirim. Salin keduanya lagi dari my.telegram.org/apps lalu tambal ulang.

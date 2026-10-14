@@ -152,6 +152,14 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
     private static boolean updatingPreference;
 
     /**
+     * Raised while one action changes several rows and says itself what became of them all, as
+     * Quick setups does. A change that had to be recovered then shows no toast of its own: Android
+     * queues only a few toasts for an app, and a toast for each row can push out the one message
+     * that counts them. Main thread only, like the changes it covers.
+     */
+    static boolean recoveryToastHeld;
+
+    /**
      * The keys of settings changed in this process that only take effect after a restart.
      *
      * <p>A toast said so once and vanished, and nothing afterwards said a restart was still
@@ -238,6 +246,10 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
 
         Setting<?> setting = null;
         Preference pref = null;
+        // What the change goes on to note once it's accepted. Recovery reads these as well.
+        Object valueBefore = null;
+        boolean refreshOnly = true;
+        boolean showRestartAfterUpdate = false;
         try {
             setting = Setting.getSettingFromPath(Objects.requireNonNull(key));
             if (setting == null) {
@@ -249,8 +261,8 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
             }
             Logger.printDebug(() -> "Preference changed: " + key);
             // Read before the Setting takes the new value: this is what the process runs with.
-            Object valueBefore = setting.savedValue();
-            boolean refreshOnly = settingImportInProgress || Setting.isSavedWriteInProgress()
+            valueBefore = setting.savedValue();
+            refreshOnly = settingImportInProgress || Setting.isSavedWriteInProgress()
                     || setting.isSavedPreferenceUnchanged();
 
             updatingPreference = true;
@@ -260,7 +272,6 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
                 syncPreferenceWithStoredValue(pref, setting, sharedPreferences);
             }
 
-            boolean showRestartAfterUpdate = false;
             if (!settingImportInProgress && !showingUserDialogMessage) {
                 // A confirmation needs a page to draw it on. A page's own dialog closing after
                 // the page is gone skips straight to applying, the same as a confirmed OK.
@@ -281,24 +292,44 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
             // Update any other preference availability that may now be different.
             updateUIAvailability();
             // Report success only after every operation that can still enter recovery succeeded.
-            if (showRestartAfterUpdate) {
-                if (noteRestartPending(setting, valueBefore) && isAdded()) {
-                    showRestartDialog(getContext());
-                }
-            }
-            if (!refreshOnly) setting.noteSavedPreferenceChange();
+            noteAcceptedChange(setting, valueBefore, showRestartAfterUpdate, !refreshOnly);
         } catch (Exception ex) {
             // This path owns a localized outcome below, so logging must not add a second toast.
             Logger.printInfo(() -> "OnSharedPreferenceChangeListener failure", ex);
             boolean restored = pref != null && setting != null
                     && restorePreferenceFromSetting(pref, setting, sharedPreferences);
-            Context context = getActivity();
-            Utils.showToastLong(String.valueOf(restored
-                    ? preferenceChangeRecoveredMessage(context)
-                    : preferenceChangeRecoveryFailedMessage(context)));
+            // The setting had taken the row's value before the failure, and recovery left the row
+            // and the store on it too. The change landed, so it's noted like any accepted one:
+            // left out, the restart row kept its old count and the switch's next flip was undone.
+            if (restored && !Objects.equals(valueBefore, setting.savedValue())) {
+                try {
+                    noteAcceptedChange(setting, valueBefore, showRestartAfterUpdate, !refreshOnly);
+                } catch (Exception noteFailure) {
+                    // Nothing may escape the listener, and the page is no longer known to be right.
+                    Logger.printInfo(() -> "Could not note a recovered preference change", noteFailure);
+                    restored = false;
+                }
+            }
+            if (!recoveryToastHeld) {
+                Context context = getActivity();
+                Utils.showToastLong(String.valueOf(restored
+                        ? preferenceChangeRecoveredMessage(context)
+                        : preferenceChangeRecoveryFailedMessage(context)));
+            }
         } finally {
             updatingPreference = false;
         }
+    }
+
+    /**
+     * What a change notes once its row, its setting and the store all hold it: the restart it now
+     * waits on or no longer does, and that its value is the saved one from here on.
+     */
+    private void noteAcceptedChange(Setting<?> setting, Object valueBefore, boolean restartGated, boolean saved) {
+        if (restartGated && noteRestartPending(setting, valueBefore) && isAdded()) {
+            showRestartDialog(getContext());
+        }
+        if (saved) setting.noteSavedPreferenceChange();
     }
 
     /**

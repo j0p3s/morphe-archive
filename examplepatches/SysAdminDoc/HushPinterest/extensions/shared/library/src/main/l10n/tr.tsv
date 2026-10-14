@@ -33,7 +33,6 @@ Export diagnostic report	Tanılama raporunu dışa aktar
 Export settings	Ayarları dışa aktar
 Turns off every HushPinterest switch except Debug logging the next time Pinterest starts. What you chose when you patched stays, and your choices are saved.	Pinterest bir sonraki açılışında Hata ayıklama günlüğü dışındaki tüm HushPinterest anahtarlarını kapatır. Yamalarken seçtiklerin kalır ve tercihlerin kayıtlı kalır.
 Hide ads	Reklamları gizle
-Links, updates, backup and more	Bağlantılar, güncellemeler, yedekleme ve daha fazlası
 Save your switches to a file. They cover all the accounts in this Pinterest app. Pause and Debug logging aren't included, and neither is the release check.	Anahtarlarını bir dosyaya kaydet. Anahtarlar bu Pinterest uygulamasındaki tüm hesaplar için geçerlidir. Duraklatma ve Hata ayıklama günlüğü dahil edilmez, sürüm denetimi de edilmez.
 Settings exported, but the app holding it blocked the check.	Ayarlar dışa aktarıldı ama dosyayı tutan uygulama kontrolü engelledi.
 The file's app is too slow. Nothing was changed.	Dosyanın uygulaması çok yavaş. Hiçbir şey değiştirilmedi.
@@ -108,8 +107,6 @@ Browse settings	Ayarları keşfet
 More settings	Diğer ayarlar
 # context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
 Support HushPinterest	HushPinterest'i destekle
-# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
-Buy me a coffee on Ko-fi	Ko-fi'de bana bir kahve ısmarla
 No matching settings	Eşleşen ayar yok
 %1$d setting found	%1$d ayar bulundu
 %1$d settings found	%1$d ayar bulundu
@@ -450,6 +447,12 @@ Queue pins	Pinleri sıraya al
 Download history already has each pin chosen from this board.	İndirme geçmişinde bu panodan seçilen her Pin zaten var.
 Resume HushPinterest, turn on Download pins and Download board.	HushPinterest'i sürdür, Pinleri indir ve Panoyu indir'i aç.
 Save list	Listeyi kaydet
+# context: Save list, the title of the choice between a bookmarks file and a JSON file, and the two rows under it
+Save list as	Listeyi farklı kaydet
+Bookmarks file (HTML)	Yer imleri dosyası (HTML)
+Imports into browsers and bookmark apps.	Tarayıcılara ve yer imi uygulamalarına aktarılabilir.
+JSON file	JSON dosyası
+Keeps every detail, for other tools.	Tüm ayrıntıları saklar, başka araçlar için.
 This list has only the pins Pinterest had loaded for the board when it was saved, up to %d, of the kind chosen. Pins further down the board aren't in it.	Bu liste yalnızca kaydedildiği sırada Pinterest'in panodan yüklediği, seçilen türdeki en fazla %d Pin'i içerir. Panonun daha aşağısındaki Pinler listede yok.
 This list has only the pins chosen from those on screen when it was saved.	Bu liste yalnızca kaydedildiği sırada ekrandakiler arasından seçilen Pinleri içerir.
 A source link is "missing" when the pin had none, and "omitted" when it couldn't be kept exactly as given, such as a link with tracking details or one to a private network.	Pin'in kaynak bağlantısı yoksa bağlantı "missing", olduğu gibi saklanamadıysa "omitted" olarak yazılır. Örneğin izleme bilgisi taşıyan ya da özel bir ağa giden bağlantılar saklanmaz.
@@ -480,6 +483,11 @@ Couldn't check the file, so these are still the details Pinterest supplied.	Dosy
 Black bottom bar	Siyah alt çubuk
 In dark mode, paints the bottom bar pure black to match the page, which also saves a little battery on OLED screens. Light mode stays as it is. The change shows the next time the bar redraws.	Karanlık modda alt çubuğu sayfaya uyması için tamamen siyaha boyar. Bu, OLED ekranlarda biraz pil de tasarruf ettirir. Aydınlık mod olduğu gibi kalır. Değişiklik çubuk bir sonraki çizilişinde görünür.
 AMOLED dark theme	AMOLED karanlık tema
+# context: two more AMOLED black switches on the Interface page, one for the comments sheet and one for a pin's three-dot menu
+Black comments	Siyah yorumlar
+In dark mode, paints the comments sheet and its reply bar pure black. Light mode stays as it is. The change shows the next time you open comments.	Karanlık modda yorum panelini ve yanıt çubuğunu tamamen siyaha boyar. Aydınlık mod olduğu gibi kalır. Değişiklik yorumları bir sonraki açışında görünür.
+Black pin menu	Siyah pin menüsü
+In dark mode, paints a pin's menu pure black. Light mode stays as it is. The change shows the next time you open the menu.	Karanlık modda bir pinin menüsünü tamamen siyaha boyar. Aydınlık mod olduğu gibi kalır. Değişiklik menüyü bir sonraki açışında görünür.
 # context: the two Hide closeup buttons switches on the Interface page. Pinterest calls the lens button's menu entry Search image.
 Hide back arrow on pins	Pinlerde geri okunu gizle
 Hides the back arrow that floats over a pin you open. Your phone's back gesture or button still leaves the pin. The change shows on the next pin you open.	Açtığın bir pinin üzerinde duran geri okunu gizler. Telefonunun geri hareketi veya düğmesi seni yine pinden çıkarır. Değişiklik açtığın bir sonraki pinde görünür.
@@ -503,7 +511,9 @@ Opens a GitHub report with your versions and settings filled in. Add what happen
 # context: home page row under the status card, and the title of the dialog it opens
 Quick setups	Hızlı kurulumlar
 # context: that row's summary
-Turn on a set of switches in one tap, or put every switch back the way it started.	Bir grup anahtarı tek dokunuşla aç veya tüm anahtarları başlangıçtaki hâline döndür.
+Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Bir grup anahtarı tek dokunuşla aç veya tüm anahtarları başlangıçtaki hâline döndür. Gizlemek için bu satıra basılı tut.
+# context: toast after a long press hides the Quick setups row; names the page whose row brings it back
+Quick setups hidden. Show it from Pause, backup and diagnostics.	Hızlı kurulumlar gizlendi. Duraklatma, yedekleme ve tanılama'dan geri getir.
 # context: Quick setups choice that turns on the switches that hide ads, suggestions and nags
 Quiet	Sessiz
 # context: what Quiet does, under its name
@@ -518,3 +528,23 @@ Puts every feature switch back the way it started.	Her özellik anahtarını ba�
 Changed %1$d setting	%1$d ayar değiştirildi
 # context: the same toast for any other count, zero included; %1$d is how many
 Changed %1$d settings	%1$d ayar değiştirildi
+# context: row on the Pause, backup and diagnostics page, and the title of its list of choices: the language HushPinterest's own pages, menus and messages use. Pinterest's language isn't changed
+HushPinterest language	HushPinterest dili
+# context: row on the Pause, backup and diagnostics page that shows or hides the Quick setups row on the settings home page
+Quick setups on the home page	Ana sayfada hızlı kurulumlar
+# context: that row's summary while the Quick setups row is on the home page
+Shown. Tap to hide it.	Gösteriliyor. Gizlemek için dokun.
+# context: that row's summary while the Quick setups row is hidden
+Hidden. Tap to show it again.	Gizli. Yeniden göstermek için dokun.
+# context: the first language choice and the row's line while it's in force: HushPinterest uses whatever language Pinterest is in
+Same as Pinterest	Pinterest ile aynı
+# context: the second language choice and the row's line while it's in force: the English language, by its name in this language
+English	İngilizce
+# context: the whole toast after a Quick setups choice when exactly one switch didn't take its new value and still shows the value it had; %1$d is how many switches changed, %2$d how many didn't. A toast holds two lines, so keep it short
+%1$d changed. %2$d setting is still on its saved value.	%1$d ayar değişti. %2$d ayar kayıtlı değerinde kaldı.
+# context: the same toast when any other number of switches didn't change
+%1$d changed. %2$d settings are still on their saved values.	%1$d ayar değişti. %2$d ayar kayıtlı değerinde kaldı.
+# context: the whole toast after a Quick setups choice when exactly one switch didn't change and the page may not show what's saved for it until the settings are opened again; %1$d is how many switches changed, %2$d how many didn't. A toast holds two lines, so keep it short
+%1$d changed. %2$d setting didn't. Reopen settings and try again.	%1$d ayar değişti, %2$d ayar değişmedi. Ayarları yeniden açıp tekrar dene.
+# context: the same toast when any other number of switches didn't change
+%1$d changed. %2$d settings didn't. Reopen settings and try again.	%1$d ayar değişti, %2$d ayar değişmedi. Ayarları yeniden açıp tekrar dene.

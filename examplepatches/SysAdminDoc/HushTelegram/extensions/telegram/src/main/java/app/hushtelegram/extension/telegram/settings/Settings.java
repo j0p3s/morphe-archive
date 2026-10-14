@@ -175,6 +175,13 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushtelegram_hide_phone_number", FALSE);
 
     /**
+     * Adding a contact from their chat, the box that shares your phone number with them starts clear
+     * instead of ticked. Ticking it, and what saving sends, stay Telegram's own.
+     */
+    public static final BooleanSetting SHARE_NUMBER_UNTICKED =
+            new BooleanSetting("hushtelegram_share_number_unticked", FALSE);
+
+    /**
      * The time on each message shows seconds too.
      */
     public static final BooleanSetting MESSAGE_SECONDS =
@@ -396,6 +403,21 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting DISABLE_DRAFT_PREVIEWS =
             new BooleanSetting("hushtelegram_disable_draft_previews", FALSE);
 
+    /**
+     * The server copy of an unsent draft only, which goes emptied; the draft on this phone, an empty
+     * clear and drafts the server sends stay stock ({@link app.hushtelegram.extension.telegram.misc.LocalDrafts}).
+     */
+    public static final BooleanSetting LOCAL_DRAFTS =
+            new BooleanSetting("hushtelegram_local_drafts", FALSE);
+
+    /**
+     * Search's Chats tab only: what you type there isn't sent for usernames, messages, sponsored
+     * accounts or public posts; the chats, contacts and recent searches on this phone still show
+     * ({@link app.hushtelegram.extension.telegram.misc.LocalSearch}).
+     */
+    public static final BooleanSetting LOCAL_SEARCH =
+            new BooleanSetting("hushtelegram_local_search", FALSE);
+
     /** The attachment gallery's camera tile only; the camera wakes on a tap and every other camera stays stock. */
     public static final BooleanSetting GALLERY_CAMERA_ON_TAP =
             new BooleanSetting("hushtelegram_gallery_camera_on_tap", FALSE);
@@ -409,15 +431,25 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushtelegram_strip_link_tracking", FALSE);
 
     /**
+     * The account's sign-in token Telegram adds to links for the sites its server lists for automatic
+     * sign-in; with this on those links open as they are. Routing and every other link stay stock.
+     */
+    public static final BooleanSetting SKIP_AUTOLOGIN =
+            new BooleanSetting("hushtelegram_skip_autologin", FALSE);
+
+    /**
      * telegram.org's build stops checking for its own updates, which can't install over a re-signed
      * build anyway ({@link app.hushtelegram.extension.telegram.misc.UpdateChecks}).
      */
     public static final BooleanSetting DISABLE_UPDATE_CHECKS =
             new BooleanSetting("hushtelegram_disable_update_checks", TRUE);
 
-    /** The official web certificate for the scoped Firebase Installations header only. */
+    /**
+     * The official web certificate for the scoped Firebase Installations header only. Firebase signs
+     * up once per process, so a change shows the restart row.
+     */
     public static final BooleanSetting REPAIR_FIREBASE_PUSH =
-            new BooleanSetting("hushtelegram_repair_firebase_push", TRUE);
+            new BooleanSetting("hushtelegram_repair_firebase_push", TRUE, true);
 
     /** Telegram signs up a UnifiedPush app's address for its wake-ups instead of Firebase's token. */
     public static final BooleanSetting UNIFIED_PUSH =

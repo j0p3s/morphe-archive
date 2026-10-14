@@ -13,7 +13,7 @@ from fields import field, has_any, normalize, normalize_version, parse_fields
 MIN_CHARS = 60
 
 REPO = os.environ.get("GITHUB_REPOSITORY", "")
-NEW_ISSUE = f"https://github.com/{REPO}/issues/new/choose" if REPO else ""
+NEW_ISSUE = f"https://github.com/{REPO}/issues/new"
 
 APP_NAME_FIELDS = ("App and version", "App name", "App", "Target app", "App version patched")
 APP_VERSION_FIELDS = ("Other version", "App version", "Broken app version", "App version patched",
@@ -148,7 +148,7 @@ elif matched[1] and not (
     name, versions = matched
     flags.append(
         f"{data['version']} targets {name} {', '.join(sorted(versions))}, not "
-        f"`{typed_version or reported}`"
+        f"`{typed_version or reported}`. a newer version is an [app update request]({NEW_ISSUE}?template=app_update.yml)"
     )
     labels.append("untargeted version")
 

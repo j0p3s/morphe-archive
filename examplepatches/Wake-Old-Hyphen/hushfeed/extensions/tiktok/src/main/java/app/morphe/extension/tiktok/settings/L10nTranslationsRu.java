@@ -15,7 +15,7 @@ final class L10nTranslationsRu {
     }
 
     static Map<String, String> build() {
-        Map<String, String> table = new HashMap<>(4438);
+        Map<String, String> table = new HashMap<>(4476);
         fill0(table);
         fill1(table);
         fill2(table);
@@ -53,6 +53,7 @@ final class L10nTranslationsRu {
         fill34(table);
         fill35(table);
         fill36(table);
+        fill37(table);
         return table;
     }
 
@@ -163,8 +164,6 @@ final class L10nTranslationsRu {
                 "%1$s и выше");
         table.put("%1$s appears more than once in this file.",
                 "%1$s встречается в этом файле больше одного раза.");
-        table.put("%1$s changed",
-                "%1$s изменено");
         table.put("%1$s day",
                 "%1$s день");
         table.put("%1$s days",
@@ -177,11 +176,11 @@ final class L10nTranslationsRu {
                 "%1$s день");
         table.put("%1$s destinations must start with %2$s",
                 "Места назначения %1$s должны начинаться с %2$s");
+        table.put("%1$s dp",
+                "%1$s dp");
     }
 
     private static void fill1(Map<String, String> table) {
-        table.put("%1$s dp",
-                "%1$s dp");
         table.put("%1$s entries skipped.",
                 "Пропущено %1$s записей.");
         table.put("%1$s entries skipped.|few",
@@ -300,11 +299,11 @@ final class L10nTranslationsRu {
                 "%1$s раз");
         table.put("%1$s times",
                 "%1$s раз");
+        table.put("%1$s times|few",
+                "%1$s раза");
     }
 
     private static void fill2(Map<String, String> table) {
-        table.put("%1$s times|few",
-                "%1$s раза");
         table.put("%1$s times|many",
                 "%1$s раз");
         table.put("%1$s times|one",
@@ -419,17 +418,15 @@ final class L10nTranslationsRu {
                 "%1$s · объявлено TikTok, с текущим значением");
         table.put("%1$s%%",
                 "%1$s%%");
-        table.put("%1$s, %2$s",
-                "%1$s, %2$s");
         table.put("%1$s, %2$s or %3$s",
                 "%1$s, %2$s или %3$s");
-    }
-
-    private static void fill3(Map<String, String> table) {
         table.put("%1$s, %2$s, %3$s or %4$s",
                 "%1$s, %2$s, %3$s или %4$s");
         table.put("%1$s, %2$s, %3$s, %4$s, %5$s",
                 "%1$s, %2$s, %3$s, %4$s, %5$s");
+    }
+
+    private static void fill3(Map<String, String> table) {
         table.put("%1$s, about %2$s",
                 "%1$s, около %2$s");
         table.put("%1$s, selected",
@@ -546,19 +543,21 @@ final class L10nTranslationsRu {
                 "Раскладка экрана записана. Экспортируйте диагностический отчёт, чтобы отправить её, или нажмите, чтобы записать другую.");
         table.put("A small label on the feed shows the minutes or videos left of today's budget, whichever is closer to running out.",
                 "Небольшая метка в ленте показывает оставшиеся минуты или видео дневного бюджета, в зависимости от того, что ближе к концу.");
-    }
-
-    private static void fill4(Map<String, String> table) {
         table.put("A tap on Home or on the For You tab while For You is showing no longer reloads it. The video you're on stays.",
                 "Нажатие на Главная или на вкладку Рекомендации, когда Рекомендации уже открыты, больше не перезагружает ленту. Видео, на котором вы остановились, никуда не денется.");
         table.put("A video you paused stays paused when you come back to the app instead of starting again. One you left playing starts as usual. It works on Android 10 and newer.",
                 "Видео, которое вы поставили на паузу, останется на паузе, когда вы вернётесь в приложение, вместо того чтобы начаться заново. Видео, которое проигрывалось, продолжится как обычно. Это работает на Android 10 и новее.");
+    }
+
+    private static void fill4(Map<String, String> table) {
         table.put("A web address someone left in a comment can be tapped instead of copied out by hand. Tapping anywhere else in the comment still does what it did.",
                 "По веб-адресу, оставленному кем-то в комментарии, можно нажать, вместо того чтобы копировать его вручную. Нажатие в любом другом месте комментария работает как раньше.");
         table.put("AI Self",
                 "AI Self");
         table.put("AI-generated posts",
                 "Публикации, созданные ИИ");
+        table.put("About",
+                "О приложении");
         table.put("About %1$s of storage at this limit",
                 "Около %1$s памяти при этом лимите");
         table.put("About Hushfeed",
@@ -669,11 +668,11 @@ final class L10nTranslationsRu {
                 "Все загруженные вкладки");
         table.put("Allow Duet and Stitch anyway",
                 "Всё равно разрешить Дуэт и Stitch");
+        table.put("Allow screenshots and Circle to Search",
+                "Разрешить скриншоты и Circle to Search");
     }
 
     private static void fill5(Map<String, String> table) {
-        table.put("Allow screenshots and Circle to Search",
-                "Разрешить скриншоты и Circle to Search");
         table.put("Allow storage for TikTok in Android settings to save covers",
                 "Разрешите TikTok доступ к хранилищу в настройках Android, чтобы сохранять обложки");
         table.put("Allow storage for TikTok in Android settings to save frames",
@@ -732,14 +731,14 @@ final class L10nTranslationsRu {
                 "И ещё %1$s сохранение");
         table.put("And one more save",
                 "И ещё одно сохранение");
+        table.put("Android stops telling TikTok a VPN is on, and the VPN's tunnel is left out of the network list. TikTok can still see the VPN's IP address. Leave this off if you need a feature that checks for a VPN.",
+                "Android больше не сообщает TikTok, что включён VPN, а туннель VPN не попадает в список сетей. IP-адрес VPN TikTok по-прежнему видит. Оставьте выключенным, если нужна функция, проверяющая наличие VPN.");
         table.put("Animated sticker format",
                 "Формат анимированных стикеров");
         table.put("Animated stickers and GIFs decode each frame as it's shown instead of a few ahead, so they use a little less memory. Applies to the next ones that load.",
                 "Анимированные стикеры и GIF декодируют каждый кадр при показе, а не несколько заранее, чтобы занимать немного меньше памяти. Действует для следующих загруженных.");
         table.put("App",
                 "Приложение");
-        table.put("App & advanced",
-                "Приложение и дополнительные настройки");
         table.put("App AB",
                 "Приложение AB");
         table.put("App lock",
@@ -792,11 +791,11 @@ final class L10nTranslationsRu {
                 "Автопереключение остановлено после %1$d видео");
         table.put("Auto-advance stopped after %1$d videos|few",
                 "Автопереключение остановлено после %1$d видео");
+        table.put("Auto-advance stopped after %1$d videos|many",
+                "Автопереключение остановлено после %1$d видео");
     }
 
     private static void fill6(Map<String, String> table) {
-        table.put("Auto-advance stopped after %1$d videos|many",
-                "Автопереключение остановлено после %1$d видео");
         table.put("Auto-advance stopped after %1$d videos|one",
                 "Автопереключение остановлено после %1$d видео");
         table.put("Auto-advance stopped after one video",
@@ -813,6 +812,8 @@ final class L10nTranslationsRu {
                 "Аватар и кнопка «Подписаться»");
         table.put("Back",
                 "Назад");
+        table.put("Back to defaults",
+                "По умолчанию");
         table.put("Back up settings",
                 "Создать резервную копию настроек");
         table.put("Backup and restore",
@@ -932,6 +933,16 @@ final class L10nTranslationsRu {
                 "Записать ленту");
         table.put("Changed",
                 "Изменено");
+        table.put("Changed %1$d settings",
+                "Изменено настроек: %1$d");
+        table.put("Changed %1$d settings|few",
+                "Изменены %1$d настройки");
+        table.put("Changed %1$d settings|many",
+                "Изменено %1$d настроек");
+        table.put("Changed %1$d settings|one",
+                "Изменена %1$d настройка");
+        table.put("Changed 1 setting",
+                "Изменена 1 настройка");
         table.put("Changes in Hushfeed %1$s",
                 "Изменения в Hushfeed %1$s");
         table.put("Changes to %1$s at %2$s",
@@ -1010,8 +1021,6 @@ final class L10nTranslationsRu {
                 "Комментарии с живыми фото, камерой или аудио");
         table.put("Comments",
                 "Комментарии");
-        table.put("Comments & inbox",
-                "Комментарии и входящие");
         table.put("Comments aren't available for this video",
                 "Комментарии недоступны для этого видео");
         table.put("Comments beside the video",
@@ -1030,6 +1039,9 @@ final class L10nTranslationsRu {
                 "Конфигурация (Settings Manager)");
         table.put("Confirm before a quick repost",
                 "Подтверждать перед быстрым репостом");
+    }
+
+    private static void fill8(Map<String, String> table) {
         table.put("Confirm before following",
                 "Подтверждать перед подпиской");
         table.put("Confirm before liking",
@@ -1038,13 +1050,12 @@ final class L10nTranslationsRu {
                 "Подтверждать перед лайком комментария");
         table.put("Confirm before liking a story",
                 "Подтверждать перед лайком истории");
-    }
-
-    private static void fill8(Map<String, String> table) {
         table.put("Continue supported videos from where you stopped when you scroll back to them.",
                 "Продолжать поддерживаемые видео с того места, где вы остановились, когда вы пролистываете назад к ним.");
         table.put("Controls",
                 "Элементы управления");
+        table.put("Conversations",
+                "Общение");
         table.put("Copy",
                 "Копировать");
         table.put("Copy a quick report or save the full report as a file.",
@@ -1097,6 +1108,8 @@ final class L10nTranslationsRu {
                 "Не удалось забыть сохранённые видео. Повторите попытку.");
         table.put("Couldn't import watch history. Your saved history is unchanged.",
                 "Не удалось импортировать историю просмотров. Сохранённая история не изменилась.");
+        table.put("Couldn't list your apps. Tap here to try again.",
+                "Не удалось получить список приложений. Нажмите здесь, чтобы повторить.");
         table.put("Couldn't open settings search. Reopen settings and try again.",
                 "Не удалось открыть поиск по настройкам. Откройте настройки заново и попробуйте снова.");
         table.put("Couldn't open that settings section. Reopen settings and try again.",
@@ -1149,6 +1162,9 @@ final class L10nTranslationsRu {
                 "Не удалось отправить отзыв. Попробуйте снова через минуту.");
         table.put("Couldn't start saving the feed capture. Try again in a moment.",
                 "Не удалось начать сохранение записи ленты. Попробуйте снова через минуту.");
+    }
+
+    private static void fill9(Map<String, String> table) {
         table.put("Couldn't start the Lab change. Try again in a moment.",
                 "Не удалось начать изменение в Lab. Попробуйте снова через минуту.");
         table.put("Couldn't start the export. Try again in a moment.",
@@ -1161,9 +1177,6 @@ final class L10nTranslationsRu {
                 "Не удалось начать изменение настроек. Попробуйте снова через минуту.");
         table.put("Couldn't tell which folder to update. Choose it again.",
                 "Не удалось определить, какую папку обновлять. Выберите её снова.");
-    }
-
-    private static void fill9(Map<String, String> table) {
         table.put("Couldn't translate this draft. Try again in a moment.",
                 "Не удалось перевести этот черновик. Повторите попытку чуть позже.");
         table.put("Couldn't translate this message. Try again in a moment.",
@@ -1214,8 +1227,6 @@ final class L10nTranslationsRu {
                 "Своё значение");
         table.put("Custom value…",
                 "Своё значение…");
-        table.put("Customize",
-                "Настроить");
         table.put("Cuts the tracking bits out of links you share.",
                 "Убирает из отправляемых ссылок части, которые нужны для слежки.");
         table.put("DM translation preview",
@@ -1274,6 +1285,9 @@ final class L10nTranslationsRu {
                 "Отключено");
         table.put("Discard edits",
                 "Отменить изменения");
+    }
+
+    private static void fill10(Map<String, String> table) {
         table.put("Dismissed %1$s suggested accounts",
                 "Отклонено предложенных аккаунтов: %1$s");
         table.put("Dismissed one suggested account",
@@ -1284,9 +1298,6 @@ final class L10nTranslationsRu {
                 "Ничего не делать");
         table.put("Doesn't follow you back",
                 "Не подписан в ответ");
-    }
-
-    private static void fill10(Map<String, String> table) {
         table.put("Don't auto translate these languages",
                 "Не переводить эти языки автоматически");
         table.put("Don't decode animated frames ahead",
@@ -1307,8 +1318,6 @@ final class L10nTranslationsRu {
                 "Загружать оригиналы фото");
         table.put("Downloads",
                 "Загрузки");
-        table.put("Downloads & sharing",
-                "Загрузки и отправка");
         table.put("Drag to move, release to place",
                 "Перетащите, чтобы переместить, отпустите, чтобы разместить");
         table.put("Drag up or down along the left or right edge of a video to change what that edge strip is set to below. By default that's the screen brightness on the left and the volume on the right. Swiping anywhere else still scrolls the feed.",
@@ -1399,6 +1408,9 @@ final class L10nTranslationsRu {
                 "Сохранять копию с водяным знаком, если иначе нельзя");
         table.put("Favorites range",
                 "Диапазон избранного");
+    }
+
+    private static void fill11(Map<String, String> table) {
         table.put("Feature Gate Lab",
                 "Feature Gate Lab");
         table.put("Feature gate override reset",
@@ -1407,11 +1419,6 @@ final class L10nTranslationsRu {
                 "Переопределение переключателя сохранено");
         table.put("Feature gate report copied",
                 "Отчёт о переключателях скопирован");
-    }
-
-    private static void fill11(Map<String, String> table) {
-        table.put("Feed & layout",
-                "Лента и оформление");
         table.put("Feed and navigation",
                 "Лента и навигация");
         table.put("Feed button size",
@@ -1436,8 +1443,6 @@ final class L10nTranslationsRu {
                 "Изменения полей не сохранены");
         table.put("Files",
                 "Файлы");
-        table.put("Files, subtitles and share sheet",
-                "Файлы, субтитры и меню «Поделиться»");
         table.put("Fill the screen with the video",
                 "Заполнять экран видео");
         table.put("Filter TikTok's offline videos",
@@ -1458,12 +1463,8 @@ final class L10nTranslationsRu {
                 "Отфильтровать список");
         table.put("Filter: %1$s",
                 "Фильтр: %1$s");
-        table.put("Filters, tabs and on-screen controls",
-                "Фильтры, вкладки и элементы на экране");
         table.put("Filters, translation and copy options",
                 "Фильтры, перевод и параметры копирования");
-        table.put("Filters, translation and inbox controls",
-                "Фильтры, перевод и настройки входящих");
         table.put("Find the sound on YouTube Music",
                 "Найти звук в YouTube Music");
         table.put("First caller",
@@ -1611,6 +1612,8 @@ final class L10nTranslationsRu {
                 "Скрывать Bulletin board");
         table.put("Hide CAPTCHA popups",
                 "Скрывать всплывающие окна CAPTCHA");
+        table.put("Hide Check your sources warnings",
+                "Скрывать предупреждения «Проверьте свои источники»");
         table.put("Hide Footnotes",
                 "Скрывать Footnotes");
         table.put("Hide LIVE replays",
@@ -1651,11 +1654,11 @@ final class L10nTranslationsRu {
                 "Скрывать VPN-подключение");
         table.put("Hide activity",
                 "Скрывать активность");
-        table.put("Hide activity status",
-                "Скрывать статус активности");
     }
 
     private static void fill13(Map<String, String> table) {
+        table.put("Hide activity status",
+                "Скрывать статус активности");
         table.put("Hide ads, Shop posts, LIVE videos and replays, promotional music, and paid partnerships.",
                 "Скрывает рекламу, публикации Shop, видео и повторы LIVE, рекламную музыку и платные партнёрства.");
         table.put("Hide archive",
@@ -1774,11 +1777,13 @@ final class L10nTranslationsRu {
                 "Скрывать вкладки, которые TikTok добавляет позже, если вы их не разрешили.");
         table.put("Hide the \"Search this image\" prompt shown over videos. The feed search button and suggestions above comments are separate settings.",
                 "Скрывать подсказку «Искать по этому изображению» поверх видео. Для кнопки поиска в ленте и подсказок над комментариями есть отдельные настройки.");
-        table.put("Hide the Check sources banner TikTok puts on videos it marks as unverified, and the warnings it shows when you share one.",
-                "Скрывать баннер «Проверьте источники», который TikTok ставит на видео с пометкой о непроверенном контенте, и предупреждения при попытке поделиться таким видео.");
     }
 
     private static void fill14(Map<String, String> table) {
+        table.put("Hide the Check sources banner TikTok puts on videos it marks as unverified, and the warnings it shows when you share one.",
+                "Скрывать баннер «Проверьте источники», который TikTok ставит на видео с пометкой о непроверенном контенте, и предупреждения при попытке поделиться таким видео.");
+        table.put("Hide the Check your sources banner TikTok puts across the top of some videos, and the prompt it shows when you share one.",
+                "Скрывать баннер «Проверьте свои источники», который TikTok показывает поверх некоторых видео, и предупреждение при попытке поделиться таким видео.");
         table.put("Hide the Clear display controls",
                 "Скрывать кнопки чистого вида");
         table.put("Hide the Footnotes banner TikTok shows on a video that has a note attached. The video and its comments stay as they are.",
@@ -1895,13 +1900,13 @@ final class L10nTranslationsRu {
                 "Скрывать строку состояния в LIVE-трансляциях");
         table.put("Hide the streak button in a chat and the reminder message that goes with it.",
                 "Скрывать кнопку серии в чате и напоминание, которое к ней прилагается.");
+    }
+
+    private static void fill15(Map<String, String> table) {
         table.put("Hide the suggested-search strip above the bottom tabs and let video details and side controls use its space. The top search button and comments stay unchanged.",
                 "Скрывать полосу с предложенными запросами над нижними вкладками и отдавать её место под детали видео и боковые элементы управления. Верхняя кнопка поиска и комментарии остаются без изменений.");
         table.put("Hide the tab names above the feed",
                 "Скрывать названия вкладок над лентой");
-    }
-
-    private static void fill15(Map<String, String> table) {
         table.put("Hide the tags above a video's description that invite you to try an effect, a template, CapCut or an AI style. Location labels and the music line have their own switches.",
                 "Скрывать теги над описанием видео, которые предлагают попробовать эффект, шаблон, CapCut или ИИ-стиль. У меток геолокации и строки музыки есть собственные переключатели.");
         table.put("Hide the track name beside the caption.",
@@ -1988,6 +1993,8 @@ final class L10nTranslationsRu {
                 "Какую часть видео нужно посмотреть, чтобы оно в следующий раз считалось просмотренным. При значении «0» оно засчитывается уже через несколько секунд.");
         table.put("How wide each edge strip is, as a percent of the screen width.",
                 "Ширина каждой боковой полосы в процентах от ширины экрана.");
+        table.put("Hushfeed",
+                "Hushfeed");
         table.put("Hushfeed blocked TikTok's reports here. It hasn't confirmed that you stay off viewer lists.",
                 "Hushfeed заблокировал здесь отчёты TikTok. Он ещё не подтвердил, что вас нет в списках зрителей.");
         table.put("Hushfeed can't read the creator pattern %1$s",
@@ -2016,15 +2023,15 @@ final class L10nTranslationsRu {
                 "Импортировать файл шрифта");
         table.put("Import finished",
                 "Импорт завершён");
+    }
+
+    private static void fill16(Map<String, String> table) {
         table.put("Import loaded values",
                 "Импортировать загруженные значения");
         table.put("Import watch history",
                 "Импортировать историю просмотров");
         table.put("Imported %1$d values",
                 "Импортировано значений: %1$d");
-    }
-
-    private static void fill16(Map<String, String> table) {
         table.put("Imported %1$d values. Undo last Lab change is in the menu.",
                 "Импортировано значений: %1$d. Пункт «Отменить последнее изменение Lab» находится в меню.");
         table.put("Imported: %1$s. Pick another file to replace it.",
@@ -2139,15 +2146,15 @@ final class L10nTranslationsRu {
                 "Язык");
         table.put("Larger (1.25x)",
                 "Крупнее (1,25x)");
+    }
+
+    private static void fill17(Map<String, String> table) {
         table.put("Last change put back. Restart TikTok to apply all changes.",
                 "Последнее изменение возвращено. Перезапустите TikTok, чтобы применить все изменения.");
         table.put("Last change put back. The Feature Gate Lab rules were for another TikTok version and were left out. Restart TikTok to apply all changes.",
                 "Последнее изменение возвращено. Правила Feature Gate Lab относились к другой версии TikTok и были пропущены. Перезапустите TikTok, чтобы применить все изменения.");
         table.put("Last original value",
                 "Последнее исходное значение");
-    }
-
-    private static void fill17(Map<String, String> table) {
         table.put("Last recording: %1$d gates.",
                 "Последняя запись: %1$d переключателей.");
         table.put("Last recording: %1$d gates.|few",
@@ -2262,15 +2269,15 @@ final class L10nTranslationsRu {
                 "Запись до %1$s. Нажмите, чтобы остановить сейчас.");
         table.put("Logging, hook status and reports",
                 "Логирование, статус перехвата и отчёты");
+    }
+
+    private static void fill18(Map<String, String> table) {
         table.put("Logs for 15 minutes, then stops on its own. Restarting TikTok doesn't move the end, and the switch above stays as you set it.",
                 "Записывает 15 минут, затем останавливается само. Перезапуск TikTok не сдвигает окончание, а переключатель выше остаётся таким, как вы его поставили.");
         table.put("Long press",
                 "Долгое нажатие");
         table.put("Long-press Home for Hushfeed settings",
                 "Долгое нажатие на Главная открывает настройки Hushfeed");
-    }
-
-    private static void fill18(Map<String, String> table) {
         table.put("Long-press a bio to copy it. A profile's share sheet gets buttons that copy its username and user ID, and a video's share sheet one that copies the video ID.",
                 "Нажмите и удерживайте био, чтобы скопировать его. В меню «Поделиться» профиля появляются кнопки для копирования имени пользователя и ID пользователя, а в меню видео кнопка для копирования ID видео.");
         table.put("Long-press menu on every post",
@@ -2281,6 +2288,8 @@ final class L10nTranslationsRu {
                 "Повторять историю");
         table.put("Lowest",
                 "Самое низкое");
+        table.put("Make it yours.",
+                "Настрой под себя.");
         table.put("Makes TikTok see the country and carrier you pick as your SIM. Your IP address, account history and language don't change, and any one of them can make TikTok keep your current region. Restart TikTok to see the change.",
                 "TikTok видит выбранные вами страну и оператора как данные вашей SIM-карты. IP-адрес, история аккаунта и язык не меняются, и любого из них достаточно, чтобы TikTok сохранил текущий регион. Перезапустите TikTok, чтобы увидеть изменение.");
         table.put("Makes TikTok see the country you pick as your SIM. Your IP address, account history and language don't change, and any one of them can make TikTok keep your current region. Restart TikTok to see the change.",
@@ -2377,10 +2386,15 @@ final class L10nTranslationsRu {
                 "Нет");
         table.put("No app on this phone opens that file",
                 "Ни одно приложение на этом телефоне не открывает такой файл");
+        table.put("No app on this phone opens web links",
+                "На этом телефоне нет приложения для веб-ссылок");
         table.put("No apps match this search",
                 "Нет приложений, соответствующих этому запросу");
         table.put("No chat with @%1$s turned up on this account. Open your chat with them once, then try again.",
                 "На этом аккаунте не найден чат с @%1$s. Откройте чат с ним один раз, затем повторите попытку.");
+    }
+
+    private static void fill19(Map<String, String> table) {
         table.put("No cleared videos fit the current history limits.",
                 "Ни одно удалённое видео не укладывается в текущие ограничения истории.");
         table.put("No comments are loaded to export yet.",
@@ -2391,9 +2405,6 @@ final class L10nTranslationsRu {
                 "В этом видео нет автора для скрытия");
         table.put("No creators are hidden yet. Hide one from a video, or add a handle above.",
                 "Пока нет скрытых авторов. Скройте кого-нибудь из видео или добавьте имя выше.");
-    }
-
-    private static void fill19(Map<String, String> table) {
         table.put("No current value",
                 "Нет текущего значения");
         table.put("No current value and no active override",
@@ -2504,6 +2515,9 @@ final class L10nTranslationsRu {
                 "Ничего не было записано, потому что настройки Hushfeed были ещё открыты. Начните заново и закройте настройки.");
         table.put("Nothing was sent. Check the streak settings and try again.",
                 "Ничего не отправлено. Проверьте настройки серии сообщений и попробуйте ещё раз.");
+    }
+
+    private static void fill20(Map<String, String> table) {
         table.put("Notices from this project and the ones it's built on",
                 "Уведомления этого проекта и проектов, на которых он основан");
         table.put("OK",
@@ -2514,9 +2528,6 @@ final class L10nTranslationsRu {
                 "Выключено принудительно задаёт false, включено задаёт true. Сброс снова оставляет выбор за TikTok.");
         table.put("Off. TikTok can report views and typing.",
                 "Выкл. TikTok может сообщать о просмотрах и наборе текста.");
-    }
-
-    private static void fill20(Map<String, String> table) {
         table.put("Offer LIVE quality in more rooms",
                 "Выбор качества LIVE в большем числе комнат");
         table.put("Offline videos",
@@ -2567,6 +2578,8 @@ final class L10nTranslationsRu {
                 "Только эти языки субтитров");
         table.put("Open",
                 "Открыть");
+        table.put("Open Hushfeed settings",
+                "Открыть настройки Hushfeed");
         table.put("Open TikTok on",
                 "Открыть TikTok на");
         table.put("Open a share sheet once, then return here to choose its actions.",
@@ -2601,6 +2614,8 @@ final class L10nTranslationsRu {
                 "Откройте свой профиль один раз, затем вернитесь сюда, чтобы выбрать ярлыки.");
         table.put("Opens TikTok's own profile background editor in Edit profile, and shows the backgrounds other profiles have set. TikTok's servers may still refuse to save one for an account TikTok hasn't offered it to yet. Open Edit profile again after turning this on.",
                 "Открывает собственный редактор фона профиля TikTok в разделе Изменить профиль и показывает фоны, которые установили другие профили. Серверы TikTok всё равно могут отказаться сохранить фон для аккаунта, которому TikTok ещё не предложил эту функцию. Откройте Изменить профиль снова после включения.");
+        table.put("Opens a GitHub report with your versions and settings filled in. Add what happened.",
+                "Открывает отчёт на GitHub, где уже указаны ваши версии и настройки. Добавьте, что произошло.");
         table.put("Opens github.com in your browser",
                 "Открывает github.com в вашем браузере");
         table.put("Operator code",
@@ -2623,6 +2638,9 @@ final class L10nTranslationsRu {
                 "Исходное сообщение");
         table.put("Original photos",
                 "Оригинальные фото");
+    }
+
+    private static void fill21(Map<String, String> table) {
         table.put("Original sound",
                 "Оригинальный звук");
         table.put("Other",
@@ -2637,9 +2655,6 @@ final class L10nTranslationsRu {
                 "Переопределять данные SIM");
         table.put("Override set, not read yet",
                 "Переопределение задано, ещё не прочитано");
-    }
-
-    private static void fill21(Map<String, String> table) {
         table.put("Override store region (experimental)",
                 "Переопределять регион магазина (экспериментально)");
         table.put("Override this configuration",
@@ -2746,6 +2761,9 @@ final class L10nTranslationsRu {
                 "Нажмите и удерживайте фото профиля, чтобы сохранить оригинал в полном размере в папку для фото.");
         table.put("Press and hold a story to save it. Stories have no save button of their own, and holding one is how TikTok pauses it, so this takes that gesture over.",
                 "Нажмите и удерживайте историю, чтобы сохранить её. У историй нет собственной кнопки сохранения, а удержание в TikTok обычно ставит их на паузу, поэтому это действие использует тот же жест.");
+    }
+
+    private static void fill22(Map<String, String> table) {
         table.put("Press and hold the Home tab to open these settings. A tap on Home works as before.",
                 "Нажмите и удерживайте вкладку Главная, чтобы открыть эти настройки. Обычное нажатие на Главная работает как раньше.");
         table.put("Press and hold the left or right third of the screen to jump back or forward. The middle third keeps the Long press action.",
@@ -2760,11 +2778,10 @@ final class L10nTranslationsRu {
                 "Посмотреть перевод");
         table.put("Preview with a made-up post:",
                 "Предпросмотр на выдуманной публикации:");
-    }
-
-    private static void fill22(Map<String, String> table) {
         table.put("Privacy",
                 "Конфиденциальность");
+        table.put("Privacy and app",
+                "Конфиденциальность и приложение");
         table.put("Private account",
                 "Закрытый аккаунт");
         table.put("Problem detected.",
@@ -2831,6 +2848,14 @@ final class L10nTranslationsRu {
                 "Качество, скорость и автопереход");
         table.put("Quick setup",
                 "Быстрая настройка");
+        table.put("Quick setups",
+                "Быстрые настройки");
+        table.put("Quick setups couldn't start. Try again in a moment.",
+                "Быстрые настройки не удалось запустить. Повторите попытку через момент.");
+        table.put("Quiet",
+                "Тишина");
+        table.put("Quiet hides ads, Shop and LIVE. Privacy hides your views and typing and stops tracking. Back to defaults resets every switch.",
+                "«Тишина» скрывает рекламу, Shop и LIVE. «Конфиденциальность» скрывает ваши просмотры и набор текста и останавливает отслеживание. «По умолчанию» возвращает каждый переключатель в исходное положение.");
         table.put("Read-only list. Accounts won't be opened or unblocked.",
                 "Список только для просмотра. Аккаунты не открываются и не разблокируются.");
         table.put("Reading",
@@ -2859,8 +2884,9 @@ final class L10nTranslationsRu {
                 "Обновление текущих значений TikTok…");
         table.put("Region",
                 "Регион");
-        table.put("Region, backups and diagnostics",
-                "Регион, резервные копии и диагностика");
+    }
+
+    private static void fill23(Map<String, String> table) {
         table.put("Remember the last speed",
                 "Запоминать последнюю скорость");
         table.put("Remembers up to %1$s videos you saved here. If the file is still there, you get Open or Save again instead of a second copy.",
@@ -2883,9 +2909,6 @@ final class L10nTranslationsRu {
                 "Убрать кольцо LIVE");
         table.put("Remove the imported font",
                 "Удалить импортированный шрифт");
-    }
-
-    private static void fill23(Map<String, String> table) {
         table.put("Remove watermark",
                 "Убирать водяной знак");
         table.put("Removed %1$s",
@@ -2898,6 +2921,8 @@ final class L10nTranslationsRu {
                 "Когда история заканчивается, она запускается заново, а не переключается на следующую. Чтобы перейти дальше, коснитесь экрана или проведите пальцем.");
         table.put("Replay in the background",
                 "Повтор в фоне");
+        table.put("Report a problem",
+                "Сообщить о проблеме");
         table.put("Report saved to %1$s",
                 "Отчёт сохранён в %1$s");
         table.put("Repost with a comment",
@@ -2982,6 +3007,9 @@ final class L10nTranslationsRu {
                 "Вернуть копию с изменёнными ниже полями");
         table.put("Return after using a TikTok feature to see every gate read during the recording.",
                 "Вернитесь сюда после использования функции TikTok, чтобы увидеть все обращения к переключателям за время записи.");
+    }
+
+    private static void fill24(Map<String, String> table) {
         table.put("Returns %1$s",
                 "Возвращает %1$s");
         table.put("Reviewed for TikTok %1$s",
@@ -3006,9 +3034,6 @@ final class L10nTranslationsRu {
                 "STEM");
         table.put("Sample caption to test",
                 "Пример подписи для проверки");
-    }
-
-    private static void fill24(Map<String, String> table) {
         table.put("Sample category to test",
                 "Пример категории для проверки");
         table.put("Save",
@@ -3105,6 +3130,9 @@ final class L10nTranslationsRu {
                 "Сохранено %1$s оригинальных фото");
         table.put("Saved %1$s original photos|many",
                 "Сохранено %1$s оригинальных фото");
+    }
+
+    private static void fill25(Map<String, String> table) {
         table.put("Saved %1$s original photos|one",
                 "Сохранено %1$s оригинальное фото");
         table.put("Saved %1$s seen videos to the file",
@@ -3129,9 +3157,6 @@ final class L10nTranslationsRu {
                 "Фото сохранены как видео в %1$s. Не удалось добавить звук, поэтому видео без звука.");
         table.put("Saved videos forgotten. The files are still there.",
                 "Сохранённые видео забыты. Файлы всё ещё на месте.");
-    }
-
-    private static void fill25(Map<String, String> table) {
         table.put("Saved videos put back",
                 "Сохранённые видео возвращены");
         table.put("Saved videos show the @username and the first line of the caption in the bottom left corner. The phone encodes the whole video again to do it, so saving takes longer. Applies to saves made by Hushfeed.",
@@ -3166,6 +3191,8 @@ final class L10nTranslationsRu {
                 "Сохраняется %1$s оригинальное фото");
         table.put("Saving a frame from this video needs Android 7 or newer",
                 "Чтобы сохранить кадр из этого видео, нужен Android 7 или новее");
+        table.put("Saving and sharing",
+                "Сохранение и отправка");
         table.put("Saving one original photo",
                 "Сохраняется одно оригинальное фото");
         table.put("Saving seen history",
@@ -3226,6 +3253,9 @@ final class L10nTranslationsRu {
                 "Поиск по комментариям");
         table.put("Seconds per photo",
                 "Секунд на фото");
+    }
+
+    private static void fill26(Map<String, String> table) {
         table.put("Seconds. Zero keeps every length. If everything the feed just sent would be filtered out, the video closest to your limit is kept so the feed isn't empty.",
                 "Секунды. Ноль сохраняет любую длину. Если бы всё, что лента только что прислала, оказалось отфильтровано, остаётся видео, ближе всего подходящее к вашему лимиту, чтобы лента не была пустой.");
         table.put("Seek bar on video stories",
@@ -3252,9 +3282,6 @@ final class L10nTranslationsRu {
                 "Выберите хотя бы одно поле.");
         table.put("Select every tab",
                 "Выбрать все вкладки");
-    }
-
-    private static void fill26(Map<String, String> table) {
         table.put("Selected",
                 "Выбрано");
         table.put("Send TikTok through a proxy",
@@ -3349,6 +3376,9 @@ final class L10nTranslationsRu {
                 "Показывать собственную полосу прогресса TikTok на видео, где она обычно скрыта.");
         table.put("Show a LIVE under the status bar",
                 "Показывать LIVE под строкой состояния");
+    }
+
+    private static void fill27(Map<String, String> table) {
         table.put("Show a progress bar while a video saves.",
                 "Показывать полосу прогресса во время сохранения видео.");
         table.put("Show a verified badge on your own profile on this phone. Other people see your real status.",
@@ -3375,9 +3405,6 @@ final class L10nTranslationsRu {
                 "Показывать точные числа");
         table.put("Show failures on screen",
                 "Показывать ошибки на экране");
-    }
-
-    private static void fill27(Map<String, String> table) {
         table.put("Show follow status",
                 "Показывать статус подписки");
         table.put("Show gates",
@@ -3472,6 +3499,9 @@ final class L10nTranslationsRu {
                 "Показывает текст TikTok шрифтом вашего телефона вместо TikTok Sans. Значки и анимации подарков сохраняют свои шрифты. Перезапустите TikTok, чтобы увидеть изменение.");
         table.put("Shows a small count under TikTok's top tabs of what the feed filter has removed since TikTok started. It shows only on the feed, and taps on it go through to the video under it.",
                 "Показывает под верхними вкладками TikTok небольшой счётчик того, что фильтр ленты убрал с момента запуска TikTok. Он виден только в ленте, а нажатия на него проходят на видео под ним.");
+    }
+
+    private static void fill28(Map<String, String> table) {
         table.put("Shows every emoji in your phone's own emoji font. The newest emoji your phone doesn't have yet may show as a box or in pieces.",
                 "Показывает все эмодзи шрифтом эмодзи вашего телефона. Самые новые эмодзи, которых в телефоне ещё нет, могут выглядеть как квадрат или распасться на части.");
         table.put("Shows the Duet and Stitch options even when the creator turned them off. TikTok may still refuse to accept the result.",
@@ -3498,9 +3528,6 @@ final class L10nTranslationsRu {
                 "Пропускать проверку обновлений");
         table.put("Skipped entries are invalid, expired, already recorded, or older than the newest %1$s videos.",
                 "Пропущенные записи недействительны, устарели, уже сохранены или старше последних %1$s видео.");
-    }
-
-    private static void fill28(Map<String, String> table) {
         table.put("Skipping videos with %1$s",
                 "Пропуск видео с %1$s");
         table.put("Sleep timer off",
@@ -3595,6 +3622,9 @@ final class L10nTranslationsRu {
                 "Не позволять TikTok читать то, что вы скопировали. Копирование ссылки из TikTok по-прежнему работает.");
         table.put("Stop TikTok's built-in AI engine from starting, so it doesn't get a copy of everything TikTok logs about your use. TikTok works as if the engine weren't there.",
                 "Не даёт запускаться встроенному ИИ-движку TikTok, чтобы он не получал копию всего, что TikTok записывает о вашем использовании. TikTok работает так, будто этого движка нет.");
+    }
+
+    private static void fill29(Map<String, String> table) {
         table.put("Stop TikTok's speed tests",
                 "Остановить тесты скорости TikTok");
         table.put("Stop a long press on Like from opening TikTok's repost action.",
@@ -3621,9 +3651,6 @@ final class L10nTranslationsRu {
                 "Не даёт TikTok показывать полноэкранную рекламу при запуске.");
         table.put("Stop the notifications TikTok sends about popular videos it picked for you. Messages, comments, likes, follows and videos from accounts you follow still come through.",
                 "Останавливать уведомления, которые TikTok присылает о популярных видео, подобранных для вас. Сообщения, комментарии, лайки, новые подписчики и видео от аккаунтов, на которые вы подписаны, по-прежнему приходят.");
-    }
-
-    private static void fill29(Map<String, String> table) {
         table.put("Stop the short vibrations TikTok plays on its own taps and gestures. Your keyboard and your phone's own haptics stay as they are.",
                 "Отключает короткие вибрации, которые TikTok воспроизводит при собственных нажатиях и жестах. Клавиатура и собственная тактильная отдача телефона остаются как есть.");
         table.put("Stop the two background tasks TikTok uses to check for updates, one of them when your phone starts. Some in-app update prompts may stop. Play Store updates still work.",
@@ -3684,6 +3711,8 @@ final class L10nTranslationsRu {
                 "Субтитры");
         table.put("Subtitles: %1$s",
                 "Субтитры: %1$s");
+        table.put("Support Hushfeed",
+                "Поддержать Hushfeed");
         table.put("Swap the website in shared links",
                 "Подменять сайт в отправляемых ссылках");
         table.put("Swipe for brightness and volume",
@@ -3716,6 +3745,9 @@ final class L10nTranslationsRu {
                 "Нажмите ещё раз, чтобы лайкнуть");
         table.put("Tap again to repost",
                 "Нажмите ещё раз, чтобы сделать репост");
+    }
+
+    private static void fill30(Map<String, String> table) {
         table.put("Tap the feed Follow button twice within %1$d seconds.",
                 "Дважды нажмите кнопку «Подписаться» в ленте в течение %1$d секунд.");
         table.put("Tap the like heart twice within %1$d seconds. Removing a like stays immediate.",
@@ -3744,9 +3776,6 @@ final class L10nTranslationsRu {
                 "Этот шаблон автора мог замедлить ленту, поэтому он был пропущен: %1$s");
         table.put("That creator pattern could stall the feed, so it wasn't added: %1$s",
                 "Этот шаблон автора мог замедлить ленту, поэтому он не был добавлен: %1$s");
-    }
-
-    private static void fill30(Map<String, String> table) {
         table.put("That creator pattern is too long to use, so it was skipped: %1$s",
                 "Этот шаблон автора слишком длинный, поэтому он пропущен: %1$s");
         table.put("That creator pattern is too long, so it wasn't added: %1$s",
@@ -3825,6 +3854,8 @@ final class L10nTranslationsRu {
                 "Эта резервная копия настроек неполная и могла быть обрезана. Ничего не изменено.");
         table.put("That settings change didn't go through. Nothing was altered.",
                 "Это изменение настроек не прошло. Ничего не изменено.");
+        table.put("That setup couldn't be applied. Nothing was changed.",
+                "Не удалось применить эту настройку. Ничего не изменено.");
         table.put("That sticker is in a format Hushfeed can't read",
                 "Этот стикер в формате, который Hushfeed не может прочитать");
         table.put("That watch-history file is damaged. Nothing was imported.",
@@ -3837,6 +3868,9 @@ final class L10nTranslationsRu {
                 "Строки Bulletin board, которые TikTok добавляет во Входящие, исчезают из списка. Чаты и остальные строки остаются на месте.");
         table.put("The Following and For You names above the feed go away. Swiping between the feeds and the search button stay as they are.",
                 "Названия Подписки и Рекомендации над лентой исчезают. Переключение между лентами свайпом и кнопка поиска остаются как есть.");
+    }
+
+    private static void fill31(Map<String, String> table) {
         table.put("The Lab can't check this. TikTok gets it exactly as typed.",
                 "Lab не может это проверить. TikTok получает именно то, что вы ввели.");
         table.put("The Lab couldn't open. Go back and open it again.",
@@ -3867,9 +3901,6 @@ final class L10nTranslationsRu {
                 "Каталог указывает для этого ключа значение %1$s, а для этого переопределения значение %2$s. Сбросьте переопределение и создайте новое.");
         table.put("The comment button also opens a video's comments with its caption at the top. The caption over the video goes away while this is on.",
                 "Кнопка комментариев тоже открывает комментарии видео с подписью сверху. Подпись поверх видео исчезает, пока это включено.");
-    }
-
-    private static void fill31(Map<String, String> table) {
         table.put("The cover couldn't be saved. Try again.",
                 "Не удалось сохранить обложку. Повторите попытку.");
         table.put("The diagnostic report couldn't be saved yet. Try again in a moment.",
@@ -3960,6 +3991,9 @@ final class L10nTranslationsRu {
                 "Строка аватаров историй вверху Входящих исчезает. Истории по-прежнему можно смотреть из ленты и с профилей.");
         table.put("The saved-video choice couldn't open. Try again.",
                 "Не удалось открыть выбор для сохранённого видео. Повторите попытку.");
+    }
+
+    private static void fill32(Map<String, String> table) {
         table.put("The saved-video choice is still open",
                 "Выбор для сохранённого видео всё ещё открыт");
         table.put("The server asked us to wait. Try again later.",
@@ -3990,9 +4024,6 @@ final class L10nTranslationsRu {
                 "Видео сохранено, но его запись не удалось обновить. Последующее сохранение может создать ещё одну копию.");
         table.put("The video without the watermark couldn't be fetched, so TikTok's watermarked copy was saved to %1$s. Try again later for the clean copy.",
                 "Не удалось загрузить видео без водяного знака, поэтому копия TikTok с водяным знаком сохранена в %1$s. Повторите попытку позже, чтобы получить чистую копию.");
-    }
-
-    private static void fill32(Map<String, String> table) {
         table.put("The video you're watching keeps playing to its end after you leave TikTok or turn the screen off, with TikTok's own media notification to pause it. TikTok's background play switch stays on while this is on. Restart TikTok to apply this.",
                 "Видео, которое вы смотрите, продолжает играть до конца после того, как вы покидаете TikTok или выключаете экран, с собственным медиа-уведомлением TikTok для паузы. Переключатель фонового воспроизведения TikTok остаётся включённым, пока включено это. Перезапустите TikTok, чтобы это применить.");
         table.put("The voice and video call buttons leave the top of a chat. Calls still ring, and the chat details button stays.",
@@ -4083,10 +4114,11 @@ final class L10nTranslationsRu {
                 "У звука этого видео нет названия для поиска");
         table.put("Thumbs down blocks the commenter",
                 "Палец вниз блокирует автора комментария");
+    }
+
+    private static void fill33(Map<String, String> table) {
         table.put("TikTok account facts",
                 "Сведения об аккаунте TikTok");
-        table.put("TikTok can't tell you're using a VPN. Your other connections show as they really are. Leave this off if you need a feature that checks for a VPN.",
-                "TikTok не может определить, что вы используете VPN. Остальные подключения выглядят как есть. Оставьте выключенным, если нужна функция, проверяющая наличие VPN.");
         table.put("TikTok checks how it was signed and installed. This answers those checks the way the Play Store version would. Try it if follows or likes undo themselves after a refresh. It may not help, since TikTok has other checks.",
                 "TikTok проверяет, как он подписан и установлен. Эта настройка отвечает на проверки так, как ответила бы версия из Play Store. Попробуйте, если подписки или лайки сами отменяются после обновления. Она может не помочь, ведь у TikTok есть и другие проверки.");
         table.put("TikTok closed during these saves",
@@ -4107,15 +4139,12 @@ final class L10nTranslationsRu {
                 "TikTok не заблокировал %1$s. Повторите попытку через момент.");
         table.put("TikTok didn't unblock %1$s. Try again in a moment.",
                 "TikTok не снял блокировку с %1$s. Повторите попытку через момент.");
-        table.put("TikTok gets a blank advertising ID, like the one Android gives after you reset yours. Apps can't use it to recognize your phone.",
-                "TikTok получает пустой рекламный ID, такой же, какой Android выдаёт после сброса вашего. Приложения не смогут по нему узнавать ваш телефон.");
+        table.put("TikTok gets a blank advertising ID, like the one Android gives after you delete yours. Apps can't use it to recognize your phone.",
+                "TikTok получает пустой рекламный ID, такой же, какой Android выдаёт после удаления вашего. Приложения не смогут по нему узнавать ваш телефон.");
         table.put("TikTok gets no location from your phone. The Region settings change your country and time zone. This switch stops the exact position.",
                 "TikTok не получает местоположение с вашего телефона. Настройки региона меняют страну и часовой пояс. Этот переключатель останавливает передачу точных координат.");
         table.put("TikTok hasn't loaded this setting yet. Open the part of the app that uses it, then come back.",
                 "TikTok ещё не загрузил эту настройку. Откройте раздел приложения, который её использует, и вернитесь.");
-    }
-
-    private static void fill33(Map<String, String> table) {
         table.put("TikTok is locked",
                 "TikTok заблокирован");
         table.put("TikTok isn't locked because this phone has no screen lock",
@@ -4208,6 +4237,9 @@ final class L10nTranslationsRu {
                 "Сегодня: %1$d минут");
         table.put("Today: %1$d minutes|one",
                 "Сегодня: %1$d минута");
+    }
+
+    private static void fill34(Map<String, String> table) {
         table.put("Today: %1$d video",
                 "Сегодня: %1$d видео");
         table.put("Today: %1$d videos",
@@ -4236,9 +4268,6 @@ final class L10nTranslationsRu {
                 "Переводить на");
         table.put("Translated message",
                 "Переведённое сообщение");
-    }
-
-    private static void fill34(Map<String, String> table) {
         table.put("Translating…",
                 "Перевод…");
         table.put("Translation preview",
@@ -4331,6 +4360,9 @@ final class L10nTranslationsRu {
                 "Отменить забывание сохранённых видео");
         table.put("Undo last Lab change",
                 "Отменить последнее изменение Lab");
+    }
+
+    private static void fill35(Map<String, String> table) {
         table.put("Undo last restore or reset",
                 "Отменить последнее восстановление или сброс");
         table.put("Undoing the last change",
@@ -4359,9 +4391,6 @@ final class L10nTranslationsRu {
                 "Используйте «Сохранить отчёт» для этого большого отчёта");
         table.put("Use TikTok for a while. A popup shows up here after TikTok first tries to show it.",
                 "Попользуйтесь TikTok какое-то время. Окно появится здесь, когда TikTok впервые попытается его показать.");
-    }
-
-    private static void fill35(Map<String, String> table) {
         table.put("Use TikTok's own hold, pull down and release gesture to keep playing at the hold speed, 2x unless Playback sets another.",
                 "Используйте собственный жест TikTok «удержать, потянуть вниз и отпустить», чтобы продолжить воспроизведение на скорости удержания, обычно 2x, если в разделе «Воспроизведение» не задано другое значение.");
         table.put("Use a default playback speed",
@@ -4454,6 +4483,9 @@ final class L10nTranslationsRu {
                 "Видео в результатах поиска показывают обложку и запускаются, когда вы их открываете. Лента и открытые вами видео воспроизводятся как обычно.");
         table.put("Views range",
                 "Диапазон просмотров");
+    }
+
+    private static void fill36(Map<String, String> table) {
         table.put("Visual search",
                 "Визуальный поиск");
         table.put("Volume",
@@ -4482,9 +4514,6 @@ final class L10nTranslationsRu {
                 "Один файл ожидает сохранения");
         table.put("Waiting to save video",
                 "Видео ожидает сохранения");
-    }
-
-    private static void fill36(Map<String, String> table) {
         table.put("Watch history was imported for the account that chose the file. Switch back to see it.",
                 "История импортирована для аккаунта, который выбрал файл. Вернитесь в него, чтобы её увидеть.");
         table.put("WebP, exactly as TikTok sent it",
@@ -4565,12 +4594,21 @@ final class L10nTranslationsRu {
                 "Аккаунт изменился. Откройте редактор счётчиков снова.");
         table.put("Your current settings already match Calm feed.",
                 "Ваши текущие настройки уже соответствуют «Спокойной ленте».");
+        table.put("Your earlier settings are back",
+                "Ваши прежние настройки вернулись");
+        table.put("Your feed",
+                "Твоя лента");
+        table.put("Your feed. Your rules.",
+                "Твоя лента. Твои правила.");
         table.put("Your filters hid everything TikTok just sent. Most were %1$s.",
                 "Ваши фильтры скрыли всё, что только что прислал TikTok. В основном это было %1$s.");
         table.put("Your filters hid everything TikTok sent, %1$d times in a row. Most were %2$s.",
                 "Ваши фильтры скрыли всё, что прислал TikTok, %1$d раз подряд. В основном это было %2$s.");
         table.put("Your network proxy was kept, since a backup can't change it",
                 "Ваш сетевой прокси сохранён, так как резервная копия не может его менять");
+    }
+
+    private static void fill37(Map<String, String> table) {
         table.put("Your operator's name, like T-Mobile.",
                 "Название вашего оператора, например T-Mobile.");
         table.put("Your operator's numeric code, like 310260.",
@@ -4583,6 +4621,10 @@ final class L10nTranslationsRu {
                 "Ваша предыдущая настройка ленты восстановлена. Перезапустите TikTok, чтобы применить все изменения.");
         table.put("Your seen history changed before the import finished. Choose the file again.",
                 "История просмотров изменилась до завершения импорта. Выберите файл заново.");
+        table.put("Your settings",
+                "Твои настройки");
+        table.put("Your settings already match",
+                "Ваши настройки уже совпадают");
         table.put("Zero means no limit. Counts the videos Hushfeed advanced past for you, not the ones you swiped yourself, and starts again when the feed is rebuilt or you change this number.",
                 "Ноль означает отсутствие лимита. Считает видео, которые Hushfeed пролистал за вас, а не те, что вы пролистали сами, и начинает заново, когда лента перестраивается или вы меняете это число.");
         table.put("Zero means the way out of the hold is always there. Any other number is how many times a day it works. Once they're used up, the hold stays until the day starts over. Ignored while the budget is locked, which removes the way out.",

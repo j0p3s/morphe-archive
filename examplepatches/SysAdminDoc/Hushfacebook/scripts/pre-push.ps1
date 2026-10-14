@@ -569,6 +569,7 @@ try {
     }).Count -gt 0
     # The source ledger's rules read NOTICE, provenance.json and the catalog's declared builds, and
     # hold docs/sources.md to the ledger, so a push of any of them runs the ledger's suite too.
+    # The same suite holds the GitLab coverage ledger and the script that runs it.
     $facebookSourcePaths = @(
         'NOTICE',
         'docs/sources.md',
@@ -576,7 +577,9 @@ try {
         'provenance.json',
         'scripts/audit-facebook-sources.ps1',
         'scripts/facebook-sources.ps1',
+        'scripts/gitlab-coverage.ps1',
         'scripts/patch-target.ps1',
+        'scripts/scan-gitlab-coverage.ps1',
         'scripts/test-facebook-sources.ps1',
         'sources/facebook-sources.json'
     )
@@ -597,6 +600,9 @@ try {
         # ran the script contract tests at most, and never the check that reads them.
         $_ -like 'release-receipt-*.json' -or
         $_ -eq 'scripts/manifest-delta-allowlist.txt' -or
+        # What the release check accepts as an intentional rename, removal or default change of a
+        # published patch, so a push of that file alone is held to the check that reads it.
+        $_ -eq 'scripts/patch-catalog-compatibility.json' -or
         # A released version's heading is the only record a reader has that it shipped, and one
         # was renamed away by a post-release commit that no gate read.
         $_ -eq 'CHANGELOG.md' -or

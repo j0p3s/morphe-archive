@@ -45,6 +45,7 @@ import app.hushtelegram.extension.shared.settings.Setting;
 import app.hushtelegram.extension.shared.settings.SettingsJson;
 import app.hushtelegram.extension.shared.settings.StringSetting;
 import app.hushtelegram.extension.telegram.misc.MessageFilters;
+import app.hushtelegram.extension.telegram.misc.OutsideTranslate;
 import app.hushtelegram.extension.telegram.misc.StickerSize;
 
 /**
@@ -112,6 +113,7 @@ public final class SettingsBackup {
             Settings.KEEP_VIDEOS_MUTED,
             Settings.SWIPE_BACK_ON_PROFILES,
             Settings.HIDE_PHONE_NUMBER,
+            Settings.SHARE_NUMBER_UNTICKED,
             Settings.MESSAGE_SECONDS,
             Settings.ALLOW_CHAT_BLUR,
             Settings.VOICE_ONE_AT_A_TIME,
@@ -149,9 +151,12 @@ public final class SettingsBackup {
             Settings.DISABLE_ANALYTICS,
             Settings.DISABLE_CALL_DEBUG,
             Settings.DISABLE_DRAFT_PREVIEWS,
+            Settings.LOCAL_DRAFTS,
+            Settings.LOCAL_SEARCH,
             Settings.GALLERY_CAMERA_ON_TAP,
             Settings.OPEN_EXTERNAL_LINKS,
             Settings.STRIP_LINK_TRACKING,
+            Settings.SKIP_AUTOLOGIN,
             Settings.DISABLE_UPDATE_CHECKS,
             Settings.REPAIR_FIREBASE_PUSH));
 
@@ -566,6 +571,10 @@ public final class SettingsBackup {
         if (changes.isEmpty()) return 0;
         try {
             Setting.saveAll(changes);
+            // What the switch's row does as it goes off. A file skips the row, and the translator
+            // would otherwise only notice at the next message drawn, after a second file might
+            // have turned it back on.
+            if (Boolean.FALSE.equals(changes.get(Settings.OUTSIDE_TRANSLATE))) OutsideTranslate.forgetChats();
             return changes.size();
         } catch (Setting.BatchFailed failed) {
             throw new ApplyFailed(failed.restored, failed);

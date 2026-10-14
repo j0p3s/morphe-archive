@@ -4,11 +4,15 @@ Every HushGram release, newest first.
 
 ## Unreleased
 
-### HushGram v0.0.10
+### HushGram v0.0.11
 
 #### Features
 
-* **Instagram - HushGram settings:** Long-press the Instagram logo at the top of your feed to open HushGram settings. A tap on the logo still does what Instagram made it do, and the long press works while HushGram is paused. Where Instagram has a long press of its own on the logo, Instagram's comes first. The icon shortcut and the row in Settings and activity still open them too.
+* **Instagram - HushGram settings:** Long-press Instagram's feed logo to open HushGram settings, even while paused. Taps keep Instagram's behavior, and its own long press runs first. The icon shortcut and Settings and activity entry still work. On accounts with the newer Home header (the one with feed tabs), the logo it shows works the same way.
+
+* **Instagram - HushGram settings:** Quick setups, under Search, turns on a Quiet or Privacy set of switches in one tap, or puts every switch back the way it started. Your locks stay as they are.
+
+* **Instagram - HushGram settings:** Report a problem opens a GitHub bug report with your versions, device and switched-on settings already filled in.
 
 * **Instagram - Install next to Instagram:** New Mark the icon option, off by default. It puts a small HushGram badge on the second Instagram's home screen icon, and on the other icons Instagram lets you pick. Asked for in #145.
 
@@ -39,6 +43,28 @@ Every HushGram release, newest first.
 * **Instagram - Download any video:** New switch under Downloads, Skip what's already saved, off by default. Something you saved isn't saved twice unless you ask again within 30 seconds. It remembers your newest 15,000 saves, and Clear download history forgets the list. Asked for in #150.
 
 #### Improvements
+
+* **Tooling:** Device builds support separate keystore and key passwords, including an empty store password. The installer also picks one ADB executable when the path lists more than one.
+
+* **Instagram - HushGram settings:** Restart now reopens settings on the page you were on.
+
+* **Instagram - HushGram settings:** Hide inbox suggestions and Ask for larger photos now show the restart card when you change them.
+
+* **Instagram - Hide your active status:** Its description says the change applies the next time you come back to Instagram, instead of asking for a restart it doesn't need.
+
+* **Instagram - Hide suggested accounts in Reels:** Diagnostics now names every other kind of unit Reels shows besides reels and ads. If a page of suggestions still gets through, a saved report says what it was.
+
+* **Instagram - HushGram settings:** Switches use the same compact corners as the rest of settings, with their native on, off and disabled behavior preserved.
+
+* **Instagram - HushGram settings:** Focus, selection and pressed feedback now follow the same style across settings cards, dialogs and runtime actions. Input borders are easier to distinguish before typing, and recovery and save-cancellation actions keep visible interaction feedback.
+
+* **Instagram - HushGram settings:** Search stays available inside categories, pending restart actions appear on the page you changed, and rotation preserves your category and position without retaining search text. Empty search results explain why an install may not include a control.
+
+* **Instagram - Lock your messages:** PIN forms scroll and keep their labels visible. The keyboard can move to confirmation or submit, incomplete entries don't spend an attempt, and a retry countdown enables entry when the wait ends. Closing a form clears its digits.
+
+* **Instagram - Save profile picture:** Close and Save have their own space below the preview, clear of system bars and edge gestures. Save stays unavailable while the picture loads, with a visible message and a spoken label.
+
+* **Instagram - Find the reel you came from:** Reel search actions share the same focus and press feedback as other controls.
 
 * **Instagram - HushGram settings:** Settings now use clearer category descriptions, a rounded search field and pink icon tiles. Dialogs share the same styling, and controls stay readable at larger text sizes.
 
@@ -74,11 +100,19 @@ Every HushGram release, newest first.
 
 #### Bug Fixes
 
-* **Instagram - Hide Meta AI:** A reel opened from search results plays the one you tapped again. With Hide Meta AI in search and Home's bar on, results below Meta AI's summary opened an earlier reel. The summary card is still hidden, it's just folded away now instead of being taken out of the results. Reported in #152.
+* **Instagram - Hide suggested posts:** Hide posts from this account in a post's menu shows a crossed-out eye now, not Download's arrow.
+
+* **Instagram - HushGram settings:** Recovery and sign-in notices stay above settings, and Support stays last, including after a search. Native row sorting no longer reverses those positions.
+
+* **Instagram - HushGram settings:** Enabled actions and choices keep their full color when first shown. Android's background tint pass no longer leaves them looking disabled until their state changes.
+
+* **Instagram - HushGram settings:** Invalid Place and Sharing domain entries stay open with an explanation so you can correct them. Save and the keyboard's Done button use the same validation. Coordinates keep their order in right-to-left layouts.
+
+* **Instagram - Hide Meta AI:** Search results open the reel you tapped again. Hiding Meta AI's summary had shifted later results onto earlier reels. The summary now folds away without changing their positions. Reported in #152.
 
 * **Instagram - Glass tab bar:** Feed videos started with a tap stay in place. On some phones they dropped behind the tab bar, leaving a black gap. Reported in #136.
 
-* **Instagram - Turn off HDR brightness boosts:** Instagram now hears that the screen has no extra brightness to spare. On phones that report spare HDR brightness, it drew some reels for that extra brightness and gave ordinary reels its own HDR look, so they still lit up with the switch on. Reported in #85.
+* **Instagram - Turn off HDR brightness boosts:** Instagram now receives no spare HDR brightness from the screen. On phones reporting extra brightness, some reels still lit up with this switch on, including ordinary reels given Instagram's HDR look. Reported in #85.
 
 * **Instagram - Glass tab bar:** The bar keeps its glass appearance over videos. Its opacity and edge no longer change as videos scroll past. Video directly beneath the bar may show through without blur on some phones. Reported in #144.
 
@@ -122,11 +156,21 @@ Every HushGram release, newest first.
 
 * **Instagram - Glass tab bar:** On accounts where Instagram puts a dark capsule behind the selected tab, that capsule no longer sits on top of the glass bar's own highlight.
 
-* **Instagram - Glass tab bar:** With Show content behind the tab bar on, a reel's More button and name keep working after a visit to HushGram's settings. The strip Instagram adds to make the seek bar easier to grab used to land on top of them, so taps there did nothing.
+* **Instagram - Glass tab bar:** With Show content behind the tab bar on, a reel's More button and name keep working after visiting HushGram settings. Instagram's seek-bar touch strip had landed over them and intercepted taps.
 
-* **Instagram - Hide the Reels tab:** When Search is off a tab bar you swipe across, the note the button shows now fits on screen and says what to turn off, or that a restart brings Search back when you've just turned Hide the Search tab off. Android used to cut it off halfway.
+* **Instagram - Hide the Reels tab:** The Search button's note fits on screen when Search is hidden from a swipeable tab bar. It explains which setting restores Search, or when a restart is needed. Android previously cut the message short.
 
 * **Instagram - Download any video:** Save all's result shows each of its lines in turn, so the lower quality and already saved notes aren't cut off on Android 12 and newer.
+
+* **Instagram - Lock your messages:** Turning on Lock your messages or Lock all of Instagram no longer opens a chat you locked on its own. That chat stays covered until you unlock it, can't be taken off the list without the unlock, and its notifications stay hidden. The screen behind settings also stays out of recent apps from the moment a lock is turned on.
+
+* **Instagram - Lock your messages:** HushGram settings left open while you stepped away are covered once the lock comes back, and ask for your unlock before they can be used again. A list, a set of choices or Set a PIN left open on top of them closes then too, without saving anything, so the hidden chats list no longer shows over the cover, and cancelling the unlock leaves the cover with its Unlock button instead of asking again straight away. A settings file or an Undo that arrives while Instagram is locked waits for the unlock too, so a backup can't switch a lock off without it.
+
+* **Instagram - Lock your messages:** With a HushGram PIN, making Lock again wait longer asks for the PIN every time, like switching a lock off does, even when Instagram is already unlocked. A wrong PIN or Cancel keeps the wait you had, and a shorter wait still applies right away.
+
+* **Instagram - Lock your messages:** A diagnostics report saved with Debug logging on no longer names the chats you lock, unlock, hide or show again. The message on screen still names the chat. Names with a line break or unusual text-direction marks in them are left out too.
+
+* **Instagram - Glass tab bar:** Closed screens are let go of again. Every restyled tab bar used to stay in memory with the screen it belonged to and its blurred backdrop, so memory crept up each time Instagram rebuilt a screen with the bar on it.
 
 ## 0.0.9 (2026-10-11)
 

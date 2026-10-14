@@ -1,3 +1,25 @@
+## [2.5.2](https://github.com/bearinmindcat/morphe-patches/compare/v2.5.1...v2.5.2) (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* change the bigger speedometer sizes later in waze customization, with a switch for waze own sizes; issue [#50](https://github.com/bearinmindcat/morphe-patches/issues/50) ([778ef9c](https://github.com/bearinmindcat/morphe-patches/commit/778ef9c923d6f6a32997be87444f2e84ff8cf8b0))
+
+## [2.5.1](https://github.com/bearinmindcat/morphe-patches/compare/v2.5.0...v2.5.1) (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* change waze patch values later in its customization menu (alert and navigation distances, minutes in the background, sign style); issue [#50](https://github.com/bearinmindcat/morphe-patches/issues/50) ([08b6a3b](https://github.com/bearinmindcat/morphe-patches/commit/08b6a3bd76f53a9bed19c3fc90b1338243b0609f))
+
+## [2.5.0](https://github.com/bearinmindcat/morphe-patches/compare/v2.4.0...v2.5.0) (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* waze features is now waze & external data source ([dbf86e3](https://github.com/bearinmindcat/morphe-patches/commit/dbf86e34fbfb7a3623241636cc531d0107bec752))
+
+### ✨ New Features
+
+* avoid flock cameras (steers google maps driving directions around them, routed with brouter) ([c59cbfe](https://github.com/bearinmindcat/morphe-patches/commit/c59cbfe74c3bb6cb32f5c8f4acee9ee14666d5ee))
+
 ## [2.4.0](https://github.com/bearinmindcat/morphe-patches/compare/v2.3.1...v2.4.0) (2026-10-12)
 
 ### 🐛 Bug Fixes

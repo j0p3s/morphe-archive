@@ -17,11 +17,7 @@
 package app.hushtumblr.extension.tumblr.settings;
 
 import android.content.Context;
-import android.content.res.ColorStateList;
 import android.graphics.Typeface;
-import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.InsetDrawable;
-import android.graphics.drawable.RippleDrawable;
 import android.text.SpannableStringBuilder;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -86,7 +82,7 @@ final class ChoiceCards extends BaseAdapter {
     static final class Card extends LinearLayout {
         /** How far the card sits in from the list's sides, and from the next card. */
         static final int SIDE_INSET_DP = 16;
-        static final int GAP_INSET_DP = 4;
+        static final int GAP_INSET_DP = 5;
 
         final TextView name;
         final TextView detail;
@@ -97,13 +93,7 @@ final class ChoiceCards extends BaseAdapter {
             setGravity(Gravity.CENTER_VERTICAL);
             int side = dp(context, SIDE_INSET_DP);
             int gap = dp(context, GAP_INSET_DP);
-            GradientDrawable surface = new GradientDrawable();
-            // The shared row surface, with its outline separating it from the dialog.
-            surface.setColor(colors.card);
-            surface.setStroke(dp(context, 1), colors.outline);
-            surface.setCornerRadius(dp(context, 12));
-            setBackground(new RippleDrawable(ColorStateList.valueOf(ScreenColors.half(colors.accent)),
-                    new InsetDrawable(surface, side, gap, side, gap), null));
+            setBackground(colors.insetInteractive(this, colors.card, 12, SIDE_INSET_DP, GAP_INSET_DP));
             // Set after the background, which puts its insets in as the padding.
             setPaddingRelative(side + dp(context, 16), gap + dp(context, 12),
                     side + dp(context, 16), gap + dp(context, 12));
@@ -115,7 +105,7 @@ final class ChoiceCards extends BaseAdapter {
             addView(text, new LayoutParams(0, LayoutParams.WRAP_CONTENT, 1));
 
             name = new TextView(context);
-            name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+            name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
             name.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
             name.setTextColor(colors.title);
             ScreenColors.Chevron chevron = new ScreenColors.Chevron(colors.summary, dp(context, 2));
@@ -128,6 +118,7 @@ final class ChoiceCards extends BaseAdapter {
             LayoutParams under = new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.WRAP_CONTENT);
             under.topMargin = dp(context, 2);
             text.addView(detail, under);
+            ScreenColors.startSide(text);
             android.widget.ImageView arrow = new android.widget.ImageView(context);
             arrow.setImageDrawable(chevron);
             arrow.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);

@@ -33,7 +33,6 @@ Export diagnostic report	Ekspor laporan diagnostik
 Export settings	Ekspor pengaturan
 Turns off every HushPinterest switch except Debug logging the next time Pinterest starts. What you chose when you patched stays, and your choices are saved.	Mematikan semua sakelar HushPinterest kecuali Pencatatan debug saat Pinterest dibuka berikutnya. Yang Anda pilih saat menambal tetap berlaku, dan pilihan Anda tersimpan.
 Hide ads	Sembunyikan iklan
-Links, updates, backup and more	Tautan, pembaruan, cadangan, dan lainnya
 Save your switches to a file. They cover all the accounts in this Pinterest app. Pause and Debug logging aren't included, and neither is the release check.	Simpan sakelar Anda ke sebuah file. Sakelar ini mencakup semua akun di aplikasi Pinterest ini. Jeda dan Pencatatan debug tidak disertakan, begitu pula pemeriksaan rilis.
 Settings exported, but the app holding it blocked the check.	Pengaturan diekspor, tetapi aplikasi penyimpannya menolak pemeriksaan.
 The file's app is too slow. Nothing was changed.	Aplikasi file itu terlalu lambat. Tidak ada yang diubah.
@@ -108,8 +107,6 @@ Browse settings	Jelajahi pengaturan
 More settings	Pengaturan lainnya
 # context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
 Support HushPinterest	Dukung HushPinterest
-# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
-Buy me a coffee on Ko-fi	Traktir saya secangkir kopi di Ko-fi
 No matching settings	Tidak ada pengaturan yang cocok
 %1$d setting found	%1$d pengaturan ditemukan
 %1$d settings found	%1$d pengaturan ditemukan
@@ -450,6 +447,12 @@ Queue pins	Antrekan Pin
 Download history already has each pin chosen from this board.	Riwayat unduhan sudah memiliki setiap Pin pilihan dari papan ini.
 Resume HushPinterest, turn on Download pins and Download board.	Lanjutkan HushPinterest, aktifkan Unduh Pin dan Unduh papan.
 Save list	Simpan daftar
+# context: Save list, the title of the choice between a bookmarks file and a JSON file, and the two rows under it
+Save list as	Simpan daftar sebagai
+Bookmarks file (HTML)	File bookmark (HTML)
+Imports into browsers and bookmark apps.	Bisa diimpor ke browser dan aplikasi bookmark.
+JSON file	File JSON
+Keeps every detail, for other tools.	Menyimpan semua detail, untuk alat lain.
 This list has only the pins Pinterest had loaded for the board when it was saved, up to %d, of the kind chosen. Pins further down the board aren't in it.	Daftar ini hanya berisi Pin dari jenis yang dipilih yang sudah dimuat Pinterest untuk papan saat daftar disimpan, maksimal %d. Pin yang lebih bawah di papan tidak ada di dalamnya.
 This list has only the pins chosen from those on screen when it was saved.	Daftar ini hanya berisi Pin yang dipilih dari Pin di layar saat daftar disimpan.
 A source link is "missing" when the pin had none, and "omitted" when it couldn't be kept exactly as given, such as a link with tracking details or one to a private network.	Tautan sumber bernilai "missing" jika Pin tidak punya tautan, dan "omitted" jika tautan tidak bisa disimpan persis seperti aslinya, misalnya tautan dengan data pelacakan atau tautan ke jaringan pribadi.
@@ -480,6 +483,11 @@ Couldn't check the file, so these are still the details Pinterest supplied.	File
 Black bottom bar	Bilah bawah hitam
 In dark mode, paints the bottom bar pure black to match the page, which also saves a little battery on OLED screens. Light mode stays as it is. The change shows the next time the bar redraws.	Dalam mode gelap, mewarnai bilah bawah hitam pekat agar serasi dengan halaman, yang juga sedikit menghemat baterai di layar OLED. Mode terang tetap seperti biasa. Perubahan terlihat saat bilah digambar ulang berikutnya.
 AMOLED dark theme	Tema gelap AMOLED
+# context: two more AMOLED black switches on the Interface page, one for the comments sheet and one for a pin's three-dot menu
+Black comments	Komentar hitam
+In dark mode, paints the comments sheet and its reply bar pure black. Light mode stays as it is. The change shows the next time you open comments.	Dalam mode gelap, mewarnai panel komentar dan bilah balasannya hitam pekat. Mode terang tetap seperti biasa. Perubahan terlihat saat Anda membuka komentar berikutnya.
+Black pin menu	Menu pin hitam
+In dark mode, paints a pin's menu pure black. Light mode stays as it is. The change shows the next time you open the menu.	Dalam mode gelap, mewarnai menu pin hitam pekat. Mode terang tetap seperti biasa. Perubahan terlihat saat Anda membuka menu berikutnya.
 # context: the two Hide closeup buttons switches on the Interface page. Pinterest calls the lens button's menu entry Search image.
 Hide back arrow on pins	Sembunyikan panah kembali di pin
 Hides the back arrow that floats over a pin you open. Your phone's back gesture or button still leaves the pin. The change shows on the next pin you open.	Menyembunyikan panah kembali yang mengambang di atas pin yang Anda buka. Gestur atau tombol kembali ponsel Anda tetap membawa Anda keluar dari pin. Perubahan terlihat pada pin berikutnya yang Anda buka.
@@ -503,7 +511,9 @@ Opens a GitHub report with your versions and settings filled in. Add what happen
 # context: home page row under the status card, and the title of the dialog it opens
 Quick setups	Penyiapan cepat
 # context: that row's summary
-Turn on a set of switches in one tap, or put every switch back the way it started.	Nyalakan sekumpulan sakelar dengan sekali ketuk, atau kembalikan semua sakelar seperti semula.
+Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Nyalakan sekumpulan sakelar dengan sekali ketuk, atau kembalikan semua sakelar seperti semula. Tekan lama baris ini untuk menyembunyikannya.
+# context: toast after a long press hides the Quick setups row; names the page whose row brings it back
+Quick setups hidden. Show it from Pause, backup and diagnostics.	Penyiapan cepat disembunyikan. Tampilkan dari Jeda, cadangan, dan diagnostik.
 # context: Quick setups choice that turns on the switches that hide ads, suggestions and nags
 Quiet	Tenang
 # context: what Quiet does, under its name
@@ -518,3 +528,23 @@ Puts every feature switch back the way it started.	Mengembalikan setiap sakelar 
 Changed %1$d setting	%1$d pengaturan diubah
 # context: the same toast for any other count, zero included; %1$d is how many
 Changed %1$d settings	%1$d pengaturan diubah
+# context: row on the Pause, backup and diagnostics page, and the title of its list of choices: the language HushPinterest's own pages, menus and messages use. Pinterest's language isn't changed
+HushPinterest language	Bahasa HushPinterest
+# context: row on the Pause, backup and diagnostics page that shows or hides the Quick setups row on the settings home page
+Quick setups on the home page	Penyiapan cepat di halaman utama
+# context: that row's summary while the Quick setups row is on the home page
+Shown. Tap to hide it.	Ditampilkan. Ketuk untuk menyembunyikannya.
+# context: that row's summary while the Quick setups row is hidden
+Hidden. Tap to show it again.	Disembunyikan. Ketuk untuk menampilkannya lagi.
+# context: the first language choice and the row's line while it's in force: HushPinterest uses whatever language Pinterest is in
+Same as Pinterest	Sama dengan Pinterest
+# context: the second language choice and the row's line while it's in force: the English language, by its name in this language
+English	Bahasa Inggris
+# context: the whole toast after a Quick setups choice when exactly one switch didn't take its new value and still shows the value it had; %1$d is how many switches changed, %2$d how many didn't. A toast holds two lines, so keep it short
+%1$d changed. %2$d setting is still on its saved value.	%1$d diubah. %2$d pengaturan masih memakai nilai tersimpan.
+# context: the same toast when any other number of switches didn't change
+%1$d changed. %2$d settings are still on their saved values.	%1$d diubah. %2$d pengaturan masih memakai nilai tersimpan.
+# context: the whole toast after a Quick setups choice when exactly one switch didn't change and the page may not show what's saved for it until the settings are opened again; %1$d is how many switches changed, %2$d how many didn't. A toast holds two lines, so keep it short
+%1$d changed. %2$d setting didn't. Reopen settings and try again.	%1$d diubah, %2$d pengaturan tidak. Buka kembali pengaturan lalu coba lagi.
+# context: the same toast when any other number of switches didn't change
+%1$d changed. %2$d settings didn't. Reopen settings and try again.	%1$d diubah, %2$d pengaturan tidak. Buka kembali pengaturan lalu coba lagi.

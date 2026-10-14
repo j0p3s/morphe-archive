@@ -1,5 +1,69 @@
 ## Unreleased
 
+* **TikTok:** Nascondi i video che hai già visto ora funziona anche in Seguiti, senza spostare il video in riproduzione.
+
+* **TikTok:** Un video in riproduzione in Per te o Seguiti non sparisce più quando supera l'Età massima dei post o quando Nascondi i video che hai già visto lo conta.
+
+* **TikTok:** Mostra l'ora al secondo ha due opzioni sue: Mostra il fuso orario, attiva come prima, e Data breve (#147).
+
+* **TikTok:** Scegli i video da salvare dalle griglie dei profili ora funziona anche dentro una raccolta dei Preferiti, Scegli tutti compreso (#27).
+
+* **TikTok:** Se un salvataggio di foto originali riesce solo in parte, ora offre Riprova accanto ad Apri. Riprova solo le foto che non sono arrivate.
+
+* **TikTok:** Le Configurazioni rapide si possono nascondere dalla home delle impostazioni con una pressione prolungata sulla scheda. La riga Configurazioni rapide nella home in Backup e ripristino le fa tornare.
+
+* **TikTok:** Le stanze LIVE possono mostrare un pulsante Registra (disattivato di default, nelle impostazioni di Riproduzione). Salva quello che guardi da quando lo tocchi finché tocchi Interrompi o esci dalla stanza (#37).
+
+* **TikTok:** Con Nascondi la barra dei commenti nei video aperti attivo, la barra di avanzamento non passa più sopra la descrizione nei video che apri da un profilo o dalla ricerca. La descrizione e il disco della musica salgono quanto basta per lasciarla libera (#153).
+
+* **TikTok:** Il report diagnostico non segnala più la barra dei commenti come mancante mentre sei nel feed principale (#153).
+
+* **TikTok:** La sezione archiviazione del report diagnostico non mostra più parte dell'ID del tuo account come nome di una cartella (#70).
+
+* **TikTok:** Con Nascondi la barra dei commenti nei video aperti attivo, i post con foto in una griglia aperta non finiscono più sopra una fascia nera in basso (#153).
+
+* **TikTok:** Con Mostra il LIVE sotto la barra di stato attivo, i pannelli sopra la prima stanza del feed LIVE ora iniziano sotto l'orologio e non più dietro la barra di stato (#137).
+
+* **TikTok:** Un LIVE nel feed Per te non mostra più la riga Service+ di un LIVE che hai già superato (#94).
+
+* **TikTok:** Un nuovo interruttore mantiene la qualità LIVE che hai scelto dopo il riavvio di TikTok (#57).
+
+* **TikTok:** Un nuovo interruttore aggiunge lo schermo pulito, che lascia solo la diretta, al menu di ogni stanza LIVE (#57).
+
+* **TikTok:** Il nome visualizzato di un creator che torna dopo il paese o l'@nome utente non resta più tagliato (#127).
+
+* **TikTok:** Il tema scuro AMOLED ora rende nere anche le schede delle pagine di impostazioni di TikTok (#152).
+
+* **TikTok:** Feature Gate Lab ha due nuovi preset: Commenti scorrevoli sui video e Più foto in un commento (#98).
+
+* **TikTok:** Un nuovo interruttore nella pagina Feed screen, Barra inferiore trasparente, fa arrivare il video fino in fondo allo schermo e toglie lo sfondo della barra delle schede. Parte disattivato (#145).
+
+* **TikTok:** Feature Gate Lab ha una nuova impostazione pronta, Traduzione automatica della chat LIVE. Attiva l'opzione Traduci commenti sotto Condividi in una stanza LIVE (#98).
+
+* **TikTok:** Attiva Scegli i video da salvare dalle griglie dei profili in Impostazioni di Hushfeed > Download e ogni video di una griglia del profilo, Mi piace o Preferiti avrà un cerchio. Scegline fino a 50, tocca Salva e vengono salvati uno dopo l'altro con un contatore e Annulla (#27).
+
+* **TikTok:** Scegli i video da salvare dalle griglie dei profili ha un pulsante Scegli tutti. Sceglie fino a 50 dei post che una lista ha caricato e, con Controlla i video già salvati attivo, salta quelli già salvati. Così un'intera lista si salva a turni, ognuno dei quali riprende da dove si era fermato il precedente (#27).
+
+* **TikTok:** Con Nascondi i video che hai già visto attivo e la cronologia piena, ogni video che guardi non scorre più tutte le 10.000 righe per togliere la più vecchia. Ora succede una volta ogni 256 video (#84).
+
+## 0.72.0 (2026-10-13)
+
+* **TikTok:** Il rapporto diagnostico ha una nuova sezione con le impostazioni modificate. Elenca ogni impostazione che non è più al valore predefinito, così un rapporto mostra quali interruttori sono attivi. Il testo che hai scritto in un'impostazione non viene mai incluso (#149).
+
+* **TikTok:** Aggiunta una nota sulla configurazione dell'emulatore Android 17 per gli strumenti SDK che leggono male le versioni minori dell'API.
+
+* **TikTok:** Ogni pagina delle impostazioni ora è nella pagina principale delle impostazioni, sotto un breve titolo, a un tocco di distanza. Metti in pausa Hushfeed e lo stato completo sono verso la fine, sotto Hushfeed.
+
+* **TikTok:** Un nuovo interruttore in Popup, Nascondi gli avvisi Controlla le tue fonti, toglie il banner Controlla le tue fonti in cima ad alcuni video e l'avviso che TikTok mostra quando ne condividi uno.
+
+* **TikTok:** La ricerca nelle impostazioni ti permette di attivare o disattivare un interruttore direttamente nei risultati. Gli interruttori che fanno di più aprono ancora la loro pagina.
+
+* **TikTok:** Sotto il campo di ricerca ci sono le Configurazioni rapide. Tranquillo, Privacy e Ripristina predefiniti richiedono un tocco, dicono quante impostazioni sono cambiate e offrono Annulla.
+
+* **TikTok:** La pagina principale delle impostazioni termina con Segnala un problema, che apre una segnalazione su GitHub con versioni e interruttori già compilati, e Sostieni Hushfeed, che apre Ko-fi.
+
+* **TikTok:** Riavviare TikTok dalla riga di riavvio o dal banner ti riporta alla pagina delle impostazioni di Hushfeed in cui eri.
+
 * **TikTok:** Le impostazioni di Hushfeed hanno un nuovo aspetto, con le voci della pagina iniziale riunite e icone rosa. I pannelli arrotondati e gli interruttori ovali arrivano anche in Feature Gate Lab e nell'editor dei creator nascosti. Il testo grande e il tema chiaro restano leggibili.
 
 * **TikTok:** Ripristinati il controllo della copertura del menu del profilo, il caso di prova con registri alti e il progetto di test della firma. Il test della firma accetta anche le opzioni di D8 in qualsiasi ordine.
@@ -126,7 +190,25 @@
 
 * **TikTok:** La persona che aveva segnalato il problema ha confermato che le date dei post seguono Dimensione del nome del creator (#66).
 
-## 0.71.3 (2026-10-11)
+* **TikTok:** Un backup ripristinato con uno schema di nome file o una cartella di download molto lunghi non blocca più la pagina delle impostazioni.
+
+* **TikTok:** La freccia Indietro in una pagina delle impostazioni aperta da "Mostra l'interruttore" ora esce dalle impostazioni invece di non fare nulla.
+
+* **TikTok:** "Nascondi una connessione VPN" ora dice che TikTok vede comunque l'indirizzo IP della VPN, e "Blocca l'ID pubblicitario" parla di eliminare invece di reimpostare.
+
+* **TikTok:** "Dimentica i video salvati" e "Aggiungi app a Condividi con" non si bloccano più quando TikTok è occupato. Te lo dicono e puoi riprovare.
+
+* **TikTok:** Il controllo delle patch ora verifica la cartella di conservazione prima di svuotarla e rifiuta una cartella che non ha creato.
+
+* **TikTok:** Con TalkBack attivo, Per te offre l'azione Apri le impostazioni di Hushfeed, così la scorciatoia con pressione prolungata funziona anche con uno screen reader.
+
+* **TikTok:** Se il salvataggio di un nuovo carattere importato non riesce o TikTok si chiude a metà, il carattere che avevi resta invece di sparire.
+
+* **TikTok:** Cambiare account a metà video non nasconde più quel video nell'account a cui passi. Conta come visto solo per l'account che l'ha guardato.
+
+* **TikTok:** Ruotare il telefono o cambiare il tema scuro con un editor di elenchi aperto mantiene quello che hai scelto o scritto invece di ricominciare. Annulla continua a non cambiare nulla.
+
+* **TikTok:** Immagine dell'icona ora controlla anche i dati dei pixel del PNG, quindi un file danneggiato all'interno ferma le patch in sicurezza invece di finire nell'app.
 
 * **TikTok:** Mostra il LIVE sotto la barra di stato ora riempie il bordo superiore in ogni stanza, senza fasce nere o strisce chiare (#137).
 

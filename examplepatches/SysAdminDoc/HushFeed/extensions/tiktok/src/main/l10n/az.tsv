@@ -76,7 +76,6 @@ That watch-history file is damaged. Nothing was imported.	Bu izləmə tarixçəs
 %1$s (will be returned when requested)	%1$s (tələb olunduqda qaytarılacaq)
 %1$s and above	%1$s və yuxarı
 %1$s appears more than once in this file.	%1$s bu faylda bir neçə dəfə rast gəlinir.
-%1$s changed	%1$s dəyişdi
 %1$s destinations must start with %2$s	%1$s təyinatları %2$s ilə başlamalıdır
 %1$s is too long for a settings backup. Shorten it, then save the backup again.	%1$s ayarların ehtiyat nüsxəsi üçün çox uzundur. Onu qısaldın, sonra ehtiyat nüsxəni yenidən saxlayın.
 %1$s isn't a language code, so no video would ever match it. Use two letters, like en, es or de.	%1$s dil kodu deyil, ona görə heç bir video onunla uyğun gəlməyəcək. İki hərf yazın, məsələn en, es və ya de.
@@ -239,9 +238,9 @@ Backup and restore	Ehtiyat nüsxə və bərpa
 Black	Qara
 Block clipboard reads	Mübadilə buferinin oxunmasını bloklayın
 Hide a VPN connection	VPN bağlantısını gizlə
-TikTok can't tell you're using a VPN. Your other connections show as they really are. Leave this off if you need a feature that checks for a VPN.	TikTok VPN istifadə etdiyinizi bilmir. Digər bağlantılarınız olduğu kimi görünür. VPN yoxlayan bir funksiyaya ehtiyacınız varsa, bunu söndürülmüş saxlayın.
+Android stops telling TikTok a VPN is on, and the VPN's tunnel is left out of the network list. TikTok can still see the VPN's IP address. Leave this off if you need a feature that checks for a VPN.	Android artıq TikTok-a VPN-in açıq olduğunu demir və VPN tuneli şəbəkə siyahısında görünmür. TikTok VPN-in IP ünvanını yenə də görür. VPN yoxlayan bir funksiyaya ehtiyacınız varsa, bunu söndürülmüş saxlayın.
 Block the advertising ID	Reklam ID-sini blokla
-TikTok gets a blank advertising ID, like the one Android gives after you reset yours. Apps can't use it to recognize your phone.	TikTok boş reklam ID-si alır, Android-in sizinkini sıfırladıqdan sonra verdiyi kimi. Tətbiqlər onunla telefonunuzu tanıya bilmir.
+TikTok gets a blank advertising ID, like the one Android gives after you delete yours. Apps can't use it to recognize your phone.	TikTok boş reklam ID-si alır, Android-in sizinkini sildikdən sonra verdiyi kimi. Tətbiqlər onunla telefonunuzu tanıya bilmir.
 Block contact list access	Kontakt siyahısına girişi bloklayın
 Block installed app scanning	Quraşdırılmış tətbiqlərin skanını bloklayın
 Block location	Məkanı bloklayın
@@ -1534,6 +1533,7 @@ Add apps to Share via	Share via bölməsinə tətbiqlər əlavə edin
 Pick apps to add to the Share via row, before More. Each gets the same link the other apps get.	Share via sətrinə, More-dan əvvəl əlavə ediləcək tətbiqləri seçin. Hər biri digər tətbiqlərin aldığı keçidin eynisini alır.
 Search apps	Tətbiqləri axtarın
 Looking for apps	Tətbiqlər axtarılır
+Couldn't list your apps. Tap here to try again.	Tətbiqlərinizin siyahısını almaq olmadı. Yenidən cəhd etmək üçün bura toxunun.
 No other app takes shared text	Paylaşılan mətni qəbul edən başqa tətbiq yoxdur
 Install one, then come back here.	Birini quraşdırın, sonra bura qayıdın.
 No apps match this search	Bu axtarışa uyğun tətbiq yoxdur
@@ -1730,6 +1730,10 @@ Show exact LIVE viewer counts	Dəqiq LIVE izləyici sayını göstər
 A LIVE room shows how many people are watching as a rounded number like 1.2K. This shows the exact count instead.	LIVE otağı kimin baxdığını 1.2K kimi yuvarlaqlaşdırılmış rəqəmlə göstərir. Bu, əvəzinə dəqiq sayı göstərir.
 Offer LIVE quality in more rooms	Daha çox LIVE otağında keyfiyyət seçimi təklif et
 TikTok lets you pick a LIVE's quality only in some rooms. This adds Video quality to the menu in most of the others, and the next room opens at the quality you picked last.	TikTok LIVE keyfiyyətini yalnız bəzi otaqlarda seçməyə imkan verir. Bu, qalan otaqların çoxunun menyusuna Video keyfiyyəti əlavə edir və növbəti otaq sonuncu seçdiyin keyfiyyətdə açılır.
+Keep the LIVE quality after TikTok restarts	TikTok yenidən başlayandan sonra LIVE keyfiyyətini saxla
+TikTok forgets the LIVE quality you picked when it closes. This starts rooms at that quality again after a restart. A room whose stream doesn't have it opens at TikTok's choice.	TikTok bağlananda seçdiyin LIVE keyfiyyətini unudur. Bu, yenidən başladıqdan sonra otaqları yenə həmin keyfiyyətdə açır. Yayımında o keyfiyyət olmayan otaq TikTok-un seçdiyi keyfiyyətdə açılır.
+Offer clear screen in every LIVE room	Hər LIVE otağında təmiz ekran təklif et
+Clear screen hides a LIVE's chat, gifts and buttons so only the stream shows. TikTok puts it in the menu of only some rooms. This adds it to the others.	Təmiz ekran LIVE-ın çatını, hədiyyələrini və düymələrini gizlədir, yalnız yayım görünür. TikTok onu yalnız bəzi otaqların menyusuna qoyur. Bu, onu qalanlarına da əlavə edir.
 Keep watching in a small window	Kiçik pəncərədə izləməyə davam et
 When you leave TikTok while a video plays, it keeps playing in a small window over your other apps, with a button to pause it. Works in the feed and on videos you open from a profile, search or a sound. Needs Android 8 or later.	Video oynayarkən TikTok-dan çıxdığınız zaman o, digər tətbiqlərin üzərində kiçik pəncərədə oynamağa davam edir və onu dayandırmaq üçün düymə olur. Lentdə, həmçinin profildən, axtarışdan və ya səsdən açdığınız videolarda işləyir. Android 8 və ya daha yeni versiya tələb olunur.
 Play	Oynat
@@ -1929,26 +1933,18 @@ Skip TikTok's setup screens	TikTok-un quraşdırma ekranlarını keç
 Leave out the interest picker, the language and gender questions, the creators to follow, the swipe up tutorial and TikTok's notification page when TikTok runs its setup. Consent, age and sign-in screens still show.	TikTok quraşdırmanı işə salanda maraq seçimini, dil və cins suallarını, izləmək üçün təklif olunan yaradıcıları, yuxarı sürüşdürmə təlimatını və TikTok-un bildiriş səhifəsini burax. Razılıq, yaş və giriş ekranları yenə də göstərilir.
 Hide unverified content notices	Təsdiqlənməmiş məzmun bildirişlərini gizlət
 Hide the Check sources banner TikTok puts on videos it marks as unverified, and the warnings it shows when you share one.	TikTok-un təsdiqlənməmiş kimi işarələdiyi videolardakı Mənbələri yoxla bannerini və belə videonu paylaşanda göstərdiyi xəbərdarlıqları gizlət.
+Hide Check your sources warnings	Mənbələrini yoxla xəbərdarlıqlarını gizlət
+Hide the Check your sources banner TikTok puts across the top of some videos, and the prompt it shows when you share one.	TikTok-un bəzi videoların üst hissəsinə qoyduğu Mənbələrini yoxla bannerini və belə videonu paylaşanda göstərdiyi xəbərdarlığı gizlət.
 Keep offline videos until you delete them	Oflayn videoları siz silənə qədər saxlayın
 TikTok removes videos saved for offline viewing after a set time, sometimes only two days, watched or not. With this on they stay until you delete them in TikTok's Offline videos settings. TikTok can still clear watched ones when your phone is low on space.	TikTok oflayn izləmək üçün saxlanan videoları müəyyən vaxtdan sonra, bəzən cəmi iki gündən sonra, izlənsə də izlənməsə də silir. Bu açıq olduqda onlar TikTok-un Offline videos ayarlarında özünüz silənə qədər qalır. Telefonda yer azaldıqda TikTok izlənmişləri yenə də silə bilər.
 Hide Thoughts on profiles	Profillərdə Thoughts-u gizlədin
 Hide the Thoughts bubble TikTok shows above a profile picture, and the prompt to share one on your own profile. Restart TikTok to apply this.	TikTok-un profil şəklinin üstündə göstərdiyi Thoughts balonunu və öz profilinizdə onu paylaşmaq təklifini gizlədin. Tətbiq etmək üçün TikTok-u yenidən başladın.
 
-# context: Quiet Index settings categories and compact runtime status.
-Feed & layout	Lent və tərtibat
-Filters, tabs and on-screen controls	Filtrlər, vərəqlər və ekran idarəetmələri
-Comments & inbox	Şərhlər və gələnlər qutusu
-Filters, translation and inbox controls	Filtrlər, tərcümə və gələnlər qutusu idarəetmələri
-Downloads & sharing	Endirmələr və paylaşma
-Files, subtitles and share sheet	Fayllar, subtitrlər və paylaşma menyusu
-App & advanced	Tətbiq və əlavə ayarlar
-Region, backups and diagnostics	Region, ehtiyat nüsxələr və diaqnostika
 About Hushfeed	Hushfeed haqqında
 Version, changes and licenses	Versiya, dəyişikliklər və lisenziyalar
 Active	Aktiv
 Paused	Dayandırılıb
 Budgets and reminders	Limitlər və xatırlatmalar
-%1$s, %2$s	%1$s, %2$s
 Don't auto translate these languages	Bu dilləri avtomatik tərcümə etməyin
 Separate language codes with commas, like es, de. When TikTok translates for you, captions and comments in these languages stay as they were written. See translation still works when you tap it. TikTok's own Don't translate list stays the way it is.	Dil kodlarını vergüllə ayırın, məsələn es, de. TikTok sizin yerinizə tərcümə edəndə bu dillərdəki başlıqlar və şərhlər yazıldığı kimi qalır. Tərcüməyə bax düyməsinə toxunanda isə yenə işləyir. TikTok-un öz Tərcümə etmə siyahısı olduğu kimi qalır.
 Performance	Performans
@@ -2065,10 +2061,82 @@ The quality choice is still open	Keyfiyyət seçimi hələ də açıqdır
 Unknown resolution	Ayırdetmə bilinmir
 Make it yours.	Özünə uyğunlaşdır.
 Your feed. Your rules.	Sənin lentin. Sənin qaydaların.
-Your experience	Təcrübən
-Shape your feed	Lentini düzənlə
 Conversations	Söhbətlər
-Save and send	Saxla və göndər
-App controls	Tətbiq idarələri
 About	Haqqında
 Your settings	Parametrlərin
+Report a problem	Problem barədə bildirin
+Opens a GitHub report with your versions and settings filled in. Add what happened.	Versiyalarınız və ayarlarınız artıq doldurulmuş GitHub hesabatını açır. Nə baş verdiyini əlavə edin.
+Support Hushfeed	Hushfeed-i dəstəkləyin
+No app on this phone opens web links	Bu telefonda veb keçidləri açan tətbiq yoxdur
+Quick setups	Sürətli quruluşlar
+Quiet hides ads, Shop and LIVE. Privacy hides your views and typing and stops tracking. Back to defaults resets every switch. Press and hold to hide this row.	Sakit reklamları, Shop və LIVE-ı gizlədir. Məxfilik baxışlarınızı və yazmağınızı gizlədir, izləməni dayandırır. Defolta qaytarın hər açarı sıfırlayır. Bu sətri gizlətmək üçün basıb saxlayın.
+# context: toast after a long press hides the Quick setups card from the settings home page; the page name is the one holding the row that brings it back
+Quick setups hidden. Bring it back from %1$s.	Sürətli quruluşlar gizlədildi. Onları %1$s bölməsindən geri qaytara bilərsiniz.
+# context: row on the Backup and restore page; shows or hides the Quick setups card on the settings home page
+Quick setups on the home page	Ana səhifədə sürətli quruluşlar
+Shown. Tap to hide it.	Göstərilir. Gizlətmək üçün toxunun.
+Hidden. Tap to show it again.	Gizlidir. Yenidən göstərmək üçün toxunun.
+Quiet	Sakit
+Back to defaults	Defolta qaytarın
+Changed 1 setting	1 ayar dəyişdirildi
+Changed %1$d settings	%1$d ayar dəyişdirildi
+Your settings already match	Ayarlarınız artıq uyğundur
+That setup couldn't be applied. Nothing was changed.	Bu quruluşu tətbiq etmək mümkün olmadı. Heç nə dəyişdirilmədi.
+Quick setups couldn't start. Try again in a moment.	Sürətli quruluşları başlatmaq mümkün olmadı. Bir azdan yenidən cəhd edin.
+Your earlier settings are back	Əvvəlki ayarlarınız geri qayıtdı
+# context: a heading on the settings home page, over Feed filter, Feed tabs, Feed screen, Playback and Screen time
+Your feed	Sənin lentin
+# context: a heading on the settings home page, over Downloads and Share sheet
+Saving and sharing	Saxlama və paylaşma
+# context: a heading on the settings home page, over Privacy, App, Region, Backup and restore and Feature Gate Lab
+Privacy and app	Məxfilik və tətbiq
+# context: a heading on the settings home page, over Hushfeed's status, Pause, Diagnostics, About, Report a problem and Support; the app's name, usually kept as is
+Hushfeed	Hushfeed
+Open Hushfeed settings	Hushfeed ayarlarını açın
+Several photos in one comment	Bir şərhdə bir neçə foto
+Scrolling comments on videos	Videoların üzərində sürüşən şərhlər
+See-through bottom bar	Şəffaf alt panel
+Let the video reach the bottom of the screen on the main feed and show the tabs over it with no bar behind them.	Videonun əsas lentdə ekranın aşağısına qədər uzanmasına icazə verin və tabları arxasında panel olmadan onun üzərində göstərin.
+LIVE chat auto-translate	LIVE söhbətinin avtomatik tərcüməsi
+
+Pick videos to save from profile grids	Profil şəbəkələrindən saxlamaq üçün videolar seçin
+Puts a circle on each video in a profile, Liked or Favorites grid. Pick up to %1$s, then tap Save to save them one after another, with a count and Cancel.	Profil, Bəyənilənlər və ya Sevimlilər şəbəkəsindəki hər videonun üzərinə dairə qoyur. %1$s videoya qədər seçin, sonra Saxla düyməsinə toxunun: onlar sayğac və Ləğv edin ilə bir-bir saxlanılır.
+Pick for saving	Saxlamaq üçün seçin
+You can pick up to %1$s at a time	Bir dəfəyə ən çox %1$s seçə bilərsiniz
+One picked	Biri seçildi
+%1$s picked	%1$s seçildi
+None of the picked videos could be saved. Try again.	Seçilmiş videoların heç biri saxlanıla bilmədi. Yenidən cəhd edin.
+Saved one video	Bir video saxlanıldı
+Saved %1$s videos	%1$s video saxlanıldı
+One was already saved	Biri artıq saxlanılmışdı
+%1$s were already saved	%1$s artıq saxlanılmışdı
+Picked videos	Seçilmiş videolar
+Pick all	Hamısını seç
+Picked the first %1$s. Save them, then tap Pick all again for the rest.	İlk %1$s seçildi. Onları saxlayın, qalanları üçün yenidən Hamısını seç düyməsinə toxunun.
+Everything this list has loaded is picked or saved. Scroll down to load more.	Bu siyahının yüklədiyi hər şey artıq seçilib və ya saxlanılıb. Daha çoxunu yükləmək üçün aşağı sürüşdürün.
+
+Record LIVEs you watch	Baxdığın LIVE-ları yaz
+Adds a Record button to LIVE rooms. A recording starts when you tap it and ends when you tap Stop or leave the room. Nothing before that is saved.	LIVE otaqlarına Yaz düyməsi əlavə edir. Yazı ona toxunanda başlayır, Dayandır düyməsinə toxunanda və ya otaqdan çıxanda bitir. Ondan əvvəlki heç nə saxlanmır.
+Record	Yaz
+Stop	Dayandır
+Stop recording this LIVE	Bu LIVE-ın yazısını dayandır
+Record this LIVE from now	Bu LIVE-ı indidən yaz
+Recording this LIVE from now	Bu LIVE indidən yazılır
+Saving the recording	Yazı saxlanılır
+Couldn't find this LIVE's stream to record. Leave the room and open it again.	Bu LIVE-ın yayımını tapmaq mümkün olmadı. Otaqdan çıxıb yenidən açın.
+Allow storage for TikTok in Android settings to record LIVEs	LIVE-ları yazmaq üçün Android ayarlarında TikTok üçün yaddaşa icazə ver
+LIVE recording saved to %1$s	LIVE yazısı %1$s qovluğuna saxlanıldı
+The LIVE ended or the connection dropped. What was recorded is saved to %1$s	LIVE bitdi və ya bağlantı kəsildi. Yazılan hissə %1$s qovluğuna saxlanıldı
+The phone is running out of room. What was recorded is saved to %1$s	Telefonda yer azalır. Yazılan hissə %1$s qovluğuna saxlanıldı
+The recording reached its size limit and was saved to %1$s	Yazı ölçü həddinə çatdı və %1$s qovluğuna saxlanıldı
+TikTok closed. What was recorded is saved to %1$s	TikTok bağlandı. Yazılan hissə %1$s qovluğuna saxlanıldı
+Recording stopped early. What was recorded is saved to %1$s	Yazı vaxtından əvvəl dayandı. Yazılan hissə %1$s qovluğuna saxlanıldı
+This LIVE's stream can't be saved	Bu LIVE-ın yayımını saxlamaq mümkün deyil
+There isn't enough room on the phone to record	Yazmaq üçün telefonda kifayət qədər yer yoxdur
+Nothing was recorded	Heç nə yazılmadı
+The recording couldn't be saved. Try again.	Yazı saxlanıla bilmədi. Yenidən cəhd et.
+Those photos can't be tried again now. Save the post again to get the rest.	Bu fotoları indi yenidən sınamaq olmur. Qalanını almaq üçün paylaşımı yenidən yadda saxla.
+Show the time zone	Saat qurşağını göstərin
+Puts your time zone after the time to the second, like EDT.	Saniyəsinə qədər göstərilən vaxtın ardından saat qurşağınızı yazır, məsələn EDT.
+Short date	Qısa tarix
+Writes the date before the time to the second the short way your language does, like 10/7/25.	Saniyəsinə qədər göstərilən vaxtdan əvvəlki tarixi dilinizin qısa yazılışı ilə yazır, məsələn 07.10.25.

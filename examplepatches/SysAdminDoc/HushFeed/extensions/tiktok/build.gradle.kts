@@ -64,16 +64,10 @@ val trackedScreenshots = mapOf(
     "settings/search.png" to "pages/dark/search.png",
     "settings/settings-error.png" to "settings-initialization-error.png",
     "settings/session-reminder.png" to "session-reminder.png",
-    "settings/hub-feed_layout.png" to "pages/dark/hub-feed_layout.png",
-    "settings/hub-feed_layout-light.png" to "pages/light/hub-feed_layout.png",
-    "settings/hub-comments_inbox.png" to "pages/dark/hub-comments_inbox.png",
-    "settings/hub-comments_inbox-light.png" to "pages/light/hub-comments_inbox.png",
-    "settings/hub-downloads_sharing.png" to "pages/dark/hub-downloads_sharing.png",
-    "settings/hub-downloads_sharing-light.png" to "pages/light/hub-downloads_sharing.png",
-    "settings/hub-app_advanced.png" to "pages/dark/hub-app_advanced.png",
-    "settings/hub-app_advanced-light.png" to "pages/light/hub-app_advanced.png",
     "settings/hub-about.png" to "pages/dark/hub-about.png",
     "settings/hub-about-light.png" to "pages/light/hub-about.png",
+    "settings/settings-end.png" to "pages/dark/settings-end.png",
+    "settings/settings-end-light.png" to "pages/light/settings-end.png",
     "settings/settings-light.png" to "pages/light/settings-quiet-index.png",
     "settings/settings.png" to "pages/dark/settings.png",
     "settings/share.png" to "pages/dark/share.png",
@@ -99,10 +93,10 @@ val refreshingScreenshots = gradle.startParameter.taskNames.any {
 // is worth failing on, is the request underneath it. When Robolectric moves to a version nobody
 // has looked at, this build stops instead of quietly rewriting it away.
 val safeBouncyCastleVersion = libs.versions.bouncycastle.get()
-// 1.85 was checked on 2026-09-15 against the six advisories the catalog names: CVE-2025-8916
+// 1.85 was checked on 2026-09-15 against six of the advisories the catalog names: CVE-2025-8916
 // ends at 1.78, CVE-2026-5588 at 1.83, CVE-2025-14813 and CVE-2026-0636 at 1.84, and
-// CVE-2026-8763 and CVE-2026-13506 at 1.85. It is rewritten
-// all the same, because one reviewed release in the graph is easier to hold than two.
+// CVE-2026-8763 and CVE-2026-13506 at 1.85. CVE-2026-97873 covers everything before 1.86, 1.85
+// included, so the request is allowed only because it is rewritten to the reviewed release.
 val reviewedBouncyCastleRequests = setOf("1.85", safeBouncyCastleVersion)
 // Modules Robolectric declares with no version of its own, because the BOM it imports carries
 // the version for them. Reviewing that BOM is what covers these, so they are named here rather
@@ -264,6 +258,10 @@ android {
                 .withPathSensitivity(PathSensitivity.RELATIVE)
             it.inputs.file(rootProject.layout.projectDirectory.file("CHANGELOG.md"))
                 .withPropertyName("releaseNotes")
+                .withPathSensitivity(PathSensitivity.RELATIVE)
+            // ReleaseNotesTest captures What's new for the version this file names.
+            it.inputs.file(rootProject.layout.projectDirectory.file("gradle.properties"))
+                .withPropertyName("sourceVersion")
                 .withPathSensitivity(PathSensitivity.RELATIVE)
             // refreshScreenshots asks for the capture itself, so it does not need the property
             // and cannot be pointed at assets/ by accident. Forcing the rerun matters because a

@@ -49,6 +49,16 @@ public final class HostScreens {
         } catch (RuntimeException error) {
             Log.e("HushMessenger", "Can't watch for chats opening", error);
         }
+        try {
+            if (app != null) SettingsReopen.watch(app);
+        } catch (RuntimeException error) {
+            Log.e("HushMessenger", "Can't watch for the first screen after a restart", error);
+        }
+    }
+
+    /** Restart, remembering [page] so settings come back on it once Messenger is up again. */
+    static void restartInto(Context context, String page) {
+        context.startActivity(intentFor(context, RESTART).putExtra(SettingsReopen.EXTRA, SettingsReopen.page(page)));
     }
 
     /** The patched factory asks this first; a result replaces the stock activity it was about to create. */
@@ -70,6 +80,15 @@ public final class HostScreens {
 
     /** Controls the patch recorded in the app itself. The patch rewrites this; the extension alone has none. */
     static String bundledControls() {
+        return "";
+    }
+
+    /**
+     * The Messenger build the patch started from, "583.0.0.29.95|346611369|base": version name, version code and the
+     * mapping its hooks came from. The patch rewrites this, so it holds on Root Mount installs and under Spoof package
+     * version, where Android's version code says something else. The extension alone has none.
+     */
+    static String originalBuild() {
         return "";
     }
 

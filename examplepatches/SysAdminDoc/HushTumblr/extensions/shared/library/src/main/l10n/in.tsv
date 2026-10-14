@@ -2,8 +2,8 @@
 # After editing, run python scripts/gen-l10n.py from the repository root.
 %1$d item in that file isn't a setting this version of HushTumblr knows, so it'll be left out.	%1$d item dalam file itu bukan pengaturan yang dikenali versi HushTumblr ini, jadi tidak akan disertakan.
 %1$d items in that file aren't settings this version of HushTumblr knows, so they'll be left out.	%1$d item dalam file itu bukan pengaturan yang dikenali versi HushTumblr ini, jadi tidak akan disertakan.
-%1$d switch will change.	%1$d sakelar akan berubah.
-%1$d switches will change.	%1$d sakelar akan berubah.
+%1$d setting will change.	%1$d pengaturan akan berubah.
+%1$d settings will change.	%1$d pengaturan akan berubah.
 %1$s. It was set when you patched, so Pause can't turn it off. To rule it out, patch again and leave out that patch.	%1$s. Ini diatur saat Anda menambal, jadi Jeda tidak dapat mematikannya. Untuk memastikan bukan ini penyebabnya, tambal ulang tanpa tambalan yang tertera dalam kurung setelahnya.
 %1$s. They were set when you patched, so Pause can't turn them off. To rule one out, patch again and leave out the patch in brackets after it.	%1$s. Ini diatur saat Anda menambal, jadi Jeda tidak dapat mematikannya. Untuk memastikan bukan ini penyebabnya, tambal ulang tanpa tambalan yang tertera dalam kurung setelahnya.
 A diagnostic report is already being saved.	Sudah ada laporan diagnostik yang sedang disimpan.
@@ -14,7 +14,7 @@ Back	Kembali
 Cancel	Batal
 Clear diagnostic data	Hapus data diagnostik
 Copy quick report	Salin laporan singkat
-Couldn't import the settings, and couldn't put back the ones you had. Check the switches on this screen.	Pengaturan tidak dapat diimpor, dan pengaturan sebelumnya tidak dapat dikembalikan. Periksa sakelar di layar ini.
+Couldn't import the settings, and couldn't put back the ones you had. Check the settings on this screen.	Pengaturan tidak dapat diimpor, dan pengaturan sebelumnya tidak dapat dikembalikan. Periksa pengaturan di layar ini.
 Couldn't import the settings. Nothing was changed.	Pengaturan tidak dapat diimpor. Tidak ada yang diubah.
 Couldn't open that file. Nothing was changed.	File itu tidak dapat dibuka. Tidak ada yang diubah.
 Couldn't open the file picker. Try again.	Pemilih file tidak dapat dibuka. Coba lagi.
@@ -32,8 +32,7 @@ Every switch but Debug logging acts as if it were off, and what was set when you
 Export diagnostic report	Ekspor laporan diagnostik
 Export settings	Ekspor pengaturan
 Turns off every HushTumblr switch except Debug logging the next time Tumblr starts. What you chose when you patched stays, and your choices are saved.	Mematikan semua sakelar HushTumblr kecuali Pencatatan debug saat Tumblr dibuka berikutnya. Yang Anda pilih saat menambal tetap berlaku, dan pilihan Anda tersimpan.
-Links, updates, backup and more	Tautan, pembaruan, cadangan, dan lainnya
-Save your switches to a file. They cover all the accounts in this Tumblr app. Pause and Debug logging aren't included, and neither is the release check.	Simpan sakelar Anda ke sebuah file. Sakelar ini mencakup semua akun di aplikasi Tumblr ini. Jeda dan Pencatatan debug tidak disertakan, begitu pula pemeriksaan rilis.
+Save your settings to a file, including word lists and tab order. These choices apply to all accounts in this Tumblr app. Pause, Debug logging and release checks aren't included.	Simpan pengaturan Anda ke file, termasuk daftar kata dan urutan tab. Pilihan ini berlaku untuk semua akun di aplikasi Tumblr ini. Jeda, Pencatatan debug, dan pemeriksaan rilis tidak disertakan.
 Settings exported. The app holding the file wouldn't let HushTumblr read it back, so it wasn't checked.	Pengaturan diekspor. Aplikasi yang menyimpan file itu tidak mengizinkan HushTumblr membacanya kembali, jadi file itu tidak diperiksa.
 The app holding that file is taking too long, so HushTumblr stopped waiting. Nothing was changed.	Aplikasi yang menyimpan file itu terlalu lama, jadi HushTumblr berhenti menunggu. Tidak ada yang diubah.
 The app holding the last settings file still hasn't answered. Try again later.	Aplikasi yang menyimpan file pengaturan terakhir masih belum merespons. Coba lagi nanti.
@@ -67,6 +66,7 @@ HushTumblr %1$s is out. Update it in Morphe Manager.	HushTumblr %1$s sudah diril
 You have the newest HushTumblr release.	Anda sudah memakai rilis HushTumblr terbaru.
 The newest HushTumblr release is %1$s.	Rilis HushTumblr terbaru adalah %1$s.
 Couldn't reach GitHub. Try again later.	GitHub tidak dapat dihubungi. Coba lagi nanti.
+Couldn't save the release check. Try again.	Pemeriksaan rilis tidak dapat disimpan. Coba lagi.
 GitHub is turning away checks from this network for now. Try again later.	GitHub sedang menolak pemeriksaan dari jaringan ini. Coba lagi nanti.
 GitHub sent back something HushTumblr couldn't read. Try again later.	GitHub mengirim sesuatu yang tidak bisa dibaca HushTumblr. Coba lagi nanti.
 Saving the settings file	Menyimpan file pengaturan
@@ -74,8 +74,8 @@ Set when you patched	Diatur saat Anda menambal
 Settings couldn't open	Pengaturan tidak dapat dibuka
 Settings couldn't refresh completely. Reopen settings and try again.	Pengaturan tidak dapat dimuat ulang sepenuhnya. Buka kembali pengaturan lalu coba lagi.
 Settings exported.	Pengaturan diekspor.
-Settings imported. %1$d switch changed.	Pengaturan diimpor. %1$d sakelar berubah.
-Settings imported. %1$d switches changed.	Pengaturan diimpor. %1$d sakelar berubah.
+Settings imported. %1$d setting changed.	Pengaturan diimpor. %1$d pengaturan berubah.
+Settings imported. %1$d settings changed.	Pengaturan diimpor. %1$d pengaturan berubah.
 Source code and issues	Kode sumber dan laporan masalah
 Stays in while paused	Tetap aktif saat dijeda
 Tap to turn it back on.	Ketuk untuk mengaktifkan HushTumblr lagi.
@@ -96,7 +96,7 @@ This phone has no file picker, so there's no way to choose a file here.	Ponsel i
 Version	Versi
 Record patch activity and show errors for a bug report. Leave off during normal use.	Catat aktivitas patch dan tampilkan kesalahan untuk laporan bug. Matikan saat penggunaan biasa.
 You paused HushTumblr.	Anda menjeda HushTumblr.
-Your switches already match that file, so nothing will change.	Sakelar Anda sudah sesuai dengan file itu, jadi tidak ada yang akan berubah.
+Your settings already match that file, so nothing will change.	Pengaturan Anda sudah sesuai dengan file itu, jadi tidak ada yang akan berubah.
 Copy a short report to the clipboard.	Salin laporan singkat ke papan klip.
 Settings imported.	Pengaturan diimpor.
 No app on this phone can open the link. The address is %1$s.	Tidak ada aplikasi di ponsel ini yang dapat membuka tautan ini. Alamatnya %1$s.
@@ -108,8 +108,6 @@ Browse settings	Jelajahi pengaturan
 More settings	Pengaturan lainnya
 # context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
 Support HushTumblr	Dukung HushTumblr
-# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
-Buy me a coffee on Ko-fi	Traktir aku secangkir kopi di Ko-fi
 No matching settings	Tidak ada pengaturan yang cocok
 %1$d setting found	%1$d pengaturan ditemukan
 %1$d settings found	%1$d pengaturan ditemukan
@@ -127,7 +125,9 @@ Opening supported links is off for this app in Android's settings. Tap to turn i
 Android didn't say which links open here. Tap to check in Android's settings.	Android tidak memberi tahu tautan mana yang terbuka di sini. Ketuk untuk memeriksanya di pengaturan Android.
 Selecting links by hand	Memilih tautan secara manual
 
-A change here applies after Tumblr restarts.	Perubahan di sini berlaku setelah Tumblr dimulai ulang.
+Restart Tumblr to apply this change	Mulai ulang Tumblr untuk menerapkan perubahan ini
+Restart Tumblr to apply %1$d changes	Mulai ulang Tumblr untuk menerapkan %1$d perubahan
+Tumblr closes and reopens on this page.	Tumblr ditutup lalu dibuka lagi di halaman ini.
 Android verified this app for Tumblr's web addresses, so their links open here.	Android telah memverifikasi aplikasi ini untuk alamat web Tumblr, jadi tautannya terbuka di sini.
 Android's settings for this app didn't open. Open App info from Tumblr's icon, then Open by default.	Pengaturan Android untuk aplikasi ini tidak terbuka. Buka Info aplikasi dari ikon Tumblr, lalu Buka secara default.
 HushTumblr %1$s on Tumblr %2$s	HushTumblr %1$s di Tumblr %2$s
@@ -165,14 +165,14 @@ Tumblr's original signature is added to the app	Tanda tangan asli Tumblr ditamba
 %1$s (%2$s to %3$s)	%1$s (%2$s menjadi %3$s)
 Your choice is saved, but this build doesn't include the patch for it.	Pilihan Anda tersimpan, tetapi build ini tidak menyertakan patch-nya.
 Undoing import	Mengurungkan impor
-Import undone. Your earlier switches are back.	Impor diurungkan. Setelan sakelar sebelumnya dipulihkan.
-Undo ended because a saved switch changed.	Urungkan tidak lagi tersedia karena sakelar tersimpan berubah.
+Import undone. Your earlier settings are back.	Impor diurungkan. Pengaturan sebelumnya dipulihkan.
+Undo ended because a saved setting changed.	Urungkan tidak lagi tersedia karena pengaturan tersimpan berubah.
 There's no import to undo.	Tidak ada impor untuk diurungkan.
-Couldn't undo the import. Your imported switches are unchanged.	Tidak dapat mengurungkan impor. Sakelar yang diimpor tidak berubah.
-Couldn't undo the import or restore the imported switches. Check the switches on this screen.	Tidak dapat mengurungkan impor atau memulihkan sakelar yang diimpor. Periksa sakelar di layar ini.
-Restore the switches from before the last import. Editing a switch or restarting Tumblr ends Undo.	Pulihkan sakelar sebelum impor terakhir. Mengubah sakelar atau memulai ulang Tumblr mengakhiri Urungkan.
+Couldn't undo the import. Your imported settings are unchanged.	Tidak dapat mengurungkan impor. Pengaturan yang diimpor tidak berubah.
+Couldn't undo the import or restore the imported settings. Check the settings on this screen.	Tidak dapat mengurungkan impor atau memulihkan pengaturan yang diimpor. Periksa pengaturan di layar ini.
+Restore the settings from before the last import. Editing a setting or restarting Tumblr ends Undo.	Pulihkan pengaturan sebelum impor terakhir. Mengubah pengaturan atau memulai ulang Tumblr mengakhiri Urungkan.
 Undo import	Urungkan impor
-Choose a settings file. Review each switch's name and old and new values before importing. Your choices apply to all accounts in this Tumblr app.	Pilih file setelan. Tinjau nama serta nilai lama dan baru setiap sakelar sebelum mengimpor. Pilihan berlaku untuk semua akun di aplikasi Tumblr ini.
+Choose a settings file. Review each setting's name and old and new values before importing. Your choices apply to all accounts in this Tumblr app.	Pilih file pengaturan. Tinjau nama serta nilai lama dan baru setiap pengaturan sebelum mengimpor. Pilihan berlaku untuk semua akun di aplikasi Tumblr ini.
 On	Aktif
 Off	Nonaktif
 Copy a quick report or save the full one to %1$s. Links, IDs, cookies and sign-in tokens are left out. Check it for other private text before you share it.	Salin laporan singkat atau simpan laporan lengkap ke %1$s. Tautan, ID, cookie, dan token masuk tidak disertakan. Periksa teks pribadi lain sebelum membagikannya.
@@ -188,7 +188,7 @@ Android may not trust a patched app's links on its own. You can choose the web a
 Open link settings	Buka pengaturan tautan
 Back up before changing builds	Cadangkan sebelum mengganti build
 An update signed with the same key keeps the app's data. A build signed with a different key can't update this one, and Android may refuse to install an older version. If an update is refused, keep the installed app and its data.	Pembaruan yang ditandatangani dengan kunci yang sama mempertahankan data aplikasi. Build yang ditandatangani dengan kunci berbeda tidak bisa memperbarui yang ini, dan Android mungkin menolak memasang versi yang lebih lama. Jika pembaruan ditolak, pertahankan aplikasi yang terpasang beserta datanya.
-Tumblr's data export is separate from Export settings. Tumblr's help page explains how to request your personal data from the account you're already using.	Ekspor data Tumblr terpisah dari Ekspor pengaturan. Halaman bantuan Tumblr menjelaskan cara meminta data pribadi dari akun yang sudah Anda gunakan.
+Tumblr's data export is separate from Export settings. To get a copy of your personal data, sign in on Tumblr's website with the account you're already using and ask for it in Settings, under Privacy. Tumblr's apps can't make that request. Exporting a blog's posts is a different Tumblr feature with its own help article.	Ekspor data Tumblr terpisah dari Ekspor pengaturan. Untuk mendapatkan salinan data pribadi Anda, masuk di situs web Tumblr dengan akun yang sudah Anda gunakan, lalu minta di Pengaturan, pada bagian Privasi. Aplikasi Tumblr tidak dapat membuat permintaan itu. Mengekspor postingan blog adalah fitur Tumblr yang berbeda dengan artikel bantuannya sendiri.
 Tumblr data export help	Bantuan ekspor data Tumblr
 Couldn't open the setup guide. Try again.	Panduan penyiapan tidak dapat dibuka. Coba lagi.
 # context: Tumblr's own settings, named on the HushTumblr page so the reader can find them.
@@ -196,10 +196,23 @@ Tumblr's own settings	Pengaturan Tumblr sendiri
 Finding them	Cara menemukannya
 Notifications	Notifikasi
 In Tumblr: %1$s	Di Tumblr: %1$s
+# context: a row on the Tumblr's own settings page: a short name for one of Tumblr's controls, then what it covers.
+Dashboard order and suggestions	Urutan dasbor dan saran
+Whether Following puts the best posts first, and which suggested posts Tumblr adds to your dashboard.	Apakah Mengikuti menampilkan postingan terbaik lebih dulu, dan postingan saran mana yang ditambahkan Tumblr ke dasbormu.
+Autoplay	Putar otomatis
+Whether GIFs and videos play by themselves: always, only on Wi-Fi or never.	Apakah GIF dan video diputar sendiri: selalu, hanya dengan Wi-Fi, atau tidak pernah.
+Post dates	Tanggal postingan
+Tumblr's own switch for hiding the date on every post.	Tombol milik Tumblr sendiri untuk menyembunyikan tanggal di setiap postingan.
+Filtered tags and words	Tag dan kata yang difilter
+Tags and post content Tumblr hides for your account on every device, and its mature content choices.	Tag dan isi postingan yang disembunyikan Tumblr untuk akunmu di semua perangkat, serta pilihan konten dewasanya.
+Color palette	Palet warna
+Tumblr's color themes. Dark background color only changes the dark ones.	Tema warna Tumblr. Warna latar gelap hanya mengubah tema yang gelap.
+Push notifications	Notifikasi push
+Which activity sends you a notification, for every blog or for one.	Aktivitas mana yang mengirimimu notifikasi, untuk semua blog atau satu blog.
 # Rows added for HushTumblr.
 Ad tracking	Pelacakan iklan
 Android sends tumblr.com links to a patched Tumblr only after you select those addresses for it. Selecting them sends their links here. Your other link settings stay as they are.	Android mengirim tautan tumblr.com ke Tumblr yang ditambal hanya setelah Anda memilih alamat itu untuknya. Memilihnya mengarahkan tautannya ke sini. Pengaturan tautan Anda yang lain tidak berubah.
-Export settings saves HushTumblr's switches. It doesn't include your Tumblr account, posts, downloaded files or Morphe Manager's signing key. Keep the settings file and a backup of Manager's signing key somewhere you can find them.	Ekspor pengaturan menyimpan sakelar HushTumblr. Akun Tumblr, postingan, file unduhan, dan kunci penandatanganan Morphe Manager tidak ikut. Simpan file pengaturan dan cadangan kunci penandatanganan Manager di tempat yang mudah Anda temukan.
+Export settings saves HushTumblr's settings, including word lists and tab order. It doesn't include your Tumblr account, posts, downloaded files, local mute list or Morphe Manager's signing key. Keep the settings file and a backup of Manager's signing key somewhere you can find them.	Ekspor pengaturan menyimpan pengaturan HushTumblr, termasuk daftar kata dan urutan tab. Akun Tumblr, postingan, file unduhan, daftar pembisuan lokal, dan kunci penandatanganan Morphe Manager tidak disertakan. Simpan file pengaturan dan cadangan kunci penandatanganan Manager di tempat yang mudah Anda temukan.
 If you joined through Google or don't know your Tumblr password, ask for a password reset on Tumblr's login screen. Enter the email already linked to that account, then use the reset link sent to your email to set a Tumblr password. It's separate from your Google password.	Jika Anda mendaftar melalui Google atau tidak tahu kata sandi Tumblr Anda, minta reset kata sandi di layar login Tumblr. Masukkan email yang sudah terhubung ke akun tersebut, lalu gunakan tautan yang dikirim ke email Anda untuk menetapkan kata sandi Tumblr. Kata sandi ini berbeda dari kata sandi Google Anda.
 Lets a patched Tumblr sign up for push notifications when Google would turn it away.	Memungkinkan Tumblr yang ditambal mendaftar untuk notifikasi push saat Google akan menolaknya.
 Open Tumblr's settings from the gear on your account tab. HushTumblr doesn't change any of these.	Buka pengaturan Tumblr dari ikon roda gigi di tab akun. HushTumblr tidak mengubah satu pun pengaturan ini.
@@ -224,7 +237,7 @@ Hide the Communities tab	Sembunyikan tab Komunitas
 Takes the Communities tab out of the bottom bar and stops Communities tips in the post editor.	Menghapus tab Komunitas dari bilah bawah dan menghentikan tips Komunitas di editor postingan.
 # context: the Hide Blaze prompts switch on the Interface page. Blaze is Tumblr's paid post promotion.
 Hide Blaze prompts	Sembunyikan ajakan Blaze
-Hides the Blaze buttons, banners and the nudge to promote a post after you share it.	Menyembunyikan tombol dan banner Blaze serta ajakan untuk mempromosikan postingan setelah kamu membagikannya.
+Hides the Blaze buttons, banners and the nudge to promote a post after you share it. The Blaze item in a post's menu stays.	Menyembunyikan tombol dan banner Blaze serta ajakan untuk mempromosikan postingan setelah kamu membagikannya. Pilihan Blaze di menu postingan tetap ada.
 # context: the Skip review prompts switch on the Interface page. It stops Tumblr's rate-this-app pop-up.
 # context: the Skip review prompts switch on the Interface page. It stops Tumblr's "What do you think of the Tumblr app?" pop-up.
 Skip review prompts	Lewati permintaan ulasan
@@ -287,6 +300,8 @@ Hide posts with these words	Sembunyikan postingan dengan kata ini
 Takes posts out of your feeds when a hidden word matches one of the selected fields below.	Menghapus postingan dari feed jika kata tersembunyi cocok dengan salah satu bidang yang dipilih di bawah.
 Words to hide	Kata yang disembunyikan
 One word or phrase a line	Satu kata atau frasa per baris
+Changes are saved only when you tap Save.	Perubahan hanya disimpan setelah Anda mengetuk Simpan.
+Words saved	Kata disimpan
 Save	Simpan
 The list is empty. Tap to add words or phrases.	Daftarnya kosong. Ketuk untuk menambahkan kata atau frasa.
 Looks for: %1$s	Mencari: %1$s
@@ -321,6 +336,7 @@ This list is too large for a settings backup. Shorten it before saving. Your dra
 Couldn't save the words. Your earlier list is unchanged. Try again.	Kata-kata tidak dapat disimpan. Daftar sebelumnya tidak berubah. Coba lagi.
 Couldn't save the tab order. Your earlier order is unchanged. Try again.	Urutan tab tidak dapat disimpan. Urutan sebelumnya tidak berubah. Coba lagi.
 %1$s moved to position %2$d of %3$d.	%1$s dipindahkan ke posisi %2$d dari %3$d.
+%1$s is already first.	%1$s sudah berada di urutan pertama.
 Filter activity notifications	Filter notifikasi aktivitas
 Hide ask notifications	Sembunyikan notifikasi pertanyaan
 Hide boop notifications	Sembunyikan notifikasi boop
@@ -332,6 +348,8 @@ Hide reply notifications	Sembunyikan notifikasi balasan
 Hides these from newly loaded activity pages. Push notifications keep Tumblr's settings.	Menyembunyikannya dari halaman aktivitas yang baru dimuat. Notifikasi push tetap memakai pengaturan Tumblr.
 Keep tagged reblogs	Pertahankan reblog bertag
 When reblogs are hidden, keep ones with tags. Other post filters still apply.	Saat reblog disembunyikan, pertahankan yang memiliki tag. Filter postingan lainnya tetap berlaku.
+Keep reblogs with added content	Pertahankan reblog dengan konten tambahan
+When reblogs are hidden, keep ones where the reblogger added something of their own. Other post filters still apply.	Saat reblog disembunyikan, pertahankan yang diberi tambahan sendiri oleh pembuat reblog. Filter postingan lainnya tetap berlaku.
 Match current post text	Cocokkan teks postingan saat ini
 Match reblog trail text	Cocokkan teks rantai reblog
 Match current post tags	Cocokkan tag postingan saat ini
@@ -339,7 +357,7 @@ Match post summaries	Cocokkan ringkasan postingan
 Hidden and allowed words use the same selected fields. Other post filters still apply.	Kata tersembunyi dan yang diizinkan memakai bidang pilihan yang sama. Filter postingan lainnya tetap berlaku.
 Allowed words	Kata yang diizinkan
 Allowed words keep a post when the word filter would hide it. Other filters still apply.	Kata yang diizinkan mempertahankan postingan yang akan disembunyikan filter kata. Filter lainnya tetap berlaku.
-Posts matching a hidden word in the selected fields are hidden. Case doesn't matter, and only whole words count.	Postingan yang cocok dengan kata tersembunyi pada bidang pilihan akan disembunyikan. Huruf besar atau kecil tidak dibedakan, dan hanya kata utuh yang dihitung.
+Match whole words or phrases in the fields you chose. Case doesn't matter.	Cocokkan kata atau frasa utuh pada bidang yang Anda pilih. Huruf besar dan kecil tidak dibedakan.
 Show post timestamps	Tampilkan waktu postingan
 Shows Tumblr's own timestamps on newly drawn post cards.	Menampilkan waktu bawaan Tumblr pada kartu postingan yang baru ditampilkan.
 Restart Tumblr to apply these settings.	Mulai ulang Tumblr untuk menerapkan pengaturan ini.
@@ -355,11 +373,10 @@ Unmute posts or clear this account's private list	Tampilkan kembali postingan at
 Couldn't update muted posts	Tidak dapat memperbarui postingan yang dibisukan
 Post muted locally	Postingan dibisukan secara lokal
 Muted posts restored	Postingan yang dibisukan dipulihkan
-Couldn't restore muted posts	Tidak dapat memulihkan postingan yang dibisukan
 Muted posts aren't available for this account yet	Postingan yang dibisukan belum tersedia untuk akun ini
 Stored only on this device for this Tumblr account. Tap a post to unmute it. Up to 500 posts are kept per account.	Disimpan hanya di perangkat ini untuk akun Tumblr ini. Ketuk postingan untuk menampilkannya kembali. Maksimal 500 postingan disimpan per akun.
+This device keeps muted post lists for eight accounts. When a ninth account mutes a post, the list that's gone longest without a change is deleted.	Perangkat ini menyimpan daftar postingan yang dibisukan untuk delapan akun. Saat akun kesembilan membisukan postingan, daftar yang paling lama tidak berubah akan dihapus.
 Post	Postingan
-No muted posts	Tidak ada postingan yang dibisukan
 Clear muted posts	Hapus postingan yang dibisukan
 Post unmuted	Postingan ditampilkan kembali
 Muted posts cleared	Postingan yang dibisukan dihapus
@@ -369,3 +386,43 @@ Show mutual markers	Tampilkan penanda saling mengikuti
 Marks blogs that follow your primary blog when you follow them.	Menandai blog yang mengikuti blog utama Anda dan Anda ikuti.
 Mutual	Saling mengikuti
 Done	Selesai
+No muted posts. Use a post's menu to mute it on this device.	Tidak ada postingan yang dibisukan. Gunakan menu postingan untuk membisukannya di perangkat ini.
+Updating muted posts	Memperbarui postingan yang dibisukan
+Couldn't update muted posts. Your list is unchanged. Try again.	Tidak dapat memperbarui postingan yang dibisukan. Daftar Anda tidak berubah. Coba lagi.
+Couldn't restore muted posts. Try again.	Tidak dapat memulihkan postingan yang dibisukan. Coba lagi.
+Couldn't read this account's muted posts. Nothing was changed or deleted.	Tidak dapat membaca postingan yang dibisukan untuk akun ini. Tidak ada yang diubah atau dihapus.
+Reading muted posts	Membaca postingan yang dibisukan
+The active account changed. Reopen Manage muted posts to see its list.	Akun aktif telah berubah. Buka kembali Kelola postingan yang dibisukan untuk melihat daftarnya.
+Unmute post %1$s	Tampilkan kembali postingan %1$s
+Saving changes	Menyimpan perubahan
+Saving the setting	Menyimpan pengaturan
+Clearing diagnostic data	Menghapus data diagnostik
+Putting diagnostic data back	Memulihkan data diagnostik
+Couldn't clear the diagnostic data. Try again.	Tidak dapat menghapus data diagnostik. Coba lagi.
+Couldn't update this feed. The post is still muted locally.	Tidak dapat memperbarui feed ini. Postingan masih dibisukan secara lokal.
+Unmute post	Tampilkan kembali postingan
+HushTumblr	HushTumblr
+Your settings	Pengaturanmu
+Make Tumblr feel like yours.	Buat Tumblr sesuai keinginanmu.
+Status	Status
+Ads, reblogs and word filters	Iklan, reblog, dan filter kata
+Details and post actions	Detail dan tindakan postingan
+Tabs, counts and appearance	Tab, jumlah, dan tampilan
+Tracking and app permissions	Pelacakan dan izin aplikasi
+Choose where Tumblr links open	Pilih tempat tautan Tumblr dibuka
+Activity filters and push alerts	Filter aktivitas dan notifikasi push
+Controls managed by Tumblr	Pengaturan yang dikelola Tumblr
+Release checks and update help	Pemeriksaan versi dan bantuan pembaruan
+Pause, save and troubleshoot	Jeda, simpan, dan atasi masalah
+Version, help and project details	Versi, bantuan, dan detail proyek
+Report a problem	Laporkan masalah
+Opens a GitHub report with your versions and settings filled in. Add what happened.	Membuka laporan GitHub dengan versi dan pengaturan Anda yang sudah terisi. Tambahkan apa yang terjadi.
+Quick setups	Penyiapan cepat
+Turn on a set of switches in one tap, or put every switch back the way it started.	Nyalakan sekumpulan sakelar dengan sekali ketuk, atau kembalikan semua sakelar seperti semula.
+Quiet	Tenang
+Hides ads, suggestions, prompts and unread counts.	Menyembunyikan iklan, saran, ajakan, dan penghitung belum dibaca.
+Stops Tumblr's tracking and screenshot watching, and hides your advertising ID.	Menghentikan pelacakan Tumblr dan pemantauan tangkapan layar, serta menyembunyikan ID iklan Anda.
+Back to defaults	Kembali ke bawaan
+Puts every feature switch back the way it started.	Mengembalikan setiap sakelar fitur seperti semula.
+Changed %1$d setting	%1$d pengaturan diubah
+Changed %1$d settings	%1$d pengaturan diubah

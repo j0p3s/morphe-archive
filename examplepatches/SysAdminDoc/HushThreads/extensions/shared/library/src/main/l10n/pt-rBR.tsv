@@ -7,7 +7,6 @@ Build %1$s	Compilação %1$s
 %1$d switches will change.	%1$d opções serão alteradas.
 %1$s. It was set when you patched, so Pause can't turn it off. To rule it out, patch again and leave out that patch.	%1$s. Isso foi definido quando você aplicou os patches, então a pausa não pode desativá-lo. Para descartar essa possibilidade, aplique os patches novamente sem esse patch.
 %1$s. They were set when you patched, so Pause can't turn them off. To rule one out, patch again and leave out the patch in brackets after it.	%1$s. Esses itens foram definidos quando você aplicou os patches, então a pausa não pode desativá-los. Para descartar um deles, aplique os patches novamente sem o patch entre parênteses depois dele.
-A change here applies after Threads restarts.	Uma alteração daqui vale depois que o Threads reiniciar.
 A diagnostic report is already being saved.	Um relatório de diagnóstico já está sendo salvo.
 A file named %1$s in %2$s paused HushThreads.	Um arquivo chamado %1$s em %2$s pausou o HushThreads.
 About	Sobre
@@ -279,8 +278,6 @@ Full size photos	Fotos em tamanho original
 Photos load at the largest size Threads has, not one picked for your screen. They look sharper and use more data.	As fotos carregam no maior tamanho que o Threads tem, não em um escolhido para a sua tela. Ficam mais nítidas e usam mais dados.
 # context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
 Support HushThreads	Apoie o HushThreads
-# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
-Buy me a coffee on Ko-fi	Me pague um café no Ko-fi
 # context: reports use the app's own Downloads folder on Android 9, where the shared Downloads collection isn't available
 Copy a quick report or save the full one in Threads' own Downloads folder. Links, IDs, cookies and sign-in tokens are left out. Check it for other private text before you share it.	Copie um relatório rápido ou salve o relatório completo na pasta de downloads do próprio Threads. Links, IDs, cookies e tokens de login são omitidos. Verifique se há outros textos privados antes de compartilhar.
 Save the full report in Threads' own Downloads folder.	Salve o relatório completo na pasta de downloads do próprio Threads.
@@ -291,3 +288,15 @@ Restore diagnostic data	Restaurar dados de diagnóstico
 
 # context: TalkBack action for a long press on the Threads logo in the feed header
 Open HushThreads settings	Abrir as configurações do HushThreads
+
+# context: the restart row's title while one change waits for a restart; a tap restarts Threads
+Restart Threads to apply this change	Reinicie o Threads para aplicar esta alteração
+# context: the same row with several changes waiting; %1$d is how many
+Restart Threads to apply %1$d changes	Reinicie o Threads para aplicar %1$d alterações
+# context: the restart row's summary; the settings screen comes back on the page it was on
+Threads closes and reopens on this page.	O Threads fecha e abre de novo nesta página.
+# Copy text on long press (#9): its heading, the heading's line on the main page, the switch and its summary. Copy text is the name of Threads' own menu item for copying a post, so use the name Threads shows in this language.
+Posts	Publicações
+Copy text when you hold a post	Copiar texto ao tocar e segurar uma publicação
+Copy text on long press	Copiar texto ao tocar e segurar
+Holding a post's text opens Copy text, on an opened post too, so you get the whole post with its links instead of picking out words.	Tocar e segurar o texto de uma publicação abre Copiar texto, até numa publicação aberta, para você copiar a publicação inteira com os links em vez de escolher palavras.

@@ -9,6 +9,7 @@ import android.content.ContextWrapper;
 import android.os.Looper;
 
 import app.hushtumblr.extension.shared.Utils;
+import app.hushtumblr.extension.shared.WorkerPoolForTests;
 import app.hushtumblr.extension.shared.diagnostics.DiagnosticCategory;
 import app.hushtumblr.extension.shared.diagnostics.HookStatus;
 import app.hushtumblr.extension.shared.settings.BaseSettings;
@@ -27,6 +28,7 @@ import java.io.File;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /** The diagnostic clear row keeps a complete, one-tap way back. */
@@ -35,7 +37,8 @@ import java.util.concurrent.atomic.AtomicReference;
 public class ClearLogBufferPreferenceTest {
     private Context context;
 
-    @Before public void setUp() {
+    @Before public void setUp() throws Exception {
+        awaitWork();
         context = RuntimeEnvironment.getApplication();
         Utils.setContext(context);
         BaseSettings.DEBUG_LOG_FILTERS.save("all");
@@ -49,7 +52,9 @@ public class ClearLogBufferPreferenceTest {
         ShadowToast.reset();
     }
 
-    @After public void tearDown() {
+    @After public void tearDown() throws Exception {
+        awaitWork();
+        Utils.setContext(context);
         emptyEverythingAndDropUndo();
         BaseSettings.DEBUG_LOG_FILTERS.resetToDefault();
         // The sentences are static, so a later test class in the same sandbox would read these
@@ -73,7 +78,7 @@ public class ClearLogBufferPreferenceTest {
 
         ClearLogBufferPreference first = row();
         assertTrue(first.getOnPreferenceClickListener().onPreferenceClick(first));
-        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        awaitWork();
         assertTrue(LogBufferManager.canUndoClear());
         assertEquals("Cleared summary", first.getSummary());
         // A report still has the build's facts, and none of what was cleared.
@@ -96,7 +101,7 @@ public class ClearLogBufferPreferenceTest {
                 "AfterClear", "INFO", "new buffered event");
         HookStatus.bound("inbox", "item_view");
         assertTrue(rebuilt.getOnPreferenceClickListener().onPreferenceClick(rebuilt));
-        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        awaitWork();
 
         assertFalse(LogBufferManager.canUndoClear());
         assertEquals("Clear summary", rebuilt.getSummary());
@@ -115,16 +120,134 @@ public class ClearLogBufferPreferenceTest {
         assertEquals("Diagnostic data put back", ShadowToast.getTextOfLatestToast());
     }
 
-    @Test public void clearingNothingDoesNotPromiseAnUndoThatDoesNotExist() {
+    @Test public void clearingNothingDoesNotPromiseAnUndoThatDoesNotExist() throws Exception {
         ClearLogBufferPreference preference = row();
 
         assertTrue(preference.getOnPreferenceClickListener().onPreferenceClick(preference));
-        Shadows.shadowOf(Looper.getMainLooper()).idle();
+        awaitWork();
 
         assertFalse(LogBufferManager.canUndoClear());
         assertEquals("Clear summary", preference.getSummary());
         assertEquals("There is no diagnostic data to clear",
                 ShadowToast.getTextOfLatestToast());
+    }
+
+    @Test public void clearKeepsTheMainThreadAndRebuiltRowsResponsiveWhileFilesWait()
+            throws Exception {
+        LogBufferManager.appendEvent(DiagnosticCategory.OTHER,
+                "BeforeClear", "INFO", "old event");
+        BlockingFilesContext blocked = new BlockingFilesContext(context, 1);
+        Utils.setContext(blocked);
+        ClearLogBufferPreference first = row();
+        try {
+            first.getOnPreferenceClickListener().onPreferenceClick(first);
+            assertTrue("clear did not reach the file worker",
+                    blocked.blocked.await(2, TimeUnit.SECONDS));
+            assertFalse("file access ran on the main thread", blocked.blockedOnMainThread);
+            assertFalse(first.isEnabled());
+            assertEquals("Clearing diagnostic data", first.getSummary());
+
+            // Both a status query and a replacement row must avoid the worker's generation lock.
+            assertFalse(LogBufferManager.canUndoClear());
+            ClearLogBufferPreference rebuilt = row();
+            assertFalse(rebuilt.isEnabled());
+            assertEquals("Clearing diagnostic data", rebuilt.getSummary());
+            AtomicBoolean mainTurn = new AtomicBoolean();
+            Utils.runOnMainThread(() -> mainTurn.set(true));
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+            assertTrue("the main loop stopped while clearing files", mainTurn.get());
+            // A stale click must not queue a second clear that would discard the Undo snapshot.
+            rebuilt.getOnPreferenceClickListener().onPreferenceClick(rebuilt);
+            blocked.release.countDown();
+            awaitWork();
+            assertTrue(first.isEnabled());
+            assertTrue(rebuilt.isEnabled());
+            assertTrue(LogBufferManager.canUndoClear());
+            assertEquals("Cleared summary", rebuilt.getSummary());
+        } finally {
+            blocked.release.countDown();
+            awaitWork();
+        }
+    }
+
+    @Test public void undoKeepsItsOfferAndRebuiltRowsResponsiveUntilTheWorkerFinishes()
+            throws Exception {
+        LogBufferManager.persistCrashReport(context, "saved crash");
+        LogBufferManager.clearLogBuffer();
+        BlockingFilesContext blocked = new BlockingFilesContext(context, 1);
+        Utils.setContext(blocked);
+        ClearLogBufferPreference first = row();
+        try {
+            first.getOnPreferenceClickListener().onPreferenceClick(first);
+            assertTrue("undo did not reach the file worker",
+                    blocked.blocked.await(2, TimeUnit.SECONDS));
+            assertFalse("file access ran on the main thread", blocked.blockedOnMainThread);
+            assertTrue(LogBufferManager.canUndoClear());
+            assertFalse(first.isEnabled());
+            ClearLogBufferPreference rebuilt = row();
+            assertFalse(rebuilt.isEnabled());
+            assertEquals("Putting diagnostic data back", rebuilt.getSummary());
+            AtomicBoolean mainTurn = new AtomicBoolean();
+            Utils.runOnMainThread(() -> mainTurn.set(true));
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+            assertTrue("the main loop stopped while restoring files", mainTurn.get());
+            blocked.release.countDown();
+            awaitWork();
+            assertFalse(LogBufferManager.canUndoClear());
+            assertTrue(first.isEnabled());
+            assertTrue(rebuilt.isEnabled());
+            assertEquals("Clear summary", rebuilt.getSummary());
+            assertEquals("saved crash", LogBufferManager.readCrashReport(context));
+        } finally {
+            blocked.release.countDown();
+            awaitWork();
+        }
+    }
+
+    @Test public void aFullWorkerQueueLeavesTheRowReadyAndTheDataAvailable() throws Exception {
+        LogBufferManager.appendEvent(DiagnosticCategory.OTHER,
+                "BeforeClear", "INFO", "must remain available");
+        ClearLogBufferPreference preference = row();
+        try (WorkerPoolForTests ignored = WorkerPoolForTests.fill()) {
+            preference.getOnPreferenceClickListener().onPreferenceClick(preference);
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+            assertTrue(preference.isEnabled());
+            assertEquals("Clear summary", preference.getSummary());
+            assertFalse(LogBufferManager.canUndoClear());
+            assertTrue(LogBufferManager.buildExportText().contains("must remain available"));
+            assertEquals("Couldn't start that. Try again in a moment.",
+                    ShadowToast.getTextOfLatestToast());
+        }
+        preference.getOnPreferenceClickListener().onPreferenceClick(preference);
+        awaitWork();
+        assertTrue(preference.isEnabled());
+        assertTrue(LogBufferManager.canUndoClear());
+    }
+
+    @Test public void aFailedRestoreKeepsUndoReadyForAnotherTap() throws Exception {
+        LogBufferManager.persistCrashReport(context, "saved crash");
+        LogBufferManager.clearLogBuffer();
+        Utils.setContext(new ContextWrapper(context) {
+            @Override public File getFilesDir() {
+                throw new IllegalStateException("storage temporarily unavailable");
+            }
+        });
+        ClearLogBufferPreference preference = row();
+        preference.getOnPreferenceClickListener().onPreferenceClick(preference);
+        awaitWork();
+        assertTrue(LogBufferManager.canUndoClear());
+        assertTrue(preference.isEnabled());
+        assertEquals("Cleared summary", preference.getSummary());
+        assertEquals("Couldn't put back the diagnostic data. Try again.",
+                ShadowToast.getTextOfLatestToast());
+
+        Utils.setContext(context);
+        preference.getOnPreferenceClickListener().onPreferenceClick(preference);
+        awaitWork();
+        assertFalse(LogBufferManager.canUndoClear());
+        assertTrue(preference.isEnabled());
+        assertEquals("Clear summary", preference.getSummary());
+        assertEquals("saved crash", LogBufferManager.readCrashReport(context));
     }
 
     @Test public void anEventArrivingDuringClearStartsTheNewGeneration() throws Exception {
@@ -185,10 +308,52 @@ public class ClearLogBufferPreferenceTest {
         assertEquals("newer crash", LogBufferManager.readCrashReport(context));
     }
 
+    /**
+     * Clear and Undo read, delete and rewrite the crash files while holding the lock every logged
+     * line waits on. With debug logging on each says once how long it held it, so the cost can be
+     * read off a phone. With it off neither says anything.
+     */
+    @Test public void aClearAndItsUndoSayHowLongTheyHeldTheLockOnlyWithDebugLoggingOn() throws Exception {
+        LogBufferManager.appendEvent(DiagnosticCategory.OTHER, "BeforeClear", "INFO", "quiet event");
+        LogBufferManager.clearLogBuffer();
+        assertEquals(LogBufferManager.UndoResult.RESTORED, LogBufferManager.undoClear());
+        awaitWork();
+        String quiet = LogBufferManager.buildExportText();
+        assertTrue(quiet, quiet.contains("quiet event"));
+        assertFalse(quiet, quiet.contains("held its lock for"));
+
+        BaseSettings.DEBUG.save(true);
+        try {
+            LogBufferManager.clearLogBuffer();
+            awaitWork();
+            String cleared = LogBufferManager.buildExportText();
+            assertEquals(cleared, 1, count(cleared, "Diagnostic data clear held its lock for "));
+            assertEquals(LogBufferManager.UndoResult.RESTORED, LogBufferManager.undoClear());
+            awaitWork();
+            String restored = LogBufferManager.buildExportText();
+            assertTrue(restored, restored.contains("quiet event"));
+            assertEquals(restored, 1, count(restored, "Diagnostic data clear held its lock for "));
+            assertEquals(restored, 1, count(restored, "Diagnostic data undo (RESTORED) held its lock for "));
+        } finally {
+            BaseSettings.DEBUG.resetToDefault();
+        }
+    }
+
+    private static int count(String text, String part) {
+        int found = 0;
+        for (int at = text.indexOf(part); at >= 0; at = text.indexOf(part, at + part.length())) found++;
+        return found;
+    }
+
     private ClearLogBufferPreference row() {
         ClearLogBufferPreference preference = new ClearLogBufferPreference(context);
         preference.setClearAndUndoSummaries("Clear summary", "Cleared summary");
         return preference;
+    }
+
+    private static void awaitWork() throws Exception {
+        Utils.awaitBackgroundTasksForTests();
+        Shadows.shadowOf(Looper.getMainLooper()).idle();
     }
 
     private static void emptyEverythingAndDropUndo() {
@@ -228,6 +393,7 @@ public class ClearLogBufferPreferenceTest {
         final CountDownLatch release = new CountDownLatch(1);
         private final int blockAt;
         private final AtomicInteger calls = new AtomicInteger();
+        volatile boolean blockedOnMainThread;
 
         BlockingFilesContext(Context base, int blockAt) {
             super(base);
@@ -238,6 +404,7 @@ public class ClearLogBufferPreferenceTest {
             int call = calls.incrementAndGet();
             if (call > blockAt) laterCall.countDown();
             if (call == blockAt) {
+                blockedOnMainThread = Utils.isCurrentlyOnMainThread();
                 blocked.countDown();
                 try {
                     if (!release.await(5, TimeUnit.SECONDS)) {

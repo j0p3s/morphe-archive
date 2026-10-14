@@ -1,3 +1,21 @@
+## [1.7.2](https://github.com/LuckyToShine/czyeru/compare/v1.7.1...v1.7.2) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **uvm:** show the ID QR code in dark mode and add Hide survey pop-ups ([cff41dc](https://github.com/LuckyToShine/czyeru/commit/cff41dc54f3560d4775fab30a9a150c375641643))
+
+## [1.7.1](https://github.com/LuckyToShine/czyeru/compare/v1.7.0...v1.7.1) (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* **uvm:** fix dark text in the AMOLED theme and add Allow screenshots ([b1912c2](https://github.com/LuckyToShine/czyeru/commit/b1912c2a1cb3e47e3279287a35fa3e7ec08e88fd))
+
+## [1.7.0](https://github.com/LuckyToShine/czyeru/compare/v1.6.3...v1.7.0) (2026-10-13)
+
+### ✨ New Features
+
+* **uvm:** add AMOLED dark theme patch for Conexión Lince UVM 1.0.63 ([74c2c92](https://github.com/LuckyToShine/czyeru/commit/74c2c92bcc7f195cb46b5cfa674c89dfc02879a3))
+
 ## [1.6.3](https://github.com/LuckyToShine/czyeru/compare/v1.6.2...v1.6.3) (2026-10-13)
 
 ### 🐛 Bug Fixes

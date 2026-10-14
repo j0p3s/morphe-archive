@@ -174,6 +174,20 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
      */
     protected boolean noteRestartPending(Setting<?> setting, Object valueBefore) {
         if (setting == null || !setting.rebootApp) return false;
+        boolean pending = recordRestartPending(setting, valueBefore);
+        onRestartPendingChanged();
+        return pending;
+    }
+
+    /**
+     * The debt alone, with no page told: for a change no switch on a page made, a settings import
+     * for one, which can finish after its page is gone. The next page to open still shows it.
+     *
+     * @param valueBefore the setting's value before the change was written.
+     * @return whether a restart is now owed for this setting.
+     */
+    public static boolean recordRestartPending(Setting<?> setting, Object valueBefore) {
+        if (setting == null || !setting.rebootApp) return false;
         Object running;
         synchronized (runningValues) {
             if (!runningValues.containsKey(setting.key)) runningValues.put(setting.key, valueBefore);
@@ -182,7 +196,6 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
         boolean pending = !Objects.equals(running, setting.savedValue());
         if (pending) restartPending.add(setting.key);
         else restartPending.remove(setting.key);
-        onRestartPendingChanged();
         return pending;
     }
 
@@ -606,8 +619,16 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
 
     private static volatile RestartFeedbackPresenter restartFeedbackPresenter;
 
-    public static void setRestartFeedbackPresenter(RestartFeedbackPresenter presenter) {
+    public static synchronized void setRestartFeedbackPresenter(RestartFeedbackPresenter presenter) {
         restartFeedbackPresenter = presenter;
+    }
+
+    /**
+     * Takes [presenter] away if it's still the one set. A screen that closes after a newer one
+     * opened leaves the newer one's presenter in place.
+     */
+    public static synchronized void clearRestartFeedbackPresenter(RestartFeedbackPresenter presenter) {
+        if (restartFeedbackPresenter == presenter) restartFeedbackPresenter = null;
     }
 
     protected CharSequence initializationErrorTitle(@Nullable Context context) {

@@ -4,6 +4,7 @@ import app.morphe.patcher.patch.ApkFileType
 import app.morphe.patcher.patch.AppTarget
 import app.morphe.patcher.patch.Compatibility
 
+
 object ArcPlayerCompatibility {
     val ARC_PLAYER = Compatibility(
         name = "Arc Player",
@@ -11,7 +12,7 @@ object ArcPlayerCompatibility {
         apkFileType = ApkFileType.APK,
         appIconColor = 0xFF5722,
         targets = listOf(
-            AppTarget(version = "1.2.9.3")
+            AppTarget(version = "1.3.4")
         )
     )
 }

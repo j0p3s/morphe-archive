@@ -296,7 +296,7 @@ otherwise saved to a file (the tool tells you where), and you read them with `jq
 
 ### What REA cannot do here
 
-- **Hermes (React Native) apps** (Flipkart, Myntra, Meshy-style apps): the screens' logic is bytecode in
+- **Hermes (React Native) apps** (Flipkart, Myntra-style apps): the screens' logic is bytecode in
   `assets/index.android.bundle` that JADX cannot decompile. REA sees only the Java/Kotlin native modules. Read the
   *data* the modules hand to JavaScript instead (dump it with `Diag`).
 - **`search-android-classes` can fail** on some APKs with `JADX class inventory is duplicated or differs from the

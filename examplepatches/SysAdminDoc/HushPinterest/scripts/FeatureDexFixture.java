@@ -19,6 +19,7 @@ import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstructio
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction21s;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction21t;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22b;
+import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22c;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22s;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22t;
 import com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction22x;
@@ -47,6 +48,15 @@ public final class FeatureDexFixture {
     private static final String BASE = "Lapp/hushpinterest/extension/pinterest/";
     private static final String STATUS = BASE + "settings/SettingsStatus;";
     private static final String ENTRY = BASE + "settings/SettingsEntry;";
+    private static final String NATIVE_ROW = BASE + "settings/NativeSettingsItem;";
+    private static final String NATIVE_MARKER = "Lfixture/NativeSettingsRow;";
+    private static final String NATIVE_BASE = "Lfixture/NativeExternalRow;";
+    private static final String NATIVE_EXTERNAL = "Lfixture/SafetyRow;";
+    private static final String NATIVE_TEXT = "Lfixture/NativeText;";
+    private static final String NATIVE_HEADER = "Lfixture/NativeHeader;";
+    private static final String NATIVE_IDS = "Lfixture/SettingsStrings;";
+    private static final String NATIVE_LIST = "Lfixture/SettingsList;";
+    private static final String NATIVE_CLICK = "Lfixture/SettingsClick;";
     private static final String UTILS = "Lapp/hushpinterest/extension/shared/Utils;";
     private static final String APP = "Lcom/pinterest/ReleaseHiltApplication;";
     private static final String ACTIVITY = "Lcom/pinterest/activity/PinterestActivity;";
@@ -74,6 +84,32 @@ public final class FeatureDexFixture {
     private static final List<String> INTEGER_FALLBACKS = integerFallbacks();
     private static final Map<String, String[]> FAMILIES = new LinkedHashMap<>();
     private static final Map<String, Boolean> FLAGS = new LinkedHashMap<>();
+    private static final String VIEW = "Landroid/view/View;";
+    private static final String AMOLED = BASE + "ui/AmoledBlack;";
+    private static final String PIN_MENU = "Lcom/pinterest/feature/gridactions/modal/view/PinOverflowMenuModalImpl;";
+    private static final String BOTTOM_BAR = "Lcom/pinterest/navigation/view/FloatingBottomNavBar;";
+    private static final String ANDROID_TOAST = "Landroid/widget/Toast;";
+    private static final String TOAST_CONTAINER = "Lcom/pinterest/gestalt/toast/PinterestToastContainer;";
+    private static final String TOAST_VIEW = "Lcom/pinterest/gestalt/toast/BaseGestaltToast;";
+    private static final String TOAST = "Lfixture/Toast;";
+    private static final String SAVED_TOAST = "Lfixture/SavedToast;";
+    private static final String FOLLOW_TOAST = "Lfixture/FollowToast;";
+    private static final String PICKER_TOAST = "Lfixture/PickerToast;";
+    private static final String MESSAGE_TOAST = "Lfixture/MessageToast;";
+    private static final String TEXT_BUILDER = "Lfixture/TextBuilder;";
+    private static final String SAVED_TEXT = "Lfixture/SavedText;";
+    private static final String SAVE_SCREEN = "Lfixture/SaveScreen;";
+
+    /** What a fixture class has beyond its methods: its parent, its interfaces, its public fields as name:type, and whether it's an interface. */
+    private record Shape(String parent, List<String> interfaces, List<String> fields, boolean contract) {}
+    private static final Map<String, Shape> SHAPES = new LinkedHashMap<>();
+    static {
+        for (String model : List.of(SAVED_TOAST, FOLLOW_TOAST)) SHAPES.put(model, new Shape(TOAST, List.of(), List.of(), false));
+        SHAPES.put(PICKER_TOAST, new Shape(TOAST, List.of(), List.of("text:" + TEXT_BUILDER), false));
+        SHAPES.put(MESSAGE_TOAST, new Shape(TOAST, List.of(), List.of("text:Ljava/lang/String;"), false));
+        SHAPES.put(TEXT_BUILDER, new Shape(OBJECT, List.of(), List.of(), true));
+        SHAPES.put(SAVED_TEXT, new Shape(OBJECT, List.of(TEXT_BUILDER), List.of(), false));
+    }
 
     private static ImmutableMethodReference ref(String type, String name, String result, String... parameters) {
         return new ImmutableMethodReference(type, name, Arrays.asList(parameters), result);
@@ -103,10 +139,22 @@ public final class FeatureDexFixture {
     }
 
     private static ClassDef type(String owner, List<Method> methods) {
+        Shape shape = SHAPES.get(owner);
+        if (shape != null) {
+            List<ImmutableField> own = new ArrayList<>();
+            for (String field : shape.fields()) own.add(new ImmutableField(owner, field.substring(0, field.indexOf(':')),
+                    field.substring(field.indexOf(':') + 1), AccessFlags.PUBLIC.getValue(), null, Set.of(), Set.of()));
+            return new ImmutableClassDef(owner, AccessFlags.PUBLIC.getValue() | (shape.contract()
+                    ? AccessFlags.INTERFACE.getValue() | AccessFlags.ABSTRACT.getValue() : 0), shape.parent(), shape.interfaces(), null, Set.of(), own, methods);
+        }
         var fields = owner.equals("Lcom/pinterest/feature/gridactions/modal/view/PinOverflowMenuModalImpl;")
                 ? List.of(new ImmutableField(owner, "pin", "Lcom/pinterest/api/model/FixturePin;", AccessFlags.PUBLIC.getValue(), null, Set.of(), Set.of()))
                 : List.<ImmutableField>of();
-        return new ImmutableClassDef(owner, AccessFlags.PUBLIC.getValue(), OBJECT, List.of(), null, Set.of(), fields, methods);
+        if (owner.equals(NATIVE_BASE)) fields = List.of(new ImmutableField(owner, "text", NATIVE_TEXT, AccessFlags.PUBLIC.getValue(), null, Set.of(), Set.of()));
+        String parent = owner.equals(NATIVE_ROW) || owner.equals(NATIVE_EXTERNAL) ? NATIVE_BASE : OBJECT;
+        var interfaces = owner.equals(NATIVE_ROW) || owner.equals(NATIVE_EXTERNAL) ? List.of(NATIVE_MARKER) : List.<String>of();
+        int flags = AccessFlags.PUBLIC.getValue() | (owner.equals(NATIVE_MARKER) ? AccessFlags.INTERFACE.getValue() | AccessFlags.ABSTRACT.getValue() : 0);
+        return new ImmutableClassDef(owner, flags, parent, interfaces, null, Set.of(), fields, methods);
     }
 
     private static void profileWebsites(Map<String, List<Method>> classes, String variant) {
@@ -119,7 +167,7 @@ public final class FeatureDexFixture {
             visit.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0));
             visit.add(new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 3)); visit.add(end());
         }
-        visit.add(literal("android_client_tracking_params_consistency", 0)); visit.add(literal("_url", 0)); visit.add(end());
+        visit.add(literal("com.pinterest.EXTRA_URL", 0)); visit.add(literal("_url", 0)); visit.add(end());
         classes.put("Lfixture/Visit;", List.of(method("Lfixture/Visit;", "visit", VOID, true, 3, visit, STRING, pin)));
         for (String name : List.of("Header", "About")) {
             String owner = "Lfixture/" + name + ";";
@@ -194,11 +242,84 @@ public final class FeatureDexFixture {
                 method(ENTRY, "onApplicationCreate", VOID, true, 1, List.of(end()), CONTEXT),
                 method(ENTRY, "onActivityCreate", VOID, true, 1, List.of(end()), "Landroid/app/Activity;"),
                 method(ENTRY, "onNewIntent", VOID, true, 2, List.of(end()), "Landroid/app/Activity;", INTENT)));
-        for (Method m : classes.getOrDefault(ENTRY, List.of())) if (SHORTCUTS.contains(m.getName())) entry.add(m);
+        for (Method m : classes.getOrDefault(ENTRY, List.of()))
+            if (SHORTCUTS.contains(m.getName()) || m.getName().equals("open") || m.getName().equals("nativeTitleId")) entry.add(m);
         classes.put(ENTRY, entry);
     }
 
     private static Instruction readiness() { return invoke(Opcode.INVOKE_STATIC, ref(UTILS, "settingsReady", "Z")); }
+
+    private static void nativeSettings(Map<String, List<Method>> classes, String variant) {
+        boolean patched = !variant.equals("clean"), rowPresent = patched && !variant.equals("missing-row");
+        boolean clickPresent = patched && !variant.equals("missing-click");
+        String fragment = "Landroidx/fragment/app/Fragment;", array = "Ljava/util/ArrayList;";
+        var add = ref(array, "add", "Z", OBJECT);
+        var parentInit = ref(NATIVE_BASE, "<init>", VOID, "I", NATIVE_TEXT);
+        var title = new ImmutableFieldReference(NATIVE_IDS, "settings_menu_teen_safety_resources", "I");
+        classes.put(NATIVE_MARKER, List.of());
+        classes.put(NATIVE_EXTERNAL, List.of(method(NATIVE_EXTERNAL, "<init>", VOID, false, 3, List.of(
+                new ImmutableInstruction21c(Opcode.SGET, 0, title), new ImmutableInstruction11n(Opcode.CONST_4, 1, 0),
+                invoke(Opcode.INVOKE_DIRECT, parentInit, 2, 0, 1), end()))));
+        classes.put(NATIVE_BASE, List.of(method(NATIVE_BASE, "<init>", VOID, false, 3,
+                List.of(invoke(Opcode.INVOKE_DIRECT, ref(OBJECT, "<init>", VOID), 0), end()), "I", NATIVE_TEXT)));
+        classes.put(NATIVE_TEXT, List.of(method(NATIVE_TEXT, "<init>", VOID, false, 4,
+                List.of(invoke(Opcode.INVOKE_DIRECT, ref(OBJECT, "<init>", VOID), 0), end()), "I", "Ljava/lang/Integer;", STRING)));
+        classes.put(NATIVE_HEADER, List.of(method(NATIVE_HEADER, "<init>", VOID, false, 2,
+                List.of(invoke(Opcode.INVOKE_DIRECT, ref(OBJECT, "<init>", VOID), 0), end()), "I")));
+        List<Instruction> builder = new ArrayList<>(List.of(
+                new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 5),
+                new ImmutableInstruction21c(Opcode.SGET, 1, new ImmutableFieldReference(NATIVE_IDS, "settings_main_header_settings", "I")),
+                new ImmutableInstruction10t(Opcode.GOTO, 3),
+                new ImmutableInstruction21c(Opcode.SGET, 1, new ImmutableFieldReference(NATIVE_IDS, "settings_main_header_account", "I")),
+                new ImmutableInstruction21c(Opcode.NEW_INSTANCE, 2, new ImmutableTypeReference(NATIVE_HEADER)),
+                invoke(Opcode.INVOKE_DIRECT, ref(NATIVE_HEADER, "<init>", VOID, "I"), 2, 1),
+                invoke(Opcode.INVOKE_VIRTUAL, add, 3, 2)));
+        if (rowPresent) for (int n = 0; n < (variant.equals("duplicate-row") ? 2 : 1); n++) {
+            builder.add(new ImmutableInstruction21c(Opcode.NEW_INSTANCE, 0, new ImmutableTypeReference(NATIVE_ROW)));
+            builder.add(invoke(Opcode.INVOKE_DIRECT, ref(NATIVE_ROW, "<init>", VOID), 0));
+            builder.add(invoke(Opcode.INVOKE_VIRTUAL, add, 3, 0));
+        }
+        builder.add(end());
+        classes.put(NATIVE_LIST, List.of(method(NATIVE_LIST, "build", VOID, true, 4, builder, array)));
+        List<Instruction> click = new ArrayList<>(List.of(
+                new ImmutableInstruction22c(Opcode.INSTANCE_OF, 0, 3, new ImmutableTypeReference(NATIVE_BASE)),
+                new ImmutableInstruction21t(Opcode.IF_EQZ, 0, clickPresent ? 28 : 13)));
+        var unit = new ImmutableFieldReference("Lkotlin/Unit;", "a", "Lkotlin/Unit;");
+        if (clickPresent) click.addAll(List.of(
+                new ImmutableInstruction22c(Opcode.INSTANCE_OF, 0, 3,
+                        new ImmutableTypeReference(variant.equals("wrong-identity") ? NATIVE_BASE : NATIVE_ROW)),
+                new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 12),
+                invoke(Opcode.INVOKE_VIRTUAL, ref(fragment, "requireActivity", "Landroidx/fragment/app/FragmentActivity;"), 4),
+                new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0),
+                invoke(Opcode.INVOKE_STATIC, ref(ENTRY, "open", "Z", "Landroid/app/Activity;"), 0),
+                new ImmutableInstruction21c(Opcode.SGET_OBJECT, 0, unit),
+                new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0), new ImmutableInstruction10x(Opcode.NOP)));
+        click.addAll(List.of(new ImmutableInstruction12x(Opcode.MOVE_OBJECT, 0, 3),
+                new ImmutableInstruction21c(Opcode.CHECK_CAST, 0, new ImmutableTypeReference(NATIVE_BASE)),
+                new ImmutableInstruction22c(Opcode.IGET_OBJECT, 0, 0, new ImmutableFieldReference(NATIVE_BASE, "text", NATIVE_TEXT)),
+                invoke(Opcode.INVOKE_VIRTUAL, ref(fragment, "requireContext", CONTEXT), 4),
+                new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 1),
+                new ImmutableInstruction21c(Opcode.SGET_OBJECT, 2, new ImmutableFieldReference("Lfixture/Events;", "TEEN_SAFETY_RESOURCES_LINK", OBJECT)),
+                new ImmutableInstruction21c(Opcode.SGET_OBJECT, 0, unit), new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0)));
+        classes.put(NATIVE_CLICK, List.of(method(NATIVE_CLICK, "invoke", OBJECT, true, 5, click, OBJECT, fragment)));
+        if (!patched) return;
+        List<Instruction> ctor = new ArrayList<>(List.of(new ImmutableInstruction11n(Opcode.CONST_4, 0, 1),
+                new ImmutableInstruction11n(Opcode.CONST_4, 1, 0), literal("", 2),
+                new ImmutableInstruction21c(Opcode.NEW_INSTANCE, 3, new ImmutableTypeReference(NATIVE_TEXT)),
+                invoke(Opcode.INVOKE_DIRECT, ref(NATIVE_TEXT, "<init>", VOID, "I", "Ljava/lang/Integer;", STRING), 3, 0, 1, 2),
+                invoke(Opcode.INVOKE_STATIC, ref(ENTRY, "nativeTitleId", "I")), new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0),
+                invoke(Opcode.INVOKE_DIRECT, parentInit, 4, variant.equals("wrong-title") ? 1 : 0, 3), end()));
+        classes.put(NATIVE_ROW, List.of(method(NATIVE_ROW, "<init>", VOID, false, 5, ctor),
+                method(NATIVE_ROW, "getViewType", "I", false, 2, List.of(
+                        new ImmutableInstruction21s(Opcode.CONST_16, 0, variant.equals("wrong-view-type") ? 14 : 13),
+                        new ImmutableInstruction11x(Opcode.RETURN, 0)))));
+        List<Method> entry = new ArrayList<>(classes.get(ENTRY));
+        entry.add(method(ENTRY, "open", "Z", true, 1, List.of(new ImmutableInstruction11n(Opcode.CONST_4, 0, 1),
+                new ImmutableInstruction11x(Opcode.RETURN, 0)), "Landroid/app/Activity;"));
+        entry.add(method(ENTRY, "nativeTitleId", "I", true, 1, List.of(new ImmutableInstruction11n(Opcode.CONST_4, 0, 1),
+                new ImmutableInstruction11x(Opcode.RETURN, 0))));
+        classes.put(ENTRY, entry);
+    }
 
     private static void shortcuts(Map<String, List<Method>> classes, boolean patched, String variant) {
         List<Instruction> publisher = new ArrayList<>();
@@ -254,7 +375,13 @@ public final class FeatureDexFixture {
             classes.put(STATUS, status);
         }
         List<ClassDef> defs = new ArrayList<>();
-        classes.forEach((owner, methods) -> defs.add(type(owner, methods)));
+        classes.forEach((owner, methods) -> {
+            ClassDef definition = type(owner, methods);
+            if (name.equals("feature-native-settings-missing-interface") && owner.equals(NATIVE_ROW))
+                definition = new ImmutableClassDef(owner, definition.getAccessFlags(), definition.getSuperclass(), List.of(),
+                        null, definition.getAnnotations(), definition.getFields(), definition.getMethods());
+            defs.add(definition);
+        });
         DexPool.writeTo(new File(root, name + ".dex").getPath(), new ImmutableDexFile(Opcodes.getDefault(), defs));
         if (patched) {
             List<String> names = new ArrayList<>(List.of("HushPinterest settings"));
@@ -292,6 +419,108 @@ public final class FeatureDexFixture {
             decision.add(readiness()); decision.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0)); decision.add(new ImmutableInstruction11x(Opcode.RETURN, 0));
             classes.put(SCREENSHOT, List.of(method(SCREENSHOT, "hideScreenshotShare", "Z", true, 1, decision)));
         }
+    }
+
+    /** A read of one of Pinterest's texts by its id, the way a method that words a message starts. */
+    private static Instruction textId(String name) {
+        return new ImmutableInstruction21c(Opcode.SGET, 0, new ImmutableFieldReference("Lfixture/Strings;", name, "I"));
+    }
+
+    /** False, then the true every check of a UiHooks stub jumps to. */
+    private static List<Instruction> answers() {
+        return List.of(new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), new ImmutableInstruction11x(Opcode.RETURN, 0),
+                new ImmutableInstruction11n(Opcode.CONST_4, 0, 1), new ImmutableInstruction11x(Opcode.RETURN, 0));
+    }
+
+    /** A UiHooks stub that answers true for an instance of one of these classes, as Hide save toasts writes it. */
+    private static Method instanceStub(String name, String... types) {
+        List<Instruction> body = new ArrayList<>();
+        for (int k = 0; k < types.length; k++) {
+            body.add(new ImmutableInstruction22c(Opcode.INSTANCE_OF, 0, 1, new ImmutableTypeReference(types[k])));
+            body.add(new ImmutableInstruction21t(Opcode.IF_NEZ, 0, 4 * (types.length - k)));
+        }
+        body.addAll(answers());
+        return method(SCREENSHOT, name, "Z", true, 2, body, OBJECT);
+    }
+
+    /**
+     * Pinterest's toast container, a toast of each kind Hide save toasts tells apart and a screen
+     * that words a save itself, with the patch's hooks and stubs unless clean. A no-text build has
+     * no class that builds a save text for the board picker's toast, so nothing can tell that
+     * toast's save from its removal: its stub stays the extension's own, and the capability has to
+     * stay off. "bad-text-stub" leaves that stub alone in a build that does have the class.
+     */
+    private static void saveToasts(Map<String, List<Method>> classes, String variant) {
+        boolean patched = !variant.endsWith("clean"), builder = !variant.startsWith("no-text");
+        Instruction none = new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), answer = new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0);
+        List<Instruction> show = new ArrayList<>();
+        if (patched) {
+            show.add(invoke(Opcode.INVOKE_STATIC, ref(SCREENSHOT, "hideSaveToast", "Z", OBJECT), 2));
+            show.add(new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0));
+            show.add(new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 3)); show.add(end());
+        }
+        show.add(invoke(Opcode.INVOKE_VIRTUAL, ref(TOAST, "view", TOAST_VIEW, TOAST_CONTAINER), 2, 1)); show.add(end());
+        classes.put(TOAST_CONTAINER, List.of(method(TOAST_CONTAINER, "show", VOID, false, 3, show, TOAST)));
+        classes.put(TOAST, List.of(method(TOAST, "view", TOAST_VIEW, false, 3, List.of(none, answer), TOAST_CONTAINER)));
+        classes.put(SAVED_TOAST, List.of(method(SAVED_TOAST, "view", TOAST_VIEW, false, 3, List.of(textId("saved_to"), none, answer), TOAST_CONTAINER)));
+        classes.put(FOLLOW_TOAST, List.of(method(FOLLOW_TOAST, "view", TOAST_VIEW, false, 3, List.of(
+                new ImmutableInstruction21c(Opcode.SGET_OBJECT, 0, new ImmutableFieldReference("Lfixture/Kinds;", "FollowUpsellToast", "Lfixture/Kinds;")),
+                none, answer), TOAST_CONTAINER)));
+        // The board picker's toast shows whatever the builder in its field hands it.
+        classes.put(PICKER_TOAST, List.of(method(PICKER_TOAST, "view", TOAST_VIEW, false, 3, List.of(
+                new ImmutableInstruction22c(Opcode.IGET_OBJECT, 0, 1, new ImmutableFieldReference(PICKER_TOAST, "text", TEXT_BUILDER)),
+                invoke(Opcode.INVOKE_INTERFACE, ref(TEXT_BUILDER, "build", TEXT), 0),
+                new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0), none, answer), TOAST_CONTAINER)));
+        classes.put(MESSAGE_TOAST, List.of());
+        classes.put(TEXT_BUILDER, List.of());
+        if (builder) classes.put(SAVED_TEXT, List.of(method(SAVED_TEXT, "build", TEXT, false, 2, List.of(textId("saved_onto_board_bold"), none, answer))));
+        // The screen words a section save, builds a toast that's handed its text, and shows an Android toast at once.
+        ImmutableMethodReference make = ref(ANDROID_TOAST, "makeText", ANDROID_TOAST, CONTEXT, TEXT, "I");
+        ImmutableMethodReference standIn = ref(SCREENSHOT, "androidToast", ANDROID_TOAST, CONTEXT, TEXT, "I");
+        classes.put(SAVE_SCREEN, List.of(method(SAVE_SCREEN, "saved", VOID, true, 4, List.of(textId("saved_to_board_section"),
+                new ImmutableInstruction21c(Opcode.NEW_INSTANCE, 0, new ImmutableTypeReference(MESSAGE_TOAST)),
+                new ImmutableInstruction11n(Opcode.CONST_4, 1, 1), invoke(Opcode.INVOKE_STATIC, patched ? standIn : make, 2, 3, 1),
+                new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0), invoke(Opcode.INVOKE_VIRTUAL, ref(ANDROID_TOAST, "show", VOID), 0), end()),
+                CONTEXT, TEXT)));
+        if (!patched) return;
+        Instruction decided = new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0);
+        List<Instruction> asks = new ArrayList<>();
+        if (builder && !variant.equals("bad-text-stub")) {
+            asks.add(new ImmutableInstruction22c(Opcode.INSTANCE_OF, 0, 2, new ImmutableTypeReference(PICKER_TOAST)));
+            asks.add(new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 10));
+            asks.add(new ImmutableInstruction21c(Opcode.CHECK_CAST, 2, new ImmutableTypeReference(PICKER_TOAST)));
+            asks.add(new ImmutableInstruction22c(Opcode.IGET_OBJECT, 0, 2, new ImmutableFieldReference(PICKER_TOAST, "text", TEXT_BUILDER)));
+            asks.add(new ImmutableInstruction22c(Opcode.INSTANCE_OF, 1, 0, new ImmutableTypeReference(SAVED_TEXT)));
+            asks.add(new ImmutableInstruction21t(Opcode.IF_NEZ, 1, 4));
+            asks.addAll(answers());
+        } else asks.addAll(answers().subList(0, 2));
+        classes.put(SCREENSHOT, List.of(
+                method(SCREENSHOT, "hideSaveToast", "Z", true, 2, List.of(readiness(), decided, new ImmutableInstruction11x(Opcode.RETURN, 0)), OBJECT),
+                // Off or not ready, the stand-in makes Android's own toast.
+                method(SCREENSHOT, "androidToast", ANDROID_TOAST, true, 4, List.of(readiness(), decided,
+                        new ImmutableInstruction21t(Opcode.IF_EQZ, 0, 4), none, answer, invoke(Opcode.INVOKE_STATIC, make, 1, 2, 3),
+                        new ImmutableInstruction11x(Opcode.MOVE_RESULT_OBJECT, 0), answer), CONTEXT, TEXT, "I"),
+                instanceStub("isSaveToast", SAVED_TOAST, FOLLOW_TOAST), instanceStub("isMessageToast", MESSAGE_TOAST),
+                method(SCREENSHOT, "isSaveTextToast", "Z", true, 3, asks, OBJECT)));
+    }
+
+    /**
+     * A build with a pin's menu and neither the comments screen nor the frosted glass under the
+     * bottom bar, so AMOLED black reaches the menu alone. "no-glass" has the bottom bar as well,
+     * still without its glass. "doubled" builds the menu in two methods: that isn't a missing
+     * surface but one to look at, so the patched build has no hook and the check has to say why.
+     */
+    private static void blackSurfaces(Map<String, List<Method>> classes, String variant) {
+        boolean doubled = variant.startsWith("doubled"), hooked = !variant.endsWith("clean") && !doubled;
+        List<Instruction> build = new ArrayList<>(List.of(new ImmutableInstruction11n(Opcode.CONST_4, 0, 0)));
+        if (hooked) build.add(invoke(Opcode.INVOKE_STATIC, ref(AMOLED, "pinMenu", VOID, VIEW), 0));
+        build.add(new ImmutableInstruction11x(Opcode.RETURN_OBJECT, 0));
+        List<Method> menu = new ArrayList<>(List.of(method(PIN_MENU, "createModalView", VIEW, false, 2, build)));
+        if (doubled) menu.add(method(PIN_MENU, "createModalView", VIEW, false, 3, build, CONTEXT));
+        classes.put(PIN_MENU, menu);
+        if (variant.startsWith("no-glass")) classes.put(BOTTOM_BAR, List.of());
+        if (hooked) classes.put(AMOLED, List.of(method(AMOLED, "pinMenu", VOID, true, 2,
+                List.of(readiness(), new ImmutableInstruction11x(Opcode.MOVE_RESULT, 0), end()), VIEW)));
     }
 
     private static void feed(Map<String, List<Method>> classes, String variant) {
@@ -598,6 +827,15 @@ public final class FeatureDexFixture {
         Map<String, List<Method>> missingHomeIntent = new LinkedHashMap<>(settings);
         missingHomeIntent.put(HOME_ACTIVITY, clean.get(HOME_ACTIVITY));
         write(root, "feature-settings-missing-home-intent", missingHomeIntent, true);
+        Map<String, List<Method>> nativeClean = new LinkedHashMap<>(clean);
+        nativeSettings(nativeClean, "clean");
+        write(root, "feature-native-settings-clean", nativeClean, false);
+        for (String variant : List.of("good", "missing-row", "duplicate-row", "missing-click", "wrong-identity", "wrong-title", "wrong-view-type", "missing-interface")) {
+            reset();
+            Map<String, List<Method>> nativePatched = new LinkedHashMap<>(settings);
+            nativeSettings(nativePatched, variant);
+            write(root, "feature-native-settings-" + variant, nativePatched, true);
+        }
         write(root, "feature-internal-dependencies", new LinkedHashMap<>(settings), true);
         Files.write(new File(root, "feature-internal-dependencies.selected").toPath(),
                 List.of("HushPinterest settings", "BytecodePatch", "ResourcePatch"), StandardCharsets.UTF_8);
@@ -733,5 +971,32 @@ public final class FeatureDexFixture {
         write(root, "feature-optional-unrelated-clean", unrelatedClean, false);
         unrelatedClean.putAll(hosts(true));
         write(root, "feature-optional-unrelated", unrelatedClean, true, "disableUpdateNag");
+        // Builds that are short of one piece a patch works on: it keeps the rest, and the flag for the piece stays off.
+        for (String build : List.of("", "no-text-")) {
+            Map<String, List<Method>> toastClean = new LinkedHashMap<>(clean);
+            saveToasts(toastClean, build + "clean");
+            write(root, "feature-save-toasts-" + build + "clean", toastClean, false);
+        }
+        for (String variant : List.of("good", "bad-text-stub", "no-text", "no-text-claimed")) {
+            reset(); enable("hideSaveToasts");
+            if (variant.equals("no-text")) FLAGS.put("saveToasts", false);
+            Map<String, List<Method>> classes = new LinkedHashMap<>(settings);
+            saveToasts(classes, variant);
+            write(root, "feature-save-toasts-" + variant, classes, true, "hideSaveToasts");
+        }
+        for (String build : List.of("partial", "no-glass", "doubled")) {
+            Map<String, List<Method>> surfaces = new LinkedHashMap<>(clean);
+            blackSurfaces(surfaces, build + "-clean");
+            write(root, "feature-amoled-" + build + "-clean", surfaces, false);
+        }
+        for (String variant : List.of("partial", "partial-claimed", "no-glass", "doubled")) {
+            reset();
+            FLAGS.put("amoledBlack", true);
+            if (!variant.equals("doubled")) FLAGS.put("blackPinMenu", true);
+            if (variant.equals("partial-claimed")) FLAGS.put("blackComments", true);
+            Map<String, List<Method>> classes = new LinkedHashMap<>(settings);
+            blackSurfaces(classes, variant);
+            write(root, "feature-amoled-" + variant, classes, true, "amoledBlack");
+        }
     }
 }

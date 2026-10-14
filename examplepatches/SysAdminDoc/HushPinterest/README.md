@@ -1,10 +1,10 @@
 ![HushPinterest. Keep the pins. Lose the ads.](assets/readme-hero.png)
 
 <p>
-  <img src="https://img.shields.io/badge/version-0.0.8-E60023" alt="Version 0.0.8">
+  <img src="https://img.shields.io/badge/version-0.0.9-E60023" alt="Version 0.0.9">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%2010%2B-3DDC84" alt="Platform Android 10+">
-  <img src="https://img.shields.io/badge/Pinterest-14.39.0-E60023" alt="Pinterest 14.39.0">
+  <img src="https://img.shields.io/badge/Pinterest-14.40.0-E60023" alt="Pinterest 14.40.0">
   <img src="https://img.shields.io/badge/for-Morphe%20Manager%201.34.0%2B-8A2BE2" alt="For Morphe Manager 1.34.0 or newer">
 </p>
 
@@ -24,7 +24,7 @@ HushPinterest is a set of [Morphe](https://morphe.software) patches for Pinteres
 
 Hide ads, Disable analytics, Strip link tracking, Hide advertising ID and Fix push notifications start on. Every other switch starts off, so a freshly patched Pinterest looks like stock until you turn something on. What changed in each version is in the [changelog](CHANGELOG.md).
 
-The latest release is [v0.0.8](https://github.com/SysAdminDoc/HushPinterest/releases/tag/v0.0.8), with 29 patches. Add this repo to Morphe Manager as a patch source and it'll offer each new release when it comes out.
+The latest release is [v0.0.9](https://github.com/SysAdminDoc/HushPinterest/releases/tag/v0.0.9), with 29 patches. Add this repo to Morphe Manager as a patch source and it'll offer each new release when it comes out.
 
 **[Add HushPinterest to Morphe Manager](https://morphe.software/add-source?github=SysAdminDoc%2FHushPinterest)**
 
@@ -35,7 +35,7 @@ The latest release is [v0.0.8](https://github.com/SysAdminDoc/HushPinterest/rele
 
 1. Install [Morphe Manager](https://github.com/MorpheApp/morphe-manager) 1.34.0 or newer.
 2. Add HushPinterest as a patch source with the link above. Or in Manager open **Sources**, tap **+**, choose **Remote** and enter `github.com/SysAdminDoc/HushPinterest`.
-3. Get Pinterest 14.39.0, version code 14398020. Use the universal APK, the one file that holds every screen density and processor type, which APKMirror lists as the "nodpi" variant. A split bundle (`.apkm`, `.xapk`) works too if Manager can merge it.
+3. Get Pinterest 14.40.0, version code 14408010. Use the universal APK, the one file that holds every screen density and processor type, which APKMirror lists as the "nodpi" variant. A split bundle (`.apkm`, `.xapk`) works too if Manager can merge it.
 4. Patch it with the default selection. It holds every switch, so you don't need Expert mode. The one patch left out is Spoof signature for Google sign-in. If you want it, turn on **Settings > Advanced > Expert mode** in Manager and pick it before you patch.
 
 A patched Pinterest can't install over the stock app, because Android only accepts an update signed with the same key. Save anything local you need, uninstall stock Pinterest, then install the patched one. Your boards and pins come back when you sign in. Local settings and drafts don't.
@@ -54,9 +54,9 @@ Android hands a pinterest.com or pin.it link to the Pinterest app only when the 
 
 ## Settings
 
-Inside Pinterest, long-press the Pinterest logo at the top of your home feed. From your home screen, long-press the Pinterest icon and tap **HushPinterest**. Pinterest's App info page has it too, under **Additional settings in the app** (Samsung calls it **Configure in Pinterest**).
+Open Pinterest's settings and tap **HushPinterest**. You can also long-press the Pinterest logo at the top of your home feed. From your home screen, long-press the Pinterest icon and tap **HushPinterest**. Pinterest's App info page has it too, under **Additional settings in the app** (Samsung calls it **Configure in Pinterest**).
 
-Switches take effect without patching again. A screen that's already open may need reopening, and a few switches need Pinterest to restart. When you flip one of those, a **Restart** row shows up at the top of the page, and tapping it reopens Pinterest on the same settings page. **Quick setups** on the home page turns on the Quiet or Privacy switches in one tap, or puts every switch back the way it started. **Pause** puts everything back to Pinterest's own behavior without forgetting your choices. You can export your switches to a file and import them later, with a preview of every change and one Undo. The file holds settings only, never your account, media or signing key. **Setup and backup guide** under About explains all of this, and **Pinterest's own settings** under More settings says where Pinterest keeps the options HushPinterest leaves alone.
+Switches take effect without patching again. A screen that's already open may need reopening, and a few switches need Pinterest to restart. When you flip one of those, a **Restart** row shows up at the top of the page, and tapping it reopens Pinterest on the same settings page. **Quick setups** on the home page turns on the Quiet or Privacy switches in one tap, or puts every switch back the way it started. **Pause** puts everything back to Pinterest's own behavior without forgetting your choices. You can export your switches to a file and import them later, with a preview of every change and one Undo. The file holds settings only, never your account, media or signing key. **Setup and backup guide** under About explains all of this, and the **Pinterest's own settings** page says where Pinterest keeps the options HushPinterest leaves alone.
 
 <p>
   <img src="assets/screenshots/settings-home.png" width="240" alt="Settings home with a Pause button below its status summary">
@@ -68,7 +68,7 @@ Switches take effect without patching again. A screen that's already open may ne
 
 **Download pins** adds a Download row to a pin's menu. For an image it saves the original when Pinterest's media host has one, or the largest size when it doesn't. For a video it saves the best MP4 Pinterest supplies, and streaming-only videos can't be saved. Files go to your Download folder. Turn on **Save in Pinterest's folder** to keep them in Pictures/100PINT/Pins, or use **Pick a download folder**.
 
-From a feed, search or board grid, **Download visible pins** in a pin's menu lets you pick up to 32 pins already on screen. **Download board** saves up to 500 pins Pinterest has loaded for a board and skips the ones already in Download history, so scroll to the end of the board first if you want all of it. Both pickers can also save the chosen pins' links to a JSON file. **Long-press download** adds a Download button to the round menu you get when you hold a pin in a grid.
+From a feed, search or board grid, **Download visible pins** in a pin's menu lets you pick up to 32 pins already on screen. **Download board** saves up to 500 pins Pinterest has loaded for a board and skips the ones already in Download history, so scroll to the end of the board first if you want all of it. Both pickers can also save the chosen pins' links with **Save list**, as a bookmarks file you can import into a browser or bookmark app, or as a JSON file. **Long-press download** adds a Download button to the round menu you get when you hold a pin in a grid.
 
 **Download history** under Pin actions shows Android's status for each download, with Retry, Open file, Share file and, for images, Set as wallpaper. Two more switches there hold downloads to unmetered networks or keep them off while you roam.
 
@@ -78,13 +78,13 @@ There are 29 patches. Where a patch has a switch, its description names the sett
 
 | Patch | What it does |
 |---|---|
-| `AMOLED black` | Paints the bottom bar pure black in dark mode, so it matches Pinterest's black pages on OLED screens. Light mode stays as it is. Starts off. Turn it on in HushPinterest settings > Interface. |
+| `AMOLED black` | Paints the bottom bar pure black in dark mode, so it matches Pinterest's black pages on OLED screens. The comments sheet and a pin's menu can go black too, each with its own switch. Light mode stays as it is. Starts off. Turn them on in HushPinterest settings > Interface. |
 | `Disable analytics` | Stops Pinterest from sending usage reports, crash reports and ad-tracking data to outside companies, and turns off Google's analytics inside the app. Good if you'd rather share less. On by default. Turn it off in HushPinterest settings > Privacy. |
-| `Disable update nag` | Stops Pinterest's pop-ups asking you to update from the Play Store. You can still update Pinterest yourself. Good if the reminders get annoying. Starts off. Turn it on in HushPinterest settings > More settings > Updates. |
+| `Disable update nag` | Stops Pinterest's pop-ups asking you to update from the Play Store. You can still update Pinterest yourself. Good if the reminders get annoying. Starts off. Turn it on in HushPinterest settings > Updates. |
 | `Download board` | Adds Download board to a board's menu. It saves every pin Pinterest has loaded for that board, up to 500, and skips ones already in Download history, so you can keep a board without picking pins one at a time. Needs Download pins on too. Starts off. Turn it on in HushPinterest settings > Pin actions. |
 | `Download pins` | Adds downloads for a pin, or for several pins you select in a grid. Saves the original image or the highest-quality video Pinterest supplies to your phone. When it saves an image, Pinterest's own Download image row is hidden. Downloads go to the Download folder. Turn on Save in Pinterest's folder to keep them in Pictures/100PINT/Pins with Pinterest's own saves, or use Pick a download folder to choose any folder inside Pictures, DCIM, Download or Documents. Starts off. Turn it on in HushPinterest settings > Pin actions. |
 | `Filter pin menu` | Lets you hide Add to collage, Remix collage, Search image and Promote pin in a pin's menu, each with its own switch. Download, share and copy link stay. Starts off. Turn them on in HushPinterest settings > Interface. |
-| `Fix push notifications` | Lets the patched app sign up for push notifications. Google's Firebase service only signs Pinterest up when the request names Pinterest's original signature, so this sends that signature's fingerprint and changes nothing else in the request. On by default. Turn it off in HushPinterest settings > More settings > Notifications. |
+| `Fix push notifications` | Lets the patched app sign up for push notifications. Google's Firebase service only signs Pinterest up when the request names Pinterest's original signature, so this sends that signature's fingerprint and changes nothing else in the request. On by default. Turn it off in HushPinterest settings > Notifications. |
 | `Hide AI-labeled pins` | Removes pins that Pinterest labels as made or changed with AI from your home feed, search, related pins and boards. AI images without the label still show. Starts off. Turn it on in HushPinterest settings > Feed. |
 | `Hide ads` | Removes promoted pins from your home feed, search, related pins and boards, and hides panels that only hold ads. Good for a cleaner feed. On by default. Turn it off in HushPinterest settings > Feed. |
 | `Hide advertising ID` | Pinterest sees an empty advertising ID with ad tracking limited, the same as if you deleted your advertising ID in Android. Pinterest also stops keeping its browser ID in Google's Block Store, so a reinstall doesn't bring the old one back. Good for keeping ads from following you. On by default. Turn it off in HushPinterest settings > Privacy. |
@@ -97,10 +97,10 @@ There are 29 patches. Where a patch has a switch, its description names the sett
 | `Hide shopping and product pins` | Hides shoppable pins, shopping stories and featured boards. Good if you want to browse ideas, not products. Starts off. Turn it on in HushPinterest settings > Feed. |
 | `Hide survey prompts` | Turns down Pinterest's "Got a minute?" survey invite before it pops up, the same way tapping Maybe later does, so the same survey doesn't come back. Advertiser-sponsored polls don't pop up either. Starts off. Turn it on in HushPinterest settings > Interface. |
 | `Hide topic suggestions` | Hides the Ideas you might love row of topic bubbles under pins, without leaving a gap. Comments and related pins stay. Starts off. Turn it on in HushPinterest settings > Interface. |
-| `HushPinterest settings` | Adds a HushPinterest page to Pinterest where you turn features on or off, pause HushPinterest, back up your settings and read the licenses. Open it by long-pressing the Pinterest logo at the top of your home feed or Pinterest's app icon. Works as soon as you patch it in, with no switch. |
+| `HushPinterest settings` | Adds a HushPinterest page to Pinterest where you turn features on or off, pause HushPinterest, back up your settings and read the licenses. Open it from Pinterest's settings, or by long-pressing the Pinterest logo at the top of your home feed or Pinterest's app icon. Works as soon as you patch it in, with no switch. |
 | `Long-press download` | Adds a Download button to the round menu you get when you long-press a pin in a grid, so you can save a pin without opening it. Slide onto the button and let go. Needs Download pins on too. Starts off. Turn it on in HushPinterest settings > Pin actions. |
 | `No screenshot share menu` | Stops Pinterest from popping up sharing suggestions after you take a screenshot. Screenshots still work as usual. Starts off. Turn it on in HushPinterest settings > Interface. |
-| `Open links in your browser` | Opens a pin's Visit link and profile websites in your web browser. Pinterest links and sign-in work as before. Good if you prefer your own browser. Starts off. Turn it on in HushPinterest settings > More settings > Links. |
+| `Open links in your browser` | Opens a pin's Visit link and profile websites in your web browser. Pinterest links and sign-in work as before. Good if you prefer your own browser. Starts off. Turn it on in HushPinterest settings > Links. |
 | `Original-quality images` | Loads the original image for each pin and in collages, instead of the large size. Pictures look sharper but use more data. Starts off. Turn it on in HushPinterest settings > Interface. |
 | `Quiet email reminders` | Dismisses the optional reminder to confirm your email. Account checks and sign-in still work as usual. Starts off. Turn it on in HushPinterest settings > Interface. |
 | `Remove ad tracking permissions` | Removes Google's advertising ID permission and Android's Privacy Sandbox ad services from Pinterest, so it can't use them. Google Play services then answers with zeros. Works as soon as you patch it in, with no switch. |
@@ -112,10 +112,10 @@ Every patch but Spoof signature for Google sign-in is in Manager's default selec
 
 ## Help
 
-- **Can't find the settings.** Long-press the Pinterest logo at the top of your home feed, or long-press the app icon and tap **HushPinterest**. If neither is there, refresh the source in Manager and patch again.
+- **Can't find the settings.** Open Pinterest's settings and tap **HushPinterest**, or long-press the Pinterest logo at the top of your home feed or the app icon. If the entries are missing, refresh the source in Manager and patch again.
 - **A switch does nothing.** Check that **Pause** is off, then reopen the screen you're looking at. Pin menu changes show on the next menu you open.
 - **Android won't install the patched app.** It can't replace stock Pinterest, so uninstall that first. Later updates of your patched copy need the same signing key.
-- **Manager rejects the APK, or a patch fails.** Use Pinterest 14.39.0, version code 14398020, unmodified. Each patch finds its code by what it does in that build, and Pinterest renames almost everything between releases, so a patch that can't find its spot stops instead of patching the wrong place.
+- **Manager rejects the APK, or a patch fails.** Use Pinterest 14.40.0, version code 14408010, unmodified. Each patch finds its code by what it does in that build, and Pinterest renames almost everything between releases, so a patch that can't find its spot stops instead of patching the wrong place.
 - **Google sign-in fails.** Use your email and a Pinterest password. See [Signing in](#signing-in).
 
 ### Reporting a problem
@@ -139,15 +139,15 @@ Disable analytics stops Pinterest's usage uploads, the AppsFlyer and Bugsnag tra
 | Field | Value |
 | --- | --- |
 | Package | `com.pinterest` |
-| Version | Pinterest 14.39.0 |
-| Version code | `14398020` |
+| Version | Pinterest 14.40.0 |
+| Version code | `14408010` |
 | APK | The universal APK (APKMirror's "nodpi" variant), or a split bundle Manager can merge |
 | Minimum Android version | Android 10 |
 
 SHA-256 of the stock APK the patches were checked against:
 
 ```text
-14398020  4ecc7f9a34c89fd98d0e2133c294517772857b935969847bfd92b3e25b13e78d
+14408010  1ddbd604d06f81489a5c628ba874a93b979eefcf1f1dcc263b2e0a2804518438
 ```
 
 On Windows, compare yours with `Get-FileHash -Algorithm SHA256 .\pinterest.apk`. Other Pinterest versions aren't supported.

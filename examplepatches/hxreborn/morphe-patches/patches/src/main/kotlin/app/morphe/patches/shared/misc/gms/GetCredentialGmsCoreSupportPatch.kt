@@ -18,13 +18,14 @@ val getCredentialGmsCoreSupportPatch = bytecodePatch(
     description = "Signs in through GmsCore instead of Google Play Services. " +
         "Requires GmsCore to be installed.",
 ) {
-    compatibleWith(AppCompatibilities.MEMONEET, AppCompatibilities.STORYWISE)
+    compatibleWith(AppCompatibilities.JUJO, AppCompatibilities.MEMONEET, AppCompatibilities.STORYWISE)
     extendWith("extensions/extension.mpe")
 
-    dependsOn(gmsCoreSpoofedSignaturePatch)
+    dependsOn(gmsCoreSpoofedSignaturePatch, gmsCoreManifestPatch)
 
     execute {
         bindGmsCoreSignInTypes()
+        renameCloudMessagingToGmsCore()
 
         GetCredentialHandlerFingerprint.matchSingle().let { match ->
             val (isEmpty, activityRead, _, completeFailure) = match.instructionMatches.map { it.index }

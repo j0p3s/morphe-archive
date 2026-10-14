@@ -63,9 +63,11 @@ public class Settings extends BaseSettings {
      * Ads and paid Blaze posts leave each page of posts Tumblr loads, and Tumblr's own requests to
      * its ad networks are turned off ({@link app.hushtumblr.extension.tumblr.timeline.TimelineFilter},
      * {@link app.hushtumblr.extension.tumblr.flags.FeatureSwitches}). On to start, like the patch.
+     * Restart-gated: the feed filter reads it per page, but the ad network switches are only read
+     * when Tumblr starts, which is what the row's summary promises.
      */
     public static final BooleanSetting HIDE_ADS =
-            new BooleanSetting("hushtumblr_hide_ads", TRUE);
+            new BooleanSetting("hushtumblr_hide_ads", TRUE, true);
 
     /**
      * Google's advertising ID getters answer an empty ID with ad tracking limited
@@ -105,8 +107,10 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushtumblr_hide_tumblr_tv", FALSE, true);
 
     /**
-     * The Communities tab leaves the bottom bar, and the post editor stops showing Communities tips
-     * ({@link app.hushtumblr.extension.tumblr.flags.FeatureSwitches}). Off to start.
+     * The bottom bar doesn't show the Communities tab's button; the tab itself stays in Tumblr's
+     * list ({@link app.hushtumblr.extension.tumblr.ui.BottomBarTabs}). The post editor stops
+     * showing Communities tips ({@link app.hushtumblr.extension.tumblr.flags.FeatureSwitches}).
+     * Off to start.
      */
     public static final BooleanSetting HIDE_COMMUNITIES_TAB =
             new BooleanSetting("hushtumblr_hide_communities_tab", FALSE, true);
@@ -254,6 +258,10 @@ public class Settings extends BaseSettings {
     /** Keep tagged reblogs, while leaving the other enabled post rules in force. */
     public static final BooleanSetting KEEP_TAGGED_REBLOGS =
             new BooleanSetting("hushtumblr_keep_tagged_reblogs", FALSE);
+
+    /** Keep reblogs whose own content isn't empty, while leaving the other enabled post rules in force. */
+    public static final BooleanSetting KEEP_REBLOGS_WITH_CONTENT =
+            new BooleanSetting("hushtumblr_keep_reblogs_with_content", FALSE);
 
     /**
      * Posts with a video anywhere in them, the reblog trail included, leave each page of posts

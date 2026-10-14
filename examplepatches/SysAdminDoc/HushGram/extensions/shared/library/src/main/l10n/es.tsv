@@ -104,6 +104,7 @@ HushGram pauses when Instagram restarts.	HushGram se pausa cuando Instagram se r
 HushGram saves	Descargas de HushGram
 HushGram settings	Configuración de HushGram
 HushGram settings couldn't open	No se pudo abrir la configuración de HushGram
+HushGram settings are locked	La configuración de HushGram está bloqueada
 HushGram turns back on when Instagram restarts.	HushGram vuelve a activarse cuando Instagram se reinicie.
 Instagram crashed or froze within a minute of starting three times in a row, so HushGram paused itself.	Tres veces seguidas, Instagram falló o se congeló durante el primer minuto tras iniciarse, así que HushGram se pausó solo.
 Instagram stops showing the screen that says this version is too old. A patched build doesn't update on its own, so this keeps it usable.	Instagram deja de mostrar la pantalla que dice que esta versión es demasiado antigua. Una versión parcheada no se actualiza sola, así que esto la mantiene usable.
@@ -320,7 +321,7 @@ Couldn't mark as read	No se pudo marcar como leído
 Hide that you're typing	Ocultar que estás escribiendo
 People you're chatting with don't see the typing dots while you write, and you still see theirs.	Las personas con las que chateas no ven los puntos de escritura mientras escribes, y tú sigues viendo los suyos.
 Hide your active status	Ocultar tu estado de actividad
-People don't see Active now for you while you use Instagram, and you still see when they're active. Restart Instagram to see the change.	Los demás no ven que estás activo ahora mientras usas Instagram, y tú sigues viendo cuándo están activos. Reinicia Instagram para ver el cambio.
+People don't see Active now for you while you use Instagram, and you still see when they're active. It takes effect the next time you come back to Instagram.	Los demás no ven que estás activo ahora mientras usas Instagram, y tú sigues viendo cuándo están activos. Se aplica la próxima vez que vuelvas a Instagram.
 Start Home on Following	Abrir Inicio en Seguidos
 Opens Home on posts from accounts you follow instead of For you. Tap the top of Home to switch. Restart Instagram to see the change.	Abre Inicio con las publicaciones de las cuentas que sigues en lugar de Para ti. Toca la parte de arriba de Inicio para cambiar. Reinicia Instagram para ver el cambio.
 Hide suggested stories	Ocultar historias sugeridas
@@ -428,7 +429,7 @@ Reopen the media and save again.	Vuelve a abrir el contenido y guárdalo otra ve
 Search settings	Buscar en ajustes
 Clear search	Borrar búsqueda
 No matching settings	No hay ajustes coincidentes
-Try another word or clear the search.	Prueba otra palabra o borra la búsqueda.
+Try another word. Settings only appear for patches included in this install.	Prueba otra palabra. Solo aparecen los ajustes de los parches incluidos en esta instalación.
 Contacts, location setup, analytics	Contactos, configuración de ubicación, analíticas
 Save all	Guardar todo
 Saving a carousel	Guardando un carrusel
@@ -1015,3 +1016,23 @@ Clear download history	Borrar el historial de descargas
 Forgets everything Skip what's already saved remembers, for all your accounts. Your saved files stay.	Olvida todo lo que recuerda Omitir lo que ya está guardado, en todas tus cuentas. Tus archivos guardados se quedan.
 Download history cleared.	Historial de descargas borrado.
 Couldn't clear the download history. Try again.	No se pudo borrar el historial de descargas. Inténtalo de nuevo.
+Loading the picture...	Cargando la imagen...
+# context: the settings row right above Support HushGram that opens a new bug report on GitHub
+Report a problem	Informar de un problema
+Opens a GitHub report with your versions and settings filled in. Add what happened.	Abre un informe en GitHub con tus versiones y ajustes ya rellenados. Añade lo que pasó.
+# context: the settings row under Search, and the title of its dialog of one-tap choices
+Quick setups	Configuración rápida
+Turn on a set of switches in one tap, or put every switch back the way it started.	Activa varios interruptores con un toque o devuelve todos los interruptores a como estaban al principio.
+# context: a Quick setups choice that hides ads, suggestions and promotions
+Quiet	Tranquilo
+# context: a Quick setups choice that turns on the privacy switches
+Privacy	Privacidad
+# context: a Quick setups choice that puts every switch back the way it started
+Back to defaults	Volver a los valores predeterminados
+Hides ads, suggested accounts and posts, surveys and promotions.	Oculta anuncios, cuentas y publicaciones sugeridas, encuestas y promociones.
+Hides your seen receipts, typing and active status. Allows screenshots and stops link tracking and usage reports.	Oculta tus confirmaciones de visto, cuándo escribes y tu estado de actividad. Permite capturas de pantalla y detiene el rastreo de enlaces y los informes de uso.
+Puts every switch back the way it started. Your locks stay as they are.	Devuelve todos los interruptores a como estaban al principio. Tus bloqueos se quedan como están.
+# context: toast after a Quick setups choice changed exactly one switch
+Changed %1$d setting	Se cambió %1$d ajuste
+# context: the same toast for any other count, zero included; %1$d is how many
+Changed %1$d settings	Se cambiaron %1$d ajustes

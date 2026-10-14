@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Runs a Hushfacebook release one stage at a time: source, preflight, bundle, publish, index.
+    Runs a Hushfacebook release one stage at a time: source, preflight, bundle, rebuild, publish, index.
 
 .DESCRIPTION
     One command per stage, in this order. Each stage checks that the one before it finished and
@@ -19,10 +19,21 @@
     bundle     From the pushed, clean source commit: the bundle with its SBOM and tooling list,
                the receipt over every declared build (reading the runs the gate kept in
                patches/build/fixture-apply) and SHA256SUMS.txt, into build/release-assets/<version>.
-    publish    Notes from the whole CHANGELOG section with -Checked as What was checked, a
-               lightweight tag, the GitHub release with the five assets, each downloaded back and
-               compared. -Checked must say "applied ... to Facebook <version>" with "Facebook"
-               right after "to": the app's update check reads the target from that phrase.
+    rebuild    The source commit built a second time, in a fresh worktree under the temp folder,
+               and that bundle compared with the staged one: every class, DEX, extension payload
+               and resource by name and SHA-256, whatever the ZIP order, times or compression. The
+               identity each bundle carries is held to its own checkout and doesn't decide, so a
+               checkout with other line endings passes and a changed class doesn't. A pass leaves
+               a note beside the assets naming the commit and the staged bundle's hash, and with
+               that note there the stage builds nothing again: one more build a release. The
+               worktree is removed whatever happens.
+    publish    A copy of the five assets, held to SHA256SUMS.txt and the receipt (the bundle, SBOM
+               and tooling report it names, at the source commit) before anything else runs, and
+               the bundle in it to the rebuild stage's note by its hash. Then
+               notes from the whole CHANGELOG section with -Checked as What was checked, a
+               lightweight tag, and the GitHub release with that checked copy, each file downloaded
+               back and compared. -Checked must say "applied ... to Facebook <version>" with
+               "Facebook" right after "to": the app's update check reads the target from that phrase.
     index      patches-bundle.json, the README's latest-release sentence and the bug form, from the
                published release and the gate's test results, and the repository description. Then
                commit "chore(release): point Manager to the verified X.Y.Z bundle" and push.
@@ -36,12 +47,13 @@
     scripts/release/release.ps1 -Stage source -Version 0.9.0 -Summary summary.txt
     scripts/release/release.ps1 -Stage preflight -Version 0.9.0
     scripts/release/release.ps1 -Stage bundle -Version 0.9.0
+    scripts/release/release.ps1 -Stage rebuild -Version 0.9.0
     scripts/release/release.ps1 -Stage publish -Version 0.9.0 -Checked checked.txt
     scripts/release/release.ps1 -Stage index -Version 0.9.0 -ReadmeSummary readme.txt -BundleSummary bundle.txt
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true)][ValidateSet('source', 'preflight', 'bundle', 'publish', 'index')][string]$Stage,
+    [Parameter(Mandatory = $true)][ValidateSet('source', 'preflight', 'bundle', 'rebuild', 'publish', 'index')][string]$Stage,
     [Parameter(Mandatory = $true)][ValidatePattern('^\d+\.\d+\.\d+$')][string]$Version,
     # source: a file holding the release's one-paragraph summary, and the CHANGELOG date if not today.
     [string]$Summary,
@@ -58,6 +70,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 . (Join-Path $root 'scripts/common.ps1')
 . (Join-Path $root 'scripts/patch-target.ps1')
+. (Join-Path $root 'scripts/release-receipt.ps1')
 
 $tag = "v$Version"
 $assets = Join-Path $root "build/release-assets/$Version"
@@ -66,6 +79,8 @@ $receiptName = "release-receipt-$Version.json"
 # What :patches:buildAndroid leaves in patches/build/release, published beside the receipt.
 $builtNames = @("patches-$Version.mpp", "patches-$Version.cdx.json", "patches-$Version.tooling.json")
 $assetNames = $builtNames + $receiptName
+# What the rebuild stage leaves beside the assets when the rebuilt bundle matched. It isn't published.
+$rebuildName = "rebuild-$Version.json"
 
 function Step([string]$Text) { Write-Host "[release] $Text" -ForegroundColor Cyan }
 
@@ -115,7 +130,11 @@ function Invoke-ReleaseText {
 }
 
 function Invoke-Gradle {
-    param([Parameter(Mandatory = $true)][string[]]$Tasks)
+    param(
+        [Parameter(Mandatory = $true)][string[]]$Tasks,
+        # The checkout to build: this one, or the worktree the rebuild stage made.
+        [string]$ProjectDir = $root
+    )
     Set-GitHubPackagesCredential
     $wrapper = $env:HUSHFACEBOOK_BUILD_WRAPPER
     if ($wrapper -and -not (Test-Path -LiteralPath $wrapper -PathType Leaf)) {
@@ -123,11 +142,39 @@ function Invoke-Gradle {
     }
     $global:LASTEXITCODE = 0
     if ($wrapper) {
-        & $wrapper -ProjectDir $root -Tasks $Tasks
+        & $wrapper -ProjectDir $ProjectDir -Tasks $Tasks
     } else {
-        Invoke-HeavyJob -Label "release gradle $($Tasks[0])" -ScriptBlock { & (Join-Path $root 'gradlew.bat') -p $root @Tasks }
+        Invoke-HeavyJob -Label "release gradle $($Tasks[0])" -ScriptBlock { & (Join-Path $ProjectDir 'gradlew.bat') -p $ProjectDir @Tasks }
     }
     if ($LASTEXITCODE -ne 0) { throw "Gradle $($Tasks -join ' ') did not pass (exit $LASTEXITCODE)." }
+}
+
+# The rebuild stage's note, or nothing when there is none that reads. Publish asks for one naming
+# its commit and the hash of the bundle it's about to upload.
+function Read-RebuildNote {
+    $path = Join-Path $assets $rebuildName
+    if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { return $null }
+    try { return [IO.File]::ReadAllText($path) | ConvertFrom-Json } catch { return $null }
+}
+
+function Test-RebuildNote($Note, [string]$Commit, [string]$BundleHash) {
+    return [bool]($null -ne $Note -and $BundleHash -and [string]$Note.version -ceq $Version -and
+        [string]$Note.commit -ceq $Commit -and [string]$Note.bundle.sha256 -ieq $BundleHash)
+}
+
+# Takes away the worktree the rebuild stage added, and nothing else: git's own removal, which
+# drops its entry from the repository too, then whatever a build process still held open, the way
+# the other scratch folders go. What won't go is named, since it's a whole checkout left in temp.
+function Remove-RebuildWorktree([string]$Path) {
+    $global:LASTEXITCODE = 0
+    & git -C $root worktree remove --force $Path
+    $removed = $LASTEXITCODE -eq 0
+    if (Test-Path -LiteralPath $Path) { Remove-TreeWithoutFollowingLinks -Path $Path }
+    # A folder that went only by the fallback leaves git's entry for it, which prune drops.
+    if (-not $removed) { & git -C $root worktree prune }
+    if (-not $removed -or (Test-Path -LiteralPath $Path)) {
+        Write-Warning "The rebuild's worktree didn't go cleanly. See 'git worktree list', and remove $Path if it's still there."
+    }
 }
 
 function Get-TestCount([string[]]$Directories) {
@@ -253,14 +300,15 @@ try {
                 })
 
             Step "receipt over $($fixtures.Count) fixtures of $($versions -join ', ')"
-            $work = Join-Path ([IO.Path]::GetTempPath()) "hushfacebook-receipt-$Version"
-            New-Item -ItemType Directory -Force -Path $work | Out-Null
+            # A fresh name each run, made here and not found, so nothing can be waiting in it.
+            $work = Join-Path ([IO.Path]::GetTempPath()) "hushfacebook-receipt-$Version-$([guid]::NewGuid().ToString('N'))"
+            New-Item -ItemType Directory -Path $work | Out-Null
             try {
                 $global:LASTEXITCODE = 0
                 & (Join-Path $root 'scripts/build-release-receipt.ps1') -Root $root -WorkDir $work -Fixture $fixtures `
                     -Bundle (Join-Path $built $builtNames[0]) -AppliedDir (Join-Path $root 'patches/build/fixture-apply')
                 if ($LASTEXITCODE -ne 0) { throw "The receipt did not pass (exit $LASTEXITCODE)." }
-            } finally { Remove-Item -LiteralPath $work -Recurse -Force -ErrorAction SilentlyContinue }
+            } finally { Remove-TreeWithoutFollowingLinks -Path $work }
 
             New-Item -ItemType Directory -Force -Path $assets | Out-Null
             Copy-Item -LiteralPath ($builtNames | ForEach-Object { Join-Path $built $_ }) -Destination $assets -Force
@@ -270,7 +318,72 @@ try {
             }
             [IO.File]::WriteAllText((Join-Path $assets 'SHA256SUMS.txt'), (($sums -join "`n") + "`n"), [Text.UTF8Encoding]::new($false))
             $sums | ForEach-Object { Step $_ }
-            Step "assets in $assets. Write the What was checked paragraph, then run -Stage publish"
+            Step "assets in $assets. Run -Stage rebuild next"
+        }
+        'rebuild' {
+            $head = Assert-PushedHead
+            Assert-SourceVersion
+            foreach ($name in $assetNames + 'SHA256SUMS.txt') {
+                if (-not (Test-Path -LiteralPath (Join-Path $assets $name) -PathType Leaf)) { throw "No $name in $assets. Run -Stage bundle first." }
+            }
+            # The staged bundle stays held from before its hash is taken until the compare is done,
+            # so the hash the note names is the hash of the bytes that were compared.
+            $staged = Join-Path $assets $builtNames[0]
+            try { $hold = Open-HeldFile -Path $staged }
+            catch { throw "The staged $($builtNames[0]) couldn't be held as itself, so nothing was rebuilt: $($_.Exception.Message)" }
+            try {
+                $stagedHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $staged).Hash.ToLowerInvariant()
+                if (Test-RebuildNote (Read-RebuildNote) $head $stagedHash) {
+                    Step "$($builtNames[0]) ($stagedHash) already matched a rebuild of $head, so nothing is built again"
+                } else {
+                    # A note for another commit or another bundle says nothing about this one.
+                    Remove-Item -LiteralPath (Join-Path $assets $rebuildName) -Force -ErrorAction SilentlyContinue
+                    # A fresh name each run, and only a folder git made under it here is ever removed.
+                    $worktree = Join-Path ([IO.Path]::GetTempPath()) "hushfacebook-rebuild-$([guid]::NewGuid().ToString('N'))"
+                    if (Test-Path -LiteralPath $worktree) { throw "$worktree is already there, and the rebuild only uses a folder it made." }
+                    $added = $false
+                    try {
+                        Step "a fresh worktree of $head in $worktree"
+                        Invoke-Native 'The rebuild worktree' { & git -C $root worktree add --quiet --detach $worktree $head }
+                        $added = $true
+                        # Where the Android SDK is. git keeps it out of every checkout, and it isn't
+                        # one of the inputs a bundle is built from, so the worktree stays clean.
+                        $sdk = Join-Path $root 'local.properties'
+                        if (Test-Path -LiteralPath $sdk -PathType Leaf) { Copy-Item -LiteralPath $sdk -Destination $worktree }
+
+                        Step 'bundle from the worktree'
+                        # Without the build cache: its keys don't depend on the folder, so the staged
+                        # build's own outputs would come back from it, and a build that doesn't come
+                        # out the same twice would pass.
+                        Invoke-Gradle @(':patches:buildAndroid', '--no-build-cache') -ProjectDir $worktree
+                        $rebuilt = Get-ReleaseBundlePath -Root $worktree -Version $Version
+                        if (-not (Test-Path -LiteralPath $rebuilt -PathType Leaf)) {
+                            throw "The rebuild left no $($builtNames[0]) in $(Split-Path -Parent $rebuilt)."
+                        }
+
+                        Step 'holding the staged bundle to the rebuilt one'
+                        $verdict = Test-RebuiltBundle -Root $root -BundlePath $staged -RebuiltRoot $worktree -RebuiltPath $rebuilt -Commit $head
+                        if (-not $verdict.Valid) { throw "The rebuild doesn't back the staged bundle, so it can't be published: $($verdict.Reason)" }
+                        $moved = @($verdict.Comparison.Identity | Where-Object { $_ -and -not $_.Same } | ForEach-Object { [string]$_.Name })
+                        $note = [ordered]@{
+                            version = $Version
+                            commit = $head
+                            bundle = [ordered]@{ file = $builtNames[0]; sha256 = $stagedHash }
+                            rebuilt = [ordered]@{ sha256 = (Get-FileHash -Algorithm SHA256 -LiteralPath $rebuilt).Hash.ToLowerInvariant() }
+                            compared = [int]$verdict.Comparison.Compared
+                            identityDiffers = $moved
+                        }
+                        [IO.File]::WriteAllText((Join-Path $assets $rebuildName), (($note | ConvertTo-Json -Depth 4) + "`n"), [Text.UTF8Encoding]::new($false))
+                        Step "$($note.compared) entries match by name and SHA-256"
+                        if ($moved.Count -gt 0) {
+                            Step "the build identity differs in $($moved -join ' and '), and each bundle was held to its own checkout for it"
+                        }
+                    } finally {
+                        if ($added) { Remove-RebuildWorktree $worktree }
+                    }
+                }
+            } finally { $hold.Dispose() }
+            Step 'the staged bundle is what the commit builds. Write the What was checked paragraph, then run -Stage publish'
         }
         'publish' {
             $head = Assert-PushedHead
@@ -278,6 +391,8 @@ try {
             foreach ($name in $assetNames + 'SHA256SUMS.txt') {
                 if (-not (Test-Path -LiteralPath (Join-Path $assets $name) -PathType Leaf)) { throw "No $name in $assets. Run -Stage bundle first." }
             }
+            $rebuildNote = Read-RebuildNote
+            if ($null -eq $rebuildNote) { throw "No $rebuildName in $assets that reads. Run -Stage rebuild first." }
             $receipt = Get-Content -LiteralPath (Join-Path $assets $receiptName) -Raw | ConvertFrom-Json
             # build-release-receipt writes the commit it saw as release.commit.
             $receiptCommit = [string]$receipt.release.commit
@@ -285,29 +400,76 @@ try {
                 throw "The receipt is for $(if ($receiptCommit) { $receiptCommit } else { 'no commit' }), and HEAD is $head."
             }
 
-            $notes = Join-Path $assets 'notes.md'
-            Invoke-ReleaseText 'The release notes' @('github-notes', '--version', $Version, '--checked', $Checked, '--out', $notes)
-            if (-not (& git -C $root tag --list $tag)) { Invoke-Native 'The tag' { & git -C $root tag $tag $head } }
-            if (([string](& git -C $root rev-parse "$tag^{commit}")).Trim() -ne $head) { throw "$tag doesn't point at $head." }
-            Invoke-Native 'The tag push' { & git -C $root push --quiet origin $tag }
-
-            Step "publishing $tag"
-            Invoke-Native 'gh release create' {
-                & gh release create $tag -R $Repository --verify-tag --title $tag --notes-file $notes `
-                    (($assetNames + 'SHA256SUMS.txt') | ForEach-Object { Join-Path $assets $_ })
-            }
-            $check = Join-Path ([IO.Path]::GetTempPath()) "hushfacebook-published-$Version"
-            Remove-Item -LiteralPath $check -Recurse -Force -ErrorAction SilentlyContinue
+            # What goes out is a copy taken now and checked, so a staged file changed after the
+            # check can't be uploaded in its place, and the download back is held to the same bytes.
+            # The copy's folder gets a name nobody knows ahead, and it and each file in it stay held
+            # (Open-HeldFile) from before the check until the download back is compared: the folder
+            # can't be renamed or swapped for a link, and a file can't be written, replaced or
+            # deleted. Each hold is proved to be the path's own file rather than one a link there
+            # led to, so what was checked is what gh opens by those paths. The hashes taken as
+            # they're opened are what the hosted copies must match.
+            $publishing = Join-Path ([IO.Path]::GetTempPath()) "hushfacebook-publishing-$Version-$([guid]::NewGuid().ToString('N'))"
+            New-Item -ItemType Directory -Path $publishing | Out-Null
+            $held = [Collections.Generic.List[IDisposable]]::new()
             try {
-                Invoke-Native 'The download back' { & gh release download $tag -R $Repository -D $check }
+                try { $held.Add((Open-HeldFile -Path $publishing -Directory)) }
+                catch { throw "The publishing copy couldn't be held as itself, so nothing was tagged: $($_.Exception.Message)" }
+                Copy-Item -LiteralPath (($assetNames + 'SHA256SUMS.txt') | ForEach-Object { Join-Path $assets $_ }) -Destination $publishing
+                $checkedHashes = @{}
                 foreach ($name in $assetNames + 'SHA256SUMS.txt') {
-                    $local = (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $assets $name)).Hash
-                    $hostedPath = Join-Path $check $name
-                    if (-not (Test-Path -LiteralPath $hostedPath -PathType Leaf)) { throw "The release has no $name." }
-                    if ((Get-FileHash -Algorithm SHA256 -LiteralPath $hostedPath).Hash -ne $local) { throw "The hosted $name differs from the local one." }
-                    Step "$name matches the hosted copy"
+                    $path = Join-Path $publishing $name
+                    try { $held.Add((Open-HeldFile -Path $path)) }
+                    catch { throw "$name in the publishing copy couldn't be held as itself, so nothing was tagged: $($_.Exception.Message)" }
+                    $checkedHashes[$name] = (Get-FileHash -Algorithm SHA256 -LiteralPath $path).Hash
                 }
-            } finally { Remove-Item -LiteralPath $check -Recurse -Force -ErrorAction SilentlyContinue }
+                Step 'holding the staged assets to SHA256SUMS.txt, the receipt and the source commit'
+                $staged = Test-StagedReleaseAt -Root $root -Folder $publishing -Version $Version -Commit $head
+                if (-not $staged.Valid) { throw "The staged release doesn't hold together, so nothing was tagged: $($staged.Reason)" }
+                # Anything else in the copy that's a link is refused too: nothing put one there, so
+                # one showing up means the copy was tampered with.
+                foreach ($item in @(Get-Item -LiteralPath $publishing -Force) + @(Get-ChildItem -LiteralPath $publishing -Force)) {
+                    if ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) {
+                        throw "$($item.Name) in the publishing copy is a link, so nothing was tagged: what was checked might not be what gh uploads."
+                    }
+                }
+                # The identity that check reads is the build's own word. The rebuild stage's note
+                # is what backs it, and it has to name this commit and the hash of the bundle in
+                # the copy, so a bundle staged or changed since the rebuild isn't taken for the
+                # one that was compared.
+                if (-not (Test-RebuildNote $rebuildNote $head $checkedHashes[$builtNames[0]])) {
+                    throw ("The staged $($builtNames[0]) isn't the bundle a rebuild of $head was compared with, so nothing " +
+                        'was tagged. Run -Stage rebuild again.')
+                }
+
+                $notes = Join-Path $assets 'notes.md'
+                Invoke-ReleaseText 'The release notes' @('github-notes', '--version', $Version, '--checked', $Checked, '--out', $notes)
+                if (-not (& git -C $root tag --list $tag)) { Invoke-Native 'The tag' { & git -C $root tag $tag $head } }
+                if (([string](& git -C $root rev-parse "$tag^{commit}")).Trim() -ne $head) { throw "$tag doesn't point at $head." }
+                Invoke-Native 'The tag push' { & git -C $root push --quiet origin $tag }
+
+                Step "publishing $tag"
+                Invoke-Native 'gh release create' {
+                    & gh release create $tag -R $Repository --verify-tag --title $tag --notes-file $notes `
+                        (($assetNames + 'SHA256SUMS.txt') | ForEach-Object { Join-Path $publishing $_ })
+                }
+                # A name nobody knows ahead, like the publishing copy's, so nothing can wait there
+                # with good copies for the compare.
+                $check = Join-Path ([IO.Path]::GetTempPath()) "hushfacebook-published-$Version-$([guid]::NewGuid().ToString('N'))"
+                try {
+                    Invoke-Native 'The download back' { & gh release download $tag -R $Repository -D $check }
+                    foreach ($name in $assetNames + 'SHA256SUMS.txt') {
+                        $hostedPath = Join-Path $check $name
+                        if (-not (Test-Path -LiteralPath $hostedPath -PathType Leaf)) { throw "The release has no $name." }
+                        if ((Get-FileHash -Algorithm SHA256 -LiteralPath $hostedPath).Hash -ne $checkedHashes[$name]) { throw "The hosted $name differs from the local one." }
+                        Step "$name matches the hosted copy"
+                    }
+                } finally { Remove-TreeWithoutFollowingLinks -Path $check }
+            } finally {
+                foreach ($handle in $held) { $handle.Dispose() }
+                # Links go as links, at any depth: Windows PowerShell's recursive removal follows a
+                # junction and would empty whatever it points at.
+                Remove-TreeWithoutFollowingLinks -Path $publishing
+            }
             Step 'published. Write the README and bundle summaries, then run -Stage index'
         }
         'index' {

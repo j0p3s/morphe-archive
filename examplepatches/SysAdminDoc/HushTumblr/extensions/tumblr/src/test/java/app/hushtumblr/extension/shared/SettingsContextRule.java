@@ -53,6 +53,14 @@ public final class SettingsContextRule extends ExternalResource {
     @Override
     protected void before() {
         Utils.setContext(RuntimeEnvironment.getApplication());
+        try {
+            Field worker = app.hushtumblr.extension.tumblr.settings.HushTumblrPreferenceFragment
+                    .class.getDeclaredField("editWorkerForTests");
+            worker.setAccessible(true);
+            worker.set(null, (java.util.function.Consumer<Runnable>) Runnable::run);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException("Could not install the settings edit worker", exception);
+        }
         // Robolectric hands every test method a fresh application and preference cache, but
         // Setting's store is a static captured when its class first loaded in this sandbox,
         // which is whichever class ran first. A fragment resolves its own store from the
@@ -82,6 +90,12 @@ public final class SettingsContextRule extends ExternalResource {
         } catch (ReflectiveOperationException exception) {
             throw new IllegalStateException("Could not clear the running values", exception);
         }
+        // A settings screen a test left open keeps the restart toast off every screen after it.
+        app.hushtumblr.extension.shared.settings.preference.AbstractPreferenceFragment
+                .setRestartFeedbackPresenter(null);
+        // The restart row's real restart ends the process, which here is the whole test run.
+        app.hushtumblr.extension.shared.settings.preference.ReopenSettingsAfterRestart
+                .setRestarterForTests(ignored -> { });
     }
 
     /**
@@ -128,5 +142,25 @@ public final class SettingsContextRule extends ExternalResource {
         // The sandbox is shared with whatever runs next, and a test is free to swap the context
         // for one of its own.
         Utils.setContext(RuntimeEnvironment.getApplication());
+        boolean pending;
+        try {
+            Class<?> page = app.hushtumblr.extension.tumblr.settings.HushTumblrPreferenceFragment.class;
+            Field worker = page.getDeclaredField("editWorkerForTests");
+            worker.setAccessible(true);
+            worker.set(null, null);
+            // An edit a test left queued, or a refresh retry it never ran, is counted for as long
+            // as the sandbox lives: Resume, Quick setups and every page refresh after it then do
+            // nothing, in whichever test happens to run next.
+            Field edits = page.getDeclaredField("pendingEdits");
+            edits.setAccessible(true);
+            pending = ((java.util.concurrent.atomic.AtomicInteger) edits.get(null)).getAndSet(0) != 0;
+            Field retry = page.getDeclaredField("savedRefreshRetryScheduled");
+            retry.setAccessible(true);
+            pending |= retry.getBoolean(null);
+            retry.setBoolean(null, false);
+        } catch (ReflectiveOperationException exception) {
+            throw new IllegalStateException("Could not clear the settings edit worker", exception);
+        }
+        if (pending) throw new AssertionError("The test left a settings edit pending");
     }
 }

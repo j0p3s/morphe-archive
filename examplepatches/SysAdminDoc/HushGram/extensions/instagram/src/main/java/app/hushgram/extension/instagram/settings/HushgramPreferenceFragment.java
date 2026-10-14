@@ -21,10 +21,12 @@ import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.SystemClock;
+import android.preference.DialogPreference;
 import android.preference.EditTextPreference;
 import android.preference.ListPreference;
 import android.preference.Preference;
 import android.preference.PreferenceCategory;
+import android.preference.PreferenceGroup;
 import android.preference.PreferenceScreen;
 import android.preference.SwitchPreference;
 import android.preference.TwoStatePreference;
@@ -37,9 +39,11 @@ import android.text.format.Formatter;
 import android.text.util.Linkify;
 import android.util.TypedValue;
 import android.view.ContextThemeWrapper;
+import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.view.inputmethod.EditorInfo;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.AbsListView;
@@ -63,6 +67,7 @@ import java.text.NumberFormat;
 import java.text.Normalizer;
 import java.text.DateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -127,6 +132,7 @@ import app.hushgram.extension.shared.settings.preference.ExportDiagnosticReportP
 import app.hushgram.extension.shared.settings.preference.ExportStatus;
 import app.hushgram.extension.shared.settings.preference.ImmediateAction;
 import app.hushgram.extension.shared.settings.preference.LogBufferManager;
+import app.hushgram.extension.shared.settings.preference.QuickSetups;
 
 /**
  * The preference list, built in code rather than from an XML resource so the bundle adds no
@@ -146,6 +152,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     static final String SUPPORT_ADDRESS = SUPPORT_URL.substring(SUPPORT_URL.indexOf("://") + 3);
     /** The key of Support HushGram, the settings home's last row. */
     static final String SUPPORT_ROW_KEY = "action_support_hushgram";
+    /** The row right above Support HushGram that opens a filled-in bug report on GitHub. */
+    static final String REPORT_ROW_KEY = "action_report_problem";
+    /** The row under Search that offers Quiet, Privacy and Back to defaults. */
+    static final String QUICK_SETUPS_ROW_KEY = "action_quick_setups";
     /** The English of the row listing what Pause can't reach, and its key in {@link L10n}. */
     static final String STAYS_WHILE_PAUSED = "Stays in while paused";
     /** The Before you sign in notice's key, which finds it on the screen. */
@@ -160,7 +170,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     static final String CHANGE_PIN_ROW = "hushgram_change_pin_row";
     static final String HIDDEN_ACCOUNTS_ROW = "hushgram_hidden_accounts_row";
     private static final String SCREEN_KEY = "hushgram_settings_root";
-    /** The keys of the rows that open each category's page, numbered in the page's order. */
+    /** The keys of category page rows, stable across translations and installed patch combinations. */
     static final String CATEGORY_ROW_KEY = "hushgram_category_page_";
     /** The key of the line an open category's page starts with. */
     static final String INTRO_KEY = "hushgram_category_intro";
@@ -218,6 +228,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     @Nullable private Row noSearchResults;
     /** The home page's last row, which opens the Ko-fi page in a browser. */
     @Nullable private Row support;
+    /** Report a problem, right above Support HushGram. */
+    @Nullable private Row report;
+    /** Quick setups, right under Search. */
+    @Nullable private Row quickSetups;
     /** Keep the actual row objects, including their values and listeners, while filtering. */
     private final Map<PreferenceCategory, List<Preference>> searchableRows = new LinkedHashMap<>();
     private final Map<Preference, String> searchAliases = new HashMap<>();
@@ -229,10 +243,13 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     @Nullable private Intro intro;
     /** The button at the top that switches between the list of categories and one long list. */
     @Nullable private Row viewToggle;
-    /** True while a category's page is open and the status card, view button and search row are off the screen. */
+    /** True while a category's page is open, with its search and any pending restart still reachable. */
     private boolean topHidden;
     /** Where the list of categories was scrolled to when a page opened, for Back. */
     private int categoryListPosition, categoryListTop;
+    @Nullable private String restoredCategory;
+    private int restoredPosition = -1;
+    private int restoredTop;
 
     /** The page's dialogs that may still be on screen, which would outlive it. */
     private final List<Dialog> shownDialogs = new ArrayList<>();
@@ -253,6 +270,11 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     @Override
     public void onCreate(Bundle state) {
         if (state != null) {
+            restoredCategory = state.getString("hushgram_open_category");
+            restoredPosition = state.getInt("hushgram_category_position", -1);
+            restoredTop = state.getInt("hushgram_category_top", 0);
+            categoryListPosition = state.getInt("hushgram_category_list_position", 0);
+            categoryListTop = state.getInt("hushgram_category_list_top", 0);
             documentRequest = state.getInt("hushgram_document_request", 0);
             // Older saved pages used the operation itself as their Android request code.
             documentCode = state.getInt("hushgram_document_code", documentRequest);
@@ -271,6 +293,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     documentCode = 0;
                 }
             }
+        } else if (getParentFragment() instanceof SettingsDialog) {
+            // Back after Restart now: the page it was tapped on, which initialize opens like a
+            // page put back after a turn. Only with Open categories as pages on, like that one.
+            restoredCategory = ((SettingsDialog) getParentFragment()).startPage();
         }
         super.onCreate(state);
     }
@@ -282,6 +308,15 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         state.putInt("hushgram_document_code", documentCode);
         state.putInt("hushgram_document_sequence", documentSequence);
         state.putString("hushgram_configuration_export", configurationExportToken);
+        Row category = categoryRows.get(openCategory);
+        if (category != null) state.putString("hushgram_open_category", category.getKey());
+        ListView list = listView();
+        boolean searching = !searchQuery.trim().isEmpty();
+        View first = list == null ? null : list.getChildAt(0);
+        state.putInt("hushgram_category_position", searching || list == null ? 0 : list.getFirstVisiblePosition());
+        state.putInt("hushgram_category_top", searching || first == null ? 0 : first.getTop() - list.getPaddingTop());
+        state.putInt("hushgram_category_list_position", categoryListPosition);
+        state.putInt("hushgram_category_list_top", categoryListTop);
     }
 
     @Override
@@ -289,16 +324,33 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         super.onViewCreated(view, savedInstanceState);
         ListView list = view.findViewById(android.R.id.list);
         if (list != null) {
+            // Our saved position belongs to the restored page, not the previous search results.
+            list.setSaveEnabled(false);
             list.setItemsCanFocus(true);
             list.setDivider(null);
             list.setDividerHeight(0);
             list.setBackgroundColor(Color.BLACK);
+        }
+        showTitle(openCategory == null ? null : openCategory.getTitle());
+    }
+
+    @Override public void onViewStateRestored(Bundle state) {
+        super.onViewStateRestored(state);
+        focusPage();
+        ListView list = listView();
+        if (list != null && restoredPosition >= 0) {
+            int position = restoredPosition, top = restoredTop;
+            restoredPosition = -1;
+            list.post(() -> {
+                if (list == listView()) list.setSelectionFromTop(position, top);
+            });
         }
     }
 
     @Override
     public void onResume() {
         super.onResume();
+        AbstractPreferenceFragment.setRestartFeedbackPresenter(restartFeedback);
         ExportStatus.CONFIGURATION.watch(exportChanges);
         ExportStatus.DIAGNOSTICS.watch(exportChanges);
         SaveControl.watch(saves);
@@ -319,12 +371,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
 
     @Override
     public void onDestroyView() {
+        AbstractPreferenceFragment.clearRestartFeedbackPresenter(restartFeedback);
         undoRefresh.removeCallbacks(refreshUndo);
-        // A rebuilt view starts on the list of categories, under the dialog's own title.
-        if (openCategory != null) {
-            openCategory = null;
-            filterSettings();
-        }
         for (Dialog dialog : new ArrayList<>(shownDialogs)) dialog.dismiss();
         shownDialogs.clear();
         clearPositions = null;
@@ -375,15 +423,24 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             }
             return true;
         });
-        screen.addPreference(statusCard(context));
+        Preference status = statusCard(context);
+        status.setOrder(-40);
+        screen.addPreference(status);
         // The sign-in notice stays right under the status card, so the view button goes after it.
-        if (!Settings.SIGN_IN_NOTICE_HIDDEN.savedValue()) screen.addPreference(signInNotice(context, screen));
+        if (!Settings.SIGN_IN_NOTICE_HIDDEN.savedValue()) {
+            Preference notice = signInNotice(context, screen);
+            notice.setOrder(-30);
+            screen.addPreference(notice);
+        }
+        viewToggle.setOrder(-20);
         screen.addPreference(viewToggle);
         search = new SearchRow(context);
+        search.setOrder(-10);
         search.setKey("hushgram_settings_search");
         search.setTitle(L10n.t("Search settings"));
         search.setPersistent(false);
-        search.setSelectable(false);
+        // ListView skips non-selectable rows when restoring or resetting its position outside
+        // touch mode. Search contains real controls, so it must remain a selectable row.
         screen.addPreference(search);
         noSearchResults = new Row(context);
         noSearchResults.setPersistent(false);
@@ -391,7 +448,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         noSearchResults.setKey("hushgram_settings_search_empty");
         noSearchResults.setOrder(search.getOrder() + 1);
         noSearchResults.setTitle(L10n.t("No matching settings"));
-        noSearchResults.setSummary(L10n.t("Try another word or clear the search."));
+        noSearchResults.setSummary(L10n.t("Try another word. Settings only appear for patches included in this install."));
         mark(noSearchResults, SettingsIcons.SEARCH);
         // The export row below reads this; registering twice keeps one.
         PatchFamily.registerDiagnostics();
@@ -684,7 +741,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             if (build.contains(PatchFamily.ACTIVE_STATUS)) {
                 messages.addPreference(toggle(context, Settings.HIDE_ACTIVE_STATUS, L10n.t("Hide your active status"),
                         L10n.t("People don't see Active now for you while you use Instagram, and you still see when "
-                                + "they're active. Restart Instagram to see the change.")));
+                                + "they're active. It takes effect the next time you come back to Instagram.")));
             }
             if (build.contains(PatchFamily.LAST_ACTIVE)) {
                 messages.addPreference(toggle(context, Settings.SHOW_LAST_ACTIVE,
@@ -1559,6 +1616,34 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         });
         about.addPreference(mark(licenses, SettingsIcons.LICENSE));
 
+        // Outside every category, so no category page or count changes. Under Search (-10) and
+        // above the first category, whose line on its own page takes the order just before it.
+        Row quick = quickSetups = new Row(context);
+        quick.setKey(QUICK_SETUPS_ROW_KEY);
+        quick.setTitle(L10n.t("Quick setups"));
+        quick.setSummary(L10n.t("Turn on a set of switches in one tap, or put every switch back the way it started."));
+        quick.setPersistent(false);
+        quick.setOrder(-5);
+        quick.setOnPreferenceClickListener(p -> {
+            showQuickSetups();
+            return true;
+        });
+        mark(quick, SettingsIcons.TOOLS);
+
+        // Outside every category, like Support HushGram below it. Every row counts toward the
+        // switches it lists, the ones a category page or a search keeps off the screen too.
+        Row bug = report = new Row(context);
+        bug.setKey(REPORT_ROW_KEY);
+        bug.setTitle(L10n.t("Report a problem"));
+        bug.setSummary(L10n.t("Opens a GitHub report with your versions and settings filled in. Add what happened."));
+        bug.setPersistent(false);
+        bug.setOrder(Integer.MAX_VALUE / 2 - 1);
+        bug.setOnPreferenceClickListener(p -> {
+            ReportProblemForm.open(p.getContext(), everyRow());
+            return true;
+        });
+        mark(bug, SettingsIcons.BUG);
+
         // Outside every category, so no category page, count or saved setting changes. filterSettings
         // puts it last on the home page and in a search it matches.
         Row donate = support = new Row(context);
@@ -1566,7 +1651,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         donate.setTitle(L10n.t("Support HushGram"));
         donate.setSummary(L10n.t("Buy me a coffee on Ko-fi"));
         donate.setPersistent(false);
-        donate.setOrder(Integer.MAX_VALUE - 1);
+        // Native Preference.compareTo subtracts orders, so leave room for negative header orders.
+        donate.setOrder(Integer.MAX_VALUE / 2);
         donate.setOnPreferenceClickListener(p -> {
             openSupport(p.getContext());
             return true;
@@ -1641,13 +1727,23 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             // Pause and diagnostics stays open in every mode, as it does while searching.
             if (group != recovery) categoryRows.put(group, categoryRow(context, group, rows));
         }
+        if (categoryPages() && restoredCategory != null) {
+            for (Map.Entry<PreferenceCategory, Row> category : categoryRows.entrySet()) {
+                if (restoredCategory.equals(category.getValue().getKey())) {
+                    openCategory = category.getKey();
+                    break;
+                }
+            }
+        }
+        if (restoredCategory != null && openCategory == null) restoredPosition = -1;
+        restoredCategory = null;
         filterSettings();
     }
 
     /** The row that opens [group]'s page: its name, its first few settings, and where it stood. */
     private Row categoryRow(Context context, PreferenceCategory group, List<Preference> rows) {
         Row row = new Row(context);
-        row.setKey(CATEGORY_ROW_KEY + categoryRows.size());
+        row.setKey(CATEGORY_ROW_KEY + iconOf(group));
         row.setPersistent(false);
         row.setTitle(group.getTitle());
         List<String> titles = new ArrayList<>();
@@ -1685,6 +1781,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             View first = list.getChildAt(0);
             categoryListTop = first == null ? 0 : first.getTop() - list.getPaddingTop();
         }
+        focusPage();
         openCategory = group;
         filterSettings();
         showTitle(group.getTitle());
@@ -1715,6 +1812,19 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     @Nullable private ListView listView() {
         View view = getView();
         return view == null ? null : view.findViewById(android.R.id.list);
+    }
+
+    /** Page entry shouldn't focus the search field or move a restored viewport to show it. */
+    private void focusPage() {
+        View view = getView();
+        if (!(view instanceof android.view.ViewGroup)) return;
+        android.view.ViewGroup body = (android.view.ViewGroup) view;
+        body.setFocusableInTouchMode(true);
+        body.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+        // PreferenceFragment posts focusableViewAvailable(list) after binding. Keep initial
+        // focus here; explicit focus on Search and its controls still works normally.
+        body.setDescendantFocusability(android.view.ViewGroup.FOCUS_BEFORE_DESCENDANTS);
+        body.requestFocus();
     }
 
     private void showTitle(@Nullable CharSequence title) {
@@ -1860,11 +1970,15 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         }
         // A search looks through every category, whichever page is open, and clearing it goes back.
         boolean listing = pages && terms.length == 0;
-        // A category's page shows only its own settings: no status card, view button or search.
+        // Search stays within reach on every page. A pending restart keeps its action there too.
         topHidden = listing && openCategory != null;
+        boolean categoryContext = pages && openCategory != null;
+        showTitle(terms.length > 0 ? L10n.t("Search settings")
+                : openCategory == null ? null : openCategory.getTitle());
         for (Preference top : new Preference[]{statusCard, viewToggle, search}) {
             if (top == null) continue;
-            if (topHidden) {
+            boolean hidden = categoryContext && top != search && (top != statusCard || !restartActionAvailable());
+            if (hidden) {
                 if (top.getParent() == screen) screen.removePreference(top);
             } else if (top.getParent() != screen) screen.addPreference(top);
         }
@@ -1905,17 +2019,21 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 } else if (row.getParent() == screen) screen.removePreference(row);
             }
         }
-        Row donate = support;
-        if (donate != null) {
-            String text = searchText(donate.getTitle()) + " " + searchText(donate.getSummary()) + " ko-fi kofi donate";
+        // The rows outside every category: the home page (and a search each matches) shows them,
+        // a category's page doesn't.
+        Row[] loose = {quickSetups, report, support};
+        String[] looseAliases = {" preset quiet privacy defaults reset", " github bug issue", " ko-fi kofi donate"};
+        for (int i = 0; i < loose.length; i++) {
+            Row row = loose[i];
+            if (row == null) continue;
+            String text = searchText(row.getTitle()) + " " + searchText(row.getSummary()) + looseAliases[i];
             boolean match = true;
             for (String term : terms) if (!text.contains(term)) { match = false; break; }
-            // The home page (and a search it matches) shows it, a category's page doesn't.
             boolean shown = match && (terms.length > 0 || !pages || openCategory == null);
             if (terms.length > 0 && match) matches++;
             if (shown) {
-                if (donate.getParent() != screen) screen.addPreference(donate);
-            } else if (donate.getParent() == screen) screen.removePreference(donate);
+                if (row.getParent() != screen) screen.addPreference(row);
+            } else if (row.getParent() == screen) screen.removePreference(row);
         }
         // removePreference notifies even when absent. No-op changes mustn't rebind live Cancel.
         if (terms.length > 0 && matches == 0) {
@@ -1925,8 +2043,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
 
     /**
      * Puts the open category's intro right above its section, or takes it off when no page is open
-     * or a search runs. A page shows the intro, its section and at most the sign-in notice, which
-     * sorts first, so the order just under the section's own can't tie with anything shown.
+     * or a search runs. Top-level actions have negative orders reserved ahead of every section,
+     * so even the first category's intro follows Search and directly precedes its section.
      */
     private void showIntro(PreferenceScreen screen) {
         Intro line = intro;
@@ -1946,6 +2064,63 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             line.setTitle(text);
             screen.addPreference(line);
         }
+    }
+
+    /**
+     * Quick setups: Quiet, Privacy or Back to defaults, each changing its switches at once
+     * ({@link QuickSetupKeys}), then a toast saying how many changed. A switch that needs a restart
+     * turns the status card into Restart now the way a tap on it would.
+     */
+    void showQuickSetups() {
+        Context context = getContext();
+        if (context == null) return;
+        List<Map<BooleanSetting, Boolean>> choices = Arrays.asList(
+                QuickSetupKeys.quiet(), QuickSetupKeys.privacy(), QuickSetupKeys.defaults());
+        CharSequence[] names = {L10n.t("Quiet"), L10n.t("Privacy"), L10n.t("Back to defaults")};
+        CharSequence[] details = {
+                L10n.t("Hides ads, suggested accounts and posts, surveys and promotions."),
+                L10n.t("Hides your seen receipts, typing and active status. Allows screenshots and stops link tracking and usage reports."),
+                L10n.t("Puts every switch back the way it started. Your locks stay as they are.")};
+        AlertDialog dialog = show(new AlertDialog.Builder(themed(context))
+                .setTitle(L10n.t("Quick setups"))
+                .setAdapter(new ChoiceCards(ScreenColors.DEFAULT, names, details),
+                        (shown, which) -> applyQuickSetup(choices.get(which)))
+                .setNegativeButton(L10n.t("Cancel"), null));
+        ListView list = dialog == null ? null : dialog.getListView();
+        if (list != null) {
+            // The cards bring their own spacing and press ripple, as in the diagnostic report's choices.
+            list.setDivider(null);
+            list.setSelector(new ColorDrawable(Color.TRANSPARENT));
+        }
+    }
+
+    /**
+     * Applies one Quick setups choice to every switch on this page, the ones a category page or a
+     * search keeps off the screen too, and says how many changed. While Instagram is locked it
+     * waits for the phone's lock, as a settings file does. Switches that need a restart say so
+     * once between them.
+     */
+    int applyQuickSetup(Map<BooleanSetting, Boolean> values) {
+        if (MessagesLock.locked()) {
+            Activity activity = getActivity();
+            if (activity != null) MessagesLock.confirmThen(activity, () -> applyQuickSetup(values));
+            return 0;
+        }
+        Context context = getContext();
+        if (getPreferenceScreen() == null || context == null) return 0;
+        int[] count = {0};
+        AbstractPreferenceFragment.restartNoteOnce(context,
+                () -> count[0] = QuickSetups.apply(this::findPreference, values));
+        int changed = count[0];
+        Utils.showToastLong(L10n.quantity(changed, "Changed %1$d setting", "Changed %1$d settings", changed));
+        return changed;
+    }
+
+    /** Every row in the categories, on the screen or kept off it by a category page or a search. */
+    private List<Preference> everyRow() {
+        List<Preference> rows = new ArrayList<>();
+        for (List<Preference> section : searchableRows.values()) rows.addAll(section);
+        return rows;
     }
 
     /** The Ko-fi page, for a browser, in a task of its own so it never opens inside Instagram's. */
@@ -2537,6 +2712,16 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     /** Undo always remains Undo, even if its expiration callback hasn't reached the screen yet. */
     private void changeConfiguration(@Nullable Uri uri, long token) {
         if (changingConfiguration || ExportStatus.CONFIGURATION.active()) return;
+        // These settings can outlast the unlock that opened them, and the file picker's own screen
+        // is a leave that can lock again. A file or an Undo arriving while locked waits for a new
+        // unlock; a cancel changes nothing.
+        if (MessagesLock.locked()) {
+            // The picker's request is spent, so the rows are offered again whatever the answer.
+            showConfiguration();
+            Activity activity = getActivity();
+            if (activity != null) MessagesLock.confirmThen(activity, () -> changeConfiguration(uri, token));
+            return;
+        }
         boolean undo = uri == null;
         Context context = getContext();
         if (context == null) return;
@@ -2761,6 +2946,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             row.setAddStatesFromChildren(true);
             row.setPaddingRelative(inset + Math.round(14 * density), gap, inset + Math.round(4 * density), gap);
             row.setMinimumHeight(touch + 2 * gap);
+            // Its children own the accessible actions; the row only anchors ListView selection.
+            row.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
             // Legacy ListView refocuses a row during layout. Keep focus on its typing field.
             row.setDescendantFocusability(android.view.ViewGroup.FOCUS_AFTER_DESCENDANTS);
             EditText field = new EditText(context);
@@ -2800,8 +2987,9 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             int crossSize = Math.round(20 * density);
             cross.setBounds(0, 0, crossSize, crossSize);
             clear.setCompoundDrawablesRelative(cross, null, null, null);
-            clear.setBackgroundColor(Color.TRANSPARENT);
+            ScreenColors.styleIconAction(clear);
             clear.setContentDescription(L10n.t("Clear search"));
+            clear.setTooltipText(L10n.t("Clear search"));
             int crossPadding = (touch - crossSize) / 2;
             clear.setPaddingRelative(crossPadding, 0, crossPadding, 0);
             clear.setMinimumWidth(touch);
@@ -3016,7 +3204,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     L10n.isolate(Utils.getPatchesReleaseVersion()), L10n.isolate(Utils.getAppVersionName()));
             // A change Instagram only reads as it starts makes the card a Restart now button (#146).
             // Not while a pause is on its way: that restart would come up paused.
-            boolean restart = !pausedNext && RestartNow.owed();
+            boolean restart = restartActionAvailable();
             status = pausedNext ? version + " " + L10n.t("HushGram pauses when Instagram restarts.")
                     : restart ? version + "\n\n" + L10n.t("Some changes apply when Instagram restarts. Tap to restart it now.")
                     : version;
@@ -3038,11 +3226,14 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         card.setSummary(status);
     }
 
-    /** The status card's Restart now. A save or an export still running keeps Instagram up and says so. */
+    /**
+     * The status card's Restart now. A save or an export still running keeps Instagram up and says
+     * so. Instagram comes back with the screen open on this page.
+     */
     void restartNow() {
         Activity activity = getActivity();
         if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
-        switch (RestartNow.restart(activity)) {
+        switch (RestartNow.restart(activity, currentPage())) {
             case BUSY:
                 Utils.showToastLong(L10n.t(activity, "A save or an export is still running. Restart once it's done."));
                 break;
@@ -3054,11 +3245,39 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         }
     }
 
+    /** The key of the open category page's row, or "" for the first page. */
+    String currentPage() {
+        Row category = categoryRows.get(openCategory);
+        return category == null || category.getKey() == null ? "" : category.getKey();
+    }
+
+    /**
+     * The shared fragment's "restart to apply" feedback while this page is up. When the status card
+     * has become Restart now, the card is what to tap, so a screen reader hears the message and no
+     * toast covers the page. Otherwise (HushGram paused, or pausing at the next start) the toast
+     * still says it, since nothing on the page does.
+     */
+    private final AbstractPreferenceFragment.RestartFeedbackPresenter restartFeedback = (shown, message) -> {
+        ListView list = listView();
+        if (restartActionAvailable() && list != null) {
+            list.announceForAccessibility(message);
+        } else {
+            Utils.showToastLong(message.toString());
+        }
+    };
+
     @Override
     protected void onRestartPendingChanged() {
         Preference card = statusCard;
         Context context = getContext();
         if (card != null && context != null) showStatus(card, context);
+        filterSettings();
+    }
+
+    private boolean restartActionAvailable() {
+        Context context = getContext();
+        return context != null && !HushgramPause.isPaused()
+                && !HushgramPause.pausesNextStart(context) && RestartNow.owed();
     }
 
     /**
@@ -3151,7 +3370,12 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         return row;
     }
 
-    /** How long after you leave Instagram the locks lock again; its summary says what the choice does. */
+    /**
+     * How long after you leave Instagram the locks lock again; its summary says what the choice does.
+     * With a PIN behind the locks, a longer wait weakens them, so it asks the PIN every time, as
+     * switching a lock off does, even in a session already unlocked (audit 2026-10-12). Nothing is
+     * saved until the PIN is right, and a shorter wait takes effect at once.
+     */
     static LockDelayRow lockDelayRow(Context context) {
         LockDelayRow row = new LockDelayRow(context);
         row.setKey(Settings.LOCK_AGAIN.key);
@@ -3168,6 +3392,14 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         row.setEntries(entries);
         row.setEntryValues(values);
         row.setValue(Settings.LOCK_AGAIN.savedValue().name());
+        row.setOnPreferenceChangeListener((preference, value) -> {
+            LockDelay target = LockDelayRow.delayOf(value);
+            LockDelayRow delayRow = (LockDelayRow) preference;
+            if (target.millis <= LockDelayRow.delayOf(delayRow.getValue()).millis || !PinLock.protects()) return true;
+            Activity activity = activityOf(preference.getContext());
+            if (activity != null) MessagesLock.confirmPinThen(activity, () -> delayRow.setValue(target.name()));
+            return false;
+        });
         return row;
     }
 
@@ -3290,7 +3522,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 return;
             }
             MessagesLock.chatListed();
-            Utils.showToastShort(L10n.f("%1$s is locked", chat.name));
+            Utils.showToastShort(L10n.f("%1$s is locked", L10n.isolate(chat.name)));
             return;
         }
         Runnable unlock = () -> {
@@ -3298,7 +3530,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 notSaved(dialog, position, true);
                 return;
             }
-            Utils.showToastShort(L10n.f("%1$s is unlocked", chat.name));
+            Utils.showToastShort(L10n.f("%1$s is unlocked", L10n.isolate(chat.name)));
             setChecked(dialog, position, false);
         };
         Activity activity = getActivity();
@@ -3362,13 +3594,13 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                         notSaved((AlertDialog) dialog, which, false);
                         return;
                     }
-                    Utils.showToastShort(L10n.f("%1$s is hidden", chat.name));
+                    Utils.showToastShort(L10n.f("%1$s is hidden", L10n.isolate(chat.name)));
                 } else {
                     if (!HiddenChats.remove(account, chat.id)) {
                         notSaved((AlertDialog) dialog, which, true);
                         return;
                     }
-                    Utils.showToastShort(L10n.f("%1$s is shown again", chat.name));
+                    Utils.showToastShort(L10n.f("%1$s is shown again", L10n.isolate(chat.name)));
                 }
             });
         }
@@ -4434,6 +4666,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         row.setNegativeButtonText(L10n.t("Cancel"));
         EditText field = row.getEditText();
         field.setSingleLine(true);
+        field.setLayoutDirection(View.LAYOUT_DIRECTION_LTR);
+        field.setTextDirection(View.TEXT_DIRECTION_LTR);
         field.setHint("40.758, -73.9855");
         row.setText(Settings.SPOOF_LOCATION_PLACE.savedValue());
         row.setOnPreferenceChangeListener((preference, typed) -> {
@@ -4622,6 +4856,30 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     }
 
     /**
+     * Closes every dialog this page has open over itself: its lists and notes, a row's choices or
+     * text box, and Set a PIN. The lock's cover over the settings goes in the settings' own window,
+     * under these, so once the lock is back they'd still show what they show (the hidden chats, by
+     * name) and still take a tap. Closed like a tap outside them, nothing in them is saved.
+     */
+    void closeDialogs() {
+        for (Dialog dialog : new ArrayList<>(shownDialogs)) dialog.dismiss();
+        shownDialogs.clear();
+        PinLock.closeNew();
+        PreferenceScreen screen = getPreferenceScreen();
+        if (screen != null) closeRowDialogs(screen);
+    }
+
+    private static void closeRowDialogs(PreferenceGroup group) {
+        for (int i = 0; i < group.getPreferenceCount(); i++) {
+            Preference row = group.getPreference(i);
+            if (row instanceof PreferenceGroup) closeRowDialogs((PreferenceGroup) row);
+            if (!(row instanceof DialogPreference)) continue;
+            Dialog dialog = ((DialogPreference) row).getDialog();
+            if (dialog != null && dialog.isShowing()) dialog.dismiss();
+        }
+    }
+
+    /**
      * Shows a dialog over this page and remembers it, so it goes with the page. Nothing shows once
      * the view is gone or the activity is finishing. Answers the dialog, or null when none showed.
      */
@@ -4719,7 +4977,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             showAllText(view);
             ScreenColors.row(view, this);
             view.setAccessibilityDelegate(isSelectable() ? new RowSemantics(this, Button.class) : null);
-            view.setAccessibilityLiveRegion("hushgram_export_configuration".equals(getKey())
+            view.setAccessibilityLiveRegion(("hushgram_export_configuration".equals(getKey())
+                    || "hushgram_settings_search_empty".equals(getKey()))
                     ? View.ACCESSIBILITY_LIVE_REGION_POLITE : View.ACCESSIBILITY_LIVE_REGION_NONE);
         }
     }
@@ -4795,8 +5054,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             cancel.setAllCaps(false);
             cancel.setTextSize(14);
             ScreenColors colors = ScreenColors.shown == null ? ScreenColors.DEFAULT : ScreenColors.shown;
-            cancel.setTextColor(colors.heading);
-            cancel.setBackgroundColor(Color.TRANSPARENT);
+            cancel.setTextColor(ScreenColors.dimmedWhenDisabled(colors.heading));
+            ScreenColors.styleIconAction(cancel);
             int touch = Math.round(48 * view.getResources().getDisplayMetrics().density);
             cancel.setMinWidth(touch);
             cancel.setMinimumWidth(touch);
@@ -4827,6 +5086,33 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 | WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
     }
 
+    /** Compact edit forms keep the input first and let their help scroll above the actions. */
+    private static View editDialogBody(EditTextPreference preference) {
+        Context context = preference.getContext();
+        ScreenColors colors = ScreenColors.shown == null ? ScreenColors.DEFAULT : ScreenColors.shown;
+        int pad = Math.round(20 * context.getResources().getDisplayMetrics().density);
+        LinearLayout content = new LinearLayout(context);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(pad, pad / 2, pad, pad);
+        EditText field = preference.getEditText();
+        if (field.getParent() instanceof android.view.ViewGroup) {
+            ((android.view.ViewGroup) field.getParent()).removeView(field);
+        }
+        content.addView(field, new LinearLayout.LayoutParams(-1, -2));
+        if (!TextUtils.isEmpty(preference.getDialogMessage())) {
+            TextView help = new TextView(context);
+            help.setId(android.R.id.message);
+            help.setText(preference.getDialogMessage());
+            help.setTextSize(14);
+            help.setTextColor(colors.summary);
+            help.setPadding(0, pad, 0, 0);
+            content.addView(help, new LinearLayout.LayoutParams(-1, -2));
+        }
+        ScrollView scroll = new ScrollView(context);
+        scroll.addView(content);
+        return scroll;
+    }
+
     /**
      * The save folder's row. Its summary follows its text, whoever sets it: the person, the shared
      * page syncing it from the setting, or an import.
@@ -4834,6 +5120,13 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     static final class FolderRow extends EditTextPreference {
         FolderRow(Context context) {
             super(context);
+        }
+
+        @Override protected View onCreateDialogView() { return editDialogBody(this); }
+
+        @Override protected void onBindDialogView(View view) {
+            // EditTextPreference's default binder would move the field out of our scroll body.
+            getEditText().setText(getText());
         }
 
         @Override
@@ -4864,7 +5157,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
      * shared page syncing it from the setting, or an import. Its dialog shows what the typed
      * template names a video, as it's typed.
      */
-    static final class SharingDomainRow extends EditTextPreference {
+    static final class SharingDomainRow extends ValidatedEditRow {
         SharingDomainRow(Context context) {
             super(context);
         }
@@ -4883,12 +5176,12 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             view.setAccessibilityDelegate(new RowSemantics(this, Button.class));
         }
 
-        /** Its edit dialog takes the screen's colors, as the place's does. */
-        @Override
-        protected void showDialog(Bundle state) {
-            super.showDialog(state);
-            if (getDialog() instanceof AlertDialog) ScreenColors.dialog((AlertDialog) getDialog());
-            fitAboveKeyboard(getDialog());
+        @Override String validatedValue(String typed) {
+            return SharingDomain.normalize(typed);
+        }
+
+        @Override String validationError() {
+            return L10n.t("That isn't a domain. Type one like example.com, or leave it blank.");
         }
     }
 
@@ -4935,7 +5228,63 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         }
     }
 
-    static final class PlaceRow extends EditTextPreference {
+    /** Save and the keyboard's Done share validation, leaving a rejected value ready to correct. */
+    static abstract class ValidatedEditRow extends EditTextPreference {
+        ValidatedEditRow(Context context) {
+            super(context);
+            getEditText().setImeOptions(EditorInfo.IME_ACTION_DONE);
+            getEditText().addTextChangedListener(new TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) { }
+                @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
+                    getEditText().setError(null);
+                }
+                @Override public void afterTextChanged(Editable text) { }
+            });
+        }
+
+        @Nullable abstract String validatedValue(String typed);
+        abstract String validationError();
+
+        @Override protected View onCreateDialogView() { return editDialogBody(this); }
+
+        @Override protected void onBindDialogView(View view) {
+            getEditText().setText(getText());
+        }
+
+        @Override protected void showDialog(Bundle state) {
+            super.showDialog(state);
+            Dialog shown = getDialog();
+            if (!(shown instanceof AlertDialog)) return;
+            AlertDialog dialog = (AlertDialog) shown;
+            ScreenColors.dialog(dialog);
+            fitAboveKeyboard(dialog);
+            getEditText().setError(null);
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> saveEditor(dialog));
+            getEditText().setOnEditorActionListener((view, action, key) -> {
+                boolean done = action == EditorInfo.IME_ACTION_DONE;
+                boolean enter = key != null && key.getKeyCode() == KeyEvent.KEYCODE_ENTER;
+                if (!done && !enter) return false;
+                if (done || key.getAction() == KeyEvent.ACTION_UP) saveEditor(dialog);
+                return true;
+            });
+        }
+
+        private void saveEditor(AlertDialog dialog) {
+            if (dialog != getDialog() || !dialog.isShowing() || !isEnabled()) return;
+            EditText field = getEditText();
+            String value = validatedValue(field.getText().toString());
+            if (value == null) {
+                field.setError(validationError());
+                field.requestFocus();
+                return;
+            }
+            if (!callChangeListener(value)) return;
+            setText(value);
+            dialog.dismiss();
+        }
+    }
+
+    static final class PlaceRow extends ValidatedEditRow {
         PlaceRow(Context context) {
             super(context);
         }
@@ -4954,12 +5303,12 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             view.setAccessibilityDelegate(new RowSemantics(this, Button.class));
         }
 
-        /** Its edit dialog takes the screen's colors, as the file name's does. */
-        @Override
-        protected void showDialog(Bundle state) {
-            super.showDialog(state);
-            if (getDialog() instanceof AlertDialog) ScreenColors.dialog((AlertDialog) getDialog());
-            fitAboveKeyboard(getDialog());
+        @Override String validatedValue(String typed) {
+            return typed.trim().isEmpty() || SpoofLocation.parse(typed) != null ? typed : null;
+        }
+
+        @Override String validationError() {
+            return L10n.t("That isn't a place. Type a latitude and a longitude with a comma between them.");
         }
     }
 
@@ -5299,11 +5648,16 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             showSummary();
         }
 
-        void showSummary() {
-            LockDelay delay = LockDelay.RIGHT_AWAY;
+        /** The delay a value of the list names, Right away for one it doesn't. */
+        static LockDelay delayOf(@Nullable Object value) {
             for (LockDelay candidate : LockDelay.values()) {
-                if (candidate.name().equals(getValue())) delay = candidate;
+                if (candidate.name().equals(value)) return candidate;
             }
+            return LockDelay.RIGHT_AWAY;
+        }
+
+        void showSummary() {
+            LockDelay delay = delayOf(getValue());
             setSummary(delay == LockDelay.RIGHT_AWAY
                     ? L10n.t("Instagram locks as soon as you leave it or the screen turns off.")
                     : L10n.f("Instagram locks once you've been away from it for %1$s.", lockDelayAway(delay)));

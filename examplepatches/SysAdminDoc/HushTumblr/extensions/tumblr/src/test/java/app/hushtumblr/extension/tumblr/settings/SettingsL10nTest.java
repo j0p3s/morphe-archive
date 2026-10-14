@@ -418,6 +418,45 @@ public class SettingsL10nTest {
             collect(page.getPreferenceScreen(), rows, shown);
             shown.add(String.valueOf(backOf(dialog).getContentDescription()));
 
+            // The rows only the navigation draws: Quick setups, the Browse settings and More settings
+            // headings, the section links, Report a problem and Support, then the restart row with
+            // one change and two waiting.
+            addListed(dialog, shown);
+            app.hushtumblr.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending
+                    .add(Settings.HIDE_TUMBLR_TV.key);
+            page.navigation.restartChanged();
+            addListed(dialog, shown);
+            app.hushtumblr.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending
+                    .add(Settings.FIX_PUSH_NOTIFICATIONS.key);
+            page.navigation.restartChanged();
+            addListed(dialog, shown);
+            app.hushtumblr.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending.clear();
+            page.navigation.restartChanged();
+
+            // Quick setups: each choice is its name and, on the next line, what it does. Then the
+            // toast after a choice, for one change and for none.
+            page.showQuickSetups();
+            ShadowLooper.idleMainLooper();
+            AlertDialog setups = (AlertDialog) ShadowAlertDialog.getLatestDialog();
+            assertNotNull("Quick setups opened no dialog", setups);
+            shown.add(String.valueOf(org.robolectric.Shadows.shadowOf(setups).getTitle()));
+            android.widget.ListAdapter cards = setups.getListView().getAdapter();
+            for (int i = 0; i < cards.getCount(); i++) shown.addAll(Arrays.asList(String.valueOf(cards.getItem(i)).split("\n")));
+            String setupsCancel = String.valueOf(setups.getButton(AlertDialog.BUTTON_NEGATIVE).getText());
+            assertEquals(L10n.t("Cancel"), setupsCancel);
+            shown.add(setupsCancel);
+            setups.dismiss();
+            page.applyQuickSetup(java.util.Collections.singletonMap(Settings.HIDE_SUGGESTED_BLOGS,
+                    !Settings.HIDE_SUGGESTED_BLOGS.savedValue()));
+            ShadowLooper.idleMainLooper();
+            addToast(shown);
+            page.applyQuickSetup(java.util.Collections.singletonMap(Settings.HIDE_SUGGESTED_BLOGS,
+                    Settings.HIDE_SUGGESTED_BLOGS.defaultValue));
+            ShadowLooper.idleMainLooper();
+            page.applyQuickSetup(java.util.Collections.emptyMap());
+            ShadowLooper.idleMainLooper();
+            addToast(shown);
+
             // The export row's dialog.
             Preference export = find(rows, "action_export_diagnostic_report");
             export.getOnPreferenceClickListener().onPreferenceClick(export);
@@ -456,12 +495,12 @@ public class SettingsL10nTest {
             addToast(shown);
             Preference clear = find(rows, "action_clear_diagnostic_data");
             clear.getOnPreferenceClickListener().onPreferenceClick(clear);
-            ShadowLooper.idleMainLooper();
+            settle();
             addToast(shown);
             if (LogBufferManager.canUndoClear()) {
                 // Whatever an earlier test left is put back, and the undo says so in a toast too.
                 clear.getOnPreferenceClickListener().onPreferenceClick(clear);
-                ShadowLooper.idleMainLooper();
+                settle();
                 addToast(shown);
             }
             dialog.dismissAllowingStateLoss();
@@ -606,6 +645,18 @@ public class SettingsL10nTest {
         ShadowLooper.idleMainLooper();
         app.hushtumblr.extension.shared.Utils.awaitBackgroundTasksForTests();
         ShadowLooper.idleMainLooper();
+    }
+
+    /** The title and summary of every row the dialog's list shows now. */
+    private static void addListed(SettingsDialog dialog, Set<String> shown) {
+        android.widget.ListView list = dialog.getView().findViewById(android.R.id.list);
+        for (int i = 0; i < list.getCount(); i++) {
+            Object item = list.getItemAtPosition(i);
+            if (!(item instanceof Preference)) continue;
+            shown.add(String.valueOf(((Preference) item).getTitle()));
+            CharSequence summary = ((Preference) item).getSummary();
+            if (summary != null) shown.add(String.valueOf(summary));
+        }
     }
 
     private static void addToast(Set<String> shown) {

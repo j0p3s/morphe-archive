@@ -274,11 +274,11 @@ public class DexDiff {
 
     private static final Map<String, Integer> MUTATION_COLUMNS = Map.ofEntries(
             Map.entry("answers", 4), Map.entry("settings", 3), Map.entry("firebaseCertificate", 1), Map.entry("activityNotifications", 7),
-            Map.entry("settingsRow", 3), Map.entry("featureSwitch", 4), Map.entry("timelineList", 4),
+            Map.entry("settingsRow", 3), Map.entry("featureSwitch", 4), Map.entry("timelineList", 4), Map.entry("timelinePaging", 5),
             Map.entry("timelineCarousel", 3), Map.entry("postBridge", 3), Map.entry("paidPostBridge", 6), Map.entry("postJsonPresence", 3), Map.entry("imageDescriptions", 10), Map.entry("reviewPrompt", 3),
             Map.entry("followButton", 3), Map.entry("footerButton", 3), Map.entry("postTags", 5),
             Map.entry("noteCounts", 5), Map.entry("unreadDots", 2), Map.entry("nativeTimestamps", 6), Map.entry("bottomBarTabs", 3),
-            Map.entry("darkBackground", 3), Map.entry("storeButtons", 5), Map.entry("accountIdentity", 10),
+            Map.entry("darkBackground", 5), Map.entry("storeButtons", 5), Map.entry("accountIdentity", 10),
             Map.entry("matureContent", 12), Map.entry("rootPostMutes", 10), Map.entry("mutualMarkers", 13));
 
     /**
@@ -2516,7 +2516,8 @@ public class DexDiff {
          * timeline list hook, each owning only the capability of its own bridge.
          */
         static List<String> users(Contract rule) {
-            return rule.target.equals("featureSwitch") || rule.target.equals("timelineList") || rule.target.equals("accountIdentity") || rule.target.equals("postJsonPresence")
+            return rule.target.equals("featureSwitch") || rule.target.equals("timelineList") || rule.target.equals("timelinePaging")
+                    || rule.target.equals("accountIdentity") || rule.target.equals("postJsonPresence")
                     ? List.of(rule.strings.get(rule.strings.size() - 1).split(",")) : List.of();
         }
 
@@ -2622,7 +2623,11 @@ public class DexDiff {
 
         /** True when the instruction at [at] can be reached only by falling through from [from]. */
         boolean onlyFrom(Method m, int at, int from) {
-            FeatureFlow graph = flow(m);
+            return onlyFrom(flow(m), at, from);
+        }
+
+        /** [onlyFrom] on a graph built outside the cache, which keys by signature and so can't hold a clean method too. */
+        static boolean onlyFrom(FeatureFlow graph, int at, int from) {
             for (int k = 0; k < graph.normal.size(); k++) {
                 if (k != from && graph.normal.get(k).contains(at)) return false;
                 if (graph.handlers.get(k).contains(at)) return false;
@@ -2758,6 +2763,54 @@ public class DexDiff {
                 String answer = name.equals("pushDynamicShortcut") || name.equals("removeAllDynamicShortcuts") ? "V" : "Z";
                 replacement(manager + "->" + name + "(" + parameters + ")" + answer, entry + "->" + name + "(" + manager + parameters + ")" + answer, null, true);
             }
+            dashboardLogo(entry + "->onDashboardLogo(Landroid/view/View;)V");
+        }
+
+        static final String LOGO_VIEW = "Lcom/tumblr/ui/widget/TLogoView;";
+        static final String LOGO_TAP = LOGO_VIEW + "->setOnClickListener(Landroid/view/View$OnClickListener;)V";
+
+        record LogoSite(Method method, int at, int register) {}
+
+        /**
+         * The dashboard's Tumblr logo goes to the settings entry right after Tumblr gives it its tap
+         * (TLogoView.setOnClickListener from outside the logo's own class), so a long press on it opens
+         * the screen. The patch hooks only a single such site, in a method without exception ranges,
+         * that nothing else branches into, and leaves a build without one as it was. Found in the clean
+         * target, never from the hook. The same method also takes the TumblrMart button's hook, earlier
+         * on, so the hook's place is checked by anchor against the original instructions, not by its
+         * patched index. It reads the tap's receiver, which the clean call shows is the logo.
+         */
+        void dashboardLogo(String hook) {
+            List<LogoSite> sites = new ArrayList<>();
+            for (Method m : clean.methods.values()) {
+                if (m.getDefiningClass().startsWith(OWN) || m.getDefiningClass().equals(LOGO_VIEW) || m.getImplementation() == null) continue;
+                List<Instruction> body = instructions(m);
+                for (int k = 0; k + 1 < body.size(); k++) {
+                    if (!(body.get(k) instanceof FiveRegisterInstruction tap) || tap.getOpcode() != Opcode.INVOKE_VIRTUAL
+                            || tap.getRegisterCount() != 2 || !LOGO_TAP.equals(String.valueOf(reference(tap)))) continue;
+                    sites.add(new LogoSite(m, k + 1, tap.getRegisterC()));
+                }
+            }
+            if (sites.size() != 1) return;
+            LogoSite site = sites.get(0);
+            if (site.method().getImplementation().getTryBlocks().iterator().hasNext()
+                    || !onlyFrom(new FeatureFlow(site.method()), site.at(), site.at() - 1)) return;
+            Method m = actual(site.method());
+            List<Integer> at = calls(m, hook, 1);
+            if (m == null || at.size() != 1) return;
+            int k = at.get(0);
+            List<Instruction> body = instructions(m), was = instructions(site.method());
+            Instruction tap = get(body, k - 1), next = get(body, k + 1);
+            if (!arguments(body.get(k)).equals(List.of(site.register())) || tap == null || !LOGO_TAP.equals(String.valueOf(reference(tap)))
+                    || !arguments(tap).equals(arguments(was.get(site.at() - 1))) || next == null || next.getOpcode() != was.get(site.at()).getOpcode()
+                    || !onlyFrom(m, k + 1, k) || !onlyFrom(m, k, k - 1)) {
+                fail(hook + " doesn't hand over the dashboard logo right after its tap, in front of original instruction " + site.at() + " of " + m);
+                return;
+            }
+            remove(m, k, k + 1);
+            anchor(m, k, site.at(), hook);
+            labelAnchors.add(new Anchor(m, k, site.at(), hook));
+            vouch(m, k, List.of(site.register()));
         }
 
         // Each family selector below finds its clean targets the way its patch does, checks the
@@ -3198,6 +3251,118 @@ public class DexDiff {
                 found &= hookAt(old, actual(old), 0, c.strings.get(0), List.of(items), items, List.of());
             }
             capability(c.callee, found);
+        }
+
+        /**
+         * The question a timeline fragment asks about each loaded page. Tumblr hands every page to one
+         * method of the fragment, which takes an empty one for the end of the feed. Right after its
+         * own items.isEmpty() the hook gets the fragment, the load type, the page's next link and
+         * that answer: 0 runs Tumblr's code, 1 takes the page's links and loads the next page the
+         * way the fragment's own scroll does, 2 runs a copy of Tumblr's empty first page branch.
+         * Each member is read from the clean method, so the injected block is held to Tumblr's own.
+         */
+        void timelinePaging(Contract c) {
+            if (users(c).stream().noneMatch(this::flag)) return;
+            String hook = c.strings.get(0), fragment = c.strings.get(1), links = c.strings.get(2), link = c.strings.get(3);
+            String reason = hook + " doesn't go on from an emptied page the way its rule says";
+            ClassDef owner = clean.classes.get(fragment);
+            List<Method> deliveries = new ArrayList<>();
+            if (owner != null) for (Method candidate : owner.getMethods()) {
+                List<? extends CharSequence> p = candidate.getParameterTypes();
+                if (!isStatic(candidate) && candidate.getImplementation() != null && candidate.getReturnType().equals("V") && p.size() == 5
+                        && p.get(1).toString().equals("Ljava/util/List;") && p.get(2).toString().equals(links)
+                        && p.get(3).toString().equals("Ljava/util/Map;") && p.get(4).toString().equals("Z")) deliveries.add(candidate);
+            }
+            Method old = unique(deliveries, "timeline page delivery");
+            if (old == null) return;
+            List<Instruction> b = instructions(old);
+            String mode = old.getParameterTypes().get(0).toString(), paging = mode + "->PAGINATION:" + mode;
+            int self = parameter(old, -1), type = parameter(old, 0), items = parameter(old, 1), page = parameter(old, 2);
+            int asked = firstIndex(b, 0, i -> callIs(i, Opcode.INVOKE_INTERFACE, "Ljava/util/List;->isEmpty()Z", items)), place = asked + 2;
+            Instruction kept = get(b, asked + 1), one = get(b, place), constant = get(b, place + 2);
+            boolean shape = asked >= 0 && kept != null && kept.getOpcode() == Opcode.MOVE_RESULT && one != null && one.getOpcode() == Opcode.CONST_4
+                    && constant != null && old.getImplementation().getRegisterCount() <= 16 && !old.getImplementation().getTryBlocks().iterator().hasNext();
+            int answer = shape ? firstRegister(kept) : -1, scratch = shape ? firstRegister(one) : -1;
+            shape = shape && literalIs(one, Opcode.CONST_4, scratch, 1) && movesTo(get(b, place + 1), answer, Opcode.IF_EQZ)
+                    && constant.getOpcode() == Opcode.SGET_OBJECT && paging.equals(String.valueOf(reference(constant)))
+                    && (movePair(get(b, place + 3), Opcode.IF_NE, type, firstRegister(constant)) || movePair(get(b, place + 3), Opcode.IF_NE, firstRegister(constant), type))
+                    && scratch < self && scratch != answer && answer != self && answer != type && answer != page;
+            // Nothing branches before the hook or writes what it reads, so it's asked once a page.
+            for (int k = 0; shape && k < place; k++) shape = !(b.get(k) instanceof OffsetInstruction) && b.get(k).getOpcode().canContinue()
+                    && !writes(b.get(k), self) && !writes(b.get(k), type) && !writes(b.get(k), page);
+            // Tumblr's own branch for an empty first page: the last-page flag, the empty view, return.
+            int first = shape ? target(old, place + 3) : -1;
+            FieldReference end = field(get(b, first));
+            MethodReference view = called(get(b, first + 1));
+            shape = shape && first > place + 3 && end != null && end.getType().equals("Z") && fieldIs(get(b, first), Opcode.IPUT_BOOLEAN, end.toString(), scratch, self)
+                    && view != null && view.getDefiningClass().equals(fragment) && descriptor(view).equals("()V")
+                    && callIs(get(b, first + 1), Opcode.INVOKE_VIRTUAL, view.toString(), self) && get(b, first + 2) != null && get(b, first + 2).getOpcode() == Opcode.RETURN_VOID;
+            Set<String> getters = new TreeSet<>();
+            List<Integer> stores = new ArrayList<>(), drops = new ArrayList<>();
+            for (int k = 0; k < b.size(); k++) {
+                Instruction i = b.get(k);
+                MethodReference getter = called(i);
+                if (getter != null && i.getOpcode() == Opcode.INVOKE_VIRTUAL && getter.getDefiningClass().equals(links)
+                        && descriptor(getter).equals("()" + link) && arguments(i).equals(List.of(page))) getters.add(getter.toString());
+                FieldReference f = field(i);
+                if (f == null || i.getOpcode() != Opcode.IPUT_OBJECT || ((TwoRegisterInstruction) i).getRegisterB() != self) continue;
+                if (f.getType().equals("Landroid/os/Parcelable;") && firstRegister(i) == page) stores.add(k);
+                if (f.getType().equals("Lretrofit2/Call;") && f.getDefiningClass().equals(fragment)) drops.add(k);
+            }
+            shape = shape && getters.size() == 1 && stores.size() == 1 && drops.size() == 1 && stores.get(0) > place && drops.get(0) > place;
+            FieldReference linkField = shape ? field(b.get(stores.get(0))) : null;
+            MethodReference settle = shape ? called(get(b, drops.get(0) + 1)) : null;
+            shape = shape && fieldIs(get(b, stores.get(0) + 1), Opcode.IPUT_BOOLEAN, end.toString(), firstRegister(get(b, stores.get(0) + 1)), self)
+                    && settle != null && settle.getDefiningClass().equals(fragment) && descriptor(settle).equals("(" + mode + ")V")
+                    && callIs(get(b, drops.get(0) + 1), Opcode.INVOKE_VIRTUAL, settle.toString(), self, type);
+            List<Method> loads = new ArrayList<>();
+            for (Method candidate : owner.getMethods()) if (!isStatic(candidate) && !AccessFlags.PRIVATE.isSet(candidate.getAccessFlags())
+                    && candidate.getImplementation() != null && descriptor(candidate).equals("(" + mode + "Z)V")) loads.add(candidate);
+            Method load = unique(loads, "timeline page load");
+            if (load == null) return;
+            // Tumblr's own next-page call, made when a scroll nears the end: the constant, true, the load.
+            boolean own = false;
+            for (Method candidate : owner.getMethods()) {
+                List<Instruction> body = instructions(candidate);
+                for (int k = 2; k < body.size(); k++) own |= called(body.get(k)) != null && body.get(k).getOpcode() == Opcode.INVOKE_VIRTUAL
+                        && load.toString().equals(called(body.get(k)).toString()) && arguments(body.get(k)).size() == 3
+                        && movesTo(body.get(k - 2), arguments(body.get(k)).get(1), Opcode.SGET_OBJECT) && paging.equals(String.valueOf(reference(body.get(k - 2))))
+                        && literalIs(body.get(k - 1), Opcode.CONST_4, arguments(body.get(k)).get(2), 1);
+            }
+            if (!shape || !own) { fail("timeline page delivery changed, so " + hook + " has no proven place in " + old); return; }
+
+            Method m = actual(old);
+            List<Integer> sites = calls(m, hook, 1);
+            if (m == null || sites.size() != 1) return;
+            int at = sites.get(0), start = at - 4, stock = at + 14;
+            List<Instruction> body = instructions(m);
+            boolean injected = start >= 0 && stock < body.size()
+                    && literalIs(get(body, start), Opcode.CONST_4, scratch, 0)
+                    && movesTo(get(body, start + 1), page, Opcode.IF_EQZ) && target(m, start + 1) == at
+                    && callIs(get(body, start + 2), Opcode.INVOKE_VIRTUAL, getters.iterator().next(), page)
+                    && movesTo(get(body, start + 3), scratch, Opcode.MOVE_RESULT_OBJECT)
+                    && callIs(body.get(at), Opcode.INVOKE_STATIC, hook, self, type, scratch, answer)
+                    && movesTo(get(body, at + 1), scratch, Opcode.MOVE_RESULT)
+                    && movesTo(get(body, at + 2), scratch, Opcode.IF_EQZ) && target(m, at + 2) == stock
+                    && literalIs(get(body, at + 3), Opcode.CONST_4, answer, 1)
+                    && movePair(get(body, at + 4), Opcode.IF_EQ, scratch, answer) && target(m, at + 4) == at + 8
+                    && fieldIs(get(body, at + 5), Opcode.IPUT_BOOLEAN, end.toString(), answer, self)
+                    && callIs(get(body, at + 6), Opcode.INVOKE_VIRTUAL, view.toString(), self)
+                    && get(body, at + 7).getOpcode() == Opcode.RETURN_VOID
+                    && fieldIs(get(body, at + 8), Opcode.IPUT_OBJECT, linkField.toString(), page, self)
+                    && movesTo(get(body, at + 9), scratch, Opcode.SGET_OBJECT) && paging.equals(String.valueOf(reference(get(body, at + 9))))
+                    && movePair(get(body, at + 10), Opcode.IF_EQ, type, scratch) && target(m, at + 10) == at + 12
+                    && callIs(get(body, at + 11), Opcode.INVOKE_VIRTUAL, settle.toString(), self, type)
+                    && callIs(get(body, at + 12), Opcode.INVOKE_VIRTUAL, load.toString(), self, scratch, answer)
+                    && get(body, at + 13).getOpcode() == Opcode.RETURN_VOID;
+            if (!injected) { fail(reason + " in " + m); return; }
+            remove(m, start, stock);
+            anchor(m, start, place, hook);
+            fallthroughOnly(old, place, hook);
+            // The scratch local and the register Tumblr kept its own answer in, which was a parameter's.
+            vouch(m, at, List.of(scratch, answer));
+            // A shared hook's rule sits in the settings column, which asks for no family control. This one reads switches.
+            controls(patched.methods.get(hook), true);
         }
 
         static boolean callIs(Instruction i, Opcode op, String ref, Integer... args) {
@@ -5061,7 +5226,10 @@ public class DexDiff {
             return false;
         }
 
-        /** Right after Tumblr sets an activity's theme, and right after its Compose colors take their theme wrapper's theme. */
+        /**
+         * Right after Tumblr sets an activity's theme, right after its Compose colors take their theme
+         * wrapper's theme, and where the Dark palette's design colors read their two surface grays.
+         */
         void darkBackground(Contract c) {
             List<Method> setters = new ArrayList<>(), composers = new ArrayList<>();
             List<Integer> sets = new ArrayList<>();
@@ -5099,11 +5267,124 @@ public class DexDiff {
                 if (answer == null || answer.getOpcode() != Opcode.MOVE_RESULT_OBJECT) fail("the Compose colors' theme isn't asked for once and kept in a register");
                 else themed = hookAt(composer, actual(composer), asked.get(0) + 2, c.strings.get(1), List.of(firstRegister(answer)), -1, List.of(firstRegister(answer)));
             }
+            designColors(c.strings.get(3), c.strings.get(4));
             capability(c.callee, found && themed);
         }
 
         static boolean themeOfWrapper(Instruction i) {
             return i.getOpcode() == Opcode.INVOKE_VIRTUAL && isCall(i, "Landroid/view/ContextThemeWrapper;", "getTheme", "()Landroid/content/res/Resources$Theme;");
+        }
+
+        static final String DESIGN_THEME_NOTE = "com.tumblr.compose.ds.DsTheme (";
+        static final long DARK_PAGE_GRAY = 0xFF0D0D0DL, DARK_PANEL_GRAY = 0xFF1A1A1AL;
+
+        /**
+         * The Dark palette's design colors handing each of their two surface grays to its hook right
+         * after reading it, the answer moved back over the gray: [pageHook] for the gray behind a
+         * screen, [panelHook] for the lighter one. The places are found in the clean target the way
+         * the patch finds them, never from the hooks. The patch leaves a build that keeps its design
+         * colors some other way as it was, so there both hooks go uncalled, and a call to either
+         * anywhere else is refused as misrouted.
+         */
+        void designColors(String pageHook, String panelHook) {
+            List<Method> themes = new ArrayList<>();
+            for (Method m : tumblrMethods()) if (clean.texts.get(m.toString()).stream().anyMatch(t -> t.startsWith(DESIGN_THEME_NOTE))) themes.add(m);
+            MethodReference holder = themes.size() == 1 ? nightColors(themes.get(0)) : null;
+            Method old = holder == null ? null : clean.methods.get(holder.getDefiningClass() + "-><clinit>()V");
+            if (old == null || old.getImplementation() == null || clean.duplicates.contains(old.getDefiningClass())
+                    || old.getImplementation().getTryBlocks().iterator().hasNext()) return;
+            List<Instruction> was = instructions(old);
+            if (was.stream().anyMatch(i -> i instanceof OffsetInstruction)) return;
+            Map<String, Long> grays = new HashMap<>();
+            List<Integer> places = new ArrayList<>(), registers = new ArrayList<>();
+            List<String> hooks = new ArrayList<>();
+            for (int at = 0; at + 1 < was.size(); at++) {
+                MethodReference getter = colorGetter(was.get(at));
+                if (getter == null || was.get(at + 1).getOpcode() != Opcode.MOVE_RESULT_WIDE) continue;
+                Long gray = grays.computeIfAbsent(getter.toString(), key -> fixedColor(getter));
+                String hook = gray == null ? null : gray == DARK_PAGE_GRAY ? pageHook : gray == DARK_PANEL_GRAY ? panelHook : null;
+                if (hook == null) continue;
+                places.add(at + 2);
+                registers.add(firstRegister(was.get(at + 1)));
+                hooks.add(hook);
+            }
+            if (!hooks.contains(pageHook) || !hooks.contains(panelHook)) return;
+            Method m = actual(old);
+            if (m == null) return;
+            List<Instruction> body = instructions(m);
+            for (String hook : List.of(pageHook, panelHook)) {
+                List<Integer> wanted = new ArrayList<>();
+                for (int k = 0; k < hooks.size(); k++) if (hooks.get(k).equals(hook)) wanted.add(k);
+                List<Integer> sites = calls(m, hook, wanted.size());
+                if (sites.size() != wanted.size()) continue;
+                for (int k = 0; k < sites.size(); k++) {
+                    int at = sites.get(k), register = registers.get(wanted.get(k));
+                    // A long takes its register and the next, and its answer goes back into the same two.
+                    if (!arguments(body.get(at)).equals(List.of(register, register + 1)) || !movesTo(get(body, at + 1), register, Opcode.MOVE_RESULT_WIDE)) {
+                        fail(hook + " doesn't take a design gray and put its answer back where the gray was in " + m);
+                        continue;
+                    }
+                    remove(m, at, at + 2);
+                    anchor(m, at, places.get(wanted.get(k)), hook);
+                    vouch(m, at, List.of(register, register + 1));
+                }
+            }
+        }
+
+        /**
+         * The holder the design system's theme takes its colors from in night mode: the one static call
+         * without arguments that follows a night mode question and its `if-eqz`, answering a type the
+         * theme function also takes as a parameter. Null unless there's exactly one.
+         */
+        static MethodReference nightColors(Method theme) {
+            List<Instruction> body = instructions(theme);
+            Set<String> taken = new HashSet<>();
+            for (CharSequence type : theme.getParameterTypes()) if (type.toString().startsWith("L")) taken.add(type.toString());
+            List<MethodReference> found = new ArrayList<>();
+            for (int at = 0; at + 4 < body.size(); at++) {
+                MethodReference asked = body.get(at).getOpcode() == Opcode.INVOKE_STATIC ? called(body.get(at)) : null;
+                if (asked == null || !descriptor(asked).equals("(Landroid/content/res/Configuration;)Z")) continue;
+                Instruction answer = body.get(at + 1), test = body.get(at + 2);
+                MethodReference night = body.get(at + 3).getOpcode() == Opcode.INVOKE_STATIC ? called(body.get(at + 3)) : null;
+                if (answer.getOpcode() == Opcode.MOVE_RESULT && test.getOpcode() == Opcode.IF_EQZ && firstRegister(answer) == firstRegister(test)
+                        && night != null && night.getParameterTypes().isEmpty() && taken.contains(night.getReturnType())
+                        && body.get(at + 4).getOpcode() == Opcode.MOVE_RESULT_OBJECT) found.add(night);
+            }
+            return found.size() == 1 ? found.get(0) : null;
+        }
+
+        /** The getter of a long, without arguments, that [i] calls on an object, or null for anything else. */
+        static MethodReference colorGetter(Instruction i) {
+            if (i.getOpcode() != Opcode.INVOKE_VIRTUAL && i.getOpcode() != Opcode.INVOKE_VIRTUAL_RANGE) return null;
+            MethodReference getter = called(i);
+            return getter != null && arguments(i).size() == 1 && getter.getParameterTypes().isEmpty() && getter.getReturnType().equals("J") ? getter : null;
+        }
+
+        /**
+         * The fixed color [getter] hands out, as its class wrote it: the getter only returns a static
+         * long of its class, which the class's initializer fills once from a `const-wide` passed
+         * through a static `(J)J` call. Null for a getter of any other shape.
+         */
+        Long fixedColor(MethodReference getter) {
+            String owner = getter.getDefiningClass();
+            Method reader = clean.methods.get(getter.toString()), start = clean.methods.get(owner + "-><clinit>()V");
+            if (reader == null || start == null || reader.getImplementation() == null || start.getImplementation() == null
+                    || clean.duplicates.contains(owner)) return null;
+            List<Instruction> read = instructions(reader), filled = instructions(start);
+            FieldReference kept = read.size() == 2 && read.get(0).getOpcode() == Opcode.SGET_WIDE && read.get(1).getOpcode() == Opcode.RETURN_WIDE
+                    ? field(read.get(0)) : null;
+            if (kept == null || !kept.getDefiningClass().equals(owner)) return null;
+            List<Integer> stored = new ArrayList<>();
+            for (int at = 0; at < filled.size(); at++) {
+                FieldReference f = field(filled.get(at));
+                if (filled.get(at).getOpcode() == Opcode.SPUT_WIDE && f != null && f.getDefiningClass().equals(owner) && f.getName().equals(kept.getName())) stored.add(at);
+            }
+            if (stored.size() != 1 || stored.get(0) < 3) return null;
+            int at = stored.get(0);
+            MethodReference made = filled.get(at - 2).getOpcode() == Opcode.INVOKE_STATIC ? called(filled.get(at - 2)) : null;
+            if (!(filled.get(at - 3) instanceof WideLiteralInstruction written) || !written.getOpcode().name.startsWith("const-wide")
+                    || made == null || !descriptor(made).equals("(J)J") || filled.get(at - 1).getOpcode() != Opcode.MOVE_RESULT_WIDE) return null;
+            return written.getWideLiteral();
         }
 
         /**
@@ -5276,6 +5557,7 @@ public class DexDiff {
                     case "settingsRow": settingsRow(c); break;
                     case "featureSwitch": featureSwitch(c); break;
                     case "timelineList": timelineList(c); break;
+                    case "timelinePaging": timelinePaging(c); break;
                     case "nativeTimestamps": nativeTimestamps(c); break;
                     case "timelineCarousel": timelineCarousel(c); break;
                     case "postBridge": postBridge(c); break;

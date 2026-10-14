@@ -3251,13 +3251,15 @@ try {
         & git -C $gateRepo config user.name 'Gate Contract'
         & git -C $gateRepo config user.email 'gate@example.invalid'
         Initialize-HookFixtureCatalog $gateRepo
-        foreach ($suite in @('scripts/test-script-contracts.ps1', 'scripts/test-tumblr-sources.ps1')) {
+        foreach ($suite in @('scripts/test-script-contracts.ps1', 'scripts/test-tumblr-sources.ps1',
+                'scripts/test-injected-registers.ps1', 'scripts/test-resource-table-check.ps1')) {
             Set-Content -LiteralPath (Join-Path $gateRepo $suite) -Encoding UTF8 -Value @(
                 'param([string]$Root)', 'exit 0')
         }
         & git -C $gateRepo add patches-list.json scripts/patch-target.ps1 `
             gradle/wrapper/gradle-wrapper.properties gradle/wrapper/gradle-wrapper.jar `
-            scripts/build-advisories.ps1 scripts/test-script-contracts.ps1 scripts/test-tumblr-sources.ps1
+            scripts/build-advisories.ps1 scripts/test-script-contracts.ps1 scripts/test-tumblr-sources.ps1 `
+            scripts/test-injected-registers.ps1 scripts/test-resource-table-check.ps1
         $gateMarker = Join-Path $hookRoot 'gate-ran.txt'
         $gateStub = Join-Path $hookRoot 'gate-wrapper.ps1'
         Set-Content -LiteralPath $gateStub -Encoding UTF8 -Value @(
@@ -3981,6 +3983,234 @@ try {
     Assert-Throws { Get-BaseApk -Apk $noApk -Destination (Join-Path $commonRoot 'out/none.apk') } `
         '*holds no APK*' 'A bundle with no APK in it handed back something to read.'
 
+    # Unpacking a bundle for the merge (Expand-SplitBundle, behind Get-MergedApk). The CLI's merger
+    # unpacked a bundle into a folder beside it and wrote each .apk member where its name pointed,
+    # truncating whatever was there, so a member named ../sentinel.apk overwrote the APK beside the
+    # bundle. Every name is checked now before anything is written, and the APKs go into a folder
+    # the run owns. Each case is a bundle in a folder of its own, beside an APK a name that climbs
+    # one level would land on, with another one level up. A refusal leaves both as they were: no
+    # merge, no unpacked folder, no file changed. The archives are written byte by byte, stored and
+    # deflated, because an archive library writes only the names it thinks are sensible.
+    function Get-TestCrc32([byte[]]$Bytes) {
+        $crc = [long]4294967295
+        foreach ($byte in $Bytes) {
+            $crc = $crc -bxor [long]$byte
+            for ($bit = 0; $bit -lt 8; $bit++) {
+                if (($crc -band 1) -eq 1) { $crc = ($crc -shr 1) -bxor [long]3988292384 } else { $crc = $crc -shr 1 }
+            }
+        }
+        return [uint32]($crc -bxor [long]4294967295)
+    }
+    function New-TestRawZip([string]$Path, [object[]]$Members) {
+        $archive = New-Object System.IO.MemoryStream
+        $central = New-Object System.IO.MemoryStream
+        $local = New-Object System.IO.BinaryWriter($archive)
+        $index = New-Object System.IO.BinaryWriter($central)
+        foreach ($member in $Members) {
+            $nameBytes = [System.Text.Encoding]::UTF8.GetBytes([string]$member.Name)
+            $data = [System.Text.Encoding]::ASCII.GetBytes([string]$member.Text)
+            $crc = Get-TestCrc32 $data
+            # The size both headers declare, which a crafted member can set below what it holds.
+            $declares = if ($null -ne $member.Declares) { [uint32]$member.Declares } else { [uint32]$data.Length }
+            [uint16]$method = 0
+            $stored = $data
+            if ($member.Deflate) {
+                $method = 8
+                $packed = New-Object System.IO.MemoryStream
+                $deflate = New-Object System.IO.Compression.DeflateStream($packed, [System.IO.Compression.CompressionMode]::Compress, $true)
+                $deflate.Write($data, 0, $data.Length)
+                $deflate.Dispose()
+                $stored = $packed.ToArray()
+            }
+            $local.Flush()
+            $offset = [uint32]$archive.Position
+            $local.Write([uint32]0x04034b50); $local.Write([uint16]20); $local.Write([uint16]0); $local.Write($method)
+            $local.Write([uint16]0); $local.Write([uint16]0x21); $local.Write([uint32]$crc)
+            $local.Write([uint32]$stored.Length); $local.Write($declares)
+            $local.Write([uint16]$nameBytes.Length); $local.Write([uint16]0); $local.Write($nameBytes); $local.Write($stored)
+            $index.Write([uint32]0x02014b50); $index.Write([uint16]20); $index.Write([uint16]20); $index.Write([uint16]0)
+            $index.Write($method); $index.Write([uint16]0); $index.Write([uint16]0x21); $index.Write([uint32]$crc)
+            $index.Write([uint32]$stored.Length); $index.Write($declares); $index.Write([uint16]$nameBytes.Length)
+            $index.Write([uint16]0); $index.Write([uint16]0); $index.Write([uint16]0); $index.Write([uint16]0)
+            $index.Write([uint32]0); $index.Write([uint32]$offset); $index.Write($nameBytes)
+        }
+        $local.Flush()
+        $index.Flush()
+        $directory = $central.ToArray()
+        $start = [uint32]$archive.Position
+        $local.Write($directory)
+        $local.Write([uint32]0x06054b50); $local.Write([uint16]0); $local.Write([uint16]0)
+        $local.Write([uint16]$Members.Count); $local.Write([uint16]$Members.Count)
+        $local.Write([uint32]$directory.Length); $local.Write($start); $local.Write([uint16]0)
+        $local.Flush()
+        [System.IO.File]::WriteAllBytes($Path, $archive.ToArray())
+    }
+    function Get-TestTreeState([string]$Path) {
+        return (@(Get-ChildItem -LiteralPath $Path -Recurse -Force | Sort-Object FullName | ForEach-Object {
+            if ($_.PSIsContainer) { "dir $($_.FullName)" }
+            else { "file $($_.FullName) $((Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash)" }
+        }) -join "`n")
+    }
+    $guardRoot = Join-Path $commonRoot 'split-guard'
+    New-Item -ItemType Directory -Path $guardRoot -Force | Out-Null
+    $outerSentinel = Join-Path $guardRoot 'outer.apk'
+    [System.IO.File]::WriteAllText($outerSentinel, 'outer sentinel')
+    $guardBase = @{ Name = 'base.apk' }
+    $guardCases = @(
+        @{ Case = 'climbs out, stored'; Members = @($guardBase, @{ Name = '../sentinel.apk' }); Says = 'climbs with a . or .. segment' }
+        @{ Case = 'climbs out, deflated'; Members = @($guardBase, @{ Name = '../sentinel.apk'; Deflate = $true }); Says = 'climbs with a . or .. segment' }
+        @{ Case = 'climbs out before the base'; Members = @(@{ Name = '../sentinel.apk'; Deflate = $true }, $guardBase); Says = 'climbs with a . or .. segment' }
+        @{ Case = 'climbs two levels'; Members = @($guardBase, @{ Name = 'splits/../../outer.apk' }); Says = 'climbs with a . or .. segment' }
+        @{ Case = 'climbs out of a folder'; Members = @($guardBase, @{ Name = 'splits/../sentinel.apk'; Deflate = $true }); Says = 'climbs with a . or .. segment' }
+        @{ Case = 'starts with a dot segment'; Members = @($guardBase, @{ Name = './split_config.en.apk' }); Says = 'climbs with a . or .. segment' }
+        @{ Case = 'is rooted'; Members = @($guardBase, @{ Name = '/sentinel.apk' }); Says = 'is rooted' }
+        @{ Case = 'is a UNC path with slashes'; Members = @($guardBase, @{ Name = '//server/share/sentinel.apk' }); Says = 'is rooted' }
+        @{ Case = 'is rooted with a backslash'; Members = @($guardBase, @{ Name = '\sentinel.apk' }); Says = 'uses a backslash*' }
+        @{ Case = 'is a UNC path'; Members = @($guardBase, @{ Name = '\\server\share\sentinel.apk'; Deflate = $true }); Says = 'uses a backslash*' }
+        @{ Case = 'names a drive root'; Members = @($guardBase, @{ Name = 'C:\sentinel.apk' }); Says = 'uses a backslash*' }
+        @{ Case = 'names a drive root with a slash'; Members = @($guardBase, @{ Name = 'C:/sentinel.apk' }); Says = 'holds a colon*' }
+        @{ Case = 'is relative to a drive'; Members = @($guardBase, @{ Name = 'C:sentinel.apk' }); Says = 'holds a colon*' }
+        @{ Case = 'names a stream'; Members = @($guardBase, @{ Name = 'split_config.en.apk:hidden' }); Says = 'holds a colon*' }
+        @{ Case = 'uses a backslash as a separator'; Members = @($guardBase, @{ Name = 'splits\split_config.en.apk' }); Says = 'uses a backslash*' }
+        @{ Case = 'mixes separators'; Members = @($guardBase, @{ Name = 'splits/..\sentinel.apk'; Deflate = $true }); Says = 'uses a backslash*' }
+        @{ Case = 'has an empty segment'; Members = @($guardBase, @{ Name = 'splits//split_config.en.apk' }); Says = 'has an empty path segment' }
+        @{ Case = 'ends in a dot'; Members = @($guardBase, @{ Name = 'split_config.en.apk.' }); Says = 'ends a segment with a dot or a space*' }
+        @{ Case = 'has a folder ending in a space'; Members = @($guardBase, @{ Name = 'splits /split_config.en.apk' }); Says = 'ends a segment with a dot or a space*' }
+        @{ Case = 'names a device'; Members = @($guardBase, @{ Name = 'nul.apk' }); Says = 'names a Windows device' }
+        @{ Case = 'holds a shell character'; Members = @($guardBase, @{ Name = 'split&calc.apk' }); Says = 'is an APK whose file name holds more than*' }
+        @{ Case = 'repeats a name'; Members = @($guardBase, @{ Name = 'base.apk'; Deflate = $true }); Says = "is the same path as 'base.apk' once case is ignored" }
+        @{ Case = 'repeats a name in other case'; Members = @($guardBase, @{ Name = 'BASE.apk' }); Says = "is the same path as 'base.apk' once case is ignored" }
+        @{ Case = 'repeats a file name in a folder'; Members = @($guardBase, @{ Name = 'splits/base.apk' }); Says = "unpacks to base.apk, as 'base.apk' does" }
+        @{ Case = 'repeats a file name with the extension in capitals'; Members = @($guardBase, @{ Name = 'splits/Base.APK' }); Says = "unpacks to Base.apk, as 'base.apk' does" }
+    )
+    foreach ($case in $guardCases) {
+        $caseDir = Join-Path $guardRoot ($case.Case -replace '[^A-Za-z0-9]+', '-')
+        New-Item -ItemType Directory -Path $caseDir -Force | Out-Null
+        $caseBundle = Join-Path $caseDir 'bundle.apkm'
+        [System.IO.File]::WriteAllText((Join-Path $caseDir 'sentinel.apk'), 'sentinel')
+        New-TestRawZip -Path $caseBundle -Members @($case.Members | ForEach-Object {
+            @{ Name = $_.Name; Text = "the bytes of $($_.Name)"; Deflate = [bool]$_.Deflate } })
+        $caseBefore = Get-TestTreeState $caseDir
+        $outerBefore = (Get-FileHash -LiteralPath $outerSentinel -Algorithm SHA256).Hash
+        $caseMerge = Join-Path $caseDir 'merged.apk'
+        $refusal = "*Refusing bundle.apkm: its member*$($case.Says)*Nothing was unpacked*"
+        Assert-Throws { Expand-SplitBundle -Apk $caseBundle -Destination $caseMerge } $refusal `
+            "A bundle with a member that $($case.Case) was unpacked."
+        # The shared merge path refuses it the same way, before any JDK, aapt2 or apksigner is looked for.
+        Assert-Throws { Get-MergedApk -Apk $caseBundle -Destination $caseMerge -Java (Join-Path $caseDir 'no-java.exe') `
+                -DesktopJar (Join-Path $caseDir 'no.jar') -Aapt2 (Join-Path $caseDir 'no-aapt2.exe') -PackageName 'com.tumblr' `
+                -Signers @('0' * 64) } $refusal "The merge took a bundle with a member that $($case.Case)."
+        Assert-True ((Get-TestTreeState $caseDir) -ceq $caseBefore -and
+            (Get-FileHash -LiteralPath $outerSentinel -Algorithm SHA256).Hash -ceq $outerBefore) `
+            "Refusing a bundle with a member that $($case.Case) changed a file or left one behind."
+    }
+    $noApkDir = Join-Path $guardRoot 'no-apk'
+    Assert-Throws { Expand-SplitBundle -Apk $noApk -Destination (Join-Path $noApkDir 'merged.apk') } `
+        '*empty.apkm holds no APK. Nothing was unpacked.*' 'A bundle with no APK in it was unpacked.'
+    Assert-True (-not (Test-Path -LiteralPath $noApkDir)) 'Refusing a bundle with no APK in it created its merge folder.'
+
+    # Sizes are capped before anything is written, so a crafted bundle can't fill the disk: one APK
+    # declaring more than -MemberLimit, or APKs declaring more than -TotalLimit together, are refused
+    # with nothing unpacked, and a bundle right at both limits unpacks. The limits are small here; the
+    # defaults are 1 GiB an APK and 2 GiB a bundle. Get-BaseApk holds the base to the same rule.
+    $sizeDir = Join-Path $guardRoot 'sizes'
+    New-Item -ItemType Directory -Path $sizeDir -Force | Out-Null
+    $sizeBundle = Join-Path $sizeDir 'bundle.apkm'
+    New-TestRawZip -Path $sizeBundle -Members @(
+        @{ Name = 'base.apk'; Text = ('b' * 600) }, @{ Name = 'split_config.en.apk'; Text = ('e' * 600); Deflate = $true })
+    $sizeBefore = Get-TestTreeState $sizeDir
+    $sizeMerge = Join-Path $sizeDir 'merged.apk'
+    Assert-Throws { Expand-SplitBundle -Apk $sizeBundle -Destination $sizeMerge -MemberLimit 500 } `
+        "*Refusing bundle.apkm: its member 'base.apk' would unpack to 600 bytes, more than the 500 bytes one APK may take. Nothing was unpacked.*" `
+        'An APK past the size limit was unpacked.'
+    Assert-Throws { Expand-SplitBundle -Apk $sizeBundle -Destination $sizeMerge -TotalLimit 1000 } `
+        '*Refusing bundle.apkm: its APKs would unpack to 1200 bytes, more than the 1000 bytes a bundle may take. Nothing was unpacked.*' `
+        'A bundle past the size limit was unpacked.'
+    Assert-Throws { Get-BaseApk -Apk $sizeBundle -Destination (Join-Path $sizeDir 'base.apk') -Limit 500 } `
+        "*Refusing bundle.apkm: its base APK 'base.apk' would unpack to 600 bytes, more than the 500 bytes one APK may take*" `
+        'A base APK past the size limit was taken out.'
+    Assert-True ((Get-TestTreeState $sizeDir) -ceq $sizeBefore) 'Refusing a bundle past a size limit changed a file or left one behind.'
+    $withinLimits = Expand-SplitBundle -Apk $sizeBundle -Destination $sizeMerge -MemberLimit 600 -TotalLimit 1200
+    try {
+        Assert-True (@($withinLimits.Files).Count -eq 2 -and
+            (@($withinLimits.Files | ForEach-Object { (Get-Item -LiteralPath $_.Path).Length }) -join ',') -ceq '600,600') `
+            'A bundle right at its size limits did not unpack whole.'
+    } finally { Remove-SplitDirectory -Splits $withinLimits }
+
+    # A member declaring fewer bytes than it inflates to never unpacks past what it declares, the
+    # size the limits read. Windows PowerShell 5.1's .NET Framework inflater reads to the end, which
+    # Copy-BundleMember refuses; newer .NET stops at the declared size itself. Either way no file holds
+    # more than 100 bytes, and a refusal leaves no unpacked folder.
+    $lyingBundle = Join-Path $sizeDir 'lying.apkm'
+    New-TestRawZip -Path $lyingBundle -Members @(@{ Name = 'base.apk'; Text = ('b' * 4000); Deflate = $true; Declares = 100 })
+    foreach ($taker in @('Expand-SplitBundle', 'Get-BaseApk')) {
+        $taken = $null
+        $lyingRefusal = $null
+        $lyingOut = Join-Path $sizeDir "lying-$taker.apk"
+        try { $taken = & $taker -Apk $lyingBundle -Destination $lyingOut } catch { $lyingRefusal = $_.Exception.Message }
+        try {
+            $written = @(if ($taker -eq 'Expand-SplitBundle') { @($taken.Files | ForEach-Object { $_.Path }) } else { @($taken) }) |
+                Where-Object { $_ -and (Test-Path -LiteralPath $_) }
+            Assert-True ((-not $lyingRefusal -or ($lyingRefusal -like "*Refusing lying.apkm: its member 'base.apk'*Nothing was kept.*" -and
+                        -not (Test-Path -LiteralPath $lyingOut) -and @(Get-ChildItem -LiteralPath $sizeDir -Force -Filter '.splits-*').Count -eq 0)) -and
+                    @($written | Where-Object { (Get-Item -LiteralPath $_).Length -gt 100 }).Count -eq 0) `
+                "$taker unpacked a member declaring 100 bytes past what it declares: $lyingRefusal"
+        } finally {
+            if ($taker -eq 'Expand-SplitBundle') { Remove-SplitDirectory -Splits $taken }
+            Remove-Item -LiteralPath $lyingOut -Force -ErrorAction SilentlyContinue
+        }
+    }
+
+    # An .xapk's manifest.json, which Get-BaseApk reads into memory to find the base, is capped at
+    # 1 MiB by what it declares, so a crafted one can't fill memory the way a crafted APK could fill
+    # the disk.
+    $bigManifest = Join-Path $sizeDir 'big-manifest.xapk'
+    New-TestRawZip -Path $bigManifest -Members @(
+        @{ Name = 'manifest.json'; Text = '{"package_name":"com.tumblr"}'; Deflate = $true; Declares = 2097152 },
+        @{ Name = 'com.tumblr.apk'; Text = 'base' })
+    $bigManifestOut = Join-Path $sizeDir 'big-manifest-base.apk'
+    Assert-Throws { Get-BaseApk -Apk $bigManifest -Destination $bigManifestOut } `
+        '*Refusing big-manifest.xapk: its manifest.json would unpack to 2097152 bytes, more than the 1048576 bytes it may take. Nothing was unpacked.*' `
+        'A manifest.json past its size limit was read.'
+    Assert-True (-not (Test-Path -LiteralPath $bigManifestOut)) 'Refusing an oversized manifest.json left a base APK behind.'
+
+    # Distributors' layouts unpack whole, the APKs alone and byte for byte, into a .splits- folder
+    # beside the merge that is gone once the caller is done: an .apkm (base.apk, its splits,
+    # info.json and an icon, one split's extension in capitals, which is written as .apk, the name
+    # the merger reads), an .xapk (the base named for the package, config splits, manifest.json, an
+    # icon and an OBB in a folder) and an .apks, whose APKs sit in splits/ and unpack by file name.
+    foreach ($layout in @(
+            @{ Name = 'tumblr.apkm'; Entries = [ordered]@{ 'info.json' = '{"versioncode":"1"}'; 'icon.png' = 'icon'
+                    'base.apk' = 'base'; 'split_config.arm64_v8a.apk' = 'arm64'; 'split_config.xxhdpi.APK' = 'xxhdpi' }
+                Unpacked = [ordered]@{ 'base.apk' = 'base'; 'split_config.arm64_v8a.apk' = 'arm64'; 'split_config.xxhdpi.apk' = 'xxhdpi' } }
+            @{ Name = 'tumblr.xapk'; Entries = [ordered]@{ 'com.tumblr.apk' = 'base'; 'config.arm64_v8a.apk' = 'arm64'
+                    'config.en.apk' = 'en'; 'icon.png' = 'icon'; 'manifest.json' = '{"package_name":"com.tumblr"}'
+                    'Android/obb/com.tumblr/main.1.com.tumblr.obb' = 'obb' }
+                Unpacked = [ordered]@{ 'com.tumblr.apk' = 'base'; 'config.arm64_v8a.apk' = 'arm64'; 'config.en.apk' = 'en' } }
+            @{ Name = 'tumblr.apks'; Entries = [ordered]@{ 'toc.pb' = 'toc'; 'splits/' = ''; 'splits/base-master.apk' = 'base'
+                    'splits/base-xxhdpi.apk' = 'xxhdpi' }
+                Unpacked = [ordered]@{ 'base-master.apk' = 'base'; 'base-xxhdpi.apk' = 'xxhdpi' } })) {
+        $layoutDir = Join-Path $guardRoot ('layout-' + $layout.Name)
+        New-Item -ItemType Directory -Path $layoutDir -Force | Out-Null
+        $layoutBundle = Join-Path $layoutDir $layout.Name
+        New-TestBundleArchive -Path $layoutBundle -Entries $layout.Entries
+        $splits = Expand-SplitBundle -Apk $layoutBundle -Destination (Join-Path $layoutDir 'merged.apk')
+        try {
+            $found = @(Get-ChildItem -LiteralPath $splits.Directory -Force | Sort-Object Name | ForEach-Object {
+                "$($_.Name)=$([System.IO.File]::ReadAllText($_.FullName))" }) -join ';'
+            $expected = @($layout.Unpacked.Keys | Sort-Object | ForEach-Object { "$_=$($layout.Unpacked[$_])" }) -join ';'
+            $listed = @($splits.Files | ForEach-Object { $_.Name } | Sort-Object) -join ';'
+            Assert-True ($found -ceq $expected -and $listed -ceq (@($layout.Unpacked.Keys | Sort-Object) -join ';') -and
+                (Test-SamePath (Split-Path -Parent $splits.Directory) $layoutDir) -and
+                (Split-Path -Leaf $splits.Directory) -like '.splits-*') `
+                "$($layout.Name) did not unpack its APKs alone, byte for byte, into a folder of its own beside the merge: $found"
+        } finally {
+            Remove-SplitDirectory -Splits $splits
+        }
+        Assert-True (@(Get-ChildItem -LiteralPath $layoutDir -Force -Filter '.splits-*').Count -eq 0 -and
+            -not (Test-Path -LiteralPath (Join-Path $layoutDir 'merged.apk'))) "$($layout.Name) left its unpacked folder behind."
+    }
+
     # The fetch the release facts make of the indexed bundle and the add-source page. A real
     # request first: nothing listens on port 1, so it is refused before it leaves this machine.
     # Then the two answers a stand-in gives, a 404 the way both shells raise it and a 200.
@@ -4019,17 +4249,30 @@ Write-Host '[scripts] shared helper contracts passed'
 function New-FakeBuildQueue {
     param([string]$Path, [string]$Log)
     $quotedLog = "'" + $Log.Replace("'", "''") + "'"
+    $mutexName = 'Local\HushTumblrFixtureQueue-' + [guid]::NewGuid().ToString('N')
+    # Only the log append is serialized. The builders still run concurrently.
+    # PowerShell 5.1's Add-Content can fail while reopening a contended file.
     Set-Content -LiteralPath $Path -Encoding ASCII -Value @(
         'param([switch]$Status, [string]$Label, [string]$Priority, [string]$Run)',
         'function Enter-BuildQueue {',
         '    param([string]$Label = ''build'', [string]$Priority)',
         '    if (-not $Priority) { $Priority = if ($env:BUILD_QUEUE_PRIORITY -eq ''release'') { ''release'' } else { ''normal'' } }',
-        "    Add-Content -LiteralPath $quotedLog -Value ""enter `$Priority `$Label""",
+        "    `$mutex = New-Object System.Threading.Mutex(`$false, '$mutexName')",
+        '    try {',
+        '        [void]$mutex.WaitOne()',
+        "        try { [IO.File]::AppendAllText($quotedLog, ""enter `$Priority `$Label"" + [Environment]::NewLine, [Text.Encoding]::ASCII) }",
+        '        finally { $mutex.ReleaseMutex() }',
+        '    } finally { $mutex.Dispose() }',
         '    return [pscustomobject]@{ slot = 0; label = $Label }',
         '}',
         'function Exit-BuildQueue {',
         '    param($Ticket)',
-        "    Add-Content -LiteralPath $quotedLog -Value ""exit `$(`$Ticket.label)""",
+        "    `$mutex = New-Object System.Threading.Mutex(`$false, '$mutexName')",
+        '    try {',
+        '        [void]$mutex.WaitOne()',
+        "        try { [IO.File]::AppendAllText($quotedLog, ""exit `$(`$Ticket.label)"" + [Environment]::NewLine, [Text.Encoding]::ASCII) }",
+        '        finally { $mutex.ReleaseMutex() }',
+        '    } finally { $mutex.Dispose() }',
         '}',
         'function Get-BuildQueueMask {',
         '    param([int]$Slot)',
@@ -4209,6 +4452,112 @@ foreach ($name in @('build-release-receipt.ps1', 'verify-all-patches.ps1')) {
     $text = Get-Content -LiteralPath (Join-Path $PSScriptRoot $name) -Raw
     Assert-True ($text -match '(?m)^[^#\r\n]*\$patchInput = Get-MergedApk -Apk ' -and $text -notmatch '\*-merged\.apk') `
         "$name does not merge a bundle before it patches, or still looks for the merge the CLI deletes."
+}
+
+# Every script that takes a fixture or an APK straight goes through Get-MergedApk, which holds each
+# APK to Tumblr's declared signer before anything is merged, and none runs the unpack, lock or
+# merge steps itself: those run unchecked only in the resource table test, on APKs aapt2 builds
+# there. Get-MergedApk has no switch, so nothing can ask it to skip the check, and in each script
+# it comes before the CLI patches, a kept APK is signed, a kept run is looked up or the clean side
+# is compared. Assert-AuthenticInput runs the same checks with nothing merged, so the receipt
+# builder can refuse its whole fixture list first; the steps it opens and closes stay in common.ps1.
+$checkedSteps = @('Expand-SplitBundle', 'Copy-ApkToSplitDirectory', 'Lock-SplitFiles', 'Invoke-SplitMerge', 'Assert-SplitsAuthentic',
+    'Open-AuthenticInput', 'Close-AuthenticInput')
+foreach ($script in @(Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.ps1' -File |
+        Where-Object { $_.Name -ne 'common.ps1' -and $_.Name -notlike 'test-*' })) {
+    $scriptAst = [System.Management.Automation.Language.Parser]::ParseFile($script.FullName, [ref]$null, [ref]$null)
+    $direct = @($scriptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
+            $checkedSteps -contains $node.GetCommandName() }, $true))
+    Assert-True ($direct.Count -eq 0) `
+        "$($script.Name) calls $(@($direct | ForEach-Object { $_.GetCommandName() }) -join ', ') itself instead of going through Get-MergedApk."
+}
+$mergeCommand = Get-Command -Name Get-MergedApk -CommandType Function
+$mergeParameters = @($mergeCommand.Parameters.Keys | Where-Object {
+        [System.Management.Automation.Cmdlet]::CommonParameters -notcontains $_ -and
+        [System.Management.Automation.Cmdlet]::OptionalCommonParameters -notcontains $_ } | Sort-Object)
+Assert-True (($mergeParameters -join ',') -ceq 'Aapt2,Apk,DesktopJar,Destination,Java,PackageName,Signers' -and
+    @($mergeParameters | Where-Object { $mergeCommand.Parameters[$_].SwitchParameter -or
+        @($mergeCommand.Parameters[$_].Attributes | Where-Object {
+            $_ -is [System.Management.Automation.ParameterAttribute] -and $_.Mandatory }).Count -eq 0 }).Count -eq 0) `
+    "Get-MergedApk takes something other than its seven mandatory values, a switch to skip the signer check among them: $($mergeParameters -join ', ')"
+function Get-FirstCommandOffset($ScriptAst, [scriptblock]$Match) {
+    $hits = @($ScriptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and (& $Match $node) }, $true) |
+        Sort-Object { $_.Extent.StartOffset })
+    if ($hits.Count -eq 0) { return -1 }
+    return $hits[0].Extent.StartOffset
+}
+$isMerge = { param($node) $node.GetCommandName() -eq 'Get-MergedApk' }
+$isCliPatch = { param($node) $node.Extent.Text -match "^&\s*\`$Java\s+'?-jar'?\s" }
+$isKeptLookup = { param($node) $node.GetCommandName() -eq 'Find-AppliedRecord' }
+$isKeptSign = { param($node) $node.Extent.Text -match '^&\s*\$apksigner\s+sign\s' }
+foreach ($order in @(
+        @{ Name = 'patch-for-device.ps1'; After = @(@{ What = 'a kept run is looked up'; Match = $isKeptLookup },
+            @{ What = 'a kept APK is signed'; Match = $isKeptSign }, @{ What = 'the CLI patches'; Match = $isCliPatch }) },
+        @{ Name = 'build-release-receipt.ps1'; After = @(@{ What = 'a kept run is looked up'; Match = $isKeptLookup },
+            @{ What = 'the CLI patches'; Match = $isCliPatch }) },
+        @{ Name = 'verify-all-patches.ps1'; After = @(@{ What = 'the CLI patches'; Match = $isCliPatch }) },
+        @{ Name = 'verify-injected-registers.ps1'; After = @(
+            @{ What = 'the merge is held to its record'; Match = { param($node) $node.GetCommandName() -eq 'Assert-AuthenticMerge' } },
+            @{ What = 'DexDiff compares the clean side'; Match = { param($node) $node.GetCommandName() -eq 'Invoke-DexDiff' } }) })) {
+    $scriptPath = Join-Path $PSScriptRoot $order.Name
+    $scriptAst = [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$null, [ref]$null)
+    $calls = @($scriptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Get-MergedApk' }, $true))
+    Assert-True ($calls.Count -eq 1) "$($order.Name) doesn't merge through exactly one Get-MergedApk call."
+    $bound = @($calls[0].CommandElements | Where-Object { $_ -is [System.Management.Automation.Language.CommandParameterAst] } |
+        ForEach-Object { $_.ParameterName })
+    foreach ($parameter in @('Aapt2', 'PackageName', 'Signers')) {
+        Assert-True ($bound -contains $parameter) "$($order.Name) calls Get-MergedApk without -$parameter."
+    }
+    $mergeAt = Get-FirstCommandOffset $scriptAst $isMerge
+    foreach ($later in $order.After) {
+        $laterAt = Get-FirstCommandOffset $scriptAst $later.Match
+        Assert-True ($laterAt -gt $mergeAt) "In $($order.Name), $($later.What) before Get-MergedApk has checked the APKs, or never."
+    }
+}
+# The receipt builder checks its whole fixture list before it merges any fixture.
+$receiptAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'build-release-receipt.ps1'), [ref]$null, [ref]$null)
+$fixtureCheckAt = Get-FirstCommandOffset $receiptAst { param($node) $node.GetCommandName() -eq 'Assert-AuthenticInput' }
+Assert-True ($fixtureCheckAt -ge 0 -and $fixtureCheckAt -lt (Get-FirstCommandOffset $receiptAst $isMerge)) `
+    'build-release-receipt.ps1 merges a fixture before it has checked every fixture (Assert-AuthenticInput), or never checks them.'
+# The verifier holds whatever merge it compares to the record, a merge it was handed included, so
+# that check can't sit behind a condition.
+$verifierAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'verify-injected-registers.ps1'),
+    [ref]$null, [ref]$null)
+$recordChecks = @($verifierAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
+        $node.GetCommandName() -eq 'Assert-AuthenticMerge' }, $true))
+$conditional = @($recordChecks | Where-Object {
+        $inside = $false
+        for ($parent = $_.Parent; $null -ne $parent; $parent = $parent.Parent) {
+            if ($parent -is [System.Management.Automation.Language.IfStatementAst] -or
+                    $parent -is [System.Management.Automation.Language.LoopStatementAst] -or
+                    $parent -is [System.Management.Automation.Language.SwitchStatementAst] -or
+                    $parent -is [System.Management.Automation.Language.FunctionDefinitionAst] -or
+                    $parent -is [System.Management.Automation.Language.ScriptBlockExpressionAst]) { $inside = $true }
+        }
+        $inside })
+Assert-True ($recordChecks.Count -eq 1 -and $conditional.Count -eq 0) `
+    'verify-injected-registers.ps1 does not hold the merge it compares to the record of its signer check on every run.'
+
+# Every script that patches holds the APK it made to what a device with 16 KB pages needs
+# (Assert-PageAlignment), against the stock APK the CLI was handed, once the CLI has patched. The
+# device script also signs a kept APK itself, and zipalign can't put a signed APK right, so there
+# the kept APK is held to it before apksigner signs and the signed one after. The release root
+# section below runs all three against a zipalign that fails.
+$isPageCheck = { param($node) $node.GetCommandName() -eq 'Assert-PageAlignment' }
+foreach ($name in @('patch-for-device.ps1', 'build-release-receipt.ps1', 'verify-all-patches.ps1')) {
+    $scriptAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $name), [ref]$null, [ref]$null)
+    $pageChecks = @($scriptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
+            (& $isPageCheck $node) }, $true) | Sort-Object { $_.Extent.StartOffset })
+    Assert-True ($pageChecks.Count -gt 0 -and $pageChecks[-1].Extent.StartOffset -gt (Get-FirstCommandOffset $scriptAst $isCliPatch) -and
+        $pageChecks[-1].Extent.Text -match '-Apk \$out -Stock \$patchInput -Aapt2 \$Aapt2$') `
+        "$name does not hold the APK it patched to the 16 KB page check, against the stock APK the CLI was handed."
+    if ($name -eq 'patch-for-device.ps1') {
+        $signAt = Get-FirstCommandOffset $scriptAst $isKeptSign
+        Assert-True ($pageChecks.Count -eq 2 -and $pageChecks[0].Extent.StartOffset -lt $signAt -and
+            $pageChecks[0].Extent.Text -match '-Apk \$recorded\.PatchedApk -Stock \$patchInput ' -and $pageChecks[1].Extent.StartOffset -gt $signAt) `
+            'patch-for-device.ps1 does not hold a kept APK to the 16 KB page check before it signs it, and the signed APK after.'
+    }
 }
 
 Write-Host '[scripts] split bundle contracts passed'
@@ -4499,6 +4848,19 @@ try {
         }
         return ($lines -join "`n") + "`n"
     }
+    # A config split's manifest, as aapt2 prints one: the package, the build's version code and the
+    # split's name. -Marker adds a line the apksigner stand-in reads (see it below).
+    function Get-FixtureSplitManifest([string]$Code, [string]$Split, [string]$Package = $releaseTarget.PackageName, [string]$Marker) {
+        $lines = @(
+            'N: android=http://schemas.android.com/apk/res/android (line=1)',
+            '  E: manifest (line=1)',
+            "    A: http://schemas.android.com/apk/res/android:versionCode(0x0101021b)=$Code",
+            "    A: package=`"$Package`" (Raw: `"$Package`")",
+            "    A: split=`"$Split`" (Raw: `"$Split`")",
+            '      E: application (line=4)')
+        if ($Marker) { $lines = @("N: $Marker") + $lines }
+        return ($lines -join "`n") + "`n"
+    }
     $releaseSelectedAllowlist = @(Read-ManifestDeltaAllowlist -Path (Join-Path $PSScriptRoot 'manifest-delta-allowlist.txt') `
         -SelectedPatchNames $releaseNames)
 
@@ -4667,12 +5029,15 @@ try {
         'set "LAST=!V!"',
         'exit /b 0',
         ':run',
-        'rem A merged APK names the bundle it came from, whose report and patched manifest these are.',
+        'rem A merged APK names the bundle it came from, whose report and patched manifest these are,',
+        'rem and the checked copy of a plain APK carries the name of the fixture it was copied from.',
         'set "SRC=!LAST!"',
         'set "VIA="',
         'if exist "!LAST!.source" (',
         '    set /p SRC=<"!LAST!.source"',
         '    set "VIA= merged"',
+        ') else (',
+        '    for /f "tokens=1,* delims==" %%A in (''findstr /b /l /c:"N: stand-in-bundle=" "!LAST!"'') do set "SRC=%%B"',
         ')',
         '>>"!HERE!java.log" echo patch !SRC!!VIA! forced=!FORCED!',
         'rem The CLI logs WARNING and SEVERE on standard error, which Windows PowerShell 5.1 makes a',
@@ -4684,16 +5049,20 @@ try {
         'copy /y "!HERE!patched.apk" "!OUT!" >nul || exit /b 4',
         'copy /y "!SRC!.patched.txt" "!OUT!.xmltree" >nul || exit /b 5',
         'exit /b 0',
-        'rem MergeSplits.java <bundle> <merged.apk>. A case can make it fail, or leave no APK behind.',
+        'rem MergeSplits.java <split directory> <merged.apk>. The base APK the scripts unpacked into that',
+        'rem directory names the fixture it came from. A case can make it fail, or leave no APK behind.',
         ':merge',
-        '>>"!HERE!merge.log" echo merge %~5',
+        'set "BUNDLE="',
+        'for %%F in ("%~5\*.apk") do for /f "tokens=1,* delims==" %%A in (''findstr /b /l /c:"N: stand-in-bundle=" "%%~F"'') do set "BUNDLE=%%B"',
+        '>>"!HERE!merge.log" echo merge !BUNDLE!',
         'if exist "!HERE!merge-fails.txt" (',
         '    echo [merge] could not read the bundle 1>&2',
         '    exit /b 9',
         ')',
         'if exist "!HERE!merge-writes-nothing.txt" exit /b 0',
-        'copy /y "%~5.merged.txt" "%~6" >nul || exit /b 7',
-        '>"%~6.source" echo %~5',
+        'if not defined BUNDLE exit /b 6',
+        'copy /y "!BUNDLE!.merged.txt" "%~6" >nul || exit /b 7',
+        '>"%~6.source" echo !BUNDLE!',
         'exit /b 0',
         'rem ResourceTableCheck.java <stock> <patched> <report>: keeps what it was handed as the stock side.',
         ':resources',
@@ -4745,16 +5114,35 @@ try {
         Where-Object { $_.packageName -eq $releaseTarget.PackageName } | ForEach-Object { $_.signatures } |
         Sort-Object -Unique | Select-Object -First 1)
     Assert-True ($releaseSigner.Count -eq 1) 'The release catalog names no signer for the stand-in apksigner.'
+    # Every APK is checked before it is merged or patched (Get-MergedApk), and a marker in the APK
+    # says how this one is signed: stand-in-unsigned and stand-in-tampered don't verify,
+    # stand-in-foreign is signed by another certificate alone, stand-in-second-signer by another
+    # one beside Tumblr's, and stand-in-stamp carries a Source Stamp beside Tumblr's, which is the
+    # store's certificate and doesn't count. Without a marker the answer is Tumblr's signer.
     # It signs too: patch-for-device.ps1 signs a kept gate run with it. "sign ... --out <apk> <in>"
     # copies the input and the manifest beside it, and notes the call in apksigner.log.
+    $foreignSigner = '0123456789abcdef' * 4
     Set-Content -LiteralPath (Join-Path $tools 'apksigner.bat') -Encoding ASCII -Value @(
         '@echo off',
         'setlocal EnableExtensions EnableDelayedExpansion',
         'set "HERE=%~dp0"',
-        'if /i not "%~1"=="sign" (',
-        "    echo Signer #1 certificate SHA-256 digest: $($releaseSigner[0])",
-        '    exit /b 0',
-        ')',
+        'if /i "%~1"=="sign" goto sign',
+        'set "APK="',
+        ':arg',
+        'if "%~1"=="" goto verify',
+        'set "APK=%~1"',
+        'shift',
+        'goto arg',
+        ':verify',
+        'findstr /l /c:"stand-in-unsigned" "!APK!" >nul 2>&1 && (echo DOES NOT VERIFY& echo ERROR: Missing META-INF/MANIFEST.MF& exit /b 1)',
+        ('findstr /l /c:"stand-in-tampered" "!APK!" >nul 2>&1 && (echo DOES NOT VERIFY& echo ERROR: APK Signature Scheme v2 ' +
+            'signer #1: APK integrity check failed. CHUNKED_SHA256 digest mismatch.& exit /b 1)'),
+        "findstr /l /c:`"stand-in-foreign`" `"!APK!`" >nul 2>&1 && (echo Signer #1 certificate SHA-256 digest: $foreignSigner& exit /b 0)",
+        "echo Signer #1 certificate SHA-256 digest: $($releaseSigner[0])",
+        "findstr /l /c:`"stand-in-second-signer`" `"!APK!`" >nul 2>&1 && echo Signer #2 certificate SHA-256 digest: $foreignSigner",
+        "findstr /l /c:`"stand-in-stamp`" `"!APK!`" >nul 2>&1 && echo Source Stamp Signer certificate SHA-256 digest: $foreignSigner",
+        'exit /b 0',
+        ':sign',
         'set "OUT=" & set "LAST=" & set "PREV=" & set "ALIAS="',
         ':next',
         'shift',
@@ -4769,6 +5157,17 @@ try {
         'copy /y "!LAST!" "!OUT!" >nul || exit /b 3',
         'if exist "!LAST!.xmltree" copy /y "!LAST!.xmltree" "!OUT!.xmltree" >nul',
         'exit /b 0')
+    # And a zipalign beside them, which every patched APK is held to for devices with 16 KB pages
+    # (Assert-PageAlignment). It notes what it was asked in zipalign.log and passes the APK, unless
+    # a case leaves zipalign-fails.txt behind. The real one is run against real archives in
+    # test-resource-table-check.ps1.
+    $zipalignLog = Join-Path $tools 'zipalign.log'
+    Set-Content -LiteralPath (Join-Path $tools 'zipalign.bat') -Encoding ASCII -Value @(
+        '@echo off',
+        '>>"%~dp0zipalign.log" echo %*',
+        'if exist "%~dp0zipalign-fails.txt" (echo Verification FAILED& exit /b 1)',
+        'echo Verification successful',
+        'exit /b 0')
     New-TestBundleArchive -Path (Join-Path $tools 'patched.apk') -Entries ([ordered]@{
         'AndroidManifest.xml' = 'binary manifest'; 'classes.dex' = "dex`n035" })
 
@@ -4779,14 +5178,17 @@ try {
     # the catalog pins it to; the fixtures used to count down from a code of their own, which only
     # the version name made declared.
     $newerBuild = "$([int]($releaseTarget.PackageVersion -split '\.')[0] + 1).0.0.1.1"
+    $newerCode = 512008382
     foreach ($build in @($newerBuild) + @($releaseTarget.PackageVersions)) {
         $stockMinSdk = if ($build -eq $newerBuild) { 36 } else { 21 }
-        $versionCode = if ($build -eq $newerBuild) { 512008382 } else { [long]@($releaseTarget.PackageVersionCodes[$build])[0] }
+        $versionCode = if ($build -eq $newerBuild) { $newerCode } else { [long]@($releaseTarget.PackageVersionCodes[$build])[0] }
         $apkm = Join-Path $fixtures "tumblr-$build-$versionCode.xapk"
+        # The base names the fixture it was packed into, which the JDK stand-in reads back as it
+        # merges: the merger is handed the directory the APKs were unpacked into, not the bundle.
         New-TestBundleArchive -Path $apkm -Entries ([ordered]@{
-            'com.tumblr.apk' = Get-FixtureManifest -Build $build -Code "$versionCode" -MinSdk $stockMinSdk
+            'com.tumblr.apk' = "N: stand-in-bundle=$apkm`n" + (Get-FixtureManifest -Build $build -Code "$versionCode" -MinSdk $stockMinSdk)
             'icon.png' = 'icon'
-            'config.arm64_v8a.apk' = ('native code ' * 64)
+            'config.arm64_v8a.apk' = Get-FixtureSplitManifest -Code "$versionCode" -Split 'config.arm64_v8a'
             'manifest.json' = ("{`"package_name`":`"com.tumblr`",`"version_code`":`"$versionCode`",`"split_apks`":[" +
                 '{"file":"com.tumblr.apk","id":"base"},{"file":"config.arm64_v8a.apk","id":"config.arm64_v8a"}]}') })
         Set-Content -LiteralPath "$apkm.merged.txt" -Encoding ASCII -NoNewline `
@@ -4812,6 +5214,107 @@ try {
     New-TestBundleArchive -Path $variantApkm -Entries ([ordered]@{
         'info.json' = "{`"versioncode`":`"$variantCode`"}"
         'base.apk' = Get-FixtureManifest -Build $variantBuild -Code "$variantCode" })
+
+    # Every APK a merge is made from has to carry Tumblr's declared signer, and only it, and belong
+    # to one build of the package, before the merger reads it (Get-MergedApk). Each refusal comes
+    # before the JDK is started (no merge.log), names the APK and the reason, and leaves no merge,
+    # no record of one and no unpacked folder behind.
+    $authRoot = Join-Path $releaseRoot 'split-auth'
+    New-Item -ItemType Directory -Path $authRoot -Force | Out-Null
+    $authMerge = Join-Path $authRoot 'merged.apk'
+    $authCode = [string]@($releaseTarget.PackageVersionCodes[$releaseTarget.PackageVersion])[0]
+    $authBase = Get-FixtureManifest -Build $releaseTarget.PackageVersion -Code $authCode
+    function Invoke-AuthMerge([string]$Apk) {
+        Remove-Item -LiteralPath $mergeLog -Force -ErrorAction SilentlyContinue
+        Get-MergedApk -Apk $Apk -Destination $authMerge -Java $stubJava -DesktopJar $stubJar `
+            -Aapt2 $stubAapt2 -PackageName $releaseTarget.PackageName -Signers @($releaseSigner)
+    }
+    function Get-TextSha256([string]$Text) {
+        $sha = [System.Security.Cryptography.SHA256]::Create()
+        try { return ([BitConverter]::ToString($sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Text))) -replace '-', '').ToLowerInvariant() }
+        finally { $sha.Dispose() }
+    }
+    $authCases = @(
+        @{ Case = 'an unsigned split'; Marker = 'stand-in-unsigned'; Says = 'config.arm64_v8a.apk does not verify (*DOES NOT VERIFY*' }
+        @{ Case = 'a split whose bytes changed after signing'; Marker = 'stand-in-tampered'; Says = 'config.arm64_v8a.apk does not verify (*integrity check failed*' }
+        @{ Case = 'a split signed by somebody else'; Marker = 'stand-in-foreign'
+            Says = "config.arm64_v8a.apk is signed by $foreignSigner, which isn't a certificate patches-list.json declares for $($releaseTarget.PackageName)" }
+        @{ Case = 'a split signed by somebody else beside Tumblr'; Marker = 'stand-in-second-signer'
+            Says = "config.arm64_v8a.apk is signed by $foreignSigner, which isn't a certificate*" }
+        @{ Case = 'an unsigned base'; BaseMarker = 'stand-in-unsigned'; Says = 'com.tumblr.apk does not verify*' }
+        @{ Case = 'a split of another app'; Package = 'com.example.nottumblr'
+            Says = "config.arm64_v8a.apk is com.example.nottumblr, not $($releaseTarget.PackageName)" }
+        @{ Case = 'a split of another build'; Code = '1'; Says = 'its APKs carry more than one version code*' }
+        @{ Case = 'a second base'; Extra = $authBase; Says = 'it holds 2 base APKs*' }
+        @{ Case = 'no base'; NoBase = $true; Says = 'it holds 0 base APKs*' }
+        @{ Case = 'one split name twice'; Extra = (Get-FixtureSplitManifest -Code $authCode -Split 'config.arm64_v8a')
+            Says = 'config.arm64_v8a.apk and config.extra.apk are both split config.arm64_v8a*' }
+    )
+    foreach ($case in $authCases) {
+        $entries = [ordered]@{}
+        if (-not $case.NoBase) {
+            $entries['com.tumblr.apk'] = $(if ($case.BaseMarker) { "N: $($case.BaseMarker)`n" } else { '' }) + $authBase
+        }
+        $splitCode = if ($case.Code) { $case.Code } else { $authCode }
+        $splitPackage = if ($case.Package) { $case.Package } else { $releaseTarget.PackageName }
+        $entries['config.arm64_v8a.apk'] = Get-FixtureSplitManifest -Code $splitCode -Split 'config.arm64_v8a' -Package $splitPackage -Marker $case.Marker
+        if ($case.Extra) { $entries['config.extra.apk'] = $case.Extra }
+        $authBundle = Join-Path $authRoot 'auth.xapk'
+        Remove-Item -LiteralPath $authBundle -Force -ErrorAction SilentlyContinue
+        New-TestBundleArchive -Path $authBundle -Entries $entries
+        Assert-Throws { Invoke-AuthMerge $authBundle } "*Refusing auth.xapk: $($case.Says)*Nothing was merged or patched.*" `
+            "Get-MergedApk took a bundle with $($case.Case)."
+        Assert-True (-not (Test-Path -LiteralPath $mergeLog) -and -not (Test-Path -LiteralPath $authMerge) -and
+            -not (Test-Path -LiteralPath "$authMerge.authentic.json") -and
+            @(Get-ChildItem -LiteralPath $authRoot -Force -Filter '.splits-*').Count -eq 0) `
+            "Refusing a bundle with $($case.Case) started the merge or left something behind."
+    }
+    # The control: a Source Stamp beside Tumblr's signer is the store's and passes, the merger is
+    # handed the checked APKs, and the record beside the merge names them and the base.
+    $stampedBundle = Join-Path $authRoot 'stamped.xapk'
+    $stampedBase = "N: stand-in-bundle=$stampedBundle`n" + $authBase
+    $stampedSplit = Get-FixtureSplitManifest -Code $authCode -Split 'config.arm64_v8a' -Marker 'stand-in-stamp'
+    New-TestBundleArchive -Path $stampedBundle -Entries ([ordered]@{ 'com.tumblr.apk' = $stampedBase; 'config.arm64_v8a.apk' = $stampedSplit })
+    Set-Content -LiteralPath "$stampedBundle.merged.txt" -Encoding ASCII -NoNewline -Value $authBase
+    $stampedMerge = Invoke-AuthMerge $stampedBundle
+    $stampedRecord = Get-Content -LiteralPath "$authMerge.authentic.json" -Raw | ConvertFrom-Json
+    Assert-True ($stampedMerge -eq $authMerge -and (@(Get-Content -LiteralPath $mergeLog) -join ';') -eq "merge $stampedBundle" -and
+        $stampedRecord.package -ceq $releaseTarget.PackageName -and [string]$stampedRecord.versionCode -ceq $authCode -and
+        (@($stampedRecord.signers) -join ',') -ceq $releaseSigner[0] -and
+        $stampedRecord.baseSha256 -ceq (Get-TextSha256 $stampedBase) -and
+        $stampedRecord.mergedSha256 -ceq (Get-Sha256Hex -Path $authMerge).ToLowerInvariant() -and
+        ((@($stampedRecord.apks | ForEach-Object { "$($_.name)=$($_.sha256)=$($_.split)" }) | Sort-Object) -join ';') -ceq
+            ((@("com.tumblr.apk=$(Get-TextSha256 $stampedBase)=", "config.arm64_v8a.apk=$(Get-TextSha256 $stampedSplit)=config.arm64_v8a") |
+                Sort-Object) -join ';') -and
+        @(Get-ChildItem -LiteralPath $authRoot -Force -Filter '.splits-*').Count -eq 0) `
+        "A bundle whose split carries a Source Stamp beside Tumblr's signer was not merged and recorded: $($stampedRecord | ConvertTo-Json -Compress -Depth 4)"
+    # A plain APK is checked the same way and handed on as a copy of the bytes that were checked,
+    # with no merge. A refusal after it leaves that copy and its record as they were.
+    $plainAuth = Join-Path $authRoot 'plain.apk'
+    [System.IO.File]::WriteAllText($plainAuth, $authBase)
+    $plainCopy = Invoke-AuthMerge $plainAuth
+    $plainRecord = Get-Content -LiteralPath "$authMerge.authentic.json" -Raw | ConvertFrom-Json
+    Assert-True ($plainCopy -eq $authMerge -and [System.IO.File]::ReadAllText($authMerge) -ceq $authBase -and
+        -not (Test-Path -LiteralPath $mergeLog) -and $plainRecord.baseSha256 -ceq (Get-TextSha256 $authBase) -and
+        $plainRecord.mergedSha256 -ceq $plainRecord.baseSha256 -and -not $plainRecord.signedForm) `
+        'A plain APK signed by Tumblr was not handed on as a checked copy with its record.'
+    $keptCopy = Get-Sha256Hex -Path $authMerge
+    $keptRecord = Get-Sha256Hex -Path "$authMerge.authentic.json"
+    foreach ($plainCase in @(
+            @{ Case = 'signed by somebody else'; Text = "N: stand-in-foreign`n$authBase"; Says = "it is signed by $foreignSigner*" },
+            @{ Case = 'signed by somebody else beside Tumblr'; Text = "N: stand-in-second-signer`n$authBase"; Says = "it is signed by $foreignSigner*" },
+            @{ Case = 'unsigned with no bundle beside it'; Text = "N: stand-in-unsigned`n$authBase"
+                Says = 'it does not verify (*no .apkm, .xapk or .apks of the same name beside it*' },
+            @{ Case = 'a split'; Text = (Get-FixtureSplitManifest -Code $authCode -Split 'config.arm64_v8a'); Says = 'it is the split config.arm64_v8a, not a whole app' },
+            @{ Case = 'another app'; Text = (Get-FixtureManifest -Build $releaseTarget.PackageVersion -Code $authCode -Package 'com.example.nottumblr')
+                Says = "it is com.example.nottumblr, not $($releaseTarget.PackageName)" })) {
+        [System.IO.File]::WriteAllText($plainAuth, $plainCase.Text)
+        Assert-Throws { Invoke-AuthMerge $plainAuth } "*Refusing plain.apk: $($plainCase.Says)*Nothing was merged or patched.*" `
+            "Get-MergedApk took a plain APK $($plainCase.Case)."
+        Assert-True ((Get-Sha256Hex -Path $authMerge) -ceq $keptCopy -and (Get-Sha256Hex -Path "$authMerge.authentic.json") -ceq $keptRecord -and
+            @(Get-ChildItem -LiteralPath $authRoot -Force -Filter '.splits-*').Count -eq 0) `
+            "Refusing a plain APK $($plainCase.Case) changed the last checked copy or left something behind."
+    }
     $releaseBundle = Get-ReleaseBundlePath -Root $releaseRepo
     New-Item -ItemType Directory -Path (Split-Path -Parent $releaseBundle) -Force | Out-Null
     New-TestBundleArchive -Path $releaseBundle -Entries ([ordered]@{
@@ -4959,10 +5462,12 @@ try {
     # A patched fixture whose injected code fails the structural check, or calls a class or member
     # the build lacks, stops the run with no receipt. HushPinterest 0.0.3 shipped a System share sheet
     # call into a class from another Pinterest build because the builder read only the CLI's verdicts.
+    # So does one zipalign -c -P 16 -v 4 doesn't pass, which a device with 16 KB pages can't load.
     $builtReceiptBeforeChecks = [System.IO.File]::ReadAllBytes($releaseReceipt)
     foreach ($broken in @(
             @{ Flag = 'dexdiff-fails.txt'; Pattern = '*failed its structural or host reference checks (exit 1)*' },
-            @{ Flag = 'references-fails.txt'; Pattern = '*failed its structural or host reference checks (exit 1)*' })) {
+            @{ Flag = 'references-fails.txt'; Pattern = '*failed its structural or host reference checks (exit 1)*' },
+            @{ Flag = 'zipalign-fails.txt'; Pattern = "*zipalign -c -P 16 -v 4 didn't pass *.apk (exit 1)*Verification FAILED*" })) {
         $flag = Join-Path $tools $broken.Flag
         Set-Content -LiteralPath $flag -Value 'on' -Encoding ASCII
         Remove-Item -LiteralPath $releaseReceipt -Force
@@ -5077,8 +5582,10 @@ try {
     $plainFixture = Join-Path $fixtures "tumblr-$($releaseTarget.PackageVersion)-arm64-v8a.apk"
     $newestCode = [regex]::Match((Get-Content -LiteralPath "$newestFixture.merged.txt" -Raw),
         'versionCode\(0x0101021b\)=(\d+)').Groups[1].Value
-    Set-Content -LiteralPath $plainFixture -Encoding ASCII -NoNewline `
-        -Value (Get-FixtureManifest -Build $releaseTarget.PackageVersion -Code $newestCode)
+    # The CLI is handed the copy of it that was checked against Tumblr's signer, which names the
+    # fixture it was copied from for the JDK stand-in.
+    $plainManifest = "N: stand-in-bundle=$plainFixture`n" + (Get-FixtureManifest -Build $releaseTarget.PackageVersion -Code $newestCode)
+    Set-Content -LiteralPath $plainFixture -Encoding ASCII -NoNewline -Value $plainManifest
     Copy-Item -LiteralPath "$newestFixture.result.json" -Destination "$plainFixture.result.json"
     # Patched from the plain APK itself: its manifest with the patches' change and no split's
     # component, which verify-all-patches.ps1 would refuse as a change nobody approved.
@@ -5091,6 +5598,19 @@ try {
             (@(Get-Content -LiteralPath $javaLog) -join "`n") -eq "patch $plainFixture forced=0" -and
             (Get-Content -LiteralPath $resourceStock -Raw) -ceq (Get-Content -LiteralPath $plainFixture -Raw)) `
             "verify-all-patches.ps1 did not patch a plain APK as it is and hold the table to it: $said"
+        # One that isn't signed by Tumblr alone, or doesn't verify and has no bundle beside it to be
+        # the merge of, is refused before the CLI starts.
+        foreach ($plainCase in @(
+                @{ Marker = 'stand-in-foreign'; Says = "it is signed by $foreignSigner*" },
+                @{ Marker = 'stand-in-second-signer'; Says = "it is signed by $foreignSigner*" },
+                @{ Marker = 'stand-in-unsigned'; Says = 'it does not verify (*no .apkm, .xapk or .apks of the same name beside it*' })) {
+            Set-Content -LiteralPath $plainFixture -Encoding ASCII -NoNewline -Value "N: $($plainCase.Marker)`n$plainManifest"
+            Assert-Throws { Invoke-VerifyAll -Apk $plainFixture } `
+                "*Refusing $(Split-Path -Leaf $plainFixture): $($plainCase.Says)*Nothing was merged or patched.*" `
+                "verify-all-patches.ps1 took a plain APK marked $($plainCase.Marker)."
+            Assert-True (-not (Test-Path -LiteralPath $javaLog) -and -not (Test-Path -LiteralPath $resourceStock)) `
+                "verify-all-patches.ps1 patched a plain APK marked $($plainCase.Marker)."
+        }
     } finally {
         Remove-Item -LiteralPath $plainFixture, "$plainFixture.result.json", "$plainFixture.patched.txt" -Force -ErrorAction SilentlyContinue
     }
@@ -5166,6 +5686,23 @@ try {
         Assert-True (@(Get-StoreEntries $failedStore).Count -eq 0) `
             "A run that failed when $($flagName -replace '\.txt$', '') left something in the record store: $(@(Get-StoreEntries $failedStore).Name -join ', ')"
     }
+    # A patched APK zipalign -c -P 16 -v 4 doesn't pass is refused by name, before the resource
+    # table is compared, and isn't kept either. A passing run asked zipalign exactly that.
+    $zipalignFlag = Join-Path $tools 'zipalign-fails.txt'
+    Set-Content -LiteralPath $zipalignFlag -Value 'on' -Encoding ASCII
+    try {
+        Assert-Throws { Invoke-VerifyAll -Apk $newestFixture -KeepIn $failedStore } `
+            "*zipalign -c -P 16 -v 4 didn't pass verify-all.apk (exit 1)*Verification FAILED*" `
+            'verify-all-patches.ps1 passed an APK that failed the 16 KB layout check.'
+    } finally { Remove-Item -LiteralPath $zipalignFlag -Force -ErrorAction SilentlyContinue }
+    Assert-True (-not (Test-Path -LiteralPath $resourceStock) -and @(Get-StoreEntries $failedStore).Count -eq 0) `
+        'A run that failed the 16 KB layout check went on to the resource table or left something in the record store.'
+    Remove-Item -LiteralPath $zipalignLog -Force -ErrorAction SilentlyContinue
+    $said = Invoke-VerifyAll -Apk $newestFixture
+    Assert-True ($said -like '*16 KB pages: zipalign -c -P 16 -v 4 passes, with 0 target limitation(s)*' -and
+        (@(Get-Content -LiteralPath $zipalignLog) -join '|') -like '-c -P 16 -v 4 *verify-all.apk*' -and
+        @(Get-Content -LiteralPath $zipalignLog).Count -eq 1) `
+        "verify-all-patches.ps1 did not hold the patched APK to zipalign -c -P 16 -v 4 once: $(@(Get-Content -LiteralPath $zipalignLog -ErrorAction SilentlyContinue) -join '; ')"
 
     # The receipt reads a kept run of each fixture instead of patching it, and still checks the
     # report, manifests and delta, so the release check takes what it writes. The stand-in aapt2
@@ -5202,13 +5739,29 @@ try {
     $keptDevice = @{ Root = $releaseRepo; DesktopJar = $stubJar; Java = $stubJava; Aapt2 = $stubAapt2
         OutDir = (Join-Path $releaseRoot 'device-kept'); AndroidJar = $stubAndroidJar; ApiVersions = $stubApiVersions
         Apk = $newestFixture; AppliedDir = $receiptStore }
-    Remove-Item -LiteralPath $javaLog, $apksignerLog -Force -ErrorAction SilentlyContinue
+    Remove-Item -LiteralPath $javaLog, $apksignerLog, $zipalignLog -Force -ErrorAction SilentlyContinue
     $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6>&1 | ForEach-Object { "$_" })
     $handed = [string]$said[-1]
     Assert-True (-not (Test-Path -LiteralPath $javaLog) -and (Test-Path -LiteralPath $handed -PathType Leaf) -and
         ($said -join "`n") -like '*passed every check in the gate run kept as*' -and
         (Get-Content -LiteralPath $apksignerLog -Raw) -like '*sign alias=sideload in=*patched.apk out=*') `
         "patch-for-device.ps1 did not sign the kept run instead of patching: $($said -join ' | ')"
+    # zipalign can't put a signed APK right, so the kept APK is held to the 16 KB layout before it's
+    # signed and the signed one after. A kept APK that fails is never signed, and nothing is left.
+    Assert-True ((@(Get-Content -LiteralPath $zipalignLog) -join '|') -like '-c -P 16 -v 4 *patched.apk*|-c -P 16 -v 4 *-signed.apk*' -and
+        @(Get-Content -LiteralPath $zipalignLog).Count -eq 2) `
+        "patch-for-device.ps1 did not hold the kept APK and then the signed one to zipalign -c -P 16 -v 4: $(@(Get-Content -LiteralPath $zipalignLog) -join '; ')"
+    $keptRunsBefore = @(Get-ChildItem -LiteralPath $keptDevice.OutDir -Directory).Count
+    Remove-Item -LiteralPath $apksignerLog -Force -ErrorAction SilentlyContinue
+    Set-Content -LiteralPath $zipalignFlag -Value 'on' -Encoding ASCII
+    try {
+        Assert-Throws { & (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6> $null } `
+            "*zipalign -c -P 16 -v 4 didn't pass patched.apk (exit 1)*Verification FAILED*" `
+            'patch-for-device.ps1 took a kept APK that failed the 16 KB layout check.'
+    } finally { Remove-Item -LiteralPath $zipalignFlag -Force -ErrorAction SilentlyContinue }
+    Assert-True (-not (Test-Path -LiteralPath $apksignerLog) -and
+        @(Get-ChildItem -LiteralPath $keptDevice.OutDir -Directory).Count -eq $keptRunsBefore) `
+        'patch-for-device.ps1 signed a kept APK that failed the 16 KB layout check, or left its run folder behind.'
     $keptDevice['NoReuse'] = $true
     Remove-Item -LiteralPath $javaLog, $apksignerLog -Force -ErrorAction SilentlyContinue
     $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6> $null)
@@ -5527,6 +6080,96 @@ try {
     Assert-True (-not (Test-Path -LiteralPath $javaLog)) 'build-release-receipt.ps1 started the CLI on another package.'
     Assert-Throws { Invoke-DeviceBuild -Apk $otherApkm } $otherRefusal 'patch-for-device.ps1 took another package.'
     Assert-True (-not (Test-Path -LiteralPath $javaLog)) 'patch-for-device.ps1 started the CLI on another package.'
+
+    # A declared build whose base APK is Tumblr's and one of whose splits isn't: unsigned, changed
+    # after signing, signed by somebody else, or signed by somebody else beside Tumblr. Every script
+    # that takes a fixture straight refuses it, naming the split, before anything is merged, signed,
+    # installed or written into a receipt. The fixture is the first the receipt builder patches, so
+    # nothing of the run gets that far. A Source Stamp beside Tumblr's signer is the control: the
+    # same fixture with it passes.
+    $splitFixture = $fixturePaths[$builtBuilds[0]]
+    $splitCode = [string]@($releaseTarget.PackageVersionCodes[$builtBuilds[0]])[0]
+    $splitFixtureBytes = [System.IO.File]::ReadAllBytes($splitFixture)
+    $splitReceiptBytes = [System.IO.File]::ReadAllBytes($releaseReceipt)
+    $splitDeviceOut = Join-Path $releaseRoot 'device-refused-split'
+    function Set-FixtureSplit([string]$Marker) {
+        Remove-Item -LiteralPath $splitFixture -Force
+        New-TestBundleArchive -Path $splitFixture -Entries ([ordered]@{
+            'com.tumblr.apk' = "N: stand-in-bundle=$splitFixture`n" + (Get-FixtureManifest -Build $builtBuilds[0] -Code $splitCode)
+            'icon.png' = 'icon'
+            'config.arm64_v8a.apk' = Get-FixtureSplitManifest -Code $splitCode -Split 'config.arm64_v8a' -Marker $Marker
+            'manifest.json' = ("{`"package_name`":`"com.tumblr`",`"version_code`":`"$splitCode`",`"split_apks`":[" +
+                '{"file":"com.tumblr.apk","id":"base"},{"file":"config.arm64_v8a.apk","id":"config.arm64_v8a"}]}') })
+    }
+    try {
+        foreach ($bad in @(
+                @{ Marker = 'stand-in-unsigned'; Says = 'config.arm64_v8a.apk does not verify (*DOES NOT VERIFY*' },
+                @{ Marker = 'stand-in-tampered'; Says = 'config.arm64_v8a.apk does not verify (*integrity check failed*' },
+                @{ Marker = 'stand-in-foreign'; Says = "config.arm64_v8a.apk is signed by $foreignSigner, which isn't*" },
+                @{ Marker = 'stand-in-second-signer'; Says = "config.arm64_v8a.apk is signed by $foreignSigner, which isn't*" })) {
+            Set-FixtureSplit -Marker $bad.Marker
+            $splitRefusal = "*Refusing $(Split-Path -Leaf $splitFixture): $($bad.Says)*Nothing was merged or patched.*"
+            Remove-Item -LiteralPath $releaseReceipt -Force -ErrorAction SilentlyContinue
+            Assert-Throws { Invoke-ReceiptBuilder -Fixtures $allFixtures } $splitRefusal `
+                "build-release-receipt.ps1 took a fixture whose split is marked $($bad.Marker)."
+            Assert-True (-not (Test-Path -LiteralPath $mergeLog) -and -not (Test-Path -LiteralPath $javaLog) -and
+                -not (Test-Path -LiteralPath $releaseReceipt) -and
+                @(Get-ChildItem -LiteralPath (Join-Path $releaseRoot 'work') -Directory -Filter 'receipt-*').Count -eq 0) `
+                "build-release-receipt.ps1 merged, patched or wrote a receipt with a split marked $($bad.Marker)."
+            Assert-Throws { Invoke-VerifyAll -Apk $splitFixture } $splitRefusal `
+                "verify-all-patches.ps1 took a fixture whose split is marked $($bad.Marker)."
+            Assert-True (-not (Test-Path -LiteralPath $mergeLog) -and -not (Test-Path -LiteralPath $javaLog) -and
+                -not (Test-Path -LiteralPath $resourceStock) -and
+                @(Get-ChildItem -LiteralPath (Join-Path $releaseRoot 'verify-work') -Directory -Filter 'verify-*').Count -eq 0) `
+                "verify-all-patches.ps1 merged or patched with a split marked $($bad.Marker)."
+            Remove-Item -LiteralPath $apksignerLog -Force -ErrorAction SilentlyContinue
+            Assert-Throws { Invoke-DeviceBuild -Apk $splitFixture -OutDir $splitDeviceOut } $splitRefusal `
+                "patch-for-device.ps1 took a fixture whose split is marked $($bad.Marker)."
+            Assert-True (-not (Test-Path -LiteralPath $mergeLog) -and -not (Test-Path -LiteralPath $javaLog) -and
+                -not (Test-Path -LiteralPath $apksignerLog) -and
+                @(Get-ChildItem -LiteralPath $splitDeviceOut -Directory -ErrorAction SilentlyContinue).Count -eq 0) `
+                "patch-for-device.ps1 merged, patched, signed or kept a run with a split marked $($bad.Marker)."
+        }
+        Set-FixtureSplit -Marker 'stand-in-stamp'
+        $said = Invoke-VerifyAll -Apk $splitFixture
+        Assert-True ($said -like '*success: every requested patch applied*' -and
+            (@(Get-Content -LiteralPath $mergeLog) -join ';') -eq "merge $splitFixture") `
+            "A fixture whose split carries a Source Stamp beside Tumblr's signer was refused: $said"
+    } finally {
+        [System.IO.File]::WriteAllBytes($splitFixture, $splitFixtureBytes)
+        [System.IO.File]::WriteAllBytes($releaseReceipt, $splitReceiptBytes)
+    }
+
+    # The same unsigned split in the last fixture the receipt builder is given, the undeclared build
+    # it patches under -f. Every fixture is checked before the first is merged, so the declared
+    # builds ahead of it are neither merged nor patched, and the check leaves no folder behind.
+    # Checked only as each was reached, the run merged and patched them first.
+    $lastFixture = $fixturePaths[$newerBuild]
+    $lastFixtureBytes = [System.IO.File]::ReadAllBytes($lastFixture)
+    $lastReceiptBytes = [System.IO.File]::ReadAllBytes($releaseReceipt)
+    try {
+        Assert-True ($allFixtures.Count -gt 1 -and $allFixtures[-1] -ceq $lastFixture) `
+            'The receipt builder is not given the undeclared build last, after the declared ones.'
+        Remove-Item -LiteralPath $lastFixture -Force
+        New-TestBundleArchive -Path $lastFixture -Entries ([ordered]@{
+            'com.tumblr.apk' = "N: stand-in-bundle=$lastFixture`n" + (Get-FixtureManifest -Build $newerBuild -Code "$newerCode" -MinSdk 36)
+            'icon.png' = 'icon'
+            'config.arm64_v8a.apk' = Get-FixtureSplitManifest -Code "$newerCode" -Split 'config.arm64_v8a' -Marker 'stand-in-unsigned'
+            'manifest.json' = ("{`"package_name`":`"com.tumblr`",`"version_code`":`"$newerCode`",`"split_apks`":[" +
+                '{"file":"com.tumblr.apk","id":"base"},{"file":"config.arm64_v8a.apk","id":"config.arm64_v8a"}]}') })
+        Remove-Item -LiteralPath $releaseReceipt -Force -ErrorAction SilentlyContinue
+        Assert-Throws { Invoke-ReceiptBuilder -Fixtures $allFixtures } `
+            "*Refusing $(Split-Path -Leaf $lastFixture): config.arm64_v8a.apk does not verify (*Nothing was merged or patched.*" `
+            'build-release-receipt.ps1 took a last fixture whose split is unsigned.'
+        Assert-True (-not (Test-Path -LiteralPath $mergeLog) -and -not (Test-Path -LiteralPath $javaLog) -and
+            -not (Test-Path -LiteralPath $releaseReceipt) -and
+            @(Get-ChildItem -LiteralPath (Join-Path $releaseRoot 'work') -Directory |
+                Where-Object { $_.Name -like 'receipt-*' -or $_.Name -like 'check-*' }).Count -eq 0) `
+            'build-release-receipt.ps1 merged or patched the fixtures ahead of one with an unsigned split, or left a folder behind.'
+    } finally {
+        [System.IO.File]::WriteAllBytes($lastFixture, $lastFixtureBytes)
+        [System.IO.File]::WriteAllBytes($releaseReceipt, $lastReceiptBytes)
+    }
 
     # The builder, the release check and the device build given relative paths, from a location
     # the process directory isn't. Each found its file with Test-Path, in PowerShell's location,

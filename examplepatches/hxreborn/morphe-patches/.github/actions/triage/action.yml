@@ -119,6 +119,65 @@ runs:
           fi
         done
 
+    - name: Triage app update requests
+      if: >-
+        github.event.action != 'labeled' &&
+        contains(github.event.issue.labels.*.name, 'app-update') &&
+        github.event.issue.user.type != 'Bot' &&
+        !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.token }}
+        ISSUE: ${{ github.event.issue.number }}
+        REPO: ${{ github.repository }}
+        PATCHES_LIST: ${{ inputs.patches-list }}
+      run: |
+        list="$PWD/$PATCHES_LIST"
+        cd "$RUNNER_TEMP"
+        jq -r '.issue.body // ""' "$GITHUB_EVENT_PATH" > body.md
+        gh issue list --repo "$REPO" --label app-update --state open --limit 1000 \
+          --json number,title,state > updates.json
+        python3 "${{ github.action_path }}/app_update.py" "$ISSUE" body.md updates.json "$list" > verdict.json
+        verdict=$(jq -r .verdict verdict.json)
+        jq -j .comment verdict.json > comment.md
+        echo "#$ISSUE: $(jq -c 'del(.comment)' verdict.json)"
+
+        existing=$(gh api "repos/$REPO/issues/$ISSUE/comments?per_page=100" \
+          --jq 'map(select(.body | contains("<!-- app-update-bot -->"))) | .[0].id // empty')
+        upsert_comment() {
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$existing" -F body=@comment.md >/dev/null
+          else
+            gh issue comment "$ISSUE" --repo "$REPO" --body-file comment.md
+          fi
+        }
+
+        case "$verdict" in
+          close)
+            upsert_comment
+            retitle=$(jq -r '.retitle.number // empty' verdict.json)
+            [ -n "$retitle" ] && gh issue edit "$retitle" --repo "$REPO" --title "$(jq -r .retitle.title verdict.json)"
+            if [ "$(jq -r .reason verdict.json)" = duplicate ]; then
+              gh issue close "$ISSUE" --repo "$REPO" --duplicate-of "$(jq -r .duplicate_of verdict.json)"
+            else
+              gh issue close "$ISSUE" --repo "$REPO" --reason "$(jq -r .reason verdict.json)"
+            fi
+            ;;
+          flag)
+            upsert_comment
+            gh issue edit "$ISSUE" --repo "$REPO" --add-label "$(jq -r '.labels | join(",")' verdict.json)"
+            ;;
+          pass)
+            title=$(jq -r .title verdict.json)
+            [ "$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")" = "$title" ] || gh issue edit "$ISSUE" --repo "$REPO" --title "$title"
+            if [ -n "$existing" ]; then
+              gh issue edit "$ISSUE" --repo "$REPO" --remove-label "needs info" || true
+              printf '<!-- app-update-bot -->\nchecks pass now\n' > comment.md
+              upsert_comment
+            fi
+            ;;
+        esac
+
     - name: Check the report
       if: >-
         github.event.action != 'labeled' &&

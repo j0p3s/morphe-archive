@@ -23,6 +23,7 @@ import android.app.Application;
 import android.app.FragmentManager;
 import android.content.ComponentName;
 import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
@@ -35,20 +36,27 @@ import android.graphics.drawable.Icon;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.view.View;
 
 import androidx.annotation.RequiresApi;
 
 import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import app.hushtumblr.extension.shared.L10n;
 import app.hushtumblr.extension.shared.Logger;
 import app.hushtumblr.extension.shared.Utils;
+import app.hushtumblr.extension.shared.settings.preference.ReopenSettingsAfterRestart;
 
 /**
  * How the HushTumblr screen is reached.
+ *
+ * <p>Inside Tumblr, a long press on the Tumblr logo at the top of the dashboard opens it over that
+ * screen (see {@link #onDashboardLogo}), and so does the HushTumblr row in Tumblr's own Settings.
  *
  * <p>From the home screen, a long-press shortcut on Tumblr's launcher icon opens Tumblr's launcher
  * activity with {@link #EXTRA_OPEN_SETTINGS}. From Android's App info page for Tumblr, "Additional
@@ -65,6 +73,17 @@ public final class SettingsEntry {
     static final String SHORTCUT_ID = "hushtumblr_settings";
 
     /**
+     * How the shortcut starts Tumblr. A new task alone left a hole. A Tumblr task the shortcut
+     * started keeps the shortcut's intent as its own, so the next tap matched it, Android only
+     * brought that task forward, and no activity was created to ask for the screen. Clearing the
+     * task starts the launcher activity afresh on every tap, however the task began, which is what
+     * the platform's shortcut guide says a dynamic shortcut should do. Whatever Tumblr had open in
+     * that task closes with it, a post being written included, so only Tumblr's own draft saving
+     * keeps that.
+     */
+    static final int SHORTCUT_FLAGS = Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK;
+
+    /**
      * Tumblr's exported launcher activity. The patch's App info alias points at it too, so both
      * ways in arrive at the activity Tumblr itself starts from the icon.
      */
@@ -74,8 +93,18 @@ public final class SettingsEntry {
     /** A request older than this is dropped rather than opened over some later screen. */
     private static final long REQUEST_LIFETIME_MS = 30_000;
 
+    private static final View.OnLongClickListener LOGO_PRESS = SettingsEntry::openFromLogo;
+    /** Logos that already open the screen, so a top bar bound again doesn't read ours as Tumblr's. */
+    private static final Set<View> watchedLogos = Collections.newSetFromMap(new WeakHashMap<>());
+
     private static volatile boolean openPending;
     private static volatile long requestedAt;
+    /**
+     * The page the next open lands on, or null for the first page. Set by a restart from the
+     * restart row, kept while the screen is opened again over a later activity, and dropped
+     * once the person closes it or asks for it another way.
+     */
+    private static volatile String requestedPage;
     private static volatile boolean callbacksRegistered;
     /** The activity the screen was last shown over, while the person hasn't closed it. */
     private static WeakReference<Activity> host;
@@ -104,7 +133,8 @@ public final class SettingsEntry {
     /**
      * Watches every Tumblr activity, so a pending open lands on whichever one resumes next:
      * signed out, the launcher hands straight over to the login screen. Also where the release
-     * check, when it's on, asks at most once a day, on a worker.
+     * check, when it's on, asks at most once a day, on a worker. A start that the settings
+     * screen's restart row asked for opens the screen again, on the page it was on.
      */
     static void onApplicationCreate(Context context) {
         try {
@@ -113,6 +143,8 @@ public final class SettingsEntry {
                 ((Application) context).registerActivityLifecycleCallbacks(new OpenWhenResumed());
                 callbacksRegistered = true;
             }
+            // Before the settings are ready, reading the marker would load them with no context.
+            if (Utils.settingsReady()) ReopenSettingsAfterRestart.reopenIfPending(SettingsEntry::reopenOn);
         } catch (Exception ex) {
             Logger.printException(() -> "Settings entry: could not watch activities", ex);
         }
@@ -151,8 +183,9 @@ public final class SettingsEntry {
             // Set before the attempt, so a shortcut that can't be pushed isn't tried on every screen.
             publishedLabel = longLabel;
             ShortcutInfo existing = ours(manager);
-            // One labelled in another language, or behind Tumblr's own, is pushed again below.
-            if (existing != null && existing.getRank() == 0
+            // One labelled in another language, behind Tumblr's own, or published before the
+            // shortcut cleared the task, is pushed again below.
+            if (existing != null && existing.getRank() == 0 && startsAfresh(existing)
                     && longLabel.contentEquals(existing.getLongLabel())) return;
             push(manager, shortcut(app, longLabel), existing != null);
             Logger.printInfo(() -> "Settings entry: launcher shortcut published");
@@ -210,6 +243,12 @@ public final class SettingsEntry {
         manager.addDynamicShortcuts(Collections.singletonList(shortcut));
     }
 
+    /** Whether [shortcut] carries {@link #SHORTCUT_FLAGS}, as one published by this build does. */
+    private static boolean startsAfresh(ShortcutInfo shortcut) {
+        Intent intent = shortcut.getIntent();
+        return intent != null && (intent.getFlags() & SHORTCUT_FLAGS) == SHORTCUT_FLAGS;
+    }
+
     /** The HushTumblr shortcut among the dynamic ones, or null. */
     private static ShortcutInfo ours(ShortcutManager manager) {
         for (ShortcutInfo existing : manager.getDynamicShortcuts()) {
@@ -222,7 +261,7 @@ public final class SettingsEntry {
         Intent intent = new Intent(Intent.ACTION_VIEW)
                 .setComponent(new ComponentName(app.getPackageName(), LAUNCHER_ACTIVITY))
                 .putExtra(EXTRA_OPEN_SETTINGS, true)
-                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                .addFlags(SHORTCUT_FLAGS);
         return new ShortcutInfo.Builder(app, SHORTCUT_ID)
                 .setShortLabel("HushTumblr")
                 .setLongLabel(longLabel)
@@ -312,6 +351,67 @@ public final class SettingsEntry {
         }
     }
 
+    /**
+     * Injected right after Tumblr gives the dashboard's "t" logo its tap, with the logo. A long press
+     * on it then opens the screen while a tap stays Tumblr's. Tumblr gives the logo no long press of
+     * its own; in a build where it does, the logo stays Tumblr's. It works while HushTumblr is
+     * paused, since it's a way back in.
+     */
+    public static void onDashboardLogo(View logo) {
+        try {
+            if (logo != null) watchLogo(logo);
+        } catch (Throwable t) {
+            Logger.printException(() -> "Settings entry: could not watch the Tumblr logo", t);
+        }
+    }
+
+    static void watchLogo(View logo) {
+        synchronized (watchedLogos) {
+            if (watchedLogos.contains(logo)) return;
+            if (logo.isLongClickable()) {
+                Logger.printInfo(() -> "Settings entry: Tumblr handles long presses on its logo here, so they stay Tumblr's");
+                return;
+            }
+            logo.setOnLongClickListener(LOGO_PRESS);
+            watchedLogos.add(logo);
+        }
+        Logger.printInfo(() -> "Settings entry: a long press on the Tumblr logo opens the settings");
+    }
+
+    /**
+     * The logo's long press: the screen over the logo's own activity, on its first page even when a
+     * restart left another page waiting. Once it shows, a request still waiting is spent, so it
+     * can't open the screen again over the next screen to resume. False leaves the press as it was.
+     */
+    static boolean openFromLogo(View logo) {
+        try {
+            Activity activity = activityOf(logo.getContext());
+            if (activity == null) {
+                Logger.printInfo(() -> "Settings entry: the Tumblr logo isn't in an activity");
+                return false;
+            }
+            requestedAt = SystemClock.elapsedRealtime();
+            requestedPage = null;
+            Logger.printInfo(() -> "Settings requested by a long press on the Tumblr logo");
+            boolean shown = open(activity);
+            if (shown) openPending = false;
+            return shown;
+        } catch (Throwable t) {
+            Logger.printException(() -> "Settings entry: the long press on the Tumblr logo failed", t);
+            return false;
+        }
+    }
+
+    private static Activity activityOf(Context context) {
+        while (context instanceof ContextWrapper) {
+            if (context instanceof Activity) return (Activity) context;
+            Context base = ((ContextWrapper) context).getBaseContext();
+            if (base == context) break;
+            context = base;
+        }
+        return null;
+    }
+
     static final class OpenWhenResumed implements Application.ActivityLifecycleCallbacks {
         /** The Tumblr screen in front right now, if any. */
         private WeakReference<Activity> resumed;
@@ -392,7 +492,7 @@ public final class SettingsEntry {
                 return false;
             }
             closedByUser = false;
-            new SettingsDialog().show(fragments, DIALOG_TAG);
+            SettingsDialog.onPage(requestedPage).show(fragments, DIALOG_TAG);
             host = new WeakReference<>(activity);
             Logger.printInfo(() -> "Settings opened over " + name);
             return true;
@@ -406,6 +506,7 @@ public final class SettingsEntry {
     static void onClosedByUser() {
         closedByUser = true;
         host = null;
+        requestedPage = null;
     }
 
     /**
@@ -427,8 +528,23 @@ public final class SettingsEntry {
 
     private static void request(String from) {
         requestedAt = SystemClock.elapsedRealtime();
+        requestedPage = null;
         openPending = true;
         Logger.printInfo(() -> "Settings requested by " + from);
+    }
+
+    /**
+     * The screen again after the restart row restarted Tumblr, on [page], over the first Tumblr
+     * screen to resume: the same open the launcher shortcut and App info lead to.
+     */
+    static void reopenOn(String page) {
+        request("a restart from the settings screen");
+        requestedPage = page;
+    }
+
+    /** The page the next open lands on. Package-visible for tests. */
+    static String requestedPage() {
+        return requestedPage;
     }
 
     /**

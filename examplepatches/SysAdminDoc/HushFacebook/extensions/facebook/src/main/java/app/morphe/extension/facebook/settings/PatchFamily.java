@@ -59,7 +59,7 @@ public enum PatchFamily {
     POST_WORDS(FamilyNames.POST_WORDS, "postWords", null,
             Settings.HIDE_POSTS_WITH_WORDS, Settings.POST_WORDS_WHOLE_WORDS, Settings.HIDE_POSTS_FROM_SOURCES,
             Settings.HIDE_PHOTO_POSTS, Settings.HIDE_VIDEO_POSTS, Settings.HIDE_LINK_POSTS,
-            Settings.HIDE_BACKGROUND_POSTS),
+            Settings.HIDE_BACKGROUND_POSTS, Settings.HIDE_REPOSTS),
     POST_PROMPTS(FamilyNames.POST_PROMPTS, "postPrompts", null,
             Settings.HIDE_POST_PROMPTS, Settings.HIDE_POST_FOLLOW_LINK),
     SEEN_POSTS(FamilyNames.SEEN_POSTS, "seenPosts", null,
@@ -184,12 +184,12 @@ public enum PatchFamily {
     CHAT_LIST(FamilyNames.CHAT_LIST, "chatListCleanup", null,
             Settings.HIDE_CHAT_NOTES_TRAY, Settings.HIDE_CHAT_PROMOTIONS),
     MESSENGER_ICON(FamilyNames.MESSENGER_ICON, "messengerIcon", null,
-            Settings.OPEN_MESSENGER_APP),
+            Settings.OPEN_MESSENGER_APP, Settings.LEAVE_CALLS_AND_CHATS_TO_MESSENGER),
     MENU_PROMOTIONS(FamilyNames.MENU_PROMOTIONS, "menuPromotions", null,
             Settings.HIDE_MENU_UPGRADES, Settings.HIDE_MENU_ALSO_FROM_META, Settings.HIDE_MENU_MUSE),
     META_UPSELLS(FamilyNames.META_UPSELLS, "metaUpsells", null,
             Settings.HIDE_EDITS_UPSELLS, Settings.HIDE_THREADS_CROSS_POSTING, Settings.HIDE_THREADS_SHARE_BUTTON,
-            Settings.HIDE_META_VERIFIED_UPSELLS, Settings.HIDE_AVATAR_UPSELLS, Settings.HIDE_META_AI_IMAGINE,
+            Settings.HIDE_MUSE_SHARE_BUTTON, Settings.HIDE_META_VERIFIED_UPSELLS, Settings.HIDE_AVATAR_UPSELLS, Settings.HIDE_META_AI_IMAGINE,
             Settings.HIDE_META_AI_POST_BUTTONS),
     SHARE_SHEET_ITEMS(FamilyNames.SHARE_SHEET_ITEMS, "shareSheetItems", Settings.HIDDEN_SHARE_ITEMS,
             new BooleanSetting[]{Settings.HIDE_SHARE_GROUP_BUTTONS}),
@@ -457,7 +457,8 @@ public enum PatchFamily {
         if (this == POST_WORDS) {
             anyOn = Settings.HIDE_POSTS_WITH_WORDS.savedValue() || Settings.HIDE_POSTS_FROM_SOURCES.savedValue()
                     || Settings.HIDE_PHOTO_POSTS.savedValue() || Settings.HIDE_VIDEO_POSTS.savedValue()
-                    || Settings.HIDE_LINK_POSTS.savedValue() || Settings.HIDE_BACKGROUND_POSTS.savedValue();
+                    || Settings.HIDE_LINK_POSTS.savedValue() || Settings.HIDE_BACKGROUND_POSTS.savedValue()
+                    || Settings.HIDE_REPOSTS.savedValue();
         }
         line.append(paused ? "disabled while paused (saved " : anyOn ? "on (" : "disabled by its switch (");
         for (int i = 0; i < switches.size(); i++) {

@@ -76,6 +76,7 @@ public final class SettingsStatus {
     public static boolean keepVideosMuted() { return false; }
     public static boolean swipeBackOnProfiles() { return false; }
     public static boolean hidePhoneNumber() { return false; }
+    public static boolean shareNumberUnticked() { return false; }
     public static boolean messageSeconds() { return false; }
     public static boolean allowChatBlur() { return false; }
     public static boolean voiceOneAtATime() { return false; }
@@ -126,6 +127,8 @@ public final class SettingsStatus {
     public static boolean pollLinkPreviews() { return false; }
     public static boolean storyLinkPreviews() { return false; }
     public static boolean botSharePreviews() { return false; }
+    public static boolean localDrafts() { return false; }
+    public static boolean localSearch() { return false; }
 
     public static boolean galleryCameraOnTap() { return false; }
 
@@ -134,6 +137,7 @@ public final class SettingsStatus {
     public static boolean stripLinkTracking() { return false; }
     public static boolean openedLinkTracking() { return false; }
     public static boolean sharedLinkTracking() { return false; }
+    public static boolean skipAutologin() { return false; }
 
     public static boolean disableUpdateChecks() {
         return false;

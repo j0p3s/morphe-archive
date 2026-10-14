@@ -72,20 +72,28 @@ public class SectionJumpTest {
         HushTumblrPreferenceFragment page = page(dialog);
         ListView list = laidOut(dialog);
 
-        assertEquals("Browse settings", ((Preference) list.getItemAtPosition(1)).getTitle());
-        List<String> titles = new ArrayList<>();
-        for (int i = 2; i < list.getCount() - 2; i++) titles.add(((Preference) list.getItemAtPosition(i)).getTitle().toString());
+        // Quick setups sits between the status card and the sections, every page has its own row
+        // under one of two headings, and Report a problem and Support come last.
+        assertEquals(SettingsNavigation.QUICK_SETUPS, ((Preference) list.getItemAtPosition(1)).getKey());
         assertEquals(HushTumblrPreferenceFragment.SUPPORT, ((Preference) list.getItemAtPosition(list.getCount() - 1)).getKey());
-        Preference more = (Preference) list.getItemAtPosition(list.getCount() - 2);
-        assertEquals("More settings", more.getTitle());
-        assertTrue(more.getOnPreferenceClickListener().onPreferenceClick(more));
-        for (int i = 0; i < list.getCount(); i++) titles.add(((Preference) list.getItemAtPosition(i)).getTitle().toString());
+        assertEquals(SettingsNavigation.REPORT, ((Preference) list.getItemAtPosition(list.getCount() - 2)).getKey());
+        List<String> rows = new ArrayList<>();
+        List<String> titles = new ArrayList<>();
+        for (int i = 2; i < list.getCount() - 2; i++) {
+            Preference row = (Preference) list.getItemAtPosition(i);
+            rows.add(row.getTitle().toString());
+            if (!(row instanceof android.preference.PreferenceCategory)) titles.add(row.getTitle().toString());
+        }
+        assertEquals(java.util.Arrays.asList("Browse settings", "Feed", "Posts", "Interface", "Privacy", "More settings"),
+                rows.subList(0, 6));
+        assertEquals(rows.size() - 2, titles.size());
         List<String> expected = new ArrayList<>();
         for (Preference section : page.sections()) expected.add(section.getTitle().toString());
         assertEquals(new java.util.HashSet<>(expected), new java.util.HashSet<>(titles));
         assertEquals(expected.size(), titles.size());
         assertTrue(titles.contains("Updates"));
         assertTrue(titles.contains("Links"));
+        assertTrue(titles.contains("About"));
     }
 
     @Test
@@ -105,7 +113,7 @@ public class SectionJumpTest {
         relayout(list);
         assertTrue("Back closed the page instead of going back", dialog.getDialog().isShowing());
         // The status card at 0 can't be selected while HushTumblr is on, so outside touch mode
-        // the same rule lands on the row under it.
+        // the same rule lands on the row under it, Quick setups.
         assertTrue("Back didn't return to the top: " + list.getFirstVisiblePosition(), list.getFirstVisiblePosition() <= 1);
 
         dialog.getDialog().onBackPressed();

@@ -145,6 +145,34 @@ It's made for Telegram %1$s.	Feito para o Telegram %1$s.
 None of Telegram's web addresses are selected for this app, so their links open elsewhere. Tap to select them in Android's settings.	Nenhum endereço web do Telegram está selecionado para este app, então os links deles abrem em outro lugar. Toque para selecioná-los nas configurações do Android.
 Only some of Telegram's web addresses are selected for this app, and links to the rest open elsewhere. Tap to select them in Android's settings.	Só alguns endereços web do Telegram estão selecionados para este app, e os links para os outros abrem em outro lugar. Toque para selecioná-los nas configurações do Android.
 Saved. Restart Telegram to apply this change.	Salvo. Reinicie o Telegram para aplicar esta alteração.
+# context: the restart row's title while one change waits for a restart; a tap restarts Telegram
+Restart Telegram to apply this change	Reinicie o Telegram para aplicar esta alteração
+# context: the same row with several changes waiting; %1$d is how many
+Restart Telegram to apply %1$d changes	Reinicie o Telegram para aplicar %1$d alterações
+# context: the restart row's summary; the settings screen comes back on the page it was on
+Telegram closes and reopens on this page.	O Telegram fecha e abre de novo nesta página.
+# context: home page row just above Support; a tap opens a new bug report on GitHub in a browser
+Report a problem	Relatar um problema
+# context: that row's summary
+Opens a GitHub report with your versions and settings filled in. Add what happened.	Abre um relato no GitHub com suas versões e configurações já preenchidas. Conte o que aconteceu.
+# context: home page row under the status card, and the title of the dialog it opens
+Quick setups	Configurações rápidas
+# context: that row's summary
+Turn on a set of switches in one tap, or put every switch back the way it started.	Ative um conjunto de opções com um toque ou volte todas as opções ao estado inicial.
+# context: Quick setups choice that turns on the switches that hide ads, suggestions and nags
+Quiet	Tranquilo
+# context: what Quiet does, under its name
+Hides ads, suggestions, stories, promotions and nags.	Oculta anúncios, sugestões, stories, promoções e lembretes insistentes.
+# context: what the Privacy choice does, under its name; the phone number is the person's own, covered where Telegram shows it
+Stops usage reports, strips tracking from links and covers your own phone number on screen.	Para os relatórios de uso, remove o rastreamento dos links e cobre seu próprio número de telefone na tela.
+# context: Quick setups choice that puts every feature switch back to its starting value
+Back to defaults	Voltar ao padrão
+# context: what Back to defaults does, under its name
+Puts every feature switch back the way it started.	Volta cada opção de recurso ao estado inicial.
+# context: toast after a Quick setups choice changed exactly one switch
+Changed %1$d setting	%1$d configuração alterada
+# context: the same toast for any other count, zero included; %1$d is how many
+Changed %1$d settings	%1$d configurações alteradas
 Ads in channels and search	Anúncios em canais e na busca
 Ads in channels	Anúncios em canais
 Ads in search	Anúncios na busca
@@ -201,9 +229,15 @@ Open links externally	Abrir links externamente
 Opens normal web links in your browser. Telegram links, sign-in and payment pages keep working the way they did.	Abre links normais da web no seu navegador. Links do Telegram, login e páginas de pagamento continuam funcionando como antes.
 Remove link tracking tags	Remover etiquetas de rastreamento de links
 Removes tracking tags like utm_source, gclid and fbclid from links you open or share. A link with any other tag is left unchanged.	Remove etiquetas de rastreamento como utm_source, gclid e fbclid dos links que você abre ou compartilha. Um link com qualquer outra etiqueta fica sem alteração.
+# context: Links page switch title. When on, links to the websites Telegram signs you in to automatically open without your account's sign-in token.
+No automatic sign-in on Telegram's sites	Sem login automático nos sites do Telegram
+# context: Summary under that switch. The token is what signs the account in on those sites without asking.
+Telegram adds a sign-in token for your account to links to some of its own websites. With this on, those links open without it, and you can sign in there yourself.	O Telegram adiciona um token de login da sua conta aos links de alguns dos próprios sites. Com isto ligado, esses links abrem sem ele, e você pode entrar lá por conta própria.
 external browser routing	abertura em navegador externo
 opened link tracking	rastreamento de links abertos
 shared link tracking	rastreamento de links compartilhados
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Strip link tracking that leaves the account's sign-in token off links to Telegram's websites.
+website sign-in tokens	tokens de login em sites
 Stops usage reports to Telegram, like how long you read each channel post and what you tap on Premium screens. Messages and calls work as before.	Interrompe os relatórios de uso enviados ao Telegram, como quanto tempo você lê cada publicação de canal e o que você toca nas telas do Premium. Mensagens e chamadas funcionam como antes.
 Firebase crash and session reports stop too, from the next time Telegram starts.	Os relatórios de falhas e de sessão do Firebase também param, a partir da próxima vez que o Telegram abrir.
 Premium promo views	visualizações de promoções do Premium
@@ -217,12 +251,26 @@ Accounts	Contas
 Every switch here applies to all the accounts in this Telegram app, not only the one you have open.	Cada opção aqui vale para todas as contas deste app do Telegram, não só para a que está aberta.
 No previews before sending	Sem prévias antes de enviar
 Telegram doesn't look up link previews for messages you haven't sent yet, including shares, polls, story links and bots. Sent messages still get one.	O Telegram não busca prévias de links para mensagens que você ainda não enviou, incluindo compartilhamentos, enquetes, links de stories e bots. Mensagens enviadas continuam recebendo uma.
+# context: Privacy page switch title. When on, an unsent message stays only on this phone instead of syncing to the account's other devices.
+Keep drafts on this phone	Manter rascunhos neste celular
+# context: Summary under that switch. Clearing a draft (emptying the text box) is still sent so other devices drop it too.
+A message you start but don't send stays on this phone and stops syncing to your other devices. Clearing a draft still clears it there.	Uma mensagem que você começa e não envia fica neste celular e deixa de sincronizar com seus outros aparelhos. Apagar um rascunho ainda o apaga lá.
+# context: Privacy page switch title. When on, text typed in the Chats tab of Telegram's main search is no longer sent to Telegram's server.
+Keep searches on this phone	Manter as buscas neste celular
+# context: Summary under that switch. Chats is the name of the first tab in Telegram's search, so use Telegram's own word for that tab in your language. Public accounts means people, bots and channels found by username.
+What you type in search's Chats tab isn't sent to Telegram. It finds the chats, contacts and recent searches on this phone, but not messages, public accounts or posts. The other tabs search as usual.	O que você digita na aba Chats da busca não é enviado ao Telegram. Ela encontra os chats, contatos e buscas recentes deste celular, mas não mensagens, contas públicas ou posts. As outras abas buscam como sempre.
+# context: Extra line under Telegram's "No results" message in the Chats tab of search, shown while Keep searches on this phone is on. It explains why nothing from Telegram's server turned up.
+Only chats and contacts on this phone were searched.	Só os chats e contatos deste celular foram pesquisados.
 Draft link previews	Prévias de links em rascunhos
 chat drafts	rascunhos de chat
 share sheet comments	comentários ao compartilhar
 poll links	links de enquetes
 story links	links de Stories
 bot shares	mensagens compartilhadas por bots
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Draft link previews that keeps drafts off the server.
+draft syncing	sincronização de rascunhos
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Draft link previews that keeps text typed in search's Chats tab from being sent to Telegram.
+search lookups	consultas de busca
 Camera only on tap	Câmera só ao tocar
 Opening the attachment gallery doesn't start the camera or ask for camera access. Tap the camera tile to start it.	Abrir a galeria de anexos não liga a câmera nem pede acesso a ela. Toque no bloco da câmera para ligá-la.
 Gallery camera	Câmera da galeria
@@ -238,7 +286,7 @@ Quiet contacts prompts	Silenciar pedidos de contatos
 After you say no to contacts access, the Contacts tab stops asking again and its warning badge goes away.	Depois que você nega o acesso aos contatos, a aba Contatos deixa de pedir de novo e o aviso dela some.
 
 New Year look all year	Visual de Ano Novo o ano todo
-Shows Telegram's Santa hat and New Year snow all year, not only around New Year. Snow falls on the chat list's top bar and on chat backgrounds once Background rotation is on under Power saving.	Mostra o gorro de Papai Noel do Telegram e a neve de Ano Novo o ano todo, não só na virada. A neve cai na barra superior da lista de conversas e nos fundos das conversas quando Rotação do fundo estiver ligada em Economia de energia.
+Shows Telegram's Santa hat and New Year snow all year, not only around New Year. Snow falls on the chat list's top bar and on chat backgrounds once Wallpaper rotation is on under Power Saving, in Effects in Chats.	Mostra o gorro de Papai Noel do Telegram e a neve de Ano Novo o ano todo, não só na virada. A neve cai na barra superior da lista de conversas e nos fundos das conversas quando Rodar papel de parede estiver ligado em Economia de Energia, dentro de Efeitos nos Chats.
 Use system font	Usar fonte do sistema
 Bold, italic and code text use your phone's font instead of Telegram's built-in one. Restart Telegram to see the change.	Texto em negrito, itálico e de código usa a fonte do seu celular em vez da que vem no Telegram. Reinicie o Telegram para ver a mudança.
 AMOLED black	Preto AMOLED
@@ -257,6 +305,12 @@ Swipe back on profiles	Deslizar para voltar em perfis
 Swiping right on a profile's photos or media tabs goes back, like the rest of the profile, instead of showing the previous photo or tab.	Deslizar para a direita nas fotos ou nas abas de mídia de um perfil volta, como no resto do perfil, em vez de mostrar a foto ou aba anterior.
 Hide phone number	Ocultar número de telefone
 Your own phone number shows as dots in the side menu, Settings and your profile, which helps with screenshots. Others' numbers stay visible.	Seu próprio número de telefone aparece como pontos no menu lateral, nas configurações e no seu perfil, o que ajuda com capturas de tela. Os números de outras pessoas continuam visíveis.
+# context: Privacy page switch title, under Hide phone number. When on, the box on Telegram's add contact screen that shares your own phone number with the new contact starts unticked.
+Don't share my number by default	Não compartilhar meu número por padrão
+# context: Summary under that switch. The box is Telegram's own checkbox on the add contact screen, and the person can still tick it.
+When you add someone as a contact from their chat, Telegram ticks the box that shares your phone number with them. With this on, the box starts clear and your number goes only if you tick it.	Quando você adiciona alguém como contato pelo chat, o Telegram marca a caixa que compartilha seu número de telefone com a pessoa. Com isso ativado, a caixa começa desmarcada e seu número só vai se você marcar.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Hide phone number that starts the add contact screen's share box unticked.
+number sharing on new contacts	compartilhamento do número com novos contatos
 Message times with seconds	Horário das mensagens com segundos
 Each message's time includes seconds, like 9:41:27 PM, so messages sent close together are easy to tell apart.	O horário de cada mensagem inclui segundos, como 21:41:27, para facilitar a distinção entre mensagens enviadas quase juntas.
 Allow chat blur on slower phones	Permitir desfoque do chat em celulares mais lentos
@@ -297,7 +351,10 @@ Clear kept messages	Limpar mensagens mantidas
 Deletes the messages this phone kept after others deleted them, in every account, the way Telegram would have.	Apaga as mensagens que este celular manteve depois que outras pessoas as apagaram, em todas as contas, como o Telegram teria feito.
 # context: the notice after that tap when nothing was kept
 There are no kept messages to clear.	Não há mensagens mantidas para limpar.
-# context: the notice after that tap, with how many kept messages went
+# context: the notice right after that tap, while the kept messages are still being removed
+Removing %1$d kept message.	Removendo %1$d mensagem mantida.
+Removing %1$d kept messages.	Removendo %1$d mensagens mantidas.
+# context: the notice once Telegram has finished removing them, with how many went
 Removed %1$d kept message.	%1$d mensagem mantida removida.
 Removed %1$d kept messages.	%1$d mensagens mantidas removidas.
 Ask before sending a sticker	Perguntar antes de enviar um sticker
@@ -311,6 +368,10 @@ Translate this chat	Traduzir esta conversa
 This chat will be translated	Esta conversa será traduzida
 This chat shows the original messages	Esta conversa mostra as mensagens originais
 Translation isn't available right now	A tradução não está disponível agora
+# context: a short toast when messages scroll by faster than the translation service answers; the newest skipped ones are asked for as answers come in, the others when they're shown again
+Lots to translate at once. The rest will follow.	Muita coisa para traduzir de uma vez. O resto vem depois.
+# context: Toast shown once after an update clears the translated chats saved before each choice belonged to a Telegram account.
+Turn chat translation on again. It's now set per account.	Ative de novo a tradução das conversas. Agora ela é por conta.
 Ask before sending a GIF	Perguntar antes de enviar um GIF
 Asks Send or Cancel before a GIF you tap goes into a chat. Cancel drops it. Scheduled GIFs go out without asking.	Pergunta Enviar ou Cancelar antes de um GIF em que você tocou entrar na conversa. Cancelar o descarta. GIFs agendados saem sem perguntar.
 Ask before sending a voice or video message	Perguntar antes de enviar uma mensagem de voz ou de vídeo
@@ -502,6 +563,10 @@ Install a UnifiedPush app like ntfy, then come back here.	Instale um app de Unif
 %1$s. Turn the switch on to sign up with it.	%1$s. Ligue a chave para se cadastrar com ele.
 %1$s ended the sign-up. Turn the switch off and on to sign up again.	%1$s encerrou o cadastro. Desligue e ligue a chave para se cadastrar de novo.
 %1$s turned the sign-up down. Check that it allows UnifiedPush.	%1$s recusou o cadastro. Verifique se ele permite UnifiedPush.
+# context: the Push app row's summary when the UnifiedPush app (%1$s, its name) hands out a plain http address; Telegram only calls https
+%1$s gave an address without https, which Telegram's servers won't call.	%1$s deu um endereço sem https, e os servidores do Telegram não o chamam.
+# context: the Push app row's summary while the UnifiedPush app (%1$s, its name) says its push server is temporarily down; the sign-up is kept
+The server behind %1$s is down for now. Wake-ups come back once it's up.	O servidor por trás do %1$s está fora do ar. O Telegram volta a ser acordado quando ele voltar.
 # context: the row's summary once signed up: Telegram's servers wake Telegram up through that app.
 Telegram's wake-ups come through %1$s.	O Telegram é acordado pelo %1$s.
 Signing up with %1$s…	Cadastrando no %1$s…
@@ -545,6 +610,22 @@ Made Private, Groups, Channels and Bots folders.	Pastas Privados, Grupos, Canais
 There were no folders from HushTelegram to remove.	Não havia pastas do HushTelegram para remover.
 # context: a short toast (two lines at most) after the switch went off. Folders the person renamed or changed are kept.
 Removed the folders HushTelegram made. Changed ones stay.	As pastas do HushTelegram foram removidas. As alteradas ficam.
+# context: a short toast (two lines at most) when Telegram hasn't answered the new folder requests after two seconds, for example while offline.
+Asking Telegram to make your folders.	Pedindo ao Telegram para criar suas pastas.
+# context: a short toast (two lines at most) when Telegram hasn't answered the folder delete requests after two seconds, for example while offline.
+Asking Telegram to remove the folders.	Pedindo ao Telegram para remover as pastas.
+# context: a short toast (two lines at most) when Telegram's server made some of the folders and turned the others down.
+Made some folders. Telegram turned the rest down.	Algumas pastas criadas. O Telegram recusou o resto.
+# context: a short toast (two lines at most) when Telegram's server turned down every folder, so the switch went back off.
+Telegram turned the folders down. Try again later.	O Telegram recusou as pastas. Tente de novo mais tarde.
+# context: a short toast (two lines at most) when the folders were made but Telegram's server didn't take the order of the tabs.
+Made the folders. Telegram didn't save their order.	Pastas criadas. O Telegram não salvou a ordem delas.
+# context: a short toast (two lines at most) when the switch was turned off but Telegram's server wouldn't delete some of the folders. The switch goes back on, and turning it off again asks only for those.
+Telegram kept some folders. Turn this off again to retry.	O Telegram manteve algumas pastas. Desligue de novo para tentar outra vez.
+# context: a short toast (two lines at most) when Telegram's server wouldn't delete any of the folders, so the switch went back on.
+Telegram didn't remove the folders. Try again in a moment.	O Telegram não removeu as pastas. Tente de novo em um instante.
+# context: a short toast (two lines at most) when the folder switch is flipped while Telegram still hasn't answered the last flip.
+Telegram is still answering. Try again in a moment.	O Telegram ainda está respondendo. Tente de novo em um instante.
 Telegram refused this app's ID	O Telegram recusou o ID deste app
 Telegram turned down the API ID this app signs in with, so no login code was sent. Patch HushTelegram again with Use registered Telegram API credentials and your own ID from my.telegram.org/apps. The guide walks you through it.	O Telegram recusou o ID de API que este app usa para entrar, então nenhum código foi enviado. Aplique o patch no HushTelegram de novo com Use registered Telegram API credentials e seu próprio ID de my.telegram.org/apps. O guia mostra como.
 Telegram didn't accept the API ID and hash this app was patched with, so no login code was sent. Copy both again from my.telegram.org/apps and patch once more.	O Telegram não aceitou o ID de API e o hash usados no patch deste app, então nenhum código foi enviado. Copie os dois de novo em my.telegram.org/apps e aplique o patch outra vez.

@@ -29,6 +29,7 @@ import android.widget.TextView;
 import java.util.ArrayList;
 
 import app.hushtumblr.extension.shared.SettingsContextRule;
+import app.hushtumblr.extension.shared.settings.preference.ReopenSettingsAfterRestart;
 
 import org.junit.After;
 import org.junit.Before;
@@ -254,6 +255,34 @@ public class SettingsEntryTest {
     }
 
     /**
+     * A Tumblr task the shortcut started keeps the shortcut's intent as its own. With a new task
+     * alone, the next tap matched that task, Android only brought it forward and no screen opened
+     * (seen on the API 36 emulator). The shortcut clears the task, so the launcher activity starts
+     * on every tap, and a shortcut published before that is pushed again with the same label.
+     */
+    @Test public void theShortcutStartsTumblrAfreshAndAnOlderOneIsReplaced() {
+        android.content.Context context = RuntimeEnvironment.getApplication();
+        android.content.pm.ShortcutManager manager = context.getSystemService(android.content.pm.ShortcutManager.class);
+        manager.pushDynamicShortcut(new android.content.pm.ShortcutInfo.Builder(context, SettingsEntry.SHORTCUT_ID)
+                .setShortLabel("HushTumblr")
+                .setLongLabel("HushTumblr settings")
+                .setIntent(new Intent(Intent.ACTION_VIEW).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                .setRank(0)
+                .build());
+
+        SettingsEntry.publishShortcutNow(context);
+
+        Intent intent = shortcut(manager, SettingsEntry.SHORTCUT_ID).getIntent();
+        assertNotNull("the shortcut carries no intent", intent);
+        org.junit.Assert.assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK,
+                intent.getFlags() & (Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK));
+        assertTrue("the replacement doesn't ask for the screen",
+                intent.getBooleanExtra(SettingsEntry.EXTRA_OPEN_SETTINGS, false));
+        org.junit.Assert.assertEquals("one shortcut, replaced, not two", 1, manager.getDynamicShortcuts().size());
+        org.junit.Assert.assertEquals("HushTumblr settings", longLabel(manager));
+    }
+
+    /**
      * "Additional settings in the app" on Android's App info page starts the launcher activity with
      * ACTION_APPLICATION_PREFERENCES, and the screen opens over it. The action is spent, so a
      * recreated activity doesn't ask again and Tumblr goes on as if started from its icon.
@@ -363,6 +392,107 @@ public class SettingsEntryTest {
         ActivityController<Activity> loggedOut = replace(login);
 
         assertNull("the screen came back after the person closed it with the arrow", dialogOver(loggedOut.get()));
+    }
+
+    /**
+     * The restart row restarts Tumblr with a marker naming its page. The next start takes the
+     * marker, the same way onApplicationCreate does, and the screen opens over the first Tumblr
+     * screen to resume, on that page. Closing it drops the page, so a later open starts at the top.
+     */
+    @Test public void aStartAfterTheRestartRowOpensTheScreenOnItsPage() {
+        android.content.SharedPreferences store = app.hushtumblr.extension.shared.settings.Setting.preferences.preferences;
+        PatchFamily.inBuildForTests = java.util.EnumSet.allOf(PatchFamily.class);
+        try {
+            org.junit.Assert.assertFalse("a start without a marker asked for the screen",
+                    ReopenSettingsAfterRestart.reopenIfPending(SettingsEntry::reopenOn));
+            ReopenSettingsAfterRestart.remember(store, "Links", android.os.SystemClock.elapsedRealtime());
+            assertTrue(ReopenSettingsAfterRestart.reopenIfPending(SettingsEntry::reopenOn));
+            org.junit.Assert.assertFalse("the marker outlived the start that read it",
+                    store.contains("hush_reopen_settings_page"));
+
+            ActivityController<Activity> activity = Robolectric.buildActivity(Activity.class).setup();
+            ShadowLooper.idleMainLooper();
+            SettingsDialog dialog = (SettingsDialog) dialogOver(activity.get());
+            assertNotNull("the restart didn't open the screen again", dialog);
+            org.junit.Assert.assertEquals("Links", dialog.startPage());
+            HushTumblrPreferenceFragment page = pageOver(activity.get());
+            android.widget.ListView list = page.getView().findViewById(android.R.id.list);
+            boolean onLinks = false;
+            for (int i = 0; i < list.getCount(); i++) {
+                Object row = list.getItemAtPosition(i);
+                if (row instanceof android.preference.Preference && HushTumblrPreferenceFragment.SUPPORTED_LINKS
+                        .equals(((android.preference.Preference) row).getKey())) onLinks = true;
+            }
+            assertTrue("the screen didn't open on Links", onLinks);
+
+            SettingsL10nTest.backOf(dialog).performClick();
+            SettingsL10nTest.backOf(dialog).performClick();
+            SettingsL10nTest.backOf(dialog).performClick();
+            ShadowLooper.idleMainLooper();
+            assertNull("the screen stayed open", dialogOver(activity.get()));
+            assertNull("closing the screen kept its page for the next open", SettingsEntry.requestedPage());
+        } finally {
+            SettingsEntry.onClosedByUser();
+            PatchFamily.inBuildForTests = null;
+        }
+    }
+
+    @Test public void aLongPressOnTheDashboardLogoOpensTheScreenAndATapStaysTumblrs() {
+        ActivityController<Activity> activity = Robolectric.buildActivity(Activity.class).setup();
+        try {
+            int[] taps = {0};
+            View logo = new android.widget.FrameLayout(activity.get());
+            logo.setOnClickListener(tapped -> taps[0]++);
+            SettingsEntry.onDashboardLogo(logo);
+            // Tumblr binds the top bar again when the dashboard's view comes back.
+            SettingsEntry.onDashboardLogo(logo);
+            assertTrue("the logo got no long press", logo.isLongClickable());
+
+            logo.performClick();
+            ShadowLooper.idleMainLooper();
+            org.junit.Assert.assertEquals("the tap stopped being Tumblr's", 1, taps[0]);
+            assertNull("a tap opened the screen", dialogOver(activity.get()));
+
+            // A page a restart left waiting doesn't decide where the logo's screen opens.
+            SettingsEntry.reopenOn("Links");
+            assertTrue("the long press wasn't taken", logo.performLongClick());
+            ShadowLooper.idleMainLooper();
+            SettingsDialog dialog = (SettingsDialog) dialogOver(activity.get());
+            assertNotNull("the long press didn't open the screen", dialog);
+            org.junit.Assert.assertEquals("the logo's screen opened on another page", "", dialog.startPage());
+            org.junit.Assert.assertEquals("the long press counted as a tap too", 1, taps[0]);
+        } finally {
+            SettingsEntry.onClosedByUser();
+            activity.close();
+        }
+    }
+
+    @Test public void aLogoTumblrAlreadyLongPressesStaysTumblrs() {
+        ActivityController<Activity> activity = Robolectric.buildActivity(Activity.class).setup();
+        try {
+            int[] presses = {0};
+            View logo = new android.widget.FrameLayout(activity.get());
+            logo.setOnLongClickListener(pressed -> {
+                presses[0]++;
+                return true;
+            });
+            SettingsEntry.onDashboardLogo(logo);
+
+            assertTrue(logo.performLongClick());
+            ShadowLooper.idleMainLooper();
+            org.junit.Assert.assertEquals("Tumblr's long press didn't run", 1, presses[0]);
+            assertNull("the screen took Tumblr's long press", dialogOver(activity.get()));
+        } finally {
+            activity.close();
+        }
+    }
+
+    @Test public void aLogoOutsideAnActivityLeavesTheLongPressAlone() {
+        View logo = new android.widget.FrameLayout(RuntimeEnvironment.getApplication());
+        // A press nothing takes goes on to the parent for a context menu, so the logo has one.
+        new android.widget.FrameLayout(RuntimeEnvironment.getApplication()).addView(logo);
+        SettingsEntry.onDashboardLogo(logo);
+        org.junit.Assert.assertFalse("a press with no screen to open over was taken", logo.performLongClick());
     }
 
     @SuppressWarnings("deprecation")

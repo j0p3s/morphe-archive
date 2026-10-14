@@ -52,6 +52,7 @@ import androidx.annotation.Nullable;
 
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
@@ -71,6 +72,7 @@ import app.hushtelegram.extension.shared.settings.preference.ClearLogBufferPrefe
 import app.hushtelegram.extension.shared.settings.preference.ExportDiagnosticReportPreference;
 import app.hushtelegram.extension.shared.settings.preference.ImmediateAction;
 import app.hushtelegram.extension.shared.settings.preference.LogBufferManager;
+import app.hushtelegram.extension.shared.settings.preference.QuickSetups;
 import app.hushtelegram.extension.telegram.misc.ChatTypeFolders;
 import app.hushtelegram.extension.telegram.misc.FirebasePush;
 import app.hushtelegram.extension.telegram.misc.KeepDeleted;
@@ -573,7 +575,8 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
             notifications.addPreference(toggle(context, Settings.REPAIR_FIREBASE_PUSH, L10n.t("Repair Firebase push registration"),
                     PatchFamily.REPAIR_FIREBASE_PUSH.coverageSummary(L10n.t("Tries to help this patched Telegram sign up for push notifications with Firebase, "
                             + "Google's notification service, using Telegram's original certificate. Notification "
-                            + "permission and battery settings still apply."))));
+                            + "permission and battery settings still apply.") + " "
+                            + L10n.t("A change here applies after Telegram restarts."))));
         }
         if (build.contains(PatchFamily.UNIFIED_PUSH)) {
             SwitchPreference push = toggle(context, Settings.UNIFIED_PUSH, L10n.t("UnifiedPush notifications"),
@@ -628,7 +631,7 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         if (build.contains(PatchFamily.HOLIDAY_LOOK)) {
             on(pages, PatchFamily.HOLIDAY_LOOK).addPreference(toggle(context, Settings.HOLIDAY_LOOK, L10n.t("New Year look all year"),
                     PatchFamily.HOLIDAY_LOOK.coverageSummary(L10n.t("Shows Telegram's Santa hat and New Year snow all year, not only around New Year."
-                            + " Snow falls on the chat list's top bar and on chat backgrounds once Background rotation is on under Power saving."))));
+                            + " Snow falls on the chat list's top bar and on chat backgrounds once Wallpaper rotation is on under Power Saving, in Effects in Chats."))));
         }
         if (build.contains(PatchFamily.USE_SYSTEM_FONT)) {
             on(pages, PatchFamily.USE_SYSTEM_FONT).addPreference(toggle(context, Settings.USE_SYSTEM_FONT, L10n.t("Use system font"),
@@ -731,6 +734,17 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
                 privacy.addPreference(toggle(context, Settings.DISABLE_DRAFT_PREVIEWS, L10n.t("No previews before sending"),
                         PatchFamily.DISABLE_DRAFT_PREVIEWS.coverageSummary(L10n.t("Telegram doesn't look up link previews for messages you haven't sent yet, "
                                 + "including shares, polls, story links and bots. Sent messages still get one."))));
+                if (PatchFamily.Capability.LOCAL_DRAFTS.installed()) {
+                    privacy.addPreference(toggle(context, Settings.LOCAL_DRAFTS, L10n.t("Keep drafts on this phone"),
+                            L10n.t("A message you start but don't send stays on this phone and stops syncing to your other "
+                                    + "devices. Clearing a draft still clears it there.")));
+                }
+                if (PatchFamily.Capability.LOCAL_SEARCH.installed()) {
+                    privacy.addPreference(toggle(context, Settings.LOCAL_SEARCH, L10n.t("Keep searches on this phone"),
+                            L10n.t("What you type in search's Chats tab isn't sent to Telegram. It finds the chats, contacts and "
+                                    + "recent searches on this phone, but not messages, public accounts or posts. The other "
+                                    + "tabs search as usual.")));
+                }
             }
             if (build.contains(PatchFamily.GALLERY_CAMERA_ON_TAP)) {
                 privacy.addPreference(toggle(context, Settings.GALLERY_CAMERA_ON_TAP, L10n.t("Camera only on tap"),
@@ -742,6 +756,12 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
             on(pages, PatchFamily.HIDE_PHONE_NUMBER).addPreference(toggle(context, Settings.HIDE_PHONE_NUMBER, L10n.t("Hide phone number"),
                     PatchFamily.HIDE_PHONE_NUMBER.coverageSummary(L10n.t("Your own phone number shows as dots in the side menu, Settings and your profile,"
                             + " which helps with screenshots. Others' numbers stay visible."))));
+            if (PatchFamily.Capability.SHARE_NUMBER_UNTICKED.installed()) {
+                on(pages, PatchFamily.HIDE_PHONE_NUMBER).addPreference(toggle(context, Settings.SHARE_NUMBER_UNTICKED,
+                        L10n.t("Don't share my number by default"),
+                        L10n.t("When you add someone as a contact from their chat, Telegram ticks the box that shares your phone "
+                                + "number with them. With this on, the box starts clear and your number goes only if you tick it.")));
+            }
         }
         if (build.contains(PatchFamily.BETA_LOGS_OFF)) {
             on(pages, PatchFamily.BETA_LOGS_OFF).addPreference(toggle(context, Settings.BETA_LOGS_OFF, L10n.t("Turn off beta debug logs"),
@@ -766,6 +786,11 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
             links.addPreference(toggle(context, Settings.STRIP_LINK_TRACKING, L10n.t("Remove link tracking tags"),
                     PatchFamily.STRIP_LINK_TRACKING.coverageSummary(L10n.t("Removes tracking tags like utm_source, gclid and fbclid from links you open or "
                             + "share. A link with any other tag is left unchanged."))));
+            if (PatchFamily.Capability.SKIP_AUTOLOGIN.installed()) {
+                links.addPreference(toggle(context, Settings.SKIP_AUTOLOGIN, L10n.t("No automatic sign-in on Telegram's sites"),
+                        L10n.t("Telegram adds a sign-in token for your account to links to some of its own websites. With this on, "
+                                + "those links open without it, and you can sign in there yourself.")));
+            }
         }
         links.addPreference(mark(supportedLinksRow(context), SettingsIcons.LINKS));
         // An explanation, not a control: the info mark says so, as it does for Version on About.
@@ -912,12 +937,14 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
      * shows once the view is gone or the activity is finishing: the dialog would come up over a
      * window that's gone.
      */
-    private void show(AlertDialog.Builder builder) {
+    @Nullable
+    private AlertDialog show(AlertDialog.Builder builder) {
         Activity activity = getActivity();
-        if (getView() == null || activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+        if (getView() == null || activity == null || activity.isFinishing() || activity.isDestroyed()) return null;
         AlertDialog dialog = builder.show();
         ScreenColors.dialog(dialog);
         own(dialog);
+        return dialog;
     }
 
     private void own(Dialog dialog) {
@@ -1077,8 +1104,9 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
 
     /**
      * The way out of Keep deleted messages: a tap hands every message it kept, in every signed-in
-     * account, to Telegram's own deletion and says how many went. The tap is the whole request, so
-     * nothing asks first and nothing opens.
+     * account, to Telegram's own deletion and says how many are on their way, then again how many
+     * went once Telegram has deleted them. The tap is the whole request, so nothing asks first and
+     * nothing opens.
      */
     private static Preference clearKeptRow(Context context) {
         Row row = new Row(context);
@@ -1256,12 +1284,54 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         }
     }
 
-    /** A switch whose change waits for a restart: the card says what the next start brings. */
+    /**
+     * A switch whose change waits for a restart: the card says what the next start brings, and the
+     * restart row comes, goes or counts again.
+     */
     @Override
     protected void onRestartPendingChanged() {
         Preference card = statusCard;
         Context context = getContext();
         if (card != null && context != null) showStatus(card, context);
+        if (navigation != null) navigation.restartChanged();
+    }
+
+    /**
+     * Quick setups: Quiet, Privacy or Back to defaults, each changing its switches at once
+     * ({@link QuickSetupKeys}), then a toast saying how many changed. A switch that needs a restart
+     * brings up the restart row the way a tap on it would.
+     */
+    void showQuickSetups() {
+        Context context = getContext();
+        if (context == null) return;
+        List<Map<BooleanSetting, Boolean>> choices = Arrays.asList(
+                QuickSetupKeys.quiet(), QuickSetupKeys.privacy(), QuickSetupKeys.defaults());
+        CharSequence[] names = {L10n.t("Quiet"), L10n.t("Privacy"), L10n.t("Back to defaults")};
+        CharSequence[] details = {
+                L10n.t("Hides ads, suggestions, stories, promotions and nags."),
+                L10n.t("Stops usage reports, strips tracking from links and covers your own phone number on screen."),
+                L10n.t("Puts every feature switch back the way it started.")};
+        AlertDialog dialog = show(new AlertDialog.Builder(themed(context))
+                .setTitle(L10n.t("Quick setups"))
+                .setAdapter(new ChoiceCards(ScreenColors.DEFAULT, names, details),
+                        (shown, which) -> applyQuickSetup(choices.get(which)))
+                .setNegativeButton(L10n.t("Cancel"), null));
+        ListView list = dialog == null ? null : dialog.getListView();
+        if (list != null) {
+            // The cards bring their own spacing and press ripple, as in the diagnostic report's choices.
+            list.setDivider(null);
+            list.setSelector(ChoiceCards.Card.focusRing(dialog.getContext(), ScreenColors.DEFAULT));
+            list.setDrawSelectorOnTop(true);
+        }
+    }
+
+    /** Applies one Quick setups choice to the switches on this page and says how many changed. */
+    int applyQuickSetup(Map<BooleanSetting, Boolean> values) {
+        PreferenceScreen screen = getPreferenceScreen();
+        if (screen == null) return 0;
+        int changed = QuickSetups.apply(screen, values);
+        Utils.showToastLong(L10n.quantity(changed, "Changed %1$d setting", "Changed %1$d settings", changed));
+        return changed;
     }
 
     /**

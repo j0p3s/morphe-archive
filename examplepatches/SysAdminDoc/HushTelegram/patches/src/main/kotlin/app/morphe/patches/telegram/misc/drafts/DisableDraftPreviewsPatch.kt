@@ -20,6 +20,7 @@ import app.morphe.patches.telegram.misc.extension.requireParameterIntact
 import app.morphe.patches.telegram.misc.extension.requireThisIntact
 import app.morphe.patches.telegram.misc.extension.requireStatusMethod
 import app.morphe.patches.telegram.misc.extension.telegramExtensionPatch
+import app.morphe.patches.telegram.misc.extension.writeStub
 import app.morphe.patches.telegram.misc.settings.settingsPatch
 import app.morphe.util.ControlFlow
 import app.morphe.util.addInstructionsAtControlFlowLabel
@@ -40,6 +41,30 @@ import java.util.BitSet
 private const val PATCH = "Disable draft link previews"
 internal const val WEB_PAGE_PREVIEW = "Lorg/telegram/tgnet/tl/TL_account\$getWebPagePreview;"
 internal const val DRAFT_PREVIEWS = "$EXTENSION_PACKAGE/misc/DraftPreviews;"
+internal const val LOCAL_DRAFTS = "$EXTENSION_PACKAGE/misc/LocalDrafts;"
+internal const val SAVE_DRAFT = "Lorg/telegram/tgnet/TLRPC\$TL_messages_saveDraft;"
+internal const val SEND_REQUEST = "Lorg/telegram/tgnet/ConnectionsManager;->sendRequest(Lorg/telegram/tgnet/TLObject;Lorg/telegram/tgnet/RequestDelegate;)I"
+internal const val INPUT_REPLY_TO = "Lorg/telegram/tgnet/TLRPC\$InputReplyTo;"
+/** Where a draft goes in a channel's direct messages you manage: the person's chat there, and no reply. */
+internal const val MONO_FORUM_REPLY = "Lorg/telegram/tgnet/TLRPC\$TL_inputReplyToMonoForum;"
+private const val INPUT_PEER = "Lorg/telegram/tgnet/TLRPC\$InputPeer;"
+/** messages.saveDraft's effect:flags.7?long, the one piece of content held in its flags. */
+internal const val DRAFT_EFFECT_FLAG = 0x80
+/** media:flags.5?InputMedia, the other bit the request writes as it's set instead of from the field. */
+internal const val DRAFT_MEDIA_FLAG = 0x20
+/** What a saveDraft request holds besides where it goes and how it's shown; each one counts as content. */
+internal val DRAFT_CONTENT = mapOf(
+    "message" to "Ljava/lang/String;",
+    "entities" to "Ljava/util/ArrayList;",
+    "reply_to" to "Lorg/telegram/tgnet/TLRPC\$InputReplyTo;",
+    "suggested_post" to "Lorg/telegram/tgnet/TLRPC\$SuggestedPost;",
+    "rich_message" to "Lorg/telegram/tgnet/tl/TL_iv\$TL_inputRichMessage;",
+    "media" to "Lorg/telegram/tgnet/TLRPC\$InputMedia;",
+)
+/** The rest: the chat, the flags, the effect they flag, and the link preview and media order switches. */
+private val DRAFT_FRAME = mapOf("peer" to "Lorg/telegram/tgnet/TLRPC\$InputPeer;", "flags" to "I", "effect" to "J",
+    "no_webpage" to "Z", "invert_media" to "Z")
+private val MOVE_RESULTS = setOf(Opcode.MOVE_RESULT, Opcode.MOVE_RESULT_WIDE, Opcode.MOVE_RESULT_OBJECT)
 private const val CHAR_SEQUENCE = "Ljava/lang/CharSequence;"
 private const val STRING = "Ljava/lang/String;"
 private const val ARRAY_LIST = "Ljava/util/ArrayList;"
@@ -66,8 +91,24 @@ val disableDraftPreviewsPatch = bytecodePatch(
     execute {
         requireStatusMethod("disableDraftPreviews")
         DraftPreviewTarget.entries.forEach { requireStatusMethod(it.capability) }
+        requireStatusMethod("localDrafts")
+        requireStatusMethod("localSearch")
         // Every builder, skip target and borrowed register is checked before the first edit.
         val hooks = resolveDraftPreviewHooks()
+        val drafts = resolveLocalDraftHook()
+        val search = resolveLocalSearch()
+        shape(hooks.values.none { it.method === drafts.method }, "the draft upload shares a method with a preview builder")
+        shape(search.edits.none { edit -> edit.method === drafts.method || hooks.values.any { it.method === edit.method } },
+            "chat search shares a method with a draft hook")
+        search.rehearse()
+        // The runtime's stubs first: on their own nothing calls them.
+        writeStub(LOCAL_DRAFTS, "carries", 2, drafts.reader)
+        writeStub(LOCAL_DRAFTS, "clear", 3, drafts.emptier)
+        drafts.method.addInstructionsAtControlFlowLabel(drafts.index, drafts.code,
+            ExternalLabel("hush_done", drafts.method.getInstruction(drafts.finish)))
+        enableCapability("localDrafts")
+        search.apply()
+        enableCapability("localSearch")
         for ((target, hook) in hooks) {
             hook.method.addInstructionsAtControlFlowLabel(hook.index, hook.code,
                 ExternalLabel("hush_done", hook.method.getInstruction(hook.finish)))
@@ -378,6 +419,172 @@ private fun requestSite(method: Method): Int {
     shape(body.getOrNull(index + 1)?.call()?.let { it.definingClass == WEB_PAGE_PREVIEW && it.name == "<init>" && it.parameterTypes.isEmpty() } == true &&
         body[index + 1].namedRegisters() == body[index].namedRegisters(), "preview request constructor changed")
     return index
+}
+
+/**
+ * The draft upload's send at [index] and the instruction after it, [finish]; [reader] and [emptier]
+ * are the bodies written for LocalDrafts.carries and LocalDrafts.clear.
+ */
+internal data class LocalDraftHook(val method: MutableMethod, val index: Int, val finish: Int, val code: String,
+                                   val reader: String, val emptier: String)
+
+/**
+ * MediaDataController.saveDraft keeps a draft on the phone and then sends it to Telegram's server
+ * as messages.saveDraft. That send is the only way a draft leaves, so the hook sits on it, after the
+ * request is filled in. The runtime takes the content out of a draft it keeps, so what goes is an
+ * empty draft for the same chat, which clears any copy the server had. Only when it can't does the
+ * draft skip the send and go on to what Telegram does next, re-sorting the chat list. Every field of
+ * the request is known here: one Telegram adds refuses the patch, since it could be a new kind of
+ * content the reader wouldn't see or the emptier wouldn't take out.
+ */
+internal fun BytecodePatchContext.resolveLocalDraftHook(): LocalDraftHook {
+    val owner = classDefByOrNull(LOCAL_DRAFTS)
+    shape(owner != null && AccessFlags.PUBLIC.isSet(owner.accessFlags), "no public local drafts runtime")
+    // One method of each name, so writing a stub can't pick another or fail once the gate is in.
+    for (name in listOf("keepOnPhone", "carries", "clear")) {
+        val named = owner!!.methods.filter { it.name == name }
+        shape(named.size == 1 && named.single().let { it.hasShape(listOf("Ljava/lang/Object;"), "Z") && it.isStatic() &&
+            AccessFlags.PUBLIC.isSet(it.accessFlags) && !AccessFlags.NATIVE.isSet(it.accessFlags) &&
+            !AccessFlags.ABSTRACT.isSet(it.accessFlags) && it.implementation != null },
+            "no single callable public static runtime $name")
+    }
+    val request = classDefByOrNull(SAVE_DRAFT)
+    shape(request != null && AccessFlags.PUBLIC.isSet(request.accessFlags), "no public draft request")
+    val fields = request!!.fields.filter { !AccessFlags.STATIC.isSet(it.accessFlags) }
+    shape(fields.associate { it.name to it.type } == DRAFT_CONTENT + DRAFT_FRAME && fields.size == DRAFT_CONTENT.size + DRAFT_FRAME.size &&
+        fields.all { AccessFlags.PUBLIC.isSet(it.accessFlags) }, "draft request fields changed")
+    // A reply counts as content only when it's to a message, as Telegram's own empty-draft check has it.
+    // The other kind is where a draft goes in a channel's direct messages you manage, kept when one is emptied.
+    val reply = classDefByOrNull(INPUT_REPLY_TO)
+    shape(reply != null && AccessFlags.PUBLIC.isSet(reply.accessFlags) && listOf("reply_to_msg_id" to "I", "monoforum_peer_id" to INPUT_PEER)
+        .all { (name, type) -> reply.fields.any { it.name == name && it.type == type && AccessFlags.PUBLIC.isSet(it.accessFlags) &&
+            !AccessFlags.STATIC.isSet(it.accessFlags) } }, "draft reply fields changed")
+    val direct = classDefByOrNull(MONO_FORUM_REPLY)
+    shape(direct != null && AccessFlags.PUBLIC.isSet(direct.accessFlags) && direct.superclass == INPUT_REPLY_TO &&
+        direct.methods.any { it.name == "<init>" && it.parameterTypes.isEmpty() && AccessFlags.PUBLIC.isSet(it.accessFlags) },
+        "direct messages draft target changed")
+    val uploads = mutableListOf<Method>()
+    classDefForEach { classDef ->
+        if (classDef.type.startsWith("Lapp/hushtelegram/extension/")) return@classDefForEach
+        classDef.methods.filterTo(uploads) { it.constructs(SAVE_DRAFT) }
+    }
+    val found = uploads.one("draft upload", ::refuse)
+    val method = mutableClassDefBy(found.definingClass).methods.single { it.sameSignature(found) }
+    val body = method.instructions()
+    val created = body.indices.filter { body[it].opcode == Opcode.NEW_INSTANCE && body[it].reference() == SAVE_DRAFT }
+        .one("draft request", ::refuse)
+    val held = body[created].namedRegisters().single()
+    shape(body.getOrNull(created + 1)?.call()?.let { it.definingClass == SAVE_DRAFT && it.name == "<init>" && it.parameterTypes.isEmpty() } == true &&
+        body[created + 1].namedRegisters() == listOf(held), "draft request constructor changed")
+    val index = body.indices.filter { body[it].reference() == SEND_REQUEST }.one("draft upload send", ::refuse)
+    shape(body[index].opcode == Opcode.INVOKE_VIRTUAL && body[index].namedRegisters().getOrNull(1) == held && index > created,
+        "draft upload no longer sends the request it built")
+    // Every way to the send passes the constructor, and nothing on the way puts anything else in its register.
+    requireGuarded(method, created, index)
+    shape(keeps(method, created, index, held), "draft request register is written again before the send")
+    // The send's answer is dropped, so a draft kept back leaves nothing unset.
+    val finish = index + 1
+    shape(body.getOrNull(finish) != null && body[finish].opcode !in MOVE_RESULTS, "draft upload reads the send's answer")
+    // An effect goes in with its flag bit, and that bit is what the reader checks.
+    val effect = body.indices.filter { body[it].opcode == Opcode.IPUT_WIDE && body[it].reference() == "$SAVE_DRAFT->effect:J" }
+        .one("draft effect store", ::refuse)
+    val flag = body.getOrNull(effect + 2)
+    shape(body[effect].namedRegisters().getOrNull(1) == held &&
+        body.getOrNull(effect + 1)?.opcode == Opcode.IGET && body[effect + 1].reference() == "$SAVE_DRAFT->flags:I" &&
+        flag?.opcode == Opcode.OR_INT_LIT16 && (flag as NarrowLiteralInstruction).narrowLiteral == DRAFT_EFFECT_FLAG &&
+        body.getOrNull(effect + 3)?.opcode == Opcode.IPUT && body[effect + 3].reference() == "$SAVE_DRAFT->flags:I" &&
+        body[effect + 3].namedRegisters().getOrNull(1) == held, "draft effect no longer sets flag $DRAFT_EFFECT_FLAG")
+    val answer = method.freeLocalsAt(PATCH, index, 1, targets = listOf(finish), highest = 255).single()
+    val code = listOf(
+        "invoke-static/range {v$held .. v$held}, $LOCAL_DRAFTS->keepOnPhone(Ljava/lang/Object;)Z",
+        "move-result v$answer",
+        "if-nez v$answer, :hush_done",
+    ).joinToString("\n")
+    return LocalDraftHook(method, index, finish, code, draftReader(), draftEmptier())
+}
+
+/**
+ * LocalDrafts.carries, with the request in p0 and v0 to work in: true when it holds any [DRAFT_CONTENT]
+ * or a flagged effect. A reply counts when it's to a message, so a direct messages target alone doesn't.
+ */
+private fun draftReader(): String {
+    val lines = mutableListOf("check-cast p0, $SAVE_DRAFT")
+    for ((name, type) in DRAFT_CONTENT) {
+        lines += "iget-object v0, p0, $SAVE_DRAFT->$name:$type"
+        lines += when (name) {
+            "message" -> listOf("invoke-static {v0}, Landroid/text/TextUtils;->isEmpty(Ljava/lang/CharSequence;)Z",
+                "move-result v0", "if-eqz v0, :carries")
+            "entities" -> listOf("if-eqz v0, :no_entities", "invoke-virtual {v0}, $type->isEmpty()Z",
+                "move-result v0", "if-eqz v0, :carries", ":no_entities")
+            "reply_to" -> listOf("if-eqz v0, :no_reply", "iget v0, v0, $INPUT_REPLY_TO->reply_to_msg_id:I",
+                "if-nez v0, :carries", ":no_reply")
+            else -> listOf("if-nez v0, :carries")
+        }
+    }
+    lines += listOf("iget v0, p0, $SAVE_DRAFT->flags:I", "and-int/lit16 v0, v0, 0x${DRAFT_EFFECT_FLAG.toString(16)}",
+        "if-nez v0, :carries", "const/4 v0, 0x0", "return v0", ":carries", "const/4 v0, 0x1", "return v0")
+    return lines.joinToString("\n")
+}
+
+/**
+ * LocalDrafts.clear, with the request in p0 and v0 and v1 to work in. Every piece of [DRAFT_CONTENT]
+ * comes out and the two flag bits the request doesn't work out for itself go: what's left is the empty
+ * draft Telegram sends to clear one, for the same chat. A reply becomes no reply, except that in a
+ * channel's direct messages you manage the draft keeps the person's chat it's for, as Telegram's own
+ * clear does there. The chat and the preview and media order switches stay as they were.
+ */
+private fun draftEmptier(): String {
+    val lines = mutableListOf("check-cast p0, $SAVE_DRAFT", "const-string v0, \"\"", "iput-object v0, p0, $SAVE_DRAFT->message:$STRING",
+        "const/4 v0, 0x0")
+    for ((name, type) in DRAFT_CONTENT) if (name != "message" && name != "reply_to") lines += "iput-object v0, p0, $SAVE_DRAFT->$name:$type"
+    lines += listOf(
+        "iget v0, p0, $SAVE_DRAFT->flags:I",
+        "and-int/lit16 v0, v0, -0x${(DRAFT_EFFECT_FLAG or DRAFT_MEDIA_FLAG).inc().toString(16)}",
+        "iput v0, p0, $SAVE_DRAFT->flags:I",
+        "const-wide/16 v0, 0x0",
+        "iput-wide v0, p0, $SAVE_DRAFT->effect:J",
+        "iget-object v0, p0, $SAVE_DRAFT->reply_to:$INPUT_REPLY_TO",
+        "if-eqz v0, :done",
+        "iget-object v1, v0, $INPUT_REPLY_TO->monoforum_peer_id:$INPUT_PEER",
+        "if-eqz v1, :no_reply",
+        "instance-of v0, v0, $MONO_FORUM_REPLY",
+        "if-nez v0, :done",
+        "new-instance v0, $MONO_FORUM_REPLY",
+        "invoke-direct {v0}, $MONO_FORUM_REPLY-><init>()V",
+        "iput-object v1, v0, $INPUT_REPLY_TO->monoforum_peer_id:$INPUT_PEER",
+        "iput-object v0, p0, $SAVE_DRAFT->reply_to:$INPUT_REPLY_TO",
+        "goto :done",
+        ":no_reply",
+        "const/4 v0, 0x0",
+        "iput-object v0, p0, $SAVE_DRAFT->reply_to:$INPUT_REPLY_TO",
+        ":done",
+        "const/4 v0, 0x1",
+        "return v0",
+    )
+    return lines.joinToString("\n")
+}
+
+/** No instruction on a path from [created] to [use] writes [register] again. */
+private fun keeps(method: Method, created: Int, use: Int, register: Int): Boolean {
+    val flow = ControlFlow.of(method)
+    val body = method.instructions()
+    val next = body.indices.map { flow.normal[it] + flow.exceptional[it] }
+    val previous = body.indices.map { mutableListOf<Int>() }
+    next.forEachIndexed { from, targets -> targets.forEach { previous[it] += from } }
+    fun reach(start: List<Int>, edges: List<List<Int>>, stop: Int): BitSet {
+        val seen = BitSet()
+        val pending = ArrayDeque(start)
+        while (pending.isNotEmpty()) {
+            val at = pending.removeFirst()
+            if (at == stop || seen[at]) continue
+            seen.set(at)
+            pending += edges[at]
+        }
+        return seen
+    }
+    val after = reach(next[created], next, use)
+    val before = reach(previous[use], previous, created)
+    return body.indices.none { after[it] && before[it] && register in body[it].writes() }
 }
 
 private fun BytecodePatchContext.requireRuntimeHooks() {

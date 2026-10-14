@@ -35,6 +35,8 @@ public class TikTokActivityHook {
     /** The row the opened page scrolls to and flashes; the fragment reads the same name. */
     private static final String SETTINGS_TARGET_KEY_EXTRA = "morphe_settings_target_key";
     private static final String SETTINGS_ROOT_TAG = "hushfeed_settings_root";
+    /** The page a restart left ({@link SettingsReturn}), opened over the home page. */
+    private static final String SETTINGS_PAGE_EXTRA = "hushfeed_settings_page";
 
     /***
      * Initialize the settings menu.
@@ -57,6 +59,8 @@ public class TikTokActivityHook {
         app.morphe.extension.tiktok.featuregatelab.FeatureGateLabReport.install();
         // Which connections follow the network proxy and which stay direct.
         app.morphe.extension.tiktok.network.NetworkRoutes.install();
+        // Which settings the reader changed, so an export answers "which switch is on" itself.
+        ChangedSettingsReport.install();
         // Build details and the full log export list the switches the patcher registered, read
         // here for the same reason. Both open from this screen.
         BuildDetails.setRegisteredSwitches(SettingsStatus.registered());
@@ -87,8 +91,10 @@ public class TikTokActivityHook {
         base.setContentView(settingsSurface);
 
         if (restoredRoot == null) {
-            PreferenceFragment preferenceFragment = new TikTokPreferenceFragment();
             String section = intent.getStringExtra(SETTINGS_SECTION_EXTRA);
+            // A restart pressed far down the home page comes back scrolled to where it was.
+            PreferenceFragment preferenceFragment = TikTokPreferenceFragment.home(
+                    section == null || section.isEmpty() ? intent.getStringExtra(SETTINGS_PAGE_EXTRA) : null);
             if (section != null && !section.isEmpty()) {
                 Bundle arguments = new Bundle();
                 arguments.putString(SETTINGS_SECTION_EXTRA, section);
@@ -100,6 +106,16 @@ public class TikTokActivityHook {
             }
             base.getFragmentManager().beginTransaction()
                     .replace(fragmentId, preferenceFragment, SETTINGS_ROOT_TAG).commit();
+            // Back to the page a restart was pressed on, with the home page under it, so Back
+            // goes where it went before the restart rather than out of settings.
+            PreferenceFragment returned = section == null || section.isEmpty()
+                    ? TikTokPreferenceFragment.forPage(intent.getStringExtra(SETTINGS_PAGE_EXTRA)) : null;
+            if (returned != null) {
+                base.getFragmentManager().beginTransaction()
+                        .replace(fragmentId, returned)
+                        .addToBackStack("restart_return")
+                        .commit();
+            }
         }
 
         // Back here rode entirely on the host's onBackPressed, which stops being called once
@@ -130,25 +146,33 @@ public class TikTokActivityHook {
     }
 
     private static void startSettingsActivity() {
-        startSettingsActivity(null, null);
+        startSettingsActivity(null, null, null);
     }
 
     /** Opens the extension settings at their home page. */
     public static void openSettings() {
-        startSettingsActivity(null, null);
+        startSettingsActivity(null, null, null);
     }
 
     /** Opens the extension settings directly at the feed-filter page. */
     public static void openFeedFilterSettings() {
-        startSettingsActivity("FEED_FILTER", null);
+        startSettingsActivity("FEED_FILTER", null, null);
     }
 
     /** Opens one settings page scrolled to, and flashing, the row with this setting key. */
     public static void openSettingsRow(String section, String settingKey) {
-        startSettingsActivity(section, settingKey);
+        startSettingsActivity(section, settingKey, null);
     }
 
-    private static void startSettingsActivity(String section, String settingKey) {
+    /**
+     * Opens the settings on the page a restart was pressed on, the way the Home tab's long press
+     * opens them, with the home page under it.
+     */
+    public static void openSettingsPage(String page) {
+        startSettingsActivity(null, null, page);
+    }
+
+    private static void startSettingsActivity(String section, String settingKey, String page) {
         Context appContext = Utils.getContext();
         if (appContext != null) {
             Intent intent = new Intent(appContext, AdPersonalizationActivity.class);
@@ -160,6 +184,9 @@ public class TikTokActivityHook {
             }
             if (settingKey != null) {
                 intent.putExtra(SETTINGS_TARGET_KEY_EXTRA, settingKey);
+            }
+            if (page != null) {
+                intent.putExtra(SETTINGS_PAGE_EXTRA, page);
             }
             appContext.startActivity(intent);
         } else {

@@ -12,9 +12,14 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import android.app.Activity;
 import android.view.View;
+import android.content.Context;
+import android.content.ContextWrapper;
+import android.content.res.Resources;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -25,6 +30,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
@@ -32,14 +38,20 @@ import org.junit.After;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
+import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowLog;
 import org.robolectric.shadows.ShadowLooper;
+import org.robolectric.shadows.ShadowToast;
 
 import app.hushpinterest.extension.pinterest.settings.Settings;
 import app.hushpinterest.extension.shared.SettingsContextRule;
+import app.hushpinterest.extension.shared.Utils;
 import app.hushpinterest.extension.shared.diagnostics.HookStatus;
+import app.hushpinterest.extension.shared.settings.BaseSettings;
 import app.hushpinterest.extension.shared.settings.BooleanSetting;
 import app.hushpinterest.extension.shared.settings.HushPinterestPause;
 import app.hushpinterest.extension.shared.settings.PauseForTests;
@@ -56,7 +68,8 @@ public class UiHooksTest {
     private static BooleanSetting[] switches() { return new BooleanSetting[] {
             Settings.HIDE_SCREENSHOT_SHARE, Settings.HIDE_SEARCH_HISTORY,
             Settings.HIDE_NAV_CREATE, Settings.HIDE_NAV_NOTIFICATIONS, Settings.HIDE_NAV_SEARCH, Settings.HIDE_HEADER_BUTTONS,
-            Settings.BLACK_BOTTOM_BAR, Settings.HIDE_CLOSEUP_BACK, Settings.HIDE_CLOSEUP_LENS,
+            Settings.BLACK_BOTTOM_BAR, Settings.BLACK_COMMENTS, Settings.BLACK_PIN_MENU,
+            Settings.HIDE_CLOSEUP_BACK, Settings.HIDE_CLOSEUP_LENS,
             Settings.HIDE_PIN_MENU_COLLAGE, Settings.HIDE_PIN_MENU_VISUAL_SEARCH, Settings.HIDE_PIN_MENU_PIN_BOOST,
             Settings.HIDE_COMMENTS, Settings.HIDE_TOPIC_SUGGESTIONS, Settings.QUIET_EMAIL_REMINDER, Settings.HIDE_SURVEY_PROMPTS,
             Settings.HIDE_SAVE_TOASTS, Settings.ORIGINAL_IMAGES, Settings.DISABLE_UPDATE_NAG
@@ -139,6 +152,162 @@ public class UiHooksTest {
             UiHooks.saveToastForTests = null;
         }
         assertFalse("the unpatched stub names no toast", UiHooks.hideSaveToast(saved));
+    }
+
+    @Test public void debugLoggingNamesEachToastAndWhatBecameOfIt() {
+        UiHooks.saveToastForTests = StringBuilder.class;
+        try {
+            Settings.HIDE_SAVE_TOASTS.save(true);
+            UiHooks.hideSaveToast(new StringBuilder());
+            assertTrue("nothing is logged while Debug logging is off", toastLines().isEmpty());
+            BaseSettings.DEBUG.save(true);
+            UiHooks.hideSaveToast(new StringBuilder());
+            UiHooks.hideSaveToast("a toast patching didn't name");
+            Settings.HIDE_SAVE_TOASTS.save(false);
+            UiHooks.hideSaveToast(new StringBuilder());
+            String lines = toastLines();
+            assertTrue(lines, lines.contains("Toast java.lang.StringBuilder hidden\n"));
+            assertTrue(lines, lines.contains("Toast java.lang.String shown\n"));
+            assertTrue(lines, lines.contains("Toast java.lang.StringBuilder shown, switch off or paused\n"));
+        } finally {
+            UiHooks.saveToastForTests = null;
+            BaseSettings.DEBUG.resetToDefault();
+        }
+    }
+
+    private static String toastLines() {
+        return logged("Toast ");
+    }
+
+    private static String logged(String start) {
+        StringBuilder lines = new StringBuilder();
+        for (ShadowLog.LogItem item : ShadowLog.getLogs()) {
+            if (item.msg != null && item.msg.startsWith(start)) lines.append(item.msg).append('\n');
+        }
+        return lines.toString();
+    }
+
+    /** Stands in for a Pinterest toast that shows whatever text it was handed. */
+    private static final class HandedText {
+        final CharSequence text;
+
+        HandedText(CharSequence text) {
+            this.text = text;
+        }
+    }
+
+    /** The same kind of toast, built by a screen that has nothing to do with saving a pin. */
+    private static final class OtherText {
+        final CharSequence text;
+
+        OtherText(CharSequence text) {
+            this.text = text;
+        }
+    }
+
+    /** A Pinterest screen that reads the strings a test hands it once it's up. */
+    public static class SaveScreen extends Activity {
+        static volatile Resources strings;
+
+        @Override public Resources getResources() {
+            Resources handed = strings;
+            return handed != null ? handed : super.getResources();
+        }
+    }
+
+    @Test public void aToastHandedItsTextIsDroppedOnlyWhenASaveScreenBuiltItAndItReadsAsASave() {
+        ActivityController<SaveScreen> screen = Robolectric.buildActivity(SaveScreen.class).setup();
+        UiHooks.messageToastForTests = HandedText.class;
+        try {
+            SaveScreen.strings = SaveStrings.resources(Locale.ENGLISH, SaveStrings.english());
+            Utils.setActivity(screen.get());
+            HandedText saved = new HandedText("Saved to <b>Recipes</b> section!");
+            assertFalse("off, Pinterest shows it", UiHooks.hideSaveToast(saved));
+            Settings.HIDE_SAVE_TOASTS.save(true);
+            assertTrue(UiHooks.hideSaveToast(saved));
+            assertTrue(UiHooks.hideSaveToast(new HandedText("Saved 3 Pins to <b>Recipes</b> section!")));
+            assertTrue(UiHooks.hideSaveToast(new HandedText("Saved to Recipes")));
+            assertFalse(UiHooks.hideSaveToast(new HandedText("Moved Pin to <b>Recipes</b> section!")));
+            assertFalse(UiHooks.hideSaveToast(new HandedText("Section <b>Recipes</b> created!")));
+            assertFalse(UiHooks.hideSaveToast(new HandedText("Couldn't save this Pin. Try again.")));
+            assertFalse(UiHooks.hideSaveToast(new HandedText(null)));
+            // The words alone aren't enough. A photo saved to the phone and a collage draft say
+            // "Saved to" as well, through toasts no save screen builds, and those must show.
+            assertFalse(UiHooks.hideSaveToast(new OtherText("Saved to your camera roll")));
+            assertFalse(UiHooks.hideSaveToast("Saved to Recipes"));
+            PauseForTests.pause(HushPinterestPause.Reason.SWITCH);
+            assertFalse("paused, Pinterest shows it", UiHooks.hideSaveToast(saved));
+            PauseForTests.resume();
+            assertTrue(UiHooks.hideSaveToast(saved));
+            UiHooks.messageToastForTests = null;
+            assertFalse("the unpatched stub names no toast", UiHooks.hideSaveToast(saved));
+        } finally {
+            UiHooks.messageToastForTests = null;
+            SaveScreen.strings = null;
+            Utils.setActivity(null);
+            screen.pause().stop().destroy();
+        }
+    }
+
+    @Test public void anAndroidToastFromASaveScreenNeverShowsForASaveWhileTheSwitchIsOn() {
+        Map<String, String[]> texts = SaveStrings.english();
+        texts.put("pin_unsaved", new String[] {"Pin unsaved"});
+        Context screen = SaveStrings.context(Locale.ENGLISH, texts);
+        int saved = screen.getResources().getIdentifier("pin_saved", "string", screen.getPackageName());
+        int unsaved = screen.getResources().getIdentifier("pin_unsaved", "string", screen.getPackageName());
+        ShadowToast.reset();
+
+        UiHooks.androidToast(screen, "Saved to Recipes", Toast.LENGTH_LONG).show();
+        UiHooks.androidToast(screen, saved, Toast.LENGTH_SHORT).show();
+        assertEquals("off, Android shows both", 2, ShadowToast.shownToastCount());
+        assertEquals("Pin saved", ShadowToast.getTextOfLatestToast());
+
+        Settings.HIDE_SAVE_TOASTS.save(true);
+        UiHooks.androidToast(screen, "Saved to Recipes", Toast.LENGTH_LONG).show();
+        UiHooks.androidToast(screen, "Saved!", Toast.LENGTH_LONG).show();
+        UiHooks.androidToast(screen, saved, Toast.LENGTH_SHORT).show();
+        assertEquals("a save confirmation never shows", 2, ShadowToast.shownToastCount());
+        String report = String.join("\n", HookStatus.report());
+        assertTrue(report, report.contains("save toast hidden"));
+
+        UiHooks.androidToast(screen, "Couldn't save this Pin. Try again.", Toast.LENGTH_LONG).show();
+        assertEquals(3, ShadowToast.shownToastCount());
+        assertEquals("Couldn't save this Pin. Try again.", ShadowToast.getTextOfLatestToast());
+        UiHooks.androidToast(screen, unsaved, Toast.LENGTH_SHORT).show();
+        assertEquals(4, ShadowToast.shownToastCount());
+        assertEquals("Pin unsaved", ShadowToast.getTextOfLatestToast());
+
+        PauseForTests.pause(HushPinterestPause.Reason.SWITCH);
+        UiHooks.androidToast(screen, "Saved to Recipes", Toast.LENGTH_LONG).show();
+        assertEquals("paused, Android shows it", 5, ShadowToast.shownToastCount());
+        PauseForTests.resume();
+
+        Context bare = SaveStrings.context(Locale.ENGLISH, new LinkedHashMap<>());
+        UiHooks.androidToast(bare, "Saved to Recipes", Toast.LENGTH_LONG).show();
+        assertEquals("an app without Pinterest's wording has nothing hidden", 6, ShadowToast.shownToastCount());
+    }
+
+    @Test public void debugLoggingSaysWhatBecameOfAnAndroidToastAndLeavesItsTextOut() {
+        Context screen = SaveStrings.context(Locale.ENGLISH, SaveStrings.english());
+        try {
+            Settings.HIDE_SAVE_TOASTS.save(true);
+            UiHooks.androidToast(screen, "Saved to Sunday dinners", Toast.LENGTH_LONG);
+            assertTrue("nothing is logged while Debug logging is off", logged("Android toast ").isEmpty());
+            BaseSettings.DEBUG.save(true);
+            UiHooks.androidToast(screen, "Saved to Sunday dinners", Toast.LENGTH_LONG);
+            UiHooks.androidToast(screen, "Couldn't save to Sunday dinners", Toast.LENGTH_LONG);
+            Settings.HIDE_SAVE_TOASTS.save(false);
+            UiHooks.androidToast(screen, "Saved to Sunday dinners", Toast.LENGTH_LONG);
+            String lines = logged("Android toast ");
+            assertTrue(lines, lines.contains("Android toast from a save screen hidden\n"));
+            assertTrue(lines, lines.contains("Android toast from a save screen shown\n"));
+            assertTrue(lines, lines.contains("Android toast from a save screen shown, switch off or paused\n"));
+            for (ShadowLog.LogItem item : ShadowLog.getLogs()) {
+                assertFalse("a board's name reached the log: " + item.msg, item.msg != null && item.msg.contains("Sunday dinners"));
+            }
+        } finally {
+            BaseSettings.DEBUG.resetToDefault();
+        }
     }
 
     @Test public void topicRowsFoldToZeroAndComeBackWhenBoundWithTheSwitchOff() {
@@ -272,6 +441,65 @@ public class UiHooksTest {
         assertFalse(InterfaceControls.headerAction("end_container_text_button"));
         assertFalse(InterfaceControls.headerAction("end_container_avatar"));
         assertFalse(InterfaceControls.headerAction("header_static_search_bar"));
+    }
+
+    @Test public void nativeSettingsSurvivesNestedHeaderFilteringInItsOwnLanguage() {
+        for (String title : new String[] {"Settings", "Ayarlar", "Einstellungen", "設定"}) {
+            Context application = RuntimeEnvironment.getApplication();
+            Resources original = application.getResources();
+            Resources nativeResources = new Resources(application.getAssets(), original.getDisplayMetrics(),
+                    original.getConfiguration()) {
+                @Override public int getIdentifier(String name, String type, String pkg) {
+                    return "settings".equals(name) && "string".equals(type) ? 100 : 0;
+                }
+                @Override public CharSequence getText(int id) {
+                    return id == 100 ? title : original.getText(id);
+                }
+                @Override public String getResourceEntryName(int id) {
+                    if (id == 1) return "end_container_icon_buttons";
+                    if (id == 2 || id == 3) return "end_container_icon_bt";
+                    if (id == 4) return "start_container_icon_bt";
+                    return original.getResourceEntryName(id);
+                }
+            };
+            Context nativeContext = new ContextWrapper(application) {
+                @Override public Resources getResources() { return nativeResources; }
+            };
+            LinearLayout root = new LinearLayout(nativeContext);
+            LinearLayout trailing = new LinearLayout(nativeContext);
+            trailing.setId(1);
+            View gear = new View(nativeContext);
+            gear.setId(2);
+            gear.setContentDescription(title);
+            View optional = new View(nativeContext);
+            optional.setId(3);
+            optional.setContentDescription("Create");
+            View back = new View(nativeContext);
+            back.setId(4);
+            trailing.addView(gear);
+            trailing.addView(optional);
+            root.addView(trailing);
+            root.addView(back);
+            Settings.HIDE_HEADER_BUTTONS.save(true);
+            InterfaceControls.headerButtons(root);
+            assertEquals(title, View.VISIBLE, trailing.getVisibility());
+            assertEquals(title, View.VISIBLE, gear.getVisibility());
+            assertEquals(View.GONE, optional.getVisibility());
+            assertEquals(View.VISIBLE, back.getVisibility());
+            // A native bind can reuse a formerly optional icon for Settings.
+            optional.setContentDescription(title);
+            InterfaceControls.headerButtons(root);
+            assertEquals(View.VISIBLE, optional.getVisibility());
+            optional.setContentDescription("Create");
+            InterfaceControls.headerButtons(root);
+            PauseForTests.pause(HushPinterestPause.Reason.SWITCH);
+            InterfaceControls.headerButtons(root);
+            assertEquals(View.VISIBLE, optional.getVisibility());
+            PauseForTests.resume();
+            Settings.HIDE_HEADER_BUTTONS.save(false);
+            InterfaceControls.headerButtons(root);
+            assertEquals(View.VISIBLE, optional.getVisibility());
+        }
     }
 
     @Test public void menuChoicesAreIndependentAndKeepDownloadShareCopyReportAndSave() {

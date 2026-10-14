@@ -26,19 +26,53 @@ Enormous credit and special thanks go to **[bearinmindcat](https://github.com/be
 - **Remove telemetry & Remove permissions**
 - **Add microG support**
 
-### How to use these patches
-Install Morphe Manager if you have not yet: https://morphe.software
+## 🚀 Quick Setup & Usage Guide
 
-[Click here to add bartlomiejfornalczyk patches to Morphe Manager](https://morphe.software/add-source?github=bartlomiejfornalczyk/morphe-patches)
+### 1. Add Patches to Morphe Manager
+1. Install [Morphe Manager](https://morphe.software) on your Android device.
+2. Add this repository as a custom source:
+   - **One-click link**: [Click here to add patches to Morphe Manager](https://morphe.software/add-source?github=bartlomiejfornalczyk/morphe-patches)
+   - **Or manually**: Open Morphe Manager ➔ **Settings** ➔ **Sources** ➔ Add `https://github.com/bartlomiejfornalczyk/morphe-patches`
 
-Select the app you want to patch inside Morphe Manager, follow all instructions shown.
-Add this repository as a custom source in Morphe Manager:
-`https://github.com/bartlomiejfornalczyk/morphe-patches`
+---
+
+### 2. Patching YouTube Music & Customizing Driving Mode Tiles
+1. In Morphe Manager, select **YouTube Music** and ensure the **Allow external media browser connections** patch is checked.
+2. ⚙️ **Customizing Driving Mode Tiles (On/Off Sliders)**:
+   - **Tap the gear / options icon next to "Allow external media browser connections" *before* tapping Patch.**
+   - Every tile has an individual On/Off toggle:
+     - `Tile: My Supermix` — Personalized endless radio
+     - `Tile: Liked Music` — Your favorite songs library
+     - `Tile: Like Current Song` — Quick thumbs-up button for the currently playing track
+     - `Tile: Resume Playback` — Quick action to resume / unpause playback
+     - `Tile: Downloaded Songs` — Offline library
+     - `Tile: Mixed for You` — Commute & road trip rock hits
+     - `Tile: Pop Certified` — Certified pop hits
+     - `Tile: Dance Party Hits` — Upbeat dance & EDM
+     - `Tile: Pump-Up Energy` — High energy driving tracks
+     - `Tile: Trending 20` — Top 20 charts
+     - `Tile: Trending Music Videos` — Popular video hits
+     - `Tile: Popular Right Now` — Top trending hits
+   - > [!TIP]
+     > **Why 9 tiles?** Google Maps driving mode renders a strict **3x3 grid (maximum 9 tiles)**. By default, the top 9 most useful tiles (including Like Current Song & Resume Playback) are enabled, while the 3 trending chart playlists are disabled so nothing gets cut off. If you want "Trending 20", turn it ON and turn off another tile so it fits onto the 9-tile screen!
+3. Tap **Patch** and install the generated APK.
+
+---
+
+### 3. Setting Up Google Maps Navigation Mini Player
+1. Patch **Google Maps** with the **Allow Morphe YouTube Music mini player** and **Allow Morphe YouTube Music package visibility** patches.
+2. Open Google Maps ➔ tap your **Profile icon** ➔ **Settings** ➔ **Navigation settings**:
+   - Turn ON **Show media playback controls**.
+   - Under **Assistant default media app** (or **Default media app**), select **YouTube Music**.
+3. During turn-by-turn navigation:
+   - Tap the **music icon** on the navigation controls.
+   - Your 3x3 grid of media tiles appears with official covers.
+   - Tap any playlist to start playback, or tap **Like Current Song** to thumbs-up the song currently playing without leaving navigation!
 
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.3.0](https://github.com/bartlomiejfornalczyk/morphe-patches/releases/tag/v1.3.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;16 patches total
+> **[v1.4.0](https://github.com/bartlomiejfornalczyk/morphe-patches/releases/tag/v1.4.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;16 patches total
 <details open>
 <summary>📦 Google Maps&nbsp;&nbsp;•&nbsp;&nbsp;14 patches</summary>
 <br>
@@ -73,7 +107,7 @@ Add this repository as a custom source in Morphe Manager:
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
-| [Allow external media browser connections](#allow-external-media-browser-connections) | Allows Google Maps, Android Auto, and third-party media controllers to connect to YouTube Music. |  |
+| [Allow external media browser connections](#allow-external-media-browser-connections) | Allows Google Maps, Android Auto, and third-party media controllers to connect to YouTube Music. | • Tile: My Supermix<br>• Tile: Liked Music<br>• Tile: Like Current Song<br>• Tile: Resume Playback<br>• Tile: Downloaded Songs<br>• Tile: Mixed for You<br>• Tile: Pop Certified<br>• Tile: Dance Party Hits<br>• Tile: Pump-Up Energy<br>• Tile: Trending 20<br>• Tile: Trending Music Videos<br>• Tile: Popular Right Now |
 | [Allow external media browser launch](#allow-external-media-browser-launch) | Adds MAIN and DEFAULT intent-filters to MusicActivity so external controllers like Google Maps can open the app. |  |
 
 </details>

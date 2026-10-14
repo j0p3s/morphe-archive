@@ -1,3 +1,121 @@
+## [1.8.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.8.0...v1.8.1) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* Choose light or dark glass from the system mode and keep the bottom bar clear for transparent themes ([af63b66](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/af63b662caa676ab0f227041ea576fa5d0f37b46))
+
+## [1.8.1-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.8.0...v1.8.1-dev.1) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* Choose light or dark glass from the system mode and keep the bottom bar clear for transparent themes ([af63b66](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/af63b662caa676ab0f227041ea576fa5d0f37b46))
+
+## [1.8.0](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.7.1...v1.8.0) (2026-10-14)
+
+### ✨ New Features
+
+* Add Theme Follows Dark Mode patch ([3f7f050](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/3f7f050a2fcddf2c5b9908bde57e1cb214b09ce8))
+
+## [1.8.0-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.7.1...v1.8.0-dev.1) (2026-10-14)
+
+### ✨ New Features
+
+* Add Theme Follows Dark Mode patch ([3f7f050](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/3f7f050a2fcddf2c5b9908bde57e1cb214b09ce8))
+
+## [1.7.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.7.0...v1.7.1) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* Light the whole glass border evenly and narrow the refraction band ([d62aac2](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/d62aac25c813b42ba68acff815a434d3c5443628))
+
+## [1.7.1-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.7.0...v1.7.1-dev.1) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* Light the whole glass border evenly and narrow the refraction band ([d62aac2](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/d62aac25c813b42ba68acff815a434d3c5443628))
+
+## [1.7.0](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.6.0...v1.7.0) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* Keep the glass shape applied when Frosted Glass rebuilds its blur ([69984a3](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/69984a3d1a5023887945f07789ef0ee2b6f07aac))
+
+### ✨ New Features
+
+* Use the glass recipe from vivo's search screen, with matching dark and light variants ([edc9d4b](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/edc9d4baebe6240b0c321a76c6f36b38c5b89dd4))
+
+## [1.7.0-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.6.1-dev.1...v1.7.0-dev.1) (2026-10-14)
+
+### ✨ New Features
+
+* Use the glass recipe from vivo's search screen, with matching dark and light variants ([edc9d4b](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/edc9d4baebe6240b0c321a76c6f36b38c5b89dd4))
+
+## [1.6.1-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.6.0...v1.6.1-dev.1) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* Keep the glass shape applied when Frosted Glass rebuilds its blur ([69984a3](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/69984a3d1a5023887945f07789ef0ee2b6f07aac))
+
+## [1.6.0](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.5.1...v1.6.0) (2026-10-14)
+
+### ✨ New Features
+
+* Round the glass sheet's top corners ([658f648](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/658f648416328b371553f8566c5b0ac35c5421e7))
+
+## [1.6.0-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.5.1...v1.6.0-dev.1) (2026-10-14)
+
+### ✨ New Features
+
+* Round the glass sheet's top corners ([658f648](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/658f648416328b371553f8566c5b0ac35c5421e7))
+
+## [1.5.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.5.0...v1.5.1) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* Round the glass sheet's bottom corners to the screen's corner radius ([c2ab41d](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/c2ab41d775abab45981c12ed01a2b3215b4eade1))
+
+## [1.5.1-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.5.0...v1.5.1-dev.1) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* Round the glass sheet's bottom corners to the screen's corner radius ([c2ab41d](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/c2ab41d775abab45981c12ed01a2b3215b4eade1))
+
+## [1.5.0](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.4.4...v1.5.0) (2026-10-13)
+
+### ✨ New Features
+
+* Use vivo's system glass material for the Glass Panel, as one sheet over keyboard and bottom bar ([9b93c07](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/9b93c07c5ab1014305d62643b76eca8de25f58c8))
+
+## [1.5.0-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.4.4...v1.5.0-dev.1) (2026-10-13)
+
+### ✨ New Features
+
+* Use vivo's system glass material for the Glass Panel, as one sheet over keyboard and bottom bar ([9b93c07](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/9b93c07c5ab1014305d62643b76eca8de25f58c8))
+
+## [1.4.4](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.4.3...v1.4.4) (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* Allow blur options to be tried over adb through debug properties ([edfecea](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/edfecea60521b4f1920d300a2a640ad8724921c2))
+
+## [1.4.4-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.4.3...v1.4.4-dev.1) (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* Allow blur options to be tried over adb through debug properties ([edfecea](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/edfecea60521b4f1920d300a2a640ad8724921c2))
+
+## [1.4.3](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.4.2...v1.4.3) (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* Square all corners of the keyboard's blur, redraw when the top edge is found late, and log state ([aac3d17](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/aac3d1728bc3f274338f33308c86843d93db667c))
+
+## [1.4.3-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.4.2...v1.4.3-dev.1) (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* Square all corners of the keyboard's blur, redraw when the top edge is found late, and log state ([aac3d17](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/aac3d1728bc3f274338f33308c86843d93db667c))
+
 ## [1.4.2](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.4.1...v1.4.2) (2026-10-09)
 
 ### 🐛 Bug Fixes

@@ -231,11 +231,22 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
             Utils.runOnMainThreadNowOrLater(() -> onPreferenceChanged(sharedPreferences, key));
 
     private void onPreferenceChanged(SharedPreferences sharedPreferences, String key) {
+        // Action rows use their own keys and completion callbacks. Their worker notifications
+        // must not make the UI wait for the save/rollback lock before discovering no row exists.
+        Preference changed = key == null ? null : findPreference(key);
+        if (destroyed || changed == null) return;
+        if (!changed.isPersistent()) {
+            onNonPersistentPreferenceChanged(key);
+            return;
+        }
         synchronized (Setting.class) {
             // A background save and its rollback must finish before the UI adopts their result.
             syncSavedPreferenceChange(sharedPreferences, key);
         }
     }
+
+    /** App-owned rows can refresh after a durable worker save without taking its lock on main. */
+    protected void onNonPersistentPreferenceChanged(String key) { }
 
     private void syncSavedPreferenceChange(SharedPreferences sharedPreferences, String key) {
         // Not gated on isAdded(): a dialog's Save and its own close are two posted messages, and
@@ -640,8 +651,16 @@ public abstract class AbstractPreferenceFragment extends PreferenceFragment {
 
     private static volatile RestartFeedbackPresenter restartFeedbackPresenter;
 
-    public static void setRestartFeedbackPresenter(RestartFeedbackPresenter presenter) {
+    public static synchronized void setRestartFeedbackPresenter(RestartFeedbackPresenter presenter) {
         restartFeedbackPresenter = presenter;
+    }
+
+    /**
+     * Takes [presenter] away if it's still the one set. A screen that closes after a newer one
+     * opened leaves the newer one's presenter in place.
+     */
+    public static synchronized void clearRestartFeedbackPresenter(RestartFeedbackPresenter presenter) {
+        if (restartFeedbackPresenter == presenter) restartFeedbackPresenter = null;
     }
 
     protected CharSequence initializationErrorTitle(@Nullable Context context) {

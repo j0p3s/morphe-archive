@@ -323,7 +323,7 @@ public class HushTelegramPreferenceFragmentTest {
             assertEquals("Repair Firebase push registration", String.valueOf(page.findPreference(Settings.REPAIR_FIREBASE_PUSH.key).getTitle()));
             assertEquals("Tries to help this patched Telegram sign up for push notifications with Firebase, Google's "
                     + "notification service, using Telegram's original certificate. Notification permission and "
-                    + "battery settings still apply.",
+                    + "battery settings still apply. A change here applies after Telegram restarts.",
                     String.valueOf(page.findPreference(Settings.REPAIR_FIREBASE_PUSH.key).getSummary()));
             assertEquals("UnifiedPush notifications", String.valueOf(page.findPreference(Settings.UNIFIED_PUSH.key).getTitle()));
             assertEquals("For phones where Firebase notifications don't arrive. Telegram signs up an address from a "
@@ -355,6 +355,14 @@ public class HushTelegramPreferenceFragmentTest {
             }
             assertFalse(Settings.STRIP_LINK_TRACKING.key,
                     ((SwitchPreference) page.findPreference(Settings.STRIP_LINK_TRACKING.key)).isChecked());
+            assertEquals("No automatic sign-in on Telegram's sites",
+                    String.valueOf(page.findPreference(Settings.SKIP_AUTOLOGIN.key).getTitle()));
+            assertEquals("Telegram adds a sign-in token for your account to links to some of its own websites. With this "
+                    + "on, those links open without it, and you can sign in there yourself.",
+                    String.valueOf(page.findPreference(Settings.SKIP_AUTOLOGIN.key).getSummary()));
+            // Telegram's sites keep signing you in until someone turns the switch on.
+            assertFalse(Settings.SKIP_AUTOLOGIN.key,
+                    ((SwitchPreference) page.findPreference(Settings.SKIP_AUTOLOGIN.key)).isChecked());
             assertEquals("No previews before sending", String.valueOf(page.findPreference(Settings.DISABLE_DRAFT_PREVIEWS.key).getTitle()));
             assertEquals("Telegram doesn't look up link previews for messages you haven't sent yet, including shares, "
                     + "polls, story links and bots. Sent messages still get one.",
@@ -362,6 +370,21 @@ public class HushTelegramPreferenceFragmentTest {
             // Draft previews keep Telegram's behavior until someone turns the switch on.
             assertFalse(Settings.DISABLE_DRAFT_PREVIEWS.key,
                     ((SwitchPreference) page.findPreference(Settings.DISABLE_DRAFT_PREVIEWS.key)).isChecked());
+            assertEquals("Keep drafts on this phone", String.valueOf(page.findPreference(Settings.LOCAL_DRAFTS.key).getTitle()));
+            assertEquals("A message you start but don't send stays on this phone and stops syncing to your other devices. "
+                    + "Clearing a draft still clears it there.",
+                    String.valueOf(page.findPreference(Settings.LOCAL_DRAFTS.key).getSummary()));
+            // Drafts keep syncing the way Telegram's do until someone turns the switch on.
+            assertFalse(Settings.LOCAL_DRAFTS.key,
+                    ((SwitchPreference) page.findPreference(Settings.LOCAL_DRAFTS.key)).isChecked());
+            assertEquals("Keep searches on this phone", String.valueOf(page.findPreference(Settings.LOCAL_SEARCH.key).getTitle()));
+            assertEquals("What you type in search's Chats tab isn't sent to Telegram. It finds the chats, contacts and "
+                    + "recent searches on this phone, but not messages, public accounts or posts. The other tabs search "
+                    + "as usual.",
+                    String.valueOf(page.findPreference(Settings.LOCAL_SEARCH.key).getSummary()));
+            // Search keeps asking Telegram's server until someone turns the switch on.
+            assertFalse(Settings.LOCAL_SEARCH.key,
+                    ((SwitchPreference) page.findPreference(Settings.LOCAL_SEARCH.key)).isChecked());
             assertEquals("Camera only on tap", String.valueOf(page.findPreference(Settings.GALLERY_CAMERA_ON_TAP.key).getTitle()));
             assertEquals("Opening the attachment gallery doesn't start the camera or ask for camera access. Tap the "
                     + "camera tile to start it.",
@@ -398,7 +421,7 @@ public class HushTelegramPreferenceFragmentTest {
                     ((SwitchPreference) page.findPreference(Settings.QUIET_CONTACTS_NAG.key)).isChecked());
             assertEquals("New Year look all year", String.valueOf(page.findPreference(Settings.HOLIDAY_LOOK.key).getTitle()));
             assertEquals("Shows Telegram's Santa hat and New Year snow all year, not only around New Year. Snow falls "
-                    + "on the chat list's top bar and on chat backgrounds once Background rotation is on under Power saving.",
+                    + "on the chat list's top bar and on chat backgrounds once Wallpaper rotation is on under Power Saving, in Effects in Chats.",
                     String.valueOf(page.findPreference(Settings.HOLIDAY_LOOK.key).getSummary()));
             // Telegram keeps its own holiday dates until someone turns the switch on.
             assertFalse(Settings.HOLIDAY_LOOK.key,
@@ -465,6 +488,14 @@ public class HushTelegramPreferenceFragmentTest {
             // Your number shows until the switch is turned on.
             assertFalse(Settings.HIDE_PHONE_NUMBER.key,
                     ((SwitchPreference) page.findPreference(Settings.HIDE_PHONE_NUMBER.key)).isChecked());
+            assertEquals("Don't share my number by default",
+                    String.valueOf(page.findPreference(Settings.SHARE_NUMBER_UNTICKED.key).getTitle()));
+            assertEquals("When you add someone as a contact from their chat, Telegram ticks the box that shares your phone "
+                    + "number with them. With this on, the box starts clear and your number goes only if you tick it.",
+                    String.valueOf(page.findPreference(Settings.SHARE_NUMBER_UNTICKED.key).getSummary()));
+            // The share box starts ticked the way Telegram's does until someone turns the switch on.
+            assertFalse(Settings.SHARE_NUMBER_UNTICKED.key,
+                    ((SwitchPreference) page.findPreference(Settings.SHARE_NUMBER_UNTICKED.key)).isChecked());
             assertEquals("Message times with seconds", String.valueOf(page.findPreference(Settings.MESSAGE_SECONDS.key).getTitle()));
             assertEquals("Each message's time includes seconds, like 9:41:27 PM, so messages sent close together are "
                     + "easy to tell apart.",
@@ -987,13 +1018,13 @@ public class HushTelegramPreferenceFragmentTest {
         Settings.OUTSIDE_TRANSLATE.save(true);
         app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests.reset();
         try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
-            assertTrue(OutsideTranslateForTests.toggleChat(42));
+            assertTrue(OutsideTranslateForTests.toggleChat(7, 42));
             SwitchPreference row = (SwitchPreference) pageOf(controller).findPreference(Settings.OUTSIDE_TRANSLATE.key);
             assertTrue(row.getOnPreferenceChangeListener().onPreferenceChange(row, Boolean.TRUE));
-            assertTrue("switching on forgot the chat", OutsideTranslateForTests.chatOn(42));
+            assertTrue("switching on forgot the chat", OutsideTranslateForTests.chatOn(7, 42));
             assertTrue(row.getOnPreferenceChangeListener().onPreferenceChange(row, Boolean.FALSE));
             app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests.reset();
-            assertFalse(OutsideTranslateForTests.chatOn(42));
+            assertFalse(OutsideTranslateForTests.chatOn(7, 42));
         } finally {
             Settings.OUTSIDE_TRANSLATE.resetToDefault();
             app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests.reset();

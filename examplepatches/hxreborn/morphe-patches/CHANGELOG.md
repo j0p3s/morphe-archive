@@ -1,3 +1,18 @@
+## [1.50.0](https://github.com/hxreborn/morphe-patches/compare/v1.49.1...v1.50.0) (2026-10-14)
+
+### Bug Fixes
+
+* **MemoNeet - GmsCore support:** receive push notifications ([4da28cd](https://github.com/hxreborn/morphe-patches/commit/4da28cd9d5f203e714b1071402101297bddcb5cb))
+* **Storywise - GmsCore support:** receive push notifications ([ff1b50f](https://github.com/hxreborn/morphe-patches/commit/ff1b50fd595ed4a3a72d7a47d0241c30433e2acc))
+
+### New Features
+
+* **DevCheck - Hide menu items:** hide subscription, share and about ([cede828](https://github.com/hxreborn/morphe-patches/commit/cede82853ea7b7bf62ee99583bfa54c6fa8e5b27)), closes [#205](https://github.com/hxreborn/morphe-patches/issues/205)
+* **Jujo - Unlock premium:** unlock journals, widgets and HD export ([90643d9](https://github.com/hxreborn/morphe-patches/commit/90643d9b08f35a1ff398c18711d303753f77e0e4)), closes [#194](https://github.com/hxreborn/morphe-patches/issues/194)
+* **Public - Disable tracking:** stop AppsFlyer, Flurry and comScore ([20125e0](https://github.com/hxreborn/morphe-patches/commit/20125e07fa2dd4aa7516b04f51846a6654b97b7e))
+* **Public - GmsCore support:** enable Google sign-in with GmsCore ([8b98375](https://github.com/hxreborn/morphe-patches/commit/8b98375ba8799223b449615feb905a9788fbcd90)), closes [#91](https://github.com/hxreborn/morphe-patches/issues/91)
+* **Public - Hide ads:** remove feed and fullscreen ads ([fd5c3a1](https://github.com/hxreborn/morphe-patches/commit/fd5c3a16f543b7521e75dfc27ad96e2b3edf4b8b))
+
 ## [1.49.1](https://github.com/hxreborn/morphe-patches/compare/v1.49.0...v1.49.1) (2026-10-13)
 
 ### Bug Fixes

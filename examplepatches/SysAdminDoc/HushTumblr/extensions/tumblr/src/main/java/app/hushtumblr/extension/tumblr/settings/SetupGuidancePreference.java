@@ -14,9 +14,6 @@ import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.res.ColorStateList;
-import android.graphics.drawable.GradientDrawable;
-import android.graphics.drawable.RippleDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.preference.DialogPreference;
@@ -39,16 +36,18 @@ import app.hushtumblr.extension.shared.Utils;
 /** Optional guidance. Reading it changes no settings, accounts or stored app data. */
 @SuppressWarnings("deprecation")
 public final class SetupGuidancePreference extends DialogPreference {
-    /** Tumblr's help center, where its password and data export articles are found by searching. */
-    private static final String PASSWORD_HELP = "https://help.tumblr.com/";
-    private static final String DATA_HELP = "https://help.tumblr.com/";
+    static final String KEY = "action_setup_guidance";
+    /** Tumblr's article on resetting a password through its reset page. */
+    private static final String PASSWORD_HELP = "https://help.tumblr.com/knowledge-base/resetting-your-password/";
+    /** Tumblr's article on requesting an account's personal data, which it takes on its website only. */
+    private static final String DATA_HELP = "https://help.tumblr.com/knowledge-base/manage-account-and-privacy-data/";
     private final Activity host;
     private Session session;
 
     public SetupGuidancePreference(Context context) {
         super(HushTumblrPreferenceFragment.themed(context));
         host = activity(context);
-        setKey("action_setup_guidance");
+        setKey(KEY);
         setPersistent(false);
         setTitle(L10n.t(context, "Setup and backup guide"));
         setSummary(L10n.t(context, "Optional help with sign-in, supported links, patch choices and backups."));
@@ -96,6 +95,12 @@ public final class SetupGuidancePreference extends DialogPreference {
     @Override public void onDismiss(DialogInterface dismissed) {
         // Android queues this callback. An earlier opening can't close a replacement dialog.
         if (getDialog() == dismissed) super.onDismiss(dismissed);
+    }
+
+    /** Closing the parent window must make its help actions inert immediately. */
+    void closeDialog() {
+        if (session != null) session.close();
+        if (getDialog() != null) getDialog().dismiss();
     }
 
     @Override protected void onPrepareForRemoval() {
@@ -157,15 +162,15 @@ public final class SetupGuidancePreference extends DialogPreference {
             action(L10n.t(getContext(), "Open link settings"), this::openLinkSettings);
 
             heading(L10n.t(getContext(), "Back up before changing builds"));
-            paragraph(L10n.t(getContext(), "Export settings saves HushTumblr's switches. It doesn't include your "
-                + "Tumblr account, posts, downloaded files or Morphe Manager's signing "
+            paragraph(L10n.t(getContext(), "Export settings saves HushTumblr's settings, including word lists and tab order. It doesn't include your "
+                + "Tumblr account, posts, downloaded files, local mute list or Morphe Manager's signing "
                 + "key. Keep the settings file and a backup of Manager's signing key "
                 + "somewhere you can find them."));
             paragraph(L10n.t(getContext(), "An update signed with the same key keeps the app's data. A build signed "
                 + "with a different key can't update this one, and Android may refuse to "
                 + "install an older version. If an update is refused, keep the installed "
                 + "app and its data."));
-            paragraph(L10n.t(getContext(), "Tumblr's data export is separate from Export settings. Tumblr's help page explains how to request your personal data from the account you're already using."));
+            paragraph(L10n.t(getContext(), "Tumblr's data export is separate from Export settings. To get a copy of your personal data, sign in on Tumblr's website with the account you're already using and ask for it in Settings, under Privacy. Tumblr's apps can't make that request. Exporting a blog's posts is a different Tumblr feature with its own help article."));
             action(L10n.t(getContext(), "Tumblr data export help"), () -> openHelp(DATA_HELP));
         }
 
@@ -209,6 +214,16 @@ public final class SetupGuidancePreference extends DialogPreference {
         }
 
         void heading(CharSequence text) {
+            if (content.getChildCount() != 0) {
+                View divider = new View(getContext());
+                divider.setBackgroundColor(ScreenColors.DEFAULT.outline);
+                LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, dp(1));
+                size.topMargin = dp(12);
+                size.bottomMargin = dp(4);
+                content.addView(divider, size);
+                divider.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            }
             TextView heading = paragraph(text);
             heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
             heading.setTextColor(ScreenColors.DEFAULT.heading);
@@ -239,14 +254,7 @@ public final class SetupGuidancePreference extends DialogPreference {
             button.setMaxLines(Integer.MAX_VALUE);
             button.setEllipsize(null);
             button.setGravity(Gravity.CENTER);
-            button.setTextColor(ScreenColors.DEFAULT.secondaryActionText());
-            button.setMinHeight(dp(48));
-            button.setPaddingRelative(dp(12), dp(8), dp(12), dp(8));
-            GradientDrawable surface = new GradientDrawable();
-            surface.setColor(ScreenColors.DEFAULT.card);
-            surface.setStroke(dp(1), ScreenColors.DEFAULT.outline);
-            surface.setCornerRadius(dp(8));
-            button.setBackground(new RippleDrawable(ColorStateList.valueOf(ScreenColors.half(ScreenColors.DEFAULT.accent)), surface, null));
+            ScreenColors.DEFAULT.secondaryAction(button);
             LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
             size.bottomMargin = dp(8);
             content.addView(button, size);

@@ -1,5 +1,69 @@
 ## Unreleased
 
+* **TikTok:** Bereits gesehene Videos ausblenden wirkt jetzt auch in Gefolgt, ohne das laufende Video zu verschieben.
+
+* **TikTok:** Ein Video, das in „Für dich“ oder Gefolgt läuft, verschwindet nicht mehr, sobald es das Höchstalter von Beiträgen überschreitet oder Bereits gesehene Videos ausblenden es mitzählt.
+
+* **TikTok:** Uhrzeit sekundengenau anzeigen hat zwei eigene Optionen: Zeitzone anzeigen, wie bisher an, und Kurzes Datum (#147).
+
+* **TikTok:** Videos in Profilrastern zum Speichern auswählen funktioniert jetzt auch in einer Sammlung deiner Favoriten, Alle auswählen inklusive (#27).
+
+* **TikTok:** Kommt beim Speichern von Originalfotos nur ein Teil an, gibt es jetzt neben Öffnen auch Erneut versuchen. Das versucht nur die Fotos noch einmal, die gefehlt haben.
+
+* **TikTok:** Schnelleinstellungen lassen sich mit langem Drücken auf ihre Karte von der Startseite der Einstellungen ausblenden. Die Zeile Schnelleinstellungen auf der Startseite unter Sichern und wiederherstellen holt sie zurück.
+
+* **TikTok:** LIVE-Räume können eine Aufnahme-Taste zeigen (standardmäßig aus, in den Wiedergabe-Einstellungen). Sie speichert, was du ab dem Antippen schaust, bis du Stopp tippst oder den Raum verlässt (#37).
+
+* **TikTok:** Ist Kommentarleiste bei geöffneten Videos ausblenden an, läuft die Spulleiste bei Videos, die du über ein Profil oder die Suche öffnest, nicht mehr durch die Beschreibung. Die Beschreibung und die Musikscheibe rücken gerade so weit nach oben, dass sie frei bleiben (#153).
+
+* **TikTok:** Der Diagnosebericht meldet die Kommentarleiste nicht mehr als fehlend, solange du im Hauptfeed bist (#153).
+
+* **TikTok:** Der Speicherbereich im Diagnosebericht zeigt keinen Teil deiner Konto-ID mehr als Ordnernamen (#70).
+
+* **TikTok:** Ist Kommentarleiste bei geöffneten Videos ausblenden an, enden Fotobeiträge in einem geöffneten Raster nicht mehr über einem schwarzen Streifen am unteren Rand (#153).
+
+* **TikTok:** Ist LIVE unter der Statusleiste zeigen an, beginnen die Bereiche über dem ersten Raum im LIVE-Feed jetzt unterhalb der Uhr und nicht mehr hinter der Statusleiste (#137).
+
+* **TikTok:** Ein LIVE im Feed Für dich zeigt nicht mehr die Service+-Zeile eines LIVE, an dem du vorbeigescrollt hast (#94).
+
+* **TikTok:** Ein neuer Schalter behält die gewählte LIVE-Qualität auch nach einem Neustart von TikTok (#57).
+
+* **TikTok:** Ein neuer Schalter fügt Bildschirm leeren, das nur den Stream zeigt, dem Menü jedes LIVE-Raums hinzu (#57).
+
+* **TikTok:** Der Anzeigename eines Creators, der nach dem Land oder dem @Namen zurückkommt, bleibt nicht mehr abgeschnitten (#127).
+
+* **TikTok:** Das AMOLED-Dunkeldesign macht jetzt auch die Karten auf TikToks eigenen Einstellungsseiten schwarz (#152).
+
+* **TikTok:** Feature Gate Lab hat zwei neue Voreinstellungen: Laufende Kommentare über Videos und Mehrere Fotos in einem Kommentar (#98).
+
+* **TikTok:** Ein neuer Schalter auf der Seite Feed screen, Durchsichtige untere Leiste, lässt das Video bis zum unteren Bildschirmrand reichen und nimmt der Tab-Leiste den Hintergrund. Er ist zunächst aus (#145).
+
+* **TikTok:** Feature Gate Lab hat eine neue Voreinstellung: Automatische Übersetzung im LIVE-Chat. Sie schaltet die Option Kommentare übersetzen unter Teilen in einem LIVE-Raum frei (#98).
+
+* **TikTok:** Schalte Videos in Profilrastern zum Speichern auswählen unter Hushfeed-Einstellungen > Downloads ein, dann bekommt jedes Video in einem Profil-, Gefällt-mir- oder Favoritenraster einen Kreis. Wähle bis zu 50 aus, tippe auf Speichern, und sie werden nacheinander mit Zähler und Abbrechen gespeichert (#27).
+
+* **TikTok:** Videos in Profilrastern zum Speichern auswählen hat jetzt eine Schaltfläche Alle auswählen. Sie wählt bis zu 50 der Beiträge aus, die eine Liste geladen hat, und lässt bei eingeschaltetem Bereits gespeicherte Videos prüfen gespeicherte Videos aus. So wird eine ganze Liste in Durchgängen gespeichert, die dort weitermachen, wo der letzte aufgehört hat (#27).
+
+* **TikTok:** Ist Bereits gesehene Videos ausblenden an und der Verlauf voll, geht nicht mehr jedes angesehene Video alle 10.000 Einträge durch, um den ältesten zu entfernen. Das passiert jetzt nur noch einmal alle 256 Videos (#84).
+
+## 0.72.0 (2026-10-13)
+
+* **TikTok:** Der Diagnosebericht hat einen neuen Abschnitt mit den geänderten Einstellungen. Er nennt jede Einstellung, die nicht mehr auf ihrem Standardwert steht, sodass ein Bericht zeigt, welche Schalter an sind. Text, den du in eine Einstellung eingegeben hast, steht nie darin (#149).
+
+* **TikTok:** Hinweis zur Einrichtung des Android-17-Emulators ergänzt, für SDK-Tools, die API-Unterversionen falsch lesen.
+
+* **TikTok:** Jede Einstellungsseite steht jetzt direkt auf der Hauptseite der Einstellungen unter einer kurzen Überschrift, nur einen Tipp entfernt. Hushfeed pausieren und der ausführliche Status stehen weiter unten unter Hushfeed.
+
+* **TikTok:** Ein neuer Schalter unter Pop-ups, Warnungen „Prüfe deine Quellen“ ausblenden, entfernt das Banner „Prüfe deine Quellen“ oben über manchen Videos und den Hinweis, den TikTok beim Teilen eines solchen Videos zeigt.
+
+* **TikTok:** In der Einstellungssuche kannst du Schalter direkt in den Ergebnissen umlegen. Schalter, die mehr tun als ein- und ausschalten, öffnen weiter ihre Seite.
+
+* **TikTok:** Unter dem Suchfeld gibt es jetzt Schnelleinstellungen. Ruhig, Datenschutz und Standard wiederherstellen brauchen je einen Tipp, sagen, wie viele Einstellungen sich geändert haben, und bieten Rückgängig an.
+
+* **TikTok:** Die Hauptseite der Einstellungen endet mit Problem melden, das einen GitHub-Bericht mit deinen Versionen und Schaltern öffnet, und Hushfeed unterstützen, das Ko-fi öffnet.
+
+* **TikTok:** Ein Neustart von TikTok über die Neustart-Zeile oder das Banner bringt dich zurück auf die Hushfeed-Einstellungsseite, auf der du warst.
+
 * **TikTok:** Die Hushfeed-Einstellungen haben ein neues Aussehen, mit einer gruppierten Startseite und rosa Symbolen. Abgerundete Bereiche und ovale Schalter gibt es auch im Feature Gate Lab und im Editor für ausgeblendete Creator. Große Schrift und der helle Modus bleiben gut lesbar.
 
 * **TikTok:** Die Prüffälle für das Profilmenü und hohe Register sowie das Testprojekt für die Signierung funktionieren wieder. Die Signierungsprüfung akzeptiert D8-Optionen jetzt in beliebiger Reihenfolge.
@@ -126,7 +190,25 @@
 
 * **TikTok:** Die Person, die das Problem ursprünglich gemeldet hat, hat bestätigt, dass Beitragsdaten der Textgröße des Creatornamens folgen (#66).
 
-## 0.71.3 (2026-10-11)
+* **TikTok:** Eine wiederhergestellte Sicherung mit einem sehr langen Dateinamenmuster oder Download-Ordner friert die Einstellungsseite nicht mehr ein.
+
+* **TikTok:** Der Zurück-Pfeil auf einer Einstellungsseite, die über „Schalter anzeigen“ geöffnet wurde, verlässt jetzt die Einstellungen, statt nichts zu tun.
+
+* **TikTok:** „VPN-Verbindung verbergen“ sagt jetzt, dass TikTok die IP-Adresse des VPN weiterhin sieht, und „Werbe-ID blockieren“ spricht von Löschen statt Zurücksetzen.
+
+* **TikTok:** „Gespeicherte Videos vergessen“ und „Apps zu Teilen über hinzufügen“ bleiben nicht mehr hängen, wenn TikTok viel zu tun hat. Sie sagen Bescheid, und du kannst es noch einmal versuchen.
+
+* **TikTok:** Die Patch-Prüfung prüft ihren Aufbewahrungsordner jetzt, bevor sie ihn leert, und lehnt einen Ordner ab, den sie nicht selbst angelegt hat.
+
+* **TikTok:** Mit TalkBack bietet Für dich die Aktion Hushfeed-Einstellungen öffnen an. So klappt die Abkürzung per Gedrückthalten auch mit einem Screenreader.
+
+* **TikTok:** Scheitert das Speichern einer neu importierten Schrift oder schließt sich TikTok mittendrin, bleibt deine bisherige Schrift erhalten, statt zu verschwinden.
+
+* **TikTok:** Wechselst du mitten im Video das Konto, wird das Video für das neue Konto nicht mehr ausgeblendet. Es zählt nur für das Konto als gesehen, das es angeschaut hat.
+
+* **TikTok:** Drehst du das Handy oder wechselst den Dunkelmodus, während ein Listen-Editor offen ist, bleibt erhalten, was du ausgewählt oder eingetippt hast. Abbrechen ändert weiterhin nichts.
+
+* **TikTok:** Symbolbild prüft jetzt auch die Pixeldaten des PNG. Eine innen beschädigte Datei stoppt das Patchen sicher, statt in die App zu gelangen.
 
 * **TikTok:** LIVE unter der Statusleiste zeigen füllt jetzt in jedem Raum den oberen Rand, ohne schwarzen Balken oder hellen Streifen (#137).
 

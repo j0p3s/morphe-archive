@@ -1,9 +1,14 @@
-name: Close stale issues
+name: Close stale issues and lock closed ones
 
 on:
   schedule:
     - cron: "0 6 * * *"
   workflow_dispatch:
+    inputs:
+      dry-run:
+        description: Print what would be marked, closed or locked without doing it
+        type: boolean
+        default: true
 
 permissions:
   issues: write
@@ -14,6 +19,7 @@ jobs:
     steps:
       - uses: actions/stale@v11
         with:
+          debug-only: ${{ inputs.dry-run || false }}
           days-before-issue-stale: 30
           days-before-issue-close: 7
           stale-issue-label: "stale"
@@ -29,6 +35,7 @@ jobs:
           operations-per-run: 30
       - uses: actions/stale@v11
         with:
+          debug-only: ${{ inputs.dry-run || false }}
           only-labels: "needs info"
           days-before-issue-stale: 14
           days-before-issue-close: 7
@@ -43,3 +50,22 @@ jobs:
           exempt-all-assignees: true
           exempt-issue-labels: "bot-wrong"
           operations-per-run: 30
+
+  lock:
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry-run || false }}
+        run: |
+          gh label create discussion --repo "$REPO" --force --color C5DEF5 \
+            --description "Not locked after closing, comments welcome"
+          cutoff=$(date -u -d '7 days ago' +%F)
+          gh issue list --repo "$REPO" --state closed --limit 50 --json number \
+            --search "is:unlocked -label:discussion updated:<$cutoff" --jq '.[].number' |
+          while read -r n; do
+            if [ "$DRY_RUN" = true ]; then echo "would lock #$n"; continue; fi
+            gh issue lock "$n" --repo "$REPO" --reason resolved
+            echo "locked #$n"
+          done

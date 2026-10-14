@@ -2,9 +2,46 @@
 
 Every HushTelegram release, newest first.
 
-## Unreleased
+## 0.0.17 (2026-10-13)
 
-Working version 0.0.17.
+The eighth release, with 68 patches for telegram.org's Telegram 13.0.2 and the official Telegram beta 13.0.2.
+
+* **Telegram:** Leaving the optional Maps key blank now keeps Telegram's key, as the option says. Spaces around a valid key are ignored. Invalid keys still stop patching without printing the key.
+
+* **Tooling:** Quick setups now builds against Android's public preference API. Each switch still runs its change listener and keeps its value when that listener refuses a change. The accessibility check now finds the heading and Ads row by name after Quick setups moved them down.
+* **Tooling:** The draft fixture checks compile again after two mask assertions reused one local variable name. Both checks remain in place.
+* **Tooling:** Chat-list title fixture checks now recognize method calls by their reference type. The previous uppercase opcode check missed every call because the bytecode library uses lowercase instruction names.
+* **Tooling:** The source ledger now covers the files behind the new privacy switches.
+
+* **Telegram:** The HushTelegram row in Telegram's Settings now sits at the top of the account settings, right above Account, instead of below Language. While Telegram's new Wallet row is showing at the top, HushTelegram comes just under its divider. Asked for in #14.
+* **Telegram:** The Telegram app reference for contributors now points to where the current target builds are declared, and marks what it recorded from 12.10.6 and the 12.10.7 beta as observations of those builds rather than of today's targets.
+* **Telegram:** **Disable draft link previews** has a second switch on the Privacy page, **Keep drafts on this phone**. With it on, a message you start typing and leave unsent stays on this phone, and Telegram gets an empty draft in its place. Your other devices drop any copy of that chat's draft they had, and an older copy on Telegram's side can't come back over the one on this phone. Emptying the text box still clears it everywhere, in a channel's direct messages too. Turn the switch off and a draft goes up again the next time you change it. It's off unless you turn it on, and drafts sync as usual while HushTelegram is paused.
+* **Telegram:** **Disable draft link previews** has a third switch on the Privacy page, **Keep searches on this phone**. With it on, what you type in search's Chats tab isn't sent to Telegram. It still finds the chats and contacts stored on this phone, along with your recent searches. Messages and public accounts or posts don't show up there while it's on, and an empty result says that only this phone was searched. The other search tabs, search inside a chat and the contact pickers work as usual. It's off unless you turn it on, and search goes back to normal while HushTelegram is paused.
+* **Telegram:** **Strip link tracking** has a second switch on the Links page, **No automatic sign-in on Telegram's sites**. Telegram quietly adds a sign-in token for your account when you open a link to one of the websites its server lists for automatic sign-in. With this on, those links open without it, so the site doesn't know who you are until you sign in there yourself. Where the link opens doesn't change, and it works with or without Open links externally. It's off unless you turn it on.
+* **Telegram:** **Hide phone number** has a second switch on the Privacy page, **Don't share my number by default**. When you add someone as a contact from their chat, Telegram ticks the box that shares your phone number with them. With this on, that box starts clear. Tick it and your number goes with the contact like before, and the tick stays put if the screen redraws (after a theme change, say). It's off unless you turn it on, and the Privacy quick setup turns it on too.
+* **Telegram:** **Folders by chat type** waits for Telegram's answer before it says anything. A new folder goes into your list once Telegram's server says yes, and if it says no (its own folder limit, or anything else) you're told which and the switch goes back when nothing was made. The tab order is sent once the folders are in, and a refused order gets its own note. Turning the switch off removes a folder only once Telegram agrees. If it keeps any, the switch goes back on, and turning it off again asks for just those without making the others again. If Telegram takes a moment (offline, say), a short note says it's still being asked, and the switch waits for those answers before it can be flipped again. Folders made from now on remember the tag color Telegram's server gave them, so a color you pick later keeps the folder too. If Telegram closes before it answers, the next flip goes by what your folder list actually has, and answers that arrive after you've opened another account settle quietly without moving the switch. Folders made by earlier versions are still found and removed the same way.
+
+* **Tooling:** The native library check now reads each library's GNU_RELRO segment, the part Android makes read-only after loading. On arm64 and x86_64 it fails a library whose RELRO shares a 16 KB page with writable or executable memory, since a 16 KB phone would make that memory read-only too. Receipts record where each RELRO ends and whether that's on a 16 KB boundary, the rule Google's page-size guide states. Telegram's own language-ID library ends mid-page with nothing else in that page, so it passes and the receipt says so. Older receipts without these facts still validate.
+
+* **Telegram:** **UnifiedPush notifications** follows the current UnifiedPush rules more closely, so stricter push apps work with it. On Android 14 and up, Android tells the push app who's signing up. A new address is acknowledged right away (some apps drop one that isn't). If the push app's server goes down for a while, the sign-up and its address stay and the Push app row says the server is down. A sign-up the app turned down gets a fresh start next time, and a late refusal after a working address came in no longer counts. An address without https is turned away with a note in the row, since Telegram's servers only call https. If it replaces a working address, Telegram lets go of the old one and goes back to Firebase. A sign-up goes to the push app only once it's saved on the phone, and the same goes for an address before Telegram gets it.
+
+* **Telegram:** **Translate with an outside service** keeps up with fast scrolling instead of piling up work. At most 24 texts wait for an answer at once. Where you stop scrolling, the messages on screen are asked for next as answers come in, and a short notice says there's a backlog (once a minute at most). A message redrawn while it waits doesn't line up a second time. Failures while you're offline no longer pile up in memory, and a request still trickling in after 20 seconds (90 for an AI service) is closed so the next one can go.
+
+* **Telegram:** **Save downloaded files** tells files apart by the document they came from instead of their name and size. Two different files that happen to share both now each get a copy, and the same file downloaded again still lands only once. Files saved before this update are matched by name and size one time each, the way they were before, so updating doesn't copy them all again. If you delete a copy from Downloads, it comes back the next time that file downloads. Turning the switch off or pausing HushTelegram also stops copies still waiting their turn, and one caught halfway is removed.
+
+* **Telegram:** **Keep deleted messages** doesn't lose track of what it kept anymore. A message only counts as kept once the list naming it is saved, and if that save fails Telegram deletes it as usual. **Clear kept messages** does its work away from the screen, says "Removing" right away and "Removed" once Telegram has actually deleted them. If Telegram closes partway through, the rest goes the next time that account gets a deletion or you tap Clear again. An account slot that now holds a different account never deletes the first one's messages.
+
+* **Telegram:** **Translate with an outside service** checks again right before a message's text is sent. If you turned the chat off, turned the feature off (from its row or with a settings file), paused HushTelegram, signed out of that account or changed the translation service while it waited, nothing goes out. Waiting text always goes to the service that was set when the message was opened. Text already on its way can't be called back. Its answer stays hidden while that chat is off or HushTelegram is paused, and if the service fails you won't get a notice for a chat you've turned off.
+
+* **Telegram:** With more than one account signed in, **Translate with an outside service** keeps each account's chats to itself. A chat you turn on in one account no longer sends messages from the chat with the same ID in another, and a different account you sign in later doesn't pick up the old one's choices. Chats turned on before this update didn't record which account chose them, so they're cleared once with a short notice. Turn translation back on in the chats you want.
+
+* **Telegram:** Flipping **Repair Firebase push registration** now shows the restart row right away. Firebase only signs up when Telegram starts, so the change never took effect until the next launch anyway.
+
+* **Telegram:** The settings home page has two new rows. **Quick setups** turns on the Quiet or Privacy switches in one tap, or puts every switch back the way it started, and tells you how many settings changed. **Report a problem**, just above Support, opens a GitHub bug report with your HushTelegram and Telegram versions, your phone and the switches you have on already filled in. It doesn't include anything about your account.
+
+* **Telegram:** Press and hold the Telegram title at the top of your chat list to open HushTelegram settings. Telegram's chat list has no logo, so its title stands in. A tap on the title still scrolls the list back to the top, and it works while HushTelegram is paused.
+
+* **Telegram:** Flip a switch that needs a restart and a Restart Telegram row shows up right away at the top of the settings page, counting the changes waiting. Tap it and Telegram closes, then reopens on the same settings page. Before, a toast said to restart and there was nothing to tap.
 
 * **Telegram:** All 15 settings pages now share blue-black cards and cyan controls on an AMOLED background. Editors and dialogs use the same restrained corners. Switch explanations keep their full width at larger text sizes.
 
@@ -16,7 +53,7 @@ Working version 0.0.17.
 
 * **Telegram:** Moved to Telegram 13.0.2, telegram.org's build (version code 71759) and the official beta (71809). The beta added an audio recorder settings entry, and HushTelegram leaves it alone.
 
-* **Telegram:** The New Year look switch now says what the snow needs. Telegram only draws it while Background rotation is on under Power saving, and it leaves that off on most phones that aren't high end. Refs #14.
+* **Telegram:** The New Year look switch now says what the snow needs. Telegram only draws it while `Wallpaper rotation` is on under Power Saving, in Effects in Chats, and it leaves that off on most phones that aren't high end. Seen on a phone: the snow stops the moment that option goes off and comes back with it. Refs #14.
 
 * **Telegram:** When your UnifiedPush app is uninstalled or ends the sign-up itself, Telegram is told to ask Firebase for a token again, the same way turning the switch off does. Before, Telegram's servers could keep sending to an address nothing answered. A phone without Google services has no Firebase to fall back on, so pick another UnifiedPush app there.
 
@@ -36,7 +73,9 @@ Working version 0.0.17.
 
 * **Tooling:** Refreshed all 15 settings screenshots from the patched app. Native checks cover the settings pages and editor recovery at 200% text in German, Portuguese and mirrored layouts. Shared dialogs were checked in both themes. The source-origin ledger includes the new form helper, and the README patch table matches the shipped descriptions.
 
-* **Tooling:** Resource patches no longer require XML parser features missing from Android. DTDs, XInclude and external entities are refused before any resource changes are written. Android parser checks cover ordinary UTF-8 and UTF-16 resources and confirm refusals make no file changes or network requests. Refs #6.
+* **Telegram:** Patching on a phone no longer stops with a `disallow-doctype-decl` error when `HushTelegram icon and name`, `Black and white launch logo` or `Use registered Maps API key` is picked. All three asked Android's XML reader for safety switches it doesn't have, so they only worked when patching from a computer. They now check each file for DTDs, XInclude and outside entities themselves before anything is written. Seen patching both Telegram builds in Morphe Manager on Android 14. Refs #6.
+
+* **Tooling:** Android parser checks cover ordinary UTF-8 and UTF-16 resources and confirm a refused file makes no changes and no network requests. A source check now fails the build if a patch sets up an XML parser of its own.
 
 * **Telegram:** Settings now mirror correctly in right-to-left languages, including Back and the preference list. Telegram's host layout settings stay unchanged.
 

@@ -20,7 +20,10 @@
     the merge (or the plain APK) and the patched APK
     the way the release receipt does and prints what patching changed: permissions asked for or
     dropped, components exported or no longer. A change scripts/manifest-delta-allowlist.txt
-    doesn't approve stops the run there, before the release. It then holds the patched APK's
+    doesn't approve stops the run there, before the release. The patched APK then has to pass
+    zipalign -c -P 16 -v 4 with its 64-bit libraries still Tumblr's own bytes, which is what a
+    device with 16 KB pages needs; a library of Tumblr's that doesn't fit is printed as a target
+    limitation and left alone (Assert-PageAlignment). It then holds the patched APK's
     resource table to the merge's with ResourceTableCheck.java: every resource of every package
     has to resolve by its id with its type and each configuration's value, and every file and
     reference the patched values name has to be there. A failure names the id. What the patches
@@ -195,11 +198,14 @@ $out = Resolve-WithinRoot -Path (Join-Path $runDir 'verify-all.apk') -Root $work
 $temp = Resolve-WithinRoot -Path (Join-Path $runDir 'verify-all-tmp') -Root $workRoot
 $result = Resolve-WithinRoot -Path (Join-Path $workRoot "verify-all-result-$runId.json") -Root $workRoot
     # What the CLI patches and what the patched table is held to, one file: a bundle's merge, made
-    # here because the CLI deletes its own, or the APK itself. A bundle that won't merge stops the
-    # run; base.apk alone lacks the splits' resources and would pass a table that lost them.
+    # here because the CLI deletes its own, or a copy of the APK. A bundle that won't merge stops the
+    # run; base.apk alone lacks the splits' resources and would pass a table that lost them. Every
+    # APK either is made from has to carry Tumblr's declared signer first (Get-MergedApk).
     $mergedApk = Resolve-WithinRoot -Path (Join-Path $runDir 'stock-merged.apk') -Root $workRoot
-    $patchInput = Get-MergedApk -Apk $Apk -Destination $mergedApk -Java $Java -DesktopJar $DesktopJar
-    if ($patchInput -eq $mergedApk) { Write-Host "[verify] merged $(Split-Path -Leaf $Apk) into one APK for the CLI" }
+    $declaredSigners = @(Get-DeclaredSigners -PatchList $catalog -PackageName $expectedTarget.PackageName)
+    $patchInput = Get-MergedApk -Apk $Apk -Destination $mergedApk -Java $Java -DesktopJar $DesktopJar `
+        -Aapt2 $Aapt2 -PackageName $expectedTarget.PackageName -Signers $declaredSigners
+    if (Test-SplitBundlePath -Path $Apk) { Write-Host "[verify] merged $(Split-Path -Leaf $Apk) into one APK for the CLI" }
     $enable = @()
     foreach ($name in $names) { $enable += '-e'; $enable += $name }
     $arguments = @('patch', '--exclusive', '--continue-on-error', '--unsigned', '-p', $Bundle,
@@ -270,6 +276,12 @@ $result = Resolve-WithinRoot -Path (Join-Path $workRoot "verify-all-result-$runI
         foreach ($change in $manifestChanges) {
             Write-Host "[verify]   $change (approved)"
         }
+        # What a device with 16 KB pages needs of the patched APK: a ZIP layout zipalign -c -P 16 -v 4
+        # passes and 64-bit libraries that are still Tumblr's bytes (Assert-PageAlignment). A library
+        # of Tumblr's own that doesn't fit is the target's limit: named, and left as it is.
+        $pageLimits = @(Assert-PageAlignment -Apk $out -Stock $patchInput -Aapt2 $Aapt2)
+        foreach ($limit in $pageLimits) { Write-Warning "[verify] $limit" }
+        Write-Host "[verify] 16 KB pages: zipalign -c -P 16 -v 4 passes, with $($pageLimits.Count) target limitation(s) in Tumblr's own libraries"
     }
     if ($cliExitCode -eq 0 -and $validation.Valid -and $unapprovedChanges.Count -gt 0) {
         Write-Warning ('[verify] the patched manifest changed in ways scripts/manifest-delta-allowlist.txt ' +

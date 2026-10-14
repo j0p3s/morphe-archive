@@ -29,6 +29,7 @@ import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
 import app.hushtumblr.extension.shared.SettingsContextRule;
+import app.hushtumblr.extension.shared.WorkerPoolForTests;
 import app.hushtumblr.extension.shared.diagnostics.HookStatus;
 import app.hushtumblr.extension.shared.settings.PauseForTests;
 import app.hushtumblr.extension.shared.settings.HushTumblrPause;
@@ -82,6 +83,27 @@ public class RootPostMutesTest {
         Object request = new Object();
         RootPostMutes.requestCreated(request); RootPostMutes.requestEntered(request);
         RootPostMutes.beginAccountChange((HushAccountIdentity) () -> id);
+    }
+    /** Mutes [root] as [id], then restarts the process. The bytes are what its document held. */
+    private byte[] savedMute(String id, String root) throws Exception {
+        account(id); mute(root);
+        byte[] saved = Files.readAllBytes(file.toPath());
+        RootPostMutes.resetForTests();
+        return saved;
+    }
+    /** Commits [id] when its document can't be read, or when the worker has no room to read it. */
+    private RootPostMutes.Session unread(String id) {
+        begin(id); RootPostMutes.commitAccount(); RootPostMutes.requestExited();
+        assertNull(RootPostMutes.capture());
+        RootPostMutes.Session failed = RootPostMutes.unreadable();
+        assertNotNull(failed);
+        return failed;
+    }
+    private boolean retry(RootPostMutes.Session target) {
+        AtomicReference<Boolean> result = new AtomicReference<>();
+        RootPostMutes.retry(target, result::set);
+        assertNotNull(result.get());
+        return result.get();
     }
     private HushRootPost post(String root) { return () -> root; }
     private RootPostMutes.Undo mute(String root) {
@@ -308,6 +330,130 @@ public class RootPostMutesTest {
             begin("account-a"); RootPostMutes.commitAccount();
             assertNull(RootPostMutes.capture()); assertFalse(RootPostMutes.active());
         }
+    }
+
+    @Test public void aReadStillQueuedIsLoadingAndOnlyAFailedReadIsUnreadable() {
+        List<Runnable> queued = new ArrayList<>(); RootPostMutes.workerForTests = queued::add;
+        begin("account-a"); RootPostMutes.commitAccount(); RootPostMutes.requestExited();
+        assertNull(RootPostMutes.capture()); assertNull(RootPostMutes.unreadable());
+        // A folder where the document belongs can't be opened, which is how an I/O failure reads.
+        assertTrue(file.mkdir());
+        queued.get(0).run();
+        assertNull(RootPostMutes.capture()); assertNotNull(RootPostMutes.unreadable());
+        assertFalse(RootPostMutes.active()); assertTrue(file.isDirectory());
+        RootPostMutes.logout(); assertNull(RootPostMutes.unreadable());
+    }
+
+    @Test public void aReadTheFullWorkerRefusesIsUnreadableAndARetryLoadsItOnceThereIsRoom() throws Exception {
+        byte[] good = savedMute("account-a", "11");
+        RootPostMutes.Session refused;
+        RootPostMutes.workerForTests = null;
+        try (WorkerPoolForTests full = WorkerPoolForTests.fill()) {
+            // Nothing is wrong with the document. Its read never started, and nothing else would start one.
+            refused = unread("account-a");
+            assertFalse(RootPostMutes.active()); assertFalse(RootPostMutes.shouldHide(post("11")));
+            // A retry the worker refuses too answers no and leaves the account where it was.
+            assertFalse(retry(refused));
+            assertNull(RootPostMutes.capture()); assertSame(refused, RootPostMutes.unreadable());
+            assertArrayEquals(good, Files.readAllBytes(file.toPath()));
+            assertArrayEquals("a refused read left something beside the document",
+                    new String[]{file.getName()}, temporary.getRoot().list());
+        }
+        RootPostMutes.workerForTests = Runnable::run;
+        assertTrue(retry(refused));
+        assertNull(RootPostMutes.unreadable());
+        assertEquals(java.util.Set.of("11"), RootPostMutes.capture().roots);
+        assertTrue(RootPostMutes.shouldHide(post("11")));
+        assertArrayEquals(good, Files.readAllBytes(file.toPath()));
+    }
+
+    @Test public void aRefusedReadOfAnAccountAlreadyReplacedLeavesTheNewAccountsOwnRefusalStanding() throws Exception {
+        RootPostMutes.workerForTests = null;
+        AtomicBoolean replaced = new AtomicBoolean();
+        // Observers run inside a commit, once the account is set and before its read is handed over.
+        Runnable observer = () -> {
+            if (RootPostMutes.accountSnapshot() == null || !replaced.compareAndSet(false, true)) return;
+            begin("account-b"); RootPostMutes.commitAccount(); RootPostMutes.requestExited();
+        };
+        RootPostMutes.addAccountObserver(observer);
+        RootPostMutes.Session standing;
+        try (WorkerPoolForTests full = WorkerPoolForTests.fill()) {
+            begin("account-a"); RootPostMutes.commitAccount(); RootPostMutes.requestExited();
+            assertTrue("nothing replaced the account inside its commit", replaced.get());
+            // Account b's read was refused first. Account a's refusal lands after it, for an account that's gone.
+            standing = RootPostMutes.unreadable();
+            assertNotNull("the replaced account's refusal hid the new account's own", standing);
+            assertEquals(RootPostMutes.accountSnapshot().generation, standing.generation);
+        }
+        RootPostMutes.workerForTests = Runnable::run;
+        assertTrue(retry(standing));
+        assertNotNull(RootPostMutes.capture()); assertNull(RootPostMutes.unreadable());
+    }
+
+    @Test public void aDamagedDocumentKeepsItsBytesThroughFailedReadsAndLoadsOnceRepaired() throws Exception {
+        byte[] good = savedMute("account-a", "11");
+        for (String text : new String[]{"{broken", "x".repeat(RootPostMuteStore.MAX_BYTES + 1)}) {
+            RootPostMutes.resetForTests();
+            byte[] damaged = text.getBytes(StandardCharsets.UTF_8);
+            Files.write(file.toPath(), damaged);
+            RootPostMutes.Session failed = unread("account-a");
+            assertFalse(retry(failed));
+            assertNull(RootPostMutes.capture()); assertNotNull(RootPostMutes.unreadable());
+            assertArrayEquals(damaged, Files.readAllBytes(file.toPath()));
+            assertArrayEquals("a failed read left something beside the document",
+                    new String[]{file.getName()}, temporary.getRoot().list());
+            Files.write(file.toPath(), good);
+            assertTrue(retry(failed));
+            assertNull(RootPostMutes.unreadable());
+            assertEquals(java.util.Set.of("11"), RootPostMutes.capture().roots);
+            assertTrue(RootPostMutes.shouldHide(post("11")));
+            assertArrayEquals(good, Files.readAllBytes(file.toPath()));
+        }
+    }
+
+    @Test public void anIoFailureLeavesThePathAloneAndARetryLoadsTheRepairedDocument() throws Exception {
+        byte[] good = savedMute("account-a", "11");
+        assertTrue(file.delete()); assertTrue(file.mkdir());
+        RootPostMutes.Session failed = unread("account-a");
+        assertFalse(retry(failed));
+        assertTrue(file.isDirectory());
+        assertArrayEquals(new String[]{file.getName()}, temporary.getRoot().list());
+        assertTrue(file.delete()); Files.write(file.toPath(), good);
+        assertTrue(retry(failed));
+        assertEquals(java.util.Set.of("11"), RootPostMutes.capture().roots);
+    }
+
+    @Test public void aRetryRunsOnTheWorkerAndAReplacedAccountCannotCompleteIt() throws Exception {
+        byte[] good = savedMute("account-a", "11");
+        Files.write(file.toPath(), "{broken".getBytes(StandardCharsets.UTF_8));
+        RootPostMutes.Session failed = unread("account-a");
+        List<Runnable> queued = new ArrayList<>(); RootPostMutes.workerForTests = queued::add;
+        AtomicReference<Boolean> late = new AtomicReference<>();
+        RootPostMutes.retry(failed, late::set);
+        assertEquals(1, queued.size()); assertNull(late.get()); assertNull(RootPostMutes.capture());
+        Files.write(file.toPath(), good);
+        RootPostMutes.workerForTests = Runnable::run;
+        account("account-b");
+        queued.get(0).run();
+        assertFalse(late.get());
+        assertTrue(RootPostMutes.capture().roots.isEmpty()); assertFalse(RootPostMutes.shouldHide(post("11")));
+        List<Runnable> refused = new ArrayList<>(); RootPostMutes.workerForTests = refused::add;
+        AtomicReference<Boolean> stale = new AtomicReference<>();
+        RootPostMutes.retry(failed, stale::set);
+        assertFalse(stale.get()); assertTrue(refused.isEmpty());
+    }
+
+    @Test public void aRetryStillRestoresTheBackupAnInterruptedWriteLeftBehind() throws Exception {
+        byte[] good = savedMute("account-a", "11");
+        assertTrue(file.delete()); assertTrue(file.mkdir());
+        RootPostMutes.Session failed = unread("account-a");
+        // What an interrupted write on an older Android leaves: no document, and the last good one beside it.
+        File backup = new File(file.getPath() + ".bak");
+        assertTrue(file.delete()); Files.write(backup.toPath(), good);
+        assertTrue(retry(failed));
+        assertEquals(java.util.Set.of("11"), RootPostMutes.capture().roots);
+        assertFalse(backup.exists());
+        assertArrayEquals(good, Files.readAllBytes(file.toPath()));
     }
 
     @Test public void thePrivateDocumentDoesNotPersistTheRawAccountIdentity() throws Exception {

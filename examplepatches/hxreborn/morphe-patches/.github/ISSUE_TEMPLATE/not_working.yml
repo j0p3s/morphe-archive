@@ -11,6 +11,8 @@ body:
         - Repatch on the newest release.
         - Install the unpatched APK and repeat the steps.
         - Search open and closed reports [here](https://github.com/hxreborn/morphe-patches/issues?q=is%3Aissue).
+        - App version newer than the ones listed below: that's an
+          [app update request](https://github.com/hxreborn/morphe-patches/issues/new?template=app_update.yml), not a bug.
   - type: dropdown
     id: app
     attributes:
@@ -80,6 +82,8 @@ body:
         - "imo (another version, type it below)"
         - "Joyn 6.9.0-AOS-609012264"
         - "Joyn (another version, type it below)"
+        - "Jujo 1.2.5"
+        - "Jujo (another version, type it below)"
         - "Jvdroid 2.8"
         - "Jvdroid (another version, type it below)"
         - "Keepa 6.2.1"
@@ -144,6 +148,8 @@ body:
         - "Proton VPN (another version, type it below)"
         - "Psiphon 2.5.11"
         - "Psiphon (another version, type it below)"
+        - "Public 3.3.4"
+        - "Public (another version, type it below)"
         - "Pydroid 3 8.6_arm64"
         - "Pydroid 3 (another version, type it below)"
         - "QR & Barcode Scanner 2.2.221"
@@ -233,12 +239,12 @@ body:
       description: Newest first.
       options:
         # generated:versions
+        - "1.50.0"
         - "1.49.1"
         - "1.49.0"
         - "1.48.0"
         - "1.47.0"
         - "1.46.0"
-        - "1.45.0"
         - "Older than these"
         # /generated
     validations:
@@ -322,6 +328,7 @@ body:
         - "Cxxdroid \u00b7 AMOLED dark theme"
         - "Cxxdroid \u00b7 Disable tracking"
         - "Cxxdroid \u00b7 Unlock premium"
+        - "DevCheck \u00b7 Hide menu items"
         - "DevCheck \u00b7 Unlock premium"
         - "DWG FastView \u00b7 Block telemetry"
         - "DWG FastView \u00b7 Hide rating dialog"
@@ -352,6 +359,8 @@ body:
         - "imo \u00b7 Spoof signature"
         - "imo \u00b7 Unlock premium"
         - "Joyn \u00b7 Hide ads"
+        - "Jujo \u00b7 GmsCore support"
+        - "Jujo \u00b7 Unlock premium"
         - "Jvdroid \u00b7 AMOLED dark theme"
         - "Jvdroid \u00b7 Disable tracking"
         - "Jvdroid \u00b7 Unlock premium"
@@ -416,6 +425,9 @@ body:
         - "Proton VPN \u00b7 Unlock profiles"
         - "Proton VPN \u00b7 Unlock split tunneling"
         - "Psiphon \u00b7 Unlock premium"
+        - "Public \u00b7 Disable tracking"
+        - "Public \u00b7 GmsCore support"
+        - "Public \u00b7 Hide ads"
         - "Pydroid 3 \u00b7 AMOLED dark theme"
         - "Pydroid 3 \u00b7 Disable tracking"
         - "Pydroid 3 \u00b7 Unlock premium"

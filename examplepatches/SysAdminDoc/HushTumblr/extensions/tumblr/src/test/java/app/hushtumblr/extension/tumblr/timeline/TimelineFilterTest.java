@@ -6,6 +6,7 @@
 package app.hushtumblr.extension.tumblr.timeline;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -25,6 +26,7 @@ import org.robolectric.annotation.Config;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -48,6 +50,8 @@ public class TimelineFilterTest {
     public void everyPatchIsIn() {
         PatchFamilyForTests.inBuild(EnumSet.allOf(PatchFamily.class));
         PatchFamilyForTests.capabilities(EnumSet.allOf(PatchFamily.Capability.class));
+        // Another test class's filter runs may have emptied a page in this sandbox already.
+        TimelinePaging.resetForTests();
     }
 
     @After
@@ -59,8 +63,17 @@ public class TimelineFilterTest {
         Settings.HIDE_SUGGESTED_COMMUNITIES.resetToDefault();
         Settings.HIDE_WATCH_IT_ROWS.resetToDefault();
         TimelineFilter.carouselItemsForTests = null;
+        TimelinePaging.resetForTests();
         PauseForTests.resume();
         HookStatus.clear();
+    }
+
+    /** Tumblr's load types, by the names its own enum gives them. */
+    private enum Load { AUTO_REFRESH, USER_REFRESH, RESUME, PAGINATION }
+
+    /** One way a page reaches the filter: the response Tumblr parsed it for. */
+    private interface Feed {
+        List<?> load(List<?> page);
     }
 
     @Test
@@ -254,6 +267,122 @@ public class TimelineFilterTest {
         assertSame(page, TimelineFilter.filter(page));
     }
 
+    /**
+     * Every tab of a search loads its pages as a search response, and there a blog or community card
+     * is what was searched for. With both switches on the Blogs tab's cards and rows, the Communities
+     * tab's, and a mixed page with headings and a carousel all come back as the very list Tumblr
+     * built, while the same pages in a dashboard lose every card.
+     */
+    @Test
+    public void aSearchKeepsTheBlogsAndCommunitiesItFound() {
+        Settings.HIDE_SUGGESTED_BLOGS.save(true);
+        Settings.HIDE_SUGGESTED_COMMUNITIES.save(true);
+        List<Object> blogs = Arrays.asList(TimelineItems.of(TimelineObjectType.BLOG_CARD),
+                TimelineItems.of(TimelineObjectType.BLOG_ROW), TimelineItems.of(TimelineObjectType.COMPACT_BLOG_CARD));
+        List<Object> communities = Arrays.asList(TimelineItems.of(TimelineObjectType.COMMUNITY_CARD),
+                TimelineItems.of(TimelineObjectType.COMMUNITY_ROW));
+        List<Object> mixed = Arrays.asList(TimelineItems.of(TimelineObjectType.TITLE),
+                TimelineItems.carousel(TimelineObjectType.CAROUSEL,
+                        TimelineItems.of(TimelineObjectType.TINY_BLOG_CAROUSEL_CARD)),
+                TimelineItems.post(), TimelineItems.of(TimelineObjectType.TITLE),
+                TimelineItems.of(TimelineObjectType.COMMUNITY_CARD), TimelineItems.of(TimelineObjectType.TITLE));
+
+        for (List<Object> page : Arrays.asList(blogs, communities, mixed)) {
+            assertSame(page, TimelineItems.inSearchResults(page));
+        }
+        String report = String.join("\n", HookStatus.report(""));
+        assertTrue(report, report.contains(TimelineFilter.KEPT_RESULT + " 4"));
+        assertTrue(report, report.contains(TimelineFilter.KEPT_RESULT + " 2"));
+        assertFalse(report, report.contains("card removed"));
+        assertFalse(report, report.contains("heading removed"));
+
+        assertEquals("the control: a dashboard loses them", Collections.emptyList(),
+                TimelineItems.onTheDashboard(blogs));
+        assertEquals("a row is a line of a list and stays", Arrays.asList(communities.get(1)),
+                TimelineItems.onTheDashboard(communities));
+        assertEquals(Arrays.asList(mixed.get(2)), TimelineItems.onTheDashboard(mixed));
+    }
+
+    /**
+     * Communities' Browse page lists a category's communities as rows, and loads them through the
+     * dashboard's own response. A row is a line of that list and never a suggestion, so a page of
+     * them comes back as the very list Tumblr built, heading and all, and no page is emptied. A
+     * card between posts still goes.
+     */
+    @Test
+    public void aListOfCommunitiesKeepsItsRows() {
+        Settings.HIDE_SUGGESTED_COMMUNITIES.save(true);
+        List<Object> category = Arrays.asList(TimelineItems.of(TimelineObjectType.TITLE),
+                TimelineItems.of(TimelineObjectType.COMMUNITY_ROW), TimelineItems.of(TimelineObjectType.COMMUNITY_ROW));
+        HookStatus.clear();
+        assertSame(category, TimelineItems.onTheDashboard(category));
+        String report = String.join("\n", HookStatus.report(""));
+        assertFalse(report, report.contains("card removed"));
+        assertFalse(report, report.contains("heading removed"));
+        assertFalse(report, report.contains(TimelinePaging.EMPTIED));
+
+        List<Object> feed = Arrays.asList(TimelineItems.post(), TimelineItems.of(TimelineObjectType.COMMUNITY_CARD),
+                TimelineItems.of(TimelineObjectType.COMMUNITY_ROW));
+        assertEquals(Arrays.asList(feed.get(0), feed.get(2)), TimelineItems.onTheDashboard(feed));
+    }
+
+    /** The rest of the filter doesn't ask where a page came from: an ad in search results still goes. */
+    @Test
+    public void aSearchStillLosesItsAds() {
+        Settings.HIDE_SUGGESTED_BLOGS.save(true);
+        List<Object> page = Arrays.asList(TimelineItems.of(TimelineObjectType.BLOG_CARD),
+                TimelineItems.of(TimelineObjectType.GEMINI_AD), TimelineItems.of(TimelineObjectType.BLOG_CARD));
+        assertEquals(Arrays.asList(page.get(0), page.get(2)), TimelineItems.inSearchResults(page));
+    }
+
+    /**
+     * The cards go from each response that's a feed: the dashboard's, a blog's posts and likes. A
+     * page built under no response the filter knows keeps them, and the report says so.
+     */
+    @Test
+    public void theCardsGoOnlyFromAPageKnownToBeAFeed() {
+        Settings.HIDE_SUGGESTED_BLOGS.save(true);
+        List<Object> page = Arrays.asList(TimelineItems.post(), TimelineItems.of(TimelineObjectType.BLOG_CARD));
+        List<Object> left = Arrays.asList(page.get(0));
+        assertEquals(left, TimelineItems.onTheDashboard(page));
+        assertEquals(left, TimelineItems.onABlog(page));
+        assertEquals(left, TimelineItems.inLikes(page));
+        assertEquals("the blogs beside a dashboard's card", left, TimelineItems.besideABlogCard(page, false));
+        assertSame("the blogs beside a search result", page, TimelineItems.besideABlogCard(page, true));
+
+        HookStatus.clear();
+        assertSame(page, TimelineFilter.filter(page));
+        String report = String.join("\n", HookStatus.report(""));
+        assertTrue(report, report.contains(TimelineFilter.KEPT_UNKNOWN + " 1"));
+    }
+
+    /**
+     * How the filter reads the call stack: a search adapter anywhere on it means results, a feed's
+     * adapter without one means a feed, and a class that only looks like one means neither.
+     */
+    @Test
+    public void thePageIsKnownByTheAdapterParsingIt() {
+        String search = PageSource.SEARCH_RESULTS;
+        assertEquals(7, PageSource.FEEDS.size());
+        for (String feed : PageSource.FEEDS) {
+            assertEquals(feed, PageSource.FEED, PageSource.of(frames("okhttp3.Call", feed, "app.Hook")));
+            assertEquals(feed, PageSource.RESULTS, PageSource.of(frames(search, feed)));
+            assertEquals(feed, PageSource.RESULTS, PageSource.of(frames(feed, search)));
+        }
+        assertEquals(PageSource.RESULTS, PageSource.of(frames(search)));
+        assertEquals(PageSource.UNKNOWN, PageSource.of(frames()));
+        assertEquals(PageSource.UNKNOWN, PageSource.of(frames("com.tumblr.rumblr.model.TimelineJsonAdapter",
+                "com.tumblr.rumblr.response.PostNotesResponseJsonAdapter",
+                "com.tumblr.rumblr.response.SearchResultsResponse", search + "$Companion",
+                "com.tumblr.rumblr.response.WrappedTimelineResponse")));
+    }
+
+    private static StackTraceElement[] frames(String... owners) {
+        StackTraceElement[] frames = new StackTraceElement[owners.length];
+        for (int i = 0; i < owners.length; i++) frames[i] = new StackTraceElement(owners[i], "fromJson", null, -1);
+        return frames;
+    }
+
     @Test
     public void aCarouselGoesByItsFirstItem() {
         Settings.HIDE_SUGGESTED_BLOGS.save(true);
@@ -266,7 +395,7 @@ public class TimelineFilterTest {
                 TimelineItems.of(TimelineObjectType.BLOG_CARD));
         Object empty = TimelineItems.carousel(TimelineObjectType.CAROUSEL);
         List<Object> page = Arrays.asList(blogs, TimelineItems.post(), avatars, posts, empty);
-        List<?> shown = TimelineFilter.filter(page);
+        List<?> shown = TimelineItems.onTheDashboard(page);
         assertEquals(Arrays.asList(page.get(1), posts, empty), shown);
     }
 
@@ -278,7 +407,7 @@ public class TimelineFilterTest {
                 TimelineItems.of(TimelineObjectType.BLOG_CARD));
         TimelineFilter.carouselItemsForTests = null;
         List<Object> page = Arrays.asList(blogs, TimelineItems.post());
-        assertSame(page, TimelineFilter.filter(page));
+        assertSame(page, TimelineItems.onTheDashboard(page));
     }
 
     /**
@@ -292,7 +421,7 @@ public class TimelineFilterTest {
                 TimelineItems.of(TimelineObjectType.TITLE), TimelineItems.of(TimelineObjectType.COMMUNITY_CARD),
                 TimelineItems.post(), TimelineItems.of(TimelineObjectType.TITLE), TimelineItems.post(),
                 TimelineItems.of(TimelineObjectType.TITLE));
-        List<?> shown = TimelineFilter.filter(page);
+        List<?> shown = TimelineItems.onTheDashboard(page);
         assertEquals(Arrays.asList(page.get(3), page.get(4), page.get(5)), shown);
         String report = String.join("\n", HookStatus.report(""));
         assertTrue(report, report.contains("heading removed 3"));
@@ -315,26 +444,181 @@ public class TimelineFilterTest {
         Settings.HIDE_SUGGESTED_COMMUNITIES.save(true);
         List<Object> page = Arrays.asList(TimelineItems.of(TimelineObjectType.COMMUNITY_HUB_HEADER_CARD),
                 TimelineItems.post());
-        assertSame(page, TimelineFilter.filter(page));
+        assertSame(page, TimelineItems.onTheDashboard(page));
     }
 
     /**
-     * Each of [kinds] goes with [setting] on, and stays with it off, paused, or without its patch's
-     * capability.
+     * A page whose items all go comes back empty, and Tumblr takes an empty page for the end of the
+     * feed. On the dashboard, a blog, likes and search alike, the fragment is told to load the next
+     * page while the page came with a next link, for its first page and for a later one, and to do
+     * as Tumblr does when it came with none or kept a post.
+     */
+    @Test
+    public void aPageWhoseItemsAllGoSendsTheFeedOnToItsNextPage() {
+        List<Object> ads = Arrays.asList(TimelineItems.of(TimelineObjectType.GEMINI_AD), TimelineItems.sponsoredPost());
+        Object next = new Object();
+        List<Feed> feeds = Arrays.asList(TimelineItems::onTheDashboard, TimelineItems::onABlog,
+                TimelineItems::inLikes, TimelineItems::inSearchResults);
+        for (int i = 0; i < feeds.size(); i++) {
+            String feed = "feed " + i;
+            Object fragment = new Object();
+
+            assertEquals(feed, Collections.emptyList(), feeds.get(i).load(ads));
+            assertEquals(feed + ", its first page", TimelinePaging.NEXT,
+                    TimelinePaging.onPage(fragment, Load.AUTO_REFRESH, next, true));
+            assertEquals(feed, Collections.emptyList(), feeds.get(i).load(ads));
+            assertEquals(feed + ", a later page", TimelinePaging.NEXT,
+                    TimelinePaging.onPage(fragment, Load.PAGINATION, next, true));
+
+            assertEquals(feed + ", a page that kept a post", TimelinePaging.STOCK,
+                    TimelinePaging.onPage(fragment, Load.PAGINATION, next, false));
+            assertEquals(feed + ", a later page with no next link", TimelinePaging.STOCK,
+                    TimelinePaging.onPage(fragment, Load.PAGINATION, null, true));
+            assertEquals(feed + ", a first page with no next link", TimelinePaging.STOCK,
+                    TimelinePaging.onPage(fragment, Load.USER_REFRESH, null, true));
+        }
+        String report = String.join("\n", HookStatus.report(""));
+        assertTrue(report, report.contains(TimelinePaging.EMPTIED + " 8"));
+        assertTrue(report, report.contains(TimelinePaging.SKIPPED + " 8"));
+        assertFalse(report, report.contains(TimelinePaging.STOPPED));
+    }
+
+    /** The card switches empty a page the same way: a dashboard page of suggested blogs under a heading. */
+    @Test
+    public void aPageOfNothingButSuggestionsGoesOnToo() {
+        Settings.HIDE_SUGGESTED_BLOGS.save(true);
+        List<Object> cards = Arrays.asList(TimelineItems.of(TimelineObjectType.TITLE),
+                TimelineItems.of(TimelineObjectType.BLOG_CARD), TimelineItems.of(TimelineObjectType.BLOG_CARD));
+        Object fragment = new Object();
+        assertEquals(Collections.emptyList(), TimelineItems.onTheDashboard(cards));
+        assertEquals(TimelinePaging.NEXT, TimelinePaging.onPage(fragment, Load.PAGINATION, new Object(), true));
+        String report = String.join("\n", HookStatus.report(""));
+        assertTrue(report, report.contains(TimelinePaging.EMPTIED + " 1"));
+    }
+
+    /**
+     * Five empty pages in a row end it. A run that began with a first page or a refresh has shown
+     * nothing, so the fifth gets Tumblr's empty view. One that began further down a list ends the
+     * way Tumblr ends a list. Each fragment counts its own pages, and a refresh starts over.
+     */
+    @Test
+    public void fiveEmptyPagesInARowEndIt() {
+        List<Object> ads = Arrays.asList(TimelineItems.of(TimelineObjectType.GEMINI_AD));
+        assertEquals(Collections.emptyList(), TimelineFilter.filter(ads));
+        Object next = new Object();
+
+        Object blank = new Object();
+        Object scrolled = new Object();
+        assertEquals(TimelinePaging.NEXT, TimelinePaging.onPage(blank, Load.RESUME, next, true));
+        assertEquals(TimelinePaging.NEXT, TimelinePaging.onPage(scrolled, Load.PAGINATION, next, true));
+        for (int page = 2; page < TimelinePaging.LIMIT; page++) {
+            assertEquals("page " + page, TimelinePaging.NEXT, TimelinePaging.onPage(blank, Load.PAGINATION, next, true));
+            assertEquals("page " + page, TimelinePaging.NEXT,
+                    TimelinePaging.onPage(scrolled, Load.PAGINATION, next, true));
+        }
+        assertEquals(TimelinePaging.EMPTY, TimelinePaging.onPage(blank, Load.PAGINATION, next, true));
+        assertEquals(TimelinePaging.STOCK, TimelinePaging.onPage(scrolled, Load.PAGINATION, next, true));
+        String report = String.join("\n", HookStatus.report(""));
+        assertTrue(report, report.contains(TimelinePaging.STOPPED + " 2"));
+
+        // A refresh in the middle of a run starts counting again.
+        Object refreshed = new Object();
+        for (int page = 1; page < TimelinePaging.LIMIT; page++) {
+            assertEquals(TimelinePaging.NEXT,
+                    TimelinePaging.onPage(refreshed, page == 1 ? Load.AUTO_REFRESH : Load.PAGINATION, next, true));
+        }
+        assertEquals(TimelinePaging.NEXT, TimelinePaging.onPage(refreshed, Load.USER_REFRESH, next, true));
+        assertEquals(TimelinePaging.NEXT, TimelinePaging.onPage(refreshed, Load.PAGINATION, next, true));
+
+        // And so does a page that kept something.
+        assertEquals(TimelinePaging.STOCK, TimelinePaging.onPage(refreshed, Load.PAGINATION, next, false));
+        for (int page = 1; page < TimelinePaging.LIMIT; page++) {
+            assertEquals(TimelinePaging.NEXT, TimelinePaging.onPage(refreshed, Load.PAGINATION, next, true));
+        }
+        assertEquals("it began down the list this time", TimelinePaging.STOCK,
+                TimelinePaging.onPage(refreshed, Load.PAGINATION, next, true));
+    }
+
+    /**
+     * A blank run that reaches a page with no next link has still shown nothing, so it ends in the
+     * empty view though the page arrived as a next page.
+     */
+    @Test
+    public void aBlankRunThatReachesTheLastPageShowsTheEmptyView() {
+        assertEquals(Collections.emptyList(),
+                TimelineFilter.filter(Arrays.asList(TimelineItems.of(TimelineObjectType.GEMINI_AD))));
+        Object fragment = new Object();
+        assertEquals(TimelinePaging.NEXT, TimelinePaging.onPage(fragment, Load.AUTO_REFRESH, new Object(), true));
+        assertEquals(TimelinePaging.EMPTY, TimelinePaging.onPage(fragment, Load.PAGINATION, null, true));
+    }
+
+    /**
+     * Until a switch has emptied a page, every page is Tumblr's to handle, the empty ones too. Nothing
+     * is counted, so the report stays as it was.
+     */
+    @Test
+    public void whileNoPageHasBeenEmptiedEveryPageIsTumblrsOwn() {
+        List<Object> page = Arrays.asList(TimelineItems.post(), TimelineItems.of(TimelineObjectType.GEMINI_AD));
+        assertEquals("a page that kept a post isn't an emptied one", 1, TimelineFilter.filter(page).size());
+        HookStatus.clear();
+        Object fragment = new Object();
+        Object next = new Object();
+        for (Load type : Load.values()) {
+            assertEquals(type.name(), TimelinePaging.STOCK, TimelinePaging.onPage(fragment, type, next, true));
+            assertEquals(type.name(), TimelinePaging.STOCK, TimelinePaging.onPage(fragment, type, next, false));
+        }
+        assertEquals(Collections.emptyList(), HookStatus.report(""));
+    }
+
+    /** Paused, or before the settings are ready, an empty page is Tumblr's own again and the run is dropped. */
+    @Test
+    public void pausedOrBeforeTheSettingsAreReadyAnEmptyPageIsTumblrsOwn() {
+        assertEquals(Collections.emptyList(),
+                TimelineFilter.filter(Arrays.asList(TimelineItems.of(TimelineObjectType.GEMINI_AD))));
+        Object fragment = new Object();
+        Object next = new Object();
+        assertEquals("the control", TimelinePaging.NEXT, TimelinePaging.onPage(fragment, Load.AUTO_REFRESH, next, true));
+
+        PauseForTests.pause(HushTumblrPause.Reason.SWITCH);
+        assertEquals(TimelinePaging.STOCK, TimelinePaging.onPage(fragment, Load.PAGINATION, next, true));
+        PauseForTests.resume();
+        assertEquals("the run began again, down the list", TimelinePaging.NEXT,
+                TimelinePaging.onPage(fragment, Load.PAGINATION, next, true));
+        assertEquals("so with no next link it ends as Tumblr ends a list", TimelinePaging.STOCK,
+                TimelinePaging.onPage(fragment, Load.PAGINATION, null, true));
+
+        SettingsContextRule.withoutContext(() -> assertEquals(TimelinePaging.STOCK,
+                TimelinePaging.onPage(fragment, Load.AUTO_REFRESH, next, true)));
+    }
+
+    /** What isn't a fragment and a load type is left to Tumblr, and nothing is thrown. */
+    @Test
+    public void anythingTheHookCantReadIsLeftToTumblr() {
+        assertEquals(Collections.emptyList(),
+                TimelineFilter.filter(Arrays.asList(TimelineItems.of(TimelineObjectType.GEMINI_AD))));
+        Object next = new Object();
+        assertEquals(TimelinePaging.STOCK, TimelinePaging.onPage(null, Load.PAGINATION, next, true));
+        assertEquals(TimelinePaging.STOCK, TimelinePaging.onPage(new Object(), null, next, true));
+        assertEquals(TimelinePaging.STOCK, TimelinePaging.onPage(new Object(), "PAGINATION", next, true));
+    }
+
+    /**
+     * In a dashboard page each of [kinds] goes with [setting] on, and stays with it off, paused, or
+     * without its patch's capability.
      */
     private static void checkCards(BooleanSetting setting, Set<String> kinds) {
         for (String kind : kinds) {
             List<Object> page = Arrays.asList(TimelineItems.post(), TimelineItems.of(TimelineObjectType.valueOf(kind)),
                     TimelineItems.post());
-            assertSame(kind + " with the switch off", page, TimelineFilter.filter(page));
+            assertSame(kind + " with the switch off", page, TimelineItems.onTheDashboard(page));
             setting.save(true);
-            List<?> shown = TimelineFilter.filter(page);
+            List<?> shown = TimelineItems.onTheDashboard(page);
             assertEquals(kind, Arrays.asList(page.get(0), page.get(2)), shown);
             PauseForTests.pause(HushTumblrPause.Reason.SWITCH);
-            assertSame(kind + " paused", page, TimelineFilter.filter(page));
+            assertSame(kind + " paused", page, TimelineItems.onTheDashboard(page));
             PauseForTests.resume();
             PatchFamilyForTests.capabilities(EnumSet.of(PatchFamily.Capability.TIMELINE_ADS));
-            assertSame(kind + " without the patch", page, TimelineFilter.filter(page));
+            assertSame(kind + " without the patch", page, TimelineItems.onTheDashboard(page));
             PatchFamilyForTests.capabilities(EnumSet.allOf(PatchFamily.Capability.class));
             setting.resetToDefault();
         }

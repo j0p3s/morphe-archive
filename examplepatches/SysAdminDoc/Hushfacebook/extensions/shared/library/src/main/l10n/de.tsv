@@ -12,7 +12,6 @@ Hides "Pages you may like" cards, cards promoting Facebook's own features, and s
 %1$s elapsed	%1$s vergangen
 %1$s. It was set when you patched, so Pause can't turn it off. To rule it out, patch again and leave out that patch.	%1$s. Das wurde beim Patchen festgelegt, deshalb kann die Pause es nicht ausschalten. Um es auszuschließen, patche erneut und lass diesen Patch weg.
 %1$s. They were set when you patched, so Pause can't turn them off. To rule one out, patch again and leave out the patch in brackets after it.	%1$s. Diese wurden beim Patchen festgelegt, deshalb kann die Pause sie nicht ausschalten. Um eines davon auszuschließen, patche erneut und lass den Patch weg, der in Klammern dahinter steht.
-A change here applies after Facebook restarts.	Eine Änderung hier gilt erst nach einem Neustart von Facebook.
 Add a Download button to reels, using your download quality. Off or paused, Facebook's own buttons return.	Fügt Reels einen Download-Button mit deiner Downloadqualität hinzu. Ausgeschaltet oder pausiert erscheinen Facebooks eigene Buttons.
 A file named %1$s in %2$s paused Hushfacebook.	Eine Datei namens %1$s in %2$s hat Hushfacebook pausiert.
 About	Info
@@ -119,6 +118,8 @@ Android couldn't use that font file. Your font didn't change.	Android konnte die
 Couldn't save a copy of that font. Check that the phone has room, then try again.	Eine Kopie dieser Schriftart ließ sich nicht speichern. Prüfe, ob auf dem Handy Platz ist, und versuche es noch einmal.
 Couldn't open that file. Your font didn't change.	Diese Datei ließ sich nicht öffnen. Deine Schriftart wurde nicht geändert.
 Couldn't go back to your phone's font. Try again.	Die Rückkehr zur Schriftart deines Handys hat nicht geklappt. Versuche es noch einmal.
+The app holding that font file is taking too long, so Hushfacebook stopped waiting. Your font didn't change.	Die App, in der die Schriftdatei liegt, braucht zu lange, deshalb wartet Hushfacebook nicht mehr. Deine Schriftart wurde nicht geändert.
+The app holding the last font file still hasn't answered. Try again later.	Die App mit der letzten Schriftdatei hat noch immer nicht geantwortet. Versuche es später noch einmal.
 Full report saved to %1$s	Vollständiger Bericht gespeichert unter %1$s
 The GPL-3.0 license, plus notices for the projects this is built on	Die GPL-3.0-Lizenz und die Hinweise zu den Projekten, auf denen dies aufbaut
 Hide "People you may know"	„Personen, die du kennen könntest“ ausblenden
@@ -392,6 +393,10 @@ Hides the banners at the top of Chats, like the one asking you to turn on notifi
 Open the Messenger app	Messenger-App öffnen
 # context: summary of that switch; Messenger is the app's name, Chats is Facebook's own chat screen as named above
 Tapping the Messenger icon at the top of Facebook opens the Messenger app instead of Chats. Without Messenger, Chats opens as before.	Tippst du oben in Facebook auf das Messenger-Symbol, öffnet sich die Messenger-App statt der Chats. Ohne Messenger öffnen sich die Chats wie bisher.
+# context: switch title under Chats; on, Facebook leaves ringing for calls and notifying about chats to the Messenger app
+Leave calls and chats to Messenger	Anrufe und Chats Messenger überlassen
+# context: summary of that switch; signed out means not logged in to the Messenger app, turned off means the app is disabled in Android's settings
+Facebook stops ringing for calls and notifying you about chats while Messenger is installed, so only Messenger does. Without Messenger, or with it turned off, Facebook rings and notifies as before. If you're signed out of Messenger, you'll miss calls and messages.	Facebook klingelt nicht mehr bei Anrufen und benachrichtigt dich nicht mehr über Chats, solange Messenger installiert ist, sodass nur Messenger das tut. Ohne Messenger oder wenn es ausgeschaltet ist, klingelt und benachrichtigt Facebook wie bisher. Bist du in Messenger abgemeldet, verpasst du Anrufe und Nachrichten.
 # context: settings section heading for the Tap to play switch
 Playback	Wiedergabe
 # context: switch title; on, videos and music wait for a tap before they play
@@ -1010,6 +1015,8 @@ Hide Edits promotions	Edits-Werbung ausblenden
 Hide Threads cross-posting prompts	Hinweise zum Teilen auf Threads ausblenden
 # context: switch title under Meta's other products; Threads is Meta's app, keep its name; the share sheet is the panel that opens when you tap Share on a post, use Facebook's own word for it in this language
 Hide Threads in the share sheet	Threads im Teilen-Menü ausblenden
+# context: switch title under Meta's other products; Muse is Meta's AI agent app, keep its name; the share sheet is the panel that opens when you tap Share on a post, use Facebook's own word for it in this language
+Hide Muse in the share sheet	Muse im Teilen-Menü ausblenden
 # context: switch title; Meta Verified is Meta's paid subscription, keep its name
 Hide Meta Verified offers	Meta-Verified-Angebote ausblenden
 # context: switch title; avatar stickers are stickers made from your Facebook avatar
@@ -1020,6 +1027,8 @@ Hides the Edits button in the Reels composer and the Edits pill under videos. Yo
 Facebook stops asking whether to share your post to Threads too. Posting to Facebook works as before.	Facebook fragt nicht mehr, ob du deinen Beitrag auch auf Threads teilen willst. Das Posten auf Facebook funktioniert wie bisher.
 # context: summary of the Threads share sheet switch; the share sheet is the panel that opens when you tap Share on a post
 Removes the Threads button when you share something. All other ways to share stay, in the same order.	Entfernt die Threads-Schaltfläche beim Teilen. Alle anderen Wege zum Teilen bleiben in derselben Reihenfolge.
+# context: summary of the Muse share sheet switch; Muse is Meta's AI agent app, keep its name
+Removes Muse, Meta's AI agent app, when you share something. All other ways to share stay, in the same order.	Entfernt Muse, Metas KI-Agenten-App, beim Teilen. Alle anderen Wege zum Teilen bleiben in derselben Reihenfolge.
 # context: summary of the Meta Verified switch; the label is a line Facebook adds under the poster's name on some posts
 No Meta Verified offer after you post, and no Meta Verified label under the names on posts. Posting works as usual.	Kein Meta-Verified-Angebot nach dem Posten und kein Meta-Verified-Label unter den Namen bei Beiträgen. Posten funktioniert wie gewohnt.
 # context: summary of the avatar sticker switch; promotion slots are the cards Facebook uses to suggest its own features
@@ -1046,6 +1055,7 @@ Save photo	Foto speichern
 Save all photos	Alle Fotos speichern
 # context: short message shown when the photos of a post could not start saving
 Couldn't save this post's photos. Try again in a moment.	Die Fotos dieses Beitrags ließen sich nicht speichern. Versuche es gleich noch einmal.
+Too many saves at once. Try again when one finishes.	Zu viele Speichervorgänge gleichzeitig. Versuche es erneut, wenn einer fertig ist.
 # context: settings switch under Block Instant Games ads that makes a game's rewarded ad count as watched
 Answer rewarded game ads as watched	Belohnte Spielwerbung als angesehen melden
 # context: description under that switch
@@ -1150,6 +1160,10 @@ Hides posts with a video, including shares. Reels in the feed have their own swi
 Hides posts that share a link to a website, with its preview card.	Blendet Beiträge aus, die einen Link zu einer Website mit Vorschaukarte teilen.
 # context: summary of the Hide posts on a colored background switch
 Hides short posts shown as big text on a colored background.	Blendet kurze Beiträge aus, die als großer Text auf farbigem Hintergrund erscheinen.
+# context: switch title under News feed: hides posts that share someone else's post, the ones Facebook heads "shared a post"; use Facebook's own word for a shared post in this language
+Hide reposts	Geteilte Beiträge ausblenden
+# context: summary of the Hide reposts switch; a caption is what the sharer wrote above the shared post
+Hides posts that share another post, with or without a caption. Original posts stay. Untested on a real feed, so it starts off.	Blendet Beiträge aus, die einen anderen Beitrag teilen, mit oder ohne eigenen Text. Originalbeiträge bleiben. Auf einem echten Feed noch nicht getestet, daher startet es ausgeschaltet.
 # context: switch title in Privacy: asks for the phone's own screen lock before Facebook shows
 Lock Facebook	Facebook sperren
 Save crashes to Downloads	Abstürze in Downloads speichern
@@ -1343,8 +1357,6 @@ Your list of share sheet items to hide will hold %1$d item.	Deine Liste der beim
 Your list of share sheet items to hide will hold %1$d items.	Deine Liste der beim Teilen ausgeblendeten Einträge enthält dann %1$d Einträge.
 # context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
 Support Hushfacebook	Hushfacebook unterstützen
-# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
-Buy me a coffee on Ko-fi	Spendier mir einen Kaffee auf Ko-fi
 # context: heading row at the end of the Privacy settings page, above a list of the places Facebook shows ads or reports usage
 Where ads and tracking are blocked	Wo Anzeigen und Tracking blockiert werden
 # context: that heading's summary; build means this patched copy of Facebook, switch is a settings toggle
@@ -1426,3 +1438,48 @@ The saved copy of %1$s is missing. Choose the file again.	Die gespeicherte Kopie
 The video wasn't saved. Try again.	Das Video wurde nicht gespeichert. Versuche es noch einmal.
 This list needs more room than it has. Shorten it, then save again.	Diese Liste braucht mehr Platz als verfügbar. Kürze sie und speichere erneut.
 Your settings already match that file, so nothing will change.	Deine Einstellungen entsprechen bereits dieser Datei. Es wird nichts geändert.
+# context: title of the row that restarts Facebook, shown while one change waits for a restart
+Restart Facebook to apply this change	Starte Facebook neu, um diese Änderung zu übernehmen
+# context: the same row with two or more changes waiting
+Restart Facebook to apply %1$d changes	Starte Facebook neu, um %1$d Änderungen zu übernehmen
+# context: summary of that row; after the restart the settings screen opens again on the same page
+Facebook closes and reopens on this page.	Facebook schließt sich und öffnet sich wieder auf dieser Seite.
+# context: row near the end of the settings home page; opens a new bug report on GitHub
+Report a problem	Problem melden
+Opens a GitHub report with your versions and settings filled in. Add what happened.	Öffnet eine GitHub-Meldung, in der deine Versionen und Einstellungen schon stehen. Ergänze, was passiert ist.
+# context: row near the top of the settings home page; a list of ready-made sets of switches
+Quick setups	Schnelleinstellungen
+Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Schalte mehrere Schalter mit einem Tippen ein oder setze alle Schalter auf ihren Ausgangszustand zurück. Halte gedrückt, um diese Zeile auszublenden.
+# context: toast after a long press hides the Quick setups row from the settings home page; the page name is the one holding the row that brings it back
+Quick setups hidden. Bring it back from %1$s.	Schnelleinstellungen ausgeblendet. Du bekommst sie unter %1$s zurück.
+# context: row on the Pause, backup and diagnostics page; shows or hides the Quick setups row on the settings home page
+Quick setups on the home page	Schnelleinstellungen auf der Startseite
+Shown. Tap to hide it.	Angezeigt. Tippe zum Ausblenden.
+Hidden. Tap to show it again.	Ausgeblendet. Tippe, um sie wieder anzuzeigen.
+# context: name of a Quick setups choice that hides ads and nags; an adjective, as in a quiet feed
+Quiet	Ruhig
+Hides ads, suggestions, promos and prompts, and stops nagging notifications.	Blendet Werbung, Vorschläge, Werbeaktionen und Aufforderungen aus und stoppt lästige Benachrichtigungen.
+# context: what the Privacy choice of Quick setups turns on; camera roll scans are Hold back camera roll processing
+Holds back usage reports and camera roll scans, removes link tracking, and hides your typing and screenshots.	Hält Nutzungsberichte und Scans deiner Aufnahmen zurück, entfernt Link-Tracking und verbirgt dein Tippen und deine Bildschirmfotos.
+# context: name of the Quick setups choice that puts the switches back as they were after install
+Back to defaults	Zurück zum Standard
+# context: Lock Facebook is the name of the app lock switch, left as it is
+Puts every feature switch but Lock Facebook back the way it started.	Setzt jeden Funktionsschalter außer „Facebook sperren“ auf seinen Ausgangszustand zurück.
+# context: toast after a Quick setups choice changed one switch
+Changed %1$d setting	%1$d Einstellung geändert
+# context: the same toast for none, or for two or more
+Changed %1$d settings	%1$d Einstellungen geändert
+# context: toast and Last save row: a save failed for want of a connection
+The connection failed. Check your internet and try again.	Die Verbindung ist fehlgeschlagen. Prüfe dein Internet und versuche es noch einmal.
+# context: toast and Last save row: the server answered a save with an error, not the file
+Facebook's server didn't send the file. Try again in a moment.	Facebooks Server hat die Datei nicht gesendet. Versuche es gleich noch einmal.
+# context: toast and Last save row: the file a save fetched came empty or cut short
+The download ended before the whole file arrived. Try again.	Der Download endete, bevor die ganze Datei da war. Versuche es noch einmal.
+# context: toast and Last save row: a save's work file couldn't be written, for a reason the phone didn't give
+Your phone couldn't write the file. Check your free space and try again.	Dein Handy konnte die Datei nicht schreiben. Prüfe den freien Speicher und versuche es erneut.
+# context: toast and Last save row: the phone was measured and has too little free space for a save
+Not enough free space to save this. Free some up and try again.	Zu wenig freier Speicher zum Speichern. Gib etwas Platz frei und versuche es erneut.
+# context: toast and Last save row: a video's picture and sound couldn't be converted or joined; Download quality is the setting's name
+Your phone couldn't put this video together. Try another Download quality.	Dein Handy konnte das Video nicht zusammensetzen. Probiere eine andere Download-Qualität.
+# context: toast and Last save row: the gallery refused a finished photo or video
+The file couldn't be copied into your phone's gallery. Try again in a moment.	Die Datei ließ sich nicht in die Galerie deines Handys kopieren. Versuche es gleich erneut.

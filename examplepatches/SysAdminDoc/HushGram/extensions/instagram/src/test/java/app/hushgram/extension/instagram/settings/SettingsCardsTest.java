@@ -181,6 +181,8 @@ public class SettingsCardsTest {
                 if (shown.get(i) instanceof HushgramPreferenceFragment.Intro) at = i;
             }
             assertTrue(title + " opened without an intro: " + shown, at >= 0);
+            assertEquals(title + " keeps Search ahead of its intro", "hushgram_settings_search", shown.get(0).getKey());
+            assertEquals(title + " places its intro directly after Search", 1, at);
             Preference intro = shown.get(at);
             assertTrue(title + "'s section sits right under its intro",
                     at + 1 < shown.size() && shown.get(at + 1) instanceof HushgramPreferenceFragment.Heading
@@ -250,7 +252,10 @@ public class SettingsCardsTest {
         }
         assertTrue("Pause and diagnostics, a section of its own, comes next", ScreenColors.closesCard(backup));
         assertTrue(ScreenColors.opensCard(about));
-        assertFalse("Support HushGram shares About's card", ScreenColors.closesCard(about));
+        assertFalse("Report a problem and Support HushGram share About's card", ScreenColors.closesCard(about));
+        Preference report = page.findPreference(HushgramPreferenceFragment.REPORT_ROW_KEY);
+        assertFalse(ScreenColors.opensCard(report));
+        assertFalse(ScreenColors.closesCard(report));
         Preference support = page.findPreference(HushgramPreferenceFragment.SUPPORT_ROW_KEY);
         assertFalse(ScreenColors.opensCard(support));
         assertTrue(ScreenColors.closesCard(support));

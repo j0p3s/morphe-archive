@@ -32,6 +32,23 @@
     },
     {
       "paths": [
+        "extensions/shared/library/src/main/java/app/hushtelegram/extension/shared/settings/preference/ReopenSettingsAfterRestart.java",
+        "extensions/shared/library/src/main/java/app/hushtelegram/extension/shared/settings/preference/ReportProblem.java",
+        "extensions/shared/library/src/main/java/app/hushtelegram/extension/shared/settings/preference/QuickSetups.java",
+        "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/settings/ReportProblemForm.java",
+        "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/settings/QuickSetupKeys.java"
+      ],
+      "origin": "ported",
+      "upstream": "https://github.com/SysAdminDoc/HushPinterest",
+      "commit": "44fb93384a319d8e5d324f51b416efdc3d3147e6",
+      "via": [
+        "https://github.com/SysAdminDoc/hushfeed"
+      ],
+      "license": "GPL-3.0-only",
+      "changes": "Hush settings standard (2026-10-12) copied from the Pinterest sibling: packages renamed to app.hushtelegram.extension.shared and app.hushtelegram.extension.telegram, HushTelegramPause in place of HushPinterestPause, Telegram's repository, names and switches in Report a problem and Quick setups, and Quick setups running each switch row's change listener before it sets the switch."
+    },
+    {
+      "paths": [
         "patches/src/main/kotlin/app/morphe/patches/shared/compat/**"
       ],
       "origin": "ported",
@@ -130,6 +147,9 @@
         "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/misc/Recommendations.java",
         "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/misc/CallDebug.java",
         "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/misc/DraftPreviews.java",
+        "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/misc/ContactShare.java",
+        "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/misc/LocalDrafts.java",
+        "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/misc/LocalSearch.java",
         "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/misc/GalleryCamera.java",
         "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/misc/ChatSwipe.java",
         "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/misc/ChannelPull.java",
@@ -188,6 +208,7 @@
         "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/misc/MessageFilters.java",
         "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/settings/FilterEditor.java",
         "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/settings/EditorForm.java",
+        "patches/src/main/kotlin/app/morphe/patches/telegram/misc/settings/ChatListTitlePress.kt",
         "extensions/telegram/src/main/java/app/hushtelegram/extension/telegram/misc/KeepDeletedBridge.java",
         "patches/src/main/kotlin/app/morphe/patches/telegram/misc/localcontrols/**",
         "patches/src/main/kotlin/app/morphe/patches/telegram/misc/paste/**",
@@ -246,6 +267,7 @@
         "patches/src/main/kotlin/app/morphe/patches/telegram/misc/recommendations/HideRecommendationsPatch.kt",
         "patches/src/main/kotlin/app/morphe/patches/telegram/misc/calldebug/DisableCallDebugPatch.kt",
         "patches/src/main/kotlin/app/morphe/patches/telegram/misc/drafts/DisableDraftPreviewsPatch.kt",
+        "patches/src/main/kotlin/app/morphe/patches/telegram/misc/drafts/LocalSearchSupport.kt",
         "patches/src/main/kotlin/app/morphe/patches/telegram/misc/camera/GalleryCameraOnTapPatch.kt",
         "patches/src/main/kotlin/app/morphe/patches/telegram/misc/chatlist/DisableChatSwipePatch.kt",
         "patches/src/main/kotlin/app/morphe/patches/telegram/misc/channelpull/**",

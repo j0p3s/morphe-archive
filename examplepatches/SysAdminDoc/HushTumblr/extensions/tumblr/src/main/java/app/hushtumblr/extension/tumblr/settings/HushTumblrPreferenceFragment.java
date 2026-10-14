@@ -67,9 +67,12 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -84,6 +87,7 @@ import app.hushtumblr.extension.shared.settings.preference.ClearLogBufferPrefere
 import app.hushtumblr.extension.shared.settings.preference.ExportDiagnosticReportPreference;
 import app.hushtumblr.extension.shared.settings.preference.ImmediateAction;
 import app.hushtumblr.extension.shared.settings.preference.LogBufferManager;
+import app.hushtumblr.extension.shared.settings.preference.QuickSetups;
 import app.hushtumblr.extension.tumblr.rootmute.RootPostMutePreference;
 import app.hushtumblr.extension.tumblr.timeline.PostRules;
 import app.hushtumblr.extension.tumblr.ui.BottomBarTabs;
@@ -147,6 +151,85 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
     private int wordsSelectionEnd;
     private boolean restoreWordsEditor;
     private boolean editingAllowedWords;
+
+    @Nullable static Consumer<Runnable> editWorkerForTests;
+    private static final java.util.concurrent.atomic.AtomicInteger pendingEdits =
+            new java.util.concurrent.atomic.AtomicInteger();
+    private static volatile boolean savedRefreshRetryScheduled;
+
+    static boolean hasPendingEdits() {
+        return pendingEdits.get() != 0 || savedRefreshRetryScheduled;
+    }
+
+    static boolean submitEdit(Runnable task) {
+        return submitEdit(task, true);
+    }
+
+    static boolean submitEdit(Runnable task, Runnable completion) {
+        return submitEdit(task, true, completion);
+    }
+
+    private static boolean submitEdit(Runnable task, boolean refreshOnRejection) {
+        return submitEdit(task, refreshOnRejection, null);
+    }
+
+    private static boolean submitEdit(Runnable task, boolean refreshOnRejection, @Nullable Runnable completion) {
+        pendingEdits.incrementAndGet();
+        SettingsBackupPreference.refreshCurrentPage();
+        java.util.concurrent.atomic.AtomicBoolean completed = new java.util.concurrent.atomic.AtomicBoolean();
+        Runnable finish = () -> {
+            if (!completed.compareAndSet(false, true)) return;
+            pendingEdits.decrementAndGet();
+            if (completion == null) {
+                SettingsBackupPreference.refreshCurrentPage();
+            } else {
+                Utils.runOnMainThreadNowOrLater(() -> {
+                    SettingsBackupPreference.refreshCurrentPage();
+                    completion.run();
+                });
+            }
+        };
+        Runnable guarded = () -> {
+            try {
+                task.run();
+            } finally {
+                finish.run();
+            }
+        };
+        Consumer<Runnable> worker = editWorkerForTests;
+        boolean accepted = false;
+        try {
+            if (worker == null) accepted = Utils.runOnBackgroundThread(guarded);
+            else {
+                worker.accept(guarded);
+                accepted = true;
+            }
+            return accepted;
+        } catch (java.util.concurrent.RejectedExecutionException rejected) {
+            return false;
+        } finally {
+            if (!accepted && completed.compareAndSet(false, true)) {
+                pendingEdits.decrementAndGet();
+                if (refreshOnRejection) SettingsBackupPreference.refreshCurrentPage();
+            }
+        }
+    }
+
+    /** Wait for external writes and rollback off main before refreshing an app-owned row. */
+    static void scheduleSavedChangeRefresh() {
+        if (hasPendingEdits()) return;
+        if (!submitEdit(() -> {
+            synchronized (app.hushtumblr.extension.shared.settings.Setting.class) {
+                // The transaction that sent the notification must release its rollback lock.
+            }
+        }, false)) {
+            savedRefreshRetryScheduled = true;
+            Utils.runOnMainThreadDelayed(() -> {
+                savedRefreshRetryScheduled = false;
+                scheduleSavedChangeRefresh();
+            }, 250);
+        }
+    }
 
     /**
      * A settings file that was read and waits on the person's answer, as
@@ -252,6 +335,8 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
         // The preview is drawn over this page's window. It stays unanswered, and the page that
         // replaces this one shows it again.
         SettingsBackupPreference.closePreview(this);
+        Preference guide = findPreference(SetupGuidancePreference.KEY);
+        if (guide instanceof SetupGuidancePreference) ((SetupGuidancePreference) guide).closeDialog();
         if (manageMutedPosts != null) manageMutedPosts.closeDialogs();
         manageMutedPosts = null;
         rememberWordsDraft();
@@ -346,6 +431,11 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
             patchToggle(feed, context, build, PatchFamily.HIDE_REBLOGS, Settings.KEEP_TAGGED_REBLOGS,
                     L10n.t("Keep tagged reblogs"),
                     L10n.t("When reblogs are hidden, keep ones with tags. Other post filters still apply."),
+                    SettingsIcons.BLOCK);
+            patchToggle(feed, context, build, PatchFamily.HIDE_REBLOGS, Settings.KEEP_REBLOGS_WITH_CONTENT,
+                    L10n.t("Keep reblogs with added content"),
+                    L10n.t("When reblogs are hidden, keep ones where the reblogger added something of their own. "
+                        + "Other post filters still apply."),
                     SettingsIcons.BLOCK);
             patchToggle(feed, context, build, PatchFamily.MUTE_ROOT_POSTS, Settings.MUTE_ROOT_POSTS,
                     L10n.t("Mute posts locally"),
@@ -462,7 +552,8 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
                     SettingsIcons.BLOCK);
             patchToggle(ui, context, build, PatchFamily.HIDE_BLAZE_PROMPTS, Settings.HIDE_BLAZE_PROMPTS,
                     L10n.t("Hide Blaze prompts"), L10n.t("Hides the Blaze buttons, banners and the nudge to promote "
-                        + "a post after you share it."), SettingsIcons.BLOCK);
+                        + "a post after you share it. The Blaze item in a post's menu stays."),
+                    SettingsIcons.BLOCK);
             // Not flag-backed, but the TumblrMart button is only placed when its screen is made.
             patchToggle(ui, context, build, PatchFamily.HIDE_TUMBLRMART, Settings.HIDE_TUMBLRMART,
                     L10n.t("Hide the diamond and TumblrMart"), L10n.t("Hides the Premium diamond on your dashboard, "
@@ -578,11 +669,11 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
         // Morphe Manager can export the patch choices and the signing key, not these switches.
         hushtumblr.addPreference(mark(new BackupRow(this, context, SettingsBackupPreference.EXPORT,
                 L10n.t("Export settings"),
-                L10n.t("Save your switches to a file. They cover all the accounts in this Tumblr app. Pause and "
-                        + "Debug logging aren't included, and neither is the release check.")), SettingsIcons.EXPORT));
+                L10n.t("Save your settings to a file, including word lists and tab order. These choices apply to all "
+                        + "accounts in this Tumblr app. Pause, Debug logging and release checks aren't included.")), SettingsIcons.EXPORT));
         hushtumblr.addPreference(mark(new BackupRow(this, context, SettingsBackupPreference.IMPORT,
                 L10n.t("Import settings"),
-                L10n.t("Choose a settings file. Review each switch's name and old and new values before importing. "
+                L10n.t("Choose a settings file. Review each setting's name and old and new values before importing. "
                         + "Your choices apply to all accounts in this Tumblr app.")), SettingsIcons.DOWNLOADS));
         hushtumblr.addPreference(mark(new BackupRow(this, context, SettingsBackupPreference.UNDO,
                 L10n.t("Undo import"),
@@ -766,29 +857,54 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
 
     void resumeFromOverview() {
         Context context = getContext();
-        if (context == null || statusCard == null) return;
-        HushTumblrPause.Reason still = HushTumblrPause.turnBackOn(context);
-        // The switch shows what was kept. Setting it to off here would write off through the
-        // preference itself when the store had just refused to.
-        Preference pause = findPreference(BaseSettings.PAUSED.key);
-        if (pause instanceof SwitchPreference) ((SwitchPreference) pause).setChecked(BaseSettings.PAUSED.savedValue());
-        if (still == HushTumblrPause.Reason.MARKER_FILE) {
-            String file = L10n.isolate(HushTumblrPause.MARKER_FILE_NAME);
-            String folder = L10n.isolate(markerFolder(context.getPackageName()));
-            // The switches stay as they were until the file goes, so say when they still pause.
-            String left = BaseSettings.PAUSED.savedValue() || BaseSettings.SAFE_MODE.savedValue()
-                    ? L10n.f("The file %1$s couldn't be removed. Delete it from %2$s, then tap Resume again.", file, folder)
-                    : L10n.f("The file %1$s couldn't be removed. Delete it from %2$s to turn HushTumblr back on.",
-                    file, folder);
-            statusCard.setSummary(left);
-            // Resume can be tapped on a category page too, where the card isn't in view.
-            Utils.showToastLong(left);
-            return;
+        Preference card = statusCard;
+        if (context == null || card == null || hasPendingEdits() || !ownsStatusCard(card)) return;
+        card.setEnabled(false);
+        card.setSummary(L10n.t("Saving changes"));
+        java.util.concurrent.atomic.AtomicReference<HushTumblrPause.Reason> outcome =
+                new java.util.concurrent.atomic.AtomicReference<>(HushTumblrPause.Reason.SWITCH);
+        if (!submitEdit(() -> {
+            try {
+                outcome.set(HushTumblrPause.turnBackOn(context));
+            } catch (RuntimeException failure) {
+                Logger.printInfo(() -> "HushTumblr resume failed", failure);
+            }
+        }, () -> {
+            // The worker has refreshed a replacement page before this owned result runs.
+            if (!ownsStatusCard(card)) return;
+            card.setEnabled(true);
+            // Show the value actually kept, including a failed write or rollback.
+            Preference pause = findPreference(BaseSettings.PAUSED.key);
+            if (pause instanceof SwitchPreference) {
+                ((SwitchPreference) pause).setChecked(BaseSettings.PAUSED.savedValue());
+            }
+            if (outcome.get() == HushTumblrPause.Reason.MARKER_FILE) {
+                String file = L10n.isolate(HushTumblrPause.MARKER_FILE_NAME);
+                String folder = L10n.isolate(markerFolder(context.getPackageName()));
+                String left = BaseSettings.PAUSED.savedValue() || BaseSettings.SAFE_MODE.savedValue()
+                        ? L10n.f("The file %1$s couldn't be removed. Delete it from %2$s, then tap Resume again.", file, folder)
+                        : L10n.f("The file %1$s couldn't be removed. Delete it from %2$s to turn HushTumblr back on.",
+                        file, folder);
+                card.setSummary(left);
+                Utils.showToastLong(left);
+                return;
+            }
+            if (outcome.get() != HushTumblrPause.Reason.NONE) {
+                Utils.showToastLong(L10n.t("Couldn't turn HushTumblr back on. Try again."));
+            }
+            showStatus(card, context);
+        })) {
+            card.setEnabled(true);
+            showStatus(card, context);
+            Utils.showToastLong(L10n.t("Couldn't start that. Try again in a moment."));
         }
-        if (still != HushTumblrPause.Reason.NONE) {
-            Utils.showToastLong(L10n.t("Couldn't turn HushTumblr back on. Try again."));
-        }
-        showStatus(statusCard, context);
+    }
+
+    private boolean ownsStatusCard(Preference card) {
+        if (!isAdded() || getView() == null || statusCard != card) return false;
+        if (!(getParentFragment() instanceof SettingsDialog)) return true;
+        Dialog dialog = ((SettingsDialog) getParentFragment()).getDialog();
+        return dialog != null && dialog.isShowing();
     }
 
     /**
@@ -879,21 +995,66 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
                 Math.round(96 * context.getResources().getDisplayMetrics().density)));
         field.setMaxHeight(editorHeight);
         field.setVerticalScrollBarEnabled(true);
+        field.setOnTouchListener((view, event) -> {
+            int action = event.getActionMasked();
+            boolean finished = action == android.view.MotionEvent.ACTION_UP
+                    || action == android.view.MotionEvent.ACTION_CANCEL;
+            // The draft scrolls under a finger before the surrounding help and error text does.
+            view.getParent().requestDisallowInterceptTouchEvent(!finished
+                    && (view.canScrollVertically(-1) || view.canScrollVertically(1)));
+            return false;
+        });
         field.setHint(L10n.t("One word or phrase a line"));
         field.setText(wordsDraft == null ? setting.savedValue() : wordsDraft);
         if (wordsDraft != null) field.setSelection(Math.min(wordsSelectionStart, field.length()),
                 Math.min(wordsSelectionEnd, field.length()));
         LinearLayout editor = new LinearLayout(context);
+        editor.setOrientation(LinearLayout.VERTICAL);
         int inset = Math.round(24 * context.getResources().getDisplayMetrics().density);
         editor.setPaddingRelative(inset, 0, inset, 0);
+        TextView explanation = new TextView(context);
+        explanation.setText(editingAllowedWords
+                ? L10n.t("Allowed words keep a post when the word filter would hide it. Other filters still apply.")
+                : L10n.t("Match whole words or phrases in the fields you chose. Case doesn't matter."));
+        explanation.setTextSize(14);
+        explanation.setTextColor(ScreenColors.DEFAULT.summary);
+        explanation.setPaddingRelative(0, 0, 0, Math.round(12 * context.getResources().getDisplayMetrics().density));
+        editor.addView(explanation);
+        TextView label = new TextView(context);
+        label.setText(L10n.t("One word or phrase a line"));
+        label.setTextSize(13);
+        label.setTextColor(ScreenColors.DEFAULT.heading);
+        label.setLabelFor(android.R.id.edit);
+        label.setPaddingRelative(0, 0, 0, Math.round(6 * context.getResources().getDisplayMetrics().density));
+        editor.addView(label);
         editor.addView(field, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.WRAP_CONTENT));
+        TextView feedback = new TextView(context);
+        feedback.setText(L10n.t("Changes are saved only when you tap Save."));
+        feedback.setTextSize(14);
+        feedback.setTextColor(ScreenColors.DEFAULT.summary);
+        feedback.setPaddingRelative(0, Math.round(8 * context.getResources().getDisplayMetrics().density), 0, 0);
+        feedback.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        editor.addView(feedback);
+        ScreenColors.startSide(label);
+        ScreenColors.startSide(field);
+        ScreenColors.startSide(feedback);
+        field.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence text, int start, int count, int after) { }
+            @Override public void onTextChanged(CharSequence text, int start, int before, int count) {
+                if (field.getError() != null) {
+                    field.setError(null);
+                    feedback.setText(L10n.t("Changes are saved only when you tap Save."));
+                }
+            }
+            @Override public void afterTextChanged(android.text.Editable text) { }
+        });
+        android.widget.ScrollView body = new android.widget.ScrollView(context);
+        body.addView(editor, new android.widget.ScrollView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT));
         AlertDialog dialog = show(new AlertDialog.Builder(context)
                 .setTitle(row.getTitle())
-                .setMessage(editingAllowedWords
-                        ? L10n.t("Allowed words keep a post when the word filter would hide it. Other filters still apply.")
-                        : L10n.t("Posts matching a hidden word in the selected fields are hidden. Case doesn't matter, and only whole words count."))
-                .setView(editor)
+                .setView(body)
                 .setPositiveButton(L10n.t("Save"), null)
                 .setNegativeButton(L10n.t("Cancel"), null));
         if (dialog == null) return;
@@ -916,28 +1077,62 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
             dialog.dismiss();
         });
         dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(ignored -> {
-            if (wordsDialog != dialog || !dialog.isShowing() || !isAdded()) return;
+            if (wordsDialog != dialog || !dialog.isShowing() || !isAdded() || !field.isEnabled()) return;
             String words = field.getText().toString().trim();
-            String error = null;
-            try {
-                if (!SettingsBackup.saveText(setting, words)) {
+            rememberWordsDraft();
+            field.setEnabled(false);
+            setEditorBusy(dialog, true);
+            feedback.setText(L10n.t("Saving changes"));
+            if (!submitEdit(() -> {
+                String error = null;
+                try {
+                    if (!SettingsBackup.saveText(setting, words)) {
+                        error = L10n.t("Couldn't save the words. Your earlier list is unchanged. Try again.");
+                    }
+                } catch (SettingsBackup.Rejected refused) {
+                    error = refused.reason == SettingsBackup.Reason.SIZE
+                            ? L10n.t("This list is too large for a settings backup. Shorten it before saving. Your draft is still here.")
+                            : L10n.t("Couldn't save the words. Your earlier list is unchanged. Try again.");
+                } catch (RuntimeException unavailable) {
+                    Logger.printInfo(() -> "Word list save failed", unavailable);
                     error = L10n.t("Couldn't save the words. Your earlier list is unchanged. Try again.");
                 }
-            } catch (SettingsBackup.Rejected refused) {
-                error = refused.reason == SettingsBackup.Reason.SIZE
-                        ? L10n.t("This list is too large for a settings backup. Shorten it before saving. Your draft is still here.")
-                        : L10n.t("Couldn't save the words. Your earlier list is unchanged. Try again.");
-            }
-            if (error != null) {
-                rememberWordsDraft();
+                String outcome = error;
+                Utils.runOnMainThreadNowOrLater(() -> {
+                    SettingsBackupPreference.refreshCurrentPage();
+                    if (wordsDialog != dialog || !dialog.isShowing() || !isAdded()) return;
+                    field.setEnabled(true);
+                    setEditorBusy(dialog, false);
+                    if (outcome != null) {
+                        field.setError(outcome);
+                        feedback.setText(outcome);
+                        Utils.showToastLong(outcome);
+                        return;
+                    }
+                    row.setSummary(wordsSummary(setting.savedValue()));
+                    clearWordsDraft();
+                    dialog.dismiss();
+                    Utils.showToastShort(L10n.t("Words saved"));
+                });
+            })) {
+                field.setEnabled(true);
+                setEditorBusy(dialog, false);
+                String error = L10n.t("Couldn't start that. Try again in a moment.");
                 field.setError(error);
+                feedback.setText(error);
                 Utils.showToastLong(error);
-                return;
             }
-            row.setSummary(wordsSummary(setting.savedValue()));
-            clearWordsDraft();
-            dialog.dismiss();
         });
+    }
+
+    private static void setEditorBusy(AlertDialog dialog, boolean busy) {
+        dialog.setCancelable(!busy);
+        dialog.setCanceledOnTouchOutside(!busy);
+        for (int button : new int[]{AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEGATIVE,
+                AlertDialog.BUTTON_NEUTRAL}) {
+            Button action = dialog.getButton(button);
+            if (action != null) action.setEnabled(!busy);
+        }
     }
 
     private void rememberWordsDraft() {
@@ -975,36 +1170,69 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
     private void showTabOrder(Context context, Preference row) {
         List<String> order = new ArrayList<>(BottomBarTabs.choices(TextSettings.TAB_ORDER.savedValue()));
         String[] focusedTab = {order.get(0)};
-        ArrayAdapter<String> labels = new ArrayAdapter<>(context, android.R.layout.simple_list_item_1, tabLabels(order));
+        ArrayAdapter<String> labels = new ArrayAdapter<String>(context,
+                android.R.layout.simple_list_item_1, tabLabels(order)) {
+            @Override public View getView(int position, View recycled, ViewGroup parent) {
+                TextView label = (TextView) super.getView(position, recycled, parent);
+                float density = label.getResources().getDisplayMetrics().density;
+                android.graphics.drawable.Drawable glyph = SettingsIcons.icon(context, SettingsIcons.BACK,
+                        position == 0 ? ScreenColors.DEFAULT.summary : ScreenColors.DEFAULT.accent);
+                // Up has the same direction in every language, unlike the source Back arrow.
+                glyph.setAutoMirrored(false);
+                android.graphics.drawable.RotateDrawable up = new android.graphics.drawable.RotateDrawable();
+                up.setDrawable(glyph);
+                up.setFromDegrees(90);
+                up.setToDegrees(90);
+                up.setLevel(10000);
+                int size = Math.round(24 * density);
+                up.setBounds(0, 0, size, size);
+                label.setCompoundDrawablesRelative(null, null, up, null);
+                label.setCompoundDrawablePadding(Math.round(16 * density));
+                return label;
+            }
+        };
         AlertDialog dialog = show(new AlertDialog.Builder(context)
                 .setTitle(L10n.t("Tap a tab to move it up"))
                 .setAdapter(labels, null)
                 .setNeutralButton(L10n.t("Tumblr's order"), null)
-                .setPositiveButton(L10n.t("OK"), null));
+                .setPositiveButton(L10n.t("Done"), null));
         if (dialog == null) return;
+        boolean[] saving = {false};
         dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(ignored -> {
-            if (!dialog.isShowing() || !isAdded()) return;
-            saveTabOrder("");
-            order.clear();
-            order.addAll(BottomBarTabs.choices(TextSettings.TAB_ORDER.savedValue()));
-            labels.clear();
-            labels.addAll(tabLabels(order));
-            row.setSummary(tabOrderSummary(TextSettings.TAB_ORDER.savedValue()));
-            focusTab(dialog, order, focusedTab[0], false);
+            if (saving[0] || !dialog.isShowing() || !isAdded()) return;
+            saving[0] = true;
+            saveTabOrder("", dialog, saved -> {
+                saving[0] = false;
+                order.clear();
+                order.addAll(BottomBarTabs.choices(TextSettings.TAB_ORDER.savedValue()));
+                labels.clear();
+                labels.addAll(tabLabels(order));
+                row.setSummary(tabOrderSummary(TextSettings.TAB_ORDER.savedValue()));
+                focusTab(dialog, order, focusedTab[0], false);
+            });
         });
         // A click listener of its own, so a tap moves the tab without closing the list.
         dialog.getListView().setOnItemClickListener((parent, view, position, id) -> {
-            if (!dialog.isShowing() || !isAdded()) return;
+            if (saving[0] || !dialog.isShowing() || !isAdded()) return;
             String movedTab = order.get(position);
+            if (position == 0) {
+                String first = L10n.f("%1$s is already first.", tabLabel(movedTab));
+                dialog.getListView().announceForAccessibility(first);
+                Utils.showToastShort(first);
+                return;
+            }
             focusedTab[0] = movedTab;
             List<String> moved = BottomBarTabs.movedUp(order, position);
-            boolean saved = saveTabOrder(BottomBarTabs.join(moved));
-            order.clear();
-            order.addAll(BottomBarTabs.choices(TextSettings.TAB_ORDER.savedValue()));
-            labels.clear();
-            labels.addAll(tabLabels(order));
-            row.setSummary(tabOrderSummary(TextSettings.TAB_ORDER.savedValue()));
-            focusTab(dialog, order, movedTab, saved);
+            saving[0] = true;
+            saveTabOrder(BottomBarTabs.join(moved), dialog, saved -> {
+                saving[0] = false;
+                order.clear();
+                order.addAll(BottomBarTabs.choices(TextSettings.TAB_ORDER.savedValue()));
+                labels.clear();
+                labels.addAll(tabLabels(order));
+                row.setSummary(tabOrderSummary(TextSettings.TAB_ORDER.savedValue()));
+                focusTab(dialog, order, movedTab, saved);
+            });
         });
     }
 
@@ -1028,19 +1256,40 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
         list.requestLayout();
     }
 
-    private boolean saveTabOrder(String value) {
-        try {
-            SettingsBackup.checkTextBudget(TextSettings.TAB_ORDER, value);
-            String before = TextSettings.TAB_ORDER.persistedValue();
-            if (TextSettings.TAB_ORDER.save(value)) {
-                if (noteRestartPending(TextSettings.TAB_ORDER, before)) showRestartDialog(getContext());
-                return true;
+    private void saveTabOrder(String value, AlertDialog dialog, Consumer<Boolean> done) {
+        setEditorBusy(dialog, true);
+        dialog.getListView().setEnabled(false);
+        dialog.getListView().announceForAccessibility(L10n.t("Saving changes"));
+        if (!submitEdit(() -> {
+            boolean saved = false;
+            try {
+                synchronized (app.hushtumblr.extension.shared.settings.Setting.class) {
+                    String before = TextSettings.TAB_ORDER.persistedValue();
+                    saved = SettingsBackup.saveText(TextSettings.TAB_ORDER, value);
+                    if (saved) recordRestartPendingChanges(Collections.singletonMap(TextSettings.TAB_ORDER, before));
+                }
+            } catch (SettingsBackup.Rejected | RuntimeException refused) {
+                // No draft or tab names belong in the log.
             }
-        } catch (SettingsBackup.Rejected refused) {
-            // No draft or tab names belong in the log.
+            boolean outcome = saved;
+            Utils.runOnMainThreadNowOrLater(() -> {
+                SettingsBackupPreference.refreshCurrentPage();
+                if (!dialog.isShowing() || !isAdded() || !shownDialogs.contains(dialog)) return;
+                setEditorBusy(dialog, false);
+                dialog.getListView().setEnabled(true);
+                if (!outcome) Utils.showToastLong(L10n.t("Couldn't save the tab order. Your earlier order is unchanged. Try again."));
+                else {
+                    onRestartPendingChanged();
+                    if (restartPending.contains(TextSettings.TAB_ORDER.key)) showRestartDialog(getContext());
+                }
+                done.accept(outcome);
+            });
+        })) {
+            setEditorBusy(dialog, false);
+            dialog.getListView().setEnabled(true);
+            Utils.showToastLong(L10n.t("Couldn't start that. Try again in a moment."));
+            done.accept(false);
         }
-        Utils.showToastLong(L10n.t("Couldn't save the tab order. Your earlier order is unchanged. Try again."));
-        return false;
     }
 
     /** What the tab order [saved] does, for its row's summary. */
@@ -1157,12 +1406,87 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
                 + "then Open by default."));
     }
 
-    /** A switch whose change waits for a restart: the card says what the next start brings. */
+    /**
+     * A switch whose change waits for a restart: the card says what the next start brings, and the
+     * restart row comes, goes or counts again.
+     */
     @Override
     protected void onRestartPendingChanged() {
         Preference card = statusCard;
         Context context = getContext();
         if (card != null && context != null) showStatus(card, context);
+        if (navigation != null) navigation.restartChanged();
+    }
+
+    /**
+     * Quick setups: Quiet, Privacy or Back to defaults ({@link QuickSetupKeys}), each changing its
+     * switches at once, then a toast saying how many changed. A switch that needs a restart brings
+     * up the restart row the way a tap on it would.
+     */
+    void showQuickSetups() {
+        Context context = getContext();
+        if (context == null) return;
+        List<Map<BooleanSetting, Boolean>> choices = Arrays.asList(
+                QuickSetupKeys.quiet(), QuickSetupKeys.privacy(), QuickSetupKeys.defaults());
+        CharSequence[] names = {L10n.t("Quiet"), L10n.t("Privacy"), L10n.t("Back to defaults")};
+        CharSequence[] details = {
+                L10n.t("Hides ads, suggestions, prompts and unread counts."),
+                L10n.t("Stops Tumblr's tracking and screenshot watching, and hides your advertising ID."),
+                L10n.t("Puts every feature switch back the way it started.")};
+        AlertDialog dialog = show(new AlertDialog.Builder(themed(context))
+                .setTitle(L10n.t("Quick setups"))
+                .setAdapter(new ChoiceCards(ScreenColors.DEFAULT, names, details),
+                        (shown, which) -> applyQuickSetup(choices.get(which)))
+                .setNegativeButton(L10n.t("Cancel"), null));
+        ListView list = dialog == null ? null : dialog.getListView();
+        if (list != null) {
+            // The cards bring their own spacing and press ripple, as in the diagnostic report's choices.
+            list.setDivider(null);
+            list.setSelector(new ColorDrawable(Color.TRANSPARENT));
+        }
+    }
+
+    /**
+     * Applies one Quick setups choice to the switches this page shows. The save runs on the
+     * settings worker in one commit, as a tap on a switch does; a row's own setChecked never
+     * saves. Then the page shows what was saved and a toast says how many changed.
+     */
+    void applyQuickSetup(Map<BooleanSetting, Boolean> values) {
+        PreferenceScreen screen = getPreferenceScreen();
+        if (screen == null || getContext() == null) return;
+        Map<BooleanSetting, Boolean> shown = QuickSetups.shown(screen, values);
+        if (hasPendingEdits()) {
+            // A switch is still saving. Its own save would land after this one and undo part of it.
+            Utils.showToastLong(L10n.t("Couldn't start that. Try again in a moment."));
+            return;
+        }
+        int[] changed = {0};
+        boolean[] failed = {false};
+        boolean accepted = submitEdit(() -> {
+            try {
+                changed[0] = QuickSetups.save(shown);
+            } catch (java.io.IOException | RuntimeException failure) {
+                failed[0] = true;
+                Logger.printInfo(() -> "Quick setup save failed", failure);
+            }
+        }, () -> {
+            Context context = getContext();
+            if (isAdded()) refreshSwitches();
+            if (failed[0]) {
+                Utils.showToastLong(String.valueOf(preferenceChangeRecoveredMessage(context)));
+                return;
+            }
+            int count = changed[0];
+            Utils.showToastLong(L10n.quantity(count, "Changed %1$d setting", "Changed %1$d settings", count));
+            if (count == 0 || context == null || !isAdded()) return;
+            for (BooleanSetting setting : shown.keySet()) {
+                if (restartPending.contains(setting.key)) {
+                    showRestartDialog(context);
+                    return;
+                }
+            }
+        });
+        if (!accepted) Utils.showToastLong(L10n.t("Couldn't start that. Try again in a moment."));
     }
 
     /**
@@ -1220,7 +1544,7 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
      * The theme every row and dialog on this screen is built with, over Tumblr's own: dark
      * Material, which the black page reads on whatever the host activity's theme is.
      */
-    static Context themed(Context base) {
+    public static Context themed(Context base) {
         // Tumblr omits supportsRtl. Only views built for this screen opt in; the host stays intact.
         ApplicationInfo settingsInfo = new ApplicationInfo(base.getApplicationInfo());
         settingsInfo.flags |= ApplicationInfo.FLAG_SUPPORTS_RTL;
@@ -1252,15 +1576,15 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
         return category;
     }
 
-    private static void patchToggle(PreferenceCategory category, Context context, Set<PatchFamily> build,
+    private void patchToggle(PreferenceCategory category, Context context, Set<PatchFamily> build,
                                     PatchFamily family, BooleanSetting setting, String title, String summary, String icon) {
         if (build.contains(family)) {
             category.addPreference(mark(toggle(context, setting, title, family.coverageSummary(summary)), icon));
         }
     }
 
-    static SwitchPreference toggle(Context context, BooleanSetting setting, String title, String summary) {
-        SwitchPreference preference = new Toggle(context);
+    private SwitchPreference toggle(Context context, BooleanSetting setting, String title, String summary) {
+        SwitchPreference preference = new Toggle(context, this, setting);
         preference.setKey(setting.key);
         preference.setTitle(title);
         preference.setSummary(summary);
@@ -1348,10 +1672,84 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
         }
     }
 
+    @Override protected void onNonPersistentPreferenceChanged(String key) {
+        if (!settingImportInProgress) scheduleSavedChangeRefresh();
+    }
+
     /** A switch row, which a screen reader calls a switch and reads as on or off. */
     static final class Toggle extends SwitchPreference {
-        Toggle(Context context) {
+        private final HushTumblrPreferenceFragment owner;
+        private final BooleanSetting setting;
+        private boolean saving;
+        private boolean available = true;
+
+        Toggle(Context context, HushTumblrPreferenceFragment owner, BooleanSetting setting) {
             super(context);
+            this.owner = owner;
+            this.setting = setting;
+            // Framework persistence uses apply(), whose default cleanup then commits on the UI
+            // thread. Keep the visible value until our durable save and rollback have finished.
+            setPersistent(false);
+            setChecked(setting.savedValue());
+            setOnPreferenceChangeListener((preference, value) -> {
+                if (!(value instanceof Boolean) || saving || !isEnabled() || !ownsVisibleRow()) return false;
+                CharSequence summary = getSummary();
+                saving = true;
+                super.setEnabled(false);
+                setSummary(L10n.t("Saving the setting"));
+                boolean accepted = submitEdit(() -> {
+                    boolean saved = false;
+                    try {
+                        synchronized (app.hushtumblr.extension.shared.settings.Setting.class) {
+                            boolean before = setting.persistedValue();
+                            saved = setting.save((Boolean) value);
+                            if (saved) recordRestartPendingChanges(Collections.singletonMap(setting, before));
+                        }
+                    } catch (RuntimeException failure) {
+                        Logger.printInfo(() -> "Settings switch save failed", failure);
+                    }
+                    boolean success = saved;
+                    Utils.runOnMainThreadNowOrLater(() -> {
+                        saving = false;
+                        setSummary(summary);
+                        super.setEnabled(available);
+                        SettingsBackupPreference.refreshCurrentPage();
+                        if (!success) {
+                            Utils.showToastLong(String.valueOf(owner.preferenceChangeRecoveredMessage(getContext())));
+                        }
+                        if (!ownsVisibleRow()) return;
+                        setChecked(setting.savedValue());
+                        owner.updateUIAvailability();
+                        owner.onRestartPendingChanged();
+                        if (success && restartPending.contains(setting.key)) {
+                            showRestartDialog(getContext());
+                        }
+                    });
+                });
+                if (!accepted) {
+                    saving = false;
+                    setSummary(summary);
+                    super.setEnabled(available);
+                    Utils.showToastLong(L10n.t("Couldn't start that. Try again in a moment."));
+                }
+                return false;
+            });
+        }
+
+        @Override public void setEnabled(boolean enabled) {
+            available = enabled;
+            super.setEnabled(enabled && !saving);
+        }
+
+        @Override public void setChecked(boolean checked) {
+            if (!saving) super.setChecked(checked);
+        }
+
+        private boolean ownsVisibleRow() {
+            if (!owner.isAdded() || owner.findPreference(getKey()) != this) return false;
+            if (!(owner.getParentFragment() instanceof SettingsDialog)) return true;
+            Dialog dialog = ((SettingsDialog) owner.getParentFragment()).getDialog();
+            return dialog != null && dialog.isShowing();
         }
 
         @Override

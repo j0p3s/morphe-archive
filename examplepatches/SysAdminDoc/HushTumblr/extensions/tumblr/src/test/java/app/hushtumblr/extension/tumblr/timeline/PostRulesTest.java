@@ -7,6 +7,7 @@ package app.hushtumblr.extension.tumblr.timeline;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
@@ -59,6 +60,7 @@ public class PostRulesTest {
         Settings.HIDE_ADS.resetToDefault();
         Settings.HIDE_REBLOGS.resetToDefault();
         Settings.KEEP_TAGGED_REBLOGS.resetToDefault();
+        Settings.KEEP_REBLOGS_WITH_CONTENT.resetToDefault();
         Settings.HIDE_VIDEO_POSTS.resetToDefault();
         Settings.HIDE_PHOTO_POSTS.resetToDefault();
         Settings.HIDE_TEXT_POSTS.resetToDefault();
@@ -176,6 +178,96 @@ public class PostRulesTest {
         assertSame(page, TimelineFilter.filter(page));
     }
 
+    @Test
+    public void addedContentExceptionStartsOffAndOnlyTheCurrentPostsOwnBlocksCanKeepIt() {
+        assertFalse(Settings.KEEP_REBLOGS_WITH_CONTENT.defaultValue);
+        assertFalse(Settings.KEEP_REBLOGS_WITH_CONTENT.get());
+        Settings.HIDE_REBLOGS.save(true);
+        List<HushTrail> trail = Collections.singletonList(() -> Collections.singletonList(new TextBlock("original")));
+        TimelineObject added = TimelineItems.reblogOf(Collections.singletonList(new TextBlock("original")),
+                new TextBlock("my comment"));
+        TimelineObject addedWithoutATrail = new TimelineObject(new TimelineItems.Post(
+                Collections.singletonList(new ImageBlock()), null, null, null, "100"), false);
+        TimelineObject trailOnly = TimelineItems.reblogOf(Collections.singletonList(new TextBlock("original")));
+        TimelineObject noContent = new TimelineObject(new TimelineItems.Post(null, trail, null, null, "100"), false);
+        TimelineObject nullBlocks = new TimelineObject(new TimelineItems.Post(Arrays.asList((Object) null, null),
+                trail, null, null, "100"), false);
+        TimelineObject taggedOnly = new TimelineObject(new TimelineItems.Post(Collections.emptyList(), trail,
+                Collections.singletonList("my tag"), null, "100"), false);
+        assertEquals(Collections.singletonList(TEXT),
+                shown(added, addedWithoutATrail, trailOnly, noContent, nullBlocks, taggedOnly, TEXT));
+        Settings.KEEP_REBLOGS_WITH_CONTENT.save(true);
+        assertEquals(Arrays.asList(added, addedWithoutATrail, TEXT),
+                shown(added, addedWithoutATrail, trailOnly, noContent, nullBlocks, taggedOnly, TEXT));
+        // Each exception keeps its own reblogs, and neither widens the other.
+        Settings.KEEP_TAGGED_REBLOGS.save(true);
+        assertEquals(Arrays.asList(added, addedWithoutATrail, taggedOnly, TEXT),
+                shown(added, addedWithoutATrail, trailOnly, noContent, nullBlocks, taggedOnly, TEXT));
+        Settings.KEEP_REBLOGS_WITH_CONTENT.save(false);
+        assertEquals(Arrays.asList(taggedOnly, TEXT),
+                shown(added, addedWithoutATrail, trailOnly, noContent, nullBlocks, taggedOnly, TEXT));
+    }
+
+    @Test
+    public void keepingAReblogWithAddedContentStillAppliesAdsPostKindsAndWordRules() {
+        Settings.HIDE_REBLOGS.save(true);
+        Settings.KEEP_REBLOGS_WITH_CONTENT.save(true);
+        List<HushTrail> trail = Collections.singletonList(() -> Collections.singletonList(new TextBlock("original")));
+        TimelineItems.Post photo = new TimelineItems.Post(Collections.singletonList(new ImageBlock()), trail, null, null, "100");
+        TimelineItems.Post video = new TimelineItems.Post(Collections.singletonList(new VideoBlock()), trail, null, null, "100");
+        TimelineItems.Post text = new TimelineItems.Post(Collections.singletonList(new TextBlock("mine")), trail, null, null, "100");
+        for (TimelineItems.Post kept : Arrays.asList(photo, video, text)) assertNull(PostRules.now().removes(kept));
+        TimelineObject keptPhoto = new TimelineObject(photo, false);
+        TimelineObject paidPhoto = new TimelineObject(photo, true);
+        Settings.HIDE_ADS.save(true);
+        assertEquals(Arrays.asList(keptPhoto, TEXT), shown(keptPhoto, paidPhoto, TEXT));
+        Settings.HIDE_PHOTO_POSTS.save(true);
+        Settings.HIDE_VIDEO_POSTS.save(true);
+        Settings.HIDE_TEXT_POSTS.save(true);
+        assertEquals(FamilyNames.HIDE_PHOTO_POSTS, PostRules.now().removes(photo));
+        assertEquals(FamilyNames.HIDE_VIDEO_POSTS, PostRules.now().removes(video));
+        assertEquals(FamilyNames.HIDE_TEXT_POSTS, PostRules.now().removes(text));
+        Settings.HIDE_PHOTO_POSTS.save(false);
+        Settings.HIDE_VIDEO_POSTS.save(false);
+        Settings.HIDE_TEXT_POSTS.save(false);
+        Settings.HIDE_POSTS_WITH_WORDS.save(true);
+        TextSettings.HIDDEN_WORDS.save("original");
+        assertEquals(FamilyNames.HIDE_POSTS_WITH_WORDS, PostRules.now().removes(photo));
+        assertEquals(Collections.singletonList(TEXT), shown(keptPhoto, TEXT));
+        PauseForTests.pause(HushTumblrPause.Reason.SWITCH);
+        try {
+            List<Object> page = Arrays.asList(keptPhoto, paidPhoto, TEXT);
+            assertSame(page, TimelineFilter.filter(page));
+        } finally {
+            PauseForTests.resume();
+        }
+    }
+
+    @Test
+    public void anAddedContentExceptionDoesNotActivateTheRuleByItself() {
+        Settings.KEEP_REBLOGS_WITH_CONTENT.save(true);
+        assertNull(PostRules.now());
+        List<Object> page = Arrays.asList(TEXT, TimelineItems.reblogOf(Collections.singletonList(new TextBlock("original")),
+                new TextBlock("mine")));
+        assertSame(page, TimelineFilter.filter(page));
+    }
+
+    /** Without the reblog hook in the build, Hide reblogs and its exceptions answer off together. */
+    @Test
+    public void withoutTheReblogHookTheAddedContentExceptionIsOffToo() {
+        Settings.HIDE_REBLOGS.save(true);
+        Settings.KEEP_REBLOGS_WITH_CONTENT.save(true);
+        Settings.HIDE_TEXT_POSTS.save(true);
+        PatchFamilyForTests.capabilities(EnumSet.complementOf(EnumSet.of(PatchFamily.Capability.REBLOG_POSTS)));
+        PostRules rules = PostRules.now();
+        assertFalse(rules.reblogs);
+        assertFalse(rules.keepReblogsWithContent);
+        TimelineObject photoReblog = TimelineItems.reblogOf(Collections.singletonList(new TextBlock("original")), new ImageBlock());
+        TimelineObject textReblog = TimelineItems.reblogOf(Collections.singletonList(new TextBlock("original")), new TextBlock("mine"));
+        assertNull(rules.removes(photoReblog.getData()));
+        assertEquals(FamilyNames.HIDE_TEXT_POSTS, rules.removes(textReblog.getData()));
+    }
+
     /**
      * A campaign in your own Blaze dashboard carries your post, but it isn't a post in a feed, so no
      * post switch takes it out. The same posts in a feed go, as the control.
@@ -224,7 +316,7 @@ public class PostRulesTest {
         assertFalse(PostRules.containsWord("bobcat", "cat"));
     }
 
-    @Test @Config(sdk = {26, 36})
+    @Test @Config(sdk = {26, 36, 37})
     public void canonicallyEquivalentWordsMatchAndShareOneParsedRule() {
         String saved = "Caf\u00e9, CAFE\u0301";
         List<String> words = PostRules.wordList(saved);
@@ -237,7 +329,7 @@ public class PostRulesTest {
         assertFalse(PostRules.matches("caf\u00e9", PostRules.wordList("cafe")));
     }
 
-    @Test @Config(sdk = {26, 36})
+    @Test @Config(sdk = {26, 36, 37})
     public void codePointBoundariesIncludeMarksAndConnectorsAndLeaveEmojiAsSeparators() {
         List<String> words = PostRules.wordList("cat, big news");
         for (String text : Arrays.asList("category", "bobcat", "cat2", "2cat", "cat\u0661",
@@ -255,7 +347,7 @@ public class PostRulesTest {
         assertFalse(PostRules.matches("", words));
     }
 
-    @Test @Config(sdk = {26, 36})
+    @Test @Config(sdk = {26, 36, 37})
     public void canonicalWordsAndCodePointBoundariesApplyToReblogTrailsToo() {
         Settings.HIDE_POSTS_WITH_WORDS.save(true);
         TextSettings.HIDDEN_WORDS.save("caf\u00e9, cat");
@@ -303,7 +395,7 @@ public class PostRulesTest {
         assertTrue(shown(readable).isEmpty());
     }
 
-    @Test @Config(sdk = {26, 36})
+    @Test @Config(sdk = {26, 36, 37})
     public void allowedWordsUseSelectedFieldsAndCanonicalWholeWordMatching() {
         Settings.HIDE_POSTS_WITH_WORDS.save(true);
         TextSettings.HIDDEN_WORDS.save("cat");

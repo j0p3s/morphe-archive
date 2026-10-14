@@ -22,6 +22,8 @@
     one. A fixture of any other build is patched under -f and recorded as forced. The fixtures'
     base manifests are read before anything is patched, so a declared build with no fixture
     stops the run at once instead of after the others, each of which unpacks a whole Tumblr build.
+    Then every fixture's APKs are held to the declared signer (Assert-AuthenticInput), so one bad
+    split anywhere in the list stops the run before the first fixture is merged.
 
     Each patched fixture then goes through the checks verify-all-patches.ps1 runs: its rebuilt
     resource table against the stock one (ResourceTableCheck.java), and its injected code against
@@ -29,7 +31,9 @@
     can apply and still call something one build lacks. HushPinterest 0.0.3's System share sheet did,
     calling a class from one Pinterest build on another, and the receipt only read the CLI's verdicts. A
     finding stops the run.
-    Their reports stay in -WorkDir.
+    Their reports stay in -WorkDir. A patched APK that doesn't pass zipalign -c -P 16 -v 4, or
+    whose 64-bit libraries aren't Tumblr's own bytes, stops it too (Assert-PageAlignment); a
+    library of Tumblr's that doesn't fit 16 KB pages is printed as a target limitation.
 
     The patched APKs are working files and are deleted on the way out, including after a failure.
 
@@ -121,6 +125,7 @@ $manifestSelection = @($patchNames) + @($dependencyNames)
 $approved = @(Read-ManifestDeltaAllowlist -Path (Join-Path $PSScriptRoot 'manifest-delta-allowlist.txt') `
     -SelectedPatchNames $manifestSelection)
 $expectedTarget = Get-PatchTarget -PatchList $catalog
+$declaredSigners = @(Get-DeclaredSigners -PatchList $catalog -PackageName $expectedTarget.PackageName)
 
 $catalogText = Get-Content -LiteralPath (Join-Path $Root 'gradle/libs.versions.toml') -Raw
 $patcherMatch = [regex]::Match($catalogText, '(?m)^\s*morphe-patcher\s*=\s*"([^"]+)"')
@@ -323,6 +328,20 @@ if ($unfixed.Count -gt 0) {
         'Nothing was patched.')
 }
 
+# Every fixture's APKs are held to the declared signer and to one build before the first fixture is
+# merged or patched (Assert-AuthenticInput, Get-MergedApk's checks with nothing merged). Checked only
+# as each was reached, a bad split in the last fixture stopped the run after the fixtures ahead of it
+# were merged and patched. Each merge below checks its fixture again.
+foreach ($apk in $Fixture) {
+    $checkDir = Resolve-WithinRoot -Path (Join-Path $workRoot ("check-" + [guid]::NewGuid().ToString('N'))) -Root $workRoot
+    try {
+        Assert-AuthenticInput -Apk $apk -Destination (Join-Path $checkDir 'stock-merged.apk') -Java $Java -DesktopJar $DesktopJar `
+            -Aapt2 $Aapt2 -PackageName $expectedTarget.PackageName -Signers $declaredSigners
+    } finally {
+        Remove-GeneratedPath -Path $checkDir -Root $workRoot
+    }
+}
+
 # A receipt is made for a release, so its heavy jobs go ahead of everyday builds in the machine's
 # build queue: BUILD_QUEUE_PRIORITY, which the queue reads, for the length of the patch runs.
 $savedQueuePriority = $env:BUILD_QUEUE_PRIORITY
@@ -349,9 +368,11 @@ foreach ($apk in $Fixture) {
             -VersionCode ([string]$stock.versionCode))
 
         # The one APK the CLI patches: the fixture's merge when it's a split bundle, made here
-        # because the CLI deletes its own, or the fixture itself. No merge, no receipt.
+        # because the CLI deletes its own, or a copy of the fixture. No merge, no receipt, and no
+        # merge of an APK that doesn't carry Tumblr's declared signer (Get-MergedApk).
         $mergedApk = Resolve-WithinRoot -Path (Join-Path $runDir 'stock-merged.apk') -Root $workRoot
-        $patchInput = Get-MergedApk -Apk $apk -Destination $mergedApk -Java $Java -DesktopJar $DesktopJar
+        $patchInput = Get-MergedApk -Apk $apk -Destination $mergedApk -Java $Java -DesktopJar $DesktopJar `
+            -Aapt2 $Aapt2 -PackageName $expectedTarget.PackageName -Signers $declaredSigners
 
         # This bundle on this fixture, kept by a gate run that passed every check (verify-all-patches.ps1
         # -KeepIn), is read from the record. Anything that moved since gives another key and a patch run.
@@ -416,6 +437,9 @@ foreach ($apk in $Fixture) {
             -ApprovedManifestDelta $approved
         if (-not $manifestCheck.Valid) { throw "${label}: $($manifestCheck.Reason)" }
         $delta = $manifestCheck.Delta
+        # What a device with 16 KB pages needs of the patched APK (Assert-PageAlignment). A library
+        # of Tumblr's own that doesn't fit is the target's limit: named, and left as it is.
+        foreach ($limit in @(Assert-PageAlignment -Apk $out -Stock $patchInput -Aapt2 $Aapt2)) { Write-Warning "[receipt] ${label}: $limit" }
 
         if ($recorded) {
             Write-Host "[receipt] ${label}: the resource table, DexDiff and host reference checks passed on these bytes in the kept run"

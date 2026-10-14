@@ -1,0 +1,101 @@
+name: Validate Cromite AMOLED branch
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout AMOLED development branch
+        uses: actions/checkout@v4
+        with:
+          ref: feat/amoled-web
+
+      - name: Set up Java 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Configure Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Compile and generate patch list
+        env:
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :patches:compileKotlin :patches:generatePatchesList --no-daemon --stacktrace
+
+      - name: Require compiled native AMOLED patch
+        run: |
+          CLASS='app/morphe/patches/cromite/layout/theme/PureAmoledNativeResourcesPatchKt.class'
+          find patches/build -type f -path "*/$CLASS" -print | tee /tmp/amoled-classes.txt
+          test -s /tmp/amoled-classes.txt || { echo "::error::Native AMOLED patch was not compiled"; exit 1; }
+          echo "Native AMOLED patch class found. No Cromite APK was generated."
+
+      - name: Convert patch classes to Android DEX
+        run: |
+          set -euo pipefail
+          MPP="$(find patches/build/libs -maxdepth 1 -type f -name 'patches-*.mpp' ! -name '*-sources.mpp' ! -name '*-javadoc.mpp' -print -quit)"
+          test -n "$MPP" || { echo "::error::Main patch bundle missing"; exit 1; }
+          D8="$(find "${ANDROID_HOME}/build-tools" -mindepth 2 -maxdepth 2 -type f -name d8 | sort -V | tail -1)"
+          test -x "$D8" || { echo "::error::Android D8 compiler unavailable"; exit 1; }
+          DEX_DIR="$(mktemp -d)"
+          # D8 accepts JAR/ZIP input; .mpp is a JAR-compatible archive with a custom extension.
+          INPUT_JAR="$(mktemp --suffix=.jar)"
+          cp "$MPP" "$INPUT_JAR"
+          "$D8" --min-api 26 --output "$DEX_DIR" "$INPUT_JAR"
+          find "$DEX_DIR" -maxdepth 1 -type f -name '*.dex' -size +0c -print
+          test -n "$(find "$DEX_DIR" -maxdepth 1 -type f -name '*.dex' -size +0c -print -quit)" || {
+            echo "::error::DEX conversion produced no classes"; exit 1;
+          }
+          (cd "$DEX_DIR" && zip -q "$GITHUB_WORKSPACE/$MPP" ./*.dex)
+          unzip -l "$MPP" | grep -E 'classes[0-9]*[.]dex'
+
+      - name: Inspect generated bundle
+        run: |
+          set -euo pipefail
+          MPP="$(find patches/build/libs -maxdepth 1 -type f -name 'patches-*.mpp' -print -quit)"
+          test -n "$MPP"
+          unzip -l "$MPP" | tail -25
+          unzip -Z1 "$MPP" | grep -E '^classes([0-9]+)?[.]dex$' || { echo "::error::Manager requires DEX entries"; exit 1; }
+
+      - name: Verify generated patch catalog contains AMOLED
+        run: |
+          echo "Locate generated patches-list.json:"
+          find . -name 'patches-list.json' -type f -print
+          CATALOG="$(find . -name 'patches-list.json' -type f -print -quit)"
+          if [ -z "$CATALOG" ]; then
+            echo "::error::Patch catalog patches-list.json was not generated"
+            exit 1
+          fi
+          python3 - "$CATALOG" <<'PY'
+          import json,sys
+          path=sys.argv[1]
+          with open(path,encoding='utf-8') as f: data=json.load(f)
+          raw=json.dumps(data,ensure_ascii=False)
+          required=['Pure AMOLED native theme resources','Pure AMOLED web content']
+          for name in required:
+              if name not in raw:
+                  print(f'::error::Patch absent from generated catalog: {name}')
+                  sys.exit(1)
+          print('Both AMOLED patch names present in',path)
+          PY
+          cp "$CATALOG" patches-list-validated.json
+
+      - name: Upload patch bundle for Manager inspection
+        uses: actions/upload-artifact@v4
+        with:
+          name: cromite-amoled-patches
+          path: |
+            patches/build/libs/*.mpp
+            patches-list-validated.json
+          if-no-files-found: error
+          retention-days: 7

@@ -2,8 +2,8 @@
 # After editing, run python scripts/gen-l10n.py from the repository root.
 %1$d item in that file isn't a setting this version of HushTumblr knows, so it'll be left out.	%1$d item desse arquivo não é uma configuração conhecida por esta versão do HushTumblr e será ignorado.
 %1$d items in that file aren't settings this version of HushTumblr knows, so they'll be left out.	%1$d itens desse arquivo não são configurações conhecidas por esta versão do HushTumblr e serão ignorados.
-%1$d switch will change.	%1$d opção será alterada.
-%1$d switches will change.	%1$d opções serão alteradas.
+%1$d setting will change.	%1$d configuração será alterada.
+%1$d settings will change.	%1$d configurações serão alteradas.
 %1$s. It was set when you patched, so Pause can't turn it off. To rule it out, patch again and leave out that patch.	%1$s. Isso foi definido quando você aplicou os patches, então a pausa não pode desativá-lo. Para descartar essa possibilidade, aplique os patches novamente sem esse patch.
 %1$s. They were set when you patched, so Pause can't turn them off. To rule one out, patch again and leave out the patch in brackets after it.	%1$s. Esses itens foram definidos quando você aplicou os patches, então a pausa não pode desativá-los. Para descartar um deles, aplique os patches novamente sem o patch entre parênteses depois dele.
 A diagnostic report is already being saved.	Um relatório de diagnóstico já está sendo salvo.
@@ -14,7 +14,7 @@ Back	Voltar
 Cancel	Cancelar
 Clear diagnostic data	Limpar dados de diagnóstico
 Copy quick report	Copiar relatório rápido
-Couldn't import the settings, and couldn't put back the ones you had. Check the switches on this screen.	Não foi possível importar as configurações nem restaurar as que você tinha. Confira as opções nesta tela.
+Couldn't import the settings, and couldn't put back the ones you had. Check the settings on this screen.	Não foi possível importar as configurações nem restaurar as que você tinha. Confira as configurações nesta tela.
 Couldn't import the settings. Nothing was changed.	Não foi possível importar as configurações. Nada foi alterado.
 Couldn't open that file. Nothing was changed.	Não foi possível abrir esse arquivo. Nada foi alterado.
 Couldn't open the file picker. Try again.	Não foi possível abrir o seletor de arquivos. Tente de novo.
@@ -32,8 +32,7 @@ Every switch but Debug logging acts as if it were off, and what was set when you
 Export diagnostic report	Exportar relatório de diagnóstico
 Export settings	Exportar configurações
 Turns off every HushTumblr switch except Debug logging the next time Tumblr starts. What you chose when you patched stays, and your choices are saved.	Desliga todas as opções do HushTumblr, menos o Registro de depuração, na próxima vez que o Tumblr abrir. O que você escolheu ao aplicar os patches continua, e suas escolhas ficam salvas.
-Links, updates, backup and more	Links, atualizações, backup e mais
-Save your switches to a file. They cover all the accounts in this Tumblr app. Pause and Debug logging aren't included, and neither is the release check.	Salve suas opções em um arquivo. Elas valem para todas as contas deste app do Tumblr. Pausa e Registro de depuração não são incluídos, nem a verificação de novas versões.
+Save your settings to a file, including word lists and tab order. These choices apply to all accounts in this Tumblr app. Pause, Debug logging and release checks aren't included.	Salve suas configurações em um arquivo, incluindo listas de palavras e ordem das abas. Essas escolhas valem para todas as contas neste app do Tumblr. Pausa, Registro de depuração e verificação de novas versões não são incluídos.
 Settings exported. The app holding the file wouldn't let HushTumblr read it back, so it wasn't checked.	Configurações exportadas. O app que guarda o arquivo não deixou o HushTumblr lê-lo de volta, então ele não foi conferido.
 The app holding that file is taking too long, so HushTumblr stopped waiting. Nothing was changed.	O app que guarda esse arquivo está demorando demais, então o HushTumblr parou de esperar. Nada foi alterado.
 The app holding the last settings file still hasn't answered. Try again later.	O app do último arquivo de configurações ainda não respondeu. Tente de novo mais tarde.
@@ -66,6 +65,7 @@ HushTumblr %1$s is out. Update it in Morphe Manager.	O HushTumblr %1$s está dis
 You have the newest HushTumblr release.	Você já está usando a versão mais nova do HushTumblr.
 The newest HushTumblr release is %1$s.	A versão mais nova do HushTumblr é %1$s.
 Couldn't reach GitHub. Try again later.	Não foi possível conectar-se ao GitHub. Tente novamente mais tarde.
+Couldn't save the release check. Try again.	Não foi possível salvar a verificação de novas versões. Tente de novo.
 GitHub is turning away checks from this network for now. Try again later.	O GitHub está recusando consultas desta rede por enquanto. Tente novamente mais tarde.
 GitHub sent back something HushTumblr couldn't read. Try again later.	O GitHub enviou algo que o HushTumblr não conseguiu ler. Tente de novo mais tarde.
 Saving the settings file	Salvando o arquivo de configurações
@@ -73,8 +73,8 @@ Set when you patched	Definido ao aplicar os patches
 Settings couldn't open	Não foi possível abrir as configurações
 Settings couldn't refresh completely. Reopen settings and try again.	Não foi possível atualizar completamente as configurações. Reabra as configurações e tente novamente.
 Settings exported.	Configurações exportadas.
-Settings imported. %1$d switch changed.	Configurações importadas. %1$d opção foi alterada.
-Settings imported. %1$d switches changed.	Configurações importadas. %1$d opções foram alteradas.
+Settings imported. %1$d setting changed.	Configurações importadas. %1$d configuração foi alterada.
+Settings imported. %1$d settings changed.	Configurações importadas. %1$d configurações foram alteradas.
 Source code and issues	Código-fonte e relatos de problemas
 Stays in while paused	O que continua ativo na pausa
 Tap to turn it back on.	Toque para reativar.
@@ -95,7 +95,7 @@ This phone has no file picker, so there's no way to choose a file here.	Este dis
 Version	Versão
 Record patch activity and show errors for a bug report. Leave off during normal use.	Registra a atividade dos patches e mostra os erros para um relatório de problema. Mantenha desativado durante o uso normal.
 You paused HushTumblr.	Você pausou o HushTumblr.
-Your switches already match that file, so nothing will change.	Suas opções já correspondem às desse arquivo, então nada será alterado.
+Your settings already match that file, so nothing will change.	Suas configurações já correspondem às desse arquivo, então nada será alterado.
 Copy a short report to the clipboard.	Copie um relatório curto para a área de transferência.
 Settings imported.	Configurações importadas.
 No app on this phone can open the link. The address is %1$s.	Nenhum aplicativo neste dispositivo consegue abrir o link. O endereço é %1$s.
@@ -107,8 +107,6 @@ Browse settings	Explorar configurações
 More settings	Mais configurações
 # context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
 Support HushTumblr	Apoie o HushTumblr
-# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
-Buy me a coffee on Ko-fi	Me pague um café no Ko-fi
 No matching settings	Nenhuma configuração encontrada
 %1$d setting found	%1$d configuração encontrada
 %1$d settings found	%1$d configurações encontradas
@@ -124,7 +122,9 @@ Opening supported links is off for this app in Android's settings. Tap to turn i
 Android didn't say which links open here. Tap to check in Android's settings.	O Android não informou quais links abrem aqui. Toque para conferir nas configurações do Android.
 Selecting links by hand	Selecionar links manualmente
 
-A change here applies after Tumblr restarts.	Uma alteração daqui vale depois que o Tumblr reiniciar.
+Restart Tumblr to apply this change	Reinicie o Tumblr para aplicar esta alteração
+Restart Tumblr to apply %1$d changes	Reinicie o Tumblr para aplicar %1$d alterações
+Tumblr closes and reopens on this page.	O Tumblr fecha e abre de novo nesta página.
 Android verified this app for Tumblr's web addresses, so their links open here.	O Android verificou este app para os endereços web do Tumblr, então os links deles abrem aqui.
 Android's settings for this app didn't open. Open App info from Tumblr's icon, then Open by default.	As configurações do Android para este app não abriram. Abra Informações do app pelo ícone do Tumblr e depois Abrir por padrão.
 HushTumblr %1$s on Tumblr %2$s	HushTumblr %1$s no Tumblr %2$s
@@ -162,14 +162,14 @@ Tumblr's original signature is added to the app	A assinatura original do Tumblr 
 %1$s (%2$s to %3$s)	%1$s (de %2$s para %3$s)
 Your choice is saved, but this build doesn't include the patch for it.	Sua escolha está salva, mas esta versão não inclui o patch para ela.
 Undoing import	Desfazendo importação
-Import undone. Your earlier switches are back.	Importação desfeita. Seus ajustes anteriores foram restaurados.
-Undo ended because a saved switch changed.	Não é mais possível desfazer porque um ajuste salvo mudou.
+Import undone. Your earlier settings are back.	Importação desfeita. Suas configurações anteriores foram restauradas.
+Undo ended because a saved setting changed.	Não é mais possível desfazer porque uma configuração salva mudou.
 There's no import to undo.	Não há importação para desfazer.
-Couldn't undo the import. Your imported switches are unchanged.	Não foi possível desfazer a importação. Seus ajustes importados não mudaram.
-Couldn't undo the import or restore the imported switches. Check the switches on this screen.	Não foi possível desfazer a importação nem restaurar os ajustes importados. Confira os ajustes nesta tela.
-Restore the switches from before the last import. Editing a switch or restarting Tumblr ends Undo.	Restaure os ajustes anteriores à última importação. Alterar um ajuste ou reiniciar o Tumblr encerra a opção de desfazer.
+Couldn't undo the import. Your imported settings are unchanged.	Não foi possível desfazer a importação. Suas configurações importadas não mudaram.
+Couldn't undo the import or restore the imported settings. Check the settings on this screen.	Não foi possível desfazer a importação nem restaurar as configurações importadas. Confira as configurações nesta tela.
+Restore the settings from before the last import. Editing a setting or restarting Tumblr ends Undo.	Restaure as configurações anteriores à última importação. Alterar uma configuração ou reiniciar o Tumblr encerra a opção de desfazer.
 Undo import	Desfazer importação
-Choose a settings file. Review each switch's name and old and new values before importing. Your choices apply to all accounts in this Tumblr app.	Escolha um arquivo de configurações. Confira o nome e os valores antigos e novos de cada ajuste antes de importar. Suas escolhas valem para todas as contas neste app do Tumblr.
+Choose a settings file. Review each setting's name and old and new values before importing. Your choices apply to all accounts in this Tumblr app.	Escolha um arquivo de configurações. Confira o nome e os valores antigos e novos de cada configuração antes de importar. Suas escolhas valem para todas as contas neste app do Tumblr.
 On	Ativado
 Off	Desativado
 Copy a quick report or save the full one to %1$s. Links, IDs, cookies and sign-in tokens are left out. Check it for other private text before you share it.	Copie um relatório rápido ou salve o completo em %1$s. Links, IDs, cookies e tokens de login são omitidos. Confira outros textos privados antes de compartilhar.
@@ -185,7 +185,7 @@ Android may not trust a patched app's links on its own. You can choose the web a
 Open link settings	Abrir configurações de links
 Back up before changing builds	Faça backup antes de trocar de compilação
 An update signed with the same key keeps the app's data. A build signed with a different key can't update this one, and Android may refuse to install an older version. If an update is refused, keep the installed app and its data.	Uma atualização assinada com a mesma chave mantém os dados do app. Uma versão assinada com outra chave não consegue atualizar esta, e o Android pode se recusar a instalar uma versão mais antiga. Se uma atualização for recusada, mantenha o app instalado e os dados dele.
-Tumblr's data export is separate from Export settings. Tumblr's help page explains how to request your personal data from the account you're already using.	A exportação de dados do Tumblr é separada de Exportar configurações. A página de ajuda do Tumblr explica como solicitar seus dados pessoais da conta que você já usa.
+Tumblr's data export is separate from Export settings. To get a copy of your personal data, sign in on Tumblr's website with the account you're already using and ask for it in Settings, under Privacy. Tumblr's apps can't make that request. Exporting a blog's posts is a different Tumblr feature with its own help article.	A exportação de dados do Tumblr é separada de Exportar configurações. Para receber uma cópia dos seus dados pessoais, entre no site do Tumblr com a conta que você já usa e faça o pedido em Configurações, na parte de Privacidade. Os apps do Tumblr não fazem esse pedido. Exportar os posts de um blog é outro recurso do Tumblr, com um artigo de ajuda próprio.
 Tumblr data export help	Ajuda do Tumblr para exportar dados
 Couldn't open the setup guide. Try again.	Não foi possível abrir o guia de configuração. Tente novamente.
 # context: Tumblr's own settings, named on the HushTumblr page so the reader can find them.
@@ -193,10 +193,23 @@ Tumblr's own settings	Configurações do próprio Tumblr
 Finding them	Como encontrar
 Notifications	Notificações
 In Tumblr: %1$s	No Tumblr: %1$s
+# context: a row on the Tumblr's own settings page: a short name for one of Tumblr's controls, then what it covers.
+Dashboard order and suggestions	Ordem do painel e sugestões
+Whether Following puts the best posts first, and which suggested posts Tumblr adds to your dashboard.	Se Seguindo mostra primeiro os melhores posts e quais posts sugeridos o Tumblr coloca no seu painel.
+Autoplay	Reprodução automática
+Whether GIFs and videos play by themselves: always, only on Wi-Fi or never.	Se GIFs e vídeos tocam sozinhos: sempre, só no Wi-Fi ou nunca.
+Post dates	Datas dos posts
+Tumblr's own switch for hiding the date on every post.	A opção do próprio Tumblr para ocultar a data de cada post.
+Filtered tags and words	Tags e palavras filtradas
+Tags and post content Tumblr hides for your account on every device, and its mature content choices.	As tags e o conteúdo que o Tumblr oculta para a sua conta em todos os aparelhos, e as opções de conteúdo adulto.
+Color palette	Paleta de cores
+Tumblr's color themes. Dark background color only changes the dark ones.	Os temas de cores do Tumblr. Cor de fundo escura só muda os escuros.
+Push notifications	Notificações push
+Which activity sends you a notification, for every blog or for one.	Qual atividade envia uma notificação para você, para todos os blogs ou para um só.
 # Rows added for HushTumblr.
 Ad tracking	Rastreamento de anúncios
 Android sends tumblr.com links to a patched Tumblr only after you select those addresses for it. Selecting them sends their links here. Your other link settings stay as they are.	O Android só envia links de tumblr.com a um Tumblr com patches depois que você seleciona esses endereços para ele. Ao selecioná-los, os links deles vêm para cá. Suas outras configurações de links não mudam.
-Export settings saves HushTumblr's switches. It doesn't include your Tumblr account, posts, downloaded files or Morphe Manager's signing key. Keep the settings file and a backup of Manager's signing key somewhere you can find them.	Exportar configurações salva as opções do HushTumblr. Não inclui sua conta do Tumblr, seus posts, os arquivos baixados nem a chave de assinatura do Morphe Manager. Guarde o arquivo de configurações e um backup da chave de assinatura do Manager em um lugar onde você os encontre.
+Export settings saves HushTumblr's settings, including word lists and tab order. It doesn't include your Tumblr account, posts, downloaded files, local mute list or Morphe Manager's signing key. Keep the settings file and a backup of Manager's signing key somewhere you can find them.	Exportar configurações salva as configurações do HushTumblr, incluindo listas de palavras e ordem das abas. Não inclui sua conta do Tumblr, seus posts, os arquivos baixados, a lista local de posts silenciados nem a chave de assinatura do Morphe Manager. Guarde o arquivo de configurações e um backup da chave de assinatura do Manager em um lugar onde você os encontre.
 If you joined through Google or don't know your Tumblr password, ask for a password reset on Tumblr's login screen. Enter the email already linked to that account, then use the reset link sent to your email to set a Tumblr password. It's separate from your Google password.	Se você se cadastrou pelo Google ou não sabe sua senha do Tumblr, peça a redefinição de senha na tela de login do Tumblr. Informe o e-mail já vinculado a essa conta e use o link enviado por e-mail para definir uma senha do Tumblr. Ela é diferente da sua senha do Google.
 Lets a patched Tumblr sign up for push notifications when Google would turn it away.	Permite que um Tumblr com patches se cadastre para receber notificações push quando o Google o recusaria.
 Open Tumblr's settings from the gear on your account tab. HushTumblr doesn't change any of these.	Abra as configurações do Tumblr pela engrenagem na sua aba de conta. O HushTumblr não muda nenhuma delas.
@@ -221,7 +234,7 @@ Hide the Communities tab	Ocultar a aba Comunidades
 Takes the Communities tab out of the bottom bar and stops Communities tips in the post editor.	Tira a aba Comunidades da barra inferior e para as dicas sobre comunidades no editor de posts.
 # context: the Hide Blaze prompts switch on the Interface page. Blaze is Tumblr's paid post promotion.
 Hide Blaze prompts	Ocultar avisos do Blaze
-Hides the Blaze buttons, banners and the nudge to promote a post after you share it.	Esconde os botões e banners do Blaze e o aviso para promover um post depois que você o compartilha.
+Hides the Blaze buttons, banners and the nudge to promote a post after you share it. The Blaze item in a post's menu stays.	Esconde os botões e banners do Blaze e o aviso para promover um post depois que você o compartilha. A opção Blaze no menu de um post continua lá.
 # context: the Skip review prompts switch on the Interface page. It stops Tumblr's rate-this-app pop-up.
 # context: the Skip review prompts switch on the Interface page. It stops Tumblr's "What do you think of the Tumblr app?" pop-up.
 Skip review prompts	Pular pedidos de avaliação
@@ -284,6 +297,8 @@ Hide posts with these words	Ocultar posts com estas palavras
 Takes posts out of your feeds when a hidden word matches one of the selected fields below.	Remove posts dos seus feeds quando uma palavra oculta corresponde a um dos campos selecionados abaixo.
 Words to hide	Palavras para ocultar
 One word or phrase a line	Uma palavra ou frase por linha
+Changes are saved only when you tap Save.	As alterações só são salvas quando você toca em Salvar.
+Words saved	Palavras salvas
 Save	Salvar
 The list is empty. Tap to add words or phrases.	A lista está vazia. Toque para adicionar palavras ou frases.
 Looks for: %1$s	Procura: %1$s
@@ -318,6 +333,7 @@ This list is too large for a settings backup. Shorten it before saving. Your dra
 Couldn't save the words. Your earlier list is unchanged. Try again.	Não foi possível salvar as palavras. Sua lista anterior não foi alterada. Tente novamente.
 Couldn't save the tab order. Your earlier order is unchanged. Try again.	Não foi possível salvar a ordem das abas. A ordem anterior não foi alterada. Tente novamente.
 %1$s moved to position %2$d of %3$d.	%1$s foi movida para a posição %2$d de %3$d.
+%1$s is already first.	%1$s já está em primeiro lugar.
 Filter activity notifications	Filtrar notificações de atividade
 Hide ask notifications	Ocultar notificações de perguntas
 Hide boop notifications	Ocultar notificações de boops
@@ -329,6 +345,8 @@ Hide reply notifications	Ocultar notificações de respostas
 Hides these from newly loaded activity pages. Push notifications keep Tumblr's settings.	Oculta esses itens nas páginas de atividade carregadas a partir de agora. As notificações push mantêm as configurações do Tumblr.
 Keep tagged reblogs	Manter reblogs com tags
 When reblogs are hidden, keep ones with tags. Other post filters still apply.	Ao ocultar reblogs, mantém os que têm tags. Os outros filtros continuam valendo.
+Keep reblogs with added content	Manter reblogs com conteúdo adicionado
+When reblogs are hidden, keep ones where the reblogger added something of their own. Other post filters still apply.	Ao ocultar reblogs, mantém aqueles em que quem reblogou adicionou algo próprio. Os outros filtros continuam valendo.
 Match current post text	Buscar no texto do post atual
 Match reblog trail text	Buscar no texto da cadeia de reblogs
 Match current post tags	Buscar nas tags do post atual
@@ -336,7 +354,7 @@ Match post summaries	Buscar nos resumos dos posts
 Hidden and allowed words use the same selected fields. Other post filters still apply.	As palavras ocultas e permitidas usam os mesmos campos selecionados. Os outros filtros continuam valendo.
 Allowed words	Palavras permitidas
 Allowed words keep a post when the word filter would hide it. Other filters still apply.	Palavras permitidas mantêm um post que o filtro de palavras ocultaria. Os outros filtros continuam valendo.
-Posts matching a hidden word in the selected fields are hidden. Case doesn't matter, and only whole words count.	Oculta posts que contenham uma palavra oculta nos campos selecionados. Maiúsculas e minúsculas são iguais, e só contam palavras inteiras.
+Match whole words or phrases in the fields you chose. Case doesn't matter.	Busca palavras ou frases inteiras nos campos que você escolheu. Não diferencia maiúsculas de minúsculas.
 Show post timestamps	Mostrar datas dos posts
 Shows Tumblr's own timestamps on newly drawn post cards.	Mostra as datas do próprio Tumblr nos cartões de posts exibidos a partir de agora.
 Restart Tumblr to apply these settings.	Reinicie o Tumblr para aplicar essas configurações.
@@ -352,11 +370,10 @@ Unmute posts or clear this account's private list	Volte a mostrar posts ou limpe
 Couldn't update muted posts	Não foi possível atualizar os posts silenciados
 Post muted locally	Post silenciado localmente
 Muted posts restored	Posts silenciados restaurados
-Couldn't restore muted posts	Não foi possível restaurar os posts silenciados
 Muted posts aren't available for this account yet	Os posts silenciados ainda não estão disponíveis nesta conta
 Stored only on this device for this Tumblr account. Tap a post to unmute it. Up to 500 posts are kept per account.	Armazenados apenas neste dispositivo para esta conta do Tumblr. Toque em um post para voltar a mostrá-lo. Até 500 posts são mantidos por conta.
+This device keeps muted post lists for eight accounts. When a ninth account mutes a post, the list that's gone longest without a change is deleted.	Este dispositivo mantém listas de posts silenciados para oito contas. Quando uma nona conta silencia um post, a lista que está há mais tempo sem mudanças é apagada.
 Post	Post
-No muted posts	Nenhum post silenciado
 Clear muted posts	Limpar posts silenciados
 Post unmuted	Post voltou a ser mostrado
 Muted posts cleared	Posts silenciados limpos
@@ -366,3 +383,43 @@ Show mutual markers	Mostrar seguidores mútuos
 Marks blogs that follow your primary blog when you follow them.	Marca os blogs que seguem seu blog principal e que você segue.
 Mutual	Mútuos
 Done	Concluído
+No muted posts. Use a post's menu to mute it on this device.	Nenhum post silenciado. Use o menu de um post para silenciá-lo neste dispositivo.
+Updating muted posts	Atualizando posts silenciados
+Couldn't update muted posts. Your list is unchanged. Try again.	Não foi possível atualizar os posts silenciados. Sua lista não mudou. Tente de novo.
+Couldn't restore muted posts. Try again.	Não foi possível restaurar os posts silenciados. Tente de novo.
+Couldn't read this account's muted posts. Nothing was changed or deleted.	Não foi possível ler os posts silenciados desta conta. Nada foi alterado nem apagado.
+Reading muted posts	Lendo posts silenciados
+The active account changed. Reopen Manage muted posts to see its list.	A conta ativa mudou. Abra Gerenciar posts silenciados novamente para ver a lista dela.
+Unmute post %1$s	Reexibir o post %1$s
+Saving changes	Salvando alterações
+Saving the setting	Salvando a configuração
+Clearing diagnostic data	Limpando dados de diagnóstico
+Putting diagnostic data back	Restaurando dados de diagnóstico
+Couldn't clear the diagnostic data. Try again.	Não foi possível limpar os dados de diagnóstico. Tente novamente.
+Couldn't update this feed. The post is still muted locally.	Não foi possível atualizar este feed. O post continua silenciado localmente.
+Unmute post	Reexibir post
+HushTumblr	HushTumblr
+Your settings	Suas configurações
+Make Tumblr feel like yours.	Deixe o Tumblr com a sua cara.
+Status	Status
+Ads, reblogs and word filters	Anúncios, reblogs e filtros de palavras
+Details and post actions	Detalhes e ações das publicações
+Tabs, counts and appearance	Abas, contadores e aparência
+Tracking and app permissions	Rastreamento e permissões do aplicativo
+Choose where Tumblr links open	Escolha onde os links do Tumblr abrem
+Activity filters and push alerts	Filtros de atividade e notificações push
+Controls managed by Tumblr	Configurações gerenciadas pelo Tumblr
+Release checks and update help	Verificação de versões e ajuda para atualizar
+Pause, save and troubleshoot	Pausar, salvar e resolver problemas
+Version, help and project details	Versão, ajuda e detalhes do projeto
+Report a problem	Relatar um problema
+Opens a GitHub report with your versions and settings filled in. Add what happened.	Abre um relato no GitHub com suas versões e configurações já preenchidas. Conte o que aconteceu.
+Quick setups	Configurações rápidas
+Turn on a set of switches in one tap, or put every switch back the way it started.	Ative um conjunto de opções com um toque ou volte todas as opções ao estado inicial.
+Quiet	Tranquilo
+Hides ads, suggestions, prompts and unread counts.	Oculta anúncios, sugestões, avisos e contadores de não lidos.
+Stops Tumblr's tracking and screenshot watching, and hides your advertising ID.	Interrompe o rastreamento do Tumblr e a vigilância de capturas de tela, e oculta seu ID de publicidade.
+Back to defaults	Voltar ao padrão
+Puts every feature switch back the way it started.	Volta cada opção de recurso ao estado inicial.
+Changed %1$d setting	%1$d configuração alterada
+Changed %1$d settings	%1$d configurações alteradas

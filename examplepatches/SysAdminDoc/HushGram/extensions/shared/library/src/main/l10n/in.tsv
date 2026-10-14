@@ -104,6 +104,7 @@ HushGram pauses when Instagram restarts.	HushGram dijeda saat Instagram dimulai 
 HushGram saves	Penyimpanan HushGram
 HushGram settings	Pengaturan HushGram
 HushGram settings couldn't open	Pengaturan HushGram tidak dapat dibuka
+HushGram settings are locked	Pengaturan HushGram terkunci
 HushGram turns back on when Instagram restarts.	HushGram aktif lagi saat Instagram dimulai ulang.
 Instagram crashed or froze within a minute of starting three times in a row, so HushGram paused itself.	Instagram berhenti mendadak atau macet dalam satu menit setelah dibuka, tiga kali berturut-turut, jadi HushGram menjeda dirinya sendiri.
 Instagram stops showing the screen that says this version is too old. A patched build doesn't update on its own, so this keeps it usable.	Instagram berhenti menampilkan layar yang menyatakan versi ini terlalu lama. Build yang ditambal tidak memperbarui dirinya sendiri, jadi ini membuatnya tetap bisa dipakai.
@@ -320,7 +321,7 @@ Couldn't mark as read	Tidak dapat menandai sudah dibaca
 Hide that you're typing	Sembunyikan bahwa Anda sedang mengetik
 People you're chatting with don't see the typing dots while you write, and you still see theirs.	Orang yang Anda ajak chat tidak melihat titik-titik mengetik saat Anda menulis, dan Anda tetap melihat milik mereka.
 Hide your active status	Sembunyikan status aktif Anda
-People don't see Active now for you while you use Instagram, and you still see when they're active. Restart Instagram to see the change.	Orang lain tidak melihat bahwa Anda sedang aktif saat Anda memakai Instagram, dan Anda tetap melihat kapan mereka aktif. Mulai ulang Instagram untuk melihat perubahannya.
+People don't see Active now for you while you use Instagram, and you still see when they're active. It takes effect the next time you come back to Instagram.	Orang lain tidak melihat bahwa Anda sedang aktif saat Anda memakai Instagram, dan Anda tetap melihat kapan mereka aktif. Perubahan berlaku saat Anda kembali ke Instagram lagi.
 Start Home on Following	Buka Beranda di Mengikuti
 Opens Home on posts from accounts you follow instead of For you. Tap the top of Home to switch. Restart Instagram to see the change.	Membuka Beranda dengan postingan dari akun yang kamu ikuti, bukan Untuk Anda. Ketuk bagian atas Beranda untuk berganti. Mulai ulang Instagram untuk melihat perubahannya.
 Hide suggested stories	Sembunyikan cerita yang disarankan
@@ -428,7 +429,7 @@ Reopen the media and save again.	Buka kembali media dan simpan lagi.
 Search settings	Cari pengaturan
 Clear search	Hapus pencarian
 No matching settings	Tidak ada pengaturan yang cocok
-Try another word or clear the search.	Coba kata lain atau hapus pencarian.
+Try another word. Settings only appear for patches included in this install.	Coba kata lain. Pengaturan hanya muncul untuk patch yang disertakan dalam instalasi ini.
 Contacts, location setup, analytics	Kontak, pengaturan lokasi, analitik
 Save all	Simpan semua
 Saving a carousel	Menyimpan carousel
@@ -1015,3 +1016,23 @@ Clear download history	Hapus riwayat unduhan
 Forgets everything Skip what's already saved remembers, for all your accounts. Your saved files stay.	Melupakan semua yang diingat Lewati yang sudah disimpan, untuk semua akunmu. File yang sudah kamu simpan tetap ada.
 Download history cleared.	Riwayat unduhan dihapus.
 Couldn't clear the download history. Try again.	Tidak bisa menghapus riwayat unduhan. Coba lagi.
+Loading the picture...	Memuat gambar...
+# context: the settings row right above Support HushGram that opens a new bug report on GitHub
+Report a problem	Laporkan masalah
+Opens a GitHub report with your versions and settings filled in. Add what happened.	Membuka laporan GitHub yang sudah berisi versi dan pengaturanmu. Tambahkan apa yang terjadi.
+# context: the settings row under Search, and the title of its dialog of one-tap choices
+Quick setups	Penyiapan cepat
+Turn on a set of switches in one tap, or put every switch back the way it started.	Nyalakan sekumpulan sakelar dengan sekali ketuk, atau kembalikan semua sakelar seperti semula.
+# context: a Quick setups choice that hides ads, suggestions and promotions
+Quiet	Tenang
+# context: a Quick setups choice that turns on the privacy switches
+Privacy	Privasi
+# context: a Quick setups choice that puts every switch back the way it started
+Back to defaults	Kembali ke bawaan
+Hides ads, suggested accounts and posts, surveys and promotions.	Menyembunyikan iklan, akun dan kiriman yang disarankan, survei, dan promosi.
+Hides your seen receipts, typing and active status. Allows screenshots and stops link tracking and usage reports.	Menyembunyikan tanda dilihat, status mengetik, dan status aktifmu. Mengizinkan tangkapan layar serta menghentikan pelacakan tautan dan laporan penggunaan.
+Puts every switch back the way it started. Your locks stay as they are.	Mengembalikan semua sakelar seperti semula. Kuncimu tetap seperti apa adanya.
+# context: toast after a Quick setups choice changed exactly one switch
+Changed %1$d setting	%1$d pengaturan diubah
+# context: the same toast for any other count, zero included; %1$d is how many
+Changed %1$d settings	%1$d pengaturan diubah

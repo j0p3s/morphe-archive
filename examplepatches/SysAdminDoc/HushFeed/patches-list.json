@@ -1,5 +1,5 @@
 {
-  "version": "v0.71.3",
+  "version": "v0.72.0",
   "appNames": {
     "com.zhiliaoapp.musically": "TikTok"
   },
@@ -58,7 +58,7 @@
     },
     {
       "name": "Advanced downloads",
-      "description": "Adds more ways to save: pick the video quality, save full-size photos, the sound on its own or a photo post as one video, hold a profile picture or story to save it, and save a story or a video's cover from the share sheet. Starts off. Turn it on in Hushfeed settings > Downloads.",
+      "description": "Adds more ways to save: pick the video quality, save full-size photos, the sound on its own or a photo post as one video, hold a profile picture or story to save it, save a story or a video's cover from the share sheet, and pick videos on a profile grid to save in one run. Starts off. Turn it on in Hushfeed settings > Downloads.",
       "category": "Downloads",
       "use": true,
       "dependencies": [
@@ -2895,7 +2895,7 @@
     },
     {
       "name": "LIVE controls",
-      "description": "Stops a LIVE in the feed from opening by itself after a countdown, can show a LIVE's exact viewer count instead of a rounded one, and can offer a quality choice in more LIVE rooms. Starts off. Turn it on in Hushfeed settings > Playback.",
+      "description": "Stops a LIVE in the feed from opening by itself after a countdown. It can show a LIVE's exact viewer count instead of a rounded one, offer a quality choice and clear screen in more LIVE rooms, and keep your quality pick after TikTok restarts. Starts off. Turn it on in Hushfeed settings > Playback. It also keeps a LIVE in the feed from showing the Service+ row of the LIVE before it, and can add a Record button to a LIVE room that saves what you watch from when you tap it.",
       "category": "Playback",
       "use": true,
       "dependencies": [
@@ -4510,7 +4510,7 @@
     },
     {
       "name": "Skip content warnings",
-      "description": "Plays videos without the warning screen you'd have to tap through first, and can hide the Check sources banner on unverified videos. Starts off. Turn it on in Hushfeed settings > Feed screen.",
+      "description": "Plays videos without the warning screen you'd have to tap through first, and can hide the Check sources and Check your sources banners. Starts off. Turn it on in Hushfeed settings > Feed screen.",
       "category": "Feed",
       "use": true,
       "dependencies": [
@@ -5060,7 +5060,7 @@
     },
     {
       "name": "Translate comments",
-      "description": "Translates comments as they load, using TikTok's own translator, so you don't have to tap Translate on each one. Starts off. Turn it on in Hushfeed settings > Comments, where more rows list languages TikTok's automatic translation should leave alone, pick the language translations come out in, and add TikTok's translate button beside the comment count. Optional received-message and draft translation previews are under Inbox settings.",
+      "description": "Translates comments as they load, using TikTok's own translator, so you don't have to tap Translate on each one. Starts off. Turn it on in Hushfeed settings > Comments, where more rows list languages TikTok's automatic translation should leave alone, pick the language translations come out in, and add TikTok's translate button beside the comment count.",
       "category": "Comments",
       "use": true,
       "dependencies": [

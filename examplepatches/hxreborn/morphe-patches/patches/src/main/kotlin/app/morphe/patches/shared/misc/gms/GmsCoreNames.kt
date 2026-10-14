@@ -295,29 +295,45 @@ private fun gmsCoreName(value: String): String? {
         ?.let { value.replaceFirst(GOOGLE_VENDOR_GROUP_ID, GMS_CORE_VENDOR_GROUP_ID) }
 }
 
+private val CLOUD_MESSAGING_NAMES: Map<String, String> =
+    GMS_CORE_NAMES.filterKeys { name ->
+        name.startsWith("$GOOGLE_VENDOR_GROUP_ID.android.c2dm.") ||
+            name.startsWith("$GOOGLE_VENDOR_GROUP_ID.android.gcm.") ||
+            name.startsWith("$GOOGLE_VENDOR_GROUP_ID.iid.")
+    }
+
 internal fun BytecodePatchContext.renameGmsReferencesToGmsCore() {
     (GooglePlayServicesAvailabilityFingerprint.methodOrNull ?: GooglePlayServicesUtilAvailabilityFingerprint.method)
         .returnEarly(0)
 
+    replaceStringConstants(::gmsCoreName)
+}
+
+internal fun BytecodePatchContext.renameCloudMessagingToGmsCore() {
+    replaceStringConstants(CLOUD_MESSAGING_NAMES::get)
+}
+
+private fun BytecodePatchContext.replaceStringConstants(replacement: (String) -> String?) {
+    fun Instruction.replacementString() = stringConstant()?.let(replacement)
+
     classDefForEach { classDef ->
         classDef.methods.forEach { method ->
-            val renames = method.implementation?.instructions?.any { it.gmsCoreName() != null } ?: false
-            if (!renames) return@forEach
+            val instructions = method.implementation?.instructions ?: return@forEach
+            if (instructions.none { it.replacementString() != null }) return@forEach
 
             val mutableMethod = mutableClassDefBy(classDef).findMutableMethodOf(method)
-            mutableMethod.findInstructionIndicesReversed { gmsCoreName() != null }.forEach { index ->
+            mutableMethod.findInstructionIndicesReversed { replacementString() != null }.forEach { index ->
                 val instruction = mutableMethod.getInstruction(index)
                 val register = (instruction as OneRegisterInstruction).registerA
-                mutableMethod.replaceInstruction(index, "const-string v$register, \"${instruction.gmsCoreName()}\"")
+                mutableMethod.replaceInstruction(index, "const-string v$register, \"${instruction.replacementString()}\"")
             }
         }
     }
 }
 
-private fun Instruction.gmsCoreName(): String? {
+private fun Instruction.stringConstant(): String? {
     if (opcode != Opcode.CONST_STRING && opcode != Opcode.CONST_STRING_JUMBO) return null
-    val string = ((this as? ReferenceInstruction)?.reference as? StringReference)?.string ?: return null
-    return gmsCoreName(string)
+    return ((this as? ReferenceInstruction)?.reference as? StringReference)?.string
 }
 
 internal val gmsCoreManifestPatch = resourcePatch {

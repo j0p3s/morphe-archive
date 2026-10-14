@@ -280,6 +280,17 @@ internal object AppCompatibilities {
         targets = listOf(AppTarget(version = "2026.08.1041", versionCode = 26081041, minSdk = 32)),
     )
 
+    val JUJO = Compatibility(
+        name = "Jujo",
+        packageName = "com.dev2a.junk_journal",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0xE8B4A0,
+        signatures = setOf(
+            "851f5a9aa9e8287bdade98d0e41a0bdd13a685064307040133626697f16445e4",
+        ),
+        targets = listOf(AppTarget(version = "1.2.5", versionCode = 104, minSdk = 24)),
+    )
+
     val JVDROID = Compatibility(
         name = "Jvdroid",
         packageName = "ru.iiec.jvdroid",
@@ -567,6 +578,17 @@ internal object AppCompatibilities {
             "76dbef15f67726d451a12359b8579c0d7a9f635d526aa37424df131632f17810",
         ),
         targets = listOf(AppTarget(version = "2.5.11", versionCode = 506, minSdk = 24)),
+    )
+
+    val PUBLIC = Compatibility(
+        name = "Public",
+        packageName = "com.cardfeed.video_public",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0xEA1A1A,
+        signatures = setOf(
+            "38687807198e57d53bef507efdc11a6f9bf19bf7c7643b89650edff812ba2c00",
+        ),
+        targets = listOf(AppTarget(version = "3.3.4", versionCode = 9070834, minSdk = 24)),
     )
 
     val PYDROID = Compatibility(
