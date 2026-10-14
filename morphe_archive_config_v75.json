@@ -2475,14 +2475,6 @@
                 "updatedAt": 1791348284604
             },
             {
-                "name": "Luna-TV-device-comp-patch-and-no-lag",
-                "source": "https://raw.githubusercontent.com/Blazko381/Luna-TV-device-comp-patch-and-no-lag/main/patches-bundle.json",
-                "autoUpdate": true,
-                "sortOrder": 337,
-                "createdAt": 1791348286017,
-                "updatedAt": 1791348286017
-            },
-            {
                 "name": "johns-morphe-patches",
                 "source": "https://raw.githubusercontent.com/DigitalPals/johns-morphe-patches/main/patches-bundle.json",
                 "autoUpdate": true,
@@ -2985,6 +2977,54 @@
                 "sortOrder": 402,
                 "createdAt": 1791873481319,
                 "updatedAt": 1791873481319
+            },
+            {
+                "name": "pinterest-patches",
+                "source": "https://raw.githubusercontent.com/archivesteak/pinterest-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 403,
+                "createdAt": 1791953438619,
+                "updatedAt": 1791953438619
+            },
+            {
+                "name": "morphe-patches",
+                "source": "https://raw.githubusercontent.com/Gigahawk/morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 404,
+                "createdAt": 1791953442143,
+                "updatedAt": 1791953442143
+            },
+            {
+                "name": "morphe-universal-captions",
+                "source": "https://raw.githubusercontent.com/itolkien/morphe-universal-captions/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 405,
+                "createdAt": 1791953444007,
+                "updatedAt": 1791953444007
+            },
+            {
+                "name": "modo-patches",
+                "source": "https://raw.githubusercontent.com/latanvillegas/modo-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 406,
+                "createdAt": 1791953445945,
+                "updatedAt": 1791953445945
+            },
+            {
+                "name": "morphe-patches-zona",
+                "source": "https://raw.githubusercontent.com/PerfLite/morphe-patches-zona/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 407,
+                "createdAt": 1791953448886,
+                "updatedAt": 1791953448886
+            },
+            {
+                "name": "patches",
+                "source": "https://raw.githubusercontent.com/sahilwasgood/patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 408,
+                "createdAt": 1791953450091,
+                "updatedAt": 1791953450091
             }
         ]
     }

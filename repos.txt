@@ -44,6 +44,7 @@ Aorus22/twitter-bookmarker
 Apostolique/apos-morphe-patches
 arandomhooman/hoomans-morphe-patches
 archie9211/morphe-patches
+archivesteak/pinterest-patches
 areteruhiro/Haiagaru-Morphe
 ARHCOS/arhcos-patches
 ariecos/gemini-patches
@@ -143,6 +144,7 @@ fynnaly/test-morphe-patch
 Gamer92000/pixelcamera-patches
 ggYasin/ggyasin-morphe-patches
 giaaaacomo/nifty-patches-selection
+Gigahawk/morphe-patches
 GitGitro/Gitro-Morphe-Patches
 gitlab.com/api/v4
 gitlab.com/dhl0/morphe-patches
@@ -193,6 +195,7 @@ Insane96/Pinterest-patch
 ispacecase/patchweaver
 isuruhg/cricinfo-tweaks
 isuruhg/fin-tweaks
+itolkien/morphe-universal-captions
 itsthejoker/itsthejoker-patches
 jackblk/morphe-patches
 JacksonJones2003/immersive-keyboard-patches
@@ -237,6 +240,7 @@ kveld9/kveld-morphe-patches
 LaBlazer/morphe-patches
 LaKakaReal/LaKakaShitPatches
 latanvillegas/lawnchair-morphe-patches
+latanvillegas/modo-patches
 lchanc3/morphe-patches
 LDP924/qqmusic-proxy
 legendsciber/morphe-patches
@@ -297,6 +301,7 @@ Pa-kon/morphe-screenshot-patches
 Paresh-Maheshwari/patch-explorer
 PawiX25/pepper-morphe-patches
 pengusto/penguin-patches
+PerfLite/morphe-patches-zona
 phamleduy04/duy-patches
 picarica/My-moprhe-patches
 pigfoot/morphe-patches
@@ -332,11 +337,12 @@ RookieEnough/De-Vanced
 Rosaldivo/rosaldivo-morphe-patches
 RoundSalmon4/morphe-patches-template
 rufusin/revanced-patches
-rushiranpise/RI-Vanced-Universal-Morphe-Patches
 rushiranpise/Ri-Vanced-Universal-Morphe-Patches
+rushiranpise/RI-Vanced-Universal-Morphe-Patches
 ryuya0124/gemini-microg-patches
 ryykitty/twitch-patched
 sabopura/sabopura-morphe-patches
+sahilwasgood/patches
 saieshshirodkar/saiesh-morphe-patches
 SailHighSea/sailhighsea-patches
 Santodan/santodan-patches
@@ -366,8 +372,8 @@ Sudashiii/servus-patches
 Supperelias2/sbs-morphe-patches
 Supperelias2/sbs-tv-morphe-patches
 sushruth/imgur-patches
-SysAdminDoc/Hushfacebook
 SysAdminDoc/HushFacebook
+SysAdminDoc/Hushfacebook
 SysAdminDoc/hushfeed
 SysAdminDoc/HushFeed
 SysAdminDoc/HushGram
