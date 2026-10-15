@@ -9,7 +9,7 @@ This is a collection of [Morphe](https://github.com/MorpheApp) patches maintaine
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.47.0](https://github.com/legendsciber/morphe-patches/releases/tag/v1.47.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;29 patches total
+> **[v1.51.0](https://github.com/legendsciber/morphe-patches/releases/tag/v1.51.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;33 patches total
 <details open>
 <summary>📦 Age Of War 2&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
@@ -70,6 +70,22 @@ This is a collection of [Morphe](https://github.com/MorpheApp) patches maintaine
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
 | [Dan The Man Free IAP](#dan-the-man-free-iap) | All in-app purchases are granted instantly and free without Google Play billing. |  |
+
+</details>
+
+<details open>
+<summary>📦 Death Rover&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 2.7.3 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| [Death Rover Free IAP](#death-rover-free-iap) | Every shop item reports as purchased and stays owned without contacting Google Play: cars, remove ads and double coins come pre-owned, and credit packs are granted instantly and free when bought instead of opening Google Play billing. Rover upgrades are left untouched, so those stay purchasable with the coins you earn. |  |
+| [Death Rover Unlimited Turbo](#death-rover-unlimited-turbo) | The turbo no longer runs down: while the turbo is engaged the rover keeps refilling its gauge to the maximum instead of spending it, so you can hold the turbo for the whole drive. Cars without a turbo upgrade are unaffected. |  |
 
 </details>
 
@@ -260,6 +276,22 @@ This is a collection of [Morphe](https://github.com/MorpheApp) patches maintaine
 |----------|----------------|-----------|
 | [Temple Run 2 Free IAP](#temple-run-2-free-iap) | All store purchases (coins, gems, no-ads, characters, deals, potions and perks) are granted instantly and free without Google Play billing, online or offline. The shop, deals and perks tabs keep loading their full catalogue with no network connection, and real-money store items stay visible offline, where Google Play billing never reports prices. |  |
 | [Temple Run 2 Instant Rewards](#temple-run-2-instant-rewards) | Every ad-gated reward works without watching an ad and without a network connection: rewarded-map unlocks, potions, power-ups, dailies, battle pass, advent calendar, weekly rewards and rewarded boosts are granted instantly. |  |
+
+</details>
+
+<details open>
+<summary>📦 Zombie Tsunami&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 4.7.3 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| [Zombie Tsunami Free IAP](#zombie-tsunami-free-iap) | Every store item is granted the moment you tap buy, with no Google Play billing sheet in between: all coin packs, the coins and diamonds bundle and the double coins upgrade arrive instantly and for free, and coin packs can be bought as many times as you like. |  |
+| [Zombie Tsunami Installer Check Fix](#zombie-tsunami-installer-check-fix) | The game's PairIP license client asks Android who installed the package and treats anything other than the Play Store as a failed check, so sideloaded installs are rejected on launch. This makes that one check report the Play Store as the installer. |  |
 
 </details>
 

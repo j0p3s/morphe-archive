@@ -35,15 +35,17 @@ All modifications made by Morphe, along with their dates, can be found in the Gi
 ## 🩹 Patches list
 
 <!-- PATCHES_START -->
-> **[v0.2.0](https://github.com/hajs110208/morphe-patches/releases/tag/v0.2.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;3 patches total
+> **[v0.3.0](https://github.com/hajs110208/morphe-patches/releases/tag/v0.3.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;5 patches total
 <details open>
-<summary>📦 Minecraft&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<summary>📦 Minecraft&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
 <br>
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
+| [Add documents provider](#add-documents-provider) | Adds a documents provider so the app's data folders can be accessed from the system file manager. |  |
 | [Add mtbinloader2 lib](#add-mtbinloader2-lib) | Add libmtbinloader2.so to the app's native library path. |  |
-| [Change Package Name](#change-package-name) | Changes the app package name to install patch without uninstalling original app.By default, .morphe is appended. | • Package name<br>• Update permissions<br>• Update providers |
+| [Change Package Name](#change-package-name) | Changes the app package name to install patch without uninstalling original app. By default, .morphe is appended. | • Package name<br>• Update permissions<br>• Update providers |
+| [Change app branding](#change-app-branding) | Changes the app name shown in the launcher. | • App name |
 | [Remove music](#remove-music) | Removes music files. This reduces app size. |  |
 
 </details>

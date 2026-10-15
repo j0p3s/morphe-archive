@@ -39,6 +39,9 @@ import app.hushgram.extension.shared.diagnostics.HookStatus;
  *
  * <p>The chosen tab has to be on the bar as the tab list hook last shaped it. A hidden tab, or one
  * Instagram left off the account's bar (Messages is on some), opens Home.
+ *
+ * <p>Home leaves the start to Instagram, which reopens on Reels after a session that ended there.
+ * Always Home swaps that Reels landing for Home and touches nothing else.
  */
 public final class TabStart {
     /** The names of the tabs Instagram lands on when nothing asks for another. */
@@ -197,6 +200,13 @@ public final class TabStart {
             HookStatus.counted(FamilyNames.REELS_TAB, "Start tab skipped, not from the icon");
             return null;
         }
+        if (choice == StartTab.ALWAYS_HOME) {
+            // Either Home landing is Home already. Only Instagram's own reopen on Reels is swapped.
+            if (!ReelsTab.isReels(asked)) return null;
+            HookStatus.counted(FamilyNames.REELS_TAB, "Start tab applied");
+            Logger.printDebug(() -> "Reels tab: opened Home in place of " + asked.name());
+            return ReelsTab.homeOf(asked);
+        }
         if (choice.tab.equals(asked.name())) return null;
         if (ReelsTab.hiddenByName(choice.tab) || !bar.contains(choice.tab)) {
             HookStatus.counted(FamilyNames.REELS_TAB, "Start tab not on the bar, opened Home");
@@ -210,6 +220,7 @@ public final class TabStart {
 
     /** Takes the process back to before its first start, for tests. */
     static void forgetForTests() {
+        ReelsTab.forgetHomeForTests();
         firstStart = UNKNOWN;
         onTheBar = null;
         tabEnum = null;

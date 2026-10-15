@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.50.0",
+  "version": "1.52.0",
   "patches": [
     {
       "name": "AMOLED dark theme",
@@ -29,6 +29,18 @@
               },
               "isExperimental": false,
               "minSdk": 23,
+              "description": null
+            },
+            {
+              "version": "3.0.0",
+              "versionCodes": {
+                "ARM64_V8A": 32,
+                "ARMEABI_V7A": 32,
+                "X86_64": 32,
+                "X86": 32
+              },
+              "isExperimental": false,
+              "minSdk": 24,
               "description": null
             }
           ]
@@ -423,6 +435,18 @@
               "isExperimental": false,
               "minSdk": 27,
               "description": null
+            },
+            {
+              "version": "1.41.3",
+              "versionCodes": {
+                "ARM64_V8A": 14103401,
+                "ARMEABI_V7A": 14103401,
+                "X86_64": 14103401,
+                "X86": 14103401
+              },
+              "isExperimental": false,
+              "minSdk": 27,
+              "description": null
             }
           ]
         }
@@ -576,48 +600,48 @@
           ],
           "targets": [
             {
-              "version": "4.0.02.0828.03",
-              "versionCodes": {
-                "ARM64_V8A": 50020125,
-                "ARMEABI_V7A": 50020125,
-                "X86_64": 50020125,
-                "X86": 50020125
-              },
-              "isExperimental": false,
-              "minSdk": 29,
-              "description": null
-            },
-            {
-              "version": "4.0.02.0831.03",
-              "versionCodes": {
-                "ARM64_V8A": 50020126,
-                "ARMEABI_V7A": 50020126,
-                "X86_64": 50020126,
-                "X86": 50020126
-              },
-              "isExperimental": false,
-              "minSdk": 29,
-              "description": null
-            },
-            {
-              "version": "4.0.02.0903.02",
-              "versionCodes": {
-                "ARM64_V8A": 50020128,
-                "ARMEABI_V7A": 50020128,
-                "X86_64": 50020128,
-                "X86": 50020128
-              },
-              "isExperimental": false,
-              "minSdk": 29,
-              "description": null
-            },
-            {
               "version": "4.0.03.0918.03",
               "versionCodes": {
                 "ARM64_V8A": 50020129,
                 "ARMEABI_V7A": 50020129,
                 "X86_64": 50020129,
                 "X86": 50020129
+              },
+              "isExperimental": false,
+              "minSdk": 29,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "All-In-One",
+      "description": "Unlocks premium playback and removes ads, the region block and forced updates. Requires Android 10 or later.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.community.mbox.tv",
+          "name": "MovieBox TV",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#30E66D",
+          "signatures": [
+            "03d4b741632d136bc23e2de4c6adcdb7712f1980b619c183221801730bbd0410"
+          ],
+          "targets": [
+            {
+              "version": "1.2.0.0923.web_socialmedia",
+              "versionCodes": {
+                "ARM64_V8A": 50040018,
+                "ARMEABI_V7A": 50040018,
+                "X86_64": 50040018,
+                "X86": 50040018
               },
               "isExperimental": false,
               "minSdk": 29,
@@ -953,6 +977,18 @@
                 "ARMEABI_V7A": 14102398,
                 "X86_64": 14102398,
                 "X86": 14102398
+              },
+              "isExperimental": false,
+              "minSdk": 27,
+              "description": null
+            },
+            {
+              "version": "1.41.3",
+              "versionCodes": {
+                "ARM64_V8A": 14103401,
+                "ARMEABI_V7A": 14103401,
+                "X86_64": 14103401,
+                "X86": 14103401
               },
               "isExperimental": false,
               "minSdk": 27,
@@ -1305,6 +1341,56 @@
               "isExperimental": false,
               "minSdk": 23,
               "description": null
+            },
+            {
+              "version": "3.0.0",
+              "versionCodes": {
+                "ARM64_V8A": 32,
+                "ARMEABI_V7A": 32,
+                "X86_64": 32,
+                "X86": 32
+              },
+              "isExperimental": false,
+              "minSdk": 24,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Disable tracking",
+      "description": "Stops Firebase Analytics and Crashlytics from collecting usage data.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch",
+        "ResourcePatch",
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.ferdinandobermeier.focusmate",
+          "name": "FocusNow",
+          "description": null,
+          "apkFileType": "APKS_REQUIRED",
+          "appIconColor": "#FF5800",
+          "signatures": [
+            "7ea799fb96bbbe7cc574ce4667a75dcb96291fe8cf5d61f31d053d4f28aea3fa"
+          ],
+          "targets": [
+            {
+              "version": "3.8.0",
+              "versionCodes": {
+                "ARM64_V8A": 237,
+                "ARMEABI_V7A": 237,
+                "X86_64": 237,
+                "X86": 237
+              },
+              "isExperimental": false,
+              "minSdk": 24,
+              "description": null
             }
           ]
         }
@@ -1467,6 +1553,18 @@
                 "ARMEABI_V7A": 56014,
                 "X86_64": 56014,
                 "X86": 56014
+              },
+              "isExperimental": false,
+              "minSdk": 30,
+              "description": null
+            },
+            {
+              "version": "6.3.1",
+              "versionCodes": {
+                "ARM64_V8A": 56714,
+                "ARMEABI_V7A": 56714,
+                "X86_64": 56714,
+                "X86": 56714
               },
               "isExperimental": false,
               "minSdk": 30,
@@ -1895,6 +1993,43 @@
       "default": false,
       "category": null,
       "dependencies": [
+        "ResourcePatch",
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.ferdinandobermeier.focusmate",
+          "name": "FocusNow",
+          "description": null,
+          "apkFileType": "APKS_REQUIRED",
+          "appIconColor": "#FF5800",
+          "signatures": [
+            "7ea799fb96bbbe7cc574ce4667a75dcb96291fe8cf5d61f31d053d4f28aea3fa"
+          ],
+          "targets": [
+            {
+              "version": "3.8.0",
+              "versionCodes": {
+                "ARM64_V8A": 237,
+                "ARMEABI_V7A": 237,
+                "X86_64": 237,
+                "X86": 237
+              },
+              "isExperimental": false,
+              "minSdk": 24,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "GmsCore support",
+      "description": "Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed.",
+      "default": false,
+      "category": null,
+      "dependencies": [
         "RawResourcePatch",
         "BytecodePatch",
         "ResourcePatch",
@@ -1921,6 +2056,44 @@
               },
               "isExperimental": false,
               "minSdk": 32,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "GmsCore support",
+      "description": "Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed.",
+      "default": false,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch",
+        "ResourcePatch",
+        "ResourcePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.lagguy.wallpapers",
+          "name": "Lagguy Wallpapers",
+          "description": null,
+          "apkFileType": "APKS_REQUIRED",
+          "appIconColor": "#FFFFFF",
+          "signatures": [
+            "d39a40cf5446332eff3e40b9b203b5a8aa9b1f1d834f683df5bb1cc4d1d45edf"
+          ],
+          "targets": [
+            {
+              "version": "40.0.44",
+              "versionCodes": {
+                "ARM64_V8A": 37,
+                "ARMEABI_V7A": 37,
+                "X86_64": 37,
+                "X86": 37
+              },
+              "isExperimental": false,
+              "minSdk": 24,
               "description": null
             }
           ]
@@ -2626,7 +2799,7 @@
     },
     {
       "name": "Hide ads",
-      "description": "Removes ads from the feed, app open, interstitial and rewarded placements.",
+      "description": "Removes ads from the feed, app open, interstitial and rewarded placements, and the sponsor banner on the launch screen.",
       "default": true,
       "category": null,
       "dependencies": [],
@@ -2790,6 +2963,18 @@
               "isExperimental": false,
               "minSdk": 26,
               "description": null
+            },
+            {
+              "version": "416.0.0.183472",
+              "versionCodes": {
+                "ARM64_V8A": 1283472,
+                "ARMEABI_V7A": 1283472,
+                "X86_64": 1283472,
+                "X86": 1283472
+              },
+              "isExperimental": false,
+              "minSdk": 26,
+              "description": null
             }
           ]
         }
@@ -2911,6 +3096,66 @@
       "options": []
     },
     {
+      "name": "Hide layout components",
+      "description": "Adds settings to hide the Help center, Spread the word and About sections.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "proton.android.pass",
+          "name": "Proton Pass",
+          "description": null,
+          "apkFileType": "XAPK_REQUIRED",
+          "appIconColor": "#6D4AFF",
+          "signatures": [
+            "dcc9439ec1a6c6a8d0203f3423ee42bcc8b970628e53cb73a0393f398dd5b853"
+          ],
+          "targets": [
+            {
+              "version": "1.40.3",
+              "versionCodes": {
+                "ARM64_V8A": 14003373,
+                "ARMEABI_V7A": 14003373,
+                "X86_64": 14003373,
+                "X86": 14003373
+              },
+              "isExperimental": false,
+              "minSdk": 27,
+              "description": null
+            },
+            {
+              "version": "1.41.2",
+              "versionCodes": {
+                "ARM64_V8A": 14102398,
+                "ARMEABI_V7A": 14102398,
+                "X86_64": 14102398,
+                "X86": 14102398
+              },
+              "isExperimental": false,
+              "minSdk": 27,
+              "description": null
+            },
+            {
+              "version": "1.41.3",
+              "versionCodes": {
+                "ARM64_V8A": 14103401,
+                "ARMEABI_V7A": 14103401,
+                "X86_64": 14103401,
+                "X86": 14103401
+              },
+              "isExperimental": false,
+              "minSdk": 27,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "Hide membership upselling",
       "description": "Hides the membership promotion on the Home screen and the free trial bottom sheet.",
       "default": true,
@@ -2944,6 +3189,18 @@
                 "ARMEABI_V7A": 2090263808,
                 "X86_64": 2090263808,
                 "X86": 2090263808
+              },
+              "isExperimental": false,
+              "minSdk": 28,
+              "description": null
+            },
+            {
+              "version": "26.41.06",
+              "versionCodes": {
+                "ARM64_V8A": 2090264106,
+                "ARMEABI_V7A": 2090264106,
+                "X86_64": 2090264106,
+                "X86": 2090264106
               },
               "isExperimental": false,
               "minSdk": 28,
@@ -3026,6 +3283,18 @@
                 "ARMEABI_V7A": 14102398,
                 "X86_64": 14102398,
                 "X86": 14102398
+              },
+              "isExperimental": false,
+              "minSdk": 27,
+              "description": null
+            },
+            {
+              "version": "1.41.3",
+              "versionCodes": {
+                "ARM64_V8A": 14103401,
+                "ARMEABI_V7A": 14103401,
+                "X86_64": 14103401,
+                "X86": 14103401
               },
               "isExperimental": false,
               "minSdk": 27,
@@ -3332,6 +3601,18 @@
               "isExperimental": false,
               "minSdk": 27,
               "description": null
+            },
+            {
+              "version": "1.41.3",
+              "versionCodes": {
+                "ARM64_V8A": 14103401,
+                "ARMEABI_V7A": 14103401,
+                "X86_64": 14103401,
+                "X86": 14103401
+              },
+              "isExperimental": false,
+              "minSdk": 27,
+              "description": null
             }
           ]
         }
@@ -3567,7 +3848,7 @@
       "compatiblePackages": [
         {
           "packageName": "me.proton.android.lumo",
-          "name": "Lumo",
+          "name": "Proton Lumo",
           "description": null,
           "apkFileType": "APKS_REQUIRED",
           "appIconColor": "#6D4AFF",
@@ -3719,6 +4000,18 @@
               "isExperimental": false,
               "minSdk": 27,
               "description": null
+            },
+            {
+              "version": "1.41.3",
+              "versionCodes": {
+                "ARM64_V8A": 14103401,
+                "ARMEABI_V7A": 14103401,
+                "X86_64": 14103401,
+                "X86": 14103401
+              },
+              "isExperimental": false,
+              "minSdk": 27,
+              "description": null
             }
           ]
         }
@@ -3841,6 +4134,18 @@
               "isExperimental": false,
               "minSdk": 30,
               "description": null
+            },
+            {
+              "version": "6.3.1",
+              "versionCodes": {
+                "ARM64_V8A": 56714,
+                "ARMEABI_V7A": 56714,
+                "X86_64": 56714,
+                "X86": 56714
+              },
+              "isExperimental": false,
+              "minSdk": 30,
+              "description": null
             }
           ]
         }
@@ -3881,6 +4186,18 @@
                 "ARMEABI_V7A": 2090263808,
                 "X86_64": 2090263808,
                 "X86": 2090263808
+              },
+              "isExperimental": false,
+              "minSdk": 28,
+              "description": null
+            },
+            {
+              "version": "26.41.06",
+              "versionCodes": {
+                "ARM64_V8A": 2090264106,
+                "ARMEABI_V7A": 2090264106,
+                "X86_64": 2090264106,
+                "X86": 2090264106
               },
               "isExperimental": false,
               "minSdk": 28,
@@ -4117,6 +4434,18 @@
                 "ARMEABI_V7A": 56014,
                 "X86_64": 56014,
                 "X86": 56014
+              },
+              "isExperimental": false,
+              "minSdk": 30,
+              "description": null
+            },
+            {
+              "version": "6.3.1",
+              "versionCodes": {
+                "ARM64_V8A": 56714,
+                "ARMEABI_V7A": 56714,
+                "X86_64": 56714,
+                "X86": 56714
               },
               "isExperimental": false,
               "minSdk": 30,
@@ -4442,6 +4771,18 @@
           "signatures": null,
           "targets": [
             {
+              "version": "1.01.100.1012",
+              "versionCodes": {
+                "ARM64_V8A": 10157,
+                "ARMEABI_V7A": 10157,
+                "X86_64": 10157,
+                "X86": 10157
+              },
+              "isExperimental": false,
+              "minSdk": 24,
+              "description": null
+            },
+            {
               "version": "1.01.99.0909",
               "versionCodes": {
                 "ARM64_V8A": 10153,
@@ -4658,7 +4999,7 @@
       "compatiblePackages": [
         {
           "packageName": "me.proton.android.lumo",
-          "name": "Lumo",
+          "name": "Proton Lumo",
           "description": null,
           "apkFileType": "APKS_REQUIRED",
           "appIconColor": "#6D4AFF",
@@ -4762,7 +5103,8 @@
       "dependencies": [
         "BytecodePatch",
         "BytecodePatch",
-        "ResourcePatch"
+        "ResourcePatch",
+        "BytecodePatch"
       ],
       "compatiblePackages": [
         {
@@ -5002,6 +5344,18 @@
               "isExperimental": false,
               "minSdk": 30,
               "description": null
+            },
+            {
+              "version": "6.3.1",
+              "versionCodes": {
+                "ARM64_V8A": 56714,
+                "ARMEABI_V7A": 56714,
+                "X86_64": 56714,
+                "X86": 56714
+              },
+              "isExperimental": false,
+              "minSdk": 30,
+              "description": null
             }
           ]
         }
@@ -5118,6 +5472,91 @@
               },
               "isExperimental": false,
               "minSdk": 32,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Swipe to switch accounts",
+      "description": "Switches between signed-in accounts by swiping up or down on the account avatar.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch",
+        "BytecodePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "ch.protonmail.android",
+          "name": "Proton Mail",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": "#6D4AFF",
+          "signatures": [
+            "dcc9439ec1a6c6a8d0203f3423ee42bcc8b970628e53cb73a0393f398dd5b853"
+          ],
+          "targets": [
+            {
+              "version": "7.11.10",
+              "versionCodes": {
+                "ARM64_V8A": 18325,
+                "ARMEABI_V7A": 18325,
+                "X86_64": 18325,
+                "X86": 18325
+              },
+              "isExperimental": false,
+              "minSdk": 29,
+              "description": null
+            },
+            {
+              "version": "7.11.9",
+              "versionCodes": {
+                "ARM64_V8A": 18324,
+                "ARMEABI_V7A": 18324,
+                "X86_64": 18324,
+                "X86": 18324
+              },
+              "isExperimental": false,
+              "minSdk": 29,
+              "description": null
+            },
+            {
+              "version": "7.11.8",
+              "versionCodes": {
+                "ARM64_V8A": 18323,
+                "ARMEABI_V7A": 18323,
+                "X86_64": 18323,
+                "X86": 18323
+              },
+              "isExperimental": false,
+              "minSdk": 29,
+              "description": null
+            },
+            {
+              "version": "7.11.5",
+              "versionCodes": {
+                "ARM64_V8A": 18317,
+                "ARMEABI_V7A": 18317,
+                "X86_64": 18317,
+                "X86": 18317
+              },
+              "isExperimental": false,
+              "minSdk": 29,
+              "description": null
+            },
+            {
+              "version": "7.10.4",
+              "versionCodes": {
+                "ARM64_V8A": 17667,
+                "ARMEABI_V7A": 17667,
+                "X86_64": 17667,
+                "X86": 17667
+              },
+              "isExperimental": false,
+              "minSdk": 29,
               "description": null
             }
           ]
@@ -5789,6 +6228,18 @@
               "isExperimental": false,
               "minSdk": 23,
               "description": null
+            },
+            {
+              "version": "3.0.0",
+              "versionCodes": {
+                "ARM64_V8A": 32,
+                "ARMEABI_V7A": 32,
+                "X86_64": 32,
+                "X86": 32
+              },
+              "isExperimental": false,
+              "minSdk": 24,
+              "description": null
             }
           ]
         }
@@ -6064,6 +6515,18 @@
               "isExperimental": false,
               "minSdk": 24,
               "description": null
+            },
+            {
+              "version": "2.91",
+              "versionCodes": {
+                "ARM64_V8A": 329,
+                "ARMEABI_V7A": 329,
+                "X86_64": 329,
+                "X86": 329
+              },
+              "isExperimental": false,
+              "minSdk": 24,
+              "description": null
             }
           ]
         }
@@ -6097,6 +6560,54 @@
               },
               "isExperimental": false,
               "minSdk": 26,
+              "description": null
+            },
+            {
+              "version": "v7.8.5-Build-1-gms-release",
+              "versionCodes": {
+                "ARM64_V8A": 7080501,
+                "ARMEABI_V7A": 7080501,
+                "X86_64": 7080501,
+                "X86": 7080501
+              },
+              "isExperimental": false,
+              "minSdk": 26,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Unlock premium",
+      "description": "Unlocks FocusNow Pro.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.ferdinandobermeier.focusmate",
+          "name": "FocusNow",
+          "description": null,
+          "apkFileType": "APKS_REQUIRED",
+          "appIconColor": "#FF5800",
+          "signatures": [
+            "7ea799fb96bbbe7cc574ce4667a75dcb96291fe8cf5d61f31d053d4f28aea3fa"
+          ],
+          "targets": [
+            {
+              "version": "3.8.0",
+              "versionCodes": {
+                "ARM64_V8A": 237,
+                "ARMEABI_V7A": 237,
+                "X86_64": 237,
+                "X86": 237
+              },
+              "isExperimental": false,
+              "minSdk": 24,
               "description": null
             }
           ]
@@ -6415,6 +6926,42 @@
     },
     {
       "name": "Unlock premium",
+      "description": "Unlocks Pro collections, wide walls, original-size downloads and unlimited saves. Requires a signed-in account.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "com.lagguy.wallpapers",
+          "name": "Lagguy Wallpapers",
+          "description": null,
+          "apkFileType": "APKS_REQUIRED",
+          "appIconColor": "#FFFFFF",
+          "signatures": [
+            "d39a40cf5446332eff3e40b9b203b5a8aa9b1f1d834f683df5bb1cc4d1d45edf"
+          ],
+          "targets": [
+            {
+              "version": "40.0.44",
+              "versionCodes": {
+                "ARM64_V8A": 37,
+                "ARMEABI_V7A": 37,
+                "X86_64": 37,
+                "X86": 37
+              },
+              "isExperimental": false,
+              "minSdk": 24,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Unlock premium",
       "description": "Unlocks pocket mode, notification history and statistics, and removes ads.",
       "default": true,
       "category": null,
@@ -6442,6 +6989,44 @@
               },
               "isExperimental": false,
               "minSdk": 24,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Unlock premium",
+      "description": "Unlocks unlimited projects and removes upgrade prompts. Usage limits for models, messages and images still apply.",
+      "default": true,
+      "category": null,
+      "dependencies": [
+        "BytecodePatch",
+        "BytecodePatch"
+      ],
+      "compatiblePackages": [
+        {
+          "packageName": "me.proton.android.lumo",
+          "name": "Proton Lumo",
+          "description": null,
+          "apkFileType": "APKS_REQUIRED",
+          "appIconColor": "#6D4AFF",
+          "signatures": [
+            "a747eaee28611e25217b793c07bf302234405cfd1e19068162556c79e5bf04f0",
+            "dcc9439ec1a6c6a8d0203f3423ee42bcc8b970628e53cb73a0393f398dd5b853"
+          ],
+          "targets": [
+            {
+              "version": "2.1.4-gms",
+              "versionCodes": {
+                "ARM64_V8A": 78,
+                "ARMEABI_V7A": 78,
+                "X86_64": 78,
+                "X86": 78
+              },
+              "isExperimental": false,
+              "minSdk": 29,
               "description": null
             }
           ]
@@ -6677,6 +7262,18 @@
               },
               "isExperimental": false,
               "minSdk": 29,
+              "description": null
+            },
+            {
+              "version": "0.5.38",
+              "versionCodes": {
+                "ARM64_V8A": 350,
+                "ARMEABI_V7A": 350,
+                "X86_64": 350,
+                "X86": 350
+              },
+              "isExperimental": false,
+              "minSdk": 32,
               "description": null
             }
           ]
@@ -7045,6 +7642,18 @@
           "appIconColor": "#243ECA",
           "signatures": null,
           "targets": [
+            {
+              "version": "1.01.100.1012",
+              "versionCodes": {
+                "ARM64_V8A": 10157,
+                "ARMEABI_V7A": 10157,
+                "X86_64": 10157,
+                "X86": 10157
+              },
+              "isExperimental": false,
+              "minSdk": 24,
+              "description": null
+            },
             {
               "version": "1.01.99.0909",
               "versionCodes": {
@@ -7583,6 +8192,18 @@
               "isExperimental": false,
               "minSdk": 26,
               "description": null
+            },
+            {
+              "version": "2.34.1",
+              "versionCodes": {
+                "ARM64_V8A": 23401,
+                "ARMEABI_V7A": 23401,
+                "X86_64": 23401,
+                "X86": 23401
+              },
+              "isExperimental": false,
+              "minSdk": 26,
+              "description": null
             }
           ]
         }
@@ -7685,6 +8306,18 @@
                 "ARMEABI_V7A": 56014,
                 "X86_64": 56014,
                 "X86": 56014
+              },
+              "isExperimental": false,
+              "minSdk": 30,
+              "description": null
+            },
+            {
+              "version": "6.3.1",
+              "versionCodes": {
+                "ARM64_V8A": 56714,
+                "ARMEABI_V7A": 56714,
+                "X86_64": 56714,
+                "X86": 56714
               },
               "isExperimental": false,
               "minSdk": 30,

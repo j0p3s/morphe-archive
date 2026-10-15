@@ -90,6 +90,7 @@ public class PatchFamilyTest {
         Settings.NO_HAPTICS.resetToDefault();
         Settings.REACTION_EFFECTS_OFF.resetToDefault();
         Settings.HIDE_FOLDER_COUNTERS.resetToDefault();
+        Settings.LAUNCH_FOLDER.resetToDefault();
         Settings.FORWARD_HIDE_SENDER.resetToDefault();
         Settings.VOICE_MUSIC_PLAYER.resetToDefault();
         Settings.SILENCE_NON_CONTACTS.resetToDefault();
@@ -112,6 +113,7 @@ public class PatchFamilyTest {
         Settings.HIDE_SEND_AS.resetToDefault();
         Settings.HIDE_CONTACTS_TAB.resetToDefault();
         Settings.FASTER_DOWNLOADS.resetToDefault();
+        Settings.DATA_SAVER_DOWNLOADS.resetToDefault();
         Settings.SAVE_DOWNLOADS.resetToDefault();
         Settings.CHAT_TYPE_FOLDERS.resetToDefault();
         Settings.UNIFIED_PUSH.resetToDefault();
@@ -164,14 +166,34 @@ public class PatchFamilyTest {
         PatchFamily family = PatchFamily.HIDE_CONTACTS_TAB;
         assertEquals("Hide Contacts tab", family.patchName);
         assertEquals("hideContactsTab", family.statusMethod);
-        assertEquals(Collections.singletonList(Settings.HIDE_CONTACTS_TAB), family.switches);
-        assertFalse(Settings.HIDE_CONTACTS_TAB.defaultValue);
-        // Telegram builds the bar with the main screen, so the change shows after a restart.
+        // The compact bar and the side menu start off too and work with or without the first.
+        assertEquals(Arrays.asList(Settings.HIDE_CONTACTS_TAB, Settings.COMPACT_TAB_BAR, Settings.SIDE_MENU), family.switches);
+        for (BooleanSetting setting : family.switches) assertFalse(setting.key, setting.defaultValue);
+        // Telegram builds the bar with the main screen, so a change to it shows after a restart.
         assertTrue(Settings.HIDE_CONTACTS_TAB.rebootApp);
-        assertTrue(family.expectedCapabilities().isEmpty());
+        assertTrue(Settings.COMPACT_TAB_BAR.rebootApp);
+        // Each swipe reads the side menu's switch, so it needs none.
+        assertFalse(Settings.SIDE_MENU.rebootApp);
+        assertEquals(EnumSet.of(PatchFamily.Capability.COMPACT_TAB_BAR, PatchFamily.Capability.SIDE_MENU), family.expectedCapabilities());
         assertOnItsPage(family);
         // The bar sits under the chat list, beside its folder switches.
         assertEquals(PatchFamily.Page.CHAT_LIST, PatchFamily.Page.of(family));
+    }
+
+    @Test
+    public void holidayLookCarriesTheTitleEmojiBesideItsOneSwitch() {
+        PatchFamily family = PatchFamily.HOLIDAY_LOOK;
+        assertEquals("Holiday look all year", family.patchName);
+        assertEquals("holidayLook", family.statusMethod);
+        // The emoji is text, not a switch: Pause reaches it through its own empty paused value.
+        assertEquals(Collections.singletonList(Settings.HOLIDAY_LOOK), family.switches);
+        assertEquals(EnumSet.of(PatchFamily.Capability.TITLE_EMOJI), family.expectedCapabilities());
+        assertEquals("titleEmoji", PatchFamily.Capability.TITLE_EMOJI.statusMethod);
+        assertEquals("", Settings.TITLE_EMOJI.defaultValue);
+        // The chat list builds its title once, so new text shows after a restart.
+        assertTrue(Settings.TITLE_EMOJI.rebootApp);
+        assertOnItsPage(family);
+        assertEquals(PatchFamily.Page.LOOK, PatchFamily.Page.of(family));
     }
 
     @Test
@@ -353,15 +375,19 @@ public class PatchFamilyTest {
     }
 
     @Test
-    public void fasterDownloadsHasItsOwnOffByDefaultSwitchOnPlaybackThatAppliesAtOnce() {
+    public void fasterDownloadsHasTwoOffByDefaultSwitchesOnPlaybackThatApplyAtOnce() {
         PatchFamily family = PatchFamily.FASTER_DOWNLOADS;
         assertEquals("Faster downloads", family.patchName);
         assertEquals("fasterDownloads", family.statusMethod);
-        assertEquals(Collections.singletonList(Settings.FASTER_DOWNLOADS), family.switches);
-        assertFalse(Settings.FASTER_DOWNLOADS.defaultValue);
-        // Telegram picks the piece size each time a download starts, so no restart is needed.
-        assertFalse(Settings.FASTER_DOWNLOADS.rebootApp);
-        assertTrue(family.expectedCapabilities().isEmpty());
+        // The second switch, the Data Saver hold, starts off too and works with or without the first.
+        assertEquals(Arrays.asList(Settings.FASTER_DOWNLOADS, Settings.DATA_SAVER_DOWNLOADS), family.switches);
+        for (BooleanSetting setting : family.switches) {
+            assertFalse(setting.key, setting.defaultValue);
+            // Telegram picks the piece size each time a download starts and asks again before each
+            // automatic download, so no restart is needed.
+            assertFalse(setting.key, setting.rebootApp);
+        }
+        assertEquals(EnumSet.of(PatchFamily.Capability.DATA_SAVER_DOWNLOADS), family.expectedCapabilities());
         assertOnItsPage(family);
         assertEquals(PatchFamily.Page.PLAYBACK, PatchFamily.Page.of(family));
     }
@@ -425,10 +451,15 @@ public class PatchFamilyTest {
     public void hideFolderCountersHasItsOwnOffByDefaultSwitchThatAppliesAtOnce() {
         PatchFamily family = PatchFamily.HIDE_FOLDER_COUNTERS;
         assertEquals("Hide folder tab counters", family.patchName);
-        assertEquals(Collections.singletonList(Settings.HIDE_FOLDER_COUNTERS), family.switches);
-        assertFalse(Settings.HIDE_FOLDER_COUNTERS.defaultValue);
-        assertFalse(Settings.HIDE_FOLDER_COUNTERS.rebootApp);
-        assertTrue(family.expectedCapabilities().isEmpty());
+        // The second switch, the folder the chat list opens on, starts off too and works with or without the first.
+        assertEquals(Arrays.asList(Settings.HIDE_FOLDER_COUNTERS, Settings.LAUNCH_FOLDER), family.switches);
+        for (BooleanSetting setting : family.switches) {
+            assertFalse(setting.key, setting.defaultValue);
+            // The counters change at once, and the folder pick is for the next chat list, so neither needs a restart.
+            assertFalse(setting.key, setting.rebootApp);
+        }
+        assertEquals(EnumSet.of(PatchFamily.Capability.LAUNCH_FOLDER), family.expectedCapabilities());
+        assertEquals("launchFolder", PatchFamily.Capability.LAUNCH_FOLDER.statusMethod);
         assertOnItsPage(family);
     }
 
@@ -458,10 +489,14 @@ public class PatchFamilyTest {
     public void voiceOneAtATimeHasItsOwnOffByDefaultSwitchThatAppliesAtOnce() {
         PatchFamily family = PatchFamily.VOICE_ONE_AT_A_TIME;
         assertEquals("Play voice messages one at a time", family.patchName);
-        assertEquals(Collections.singletonList(Settings.VOICE_ONE_AT_A_TIME), family.switches);
-        assertFalse(Settings.VOICE_ONE_AT_A_TIME.defaultValue);
-        assertFalse(Settings.VOICE_ONE_AT_A_TIME.rebootApp);
-        assertTrue(family.expectedCapabilities().isEmpty());
+        // The second switch, the locked phone guard, starts off too and works with or without the first.
+        assertEquals(Arrays.asList(Settings.VOICE_ONE_AT_A_TIME, Settings.LOCKED_VOICE_GUARD), family.switches);
+        for (BooleanSetting setting : family.switches) {
+            assertFalse(setting.key, setting.defaultValue);
+            // Each play asks again, so both apply at once.
+            assertFalse(setting.key, setting.rebootApp);
+        }
+        assertEquals(EnumSet.of(PatchFamily.Capability.LOCKED_VOICE), family.expectedCapabilities());
         assertOnItsPage(family);
     }
 
@@ -498,6 +533,25 @@ public class PatchFamilyTest {
             assertFalse(setting.key, setting.rebootApp);
         }
         assertEquals(EnumSet.of(PatchFamily.Capability.SHARE_NUMBER_UNTICKED), family.expectedCapabilities());
+        assertOnItsPage(family);
+    }
+
+    @Test
+    public void hidePopularAppsCarriesItsSearchSwitchesOffByDefault() {
+        PatchFamily family = PatchFamily.HIDE_POPULAR_APPS;
+        assertEquals("Hide popular apps", family.patchName);
+        // Popular apps stay hidden as shipped; search keeps its public parts, and matches names as Telegram
+        // does, until someone turns the other switches on.
+        assertEquals(Arrays.asList(Settings.HIDE_POPULAR_APPS, Settings.SEARCH_ONLY_MY_CHATS, Settings.SEARCH_STYLED_NAMES),
+                family.switches);
+        assertTrue(Settings.HIDE_POPULAR_APPS.defaultValue);
+        assertFalse(Settings.SEARCH_ONLY_MY_CHATS.defaultValue);
+        assertFalse(Settings.SEARCH_STYLED_NAMES.defaultValue);
+        for (BooleanSetting setting : family.switches) assertFalse(setting.key, setting.rebootApp);
+        assertEquals(EnumSet.of(PatchFamily.Capability.MY_CHATS_SEARCH, PatchFamily.Capability.NAME_FOLD),
+                family.expectedCapabilities());
+        assertEquals("myChatsSearch", PatchFamily.Capability.MY_CHATS_SEARCH.statusMethod);
+        assertEquals("nameFold", PatchFamily.Capability.NAME_FOLD.statusMethod);
         assertOnItsPage(family);
     }
 

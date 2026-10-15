@@ -11,6 +11,7 @@ import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
 import android.content.res.ColorStateList;
+import android.util.TypedValue;
 
 import org.junit.After;
 import org.junit.Before;
@@ -101,6 +102,62 @@ public class AccentColorTest {
                 + AccentColor.COLOR + " 9"), HookStatus.report());
     }
 
+    /**
+     * #8 on 451: a Compose palette's color holds its ARGB in the high 32 bits. Each accent blue
+     * becomes its shade there, keeping its alpha. Grays, colors in other color spaces (something in
+     * the low bits) and everything with the switch off go through.
+     */
+    @Test
+    public void aComposePalettesBlueBecomesItsShade() {
+        long link = 0xff85a1ffL << 32;
+        assertEquals(link, AccentColor.composeColor(link));
+        Settings.ACCENT_COLOR.save(true);
+        HookStatus.clear();
+        assertEquals(0xffa07cfdL << 32, AccentColor.composeColor(link));
+        assertEquals(0xff7638faL << 32, AccentColor.composeColor(0xff4a5df9L << 32));
+        assertEquals("a see-through step keeps its alpha", 0x4d7638faL << 32, AccentColor.composeColor(0x4d4a5df9L << 32));
+        assertEquals(0xff737373L << 32, AccentColor.composeColor(0xff737373L << 32));
+        long otherSpace = (0xff85a1ffL << 32) | 0x3f;
+        assertEquals(otherSpace, AccentColor.composeColor(otherSpace));
+        assertEquals(List.of(FamilyNames.ACCENT_COLOR + ": invoked 5, 0 found, 0 missing. Counted: "
+                + AccentColor.COMPOSE + " 3"), HookStatus.report());
+    }
+
+    /**
+     * A read through the theme and then Instagram's own Resources passes two hooks, so a color
+     * already swapped comes back as it is, every shade of every color picked.
+     */
+    @Test
+    public void aSwappedColorComesBackAsItIs() {
+        Settings.ACCENT_COLOR.save(true);
+        for (AccentHue hue : AccentHue.values()) {
+            if (hue == AccentHue.BLUE) continue;
+            Settings.ACCENT_HUE.save(hue);
+            for (int shade : new int[] {hue.fill, hue.pressed, hue.dim, hue.linkOnLight, hue.linkOnDark, hue.pale}) {
+                int color = 0xff000000 | shade;
+                assertEquals(hue + " " + Integer.toHexString(color), color, AccentColor.color(color));
+            }
+        }
+    }
+
+    /**
+     * #8 on 451: the dark screen's link (#708dff, seen on the S22's captions and mentions), the
+     * indigo fills of badges, dots and strong buttons, and a selected pill's pale backgrounds.
+     */
+    @Test
+    public void theNewerIndigoShadesTakeTheColor() {
+        Settings.ACCENT_COLOR.save(true);
+        AccentHue purple = AccentHue.PURPLE;
+        assertEquals(0xff000000 | purple.linkOnDark, AccentColor.color(0xff708dff));
+        for (int fill : new int[] {0xff5c77ff, 0xff5465fe, 0xff4150f7}) {
+            assertEquals(Integer.toHexString(fill), 0xff000000 | purple.fill, AccentColor.color(fill));
+        }
+        for (int pale : new int[] {0xffeff1ff, 0xffebf1ff, 0xffdbdfff, 0xffccddff}) {
+            assertEquals(Integer.toHexString(pale), 0xff000000 | purple.pale, AccentColor.color(pale));
+        }
+        assertEquals("a see-through link keeps its alpha", 0x99000000 | purple.linkOnDark, AccentColor.color(0x99708dff));
+    }
+
     /** No other color changes: text, backgrounds, grays and Instagram's other pale blues stay as they are. */
     @Test
     public void everyOtherColorGoesThrough() {
@@ -128,6 +185,35 @@ public class AccentColorTest {
                 0xe0f2fe, AccentHue.towardWhite(0x0095f6, 0.878f));
         assertEquals(List.of(FamilyNames.ACCENT_COLOR + ": invoked 3, 0 found, 0 missing. Counted: "
                 + AccentColor.COLOR + " 3"), HookStatus.report());
+    }
+
+    /**
+     * #8: the value read hands over what an attribute resolves to. A color, the way mentions,
+     * hashtags and links get theirs, swaps like any other read. The same bits as a number, a size or
+     * a reference go through untouched, and so does a value with no TypedValue.
+     */
+    @Test
+    public void aThemeValueSwapsOnlyWhenItsAColor() {
+        Settings.ACCENT_COLOR.save(true);
+        AccentHue purple = AccentHue.PURPLE;
+        assertEquals(0xff000000 | purple.linkOnLight, AccentColor.value(CLASSIC_LINK, typed(TypedValue.TYPE_INT_COLOR_ARGB8, CLASSIC_LINK)));
+        assertEquals(0xff000000 | purple.linkOnDark, AccentColor.value(0xff85a1ff, typed(TypedValue.TYPE_INT_COLOR_RGB8, 0xff85a1ff)));
+        assertEquals(0xff7638fa, AccentColor.value(BLUE, typed(TypedValue.TYPE_INT_COLOR_ARGB4, BLUE)));
+        assertEquals(WHITE, AccentColor.value(WHITE, typed(TypedValue.TYPE_INT_COLOR_ARGB8, WHITE)));
+        for (int type : new int[] {TypedValue.TYPE_INT_DEC, TypedValue.TYPE_INT_HEX, TypedValue.TYPE_DIMENSION,
+                TypedValue.TYPE_REFERENCE, TypedValue.TYPE_STRING, TypedValue.TYPE_INT_BOOLEAN, TypedValue.TYPE_NULL}) {
+            assertEquals("type " + type, CLASSIC_LINK, AccentColor.value(CLASSIC_LINK, typed(type, CLASSIC_LINK)));
+        }
+        assertEquals(BLUE, AccentColor.value(BLUE, null));
+        assertEquals(List.of(FamilyNames.ACCENT_COLOR + ": invoked 4, 0 found, 0 missing. Counted: "
+                + AccentColor.COLOR + " 3"), HookStatus.report());
+
+        Settings.ACCENT_COLOR.save(false);
+        assertEquals("off, Instagram's own", CLASSIC_LINK, AccentColor.value(CLASSIC_LINK, typed(TypedValue.TYPE_INT_COLOR_ARGB8, CLASSIC_LINK)));
+        Settings.ACCENT_COLOR.save(true);
+        BaseSettings.PAUSED.save(true);
+        PauseForTests.pause(HushgramPause.Reason.SWITCH);
+        assertEquals("paused, Instagram's own", CLASSIC_LINK, AccentColor.value(CLASSIC_LINK, typed(TypedValue.TYPE_INT_COLOR_ARGB8, CLASSIC_LINK)));
     }
 
     /** Every color picked swaps, and Instagram blue picked leaves the stock blue. */
@@ -237,6 +323,14 @@ public class AccentColorTest {
         Settings.ACCENT_HUE.save(AccentHue.PINK);
         assertEquals(0xffd6005a, AccentColor.color(BLUE));
         assertFalse(button == AccentColor.list(button));
+    }
+
+    /** A TypedValue as Theme.resolveAttribute fills it: its type and its data. */
+    private static TypedValue typed(int type, int data) {
+        TypedValue value = new TypedValue();
+        value.type = type;
+        value.data = data;
+        return value;
     }
 
     /** A Prism primary button's list: pressed, disabled, selected white and the fill for the rest. */

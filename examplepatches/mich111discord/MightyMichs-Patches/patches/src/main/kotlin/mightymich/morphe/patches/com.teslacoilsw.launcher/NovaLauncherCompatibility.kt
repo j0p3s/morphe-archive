@@ -9,6 +9,7 @@ object NovaLauncherCompatibility {
         name = "Nova Launcher",
         packageName = "com.teslacoilsw.launcher",
         apkFileType = ApkFileType.APK,
+        
         appIconColor = 0x2196F3,
         targets = listOf(
             AppTarget(version = "7.0.58"),

@@ -27,19 +27,16 @@ fun showAppIconPatch(
 
                 for (child in node.childElementsSequence()) {
                     when (child.tagName) {
-                        "action" -> if (child.getAttribute("android:name") == "android.intent.action.MAIN") {
-                            hasMainAction = true
-                        }
+                        "action" ->
+                            if (child.getAttribute("android:name") == "android.intent.action.MAIN")
+                                hasMainAction = true
 
-                        "category" -> when (child.getAttribute("android:name")) {
-                            "android.intent.category.LAUNCHER" -> {
-                                hasLauncher = true
+                        "category" ->
+                            when (child.getAttribute("android:name")) {
+                                "android.intent.category.LAUNCHER" -> hasLauncher = true
+                                "android.intent.category.LEANBACK_LAUNCHER" ->
+                                    hasLeanbackLauncher = true
                             }
-
-                            "android.intent.category.LEANBACK_LAUNCHER" -> {
-                                hasLeanbackLauncher = true
-                            }
-                        }
                     }
                 }
 
@@ -54,7 +51,8 @@ fun showAppIconPatch(
                     if (leanbackLauncher && !hasLeanbackLauncher) {
                         node.adoptChild("category") {
                             setAttribute(
-                                "android:name", "android.intent.category.LEANBACK_LAUNCHER"
+                                "android:name",
+                                "android.intent.category.LEANBACK_LAUNCHER",
                             )
                         }
                         changed = true

@@ -5,9 +5,11 @@ import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
+import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_SOFASCORE
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation
+import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter
 
@@ -16,6 +18,33 @@ private val PROMO_BANNERS = listOf(
     "Lcom/sofascore/results/event/details/view/promotion/PromotionBannerView;",
     "Lcom/sofascore/results/featuredtournament/view/PromotionalOffersBannerView;",
 )
+
+// Firebase In-App Messaging's display callback. Its implementations (the FIAM display component
+// and an R8 lambda wrapping it) are obfuscated, but they implement this kept interface and the
+// interface keeps the method name.
+private const val FIAM_DISPLAY = "Lcom/google/firebase/inappmessaging/FirebaseInAppMessagingDisplay;"
+
+/**
+ * Makes every FirebaseInAppMessagingDisplay.displayMessage implementation return at once, so
+ * server-side In-App Messaging campaigns (promo modals, cards, banners) never render. Skipped when
+ * the app does not bundle FIAM; fails when it does but no implementation is found.
+ */
+private fun BytecodePatchContext.blockInAppMessaging() {
+    var bundled = false
+    val displays = mutableListOf<ClassDef>()
+    classDefForEach { classDef ->
+        if (classDef.type == FIAM_DISPLAY) bundled = true
+        if (FIAM_DISPLAY in classDef.interfaces) displays += classDef
+    }
+    if (!bundled) return
+    var patched = 0
+    for (classDef in displays) {
+        mutableClassDefBy(classDef).methods
+            .filter { it.name == "displayMessage" && it.returnType == "V" && it.implementation != null }
+            .forEach { it.returnEarly(); patched++ }
+    }
+    if (patched == 0) throw PatchException("No FirebaseInAppMessagingDisplay.displayMessage implementation found")
+}
 
 /** Keeps the view GONE by overriding (or prepending to) setVisibility(int). */
 private fun BytecodePatchContext.keepGone(type: String) {
@@ -54,10 +83,9 @@ private fun BytecodePatchContext.keepGone(type: String) {
 @Suppress("unused")
 val blockMarketingNotificationsPatch = bytecodePatch(
     name = "Block marketing notifications",
-    description = "Blocks in-app promotional prompts, modals and promotion banners. " +
-        "Note: this only affects in-app promotions. Match-alert push delivery on " +
-        "re-signed builds needs working push delivery - use MicroG integration + " +
-        "signature spoofing where Play Services is absent (issue #25)."
+    description = "Blocks in-app promotional prompts, modals, promotion banners and Firebase " +
+        "In-App Messaging popups. Note: this only affects in-app promotions. Match-alert push " +
+        "delivery on re-signed builds needs \"GmsCore support\" with MicroG RE (issue #25)."
 ) {
     compatibleWith(COMPATIBILITY_SOFASCORE)
 
@@ -75,5 +103,7 @@ val blockMarketingNotificationsPatch = bytecodePatch(
         TennisPromoSheetFingerprint.methodOrNull?.addInstructions(0, dismissEarly)
 
         PROMO_BANNERS.forEach { keepGone(it) }
+
+        blockInAppMessaging()
     }
 }

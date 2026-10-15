@@ -6,12 +6,13 @@ import app.morphe.patches.klikk.shared.patches.api.response.deviceCheckResponse.
 import app.morphe.patches.klikk.shared.patches.ui.activity.newDetailsAndDownloadActivity.deviceCheckFieldAccessPatch
 
 @Suppress("unused")
-val bypassDeviceCheckPatch = bytecodePatch(
-    name = "Bypass device check",
-    description = "Force device check to succeed.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_KLIKK)
+val bypassDeviceCheckPatch =
+    bytecodePatch(
+        name = "Bypass device check",
+        description = "Force device check to succeed.",
+        default = true,
+    ) {
+        compatibleWith(COMPATIBILITY_KLIKK)
 
-    dependsOn(getResultPatch, deviceCheckFieldAccessPatch)
-}
+        dependsOn(getResultPatch, deviceCheckFieldAccessPatch)
+    }

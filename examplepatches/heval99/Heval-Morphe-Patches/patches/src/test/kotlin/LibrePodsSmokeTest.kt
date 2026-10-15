@@ -60,7 +60,7 @@ class LibrePodsSmokeTest {
             apk,
             workDir.resolve("out"),
             PKG,
-            "1.0.0-rc1-play",
+            "1.0.1-rc1-play",
         )
 
         // Patcher.invoke() only executes the patches. Patcher.get() is what finalizes the

@@ -6,14 +6,15 @@ import app.morphe.util.matchSingle
 import app.morphe.util.returnBoxedBooleanEarly
 
 @Suppress("unused")
-val splashAdPatch = bytecodePatch(
-    name = "Splash ad",
-    description = "Conceal splash ad.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_TOFFEE)
+val splashAdPatch =
+    bytecodePatch(
+        name = "Splash ad",
+        description = "Conceal splash ad.",
+        default = true,
+    ) {
+        compatibleWith(COMPATIBILITY_TOFFEE)
 
-    execute {
-        GetSplashAdVisibilityFingerprint.matchSingle().method.returnBoxedBooleanEarly(false)
+        execute {
+            GetSplashAdVisibilityFingerprint.matchSingle().method.returnBoxedBooleanEarly(false)
+        }
     }
-}

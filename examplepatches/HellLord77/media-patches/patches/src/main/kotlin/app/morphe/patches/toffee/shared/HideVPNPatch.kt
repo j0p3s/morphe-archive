@@ -5,12 +5,13 @@ import app.morphe.patches.all.network.hideVPNPatch
 import app.morphe.patches.toffee.shared.Constants.COMPATIBILITY_TOFFEE
 
 @Suppress("unused")
-val hideVPNPatch = rawResourcePatch(
-    name = hideVPNPatch.name,
-    description = hideVPNPatch.description,
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_TOFFEE)
+val hideVPNPatch =
+    rawResourcePatch(
+        name = hideVPNPatch.name,
+        description = hideVPNPatch.description,
+        default = true,
+    ) {
+        compatibleWith(COMPATIBILITY_TOFFEE)
 
-    dependsOn(hideVPNPatch)
-}
+        dependsOn(hideVPNPatch)
+    }

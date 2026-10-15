@@ -161,7 +161,8 @@ fun assertReturnsTrueFlow(method: Method, label: String, diagnostics: String = "
 
 /**
  * Applies [patchNames] (filtered to patches compatible with [pkg]) to [apk] and returns every
- * class from the emitted dex files.
+ * class from the emitted dex files. Pass [filterByCompatibility] = false for universal patches
+ * that declare no compatibility at all (they apply to any package).
  */
 fun applyPatches(
     apk: File,
@@ -170,9 +171,11 @@ fun applyPatches(
     version: String,
     patchNames: Set<String>,
     allPatches: Set<Patch<*>>,
+    filterByCompatibility: Boolean = true,
 ): List<ClassDef> {
     val target = allPatches.filter { patch ->
-        patch.name in patchNames && patch.compatibility.orEmpty().any { it.packageName == pkg }
+        patch.name in patchNames &&
+            (!filterByCompatibility || patch.compatibility.orEmpty().any { it.packageName == pkg })
     }.toList()
 
     assertTrue(

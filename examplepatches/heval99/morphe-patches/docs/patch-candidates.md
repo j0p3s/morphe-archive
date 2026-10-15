@@ -14,9 +14,9 @@ test + decompile-verify.
 
 | App | Package | Latest seen | Notes |
 |---|---|---|---|
-| Shazam | `com.shazam.android` | 16.62.0 | **Shipped 2026-10-05** - "Disable telemetry" (FirebaseAnalytics.logEvent + public Crashlytics surface). No ad SDK, billing or shields in the dex; no premium gate (free app) |
+| Shazam | `com.shazam.android` | 16.62.1 | **Shipped 2026-10-05** - "Disable telemetry" (FirebaseAnalytics.logEvent + public Crashlytics surface). **2026-10-11** - "Open in Morphe YouTube apps" (issue #48: remaps the YouTube / YT Music "Open in" rows to the Morphe packages, falling back to stock; first extension module `extensions/shazam`). No ad SDK, billing or shields in the dex; no premium gate (free app) |
 | Simple Radio | `com.streema.simpleradio` | 6.2.0 | **Shipped 2026-09-29** - "Enable Premium" (local `iab_premium` pref gate + `isPremium()`) and "Disable ads" (GMA init + MAX interstitial load/show) |
-| WiFi Analyzer | `com.farproc.wifi.analyzer` | 3.10.5-L | **Shipped 2026-09-29** - "Disable ads" (single `Settings` show-ad gate on the `next_show_ad_time_millisec` pref) |
+| WiFi Analyzer | `com.farproc.wifi.analyzer` | 3.11.2 | **Shipped 2026-09-29** - "Disable ads" (single `Settings` show-ad gate on the `next_show_ad_time_millisec` pref) |
 | SoundHound | `com.melodis.midomiMusicIdentifier.freemium` | 10.5.8 | **Shipped 2026-10-07** - "Disable ads" (GMA init + startPreload, every load/loadAd/loadAds on banner/native/interstitial/rewarded/app-open/Ad Manager classes, Meta AN init). NOTE the package: the earlier `com.melodis.soundhound.android` guess does not exist. Premium (Play Billing, obfuscated) parked |
 | Dictionary.com | `com.dictionary` | 12.1.3 | **Parked 2026-10-07, needs deep dive.** Package/version verified against the APK (677). No IAP surface in app code (the billingclient bytes come from AppsFlyer's SDK). Ads are the problem: R8 stripped/inlined the GMA lite wrappers - only `MobileAds` + `nativead.NativeAd` remain public; banner/native/interstitial load through an R8-renamed Amazon-APS pipeline (Q4.d slots, P5.i/M5 flows, Q5.b placement enum with `/1027916/ANDROID_*` GAM units) and the readable `com.dictionary.foundation.ads.AdInitializer` bootstrap only covers the startup path, not the on-demand composable path (Q6.v). Candidate anchors for a future attempt: AdInitializer.b(Context) preamble, P5.i.b(Q5.a), GMA ClientApi located by its creator strings |
 | Moon+ Reader | `com.flyersoft.moonreader` | 10.7 | **Shipped 2026-10-06** - "Disable ads" (MrAd.disableAds() forced true; the only app class touching the ad SDK) |
@@ -42,6 +42,8 @@ test + decompile-verify.
 |---|---|---|---|
 | Device Info HW | `ru.andr7e.deviceinfohw` | 5.27.1 | **Blocked 2026-09-29** - no Pro boolean exists in this build; see blocklist |
 | Xplore File Manager | `com.lonelycatgames.Xplore` | 4.49.10 | **Blocked 2026-10-10** - PairIP VM + native tamper check; see blocklist |
+| DartCounter | `com.dartcounter.mobile` | 9.7.5 | **Blocked 2026-10-11** - PairIP VM + native tamper check; Ultimate entitlement is server-side; see blocklist |
+| spacedesk | `ph.spacedesk.beta` | 2.1.38 | **Blocked 2026-10-11** - free licence has the same features as paid; paid tier is a commercial business licence, and forcing it would spoof one to the PC driver (owner decision); see blocklist |
 
 ## Also covered by other bundles (informational, not a blocker)
 
@@ -72,6 +74,18 @@ Addict, Windy, Hermit, Calimoto, Nova Launcher, Sleep as Android, MiXplorer.
   - online-server games: training/economy state is server-authoritative (the same wall
   the UFM 27 mod hit; see `apks/games/UFM 27/MODDING-NOTES.md`). Skip the whole category.
 
+## Queued by owner (2026-10-11)
+
+Triaged 2026-10-12; status per row.
+
+| App | Package | Notes |
+|---|---|---|
+| AZ Screen Recorder | `com.hecorat.screenrecorder.free` | **Blocked 2026-10-12** - full PairIP still ships on 6.9.9 (VMRunner, libpairipcore.so); see blocklist |
+| Spark Mail | `com.readdle.spark` | **Blocked 2026-10-12** - Premium/Plus/Pro are server-side (Readdle backend returns BillingInfo); see blocklist |
+| BlueMail | `me.bluemail.mail` | **Shipped 2026-10-12** - "Disable ads" (2.2.408; ads via react-native-google-mobile-ads). Premium/ad-free entitlement is server-side and not patched. Not runtime-tested (ARM-only libs, extractNativeLibs=false; stock also fails on the x86_64 emulator) |
+| PDF Reader | `pdf.pdfreader.viewer.editor.free` | **Pending 2026-10-12** - only APK found is an unverified Aptoide 2.1.6 (Play shows 2.1.5), signed by a self-signed "Jx Clarynx" cert that does not match the Play developer ("QR Code Scanner."). APKMirror and APKPure do not carry it. **2026-10-14: confirmed adware repack** (same signer and injected launcher-activity payload as the fake Futbin "27.5"); quarantined, never use it. Waiting for the genuine Play build from the owner's phone |
+| SmartWOD Timer | `net.smartwod.timer` | **Shipped 2026-10-12** - "Enable Premium" (RNIapModule.getAvailableItemsByType @ReactMethod hooked via `extensions/smartwod` to report lifetime (Premium+) and ad-free as owned; premium is decided in JS from react-native-iap results checking only productId) and "Disable ads" (1.46.9). Runtime-verified on a Play-certified emulator (Premium+ / Lifetime, no ads) |
+
 ## Recommended first batch
 
 Shazam + Simple Radio + Device Info HW + Pi Music Player: two trivial ad kills and two
@@ -92,3 +106,55 @@ Tier 1 progress, all checked against the latest APKMirror builds:
 | JuiceSSH | Parked - purchases stored in an ORMLite `purchase` table, premium gate in obfuscated code |
 | Business Calendar 2 | **Patched 2026-10-11** - "Disable ads" (readable app code; `AdsUtil.showAdsForUser(Context)` gates the mediation SDK start and interstitials). Pro untouched |
 
+## Requested on Reddit (v1.14.0-dev.5 release post, 2026-10-14)
+
+From the comments on [the release post](https://www.reddit.com/r/MorpheApp/comments/1x54qjm/release_heval_morphe_patches_v1140dev5_new_apps/).
+In queue order. Verdicts are first impressions; nothing has been triaged yet.
+
+**Bug report (fix first)**
+
+| App | Package | Notes |
+|---|---|---|
+| AiScore | `com.onesports.score` | **Bug, 3 reports:** goal alerts never arrive on the patched app, even with every notification permission granted (FotMob works for the same users). Likely Firebase push rejecting the re-signed app, as with 365Scores/Sofascore (fixed there with Spoof signature / GmsCore support) |
+
+**App requests**
+
+| # | App | Package | Requested | Notes |
+|---|---|---|---|---|
+| 1 | Brevent | `me.piebridge.brevent` | Unlock all features / premium | Most upvoted request (7); owner replied "i will try" |
+| 2 | WeMuslim (Athan & Qibla) | `com.fyxtech.muslim` | Ads + analytics, premium, hide Premium tab and upgrade banners | Detailed request; promising if the entitlement check is local |
+| 3 | Interval Timer | `cc.dreamspark.intervaltimer` | Remove ads ("ads mess with the UI") | Simple ad app, likely an easy Tier 1 win |
+| 4 | Camera (Ocean Galaxy) | `com.oceangalaxy.camera.new` | Not specified | Probably ads + premium; triage |
+| 5 | Tennis app | `com.tennisrn` | Not specified | Triage |
+| 6 | `com.astrapaging.vff` | `com.astrapaging.vff` | Not specified | Triage; identify the app first |
+| 7 | Textpand | unknown | Not specified | Find the package first |
+| 8 | Moneycontrol | `com.divum.MoneyControl` | Not specified | Pro content is probably server-side; ads may be doable |
+| 9 | A Better Routeplanner | `com.iternio.abrpapp` | Not specified | Premium is probably server-side |
+| 10 | The Wall Street Journal (+ NYT, Washington Post, Financial Times, Guardian) | `wsj.reader_sp`, ... | Paywall / ads | Subscriptions are server-side; ad removal at most |
+| 11 | Ultimate Guitar, WiFi Map Pro, The Pioneer | various | Not specified | One user; triage |
+| 12 | Backdrops | `com.backdrops.wallpapers` | Newer patch | Already in another Morphe bundle, and wallpapers update regardless; low priority |
+| 13 | X-VPN | unknown | Premium | VPN premium is almost always server-side; likely skip |
+| 14 | Twitch | `tv.twitch.android.app` | Remove ads | Twitch ads are mostly server-inserted; commenters point to Xtra; likely skip |
+| 15 | Cronometer | `com.cronometer.android` | Not specified | Already on the blocklist (APKMirror 403, likely server-side) |
+| 16 | UniTV | not on Google Play | Full version | Off-Play IPTV service from a download site; skip |
+
+| 17 | LuckyClick (auto clicker) | `com.peter890331.luckyclick.app` | Remove ads ("really long and unskippable") | Likely a simple ads patch; triage |
+| 18 | Car Scanner ELM OBD2 | `com.ovz.carscanner` | Unlock premium | Already parked (fully obfuscated, billing path not located; see "Also covered" list). Genuine APK in apks/carscanner |
+| 19 | Cherrygram (Telegram fork) | github.com/arslan4k1390/Cherrygram | Premium | Open source; "premium" is Telegram Premium, which is server-side. Likely skip |
+| 20 | Lovora | unknown | Not specified | Find the package first |
+| 21 | VidMate | not on Google Play | Not specified | Off-Play downloader from download sites (repack risk); skip |
+
+**Community note:** a Korean user worries about patching KakaoTalk, which handles payments and certificates in Korea. A re-signed KakaoTalk may break Kakao Pay and certificate features; consider a warning in the patch description or the README.
+
+## Open GitHub issues (2026-10-14)
+
+From [the issue tracker](https://github.com/heval99/Heval-Morphe-Patches/issues). Truecaller (shipped 2026-10-13) has four of the five, so it goes first.
+
+| Issue | App | Type | Notes |
+|---|---|---|---|
+| [#54](https://github.com/heval99/Heval-Morphe-Patches/issues/54) | Truecaller | Bug | Repeated "your premium expired" notifications, random freezes and crashes; after a clean install, spam calls are still not blocked |
+| [#52](https://github.com/heval99/Heval-Morphe-Patches/issues/52) | Truecaller | Bug | Spam Protection falls back from Max to Basic; "Servers can't be reached" toasts; Premium tab stuck loading; Frequently called contacts enabled with its setting hidden (`isFrequentlyCalledVisible` false, per a commenter); **T9 dialer search finds no saved contacts**; unasked contact-UI, fraud-protection and SMS-tab changes. Likely the server treating the patched app as non-premium or modified (shared cause with #54) plus separate client bugs (T9, frequently called) |
+| [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53) | Truecaller | Request | Hide the Blocking, Family invite and Premium tabs; block the tracking that flags the app as modified ("install from Play Store"). Owner replied "Looking into it" |
+| [#50](https://github.com/heval99/Heval-Morphe-Patches/issues/50) | Truecaller | Request | "Clone" option: a different package name so the patched app installs next to stock Truecaller (dual SIM). Check whether Morphe's universal "Change package name" patch works with our GmsCore/Spoof signature patches |
+| [#55](https://github.com/heval99/Heval-Morphe-Patches/issues/55) | BoxBox | Bug | "Neither Disable ads nor Enable Premium works" after a clean install. Matches the 5.4.17 breakage fixed in 71bb868 (dev pre-release v1.14.0-dev.5 and later; emulator-verified); stable v1.13.0 still ships the old patches. Confirm the reporter's bundle and BoxBox versions |
+| [#51](https://github.com/heval99/Heval-Morphe-Patches/issues/51) | Duplila - Mirror Screen | Request | `com.duplila.screenshare`, unlock premium (screen casting); triage |

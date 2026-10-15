@@ -5,12 +5,13 @@ import app.morphe.patches.klikktv.shared.Constants.COMPATIBILITY_KLIKKTV
 import app.morphe.patches.klikktv.shared.patches.utils.ioUtils.getSharedPreferenceStringPatch
 
 @Suppress("unused")
-val fakeUserPatch = bytecodePatch(
-    name = "Fake user",
-    description = "Fakes logged in user",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_KLIKKTV)
+val fakeUserPatch =
+    bytecodePatch(
+        name = "Fake user",
+        description = "Fakes logged in user",
+        default = true,
+    ) {
+        compatibleWith(COMPATIBILITY_KLIKKTV)
 
-    dependsOn(getSharedPreferenceStringPatch)
-}
+        dependsOn(getSharedPreferenceStringPatch)
+    }

@@ -190,6 +190,7 @@ ICONS = {
     "com.atlogis.atlomaps": "atlomaps.png",
     "com.shervinkoushan.anyTracker": "anytracker.png",
     "flar2.devcheck": "devcheck.png",
+    "com.ferdinandobermeier.focusmate": "focusnow.png",
     "com.adithya.memoneet": "memoneet.png",
     "com.halalfire.medicneet": "medicneet.png",
     "com.stresscodes.wallp": "walp.png",
@@ -219,6 +220,7 @@ ICONS = {
     "io.lightray.photone": "photone.png",
     "photo.editor.photoeditor.photoeditorpro": "photoeditorpro.png",
     "com.community.oneroom": "moviebox.png",
+    "com.community.mbox.tv": "movieboxtv.png",
     "com.musixmatch.android.lyrify": "musixmatch.png",
     "com.gstarmc.android": "dwgfastview.png",
     "com.mchutov.Quranify": "quranify.png",
@@ -256,6 +258,7 @@ ICONS = {
     "com.one4studio.one4home": "one4home.png",
     "com.keepa.mobile": "keepa.png",
     "com.hitrolab.audioeditor": "audiolab.png",
+    "com.lagguy.wallpapers": "lagguy.png",
 }
 
 

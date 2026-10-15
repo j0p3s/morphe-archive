@@ -12,10 +12,14 @@ import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.telegram.misc.extension.EXTENSION_PACKAGE
+import app.morphe.patches.telegram.misc.extension.enableCapability
 import app.morphe.patches.telegram.misc.extension.enableStatus
 import app.morphe.patches.telegram.misc.extension.freeLocalsAt
+import app.morphe.patches.telegram.misc.extension.patchLog
 import app.morphe.patches.telegram.misc.extension.requireStatusMethod
 import app.morphe.patches.telegram.misc.extension.telegramExtensionPatch
+import app.morphe.patches.telegram.misc.localcontrols.Mention
+import app.morphe.patches.telegram.misc.localcontrols.forEachClassMentioning
 import app.morphe.patches.telegram.misc.settings.settingsPatch
 import app.morphe.util.addInstructionsAtControlFlowLabel
 import app.morphe.util.branchTarget
@@ -42,7 +46,9 @@ private const val STRINGS = "Lorg/telegram/messenger/R\$string;"
 val hidePopularAppsPatch = bytecodePatch(
     name = PATCH,
     description = "Hides the Popular apps list on the Apps tab of search and stops Telegram from loading it. On by " +
-        "default. Turn it off in HushTelegram settings > Ads.",
+        "default. Turn it off in HushTelegram settings > Ads. Two more switches there start off. Search only my " +
+        "chats keeps search to your own chats and contacts, with nothing public. Find names in styled letters finds " +
+        "names written in decorative letters when you type plain ones.",
     default = true,
 ) {
     category("Search")
@@ -51,8 +57,30 @@ val hidePopularAppsPatch = bytecodePatch(
 
     execute {
         requireStatusMethod("hidePopularApps")
+        requireStatusMethod("myChatsSearch")
+        requireNameFoldRuntime()
+        // Every target, borrowed register and runtime call of both switches is checked before the first edit.
         val sites = resolvePopularAppsSites()
+        val search = resolveMyChatsSearch()
+        val popular = listOf(sites.load, sites.section)
+        val searched = search.chat.edits.map { it.method } + listOf(search.tabs.update, search.downloads.method, search.hashtag.search,
+            search.found.read, search.stories.method)
+        shape(popular.none { method -> searched.any { it === method } }, "search only my chats shares a method with the Apps tab")
+        search.rehearse()
+        // The styled names switch rides along while the catalog is held. A build without its shape keeps
+        // the rest of the patch and leaves the switch out.
+        val fold = resolveNameFold()
+        // The runtime's stubs first: on their own nothing calls them.
+        writeMyChatsSearchStubs(search)
         sites.apply()
+        search.apply()
+        enableCapability("myChatsSearch")
+        if (fold.missing == null) {
+            fold.apply()
+            enableCapability("nameFold")
+        } else {
+            patchLog.warning("$PATCH: ${fold.missing}. The patch goes on without finding names in styled letters.")
+        }
         enableStatus("hidePopularApps")
     }
 }
@@ -67,8 +95,8 @@ internal class PopularAppsSites(val load: MutableMethod, val section: MutableMet
 internal fun BytecodePatchContext.resolvePopularAppsSites(): PopularAppsSites {
     requireRuntimeHooks()
     val builders = mutableListOf<Method>()
-    classDefForEach { classDef ->
-        if (classDef.type.startsWith("Lapp/hushtelegram/extension/")) return@classDefForEach
+    forEachClassMentioning(Mention.type(GET_POPULAR_APP_BOTS)) { classDef ->
+        if (classDef.type.startsWith("Lapp/hushtelegram/extension/")) return@forEachClassMentioning
         classDef.methods.filterTo(builders) { method -> method.instructions().any { it.opcode == Opcode.NEW_INSTANCE && it.type() == GET_POPULAR_APP_BOTS } }
     }
     val builder = builders.one("getPopularAppBots builder", ::refuse)
@@ -92,8 +120,8 @@ internal fun BytecodePatchContext.resolvePopularAppsSites(): PopularAppsSites {
 
     // The Apps tab: the one method that reads the list and names the Popular heading.
     val fills = mutableListOf<Method>()
-    classDefForEach { classDef ->
-        if (classDef.type.startsWith("Lapp/hushtelegram/extension/")) return@classDefForEach
+    forEachClassMentioning(Mention.member(list.definingClass, list.name) and Mention.member(STRINGS, "SearchAppsPopular")) { classDef ->
+        if (classDef.type.startsWith("Lapp/hushtelegram/extension/")) return@forEachClassMentioning
         classDef.methods.filterTo(fills) { method -> method.instructions().let { body ->
             body.any { it.opcode == Opcode.IGET_OBJECT && it.field() == list } &&
                 body.any { it.opcode == Opcode.SGET && it.field()?.let { field -> field.definingClass == STRINGS && field.name == "SearchAppsPopular" } == true }

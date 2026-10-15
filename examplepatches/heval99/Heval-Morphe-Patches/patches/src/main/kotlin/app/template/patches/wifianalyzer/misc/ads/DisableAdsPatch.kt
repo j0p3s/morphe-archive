@@ -7,11 +7,10 @@ import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_WIFIANALYZER
 
 /**
- * Banner ads are gated by Settings.a(Context), which reads the
- * "next_show_ad_time_millisec" preference and returns true once the hide-until
- * date passes. MainScreen.N() shows the legacy AdMob banner
- * (com.google.android.gms.ads.e) only when the gate is true. Forcing the gate
- * false hides the banner everywhere.
+ * Ads are gated by Settings.a(Context), which reads the "next_show_ad_time_millisec"
+ * preference and returns true once the hide-until date passes. Every ad checks it:
+ * the main banner and the interstitial (through MainScreen's gate wrapper) and the
+ * LAN neighbors banner (directly). Forcing the gate false disables all three.
  *
  * Settings is not obfuscated, but the gate is located by its stable preference
  * key plus shape (the only static no-arg... single-Context boolean with a body
@@ -29,7 +28,7 @@ private fun BytecodePatchContext.adGateClass(): MutableClass {
 @Suppress("unused")
 val disableAdsPatch = bytecodePatch(
     name = "Disable ads",
-    description = "Disables the banner ad."
+    description = "Disables the banner and full-screen ads."
 ) {
     compatibleWith(COMPATIBILITY_WIFIANALYZER)
 

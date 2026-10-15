@@ -5,12 +5,13 @@ import app.morphe.patches.klikktv.shared.Constants.COMPATIBILITY_KLIKKTV
 import app.morphe.patches.klikktv.shared.patches.activity.splashScreen.isUpdateAvailableFieldAccessPatch
 
 @Suppress("unused")
-val disableUpdatePatch = bytecodePatch(
-    name = "Disable update",
-    description = "Disables forced update.",
-    default = false,
-) {
-    compatibleWith(COMPATIBILITY_KLIKKTV)
+val disableUpdatePatch =
+    bytecodePatch(
+        name = "Disable update",
+        description = "Disables forced update.",
+        default = false,
+    ) {
+        compatibleWith(COMPATIBILITY_KLIKKTV)
 
-    dependsOn(isUpdateAvailableFieldAccessPatch)
-}
+        dependsOn(isUpdateAvailableFieldAccessPatch)
+    }

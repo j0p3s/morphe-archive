@@ -162,6 +162,8 @@ public enum PatchFamily {
         PIN_SHARE(SYSTEM_SHARE, "pinShare", "System share sheet"),
         SCREENSHOT_SHARE(HIDE_SCREENSHOT_SHARE, "screenshotShare", "No screenshot share menu"),
         SEARCH_HISTORY(HIDE_SEARCH_HISTORY, "searchHistory", "Hide search history"),
+        RECENT_SEARCH_ROWS(HIDE_SEARCH_HISTORY, "recentSearchRows", "Recent searches under the search bar"),
+        RECENT_SEARCH_HEADING(HIDE_SEARCH_HISTORY, "recentSearchHeading", "Recent searches heading on the search page"),
         NAVIGATION_BUTTONS(HIDE_NAVIGATION_BUTTONS, "navigationButtons", "Hide navigation buttons"),
         HEADER_BUTTONS(HIDE_HEADER_BUTTONS, "headerButtons", "Hide header buttons"),
         BOTTOM_BAR(AMOLED_BLACK, "blackBottomBar", "Black bottom bar"),

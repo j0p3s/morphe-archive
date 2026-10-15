@@ -171,7 +171,7 @@ public class PausedHooksTest {
                 app.hushtelegram.extension.telegram.misc.CallDebug::skipCallLogFileUpload,
                 app.hushtelegram.extension.telegram.misc.CallDebug::skipCallLogUpload));
         // An unsent message's link preview is never asked for, on any compose surface, its draft
-        // stays off Telegram's server, and what's typed in search's Chats tab stays here too.
+        // stays off Telegram's server, and what's typed in search stays here too.
         probes.put(PatchFamily.DISABLE_DRAFT_PREVIEWS, Arrays.asList(
                 app.hushtelegram.extension.telegram.misc.DraftPreviews::skipChatPreview,
                 app.hushtelegram.extension.telegram.misc.DraftPreviews::skipSharePreview,
@@ -181,11 +181,25 @@ public class PausedHooksTest {
                 () -> app.hushtelegram.extension.telegram.misc.LocalDrafts.keepOnPhone(new Object()),
                 app.hushtelegram.extension.telegram.misc.LocalSearch::keep,
                 () -> app.hushtelegram.extension.telegram.misc.LocalSearch.sent("cat") == null,
-                () -> !"none".equals(app.hushtelegram.extension.telegram.misc.LocalSearch.emptyText("none"))));
-        // Search's Apps tab neither loads nor draws the Popular apps list.
+                () -> !"none".equals(app.hushtelegram.extension.telegram.misc.LocalSearch.emptyText("none")),
+                () -> app.hushtelegram.extension.telegram.misc.LocalSearch.keepsText("cat"),
+                () -> app.hushtelegram.extension.telegram.misc.LocalSearch.phones(new Object(), "+15551234",
+                        true, true, true, true, false, 0, true, 0, 7, 0L, null)));
+        // Search's Apps tab neither loads nor draws the Popular apps list, and search keeps to your
+        // own chats: no public tab, lookup, account match or hashtag posts, and Downloads opens
+        // where it now sits.
         probes.put(PatchFamily.HIDE_POPULAR_APPS, Arrays.asList(
                 app.hushtelegram.extension.telegram.misc.PopularApps::skipLoad,
-                app.hushtelegram.extension.telegram.misc.PopularApps::hideSection));
+                app.hushtelegram.extension.telegram.misc.PopularApps::hideSection,
+                app.hushtelegram.extension.telegram.misc.MyChatsSearch::keep,
+                () -> app.hushtelegram.extension.telegram.misc.MyChatsSearch.sent("cat") == null,
+                () -> app.hushtelegram.extension.telegram.misc.MyChatsSearch.phones(new Object(), "+15551234",
+                        true, true, true, true, false, 0, true, 0, 7, 0L, null),
+                () -> !app.hushtelegram.extension.telegram.misc.MyChatsSearch.keepHashtag(new Object(), "#cats", 2),
+                app.hushtelegram.extension.telegram.misc.MyChatsSearchForTests::dropsPublicResults,
+                app.hushtelegram.extension.telegram.misc.MyChatsSearchForTests::dropsPublicTabs,
+                app.hushtelegram.extension.telegram.misc.MyChatsSearchForTests::movesDownloads,
+                () -> "ann".equals(app.hushtelegram.extension.telegram.misc.NameFold.fold("𝐀𝐧𝐧", true, false))));
         // A sideways swipe on a chat row starts nothing.
         probes.put(PatchFamily.DISABLE_CHAT_SWIPE, Collections.singletonList(
                 app.hushtelegram.extension.telegram.misc.ChatSwipe::keepRowStill));
@@ -276,18 +290,22 @@ public class PausedHooksTest {
         // Reaction effects don't play.
         probes.put(PatchFamily.REACTION_EFFECTS_OFF, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.ReactionEffects.skipped()));
-        // Folder tabs show no unread counts.
-        probes.put(PatchFamily.HIDE_FOLDER_COUNTERS, Collections.singletonList(
-                () -> app.hushtelegram.extension.telegram.misc.FolderTabs.countersHidden()));
+        // Folder tabs show no unread counts, and the chat list opens on the picked folder.
+        probes.put(PatchFamily.HIDE_FOLDER_COUNTERS, Arrays.asList(
+                () -> app.hushtelegram.extension.telegram.misc.FolderTabs.countersHidden(),
+                app.hushtelegram.extension.telegram.misc.LaunchFolderForTests::opens));
         // New forwards start with the sender hidden.
         probes.put(PatchFamily.FORWARD_HIDE_SENDER, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.ForwardSenderForTests.on()));
         // A voice message opens the full player.
         probes.put(PatchFamily.VOICE_MUSIC_PLAYER, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.VoicePlayerForTests.voiceOpensThePlayer()));
-        // A download the server didn't flag keeps Telegram's small pieces.
-        probes.put(PatchFamily.FASTER_DOWNLOADS, Collections.singletonList(
-                () -> app.hushtelegram.extension.telegram.misc.DownloadSpeed.fast(false)));
+        // A download the server didn't flag keeps Telegram's small pieces, and Data Saver on a
+        // metered network holds neither automatic downloads nor the download mask.
+        probes.put(PatchFamily.FASTER_DOWNLOADS, Arrays.asList(
+                () -> app.hushtelegram.extension.telegram.misc.DownloadSpeed.fast(false),
+                () -> app.hushtelegram.extension.telegram.misc.DataSaverDownloadsForTests.holdsOnMeteredDataSaver(),
+                () -> app.hushtelegram.extension.telegram.misc.DataSaverDownloadsForTests.holdsMaskOnMeteredDataSaver()));
         // A finished file from a message is queued for a copy in Download/Telegram.
         probes.put(PatchFamily.SAVE_DOWNLOADS, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.SaveDownloadsForTests.queuesACopy()));
@@ -351,9 +369,11 @@ public class PausedHooksTest {
         // The message box keeps its Send as button.
         probes.put(PatchFamily.HIDE_SEND_AS, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.ChannelButtonsForTests.sendAsOn()));
-        // The main screen keeps its Contacts tab, and a swipe from Chats lands on its page.
-        probes.put(PatchFamily.HIDE_CONTACTS_TAB, Collections.singletonList(
-                () -> app.hushtelegram.extension.telegram.misc.MainTabs.blocksSwipe(0, true)));
+        // The main screen keeps its Contacts tab, and a swipe from Chats lands on its page. Its bar
+        // keeps Telegram's 72 dp height.
+        probes.put(PatchFamily.HIDE_CONTACTS_TAB, Arrays.asList(
+                () -> app.hushtelegram.extension.telegram.misc.MainTabs.blocksSwipe(0, true),
+                () -> app.hushtelegram.extension.telegram.misc.MainTabs.barHeight(72) != 72));
         // The gallery's camera stays off until a tap, and a tap that asks for the permission wakes it.
         probes.put(PatchFamily.GALLERY_CAMERA_ON_TAP, Arrays.asList(
                 () -> app.hushtelegram.extension.telegram.misc.GalleryCamera.keepCameraOff(new Object()),
@@ -375,7 +395,14 @@ public class PausedHooksTest {
                 () -> Analytics.skipCrashReporterStart(),
                 () -> Analytics.skipErrorReport(),
                 () -> Boolean.FALSE.equals(Analytics.sessionsEnabled(null))));
-        probes.put(PatchFamily.OPEN_EXTERNAL_LINKS, Collections.singletonList(PausedHooksTest::externalBrowserOpened));
+        // Links open in the browser, and Mini Apps and web pages inside Telegram get no location.
+        probes.put(PatchFamily.OPEN_EXTERNAL_LINKS, Arrays.asList(
+                PausedHooksTest::externalBrowserOpened,
+                app.hushtelegram.extension.telegram.misc.MiniAppLocation::refuse,
+                () -> app.hushtelegram.extension.telegram.misc.MiniAppLocation.location(new android.location.Location("gps")) == null,
+                () -> app.hushtelegram.extension.telegram.misc.MiniAppLocation.refusePrompt("https://example.com",
+                        (android.webkit.GeolocationPermissions.Callback) (origin, allow, retain) -> { }),
+                () -> Boolean.FALSE.equals(app.hushtelegram.extension.telegram.misc.MiniAppLocation.answer(Boolean.TRUE))));
         probes.put(PatchFamily.STRIP_LINK_TRACKING, Arrays.asList(
                 () -> PROBE_URL.equals(LinkRouting.cleanOpenedUri(Uri.parse(TRACKED_URL), false, new boolean[1]).toString()),
                 () -> PROBE_URL.equals(LinkRouting.cleanShareIntent(new Intent(Intent.ACTION_SEND).setType("text/plain")

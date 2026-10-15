@@ -34,6 +34,7 @@ public final class FamilyNames {
     public static final String STORY_SOUND = "Start stories with sound";
     public static final String STORY_UPLOAD_QUALITY = "Upload stories at full quality";
     public static final String FEED_SOUND = "Start feed videos with sound";
+    public static final String FEED_TAP_PAUSE = "Tap a feed video to pause it";
     public static final String LONG_PRESS_ZOOM = "Long press to zoom";
     public static final String ROUNDED_POST_CORNERS = "Rounded post corners";
     public static final String STORY_SEEN = "View stories anonymously";
@@ -70,6 +71,7 @@ public final class FamilyNames {
     public static final String EMOJI_STYLE = "Emoji style";
     public static final String ACCENT_COLOR = "Accent color";
     public static final String LAUNCH_SCREEN = "HushGram launch screen";
+    public static final String FONT = "Font";
     public static final String NOTIFICATION_GROUPS = "Group Instagram's notifications";
     public static final String HDR_BOOST = "Turn off HDR brightness boosts";
     public static final String MEDIA_CACHE = "Clear the media cache";
@@ -91,7 +93,9 @@ public final class FamilyNames {
     public static final String REELS_TAB = "Hide the Reels tab";
     public static final String REELS_SUGGESTIONS = "Hide suggested accounts in Reels";
     public static final String PAID_PARTNERSHIP_REELS = "Hide paid partnership Reels";
+    public static final String AI_LABELED_REELS = "Hide AI-labeled reels";
     public static final String KEEP_REEL_SPEED = "Keep the reel speed";
+    public static final String REEL_POST_TIME = "Show a reel's exact time";
     public static final String REEL_SEEK_BAR = "Keep a seek bar on Reels";
     public static final String REEL_BLUR_BARS = "Blur the bars around Reels";
     public static final String REEL_TAP_AND_VOLUME = "Control taps and volume on Reels";

@@ -4,6 +4,7 @@
  */
 package app.morphe.patches.vpnsuper.premium
 
+import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
@@ -131,6 +132,10 @@ val unlockPremiumPatch = bytecodePatch(
             replaceInstruction(index, "const/4 v$register, 0x1")
         }
 
+        CrownClickFingerprint.matchSingle().let { crownClick ->
+            crownClick.method.addInstruction(crownClick.instructionMatches.first().index, "return-void")
+        }
+
         val connectReport = ConnectReportToStringFingerprint.matchSingle()
         val promoBanners = connectReport.method.booleanFieldsBetween(
             SHOW_BANNER_ADS_LABEL,
@@ -141,7 +146,9 @@ val unlockPremiumPatch = bytecodePatch(
         }
 
         mutableClassDefBy(connectReport.classDef.type).methods
-            .single { it.name == "<init>" }
+            .single {
+                it.name == "<init>" && it.indexOfFirstInstruction(filter = writes(promoBanners.first())) >= 0
+            }
             .apply {
                 promoBanners.reversed().forEach { banner ->
                     val index = indexOfFirstInstructionOrThrow(filter = writes(banner))

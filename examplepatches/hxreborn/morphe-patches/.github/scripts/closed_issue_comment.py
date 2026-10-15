@@ -60,6 +60,7 @@ def reply(issue_title="", patches_list=None):
         f"{lead}\n"
         "\n"
         f"- a newer app version: open an [app update request]({new}?template=app_update.yml). one per version\n"
+        f"- another patch for a supported app: open a [feature request]({new}?template=feature_request.yml)\n"
         f"- something broken on a version the README lists: open a [bug report]({new}/choose)\n"
         "\n"
         "this thread locks 7 days after closing\n"

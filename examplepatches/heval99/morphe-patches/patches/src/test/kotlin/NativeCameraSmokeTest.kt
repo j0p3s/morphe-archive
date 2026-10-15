@@ -40,7 +40,7 @@ class NativeCameraSmokeTest {
         assumeTrue(apk.exists(), "skipping: base.apk not present at ${apk.path}")
 
         val classes = applyPatches(
-            apk = apk, workDir = workDir, pkg = PKG, version = "1.4.3",
+            apk = apk, workDir = workDir, pkg = PKG, version = "1.4.4",
             patchNames = setOf("Disable license check", "Enable Premium"),
             allPatches = loadAllPatches(newestPatchBundle(root)),
         )

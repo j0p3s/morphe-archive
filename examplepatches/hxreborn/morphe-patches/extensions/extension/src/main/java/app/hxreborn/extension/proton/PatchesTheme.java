@@ -22,7 +22,8 @@ public final class PatchesTheme {
     public static final String TEXT_NORM = "proton_text_norm";
 
     public static final String TEXT_WEAK = "proton_text_weak";
-    static final String BACKGROUND_NORM = "proton_background_norm";
+
+    public static final String BACKGROUND_NORM = "proton_background_norm";
     static final String ICON_DISABLED = "proton_icon_disabled";
 
     private static final int FALLBACK_BACKGROUND_NORM = 0xFF1C1B24;
@@ -105,7 +106,7 @@ public final class PatchesTheme {
         return (identifier != 0) ? context.getDrawable(identifier) : null;
     }
 
-    static GradientDrawable createRoundedRectangle(Context context, int color, int radiusDp) {
+    public static GradientDrawable createRoundedRectangle(Context context, int color, int radiusDp) {
         final GradientDrawable background = new GradientDrawable();
         background.setColor(color);
         background.setCornerRadius(dpToPx(context, radiusDp));
@@ -153,7 +154,7 @@ public final class PatchesTheme {
         return (color & 0x00FFFFFF) | (HALF_ALPHA << 24);
     }
 
-    static void makeClickable(View view) {
+    public static void makeClickable(View view) {
         final TypedValue value = new TypedValue();
         if (!view.getContext().getTheme().resolveAttribute(android.R.attr.selectableItemBackground, value, true)) {
             return;

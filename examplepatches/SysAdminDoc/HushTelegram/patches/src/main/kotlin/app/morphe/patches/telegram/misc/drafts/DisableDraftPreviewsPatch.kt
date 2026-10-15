@@ -21,6 +21,8 @@ import app.morphe.patches.telegram.misc.extension.requireThisIntact
 import app.morphe.patches.telegram.misc.extension.requireStatusMethod
 import app.morphe.patches.telegram.misc.extension.telegramExtensionPatch
 import app.morphe.patches.telegram.misc.extension.writeStub
+import app.morphe.patches.telegram.misc.localcontrols.Mention
+import app.morphe.patches.telegram.misc.localcontrols.forEachClassMentioning
 import app.morphe.patches.telegram.misc.settings.settingsPatch
 import app.morphe.util.ControlFlow
 import app.morphe.util.addInstructionsAtControlFlowLabel
@@ -81,7 +83,9 @@ private val GOTOS = setOf(Opcode.GOTO, Opcode.GOTO_16, Opcode.GOTO_32)
 val disableDraftPreviewsPatch = bytecodePatch(
     name = PATCH,
     description = "Keeps Telegram from looking up a link's preview before you send the message. Sent messages still get" +
-        " a preview. Starts off. Turn it on in HushTelegram settings > Privacy.",
+        " a preview. The same page has Keep drafts on this phone, so unsent drafts stop syncing to your other devices," +
+        " and Keep searches on this phone, so what you type in the main search isn't sent to Telegram. Each starts" +
+        " off. Turn them on in HushTelegram settings > Privacy.",
     default = true,
 ) {
     category("Privacy")
@@ -104,6 +108,7 @@ val disableDraftPreviewsPatch = bytecodePatch(
         // The runtime's stubs first: on their own nothing calls them.
         writeStub(LOCAL_DRAFTS, "carries", 2, drafts.reader)
         writeStub(LOCAL_DRAFTS, "clear", 3, drafts.emptier)
+        search.lookUp?.let { writeStub(LOCAL_SEARCH, "lookUp", PHONE_MATCH_REGISTERS, it) }
         drafts.method.addInstructionsAtControlFlowLabel(drafts.index, drafts.code,
             ExternalLabel("hush_done", drafts.method.getInstruction(drafts.finish)))
         enableCapability("localDrafts")
@@ -143,8 +148,8 @@ internal data class DraftPreviewHook(val method: MutableMethod, val index: Int, 
 internal fun BytecodePatchContext.resolveDraftPreviewHooks(): Map<DraftPreviewTarget, DraftPreviewHook> {
     requireRuntimeHooks()
     val builders = mutableListOf<Method>()
-    classDefForEach { classDef ->
-        if (classDef.type.startsWith("Lapp/hushtelegram/extension/")) return@classDefForEach
+    forEachClassMentioning(Mention.reference(WEB_PAGE_PREVIEW)) { classDef ->
+        if (classDef.type.startsWith("Lapp/hushtelegram/extension/")) return@forEachClassMentioning
         classDef.methods.filterTo(builders) { it.constructs(WEB_PAGE_PREVIEW) }
     }
     val found = DraftPreviewTarget.entries.associateWith { mutableListOf<Method>() }
@@ -464,8 +469,8 @@ internal fun BytecodePatchContext.resolveLocalDraftHook(): LocalDraftHook {
         direct.methods.any { it.name == "<init>" && it.parameterTypes.isEmpty() && AccessFlags.PUBLIC.isSet(it.accessFlags) },
         "direct messages draft target changed")
     val uploads = mutableListOf<Method>()
-    classDefForEach { classDef ->
-        if (classDef.type.startsWith("Lapp/hushtelegram/extension/")) return@classDefForEach
+    forEachClassMentioning(Mention.reference(SAVE_DRAFT)) { classDef ->
+        if (classDef.type.startsWith("Lapp/hushtelegram/extension/")) return@forEachClassMentioning
         classDef.methods.filterTo(uploads) { it.constructs(SAVE_DRAFT) }
     }
     val found = uploads.one("draft upload", ::refuse)

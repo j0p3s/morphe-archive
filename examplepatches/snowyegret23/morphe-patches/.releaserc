@@ -17,6 +17,11 @@
           },
           {
             "type": "feat",
+            "release": "patch"
+          },
+          {
+            "type": "feat",
+            "scope": "minor",
             "release": "minor"
           },
           {
@@ -107,18 +112,6 @@
           }
         ],
         "successComment": false
-      }
-    ],
-    [
-      "@cleyrop-org/semantic-release-backmerge",
-      {
-        "backmergeBranches": [
-          {
-            "from": "main",
-            "to": "dev"
-          }
-        ],
-        "clearWorkspace": true
       }
     ]
   ]

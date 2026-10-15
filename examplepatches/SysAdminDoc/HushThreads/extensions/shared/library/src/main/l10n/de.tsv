@@ -47,7 +47,6 @@ HushThreads %1$s targets Threads %2$s.	HushThreads %1$s ist für Threads %2$s ge
 HushThreads pauses when Threads restarts.	HushThreads pausiert, sobald Threads neu startet.
 HushThreads turns back on when Threads restarts.	HushThreads ist wieder aktiv, sobald Threads neu startet.
 It targets Threads %1$s.	Es ist für Threads %1$s gedacht.
-Links, updates, backup and more	Links, Updates, Sicherung und mehr
 None of Threads' web addresses are selected for this app, so their links open elsewhere. Tap to select them in Android's settings.	Keine Webadresse von Threads ist für diese App ausgewählt, deshalb öffnen sich ihre Links woanders. Tippe, um sie in den Android-Einstellungen auszuwählen.
 Only some of Threads' web addresses are selected for this app, and links to the rest open elsewhere. Tap to select them in Android's settings.	Nur einige Webadressen von Threads sind für diese App ausgewählt, und Links zu den übrigen öffnen sich woanders. Tippe, um sie in den Android-Einstellungen auszuwählen.
 Privacy	Datenschutz
@@ -303,3 +302,34 @@ Posts	Beiträge
 Copy text when you hold a post	Text kopieren, wenn du einen Beitrag gedrückt hältst
 Copy text on long press	Text kopieren per langem Drücken
 Holding a post's text opens Copy text, on an opened post too, so you get the whole post with its links instead of picking out words.	Hältst du den Text eines Beitrags gedrückt, öffnet sich Text kopieren, auch in einem geöffneten Beitrag. So bekommst du den ganzen Beitrag mit seinen Links, statt einzelne Wörter auszuwählen.
+# Quick setups: the main page row and its summary, the three choices, the toast after one applies (%1$d is how many switches changed). Quiet, Privacy and Back to defaults are names of a set of switches.
+Quick setups	Schnelleinstellungen
+Quiet	Ruhig
+Hides ads and the cards that suggest accounts to follow.	Blendet Werbung und die Karten mit vorgeschlagenen Konten zum Folgen aus.
+Stops most usage reports and takes tracking off the links you share. Threads isn't told about your screenshots either.	Hält die meisten Nutzungsberichte zurück und entfernt das Tracking aus den Links, die du teilst. Threads erfährt auch nichts von deinen Screenshots.
+Back to defaults	Zurück zum Standard
+Puts every feature switch back the way it started.	Setzt jeden Funktionsschalter auf seinen Ausgangszustand zurück.
+Changed %1$d setting	%1$d Einstellung geändert
+Changed %1$d settings	%1$d Einstellungen geändert
+# Report a problem: the main page row and its summary. A tap opens a new GitHub bug report in the browser.
+Report a problem	Problem melden
+Opens a GitHub report with your versions and settings filled in. Add what happened.	Öffnet eine GitHub-Meldung, in der deine Versionen und Einstellungen schon stehen. Ergänze, was passiert ist.
+# The Links page's line beside a Meta-signed Instagram (#8): Instagram's own launcher won't hand a post or profile to a patched Threads, and the error is Instagram's.
+Instagram won't open posts here	Instagram öffnet hier keine Beiträge
+Your Instagram is signed by Meta, and it only opens Threads posts and profiles in a Threads signed by Meta. Tapping one in Instagram shows an error saying it couldn't load the website. Posts you open in Threads itself work as usual.	Dein Instagram ist von Meta signiert und öffnet Threads-Beiträge und -Profile nur in einem von Meta signierten Threads. Tippst du in Instagram auf einen, zeigt es einen Fehler, dass die Website nicht geladen werden konnte. Beiträge, die du in Threads selbst öffnest, funktionieren wie gewohnt.
+Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Schalte mehrere Schalter mit einem Tippen ein oder setze alle Schalter auf ihren Ausgangszustand zurück. Halte diese Zeile gedrückt, um sie auszublenden.
+Quick setups on the home page	Schnelleinstellungen auf der Startseite
+Hidden. Tap to show it again.	Ausgeblendet. Tippe, um sie wieder anzuzeigen.
+Shown. Tap to hide it.	Werden angezeigt. Tippe, um sie auszublenden.
+Quick setups hidden. Bring it back from Pause, backup and diagnostics.	Schnelleinstellungen ausgeblendet. Unter Pause, Sicherung und Diagnose holst du sie zurück.
+# Android 9 only, a save without Threads' Storage permission: the toast, then the same advice as the line under a carousel's counts. Storage and Permissions are the names Android's app info screen shows in this language.
+Not saved: Threads needs the Storage permission to save on Android 9. Turn it on in Threads' app info under Permissions, then save again.	Nicht gespeichert: Threads braucht unter Android 9 die Speicher-Berechtigung, um zu speichern. Schalte sie in den App-Infos von Threads unter Berechtigungen ein und speichere dann noch einmal.
+Threads needs the Storage permission to save on Android 9. Turn it on in Threads' app info under Permissions, then save again.	Threads braucht unter Android 9 die Speicher-Berechtigung, um zu speichern. Schalte sie in den App-Infos von Threads unter Berechtigungen ein und speichere dann noch einmal.
+# A save whose download took longer than its time limit (ten minutes for one file): the toast. The connection is the phone's internet connection.
+Not saved: the download was too slow to finish. Try again on a faster connection.	Nicht gespeichert: Der Download war zu langsam, um fertig zu werden. Versuche es mit einer schnelleren Verbindung noch einmal.
+Hide follow suggestions in Search	Vorschläge zum Folgen in der Suche ausblenden
+Takes the Follow suggestions row off the Search screen. Your searches and topics stay.	Entfernt die Reihe „Vorschläge zum Folgen“ aus der Suche. Deine Suchen und Themen bleiben.
+# A save stopped because a proxy server on the phone's network (Wi-Fi or global proxy setting) asked for a user name and password: the toast. HushThreads never sends one for a download.
+Not saved: this network's proxy asks for a password, and saves never send one. Try again on another network.	Nicht gespeichert: Der Proxy dieses Netzwerks verlangt ein Passwort, und beim Speichern wird nie eins gesendet. Versuche es in einem anderen Netzwerk noch einmal.
+# The same, as an extra line under a carousel's 'Saved %1$d. Failed %2$d. Skipped %3$d.' summary.
+This network's proxy asks for a password, and saves never send one. Try again on another network.	Der Proxy dieses Netzwerks verlangt ein Passwort, und beim Speichern wird nie eins gesendet. Versuche es in einem anderen Netzwerk noch einmal.

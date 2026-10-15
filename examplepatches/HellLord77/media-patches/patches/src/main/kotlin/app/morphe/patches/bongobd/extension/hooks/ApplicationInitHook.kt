@@ -8,7 +8,8 @@ internal val bongobdActivityOnCreateHook =
         targetBundleMethod = true,
     )
 
-internal val bongobdApplicationOnCreateHook = activityOnCreateExtensionHook(
-    activityClassType = "Lcom/bongo/ottandroidbuildvariant/MainApplication;",
-    targetBundleMethod = false,
-)
+internal val bongobdApplicationOnCreateHook =
+    activityOnCreateExtensionHook(
+        activityClassType = "Lcom/bongo/ottandroidbuildvariant/MainApplication;",
+        targetBundleMethod = false,
+    )

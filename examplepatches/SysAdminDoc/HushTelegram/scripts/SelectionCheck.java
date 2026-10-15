@@ -319,7 +319,7 @@ public final class SelectionCheck {
         hook(calls, flags, "storyLinkPreviews", "misc/DraftPreviews", "skipStoryLinkPreview");
         hook(calls, flags, "botSharePreviews", "misc/DraftPreviews", "skipBotSharePreview");
         hook(calls, flags, "localDrafts", "misc/LocalDrafts", "keepOnPhone");
-        hook(calls, flags, "localSearch", "misc/LocalSearch", "keep", "sent", "emptyText");
+        hook(calls, flags, "localSearch", "misc/LocalSearch", "keep", "sent", "emptyText", "phones");
         hook(calls, flags, "skipAutologin", "misc/LinkRouting", "addAutologinToken");
         hook(calls, flags, "commerceSettingsRows", "misc/Commerce", "addSettingsRow", "showWalletRow");
         hook(calls, flags, "commerceProfileGifts", "misc/Commerce", "addProfileTab", "showGiftsTab");
@@ -341,11 +341,15 @@ public final class SelectionCheck {
         hook(calls, flags, "cachedProxyDialog", "ads/ProxyPromotions", "hideCachedProxyDialog");
         hook(calls, flags, "cachedProxyFilters", "ads/ProxyPromotions", "showSelectedDialog");
         hook(calls, flags, "externalBrowserRouting", "misc/LinkRouting", "tryOpenExternal");
+        hook(calls, flags, "miniAppLocation", "misc/MiniAppLocation", "refuse", "location", "refusePrompt", "answer");
         hook(calls, flags, "openedLinkTracking", "misc/LinkRouting", "cleanOpenedUri");
         hook(calls, flags, "sharedLinkTracking", "misc/LinkRouting", "cleanShareIntent");
         hook(calls, flags, "firebaseCertificateHeader", "misc/FirebasePush", "certificateHeader");
         hook(calls, flags, "repairFirebasePush", "misc/FirebasePush", "registerDeviceAnswer");
         hook(calls, flags, "hidePopularApps", "misc/PopularApps", "skipLoad", "hideSection");
+        hook(calls, flags, "myChatsSearch", "misc/MyChatsSearch", "keep", "sent", "phones", "dropPublicTabs", "downloadsAt",
+                "keepHashtag", "endPublicPosts", "dropPublicResults");
+        hook(calls, flags, "nameFold", "misc/NameFold", "fold");
         hook(calls, flags, "hideContactsBlock", "misc/ContactsBlock", "rows", "placeholder");
         hook(calls, flags, "hideGreetingStickers", "misc/GreetingStickers", "measure");
         hook(calls, flags, "disableChatSwipe", "misc/ChatSwipe", "keepRowStill");
@@ -353,6 +357,7 @@ public final class SelectionCheck {
         hook(calls, flags, "disableChannelPull", "misc/ForumTopicPull", "stopTopicPull", "keepTopicStill");
         hook(calls, flags, "quietContactsNag", "misc/ContactsNag", "skipAsk", "hideBadge");
         hook(calls, flags, "holidayLook", "misc/HolidayLook", "mode");
+        hook(calls, flags, "titleEmoji", "misc/TitleEmoji", "decorate");
         hook(calls, flags, "useSystemFont", "misc/SystemFont", "typeface", "built");
         hook(calls, flags, "amoledBlack", "misc/BlackTheme", "loaded");
         hook(calls, flags, "hideTranslateBar", "misc/TranslateBar", "hidden");
@@ -366,9 +371,11 @@ public final class SelectionCheck {
         hook(calls, flags, "messageSeconds", "misc/MessageTime", "shown");
         hook(calls, flags, "allowChatBlur", "misc/ChatBlur", "allowed");
         hook(calls, flags, "voiceOneAtATime", "misc/VoicePlaylist", "queue");
+        hook(calls, flags, "lockedVoice", "misc/LockedVoice", "refuse");
         hook(calls, flags, "noHaptics", "misc/Haptics", "tap");
         hook(calls, flags, "reactionEffectsOff", "misc/ReactionEffects", "skipped");
         hook(calls, flags, "hideFolderCounters", "misc/FolderTabs", "countersHidden");
+        hook(calls, flags, "launchFolder", "misc/LaunchFolder", "firstTabs");
         hook(calls, flags, "forwardHideSender", "misc/ForwardSender", "starts");
         hook(calls, flags, "voiceMusicPlayer", "misc/VoicePlayer", "music");
         hook(calls, flags, "silenceNonContacts", "misc/NonContacts", "silenced");
@@ -388,7 +395,10 @@ public final class SelectionCheck {
         hook(calls, flags, "hideChannelButtons", "misc/ChannelButtons", "set");
         hook(calls, flags, "hideSendAs", "misc/SendAs", "show");
         hook(calls, flags, "hideContactsTab", "misc/MainTabs", "tabsShown", "blocksSwipe");
+        hook(calls, flags, "compactTabBar", "misc/MainTabs", "barPadding", "barCorner", "barHeight", "barMinWidth");
+        hook(calls, flags, "sideMenu", "misc/SideMenu", "swipeStarts", "back");
         hook(calls, flags, "fasterDownloads", "misc/DownloadSpeed", "fast");
+        hook(calls, flags, "dataSaverDownloads", "misc/DataSaverDownloads", "hold", "holdMask");
         hook(calls, flags, "saveDownloads", "misc/SaveDownloads", "fileLoaded");
         hook(calls, flags, "unifiedPush", "misc/UnifiedPush", "token", "type");
         hook(calls, flags, "hideByKeyword", "misc/MessageFilters", "type");
@@ -694,7 +704,7 @@ public final class SelectionCheck {
             if (queries.isEmpty()) before.child(query);
             query.child(new Node("intent").child(new Node("action").attribute("name", "STRING:org.unifiedpush.android.distributor.REGISTER")));
             Node actions = new Node("intent-filter");
-            for (String action : List.of("NEW_ENDPOINT", "MESSAGE", "UNREGISTERED", "REGISTRATION_FAILED")) {
+            for (String action : List.of("NEW_ENDPOINT", "MESSAGE", "UNREGISTERED", "REGISTRATION_FAILED", "TEMP_UNAVAILABLE")) {
                 actions.child(new Node("action").attribute("name", "STRING:org.unifiedpush.android.connector." + action));
             }
             application.child(new Node("receiver").attribute("name", "STRING:" + PUSH_RECEIVER)

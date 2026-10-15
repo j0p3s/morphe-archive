@@ -190,6 +190,10 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean font() {
+        return false;
+    }
+
     public static boolean notificationGroups() {
         return false;
     }
@@ -252,6 +256,10 @@ public final class SettingsStatus {
     }
 
     public static boolean paidPartnershipReels() {
+        return false;
+    }
+
+    public static boolean aiLabeledReels() {
         return false;
     }
 
@@ -331,6 +339,11 @@ public final class SettingsStatus {
     }
 
     public static boolean reelSeekBar() {
+        return false;
+    }
+
+    /** Rewritten by the Show a reel's exact time patch. */
+    public static boolean reelPostTime() {
         return false;
     }
 
@@ -451,6 +464,11 @@ public final class SettingsStatus {
 
     /** Rewritten by the Start feed videos with sound patch. */
     public static boolean feedSound() {
+        return false;
+    }
+
+    /** Rewritten by the Tap a feed video to pause it patch. */
+    public static boolean feedTapPause() {
         return false;
     }
 

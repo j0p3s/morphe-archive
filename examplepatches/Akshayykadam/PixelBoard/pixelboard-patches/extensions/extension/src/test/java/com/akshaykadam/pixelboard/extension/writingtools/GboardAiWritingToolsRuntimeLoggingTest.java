@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.ContextWrapper;
 import android.content.SharedPreferences;
 
+import com.akshaykadam.pixelboard.extension.settings.GboardRoundedKeysSettings;
+
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -35,6 +37,9 @@ public final class GboardAiWritingToolsRuntimeLoggingTest {
             if (field.getType() == AtomicInteger.class) {
                 field.setAccessible(true);
                 ((AtomicInteger) field.get(null)).set(0);
+            } else if (field.getType() == java.util.concurrent.atomic.AtomicBoolean.class) {
+                field.setAccessible(true);
+                ((java.util.concurrent.atomic.AtomicBoolean) field.get(null)).set(false);
             }
         }
         ShadowLog.clear();
@@ -129,6 +134,317 @@ public final class GboardAiWritingToolsRuntimeLoggingTest {
                 "safeLog(\"failed to evaluate signal\", throwable)"));
     }
 
+    @Test
+    public void deviceIntelligenceFlagEnforcesTrueAndLogsDiagnostics() throws Exception {
+        DeviceIntelligenceFlagReceiver receiver = new DeviceIntelligenceFlagReceiver();
+
+        // 1. Overriding Boolean.FALSE -> returns Boolean.TRUE and logs to GboardPatches tag
+        Object enforced = GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, Boolean.FALSE);
+        Assert.assertSame(Boolean.TRUE, enforced);
+        Assert.assertEquals(1L, warningCount(
+                "flag=enable_device_intelligence, original=Boolean(false), enforced=Boolean(true)"));
+
+        // 2. Already Boolean.TRUE -> returns Boolean.TRUE without redundant logging
+        Object unchanged = GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, Boolean.TRUE);
+        Assert.assertSame(Boolean.TRUE, unchanged);
+        Assert.assertEquals(1L, warningCount(
+                "flag=enable_device_intelligence, original=Boolean(false), enforced=Boolean(true)"));
+
+        // 3. Non-boolean values are preserved
+        Object wrongType = "disabled";
+        Assert.assertSame(wrongType, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, wrongType));
+
+        // 4. Logging is bounded (at most 80 warnings)
+        for (int index = 0; index < 85; index++) {
+            GboardAiWritingToolsRuntime.applyOverriddenFlagValue(receiver, Boolean.FALSE);
+        }
+        Assert.assertEquals(80L, warningCount(
+                "flag=enable_device_intelligence, original=Boolean(false), enforced=Boolean(true)"));
+    }
+
+    @Test
+    public void roundedKeysFlagsEnforceTrueWhenEnabledAndLogDiagnostics() throws Exception {
+        Context context = RuntimeEnvironment.getApplication();
+        staticField("applicationContext").set(null, context);
+        SharedPreferences preferences = GboardRoundedKeysSettings.preferences(context);
+        GboardRoundedKeysSettings.writeEnabled(preferences, false);
+
+        RoundedKeysFlagReceiver receiver = new RoundedKeysFlagReceiver();
+
+        // 1. When disabled, original value is preserved
+        Assert.assertSame(Boolean.FALSE, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, Boolean.FALSE));
+        Assert.assertEquals(0L, warningCount(
+                "flag=belka_rounded_keyboard, original=Boolean(false), enforced=Boolean(true)"));
+
+        // 2. When enabled, Boolean.FALSE is overridden to Boolean.TRUE with diagnostics log
+        GboardRoundedKeysSettings.writeEnabled(preferences, true);
+        ShadowLog.clear();
+
+        Object enforced = GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, Boolean.FALSE);
+        Assert.assertSame(Boolean.TRUE, enforced);
+        Assert.assertEquals(1L, warningCount(
+                "flag=belka_rounded_keyboard, original=Boolean(false), enforced=Boolean(true)"));
+
+        // 3. When already Boolean.TRUE, returns Boolean.TRUE without diagnostic warning
+        ShadowLog.clear();
+        Object unchanged = GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, Boolean.TRUE);
+        Assert.assertSame(Boolean.TRUE, unchanged);
+        Assert.assertEquals(0L, warningCount(
+                "flag=belka_rounded_keyboard, original=Boolean(false), enforced=Boolean(true)"));
+
+        // 4. Non-boolean values are preserved
+        Object wrongType = "invalid";
+        Assert.assertSame(wrongType, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, wrongType));
+    }
+
+    @Test
+    public void emojiScaleFlagEnforcesTrue() throws Exception {
+        Object receiver = new EmojiScaleFlagReceiver();
+
+        Object enforced = GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, Boolean.FALSE);
+        Assert.assertSame(Boolean.TRUE, enforced);
+
+        Object alreadyTrue = GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, Boolean.TRUE);
+        Assert.assertSame(Boolean.TRUE, alreadyTrue);
+    }
+
+    @Test
+    public void accessPointsFlagsEnforceTrueAndLogDiagnostics() throws Exception {
+        AccessPointsMenuRedesignFlagReceiver redesignReceiver =
+                new AccessPointsMenuRedesignFlagReceiver();
+        AccessPointKeyboardFlagReceiver keyboardReceiver =
+                new AccessPointKeyboardFlagReceiver();
+
+        ShadowLog.clear();
+        Object enforcedRedesign = GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                redesignReceiver, Boolean.FALSE);
+        Assert.assertSame(Boolean.TRUE, enforcedRedesign);
+        Assert.assertEquals(1L, warningCount(
+                "flag=enable_access_points_menu_redesign, original=Boolean(false), enforced=Boolean(true)"));
+
+        ShadowLog.clear();
+        Object enforcedKeyboard = GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                keyboardReceiver, Boolean.FALSE);
+        Assert.assertSame(Boolean.TRUE, enforcedKeyboard);
+        Assert.assertEquals(1L, warningCount(
+                "flag=enable_access_point_keyboard, original=Boolean(false), enforced=Boolean(true)"));
+
+        // Already true
+        ShadowLog.clear();
+        Assert.assertSame(Boolean.TRUE, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                redesignReceiver, Boolean.TRUE));
+        Assert.assertEquals(0L, warningCount(
+                "flag=enable_access_points_menu_redesign, original=Boolean(false), enforced=Boolean(true)"));
+
+        // Non-boolean preserved
+        String nonBool = "custom";
+        Assert.assertSame(nonBool, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                redesignReceiver, nonBool));
+    }
+
+    @Test
+    public void autofillImeIntegrationFlagEnforcesTrueAndLogsDiagnostics() throws Exception {
+        AutofillImeIntegrationFlagReceiver receiver =
+                new AutofillImeIntegrationFlagReceiver();
+
+        ShadowLog.clear();
+        Object enforced = GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, Boolean.FALSE);
+        Assert.assertSame(Boolean.TRUE, enforced);
+        Assert.assertEquals(1L, warningCount(
+                "flag=enable_autofill_ime_integration, original=Boolean(false), enforced=Boolean(true)"));
+
+        // Already true
+        ShadowLog.clear();
+        Assert.assertSame(Boolean.TRUE, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, Boolean.TRUE));
+        Assert.assertEquals(0L, warningCount(
+                "flag=enable_autofill_ime_integration, original=Boolean(false), enforced=Boolean(true)"));
+
+        // Non-boolean preserved
+        Long nonBool = 42L;
+        Assert.assertSame(nonBool, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, nonBool));
+    }
+
+    @Test
+    public void spellcheckerChipsUiFlagsEnforceTrueAndLogDiagnostics() throws Exception {
+        SpellcheckerChipsUiFlagReceiver chipsUiReceiver =
+                new SpellcheckerChipsUiFlagReceiver();
+        SpellcheckerChipsUiWebViewFlagReceiver webViewReceiver =
+                new SpellcheckerChipsUiWebViewFlagReceiver();
+        SpellCheckerExtensionFlagReceiver extensionReceiver =
+                new SpellCheckerExtensionFlagReceiver();
+
+        ShadowLog.clear();
+        Assert.assertSame(Boolean.TRUE, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                chipsUiReceiver, Boolean.FALSE));
+        Assert.assertEquals(1L, warningCount(
+                "flag=enable_spellchecker_chips_ui, original=Boolean(false), enforced=Boolean(true)"));
+
+        ShadowLog.clear();
+        Assert.assertSame(Boolean.TRUE, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                webViewReceiver, Boolean.FALSE));
+        Assert.assertEquals(1L, warningCount(
+                "flag=enable_spellchecker_chips_ui_web_view, original=Boolean(false), enforced=Boolean(true)"));
+
+        ShadowLog.clear();
+        Assert.assertSame(Boolean.TRUE, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                extensionReceiver, Boolean.FALSE));
+        Assert.assertEquals(1L, warningCount(
+                "flag=enable_spell_checker_extension, original=Boolean(false), enforced=Boolean(true)"));
+
+        // Already true
+        ShadowLog.clear();
+        Assert.assertSame(Boolean.TRUE, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                chipsUiReceiver, Boolean.TRUE));
+        Assert.assertEquals(0L, warningCount(
+                "flag=enable_spellchecker_chips_ui, original=Boolean(false), enforced=Boolean(true)"));
+
+        // Non-boolean preserved
+        Integer nonBool = 123;
+        Assert.assertSame(nonBool, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                chipsUiReceiver, nonBool));
+    }
+
+    @Test
+    public void isStockPhenotypeEnforcedFlagMatchesOnlyTargetFlags() {
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_DEVICE_INTELLIGENCE));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_EMOJI_SCALE_SUPPORTED));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_ACCESS_POINTS_MENU_REDESIGN));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_ACCESS_POINT_KEYBOARD));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_AUTOFILL_IME_INTEGRATION));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_SPELLCHECKER_CHIPS_UI));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_SPELLCHECKER_CHIPS_UI_WEB_VIEW));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_SPELL_CHECKER_EXTENSION));
+
+        // Delight5 LM User History and Learning flags
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_PC_USER_HISTORY_NGRAM_COUNT));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_POPULATE_NGRAM_COUNT_WITH_CONTEXT));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_POPULATE_NGRAM_TIMESTAMP_IN_USER_HISTORY));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_DYNAMIC_LM_UNIGRAM_CONTINUATION_SCORING));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_PRESERVE_CONTEXT_IN_DYNAMIC_LM_COMPUTE_HISTORY));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_MULTIWORD_PREDICTIONS_FROM_USER_HISTORY));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_MULTIWORD_SUGGESTIONS_FROM_USER_HISTORY));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_DYNAMIC_LM_NOISE_FILTER));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_OOV_DEDUPLICATION));
+
+        // Concept prediction and emoji suggestions flags
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_CONFIG_EXPRESSION));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_CONCEPT_PREDICTION_ENGINE));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_RULE_BASED_CONCEPT_PREDICTION));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_LAST_WORD_RULE_BASED_CONCEPT_PREDICTION));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_SUFFIX_RULE_BASED_CONCEPT_PREDICTION));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_EMOJI_SUGGESTION_FROM_TOP_CANDIDATE));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_PREDICTIONS_FROM_EMOJI_SHORTCUTS));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_NGRAM_EMOJI_SHORTCUTS_BY_SPANS));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_NGRAM_EMOJI_SHORTCUTS_FOR_PREDICTION));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_RETAIN_EMOJI_SHORTCUT_CANDIDATES_ON_SELECTION));
+
+        // Glide typing and autocorrect decoder flags
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_UPDATE_STREAMING_TOUCH_DATA_SET_IS_GESTURE));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_TWO_STAGE_DECODER));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_SPACE_TRANSPOSITION_POST_CORRECTION));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_PK_SPATIAL_MODEL_FEATURES));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_PK_AUTO_CORRECTION_TRIGGER_PREDICTOR));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_ENABLE_POST_CORRECTION_TRIGGER_PREDICTOR));
+        Assert.assertTrue(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_POPULATE_PREEMPTIVE_NEXT_KEY_PREDICTIONS));
+
+        Assert.assertFalse(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_WRITING_TOOLS));
+        Assert.assertFalse(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardAiWritingToolsRuntime.FLAG_INTENDED_OOV_MIN_COUNT));
+        Assert.assertFalse(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(
+                GboardRoundedKeysSettings.FLAG_BELKA_ROUNDED_KEYBOARD));
+        Assert.assertFalse(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(null));
+        Assert.assertFalse(GboardAiWritingToolsRuntime.isStockPhenotypeEnforcedFlag(""));
+    }
+
+    @Test
+    public void intendedOovMinCountEnforcesOneAndLogsDiagnostics() throws Exception {
+        IntendedOovMinCountFlagReceiver receiver = new IntendedOovMinCountFlagReceiver();
+
+        ShadowLog.clear();
+        Object enforced = GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, Long.valueOf(4L));
+        Assert.assertEquals(Long.valueOf(1L), enforced);
+        Assert.assertEquals(1L, warningCount(
+                "flag=intended_oov_min_count, original=Long(4), enforced=Long(1)"));
+
+        // Already 1L -> no duplicate log
+        ShadowLog.clear();
+        Object unchanged = GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, Long.valueOf(1L));
+        Assert.assertEquals(Long.valueOf(1L), unchanged);
+        Assert.assertEquals(0L, warningCount(
+                "flag=intended_oov_min_count, original=Long(1), enforced=Long(1)"));
+
+        // Non-Long is preserved
+        String nonLong = "not_a_long";
+        Assert.assertSame(nonLong, GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                receiver, nonLong));
+    }
+
+    @Test
+    public void defaultPreferencesInitializeEmojiSuggestion() throws Exception {
+        Context context = RuntimeEnvironment.getApplication();
+        SharedPreferences defaultPrefs =
+                android.preference.PreferenceManager.getDefaultSharedPreferences(context);
+        defaultPrefs.edit().clear().commit();
+
+        Assert.assertFalse(defaultPrefs.contains("pref_key_enable_emoji_suggestion"));
+
+        staticField("applicationContext").set(null, context);
+        GboardAiWritingToolsRuntime.applyOverriddenFlagValue(
+                new EmojiScaleFlagReceiver(), Boolean.FALSE);
+
+        Assert.assertTrue(defaultPrefs.contains("pref_key_enable_emoji_suggestion"));
+        Assert.assertTrue(defaultPrefs.getBoolean("pref_key_enable_emoji_suggestion", false));
+    }
+
     private static long warningCount(String message) {
         String expected = "[gboard-writing-tools-18.0.3] " + message;
         return ShadowLog.getLogsForTag(TAG).stream()
@@ -146,6 +462,56 @@ public final class GboardAiWritingToolsRuntimeLoggingTest {
     private static final class FlagReceiver {
         @SuppressWarnings("unused")
         private final String a = GboardAiWritingToolsRuntime.FLAG_WRITING_TOOLS;
+    }
+
+    private static final class DeviceIntelligenceFlagReceiver {
+        @SuppressWarnings("unused")
+        private final String a = GboardAiWritingToolsRuntime.FLAG_ENABLE_DEVICE_INTELLIGENCE;
+    }
+
+    private static final class EmojiScaleFlagReceiver {
+        @SuppressWarnings("unused")
+        private final String a = GboardAiWritingToolsRuntime.FLAG_EMOJI_SCALE_SUPPORTED;
+    }
+
+    private static final class IntendedOovMinCountFlagReceiver {
+        @SuppressWarnings("unused")
+        private final String a = GboardAiWritingToolsRuntime.FLAG_INTENDED_OOV_MIN_COUNT;
+    }
+
+    private static final class AccessPointsMenuRedesignFlagReceiver {
+        @SuppressWarnings("unused")
+        private final String a = GboardAiWritingToolsRuntime.FLAG_ENABLE_ACCESS_POINTS_MENU_REDESIGN;
+    }
+
+    private static final class AccessPointKeyboardFlagReceiver {
+        @SuppressWarnings("unused")
+        private final String a = GboardAiWritingToolsRuntime.FLAG_ENABLE_ACCESS_POINT_KEYBOARD;
+    }
+
+    private static final class AutofillImeIntegrationFlagReceiver {
+        @SuppressWarnings("unused")
+        private final String a = GboardAiWritingToolsRuntime.FLAG_ENABLE_AUTOFILL_IME_INTEGRATION;
+    }
+
+    private static final class SpellcheckerChipsUiFlagReceiver {
+        @SuppressWarnings("unused")
+        private final String a = GboardAiWritingToolsRuntime.FLAG_ENABLE_SPELLCHECKER_CHIPS_UI;
+    }
+
+    private static final class SpellcheckerChipsUiWebViewFlagReceiver {
+        @SuppressWarnings("unused")
+        private final String a = GboardAiWritingToolsRuntime.FLAG_ENABLE_SPELLCHECKER_CHIPS_UI_WEB_VIEW;
+    }
+
+    private static final class SpellCheckerExtensionFlagReceiver {
+        @SuppressWarnings("unused")
+        private final String a = GboardAiWritingToolsRuntime.FLAG_ENABLE_SPELL_CHECKER_EXTENSION;
+    }
+
+    private static final class RoundedKeysFlagReceiver {
+        @SuppressWarnings("unused")
+        private final String a = GboardRoundedKeysSettings.FLAG_BELKA_ROUNDED_KEYBOARD;
     }
 
     private static final class ThrowingSharedPreferencesContext extends ContextWrapper {

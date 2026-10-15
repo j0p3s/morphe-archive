@@ -1,7 +1,7 @@
 ![HushPinterest. Keep the pins. Lose the ads.](assets/readme-hero.png)
 
 <p>
-  <img src="https://img.shields.io/badge/version-0.0.9-E60023" alt="Version 0.0.9">
+  <img src="https://img.shields.io/badge/version-0.0.11-E60023" alt="Version 0.0.11">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%2010%2B-3DDC84" alt="Platform Android 10+">
   <img src="https://img.shields.io/badge/Pinterest-14.40.0-E60023" alt="Pinterest 14.40.0">
@@ -24,7 +24,7 @@ HushPinterest is a set of [Morphe](https://morphe.software) patches for Pinteres
 
 Hide ads, Disable analytics, Strip link tracking, Hide advertising ID and Fix push notifications start on. Every other switch starts off, so a freshly patched Pinterest looks like stock until you turn something on. What changed in each version is in the [changelog](CHANGELOG.md).
 
-The latest release is [v0.0.9](https://github.com/SysAdminDoc/HushPinterest/releases/tag/v0.0.9), with 29 patches. Add this repo to Morphe Manager as a patch source and it'll offer each new release when it comes out.
+The latest release is [v0.0.11](https://github.com/SysAdminDoc/HushPinterest/releases/tag/v0.0.11), with 29 patches. Add this repo to Morphe Manager as a patch source and it'll offer each new release when it comes out.
 
 **[Add HushPinterest to Morphe Manager](https://morphe.software/add-source?github=SysAdminDoc%2FHushPinterest)**
 

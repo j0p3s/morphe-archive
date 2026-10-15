@@ -27,12 +27,17 @@ private val PROMO_BANNERS = listOf(
     "Lcom/sofascore/results/featuredtournament/view/PromotionalOffersBannerView;",
 )
 
+private const val START_ACTIVITY = "Lcom/sofascore/results/main/start/StartActivity;"
+private const val SIGNATURE_SHA1 = "e235776bc0ad3837b01359177c438658b1424d23"
+
 private val SOFASCORE_PATCHES = setOf(
     "Block marketing notifications",
     "Disable Facebook SDK",
     "Disable ads",
     "Disable telemetry",
     "Enable Premium",
+    "GmsCore support",
+    "Spoof signature",
 )
 
 class SofascoreSmokeTest {
@@ -96,7 +101,7 @@ class SofascoreSmokeTest {
             apk = apk,
             workDir = workDir,
             pkg = PKG,
-            version = "26.09.07",
+            version = "26.09.28",
             patchNames = SOFASCORE_PATCHES,
             allPatches = loadAllPatches(newestPatchBundle(root)),
         )
@@ -208,5 +213,21 @@ class SofascoreSmokeTest {
                 "$banner.setVisibility does not force GONE; first instruction is ${first?.opcode}\n$diagnostics"
             )
         }
+
+        // Firebase In-App Messaging: every display implementation returns at once.
+        val fiamDisplays = classes.filter {
+            "Lcom/google/firebase/inappmessaging/FirebaseInAppMessagingDisplay;" in it.interfaces
+        }
+        assertTrue(fiamDisplays.isNotEmpty(), "no FirebaseInAppMessagingDisplay implementation found\n$diagnostics")
+        for (display in fiamDisplays) {
+            assertReturnsEarlyVoid(
+                display.methodsNamed("displayMessage").single(),
+                label = "${display.type}.displayMessage()", diagnostics
+            )
+        }
+
+        // GmsCore support + Spoof signature (MicroG RE push and Google login).
+        assertGmsCoreSupport(classes, workDir, PKG, START_ACTIVITY, SIGNATURE_SHA1, expectCredentialRouting = true)
+        assertSpoofSignature(classes, PKG, SIGNATURE_SHA1)
     }
 }

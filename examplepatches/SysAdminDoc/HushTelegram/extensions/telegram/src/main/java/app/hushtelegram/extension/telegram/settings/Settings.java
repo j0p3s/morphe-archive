@@ -65,6 +65,22 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushtelegram_hide_popular_apps", TRUE);
 
     /**
+     * Search's public parts only: the Channels, Apps, Posts and public posts tabs, public accounts,
+     * sponsored accounts and public posts in the Chats tab, and a hashtag's public posts. Your chats,
+     * contacts and messages from chats you're in still show
+     * ({@link app.hushtelegram.extension.telegram.misc.MyChatsSearch}).
+     */
+    public static final BooleanSetting SEARCH_ONLY_MY_CHATS =
+            new BooleanSetting("hushtelegram_search_only_my_chats", FALSE);
+
+    /**
+     * Search on this phone finds names in styled letters from plain ones; the names shown and
+     * digits stay as they are ({@link app.hushtelegram.extension.telegram.misc.NameFold}).
+     */
+    public static final BooleanSetting SEARCH_STYLED_NAMES =
+            new BooleanSetting("hushtelegram_search_styled_names", FALSE);
+
+    /**
      * The chat list's Your contacts on Telegram heading, rows and loading rows only; chats, folders,
      * contact sync and search stay stock.
      */
@@ -116,6 +132,14 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting HOLIDAY_LOOK =
             new BooleanSetting("hushtelegram_holiday_look", FALSE);
+
+    /**
+     * A few characters, usually an emoji, drawn after the chat list's title on this phone only
+     * ({@link app.hushtelegram.extension.telegram.misc.TitleEmoji}). Empty shows nothing. The chat
+     * list builds its title once, so a change waits for a restart.
+     */
+    public static final StringSetting TITLE_EMOJI =
+            new StringSetting("hushtelegram_title_emoji", "", true);
 
     /**
      * Medium, italic, extra bold, condensed and monospace text in the phone's own font instead of
@@ -200,6 +224,14 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushtelegram_voice_one_at_a_time", FALSE);
 
     /**
+     * While the lock screen shows, no voice or round video message starts, resumes or skips to
+     * another, whether from a headset, a car, the notification or the lock screen. One already
+     * playing keeps going to its end. Music and ordinary videos play as Telegram plays them.
+     */
+    public static final BooleanSetting LOCKED_VOICE_GUARD =
+            new BooleanSetting("hushtelegram_locked_voice_guard", FALSE);
+
+    /**
      * Telegram stops vibrating for taps, long presses, swipes and wrong entries.
      */
     public static final BooleanSetting NO_HAPTICS =
@@ -216,6 +248,14 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting HIDE_FOLDER_COUNTERS =
             new BooleanSetting("hushtelegram_hide_folder_counters", FALSE);
+
+    /**
+     * The chat list opens on the folder picked for each account instead of All chats
+     * ({@link app.hushtelegram.extension.telegram.misc.LaunchFolder}). The picks themselves stay on
+     * this phone, outside the settings.
+     */
+    public static final BooleanSetting LAUNCH_FOLDER =
+            new BooleanSetting("hushtelegram_launch_folder", FALSE);
 
     /**
      * Forwards start with Telegram's Hide sender's name option turned on.
@@ -352,9 +392,29 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting HIDE_CONTACTS_TAB =
             new BooleanSetting("hushtelegram_hide_contacts_tab", FALSE, true);
 
+    /**
+     * The bar at the bottom of the main screen is shorter and only as wide as its tabs need. Each tab
+     * keeps Telegram's 48 dp height. The bar is sized when the main screen is built, so a restart
+     * shows the change.
+     */
+    public static final BooleanSetting COMPACT_TAB_BAR =
+            new BooleanSetting("hushtelegram_compact_tab_bar", FALSE, true);
+
+    /**
+     * A swipe right on the chat list's first folder slides in a menu like the one Telegram 13 took
+     * away. Each swipe reads the switch, so it works the moment it's flipped. The key says drawer
+     * because the diagnostic report hides the value of any name holding "sid".
+     */
+    public static final BooleanSetting SIDE_MENU =
+            new BooleanSetting("hushtelegram_drawer_menu", FALSE);
+
     /** Downloads take 512 KB pieces, 8 at a time, unless Telegram drops back to small ones itself. */
     public static final BooleanSetting FASTER_DOWNLOADS =
             new BooleanSetting("hushtelegram_faster_downloads", FALSE);
+
+    /** Automatic media downloads wait while Android's Data Saver restricts Telegram on a metered network. */
+    public static final BooleanSetting DATA_SAVER_DOWNLOADS =
+            new BooleanSetting("hushtelegram_data_saver_downloads", FALSE);
 
     /** A file or song that finishes downloading gets a copy in Download/Telegram, unless saving it isn't allowed. */
     public static final BooleanSetting SAVE_DOWNLOADS =
@@ -425,6 +485,13 @@ public class Settings extends BaseSettings {
     /** Ordinary HTTP(S) browser dispatch only; native and protected Telegram routes stay stock. */
     public static final BooleanSetting OPEN_EXTERNAL_LINKS =
             new BooleanSetting("hushtelegram_open_external_links", TRUE);
+
+    /**
+     * Mini Apps hear that location isn't available and web pages inside Telegram are refused it.
+     * Location sharing in chats, maps and live locations stay stock.
+     */
+    public static final BooleanSetting MINI_APP_LOCATION_OFF =
+            new BooleanSetting("hushtelegram_mini_app_location_off", FALSE);
 
     /** Optional local URL cleaning at verified open/share sinks; unknown query keys preserve the URL. */
     public static final BooleanSetting STRIP_LINK_TRACKING =

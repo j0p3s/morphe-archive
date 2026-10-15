@@ -45,45 +45,67 @@ import com.android.tools.smali.dexlib2.AccessFlags
 // both builds, so it replaces the parameter list. returnType + [PUBLIC, FINAL]
 // are kept as cheap extra constraints (the other public-final-void methods —
 // the a/b accessors and c(DisposeReason) teardown — don't carry this string).
+//
+// Version note (4.47.2_tv → 4.50.1_tv): the mount method was renamed h → u,
+// and a SECOND public-final-void method (t(WebView, VideoModel)) in the same
+// class now also carries the "innovidAd" string — so string + [PUBLIC, FINAL]
+// + V is no longer unique and binds ambiguously. The mount method is the
+// 4-arg overload whose first parameter is the boolean gate and last is the
+// coroutine Flow; the decoy t() takes 2 params starting with the WebView. A
+// custom predicate pins parameter count == 4 with a leading boolean (Z) —
+// both stable across the VideoModel (v→t) obfuscation drift — to select the
+// mount method unambiguously.
 // ─────────────────────────────────────────────────────────────────────────────
 object InnovidStartAdFingerprint : Fingerprint(
     definingClass = "Lcom/univision/descarga/videoplayer/utilities/innovid/InnovidHelper;",
     strings = listOf("innovidAd"),
     returnType = "V",
-    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL)
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    custom = { method, _ ->
+        method.parameters.size == 4 &&
+            method.parameters[0].type == "Z" &&
+            method.parameters[1].type == "Landroid/webkit/WebView;"
+    }
 )
 
 // ─────────────────────────────────────────────────────────────────────────────
-// LuraPlayer ad-break scheduler — linear (client-side VAST/VMAP) ad trigger
-// classes6.dex / com/akta/luraplayer/implementations/ads/analyzers/
+// LuraPlayer interstitials (ad-break) schedule — client-VMAP ad source
+// com/akta/luraplayer/api/event/LuraEventData$InterstitialsData->getBreaks()
 //
-// The abstract base analyzer's TIME_UPDATED handler is the single entry point
-// that decides when a linear ad break fires. On every time update it dispatches
-// to the VOD subclass's per-tick evaluator (l(J)), which launches the
-// LuraVodAdAnalyzer coroutine that locates the due break and plays it, or to
-// the live subclass for SGAI/DASH timing. Returning void at index 0 stops the
-// VOD client-side ad-break evaluation at its root, so no VAST creative is
-// requested or played. Content playback is unaffected — the analyzer is an
-// event subscriber, separate from the media pipeline.
+// ViX serves its VOD ads client-side (provider = "generic", VMAP from the GAM
+// ad unit /6881/vix.tv/viewer/vod/androidtv/ondemand, confirmed on-device by the
+// LuraAdPingExecutor AD_BREAK_START trace). After the VMAP is fetched and parsed,
+// the ad engine emits a LuraEvent carrying an InterstitialsData payload whose
+// getBreaks() is the List<LuraAdBreak> schedule. The player state machine (c5)
+// ingests it — getData() → instanceof InterstitialsData → getBreaks() — and
+// stores it into its schedule holder (j4 fields G/J, read back via c5.x() /
+// getGetIntersititals()); the media3 layer (f5) then inserts those breaks as
+// timeline ad-periods and plays the VAST creatives.
 //
-// ViX uses provider = "generic" (client-side VAST), so the ad creative is a
-// separate playback the analyzer triggers; cutting the trigger removes the ad.
-// (Live SGAI ads are server-stitched into the manifest and are NOT removable
-// from the client — that requires a network/manifest-layer block.)
+// Returning an EMPTY list (java.util.Collections.emptyList — NOT null: the
+// ingestion site skips on a null but ingests-empty on an empty list) empties the
+// schedule at its single ingestion point. With no breaks the player inserts no
+// ad-periods → content plays through, seamless, no pre/mid-roll. This is the
+// "empty the ad DATA, never the flow the player waits on" rule (RTE/Tubi/FoxOne
+// IMA precedent): content playback runs on a separate path and is untouched.
 //
-// Robustness: both the analyzer class and method names are R8-obfuscated
-// single letters, so they are NOT matched on. The handler is pinned by its
-// parameter type — Lcom/akta/luraplayer/api/event/LuraEventData$TimeUpdate; —
-// which lives in LuraPlayer's un-obfuscated public `api` package and is a
-// stable anchor. This method (taking exactly that single param, returning V)
-// is unique across the entire analyzers package.
+// Why this seam and not the earlier attempts: the 4.51.0 ad IMPLEMENTATION was
+// R8-flattened into com/akta/lura/<short>, so every impl-side anchor drifted or
+// hit the wrong seam — d3.a→g$g is the MEDIA-FRAME producer (crashed content),
+// m2 (LuraAdPingExecutor) and the quartile reporters fire DOWNSTREAM of delivery
+// (device-proven: ad still played), and the LuraGam*.getAdTagUrl() config getters
+// are never read at request time (device-proven: emptied to "" and the VMAP
+// still fetched). getBreaks() lives in the RETAINED public `api/event` package —
+// class + method names survive R8 — and sits UPSTREAM of the schedule store, so
+// it is both obfuscation-proof and the true data source.
+//
+// Anchored on returnType + method name + enclosing class suffix (smallest unique
+// set). The `$` in the nested class name is escaped for the Kotlin string.
 // ─────────────────────────────────────────────────────────────────────────────
-object LuraAdBreakSchedulerFingerprint : Fingerprint(
+object InterstitialsDataGetBreaksFingerprint : Fingerprint(
+    returnType = "Ljava/util/List;",
     custom = { method, classDef ->
-        classDef.type.startsWith("Lcom/akta/luraplayer/implementations/ads/analyzers/") &&
-            method.returnType == "V" &&
-            method.parameters.size == 1 &&
-            method.parameters[0].type ==
-            "Lcom/akta/luraplayer/api/event/LuraEventData\$TimeUpdate;"
+        method.name == "getBreaks" &&
+            classDef.type.endsWith("/LuraEventData\$InterstitialsData;")
     }
 )

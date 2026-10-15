@@ -29,6 +29,7 @@ object Constants {
         appIconColor = 0xECEBB4,
         targets = listOf(
             AppTarget(version = "2026.34.2"),
+            AppTarget(version = "2026.41.3"),
         ),
     )
 
@@ -66,6 +67,17 @@ object Constants {
         targets = listOf(
             AppTarget(version = "2.12.0"),
             AppTarget(version = "2.20.0"),
+        )
+    )
+
+    // Tramonto & Alba: PhotoTime — https://apkpure.net/golden-hour-for-photography/pl.guteklabs.phototime
+    val COMPATIBILITY_PHOTOTIME = Compatibility(
+        name = "Tramonto & Alba: PhotoTime",
+        packageName = "pl.guteklabs.phototime",
+        apkFileType = ApkFileType.XAPK,
+        appIconColor = 0xE85D04,
+        targets = listOf(
+            AppTarget(version = "8.2.3")
         )
     )
 }

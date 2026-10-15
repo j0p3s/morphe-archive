@@ -39,7 +39,7 @@ private fun NodeList.elements() = (0 until length).mapNotNull { item(it) as? Ele
 @Suppress("unused")
 val cloneAppPatch = resourcePatch(
     name = "Change Package Name",
-    description = "Changes the app package name to install patch without uninstalling original app." +
+    description = "Changes the app package name to install patch without uninstalling original app. " +
             "By default, .morphe is appended.",
     default = true,
 ) {

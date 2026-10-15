@@ -172,10 +172,12 @@ private val removePairipResourcesPatch = rawResourcePatch {
                 val library = architecture.resolve(fileName)
                 if (!library.exists()) return@forEach
 
-                val delta = inputStreamFromBundledResource(
-                    "pairip",
-                    "delta-${architecture.name}-$name.bin",
-                ) ?: throw IllegalStateException("No $fileName delta for ${architecture.name}")
+                val delta = inputStreamFromBundledResource("pairip", "delta-${architecture.name}-$name.bin")
+                    ?: if (architecture.name == "arm64-v8a") {
+                        throw IllegalStateException("No $fileName delta for ${architecture.name}")
+                    } else {
+                        return@forEach
+                    }
 
                 library.writeBytes(library.readBytes().applyDelta(delta.use { it.readBytes() }))
                 restoredLibraries++

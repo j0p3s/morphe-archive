@@ -19,11 +19,15 @@ fun renameClassPatch(
     classMap: Map<String, String>,
     custom: ((classDef: ClassDef) -> Boolean)? = null,
 ) = bytecodePatch {
-    val rewriter = DexRewriter(object : RewriterModule() {
-        override fun getTypeRewriter(rewriters: Rewriters) = Rewriter<String> {
-            classMap[it] ?: it
-        }
-    })
+    val rewriter =
+        DexRewriter(
+            object : RewriterModule() {
+                override fun getTypeRewriter(rewriters: Rewriters) =
+                    Rewriter<String> {
+                        classMap[it] ?: it
+                    }
+            }
+        )
 
     finalize {
         classDefForEach { classDef ->
@@ -31,9 +35,7 @@ fun renameClassPatch(
             val mutableClass = mutableClassDefBy(classDef)
 
             mutableClass.type = classMap[mutableClass.type] ?: mutableClass.type
-            mutableClass.setSuperClass(
-                classMap[mutableClass.superclass] ?: mutableClass.superclass
-            )
+            mutableClass.setSuperClass(classMap[mutableClass.superclass] ?: mutableClass.superclass)
             mutableClass.interfaces.replaceAll { classMap[it] ?: it }
 
             mutableClass.annotations.replaceAll {
@@ -44,9 +46,6 @@ fun renameClassPatch(
         }
     }
 }
-
-fun obfuscateExtensionClassFingerprintPatch(classMap: Map<String, Fingerprint>) =
-    obfuscateExtensionClassBlockPatch(classMap.mapValues { { it.value.matchSingle().originalClassDef.type } })
 
 fun obfuscateExtensionClassBlockPatch(classMap: Map<String, BytecodePatchContext.() -> String>) =
     bytecodePatch {
@@ -60,3 +59,10 @@ fun obfuscateExtensionClassBlockPatch(classMap: Map<String, BytecodePatchContext
             }
         }
     }
+
+fun obfuscateExtensionClassPatch(vararg classes: Pair<String, Fingerprint>) =
+    obfuscateExtensionClassBlockPatch(
+        classes.associate { (classDescriptor, fingerprint) ->
+            classDescriptor to { fingerprint.matchSingle().originalClassDef.type }
+        }
+    )

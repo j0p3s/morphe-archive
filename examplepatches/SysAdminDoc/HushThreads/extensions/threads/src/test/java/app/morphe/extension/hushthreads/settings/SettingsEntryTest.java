@@ -433,8 +433,7 @@ public class SettingsEntryTest {
             }
             assertTrue("the screen didn't open on Appearance", onAppearance);
 
-            // Appearance, More settings, the first page, and out.
-            SettingsL10nTest.backOf(dialog).performClick();
+            // Appearance, the first page, and out: every page opens from the first one.
             SettingsL10nTest.backOf(dialog).performClick();
             SettingsL10nTest.backOf(dialog).performClick();
             ShadowLooper.idleMainLooper();
@@ -450,6 +449,240 @@ public class SettingsEntryTest {
             SettingsEntry.onClosedByUser();
             PatchFamily.inBuildForTests = null;
         }
+    }
+
+    /**
+     * Threads takes Android's fragment state out of every activity it recreates, so a font size or
+     * dark theme change, or Android ending Threads in the background, closed the screen for good
+     * (seen on an emulator). It comes back over the recreated activity on the page it was on. One
+     * the person closed stays closed.
+     */
+    @Test public void theScreenComesBackOnItsPageWhenThreadsRecreatesItsHost() {
+        recreatedHostWithEveryPatch();
+    }
+
+    /**
+     * Android 9 is the oldest Threads runs on, and no emulator image for it here can run Threads'
+     * arm64 code, so its framework fragments get the same recreation here.
+     */
+    @Test @Config(sdk = 28) public void onAndroid9TheScreenComesBackWhenThreadsRecreatesItsHost() {
+        recreatedHostWithEveryPatch();
+    }
+
+    private void recreatedHostWithEveryPatch() {
+        PatchFamily.inBuildForTests = java.util.EnumSet.allOf(PatchFamily.class);
+        try {
+            recreatedHostBringsTheScreenBack();
+        } finally {
+            SettingsEntry.onClosedByUser();
+            PatchFamily.inBuildForTests = null;
+        }
+    }
+
+    private void recreatedHostBringsTheScreenBack() {
+        Intent shortcut = new Intent().putExtra(SettingsEntry.EXTRA_OPEN_SETTINGS, true);
+        ActivityController<ThreadsLikeActivity> activity = Robolectric.buildActivity(ThreadsLikeActivity.class, shortcut).create();
+        SettingsEntry.onActivityCreate(activity.get());
+        activity.start().resume();
+        ShadowLooper.idleMainLooper();
+        tapRow(activity.get(), "section_Feed");
+        org.junit.Assert.assertEquals("Feed", pageOver(activity.get()).navigation.route());
+        // Long after the request, so only the activity's saved state can bring the screen back.
+        ShadowLooper.idleMainLooper(5, java.util.concurrent.TimeUnit.MINUTES);
+
+        activity.recreate();
+        ShadowLooper.idleMainLooper();
+
+        assertNotNull("the screen closed when Threads recreated its activity", dialogOver(activity.get()));
+        org.junit.Assert.assertEquals("the screen came back on another page",
+                "Feed", pageOver(activity.get()).navigation.route());
+
+        // Feed, the first page, and out.
+        SettingsL10nTest.backOf((SettingsDialog) dialogOver(activity.get())).performClick();
+        SettingsL10nTest.backOf((SettingsDialog) dialogOver(activity.get())).performClick();
+        ShadowLooper.idleMainLooper();
+        assertNull("the screen stayed open", dialogOver(activity.get()));
+        activity.recreate();
+        ShadowLooper.idleMainLooper();
+        assertNull("a screen the person closed came back with its activity", dialogOver(activity.get()));
+    }
+
+    /**
+     * Android 9 resumes only the focused side of a split screen. A font size or theme change made
+     * in the other side recreates Threads there without resuming it, and the screen used to be
+     * dropped once its request was 30 seconds old. It waits for that activity however long it
+     * takes, while another Threads screen that resumes late doesn't get it.
+     */
+    @Test @Config(sdk = 28) public void onAndroid9ARecreatedSideThatResumesLateStillGetsTheScreen() {
+        PatchFamily.inBuildForTests = java.util.EnumSet.allOf(PatchFamily.class);
+        try {
+            Intent shortcut = new Intent().putExtra(SettingsEntry.EXTRA_OPEN_SETTINGS, true);
+            ActivityController<ThreadsLikeActivity> side = Robolectric.buildActivity(ThreadsLikeActivity.class, shortcut).create();
+            SettingsEntry.onActivityCreate(side.get());
+            side.start().resume();
+            ShadowLooper.idleMainLooper();
+            tapRow(side.get(), "section_Feed");
+            ShadowLooper.idleMainLooper(5, java.util.concurrent.TimeUnit.MINUTES);
+
+            // The other side takes focus, and its change recreates Threads, which stays paused.
+            // Built by hand: Robolectric's recreate() passes through a resume.
+            side.pause();
+            android.os.Bundle saved = new android.os.Bundle();
+            side.saveInstanceState(saved);
+            side.stop().destroy();
+            ActivityController<ThreadsLikeActivity> rebuilt = Robolectric.buildActivity(ThreadsLikeActivity.class, side.getIntent())
+                    .create(saved).start().postCreate(saved);
+            ShadowLooper.idleMainLooper(2, java.util.concurrent.TimeUnit.MINUTES);
+            ActivityController<ThreadsLikeActivity> other = Robolectric.buildActivity(ThreadsLikeActivity.class).setup();
+            ShadowLooper.idleMainLooper();
+            assertNull("a Threads screen that resumed late took the screen", dialogOver(other.get()));
+            other.pause().stop().destroy();
+
+            rebuilt.resume();
+            ShadowLooper.idleMainLooper();
+            assertNotNull("the screen was dropped while its side waited for focus", dialogOver(rebuilt.get()));
+            org.junit.Assert.assertEquals("Feed", pageOver(rebuilt.get()).navigation.route());
+        } finally {
+            SettingsEntry.onClosedByUser();
+            PatchFamily.inBuildForTests = null;
+        }
+    }
+
+    /**
+     * The screen open over two Threads activities: closing the copy over the second leaves the
+     * first's copy to come back when Threads recreates the first. One closed flag for every copy
+     * used to make the first activity skip saving its own.
+     */
+    @Test public void closingOneCopyKeepsTheOtherAcrossARecreation() {
+        PatchFamily.inBuildForTests = java.util.EnumSet.allOf(PatchFamily.class);
+        try {
+            Intent shortcut = new Intent().putExtra(SettingsEntry.EXTRA_OPEN_SETTINGS, true);
+            ActivityController<ThreadsLikeActivity> first = Robolectric.buildActivity(ThreadsLikeActivity.class, shortcut).create();
+            SettingsEntry.onActivityCreate(first.get());
+            first.start().resume();
+            ShadowLooper.idleMainLooper();
+            assertNotNull("the shortcut opened nothing", dialogOver(first.get()));
+
+            first.pause();
+            ActivityController<ThreadsLikeActivity> second = Robolectric.buildActivity(ThreadsLikeActivity.class).setup();
+            first.stop();
+            assertTrue(SettingsEntry.open(second.get()));
+            ShadowLooper.idleMainLooper();
+            SettingsL10nTest.backOf((SettingsDialog) dialogOver(second.get())).performClick();
+            ShadowLooper.idleMainLooper();
+            assertNull("the second copy stayed open", dialogOver(second.get()));
+            second.pause();
+            first.start().resume();
+            second.stop().destroy();
+            ShadowLooper.idleMainLooper();
+            assertNotNull("the first copy closed with the second", dialogOver(first.get()));
+
+            // Long after the request, so only the activity's saved state can bring the screen back.
+            ShadowLooper.idleMainLooper(5, java.util.concurrent.TimeUnit.MINUTES);
+            first.recreate();
+            ShadowLooper.idleMainLooper();
+            assertNotNull("closing the other copy lost this one", dialogOver(first.get()));
+        } finally {
+            SettingsEntry.onClosedByUser();
+            PatchFamily.inBuildForTests = null;
+        }
+    }
+
+    /**
+     * A file picked while Threads rebuilt its activity behind the picker reaches the settings it
+     * brings back. The answer used to go to the page that asked, by a name the rebuilt activity no
+     * longer had, so the file went nowhere and the screen came back as if nothing was picked.
+     */
+    @Test public void aFilePickedWhileThreadsRebuildsReachesTheSettingsItBringsBack() throws Exception {
+        PatchFamily.inBuildForTests = java.util.EnumSet.allOf(PatchFamily.class);
+        SettingsFileProvider.install("settings-entry");
+        try {
+            Intent shortcut = new Intent().putExtra(SettingsEntry.EXTRA_OPEN_SETTINGS, true);
+            ActivityController<ThreadsLikeActivity> activity = Robolectric.buildActivity(ThreadsLikeActivity.class, shortcut).create();
+            SettingsEntry.onActivityCreate(activity.get());
+            activity.start().resume();
+            ShadowLooper.idleMainLooper();
+            SettingsBackupTest.listPicker(activity.get());
+            HushThreadsPreferenceFragment asked = pageOver(activity.get());
+            android.preference.Preference row = asked.findPreference("action_import_settings");
+            row.getOnPreferenceClickListener().onPreferenceClick(row);
+            Intent around = org.robolectric.Shadows.shadowOf(activity.get()).getNextStartedActivity();
+            assertNotNull("Import opened nothing", around);
+            ActivityController<SettingsFilePicker> picker = Robolectric.buildActivity(SettingsFilePicker.class, around).create();
+            org.robolectric.shadows.ShadowActivity.IntentForResult started =
+                    org.robolectric.Shadows.shadowOf(picker.get()).getNextStartedActivityForResult();
+
+            // Covered by the picker, Threads is rebuilt without its fragments, as a font size change does.
+            activity.pause().stop();
+            activity.recreate();
+            ShadowLooper.idleMainLooper();
+            android.net.Uri file = SettingsFileProvider.put("settings-entry", "picked.json",
+                    SettingsBackup.create().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            org.robolectric.Shadows.shadowOf(picker.get()).receiveResult(started.intent, Activity.RESULT_OK,
+                    new Intent().setData(file).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION
+                            | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION));
+            // Held while the file waits for the settings, since the picker's own access ends with it.
+            org.junit.Assert.assertEquals("the file's access wasn't kept while it waited", 1,
+                    activity.get().getContentResolver().getPersistedUriPermissions().size());
+            activity.start().resume();
+            for (int round = 0; round < 3; round++) {
+                app.morphe.extension.shared.Utils.awaitBackgroundTasksForTests();
+                ShadowLooper.idleMainLooper();
+            }
+            assertTrue("the file's access was kept after the read",
+                    activity.get().getContentResolver().getPersistedUriPermissions().isEmpty());
+
+            HushThreadsPreferenceFragment page = pageOver(activity.get());
+            org.junit.Assert.assertNotSame("the settings weren't rebuilt", asked, page);
+            android.app.AlertDialog preview = org.robolectric.shadows.ShadowAlertDialog.getLatestAlertDialog();
+            assertNotNull("the picked file went nowhere", preview);
+            assertTrue(preview.isShowing());
+            org.junit.Assert.assertEquals("Your switches already match that file, so nothing will change.",
+                    String.valueOf(org.robolectric.Shadows.shadowOf(preview).getMessage()));
+            preview.cancel();
+            ShadowLooper.idleMainLooper();
+        } finally {
+            SettingsEntry.onClosedByUser();
+            SettingsBackupPreference.forgetPickForTests();
+            SettingsFileGrants.forgetProcessForTests();
+            PatchFamily.inBuildForTests = null;
+        }
+    }
+
+    /** Threads' start lets go of the access to a settings file an ended process kept. */
+    @Test public void threadsStartingLetsGoOfFileAccessAnEndedProcessKept() throws Exception {
+        android.content.Context application = RuntimeEnvironment.getApplication();
+        SettingsFileProvider.install("settings-entry");
+        android.net.Uri left = SettingsFileProvider.put("settings-entry", "left.json", new byte[0]);
+        SettingsFileGrants.take(application, left, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        SettingsFileGrants.forgetProcessForTests();
+        org.junit.Assert.assertEquals(1, application.getContentResolver().getPersistedUriPermissions().size());
+
+        // Not the Application itself, so no second lifecycle watcher is registered.
+        SettingsEntry.onApplicationCreate(new android.content.ContextWrapper(application));
+        app.morphe.extension.shared.Utils.awaitBackgroundTasksForTests();
+        assertTrue("the start kept the ended process's access",
+                application.getContentResolver().getPersistedUriPermissions().isEmpty());
+    }
+
+    /** Takes Android's fragment state out before it's restored, as Threads' IgFragmentActivity does. */
+    public static final class ThreadsLikeActivity extends Activity {
+        @Override protected void onCreate(android.os.Bundle state) {
+            if (state != null) state.remove("android:fragments");
+            super.onCreate(state);
+        }
+    }
+
+    private static void tapRow(Activity activity, String key) {
+        android.widget.ListView list = pageOver(activity).getView().findViewById(android.R.id.list);
+        for (int i = 0; i < list.getCount(); i++) {
+            Object row = list.getItemAtPosition(i);
+            if (!(row instanceof android.preference.Preference) || !key.equals(((android.preference.Preference) row).getKey())) continue;
+            assertTrue(list.performItemClick(list.getAdapter().getView(i, null, list), i, list.getAdapter().getItemId(i)));
+            ShadowLooper.idleMainLooper();
+            return;
+        }
+        org.junit.Assert.fail("No row " + key);
     }
 
     @SuppressWarnings("deprecation")

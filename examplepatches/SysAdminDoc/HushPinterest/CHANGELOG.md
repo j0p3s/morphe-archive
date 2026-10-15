@@ -4,6 +4,18 @@ Every HushPinterest release, newest first.
 
 ## Unreleased
 
+* **Tooling:** The release gate's advisory check works in Windows PowerShell 5.1 again. Since 0.0.11, any failed OSV request stopped it there with an "Unable to find type" error. A dropped connection or a busy server now gets asked again in 5.1, the way it already did in PowerShell 7.
+* **Tooling:** The script tests now clean up after themselves. The pre-push cases remove the worktree the hook builds in, and a passing host reference run deletes its report folder. Each run used to leave both in the temp directory.
+
+## 0.0.11 (2026-10-14)
+
+* **Pinterest:** Hide AI-labeled pins works on Pinterest 14.40.0 again. That version marks AI pins in a new way, including the ones Pinterest's own detection flags, and stopped sending the old label, so with the switch on they kept showing in search and the home feed. It now reads the new marks as well as the old label.
+* **Tooling:** The release gate's advisory check asks OSV again when a connection drops or the server is busy, up to two more times, before it gives up. One lost request out of the hundred or so a release sends used to stop the whole gate.
+
+## 0.0.10 (2026-10-14)
+
+* **Pinterest:** Hide search history now also hides the recent searches listed when you tap the search bar, with no gap where they were. Suggestions for what you type still show, and turning the switch off or pausing brings the recent searches back.
+* **Pinterest:** The Recent searches heading on the search page now hides along with the searches under it. Before, Hide search history left the heading sitting there over nothing.
 * **Pinterest:** Don't use Quick setups? Press and hold its row on the settings home page and it's gone, and its help line now says so. Quick setups on the home page, on the Pause, backup and diagnostics page, brings it back.
 
 ## 0.0.9 (2026-10-14)

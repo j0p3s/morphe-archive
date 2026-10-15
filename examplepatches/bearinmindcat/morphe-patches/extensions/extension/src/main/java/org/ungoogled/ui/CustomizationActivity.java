@@ -4,6 +4,8 @@ import android.app.Activity;
 import android.app.AlertDialog;
 import android.graphics.Typeface;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -365,6 +367,15 @@ public final class CustomizationActivity extends Activity {
                 areaSub.setText(SpeedCameras.AREA_LABELS[which]);
             }));
             body.addView(areaRow);
+            // What the downloads are doing now -- how many cameras, or what they wait for; tap to try again.
+            LinearLayout camsNow = rowBase("Cameras now", cameraStatus());
+            TextView camsNowSub = (TextView) ((LinearLayout) camsNow.getChildAt(0)).getChildAt(1);
+            camsNow.setOnClickListener(v -> {
+                SpeedCameras.retryNow();
+                camsNowSub.setText(cameraStatus());
+            });
+            body.addView(camsNow);
+            live(() -> camsNowSub.setText(cameraStatus()));
             // both read live, so no restart
             cams.setOnCheckedChangeListener((CompoundButton b, boolean on) -> {
                 SpeedCameras.setEnabled(this, on);
@@ -402,7 +413,37 @@ public final class CustomizationActivity extends Activity {
             });
             wazeMap.setOnCheckedChangeListener((CompoundButton b, boolean on) -> WazeAlerts.setOnMap(this, on));
             wazeChime.setOnCheckedChangeListener((CompoundButton b, boolean on) -> WazeAlerts.setChime(this, on));
+            // The last word from Waze; tap to ask it for its list again.
+            LinearLayout wazeNow = rowBase("Waze now", WazeAlerts.status());
+            TextView wazeNowSub = (TextView) ((LinearLayout) wazeNow.getChildAt(0)).getChildAt(1);
+            wazeNow.setOnClickListener(v -> WazeAlerts.ask());
+            body.addView(wazeNow);
+            live(() -> wazeNowSub.setText(WazeAlerts.status()));
         }
+    }
+
+    /** "Speed cameras: 42 cameras around you", and Flock cameras' line below it when that patch is in. */
+    private String cameraStatus() {
+        String out = "Speed cameras: " + SpeedCameras.status(false);
+        if (Shapes.flockCamerasPatched()) out += "\nFlock cameras: " + SpeedCameras.status(true);
+        return out;
+    }
+
+    /** Runs [update] every second while this screen is open. */
+    private void live(Runnable update) {
+        Handler h = new Handler(Looper.getMainLooper());
+        h.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                if (isFinishing() || isDestroyed()) return;
+                try {
+                    update.run();
+                } catch (Throwable t) {
+                    android.util.Log.w("UA", "customization status", t);
+                }
+                h.postDelayed(this, 1000L);
+            }
+        }, 1000L);
     }
 
     /** SpeedAlerts' choices, in order. */

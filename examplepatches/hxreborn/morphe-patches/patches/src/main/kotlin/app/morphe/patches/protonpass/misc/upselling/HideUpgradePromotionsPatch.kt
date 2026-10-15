@@ -91,6 +91,43 @@ val hideUpgradePromotionsPatch = bytecodePatch(
             """,
         )
 
+        DarkWebMonitoringSectionFingerprint.matchSingle().method.apply {
+            val register = getFreeRegisterProvider(0, 1).getFreeRegister4Bit()
+
+            addInstructionsWithLabels(
+                0,
+                """
+                    invoke-static { }, $UPSELLING_VISIBILITY_CLASS->isHidden()Z
+                    move-result v$register
+                    if-eqz v$register, :shown
+                    move-object/from16 v$register, p2
+                    instance-of v$register, v$register, $DARK_WEB_MONITORING_CLASS${'$'}FreeNoDataBreaches;
+                    if-nez v$register, :hidden
+                    move-object/from16 v$register, p2
+                    instance-of v$register, v$register, $DARK_WEB_MONITORING_CLASS${'$'}FreeLoading;
+                    if-eqz v$register, :shown
+                    :hidden
+                    return-void
+                """,
+                ExternalLabel("shown", getInstruction(0)),
+            )
+        }
+
+        SentinelUpsellRowFingerprint.matchSingle().run {
+            val rowIndex = instructionMatches.last().index
+            val hidden = method.getFreeRegisterProvider(rowIndex, 1).getFreeRegister()
+
+            method.addInstructionsWithLabels(
+                rowIndex,
+                """
+                    invoke-static { }, $UPSELLING_VISIBILITY_CLASS->isHidden()Z
+                    move-result v$hidden
+                    if-nez v$hidden, :skip_row
+                """,
+                ExternalLabel("skip_row", method.getInstruction(rowIndex + 1)),
+            )
+        }
+
         OnboardingRouteFingerprint.matchSingle().run {
             val onboardingRoute = instructionMatches.last().getInstruction<ReferenceInstruction>().reference
             val shownIndex = firstIndex + 1

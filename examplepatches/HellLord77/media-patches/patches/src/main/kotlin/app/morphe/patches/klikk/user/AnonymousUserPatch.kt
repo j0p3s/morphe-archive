@@ -6,12 +6,13 @@ import app.morphe.patches.klikk.shared.patches.utils.ioUtils.hasValidSubscriptio
 import app.morphe.patches.klikk.shared.patches.utils.ioUtils.isUserLoggedInPatch
 
 @Suppress("unused")
-val anonymousUserPatch = bytecodePatch(
-    name = "Anonymous user",
-    description = "Log in as anonymous subscribed user.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_KLIKK)
+val anonymousUserPatch =
+    bytecodePatch(
+        name = "Anonymous user",
+        description = "Log in as subscribed anonymous user.",
+        default = true,
+    ) {
+        compatibleWith(COMPATIBILITY_KLIKK)
 
-    dependsOn(isUserLoggedInPatch, hasValidSubscriptionPatch)
-}
+        dependsOn(isUserLoggedInPatch, hasValidSubscriptionPatch)
+    }

@@ -1982,6 +1982,220 @@ public class BadDexFixture {
         return classes;
     }
 
+    /** Three direct 451 browser boundaries, plus the shared factory and already-routed immersive screen. */
+    private static void directBrowserClasses(List<ClassDef> classes, boolean enabled, String fault) {
+        String text = "Ljava/lang/String;", intent = "Landroid/content/Intent;", uri = "Landroid/net/Uri;";
+        String session = "Lcom/instagram/common/session/UserSession;", state = "Landroidx/compose/runtime/MutableState;";
+        String cta = "Lfixture/BrowserCTA;", destination = "Lfixture/BrowserDestination;", factoryOwner = "Lfixture/BrowserIntent;";
+        ImmutableMethodReference factory = method(factoryOwner, "make", intent, CONTEXT, OBJECT, FEATURE_MEDIA, session, OBJECT, text, text, text, text);
+        ImmutableMethodReference launcher = method("Lfixture/BrowserLauncher;", "launch", "V", CONTEXT, OBJECT, OBJECT, OBJECT, text, text, text, text, OBJECT);
+        for (int n = 0; n < classes.size(); n++) if (classes.get(n).getType().equals(FEATURE_MEDIA)) {
+            ClassDef original = classes.get(n);
+            List<ImmutableField> fields = new ArrayList<>(); original.getFields().forEach(f -> fields.add(ImmutableField.of(f)));
+            fields.add(featureField(FEATURE_MEDIA, "ctas", "Ljava/util/List;"));
+            classes.set(n, new ImmutableClassDef(original.getType(), original.getAccessFlags(), original.getSuperclass(), original.getInterfaces(),
+                    original.getSourceFile(), original.getAnnotations(), fields, original.getMethods()));
+        }
+        // Keep the original launcher parser/hook controls. Both stock browser modes call the factory.
+        for (int n = 0; n < classes.size(); n++) if (classes.get(n).getType().equals(launcher.getDefiningClass())) {
+            Method original = classes.get(n).getMethods().iterator().next();
+            List<Instruction> code = new ArrayList<>(); original.getImplementation().getInstructions().forEach(code::add);
+            code.add(code.size() - 1, new ImmutableInstruction11n(Opcode.CONST_4, 4, 0));
+            code.add(code.size() - 1, new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 3, 9, factory));
+            code.add(code.size() - 1, new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 3, 9, factory));
+            classes.set(n, featureClass(launcher.getDefiningClass(), OBJECT, List.of(), define(launcher.getDefiningClass(), "launch", "V", true,
+                    body(12, code.toArray(new Instruction[0])), CONTEXT, OBJECT, OBJECT, OBJECT, text, text, text, text, OBJECT)));
+        }
+        List<Instruction> factoryCode = new ArrayList<>(List.of(string(0, "TrackingInfo.ARG_MODULE_NAME"), string(1, "BrowserLiteIntent.OPEN_WITH_URL"),
+                invoke(method(uri, "parse", uri, text), 12), op(Opcode.MOVE_RESULT_OBJECT, 0), type(Opcode.NEW_INSTANCE, 1, intent),
+                direct(method(intent, "<init>", "V"), 1), virtual(method(intent, "setData", intent, uri), 1, 0), op(Opcode.RETURN_OBJECT, 1)));
+        if (enabled && fault.equals("browser-direct-factory-hook")) factoryCode.add(0, invoke(LINK_OPENER, 7, 12));
+        classes.add(featureClass(factoryOwner, OBJECT, List.of(), define(factoryOwner, "make", intent, true,
+                body(16, factoryCode.toArray(new Instruction[0])), CONTEXT, OBJECT, FEATURE_MEDIA, session, OBJECT, text, text, text, text)));
+        classes.add(featureClass(cta, OBJECT, List.of(featureField(cta, "webUrl", text)), define(cta, "kind", destination, false,
+                body(2, staticField(Opcode.SGET_OBJECT, 0, destination, "web", destination), op(Opcode.RETURN_OBJECT, 0)))));
+        classes.add(featureClass(destination, OBJECT, List.of(new ImmutableField(destination, "web", destination,
+                AccessFlags.PUBLIC.getValue() | AccessFlags.STATIC.getValue(), null, null, null))));
+        String requestOwner = "Lfixture/BrowserAdRequest;";
+        List<Instruction> request = new ArrayList<>(List.of(string(10, "AdClickHandler.openWebLink missing webUri for AD_DESTINATION_WEB"),
+                objectField(Opcode.IGET_OBJECT, 1, 11, requestOwner, "cta", cta), objectField(Opcode.IGET_OBJECT, 7, 1, cta, "webUrl", text)));
+        for (int r = 0; r < 9; r++) if (r != 7) request.add(new ImmutableInstruction11n(Opcode.CONST_4, r, 0));
+        request.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 0, 9, launcher)); request.add(op(Opcode.RETURN_VOID));
+        classes.add(featureClass(requestOwner, OBJECT, List.of(featureField(requestOwner, "cta", cta)), define(requestOwner, "request", "V", false,
+                body(14, request.toArray(new Instruction[0])), FEATURE_MEDIA, OBJECT)));
+        for (String kind : List.of("lead", "ad", "media", "immersive")) {
+            String owner = "Lfixture/Browser" + Character.toUpperCase(kind.charAt(0)) + kind.substring(1) + ";";
+            BrowserCode code = new BrowserCode();
+            boolean lead = kind.equals("lead"), media = kind.equals("media"), immersive = kind.equals("immersive");
+            int[] hook = null;
+            if (lead && enabled && !fault.equals("browser-direct-lead-missing")) hook = code.hook(9,
+                    fault.equals("browser-direct-lead-url") ? 11 : 12, true, fault);
+            int guard = -1, noUrl = -1, factoryAt, opened = -1, failed, done;
+            if (lead) {
+                code.add(string(2, "android.intent.action.VIEW"));
+                for (int r = 0; r < 9; r++) code.add(r == 0 || r == 5 ? new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, r, r == 0 ? 9 : 12)
+                        : new ImmutableInstruction11n(Opcode.CONST_4, r, 0));
+            } else if (immersive) {
+                code.add(string(10, "com.instagram.barcelona.inappbrowser.compose.ImmersiveBrowserScreen (ImmersiveBrowserScreen.kt:97)"));
+                for (int r = 0; r < 9; r++) code.add(r == 0 || r == 5 ? new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, r, r == 0 ? 12 : 16)
+                        : new ImmutableInstruction11n(Opcode.CONST_4, r, 0));
+                if (enabled && fault.equals("browser-direct-immersive-hook")) code.add(invoke(LINK_OPENER, 0, 5));
+            } else {
+                if (media) {
+                    code.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 0, 22));
+                    code.add(objectField(Opcode.IGET_OBJECT, 13, 0, owner, "context", CONTEXT));
+                    code.add(objectField(Opcode.IGET_OBJECT, 14, 0, owner, "opened", state));
+                    code.add(objectField(Opcode.IGET_OBJECT, 1, 0, owner, "post", FEATURE_MEDIA));
+                    code.add(string(10, "AD_DESTINATION_WEB"));
+                } else {
+                    code.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 1, 18));
+                    code.add(type(Opcode.NEW_INSTANCE, 13, "Lcom/facebook/browser/common/viewmode/IABViewModeLaunchConfig$FullScreen;"));
+                    code.add(staticField(Opcode.SGET_OBJECT, 14, "Lcom/facebook/browser/common/viewmode/IABViewModeLaunchConfig$HalfSheet;", "INSTANCE",
+                            "Lcom/facebook/browser/common/viewmode/IABViewModeLaunchConfig$HalfSheet;"));
+                }
+                code.add(objectField(Opcode.IGET_OBJECT, 2, 1, FEATURE_MEDIA, "ctas", "Ljava/util/List;"));
+                code.add(invoke(method("Lfixture/Lists;", "first", OBJECT, "Ljava/util/List;"), 2)); code.add(op(Opcode.MOVE_RESULT_OBJECT, 2));
+                code.add(type(Opcode.CHECK_CAST, 2, cta)); code.add(virtual(method(cta, "kind", destination), 2)); code.add(op(Opcode.MOVE_RESULT_OBJECT, 3));
+                code.add(staticField(Opcode.SGET_OBJECT, 0, destination, "web", destination));
+                guard = code.branch(new ImmutableInstruction22t(Opcode.IF_NE, 3, 0, 1));
+                code.add(objectField(Opcode.IGET_OBJECT, 3, 2, cta, "webUrl", text));
+                noUrl = code.branch(ifEqz(3, 1));
+                for (int r = 4; r <= 12; r++) {
+                    int source = r == 4 ? media ? 13 : 16 : r == 6 ? 1 : r == 9 ? 3 : -1;
+                    code.add(source >= 0 ? new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, r, source) : new ImmutableInstruction11n(Opcode.CONST_4, r, 0));
+                }
+                if (enabled && !fault.equals("browser-direct-" + kind + "-missing")) hook = code.hook(
+                        fault.equals("browser-direct-" + kind + "-context") ? 5 : 4,
+                        fault.equals("browser-direct-" + kind + "-url") ? 10 : 9, false, fault.startsWith("browser-direct-" + kind + "-") ? fault : "");
+            }
+            factoryAt = code.size();
+            code.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, lead || immersive ? 0 : 4, 9, factory));
+            code.add(op(Opcode.MOVE_RESULT_OBJECT, 2));
+            if (lead) code.add(virtual(method(CONTEXT, "startActivity", "V", intent), 9, 2));
+            else code.add(invoke(method("Lfixture/BrowserView;", "show", "V", intent), 2));
+            if (media) {
+                opened = code.size(); code.add(new ImmutableInstruction11n(Opcode.CONST_4, 0, 1));
+                code.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 1, 14));
+                code.add(invoke(method("Lfixture/State;", "set", "V", state, "Z"), 1, 0));
+                code.add(staticField(Opcode.SGET_OBJECT, 2, "Lfixture/Unit;", "INSTANCE", "Lfixture/Unit;")); code.add(op(Opcode.RETURN_OBJECT, 2));
+                failed = code.size(); code.add(new ImmutableInstruction11n(Opcode.CONST_4, 0, 0));
+                int back = code.branch(new com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction20t(Opcode.GOTO_16, 1)); code.to(back, opened + 1);
+                done = opened;
+            } else {
+                if (kind.equals("ad")) { code.add(op(Opcode.RETURN_VOID)); code.add(op(Opcode.RETURN_VOID)); }
+                done = code.size(); code.add(op(Opcode.RETURN_VOID)); failed = done;
+            }
+            if (guard >= 0) { code.to(guard, failed); code.to(noUrl, failed); }
+            if (hook != null) {
+                code.to(hook[1], hook[0] + 6);
+                if (!lead) code.to(hook[2], fault.equals("browser-direct-" + kind + "-double-open") ? factoryAt
+                        : fault.equals("browser-direct-ad-return") && kind.equals("ad") ? done - 1
+                        : fault.equals("browser-direct-media-false") && media ? failed
+                        : fault.equals("browser-direct-media-uninitialized") && media ? factoryAt + 2 : done);
+                else if (fault.equals("browser-direct-lead-double-open")) code.to(hook[2], hook[0] + 6);
+                if (fault.equals("browser-direct-" + kind + "-bypass")) code.to(hook[1], done);
+            }
+            if (fault.equals("browser-direct-omitted-body") && kind.equals("ad")) code.code.add(done, op(Opcode.NOP));
+            String[] parameters = lead ? new String[]{CONTEXT, session, OBJECT, text} : media ? new String[]{OBJECT}
+                    : immersive ? new String[]{CONTEXT, OBJECT, OBJECT, OBJECT, text, text, text, "Lkotlin/jvm/functions/Function0;", "I", "I", "I", "Z"}
+                    : new String[]{CONTEXT, OBJECT, FEATURE_MEDIA, OBJECT, session, OBJECT, "Z", "Z"};
+            List<ImmutableField> fields = media ? List.of(featureField(owner, "context", CONTEXT), featureField(owner, "opened", state), featureField(owner, "post", FEATURE_MEDIA)) : List.of();
+            classes.add(featureClass(owner, OBJECT, fields, define(owner, media ? "invokeSuspend" : "open", media ? OBJECT : "V", lead || immersive,
+                    body(lead ? 13 : 24, code.finish()), parameters)));
+        }
+    }
+
+    /** Branch addresses are calculated after hooks have been placed, independently of the verifier. */
+    private static final class BrowserCode {
+        final List<Instruction> code = new ArrayList<>();
+        final Map<Integer, Integer> jumps = new LinkedHashMap<>();
+        int size() { return code.size(); }
+        void add(Instruction instruction) { code.add(instruction); }
+        int branch(Instruction instruction) { int at = size(); add(instruction); return at; }
+        void to(int from, int target) { jumps.put(from, target); }
+        int[] hook(int context, int url, boolean entry, String fault) {
+            // media-live reuses v14, read on both edges. ad-live reuses v5, which the factory's range
+            // call reads and the ad's return-void completion doesn't, so only the hook-site check sees
+            // it. lead-parameter takes v10, a parameter nothing reads, so only the locals bound does.
+            int start = size(), scratch = 0, link = fault.equals("browser-direct-media-live") && !entry ? 14
+                    : fault.equals("browser-direct-ad-live") && !entry ? 5 : fault.equals("browser-direct-lead-parameter") && entry ? 10 : entry ? 1 : 3;
+            add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, scratch, context));
+            add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, link, url)); add(invoke(LINK_OPENER, scratch, link)); add(op(Opcode.MOVE_RESULT, scratch));
+            int declined = branch(ifEqz(scratch, 1));
+            int success = size();
+            add(entry && !fault.equals("browser-direct-lead-double-open") ? op(Opcode.RETURN_VOID)
+                    : new com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction20t(Opcode.GOTO_16, 1));
+            return new int[]{start, declined, success};
+        }
+        Instruction[] finish() {
+            int[] address = new int[size()];
+            for (int n = 1; n < size(); n++) address[n] = address[n - 1] + code.get(n - 1).getCodeUnits();
+            for (var jump : jumps.entrySet()) {
+                int n = jump.getKey(), delta = address[jump.getValue()] - address[n]; Instruction old = code.get(n);
+                code.set(n, old instanceof com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction two
+                        ? new ImmutableInstruction22t(old.getOpcode(), two.getRegisterA(), two.getRegisterB(), delta)
+                        : old instanceof com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction one ? new ImmutableInstruction21t(old.getOpcode(), one.getRegisterA(), delta)
+                        : new com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction20t(Opcode.GOTO_16, delta));
+            }
+            return code.toArray(new Instruction[0]);
+        }
+    }
+
+    private static final String SEARCH_LIST = "Lfixture/SearchList;";
+    private static final String SEARCH_ITEMS = "Lfixture/SearchItems;";
+    private static final String FEATURE_SEARCH = "Lapp/morphe/extension/hushthreads/search/SearchSuggestions;";
+    private static final ImmutableMethodReference SHOW_SEARCH_CAROUSEL = method(FEATURE_SEARCH, "showCarousel", "Z");
+
+    /**
+     * Search's list builder in 451's shape, as much of it as the carousel contract reads: the
+     * suggestions list read out of a field, its isEmpty() answer, an if-nez that sends an empty list
+     * to the rest of the list and falls into the carousel's path, the carousel added under its key,
+     * and then the rest. v0..v5 are locals, this is v6, the list's items v7 and an unused parameter
+     * v8. v3 is an int only the carousel's path reads, and v4 one only the rest reads, since the
+     * carousel's path writes it before it gets there: a hook taking either is live on one edge alone.
+     * [hooked] puts the hook in with v5, which nothing reads. refresh() is a second method of the
+     * class, where a stray call goes.
+     */
+    private static List<ClassDef> searchCarouselClasses(boolean hooked, String fault) {
+        BrowserCode code = new BrowserCode();
+        code.add(objectField(Opcode.IGET_OBJECT, 0, 6, SEARCH_LIST, "suggested", SHORTCUT_LIST));
+        code.add(new ImmutableInstruction35c(Opcode.INVOKE_INTERFACE, 1, 0, 0, 0, 0, 0, method(SHORTCUT_LIST, "isEmpty", "Z")));
+        code.add(op(Opcode.MOVE_RESULT, 1));
+        code.add(new ImmutableInstruction11n(Opcode.CONST_4, 3, fault.equals("search-carousel-body") ? 2 : 1));
+        code.add(new ImmutableInstruction11n(Opcode.CONST_4, 4, 1));
+        int guard = code.branch(new ImmutableInstruction21t(Opcode.IF_NEZ, 1, 1));
+        List<Integer> leaves = new ArrayList<>();
+        int copies = !hooked || fault.equals("search-carousel-missing") ? 0 : fault.equals("search-carousel-double") ? 2 : 1;
+        int scratch = fault.equals("search-carousel-live-start") ? 3 : fault.equals("search-carousel-live-away") ? 4
+                : fault.equals("search-carousel-parameter") ? 8 : 5;
+        for (int n = 0; n < copies; n++) {
+            code.add(invoke(SHOW_SEARCH_CAROUSEL));
+            // ignored drops the answer and tests a constant, so the carousel always shows.
+            code.add(fault.equals("search-carousel-ignored") ? new ImmutableInstruction11n(Opcode.CONST_4, scratch, 1) : op(Opcode.MOVE_RESULT, scratch));
+            leaves.add(code.branch(new ImmutableInstruction21t(fault.equals("search-carousel-inverted") ? Opcode.IF_NEZ : Opcode.IF_EQZ, scratch, 1)));
+        }
+        code.add(string(2, "standalone_suggested_users"));
+        code.add(virtual(method(SEARCH_ITEMS, "item", "V", OBJECT, OBJECT, "I"), 7, 2, 0, 3));
+        code.add(new ImmutableInstruction11n(Opcode.CONST_4, 4, 0));
+        int away = code.size();
+        code.add(virtual(method(SEARCH_ITEMS, "done", "V", "I"), 7, 4));
+        if (fault.equals("search-carousel-omitted-body")) code.add(op(Opcode.NOP));
+        int end = code.size();
+        code.add(op(Opcode.RETURN_VOID));
+        code.to(guard, away);
+        // target leaves for the return, past the rest of the list.
+        for (int leave : leaves) code.to(leave, fault.equals("search-carousel-target") ? end : away);
+        List<Instruction> refresh = new ArrayList<>();
+        if (fault.equals("search-carousel-stray") || fault.equals("search-carousel-omitted-call")) {
+            refresh.add(invoke(SHOW_SEARCH_CAROUSEL));
+            refresh.add(op(Opcode.MOVE_RESULT, 0));
+        }
+        refresh.add(op(Opcode.RETURN_VOID));
+        return List.of(featureClass(SEARCH_LIST, OBJECT, List.of(featureField(SEARCH_LIST, "suggested", SHORTCUT_LIST)),
+                define(SEARCH_LIST, "build", "V", false, body(9, code.finish()), SEARCH_ITEMS, OBJECT),
+                define(SEARCH_LIST, "refresh", "V", false, body(2, refresh.toArray(new Instruction[0])))));
+    }
+
     /** Independent small host shapes. Every faulty build still passes all structural checks. */
     private static List<ClassDef> featureBuild(boolean patched, Set<String> selected, int mask, String fault) {
         List<ClassDef> classes = new ArrayList<>(patched ? good() : clean(cleanHost()));
@@ -2139,6 +2353,8 @@ public class BadDexFixture {
         classes.add(featureClass("Lfixture/BrowserLauncher;", OBJECT, List.of(), define("Lfixture/BrowserLauncher;", "launch", "V", true,
                 body(12, launcher.toArray(new Instruction[0])), CONTEXT, OBJECT, OBJECT, OBJECT,
                 "Ljava/lang/String;", "Ljava/lang/String;", "Ljava/lang/String;", "Ljava/lang/String;", OBJECT)));
+        directBrowserClasses(classes, browser, fault);
+        classes.addAll(searchCarouselClasses(suggestions || fault.equals("search-carousel-omitted-hook"), fault));
 
         List<Instruction> pigeon = new ArrayList<>(List.of(string(0, "/pigeon_nest"), string(1, "/logging_client_events"),
                 ifEqz(3, fault.equals("pigeon-bypass") ? 6 : 2)));
@@ -2254,6 +2470,8 @@ public class BadDexFixture {
                         "Ljava/lang/String;", OBJECT, "Ljava/lang/String;")));
         classes.add(featureClass(FEATURE_BROWSER, OBJECT, List.of(), define(FEATURE_BROWSER, "open", "Z", true,
                 body(2, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN, 0)), CONTEXT, "Ljava/lang/String;")));
+        classes.add(featureClass(FEATURE_SEARCH, OBJECT, List.of(), define(FEATURE_SEARCH, "showCarousel", "Z", true,
+                body(1, new ImmutableInstruction11n(Opcode.CONST_4, 0, 1), op(Opcode.RETURN, 0)))));
         classes.add(featureClass(FEATURE_TRUST, OBJECT, List.of(), define(FEATURE_TRUST, "originalSigners", SHORTCUT_LIST, true,
                 body(2, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN_OBJECT, 0)), PACKAGE_INFO)));
         classes.add(featureClass(FEATURE_RETURN, OBJECT, List.of(),
@@ -2453,6 +2671,18 @@ public class BadDexFixture {
                 "pigeon-missing", "pigeon-replaced", "pigeon-bypass",
                 "default-missing", "mqtt-missing", "trust-missing", "trust-replaced", "trust-fallback", "status-missing", "status-false")) {
             dexes.put("features-bad-" + fault, featureBuild(true, allFeatures, 7, fault));
+        }
+        for (String fault : List.of("lead-missing", "lead-url", "lead-double-open", "lead-parameter", "ad-missing", "ad-url", "ad-context", "ad-double-open", "ad-return", "ad-bypass", "ad-live",
+                "media-missing", "media-url", "media-context", "media-double-open", "media-false", "media-uninitialized", "media-live", "media-bypass", "factory-hook", "immersive-hook")) {
+            dexes.put("features-bad-browser-direct-" + fault, featureBuild(true, Set.of("openLinksExternally"), 0, "browser-direct-" + fault));
+        }
+        dexes.put("features-bad-browser-direct-omitted-body", featureBuild(true, Set.of(), 0, "browser-direct-omitted-body"));
+        // Search's Follow suggestions carousel, Hide suggested users alone, and then left out.
+        for (String fault : List.of("missing", "inverted", "ignored", "target", "double", "stray", "live-start", "live-away", "parameter", "body")) {
+            dexes.put("features-bad-search-carousel-" + fault, featureBuild(true, Set.of("hideSuggestedUsers"), 0, "search-carousel-" + fault));
+        }
+        for (String fault : List.of("omitted-hook", "omitted-call", "omitted-body")) {
+            dexes.put("features-bad-search-carousel-" + fault, featureBuild(true, Set.of(), 0, "search-carousel-" + fault));
         }
         // Background-return refresh alone, so a failure can only be its own.
         for (String fault : List.of("hot-start-missing", "hot-start-inverted", "reset-missing", "reset-register",

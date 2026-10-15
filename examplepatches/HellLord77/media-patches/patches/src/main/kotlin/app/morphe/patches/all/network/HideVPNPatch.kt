@@ -13,35 +13,37 @@ import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodRefere
 
 private const val EXTENSION_CLASS = "Lapp/morphe/extension/network/patches/NetworkCapabilities;"
 
-val hideVPNPatch = bytecodePatch(
-    name = "Hide VPN",
-    description = "Hides active VPN.",
-    default = false,
-) {
-    extendWith("extensions/network.mpe")
+val hideVPNPatch =
+    bytecodePatch(
+        name = "Hide VPN",
+        description = "Hides active VPN.",
+        default = false,
+    ) {
+        extendWith("extensions/network.mpe")
 
-    execute {
-        HasTransportMethodCallFingerprint.matchAllMethodIndicesForEach {
-            val instruction = getInstruction<FiveRegisterInstruction>(it)
-            val reference = instruction.getReference<MethodReference>()!!
+        execute {
+            HasTransportMethodCallFingerprint.matchAllMethodIndicesForEach {
+                val instruction = getInstruction<FiveRegisterInstruction>(it)
+                val reference = instruction.getReference<MethodReference>()!!
 
-            replaceInstruction(
-                it, BuilderInstruction35c(
-                    Opcode.INVOKE_STATIC,
-                    instruction.registerCount,
-                    instruction.registerC,
-                    instruction.registerD,
-                    instruction.registerE,
-                    instruction.registerF,
-                    instruction.registerG,
-                    ImmutableMethodReference(
-                        EXTENSION_CLASS,
-                        reference.name,
-                        listOf(reference.definingClass) + reference.parameterTypes,
-                        reference.returnType
-                    )
+                replaceInstruction(
+                    it,
+                    BuilderInstruction35c(
+                        Opcode.INVOKE_STATIC,
+                        instruction.registerCount,
+                        instruction.registerC,
+                        instruction.registerD,
+                        instruction.registerE,
+                        instruction.registerF,
+                        instruction.registerG,
+                        ImmutableMethodReference(
+                            EXTENSION_CLASS,
+                            reference.name,
+                            listOf(reference.definingClass) + reference.parameterTypes,
+                            reference.returnType,
+                        ),
+                    ),
                 )
-            )
+            }
         }
     }
-}

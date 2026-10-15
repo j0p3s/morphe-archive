@@ -107,21 +107,44 @@ public final class MediaSave {
         public final int skipped;
         public final int lower;
         public final boolean cancelled;
+        /** Android 9 took the storage permission away, so the pages after the one it stopped were skipped. */
+        public final boolean noPermission;
+        /** A proxy asked for a password, which saves never send, so the pages after that one were skipped. */
+        public final boolean proxyRefused;
 
         BatchResult(int saved, int failed, int skipped, int lower, boolean cancelled) {
+            this(saved, failed, skipped, lower, cancelled, false);
+        }
+
+        BatchResult(int saved, int failed, int skipped, int lower, boolean cancelled, boolean noPermission) {
+            this(saved, failed, skipped, lower, cancelled, noPermission, false);
+        }
+
+        BatchResult(int saved, int failed, int skipped, int lower, boolean cancelled, boolean noPermission,
+                boolean proxyRefused) {
             this.saved = saved;
             this.failed = failed;
             this.skipped = skipped;
             this.lower = lower;
             this.cancelled = cancelled;
+            this.noPermission = noPermission;
+            this.proxyRefused = proxyRefused;
         }
 
         String message(Context application) {
             String text = cancelled
                     ? L10n.f(application, "Carousel cancelled. Saved %1$d. Failed %2$d. Skipped %3$d.", saved, failed, skipped)
                     : L10n.f(application, "Saved %1$d. Failed %2$d. Skipped %3$d.", saved, failed, skipped);
-            return lower == 0 ? text : text + "\n" + L10n.f(application,
-                    "%1$d saved in lower quality than on Threads.", lower);
+            if (lower > 0) text += "\n" + L10n.f(application, "%1$d saved in lower quality than on Threads.", lower);
+            if (noPermission) {
+                text += "\n" + L10n.t(application, "Threads needs the Storage permission to save on Android 9. "
+                        + "Turn it on in Threads' app info under Permissions, then save again.");
+            }
+            if (proxyRefused) {
+                text += "\n" + L10n.t(application, "This network's proxy asks for a password, and saves never send one. "
+                        + "Try again on another network.");
+            }
+            return text;
         }
     }
 
@@ -157,7 +180,7 @@ public final class MediaSave {
             }
             if (snapshot.isEmpty()) return false;
             Context application = ready(context);
-            if (application == null) return false;
+            if (application == null || !permitted(application)) return false;
             DownloadQuality quality = quality();
             boolean compatible = compatibleSaves();
             Date started = new Date();
@@ -166,7 +189,7 @@ public final class MediaSave {
             return launch(application, false, snapshot.size(), save -> {
                 String group = known.hasVideoId() ? known.videoId : String.valueOf(save.id);
                 int saved = 0, failed = 0, skipped = 0, lower = 0;
-                boolean cancelled = false;
+                boolean cancelled = false, noPermission = false, proxyRefused = false;
                 for (int index = 0; index < snapshot.size(); index++) {
                     if (save.cancelled()) {
                         skipped += snapshot.size() - index;
@@ -196,6 +219,7 @@ public final class MediaSave {
                         failure(() -> "a carousel page could not be saved", failure);
                         result = Downloader.Result.fail(Downloader.Status.WRITE_ERROR, "the page could not be saved");
                     }
+                    result = permissionChecked(application, result);
                     final int number = index + 1;
                     final Downloader.Result ended = result;
                     info(() -> "carousel page " + number + " finished: " + ended);
@@ -204,9 +228,22 @@ public final class MediaSave {
                         skipped += snapshot.size() - index;
                         cancelled = true;
                         break;
+                    } else if (result.status == Downloader.Status.NO_PERMISSION) {
+                        // Every page after this one would fetch its file for nothing.
+                        failed++;
+                        skipped += snapshot.size() - index - 1;
+                        noPermission = true;
+                        break;
+                    } else if (result.status == Downloader.Status.PROXY_AUTH) {
+                        // The same proxy would ask every page after this one, and get no password either.
+                        failed++;
+                        skipped += snapshot.size() - index - 1;
+                        proxyRefused = true;
+                        break;
                     } else failed++;
                 }
-                outcome[0] = new BatchResult(saved, failed, skipped, lower, cancelled || save.cancelled());
+                outcome[0] = new BatchResult(saved, failed, skipped, lower, cancelled || save.cancelled(), noPermission,
+                        proxyRefused);
             }, save -> {
                 BatchResult result = outcome[0] != null ? outcome[0]
                         : save.cancelled() ? new BatchResult(0, 0, snapshot.size(), 0, true)
@@ -333,7 +370,7 @@ public final class MediaSave {
 
     // ---------------------------------------------------------------- internals
 
-    /** The renditions whose address {@code HttpURLConnection} can fetch at all. Never null. */
+    /** The renditions whose address {@link MediaConnection} can fetch at all. Never null. */
     private static List<Rendition> usable(List<Rendition> renditions) {
         List<Rendition> usable = new ArrayList<>();
         if (renditions == null) return usable;
@@ -354,7 +391,7 @@ public final class MediaSave {
     private static boolean begin(Context context, List<Rendition> found, boolean videos, boolean images,
             PostDetails details) {
         Context safe = ready(context);
-        if (safe == null) return false;
+        if (safe == null || !permitted(safe)) return false;
         DownloadQuality quality = quality();
         Job job = singleJob(safe, found, videos, images, quality);
         return job != null && start(safe, videos && RenditionPicker.pickVideo(metaOnly(found), quality) != null,
@@ -386,7 +423,14 @@ public final class MediaSave {
         if (chosen == null) {
             final int candidates = renditions.size();
             final String kind = videos && images ? "a file" : videos ? "a video file" : "a picture";
-            failure(() -> "nothing to save: none of the " + candidates + " addresses was " + kind, null);
+            StringBuilder shapes = new StringBuilder();
+            for (int i = 0; i < Math.min(candidates, 6); i++) {
+                Rendition rendition = renditions.get(i);
+                if (i > 0) shapes.append(", ");
+                shapes.append(describe(rendition)).append(' ').append(RenditionPicker.markersOf(rendition.url));
+            }
+            failure(() -> "nothing to save: none of the " + candidates + " addresses was " + kind
+                    + ": " + shapes, null);
             return null;
         }
 
@@ -558,6 +602,9 @@ public final class MediaSave {
     private static Downloader.Result saveFile(Context application, String url, Downloader.Kind kind, String why,
             List<DashManifest.Track> offered, DashManifest.Track writable, DownloadQuality quality,
             MediaStoreWriter writer, Downloader.Progress progress) {
+        // Nothing is fetched for a file the gallery can't take: a carousel's next page, or the
+        // single file after a DASH save that ended without the permission.
+        if (!MediaStoreWriter.mayWrite(application)) return noPermission();
         java.io.File folder = DashSave.workFolder(application);
         if (folder == null) return Downloader.Result.fail(Downloader.Status.WRITE_ERROR, "no cache folder");
         java.io.File file = null;
@@ -611,7 +658,8 @@ public final class MediaSave {
     static MediaUrlPolicy policyFor(Context application) {
         MediaUrlPolicy forced = policyForTests;
         if (forced != null) return forced;
-        return new MediaUrlPolicy(MediaUrlPolicy.DNS, url -> !MediaUrlPolicy.proxied(url) && !onVpn(application));
+        return new MediaUrlPolicy(MediaUrlPolicy.DNS, url -> !MediaUrlPolicy.proxied(url) && !onVpn(application),
+                url -> !onVpn(application));
     }
 
     /**
@@ -681,7 +729,7 @@ public final class MediaSave {
     private static boolean beginDash(Context context, String label, String manifest, List<Rendition> renditions,
             PostDetails details) {
         Context safe = ready(context);
-        if (safe == null) return false;
+        if (safe == null || !permitted(safe)) return false;
         List<Rendition> candidates = new ArrayList<>(renditions);
         DownloadQuality quality = quality();
         boolean compatible = compatibleSaves();
@@ -828,9 +876,15 @@ public final class MediaSave {
     private static Job dashJob(Context application, DashManifest.Track video, DashManifest.Track audio,
             Rendition fallback, DownloadQuality quality) {
         return (writer, progress) -> {
-            Downloader.Result result = DashSave.save(application, video, audio, writer, policyFor(application), cap(),
-                progress);
-            if (result.ok() || fallback == null || result.status == Downloader.Status.CANCELLED) return result;
+            if (!MediaStoreWriter.mayWrite(application)) return noPermission();
+            Downloader.Result result = permissionChecked(application, DashSave.save(application, video, audio, writer,
+                policyFor(application), cap(), progress));
+            // A proxy that wants a password would ask the single file's fetch for one too.
+            if (result.ok() || fallback == null || result.status == Downloader.Status.CANCELLED
+                    || result.status == Downloader.Status.NO_PERMISSION
+                    || result.status == Downloader.Status.PROXY_AUTH) {
+                return result;
+            }
 
             DashManifest.Track better = better(Collections.singletonList(video),
                 RenditionPicker.qualityOf(fallback), quality);
@@ -852,6 +906,37 @@ public final class MediaSave {
 
         Context application = context.getApplicationContext();
         return application != null ? application : context;
+    }
+
+    /**
+     * Whether a save tapped now can reach the gallery. On Android 9 without the storage permission
+     * it can't, and the person saving is told once what to turn on, before anything is fetched,
+     * any slot is taken or any file is made. Nothing asks for the permission or opens Android's
+     * settings: Threads asks for it itself, and a prompt on every tap would nag. Never throws.
+     */
+    static boolean permitted(Context application) {
+        if (MediaStoreWriter.mayWrite(application)) return true;
+        info(() -> "not saved: Android 9 writes to the gallery only with the storage permission, and Threads hasn't it");
+        Feedback.show(application, message(application, Downloader.Status.NO_PERMISSION, null, false), true);
+        return false;
+    }
+
+    private static Downloader.Result noPermission() {
+        return Downloader.Result.fail(Downloader.Status.NO_PERMISSION,
+            "Android 9 writes to the gallery only with the storage permission, and Threads hasn't it");
+    }
+
+    /**
+     * [result], or the missing permission when the save failed and the permission is gone now. The
+     * permission can be taken away while a file comes in, and the write then fails like a full disk
+     * would: told as one, the person saving would try again for nothing.
+     */
+    private static Downloader.Result permissionChecked(Context application, Downloader.Result result) {
+        if (result.ok() || result.status == Downloader.Status.CANCELLED
+                || result.status == Downloader.Status.NO_PERMISSION || MediaStoreWriter.mayWrite(application)) {
+            return result;
+        }
+        return noPermission();
     }
 
     /**
@@ -889,7 +974,7 @@ public final class MediaSave {
         return launch(application, video, 0, save -> {
             observeDetails(known);
             MediaStoreWriter writer = new MediaStoreWriter(application, video, known);
-            Downloader.Result result = job.run(writer, save);
+            Downloader.Result result = permissionChecked(application, job.run(writer, save));
             boolean cancelled = result.status == Downloader.Status.CANCELLED;
             if (result.ok() || cancelled) info(() -> "save finished: " + result);
             else failure(() -> "save finished: " + result, null);
@@ -994,6 +1079,15 @@ public final class MediaSave {
                 return L10n.t(application, "Not saved: that isn't a Threads photo or video");
             case TOO_LARGE:
                 return L10n.t(application, "Not saved: the file is over 512 MB");
+            case TIMED_OUT:
+                return L10n.t(application, "Not saved: the download was too slow to finish. "
+                    + "Try again on a faster connection.");
+            case NO_PERMISSION:
+                return L10n.t(application, "Not saved: Threads needs the Storage permission to save on Android 9. "
+                    + "Turn it on in Threads' app info under Permissions, then save again.");
+            case PROXY_AUTH:
+                return L10n.t(application, "Not saved: this network's proxy asks for a password, and saves never "
+                    + "send one. Try again on another network.");
             case CANCELLED:
                 return L10n.t(application, "Save cancelled");
             default:

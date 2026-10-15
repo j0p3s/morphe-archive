@@ -4,10 +4,11 @@ import app.morphe.patcher.Fingerprint
 import app.morphe.patches.shared.Type
 import com.android.tools.smali.dexlib2.AccessFlags
 
-object GetSplashAdVisibilityFingerprint : Fingerprint(
-    definingClass = $$"Lcom/api/model/baseConfig/Configuration$SplashAd;",
-    name = "getVisibility",
-    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
-    returnType = Type.BOOLEAN,
-    parameters = emptyList(),
-)
+object GetSplashAdVisibilityFingerprint :
+    Fingerprint(
+        definingClass = $$"Lcom/api/model/baseConfig/Configuration$SplashAd;",
+        name = "getVisibility",
+        accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+        returnType = Type.BOOLEAN,
+        parameters = emptyList(),
+    )

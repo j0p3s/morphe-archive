@@ -22,16 +22,20 @@ fun renameFieldReferencePatch(
     fieldReferenceMap: Map<String, Map<String, String>>,
     custom: ((classDef: ClassDef) -> Boolean)? = null,
 ) = bytecodePatch {
-    val rewriter = DexRewriter(object : RewriterModule() {
-        override fun getFieldReferenceRewriter(rewriters: Rewriters): Rewriter<FieldReference?> =
-            Rewriter {
-                ImmutableFieldReference(
-                    it.definingClass,
-                    fieldReferenceMap[it.definingClass]?.get(it.name) ?: it.name,
-                    it.type,
-                )
+    val rewriter =
+        DexRewriter(
+            object : RewriterModule() {
+                override fun getFieldReferenceRewriter(
+                    rewriters: Rewriters
+                ): Rewriter<FieldReference?> = Rewriter {
+                    ImmutableFieldReference(
+                        it.definingClass,
+                        fieldReferenceMap[it.definingClass]?.get(it.name) ?: it.name,
+                        it.type,
+                    )
+                }
             }
-    })
+        )
 
     finalize {
         classDefForEach { classDef ->
@@ -47,25 +51,39 @@ fun renameFieldReferencePatch(
     }
 }
 
-fun obfuscateExtensionFieldReferenceFingerprintPatch(fieldReferenceMap: Map<String, Map<String, Fingerprint>>) =
-    obfuscateExtensionFieldReferenceBlockPatch(
-        fieldReferenceMap.mapValues { (_, fieldMap) ->
-            fieldMap.mapValues { (_, fingerprint) ->
-                { fingerprint.matchSingle().instructionMatches.first().instruction.getReference<FieldReference>()!!.name }
-            }
-        })
+fun obfuscateExtensionFieldReferencePatch(
+    fieldReferenceMap: Map<String, Map<String, BytecodePatchContext.() -> String>>
+) = bytecodePatch {
+    val lazyFieldReferenceMap = mutableMapOf<String, Map<String, String>>()
 
-fun obfuscateExtensionFieldReferenceBlockPatch(fieldReferenceMap: Map<String, Map<String, BytecodePatchContext.() -> String>>) =
-    bytecodePatch {
-        val lazyFieldReferenceMap = mutableMapOf<String, Map<String, String>>()
+    dependsOn(renameFieldReferencePatch(lazyFieldReferenceMap, ClassDef::isExtension))
 
-        dependsOn(renameFieldReferencePatch(lazyFieldReferenceMap, ClassDef::isExtension))
-
-        execute {
-            fieldReferenceMap.forEach { (classDescriptor, fieldMap) ->
-                lazyFieldReferenceMap[classDescriptor] = fieldMap.mapValues { (_, executeBlock) ->
-                    executeBlock(this)
-                }
+    execute {
+        fieldReferenceMap.forEach { (classDescriptor, fieldMap) ->
+            lazyFieldReferenceMap[classDescriptor] = fieldMap.mapValues { (_, executeBlock) ->
+                executeBlock(this)
             }
         }
     }
+}
+
+fun obfuscateExtensionFieldReferencePatch(
+    vararg fieldReferences: Pair<String, Pair<String, Fingerprint>>
+) =
+    obfuscateExtensionFieldReferencePatch(
+        fieldReferences.associate { (classDescriptor, fieldReference) ->
+            (classDescriptor to
+                mapOf(
+                    fieldReference.first to
+                        {
+                            fieldReference.second
+                                .matchSingle()
+                                .instructionMatches
+                                .first()
+                                .instruction
+                                .getReference<FieldReference>()!!
+                                .name
+                        }
+                ))
+        }
+    )

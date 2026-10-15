@@ -196,6 +196,36 @@ public class CategoryPagesSettingsTest {
         assertFalse("Back from the list closes settings", page.closeCategory());
     }
 
+    /**
+     * Before you sign in is the home page's card, like the status card above it. On a category's
+     * page it stood a third of the screen tall above Search (S25, 2026-10-13).
+     */
+    @Test public void theSignInNoticeStaysOnTheHomePage() throws Exception {
+        Settings.SIGN_IN_NOTICE_HIDDEN.save(false);
+        Settings.CATEGORY_PAGES.save(true);
+        open();
+        PreferenceScreen screen = page.getPreferenceScreen();
+        Preference notice = screen.findPreference(HushgramPreferenceFragment.SIGN_IN_NOTICE_KEY);
+        assertNotNull(notice);
+        tap(categoryRow("Feed"));
+        assertNull("the notice is on a category's page",
+                screen.findPreference(HushgramPreferenceFragment.SIGN_IN_NOTICE_KEY));
+        assertTrue(page.closeCategory());
+        ShadowLooper.idleMainLooper();
+        assertSame("the home page has it back", notice,
+                screen.findPreference(HushgramPreferenceFragment.SIGN_IN_NOTICE_KEY));
+        assertEquals("right under the status card", HushgramPreferenceFragment.SIGN_IN_NOTICE_KEY,
+                screen.getPreference(1).getKey());
+
+        assertTrue(notice.getOnPreferenceClickListener().onPreferenceClick(notice));
+        assertTrue(Settings.SIGN_IN_NOTICE_HIDDEN.savedValue());
+        tap(categoryRow("Feed"));
+        assertTrue(page.closeCategory());
+        ShadowLooper.idleMainLooper();
+        assertNull("a notice hidden by a tap stays hidden",
+                screen.findPreference(HushgramPreferenceFragment.SIGN_IN_NOTICE_KEY));
+    }
+
     @Test public void searchLooksThroughEveryCategoryFromAPage() throws Exception {
         Settings.CATEGORY_PAGES.save(true);
         open();
@@ -235,6 +265,46 @@ public class CategoryPagesSettingsTest {
         assertTrue(input.hasFocus());
     }
 
+    /**
+     * Back during a search ends the search on the page it started from. From a category's page it
+     * used to drop the category under the search: the matches stayed, and the status card and the
+     * list switch came in above the field (S25, 2026-10-13).
+     */
+    @Test public void backDuringASearchEndsItOnThePageItStartedFrom() throws Exception {
+        openDialog();
+        tap(categoryRow("Feed"));
+        layoutPage();
+        EditText input = page.getView().findViewWithTag("hushgram-settings-search");
+        assertNotNull(input);
+        touchMode(input, true);
+        assertTrue(input.requestFocus());
+        layoutPage();
+        input.setText("Hide ads");
+        layoutPage();
+        assertTrue(shown(PreferenceCategory.class).contains("Ads and privacy"));
+
+        assertTrue("Back ends the search", page.closeCategory());
+        layoutPage();
+        assertEquals("the page the search started from is back", List.of("Feed"), shown(PreferenceCategory.class));
+        input = page.getView().findViewWithTag("hushgram-settings-search");
+        assertNotNull(input);
+        assertEquals("", input.getText().toString());
+        LinearLayout bar = (LinearLayout) ((LinearLayout) dialog.getView()).getChildAt(0);
+        assertEquals("Feed", ((TextView) bar.getChildAt(1)).getText().toString());
+
+        assertTrue("the next Back leaves the category", page.closeCategory());
+        layoutPage();
+        assertTrue(shown(Preference.class).contains("Feed"));
+
+        page.searchSettings("Hide ads");
+        layoutPage();
+        assertFalse("the search took the category rows off", shown(Preference.class).contains("Feed"));
+        assertTrue("Back ends a search started from the list too", page.closeCategory());
+        layoutPage();
+        assertTrue(shown(Preference.class).contains("Feed"));
+        assertFalse("and the Back after it closes settings", page.closeCategory());
+    }
+
     @Test public void everyCategoryStartsAtSearchOutsideTouchModeEvenFromALaterOverviewRow() throws Exception {
         PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
         openDialog();
@@ -255,6 +325,75 @@ public class CategoryPagesSettingsTest {
         }
     }
 
+    /**
+     * The two views that hold the focus for touch aren't stops under a keyboard. Left focusable, the
+     * screen's root took the focus a field gave up, the arrows couldn't leave it, and its focus
+     * highlight grayed the whole screen (S25, 2026-10-13).
+     */
+    @Test public void aKeyboardNeverLandsOnTheViewsThatHoldFocusForTouch() throws Exception {
+        openDialog();
+        layoutPage();
+        View root = dialog.getView();
+        View body = page.getView();
+        ListView list = body.findViewById(android.R.id.list);
+        touchMode(body, true);
+        assertTrue(root.isFocusableInTouchMode());
+        assertTrue(body.isFocusableInTouchMode());
+        assertFalse(root.getDefaultFocusHighlightEnabled());
+        assertFalse(body.getDefaultFocusHighlightEnabled());
+        assertTrue("touch keeps the focus off the rows: " + root.findFocus(), body.requestFocus() && body.isFocused());
+
+        touchMode(body, false);
+        assertFalse(root.isFocusable());
+        assertFalse(body.isFocusable());
+        assertTrue("the focus a rest gives up goes to the rows: " + root.findFocus(), list.hasFocus());
+
+        EditText input = body.findViewWithTag("hushgram-settings-search");
+        assertNotNull(input);
+        assertTrue(input.requestFocus());
+        input.clearFocus();
+        assertTrue("a field giving its focus up lands in the rows: " + root.findFocus(), list.hasFocus());
+
+        tap(categoryRow("Feed"));
+        layoutPage();
+        assertFalse(body.isFocusable());
+        assertTrue("a page opened by keyboard starts in its rows: " + root.findFocus(), list.hasFocus());
+
+        touchMode(body, true);
+        assertTrue(root.isFocusableInTouchMode());
+        assertTrue(body.isFocusableInTouchMode());
+    }
+
+    /**
+     * A search that starts brings its field to the top of the list. Under the status card and the
+     * sign-in notice it sat two thirds down a phone's screen, so the matches came up behind the
+     * keyboard (S25, 2026-10-13).
+     */
+    @Test public void startingASearchBringsItsFieldToTheTopOfTheList() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        openDialog();
+        ListView list = page.getView().findViewById(android.R.id.list);
+        EditText input = page.getView().findViewWithTag("hushgram-settings-search");
+        assertNotNull(input);
+        touchMode(input, true);
+        assertTrue(input.requestFocus());
+        input.setText("hide");
+        layoutPage();
+        Preference field = page.getPreferenceScreen().findPreference("hushgram_settings_search");
+        int at = -1;
+        for (int i = 0; i < list.getAdapter().getCount(); i++) if (list.getAdapter().getItem(i) == field) at = i;
+        assertTrue("the field sits under other rows to begin with: " + at, at > 0);
+        assertEquals(at, list.getFirstVisiblePosition());
+        assertEquals(list.getPaddingTop(), list.getChildAt(0).getTop());
+        assertTrue("moving the list lost typing focus: " + page.getView().findFocus(), input.hasFocus());
+
+        list.setSelectionFromTop(0, 0);
+        layoutPage();
+        input.setText("hide s");
+        layoutPage();
+        assertEquals("typing on leaves the list where the reader put it", 0, list.getFirstVisiblePosition());
+    }
+
     private static void touchMode(View view, boolean value) {
         Object root = org.robolectric.util.ReflectionHelpers.callInstanceMethod(view, "getViewRootImpl");
         assertNotNull("The test must change the attached window's touch mode", root);
@@ -263,25 +402,38 @@ public class CategoryPagesSettingsTest {
         assertEquals(value, view.isInTouchMode());
     }
 
-    @Test public void aCategoryShowsItsPendingRestartAndHidesItWhenTheChangeIsUndone() throws Exception {
-        open();
+    /**
+     * As the page's first row, Restart now was two screens above a switch far down the Tab bar page,
+     * and putting it in moved the rows under the finger (S25, 2026-10-13). It's the screen's bar
+     * under the page now: in view wherever the page is scrolled, and no row goes in or out.
+     */
+    @Test public void aPendingRestartShowsItsBarUnderTheCategoryAndMovesNoRow() throws Exception {
+        openDialog();
         Preference status = page.getPreferenceScreen().getPreference(0);
+        View bar = dialog.getView().findViewById(SettingsDialog.RESTART_ID);
         tap(categoryRow("Feed"));
+        layoutPage();
         assertNull(status.getParent());
+        assertEquals("nothing waits on a restart yet", View.GONE, bar.getVisibility());
+        ListView list = page.getView().findViewById(android.R.id.list);
+        int rows = list.getAdapter().getCount();
         SwitchPreference following = (SwitchPreference) page.findPreference(Settings.START_ON_FOLLOWING.key);
         boolean before = following.isChecked();
         following.setChecked(!before);
-        ShadowLooper.idleMainLooper();
-        assertSame(page.getPreferenceScreen(), status.getParent());
-        assertSame(status, page.getPreferenceScreen().getPreference(0));
-        assertEquals("hushgram_settings_search", page.getPreferenceScreen().getPreference(1).getKey());
-        assertTrue(status.isSelectable());
-        assertNotNull(status.getOnPreferenceClickListener());
-        assertTrue(status.getSummary().toString().contains("Tap to restart it now."));
+        layoutPage();
+        assertEquals("the bar offers the restart", View.VISIBLE, bar.getVisibility());
+        assertTrue(bar.isClickable());
+        assertEquals("Some changes apply when Instagram restarts. Tap to restart it now.",
+                ((android.widget.TextView) bar).getText().toString());
+        assertTrue("under the page, not over its rows",
+                bar.getTop() >= dialog.getView().findViewById(SettingsDialog.CONTAINER_ID).getBottom());
+        assertNull("no row goes in above the one that was flipped", status.getParent());
+        assertEquals(rows, list.getAdapter().getCount());
+        assertEquals("hushgram_settings_search", page.getPreferenceScreen().getPreference(0).getKey());
         following.setChecked(before);
-        ShadowLooper.idleMainLooper();
-        assertFalse(status.isSelectable());
-        assertNull("a resolved restart no longer occupies the category", status.getParent());
+        layoutPage();
+        assertEquals("a resolved restart takes the bar off", View.GONE, bar.getVisibility());
+        assertEquals(rows, list.getAdapter().getCount());
     }
 
     @Test public void recreationKeepsTheCategoryTitleAndScrollWithoutSavingTheSearchText() throws Exception {

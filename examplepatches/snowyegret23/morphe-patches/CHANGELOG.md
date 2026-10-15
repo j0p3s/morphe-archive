@@ -1,3 +1,16 @@
+## [1.4.0](https://github.com/snowyegret23/morphe-patches/compare/v1.3.0...v1.4.0) (2026-10-14)
+
+### ✨ New Features
+
+* **minor:** improve live catch-up and add buffer controls ([d3a142a](https://github.com/snowyegret23/morphe-patches/commit/d3a142ad15387e08d96f0c5ded48175e770977fc))
+
+## 1.3.0 (2026-10-14)
+
+### 새 기능과 개선
+
+- 소리 평준화와 100–300% 추가 증폭을 추가했습니다. Morphe 설정의 ‘소리’에서 각각 켜고 조절할 수 있습니다.
+- 채팅 글자 크기와 소리 증폭 배율을 −/+ 버튼으로 5%씩 조절할 수 있습니다.
+
 ## 1.2.0 (2026-10-12)
 
 ### 지원 버전 추가

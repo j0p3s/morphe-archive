@@ -28,7 +28,8 @@ fun isNotExtension(@Suppress("UNUSED_PARAMETER") method: Method, classDef: Class
 fun Method.getRegisterName(register: Int): String {
     val firstParameterRegister = if (implementation != null) p0Register else 0
 
-    return if (register >= firstParameterRegister) "p${register - firstParameterRegister}" else "v$register"
+    return if (register >= firstParameterRegister) "p${register - firstParameterRegister}"
+    else "v$register"
 }
 
 fun ByteArray.indexOfPatternIn(file: RandomAccessFile, mask: ByteArray = ByteArray(0)): Long {
@@ -84,9 +85,14 @@ fun InputStream.limitNBytes(n: Int): InputStream {
             if (left <= 0) -1 else super.read().also { if (it >= 0) left -= it }
 
         override fun read(b: ByteArray, off: Int, len: Int): Int {
-            return if (left <= 0) -1 else super.read(
-                b, off, minOf(len, left)
-            ).also { if (it >= 0) left -= it }
+            return if (left <= 0) -1
+            else
+                super.read(
+                        b,
+                        off,
+                        minOf(len, left),
+                    )
+                    .also { if (it >= 0) left -= it }
         }
     }
 }
@@ -112,6 +118,7 @@ fun ResourcePatchContext.writeResources(
     resourceGroup: ResourceGroup,
 ) {
     writeResources(
-        *streams.map(::ByteArrayInputStream).toTypedArray(), resourceGroup = resourceGroup
+        *streams.map(::ByteArrayInputStream).toTypedArray(),
+        resourceGroup = resourceGroup,
     )
 }

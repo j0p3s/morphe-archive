@@ -18,6 +18,7 @@ import android.graphics.ColorMatrixColorFilter;
 import android.graphics.LinearGradient;
 import android.graphics.Outline;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -41,6 +42,7 @@ import android.view.ViewGroup;
 import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.animation.AnimationUtils;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
@@ -72,8 +74,16 @@ import app.hushgram.extension.shared.settings.HushgramPause;
  * inside a pill, a little extra height for the gap under the pill, and a background that draws the
  * pill: the content behind it blurred ({@link RenderEffect}, Android 12 and newer), a tint taken
  * from the colour Instagram gave the bar, a soft highlight and a hairline edge. The tab Instagram
- * marks selected gets a lighter capsule that slides to the next one. Without blur, or with
+ * marks selected gets a lighter capsule that slides to the next one. With Slide across the tabs on, a
+ * finger slid along the pill carries the capsule and opens the tab it lifts over ({@link GlassTabSlide}).
+ * Without blur, or with
  * Android's blur unavailable, the pill is the same tint, more opaque.
+ *
+ * <p>The liquid look (#65) rounds the pill and the capsule fully, moves Search into a glass circle of its own
+ * beside the pill, and spreads the other tabs over what's left, all by translation, so nothing is laid out
+ * again. Both shapes share the one blurred backdrop, clipped to them. With Hide the tab bar as you scroll off,
+ * a list scrolled down shrinks the pill to a circle round the tab you're on, next to Search's circle
+ * ({@link GlassScrollHide}), and the other tabs fade out and take no touches until it grows back.
  *
  * <p>Sizes follow the pill on Instagram's iPhone tab bar, as proportions of the screen's width
  * (see the constants), so they carry to any width, and are held to sensible limits on narrow and
@@ -106,6 +116,8 @@ public final class GlassTabBar {
     /** The strip Instagram lays over a reel's seek bar to widen it for touches, and the seek bar. */
     static final String TOUCH_STRIP = "clips_expanded_touch_view";
     static final String SCRUBBER = "scrubber";
+    /** The Search tab, a child of the bar, which the liquid look puts in a circle of its own (#65). */
+    static final String SEARCH_TAB = "search_tab";
 
     private static final java.util.HashMap<String, Integer> IDS = new java.util.HashMap<>();
 
@@ -365,6 +377,29 @@ public final class GlassTabBar {
     static final String COUNT_TAB_BACKGROUND = "Tab's own capsule taken off";
     /** Counted each time Instagram's touch strip for a reel's seek bar is moved back onto the seek bar. */
     static final String COUNT_STRIP_KEPT = "Seek bar's touch strip kept on the reel";
+    /** Counted each time the navigation bar's height is answered 0 so the screens run behind the gesture handle (#144). */
+    static final String COUNT_NAV_BEHIND = "Screens run behind the gesture handle";
+    /** Counted each time the pill shows or hides and the window's insets are asked for again. */
+    static final String COUNT_INSETS_AGAIN = "Insets asked again for the pill";
+    /** Counted once for each bar whose Search tab the liquid look puts in a circle of its own (#65). */
+    static final String COUNT_SEARCH_APART = "Search put in its own circle";
+
+    /** Liquid look (#65): the clear gap between the pill and Search's circle beside it. */
+    static final int SEARCH_GAP_DP = 8;
+    /** How long the liquid bar takes to shrink to its compact row, and to grow back. */
+    static final long COMPACT_MS = 260;
+
+    /**
+     * The activity in front, from its resume to its pause: the window whose screens Instagram pads by
+     * the navigation bar's height when its insets listener runs. Main thread.
+     */
+    private static WeakReference<Activity> front = new WeakReference<>(null);
+    /**
+     * The navigation bar's height Instagram would have padded its screens by when it was last answered
+     * 0 for a floating pill, or 0 when it was given through. The pill makes this much room of its own
+     * under itself. Main thread, as Instagram's insets listener is.
+     */
+    private static int navTaken;
 
     static final String TAG = "HushGlass";
     private static final boolean DIAGNOSE = false;
@@ -401,16 +436,73 @@ public final class GlassTabBar {
             if (!Utils.settingsReady() || !Settings.GLASS_TAB_BAR.get()) return;
             View found = find(activity.getWindow().getDecorView(), TAB_BAR);
             if (!(found instanceof ViewGroup) || !(found.getParent() instanceof FrameLayout)) return;
-            if (applied.containsKey(found)) return;
+            if (applied.containsKey(found)) {
+                WeakReference<Glass> held = applied.get(found);
+                Glass known = held == null ? null : held.get();
+                if (known != null) known.cameToTheFront();
+                return;
+            }
             Glass glass = new Glass((ViewGroup) found);
             applied.put(found, new WeakReference<>(glass));
             glass.watchScrolling(activity.getWindow());
+            glass.watchSlides(activity.getWindow());
             HookStatus.invoked(FamilyNames.GLASS_TAB_BAR);
             Logger.printDebug(() -> "Glass tab bar: restyled the tab bar");
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.GLASS_TAB_BAR, "tab bar", failure);
             diagnose("apply failed", failure);
         }
+    }
+
+    /**
+     * Called through FullScreenBars with the navigation bar's height Instagram's insets listener is
+     * about to keep for its screens (#144). Instagram pads its screens by it, which left a strip of its
+     * own color under a floating pill around the gesture handle. While a floating glass bar shows in
+     * the front window the answer is 0, so the screens run to the bottom edge, and the pill keeps itself
+     * above the handle by [height] ({@link #navRoom}). Screens without the bar showing (a chat's
+     * composer, settings, the camera), another activity in front, the float switch off, Pause or
+     * settings not ready all get [height] as it came.
+     */
+    public static int navBarHeight(int height) {
+        if (height <= 0 || !floatingBarInFront()) {
+            navTaken = 0;
+            return height;
+        }
+        navTaken = height;
+        HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_NAV_BEHIND);
+        return 0;
+    }
+
+    /** Whether the front activity shows a floating glass bar: restyled, floating, and shown. */
+    static boolean floatingBarInFront() {
+        if (!Utils.settingsReady() || HushgramPause.isPaused()) return false;
+        Activity activity = front.get();
+        if (activity == null) return false;
+        for (Map.Entry<View, WeakReference<Glass>> entry : applied.entrySet()) {
+            WeakReference<Glass> held = entry.getValue();
+            Glass glass = held == null ? null : held.get();
+            if (glass != null && glass.floatsShownIn(activity)) return true;
+        }
+        return false;
+    }
+
+    /** The room a floating pill makes under itself for the navigation bar: the height Instagram was answered 0 for. */
+    static int navRoom(boolean floating) {
+        return floating ? navTaken : 0;
+    }
+
+    static void nowInFront(Activity activity) {
+        front = new WeakReference<>(activity);
+    }
+
+    static void nowBehind(Activity activity) {
+        if (front.get() == activity) front = new WeakReference<>(null);
+    }
+
+    /** Tests start with no activity in front and nothing taken from the navigation bar. */
+    static void resetForTests() {
+        front = new WeakReference<>(null);
+        navTaken = 0;
     }
 
     static void diagnose(String what, @Nullable Throwable failure) {
@@ -502,6 +594,46 @@ public final class GlassTabBar {
     }
 
     /**
+     * Splits [pill] for the liquid look (#65): Search's circle, as wide as the pill is tall, at the pill's left
+     * end when [onLeft] (a right-to-left bar) or at its right end, and the rest, less [gap], for the other tabs.
+     * Fills [holder] and [circle] and returns true. With no room beside the circle for two circles' width,
+     * [holder] is the whole pill, [circle] is empty and it returns false.
+     */
+    static boolean splitOffSearch(RectF pill, float gap, boolean onLeft, RectF holder, RectF circle) {
+        float size = pill.height();
+        if (size <= 0f || pill.width() - size - gap < 2f * size) {
+            holder.set(pill);
+            circle.setEmpty();
+            return false;
+        }
+        if (onLeft) {
+            circle.set(pill.left, pill.top, pill.left + size, pill.bottom);
+            holder.set(circle.right + gap, pill.top, pill.right, pill.bottom);
+        } else {
+            circle.set(pill.right - size, pill.top, pill.right, pill.bottom);
+            holder.set(pill.left, pill.top, circle.left - gap, pill.bottom);
+        }
+        return true;
+    }
+
+    /**
+     * The pill holding the tabs on its way to the compact row (#65), put in [into]: [holder] itself at [share]
+     * 0, and at 1 a circle as wide as it is tall at its right end when [fromRight] (a right-to-left bar) or at
+     * its left end.
+     */
+    static void shrunkHolder(RectF holder, boolean fromRight, float share, RectF into) {
+        float size = Math.min(holder.height(), holder.width());
+        float left = fromRight ? holder.right - size : holder.left;
+        into.set(holder.left + (left - holder.left) * share, holder.top,
+                holder.right + (left + size - holder.right) * share, holder.bottom);
+    }
+
+    /** The middle of the [index]th of [count] tabs spread evenly from [from] to [to]. */
+    static float slotMiddle(float from, float to, int count, int index) {
+        return from + (to - from) * (index + 0.5f) / count;
+    }
+
+    /**
      * How far the pill is kept clear of each side: 5% of the width, at least 16dp, and enough on a
      * wide screen that the pill is no wider than {@link #MAX_PILL_DP}.
      */
@@ -561,12 +693,14 @@ public final class GlassTabBar {
 
     static final class Watcher implements Application.ActivityLifecycleCallbacks {
         @Override public void onActivityResumed(@NonNull Activity activity) {
+            nowInFront(activity);
             apply(activity);
         }
 
         @Override public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle state) { }
         @Override public void onActivityStarted(@NonNull Activity activity) { }
         @Override public void onActivityPaused(@NonNull Activity activity) {
+            nowBehind(activity);
             restoreAll();
         }
         @Override public void onActivityStopped(@NonNull Activity activity) { }
@@ -607,7 +741,7 @@ public final class GlassTabBar {
     }
 
     private static final class Glass implements ViewTreeObserver.OnPreDrawListener,
-            View.OnAttachStateChangeListener {
+            View.OnAttachStateChangeListener, GlassTabSlide.Host, GlassScrollHide.Shrinker {
         private final ViewGroup bar;
         private final float density;
         private final boolean blurWanted;
@@ -615,10 +749,29 @@ public final class GlassTabBar {
         private final HapticStyle hapticStyle;
         private final GlassOpacity opacity;
         private final GlassHeight height;
-        /** How much higher the pill sits, in pixels: the room under a floating pill. */
+        /** How much higher the pill sits, in pixels, by the lift chosen. */
         private final int lift;
-        /** Hides the bar while a list scrolls down, when that switch is on; otherwise null. */
+        /**
+         * The room under the pill, as of the last frame: the lift, plus the navigation bar's height while
+         * Instagram is answered 0 for it, so the pill stays above the gesture handle (#144).
+         */
+        private int room;
+        /**
+         * Whether Instagram was last asked for its insets with this pill floating and shown in front, or
+         * null when it's to be asked again. Instagram only reads the navigation bar's height when the
+         * window's insets go round, so a pill that shows or hides has them sent round again.
+         */
+        @Nullable private Boolean insetsShown;
+        /**
+         * Hides the bar while a list scrolls down, with that switch on, and on Reels after the wait picked
+         * for it (#170). Null with the switch off and the wait on Never.
+         */
         @Nullable private final GlassScrollHide scrollHide;
+        /** Carries the capsule along with a finger slid across the pill, with that switch on (#136). Null with it off. */
+        @Nullable private final GlassTabSlide slide;
+        /** Where a sliding finger holds the capsule's middle, in the bar's pixels, or NaN while none does. */
+        private float dragX = Float.NaN;
+        private final RectF touchArea = new RectF();
         /** Whether this slide has had its tick: one tick for a change of tab, however many tabs the capsule crosses. */
         private boolean tickedThisSlide;
         private final boolean floating;
@@ -650,6 +803,21 @@ public final class GlassTabBar {
         private int reelsLeft, reelsRight;
         private final Rect reelsRect = new Rect();
         private final int[] barOnScreen = new int[2];
+        /** The liquid look (#65): a round pill and highlight, Search in a circle of its own, and the compact row on a scroll. */
+        private final boolean liquid;
+        /** How far the liquid bar has shrunk to its compact row: 0 is the whole bar, 1 the tab you're on and Search. */
+        private float compact;
+        @Nullable private ValueAnimator compacting;
+        /** The translation and alpha the liquid look gave each tab, and the tabs it put out of a touch's reach, so only what it did is undone. */
+        private final WeakHashMap<View, Float> shifted = new WeakHashMap<>();
+        private final WeakHashMap<View, Float> faded = new WeakHashMap<>();
+        private final WeakHashMap<View, Boolean> tucked = new WeakHashMap<>();
+        /** Where the liquid look puts the tabs, in the bar's pixels, as of the last frame: the pill holding them and Search's circle, empty without one. */
+        private final RectF holder = new RectF();
+        private final RectF circle = new RectF();
+        private final RectF whole = new RectF();
+        private final java.util.ArrayList<View> order = new java.util.ArrayList<>();
+        private boolean countedApart;
 
         Glass(ViewGroup bar) {
             this.bar = bar;
@@ -661,8 +829,18 @@ public final class GlassTabBar {
             this.opacity = Settings.GLASS_TAB_BAR_OPACITY.get();
             this.height = Settings.GLASS_TAB_BAR_HEIGHT.get();
             this.lift = liftPx(Settings.GLASS_TAB_BAR_LIFT.get(), floating, density);
-            this.scrollHide = Settings.GLASS_TAB_BAR_HIDE_ON_SCROLL.get()
-                    ? new GlassScrollHide(bar, () -> !HushgramPause.isPaused()) : null;
+            this.room = lift;
+            this.liquid = Settings.GLASS_TAB_BAR_LIQUID.get();
+            boolean hideOnScroll = Settings.GLASS_TAB_BAR_HIDE_ON_SCROLL.get();
+            // The liquid look shrinks the bar as a list scrolls down, unless a scroll is to take it away altogether.
+            boolean shrinkOnScroll = liquid && !hideOnScroll;
+            GlassReelsHide hideOnReels = Settings.GLASS_TAB_BAR_REELS_HIDE.get();
+            long reelsMillis = hideOnReels == null ? 0L : hideOnReels.millis;
+            this.scrollHide = hideOnScroll || shrinkOnScroll || reelsMillis > 0
+                    ? new GlassScrollHide(bar, () -> !HushgramPause.isPaused(), hideOnScroll || shrinkOnScroll, reelsMillis,
+                            shrinkOnScroll ? this : null) : null;
+            this.slide = Settings.GLASS_TAB_BAR_SLIDE.get()
+                    ? new GlassTabSlide(bar, this, () -> !HushgramPause.isPaused()) : null;
             this.base = baseColor(bar.getBackground());
             this.originalLeft = bar.getPaddingLeft();
             this.originalRight = bar.getPaddingRight();
@@ -697,6 +875,209 @@ public final class GlassTabBar {
             if (scrollHide != null) scrollHide.restoreNow();
         }
 
+        void watchSlides(Window window) {
+            if (slide == null) return;
+            try {
+                GlassTabSlide.install(window, slide);
+                HookStatus.counted(FamilyNames.GLASS_TAB_BAR, GlassTabSlide.COUNT_WATCHING);
+            } catch (Throwable failure) {
+                HookStatus.threw(FamilyNames.GLASS_TAB_BAR, "tab slide", failure);
+            }
+        }
+
+        @Override public boolean onPill(float x, float y) {
+            // The compact row has no tabs to slide across.
+            return compact <= 0f && pill.pillBounds(touchArea) && touchArea.contains(x, y);
+        }
+
+        /**
+         * Shrinks the liquid bar to its compact row as a list scrolls down, or grows it back (#65), sliding over
+         * {@link #COMPACT_MS} unless [now] or the phone's animations are off. It won't shrink without the look,
+         * while paused, with no tab marked selected or with Search selected, which has no tab to shrink to.
+         */
+        @Override public boolean shrink(boolean on, boolean now) {
+            if (on) {
+                if (!liquidNow()) return false;
+                View selected = selectedTab();
+                if (selected == null || selected == searchTab()) return false;
+            }
+            float target = on ? 1f : 0f;
+            ValueAnimator running = compacting;
+            compacting = null;
+            if (running != null) running.cancel();
+            if (now || !animationsOn() || compact == target) {
+                compact = target;
+                bar.invalidate();
+                return true;
+            }
+            ValueAnimator animator = ValueAnimator.ofFloat(compact, target);
+            animator.setDuration(COMPACT_MS);
+            animator.setInterpolator(new DecelerateInterpolator());
+            animator.addUpdateListener(step -> {
+                compact = (float) step.getAnimatedValue();
+                bar.invalidate();
+            });
+            compacting = animator;
+            animator.start();
+            return true;
+        }
+
+        /** Whether the liquid look shows right now: switched on, and HushGram not paused. */
+        private boolean liquidNow() {
+            return liquid && !HushgramPause.isPaused();
+        }
+
+        /** Instagram's Search tab among the bar's children while it shows, or null. */
+        @Nullable
+        private View searchTab() {
+            int search = id(bar.getContext(), SEARCH_TAB);
+            if (search == 0) return null;
+            for (int i = 0; i < bar.getChildCount(); i++) {
+                View child = bar.getChildAt(i);
+                if (child.getId() == search) return child.getVisibility() == View.VISIBLE ? child : null;
+            }
+            return null;
+        }
+
+        /**
+         * Works out the liquid look's shapes for the pill [pillArea] into {@link #holder} and {@link #circle}:
+         * Search's circle beside the pill holding the other tabs when [search] shows and there's room, or the
+         * whole pill holding every tab. Says whether Search got its circle.
+         */
+        private boolean liquidShapes(RectF pillArea, @Nullable View search) {
+            boolean rtl = bar.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+            if (search != null && splitOffSearch(pillArea, dp(SEARCH_GAP_DP), rtl, holder, circle)) return true;
+            holder.set(pillArea);
+            circle.setEmpty();
+            return false;
+        }
+
+        /**
+         * Puts the tabs where the liquid look draws them (#65), by their translation only, so nothing is laid
+         * out again: Search in its circle and the other tabs spread across the pill beside it. On the way to
+         * the compact row the tab you're on slides into a circle at the pill's start while the others fade, and
+         * once there they're put out of a touch's reach. With the look off or HushGram paused, whatever this
+         * moved goes back.
+         */
+        private void arrangeTabs() {
+            if (!liquidNow() || !pill.pillBounds(whole)) {
+                if (!shifted.isEmpty() || !faded.isEmpty() || !tucked.isEmpty()) putTabsBack();
+                return;
+            }
+            View search = searchTab();
+            boolean apart = liquidShapes(whole, search);
+            if (apart && !countedApart) {
+                countedApart = true;
+                HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_SEARCH_APART);
+            }
+            boolean rtl = bar.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+            View selected = selectedTab();
+            order.clear();
+            for (int i = 0; i < bar.getChildCount(); i++) {
+                View tab = bar.getChildAt(i);
+                if (apart && tab == search) continue;
+                if (tab.getVisibility() == View.VISIBLE || tucked.containsKey(tab)) order.add(tab);
+            }
+            java.util.Collections.sort(order, (one, other) -> Integer.compare(one.getLeft(), other.getLeft()));
+            float inner = dp(INNER_DP);
+            float from = apart && rtl ? holder.left + inner : bar.getPaddingLeft();
+            float to = apart && !rtl ? holder.right - inner : bar.getWidth() - bar.getPaddingRight();
+            float size = Math.min(holder.height(), holder.width());
+            float start = rtl ? holder.right - size / 2f : holder.left + size / 2f;
+            for (int k = 0; k < order.size(); k++) {
+                View tab = order.get(k);
+                float middle = (tab.getLeft() + tab.getRight()) / 2f;
+                float wanted = apart ? slotMiddle(from, to, order.size(), k) : middle;
+                float alpha = 1f;
+                boolean tuck = false;
+                if (compact > 0f) {
+                    if (tab == selected) {
+                        wanted += (start - wanted) * compact;
+                    } else {
+                        alpha = 1f - compact;
+                        tuck = compact >= 1f;
+                    }
+                }
+                place(tab, wanted - middle, alpha, tuck);
+            }
+            if (apart) place(search, circle.centerX() - (search.getLeft() + search.getRight()) / 2f, 1f, false);
+            order.clear();
+        }
+
+        /** Gives [tab] the liquid look's [shift] and [alpha], and takes it out of a touch's reach when [tuck]. */
+        private void place(View tab, float shift, float alpha, boolean tuck) {
+            float x = Math.round(shift);
+            if (tab.getTranslationX() != x) tab.setTranslationX(x);
+            if (x == 0f) shifted.remove(tab);
+            else shifted.put(tab, x);
+            if (tab.getAlpha() != alpha) tab.setAlpha(alpha);
+            if (alpha >= 1f) faded.remove(tab);
+            else faded.put(tab, alpha);
+            if (tuck) {
+                if (tab.getVisibility() == View.VISIBLE) {
+                    tab.setVisibility(View.INVISIBLE);
+                    tucked.put(tab, Boolean.TRUE);
+                }
+            } else if (tucked.remove(tab) != null && tab.getVisibility() == View.INVISIBLE) {
+                tab.setVisibility(View.VISIBLE);
+            }
+        }
+
+        /** Undoes what the liquid look did to the tabs, wherever nothing else changed it since. */
+        private void putTabsBack() {
+            for (Map.Entry<View, Float> entry : new java.util.ArrayList<>(shifted.entrySet())) {
+                View tab = entry.getKey();
+                if (tab != null && tab.getTranslationX() == entry.getValue()) tab.setTranslationX(0f);
+            }
+            shifted.clear();
+            for (Map.Entry<View, Float> entry : new java.util.ArrayList<>(faded.entrySet())) {
+                View tab = entry.getKey();
+                if (tab != null && tab.getAlpha() == entry.getValue()) tab.setAlpha(1f);
+            }
+            faded.clear();
+            for (View tab : new java.util.ArrayList<>(tucked.keySet())) {
+                if (tab != null && tab.getVisibility() == View.INVISIBLE) tab.setVisibility(View.VISIBLE);
+            }
+            tucked.clear();
+        }
+
+        @Override public void follow(float x) {
+            dragX = x;
+            // A slide is a touch like any other, so the wait to hide the bar on Reels starts over.
+            if (scrollHide != null) scrollHide.arm();
+            bar.invalidate();
+        }
+
+        /**
+         * The bar's activity is in front again. Going to the background dropped the wait on Reels, and
+         * a reel that plays on untouched would never start another.
+         */
+        void cameToTheFront() {
+            if (scrollHide != null) scrollHide.arm();
+            // Another window may have had the navigation bar's real height since, so Instagram is asked again.
+            insetsShown = null;
+        }
+
+        /** Whether this is a floating pill that shows in [activity]'s window. */
+        boolean floatsShownIn(Activity activity) {
+            return floating && bar.isShown() && ownedBy(bar, activity);
+        }
+
+        /**
+         * Sends the window's insets round again when this floating pill shows or hides in front, or its
+         * activity came back, so Instagram reads the navigation bar's height again ({@link #navBarHeight}).
+         */
+        private void askForInsetsWhenShownChanges() {
+            if (!floating) return;
+            Activity now = front.get();
+            boolean shown = now != null && !HushgramPause.isPaused() && floatsShownIn(now);
+            if (insetsShown != null && insetsShown == shown) return;
+            insetsShown = shown;
+            View root = bar.getRootView();
+            root.post(root::requestApplyInsets);
+            HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_INSETS_AGAIN);
+        }
+
         /** The clear space above and under the pill. */
         private int gap() {
             return dp(FIT_GAP_DP);
@@ -704,7 +1085,7 @@ public final class GlassTabBar {
 
         /** How far a compact pill is drawn in from the top and bottom, beyond the gap. */
         private int pillInset() {
-            return pillInsetPx(height, bar.getHeight() - lift, gap(), density);
+            return pillInsetPx(height, bar.getHeight() - room, gap(), density);
         }
 
         /** The colour Instagram gave the bar, or white or black by the theme when it wasn't a plain one. */
@@ -736,13 +1117,14 @@ public final class GlassTabBar {
             int width = parent != null && parent.getWidth() > 0 ? parent.getWidth()
                     : bar.getResources().getDisplayMetrics().widthPixels;
             outer = outerPx(width, density);
+            room = lift + navRoom(floating);
 
             // Height: the bar's own, which is what Instagram keeps every screen's own controls above, and
             // the room asked for under a floating pill.
             ViewGroup.LayoutParams params = bar.getLayoutParams();
             if (params != null && params.height > 0) {
                 if (originalBarHeight < 0) originalBarHeight = params.height;
-                int wanted = barHeightPx(height, originalBarHeight, density) + lift;
+                int wanted = barHeightPx(height, originalBarHeight, density) + room;
                 if (params.height != wanted) {
                     params.height = wanted;
                     bar.setLayoutParams(params);
@@ -760,7 +1142,7 @@ public final class GlassTabBar {
             int left = originalLeft + outer + dp(INNER_DP);
             int right = originalRight + outer + dp(INNER_DP);
             int above = originalTop + gap();
-            int under = originalBottom + gap() + lift;
+            int under = originalBottom + gap() + room;
             if (left != bar.getPaddingLeft() || right != bar.getPaddingRight()
                     || above != bar.getPaddingTop() || under != bar.getPaddingBottom()) {
                 bar.setPadding(left, above, right, under);
@@ -819,6 +1201,7 @@ public final class GlassTabBar {
                 if (content instanceof ViewGroup) keepScreensAboveTheBar((ViewGroup) content, params);
                 if (floating) keepReelsAboveThePill(parent, params, now);
             }
+            arrangeTabs();
         }
 
         /**
@@ -903,6 +1286,7 @@ public final class GlassTabBar {
             Trace.beginSection("hushgram:preDraw");
             try {
                 keep();
+                askForInsetsWhenShownChanges();
                 followReels();
                 // A tab's own selected state redraws that tab, not the bar behind it, so the capsule would
                 // wait for something else to redraw the bar. Look at it every frame instead.
@@ -958,6 +1342,9 @@ public final class GlassTabBar {
         void dispose() {
             bar.removeOnAttachStateChangeListener(this);
             bar.getViewTreeObserver().removeOnPreDrawListener(this);
+            ValueAnimator running = compacting;
+            compacting = null;
+            if (running != null) running.cancel();
             pill.discard();
         }
 
@@ -968,6 +1355,10 @@ public final class GlassTabBar {
             private final Paint stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
             private final RectF rect = new RectF();
             private final RectF capsule = new RectF();
+            /** The liquid look's pill as drawn this frame, on its way to the compact row, the edge being drawn, and both shapes. */
+            private final RectF shrunk = new RectF();
+            private final RectF outline = new RectF();
+            private final Path shapes = new Path();
             /** The pill's bounds as of the last recording, kept apart from what the drawing is using. */
             private final RectF area = new RectF();
             @Nullable private RenderNode node;
@@ -1004,7 +1395,7 @@ public final class GlassTabBar {
                 float left = outer;
                 float top = gap() + pillInset();
                 float right = bar.getWidth() - outer;
-                float bottomEdge = bar.getHeight() - lift - gap() - pillInset();
+                float bottomEdge = bar.getHeight() - room - gap() - pillInset();
                 if (right - left <= 0 || bottomEdge - top <= 0) return false;
                 into.set(left, top, right, bottomEdge);
                 return true;
@@ -1012,9 +1403,81 @@ public final class GlassTabBar {
 
             private void drawPill(@NonNull Canvas canvas) {
                 if (!pillBounds(rect)) return;
+                if (liquidNow()) {
+                    drawLiquid(canvas);
+                    return;
+                }
                 float radius = dp(CORNER_DP);
                 boolean dark = isDark(base);
+                underlay(canvas);
+                // Light glass has nothing under it to stand out against, so it gets a soft shadow.
+                if (!dark) shadow(canvas, rect, radius);
+                boolean blurred = !blurBroken && blurWanted && drawBackdrop(canvas);
+                fill.setColor(tint(base, blurred, opacity));
+                canvas.drawRoundRect(rect, radius, radius, fill);
 
+                keepSheen(dark);
+                canvas.drawRoundRect(rect, radius, radius, sheen);
+
+                drawCapsule(canvas, rect, dp(HIGHLIGHT_CORNER_DP), 1f);
+
+                stroke.setStrokeWidth(Math.max(1f, density));
+                stroke.setColor(edge(base));
+                rect.inset(density / 2f, density / 2f);
+                canvas.drawRoundRect(rect, radius, radius, stroke);
+            }
+
+            /**
+             * The liquid look (#65): the pill holding the tabs and Search's circle beside it, both fully round,
+             * over the one blurred backdrop clipped to the two, with the standard pill's tint, sheen and edge. A
+             * highlight as round marks the tab you're on. On the way to the compact row the pill shrinks to a
+             * circle round that tab, and its highlight fades.
+             */
+            private void drawLiquid(@NonNull Canvas canvas) {
+                boolean dark = isDark(base);
+                View search = searchTab();
+                boolean apart = liquidShapes(rect, search);
+                shrunkHolder(holder, bar.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL, compact, shrunk);
+                float round = shrunk.height() / 2f;
+                underlay(canvas);
+                if (!dark) {
+                    shadow(canvas, shrunk, round);
+                    if (apart) shadow(canvas, circle, circle.height() / 2f);
+                }
+                shapes.rewind();
+                shapes.addRoundRect(shrunk, round, round, Path.Direction.CW);
+                if (apart) shapes.addOval(circle, Path.Direction.CW);
+                boolean blurred = false;
+                if (!blurBroken && blurWanted) {
+                    int saved = canvas.save();
+                    canvas.clipPath(shapes);
+                    blurred = drawBackdrop(canvas);
+                    canvas.restoreToCount(saved);
+                }
+                fill.setColor(tint(base, blurred, opacity));
+                canvas.drawPath(shapes, fill);
+                keepSheen(dark);
+                canvas.drawPath(shapes, sheen);
+
+                View selected = selectedTab();
+                RectF within = apart && selected != null && selected == search ? circle : shrunk;
+                drawCapsule(canvas, within, Math.max(0f, within.height() / 2f - dp(HIGHLIGHT_INSET_DP)), 1f - compact);
+
+                stroke.setStrokeWidth(Math.max(1f, density));
+                stroke.setColor(edge(base));
+                float half = density / 2f;
+                outline.set(shrunk);
+                outline.inset(half, half);
+                canvas.drawRoundRect(outline, outline.height() / 2f, outline.height() / 2f, stroke);
+                if (apart) {
+                    outline.set(circle);
+                    outline.inset(half, half);
+                    canvas.drawOval(outline, stroke);
+                }
+            }
+
+            /** What shows round the pill: the bar's own colour over Instagram's bar, and black under a Reels viewer. */
+            private void underlay(@NonNull Canvas canvas) {
                 // The content stops above the bar, so the bar's own colour fills round the pill.
                 if (!floating) {
                     fill.setColor(base);
@@ -1024,20 +1487,21 @@ public final class GlassTabBar {
                     fill.setColor(Color.BLACK);
                     canvas.drawRect(reelsLeft, 0, reelsRight, bar.getHeight(), fill);
                 }
-                // Light glass has nothing under it to stand out against, so it gets a soft shadow.
-                if (!dark) {
-                    for (int i = 6; i >= 1; i--) {
-                        float spread = i * density * 0.8f;
-                        fill.setColor(0x06000000);
-                        capsule.set(rect.left - spread, rect.top - spread / 3f + density,
-                                rect.right + spread, rect.bottom + spread);
-                        canvas.drawRoundRect(capsule, radius + spread, radius + spread, fill);
-                    }
-                }
-                boolean blurred = !blurBroken && blurWanted && drawBackdrop(canvas);
-                fill.setColor(tint(base, blurred, opacity));
-                canvas.drawRoundRect(rect, radius, radius, fill);
+            }
 
+            /** The soft shadow light glass gets round [shape], whose corners are [radius]. */
+            private void shadow(@NonNull Canvas canvas, RectF shape, float radius) {
+                for (int i = 6; i >= 1; i--) {
+                    float spread = i * density * 0.8f;
+                    fill.setColor(0x06000000);
+                    capsule.set(shape.left - spread, shape.top - spread / 3f + density,
+                            shape.right + spread, shape.bottom + spread);
+                    canvas.drawRoundRect(capsule, radius + spread, radius + spread, fill);
+                }
+            }
+
+            /** Makes the sheen's gradient again when the pill's height or the glass's shade changed. */
+            private void keepSheen(boolean dark) {
                 if (sheenTop != rect.top || sheenBottom != rect.bottom || sheenDark != dark) {
                     sheenTop = rect.top;
                     sheenBottom = rect.bottom;
@@ -1045,30 +1509,32 @@ public final class GlassTabBar {
                     sheen.setShader(new LinearGradient(0, rect.top, 0, rect.bottom,
                             dark ? 0x22ffffff : 0x40ffffff, 0x00ffffff, Shader.TileMode.CLAMP));
                 }
-                canvas.drawRoundRect(rect, radius, radius, sheen);
-
-                drawCapsule(canvas);
-
-                stroke.setStrokeWidth(Math.max(1f, density));
-                stroke.setColor(edge(base));
-                rect.inset(density / 2f, density / 2f);
-                canvas.drawRoundRect(rect, radius, radius, stroke);
             }
 
             /**
-             * The lighter capsule behind the selected tab. When the tab changes it slides to the new one over
-             * {@link #SLIDE_MS}, eased out, timed by the frame clock rather than by counting frames, so a
-             * dropped frame doesn't make it jump and it takes as long at 120 Hz as at 60.
+             * The lighter capsule behind the selected tab, kept inside [within] with corners of [corner] and drawn
+             * at [share] of its strength. When the tab changes it slides to the new one over {@link #SLIDE_MS},
+             * eased out, timed by the frame clock rather than by counting frames, so a dropped frame doesn't make
+             * it jump and it takes as long at 120 Hz as at 60. Below full strength, on the way to the liquid look's
+             * compact row, it stays on the tab as the tab moves.
              */
-            private void drawCapsule(Canvas canvas) {
+            private void drawCapsule(Canvas canvas, RectF within, float corner, float share) {
                 View selected = selectedTab();
                 if (selected == null) return;
                 float grow = dp(HIGHLIGHT_GROW_DP);
                 float inset = dp(HIGHLIGHT_INSET_DP);
-                float targetLeft = Math.max(rect.left + inset, selected.getLeft() + selected.getTranslationX() - grow);
-                float targetRight = Math.min(rect.right - inset, selected.getRight() + selected.getTranslationX() + grow);
+                float targetLeft = Math.max(within.left + inset, selected.getLeft() + selected.getTranslationX() - grow);
+                float targetRight = Math.min(within.right - inset, selected.getRight() + selected.getTranslationX() + grow);
                 long now = AnimationUtils.currentAnimationTimeMillis();
-                if (Float.isNaN(fromLeft)) {
+                if (!Float.isNaN(dragX)) {
+                    // A finger slides it (#136): it sits on the finger, as wide as the selected tab's, and
+                    // ticks for each tab it crosses. Once the finger lifts it slides from here to the tab.
+                    float width = targetRight - targetLeft;
+                    fromLeft = nowLeft = toLeft = followLeft(dragX, width, rect.left + inset, rect.right - inset);
+                    fromRight = nowRight = toRight = toLeft + width;
+                    slideStart = now - SLIDE_MS;
+                    tickedThisSlide = false;
+                } else if (Float.isNaN(fromLeft) || share < 1f) {
                     fromLeft = nowLeft = toLeft = targetLeft;
                     fromRight = nowRight = toRight = targetRight;
                     slideStart = now - SLIDE_MS;
@@ -1083,21 +1549,23 @@ public final class GlassTabBar {
                 float progress = slideProgress(now - slideStart);
                 nowLeft = fromLeft + (toLeft - fromLeft) * progress;
                 nowRight = fromRight + (toRight - fromRight) * progress;
-                capsule.set(nowLeft, rect.top + inset, nowRight, rect.bottom - inset);
+                capsule.set(nowLeft, within.top + inset, nowRight, within.bottom - inset);
                 tick((nowLeft + nowRight) / 2f);
-                fill.setColor(highlight(base));
-                float capsuleRadius = dp(HIGHLIGHT_CORNER_DP);
-                canvas.drawRoundRect(capsule, capsuleRadius, capsuleRadius, fill);
+                int color = highlight(base);
+                if (share < 1f) color = (color & 0x00ffffff) | (scaledAlpha(Color.alpha(color), Math.max(0f, share)) << 24);
+                fill.setColor(color);
+                if (share > 0f) canvas.drawRoundRect(capsule, corner, corner, fill);
                 if (progress < 1f) invalidateSelf();
             }
 
-            /** A light tick each time the capsule's middle moves over a different tab. */
+            /** A light tick each time the capsule's middle moves over a different tab, wherever the tab was moved to. */
             private void tick(float middle) {
                 int over = -1;
                 for (int i = 0; i < bar.getChildCount(); i++) {
                     View child = bar.getChildAt(i);
+                    float shift = child.getTranslationX();
                     if (child.getVisibility() == View.VISIBLE
-                            && middle >= child.getLeft() && middle < child.getRight()) {
+                            && middle >= child.getLeft() + shift && middle < child.getRight() + shift) {
                         over = i;
                         break;
                     }
@@ -1312,6 +1780,15 @@ public final class GlassTabBar {
         float t = elapsed / (float) SLIDE_MS;
         float rest = 1f - t;
         return 1f - rest * rest * rest;
+    }
+
+    /**
+     * Where the capsule's left edge goes while a finger slides it (#136): [width] wide, centered on
+     * [finger], and kept between [min] and [max]. With no room to move it stays at [min].
+     */
+    static float followLeft(float finger, float width, float min, float max) {
+        if (max - min <= width) return min;
+        return Math.max(min, Math.min(max - width, finger - width / 2f));
     }
 
     /**

@@ -13,37 +13,57 @@ package app.hushtelegram.extension.telegram.settings;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 import static org.robolectric.Shadows.shadowOf;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Color;
 import android.graphics.Typeface;
+import android.net.ConnectivityManager;
+import android.os.Looper;
 import android.preference.Preference;
 import android.preference.PreferenceCategory;
 import android.preference.PreferenceGroup;
 import android.preference.SwitchPreference;
 import android.text.Spanned;
 import android.text.style.StyleSpan;
+import android.view.View;
+import android.view.inputmethod.EditorInfo;
+import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
+import android.widget.TextView;
 
 import app.hushtelegram.extension.shared.L10n;
 import app.hushtelegram.extension.shared.SettingsContextRule;
+import app.hushtelegram.extension.shared.Utils;
 import app.hushtelegram.extension.shared.diagnostics.HookStatus;
 import app.hushtelegram.extension.shared.settings.BaseSettings;
 import app.hushtelegram.extension.shared.settings.BooleanSetting;
 import app.hushtelegram.extension.shared.settings.FailingStore;
 import app.hushtelegram.extension.shared.settings.HushTelegramPause;
 import app.hushtelegram.extension.shared.settings.PauseForTests;
+import app.hushtelegram.extension.shared.settings.Setting;
+import app.hushtelegram.extension.shared.settings.preference.AbstractPreferenceFragment;
 import app.hushtelegram.extension.shared.settings.preference.ImmediateAction;
+import app.hushtelegram.extension.shared.settings.preference.LogBufferManager;
+import app.hushtelegram.extension.telegram.misc.DataSaverDownloads;
+import app.hushtelegram.extension.telegram.misc.DataSaverDownloadsForTests;
+import app.hushtelegram.extension.telegram.misc.LaunchFolder;
+import app.hushtelegram.extension.telegram.misc.LaunchFolderForTests;
 import app.hushtelegram.extension.telegram.misc.MessageFilters;
+import app.hushtelegram.extension.telegram.misc.OutsideTranslate;
 import app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests;
 
+import org.json.JSONObject;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
@@ -68,6 +88,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 /**
@@ -85,6 +108,11 @@ public class HushTelegramPreferenceFragmentTest {
 
     /** Wording that tells the reader a paused Telegram is an unpatched one, which it isn't. */
     private static final Pattern UNPATCHED = Pattern.compile("(?i)unpatched|n't patched|not patched|as if it weren");
+
+    /** What the Data Saver switch does, before the line with what Android reports. */
+    private static final String DATA_SAVER_SUMMARY = "While Android's Data Saver is on and the network is metered, Telegram"
+            + " doesn't start photos, videos, files, voice messages, music or stories downloading on its own, and stops the"
+            + " ones in its download queue. What you tap still downloads.";
 
     /** The row each patch adds, by the title it shows. */
     private static final Map<PatchFamily, String> ROW_TITLES = new LinkedHashMap<>();
@@ -160,6 +188,9 @@ public class HushTelegramPreferenceFragmentTest {
     /** The sections every build has, in the order they're drawn. */
     private static final List<String> EVERY_BUILD = Arrays.asList(
             "Links", "Updates", "Pause", "Settings backup", "Diagnostics", "About");
+
+    /** The outside translate's own preference file, where the service and its key are kept. */
+    private static final String TRANSLATE_FILE = "hushtelegram_outside_translate";
 
     @After
     public void restore() {
@@ -363,6 +394,15 @@ public class HushTelegramPreferenceFragmentTest {
             // Telegram's sites keep signing you in until someone turns the switch on.
             assertFalse(Settings.SKIP_AUTOLOGIN.key,
                     ((SwitchPreference) page.findPreference(Settings.SKIP_AUTOLOGIN.key)).isChecked());
+            assertEquals("Keep your location from Mini Apps",
+                    String.valueOf(page.findPreference(Settings.MINI_APP_LOCATION_OFF.key).getTitle()));
+            assertEquals("Mini Apps are told your phone's location isn't available, and web pages opened in Telegram "
+                    + "are refused it. A page that already had it keeps it until you close it. Sites can still guess "
+                    + "a rough area from your connection. Sending your location in a chat works as before.",
+                    String.valueOf(page.findPreference(Settings.MINI_APP_LOCATION_OFF.key).getSummary()));
+            // Mini Apps keep getting the location Telegram gives them until someone turns the switch on.
+            assertFalse(Settings.MINI_APP_LOCATION_OFF.key,
+                    ((SwitchPreference) page.findPreference(Settings.MINI_APP_LOCATION_OFF.key)).isChecked());
             assertEquals("No previews before sending", String.valueOf(page.findPreference(Settings.DISABLE_DRAFT_PREVIEWS.key).getTitle()));
             assertEquals("Telegram doesn't look up link previews for messages you haven't sent yet, including shares, "
                     + "polls, story links and bots. Sent messages still get one.",
@@ -372,15 +412,16 @@ public class HushTelegramPreferenceFragmentTest {
                     ((SwitchPreference) page.findPreference(Settings.DISABLE_DRAFT_PREVIEWS.key)).isChecked());
             assertEquals("Keep drafts on this phone", String.valueOf(page.findPreference(Settings.LOCAL_DRAFTS.key).getTitle()));
             assertEquals("A message you start but don't send stays on this phone and stops syncing to your other devices. "
-                    + "Clearing a draft still clears it there.",
+                    + "Clearing a draft still clears it there. This covers every account in this Telegram app.",
                     String.valueOf(page.findPreference(Settings.LOCAL_DRAFTS.key).getSummary()));
             // Drafts keep syncing the way Telegram's do until someone turns the switch on.
             assertFalse(Settings.LOCAL_DRAFTS.key,
                     ((SwitchPreference) page.findPreference(Settings.LOCAL_DRAFTS.key)).isChecked());
             assertEquals("Keep searches on this phone", String.valueOf(page.findPreference(Settings.LOCAL_SEARCH.key).getTitle()));
-            assertEquals("What you type in search's Chats tab isn't sent to Telegram. It finds the chats, contacts and "
-                    + "recent searches on this phone, but not messages, public accounts or posts. The other tabs search "
-                    + "as usual.",
+            assertEquals("What you type in the main search isn't sent to Telegram, except in the Posts tab. The Chats tab "
+                    + "finds your chats and contacts on this phone, plus recent searches, but not messages or public "
+                    + "accounts. Channels, Apps, the media tabs and chat or date filters don't search for typed text. "
+                    + "Search inside a chat still goes to Telegram.",
                     String.valueOf(page.findPreference(Settings.LOCAL_SEARCH.key).getSummary()));
             // Search keeps asking Telegram's server until someone turns the switch on.
             assertFalse(Settings.LOCAL_SEARCH.key,
@@ -396,6 +437,21 @@ public class HushTelegramPreferenceFragmentTest {
             assertEquals("Hides the Popular apps list on the Apps tab of search, and doesn't ask Telegram for it. Apps"
                     + " you've opened and other results stay.",
                     String.valueOf(page.findPreference(Settings.HIDE_POPULAR_APPS.key).getSummary()));
+            assertEquals("Search only my chats", String.valueOf(page.findPreference(Settings.SEARCH_ONLY_MY_CHATS.key).getTitle()));
+            assertEquals("Search finds your chats, contacts and messages from chats you're in, and nothing public. The "
+                    + "Channels, Apps and Posts tabs go away, and a hashtag's public posts don't load.",
+                    String.valueOf(page.findPreference(Settings.SEARCH_ONLY_MY_CHATS.key).getSummary()));
+            // Search keeps its public tabs and lookups until someone turns the switch on.
+            assertFalse(Settings.SEARCH_ONLY_MY_CHATS.key,
+                    ((SwitchPreference) page.findPreference(Settings.SEARCH_ONLY_MY_CHATS.key)).isChecked());
+            assertEquals("Find names in styled letters", String.valueOf(page.findPreference(Settings.SEARCH_STYLED_NAMES.key).getTitle()));
+            assertEquals("Searching your chats and contacts also finds names written in letters like 𝐁𝐨𝐥𝐝, 𝘐𝘵𝘢𝘭𝘪𝘤 or "
+                    + "Ｗｉｄｅ when you type plain ones. Names still show as they're written and numbers aren't changed. "
+                    + "A name found this way isn't highlighted.",
+                    String.valueOf(page.findPreference(Settings.SEARCH_STYLED_NAMES.key).getSummary()));
+            // Search matches names as Telegram does until someone turns the switch on.
+            assertFalse(Settings.SEARCH_STYLED_NAMES.key,
+                    ((SwitchPreference) page.findPreference(Settings.SEARCH_STYLED_NAMES.key)).isChecked());
             assertEquals("When your chat list is short, Telegram lists your contacts below it. This hides that list "
                     + "and its heading. Chats, folders and search stay.",
                     String.valueOf(page.findPreference(Settings.HIDE_CONTACTS_BLOCK.key).getSummary()));
@@ -482,7 +538,7 @@ public class HushTelegramPreferenceFragmentTest {
             assertFalse(Settings.SWIPE_BACK_ON_PROFILES.key,
                     ((SwitchPreference) page.findPreference(Settings.SWIPE_BACK_ON_PROFILES.key)).isChecked());
             assertEquals("Hide phone number", String.valueOf(page.findPreference(Settings.HIDE_PHONE_NUMBER.key).getTitle()));
-            assertEquals("Your own phone number shows as dots in the side menu, Settings and your profile, which helps"
+            assertEquals("Your own phone number shows as dots in Settings and your profile, which helps"
                     + " with screenshots. Others' numbers stay visible.",
                     String.valueOf(page.findPreference(Settings.HIDE_PHONE_NUMBER.key).getSummary()));
             // Your number shows until the switch is turned on.
@@ -516,6 +572,13 @@ public class HushTelegramPreferenceFragmentTest {
             // Telegram plays the next voice message until the switch is turned on.
             assertFalse(Settings.VOICE_ONE_AT_A_TIME.key,
                     ((SwitchPreference) page.findPreference(Settings.VOICE_ONE_AT_A_TIME.key)).isChecked());
+            assertEquals("Keep voice messages quiet while locked", String.valueOf(page.findPreference(Settings.LOCKED_VOICE_GUARD.key).getTitle()));
+            assertEquals("While your phone is locked, voice and round video messages don't start, resume or skip to the next one, "
+                            + "whether from headphones, a car, the notification or the lock screen. One that's already playing "
+                            + "finishes. Music and other videos play as usual.",
+                    String.valueOf(page.findPreference(Settings.LOCKED_VOICE_GUARD.key).getSummary()));
+            // A locked phone plays voice messages as Telegram does until the switch is turned on.
+            assertFalse(((SwitchPreference) page.findPreference(Settings.LOCKED_VOICE_GUARD.key)).isChecked());
             assertEquals("Stop vibrations on taps", String.valueOf(page.findPreference(Settings.NO_HAPTICS.key).getTitle()));
             assertEquals("Taps, long presses, swipes and wrong entries no longer vibrate the phone. Incoming calls "
                     + "still vibrate, and notifications follow your own settings.",
@@ -537,9 +600,18 @@ public class HushTelegramPreferenceFragmentTest {
             // Folder tabs show their counts until the switch is turned on.
             assertFalse(Settings.HIDE_FOLDER_COUNTERS.key,
                     ((SwitchPreference) page.findPreference(Settings.HIDE_FOLDER_COUNTERS.key)).isChecked());
+            assertEquals("Open a folder at launch", String.valueOf(page.findPreference(Settings.LAUNCH_FOLDER.key).getTitle()));
+            assertEquals("The chat list opens on the folder you pick below instead of All Chats. Each account keeps its own "
+                    + "pick, and the folder order doesn't change. If that folder is gone, renamed or locked, All Chats opens as usual.",
+                    String.valueOf(page.findPreference(Settings.LAUNCH_FOLDER.key).getSummary()));
+            // The chat list opens on All Chats until the switch is turned on.
+            assertFalse(Settings.LAUNCH_FOLDER.key,
+                    ((SwitchPreference) page.findPreference(Settings.LAUNCH_FOLDER.key)).isChecked());
+            assertEquals("Folder to open", String.valueOf(page.findPreference(HushTelegramPreferenceFragment.LAUNCH_FOLDER_ROW).getTitle()));
             assertEquals("Folders by chat type", String.valueOf(page.findPreference(Settings.CHAT_TYPE_FOLDERS.key).getTitle()));
             assertEquals("Turning this on makes Private, Groups, Channels and Bots folders, as tabs above the chat list "
-                    + "and on your other devices. Turning it off removes the ones it made, unless you renamed or changed them.",
+                    + "and on your other devices. Turning it off removes the ones it made, unless you renamed or changed them. "
+                    + "Both work on the account you have open.",
                     String.valueOf(page.findPreference(Settings.CHAT_TYPE_FOLDERS.key).getSummary()));
             // No folders are made until the switch is turned on.
             assertFalse(Settings.CHAT_TYPE_FOLDERS.key,
@@ -565,6 +637,13 @@ public class HushTelegramPreferenceFragmentTest {
             // Downloads keep Telegram's piece size until the switch is turned on.
             assertFalse(Settings.FASTER_DOWNLOADS.key,
                     ((SwitchPreference) page.findPreference(Settings.FASTER_DOWNLOADS.key)).isChecked());
+            assertEquals("Hold automatic downloads on Data Saver",
+                    String.valueOf(page.findPreference(Settings.DATA_SAVER_DOWNLOADS.key).getTitle()));
+            assertTrue(String.valueOf(page.findPreference(Settings.DATA_SAVER_DOWNLOADS.key).getSummary())
+                    .startsWith(DATA_SAVER_SUMMARY + "\n"));
+            // Data Saver leaves automatic downloads to Telegram until the switch is turned on.
+            assertFalse(Settings.DATA_SAVER_DOWNLOADS.key,
+                    ((SwitchPreference) page.findPreference(Settings.DATA_SAVER_DOWNLOADS.key)).isChecked());
             assertEquals("Save downloaded files", String.valueOf(page.findPreference(Settings.SAVE_DOWNLOADS.key).getTitle()));
             assertEquals("Each file or song you download also goes to Download/Telegram on your phone, where file "
                     + "managers and other apps can open it. Files from secret chats and chats that don't allow saving "
@@ -681,7 +760,8 @@ public class HushTelegramPreferenceFragmentTest {
             assertEquals("Adds Translate here to a message's menu and Translate this chat to a chat's menu, using "
                             + "the translation service you choose. The text you ask to translate is sent to that service, "
                             + "one message at a time. Nothing leaves your phone until "
-                            + "you turn a chat or message on.",
+                            + "you turn a chat or message on. A chat or message you turn on stays on only in the "
+                            + "account you turned it on in.",
                     String.valueOf(page.findPreference(Settings.OUTSIDE_TRANSLATE.key).getSummary()));
             // Messages stay as sent until a chat or message is turned on.
             assertFalse(Settings.OUTSIDE_TRANSLATE.key,
@@ -705,6 +785,19 @@ public class HushTelegramPreferenceFragmentTest {
                     String.valueOf(page.findPreference(Settings.HIDE_CONTACTS_TAB.key).getSummary()));
             // The main screen keeps its Contacts tab until the switch is turned on.
             assertFalse(((SwitchPreference) page.findPreference(Settings.HIDE_CONTACTS_TAB.key)).isChecked());
+            assertEquals("Compact bottom bar", String.valueOf(page.findPreference(Settings.COMPACT_TAB_BAR.key).getTitle()));
+            assertEquals("The bar at the bottom of the main screen gets shorter and only as wide as its tabs need. The tabs "
+                            + "keep their full height, so they're just as easy to tap. Restart Telegram to see the change.",
+                    String.valueOf(page.findPreference(Settings.COMPACT_TAB_BAR.key).getSummary()));
+            // The bar keeps Telegram's size until the switch is turned on.
+            assertFalse(((SwitchPreference) page.findPreference(Settings.COMPACT_TAB_BAR.key)).isChecked());
+            assertEquals("Side menu", String.valueOf(page.findPreference(Settings.SIDE_MENU.key).getTitle()));
+            assertEquals("Swipe right on your first chat folder and a menu slides in, like the one older Telegram had. It has "
+                            + "your profile, new message, contacts, calls, saved messages and settings, plus a way to switch "
+                            + "accounts. Back or a tap beside it closes it.",
+                    String.valueOf(page.findPreference(Settings.SIDE_MENU.key).getSummary()));
+            // A swipe on the chat list stays Telegram's until the switch is turned on.
+            assertFalse(((SwitchPreference) page.findPreference(Settings.SIDE_MENU.key)).isChecked());
             assertEquals("Ask before sending a GIF", String.valueOf(page.findPreference(Settings.ASK_BEFORE_GIF.key).getTitle()));
             assertEquals("Asks Send or Cancel before a GIF you tap goes into a chat. Cancel drops it. Scheduled GIFs "
                     + "go out without asking.",
@@ -793,7 +886,7 @@ public class HushTelegramPreferenceFragmentTest {
      * trimmed when every line can.
      */
     @Test
-    public void theFilterListsComeWithHideByKeywordAndSaveOnlyWhatWorks() {
+    public void theFilterListsComeWithHideByKeywordAndSaveOnlyWhatWorks() throws Exception {
         PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
         PatchFamily.inBuildForTests.remove(PatchFamily.HIDE_BY_KEYWORD);
         try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
@@ -846,7 +939,7 @@ public class HushTelegramPreferenceFragmentTest {
             field.setText("spam");
             try (FailingStore ignored = FailingStore.install(FailingStore.Fault.COMMIT_FALSE)) {
                 editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
-                ShadowLooper.idleMainLooper();
+                settle();
             }
             assertTrue("a save that fails keeps the dialog", editor.isShowing());
             assertEquals("Couldn't save the filters. Try again in a moment.", ShadowToast.getTextOfLatestToast());
@@ -854,7 +947,7 @@ public class HushTelegramPreferenceFragmentTest {
 
             field.setText("  spam \n\n/\\bgiveaway\\b/\n");
             editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
-            ShadowLooper.idleMainLooper();
+            settle();
             assertFalse(editor.isShowing());
             assertEquals("Filters saved.", ShadowToast.getTextOfLatestToast());
             assertEquals("spam\n/\\bgiveaway\\b/", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
@@ -873,7 +966,7 @@ public class HushTelegramPreferenceFragmentTest {
      * settings the backup reads.
      */
     @Test
-    public void theTranslationServiceRowSavesAnAiServiceAndUseGoogleForgetsTheKey() {
+    public void theTranslationServiceRowSavesAnAiServiceAndUseGoogleForgetsTheKey() throws Exception {
         PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
         PatchFamily.inBuildForTests.remove(PatchFamily.OUTSIDE_TRANSLATE);
         try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
@@ -926,13 +1019,25 @@ public class HushTelegramPreferenceFragmentTest {
 
             address.setText(" https://openrouter.ai/api/v1 ");
             model.setText("deepseek/deepseek-chat");
+            EditText style = editor.findViewById(android.R.id.summary);
+            assertEquals("", style.getText().toString());
+            assertTrue("instructions can run over several lines",
+                    (style.getInputType() & android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE) != 0);
+            style.setText(new String(new char[1001]).replace('\0', 'x'));
             editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
             ShadowLooper.idleMainLooper();
+            assertTrue("instructions past the limit keep the dialog", editor.isShowing());
+            assertEquals("This field is too long. Use 1000 characters or fewer.", ShadowToast.getTextOfLatestToast());
+            assertNotNull("the refusal points at the instructions field", style.getTag());
+            style.setText("Keep it casual.\nLeave names as they are.");
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            settle();
             assertFalse(editor.isShowing());
             assertEquals("Translation service saved.", ShadowToast.getTextOfLatestToast());
             assertEquals("Your AI service at openrouter.ai, model deepseek/deepseek-chat.", String.valueOf(row.getSummary()));
             assertEquals("sk-test-123", file.getString("ai_key", null));
             assertEquals("https://openrouter.ai/api/v1", file.getString("ai_address", null));
+            assertEquals("Keep it casual.\nLeave names as they are.", file.getString("ai_style", null));
             // Nothing of the service is in the settings a backup or the report reads.
             for (String saved : app.hushtelegram.extension.shared.Utils.getContext()
                     .getSharedPreferences(app.hushtelegram.extension.shared.settings.Setting.PREFERENCES_NAME, 0).getAll().keySet()) {
@@ -944,8 +1049,10 @@ public class HushTelegramPreferenceFragmentTest {
             editor = (AlertDialog) ShadowAlertDialog.getLatestDialog();
             assertEquals("the saved key comes back masked", "sk-test-123",
                     ((EditText) editor.findViewById(android.R.id.edit)).getText().toString());
+            assertEquals("Keep it casual.\nLeave names as they are.",
+                    ((EditText) editor.findViewById(android.R.id.summary)).getText().toString());
             editor.getButton(AlertDialog.BUTTON_NEUTRAL).performClick();
-            ShadowLooper.idleMainLooper();
+            settle();
             assertFalse(editor.isShowing());
             assertEquals("Back to Google's web translate.", ShadowToast.getTextOfLatestToast());
             assertEquals("Google's web translate. Tap to use an AI service with your own key.", String.valueOf(row.getSummary()));
@@ -956,12 +1063,59 @@ public class HushTelegramPreferenceFragmentTest {
         }
     }
 
+    /** The Data Saver row ends with what Android reports when the page opens, each fact on its own. */
+    @Test
+    public void theDataSaverRowSaysWhatAndroidReportsNow() {
+        Context app = RuntimeEnvironment.getApplication();
+        DataSaverDownloadsForTests.android(ConnectivityManager.RESTRICT_BACKGROUND_STATUS_ENABLED, ConnectivityManager.TYPE_MOBILE);
+        assertEquals(DATA_SAVER_SUMMARY + "\nAndroid's Data Saver is on. This network is metered.",
+                HushTelegramPreferenceFragment.dataSaverSummary(DataSaverDownloads.status(app)));
+        DataSaverDownloadsForTests.android(ConnectivityManager.RESTRICT_BACKGROUND_STATUS_WHITELISTED, ConnectivityManager.TYPE_WIFI);
+        assertEquals(DATA_SAVER_SUMMARY + "\nAndroid's Data Saver is on, but Telegram may use data freely. This network isn't metered.",
+                HushTelegramPreferenceFragment.dataSaverSummary(DataSaverDownloads.status(app)));
+        DataSaverDownloadsForTests.android(ConnectivityManager.RESTRICT_BACKGROUND_STATUS_DISABLED, ConnectivityManager.TYPE_WIFI);
+        assertEquals(DATA_SAVER_SUMMARY + "\nAndroid's Data Saver is off. This network isn't metered.",
+                HushTelegramPreferenceFragment.dataSaverSummary(DataSaverDownloads.status(app)));
+        assertEquals(DATA_SAVER_SUMMARY + "\nAndroid doesn't say whether Data Saver is on. Android doesn't say whether this"
+                        + " network is metered.",
+                HushTelegramPreferenceFragment.dataSaverSummary(DataSaverDownloads.status(null)));
+    }
+
+    /**
+     * Flipping the Data Saver switch runs Telegram's download check once the switch is saved, so its
+     * queue follows the switch now instead of at the next network change.
+     */
+    @Test
+    public void flippingTheDataSaverSwitchRunsTelegramsCheckOnceItsSaved() {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.FASTER_DOWNLOADS);
+        Object downloads = new Object();
+        List<String> checks = new ArrayList<>();
+        DataSaverDownloadsForTests.checkWith(
+                checked -> checks.add((checked == downloads) + " " + Settings.DATA_SAVER_DOWNLOADS.get()), downloads);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            SwitchPreference row = (SwitchPreference) pageOf(controller).findPreference(Settings.DATA_SAVER_DOWNLOADS.key);
+            assertTrue(row.getOnPreferenceChangeListener().onPreferenceChange(row, Boolean.TRUE));
+            row.setChecked(true);
+            assertEquals("the check waits for the save", Collections.emptyList(), checks);
+            ShadowLooper.idleMainLooper();
+            assertEquals(Collections.singletonList("true true"), checks);
+
+            assertTrue(row.getOnPreferenceChangeListener().onPreferenceChange(row, Boolean.FALSE));
+            row.setChecked(false);
+            ShadowLooper.idleMainLooper();
+            assertEquals(Arrays.asList("true true", "true false"), checks);
+        } finally {
+            Settings.DATA_SAVER_DOWNLOADS.resetToDefault();
+            DataSaverDownloadsForTests.reset();
+        }
+    }
+
     /**
      * Change sticker size brings a row for the size under its switch. A tap lists the four sizes
      * with the saved one checked, and a pick saves it at once and closes the list.
      */
     @Test
-    public void theStickerSizeRowListsTheSizesAndSavesThePick() {
+    public void theStickerSizeRowListsTheSizesAndSavesThePick() throws Exception {
         PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
         PatchFamily.inBuildForTests.remove(PatchFamily.CHANGE_STICKER_SIZE);
         try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
@@ -990,13 +1144,158 @@ public class HushTelegramPreferenceFragmentTest {
             assertEquals("the saved size is checked", 1, choices.getCheckedItemPosition());
 
             shadowOf(list).clickOnItem(3);
-            ShadowLooper.idleMainLooper();
+            settle();
             assertFalse(list.isShowing());
             assertEquals(150, (int) Settings.STICKER_SIZE.savedValue());
             assertEquals("150% of Telegram's size", String.valueOf(size.getSummary()));
             assertFalse("picking a size leaves the switch alone", Settings.CHANGE_STICKER_SIZE.savedValue());
         } finally {
             Settings.STICKER_SIZE.resetToDefault();
+        }
+    }
+
+    /**
+     * Hide folder tab counters brings the folder at launch switch and, under it, a row that lists
+     * All Chats and the account's folders and saves the pick for the account shown.
+     */
+    @Test
+    public void theFolderToOpenRowListsTheFoldersAndSavesThePick() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_FOLDER_COUNTERS);
+        PatchFamily.capabilitiesForTests = EnumSet.noneOf(PatchFamily.Capability.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushTelegramPreferenceFragment page = pageOf(controller);
+            assertNull("a build without the target has no switch", page.findPreference(Settings.LAUNCH_FOLDER.key));
+            assertNull("or row", page.findPreference(HushTelegramPreferenceFragment.LAUNCH_FOLDER_ROW));
+        }
+        PatchFamily.capabilitiesForTests = null;
+        LaunchFolderForTests.signedIn(1000, "Work", "Friends");
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            List<Preference> rows = new ArrayList<>();
+            collect(pageOf(controller).getPreferenceScreen(), rows);
+            int toggle = indexOfKey(rows, Settings.LAUNCH_FOLDER.key);
+            Preference folder = rows.get(toggle + 1);
+            assertEquals(HushTelegramPreferenceFragment.LAUNCH_FOLDER_ROW, folder.getKey());
+            assertSame(rows.get(toggle).getParent(), folder.getParent());
+            assertFalse("it stores nothing itself", folder.isPersistent());
+            assertEquals("All Chats", String.valueOf(folder.getSummary()));
+
+            AlertDialog list = dialogOf(folder);
+            assertTrue(list.isShowing());
+            assertEquals("Folder to open", String.valueOf(shadowOf(list).getTitle()));
+            ListView choices = list.getListView();
+            List<String> labels = new ArrayList<>();
+            for (int i = 0; i < choices.getCount(); i++) labels.add(String.valueOf(choices.getAdapter().getItem(i)));
+            assertEquals(Arrays.asList("All Chats", "Work", "Friends"), labels);
+            assertEquals("nothing picked yet", 0, choices.getCheckedItemPosition());
+
+            shadowOf(list).clickOnItem(2);
+            settle();
+            assertFalse(list.isShowing());
+            // Saved with its name, so a folder made later in its place isn't taken for it.
+            assertEquals(2, LaunchFolder.picked(1000).id);
+            assertEquals("Friends", LaunchFolder.picked(1000).name);
+            assertEquals("Friends", String.valueOf(folder.getSummary()));
+            assertFalse("picking a folder leaves the switch alone", Settings.LAUNCH_FOLDER.savedValue());
+
+            list = dialogOf(folder);
+            assertEquals("the pick is checked", 2, list.getListView().getCheckedItemPosition());
+            shadowOf(list).clickOnItem(0);
+            settle();
+            assertNull(LaunchFolder.picked(1000));
+            assertEquals("All Chats", String.valueOf(folder.getSummary()));
+
+            // Signed out, no folders yet, or folders that can't be read: a note instead of a list.
+            for (Object[] state : new Object[][]{{0L, "Sign in to Telegram first."}, {1000L, "You don't have any folders yet."},
+                    {-1L, "Couldn't read your folders."}}) {
+                if ((Long) state[0] < 0) LaunchFolderForTests.unreadable();
+                else LaunchFolderForTests.signedIn((Long) state[0]);
+                ShadowToast.reset();
+                ShadowAlertDialog.reset();
+                assertTrue(folder.getOnPreferenceClickListener().onPreferenceClick(folder));
+                ShadowLooper.idleMainLooper();
+                assertNull(ShadowAlertDialog.getLatestAlertDialog());
+                assertEquals(state[1], ShadowToast.getTextOfLatestToast());
+            }
+            // The page still builds, and the row names All Chats.
+            assertEquals("All Chats", HushTelegramPreferenceFragment.launchFolderSummary());
+        } finally {
+            LaunchFolderForTests.restore();
+        }
+    }
+
+    /**
+     * Holiday look brings a row for the text beside the chat list's title, under its switch. A tap
+     * opens an editor that saves the text cleaned and refuses text that's too long, and a restart
+     * is owed only while the saved text isn't the one running.
+     */
+    @Test
+    public void theTitleEmojiRowSavesCleanTextAndSaysWhenARestartIsOwed() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HOLIDAY_LOOK);
+        PatchFamily.capabilitiesForTests = EnumSet.noneOf(PatchFamily.Capability.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            assertNull("a build without the title target has no row", pageOf(controller).findPreference(TitleEmojiEditor.KEY));
+        }
+        PatchFamily.capabilitiesForTests = null;
+        String tree = new String(Character.toChars(0x1F384));
+        String invitation = "Add an emoji or a few letters after Telegram's name at the top of the chat list. It stays on "
+                + "this phone, and your Premium emoji status is left alone.";
+        ShadowToast.reset();
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            List<Preference> rows = new ArrayList<>();
+            collect(pageOf(controller).getPreferenceScreen(), rows);
+            Preference row = rows.get(indexOfKey(rows, Settings.HOLIDAY_LOOK.key) + 1);
+            assertEquals(TitleEmojiEditor.KEY, row.getKey());
+            assertEquals("Emoji next to the chat list title", String.valueOf(row.getTitle()));
+            assertEquals(invitation, String.valueOf(row.getSummary()));
+            assertFalse("it stores nothing itself", row.isPersistent());
+
+            assertTrue(row.getOnPreferenceClickListener().onPreferenceClick(row));
+            ShadowLooper.idleMainLooper();
+            AlertDialog editor = (AlertDialog) ShadowAlertDialog.getLatestDialog();
+            assertTrue(editor.isShowing());
+            assertEquals("Emoji next to the chat list title", String.valueOf(shadowOf(editor).getTitle()));
+            EditText field = editor.findViewById(android.R.id.edit);
+            assertEquals("", field.getText().toString());
+            StringBuilder tooLong = new StringBuilder();
+            for (int i = 0; i <= app.hushtelegram.extension.telegram.misc.TitleEmoji.MAX_CODE_POINTS; i++) tooLong.append(tree);
+            field.setText(tooLong);
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertTrue("too long keeps the dialog", editor.isShowing());
+            assertEquals("That's too long. Try an emoji or two, or a short word.", ShadowToast.getTextOfLatestToast());
+            assertEquals("", Settings.TITLE_EMOJI.savedValue());
+
+            field.setText("  " + tree + "\n");
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            // The write is on the worker, and the dialog closes once its answer is back.
+            settle();
+            assertFalse(editor.isShowing());
+            assertEquals("saved cleaned", tree, Settings.TITLE_EMOJI.savedValue());
+            assertTrue("the chat list shows it after a restart",
+                    app.hushtelegram.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending
+                            .contains(Settings.TITLE_EMOJI.key));
+            assertEquals(app.hushtelegram.extension.shared.L10n.isolate(tree) + " shows after Telegram's name at the top "
+                    + "of the chat list, on this phone only. Tap to change it.", String.valueOf(row.getSummary()));
+
+            // Cleared again, it's what Telegram runs with, so nothing waits for a restart.
+            assertTrue(row.getOnPreferenceClickListener().onPreferenceClick(row));
+            ShadowLooper.idleMainLooper();
+            editor = (AlertDialog) ShadowAlertDialog.getLatestDialog();
+            field = editor.findViewById(android.R.id.edit);
+            assertEquals(tree, field.getText().toString());
+            field.setText("");
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            settle();
+            assertFalse(editor.isShowing());
+            assertEquals("", Settings.TITLE_EMOJI.savedValue());
+            assertEquals("Saved.", ShadowToast.getTextOfLatestToast());
+            assertFalse(app.hushtelegram.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending
+                    .contains(Settings.TITLE_EMOJI.key));
+            assertEquals(invitation, String.valueOf(row.getSummary()));
+        } finally {
+            Settings.TITLE_EMOJI.resetToDefault();
+            app.hushtelegram.extension.shared.settings.preference.AbstractPreferenceFragment.restartPending
+                    .remove(Settings.TITLE_EMOJI.key);
         }
     }
 
@@ -1009,6 +1308,176 @@ public class HushTelegramPreferenceFragmentTest {
                 FilterEditor.refusal("ok\n" + new String(new char[201]).replace('\0', 'x')));
         assertNull(FilterEditor.refusal(""));
         assertNull(FilterEditor.refusal("\n  \n"));
+    }
+
+    /**
+     * Save names the line whose count only makes work, and the line a list's expressions run out of
+     * room at, and saves neither list. Each of the second list's lines is fine alone.
+     */
+    @Test
+    public void saveNamesTheLineACountMakesSlowAndTheLineAListRunsOutAt() {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_BY_KEYWORD);
+        ShadowToast.reset();
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            Preference groups = pageOf(controller).findPreference(FilterEditor.GROUPS);
+            assertTrue(groups.getOnPreferenceClickListener().onPreferenceClick(groups));
+            ShadowLooper.idleMainLooper();
+            AlertDialog editor = (AlertDialog) ShadowAlertDialog.getLatestDialog();
+            EditText field = editor.findViewById(android.R.id.edit);
+
+            field.setText("spam\n\n/\\d{4}-\\d{2}/\n/(?:(?=x)){16777215}(?!x)/");
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertTrue("a count that only makes work keeps the dialog", editor.isShowing());
+            assertEquals("Line 4 may be slow on long messages. Try a simpler pattern.", ShadowToast.getTextOfLatestToast());
+            assertEquals("", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+
+            StringBuilder heavy = new StringBuilder("spam\n");
+            for (int i = 0; i < 7; i++) {
+                String line = "/x.*a?b?c?d?" + i + "/";
+                assertNull(line, MessageFilters.problem(line));
+                heavy.append(line).append('\n');
+            }
+            field.setText(heavy);
+            editor.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertTrue("a list past what its expressions may add up to keeps the dialog", editor.isShowing());
+            assertEquals("Line 8 may be slow on long messages. Try a simpler pattern.", ShadowToast.getTextOfLatestToast());
+            assertEquals("", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+        } finally {
+            Settings.MESSAGE_FILTERS_GROUPS.resetToDefault();
+            Settings.MESSAGE_FILTERS_CHANNELS.resetToDefault();
+        }
+    }
+
+    /**
+     * Try runs a typed message against the lines as they stand, saved or not, and names the first
+     * one that would hide it, or says why the list can't be tried in Save's words. None of it is
+     * saved or toasted: the answer goes once either text changes, and the message is gone when the
+     * editor opens again.
+     */
+    @Test
+    public void theFilterEditorTriesAMessageWithoutKeepingIt() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_BY_KEYWORD);
+        ShadowToast.reset();
+        Settings.MESSAGE_FILTERS_GROUPS.save("saved line");
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            Preference groups = pageOf(controller).findPreference(FilterEditor.GROUPS);
+            assertTrue(groups.getOnPreferenceClickListener().onPreferenceClick(groups));
+            ShadowLooper.idleMainLooper();
+            AlertDialog editor = (AlertDialog) ShadowAlertDialog.getLatestDialog();
+            EditText field = editor.findViewById(android.R.id.edit);
+            EditText sample = editor.findViewById(android.R.id.input);
+            TextView answer = editor.getWindow().getDecorView().findViewWithTag(EditorForm.ANSWER);
+            Button tryIt = editor.getButton(AlertDialog.BUTTON_NEUTRAL);
+            assertEquals("Try", tryIt.getText().toString());
+            assertEquals(View.GONE, answer.getVisibility());
+            assertFalse("the message stays out of the screen's saved state", sample.isSaveEnabled());
+            assertTrue("and out of the keyboard's learning", (sample.getImeOptions() & EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING) != 0);
+            assertEquals("and out of autofill", View.IMPORTANT_FOR_AUTOFILL_NO, sample.getImportantForAutofill());
+
+            field.setText("airdrop\n\n/free\\s+crypto/\ncrypto");
+            tryIt.performClick();
+            settle();
+            assertEquals(View.VISIBLE, answer.getVisibility());
+            assertEquals("Type a message to try the filters on.", answer.getText().toString());
+
+            sample.setText("Get FREE   crypto now");
+            assertEquals("a changed text takes the answer away", View.GONE, answer.getVisibility());
+            tryIt.performClick();
+            settle();
+            assertEquals("the first line that matches, numbered as shown",
+                    "Line 3 would hide this message: ⁨/free\\s+crypto/⁩", answer.getText().toString());
+
+            sample.setText("nothing to see");
+            tryIt.performClick();
+            settle();
+            assertEquals("No filter here would hide this message.", answer.getText().toString());
+
+            sample.setText("crypto");
+            tryIt.performClick();
+            sample.setText("crypto, changed before the answer came");
+            settle();
+            assertEquals("an answer for a message that has changed since isn't shown", View.GONE, answer.getVisibility());
+
+            field.setText("spam\n/(a+)+/");
+            sample.setText("aaaa");
+            tryIt.performClick();
+            settle();
+            assertEquals("Line 2 may be slow on long messages. Try a simpler pattern.", answer.getText().toString());
+
+            field.setText("\n\n");
+            tryIt.performClick();
+            settle();
+            assertEquals("There are no filters to try yet.", answer.getText().toString());
+
+            assertTrue("Try leaves the editor open", editor.isShowing());
+            assertEquals("nothing tried is saved", "saved line", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+            assertEquals("nor toasted", 0, ShadowToast.shownToastCount());
+
+            editor.getButton(AlertDialog.BUTTON_NEGATIVE).performClick();
+            ShadowLooper.idleMainLooper();
+            assertTrue(groups.getOnPreferenceClickListener().onPreferenceClick(groups));
+            ShadowLooper.idleMainLooper();
+            AlertDialog again = (AlertDialog) ShadowAlertDialog.getLatestDialog();
+            assertNotSame(editor, again);
+            assertEquals("", ((EditText) again.findViewById(android.R.id.input)).getText().toString());
+            assertEquals("saved line", ((EditText) again.findViewById(android.R.id.edit)).getText().toString());
+        } finally {
+            Settings.MESSAGE_FILTERS_GROUPS.resetToDefault();
+            Settings.MESSAGE_FILTERS_CHANNELS.resetToDefault();
+        }
+    }
+
+    /**
+     * Try waits for its answer before it takes another tap, so taps can't stack checks on the
+     * shared workers, and with no worker free it says so rather than checking on the main thread.
+     */
+    @Test
+    public void theFilterEditorTriesOneMessageAtATimeAndNeverOnTheMainThread() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_BY_KEYWORD);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            Preference groups = pageOf(controller).findPreference(FilterEditor.GROUPS);
+            assertTrue(groups.getOnPreferenceClickListener().onPreferenceClick(groups));
+            ShadowLooper.idleMainLooper();
+            AlertDialog editor = (AlertDialog) ShadowAlertDialog.getLatestDialog();
+            ((EditText) editor.findViewById(android.R.id.edit)).setText("crypto");
+            ((EditText) editor.findViewById(android.R.id.input)).setText("crypto");
+            TextView answer = editor.getWindow().getDecorView().findViewWithTag(EditorForm.ANSWER);
+            Button tryIt = editor.getButton(AlertDialog.BUTTON_NEUTRAL);
+
+            // A click that reaches the button while it waits, as a program or some accessibility paths can, starts nothing.
+            tryIt.setEnabled(false);
+            tryIt.performClick();
+            settle();
+            assertEquals("", answer.getText().toString());
+            tryIt.setEnabled(true);
+
+            tryIt.performClick();
+            assertFalse("Try waits for the answer", tryIt.isEnabled());
+            settle();
+            assertTrue(tryIt.isEnabled());
+            assertEquals("Line 1 would hide this message: ⁨crypto⁩", answer.getText().toString());
+
+            try (app.hushtelegram.extension.shared.WorkerPoolForTests full = app.hushtelegram.extension.shared.WorkerPoolForTests.fill()) {
+                tryIt.performClick();
+                assertTrue("a refused check gives Try back", tryIt.isEnabled());
+                assertEquals("and isn't checked on the main thread instead",
+                        "Couldn't try it now. Try again in a moment.", answer.getText().toString());
+            }
+            settle();
+
+            // A check that breaks gives Try back and still answers.
+            answer.setText("");
+            FilterEditor.check = (typed, message) -> { throw new IllegalStateException("broken check"); };
+            tryIt.performClick();
+            settle();
+            assertTrue(tryIt.isEnabled());
+            assertEquals("Couldn't try it now. Try again in a moment.", answer.getText().toString());
+        } finally {
+            FilterEditor.check = FilterEditor::verdict;
+            Settings.MESSAGE_FILTERS_GROUPS.resetToDefault();
+        }
     }
 
     /** Its row says nothing leaves the phone until a chat or message is turned on, so off forgets them. */
@@ -1232,6 +1701,570 @@ public class HushTelegramPreferenceFragmentTest {
         }
         assertTrue(bold.toString(), bold.containsAll(Arrays.asList(
                 "HushTelegram NOTICE", "Morphe: Project Name Restriction", "Trademarks", "Material Design icons")));
+    }
+
+    /**
+     * A switch the file doesn't name stays the person's to change while an import writes. Tapped on
+     * a second page with the import's commit still out, it's saved, running and shown on both pages
+     * and on one built afterwards, whether the import lands or is put back. The switch the file
+     * names waits out of reach meanwhile, for a tap and for Quick setups, and is back when it ends.
+     *
+     * <p>Every switch used to be shown from its Setting while an import ran, so the tap reached the
+     * store and the row went back: the screen and the running value said off, and the next start
+     * loaded on.
+     */
+    @Test
+    public void aSwitchTappedWhileAnImportWritesIsSavedRunningAndShownOnEveryPage() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_ADS, PatchFamily.NORMAL_PASTE);
+        String file = new JSONObject().put("format", SettingsBackup.FORMAT).put("schema", SettingsBackup.SCHEMA)
+                .put("settings", new JSONObject().put(Settings.HIDE_ADS.key, false)).toString();
+        for (boolean lands : new boolean[]{true, false}) {
+            String name = lands ? "an import that lands: " : "an import that's put back: ";
+            ShadowToast.reset();
+            try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+                HushTelegramPreferenceFragment first = pageOf(controller);
+                HushTelegramPreferenceFragment second = pageOf(controller);
+                try (FailingStore store = lands ? FailingStore.holding()
+                        : FailingStore.holding(FailingStore.Fault.COMMIT_THROWS)) {
+                    first.pendingImport = SettingsBackup.parse(file).toBundle();
+                    SettingsBackupPreference.showPreview(first);
+                    ShadowAlertDialog.getLatestAlertDialog().getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+                    ShadowLooper.idleMainLooper();
+                    assertTrue(name + "the import never reached its commit", store.awaitHeld());
+
+                    for (HushTelegramPreferenceFragment page : Arrays.asList(first, second)) {
+                        assertFalse(name + "a switch the import writes is in reach",
+                                page.findPreference(Settings.HIDE_ADS.key).isEnabled());
+                        assertEquals("Importing settings",
+                                String.valueOf(page.findPreference("action_import_settings").getSummary()));
+                    }
+                    tap(second, Settings.HIDE_ADS.key);
+                    assertEquals(name + "Quick setups reached a switch the import writes", 0,
+                            second.applyQuickSetup(Collections.singletonMap(Settings.HIDE_ADS, false)));
+                    assertFalse(name + "a tap reached a switch the import writes",
+                            Setting.preferences.preferences.contains(Settings.HIDE_ADS.key));
+
+                    tap(second, Settings.NORMAL_PASTE.key);
+                    assertAgreed(name + "while it writes, ", Settings.NORMAL_PASTE, true, first, second);
+
+                    store.letGo();
+                    for (int round = 0; round < 3; round++) {
+                        Utils.awaitBackgroundTasksForTests();
+                        ShadowLooper.idleMainLooper();
+                    }
+                }
+                assertEquals(name, lands ? "Settings imported. 1 switch changed."
+                        : "Couldn't import the settings. Nothing was changed.", ShadowToast.getTextOfLatestToast());
+                assertFalse(name + "the import still holds its switches",
+                        AbstractPreferenceFragment.settingImportInProgress);
+                assertAgreed(name, Settings.NORMAL_PASTE, true, first, second);
+                assertAgreed(name, Settings.HIDE_ADS, !lands, first, second);
+
+                controller.recreate();
+                ShadowLooper.idleMainLooper();
+                HushTelegramPreferenceFragment rebuilt = pageOf(controller);
+                assertAgreed(name + "on a page built afterwards, ", Settings.NORMAL_PASTE, true, rebuilt);
+                assertAgreed(name + "on a page built afterwards, ", Settings.HIDE_ADS, !lands, rebuilt);
+            } finally {
+                Settings.HIDE_ADS.resetToDefault();
+                Settings.NORMAL_PASTE.resetToDefault();
+            }
+        }
+    }
+
+    /**
+     * Save hands a filter list's write to the worker and waits for its answer. The tap comes
+     * straight back and the page behind still takes a tap. The dialog stays up with its actions out
+     * of reach until the answer is in, so a second Save starts nothing. A write that fails keeps the
+     * dialog and what was typed, one that lands closes it, and a page that went in the meantime is
+     * told nothing.
+     *
+     * <p>The write used to be made inside the tap, so the screen stood still for as long as the
+     * disk took.
+     */
+    @Test
+    public void aFilterSaveWaitsForItsWriteWithoutHoldingTheScreen() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_BY_KEYWORD);
+        ShadowToast.reset();
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushTelegramPreferenceFragment page = pageOf(controller);
+            Preference groups = page.findPreference(FilterEditor.GROUPS);
+            AlertDialog editor = dialogOf(groups);
+            EditText field = editor.findViewById(android.R.id.edit);
+            Button save = editor.getButton(AlertDialog.BUTTON_POSITIVE);
+
+            field.setText("spam");
+            try (FailingStore store = FailingStore.holding(FailingStore.Fault.COMMIT_THROWS)) {
+                save.performClick();
+                assertWaiting("a save that fails: ", store, editor);
+                assertEquals("No filters yet.", String.valueOf(groups.getSummary()));
+                assertEquals("the chat read the list before its write landed", "", Settings.MESSAGE_FILTERS_GROUPS.get());
+                assertNull("something was said before the write was back", ShadowToast.getLatestToast());
+                tap(page, Settings.HIDE_BY_KEYWORD.key);
+                assertTrue("the page behind took no tap while the write was out",
+                        ((SwitchPreference) page.findPreference(Settings.HIDE_BY_KEYWORD.key)).isChecked());
+                assertTrue(Settings.HIDE_BY_KEYWORD.savedValue());
+
+                field.setText("spam\nlater");
+                save.performClick();
+                store.letGo();
+                settle();
+            }
+            assertTrue("a save that fails keeps the dialog", editor.isShowing());
+            assertTrue("its actions are still out of reach", save.isEnabled());
+            assertEquals("Couldn't save the filters. Try again in a moment.", ShadowToast.getTextOfLatestToast());
+            assertEquals("what was typed is kept", "spam\nlater", field.getText().toString());
+            assertEquals("the second Save wrote", "", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+            assertEquals("No filters yet.", String.valueOf(groups.getSummary()));
+
+            field.setText("spam");
+            try (FailingStore store = FailingStore.holding()) {
+                save.performClick();
+                assertWaiting("a save that lands: ", store, editor);
+                assertFalse("the list was in the store before its commit was let through",
+                        Setting.preferences.preferences.contains(Settings.MESSAGE_FILTERS_GROUPS.key));
+                assertEquals("the chat read the list before its write landed", "", Settings.MESSAGE_FILTERS_GROUPS.get());
+                field.setText("later");
+                save.performClick();
+                store.letGo();
+                settle();
+            }
+            assertFalse("a save that landed left the dialog up", editor.isShowing());
+            assertEquals("Filters saved.", ShadowToast.getTextOfLatestToast());
+            assertEquals("the second Save wrote over the first", "spam", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+            assertEquals("1 filter.", String.valueOf(groups.getSummary()));
+
+            AlertDialog left = dialogOf(groups);
+            assertNotSame(editor, left);
+            ((EditText) left.findViewById(android.R.id.edit)).setText("spam\nmore");
+            ShadowToast.reset();
+            try (FailingStore store = FailingStore.holding()) {
+                left.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+                assertTrue("the write never reached the store", store.awaitHeld());
+                controller.get().getFragmentManager().beginTransaction().remove(page).commitNow();
+                assertFalse("the dialog outlived its page", left.isShowing());
+                store.letGo();
+                settle();
+            }
+            assertEquals("the write a page left behind is lost", "spam\nmore", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+            assertEquals("a page that's gone had its row changed", "1 filter.", String.valueOf(groups.getSummary()));
+            assertNull("a page that's gone was told how its save went", ShadowToast.getLatestToast());
+            assertEquals("2 filters.", String.valueOf(pageOf(controller).findPreference(FilterEditor.GROUPS).getSummary()));
+        } finally {
+            Settings.MESSAGE_FILTERS_GROUPS.resetToDefault();
+            Settings.HIDE_BY_KEYWORD.resetToDefault();
+        }
+    }
+
+    /**
+     * A Save made while a settings import is writing is held back with a note. Nothing is written
+     * and the dialog keeps what was typed, so the import can't land over the save or under it, and
+     * a Save once the import is done goes through.
+     */
+    @Test
+    public void aFilterSaveWaitsForASettingsImportToFinish() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_BY_KEYWORD);
+        ShadowToast.reset();
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            Preference groups = pageOf(controller).findPreference(FilterEditor.GROUPS);
+            AlertDialog editor = dialogOf(groups);
+            EditText field = editor.findViewById(android.R.id.edit);
+            Button save = editor.getButton(AlertDialog.BUTTON_POSITIVE);
+
+            field.setText("spam");
+            AbstractPreferenceFragment.settingImportInProgress = true;
+            save.performClick();
+            settle();
+            assertEquals("Wait for the settings import to finish, then save again.", ShadowToast.getTextOfLatestToast());
+            assertTrue("a save held back closed the dialog", editor.isShowing());
+            assertTrue("a save held back left the actions out of reach", save.isEnabled());
+            assertEquals("what was typed is kept", "spam", field.getText().toString());
+            assertEquals("a save held back wrote", "", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+            assertEquals("No filters yet.", String.valueOf(groups.getSummary()));
+
+            AbstractPreferenceFragment.settingImportInProgress = false;
+            save.performClick();
+            settle();
+            assertFalse("a save after the import left the dialog up", editor.isShowing());
+            assertEquals("Filters saved.", ShadowToast.getTextOfLatestToast());
+            assertEquals("spam", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+        } finally {
+            AbstractPreferenceFragment.settingImportInProgress = false;
+            Settings.MESSAGE_FILTERS_GROUPS.resetToDefault();
+            Settings.HIDE_BY_KEYWORD.resetToDefault();
+        }
+    }
+
+    /** A size picked while a settings import is writing is held back like a Save, with the saved size checked again. */
+    @Test
+    public void aStickerSizePickHeldForAnImportChecksTheSavedSizeAgain() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.CHANGE_STICKER_SIZE);
+        ShadowToast.reset();
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            Preference size = pageOf(controller).findPreference(HushTelegramPreferenceFragment.STICKER_SIZE_ROW);
+            AlertDialog picker = dialogOf(size);
+            AbstractPreferenceFragment.settingImportInProgress = true;
+            shadowOf(picker).clickOnItem(3);
+            settle();
+            assertEquals("Wait for the settings import to finish, then save again.", ShadowToast.getTextOfLatestToast());
+            assertTrue("a pick held back closed the list", picker.isShowing());
+            assertEquals("the saved size is checked again", 1, picker.getListView().getCheckedItemPosition());
+            assertEquals("a pick held back wrote", 75, (int) Settings.STICKER_SIZE.savedValue());
+            assertEquals("75% of Telegram's size", String.valueOf(size.getSummary()));
+
+            // The import writes a size of its own while the list is open.
+            Settings.STICKER_SIZE.save(125);
+            shadowOf(picker).clickOnItem(0);
+            settle();
+            assertEquals("what the import saved is checked, not what the list opened with",
+                    2, picker.getListView().getCheckedItemPosition());
+            Settings.STICKER_SIZE.save(100);
+            shadowOf(picker).clickOnItem(0);
+            settle();
+            assertEquals("a saved size that's none of the choices checks the default, as stickers read it",
+                    1, picker.getListView().getCheckedItemPosition());
+            assertEquals(100, (int) Settings.STICKER_SIZE.savedValue());
+        } finally {
+            AbstractPreferenceFragment.settingImportInProgress = false;
+            Settings.STICKER_SIZE.resetToDefault();
+        }
+    }
+
+    /**
+     * The translation service's Save and Use Google write on the worker the same way, and the
+     * service a message reads as it draws stays the saved one, read without a wait, until the write
+     * has landed.
+     *
+     * <p>Both used to commit inside the tap while holding the lock every message takes to read the
+     * service, so a slow disk stopped the chat behind the dialog as well.
+     */
+    @Test
+    public void theTranslationServiceWaitsForItsWriteAndNoMessageWaitsWithIt() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.OUTSIDE_TRANSLATE);
+        Context application = RuntimeEnvironment.getApplication();
+        SharedPreferences file = application.getSharedPreferences(TRANSLATE_FILE, 0);
+        file.edit().clear().commit();
+        OutsideTranslateForTests.reset();
+        ShadowToast.reset();
+        String google = "Google's web translate. Tap to use an AI service with your own key.";
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushTelegramPreferenceFragment page = pageOf(controller);
+            Preference row = page.findPreference(TranslateServiceEditor.KEY);
+            AlertDialog editor = dialogOf(row);
+            EditText key = editor.findViewById(android.R.id.edit);
+            ((EditText) editor.findViewById(android.R.id.text1)).setText("https://openrouter.ai/api/v1");
+            ((EditText) editor.findViewById(android.R.id.text2)).setText("deepseek/deepseek-chat");
+            Button save = editor.getButton(AlertDialog.BUTTON_POSITIVE);
+
+            key.setText("sk-test-123");
+            try (FailingStore store = FailingStore.holding(FailingStore.Fault.LOST)) {
+                Utils.setContext(store.over(application, TRANSLATE_FILE));
+                save.performClick();
+                assertWaiting("a save that fails: ", store, editor);
+                long asked = System.nanoTime();
+                assertFalse("the service changed before its write landed", OutsideTranslate.service().enabled());
+                assertTrue("a message drawing waited for the service's write",
+                        System.nanoTime() - asked < TimeUnit.SECONDS.toNanos(2));
+
+                key.setText("sk-typed-since");
+                save.performClick();
+                // The keyboard's Done is the same Save.
+                key.onEditorAction(EditorInfo.IME_ACTION_DONE);
+                store.letGo();
+                settle();
+            } finally {
+                Utils.setContext(application);
+            }
+            assertTrue("a save that fails keeps the dialog", editor.isShowing());
+            assertTrue("its actions are still out of reach", save.isEnabled());
+            assertEquals("Couldn't save the translation service. Try again in a moment.", ShadowToast.getTextOfLatestToast());
+            assertEquals("what was typed is kept", "sk-typed-since", key.getText().toString());
+            assertFalse("the second Save wrote", file.contains("ai_key"));
+            assertEquals(google, String.valueOf(row.getSummary()));
+
+            key.setText("sk-test-123");
+            try (FailingStore store = FailingStore.holding()) {
+                Utils.setContext(store.over(application, TRANSLATE_FILE));
+                save.performClick();
+                assertWaiting("a save that lands: ", store, editor);
+                assertFalse("the key was in the file before its commit was let through", file.contains("ai_key"));
+                assertEquals(google, String.valueOf(row.getSummary()));
+                store.letGo();
+                settle();
+            } finally {
+                Utils.setContext(application);
+            }
+            assertFalse("a save that landed left the dialog up", editor.isShowing());
+            assertEquals("Translation service saved.", ShadowToast.getTextOfLatestToast());
+            assertEquals("Your AI service at openrouter.ai, model deepseek/deepseek-chat.", String.valueOf(row.getSummary()));
+            assertEquals("sk-test-123", file.getString("ai_key", null));
+
+            editor = dialogOf(row);
+            try (FailingStore store = FailingStore.holding()) {
+                Utils.setContext(store.over(application, TRANSLATE_FILE));
+                editor.getButton(AlertDialog.BUTTON_NEUTRAL).performClick();
+                assertWaiting("Use Google: ", store, editor);
+                assertTrue("the key was gone before its commit was let through", file.contains("ai_key"));
+                assertTrue("the service changed before its write landed", OutsideTranslate.service().enabled());
+                store.letGo();
+                settle();
+            } finally {
+                Utils.setContext(application);
+            }
+            assertFalse("Use Google left the dialog up", editor.isShowing());
+            assertEquals("Back to Google's web translate.", ShadowToast.getTextOfLatestToast());
+            assertEquals(google, String.valueOf(row.getSummary()));
+            assertFalse("Use Google forgets the key", file.contains("ai_key"));
+
+            AlertDialog left = dialogOf(row);
+            ((EditText) left.findViewById(android.R.id.edit)).setText("sk-test-456");
+            ShadowToast.reset();
+            try (FailingStore store = FailingStore.holding()) {
+                Utils.setContext(store.over(application, TRANSLATE_FILE));
+                left.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+                assertTrue("the write never reached the store", store.awaitHeld());
+                controller.get().getFragmentManager().beginTransaction().remove(page).commitNow();
+                assertFalse("the dialog outlived its page", left.isShowing());
+                store.letGo();
+                settle();
+            } finally {
+                Utils.setContext(application);
+            }
+            assertEquals("the write a page left behind is lost", "sk-test-456", file.getString("ai_key", null));
+            assertEquals("a page that's gone had its row changed", google, String.valueOf(row.getSummary()));
+            assertNull("a page that's gone was told how its save went", ShadowToast.getLatestToast());
+        } finally {
+            Utils.setContext(application);
+            file.edit().clear().commit();
+            OutsideTranslateForTests.reset();
+        }
+    }
+
+    /**
+     * A sticker size picked from the list is written on the worker too. The list stays up, out of
+     * reach, with the pick checked until the answer is in, and a second pick meanwhile starts
+     * nothing. A write that fails checks the saved size again. Picks made on two pages land in the
+     * order they were tapped.
+     */
+    @Test
+    public void aStickerSizePickWaitsForItsWriteAndPicksLandInTheOrderTapped() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.CHANGE_STICKER_SIZE);
+        ShadowToast.reset();
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushTelegramPreferenceFragment page = pageOf(controller);
+            Preference size = page.findPreference(HushTelegramPreferenceFragment.STICKER_SIZE_ROW);
+            AlertDialog picker = dialogOf(size);
+
+            try (FailingStore store = FailingStore.holding(FailingStore.Fault.COMMIT_THROWS)) {
+                shadowOf(picker).clickOnItem(3);
+                assertWaiting("a pick that fails: ", store, picker);
+                assertEquals("the pick shows while it's written", 3, picker.getListView().getCheckedItemPosition());
+                assertEquals("75% of Telegram's size", String.valueOf(size.getSummary()));
+                assertEquals("stickers took the pick before its write landed", 75, (int) Settings.STICKER_SIZE.savedValue());
+                shadowOf(picker).clickOnItem(0);
+                store.letGo();
+                settle();
+            }
+            assertTrue("a pick that fails keeps the list", picker.isShowing());
+            assertTrue("the list is still out of reach", picker.getListView().isEnabled());
+            assertEquals("the saved size is checked again", 1, picker.getListView().getCheckedItemPosition());
+            assertEquals("Couldn't save the size. Try again in a moment.", ShadowToast.getTextOfLatestToast());
+            assertEquals("the second pick was written", 75, (int) Settings.STICKER_SIZE.savedValue());
+            assertEquals("75% of Telegram's size", String.valueOf(size.getSummary()));
+
+            Preference otherSize = pageOf(controller).findPreference(HushTelegramPreferenceFragment.STICKER_SIZE_ROW);
+            AlertDialog otherPicker = dialogOf(otherSize);
+            assertNotSame(picker, otherPicker);
+            try (FailingStore store = FailingStore.holding()) {
+                shadowOf(picker).clickOnItem(3);
+                assertWaiting("the first of two picks: ", store, picker);
+                assertFalse("the size was in the store before its commit was let through",
+                        Setting.preferences.preferences.contains(Settings.STICKER_SIZE.key));
+                assertEquals("stickers took the pick before its write landed", 75, (int) Settings.STICKER_SIZE.savedValue());
+                shadowOf(otherPicker).clickOnItem(0);
+                ShadowLooper.idleMainLooper();
+                assertTrue("the second pick didn't wait its turn", otherPicker.isShowing());
+                store.letGo();
+                settle();
+            }
+            assertFalse("a pick that landed left the list up", picker.isShowing());
+            assertFalse("a pick that landed left the list up", otherPicker.isShowing());
+            assertEquals("the picks landed out of order", 50, (int) Settings.STICKER_SIZE.savedValue());
+            assertEquals("50% of Telegram's size", String.valueOf(otherSize.getSummary()));
+
+            AlertDialog left = dialogOf(size);
+            ShadowToast.reset();
+            try (FailingStore store = FailingStore.holding()) {
+                shadowOf(left).clickOnItem(2);
+                assertTrue("the write never reached the store", store.awaitHeld());
+                controller.get().getFragmentManager().beginTransaction().remove(page).commitNow();
+                assertFalse("the list outlived its page", left.isShowing());
+                store.letGo();
+                settle();
+            }
+            assertEquals("the write a page left behind is lost", 125, (int) Settings.STICKER_SIZE.savedValue());
+            assertEquals("a page that's gone had its row changed", "50% of Telegram's size", String.valueOf(size.getSummary()));
+            assertNull("a page that's gone was told how its save went", ShadowToast.getLatestToast());
+        } finally {
+            Settings.STICKER_SIZE.resetToDefault();
+        }
+    }
+
+    /**
+     * The worker takes 32 saves behind the one it's on. One more isn't started, and the dialog says
+     * so the way it does for a write that failed: it stays, in reach, with what was typed.
+     */
+    @Test
+    public void aSaveTheWorkerHasNoRoomForLeavesItsDialogInReach() throws Exception {
+        PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.HIDE_BY_KEYWORD);
+        ShadowToast.reset();
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        AtomicInteger unfinished = new AtomicInteger();
+        Runnable filler = () -> {
+            started.countDown();
+            try {
+                release.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException interrupted) {
+                Thread.currentThread().interrupt();
+            } finally {
+                unfinished.decrementAndGet();
+            }
+        };
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            Preference groups = pageOf(controller).findPreference(FilterEditor.GROUPS);
+            AlertDialog editor = dialogOf(groups);
+            EditText field = editor.findViewById(android.R.id.edit);
+            Button save = editor.getButton(AlertDialog.BUTTON_POSITIVE);
+            field.setText("spam");
+
+            // The worker has to be on the first one before the rest can fill everything behind it.
+            unfinished.incrementAndGet();
+            assertTrue(Utils.runInOrderOnBackgroundThread(filler));
+            assertTrue("the worker never started", started.await(5, TimeUnit.SECONDS));
+            while (true) {
+                unfinished.incrementAndGet();
+                if (!Utils.runInOrderOnBackgroundThread(filler)) break;
+                assertTrue("the worker never ran out of room", unfinished.get() < 100);
+            }
+            unfinished.decrementAndGet();
+
+            save.performClick();
+            ShadowLooper.idleMainLooper();
+            assertTrue("a save that never started closed the dialog", editor.isShowing());
+            assertTrue("a save that never started left its actions out of reach", save.isEnabled());
+            assertEquals("Couldn't save the filters. Try again in a moment.", ShadowToast.getTextOfLatestToast());
+            assertEquals("spam", field.getText().toString());
+            assertEquals("", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+
+            release.countDown();
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(10);
+            while (unfinished.get() > 0 && System.nanoTime() < deadline) Thread.sleep(5);
+            assertEquals("the worker never caught up", 0, unfinished.get());
+            save.performClick();
+            settle();
+            assertFalse("with room again, Save didn't go through", editor.isShowing());
+            assertEquals("spam", Settings.MESSAGE_FILTERS_GROUPS.savedValue());
+        } finally {
+            release.countDown();
+            Settings.MESSAGE_FILTERS_GROUPS.resetToDefault();
+        }
+    }
+
+    /**
+     * Clear diagnostic data hands its work to the same worker and waits out of reach for it. A page
+     * that goes meanwhile leaves a row nothing draws, and that row isn't changed; the page drawn
+     * next offers the Undo.
+     */
+    @Test
+    public void theClearRowOfAPageThatWentIsLeftAsItWas() throws Exception {
+        // Whatever an earlier test cleared is dropped, so the row starts on Clear.
+        LogBufferManager.clearLogBuffer();
+        LogBufferManager.clearLogBuffer();
+        LogBufferManager.appendToLogBuffer("something to clear");
+        CountDownLatch release = new CountDownLatch(1);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushTelegramPreferenceFragment page = pageOf(controller);
+            Preference clear = page.findPreference("action_clear_diagnostic_data");
+            assertEquals("Clear diagnostic data", String.valueOf(clear.getTitle()));
+
+            // The worker is kept on something else, so the row's work waits behind it.
+            assertTrue(Utils.runInOrderOnBackgroundThread(() -> {
+                try {
+                    release.await(10, TimeUnit.SECONDS);
+                } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            }));
+            assertTrue(clear.getOnPreferenceClickListener().onPreferenceClick(clear));
+            assertFalse("a row with its work out takes a tap", clear.isEnabled());
+            assertFalse("the work was done inside the tap", LogBufferManager.canUndoClear());
+
+            controller.get().getFragmentManager().beginTransaction().remove(page).commitNow();
+            release.countDown();
+            settle();
+            assertTrue("the Clear a page left behind is lost", LogBufferManager.canUndoClear());
+            assertEquals("a row whose page went was redrawn", "Clear diagnostic data", String.valueOf(clear.getTitle()));
+            assertEquals("Undo", String.valueOf(
+                    pageOf(controller).findPreference("action_clear_diagnostic_data").getTitle()));
+        } finally {
+            release.countDown();
+            settle();
+            LogBufferManager.clearLogBuffer();
+            LogBufferManager.clearLogBuffer();
+        }
+    }
+
+    /**
+     * A save is out and held at [store]: its write is on a worker, the main thread is free, and
+     * [dialog] waits with its actions out of reach.
+     */
+    private static void assertWaiting(String when, FailingStore store, AlertDialog dialog) throws Exception {
+        assertTrue(when + "the write never reached the store", store.awaitHeld());
+        assertNotSame(when + "the write is on the main thread", Looper.getMainLooper().getThread(), store.heldOn());
+        ShadowLooper.idleMainLooper();
+        assertTrue(when + "the dialog didn't wait for the write", dialog.isShowing());
+        for (int which : new int[]{AlertDialog.BUTTON_POSITIVE, AlertDialog.BUTTON_NEUTRAL, AlertDialog.BUTTON_NEGATIVE}) {
+            Button button = dialog.getButton(which);
+            if (button != null) assertFalse(when + "button " + which + " is in reach", button.isEnabled());
+        }
+        if (dialog.getListView() != null) assertFalse(when + "the list is in reach", dialog.getListView().isEnabled());
+    }
+
+    /** Lets a save finish: its write on the worker, then its answer on the main thread. */
+    private static void settle() throws Exception {
+        Utils.awaitBackgroundTasksForTests();
+        ShadowLooper.idleMainLooper();
+    }
+
+    /** Taps [row] and answers the dialog it opens. */
+    private static AlertDialog dialogOf(Preference row) {
+        assertTrue(row.getOnPreferenceClickListener().onPreferenceClick(row));
+        ShadowLooper.idleMainLooper();
+        return ShadowAlertDialog.getLatestAlertDialog();
+    }
+
+    /** Taps the row for [key] the way a finger does, through the page's list. A row out of reach ignores it. */
+    private static void tap(HushTelegramPreferenceFragment page, String key) {
+        Preference row = page.findPreference(key);
+        ListView list = page.getView().findViewById(android.R.id.list);
+        int position = -1;
+        for (int i = 0; i < list.getCount(); i++) if (list.getItemAtPosition(i) == row) position = i;
+        assertTrue("no row in the list for " + key, position >= 0);
+        list.performItemClick(null, position, list.getAdapter().getItemId(position));
+    }
+
+    /** [setting] is [expected] in the store, in the process and on each of [pages], with its row in reach. */
+    private static void assertAgreed(String when, BooleanSetting setting, boolean expected,
+                                     HushTelegramPreferenceFragment... pages) {
+        Object stored = Setting.preferences.preferences.getAll().get(setting.key);
+        assertEquals(when + setting.key + " in the store", expected, stored == null ? setting.defaultValue : stored);
+        assertEquals(when + setting.key + " in the process", expected, setting.savedValue());
+        for (HushTelegramPreferenceFragment page : pages) {
+            SwitchPreference row = (SwitchPreference) page.findPreference(setting.key);
+            assertEquals(when + setting.key + " on a page", expected, row.isChecked());
+            assertTrue(when + setting.key + "'s row is out of reach", row.isEnabled());
+        }
     }
 
     private static int indexOfKey(List<Preference> rows, String key) {

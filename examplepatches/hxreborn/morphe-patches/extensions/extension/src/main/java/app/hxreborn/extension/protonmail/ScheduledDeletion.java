@@ -4,17 +4,11 @@
  */
 package app.hxreborn.extension.protonmail;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
-import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import android.util.Log;
@@ -28,10 +22,6 @@ public final class ScheduledDeletion {
     static final String[] EMPTIED_LABELS = { TRASH, SPAM };
 
     private static final String TAG = "ScheduledDeletion";
-
-    private static final String UNIFFI_PACKAGE = "uniffi.mail_uniffi.";
-
-    private static final long SUSPEND_TIMEOUT_SECONDS = 60L;
 
     private static final AtomicBoolean DELETING = new AtomicBoolean();
 
@@ -47,32 +37,13 @@ public final class ScheduledDeletion {
 
     public static synchronized void captureMailbox(Object result, Object mailUserSession) {
         try {
-            final Object mailbox = okValueOrNull(result);
+            final Object mailbox = UniffiCalls.okValueOrNull(result);
             if (mailbox != null) {
                 MAILBOX_SESSIONS.put(mailbox, mailUserSession);
             }
         } catch (Throwable throwable) {
             Log.e(TAG, "Failed to associate mailbox with account", throwable);
         }
-    }
-
-    public static Object ioDispatcher() {
-        return null;
-    }
-
-    private static void throwOnFailure(Object result) throws Exception {
-        if (result == null || !"Failure".equals(result.getClass().getSimpleName())) {
-            return;
-        }
-
-        final Field cause = result.getClass().getDeclaredField("exception");
-        cause.setAccessible(true);
-        final Object thrown = cause.get(result);
-
-        if (thrown instanceof Exception) {
-            throw (Exception) thrown;
-        }
-        throw new IllegalStateException(String.valueOf(thrown));
     }
 
     public static synchronized void onMailboxShown(Object mailbox) {
@@ -87,7 +58,7 @@ public final class ScheduledDeletion {
                 return;
             }
 
-            shownLabelId = callNoArg(mailbox, "labelId");
+            shownLabelId = UniffiCalls.callNoArg(mailbox, "labelId");
             cacheSystemLabelIds(sessionSnapshot);
 
             if (!ScheduledDeletionSettings.anyLabelDue(Utils.getContext(), account)) {
@@ -118,7 +89,6 @@ public final class ScheduledDeletion {
     }
 
     private static void emptyDueLabels(Object mailSession, String account) throws Exception {
-        final SuspendInvoker suspendInvoker = new SuspendInvoker();
         final List<String> deletedLabels = new ArrayList<>();
 
         for (String label : EMPTIED_LABELS) {
@@ -130,17 +100,17 @@ public final class ScheduledDeletion {
                 continue;
             }
 
-            final Object labelId = systemLabelId(mailSession, suspendInvoker, label);
+            final Object labelId = systemLabelId(mailSession, label);
             if (intervalMsOf(label) != intervalMs) {
                 continue;
             }
 
-            final Object result = suspendInvoker.invoke(uniffiMethod("deleteAllMessagesInLabel"), null, mailSession,
-                    labelId);
-            final boolean emptied = "Ok".equals(simpleNameOf(result));
+            final Object result = UniffiCalls.invokeSuspending(UniffiCalls.uniffiMethod("deleteAllMessagesInLabel"),
+                    null, mailSession, labelId);
+            final boolean emptied = "Ok".equals(UniffiCalls.simpleNameOf(result));
 
             if (!emptied) {
-                Log.w(TAG, "deleteAllMessagesInLabel(" + label + ") returned " + simpleNameOf(result));
+                Log.w(TAG, "deleteAllMessagesInLabel(" + label + ") returned " + UniffiCalls.simpleNameOf(result));
                 continue;
             }
 
@@ -171,9 +141,8 @@ public final class ScheduledDeletion {
 
         new Thread(() -> {
             try {
-                final SuspendInvoker suspendInvoker = new SuspendInvoker();
                 for (String label : EMPTIED_LABELS) {
-                    SYSTEM_LABEL_IDS.put(label, systemLabelId(mailSession, suspendInvoker, label));
+                    SYSTEM_LABEL_IDS.put(label, systemLabelId(mailSession, label));
                 }
             } catch (Throwable throwable) {
                 Log.e(TAG, "Failed to resolve the Trash and Spam label IDs", throwable);
@@ -186,139 +155,26 @@ public final class ScheduledDeletion {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    private static Object systemLabelId(Object mailSession, SuspendInvoker suspendInvoker, String label)
-            throws Exception {
-        final Class<?> systemLabel = Class.forName(UNIFFI_PACKAGE + "SystemLabel");
+    private static Object systemLabelId(Object mailSession, String label) throws Exception {
+        final Class<?> systemLabel = Class.forName(UniffiCalls.UNIFFI_PACKAGE + "SystemLabel");
         final Object constant = Enum.valueOf((Class) systemLabel, label);
-        final Object result = suspendInvoker.invoke(uniffiMethod("resolveSystemLabelId"), null, mailSession, constant);
-        final Object labelId = okValueOrNull(result);
+        final Object result = UniffiCalls.invokeSuspending(UniffiCalls.uniffiMethod("resolveSystemLabelId"), null,
+                mailSession, constant);
+        final Object labelId = UniffiCalls.okValueOrNull(result);
         if (labelId == null) {
-            throw new IllegalStateException("resolveSystemLabelId(" + label + ") returned " + simpleNameOf(result));
+            throw new IllegalStateException(
+                    "resolveSystemLabelId(" + label + ") returned " + UniffiCalls.simpleNameOf(result));
         }
         return labelId;
     }
 
-    private static boolean isCoroutineSuspended(Object value) {
-        return value instanceof Enum && "COROUTINE_SUSPENDED".equals(((Enum<?>) value).name());
-    }
-
     private static String userIdOf(Object mailUserSession) {
         try {
-            return (String) okValueOrNull(callNoArg(mailUserSession, "userId"));
+            return (String) UniffiCalls.okValueOrNull(UniffiCalls.callNoArg(mailUserSession, "userId"));
         } catch (Throwable throwable) {
             Log.e(TAG, "Failed to read the account ID", throwable);
             return null;
         }
-    }
-
-    private static Object okValueOrNull(Object result) {
-        return ("Ok".equals(simpleNameOf(result))) ? callNoArg(result, "getV1") : null;
-    }
-
-    private static Method uniffiMethod(String name) throws Exception {
-        return methodNamed(Class.forName(UNIFFI_PACKAGE + "Mail_uniffiKt"), name);
-    }
-
-    private static Method methodNamed(Class<?> type, String name) throws NoSuchMethodException {
-        for (Method candidate : type.getMethods()) {
-            if (candidate.getName().equals(name)) {
-                candidate.setAccessible(true);
-                return candidate;
-            }
-        }
-        throw new NoSuchMethodException(type.getName() + "." + name);
-    }
-
-    private static Object callNoArg(Object target, String name) {
-        try {
-            return methodNamed(target.getClass(), name).invoke(target);
-        } catch (Throwable throwable) {
-            throw new IllegalStateException("Failed to invoke " + simpleNameOf(target) + "." + name + "()", throwable);
-        }
-    }
-
-    private static String simpleNameOf(Object value) {
-        return (value != null) ? value.getClass().getSimpleName() : "null";
-    }
-
-    private static ClassLoader classLoader() {
-        return ScheduledDeletion.class.getClassLoader();
-    }
-
-    private static final class SuspendInvoker {
-
-        private final Class<?> continuationType;
-
-        private final Object context;
-
-        SuspendInvoker() throws Exception {
-            final Class<?>[] parameters = uniffiMethod("deleteAllMessagesInLabel").getParameterTypes();
-            this.continuationType = parameters[parameters.length - 1];
-            this.context = ioDispatcher();
-            if (this.context == null) {
-                throw new IllegalStateException("I/O coroutine dispatcher is unavailable");
-            }
-        }
-
-        Object invoke(Method method, Object target, Object... args) throws Exception {
-            final ParkedContinuation parked = new ParkedContinuation(this.context);
-            final Object continuation = Proxy.newProxyInstance(classLoader(), new Class<?>[] { this.continuationType },
-                    parked);
-
-            final Object[] withContinuation = new Object[args.length + 1];
-            System.arraycopy(args, 0, withContinuation, 0, args.length);
-            withContinuation[args.length] = continuation;
-
-            final Object immediate = method.invoke(target, withContinuation);
-            if (!isCoroutineSuspended(immediate)) {
-                return immediate;
-            }
-
-            if (!parked.resumed.await(SUSPEND_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
-                throw new IllegalStateException(
-                        method.getName() + " did not resume within " + SUSPEND_TIMEOUT_SECONDS + "s");
-            }
-            throwOnFailure(parked.result);
-            return parked.result;
-        }
-
-    }
-
-    private static final class ParkedContinuation implements InvocationHandler {
-
-        private final CountDownLatch resumed = new CountDownLatch(1);
-
-        private final Object context;
-
-        private volatile Object result;
-
-        ParkedContinuation(Object context) {
-            this.context = context;
-        }
-
-        @Override
-        public Object invoke(Object proxy, Method method, Object[] args) {
-            final String name = method.getName();
-            if ("getContext".equals(name)) {
-                return this.context;
-            }
-            if ("resumeWith".equals(name)) {
-                this.result = args[0];
-                this.resumed.countDown();
-                return null;
-            }
-            if ("toString".equals(name)) {
-                return "ScheduledDeletion";
-            }
-            if ("hashCode".equals(name)) {
-                return System.identityHashCode(proxy);
-            }
-            if ("equals".equals(name)) {
-                return proxy == args[0];
-            }
-            return null;
-        }
-
     }
 
 }

@@ -1,3 +1,27 @@
+## [1.6.0](https://github.com/archivesteak/Quest/compare/v1.5.0...v1.6.0) (2026-10-14)
+
+### ✨ New Features
+
+* **Gboard:** Add `Change app name` patch ([9fe05b0](https://github.com/archivesteak/Quest/commit/9fe05b0c4db6267ad23bb2db82526fd892c2427c))
+
+## [1.6.0-dev.1](https://github.com/archivesteak/Quest/compare/v1.5.0...v1.6.0-dev.1) (2026-10-14)
+
+### ✨ New Features
+
+* **Gboard:** Add `Change app name` patch ([9fe05b0](https://github.com/archivesteak/Quest/commit/9fe05b0c4db6267ad23bb2db82526fd892c2427c))
+
+## [1.5.0](https://github.com/archivesteak/Quest/compare/v1.4.0...v1.5.0) (2026-10-14)
+
+### ✨ New Features
+
+* **Gboard:** Add `Remove clipboard length limit`, `Use KLIPY for GIFs` and `Change package name` patches ([3cc836e](https://github.com/archivesteak/Quest/commit/3cc836e34ec251f74ee691f4d02e240acbaa0a19))
+
+## [1.5.0-dev.1](https://github.com/archivesteak/Quest/compare/v1.4.0...v1.5.0-dev.1) (2026-10-14)
+
+### ✨ New Features
+
+* **Gboard:** Add `Remove clipboard length limit`, `Use KLIPY for GIFs` and `Change package name` patches ([3cc836e](https://github.com/archivesteak/Quest/commit/3cc836e34ec251f74ee691f4d02e240acbaa0a19))
+
 ## [1.4.0](https://github.com/archivesteak/pinterest-patches/compare/v1.3.0...v1.4.0) (2026-10-13)
 
 ### 🐛 Bug Fixes

@@ -43,11 +43,14 @@ import app.morphe.extension.shared.settings.preference.ReopenSettingsAfterRestar
 @SuppressWarnings("deprecation")
 final class SettingsNavigation extends BaseAdapter {
     private static final String STATE = "hushthreads_navigation";
-    private static final String MORE = "more";
     /** Marks the Pause, Resume or Undo button placed under a status row's text, so a rebind replaces it. */
     private static final String STATUS_ACTION = "hushthreads_status_action";
     /** The restart row's key. Like the other rows only this view draws, it stores nothing. */
     static final String RESTART = "action_restart_to_apply";
+    /** The home page's Quick setups row: Quiet, Privacy or Back to defaults in one tap ({@link QuickSetupKeys}). */
+    static final String QUICK_SETUPS = "action_quick_setups";
+    /** Just above Support: a new GitHub bug report with this install's versions filled in ({@link ReportProblemForm}). */
+    static final String REPORT = "action_report_problem";
     private final HushThreadsPreferenceFragment page;
     private final SettingsDialog host;
     private final ListView list;
@@ -56,7 +59,14 @@ final class SettingsNavigation extends BaseAdapter {
     private final List<Section> sections = new ArrayList<>();
     private final List<Preference> visible = new ArrayList<>();
     private final Preference browse;
-    private final Preference more;
+    /**
+     * The home page's second heading, over Appearance, Links, Updates and the other pages that
+     * used to sit on a More settings page of their own. Every page is one tap from home: Hush
+     * settings go at most one level deep.
+     */
+    private final Preference moreHeading;
+    private final Preference quickSetups;
+    private final Preference report;
     /** The home page's last row, which opens HushThreads' Ko-fi page in a browser. */
     private final Preference support;
     private final Preference empty;
@@ -83,8 +93,6 @@ final class SettingsNavigation extends BaseAdapter {
     private Preference refocus;
     private int homePosition;
     private int homeOffset;
-    private int morePosition;
-    private int moreOffset;
 
     private final DataSetObserver changes = new DataSetObserver() {
         @Override public void onChanged() { rebuild(); }
@@ -118,8 +126,18 @@ final class SettingsNavigation extends BaseAdapter {
         section("About", L10n.t("About"), null, SettingsIcons.ABOUT, false);
         browse = new HushThreadsPreferenceFragment.Heading(context);
         browse.setTitle(L10n.t("Browse settings"));
-        more = link(context, L10n.t("More settings"), L10n.t("Links, updates, backup and more"), SettingsIcons.SETTINGS);
-        more.setOnPreferenceClickListener(ignored -> { navigate(MORE); return true; });
+        moreHeading = new HushThreadsPreferenceFragment.Heading(context);
+        moreHeading.setTitle(L10n.t("More settings"));
+        quickSetups = link(context, L10n.t("Quick setups"),
+                L10n.t("Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row."),
+                SettingsIcons.BUILD);
+        quickSetups.setKey(QUICK_SETUPS);
+        quickSetups.setOnPreferenceClickListener(ignored -> { page.showQuickSetups(); return true; });
+        ((HushThreadsPreferenceFragment.Row) quickSetups).longPress = page::hideQuickSetups;
+        report = link(context, L10n.t("Report a problem"),
+                L10n.t("Opens a GitHub report with your versions and settings filled in. Add what happened."), SettingsIcons.BUG);
+        report.setKey(REPORT);
+        report.setOnPreferenceClickListener(row -> { ReportProblemForm.open(row.getContext(), screen); return true; });
         support = link(context, L10n.t("Support HushThreads"), null, SettingsIcons.HEART);
         support.setKey(HushThreadsPreferenceFragment.SUPPORT);
         support.setOnPreferenceClickListener(row -> { HushThreadsPreferenceFragment.openSupport(row.getContext()); return true; });
@@ -153,14 +171,14 @@ final class SettingsNavigation extends BaseAdapter {
             query = state.getString("query", "");
             homePosition = state.getInt("homePosition");
             homeOffset = state.getInt("homeOffset");
-            morePosition = state.getInt("morePosition");
-            moreOffset = state.getInt("moreOffset");
         } else {
             // Nothing saved: the page the screen was asked to open on, such as the one a restart
             // from the restart row left.
             route = host.startPage();
         }
-        if (!MORE.equals(route) && selected() == null) route = "";
+        // A route that names no page, such as "more" saved before More settings joined the home
+        // page, opens home.
+        if (selected() == null) route = "";
         source.registerDataSetObserver(changes);
         list.setAdapter(this);
         list.setOnItemClickListener((parent, view, position, id) -> {
@@ -173,6 +191,25 @@ final class SettingsNavigation extends BaseAdapter {
                 item.getOnPreferenceClickListener().onPreferenceClick(item);
             }
         });
+        // A long press takes Quick setups off the home page; a row on the Pause, backup and
+        // diagnostics page brings it back. A row with no long press of its own leaves it alone.
+        list.setOnItemLongClickListener((parent, view, position, id) -> {
+            Runnable longPress = HushThreadsPreferenceFragment.RowSemantics.longPressOf(getItem(position));
+            if (longPress == null) return false;
+            longPress.run();
+            return true;
+        });
+        // That listener makes the list itself long-clickable, and a screen reader then stops on the
+        // whole list to offer a long press. The list keeps it for touch, and RowSemantics offers it
+        // on the one row that has one.
+        list.setAccessibilityDelegate(new View.AccessibilityDelegate() {
+            @Override
+            public void onInitializeAccessibilityNodeInfo(View host, AccessibilityNodeInfo info) {
+                super.onInitializeAccessibilityNodeInfo(host, info);
+                info.setLongClickable(false);
+                info.removeAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK);
+            }
+        });
         rebuild();
         host.showPage(title(), route.isEmpty(), query);
         if (state != null) showAt(state.getInt("position"), state.getInt("offset"));
@@ -182,7 +219,6 @@ final class SettingsNavigation extends BaseAdapter {
         for (Preference candidate : page.sections()) {
             if (!title.contentEquals(candidate.getTitle())) continue;
             Preference link = link(screen.getContext(), title, detail, icon);
-            if (!primary) link.setIcon(SettingsIcons.icon(screen.getContext(), icon, palette().heading));
             link.setKey("section_" + id);
             link.setOnPreferenceClickListener(ignored -> { navigate(id); return true; });
             sections.add(new Section(id, (PreferenceCategory) candidate, link, primary));
@@ -205,7 +241,6 @@ final class SettingsNavigation extends BaseAdapter {
     }
 
     private CharSequence title() {
-        if (MORE.equals(route)) return more.getTitle();
         Section section = selected();
         return section == null ? "HushThreads" : section.category.getTitle();
     }
@@ -215,7 +250,7 @@ final class SettingsNavigation extends BaseAdapter {
         rememberIndex();
         query = "";
         route = destination;
-        if (!MORE.equals(route) && selected() == null) route = "";
+        if (selected() == null) route = "";
         rebuild();
         host.showPage(title(), route.isEmpty(), query);
         showAt(0, 0);
@@ -252,13 +287,12 @@ final class SettingsNavigation extends BaseAdapter {
         }
         if (route.isEmpty()) return false;
         Section section = selected();
-        Preference left = section != null ? section.link : more;
-        route = section != null && !section.primary ? MORE : "";
+        // Every page opens from home, so Back goes home, to the place the list was left.
+        route = "";
         rebuild();
-        host.showPage(title(), route.isEmpty(), query);
-        showAt(MORE.equals(route) ? morePosition : homePosition,
-                MORE.equals(route) ? moreOffset : homeOffset);
-        refocus = left;
+        host.showPage(title(), true, query);
+        showAt(homePosition, homeOffset);
+        refocus = section != null ? section.link : null;
         return true;
     }
 
@@ -276,10 +310,12 @@ final class SettingsNavigation extends BaseAdapter {
         if (route.isEmpty() && query.isEmpty()) {
             homePosition = list.getFirstVisiblePosition();
             homeOffset = offset;
-        } else if (MORE.equals(route)) {
-            morePosition = list.getFirstVisiblePosition();
-            moreOffset = offset;
         }
+    }
+
+    /** The page in view: a section's route, or "" for home. */
+    String route() {
+        return route;
     }
 
     void save(Bundle out) {
@@ -288,8 +324,6 @@ final class SettingsNavigation extends BaseAdapter {
         state.putString("query", query);
         state.putInt("homePosition", homePosition);
         state.putInt("homeOffset", homeOffset);
-        state.putInt("morePosition", morePosition);
-        state.putInt("moreOffset", moreOffset);
         state.putInt("position", list.getFirstVisiblePosition());
         View first = list.getChildAt(0);
         state.putInt("offset", first == null ? 0 : first.getTop());
@@ -303,6 +337,9 @@ final class SettingsNavigation extends BaseAdapter {
 
     /** A change that waits for a restart was made or taken back: the restart row comes, goes or counts again. */
     void restartChanged() { rebuild(); }
+
+    /** Quick setups was hidden or brought back: the home page shows it or leaves it out from now on. */
+    void quickSetupsChanged() { rebuild(); }
 
     private void rebuild() {
         int restartWas = visible.indexOf(restart);
@@ -331,16 +368,26 @@ final class SettingsNavigation extends BaseAdapter {
         } else if (selected != null) {
             for (int i = 0; i < selected.category.getPreferenceCount(); i++) visible.add(selected.category.getPreference(i));
             addPageStatus();
-        } else if (MORE.equals(route)) {
-            for (Section section : sections) if (!section.primary) visible.add(section.link);
         } else {
             visible.add(screen.getPreference(0));
             // Hushfacebook 814acd23: show the missing-default row under the overview card.
             Preference missing = screen.findPreference(HushThreadsPreferenceFragment.MISSING_DEFAULTS);
             if (missing != null) visible.add(missing);
-            visible.add(browse);
+            if (!BaseSettings.HIDE_QUICK_SETUPS.savedValue()) visible.add(quickSetups);
+            // Each heading only over pages this build has: a build with none of the feature
+            // patches shows no empty Browse settings heading.
+            boolean anyPrimary = false;
+            boolean anyMore = false;
+            for (Section section : sections) {
+                if (section.primary) anyPrimary = true;
+                else anyMore = true;
+            }
+            if (anyPrimary) visible.add(browse);
             for (Section section : sections) if (section.primary) visible.add(section.link);
-            visible.add(more);
+            if (anyMore) visible.add(moreHeading);
+            for (Section section : sections) if (!section.primary) visible.add(section.link);
+            // Report a problem sits just above Support, which stays last.
+            visible.add(report);
             visible.add(support);
         }
         addRestart();
@@ -461,10 +508,6 @@ final class SettingsNavigation extends BaseAdapter {
             row.post(() -> row.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null));
         }
         if (item == support) palette().paintSurface(row, item, 24);
-        if (MORE.equals(route)) {
-            palette().paintSurface(row, item, 4);
-            row.setPaddingRelative(dp(28), dp(17), dp(28), dp(18));
-        }
         if (item == screen.getPreference(0)) {
             TextView title = row.findViewById(android.R.id.title);
             if (title != null) title.setTypeface(android.graphics.Typeface.create("sans-serif-medium", 0));

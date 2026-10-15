@@ -5,6 +5,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.os.Bundle;
+import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -19,6 +20,9 @@ import java.util.List;
 import java.util.Map;
 
 public final class ChatUi {
+    private static final long CATCH_UP_MAX_BUFFER_LAG_MS = 3000;
+    private static final long CATCH_UP_MIN_ADVANCE_MS = 1000;
+    private static final long CATCH_UP_COOLDOWN_MS = 5000;
     static int dragPercent = -1;
     private static WeakReference<Activity> activity = new WeakReference<>(null);
     private static WeakReference<Object> coordinates = new WeakReference<>(null);
@@ -48,7 +52,7 @@ public final class ChatUi {
     public static void appendDevice(Object builder, Map<?, ?> inline, int device, long size) {}
     public static Object resizeModifier(Object modifier) { return modifier; }
     public static float[] chatBounds(Object coordinates) { return null; }
-    public static boolean seekToLive(Object viewModel) { return false; }
+    public static int seekToLive(Object viewModel) { return 0; }
     public static void renderCatchUp(Object viewModel, Object composer) {}
     public static void addPlayerSettings(List<?> items) {}
 
@@ -99,15 +103,32 @@ public final class ChatUi {
     public static boolean hideShare() { return ChzzkSettings.enabled("hide_share_button"); }
     public static boolean showCatchUp() { return ChzzkSettings.enabledByDefault("live_catch_up"); }
 
+    public static long catchUpPosition(long current, long buffered, long duration) {
+        if (current < 0 || buffered < current || duration <= 0
+            || buffered == Long.MAX_VALUE || duration == Long.MAX_VALUE) return -1;
+        long end = Math.min(buffered, duration);
+        // Seek only inside a buffer that reaches the live window. Otherwise reload the source.
+        if (duration - end > CATCH_UP_MAX_BUFFER_LAG_MS) return -1;
+        long bufferMs = Math.max(1, Math.min(10, ChzzkSettings.number("live_catch_up_buffer_seconds", 3))) * 1000L;
+        long target = end - bufferMs;
+        return target - current >= CATCH_UP_MIN_ADVANCE_MS ? target : -1;
+    }
+
     public static Object catchUpClick(Object viewModel) {
         if (clickOwner.get() == viewModel && liveClick != null) return liveClick;
         WeakReference<Object> owner = new WeakReference<>(viewModel);
+        long[] lastRequest = {-1};
         clickOwner = owner;
         liveClick = callback("kotlin.jvm.functions.Function0", args -> {
+            long now = SystemClock.elapsedRealtime();
+            if (lastRequest[0] >= 0 && now - lastRequest[0] < CATCH_UP_COOLDOWN_MS) return;
             Activity host = activity.get();
             Object player = owner.get();
-            boolean moved = player != null && seekToLive(player);
-            if (host != null) Toast.makeText(host, moved ? "실시간 위치로 이동했습니다" : "실시간 이동을 사용할 수 없는 영상입니다", Toast.LENGTH_SHORT).show();
+            int result = player == null ? 0 : seekToLive(player);
+            if (result != 0) lastRequest[0] = now;
+            String message = result == 1 ? "실시간 위치로 이동 중입니다"
+                : result == 2 ? "방송을 다시 연결하고 있습니다" : "지금은 실시간 이동을 사용할 수 없습니다";
+            if (host != null) Toast.makeText(host, message, Toast.LENGTH_SHORT).show();
         });
         return liveClick;
     }

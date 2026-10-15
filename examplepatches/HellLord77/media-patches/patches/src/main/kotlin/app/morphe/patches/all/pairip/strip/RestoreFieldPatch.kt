@@ -32,28 +32,29 @@ private data class Translation(val type: String, val fields: Map<String, String>
 internal val restoreFieldPatch = bytecodePatch {
     dependsOn(
         attachBaseContextPatch,
-        classConstructorPatch, invokePatch,
+        classConstructorPatch,
+        invokePatch,
     )
 
     extendWith("extensions/pairip.mpe")
 
     execute {
         val dictionaryPath =
-            "/pairip/${packageMetadata.packageName}/${packageMetadata.versionName}/${packageMetadata.versionCode}.json"
+            "/pairip/${packageMetadata.packageName}/${packageMetadata.versionCode}.json"
         val stream = object {}.javaClass.getResourceAsStream(dictionaryPath)!!.bufferedReader()
         val dictionary: Map<String, Translation> =
             Gson().fromJson(stream, object : TypeToken<Map<String, Translation>>() {}.type)
 
         val restoreInstructions = mutableListOf<ImmutableInstruction>()
         dictionary.entries.forEach { (name, translation) ->
+            val restoreField =
+                when (translation.type) {
+                    "java.lang.String" -> ::restoreString
 
-            val restoreField = when (translation.type) {
-                "java.lang.String" -> ::restoreString
+                    "java.lang.reflect.Method" -> ::restoreMethod
 
-                "java.lang.reflect.Method" -> ::restoreMethod
-
-                else -> throw PatchException("Unsupported type: ${translation.type}")
-            }
+                    else -> throw PatchException("Unsupported type: ${translation.type}")
+                }
 
             val definingClass = "L${name.replace('.', '/')};"
             translation.fields.forEach { (fieldName, fieldStr) ->
@@ -63,104 +64,132 @@ internal val restoreFieldPatch = bytecodePatch {
         restoreInstructions.add(ImmutableInstruction10x(Opcode.RETURN_VOID))
 
         val startupLauncher = mutableClassDefBy("Lcom/pairip/StartupLauncher;")
-        val restoreFields = ImmutableMethod(
-            startupLauncher.toString(),
-            "restoreFields",
-            emptyList(),
-            Type.void,
-            AccessFlags.PRIVATE.value or AccessFlags.STATIC.value,
-            null,
-            null,
-            ImmutableMethodImplementation(
-                1,
-                restoreInstructions,
-                null,
-                null,
-            ),
-        )
-        startupLauncher.methods.add(restoreFields.toMutable())
-
-        val application = mutableClassDefBy("Lcom/pairip/application/Application;")
-        InvokeMethodCallFingerprint.matchAllMethodIndicesForEach {
-            val constructor = ImmutableMethod(
-                application.toString(),
-                "<clinit>",
+        val restoreFields =
+            ImmutableMethod(
+                startupLauncher.toString(),
+                "restoreFields",
                 emptyList(),
                 Type.void,
-                AccessFlags.STATIC.value or AccessFlags.CONSTRUCTOR.value,
+                AccessFlags.PRIVATE.value or AccessFlags.STATIC.value,
                 null,
                 null,
                 ImmutableMethodImplementation(
-                    0,
-                    listOf(
-                        ImmutableInstruction35c(
-                            Opcode.INVOKE_STATIC, 0, 0, 0, 0, 0, 0, this,
-                        ),
-                        ImmutableInstruction10x(Opcode.RETURN_VOID),
-                    ),
+                    1,
+                    restoreInstructions,
                     null,
                     null,
                 ),
             )
+        startupLauncher.methods.add(restoreFields.toMutable())
+
+        val application = mutableClassDefBy("Lcom/pairip/application/Application;")
+        InvokeMethodCallFingerprint.matchAllMethodIndicesForEach {
+            val constructor =
+                ImmutableMethod(
+                    application.toString(),
+                    "<clinit>",
+                    emptyList(),
+                    Type.void,
+                    AccessFlags.STATIC.value or AccessFlags.CONSTRUCTOR.value,
+                    null,
+                    null,
+                    ImmutableMethodImplementation(
+                        0,
+                        listOf(
+                            ImmutableInstruction35c(
+                                Opcode.INVOKE_STATIC,
+                                0,
+                                0,
+                                0,
+                                0,
+                                0,
+                                0,
+                                this,
+                            ),
+                            ImmutableInstruction10x(Opcode.RETURN_VOID),
+                        ),
+                        null,
+                        null,
+                    ),
+                )
             application.methods.add(constructor.toMutable())
 
             replaceInstruction(
-                it, BuilderInstruction35c(
-                    Opcode.INVOKE_STATIC, 0, 0, 0, 0, 0, 0, restoreFields,
-                )
+                it,
+                BuilderInstruction35c(
+                    Opcode.INVOKE_STATIC,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    0,
+                    restoreFields,
+                ),
             )
         }
     }
 }
 
 private fun restoreMethod(
-    definingClass: String, fieldName: String, fieldStr: String
-) = listOf(
-    ImmutableInstruction21c(
-        Opcode.CONST_STRING,
-        0,
-        ImmutableStringReference(fieldStr),
-    ),
-    ImmutableInstruction35c(
-        Opcode.INVOKE_STATIC,
-        1, 0, 0, 0, 0, 0,
-        ImmutableMethodReference(
-            EXTENSION_CLASS,
-            "get",
-            listOf(Type.STRING),
-            Type.METHOD,
+    definingClass: String,
+    fieldName: String,
+    fieldStr: String,
+) =
+    listOf(
+        ImmutableInstruction21c(
+            Opcode.CONST_STRING,
+            0,
+            ImmutableStringReference(fieldStr),
         ),
-    ),
-    ImmutableInstruction11x(
-        Opcode.MOVE_RESULT_OBJECT,
-        0,
-    ),
-    ImmutableInstruction21c(
-        Opcode.SPUT_OBJECT,
-        0,
-        ImmutableFieldReference(
-            definingClass,
-            fieldName,
-            Type.METHOD,
+        ImmutableInstruction35c(
+            Opcode.INVOKE_STATIC,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            ImmutableMethodReference(
+                EXTENSION_CLASS,
+                "get",
+                listOf(Type.STRING),
+                Type.METHOD,
+            ),
         ),
-    ),
-)
+        ImmutableInstruction11x(
+            Opcode.MOVE_RESULT_OBJECT,
+            0,
+        ),
+        ImmutableInstruction21c(
+            Opcode.SPUT_OBJECT,
+            0,
+            ImmutableFieldReference(
+                definingClass,
+                fieldName,
+                Type.METHOD,
+            ),
+        ),
+    )
 
 private fun restoreString(
-    definingClass: String, fieldName: String, fieldStr: String
-) = listOf(
-    ImmutableInstruction21c(
-        Opcode.CONST_STRING,
-        0,
-        ImmutableStringReference(fieldStr),
-    ),
-    ImmutableInstruction21c(
-        Opcode.SPUT_OBJECT,
-        0,
-        ImmutableFieldReference(
-            definingClass,
-            fieldName,
-            Type.STRING,
+    definingClass: String,
+    fieldName: String,
+    fieldStr: String,
+) =
+    listOf(
+        ImmutableInstruction21c(
+            Opcode.CONST_STRING,
+            0,
+            ImmutableStringReference(fieldStr),
         ),
-    ),
-)
+        ImmutableInstruction21c(
+            Opcode.SPUT_OBJECT,
+            0,
+            ImmutableFieldReference(
+                definingClass,
+                fieldName,
+                Type.STRING,
+            ),
+        ),
+    )

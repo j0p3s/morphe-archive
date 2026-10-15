@@ -19,6 +19,7 @@ import app.morphe.patches.telegram.misc.extension.requireStatusMethod
 import app.morphe.patches.telegram.misc.extension.requireThisIntact
 import app.morphe.patches.telegram.misc.extension.telegramExtensionPatch
 import app.morphe.patches.telegram.misc.extension.writeStub
+import app.morphe.patches.telegram.misc.localcontrols.Mention
 import app.morphe.patches.telegram.misc.localcontrols.controlBody
 import app.morphe.patches.telegram.misc.localcontrols.controlField
 import app.morphe.patches.telegram.misc.localcontrols.controlHook
@@ -27,6 +28,7 @@ import app.morphe.patches.telegram.misc.localcontrols.controlRef
 import app.morphe.patches.telegram.misc.localcontrols.controlShape
 import app.morphe.patches.telegram.misc.localcontrols.controlSingle
 import app.morphe.patches.telegram.misc.localcontrols.controlString
+import app.morphe.patches.telegram.misc.localcontrols.forEachClassMentioning
 import app.morphe.patches.telegram.misc.messagemenu.messageMenuBuilder
 import app.morphe.patches.telegram.misc.messagemenu.messageMenuBuilders
 import app.morphe.patches.telegram.misc.settings.settingsPatch
@@ -74,7 +76,8 @@ val outsideTranslatePatch = bytecodePatch(
     name = NAME,
     description = "Adds Translate here to a message's menu and Translate this chat to a chat's menu. Text you turn on goes " +
         "to Google's web translate, or to an AI service with your own key if you set one, one message at a time, and " +
-        "nothing is sent before that. Telegram's own translation and its Premium checks stay as they are. Starts off. " +
+        "nothing is sent before that. With an AI service, a How to translate box lets you say how you want it done. " +
+        "Telegram's own translation and its Premium checks stay as they are. Starts off. " +
         "Turn it on in HushTelegram settings > Conversations.",
     default = true,
 ) {
@@ -283,8 +286,8 @@ internal fun BytecodePatchContext.resolveOutsideTranslate(): OutsideTranslateSit
 
     // The header's click delegate, the one that calls Telegram's own translate toggle.
     val delegates = mutableListOf<Pair<String, String>>()
-    classDefForEach { cls ->
-        if (cls.type.startsWith("Lapp/hushtelegram/") || cls.type == TRANSLATE_CONTROLLER) return@classDefForEach
+    forEachClassMentioning(Mention.reference(TOGGLE)) { cls ->
+        if (cls.type.startsWith("Lapp/hushtelegram/") || cls.type == TRANSLATE_CONTROLLER) return@forEachClassMentioning
         cls.methods.forEach { m ->
             if (!AccessFlags.STATIC.isSet(m.accessFlags) && m.returnType == "V" && m.parameterTypes.map(CharSequence::toString) == listOf("I") &&
                 m.controlBody().any { it.controlRef() == TOGGLE }) delegates += cls.type to signature(m)

@@ -54,27 +54,23 @@ private val focalPostStateFingerprint = Fingerprint(
     strings = listOf("FocalPostState(timelinePostState="),
 )
 
+private val timelineItemFilterFingerprint = Fingerprint(
+    strings = listOf("surface_filter"),
+)
+
 private val urtItemPresenterFingerprint = Fingerprint(
     definingClass = "Lcom/x/urt/b;",
     name = "a",
     returnType = "Lcom/x/presenter/a;",
-    parameters = listOf(
-        "I",
-        "Lcom/x/models/timelines/items/p0;",
-        "Lcom/x/navigation/wl;",
-        "Lcom/x/repositories/urt/t1;",
-        "Lcom/x/urt/t0;",
-    ),
 )
 
 private val postDetailPresenterFingerprint = Fingerprint(
-    definingClass = "Lcom/x/postdetail/c0;",
-    name = "r",
+    definingClass = "Lcom/x/postdetail/m;",
+    name = "v",
     returnType = "Lcom/x/presenter/a;",
     parameters = listOf(
         "I",
         "Lcom/x/models/timelines/items/p0;",
-        "Lcom/x/urt/t0;",
     ),
 )
 
@@ -91,7 +87,7 @@ private val communityNotesFingerprint = Fingerprint(
 )
 
 private val inlineActionBarItemFingerprint = Fingerprint(
-    definingClass = "Lcom/x/inlineactionbar/d;",
+    definingClass = "Lcom/x/inlineactionbar/g;",
     name = "invoke",
 )
 
@@ -196,7 +192,7 @@ private fun neutralizeFlag(
 @Suppress("unused")
 val twitterTimelineUiPatch = bytecodePatch(
     name = "Timeline UI",
-    description = "Timeline surfaces: posts, threads, banners, recommendations and video entry points",
+    description = "Customizes timeline surfaces including banners, recommendation carousels, and action buttons.",
     default = true,
 ) {
     compatibleWith(Constants.COMPATIBILITY_TWITTER)
@@ -205,7 +201,7 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "hideBanner",
         default = true,
         title = "Hide Banner",
-        description = "Hides new post banner",
+        description = "Hide new post banner.",
         required = false,
     )
 
@@ -213,7 +209,7 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "hidePromoteButton",
         default = true,
         title = "Hide Promote Button",
-        description = "Hides promote button under self posts",
+        description = "Hide promote button under self posts.",
         required = false,
     )
 
@@ -221,7 +217,7 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "hideNudgeButton",
         default = true,
         title = "Hide Nudge Button",
-        description = "Hides follow/subscribe/follow back buttons on posts",
+        description = "Hide follow, subscribe, and follow back buttons on posts.",
         required = false,
     )
 
@@ -229,7 +225,7 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "hideRecommendationItems",
         default = true,
         title = "Hide Recommendation Items",
-        description = "Hides recommendation items such as Who to follow and Today's news in timeline, search, and replies",
+        description = "Hide recommendation items such as Who to follow and Today's news in timeline, search, and replies.",
         required = false,
     )
 
@@ -237,7 +233,7 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "hideDiscoverMore",
         default = true,
         title = "Hide Discover More",
-        description = "Hides Discover more recommendations in tweet reply threads",
+        description = "Hide Discover more recommendations in tweet reply threads.",
         required = false,
     )
 
@@ -245,7 +241,7 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "hideRecommendedUsers",
         default = true,
         title = "Hide Recommended Users",
-        description = "Hides recommended users popup shown when following someone",
+        description = "Hide recommended users popup shown when following someone.",
         required = false,
     )
 
@@ -253,7 +249,7 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "hideLiveThreads",
         default = true,
         title = "Hide Live Threads",
-        description = "Hides live threads",
+        description = "Hide live threads.",
         required = false,
     )
 
@@ -261,7 +257,7 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "hideCommunityNotes",
         default = true,
         title = "Hide Community Notes",
-        description = "Hide community notes and birdwatch contributions on posts",
+        description = "Hide community notes and birdwatch contributions on posts.",
         required = false,
     )
 
@@ -269,7 +265,7 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "hidePostMetrics",
         default = true,
         title = "Hide Post Metrics",
-        description = "Hide like, repost, and reply count metrics on timeline posts",
+        description = "Hide like, repost, and reply count metrics on timeline posts.",
         required = false,
     )
 
@@ -277,15 +273,15 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "hideViewCount",
         default = true,
         title = "Hide View Count",
-        description = "Hide post view count metrics on timeline and post detail",
+        description = "Hide post view count metrics on timeline and post detail.",
         required = false,
     )
 
     val inlineActionBar by booleanOption(
         key = "inlineActionBar",
         default = true,
-        title = "Inline Action Bar",
-        description = "Toggle inline action buttons across notification timeline",
+        title = "Hide Inline Action Bar",
+        description = "Hide inline action buttons across notification timeline.",
         required = false,
     )
 
@@ -293,15 +289,15 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "timelineAddTab",
         default = true,
         title = "Timeline Add Tab",
-        description = "Hide add tab (+) button in home timeline tab header",
+        description = "Hide add tab (+) button in home timeline tab header.",
         required = false,
     )
 
     val timelineTopBar by booleanOption(
         key = "timelineTopBar",
         default = true,
-        title = "Timeline Top Bar",
-        description = "Toggle top bar elements in home and custom timelines",
+        title = "Hide Timeline Top Bar",
+        description = "Hide top bar elements in home and custom timelines.",
         required = false,
     )
 
@@ -309,7 +305,7 @@ val twitterTimelineUiPatch = bytecodePatch(
         key = "hideLiveBanner",
         default = true,
         title = "Hide Live Banner",
-        description = "Hides live and broadcast pill at top of home timeline",
+        description = "Hide live and broadcast pill at top of home timeline.",
         required = false,
     )
 
@@ -488,61 +484,101 @@ val twitterTimelineUiPatch = bytecodePatch(
 
         // 4. hideRecommendationItems
         if (hideRecommendationItems ?: true) {
-            urtItemPresenterFingerprint.method.addInstructionsWithLabels(
+            timelineItemFilterFingerprint.method.addInstructionsWithLabels(
                 0,
                 """
-                    move-object/from16 v0, p2
-                    if-nez v0, :cond_check_item
-                    goto :cond_continue
+                    move-object/from16 v0, p1
+                    if-eqz v0, :cond_filter_end
 
-                    :cond_check_item
-                    invoke-interface {v0}, Lcom/x/models/timelines/items/p0;->c()Ljava/lang/String;
-                    move-result-object v1
-                    if-eqz v1, :cond_continue
+                    new-instance v1, Ljava/util/ArrayList;
+                    invoke-direct {v1}, Ljava/util/ArrayList;-><init>()V
 
-                    :cond_check_entry_id
-                    const-string v2, "who-to-follow"
-                    invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
+                    invoke-interface {v0}, Ljava/util/List;->iterator()Ljava/util/Iterator;
+                    move-result-object v0
+
+                    :loop_start
+                    invoke-interface {v0}, Ljava/util/Iterator;->hasNext()Z
                     move-result v2
-                    if-nez v2, :cond_suppress_rec
+                    if-eqz v2, :loop_end
 
-                    const-string v2, "who_to_follow"
-                    invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
-                    move-result v2
-                    if-nez v2, :cond_suppress_rec
+                    invoke-interface {v0}, Ljava/util/Iterator;->next()Ljava/lang/Object;
+                    move-result-object v2
+                    check-cast v2, Lcom/x/models/timelines/items/p0;
 
-                    const-string v2, "who-to-subscribe"
-                    invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
-                    move-result v2
-                    if-nez v2, :cond_suppress_rec
+                    instance-of v3, v2, Lcom/x/models/timelines/items/b1;
+                    if-eqz v3, :cond_add_item
 
-                    const-string v2, "stories"
-                    invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
-                    move-result v2
-                    if-nez v2, :cond_suppress_rec
+                    move-object v3, v2
+                    check-cast v3, Lcom/x/models/timelines/items/b1;
 
-                    const-string v2, "eventsummary"
-                    invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
-                    move-result v2
-                    if-nez v2, :cond_suppress_rec
+                    # Check 1: entryId contains who-to-follow, who_to_follow, or user_recommendations
+                    iget-object v4, v3, Lcom/x/models/timelines/items/b1;->f:Ljava/lang/String;
+                    if-eqz v4, :cond_check_controller
 
-                    const-string v2, "toptabsrpusermodule"
-                    invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
-                    move-result v2
-                    if-nez v2, :cond_suppress_rec
+                    const-string v5, "who-to-follow"
+                    invoke-virtual {v4, v5}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
+                    move-result v5
+                    if-nez v5, :cond_drop_item
 
-                    const-string v2, "community-to-join"
-                    invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
-                    move-result v2
-                    if-nez v2, :cond_suppress_rec
+                    const-string v5, "who_to_follow"
+                    invoke-virtual {v4, v5}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
+                    move-result v5
+                    if-nez v5, :cond_drop_item
 
-                    goto :cond_continue
+                    const-string v5, "user_recommendations"
+                    invoke-virtual {v4, v5}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
+                    move-result v5
+                    if-nez v5, :cond_drop_item
 
-                    :cond_suppress_rec
-                    sget-object v0, Lcom/x/urt/b0;->a:Lcom/x/urt/b0;
-                    return-object v0
+                    :cond_check_controller
+                    # Check 2: clientEventInfo.suggestionDetails.controllerData contains wtf_user
+                    iget-object v4, v3, Lcom/x/models/timelines/items/b1;->g:Lcom/x/models/u0;
+                    if-eqz v4, :cond_check_inner
 
-                    :cond_continue
+                    iget-object v4, v4, Lcom/x/models/u0;->d:Lcom/x/models/xc;
+                    if-eqz v4, :cond_check_inner
+
+                    iget-object v4, v4, Lcom/x/models/xc;->a:Ljava/lang/String;
+                    if-eqz v4, :cond_check_inner
+
+                    const-string v5, "wtf_user"
+                    invoke-virtual {v4, v5}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
+                    move-result v5
+                    if-nez v5, :cond_drop_item
+
+                    :cond_check_inner
+                    # Check 3: innerContent contains c2 (UrtTimelineUser)
+                    iget-object v4, v3, Lcom/x/models/timelines/items/b1;->a:Ljava/util/List;
+                    if-eqz v4, :cond_add_item
+
+                    invoke-interface {v4}, Ljava/util/List;->isEmpty()Z
+                    move-result v5
+                    if-nez v5, :cond_add_item
+
+                    const/4 v5, 0x0
+                    invoke-interface {v4, v5}, Ljava/util/List;->get(I)Ljava/lang/Object;
+                    move-result-object v4
+
+                    # Defect 2 guard: verify instance-of e1 before casting
+                    instance-of v5, v4, Lcom/x/models/timelines/items/e1;
+                    if-eqz v5, :cond_add_item
+
+                    check-cast v4, Lcom/x/models/timelines/items/e1;
+                    iget-object v4, v4, Lcom/x/models/timelines/items/e1;->a:Lcom/x/models/timelines/items/p0;
+                    instance-of v5, v4, Lcom/x/models/timelines/items/c2;
+                    if-nez v5, :cond_drop_item
+
+                    :cond_add_item
+                    invoke-interface {v1, v2}, Ljava/util/List;->add(Ljava/lang/Object;)Z
+                    goto :loop_start
+
+                    :cond_drop_item
+                    goto :loop_start
+
+                    :loop_end
+                    move-object/from16 p1, v1
+
+                    :cond_filter_end
                     nop
                 """.trimIndent(),
             )
@@ -762,7 +798,7 @@ val twitterTimelineUiPatch = bytecodePatch(
         if (hidePostMetrics ?: true) {
             val method = inlineActionBarItemFingerprint.method
             val instructions = method.implementation?.instructions?.toList()
-                ?: error("[Timeline UI] Method Lcom/x/inlineactionbar/d;->invoke has no instructions.")
+                ?: error("[Timeline UI] Method Lcom/x/inlineactionbar/g;->invoke has no instructions.")
             val countedPillIndex = instructions.indexOfFirst { ins ->
                 ins.opcode == Opcode.SGET_OBJECT &&
                     ((ins as? ReferenceInstruction)?.reference as? FieldReference)?.name == "CountedPill"
@@ -772,11 +808,11 @@ val twitterTimelineUiPatch = bytecodePatch(
                 val targetReg = countedPillIns.registerA
                 method.replaceInstruction(
                     countedPillIndex,
-                    "sget-object v$targetReg, Lcom/x/inlineactionbar/d1;->Countless:Lcom/x/inlineactionbar/d1;",
+                    "sget-object v$targetReg, Lcom/x/inlineactionbar/k1;->Countless:Lcom/x/inlineactionbar/k1;",
                 )
                 patched++
             } else {
-                error("[Timeline UI] Failed to find CountedPill instruction in Lcom/x/inlineactionbar/d;->invoke.")
+                error("[Timeline UI] Failed to find CountedPill instruction in Lcom/x/inlineactionbar/g;->invoke.")
             }
         } else {
             println("[Timeline UI] Skipped hidePostMetrics: disabled by patch option.")
@@ -786,10 +822,12 @@ val twitterTimelineUiPatch = bytecodePatch(
         if (hideViewCount ?: true) {
             val method = inlineActionBarItemFingerprint.method
             val instructions = method.implementation?.instructions?.toList()
-                ?: error("[Timeline UI] Method Lcom/x/inlineactionbar/d;->invoke has no instructions.")
+                ?: error("[Timeline UI] Method Lcom/x/inlineactionbar/g;->invoke has no instructions.")
             val invokeIndex = instructions.indexOfFirst { ins ->
                 ins.opcode == Opcode.INVOKE_STATIC_RANGE &&
-                    ((ins as? ReferenceInstruction)?.reference as? MethodReference)?.name == "j"
+                    ((ins as? ReferenceInstruction)?.reference as? MethodReference)?.let { ref ->
+                        ref.parameterTypes.firstOrNull() == "Lcom/x/models/l4;"
+                    } == true
             }
             if (invokeIndex >= 0) {
                 val invokeIns = instructions[invokeIndex]
@@ -803,8 +841,8 @@ val twitterTimelineUiPatch = bytecodePatch(
                 method.addInstructionsWithLabels(
                     invokeIndex,
                     """
-                        iget-object v3, v$startReg, Lcom/x/models/l4;->a:Lcom/x/models/w5;
-                        sget-object v4, Lcom/x/models/w5;->ViewCount:Lcom/x/models/w5;
+                        iget-object v3, v$startReg, Lcom/x/models/l4;->a:Lcom/x/models/v5;
+                        sget-object v4, Lcom/x/models/v5;->ViewCount:Lcom/x/models/v5;
                         if-eq v3, v4, :skip_view_count
                         invoke-static/range {v$startReg .. v$endReg}, $methodDescriptor
                         :skip_view_count
@@ -813,7 +851,7 @@ val twitterTimelineUiPatch = bytecodePatch(
                 )
                 patched++
             } else {
-                error("[Timeline UI] Failed to find Lcom/google/android/gms/dynamite/d;->j invoke in Lcom/x/inlineactionbar/d;->invoke.")
+                error("[Timeline UI] Failed to find Lcom/google/android/gms/dynamite/d;->j invoke in Lcom/x/inlineactionbar/g;->invoke.")
             }
         } else {
             println("[Timeline UI] Skipped hideViewCount: disabled by patch option.")
@@ -887,7 +925,7 @@ val twitterTimelineUiPatch = bytecodePatch(
             val followButtonFieldIdx = instructions.indexOfFirst { ins ->
                 ins.opcode == Opcode.SGET_OBJECT &&
                     ((ins as? ReferenceInstruction)?.reference as? FieldReference)?.let {
-                        it.definingClass == "Lcom/x/home/tabbed/a;" && it.name == "d"
+                        it.definingClass == "Lcom/x/home/tabbed/a;" && (it.name == "e" || it.name == "d")
                     } == true
             }
             if (followButtonFieldIdx > 0) {
@@ -903,7 +941,7 @@ val twitterTimelineUiPatch = bytecodePatch(
                     error("[Timeline UI] Preceding if-eqz branch not found before follow button field in Lcom/x/home/tabbed/a;->i.")
                 }
             } else {
-                error("[Timeline UI] Follow button field Lcom/x/home/tabbed/a;->d not found in Lcom/x/home/tabbed/a;->i.")
+                error("[Timeline UI] Follow button field not found in Lcom/x/home/tabbed/a;->i.")
             }
         } else {
             println("[Timeline UI] Skipped timelineTopBar: disabled by patch option.")

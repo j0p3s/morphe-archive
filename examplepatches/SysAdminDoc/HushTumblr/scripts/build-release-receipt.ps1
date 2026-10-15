@@ -37,13 +37,11 @@
 
     The patched APKs are working files and are deleted on the way out, including after a failure.
 
-    -AppliedDir names the store verify-all-patches.ps1 -KeepIn wrote to; the release push gate
-    keeps one run of each declared fixture there. A fixture whose key matches (this exact bundle,
-    APK, catalog, patch selection, desktop CLI, SDK stubs and verifier files) isn't patched again:
-    its kept patched APK and report are read instead, and the report, the manifests, the delta and
-    the verdicts are checked here the same way. The resource table, DexDiff and host reference
-    checks passed on those bytes when the run was kept. A fixture with no matching record is
-    patched and checked in full, as without -AppliedDir.
+    Every fixture is patched and checked in full here. A run verify-all-patches.ps1 -KeepIn kept
+    isn't read, though the release push gate keeps one of each fixture: a kept run is a record and
+    an APK on disk, which any program of the same user can write together, so it can't show which
+    bundle made the APK. The receipt is what a release is trusted on, so it only states what this
+    run did.
 
     The bundle has to be a build of HEAD from a clean tree, and a clean tree when the receipt is
     cut doesn't show that. So its stamp has to be HEAD's commit time (the build writes 0 when the
@@ -83,9 +81,7 @@ param(
     [string]$Sbom,
     # For working with no network only: OSV isn't asked about the SBOM's libraries, and the run
     # says so. The index push asks again, so a release can't go out on it.
-    [switch]$SkipAdvisoryCheck,
-    # The applied record store a gate run kept each fixture's verified apply in.
-    [string]$AppliedDir
+    [switch]$SkipAdvisoryCheck
 )
 
 $ErrorActionPreference = 'Stop'
@@ -114,6 +110,11 @@ if (-not (Test-Path -LiteralPath $Bundle -PathType Leaf)) {
 }
 # Found in PowerShell's location; the ZipFile reads below would look in the process directory.
 $Bundle = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Bundle)
+# Held from here to the end of the run: its digest, its extension payloads, every patch run and the
+# register checks' comparison with its extensions read these bytes, and nothing can write them between.
+$bundleHeld = Open-HeldFile -Path $Bundle -What 'The bundle'
+try {
+$Bundle = Get-HeldPath -Stream $bundleHeld
 if (-not $PatchList) { $PatchList = Join-Path $Root 'patches-list.json' }
 if (-not $OutputPath) { $OutputPath = Join-Path $Root "release-receipt-$releaseVersion.json" }
 
@@ -282,13 +283,6 @@ $extensionPayloads = Get-ExtensionPayloads -BundlePath $Bundle
 New-Item -ItemType Directory -Force -Path $WorkDir | Out-Null
 $workRoot = (Resolve-Path -LiteralPath $WorkDir).Path
 $targets = New-Object System.Collections.Generic.List[object]
-if ($AppliedDir) {
-    $AppliedDir = Get-AppliedRecordStore -Path $AppliedDir
-    # The stubs a kept run's key hashed, found the way the host reference check finds them.
-    $hostStubs = Resolve-HostReferenceStubs -AndroidJar $AndroidJar -ApiVersions $ApiVersions -Aapt2 $Aapt2
-    $AndroidJar = $hostStubs.AndroidJar
-    $ApiVersions = $hostStubs.ApiVersions
-}
 
 # Every declared build needs its own run without -f, and the receipt check refuses a receipt
 # without one. That check comes after the patch runs, and a Tumblr patch run unpacks the whole
@@ -354,6 +348,9 @@ foreach ($apk in $Fixture) {
     $runId = [guid]::NewGuid().ToString('N')
     $runDir = Resolve-WithinRoot -Path (Join-Path $workRoot "receipt-$runId") -Root $workRoot
     New-Item -ItemType Directory -Force -Path $runDir | Out-Null
+    $patchInput = $null
+    $outHandle = $null
+    $resultHandle = $null
     try {
         $stock = $stockFacts[$apk]
 
@@ -369,68 +366,61 @@ foreach ($apk in $Fixture) {
 
         # The one APK the CLI patches: the fixture's merge when it's a split bundle, made here
         # because the CLI deletes its own, or a copy of the fixture. No merge, no receipt, and no
-        # merge of an APK that doesn't carry Tumblr's declared signer (Get-MergedApk).
+        # merge of an APK that doesn't carry Tumblr's declared signer (Get-MergedApk). It comes back
+        # held, so nothing can write to it or replace it until the finally, and by its real path.
         $mergedApk = Resolve-WithinRoot -Path (Join-Path $runDir 'stock-merged.apk') -Root $workRoot
         $patchInput = Get-MergedApk -Apk $apk -Destination $mergedApk -Java $Java -DesktopJar $DesktopJar `
             -Aapt2 $Aapt2 -PackageName $expectedTarget.PackageName -Signers $declaredSigners
+        # The manifest the patches start from is this APK's, the merge for a split bundle, not the
+        # base APK's: the merge rewrites the manifest itself, and a delta against the base would
+        # record its changes as the patches' own. The build the fixture was taken for, declared or
+        # forced, was read off the base APK before anything was checked, and has to be this APK's
+        # (Assert-SameBuild).
+        $baseline = Get-ApkManifestFacts -Apk $patchInput -Aapt2 $Aapt2
+        Assert-SameBuild -Decided $stock -Held $baseline -Label $label
 
-        # This bundle on this fixture, kept by a gate run that passed every check (verify-all-patches.ps1
-        # -KeepIn), is read from the record. Anything that moved since gives another key and a patch run.
-        $recorded = $null
-        if ($AppliedDir) {
-            $identity = Get-AppliedRecordKey -Bundle $Bundle -Fixture $apk -PatchList $PatchList -PatchNames $patchNames `
-                -Forced $forced -DesktopJar $DesktopJar -AndroidJar $AndroidJar -ApiVersions $ApiVersions
-            $recorded = Find-AppliedRecord -Store $AppliedDir -Key $identity.Key
-            if ($recorded) {
-                Write-Host ("[receipt] $label passed every check with this bundle in the run kept as $($identity.Key) " +
-                    "at $($recorded.RecordedAt), so its patched APK and report are read from $($recorded.Directory)")
-                $out = $recorded.PatchedApk
-                $resultPath = $recorded.Result
-                $cliExitCode = 0
-            } else {
-                Write-Host "[receipt] no run of $label is kept as $($identity.Key), so it's patched here"
-            }
-        }
-
-        if (-not $recorded) {
-            $enable = @()
-            foreach ($name in $patchNames) { $enable += '-e'; $enable += $name }
-            $arguments = @('patch', '--exclusive', '--continue-on-error', '--unsigned', '-p', $Bundle,
-                '-o', $out, '-t', $temp, '-r', $resultPath)
-            if ($forced) { $arguments += '-f' }
-            $arguments = $arguments + $enable + @($patchInput)
-            # Continue for the call alone: the CLI logs WARNING and SEVERE on stderr, which Windows
-            # PowerShell 5.1 turns into a terminating error under Stop. The report and the exit code
-            # are what decide.
-            $preference = $ErrorActionPreference
-            $queued = Enter-HushTumblrQueue -Job 'receipt patch'
-            try {
-                $ErrorActionPreference = 'Continue'
-                $global:LASTEXITCODE = -1
-                & $Java '-jar' $DesktopJar @arguments 2>&1 | Out-Null
-                $cliExitCode = $LASTEXITCODE
-            } finally {
-                $ErrorActionPreference = $preference
-                Exit-HushTumblrQueue $queued
-            }
+        $enable = @()
+        foreach ($name in $patchNames) { $enable += '-e'; $enable += $name }
+        $arguments = @('patch', '--exclusive', '--continue-on-error', '--unsigned', '-p', $Bundle,
+            '-o', $out, '-t', $temp, '-r', $resultPath)
+        if ($forced) { $arguments += '-f' }
+        $arguments = $arguments + $enable + @($patchInput)
+        # Continue for the call alone: the CLI logs WARNING and SEVERE on stderr, which Windows
+        # PowerShell 5.1 turns into a terminating error under Stop. The report and the exit code
+        # are what decide.
+        $preference = $ErrorActionPreference
+        $queued = Enter-HushTumblrQueue -Job 'receipt patch'
+        try {
+            $ErrorActionPreference = 'Continue'
+            $global:LASTEXITCODE = -1
+            & $Java '-jar' $DesktopJar @arguments 2>&1 | Out-Null
+            $cliExitCode = $LASTEXITCODE
+        } finally {
+            $ErrorActionPreference = $preference
+            Exit-HushTumblrQueue $queued
         }
 
         if (-not (Test-Path -LiteralPath $resultPath -PathType Leaf)) {
             throw "The desktop CLI wrote no result report for $label (exit $cliExitCode)."
         }
+        # What the CLI wrote is held from the moment it exits to the last check, and every check
+        # reads it by the path its handle is at, so nothing can swap it in between (Open-HeldFile).
+        $resultHandle = Open-HeldFile -Path $resultPath -What "The result report for $label"
+        $resultPath = Get-HeldPath -Stream $resultHandle
+        if (Test-Path -LiteralPath $out -PathType Leaf) {
+            $outHandle = Open-HeldFile -Path $out -What "The patched APK of $label"
+            $out = Get-HeldPath -Stream $outHandle
+        }
         $report = Get-Content -LiteralPath $resultPath -Raw | ConvertFrom-Json
+        # An APK that wasn't there to hold is no APK, whatever is at the path now.
         $validation = Test-PatchingReport -Report $report -ExpectedNames $patchNames `
-            -AllowedDependencyNames $dependencyNames -OutputPath $out `
+            -AllowedDependencyNames $dependencyNames -OutputPath $(if ($null -ne $outHandle) { $out } else { '' }) `
             -ExpectedPackageName $expectedTarget.PackageName `
             -ExpectedPackageVersion $stock.versionName
         if (-not $validation.Valid) { throw "$label did not patch cleanly: $($validation.Reason)" }
         if ($cliExitCode -ne 0) { throw "The desktop CLI exited with $cliExitCode on $label." }
 
         $patched = Get-ApkManifestFacts -Apk $out -Aapt2 $Aapt2
-        # The manifest the patches started from is the APK the CLI patched, the merge for a split
-        # bundle, not the base APK's: the merge rewrites the manifest itself, and a delta against
-        # the base would record its changes as the patches' own.
-        $baseline = Get-ApkManifestFacts -Apk $patchInput -Aapt2 $Aapt2
         $floor = Test-PatchedMinSdk -StockMinSdk $baseline.minSdk -PatchedMinSdk $patched.minSdk
         if (-not $floor.Valid) { throw "${label}: $($floor.Reason)" }
         $manifestCheck = Test-ManifestDelta -Stock $baseline -Patched $patched -SelectedPatchNames $manifestSelection `
@@ -441,37 +431,38 @@ foreach ($apk in $Fixture) {
         # of Tumblr's own that doesn't fit is the target's limit: named, and left as it is.
         foreach ($limit in @(Assert-PageAlignment -Apk $out -Stock $patchInput -Aapt2 $Aapt2)) { Write-Warning "[receipt] ${label}: $limit" }
 
-        if ($recorded) {
-            Write-Host "[receipt] ${label}: the resource table, DexDiff and host reference checks passed on these bytes in the kept run"
-        } else {
-            $resourceReport = Resolve-WithinRoot -Path (Join-Path $workRoot "receipt-resources-$runId.txt") -Root $workRoot
-            # Continue for the call alone, as for the CLI: a JDK note on stderr would otherwise end the
-            # run under Windows PowerShell 5.1 before the exit code is read.
-            $preference = $ErrorActionPreference
-            $queued = Enter-HushTumblrQueue -Job 'receipt resources'
-            try {
-                $ErrorActionPreference = 'Continue'
-                $global:LASTEXITCODE = -1
-                $resourceOutput = @(& $Java '-Xmx4g' '-cp' $DesktopJar (Join-Path $PSScriptRoot 'ResourceTableCheck.java') `
-                    $patchInput $out $resourceReport 2>&1)
-                $resourceExitCode = $LASTEXITCODE
-            } finally {
-                $ErrorActionPreference = $preference
-                Exit-HushTumblrQueue $queued
-            }
-            if ($resourceExitCode -ne 0) {
-                throw ("${label}: the patched resource table failed its check against the stock one " +
-                    "(exit $resourceExitCode). Report: $resourceReport. $(@($resourceOutput | Select-Object -Last 2) -join ' ')")
-            }
-            $registerReport = Resolve-WithinRoot -Path (Join-Path $workRoot "receipt-registers-$runId.txt") -Root $workRoot
-            $global:LASTEXITCODE = 0
-            & (Join-Path $PSScriptRoot 'verify-injected-registers.ps1') -CleanApk $apk -CleanMerged $patchInput `
-                -PatchedApk $out -ReportPath $registerReport -Java $Java -DesktopJar $DesktopJar -Aapt2 $Aapt2 `
-                -SelectedPatchNames $manifestSelection -AndroidJar $AndroidJar -ApiVersions $ApiVersions
-            if ($LASTEXITCODE -ne 0) {
-                throw ("${label}: the injected code failed its structural or host reference checks " +
-                    "(exit $LASTEXITCODE). Report: $registerReport")
-            }
+        $resourceReport = Resolve-WithinRoot -Path (Join-Path $workRoot "receipt-resources-$runId.txt") -Root $workRoot
+        # Continue for the call alone, as for the CLI: a JDK note on stderr would otherwise end the
+        # run under Windows PowerShell 5.1 before the exit code is read.
+        # What the table and its files changed is held to resource-delta-allowlist.txt, for the
+        # patches the release ships and those they pull in.
+        $preference = $ErrorActionPreference
+        $selectionBefore = $env:HUSHTUMBLR_PATCH_SELECTION
+        $queued = Enter-HushTumblrQueue -Job 'receipt resources'
+        try {
+            $ErrorActionPreference = 'Continue'
+            $env:HUSHTUMBLR_PATCH_SELECTION = (@($patchNames) + @($dependencyNames)) -join "`n"
+            $global:LASTEXITCODE = -1
+            $resourceOutput = @(& $Java '-Xmx4g' '-cp' $DesktopJar (Join-Path $PSScriptRoot 'ResourceTableCheck.java') `
+                $patchInput $out $resourceReport (Join-Path $PSScriptRoot 'resource-delta-allowlist.txt') 2>&1)
+            $resourceExitCode = $LASTEXITCODE
+        } finally {
+            $env:HUSHTUMBLR_PATCH_SELECTION = $selectionBefore
+            $ErrorActionPreference = $preference
+            Exit-HushTumblrQueue $queued
+        }
+        if ($resourceExitCode -ne 0) {
+            throw ("${label}: the patched resource table failed its check against the stock one " +
+                "(exit $resourceExitCode). Report: $resourceReport. $(@($resourceOutput | Select-Object -Last 2) -join ' ')")
+        }
+        $registerReport = Resolve-WithinRoot -Path (Join-Path $workRoot "receipt-registers-$runId.txt") -Root $workRoot
+        $global:LASTEXITCODE = 0
+        & (Join-Path $PSScriptRoot 'verify-injected-registers.ps1') -CleanApk $apk -CleanMerged $patchInput `
+            -PatchedApk $out -ReportPath $registerReport -Java $Java -DesktopJar $DesktopJar -Aapt2 $Aapt2 `
+            -SelectedPatchNames $manifestSelection -AndroidJar $AndroidJar -ApiVersions $ApiVersions -Bundle $Bundle
+        if ($LASTEXITCODE -ne 0) {
+            throw ("${label}: the injected code failed its structural or host reference checks " +
+                "(exit $LASTEXITCODE). Report: $registerReport")
         }
         $verdicts = Get-PatchVerdicts -Report $report -Names $patchNames
         $changes = @(ConvertTo-ManifestDeltaEntries -Delta $delta)
@@ -479,13 +470,19 @@ foreach ($apk in $Fixture) {
             "$($patchNames.Count) applied, binary minSdk $($baseline.minSdk) -> $($patched.minSdk), $($changes.Count) manifest changes")
         foreach ($change in $changes) { Write-Host "[receipt]   $change" }
 
+        # The fixture by the digest Get-MergedApk took through the handle it unpacked or copied it
+        # from, while the merge made of those bytes is still held, not by a hash of whatever is at its
+        # path now. Upper case, as the receipt writes every digest. An unsigned universal APK is
+        # trusted on the bundle beside it, which is named the same way, and null for anything else.
+        $vouchedBy = Get-HeldSignedFormSha256 -Merged $patchInput
         $targets.Add([ordered]@{
             source        = [ordered]@{
                 file        = $label
                 package     = $stock.package
                 versionName = $stock.versionName
                 versionCode = $stock.versionCode
-                sha256      = Get-Sha256Hex -Path $apk
+                sha256      = (Get-HeldSourceSha256 -Merged $patchInput).ToUpperInvariant()
+                signedFormSha256 = if ($vouchedBy) { $vouchedBy.ToUpperInvariant() } else { $null }
                 forced      = $forced
             }
             patches       = $verdicts
@@ -494,6 +491,9 @@ foreach ($apk in $Fixture) {
             manifestDelta = $delta
         })
     } finally {
+        # Held until every reader is done, and a held file can't be deleted.
+        foreach ($held in @($outHandle, $resultHandle)) { if ($null -ne $held) { $held.Dispose() } }
+        Close-MergedApk -Merged $patchInput
         if ($runDir.StartsWith($workRoot, [System.StringComparison]::OrdinalIgnoreCase) -and
             (Test-Path -LiteralPath $runDir)) {
             Remove-Item -LiteralPath $runDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -547,4 +547,5 @@ if (-not $check.Valid) { throw "The receipt this run produced does not pass vali
 
 $receipt | ConvertTo-Json -Depth 12 | Set-Content -LiteralPath $OutputPath -Encoding UTF8
 Write-Host "[receipt] wrote $OutputPath"
+} finally { $bundleHeld.Dispose() }
 exit 0

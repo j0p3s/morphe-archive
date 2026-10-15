@@ -28,8 +28,11 @@ function Install-AndroidPackage {
     if ($Serial.StartsWith('emulator-', [StringComparison]::Ordinal) -and -not $ExpectedAvd) {
         throw 'An emulator install requires its expected AVD profile.'
     }
-    $LeaseDirectory = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($LeaseDirectory)
-    $leasePath = Resolve-WithinRoot -Root $LeaseDirectory -Path (Join-Path $LeaseDirectory "$Serial.json")
+    # The host's shared pool and no other, settled before the first adb command. A lease in a
+    # directory of the caller's choosing says nothing about who holds the phone: with a valid one
+    # there, this reached install -r on a serial another task held in the shared pool.
+    $LeaseDirectory = Resolve-DeviceLeaseDirectory -LeaseDirectory $LeaseDirectory
+    $leasePath =Resolve-WithinRoot -Root $LeaseDirectory -Path (Join-Path $LeaseDirectory "$Serial.json")
     $WorkDirectory = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($WorkDirectory)
     $runDirectory = Resolve-WithinRoot -Root $WorkDirectory -Path (Join-Path $WorkDirectory ("install-" + [guid]::NewGuid().ToString('N')))
     $installedApk = Resolve-WithinRoot -Root $runDirectory -Path (Join-Path $runDirectory 'installed.apk')
@@ -45,7 +48,9 @@ function Install-AndroidPackage {
             $acquired = if ($lease.acquiredUtc -is [datetime]) { [DateTimeOffset]$lease.acquiredUtc }
                 else { [DateTimeOffset]::Parse([string]$lease.acquiredUtc, [Globalization.CultureInfo]::InvariantCulture) }
             $now = [DateTimeOffset]::UtcNow
-            if ($lease.schemaVersion -ne 1 -or $lease.serial -cne $Serial -or
+            # A text "1" compares equal to 1, so the number's type is checked too.
+            if (($lease.schemaVersion -isnot [int] -and $lease.schemaVersion -isnot [long]) -or
+                $lease.schemaVersion -ne 1 -or $lease.serial -cne $Serial -or
                 $lease.project -cne 'HushTelegram' -or $lease.chatIdentity -cne $ChatIdentity -or
                 $lease.ownershipToken -cne $LeaseToken -or $expires -le $now -or
                 $acquired -gt $now -or $acquired -ge $expires) {

@@ -115,6 +115,36 @@ public class HomeHeaderSettingsTest {
         assertTrue(ConfigurationBackup.eligible().containsKey(Settings.SEARCH_BUTTON_ON_HOME.key));
     }
 
+    /** Messages button on Home's header (#156) follows the Search one under Tab bar, starts off and asks for a restart. */
+    @Test public void theMessagesButtonSwitchFollowsTheSearchOneAndStartsOff() throws Exception {
+        open();
+        assertNull(row(Settings.MESSAGES_BUTTON_ON_HOME.key));
+        assertFalse(ConfigurationBackup.eligible().containsKey(Settings.MESSAGES_BUTTON_ON_HOME.key));
+        controller.close();
+        controller = null;
+
+        open(PatchFamily.REELS_TAB);
+        SwitchPreference toggle = (SwitchPreference) row(Settings.MESSAGES_BUTTON_ON_HOME.key);
+        assertNotNull(toggle);
+        PreferenceGroup section = sectionOf(page.getPreferenceScreen(), toggle);
+        assertEquals("Tab bar", String.valueOf(section.getTitle()));
+        int search = -1;
+        int messages = -1;
+        for (int i = 0; i < section.getPreferenceCount(); i++) {
+            String key = section.getPreference(i).getKey();
+            if (Settings.SEARCH_BUTTON_ON_HOME.key.equals(key)) search = i;
+            if (Settings.MESSAGES_BUTTON_ON_HOME.key.equals(key)) messages = i;
+        }
+        assertEquals("right after Search button on Home's header", search + 1, messages);
+        assertEquals("Messages button on Home's header", String.valueOf(toggle.getTitle()));
+        assertTrue(String.valueOf(toggle.getSummary()), String.valueOf(toggle.getSummary()).endsWith("Restart Instagram to see the change."));
+        assertFalse(toggle.isChecked());
+        assertEquals(Boolean.FALSE, Settings.MESSAGES_BUTTON_ON_HOME.defaultValue);
+        assertTrue(Settings.MESSAGES_BUTTON_ON_HOME.rebootApp);
+        assertTrue(PatchFamily.REELS_TAB.switches.contains(Settings.MESSAGES_BUTTON_ON_HOME));
+        assertTrue(ConfigurationBackup.eligible().containsKey(Settings.MESSAGES_BUTTON_ON_HOME.key));
+    }
+
     @Test public void theCenteredLogoSwitchShowsUnderTabBarWithTheReelsTabPatchAndStartsOff() throws Exception {
         open();
         assertNull(row(Settings.CENTER_HOME_LOGO.key));
@@ -163,6 +193,49 @@ public class HomeHeaderSettingsTest {
         assertFalse("it's moved after each layout, so no restart", Settings.CENTER_PROFILE_NAME.rebootApp);
         assertTrue(PatchFamily.REELS_TAB.switches.contains(Settings.CENTER_PROFILE_NAME));
         assertTrue(ConfigurationBackup.eligible().containsKey(Settings.CENTER_PROFILE_NAME.key));
+    }
+
+    /**
+     * Center titles on other screens (#161) follows Center the name on profiles under Tab bar, starts
+     * off and needs no restart. The two older switches keep their own keys, so a saved choice of either
+     * never turns this one on.
+     */
+    @Test public void theCenteredTitlesSwitchFollowsTheProfileNameOneAndStartsOff() throws Exception {
+        open();
+        assertNull(row(Settings.CENTER_SCREEN_TITLES.key));
+        assertFalse(ConfigurationBackup.eligible().containsKey(Settings.CENTER_SCREEN_TITLES.key));
+        controller.close();
+        controller = null;
+
+        Settings.CENTER_PROFILE_NAME.save(true);
+        Settings.CENTER_HOME_LOGO.save(true);
+        try {
+            open(PatchFamily.REELS_TAB);
+            SwitchPreference toggle = (SwitchPreference) row(Settings.CENTER_SCREEN_TITLES.key);
+            assertNotNull(toggle);
+            PreferenceGroup section = sectionOf(page.getPreferenceScreen(), toggle);
+            assertEquals("Tab bar", String.valueOf(section.getTitle()));
+            int name = -1;
+            int titles = -1;
+            for (int i = 0; i < section.getPreferenceCount(); i++) {
+                String key = section.getPreference(i).getKey();
+                if (Settings.CENTER_PROFILE_NAME.key.equals(key)) name = i;
+                if (Settings.CENTER_SCREEN_TITLES.key.equals(key)) titles = i;
+            }
+            assertEquals("right after Center the name on profiles", name + 1, titles);
+            assertEquals("Center titles on other screens", String.valueOf(toggle.getTitle()));
+            assertTrue(String.valueOf(toggle.getSummary()), String.valueOf(toggle.getSummary()).contains("The buttons stay where they are."));
+            assertFalse("the other two switches don't turn it on", toggle.isChecked());
+            assertTrue(Settings.CENTER_PROFILE_NAME.get());
+            assertTrue(Settings.CENTER_HOME_LOGO.get());
+            assertEquals(Boolean.FALSE, Settings.CENTER_SCREEN_TITLES.defaultValue);
+            assertFalse("it's moved after each layout, so no restart", Settings.CENTER_SCREEN_TITLES.rebootApp);
+            assertTrue(PatchFamily.REELS_TAB.switches.contains(Settings.CENTER_SCREEN_TITLES));
+            assertTrue(ConfigurationBackup.eligible().containsKey(Settings.CENTER_SCREEN_TITLES.key));
+        } finally {
+            Settings.CENTER_PROFILE_NAME.resetToDefault();
+            Settings.CENTER_HOME_LOGO.resetToDefault();
+        }
     }
 
     @Test public void eachHeaderButtonHasASwitchUnderTabBarThatStartsOffAndAsksForARestart() throws Exception {

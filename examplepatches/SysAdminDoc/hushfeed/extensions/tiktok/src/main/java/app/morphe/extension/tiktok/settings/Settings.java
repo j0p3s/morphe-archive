@@ -101,6 +101,7 @@ public class Settings extends BaseSettings {
             "subtitle_language", "original", false, Setting.parent(DOWNLOAD_SUBTITLES));
     public static final IntegerSetting CAPTION_TEXT_SIZE =
             new IntegerSetting("caption_text_size", 0).withRange(0, 48);
+    public static final BooleanSetting CAPTION_REGULAR_WEIGHT = new BooleanSetting("caption_regular_weight", FALSE);
     public static final StringSetting CAPTION_BACKGROUND = new StringSetting("caption_background", "default");
     public static final BooleanSetting KEEP_CAPTIONS_CLEAR_DISPLAY = new BooleanSetting("keep_captions_clear_display", FALSE);
     public static final BooleanSetting ALLOW_SCREEN_CAPTURE = new BooleanSetting("allow_screen_capture", FALSE, true);
@@ -209,6 +210,14 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting LONG_PRESS_FULL_MENU_ON_PROFILES =
             new BooleanSetting("long_press_full_menu_on_profiles", FALSE, new Setting.Availability() {
                 // Only a long press left to TikTok opens its menu at all.
+                @Override
+                public boolean isAvailable() {
+                    return !GestureActions.takesLongPress(LONG_PRESS_ACTION.savedValue());
+                }
+            });
+    /** The same For You menu for a long press on a video opened from search results (#120). */
+    public static final BooleanSetting LONG_PRESS_FULL_MENU_IN_SEARCH =
+            new BooleanSetting("long_press_full_menu_in_search", FALSE, new Setting.Availability() {
                 @Override
                 public boolean isAvailable() {
                     return !GestureActions.takesLongPress(LONG_PRESS_ACTION.savedValue());
@@ -335,6 +344,8 @@ public class Settings extends BaseSettings {
     /** Caption languages to keep, by the video's original caption track; empty keeps every language. */
     public static final StringSetting CAPTION_LANGUAGES = new StringSetting("caption_languages", "");
     public static final StringSetting REGION_NEVER_FROM = new StringSetting("region_never_from", "", true);
+    public static final IntegerSetting MIN_VIDEO_SECONDS =
+            new IntegerSetting("min_video_seconds", 0).withRange(0, 86400);
     public static final IntegerSetting MAX_VIDEO_SECONDS =
             new IntegerSetting("max_video_seconds", 0).withRange(0, 86400);
     public static final IntegerSetting MAX_PUBLICATION_AGE_DAYS =
@@ -458,6 +469,11 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting COMMENT_TRANSLATE_BUTTON_TURNED_ON =
             new BooleanSetting("comment_translate_button_turned_on", FALSE, false, false);
+    /**
+     * The translation rows on TikTok's own Settings and privacy > Language page, for accounts
+     * TikTok hides them on (#143). No restart: the page asks each time it opens.
+     */
+    public static final BooleanSetting SHOW_TRANSLATION_SETTINGS = new BooleanSetting("show_translation_settings", FALSE);
     // Restart-gated: the comment keyboard builds its slot tree once per session, and the
     // trigger that adds the emoji row is asked at that moment only.
     public static final BooleanSetting HIDE_COMMENT_QUICK_REACTIONS =
@@ -532,6 +548,9 @@ public class Settings extends BaseSettings {
      * Keeps the last LIVE quality picked after TikTok closes, so the first rooms after a cold
      * start open at it when their stream has it (#57); the LIVE controls patch, under
      * {@link #OFFER_LIVE_QUALITY}. Read as each room picks its starting quality, so no restart.
+     * A pick is saved from either of TikTok's pickers: the newer one's setter and the older
+     * LiveDefinitionSelectionDialog's applied switch, which Share > Video quality opens in rooms
+     * whose stream asks for a quality button.
      */
     public static final BooleanSetting REMEMBER_LIVE_QUALITY = new BooleanSetting(
             "remember_live_quality", FALSE, false, Setting.parent(OFFER_LIVE_QUALITY));
@@ -542,6 +561,13 @@ public class Settings extends BaseSettings {
      * room builds its menu, so the next menu follows a change.
      */
     public static final BooleanSetting OFFER_LIVE_CLEAR_SCREEN = new BooleanSetting("offer_live_clear_screen", FALSE);
+    /**
+     * Opens LIVE panels in TikTok's dark LIVE theme while TikTok is in dark mode (#159); the LIVE
+     * controls patch. Read as each panel opens, so the next panel follows a change. Has no
+     * settings row yet: on the S25 the Share panel, viewer rankings and the Video quality list
+     * stayed light with it on, and only their navigation bar turned dark.
+     */
+    public static final BooleanSetting DARK_LIVE_PANELS = new BooleanSetting("dark_live_panels", FALSE);
     /**
      * Puts a Record button in LIVE rooms (#37); the LIVE controls patch. A recording starts when the
      * button is tapped and ends at Stop or when the room is left. Read as a room resumes and on the
@@ -775,6 +801,20 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting SEE_THROUGH_BOTTOM_BAR = new BooleanSetting("see_through_bottom_bar", FALSE);
     /**
+     * With See-through bottom bar, draws the tabs on a rounded see-through pill inset from the
+     * bar's sides and bottom instead of nothing (#124). Only the bar's background changes, so the
+     * tabs keep their places. Read on each layout.
+     */
+    public static final BooleanSetting FLOATING_BOTTOM_BAR = new BooleanSetting(
+            "floating_bottom_bar", FALSE, false, Setting.parent(SEE_THROUGH_BOTTOM_BAR));
+    /**
+     * Lets the main feed's video draw up under the status bar, with the clock over it (#145).
+     * VideoOverlayHider collapses the spacer TikTok keeps above each video for the bar and
+     * SeeThroughStatusBar clears the bar's color while the feed is in front; both go back when
+     * this goes off or Hushfeed is paused. Read on each layout.
+     */
+    public static final BooleanSetting SEE_THROUGH_STATUS_BAR = new BooleanSetting("see_through_status_bar", FALSE);
+    /**
      * Burn-in guard for OLED screens (BurnInGuard): "dim" draws the controls the fade covers at a
      * quarter after a few seconds without a touch, "dim_shift" also moves the window's content a
      * couple of dp every two minutes. Over the feed and an opened video only.
@@ -809,6 +849,8 @@ public class Settings extends BaseSettings {
     /** The Check your sources banner across the top of a video (TikTok's Know the facts), and the prompt it raises when you share one. */
     public static final BooleanSetting HIDE_CHECK_YOUR_SOURCES = new BooleanSetting("hide_check_your_sources", FALSE);
     public static final BooleanSetting SHOW_AUTHOR_REGION = new BooleanSetting("show_author_region", FALSE);
+    /** The country as its flag in place of its two letters, by the creator's name and a comment's time (#157). */
+    public static final BooleanSetting REGION_AS_FLAG = new BooleanSetting("region_as_flag", FALSE);
     public static final BooleanSetting SHOW_AUTHOR_HANDLE = new BooleanSetting("show_author_handle", FALSE);
     public static final BooleanSetting SHOW_ENGAGEMENT_RATE = new BooleanSetting("show_engagement_rate", FALSE);
     public static final BooleanSetting BLOCK_AUTHOR_BUTTON =
@@ -959,8 +1001,9 @@ public class Settings extends BaseSettings {
     // once early in each start, so a change counts from the next one, with no restart asked for.
     public static final BooleanSetting KEEP_APP_LANGUAGE = new BooleanSetting("keep_app_language", FALSE);
     // Profile background (#80), in the default selection with this off. TikTok asks its gate as
-    // Edit profile or a profile is built, so a change counts from the next one, no restart.
-    public static final BooleanSetting PROFILE_BACKGROUND = new BooleanSetting("profile_background", FALSE);
+    // Edit profile or a profile is built, but the allow-list value its profile requests send is
+    // snapshotted once per account and process, so a change takes a restart to reach the server.
+    public static final BooleanSetting PROFILE_BACKGROUND = new BooleanSetting("profile_background", FALSE, true);
     // App lock. Off until the reader turns it on, and read as each screen starts, so no restart.
     // The delay is whole minutes TikTok may spend in the background before it asks again.
     public static final BooleanSetting APP_LOCK = new BooleanSetting("app_lock", FALSE);
@@ -987,6 +1030,12 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting HIDE_FEED_TAB_STRIP = new BooleanSetting("hide_feed_tab_strip", FALSE);
     public static final BooleanSetting HIDE_FEED_SEARCH_BUTTON =
             new BooleanSetting("hide_feed_search_button", FALSE, true);
+    /** The search box at the top of an opened video, with the feed's search button (#158). Read on each layout. */
+    public static final BooleanSetting HIDE_OPENED_VIDEO_SEARCH = new BooleanSetting(
+            "hide_opened_video_search", FALSE, false, Setting.parent(HIDE_FEED_SEARCH_BUTTON));
+    /** The profile views button and Add friends at the top of your Profile tab (#158). Read on each layout. */
+    public static final BooleanSetting HIDE_PROFILE_VIEWS_BUTTON = new BooleanSetting("hide_profile_views_button", FALSE);
+    public static final BooleanSetting HIDE_PROFILE_ADD_FRIENDS = new BooleanSetting("hide_profile_add_friends", FALSE);
     public static final BooleanSetting HIDE_VISUAL_SEARCH = new BooleanSetting("hide_visual_search", FALSE);
     public static final BooleanSetting HIDE_FULLSCREEN_BUTTON = new BooleanSetting("hide_fullscreen_button", FALSE, true);
     // Read each time TikTok asks, so it doesn't need a restart.
@@ -1035,6 +1084,8 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting SHOW_COMMENTER_HANDLE = new BooleanSetting("show_commenter_handle", FALSE);
     /** The country a commenter's account is set to, after the comment's time. Read on each bind. */
     public static final BooleanSetting SHOW_COMMENTER_REGION = new BooleanSetting("show_commenter_region", FALSE);
+    /** Each commenter's name in a color of its own, the same for that account every time. Read on each bind. */
+    public static final BooleanSetting COLOR_COMMENTER_NAMES = new BooleanSetting("color_commenter_names", FALSE);
     /** Tapping "more" under a video opens its comments with the caption at the top (upstream #156). */
     public static final BooleanSetting CAPTION_OPENS_COMMENTS = new BooleanSetting("caption_opens_comments", FALSE);
     /** Every video's comments open with its caption at the top. */

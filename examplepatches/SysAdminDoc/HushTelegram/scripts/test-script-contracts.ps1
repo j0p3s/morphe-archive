@@ -351,14 +351,21 @@ $dualTargets = @(Get-PatchTargets -PatchList $catalog)
 Assert-True ($dualTargets.Count -eq 2 -and $dualTargets[0].PackageName -ceq 'org.telegram.messenger.web') `
     'The complete package inventory is not default web followed by beta.'
 $betaTarget = Get-PatchTarget -PatchList $catalog -PackageName 'org.telegram.messenger.beta'
+# The beta build the catalog declares, read straight from its JSON rather than written here, so a
+# release that moves the targets moves these checks with it instead of failing in its full suite.
+$betaDeclared = @($catalog.patches[0].compatibility | Where-Object { $_.packageName -ceq 'org.telegram.messenger.beta' })
+Assert-True ($betaDeclared.Count -eq 1 -and @($betaDeclared[0].targets).Count -eq 1) 'The catalog does not declare one beta build.'
+$betaVersion = [string]$betaDeclared[0].targets[0].version
+$betaCode = [string]$betaDeclared[0].targets[0].versionCodes.ARM64_V8A
+Assert-True ($betaVersion -match '^\d+\.\d+(\.\d+)?$' -and $betaCode -match '^\d+$') 'The catalog beta build has no version or code.'
 Assert-True ((Get-PatchTarget -PatchList $catalog).PackageName -ceq 'org.telegram.messenger.web' -and
-    $betaTarget.PackageVersion -ceq '13.0.1' -and $betaTarget.PackageVersionCodes['13.0.1'][0] -eq '71669') `
+    $betaTarget.PackageVersion -ceq $betaVersion -and $betaTarget.PackageVersionCodes[$betaVersion][0] -eq $betaCode) `
     'An explicit beta selector changed the default web target or lost its exact code.'
-Assert-True ((Get-VendorFixtureName -Target $betaTarget -VersionName '13.0.1' -VersionCode '71669') -ceq
-    'telegram-beta-13.0.1-71669.apk') 'The beta fixture naming rule lost its package or build code.'
+Assert-True ((Get-VendorFixtureName -Target $betaTarget -VersionName $betaVersion -VersionCode $betaCode) -ceq
+    "telegram-beta-$betaVersion-$betaCode.apk") 'The beta fixture naming rule lost its package or build code.'
 Assert-Throws { Get-PatchTarget -PatchList $catalog -PackageName 'org.telegram.messenger' } '*does not declare package*' `
     'Store was credited with beta or web support.'
-Assert-Throws { Get-VendorFixtureName -Target $betaTarget -VersionName '13.0.1' -VersionCode '71668' } '*not a declared build*' `
+Assert-Throws { Get-VendorFixtureName -Target $betaTarget -VersionName $betaVersion -VersionCode ([string]([long]$betaCode - 1)) } '*not a declared build*' `
     'Another beta code was treated as the retained fixture.'
 $missingTarget = [pscustomobject]@{ patches = @([pscustomobject]@{ name = 'missing target' }) }
 Assert-Throws { Get-PatchTarget -PatchList $missingTarget } '*has no compatible package*' `
@@ -668,7 +675,8 @@ try {
     # the document before it's written.
     function New-TestSbom {
         param([string]$Path, [string]$Bundle,
-            [string[]]$Libraries = @('pkg:maven/com.google.code.gson/gson@2.14.0'), [scriptblock]$Mutate)
+            [string[]]$Libraries = @('pkg:maven/com.google.code.gson/gson@2.14.0'), [scriptblock]$Mutate,
+            [string]$GradleVersion = '9.8.1')
         $bundleName = Split-Path -Leaf $Bundle
         $facts = Get-BundleManifestFacts -BundlePath $Bundle
         $components = New-Object System.Collections.Generic.List[object]
@@ -696,6 +704,7 @@ try {
             metadata = [ordered]@{
                 timestamp = [DateTimeOffset]::FromUnixTimeMilliseconds($facts.timestamp).UtcDateTime.ToString(
                     "yyyy-MM-dd'T'HH:mm:ss'Z'", [Globalization.CultureInfo]::InvariantCulture)
+                tools = [ordered]@{ components = @([ordered]@{ type = 'application'; name = 'Gradle'; version = $GradleVersion }) }
                 component = [ordered]@{ type = 'file'; 'bom-ref' = $bundleName; name = $bundleName; version = $facts.version
                     hashes = @([ordered]@{ alg = 'SHA-256'; content = (Get-Sha256Hex -Path $Bundle).ToLowerInvariant() }) }
             }
@@ -1093,6 +1102,8 @@ try {
         @($sbomRead.Payloads).Count -eq 1 -and $sbomRead.Payloads[0].Ref -eq 'extensions/telegram.mpe' -and
         $sbomRead.Sha256 -eq (Get-Sha256Hex -Path $sbomFile)) `
         "The SBOM was misread: $($sbomRead.BundleName) $($sbomRead.BundleVersion) $($sbomRead.Timestamp), $(@($sbomRead.Components).Count) components"
+    Assert-True (@($sbomRead.Tools).Count -eq 1 -and $sbomRead.Tools[0].Name -ceq 'gradle' -and $sbomRead.Tools[0].Version -ceq '9.8.1') `
+        "The SBOM's recorded Gradle was misread: $(@($sbomRead.Tools | ForEach-Object { "$($_.Name) $($_.Version)" }) -join ', ')"
     $bound = Test-ReleaseSbom -Sbom $sbomRead -BundlePath $bundle -BundleName 'patches-9.9.9.mpp'
     Assert-True $bound.Valid "An SBOM of the bundle was refused: $($bound.Reason)"
 
@@ -1611,13 +1622,13 @@ New-Item -ItemType Directory -Path $advisoryRoot -Force | Out-Null
 try {
     $today = [datetime]'2026-09-25'
     # What Read-ReleaseSbom hands the gate, for the libraries named.
-    function New-GateSbom([string[]]$Purls) {
+    function New-GateSbom([string[]]$Purls, [object[]]$Tools = @([pscustomobject]@{ Name = 'gradle'; Version = '9.8.1' })) {
         $libraries = @(foreach ($purl in @($Purls | Where-Object { $_ })) {
             $parts = [regex]::Match($purl, '^pkg:maven/([^/]+)/([^@]+)@(.+)$')
             [pscustomobject]@{ Ref = $purl; Type = 'library'; Group = $parts.Groups[1].Value; Name = $parts.Groups[2].Value
                 Version = $parts.Groups[3].Value; Purl = $purl }
         })
-        return [pscustomobject]@{ Path = (Join-Path $advisoryRoot 'patches-9.9.9.cdx.json'); Libraries = $libraries }
+        return [pscustomobject]@{ Path = (Join-Path $advisoryRoot 'patches-9.9.9.cdx.json'); Libraries = $libraries; Tools = $Tools }
     }
     # The gate on an SBOM of these libraries with these exception lines, and everything it said,
     # warnings included.
@@ -1626,9 +1637,12 @@ try {
         Set-Content -LiteralPath $list -Encoding ASCII -Value (@('# exceptions for this case') + @($Exceptions))
         . $osvStandIn
         $osvAsked.Clear()
+        $gateSaid.Clear()
         return (@(Invoke-ReleaseAdvisoryGate -Sbom (New-GateSbom $Purls) -ExceptionsPath $list -Today $today `
-            -SkipAdvisoryCheck:$Skip 3>&1 6>&1 | ForEach-Object { "$_" }) -join "`n")
+            -SkipAdvisoryCheck:$Skip 3>&1 6>&1 | ForEach-Object { $gateSaid.Add("$_"); "$_" }) -join "`n")
     }
+    # Each line of the last run as it was said, which a run that throws leaves behind.
+    $gateSaid = New-Object System.Collections.Generic.List[string]
     $later = $today.AddDays(30).ToString('yyyy-MM-dd')
     $why = 'Only the build reads JSON with it, never input from outside.'
 
@@ -1761,16 +1775,46 @@ try {
     # OSV has to answer, and answer with something the gate can read.
     Assert-Throws { Invoke-Gate @('pkg:maven/com.example/unknown@1.0') } '*could not be asked about pkg:maven/com.example/unknown@1.0*fails closed*' `
         'The gate read an OSV it could not reach as no advisories.'
+    # An object is not a query result for being one: an error that arrived as {"error":...} has
+    # neither vulns nor a page token, and read as a library with no advisory it let a release out
+    # on a check that never ran. None of these is followed by the line that says OSV has nothing.
+    $retry = '*fails closed*run the check again*'
     $unreadable = @(
         @{ Name = 'a page of HTML'; Answer = '<html>Service Unavailable</html>'; Pattern = '*isn''t a query result*' },
-        @{ Name = 'an advisory with no id'; Answer = '{"vulns":[{"summary":"no id"}]}'; Pattern = '*has no id*' })
+        @{ Name = 'an advisory with no id'; Answer = '{"vulns":[{"summary":"no id"}]}'; Pattern = '*has no id*' },
+        @{ Name = 'an error object'; Answer = '{"error":"temporarily unavailable"}'
+            Pattern = "*$cleanPurl*fields a query result does not have*temporarily unavailable$retry" },
+        @{ Name = 'a gateway status'; Answer = '{"code":14,"message":"unavailable","details":[]}'; Pattern = "*fields a query result does not have$retry" },
+        @{ Name = 'an object with no query field'; Answer = '{"results":[]}'; Pattern = "*fields a query result does not have$retry" },
+        @{ Name = 'an error beside an empty list'; Answer = '{"vulns":[],"error":"temporarily unavailable"}'; Pattern = "*fields a query result does not have$retry" },
+        @{ Name = 'vulns as an object'; Answer = '{"vulns":{}}'; Pattern = "*vulns that is not a list$retry" },
+        @{ Name = 'vulns as text'; Answer = '{"vulns":"none"}'; Pattern = "*vulns that is not a list$retry" },
+        @{ Name = 'vulns as null'; Answer = '{"vulns":null}'; Pattern = "*vulns that is not a list$retry" },
+        @{ Name = 'a page token that is a number'; Answer = '{"vulns":[],"next_page_token":7}'; Pattern = "*next_page_token that is not text$retry" },
+        @{ Name = 'a page token that is an object'; Answer = '{"next_page_token":{"page":2}}'; Pattern = "*next_page_token that is not text$retry" },
+        @{ Name = 'an advisory that is only its id'; Answer = '{"vulns":["GHSA-4jrv-ppp4-jm57"]}'; Pattern = '*not a record or has no id*' },
+        @{ Name = 'a null advisory'; Answer = '{"vulns":[null]}'; Pattern = '*not a record or has no id*' },
+        @{ Name = 'an advisory with a number for an id'; Answer = '{"vulns":[{"id":7}]}'; Pattern = '*not a record or has no id*' },
+        @{ Name = 'an advisory withdrawn on true'; Answer = "{`"vulns`":[$($gsonAdvisory.Replace('{"id"', '{"withdrawn":true,"id"'))]}"
+            Pattern = '*GHSA-4jrv-ppp4-jm57 withdrawn on something that is not a date*' })
     foreach ($odd in $unreadable) {
         $osvAnswers = @{ $cleanPurl = $odd.Answer }
         try {
             Assert-Throws { Invoke-Gate @($cleanPurl) } $odd.Pattern "The gate took $($odd.Name) from OSV for an answer."
+            Assert-True (@($gateSaid | Where-Object { $_ -like '*OSV has*' }).Count -eq 0) `
+                "The gate said OSV had answered before it refused $($odd.Name): $($gateSaid -join ' / ')"
         } finally {
             $osvAnswers = $osvRecorded
         }
+    }
+    # The empty list OSV can send in place of {} is as clean as {} is.
+    $osvAnswers = @{ $cleanPurl = '{"vulns":[]}' }
+    try {
+        $said = Invoke-Gate @($cleanPurl)
+        Assert-True ($said -like '*OSV has no advisory for the libraries patches-9.9.9.cdx.json lists: gson 2.14.0*') `
+            "An empty advisory list was not read as a clean answer: $said"
+    } finally {
+        $osvAnswers = $osvRecorded
     }
     # The second page of an answer is read, and an advisory OSV withdrew is not one.
     $osvAnswers = @{ $gsonPurl = '{"next_page_token":"p2"}'; "$gsonPurl page p2" = "{`"vulns`":[$gsonAdvisory]}" }
@@ -1794,6 +1838,31 @@ try {
     $said = Invoke-Gate @()
     Assert-True ($said -like '*lists no library to ask OSV about*' -and $osvAsked.Count -eq 0) `
         "An SBOM with no library was not passed as one: $said"
+
+    # The Gradle the SBOM records is held to scripts/build-tool-advisories.txt, offline, so a skipped
+    # OSV check doesn't skip it. A version in a high or critical range, one that can't be placed and
+    # an SBOM that names no Gradle all stop the gate.
+    $toolList = Join-Path $advisoryRoot 'build-tool-advisories.txt'
+    Set-Content -LiteralPath $toolList -Encoding ASCII -Value @('# a high advisory for this case',
+        'GHSA-2222-3333-4444 gradle HIGH <9.8.0 9.8.0 2026-09-01')
+    Set-Content -LiteralPath (Join-Path $advisoryRoot 'advisory-exceptions.txt') -Encoding ASCII -Value '# none'
+    function Invoke-ToolGate($Tools, [switch]$Skip) {
+        . $osvStandIn
+        return (@(Invoke-ReleaseAdvisoryGate -Sbom (New-GateSbom @() -Tools $Tools) `
+            -ExceptionsPath (Join-Path $advisoryRoot 'advisory-exceptions.txt') -Today $today -ToolAdvisoriesPath $toolList `
+            -SkipAdvisoryCheck:$Skip 3>&1 6>&1 | ForEach-Object { "$_" }) -join "`n")
+    }
+    $said = Invoke-ToolGate @([pscustomobject]@{ Name = 'gradle'; Version = '9.8.1' })
+    Assert-True ($said -like '*built with gradle 9.8.1, outside the high and critical ranges*') "A clean Gradle was not reported: $said"
+    Assert-Throws { Invoke-ToolGate @([pscustomobject]@{ Name = 'gradle'; Version = '9.7.1' }) } '*patches-9.9.9.cdx.json records it*GHSA-2222-3333-4444*' `
+        'An SBOM built on a Gradle inside a high advisory range passed the gate.'
+    Assert-Throws { Invoke-ToolGate @([pscustomobject]@{ Name = 'gradle'; Version = '9.7.1' }) -Skip } '*GHSA-2222-3333-4444*' `
+        '-SkipAdvisoryCheck skipped the offline build tool check.'
+    Assert-Throws { Invoke-ToolGate @([pscustomobject]@{ Name = 'gradle'; Version = '9.9-rc-1' }) } '*not a released version*' `
+        'A Gradle version that cannot be placed passed the gate.'
+    Assert-Throws { Invoke-ToolGate @() } '*names no Gradle under metadata.tools*' 'An SBOM that names no Gradle passed the gate.'
+    Assert-Throws { Invoke-ToolGate @([pscustomobject]@{ Name = 'agp'; Version = '9.1.1' }) } '*names no Gradle under metadata.tools*' `
+        'An SBOM that names only another tool passed the gate.'
 } finally {
     Remove-Item -LiteralPath $advisoryRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
@@ -3015,6 +3084,71 @@ try {
         $env:GITHUB_TOKEN = $savedNewBranchToken
     }
 
+    # A record that isn't one git writes stops the hook before it asks git anything. A line of
+    # fewer than four fields used to be skipped, so 'not a ref' read as a push of nothing: the hook
+    # said there was nothing to scan and passed. A git that only counts its calls stands in for
+    # these, since a refusal that came after the good line of a mixed push had already been read
+    # would have run git first. The new branch and both tag forms above went through the same
+    # reading, and the other forms git writes follow the bad ones here with the routing they had.
+    function Invoke-RecordHook {
+        param([string]$Refs, [switch]$WithoutGit)
+        $run = @{ Said = New-Object System.Collections.Generic.List[string]; Error = ''; Exit = 0; Git = 0 }
+        if ($WithoutGit) { function git { $run.Git++; $global:LASTEXITCODE = 0 } }
+        $global:LASTEXITCODE = 0
+        try {
+            & $prePushScript -Root $hookRoot -PushedRefs $Refs 6>&1 | ForEach-Object { $run.Said.Add("$_") }
+            $run.Exit = $LASTEXITCODE
+        } catch {
+            $run.Error = $_.Exception.Message
+        }
+        return $run
+    }
+    $zeroId = '0' * 40
+    $goodRecord = "refs/heads/main $newBranchHead refs/heads/main $firstCommit"
+    $badRecords = [ordered]@{
+        'a line that is no record' = @('not a ref', 1)
+        'three fields' = @("refs/heads/main $newBranchHead refs/heads/main", 1)
+        'five fields' = @("$goodRecord extra", 1)
+        'a local ID one digit short' = @("refs/heads/main $($newBranchHead.Substring(1)) refs/heads/main $firstCommit", 1)
+        'a remote ID outside hex' = @("refs/heads/main $newBranchHead refs/heads/main $('g' * 40)", 1)
+        'an upper-case ID' = @("refs/heads/main $('A' * 40) refs/heads/main $firstCommit", 1)
+        'an ID of sixty-four digits' = @("refs/heads/main $('a' * 64) refs/heads/main $firstCommit", 1)
+        'a bad line after a good one' = @("$goodRecord`nnot a ref", 2)
+        'a bad line before a good one' = @("refs/heads/main $newBranchHead`r`n$goodRecord", 1)
+        'a remote ref outside refs/' = @("refs/heads/main $newBranchHead main $firstCommit", 1)
+        'a remote ref with two dots' = @("refs/heads/main $newBranchHead refs/heads/a..b $firstCommit", 1)
+        'a remote ref ending in .lock' = @("refs/heads/main $newBranchHead refs/heads/main.lock $firstCommit", 1)
+        'a remote ref with a hidden part' = @("refs/heads/main $newBranchHead refs/heads/.main $firstCommit", 1)
+        'a remote ref ending in a slash' = @("refs/heads/main $newBranchHead refs/heads/ $firstCommit", 1)
+        'a remote ref with a caret' = @("refs/heads/main $newBranchHead refs/heads/main^ $firstCommit", 1)
+        'a remote ref with a reflog mark' = @("refs/heads/main $newBranchHead refs/heads/main@{1} $firstCommit", 1)
+        'a deletion that names a commit' = @("(delete) $newBranchHead refs/heads/main $firstCommit", 1)
+        'the all-zero ID under a ref name' = @("refs/heads/main $zeroId refs/heads/main $firstCommit", 1)
+    }
+    foreach ($case in $badRecords.Keys) {
+        $run = Invoke-RecordHook -Refs $badRecords[$case][0] -WithoutGit
+        Assert-True ($run.Error -like "Pushed ref record $($badRecords[$case][1]) is not one git writes:*Nothing was checked*") `
+            "A push naming $case was not refused as a malformed record: exit $($run.Exit), '$($run.Error)'"
+        Assert-True ($run.Git -eq 0 -and $run.Said.Count -eq 0) `
+            "A push naming $case ran git $($run.Git) time(s) or reported a result before it was refused: $($run.Said -join ' / ')"
+    }
+    # No input, blank lines and a deletion publish nothing, and still say so without asking git.
+    foreach ($nothing in @('', "`r`n`n", "(delete) $zeroId refs/heads/old $firstCommit")) {
+        $run = Invoke-RecordHook -Refs $nothing -WithoutGit
+        Assert-True (-not $run.Error -and $run.Exit -eq 0 -and $run.Git -eq 0 -and
+            ($run.Said -join "`n") -like '*the push publishes no commit*nothing to check*') `
+            "A push of nothing ('$($nothing.Trim())') lost its routing: exit $($run.Exit), '$($run.Error)', $($run.Said -join ' / ')"
+    }
+    # An update of a hosted branch whose range moves only a document, under its ref name, under the
+    # bare ID git passes on when the push named one, and beside a deletion with Windows line ends.
+    foreach ($update in @($goodRecord, "$newBranchHead $newBranchHead refs/heads/main $firstCommit",
+            "(delete) $zeroId refs/heads/old $firstCommit`r`n$goodRecord`r`n")) {
+        $run = Invoke-RecordHook -Refs $update
+        Assert-True (-not $run.Error -and $run.Exit -eq 0 -and
+            ($run.Said -join "`n") -like '*the 1 commit(s) this push publishes*no code or published file changed*') `
+            "A document-only update lost its routing: exit $($run.Exit), '$($run.Error)', $($run.Said -join ' / ')"
+    }
+
     # The scan every push gets. A doc naming the maintainer's notes folder or a phone's serial
     # routes to no gate at all, and a test under patches/ or extensions/ only to the Gradle
     # gates, which never read for them, so neither reached the contract tests' scan. The hook
@@ -3874,6 +4008,87 @@ try {
     # A path that is simply not there is nothing to do, not a failure.
     Remove-GeneratedPath -Path (Join-Path $work 'never-existed') -Root $work
 
+    # Run folders a killed device build left behind. The argument file in one holds the signing
+    # password, so the next run sweeps every run-<guid> folder in the output folder that no live
+    # run owns, and never one a concurrent run is working in. Owned means the process in owner.json
+    # is running and started when the file says; the id alone could belong to another process by now.
+    $sweepOut = Join-Path $commonRoot 'sweep-out'
+    New-Item -ItemType Directory -Path $sweepOut -Force | Out-Null
+    $liveOther = Start-Process -FilePath 'ping.exe' -ArgumentList @('-n', '120', '127.0.0.1') -WindowStyle Hidden -PassThru
+    try {
+        $deadRun = Start-Process -FilePath 'ping.exe' -ArgumentList @('-n', '1', '127.0.0.1') -WindowStyle Hidden -PassThru
+        $deadRun.WaitForExit()
+        $deadId = $deadRun.Id
+        $liveTicks = $liveOther.StartTime.ToUniversalTime().Ticks
+        $nowTicks = [DateTime]::UtcNow.Ticks
+        function New-SweepRun([string]$Name, $Owner, [switch]$Aged) {
+            $folder = Join-Path $sweepOut $Name
+            New-Item -ItemType Directory -Path $folder -Force | Out-Null
+            Set-Content -LiteralPath (Join-Path $folder 'morphe-patch.args') -Value '"--keystore-password" "secret"' -Encoding ASCII
+            if ($null -ne $Owner) {
+                [IO.File]::WriteAllText((Join-Path $folder 'owner.json'), $Owner, (New-Object Text.UTF8Encoding($false)))
+            }
+            if ($Aged) { (Get-Item -LiteralPath $folder).LastWriteTimeUtc = [DateTime]::UtcNow.AddHours(-1) }
+            return $folder
+        }
+        function New-OwnerJson($ProcessId, $Ticks) { return (@{ processId = $ProcessId; startedUtcTicks = $Ticks } | ConvertTo-Json -Compress) }
+        $guid = { [guid]::NewGuid().ToString('N') }
+        $killed = New-SweepRun ('run-' + (& $guid)) (New-OwnerJson $deadId ($nowTicks - 600000000))
+        $concurrent = New-SweepRun ('run-' + (& $guid)) (New-OwnerJson $liveOther.Id $liveTicks)
+        $reused = New-SweepRun ('run-' + (& $guid)) (New-OwnerJson $liveOther.Id ($liveTicks - 36000000000))
+        $mine = New-SweepRun ('run-' + (& $guid)) $null
+        Write-RunOwner -RunDir $mine
+        $justMade = New-SweepRun ('run-' + (& $guid)) $null
+        $brokenFresh = New-SweepRun ('run-' + (& $guid)) 'not json'
+        $ownerless = New-SweepRun ('run-' + (& $guid)) $null -Aged
+        $brokenOld = New-SweepRun ('run-' + (& $guid)) '{"processId":"x"}' -Aged
+        $notARun = New-SweepRun 'run-notaguid' $null -Aged
+        $plainFile = Join-Path $sweepOut 'hushtelegram-9.9.9-signed.apk'
+        Set-Content -LiteralPath $plainFile -Value 'apk' -Encoding ASCII
+
+        $mineRead = Get-Content -LiteralPath (Join-Path $mine 'owner.json') -Raw | ConvertFrom-Json
+        Assert-True ($mineRead.processId -eq $PID) "Write-RunOwner recorded process $($mineRead.processId), not this one ($PID)."
+        $swept = @(Remove-StaleRunFolders -OutDir $sweepOut)
+        foreach ($gone in @($killed, $reused, $ownerless, $brokenOld)) {
+            Assert-True (-not (Test-Path -LiteralPath $gone)) "A run folder no live run owns was not swept: $(Split-Path -Leaf $gone)"
+        }
+        foreach ($kept in @($concurrent, $mine, $justMade, $brokenFresh, $notARun)) {
+            Assert-True (Test-Path -LiteralPath $kept) "A folder that is not a dead run's was swept: $(Split-Path -Leaf $kept)"
+        }
+        Assert-True (Test-Path -LiteralPath (Join-Path $concurrent 'morphe-patch.args')) 'The live run lost its argument file to the sweep.'
+        Assert-True (Test-Path -LiteralPath $plainFile) 'The sweep deleted a file that is not a run folder.'
+        Assert-True ($swept.Count -eq 4 -and ($swept -ccontains (Split-Path -Leaf $killed))) "The sweep named what it removed wrongly: $($swept -join ', ')"
+        # The owner, once it is gone, is swept on the next run, and -Keep spares a folder whatever its owner.
+        Stop-Process -Id $liveOther.Id -Force
+        $liveOther.WaitForExit()
+        $spared = @(Remove-StaleRunFolders -OutDir $sweepOut -Keep $concurrent)
+        Assert-True ((Test-Path -LiteralPath $concurrent) -and $spared.Count -eq 0) '-Keep did not spare the named folder.'
+        $swept = @(Remove-StaleRunFolders -OutDir $sweepOut)
+        Assert-True (-not (Test-Path -LiteralPath $concurrent)) 'A run folder whose process had ended was kept.'
+        Assert-True ((Test-Path -LiteralPath $mine) -and (Test-Path -LiteralPath $justMade)) 'The sweep removed this run''s folder, or one just made.'
+        Assert-True (@(Remove-StaleRunFolders -OutDir (Join-Path $commonRoot 'no-such-out')).Count -eq 0) 'A missing output folder was not an empty sweep.'
+
+        # An owner whose start can't be read is settled by HasExited, and one that denies that read
+        # too (an elevated process read from Windows PowerShell 5.1) counts as live. The denied read
+        # used to throw out of the sweep and stop the run.
+        function New-OwnerStandIn($Start, $Exited) {
+            $standIn = New-Object psobject
+            $standIn | Add-Member -MemberType ScriptProperty -Name StartTime -Value ([scriptblock]::Create($Start))
+            $standIn | Add-Member -MemberType ScriptProperty -Name HasExited -Value ([scriptblock]::Create($Exited))
+            return $standIn
+        }
+        $denied = 'throw (New-Object System.ComponentModel.Win32Exception 5)'
+        $startedAt = [DateTime]::UtcNow
+        $startedRead = "[DateTime]::new($($startedAt.Ticks), 'Utc')"
+        Assert-True (-not (Test-RunOwnerGone -Process (New-OwnerStandIn $denied $denied) -OwnerTicks $startedAt.Ticks)) 'An owner that denies every read was counted as gone.'
+        Assert-True (Test-RunOwnerGone -Process (New-OwnerStandIn $denied '$true') -OwnerTicks $startedAt.Ticks) 'An owner that had exited was counted as live.'
+        Assert-True (-not (Test-RunOwnerGone -Process (New-OwnerStandIn $denied '$false') -OwnerTicks $startedAt.Ticks)) 'A running owner whose start was denied was counted as gone.'
+        Assert-True (-not (Test-RunOwnerGone -Process (New-OwnerStandIn $startedRead $denied) -OwnerTicks $startedAt.Ticks)) 'The owner that started when its file says was counted as gone.'
+        Assert-True (Test-RunOwnerGone -Process (New-OwnerStandIn $startedRead $denied) -OwnerTicks $startedAt.AddMinutes(-1).Ticks) 'A process that reused the owner''s id was counted as the owner.'
+    } finally {
+        if (-not $liveOther.HasExited) { Stop-Process -Id $liveOther.Id -Force -ErrorAction SilentlyContinue }
+    }
+
     # The version read. -LiteralPath is the difference that had already drifted, so the fixture
     # directory carries the bracket that makes a wildcard read find nothing.
     $bracketRoot = Join-Path $commonRoot 'repo [1]'
@@ -4378,7 +4593,9 @@ try {
         "The release check did not hold the index's Manager floor to the release tag: $said"
 
     Save-ReleaseReceipt -Builds $releaseTarget.PackageVersions -WithoutOtherPackages
-    Assert-Throws { Invoke-ReleaseCheck } '*declared org.telegram.messenger.beta 13.0.1 (71669)*patched without -f*' `
+    $releaseBeta = @($releaseTargets | Where-Object { $_.PackageName -ceq 'org.telegram.messenger.beta' })[0]
+    $releaseBetaBuild = "$($releaseBeta.PackageVersion) ($($releaseBeta.PackageVersionCodes[$releaseBeta.PackageVersion][0]))"
+    Assert-Throws { Invoke-ReleaseCheck } "*declared org.telegram.messenger.beta $releaseBetaBuild*patched without -f*" `
         'Web evidence proved beta without any beta run.'
     Save-ReleaseReceipt -Builds $releaseTarget.PackageVersions
 
@@ -4443,6 +4660,15 @@ try {
         'if /i "%~nx4"=="DexDiff.java" goto dexdiff',
         'if /i "%~nx1"=="NativeLibraryCheck.java" goto native',
         'set "OUT=" & set "RESULT=" & set "LAST=" & set "PREV=" & set "FORCED=0"',
+        'rem What the JVM itself is told comes ahead of -jar <jar>. The line is kept as it arrived for',
+        'rem the case that asks: an option with = in it reaches %1 and on as two.',
+        'if not "%~1"=="-jar" >>"!HERE!jvm.log" echo %*',
+        ':jvm',
+        'if "%~1"=="-jar" goto jar',
+        'if "%~1"=="" goto jar',
+        'shift',
+        'goto jvm',
+        ':jar',
         'shift',
         'shift',
         'rem patch-for-device.ps1 hands the CLI one argument file, a quoted value a line with',
@@ -4662,7 +4888,7 @@ class AlignmentFixture {
     function Invoke-ReceiptBuilder([string[]]$Fixtures, [string]$Bundle,
             [string]$WorkDir = (Join-Path $releaseRoot 'work'), [string]$DesktopJar = $stubJar, [switch]$SkipAdvisoryCheck,
             [string]$AppliedDir) {
-        Remove-Item -LiteralPath $javaLog, $mergeLog -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $javaLog, $mergeLog, (Join-Path $tools 'jvm.log') -Force -ErrorAction SilentlyContinue
         $saved = @{}
         foreach ($variable in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'GIT_*' })) {
             $saved[$variable.Name] = $variable.Value
@@ -4734,6 +4960,11 @@ class AlignmentFixture {
         "patch $($fixturePaths[$_]) merged forced=$(if ($declaredBuilds -contains $_) { 0 } else { 1 })" })
     Assert-True (($patchRuns -join "`n") -eq ($expectedRuns -join "`n")) `
         "The CLI was not run once per fixture, on its merge, with -f for the undeclared build only: $($patchRuns -join '; ')"
+    # Every CLI start was bounded to two processors and a 2 GB heap ahead of -jar, as a device build's is.
+    $builderJvm = @(Get-Content -LiteralPath (Join-Path $tools 'jvm.log') -ErrorAction SilentlyContinue)
+    Assert-True ($builderJvm.Count -eq $builtBuilds.Count -and
+        @($builderJvm | Where-Object { -not $_.StartsWith('-Xmx2g -XX:ActiveProcessorCount=2 -jar ', [System.StringComparison]::Ordinal) }).Count -eq 0) `
+        "build-release-receipt.ps1 started the CLI without its heap and processor bounds: $($builderJvm -join '; ')"
     # The SBOM beside the bundle, recorded by name, hash and count, once OSV had been asked about it.
     Assert-True ($built.sbom.file -eq "patches-$releaseVersionHere.cdx.json" -and
         $built.sbom.sha256 -ceq (Get-Sha256Hex -Path $releaseSbom) -and [int]$built.sbom.components -eq 3) `
@@ -4805,7 +5036,7 @@ class AlignmentFixture {
         '@echo off', "echo Signer #1 certificate SHA-256 digest: $($releaseSigner[0])", 'exit /b 0')
     $verifyAllScript = Join-Path $PSScriptRoot 'verify-all-patches.ps1'
     function Invoke-VerifyAll([string]$Apk, [switch]$Force, [string]$KeepIn) {
-        Remove-Item -LiteralPath $javaLog, $mergeLog, $resourceStock -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $javaLog, $mergeLog, $resourceStock, (Join-Path $tools 'jvm.log') -Force -ErrorAction SilentlyContinue
         $global:LASTEXITCODE = 0
         $keep = @{}
         if ($KeepIn) { $keep = @{ KeepIn = $KeepIn; Root = $releaseRepo } }
@@ -4825,6 +5056,9 @@ class AlignmentFixture {
         (@(Get-Content -LiteralPath $javaLog) -join "`n") -eq "patch $newestFixture merged forced=0") `
         ("verify-all-patches.ps1 did not merge the bundle once and hand the CLI that merge: " +
             "$(@(Get-Content -LiteralPath $javaLog) -join '; ')")
+    $verifyJvm = @(Get-Content -LiteralPath (Join-Path $tools 'jvm.log') -ErrorAction SilentlyContinue)
+    Assert-True ($verifyJvm.Count -eq 1 -and $verifyJvm[0].StartsWith('-Xmx2g -XX:ActiveProcessorCount=2 -jar ', [System.StringComparison]::Ordinal)) `
+        "verify-all-patches.ps1 started the CLI without its heap and processor bounds: $($verifyJvm -join '; ')"
     Assert-True ((Get-Content -LiteralPath $resourceStock -Raw) -ceq (Get-Content -LiteralPath "$newestFixture.merged.txt" -Raw)) `
         'The resource check was not handed the merge as its stock side.'
     Assert-True ($said -like '*binary minSdk: 21 -> 28 (max(stock, 28))*') `
@@ -5096,6 +5330,23 @@ class AlignmentFixture {
         Assert-True (-not (Test-Path -LiteralPath (Join-Path $deviceOut 'stock-base.apk'))) `
             "patch-for-device.ps1 left the base APK it read for $build behind."
     }
+    # A run folder a killed build left, with the signing password in its argument file, is swept as
+    # the next build starts; one a live run owns (this process, as its owner file says) is kept.
+    $sweepDeviceOut = Join-Path $releaseRoot 'device-sweep'
+    $staleRun = Join-Path $sweepDeviceOut ('run-' + [guid]::NewGuid().ToString('N'))
+    $liveRun = Join-Path $sweepDeviceOut ('run-' + [guid]::NewGuid().ToString('N'))
+    foreach ($folder in @($staleRun, $liveRun)) {
+        New-Item -ItemType Directory -Path $folder -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $folder 'morphe-patch.args') -Value '"--keystore-password" "secret"' -Encoding ASCII
+    }
+    [IO.File]::WriteAllText((Join-Path $staleRun 'owner.json'),
+        (@{ processId = $PID; startedUtcTicks = [DateTime]::UtcNow.AddDays(-2).Ticks } | ConvertTo-Json -Compress))
+    Write-RunOwner -RunDir $liveRun
+    Invoke-DeviceBuild -Apk $fixturePaths[$declaredBuilds[0]] -OutDir $sweepDeviceOut
+    Assert-True (-not (Test-Path -LiteralPath $staleRun)) 'patch-for-device.ps1 left a killed run''s folder, argument file and all.'
+    Assert-True (Test-Path -LiteralPath (Join-Path $liveRun 'morphe-patch.args')) 'patch-for-device.ps1 swept the folder of a run that is alive.'
+    Assert-True (@(Get-ChildItem -LiteralPath $sweepDeviceOut -Directory).Count -eq 1) `
+        'patch-for-device.ps1 left a run folder of its own behind.'
     $savedFixtureDir = $env:HUSHTELEGRAM_FIXTURE_DIR
     try {
         $defaultFixtures = @{}
@@ -5144,6 +5395,464 @@ class AlignmentFixture {
     Assert-True (-not (Test-Path -LiteralPath $javaLog)) 'build-release-receipt.ps1 started the CLI on another package.'
     Assert-Throws { Invoke-DeviceBuild -Apk $otherApkm } $otherRefusal 'patch-for-device.ps1 took another package.'
     Assert-True (-not (Test-Path -LiteralPath $javaLog)) 'patch-for-device.ps1 started the CLI on another package.'
+
+    # Two device builds at once in the default output folder, which is all a second terminal takes.
+    # Every run used to write the same names there: morphe-patch.args with the signing password,
+    # tmp, result.json and the APK. Held inside the CLI together, two runs with different signing
+    # aliases showed what that does: the second rewrote the argument file the first was about to
+    # read, deleted the first one's APK as it started, and took the argument file and the scratch
+    # away as it ended, with the first still patching. Each run works in a folder of its own now.
+    # Here the stand-in CLI holds both runs at once, each known by the alias its own argument file
+    # carries, and they're let go one at a time: the first finishes, fails or is stopped while the
+    # second is still held. Each run signs with its own alias, patches its own package and installs
+    # on its own stand-in phone, so the report it's judged by and the APK adb is handed are both on
+    # record. %TEMP% is a folder of this fixture for the length of it, which makes the default
+    # -OutDir one, and the stand-in adb is the first on the PATH.
+    $raceRoot = Join-Path $releaseRoot 'race'
+    $raceBin = Join-Path $raceRoot 'bin'
+    $raceLeases = Join-Path $raceRoot 'device-leases'
+    $raceSignals = Join-Path $tools 'race'
+    $raceAdbLog = Join-Path $raceBin 'adb.log'
+    $raceBarrier = Join-Path $tools 'during-patch.cmd'
+    $raceApkName = "hushtelegram-$releaseVersionHere-signed.apk"
+    New-Item -ItemType Directory -Path $raceBin, $raceLeases -Force | Out-Null
+    [System.IO.File]::WriteAllText((Join-Path $raceBin 'adb.cmd'), ((@(
+        '@echo off',
+        '>>"%~dp0adb.log" echo %*',
+        'if "%3"=="get-state" echo device',
+        'if "%3"=="get-serialno" echo %2',
+        'if "%3|%4|%5"=="shell|getprop|ro.product.model" echo ContractPhone',
+        'rem The app is not on the phone, which Android answers with 1 and nothing. The inventory agrees.',
+        'if "%3|%4|%5"=="shell|pm|path" exit /b 1',
+        'if "%3|%4|%5|%6"=="shell|pm|list|packages" echo package:android',
+        'rem Only a file that is there installs.',
+        'if "%3"=="install" if not exist "%~5" exit /b 20',
+        'if "%3"=="install" echo Success',
+        'exit /b 0') -join "`r`n") + "`r`n"), [System.Text.Encoding]::ASCII)
+    $betaTarget = @($releaseTargets | Where-Object { $_.PackageName -ceq 'org.telegram.messenger.beta' })[0]
+    Assert-True ($null -ne $betaTarget) 'The catalog declares no beta build, so the two runs below would patch one package.'
+    $raceRuns = [ordered]@{
+        alpha = @{ Apk = $fixturePaths[$releaseTarget.PackageVersion]; Package = $releaseTarget.PackageName
+            Serial = 'contract-phone-a' }
+        beta = @{ Apk = $fixturePaths[(Get-FixtureKey -Package $betaTarget.PackageName -Version $betaTarget.PackageVersion)]
+            Package = $betaTarget.PackageName; Serial = 'contract-phone-b' }
+    }
+    # A whole-device lease for each stand-in phone, owned by the run that installs on it.
+    function Save-RaceLeases {
+        $now = [DateTimeOffset]::UtcNow
+        foreach ($alias in @($raceRuns.Keys)) {
+            $run = $raceRuns[$alias]
+            $run.Token = [guid]::NewGuid().ToString()
+            [System.IO.File]::WriteAllText((Join-Path $raceLeases "$($run.Serial).json"), ([ordered]@{
+                    schemaVersion = 1; serial = $run.Serial; project = 'HushTelegram'; chatIdentity = 'race-contract'
+                    ownershipToken = $run.Token; acquiredUtc = $now.AddMinutes(-1).ToString('o')
+                    expiresUtc = $now.AddMinutes(20).ToString('o'); purpose = 'two device builds at once' } | ConvertTo-Json))
+        }
+    }
+    # Starts a run in a runspace of its own and comes back once its CLI is held, with the argument
+    # file that CLI was handed and the folder it's in.
+    function Start-RaceBuild([string]$Alias) {
+        $run = $raceRuns[$Alias]
+        $run.Shell = [powershell]::Create()
+        [void]$run.Shell.AddCommand((Join-Path $PSScriptRoot 'patch-for-device.ps1')).AddParameters(@{
+                Root = $releaseRepo; DesktopJar = $stubJar; Java = $stubJava; Aapt2 = $stubAapt2; Apk = $run.Apk
+                KeyAlias = $Alias; Serial = $run.Serial; ExpectedModel = 'ContractPhone'
+                LeaseDirectory = $raceLeases; LeaseToken = $run.Token; ChatIdentity = 'race-contract' })
+        $run.Handle = $run.Shell.BeginInvoke()
+        $entered = Join-Path $raceSignals "entered-$Alias.txt"
+        $clock = [System.Diagnostics.Stopwatch]::StartNew()
+        while ($true) {
+            if (Test-Path -LiteralPath $entered -PathType Leaf) {
+                $handed = "$(Get-Content -LiteralPath $entered -Raw -ErrorAction SilentlyContinue)".Trim()
+                if ($handed) {
+                    $run.Arguments = $handed
+                    $run.Folder = Split-Path -Parent $handed
+                    return
+                }
+            }
+            if ($run.Handle.IsCompleted) {
+                throw "The device build signed as $Alias ended before its CLI started: $(Complete-RaceBuild $Alias)"
+            }
+            if ($clock.Elapsed.TotalSeconds -gt 90) { throw "The device build signed as $Alias never started its CLI." }
+            Start-Sleep -Milliseconds 50
+        }
+    }
+    # What a run ended with: nothing, or its error.
+    function Complete-RaceBuild([string]$Alias) {
+        $run = $raceRuns[$Alias]
+        if (-not $run.Handle.AsyncWaitHandle.WaitOne(120000)) {
+            throw "The device build signed as $Alias did not end within two minutes."
+        }
+        try {
+            $null = $run.Shell.EndInvoke($run.Handle)
+            return ''
+        } catch {
+            return "$($_.Exception.Message)"
+        } finally {
+            $run.Shell.Dispose()
+            $run.Shell = $null
+        }
+    }
+    # The arguments in a run's file, as the CLI reads them. Never printed: the password is one.
+    function Read-RaceArguments([string]$Path) {
+        return @([System.IO.File]::ReadAllLines($Path) | ForEach-Object {
+            $_.Substring(1, $_.Length - 2).Replace('\"', '"').Replace('\\', '\') })
+    }
+    function Get-RaceInstalls {
+        if (-not (Test-Path -LiteralPath $raceAdbLog -PathType Leaf)) { return @() }
+        return @(Get-Content -LiteralPath $raceAdbLog | Where-Object { $_ -match '^-s (\S+) install -r (.+)$' } |
+            ForEach-Object { "$($Matches[1])|$($Matches[2].Trim().Trim('"'))" })
+    }
+    function Get-RaceOutput([string]$Folder) {
+        if (-not (Test-Path -LiteralPath $Folder -PathType Container)) { return @() }
+        return @(Get-ChildItem -LiteralPath $Folder -Force | ForEach-Object { $_.Name } | Sort-Object)
+    }
+    $savedRaceTemp = $env:TEMP
+    $savedRacePath = $env:PATH
+    $savedRacePool = $env:HUSHTELEGRAM_DEVICE_LEASE_DIRECTORY
+    try {
+        # The fixture's leases are this host's shared pool, the only place the installer reads one.
+        $env:HUSHTELEGRAM_DEVICE_LEASE_DIRECTORY = $raceLeases
+        [System.IO.File]::WriteAllText($raceBarrier, ((@(
+            '@echo off',
+            'rem Which run this is, by the signing alias in the argument file its own CLI was handed,',
+            'rem and the scratch folder that file names, where a real CLI unpacks the APK.',
+            'set "RACE_ALIAS=" & set "RACE_SCRATCH=" & set "RACE_BEFORE="',
+            'for /f "usebackq delims=" %%L in ("%ARGUMENTS%") do (',
+            '    set "RACE_VALUE=%%~L"',
+            '    set "RACE_VALUE=!RACE_VALUE:\\=\!"',
+            '    if "!RACE_BEFORE!"=="--keystore-entry-alias" set "RACE_ALIAS=!RACE_VALUE!"',
+            '    if "!RACE_BEFORE!"=="-t" set "RACE_SCRATCH=!RACE_VALUE!"',
+            '    set "RACE_BEFORE=!RACE_VALUE!"',
+            ')',
+            'mkdir "!RACE_SCRATCH!"',
+            '>"!RACE_SCRATCH!\unpacked.txt" echo !RACE_ALIAS!',
+            '>"!HERE!race\entered-!RACE_ALIAS!.txt" echo !ARGUMENTS!',
+            ':held',
+            'if exist "!HERE!race\go-!RACE_ALIAS!.txt" goto released',
+            'ping -n 2 127.0.0.1 >nul',
+            'goto held',
+            ':released',
+            'rem A CLI that dies with no report and no APK.',
+            'if exist "!HERE!race\fail-!RACE_ALIAS!.txt" exit 6',
+            'exit /b 0') -join "`r`n") + "`r`n"), [System.Text.Encoding]::ASCII)
+        $env:PATH = "$raceBin;$savedRacePath"
+        Assert-True ("$((Get-Command adb -ErrorAction SilentlyContinue).Source)" -ieq (Join-Path $raceBin 'adb.cmd')) `
+            'The stand-in adb is not the adb a device build would find, so no build is started.'
+        foreach ($ending in @('finishes', 'fails', 'is stopped')) {
+            $raceTemp = Join-Path $raceRoot ('temp-' + ($ending -replace ' ', '-'))
+            $raceOut = Join-Path $raceTemp 'hushtelegram-device'
+            Remove-Item -LiteralPath $raceSignals -Recurse -Force -ErrorAction SilentlyContinue
+            Remove-Item -LiteralPath $raceAdbLog -Force -ErrorAction SilentlyContinue
+            New-Item -ItemType Directory -Path $raceTemp, $raceSignals -Force | Out-Null
+            Save-RaceLeases
+            $env:TEMP = $raceTemp
+            Start-RaceBuild 'alpha'
+            Start-RaceBuild 'beta'
+            $alpha = $raceRuns.alpha
+            $beta = $raceRuns.beta
+
+            # Both CLIs are held. Each was handed a file of its own, in a folder of its own under
+            # the default output folder, naming its own alias, vendor APK, scratch, report and APK.
+            Assert-True ($alpha.Arguments -ine $beta.Arguments) `
+                "Two device builds at once handed their CLIs one argument file: $($alpha.Arguments)"
+            foreach ($alias in @($raceRuns.Keys)) {
+                $run = $raceRuns[$alias]
+                Assert-True ((Split-Path -Parent $run.Folder) -ieq $raceOut -and (Split-Path -Leaf $run.Folder) -match '^run-[0-9a-f]{32}$') `
+                    "The device build signed as $alias does not work in a folder of its own under the default output folder: $($run.Folder)"
+                $run.ArgumentText = [System.IO.File]::ReadAllText($run.Arguments)
+                $values = [string[]]@(Read-RaceArguments $run.Arguments)
+                Assert-True ($values[[Array]::IndexOf($values, '--keystore-entry-alias') + 1] -ceq $alias -and $values[-1] -ieq $run.Apk) `
+                    "The CLI of the device build signed as $alias was handed another run's alias or vendor APK."
+                foreach ($flag in @('-o', '-t', '-r')) {
+                    Assert-True ($values[[Array]::IndexOf($values, $flag) + 1].StartsWith($run.Folder + '\', [System.StringComparison]::OrdinalIgnoreCase)) `
+                        "The device build signed as $alias has its CLI write $flag outside its own folder."
+                }
+                $run.Scratch = Join-Path $values[[Array]::IndexOf($values, '-t') + 1] 'unpacked.txt'
+                Assert-True (Test-Path -LiteralPath $run.Scratch -PathType Leaf) "The CLI of the device build signed as $alias left no scratch to watch."
+            }
+
+            # The first run ends while the second is still held.
+            if ($ending -eq 'is stopped') {
+                $stopping = $alpha.Shell.BeginStop($null, $null)
+                Assert-True ($stopping.AsyncWaitHandle.WaitOne(60000)) 'A device build held in its CLI did not stop within a minute.'
+                $alpha.Shell.EndStop($stopping)
+            } else {
+                if ($ending -eq 'fails') {
+                    Set-Content -LiteralPath (Join-Path $raceSignals 'fail-alpha.txt') -Value 'fail' -Encoding ASCII
+                }
+                Set-Content -LiteralPath (Join-Path $raceSignals 'go-alpha.txt') -Value 'go' -Encoding ASCII
+            }
+            $ended = Complete-RaceBuild 'alpha'
+            $expectedEnd = @{ 'finishes' = ''; 'fails' = '*Patching failed:*'; 'is stopped' = '*stopped*' }[$ending]
+            Assert-True ($(if ($expectedEnd) { $ended -like $expectedEnd } else { $ended -eq '' })) `
+                "The device build that $ending ended with: $ended"
+            # Its own folder is gone, the argument file with the password in it included, and it
+            # touched nothing of the run still patching.
+            Assert-True (-not (Test-Path -LiteralPath $alpha.Folder)) `
+                "The device build that $ending left its folder behind: $(@(Get-RaceOutput $alpha.Folder) -join ', ')"
+            Assert-True (-not $beta.Handle.IsCompleted -and (Test-Path -LiteralPath $beta.Scratch -PathType Leaf) -and
+                (Test-Path -LiteralPath $beta.Arguments -PathType Leaf) -and
+                [System.IO.File]::ReadAllText($beta.Arguments) -ceq $beta.ArgumentText) `
+                "The device build that $ending removed or rewrote the argument file or the scratch of the run still patching."
+            # What it left in the output folder: the APK and the summary when it finished, the
+            # summary a bug report attaches when it failed, nothing when it was stopped.
+            $expectedOutput = @(@(Split-Path -Leaf $beta.Folder) + @(switch ($ending) {
+                    'finishes' { $raceApkName; 'public-summary.json' }
+                    'fails' { 'public-summary.json' } }) | Sort-Object)
+            Assert-True ((@(Get-RaceOutput $raceOut) -join ', ') -ceq ($expectedOutput -join ', ')) `
+                "The device build that $ending left other files in the output folder than its own: $(@(Get-RaceOutput $raceOut) -join ', ')"
+            $alphaInstall = "$($alpha.Serial)|$(Join-Path $alpha.Folder $raceApkName)"
+            $betaInstall = "$($beta.Serial)|$(Join-Path $beta.Folder $raceApkName)"
+            $installs = @(Get-RaceInstalls)
+            if ($ending -eq 'finishes') {
+                Assert-True ($installs.Count -eq 1 -and $installs[0] -ieq $alphaInstall) `
+                    "The device build that finished first did not install the APK in its own folder, once: $($installs -join '; ')"
+                $summary = Get-Content -LiteralPath (Join-Path $raceOut 'public-summary.json') -Raw | ConvertFrom-Json
+                Assert-True ($summary.packageName -ceq $alpha.Package -and @($summary.failureCodes).Count -eq 0) `
+                    "The summary of the device build that finished first is not its own: $($summary.packageName)"
+            } else {
+                Assert-True (-not (Test-Path -LiteralPath $raceAdbLog)) `
+                    "A device build that $ending went on to adb: $(@(Get-Content -LiteralPath $raceAdbLog -ErrorAction SilentlyContinue) -join '; ')"
+            }
+            if ($ending -eq 'fails') {
+                $summary = Get-Content -LiteralPath (Join-Path $raceOut 'public-summary.json') -Raw | ConvertFrom-Json
+                Assert-True (@($summary.failureCodes).Count -gt 0) 'A device build whose CLI died published a summary with no failure code.'
+            }
+
+            # The second run goes on with what it started with: its own report, its own APK on its
+            # own phone, and nothing left but the two published files.
+            Set-Content -LiteralPath (Join-Path $raceSignals 'go-beta.txt') -Value 'go' -Encoding ASCII
+            $ended = Complete-RaceBuild 'beta'
+            Assert-True ($ended -eq '') "The device build held while the one beside it $ending did not finish: $ended"
+            Assert-True ((@(Get-RaceOutput $raceOut) -join ', ') -ceq (@($raceApkName, 'public-summary.json' | Sort-Object) -join ', ')) `
+                "Two device builds left more in the output folder than the APK and the summary: $(@(Get-RaceOutput $raceOut) -join ', ')"
+            $summary = Get-Content -LiteralPath (Join-Path $raceOut 'public-summary.json') -Raw | ConvertFrom-Json
+            Assert-True ($summary.packageName -ceq $beta.Package -and @($summary.failureCodes).Count -eq 0) `
+                "The device build that finished last was judged by another run's report: $($summary.packageName), $(@($summary.failureCodes) -join ', ')"
+            $expectedInstalls = @(if ($ending -eq 'finishes') { $alphaInstall }) + @($betaInstall)
+            Assert-True ((@(Get-RaceInstalls) -join '; ') -ieq ($expectedInstalls -join '; ')) `
+                "Each device build did not install the APK in its own folder on its own phone: $(@(Get-RaceInstalls) -join '; ')"
+        }
+    } finally {
+        $env:TEMP = $savedRaceTemp
+        $env:PATH = $savedRacePath
+        $env:HUSHTELEGRAM_DEVICE_LEASE_DIRECTORY = $savedRacePool
+        # A case that failed part way leaves a CLI held. Let it go, and end its run.
+        if (Test-Path -LiteralPath $raceSignals -PathType Container) {
+            foreach ($alias in @($raceRuns.Keys)) {
+                Set-Content -LiteralPath (Join-Path $raceSignals "go-$alias.txt") -Value 'go' -Encoding ASCII
+            }
+        }
+        foreach ($alias in @($raceRuns.Keys)) {
+            $shell = $raceRuns[$alias].Shell
+            if ($null -eq $shell) { continue }
+            $null = $shell.BeginStop($null, $null).AsyncWaitHandle.WaitOne(30000)
+            $shell.Dispose()
+        }
+        Remove-Item -LiteralPath $raceBarrier -Force -ErrorAction SilentlyContinue
+    }
+
+    # A device build's CLI in the machine-wide build queue. patch-for-device.ps1 read in the queue
+    # helper and never called it: with a queue script configured nothing asked it for a slot, and
+    # the JVM was handed -jar, the CLI and the argument file, with no bound on its heap or its
+    # processors. The CLI run asks for one slot now and starts inside it with both bounds. The
+    # stand-in queue here has a line a run can be kept in, and writes down each step with the job
+    # marked and the number of CLI starts on record at that moment, so the order is on file: asked,
+    # admitted, the CLI, released. Every case starts with a file and another run's folder in the
+    # output folder, and both have to be there unchanged when it ends.
+    $slotSignals = Join-Path $tools 'slot'
+    $slotQueue = Join-Path $slotSignals 'build-queue.ps1'
+    $slotEvents = Join-Path $slotSignals 'events.log'
+    $slotBarrier = Join-Path $tools 'during-patch.cmd'
+    $slotRoot = Join-Path $releaseRoot 'slot'
+    $slotApk = $fixturePaths[$releaseTarget.PackageVersion]
+    $slotOwn = 'hushtelegram patch-for-device|normal|patch-for-device'
+    $slotForeign = 'run-' + ('0' * 32)
+    $jvmLog = Join-Path $tools 'jvm.log'
+    function Get-SlotEvents {
+        if (-not (Test-Path -LiteralPath $slotEvents -PathType Leaf)) { return @() }
+        return @(Get-Content -LiteralPath $slotEvents)
+    }
+    # A new output folder with the two things in it that no run owns, and nothing on record.
+    function New-SlotCase([string]$Name) {
+        Remove-Item -LiteralPath $slotEvents, $javaLog, $jvmLog -Force -ErrorAction SilentlyContinue
+        Get-ChildItem -LiteralPath $slotSignals -Filter '*.txt' | Remove-Item -Force
+        $folder = Join-Path $slotRoot $Name
+        New-Item -ItemType Directory -Path (Join-Path $folder $slotForeign) -Force | Out-Null
+        Set-Content -LiteralPath (Join-Path $folder 'keep.txt') -Value 'kept' -Encoding ASCII -NoNewline
+        Set-Content -LiteralPath (Join-Path $folder "$slotForeign\morphe-patch.args") -Value 'another run' -Encoding ASCII -NoNewline
+        return $folder
+    }
+    # A run in a runspace of its own, for the cases that hold one in line or in its CLI.
+    function Start-SlotBuild([string]$OutDir) {
+        $shell = [powershell]::Create()
+        [void]$shell.AddCommand((Join-Path $PSScriptRoot 'patch-for-device.ps1')).AddParameters(@{
+                Root = $releaseRepo; DesktopJar = $stubJar; Java = $stubJava; Aapt2 = $stubAapt2; Apk = $slotApk; OutDir = $OutDir })
+        return @{ Shell = $shell; Handle = $shell.BeginInvoke() }
+    }
+    function Wait-SlotBuild($Build, [scriptblock]$Until, [string]$What) {
+        $clock = [System.Diagnostics.Stopwatch]::StartNew()
+        while (-not (& $Until)) {
+            if ($Build.Handle.IsCompleted) {
+                $ended = Complete-SlotBuild $Build
+                throw "A device build ended before ${What}$(if ($ended) { ": $ended" } else { ', with no error.' })"
+            }
+            if ($clock.Elapsed.TotalSeconds -gt 90) { throw "A device build never got as far as $What." }
+            Start-Sleep -Milliseconds 50
+        }
+    }
+    # What a run ended with: nothing, or its error.
+    function Complete-SlotBuild($Build) {
+        if (-not $Build.Handle.AsyncWaitHandle.WaitOne(120000)) { throw 'A device build did not end within two minutes.' }
+        try {
+            $null = $Build.Shell.EndInvoke($Build.Handle)
+            return ''
+        } catch {
+            return "$($_.Exception.Message)"
+        } finally {
+            $Build.Shell.Dispose()
+            $Build.Shell = $null
+        }
+    }
+    function Stop-SlotBuild($Build) {
+        $stopping = $Build.Shell.BeginStop($null, $null)
+        Assert-True ($stopping.AsyncWaitHandle.WaitOne(60000)) 'A held device build did not stop within a minute.'
+        $Build.Shell.EndStop($stopping)
+        return (Complete-SlotBuild $Build)
+    }
+    # The CLI started once, on the build it was given, and its JVM was told both bounds first.
+    function Assert-SlotCli([string]$Case) {
+        $started = @(Get-Content -LiteralPath $javaLog -ErrorAction SilentlyContinue)
+        Assert-True ($started.Count -eq 1 -and $started[0] -eq "patch $slotApk forced=0") `
+            "A device build that $Case did not start its CLI once: $($started -join '; ')"
+        $told = @(Get-Content -LiteralPath $jvmLog -ErrorAction SilentlyContinue)
+        Assert-True ($told.Count -eq 1 -and
+            $told[0].StartsWith('-Xmx2g -XX:ActiveProcessorCount=2 -jar ', [System.StringComparison]::Ordinal)) `
+            "The JVM of a device build that $Case was not given its heap and processor bounds ahead of -jar: $($told -join '; ')"
+    }
+    # How a case has to end: no job left marked, the queue's steps as given, and in the output
+    # folder what was there before, untouched, beside what the run itself puts there.
+    function Assert-SlotEnd([string]$Folder, [string]$Case, [string[]]$Steps, [string[]]$Published = @()) {
+        Assert-True (-not $env:HUSHTELEGRAM_QUEUED_JOB) "A device build that $Case left a queued job marked."
+        Assert-True ((@(Get-SlotEvents) -join '; ') -ceq ($Steps -join '; ')) `
+            "A device build that $Case went through the queue as: $(@(Get-SlotEvents) -join '; ')"
+        $expected = @(@('keep.txt', $slotForeign) + $Published | Sort-Object)
+        Assert-True ((@(Get-RaceOutput $Folder) -join ', ') -ceq ($expected -join ', ') -and
+            [System.IO.File]::ReadAllText((Join-Path $Folder 'keep.txt')) -ceq 'kept' -and
+            (@(Get-RaceOutput (Join-Path $Folder $slotForeign)) -join ', ') -ceq 'morphe-patch.args' -and
+            [System.IO.File]::ReadAllText((Join-Path $Folder "$slotForeign\morphe-patch.args")) -ceq 'another run') `
+            "A device build that $Case removed or left files that aren't its own: $(@(Get-RaceOutput $Folder) -join ', ')"
+    }
+    $savedSlotQueue = $env:BUILD_QUEUE_SCRIPT
+    $slotBuild = $null
+    try {
+        New-Item -ItemType Directory -Path $slotSignals, $slotRoot -Force | Out-Null
+        Set-Content -LiteralPath $slotQueue -Encoding ASCII -Value @'
+[CmdletBinding()]
+param([switch]$Status, [string]$Label, [ValidateSet('release', 'normal')][string]$Priority, [string]$Run)
+function Add-SlotEvent {
+    param([string]$Stage, [string]$Slot)
+    $cliLog = Join-Path (Split-Path -Parent $PSScriptRoot) 'java.log'
+    $cliStarts = if (Test-Path -LiteralPath $cliLog) { @(Get-Content -LiteralPath $cliLog).Count } else { 0 }
+    [System.IO.File]::AppendAllText((Join-Path $PSScriptRoot 'events.log'),
+        "$Stage|$Slot|$env:HUSHTELEGRAM_QUEUED_JOB|$cliStarts`r`n")
+}
+function Invoke-InBuildQueue {
+    param([string]$Label = 'build', [string]$Priority, [Parameter(Mandatory)][scriptblock]$ScriptBlock)
+    Add-SlotEvent -Stage 'asked' -Slot "$Label|$Priority"
+    while (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'full.txt')) { Start-Sleep -Milliseconds 50 }
+    Add-SlotEvent -Stage 'admitted' -Slot "$Label|$Priority"
+    $global:LASTEXITCODE = 0
+    try {
+        & $ScriptBlock | Out-Host
+        return $LASTEXITCODE
+    } finally {
+        Add-SlotEvent -Stage 'released' -Slot "$Label|$Priority"
+    }
+}
+'@
+        [System.IO.File]::WriteAllText($slotBarrier, ((@(
+            '@echo off',
+            'rem A CLI that dies with no report and no APK, or one that is held until it is let go.',
+            'if exist "!HERE!slot\fail.txt" exit 6',
+            'if not exist "!HERE!slot\hold.txt" exit /b 0',
+            '>"!HERE!slot\entered.txt" echo held',
+            ':held',
+            'if exist "!HERE!slot\go.txt" exit /b 0',
+            'ping -n 2 127.0.0.1 >nul',
+            'goto held') -join "`r`n") + "`r`n"), [System.Text.Encoding]::ASCII)
+        $env:BUILD_QUEUE_SCRIPT = $slotQueue
+
+        # The line is full. The run asks once and waits there: no CLI, and no argument file with
+        # the signing password in it lying on disk for as long as the wait lasts. Let in, it
+        # starts the CLI once, with its bounds, and gives the slot back.
+        $slotOut = New-SlotCase 'waits'
+        Set-Content -LiteralPath (Join-Path $slotSignals 'full.txt') -Value 'full' -Encoding ASCII
+        $slotBuild = Start-SlotBuild $slotOut
+        Wait-SlotBuild $slotBuild { @(Get-SlotEvents).Count -ge 1 } 'asking the queue for a slot'
+        Assert-True ((@(Get-SlotEvents) -join '; ') -ceq "asked|$slotOwn|0" -and -not (Test-Path -LiteralPath $javaLog)) `
+            "A device build did not wait for its slot before starting the CLI: $(@(Get-SlotEvents) -join '; ')"
+        Assert-True (@(Get-ChildItem -LiteralPath $slotOut -Recurse -File -Filter 'morphe-patch.args' |
+                    Where-Object { $_.Directory.Name -cne $slotForeign }).Count -eq 0) `
+            'A device build waiting in line had its argument file, signing password included, on disk already.'
+        Remove-Item -LiteralPath (Join-Path $slotSignals 'full.txt') -Force
+        $ended = Complete-SlotBuild $slotBuild
+        Assert-True ($ended -eq '') "A device build let into its slot did not finish: $ended"
+        Assert-SlotCli 'waited in line'
+        Assert-SlotEnd $slotOut 'waited in line' @("asked|$slotOwn|0", "admitted|$slotOwn|0", "released|$slotOwn|1") `
+            @("hushtelegram-$releaseVersionHere-signed.apk", 'public-summary.json')
+
+        # From a job that already holds a slot, the way a queued script would start it: the CLI
+        # runs in that slot, bounds and all, and nothing asks for a second.
+        $slotOut = New-SlotCase 'nested'
+        $null = Invoke-InHushTelegramQueue -Job 'contract' -ScriptBlock { Invoke-DeviceBuild -Apk $slotApk -OutDir $slotOut }
+        $slotOuter = 'hushtelegram contract|normal|contract'
+        Assert-SlotCli 'started inside a slot'
+        Assert-SlotEnd $slotOut 'started inside a slot' @("asked|$slotOuter|0", "admitted|$slotOuter|0", "released|$slotOuter|1") `
+            @("hushtelegram-$releaseVersionHere-signed.apk", 'public-summary.json')
+
+        # The CLI dies in its slot. The run ends with that failure, as it did before there was a
+        # queue, after one start, and the slot is given back.
+        $slotOut = New-SlotCase 'fails'
+        Set-Content -LiteralPath (Join-Path $slotSignals 'fail.txt') -Value 'fail' -Encoding ASCII
+        Assert-Throws { Invoke-DeviceBuild -Apk $slotApk -OutDir $slotOut } '*Patching failed:*CLI_FAILED*' `
+            'A device build whose CLI died in its slot did not end with the CLI''s failure.'
+        Assert-SlotCli 'failed in its slot'
+        Assert-SlotEnd $slotOut 'failed in its slot' @("asked|$slotOwn|0", "admitted|$slotOwn|0", "released|$slotOwn|1") `
+            @('public-summary.json')
+
+        # Stopped with the CLI running in its slot: the slot is given back and the run's folder goes.
+        $slotOut = New-SlotCase 'stopped-in-slot'
+        Set-Content -LiteralPath (Join-Path $slotSignals 'hold.txt') -Value 'hold' -Encoding ASCII
+        $slotBuild = Start-SlotBuild $slotOut
+        Wait-SlotBuild $slotBuild { Test-Path -LiteralPath (Join-Path $slotSignals 'entered.txt') -PathType Leaf } 'starting its CLI'
+        $ended = Stop-SlotBuild $slotBuild
+        Assert-True ($ended -like '*stopped*') "A device build stopped in its slot ended with: $ended"
+        Assert-SlotEnd $slotOut 'was stopped in its slot' @("asked|$slotOwn|0", "admitted|$slotOwn|0", "released|$slotOwn|1")
+
+        # Stopped while still in line: it never held a slot and never started the CLI.
+        $slotOut = New-SlotCase 'stopped-in-line'
+        Set-Content -LiteralPath (Join-Path $slotSignals 'full.txt') -Value 'full' -Encoding ASCII
+        $slotBuild = Start-SlotBuild $slotOut
+        Wait-SlotBuild $slotBuild { @(Get-SlotEvents).Count -ge 1 } 'asking the queue for a slot'
+        $ended = Stop-SlotBuild $slotBuild
+        Assert-True ($ended -like '*stopped*') "A device build stopped while in line ended with: $ended"
+        Assert-True (-not (Test-Path -LiteralPath $javaLog)) 'A device build stopped while in line started its CLI.'
+        Assert-SlotEnd $slotOut 'was stopped while in line' @("asked|$slotOwn|0")
+    } finally {
+        $env:BUILD_QUEUE_SCRIPT = $savedSlotQueue
+        # A case that failed part way leaves a run in line or a CLI held. Let it go, and end its run.
+        if (Test-Path -LiteralPath $slotSignals -PathType Container) {
+            Remove-Item -LiteralPath (Join-Path $slotSignals 'full.txt') -Force -ErrorAction SilentlyContinue
+            Set-Content -LiteralPath (Join-Path $slotSignals 'go.txt') -Value 'go' -Encoding ASCII
+        }
+        if ($slotBuild -and $slotBuild.Shell) {
+            $null = $slotBuild.Shell.BeginStop($null, $null).AsyncWaitHandle.WaitOne(30000)
+            $slotBuild.Shell.Dispose()
+        }
+        Remove-Item -LiteralPath $slotBarrier -Force -ErrorAction SilentlyContinue
+    }
 
     # The builder, the release check and the device build given relative paths, from a location
     # the process directory isn't. Each found its file with Test-Path, in PowerShell's location,

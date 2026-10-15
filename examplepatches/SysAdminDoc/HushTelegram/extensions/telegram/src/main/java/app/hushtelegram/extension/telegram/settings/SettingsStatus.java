@@ -53,6 +53,8 @@ public final class SettingsStatus {
     public static boolean cachedProxyDialog() { return false; }
     public static boolean cachedProxyFilters() { return false; }
     public static boolean hidePopularApps() { return false; }
+    public static boolean myChatsSearch() { return false; }
+    public static boolean nameFold() { return false; }
     public static boolean hideContactsBlock() { return false; }
     public static boolean hideGreetingStickers() { return false; }
     public static boolean disableChatSwipe() { return false; }
@@ -67,6 +69,7 @@ public final class SettingsStatus {
     public static boolean previewDoubleTapReaction() { return false; }
     public static boolean quietContactsNag() { return false; }
     public static boolean holidayLook() { return false; }
+    public static boolean titleEmoji() { return false; }
     public static boolean useSystemFont() { return false; }
     public static boolean amoledBlack() { return false; }
     public static boolean hideTranslateBar() { return false; }
@@ -80,9 +83,11 @@ public final class SettingsStatus {
     public static boolean messageSeconds() { return false; }
     public static boolean allowChatBlur() { return false; }
     public static boolean voiceOneAtATime() { return false; }
+    public static boolean lockedVoice() { return false; }
     public static boolean noHaptics() { return false; }
     public static boolean reactionEffectsOff() { return false; }
     public static boolean hideFolderCounters() { return false; }
+    public static boolean launchFolder() { return false; }
     public static boolean forwardHideSender() { return false; }
     public static boolean voiceMusicPlayer() { return false; }
     public static boolean silenceNonContacts() { return false; }
@@ -103,7 +108,10 @@ public final class SettingsStatus {
     public static boolean hideChannelButtons() { return false; }
     public static boolean hideSendAs() { return false; }
     public static boolean hideContactsTab() { return false; }
+    public static boolean compactTabBar() { return false; }
+    public static boolean sideMenu() { return false; }
     public static boolean fasterDownloads() { return false; }
+    public static boolean dataSaverDownloads() { return false; }
     public static boolean saveDownloads() { return false; }
     public static boolean chatTypeFolders() { return false; }
     public static boolean storyRequests() { return false; }
@@ -134,6 +142,7 @@ public final class SettingsStatus {
 
     public static boolean openExternalLinks() { return false; }
     public static boolean externalBrowserRouting() { return false; }
+    public static boolean miniAppLocation() { return false; }
     public static boolean stripLinkTracking() { return false; }
     public static boolean openedLinkTracking() { return false; }
     public static boolean sharedLinkTracking() { return false; }

@@ -45,9 +45,12 @@ import android.widget.TextView;
 import androidx.annotation.Nullable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import app.morphe.extension.hushthreads.coexist.FamilySignatureTrust;
 import app.morphe.extension.shared.L10n;
 import app.morphe.extension.shared.Logger;
 import app.morphe.extension.shared.Utils;
@@ -60,6 +63,7 @@ import app.morphe.extension.shared.settings.preference.ClearLogBufferPreference;
 import app.morphe.extension.shared.settings.preference.ExportDiagnosticReportPreference;
 import app.morphe.extension.shared.settings.preference.ImmediateAction;
 import app.morphe.extension.shared.settings.preference.LogBufferManager;
+import app.morphe.extension.shared.settings.preference.QuickSetups;
 
 /**
  * The preference list, built in code rather than from an XML resource so the bundle adds no
@@ -89,9 +93,17 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
     static final String SUPPORTED_LINKS = "action_supported_links";
     /** The overview row naming omitted default patches. It stores nothing. */
     static final String MISSING_DEFAULTS = "action_missing_default_patches";
+    /** The row that shows or hides Quick setups on the home page. The choice is saved by its own setting. */
+    static final String QUICK_SETUPS_HOME = "action_quick_setups_home";
 
     /** Thrown by the next initialize() and then cleared: how a test reaches the recovery page. */
     static volatile RuntimeException failNextInitialization;
+
+    /**
+     * Thrown by the next onAttach() and then cleared: a page that fails inside the dialog's
+     * transaction, before initialize() and so before it could show its own recovery.
+     */
+    static volatile RuntimeException failNextAttachment;
 
     /** The first row, which says whether HushThreads runs now and whether the next start changes that. */
     @Nullable
@@ -114,6 +126,18 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
     /** The preview of {@link #pendingImport} while it's on screen. */
     @Nullable
     AlertDialog importPreview;
+
+    /** Where the last export or import's outcome is kept across the page being rebuilt. */
+    static final String BACKUP_OUTCOME_STATE = "hushthreads_backup_outcome";
+    static final String BACKUP_OUTCOME_ACTION_STATE = "hushthreads_backup_outcome_action";
+
+    /**
+     * How the last export or import ended, shown under the row it started from until another
+     * starts, or null; {@link #backupOutcomeAction} says which row.
+     */
+    @Nullable
+    String backupOutcome;
+    int backupOutcomeAction;
 
     /** The page's other dialogs that may still be on screen, including the report chooser. */
     private final List<Dialog> shownDialogs = new ArrayList<>();
@@ -143,8 +167,22 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
     }
 
     @Override
+    public void onAttach(Context context) {
+        super.onAttach(context);
+        RuntimeException fault = failNextAttachment;
+        if (fault != null) {
+            failNextAttachment = null;
+            throw fault;
+        }
+    }
+
+    @Override
     public void onCreate(Bundle savedInstanceState) {
-        if (savedInstanceState != null) pendingImport = savedInstanceState.getBundle(PENDING_IMPORT_STATE);
+        if (savedInstanceState != null) {
+            pendingImport = savedInstanceState.getBundle(PENDING_IMPORT_STATE);
+            backupOutcome = savedInstanceState.getString(BACKUP_OUTCOME_STATE);
+            backupOutcomeAction = savedInstanceState.getInt(BACKUP_OUTCOME_ACTION_STATE);
+        }
         super.onCreate(savedInstanceState);
     }
 
@@ -179,6 +217,10 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
     public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         if (pendingImport != null) outState.putBundle(PENDING_IMPORT_STATE, pendingImport);
+        if (backupOutcome != null) {
+            outState.putString(BACKUP_OUTCOME_STATE, backupOutcome);
+            outState.putInt(BACKUP_OUTCOME_ACTION_STATE, backupOutcomeAction);
+        }
         if (navigation != null) navigation.save(outState);
     }
 
@@ -206,8 +248,10 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
     }
 
     /**
-     * The file picker's answer. Android finds this page by the name the framework gave it when
-     * the picker was opened, and a page rebuilt while the picker was up is given the same name.
+     * The file picker's answer, when the page asked from this fragment because SettingsFilePicker
+     * isn't in Threads' manifest. Android finds this page by the name the framework gave it when
+     * the picker was opened. Threads drops fragment state from an activity it rebuilds, so a page
+     * rebuilt while the picker was up has another name and never gets the answer.
      */
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
@@ -255,6 +299,9 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
                 feed.addPreference(toggle(context, Settings.HIDE_SUGGESTED_USERS, L10n.t("Hide suggested users"),
                         L10n.t("Removes the cards that suggest accounts to follow, in your feed and on "
                                 + "profiles. Normal posts and reposts stay.")));
+                feed.addPreference(toggle(context, Settings.HIDE_SEARCH_SUGGESTIONS,
+                        L10n.t("Hide follow suggestions in Search"),
+                        L10n.t("Takes the Follow suggestions row off the Search screen. Your searches and topics stay.")));
             }
             if (build.contains(PatchFamily.RETURN_REFRESH)) {
                 feed.addPreference(toggle(context, Settings.BLOCK_RETURN_REFRESH,
@@ -369,6 +416,13 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
         links.addPreference(info(context, L10n.t("Selecting links by hand"),
                 L10n.t("Android only sends Threads links to an app signed by Meta. Selecting the addresses sends "
                     + "their links here instead. Your other link settings stay as they are.")));
+        // Only beside a Meta-signed Instagram, which won't hand this build a post or a profile (#8).
+        if (FamilySignatureTrust.metaInstagramRefusesThisBuild(context)) {
+            links.addPreference(info(context, L10n.t("Instagram won't open posts here"),
+                    L10n.t("Your Instagram is signed by Meta, and it only opens Threads posts and profiles in a Threads "
+                        + "signed by Meta. Tapping one in Instagram shows an error saying it couldn't load the website. "
+                        + "Posts you open in Threads itself work as usual.")));
+        }
 
         // In every build: the release check is the settings entry's own, not a patch's. Its switch
         // is one Pause turns off, so it sits above the Pause row with the rest.
@@ -422,6 +476,7 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
         hushthreads.addPreference(mark(toggle(context, BaseSettings.PAUSED, L10n.t("Pause HushThreads"),
                 L10n.t("Turns off every HushThreads switch except Debug logging the next time Threads starts. What "
                     + "you chose when you patched stays, and your choices are saved.")), SettingsIcons.PAUSE));
+        hushthreads.addPreference(mark(quickSetupsHomeRow(context), SettingsIcons.BUILD));
         String stays = PatchFamily.staysWhilePausedSummary(build);
         // Morphe Manager can export the patch choices and the signing key, not these switches.
         hushthreads.addPreference(mark(new BackupRow(this, context, SettingsBackupPreference.EXPORT,
@@ -542,12 +597,97 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
      * shows once the view is gone or the activity is finishing: the dialog would come up over a
      * window that's gone.
      */
-    private void show(AlertDialog.Builder builder) {
+    private AlertDialog show(AlertDialog.Builder builder) {
         Activity activity = getActivity();
-        if (getView() == null || activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+        if (getView() == null || activity == null || activity.isFinishing() || activity.isDestroyed()) return null;
         AlertDialog dialog = builder.show();
         ScreenColors.dialog(dialog);
         trackDialog(dialog);
+        return dialog;
+    }
+
+    /**
+     * Quick setups: Quiet, Privacy or Back to defaults, each changing its switches at once
+     * ({@link QuickSetupKeys}), then a toast saying how many changed. A switch that needs a restart
+     * brings up the restart row the way a tap on it would.
+     */
+    void showQuickSetups() {
+        Context context = getContext();
+        if (context == null) return;
+        List<Map<BooleanSetting, Boolean>> choices = Arrays.asList(
+                QuickSetupKeys.quiet(), QuickSetupKeys.privacy(), QuickSetupKeys.defaults());
+        CharSequence[] names = {L10n.t("Quiet"), L10n.t("Privacy"), L10n.t("Back to defaults")};
+        CharSequence[] details = {
+                L10n.t("Hides ads and the cards that suggest accounts to follow."),
+                L10n.t("Stops most usage reports and takes tracking off the links you share. Threads isn't told about your screenshots either."),
+                L10n.t("Puts every feature switch back the way it started.")};
+        AlertDialog dialog = show(new AlertDialog.Builder(themed(context))
+                .setTitle(L10n.t("Quick setups"))
+                .setAdapter(new ChoiceCards(ScreenColors.DEFAULT, names, details),
+                        (shown, which) -> applyQuickSetup(choices.get(which)))
+                .setNegativeButton(L10n.t("Cancel"), null));
+        ListView list = dialog == null ? null : dialog.getListView();
+        if (list != null) {
+            // The cards bring their own spacing and press ripple, as in the diagnostic report's choices.
+            list.setDivider(null);
+            list.setSelector(new ColorDrawable(Color.TRANSPARENT));
+        }
+    }
+
+    /** Applies one Quick setups choice to the switches on this page and says how many changed. */
+    int applyQuickSetup(Map<BooleanSetting, Boolean> values) {
+        PreferenceScreen screen = getPreferenceScreen();
+        if (screen == null) return 0;
+        int changed = QuickSetups.apply(screen, values);
+        Utils.showToastLong(L10n.quantity(changed, "Changed %1$d setting", "Changed %1$d settings", changed));
+        return changed;
+    }
+
+    /**
+     * Whether Quick setups sits on the home page. A tap flips it, and a long press on the home row
+     * hides it too. It's the screen's own state, so it works while paused and stays out of
+     * settings files.
+     */
+    private Preference quickSetupsHomeRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(QUICK_SETUPS_HOME);
+        row.setTitle(L10n.t("Quick setups on the home page"));
+        row.setSummary(quickSetupsHomeSummary());
+        row.setPersistent(false);
+        // A tap changes it at once, so the row goes without a chevron.
+        row.actsAtOnce = true;
+        row.setOnPreferenceClickListener(p -> {
+            setQuickSetupsHidden(!BaseSettings.HIDE_QUICK_SETUPS.savedValue());
+            return true;
+        });
+        return row;
+    }
+
+    private static String quickSetupsHomeSummary() {
+        return BaseSettings.HIDE_QUICK_SETUPS.savedValue()
+                ? L10n.t("Hidden. Tap to show it again.") : L10n.t("Shown. Tap to hide it.");
+    }
+
+    /** The home row's long press: Quick setups leaves the home page, and a toast says where it comes back from. */
+    void hideQuickSetups() {
+        if (setQuickSetupsHidden(true)) {
+            Utils.showToastLong(L10n.t("Quick setups hidden. Bring it back from Pause, backup and diagnostics."));
+        }
+    }
+
+    /**
+     * Saves whether Quick setups is hidden and redraws the rows that show it. False when the
+     * choice couldn't be saved, which a toast says, and then nothing on screen changes.
+     */
+    boolean setQuickSetupsHidden(boolean hidden) {
+        if (!BaseSettings.HIDE_QUICK_SETUPS.save(hidden)) {
+            Utils.showToastLong(L10n.t("The setting couldn't finish updating. Its saved value is shown."));
+            return false;
+        }
+        Preference row = findPreference(QUICK_SETUPS_HOME);
+        if (row != null) row.setSummary(quickSetupsHomeSummary());
+        if (navigation != null) navigation.quickSetupsChanged();
+        return true;
     }
 
     /** A manually created dialog must leave with the view that owns it. */
@@ -893,6 +1033,7 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
         String icon = SettingsIcons.SETTINGS;
         if (setting == Settings.HIDE_ADS) icon = SettingsIcons.BLOCK;
         else if (setting == Settings.HIDE_SUGGESTED_USERS) icon = SettingsIcons.PERSON;
+        else if (setting == Settings.HIDE_SEARCH_SUGGESTIONS) icon = SettingsIcons.SEARCH;
         else if (setting == Settings.BLOCK_RETURN_REFRESH) icon = SettingsIcons.BOOKMARK;
         else if (setting == Settings.RETURN_REFRESH_NO_LIMIT) icon = SettingsIcons.CLOCK;
         else if (setting == Settings.DISABLE_VIDEO_AUTOPLAY || setting == Settings.DOWNLOAD_COMPATIBLE) icon = SettingsIcons.PLAY;
@@ -960,6 +1101,11 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
     static final class Row extends Preference implements ImmediateAction {
         /** Set on a row whose tap does what it says at once, which then goes without a chevron. */
         boolean actsAtOnce;
+        /**
+         * What a press and hold on this row does, run for a touch through the list and for a
+         * screen reader's long press action. A row without one offers no long press.
+         */
+        @Nullable Runnable longPress;
 
         Row(Context context) {
             super(context);
@@ -1105,6 +1251,14 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
                 info.setClickable(true);
                 info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK);
             }
+            // The list is long-clickable for the one row that hides on a press and hold, and it
+            // hands that to every row it describes. Only a row with a long press keeps it.
+            boolean holds = preference.isEnabled() && longPressOf(preference) != null;
+            info.setLongClickable(holds);
+            if (!holds) info.removeAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK);
+            else if (!info.getActionList().contains(AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK)) {
+                info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK);
+            }
         }
 
         @Override
@@ -1127,7 +1281,17 @@ public final class HushThreadsPreferenceFragment extends AbstractPreferenceFragm
                     return list.performItemClick(host, position, list.getItemIdAtPosition(position));
                 }
             }
+            Runnable longPress = longPressOf(preference);
+            if (action == AccessibilityNodeInfo.ACTION_LONG_CLICK && longPress != null && preference.isEnabled()) {
+                longPress.run();
+                return true;
+            }
             return super.performAccessibilityAction(host, action, arguments);
+        }
+
+        @Nullable
+        static Runnable longPressOf(Object preference) {
+            return preference instanceof Row ? ((Row) preference).longPress : null;
         }
 
         @Nullable

@@ -1,3 +1,32 @@
+## [0.3.0](https://github.com/hajs110208/morphe-patches/compare/v0.2.0...v0.3.0) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* fix patch description typo ([73bf8d4](https://github.com/hajs110208/morphe-patches/commit/73bf8d4d56a8fb8160ab1f1879f984acedc4d68b))
+
+### ✨ New Features
+
+* Add Documents provider patch ([a4d8639](https://github.com/hajs110208/morphe-patches/commit/a4d8639dab934f04a0aed10af44c25bd55d3f11b))
+* Minecraft: Change App Branding ([a7885e2](https://github.com/hajs110208/morphe-patches/commit/a7885e2da8643017ad74e048c37dfe79e7150f38))
+
+## [0.3.0-dev.2](https://github.com/hajs110208/morphe-patches/compare/v0.3.0-dev.1...v0.3.0-dev.2) (2026-10-12)
+
+### ✨ New Features
+
+* Minecraft: Change App Branding ([a7885e2](https://github.com/hajs110208/morphe-patches/commit/a7885e2da8643017ad74e048c37dfe79e7150f38))
+
+## [0.3.0-dev.1](https://github.com/hajs110208/morphe-patches/compare/v0.2.1-dev.1...v0.3.0-dev.1) (2026-10-10)
+
+### ✨ New Features
+
+* Add Documents provider patch ([a4d8639](https://github.com/hajs110208/morphe-patches/commit/a4d8639dab934f04a0aed10af44c25bd55d3f11b))
+
+## [0.2.1-dev.1](https://github.com/hajs110208/morphe-patches/compare/v0.2.0...v0.2.1-dev.1) (2026-10-10)
+
+### 🐛 Bug Fixes
+
+* fix patch description typo ([73bf8d4](https://github.com/hajs110208/morphe-patches/commit/73bf8d4d56a8fb8160ab1f1879f984acedc4d68b))
+
 ## [0.2.0](https://github.com/hajs110208/morphe-patches/compare/v0.1.0...v0.2.0) (2026-10-10)
 
 ### ✨ New Features

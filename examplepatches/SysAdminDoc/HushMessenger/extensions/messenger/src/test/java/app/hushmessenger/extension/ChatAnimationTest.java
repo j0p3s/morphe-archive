@@ -11,6 +11,7 @@ import android.view.animation.Animation;
 import android.view.animation.Transformation;
 import android.view.animation.TranslateAnimation;
 import com.facebook.messaging.msys.thread.fragment.MsysThreadViewActivity;
+import com.facebook.orca.threadview.ThreadViewActivity;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
@@ -25,6 +26,7 @@ import org.robolectric.RuntimeEnvironment;
 import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowActivity;
+import org.robolectric.shadows.ShadowDisplay;
 import org.robolectric.shadows.ShadowLooper;
 import static app.hushmessenger.extension.ChatAnimation.CHAT;
 import static app.hushmessenger.extension.ChatAnimation.INBOX;
@@ -60,6 +62,7 @@ public class ChatAnimationTest {
     @After public void restore() {
         Locale.setDefault(locale);
         durationScale(1f);
+        shadowOf(ShadowDisplay.getDefaultDisplay()).setRefreshRate(60f);
         ChatAnimation.animations = LOOKUP;
     }
 
@@ -229,6 +232,56 @@ public class ChatAnimationTest {
         assertEquals(0f, x(frame), 0.01f);
     }
 
+    /** Where a slide and a plain one with the same curve are after frames at these times, for a view 100 wide. */
+    private static float[] slideAndPlain(long... times) {
+        Animation slide = ChatAnimation.create(new Object(), CHAT, true, THREAD_ENTER);
+        Animation plain = new TranslateAnimation(Animation.RELATIVE_TO_SELF, 1f, Animation.RELATIVE_TO_SELF, 0f,
+            Animation.ABSOLUTE, 0f, Animation.ABSOLUTE, 0f);
+        plain.setDuration(ChatAnimation.SLIDE_IN);
+        plain.setInterpolator(slide.getInterpolator());
+        slide.initialize(100, 100, 100, 100);
+        plain.initialize(100, 100, 100, 100);
+        Transformation a = new Transformation(), b = new Transformation();
+        for (long time : times) {
+            slide.getTransformation(time, a);
+            plain.getTransformation(time, b);
+        }
+        return new float[] {x(a), x(b)};
+    }
+
+    @Test public void aStallOnA120HzScreenIsCaughtThoughItWouldPassAt60() {
+        on();
+        long t = SystemClock.uptimeMillis();
+        // The close on a 120 Hz Galaxy S22 stalls 25 to 33 ms, three or four of its 8 ms frames.
+        long[] stalled = {t, t + 8, t + 16, t + 41};
+        float[] at60 = slideAndPlain(stalled);
+        assertEquals("under the 60 Hz threshold", at60[1], at60[0], 0.01f);
+
+        shadowOf(ShadowDisplay.getDefaultDisplay()).setRefreshRate(120f);
+        assertEquals(8, ChatAnimation.frame());
+        float[] at120 = slideAndPlain(stalled);
+        float[] oneFrameOn = slideAndPlain(t, t + 8, t + 16, t + 24);
+        assertEquals("the slide goes one frame on from where it was", oneFrameOn[1], at120[0], 0.01f);
+        assertTrue(at120[0] > at120[1] + 5);
+    }
+
+    @Test public void framesAtHalfTheScreensRateAreNotTakenForStalls() {
+        on();
+        shadowOf(ShadowDisplay.getDefaultDisplay()).setRefreshRate(120f);
+        long start = SystemClock.uptimeMillis();
+        Animation open = ChatAnimation.create(new Object(), CHAT, true, THREAD_ENTER);
+        open.initialize(100, 100, 100, 100);
+        Transformation frame = new Transformation();
+        // A busy 120 Hz screen can drop to every other frame. The slide still keeps its own length, plus the one frame
+        // Animation draws after it ends.
+        long now = start;
+        while (open.getTransformation(now, frame)) {
+            now += now % 2 == 0 ? 17 : 16;
+            assertTrue(now <= start + ChatAnimation.SLIDE_IN + 2 * ChatAnimation.FRAME);
+        }
+        assertEquals(0f, x(frame), 0.01f);
+    }
+
     @Test public void theInboxStaysDrawnUntilTheChatHasSlidOverIt() {
         on();
         long start = SystemClock.uptimeMillis();
@@ -284,6 +337,18 @@ public class ChatAnimationTest {
         assertTransition(chat, Activity.OVERRIDE_TRANSITION_CLOSE, 103, 102);
         assertTrue(Settings.hookErrors.isEmpty());
         assertTrue(Settings.lastActive("chat_animation") > 0);
+    }
+
+    @Test public void pageAndBusinessChatsSlideInTheirOwnActivityToo() {
+        on();
+        register();
+        ActivityController<ThreadViewActivity> controller = Robolectric.buildActivity(ThreadViewActivity.class);
+        Activity chat = controller.create().start().resume().get();
+        assertTransition(chat, Activity.OVERRIDE_TRANSITION_OPEN, 101, 103);
+        assertTransition(chat, Activity.OVERRIDE_TRANSITION_CLOSE, 103, 102);
+        controller.pause().stop().destroy();
+        assertTrue(ChatAnimation.slidActivities.isEmpty());
+        assertTrue(Settings.hookErrors.isEmpty());
     }
 
     @Test public void chatActivitiesKeepStockWhenOffRestoredOrUnderRemoveAnimations() {

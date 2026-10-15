@@ -69,6 +69,23 @@ public final class SettingsEntry {
     /** A request older than this is dropped rather than opened over some later screen. */
     private static final long REQUEST_LIFETIME_MS = 30_000;
 
+    /**
+     * Where the screen goes in a Threads activity's own saved state. Threads takes Android's
+     * fragment state out of every activity it recreates (IgFragmentActivity's internalOnCreate
+     * removes "android:fragments"), so a font size or theme change, or Android ending Threads in
+     * the background, closed the screen for good. It saves itself here instead.
+     */
+    static final String RECREATED_SCREEN = "hushthreads_settings_screen";
+    /** The screen as a recreated activity saved it, for the next open to put back. */
+    @SuppressWarnings("deprecation")
+    private static volatile android.app.Fragment.SavedState recreatedScreen;
+    /**
+     * The recreated activity that screen belongs to. It gets it whenever it resumes, past the
+     * request's lifetime: Android 9 resumes only the focused side of a split screen, so a Threads
+     * recreated in the other side can wait any time for a tap.
+     */
+    private static WeakReference<Activity> recreatedHost;
+
     private static volatile boolean openPending;
     private static volatile long requestedAt;
     private static volatile boolean callbacksRegistered;
@@ -105,6 +122,8 @@ public final class SettingsEntry {
             }
             // The marker is in the settings store, which can't be read before the settings are ready.
             if (Utils.settingsReady()) ReopenSettingsAfterRestart.reopenIfPending(SettingsEntry::reopenOn);
+            // This build's receipt of its families and defaults, for the next build to compare.
+            if (Utils.settingsReady()) SettingsUpgrade.onThreadsStarted();
             // SettingsStatus rather than PatchFamily: a plain answer, with no settings read this early.
             if (SettingsStatus.returnRefresh()) ReturnRefresh.register(context);
         } catch (Exception ex) {
@@ -113,6 +132,8 @@ public final class SettingsEntry {
         // A save Android stopped halfway left a pending gallery row, a work file or a notification.
         // Whatever the switch says now: it may have been on when the save started.
         if (SettingsStatus.saveMedia()) SaveLeftovers.sweepAfterStart(context);
+        // A process that ended between a settings file's pick and its read kept access to that file.
+        SettingsFileGrants.sweepAfterStart(context);
         ReleaseCheck.onThreadsStart();
         publishShortcut(context);
     }
@@ -315,6 +336,9 @@ public final class SettingsEntry {
 
         @Override
         public void onActivityResumed(Activity activity) {
+            // HushThreads' own see-through screen for the file picker, gone again at once: the
+            // settings never open over it, and it isn't the Threads screen in front.
+            if (activity instanceof SettingsFilePicker) return;
             resumed = new WeakReference<>(activity);
             if (SettingsStatus.saveMedia()) SaveLeftovers.showInterrupted(activity);
             if (openPending) openWhenSettled(activity);
@@ -326,10 +350,37 @@ public final class SettingsEntry {
             if (resumed != null && resumed.get() == activity) resumed = null;
         }
 
-        @Override public void onActivityCreated(Activity activity, Bundle state) { }
+        @Override
+        @SuppressWarnings("deprecation")
+        public void onActivityCreated(Activity activity, Bundle state) {
+            try {
+                android.app.Fragment.SavedState screen = state == null ? null : state.getParcelable(RECREATED_SCREEN);
+                if (screen != null) reopenRecreated(activity, screen);
+            } catch (Exception ex) {
+                Logger.printException(() -> "Settings entry: could not read the screen back from a recreated activity", ex);
+            }
+        }
+
         @Override public void onActivityStarted(Activity activity) { }
         @Override public void onActivityStopped(Activity activity) { }
-        @Override public void onActivitySaveInstanceState(Activity activity, Bundle state) { }
+
+        @Override
+        @SuppressWarnings("deprecation")
+        public void onActivitySaveInstanceState(Activity activity, Bundle state) {
+            try {
+                // This activity's own copy, if it has one. A copy the person closed is gone by now,
+                // since the activity runs pending fragment changes before this. The closed flag
+                // is one for every copy, so closing a copy over another activity used to stop this
+                // one being saved.
+                FragmentManager fragments = activity.getFragmentManager();
+                android.app.Fragment shown = fragments.findFragmentByTag(DIALOG_TAG);
+                if (shown == null || shown.isRemoving()) return;
+                android.app.Fragment.SavedState screen = fragments.saveFragmentInstanceState(shown);
+                if (screen != null) state.putParcelable(RECREATED_SCREEN, screen);
+            } catch (Exception ex) {
+                Logger.printException(() -> "Settings entry: could not save the screen with its activity", ex);
+            }
+        }
         @Override
         public void onActivityDestroyed(Activity activity) {
             // The screen can land on an activity just before it clears itself for the next one.
@@ -359,9 +410,13 @@ public final class SettingsEntry {
             Utils.runOnMainThread(() -> {
                 if (!openPending) return;
                 if (SystemClock.elapsedRealtime() - requestedAt > REQUEST_LIFETIME_MS) {
-                    openPending = false;
-                    Logger.printInfo(() -> "Settings request expired before a Threads screen could show it");
-                    return;
+                    Activity waiting = recreatedHost == null ? null : recreatedHost.get();
+                    if (waiting != null && waiting != activity && !waiting.isFinishing() && !waiting.isDestroyed()) return;
+                    if (waiting != activity) {
+                        openPending = false;
+                        Logger.printInfo(() -> "Settings request expired before a Threads screen could show it");
+                        return;
+                    }
                 }
                 if (open(activity)) openPending = false;
             });
@@ -382,13 +437,23 @@ public final class SettingsEntry {
                 return false;
             }
             FragmentManager fragments = activity.getFragmentManager();
-            if (fragments.findFragmentByTag(DIALOG_TAG) != null) return true;
+            if (fragments.findFragmentByTag(DIALOG_TAG) != null) {
+                // A host that keeps fragment state put the screen back itself.
+                recreatedScreen = null;
+                recreatedHost = null;
+                return true;
+            }
             if (fragments.isStateSaved()) {
                 Logger.printInfo(() -> "Settings wait: " + name + " has saved its state");
                 return false;
             }
             closedByUser = false;
-            SettingsDialog.onPage(requestedPage).show(fragments, DIALOG_TAG);
+            SettingsDialog dialog = SettingsDialog.onPage(requestedPage);
+            android.app.Fragment.SavedState screen = recreatedScreen;
+            recreatedScreen = null;
+            recreatedHost = null;
+            if (screen != null) dialog.setInitialSavedState(screen);
+            dialog.show(fragments, DIALOG_TAG);
             host = new WeakReference<>(activity);
             Logger.printInfo(() -> "Settings opened over " + name);
             return true;
@@ -403,6 +468,8 @@ public final class SettingsEntry {
         closedByUser = true;
         host = null;
         requestedPage = null;
+        recreatedScreen = null;
+        recreatedHost = null;
     }
 
     /**
@@ -447,7 +514,22 @@ public final class SettingsEntry {
         requestedAt = SystemClock.elapsedRealtime();
         openPending = true;
         requestedPage = null;
+        recreatedScreen = null;
+        recreatedHost = null;
         Logger.printInfo(() -> "Settings requested by " + from);
+    }
+
+    /**
+     * A Threads activity that had the screen open was recreated: asks for the screen again, put
+     * back as it was saved (page, search and place in the list), over the first Threads screen to
+     * resume, which is usually the recreated one. That one still gets it after the request's
+     * lifetime, however long it waits to resume.
+     */
+    @SuppressWarnings("deprecation")
+    static void reopenRecreated(Activity activity, android.app.Fragment.SavedState screen) {
+        request("a Threads screen recreated with it open");
+        recreatedScreen = screen;
+        recreatedHost = new WeakReference<>(activity);
     }
 
     /**

@@ -23,7 +23,7 @@ class PodcastRepublicSmokeTest {
             apk = apk,
             workDir = workDir,
             pkg = PKG,
-            version = "9.17.0",
+            version = "9.17.0-260909124",
             patchNames = setOf("Disable ads"),
             allPatches = loadAllPatches(newestPatchBundle(root)),
         )

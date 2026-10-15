@@ -36,13 +36,15 @@ internal fun BytecodePatchContext.markFeaturePatched(featureClass: String) =
         .single { it.name == "isPatched" }
         .returnEarly(true)
 
-internal fun MutableMethod.returnVoidWhenUpsellingHidden() {
+internal fun MutableMethod.returnVoidWhenUpsellingHidden() = returnVoidWhen("$UPSELLING_VISIBILITY_CLASS->isHidden()Z")
+
+internal fun MutableMethod.returnVoidWhen(condition: String) {
     val free = getFreeRegisterProvider(0, 1).getFreeRegister()
 
     addInstructionsWithLabels(
         0,
         """
-            invoke-static { }, $UPSELLING_VISIBILITY_CLASS->isHidden()Z
+            invoke-static { }, $condition
             move-result v$free
             if-eqz v$free, :show
             return-void

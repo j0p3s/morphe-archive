@@ -107,6 +107,11 @@ public final class PatchedBuild {
         }
 
         @Implementation
+        public static boolean swipeToSwitchAccounts() {
+            return true;
+        }
+
+        @Implementation
         public static boolean removeServerChangeDelay() {
             return true;
         }

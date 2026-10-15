@@ -227,6 +227,42 @@ try {
         -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
     Assert-True $reportValidation.Valid `
         "A complete result with a declared dependency was rejected: $($reportValidation.Reason)"
+    # A result with no steps, or a null one, is turned down by its reason. It used to throw,
+    # since @($null) holds one item, which ended a run that should have patched over a kept one.
+    foreach ($steps in @('absent', 'null')) {
+        $stepless = $dependencyReport.PSObject.Copy()
+        if ($steps -eq 'absent') { $stepless.PSObject.Properties.Remove('patchingSteps') } else { $stepless.patchingSteps = @($null) }
+        $steplessValidation = Test-PatchingReport -Report $stepless -ExpectedNames $allNames `
+            -AllowedDependencyNames $allDependencies -OutputPath $reportApk `
+            -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
+        Assert-True (-not $steplessValidation.Valid -and $steplessValidation.Reason -ceq 'a patching step failed or is missing') `
+            "A result whose patching steps are $steps was not turned down for them alone: $($steplessValidation.Reason)"
+    }
+    # failedPatches left out or null is no failed patch, as kotlinx leaves out a field equal to its
+    # default; it used to count as one through @($null). A null entry in the list is still one.
+    foreach ($failures in @('absent', 'null', 'null entry')) {
+        $failless = $dependencyReport.PSObject.Copy()
+        switch ($failures) {
+            'absent' { $failless.PSObject.Properties.Remove('failedPatches') }
+            'null' { $failless.failedPatches = $null }
+            'null entry' { $failless.failedPatches = @($null) }
+        }
+        $faillessValidation = Test-PatchingReport -Report $failless -ExpectedNames $allNames `
+            -AllowedDependencyNames $allDependencies -OutputPath $reportApk `
+            -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
+        $faillessOk = if ($failures -eq 'null entry') {
+            -not $faillessValidation.Valid -and $faillessValidation.Reason -ceq '1 failed patches' -and $faillessValidation.Failed -eq 1
+        } else { $faillessValidation.Valid -and $faillessValidation.Failed -eq 0 }
+        Assert-True $faillessOk "A result whose failed patches are $failures was judged wrongly: $($faillessValidation.Reason)"
+    }
+    # A script hands no path for an output it couldn't hold. That's a result turned down for the
+    # APK alone, not a throw, which Test-ApkFile's Test-Path on an empty path used to be. A $null
+    # and a left-out -OutputPath both reach the [string] parameter as '', so this is all three.
+    $noOutput = Test-PatchingReport -Report $dependencyReport -ExpectedNames $allNames `
+        -AllowedDependencyNames $allDependencies -OutputPath '' `
+        -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
+    Assert-True (-not $noOutput.Valid -and $noOutput.Reason -ceq 'saved APK is missing or invalid') `
+        "A result handed no output path wasn't turned down for the APK alone: $($noOutput.Reason)"
 
     # The old replacement expectations contradicted account preservation. Exercise refusal
     # before device mutation, signer checks and ownership instead of expecting uninstalls.
@@ -576,7 +612,7 @@ try {
         }, [ordered]@{
             source = [ordered]@{ file = 'previous.apkm'; package = 'com.example.host'
                 versionName = '46.6.1'; versionCode = '2024606010'; sha256 = ('D' * 64)
-                forced = $false }
+                signedFormSha256 = $null; forced = $false }
             patches = @([ordered]@{ name = 'Alpha'; applied = $true; reason = $null },
                         [ordered]@{ name = 'Beta'; applied = $true; reason = $null })
             sdk = [ordered]@{ stockMinSdk = 36; patchedMinSdk = 36 }
@@ -603,6 +639,11 @@ try {
 
     $valid = Test-TestReceipt -Receipt (New-TestReceipt)
     Assert-True $valid.Valid "A complete receipt was refused: $($valid.Reason)"
+    # An unsigned universal APK's target names the bundle it was trusted on. A bundle's names none
+    # (null), and a receipt from before the field leaves it out, as the first target does.
+    $vouched = Test-TestReceipt -Receipt (New-TestReceipt -Mutate { param($r)
+            $r.targets[1].source.file = 'previous.apk'; $r.targets[1].source.signedFormSha256 = ('E' * 64) })
+    Assert-True $vouched.Valid "A receipt naming the bundle that vouched for a universal APK was refused: $($vouched.Reason)"
 
     # Every fact the receipt exists to pin, put in front of the check one at a time. A gate that
     # has never been shown to fail is a gate nobody has tested.
@@ -621,6 +662,12 @@ try {
         'no extension payload at all'           = { param($r) $r.extension.dexPayloads = @() }
         'no target at all'                      = { param($r) $r.targets = @() }
         'an unhashed source APK'                = { param($r) $r.targets[0].source.sha256 = '' }
+        'a vouching bundle named by no hash'    = { param($r) $r.targets[1].source.file = 'previous.apk'; $r.targets[1].source.signedFormSha256 = 'nope' }
+        'a vouching bundle hash in lower case'  = { param($r) $r.targets[1].source.file = 'previous.apk'; $r.targets[1].source.signedFormSha256 = ('e' * 64) }
+        'a vouching bundle hash and a newline'  = { param($r) $r.targets[1].source.file = 'previous.apk'; $r.targets[1].source.signedFormSha256 = ('E' * 64) + "`n" }
+        'a vouching bundle named by a number'   = { param($r) $r.targets[1].source.file = 'previous.apk'; $r.targets[1].source.signedFormSha256 = 1234 }
+        'a vouching bundle hash in an array'    = { param($r) $r.targets[1].source.file = 'previous.apk'; $r.targets[1].source.signedFormSha256 = @('E' * 64) }
+        'a bundle vouched for by another'       = { param($r) $r.targets[1].source.signedFormSha256 = ('E' * 64) }
         'a target with no binary SDK facts'      = { param($r) $r.targets[0].PSObject.Properties.Remove('sdk') }
         'a target with no stock minimum'        = { param($r) $r.targets[0].sdk.PSObject.Properties.Remove('stockMinSdk') }
         'a target with no patched minimum'      = { param($r) $r.targets[0].sdk.PSObject.Properties.Remove('patchedMinSdk') }
@@ -656,6 +703,14 @@ try {
         $result = Test-TestReceipt -Receipt (New-TestReceipt -Mutate $mutations[$description])
         Assert-True (-not $result.Valid) "Receipt validation accepted $description."
         Assert-True ([bool]$result.Reason) "Receipt validation refused $description without saying why."
+    }
+    # Each malformed vouching hash is refused for being no upper-case SHA-256, not by some later
+    # check: a one-element array included, which -cnotmatch alone lets through, since on an array
+    # it answers the elements that don't match.
+    foreach ($description in @($mutations.Keys | Where-Object { $_ -clike 'a vouching bundle*' })) {
+        $result = Test-TestReceipt -Receipt (New-TestReceipt -Mutate $mutations[$description])
+        Assert-True ([string]$result.Reason -clike "The receipt names the bundle that vouched for * by something that isn't an upper-case SHA-256:*") `
+            "Receipt validation refused $description for another reason: $($result.Reason)"
     }
 
     # A receipt built only from forced runs against newer builds has to be refused for that
@@ -2519,14 +2574,15 @@ try {
     $prePushSource = [System.IO.File]::ReadAllText($prePushScript)
     $deadSuiteCopy = Join-Path $hookRoot 'pre-push-dead-suite.ps1'
     $verifierRoutes = [ordered]@{
-        'scripts/test-injected-registers.ps1' = @('BadDexFixture.java', 'DexDiff.java', 'FeatureDexFixture.java', 'SelectorDexFixture.java',
+        'scripts/test-injected-registers.ps1' = @('BadDexFixture.java', 'DexDiff.java', 'DexDeltaFixture.java', 'dex-delta-allowlist.txt',
+            'FeatureDexFixture.java', 'SelectorDexFixture.java',
             'AccountDexFixture.java', 'MatureDexFixture.java', 'RootMuteDexFixture.java', 'MutualDexFixture.java',
             'HostReferences.java', 'HostReferenceFixture.java', 'host-reference-contracts.txt', 'test-host-references.ps1',
             'patch-for-device.ps1', 'injected-mutation-contracts.txt',
             'injected-register-contracts.ps1', 'injected-register-removal-allowlist.txt', 'script-wiring.ps1',
             'test-injected-registers.ps1', 'verify-all-patches.ps1', 'verify-injected-registers.ps1')
-        'scripts/test-resource-table-check.ps1' = @('MergeSplits.java', 'ResourceTableCheck.java', 'test-resource-table-check.ps1',
-            'verify-all-patches.ps1')
+        'scripts/test-resource-table-check.ps1' = @('MergeSplits.java', 'ResourceTableCheck.java', 'resource-delta-allowlist.txt',
+            'test-resource-table-check.ps1', 'verify-all-patches.ps1')
         'scripts/test-injected-register-device.ps1' = @('injected-register-device.ps1', 'script-wiring.ps1',
             'test-injected-register-device.ps1', 'verify-injected-registers.ps1')
         'scripts/test-fingerprint-candidates.ps1' = @('FingerprintCandidates.java', 'FingerprintFixture.java',
@@ -3124,9 +3180,9 @@ try {
 
         # A release push (HUSHTUMBLR_RELEASE_GATE=1) also builds the bundle, last, and runs every
         # declared fixture through the pushed commit's verify-all-patches.ps1 with that bundle and
-        # the record store, which reuses a kept run only when its key (this bundle's hash among the
-        # inputs) matches and patches in full otherwise. The flag is read once and taken out of the
-        # environment. An everyday push builds no bundle and patches nothing.
+        # the record store, patching each in full (-NoReuse) and keeping the run that passes. The
+        # flag is read once and taken out of the environment. An everyday push builds no bundle
+        # and patches nothing.
         $releaseLog = Join-Path $hookRoot 'release-gate.log'
         $releaseFails = Join-Path $hookRoot 'release-gate-verify-fails.txt'
         $releaseStore = Join-Path $hookRoot 'release-gate-records'
@@ -3139,8 +3195,8 @@ try {
             "Add-Content -LiteralPath '$releaseLog' -Value ('build ' + (`$Tasks -join ','))",
             'exit 0')
         Set-Content -LiteralPath $releaseVerifier -Encoding UTF8 -Value @(
-            'param([string]$Apk, [string]$DesktopJar, [string]$WorkDir, [string]$Bundle, [string]$KeepIn)',
-            "Add-Content -LiteralPath '$releaseLog' -Value (`"verify apk=`$Apk bundle=`$Bundle keep=`$KeepIn`")",
+            'param([string]$Apk, [string]$DesktopJar, [string]$WorkDir, [string]$Bundle, [string]$KeepIn, [switch]$NoReuse)',
+            "Add-Content -LiteralPath '$releaseLog' -Value (`"verify apk=`$Apk bundle=`$Bundle keep=`$KeepIn full=`$NoReuse`")",
             "if (Test-Path -LiteralPath '$releaseFails') { exit 1 }",
             'exit 0')
         Set-Content -LiteralPath $releaseProperties -Encoding ASCII -Value 'version = 9.9.9'
@@ -3169,9 +3225,9 @@ try {
                 "A release push did not build the bundle last, in its final pass: $($builds -join ' | ')"
             Assert-True ($logged.IndexOf($builds[-1]) -lt $logged.IndexOf($verifies[0])) `
                 "A release push patched the fixtures before its build finished: $($logged -join ' | ')"
-            $expectedVerifies = @($declaredHere | ForEach-Object { "verify apk=$_ bundle=$releaseBundleHere keep=$releaseStore" })
+            $expectedVerifies = @($declaredHere | ForEach-Object { "verify apk=$_ bundle=$releaseBundleHere keep=$releaseStore full=True" })
             Assert-True ((@($verifies | Sort-Object) -join "`n") -ceq (@($expectedVerifies | Sort-Object) -join "`n")) `
-                "A release push did not run each declared fixture through verify-all-patches.ps1 with the bundle it built and the record store: $($verifies -join ' | ')"
+                "A release push did not patch each declared fixture in full through verify-all-patches.ps1 with the bundle it built, keeping it in the record store: $($verifies -join ' | ')"
 
             Set-Content -LiteralPath $releaseFails -Value 'fail' -Encoding ASCII
             $env:HUSHTUMBLR_RELEASE_GATE = '1'
@@ -3558,6 +3614,20 @@ try {
         $env:GITHUB_TOKEN = $savedToken
     }
 } finally {
+    # Pushed-commit cases give the hook a gate worktree of $hookRoot, made in the temp directory
+    # beside it. Removing the fixture alone left that worktree behind on every run. This runs
+    # before Git's hook variables come back, so they can't point these commands elsewhere.
+    if (Test-Path -LiteralPath (Join-Path $hookRoot '.git') -PathType Container) {
+        foreach ($line in @(& git -C $hookRoot worktree list --porcelain)) {
+            if ($line -notlike 'worktree *') { continue }
+            $listed = [IO.Path]::GetFullPath($line.Substring('worktree '.Length)).TrimEnd('\', '/')
+            if ($listed -ieq [IO.Path]::GetFullPath($hookRoot).TrimEnd('\', '/')) { continue }
+            if ([IO.Path]::GetFileName($listed) -notmatch '^hushtumblr-pre-push-[a-f0-9]{12}$') {
+                throw "Refusing to remove unexpected fixture worktree $listed."
+            }
+            & git -C $hookRoot worktree remove --force $listed
+        }
+    }
     $env:HUSHTUMBLR_SKIP_PRE_PUSH = $savedSkip
     $env:HUSHTUMBLR_BUILD_WRAPPER = $savedRoutingWrapper
     $env:HUSHTUMBLR_FIXTURE_DIR = $savedRoutingFixtures
@@ -4078,6 +4148,9 @@ try {
         @{ Case = 'has a folder ending in a space'; Members = @($guardBase, @{ Name = 'splits /split_config.en.apk' }); Says = 'ends a segment with a dot or a space*' }
         @{ Case = 'names a device'; Members = @($guardBase, @{ Name = 'nul.apk' }); Says = 'names a Windows device' }
         @{ Case = 'holds a shell character'; Members = @($guardBase, @{ Name = 'split&calc.apk' }); Says = 'is an APK whose file name holds more than*' }
+        # The Kelvin sign is a k once case is ignored, which let it past the name check that
+        # Get-InputIdentity, matching case, then refused after the merge.
+        @{ Case = 'holds a letter only a match without case takes'; Members = @($guardBase, @{ Name = "split_$([char]0x212A).apk" }); Says = 'is an APK whose file name holds more than*' }
         @{ Case = 'repeats a name'; Members = @($guardBase, @{ Name = 'base.apk'; Deflate = $true }); Says = "is the same path as 'base.apk' once case is ignored" }
         @{ Case = 'repeats a name in other case'; Members = @($guardBase, @{ Name = 'BASE.apk' }); Says = "is the same path as 'base.apk' once case is ignored" }
         @{ Case = 'repeats a file name in a folder'; Members = @($guardBase, @{ Name = 'splits/base.apk' }); Says = "unpacks to base.apk, as 'base.apk' does" }
@@ -4211,6 +4284,43 @@ try {
             -not (Test-Path -LiteralPath (Join-Path $layoutDir 'merged.apk'))) "$($layout.Name) left its unpacked folder behind."
     }
 
+    # The input is named by the digest taken through the handle it was unpacked or copied from, and
+    # each APK by the bytes written for it, which the lock holds the file to: nothing holds the file
+    # between the write and the lock, so one changed then is refused instead of hashed as it is.
+    $sourceDir = Join-Path $guardRoot 'source-digest'
+    New-Item -ItemType Directory -Path $sourceDir -Force | Out-Null
+    $sourceBundle = Join-Path $sourceDir 'tumblr.apkm'
+    New-TestBundleArchive -Path $sourceBundle -Entries ([ordered]@{ 'info.json' = '{}'; 'base.apk' = 'base'; 'split_config.en.apk' = 'en' })
+    $sourcePlain = Join-Path $sourceDir 'tumblr.apk'
+    [System.IO.File]::WriteAllText($sourcePlain, 'plain')
+    $lowerHash = { param([string]$Path) (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
+    foreach ($taker in @('Expand-SplitBundle', 'Copy-ApkToSplitDirectory')) {
+        $taken = if ($taker -eq 'Expand-SplitBundle') { $sourceBundle } else { $sourcePlain }
+        $splits = & $taker -Apk $taken -Destination (Join-Path $sourceDir 'merged.apk')
+        try {
+            $unwritten = @($splits.Files | Where-Object { $_.Written -cne (& $lowerHash $_.Path) })
+            Assert-True ($splits.Sha256 -ceq (& $lowerHash $taken) -and $unwritten.Count -eq 0) `
+                "$taker didn't name $(Split-Path -Leaf $taken) by its own digest, or an APK by the bytes written for it."
+            Lock-SplitFiles -Splits $splits
+            Assert-True (@($splits.Files | Where-Object { $_.Sha256 -cne $_.Written -or -not $_.Handle }).Count -eq 0) `
+                "Lock-SplitFiles didn't hold what $taker wrote to the digest it was written with."
+        } finally { Remove-SplitDirectory -Splits $splits }
+        $splits = & $taker -Apk $taken -Destination (Join-Path $sourceDir 'merged.apk')
+        try {
+            [System.IO.File]::WriteAllText($splits.Files[0].Path, 'swapped in after the write')
+            Assert-Throws { Lock-SplitFiles -Splits $splits } "*$($splits.Files[0].Member) at $($splits.Files[0].Path) isn't what was written there*" `
+                "Lock-SplitFiles locked an APK $taker wrote and something then changed."
+        } finally { Remove-SplitDirectory -Splits $splits }
+    }
+    $unnamed = [pscustomobject]@{ Bundle = $sourcePlain; Directory = $null
+        Files = @([pscustomobject]@{ Name = 'input.apk'; Path = $sourcePlain; Member = 'tumblr.apk'; Sha256 = $null; Handle = $null }) }
+    try {
+        Assert-Throws { Lock-SplitFiles -Splits $unnamed } '*has no digest of what was written for it*' `
+            'Lock-SplitFiles locked an APK nothing said the bytes of.'
+    } finally { Remove-SplitDirectory -Splits $unnamed }
+    Assert-Throws { Get-HeldSourceSha256 -Merged (Join-Path $sourceDir 'not-held.apk') } "*isn't a merge this process holds*" `
+        'Get-HeldSourceSha256 named the input of a merge nothing holds.'
+
     # The fetch the release facts make of the indexed bundle and the add-source page. A real
     # request first: nothing listens on port 1, so it is refused before it leaves this machine.
     # Then the two answers a stand-in gives, a 404 the way both shells raise it and a 200.
@@ -4342,7 +4452,7 @@ $queuedJobs = [ordered]@{
     'verify-all-patches.ps1'           = @('verify patch', 'verify resources')
     'build-release-receipt.ps1'        = @('receipt patch', 'receipt resources')
     'verify-injected-registers.ps1'    = @('dex diff', 'host references')
-    'patch-for-device.ps1'             = @('device patch')
+    'patch-for-device.ps1'             = @('device patch', 'device resources')
     'fingerprint-candidates.ps1'       = @('fingerprint candidates')
     'pre-push.ps1'                     = @('gate gradle')
     'test-bouncycastle-test-graph.ps1' = @('bouncycastle review')
@@ -4394,15 +4504,17 @@ Assert-True ($unkeyed.Count -eq 0 -and $unreached.Count -eq 0 -and $keyed -conta
 $keyRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("hushtumblr-record-key-" + [guid]::NewGuid().ToString('N'))
 try {
     $keyInputs = @{}
-    foreach ($name in @('Bundle', 'Fixture', 'PatchList', 'DesktopJar', 'AndroidJar', 'ApiVersions')) {
+    foreach ($name in @('Bundle', 'PatchList', 'DesktopJar', 'AndroidJar', 'ApiVersions')) {
         $keyInputs[$name] = Join-Path $keyRoot "$name.bin"
     }
     $keyScripts = Join-Path $keyRoot 'scripts'
     New-Item -ItemType Directory -Path $keyScripts -Force | Out-Null
     foreach ($name in @($keyInputs.Keys)) { [IO.File]::WriteAllText($keyInputs[$name], "stand-in $name") }
     foreach ($name in $keyed) { Copy-Item -LiteralPath (Join-Path $PSScriptRoot $name) -Destination $keyScripts }
-    function Get-TestRecordKey([string[]]$Names = @('Hide ads', 'Download pins'), [bool]$Forced = $false) {
-        return (Get-AppliedRecordKey @keyInputs -PatchNames $Names -Forced $Forced -ScriptRoot $keyScripts).Key
+    # The input is named by what a held merge was made from (Get-HeldInputIdentity), a digest
+    # rather than a path, so a stand-in digest is enough here.
+    function Get-TestRecordKey([string[]]$Names = @('Hide ads', 'Download pins'), [bool]$Forced = $false, [string]$Identity = ('a' * 64)) {
+        return (Get-AppliedRecordKey @keyInputs -InputIdentity $Identity -PatchNames $Names -Forced $Forced -ScriptRoot $keyScripts).Key
     }
     $baseKey = Get-TestRecordKey
     Assert-True ($baseKey -cmatch '^[0-9a-f]{64}$') "The applied record key isn't a SHA-256 in lower-case hex: $baseKey"
@@ -4410,6 +4522,37 @@ try {
         'The applied record key depends on the order the patches are named in.'
     Assert-True ((Get-TestRecordKey -Names @('Hide ads')) -cne $baseKey) 'Leaving a patch out did not change the applied record key.'
     Assert-True ((Get-TestRecordKey -Forced $true) -cne $baseKey) 'A forced run has the key of a declared one.'
+    Assert-True ((Get-TestRecordKey -Identity ('b' * 64)) -cne $baseKey) 'Another input left the applied record key as it was.'
+    Assert-Throws { Get-TestRecordKey -Identity (Join-Path $keyRoot 'Fixture.apk') } '*InputIdentity*' `
+        'The applied record key took a path for the input instead of what a held merge was made from.'
+    # What a merge was made from: a plain APK by its copy, a bundle by its APKs' names and digests
+    # in any order, and the two never alike. The merger orders and names its modules by the file
+    # names, so the same APKs under other names are another input.
+    $one = '1' * 64; $two = '2' * 64
+    $apk = { param([string]$Name, [string]$Sha256) [pscustomobject]@{ Name = $Name; Sha256 = $Sha256 } }
+    $base = & $apk 'base.apk' $one; $split = & $apk 'split_config.xxhdpi.apk' $two
+    $plainIdentity = Get-InputIdentity -Plain $one
+    Assert-True ($plainIdentity -cmatch '^[0-9a-f]{64}$' -and $plainIdentity -cne $one -and
+        (Get-InputIdentity -Apks @($base, $split)) -ceq (Get-InputIdentity -Apks @($split, $base)) -and
+        (Get-InputIdentity -Apks @($base)) -cne $plainIdentity -and
+        (Get-InputIdentity -Apks @($base, $split)) -cne (Get-InputIdentity -Apks @($base))) `
+        'Get-InputIdentity does not name a plain APK and a bundle apart, or depends on the order of the APKs.'
+    Assert-True ((Get-InputIdentity -Apks @($base, $split)) -cne (Get-InputIdentity -Apks @((& $apk 'base.apk' $two), (& $apk 'split_config.xxhdpi.apk' $one))) -and
+        (Get-InputIdentity -Apks @($base)) -cne (Get-InputIdentity -Apks @((& $apk 'other.apk' $one)))) `
+        'Get-InputIdentity names a bundle alike when its APKs swap names or one is renamed.'
+    Assert-Throws { Get-InputIdentity -Plain $one -Apks @($split) } '*not both or neither*' 'Get-InputIdentity took a plain APK and a bundle at once.'
+    Assert-Throws { Get-InputIdentity } '*not both or neither*' 'Get-InputIdentity named nothing.'
+    Assert-Throws { Get-InputIdentity -Apks @($base, (& $apk 'base.apk' $two)) } '*names base.apk twice*' 'Get-InputIdentity took one name twice.'
+    foreach ($badName in @('', 'base', 'a b.apk', "base.apk`napk $two x.apk", '../base.apk')) {
+        Assert-Throws { Get-InputIdentity -Apks @((& $apk $badName $one)) } '*Not the name of an unpacked APK*' `
+            "Get-InputIdentity took '$badName' for an APK's name."
+    }
+    # Digits have no case, so the upper-case digest needs letters to differ from a lower-case one.
+    $upper = ('ab' * 32).ToUpperInvariant()
+    Assert-Throws { Get-InputIdentity -Apks @((& $apk 'base.apk' $upper)) } '*lower-case hex*' 'Get-InputIdentity took a digest in upper case.'
+    Assert-Throws { Get-TestRecordKey -Identity $upper } '*InputIdentity*' 'The applied record key took an input identity in upper case.'
+    Assert-Throws { Get-HeldInputIdentity -Merged (Join-Path $keyRoot 'not-held.apk') } "*isn't a merge this process holds*" `
+        'Get-HeldInputIdentity named a merge nothing holds.'
     $moved = @()
     foreach ($file in @($keyInputs.Values) + @($keyed | ForEach-Object { Join-Path $keyScripts $_ })) {
         $saved = [IO.File]::ReadAllBytes($file)
@@ -4428,6 +4571,57 @@ try {
     Set-Content -LiteralPath (Join-Path $store "$baseKey/record.json") -Encoding ASCII -Value ('{"schema":1,"key":"' + ('0' * 64) + '"}')
     Assert-True ($null -eq (Find-AppliedRecord -Store $store -Key $baseKey 3> $null)) 'A record naming another key was handed back.'
     Assert-True ($null -eq (Find-AppliedRecord -Store $store -Key ('1' * 64))) 'A key with no record found one.'
+    # A record that holds together comes back with its patched APK and result report held to the
+    # digests they were kept with: nothing can write to either until Close-AppliedRecord, and the
+    # paths handed on are where the handles are. A record naming no digest, or another one, for
+    # either file is passed over.
+    $keptDir = Join-Path $store $baseKey
+    $keptApk = Join-Path $keptDir 'patched.apk'
+    $keptResult = Join-Path $keptDir 'result.json'
+    [IO.File]::WriteAllText($keptApk, 'stand-in patched APK')
+    [IO.File]::WriteAllText($keptResult, '{}')
+    $keptDigest = (Get-FileHash -LiteralPath $keptApk -Algorithm SHA256).Hash.ToLowerInvariant()
+    $resultDigest = (Get-FileHash -LiteralPath $keptResult -Algorithm SHA256).Hash.ToLowerInvariant()
+    $openToWrite = { param([string]$Path) [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Write,
+            [System.IO.FileShare]'ReadWrite, Delete').Dispose() }
+    $writeRecord = { param([string]$Patched, [string]$Result)
+        Set-Content -LiteralPath (Join-Path $keptDir 'record.json') -Encoding ASCII `
+            -Value ('{"schema":1,"key":"' + $baseKey + '","patchedSha256":"' + $Patched + '","resultSha256":"' + $Result + '"}') }
+    foreach ($digestCase in @(
+            @{ Patched = ''; Result = $resultDigest; Says = '*names no patched APK digest*' },
+            @{ Patched = ('0' * 64); Result = $resultDigest; Says = '*its patched APK changed after it was kept*' },
+            @{ Patched = $keptDigest; Result = ''; Says = '*names no result report digest*' },
+            @{ Patched = $keptDigest; Result = ('0' * 64); Says = '*its result report changed after it was kept*' })) {
+        & $writeRecord $digestCase.Patched $digestCase.Result
+        $said = @(Find-AppliedRecord -Store $store -Key $baseKey 3>&1)
+        $warned = @($said | Where-Object { $_ -is [System.Management.Automation.WarningRecord] })
+        $handed = @($said | Where-Object { $null -ne $_ -and $_ -isnot [System.Management.Automation.WarningRecord] })
+        Assert-True ($handed.Count -eq 0 -and $warned.Count -eq 1 -and "$($warned[0])" -like $digestCase.Says) `
+            "A record with digests '$($digestCase.Patched)' and '$($digestCase.Result)' was handed back, or not said: $($said -join '; ')"
+        # Passed over, it holds nothing: the patched APK held before the report failed is let go,
+        # and so is a report that didn't hash to its digest.
+        & $openToWrite $keptApk
+        & $openToWrite $keptResult
+    }
+    & $writeRecord $keptDigest $resultDigest
+    $found = Find-AppliedRecord -Store $store -Key $baseKey
+    try {
+        Assert-True ($null -ne $found -and $null -ne $found.Handle -and $null -ne $found.ResultHandle -and
+            [IO.Path]::GetFullPath($found.PatchedApk) -eq [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $keptApk).Path) -and
+            [IO.Path]::GetFullPath($found.Result) -eq [IO.Path]::GetFullPath((Resolve-Path -LiteralPath $keptResult).Path)) `
+            "Find-AppliedRecord did not hand back the kept APK and report held, by the paths their handles are at: $($found.PatchedApk), $($found.Result)"
+        foreach ($heldFile in @($keptApk, $keptResult)) {
+            $turnedAway = $null
+            try { & $openToWrite $heldFile } catch { $turnedAway = $_.Exception.GetBaseException() }
+            Assert-True ($turnedAway -is [System.IO.IOException] -and $turnedAway.HResult -eq -2147024864) `
+                "$(Split-Path -Leaf $heldFile) could be opened to write while Find-AppliedRecord held it: $turnedAway"
+        }
+        Assert-True ((Get-Content -LiteralPath $found.Result -Raw).Trim() -eq '{}') 'The held result report could not be read where it was handed on.'
+    } finally { Close-AppliedRecord -Record $found }
+    Assert-True ($null -eq $found.Handle -and $null -eq $found.ResultHandle) 'Close-AppliedRecord left the kept APK or report held.'
+    & $openToWrite $keptApk
+    & $openToWrite $keptResult
+    Close-AppliedRecord -Record $null
 } finally {
     Remove-Item -LiteralPath $keyRoot -Recurse -Force -ErrorAction SilentlyContinue
 }
@@ -4470,6 +4664,59 @@ foreach ($script in @(Get-ChildItem -LiteralPath $PSScriptRoot -Filter '*.ps1' -
             $checkedSteps -contains $node.GetCommandName() }, $true))
     Assert-True ($direct.Count -eq 0) `
         "$($script.Name) calls $(@($direct | ForEach-Object { $_.GetCommandName() }) -join ', ') itself instead of going through Get-MergedApk."
+    # What was checked about a merge is kept in the process, with the handle that holds it, and
+    # only common.ps1 reads or writes that table.
+    $table = @($scriptAst.FindAll({ param($node)
+            ($node -is [System.Management.Automation.Language.CommandAst] -and $node.GetCommandName() -eq 'Get-HeldMerges') -or
+            ($node -is [System.Management.Automation.Language.VariableExpressionAst] -and $node.VariablePath.UserPath -match '(?i)HushTumblrHeldMerges') }, $true))
+    Assert-True ($table.Count -eq 0) "$($script.Name) reads or writes the table of merges this process holds, which is common.ps1's alone."
+}
+# Another process of the same user can write to anything this one can, so Get-MergedApk hands the
+# merge back held: opened so nothing can write to it, and kept that way through the patch run,
+# the signing and every check that reads it. Each script lets go of it once, in a finally, since a
+# held file can't be deleted, and reads it nowhere after that. The merger does its steps through
+# files it holds rather than by a path a second time: it never hands the folder back to the
+# library to list, opens what it writes as new files that other processes can't write or delete,
+# and prints the digest of what it wrote. And nothing that vouches for a merge reads the record
+# beside one, since whoever could write the merge could write the record to match.
+foreach ($release in @(@{ Name = 'patch-for-device.ps1'; Variable = 'patchInput' }, @{ Name = 'build-release-receipt.ps1'; Variable = 'patchInput' },
+        @{ Name = 'verify-all-patches.ps1'; Variable = 'patchInput' }, @{ Name = 'verify-injected-registers.ps1'; Variable = 'CleanMerged' })) {
+    $scriptAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $release.Name), [ref]$null, [ref]$null)
+    $closes = @($scriptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Close-MergedApk' }, $true))
+    $inFinally = @($closes | Where-Object {
+            $found = $false
+            for ($parent = $_.Parent; $null -ne $parent; $parent = $parent.Parent) {
+                if ($parent -is [System.Management.Automation.Language.TryStatementAst] -and $null -ne $parent.Finally -and
+                        $_.Extent.StartOffset -ge $parent.Finally.Extent.StartOffset -and
+                        $_.Extent.EndOffset -le $parent.Finally.Extent.EndOffset) { $found = $true }
+            }
+            $found })
+    Assert-True ($closes.Count -eq 1 -and $inFinally.Count -eq 1 -and $closes[0].Extent.Text -ceq "Close-MergedApk -Merged `$$($release.Variable)") `
+        "$($release.Name) does not let go of the merge Get-MergedApk handed it once, in a finally."
+    $readsAfter = @($scriptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.VariableExpressionAst] -and
+            $node.VariablePath.UserPath -eq $release.Variable -and $node.Extent.StartOffset -gt $closes[0].Extent.EndOffset }, $true))
+    Assert-True ($readsAfter.Count -eq 0) "$($release.Name) reads the merge after it has let go of it, when anything could have been written there."
+}
+$mergerText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'MergeSplits.java') -Raw
+$mergerCode = [regex]::Replace($mergerText, '(?s)/\*.*?\*/|//[^\r\n]*', '')
+Assert-True ($mergerCode -notmatch 'loadApkDirectory|loadApkFile|\.merge\(' -and
+    $mergerCode -match 'NOSHARE_READ' -and $mergerCode -match 'NOSHARE_WRITE' -and $mergerCode -match 'NOSHARE_DELETE' -and
+    @([regex]::Matches($mergerCode, 'StandardOpenOption\.CREATE_NEW')).Count -eq 2 -and
+    $mergerCode -notmatch 'StandardOpenOption\.(CREATE|TRUNCATE_EXISTING|APPEND)\b' -and
+    $mergerCode -match 'System\.out\.println\("\[merge\] sha256 " \+ digest\)') `
+    'MergeSplits.java hands the folder or a path back to the library to read, writes into a file that was already there, or does not print the digest of what it wrote.'
+$commonAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'common.ps1'), [ref]$null, [ref]$null)
+foreach ($vouching in 'Get-MergedApk', 'Assert-AuthenticMerge', 'Open-AuthenticInput', 'Invoke-SplitMerge') {
+    $body = @($commonAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+            $node.Name -eq $vouching }, $true))
+    Assert-True ($body.Count -eq 1) "common.ps1 does not define $vouching once."
+    $readers = @($body[0].Body.FindAll({ param($node)
+            ($node -is [System.Management.Automation.Language.CommandAst] -and
+                @('Get-Content', 'ConvertFrom-Json', 'Import-Clixml') -contains $node.GetCommandName()) -or
+            ($node -is [System.Management.Automation.Language.InvokeMemberExpressionAst] -and
+                $node.Member.Extent.Text -match '^(ReadAllText|ReadAllBytes|ReadAllLines|OpenText)$') }, $true))
+    Assert-True ($readers.Count -eq 0) "$vouching reads a file's word for where a merge came from: $(@($readers | ForEach-Object { $_.Extent.Text }) -join '; ')"
 }
 $mergeCommand = Get-Command -Name Get-MergedApk -CommandType Function
 $mergeParameters = @($mergeCommand.Parameters.Keys | Where-Object {
@@ -4493,11 +4740,11 @@ $isKeptSign = { param($node) $node.Extent.Text -match '^&\s*\$apksigner\s+sign\s
 foreach ($order in @(
         @{ Name = 'patch-for-device.ps1'; After = @(@{ What = 'a kept run is looked up'; Match = $isKeptLookup },
             @{ What = 'a kept APK is signed'; Match = $isKeptSign }, @{ What = 'the CLI patches'; Match = $isCliPatch }) },
-        @{ Name = 'build-release-receipt.ps1'; After = @(@{ What = 'a kept run is looked up'; Match = $isKeptLookup },
+        @{ Name = 'build-release-receipt.ps1'; After = @(@{ What = 'the CLI patches'; Match = $isCliPatch }) },
+        @{ Name = 'verify-all-patches.ps1'; After = @(@{ What = 'a kept run is looked up'; Match = $isKeptLookup },
             @{ What = 'the CLI patches'; Match = $isCliPatch }) },
-        @{ Name = 'verify-all-patches.ps1'; After = @(@{ What = 'the CLI patches'; Match = $isCliPatch }) },
         @{ Name = 'verify-injected-registers.ps1'; After = @(
-            @{ What = 'the merge is held to its record'; Match = { param($node) $node.GetCommandName() -eq 'Assert-AuthenticMerge' } },
+            @{ What = 'the merge is held to what was checked'; Match = { param($node) $node.GetCommandName() -eq 'Assert-AuthenticMerge' } },
             @{ What = 'DexDiff compares the clean side'; Match = { param($node) $node.GetCommandName() -eq 'Invoke-DexDiff' } }) })) {
     $scriptPath = Join-Path $PSScriptRoot $order.Name
     $scriptAst = [System.Management.Automation.Language.Parser]::ParseFile($scriptPath, [ref]$null, [ref]$null)
@@ -4515,13 +4762,336 @@ foreach ($order in @(
         Assert-True ($laterAt -gt $mergeAt) "In $($order.Name), $($later.What) before Get-MergedApk has checked the APKs, or never."
     }
 }
+# What each of the three decided on before the merge, the build and whether it is forced, was read
+# off a base APK nothing held. Each holds that to the merge once (Assert-SameBuild), after
+# Get-MergedApk has handed the merge back and before the build is acted on.
+foreach ($decided in @(
+        @{ Name = 'patch-for-device.ps1'; Before = @($isKeptLookup, $isKeptSign, $isCliPatch) },
+        @{ Name = 'build-release-receipt.ps1'; Before = @($isCliPatch) },
+        @{ Name = 'verify-all-patches.ps1'; Before = @($isKeptLookup, $isCliPatch) })) {
+    $scriptAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $decided.Name), [ref]$null, [ref]$null)
+    $sameBuild = @($scriptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq 'Assert-SameBuild' }, $true))
+    Assert-True ($sameBuild.Count -eq 1 -and $sameBuild[0].Extent.StartOffset -gt (Get-FirstCommandOffset $scriptAst $isMerge)) `
+        "$($decided.Name) does not hold the build it read first to the merge once, after Get-MergedApk."
+    foreach ($use in $decided.Before) {
+        Assert-True ((Get-FirstCommandOffset $scriptAst $use) -gt $sameBuild[0].Extent.StartOffset) `
+            "$($decided.Name) acts on the build it read first before it has held it to the merge (Assert-SameBuild)."
+    }
+}
+# A kept run is looked up by what the held merge was made from, never by a path hashed after the
+# merge let the input go: each of the two that reuse one keys it with -InputIdentity taken from the
+# merge it holds, once. The kept APK comes back held (Find-AppliedRecord), into $recorded, and each
+# lets go of it once, in a finally, before the merge. The receipt reads none (below).
+function Get-NamedCommands($ScriptAst, [string]$Name) {
+    @($ScriptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.GetCommandName() -eq $Name }, $true))
+}
+foreach ($keyedScript in @('patch-for-device.ps1', 'verify-all-patches.ps1')) {
+    $scriptAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $keyedScript), [ref]$null, [ref]$null)
+    $keys = Get-NamedCommands $scriptAst 'Get-AppliedRecordKey'
+    $named = @($keys | ForEach-Object { $_.CommandElements } | Where-Object { $_ -is [System.Management.Automation.Language.CommandParameterAst] } |
+        ForEach-Object { $_.ParameterName })
+    $identityArgument = $null
+    if ($keys.Count -eq 1) {
+        $elements = @($keys[0].CommandElements)
+        for ($i = 0; $i -lt $elements.Count - 1; $i++) {
+            if ($elements[$i] -is [System.Management.Automation.Language.CommandParameterAst] -and $elements[$i].ParameterName -eq 'InputIdentity') {
+                $identityArgument = $elements[$i + 1].Extent.Text
+            }
+        }
+    }
+    Assert-True ($keys.Count -eq 1 -and $named -notcontains 'Fixture' -and $identityArgument -ceq '(Get-HeldInputIdentity -Merged $patchInput)') `
+        "$keyedScript doesn't key its kept run once on what the merge it holds was made from: $identityArgument"
+    $lookups = Get-NamedCommands $scriptAst 'Find-AppliedRecord'
+    $assigned = $null
+    if ($lookups.Count -eq 1) {
+        for ($parent = $lookups[0].Parent; $null -ne $parent; $parent = $parent.Parent) {
+            if ($parent -is [System.Management.Automation.Language.AssignmentStatementAst]) { $assigned = $parent.Left.Extent.Text; break }
+        }
+    }
+    Assert-True ($lookups.Count -eq 1 -and $assigned -ceq '$recorded') "$keyedScript doesn't look a kept run up once, into `$recorded."
+    $closes = Get-NamedCommands $scriptAst 'Close-AppliedRecord'
+    $closeInFinally = @($closes | Where-Object {
+            $found = $false
+            for ($parent = $_.Parent; $null -ne $parent; $parent = $parent.Parent) {
+                if ($parent -is [System.Management.Automation.Language.TryStatementAst] -and $null -ne $parent.Finally -and
+                    $_.Extent.StartOffset -ge $parent.Finally.Extent.StartOffset -and $_.Extent.EndOffset -le $parent.Finally.Extent.EndOffset) { $found = $true }
+            }
+            $found -and $_.Extent.Text -ceq 'Close-AppliedRecord -Record $recorded' })
+    $mergeClose = Get-NamedCommands $scriptAst 'Close-MergedApk'
+    Assert-True ($closeInFinally.Count -eq 1 -and $mergeClose.Count -eq 1 -and
+        $closeInFinally[0].Extent.StartOffset -lt $mergeClose[0].Extent.StartOffset) `
+        "$keyedScript does not let go of the kept APK Find-AppliedRecord held, once in a finally before the merge."
+}
+# A kept run's report is checked through the path its held handle is at, never a copy of it:
+# patch-for-device.ps1 copied it into its output folder and checked the copy, which nothing held.
+foreach ($reader in @(@{ Name = 'patch-for-device.ps1'; Reads = '$reportPath' }, @{ Name = 'verify-all-patches.ps1'; Reads = '$recorded.Result' })) {
+    $readerAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $reader.Name), [ref]$null, [ref]$null)
+    $reads = @(Get-NamedCommands $readerAst 'Get-Content' | ForEach-Object {
+            $elements = @($_.CommandElements)
+            for ($i = 0; $i -lt $elements.Count - 1; $i++) {
+                if ($elements[$i] -is [System.Management.Automation.Language.CommandParameterAst] -and $elements[$i].ParameterName -eq 'LiteralPath') {
+                    $elements[$i + 1].Extent.Text
+                }
+            } })
+    $fromKept = @($readerAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+                $node.Left.Extent.Text -ceq $reader.Reads -and $node.Right.Extent.Text -ceq '$recorded.Result' }, $true))
+    Assert-True ($reads -ccontains $reader.Reads -and ($reader.Reads -ceq '$recorded.Result' -or $fromKept.Count -eq 1) -and
+        ($reader.Name -ne 'patch-for-device.ps1' -or $reads -cnotcontains '$result')) `
+        "$($reader.Name) doesn't check a kept run's report through the path Find-AppliedRecord holds: $($reads -join ', ')"
+}
+# In patch-for-device.ps1 the report path is set in the kept-run if alone: the held kept report
+# where a kept run is used, and in the else branch the path the CLI's report is held at, or none
+# where the CLI left none to hold (the report check then fails, whatever is at the path later).
+# Nowhere after.
+$deviceAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'patch-for-device.ps1'), [ref]$null, [ref]$null)
+$reportSets = @($deviceAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+            $node.Left.Extent.Text -ceq '$reportPath' }, $true))
+$reportBranches = @($deviceAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.IfStatementAst] -and
+            $node.Clauses.Count -eq 1 -and $null -ne $node.ElseClause }, $true) | Where-Object {
+        $branch = $_
+        $kept = @($reportSets | Where-Object { $_.Right.Extent.Text -ceq '$recorded.Result' -and
+                $_.Extent.StartOffset -ge $branch.Clauses[0].Item2.Extent.StartOffset -and $_.Extent.EndOffset -le $branch.Clauses[0].Item2.Extent.EndOffset })
+        $own = @($reportSets | Where-Object { $_.Extent.StartOffset -ge $branch.ElseClause.Extent.StartOffset -and
+                $_.Extent.EndOffset -le $branch.ElseClause.Extent.EndOffset } | ForEach-Object { $_.Right.Extent.Text })
+        $kept.Count -eq 1 -and ($own -join '; ') -ceq 'Get-HeldPath -Stream $resultHandle; $null' })
+Assert-True ($reportSets.Count -eq 3 -and $reportBranches.Count -eq 1) `
+    "patch-for-device.ps1 sets the report path outside the branches of the kept-run if: $(@($reportSets | ForEach-Object { $_.Extent.Text }) -join '; ')"
+# What the CLI wrote is held from the moment it exits: the patched APK and the report are opened
+# by Open-HeldFile before anything reads them, and from then on read by the path the handle is at.
+# patch-for-device.ps1 holds the APK after the kept-run if, so apksigner's output is held too.
+foreach ($writer in @(
+        @{ Name = 'verify-all-patches.ps1'; Apk = '$out'; Report = '$result' },
+        @{ Name = 'build-release-receipt.ps1'; Apk = '$out'; Report = '$resultPath' },
+        @{ Name = 'patch-for-device.ps1'; Apk = '$out'; Report = '$result' })) {
+    $writerAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $writer.Name), [ref]$null, [ref]$null)
+    $cliAt = @($writerAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and (& $isCliPatch $node) }, $true) |
+        ForEach-Object { $_.Extent.EndOffset } | Sort-Object)
+    # The first report check after the CLI: verify-all checks a kept run's report before it.
+    $firstRead = if ($cliAt.Count -eq 1) {
+        Get-FirstCommandOffset $writerAst { param($node) $node.GetCommandName() -eq 'Test-PatchingReport' -and $node.Extent.StartOffset -gt $cliAt[0] }
+    } else { -1 }
+    $unheld = @()
+    foreach ($held in @(@{ Path = $writer.Apk; Handle = '$outHandle' }, @{ Path = $writer.Report; Handle = '$resultHandle' })) {
+        $opens = @($writerAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+                    $node.Left.Extent.Text -ceq $held.Handle -and $node.Right.Extent.Text -clike "Open-HeldFile -Path $($held.Path) -What *" }, $true))
+        $moves = @($writerAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+                    $node.Left.Extent.Text -ceq $held.Path -and $node.Right.Extent.Text -ceq "Get-HeldPath -Stream $($held.Handle)" }, $true))
+        if ($opens.Count -ne 1 -or $moves.Count -ne 1 -or $cliAt.Count -ne 1 -or $firstRead -lt 0 -or
+            $opens[0].Extent.StartOffset -lt $cliAt[0] -or $moves[0].Extent.StartOffset -lt $opens[0].Extent.EndOffset -or
+            $moves[0].Extent.EndOffset -gt $firstRead) { $unheld += $held.Path }
+    }
+    if ($writer.Name -eq 'patch-for-device.ps1') {
+        # The device run's report comes in a $reportPath of its own, checked above.
+        $unheld = @($unheld | Where-Object { $_ -cne '$result' })
+        $deviceReportOpen = @($writerAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+                    $node.Left.Extent.Text -ceq '$resultHandle' -and $node.Right.Extent.Text -clike 'Open-HeldFile -Path $result -What *' }, $true))
+        if ($deviceReportOpen.Count -ne 1 -or $deviceReportOpen[0].Extent.StartOffset -lt $cliAt[0]) { $unheld += '$result' }
+    }
+    $disposed = @($writerAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.ForEachStatementAst] -and
+                $node.Condition.Extent.Text -clike '@($outHandle, $resultHandle*)' -and $node.Parent.Parent -is [System.Management.Automation.Language.TryStatementAst] -and
+                $node.Parent -eq $node.Parent.Parent.Finally }, $true))
+    Assert-True ($unheld.Count -eq 0 -and $disposed.Count -eq 1) `
+        "$($writer.Name) reads what the CLI wrote before it holds it, or never lets it go: $($unheld -join ', ') ($($disposed.Count) finally disposing the handles)"
+}
+# An output the CLI didn't leave to hold is none: the report check after the CLI gets the APK's
+# path only when $outHandle holds it, and verify-all reads the report only when $resultHandle
+# holds it. Neither handle is let go or set to anything else before the finally checked above,
+# since from then on its path is one anything can put a file at.
+foreach ($name in 'verify-all-patches.ps1', 'build-release-receipt.ps1', 'patch-for-device.ps1') {
+    $writerAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $name), [ref]$null, [ref]$null)
+    $cliEnd = @($writerAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and (& $isCliPatch $node) }, $true) |
+        ForEach-Object { $_.Extent.EndOffset })
+    $outputPaths = @(Get-NamedCommands $writerAst 'Test-PatchingReport' | Where-Object { $cliEnd.Count -eq 1 -and $_.Extent.StartOffset -gt $cliEnd[0] } |
+        ForEach-Object {
+            $elements = @($_.CommandElements)
+            $given = @(for ($i = 0; $i -lt $elements.Count - 1; $i++) {
+                    if ($elements[$i] -is [System.Management.Automation.Language.CommandParameterAst] -and $elements[$i].ParameterName -eq 'OutputPath') {
+                        $elements[$i + 1].Extent.Text } })
+            if ($given.Count -eq 1) { $given[0] } else { "$($given.Count) -OutputPath" } })
+    Assert-True ($outputPaths.Count -eq 1 -and $outputPaths[0] -ceq '$(if ($null -ne $outHandle) { $out } else { '''' })') `
+        "$name hands the report check an APK path it doesn't hold: $($outputPaths -join '; ')"
+    $handleUses = @($writerAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.MemberExpressionAst] -and
+                $node.Expression.Extent.Text -cin @('$outHandle', '$resultHandle') -and $node.Member.Extent.Text -cnotin @('Position', 'Read') }, $true) |
+        ForEach-Object { $_.Extent.Text })
+    $handleSets = @($writerAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+                $node.Left.Extent.Text -cin @('$outHandle', '$resultHandle') }, $true) | ForEach-Object { $_.Extent.Text } |
+        Where-Object { $_ -cnotmatch '^\$(outHandle|resultHandle) = (\$null|Open-HeldFile -Path \$\w+ -What .+)\z' })
+    Assert-True ($handleUses.Count -eq 0 -and $handleSets.Count -eq 0) `
+        "$name lets go of a held output, or sets its handle, outside the finally that disposes it: $(@($handleUses) + @($handleSets) -join '; ')"
+}
+$verifyReportReads = @(Get-NamedCommands ([System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'verify-all-patches.ps1'),
+            [ref]$null, [ref]$null)) 'Get-Content' | Where-Object { $_.Extent.Text -clike 'Get-Content -LiteralPath $result *' } | ForEach-Object {
+        $guard = $_
+        while ($null -ne $guard -and $guard -isnot [System.Management.Automation.Language.IfStatementAst]) { $guard = $guard.Parent }
+        if ($guard) { $guard.Clauses[0].Item1.Extent.Text } else { '(no if)' } })
+Assert-True (($verifyReportReads -join '; ') -ceq '$null -ne $resultHandle') `
+    "verify-all-patches.ps1 reads the CLI's report without its handle holding it: $($verifyReportReads -join '; ')"
+# Each resource check holds what the table and its files changed to resource-delta-allowlist.txt,
+# with the run's patches and the ones they pull in as HUSHTUMBLR_PATCH_SELECTION, set in the try
+# around the call and put back in its finally.
+foreach ($resourceRun in @(@{ Name = 'verify-all-patches.ps1'; Names = '$names' }, @{ Name = 'build-release-receipt.ps1'; Names = '$patchNames' },
+        @{ Name = 'patch-for-device.ps1'; Names = '$names' })) {
+    $runAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot $resourceRun.Name), [ref]$null, [ref]$null)
+    $selection = '(@(' + $resourceRun.Names + ') + @($dependencyNames)) -join "`n"'
+    $resourceCalls = @($runAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
+                $node.Extent.Text -match '^&[^\r\n]*ResourceTableCheck\.java' }, $true))
+    $wired = @($resourceCalls | Where-Object {
+            $call = $_
+            $around = $call
+            while ($null -ne $around -and $around -isnot [System.Management.Automation.Language.TryStatementAst]) { $around = $around.Parent }
+            $setsIn = { param($Block) if ($null -eq $Block) { return '' }
+                @($Block.FindAll({ param($node) $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+                            $node.Left.Extent.Text -ceq '$env:HUSHTUMBLR_PATCH_SELECTION' }, $true) | ForEach-Object { $_.Right.Extent.Text }) -join '; ' }
+            $null -ne $around -and @($call.CommandElements)[-1].Extent.Text -ceq "(Join-Path `$PSScriptRoot 'resource-delta-allowlist.txt')" -and
+                (& $setsIn $around.Body) -ceq $selection -and (& $setsIn $around.Finally) -ceq '$selectionBefore' })
+    Assert-True ($resourceCalls.Count -eq 1 -and $wired.Count -eq 1) `
+        "$($resourceRun.Name) doesn't hold its resource check to resource-delta-allowlist.txt for the patches it selected."
+}
+# The allowlist's sections are [rebuild] and patches the catalog lists.
+$resourceSections = @(Get-Content -LiteralPath (Join-Path $PSScriptRoot 'resource-delta-allowlist.txt') |
+    Where-Object { $_ -match '^\[(.+)\]$' } | ForEach-Object { $Matches[1] })
+$catalogNames = @($catalog.patches | ForEach-Object { [string]$_.name })
+$strangeSections = @($resourceSections | Where-Object { $_ -cne 'rebuild' -and $catalogNames -cnotcontains $_ })
+Assert-True ($resourceSections -ccontains 'rebuild' -and $strangeSections.Count -eq 0) `
+    "resource-delta-allowlist.txt has sections for no patch the catalog lists: $($strangeSections -join ', ')"
+# The dex delta allowlist's sections are patches the catalog lists: alternatives joined by " | ",
+# each one patch or several that write the code together joined by " + ". The check is tried on
+# made-up headers too, so a header DexDiff reads can't fail it and a misspelled one can't pass.
+$dexSections = @(Get-Content -LiteralPath (Join-Path $PSScriptRoot 'dex-delta-allowlist.txt') |
+    Where-Object { $_ -match '^\[(.+)\]$' } | ForEach-Object { $Matches[1] })
+$isStrangeDexSection = { param([string]$Header)
+    @($Header -split ' \| ' | ForEach-Object { $_ -split ' \+ ' } | Where-Object { $catalogNames -cnotcontains $_ }).Count -gt 0
+}
+$firstName, $secondName = $catalogNames[0], $catalogNames[1]
+foreach ($case in @(@("$firstName + $secondName", $false), @("$firstName | $firstName + $secondName", $false),
+        @("$firstName+$secondName", $true), @("$firstName + Not a patch", $true), @("Not a patch | $secondName", $true))) {
+    Assert-True ((& $isStrangeDexSection $case[0]) -eq $case[1]) `
+        "The dex allowlist header check read [$($case[0])] as $(if ($case[1]) { 'naming only catalog patches' } else { 'naming a patch the catalog lacks' })."
+}
+$strangeDexSections = @($dexSections | Where-Object { & $isStrangeDexSection $_ })
+Assert-True ($dexSections.Count -gt 0 -and $strangeDexSections.Count -eq 0) `
+    "dex-delta-allowlist.txt has sections naming a patch the catalog doesn't list: $($strangeDexSections -join ', ')"
+# Each script that patches hands the verifier the bundle it patched with by the path of a handle it
+# holds for the whole run, and the verifier hands DexDiff the path of its own hold, so a bundle
+# swapped after the patch can't stand in for the one the patcher read. Each is also tried with that
+# wiring taken out, so the check can't pass by passing everything.
+$holdsBundle = { param([string]$Text, [string]$Variable, [bool]$Hands)
+    $ast = [System.Management.Automation.Language.Parser]::ParseInput($Text, [ref]$null, [ref]$null)
+    $assignments = @($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.AssignmentStatementAst] }, $true))
+    $assigned = @($assignments | Where-Object { $_.Left.Extent.Text -eq $Variable })
+    $heldAt = @($assigned | Where-Object { $_.Right.Extent.Text -ceq 'Get-HeldPath -Stream $bundleHeld' })
+    $opens = @($assignments | Where-Object { $_.Left.Extent.Text -ceq '$bundleHeld' -and $_.Right.Extent.Text -clike 'Open-HeldFile *' })
+    $later = @(if ($heldAt.Count -eq 1) { $assigned | Where-Object { $_.Extent.StartOffset -gt $heldAt[0].Extent.StartOffset } })
+    $disposed = @($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.TryStatementAst] }, $true) |
+        Where-Object { $null -ne $_.Finally -and $_.Finally.Extent.Text -match '\$bundleHeld\b' }).Count -gt 0
+    $handed = $true
+    if ($Hands) {
+        $calls = @($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] }, $true) |
+            Where-Object { $_.Extent.Text -match "^&\s*\(Join-Path \`$PSScriptRoot 'verify-injected-registers\.ps1'\)" })
+        $handed = $calls.Count -eq 1 -and @(for ($k = 0; $k + 1 -lt $calls[0].CommandElements.Count; $k++) {
+                $element = $calls[0].CommandElements[$k]
+                if ($element -is [System.Management.Automation.Language.CommandParameterAst] -and $element.ParameterName -eq 'Bundle' -and
+                    $calls[0].CommandElements[$k + 1].Extent.Text -eq $Variable) { $true } }).Count -eq 1
+    }
+    $heldAt.Count -eq 1 -and $opens.Count -eq 1 -and $later.Count -eq 0 -and $disposed -and $handed
+}
+foreach ($bundleRun in @(@{ Name = 'verify-all-patches.ps1'; Variable = '$Bundle'; Hands = $true; Cut = ' -Bundle $Bundle' }
+        @{ Name = 'patch-for-device.ps1'; Variable = '$bundle'; Hands = $true; Cut = ' -Bundle $bundle' }
+        @{ Name = 'build-release-receipt.ps1'; Variable = '$Bundle'; Hands = $true; Cut = ' -Bundle $Bundle' }
+        @{ Name = 'verify-injected-registers.ps1'; Variable = '$bundlePath'; Hands = $false; Cut = 'Get-HeldPath -Stream $bundleHeld'; Into = '$Bundle' })) {
+    $runText = [System.IO.File]::ReadAllText((Join-Path $PSScriptRoot $bundleRun.Name))
+    $cutText = $runText.Replace($bundleRun.Cut, [string]$bundleRun.Into)
+    Assert-True ((& $holdsBundle $runText $bundleRun.Variable $bundleRun.Hands) -and $cutText -cne $runText -and
+        -not (& $holdsBundle $cutText $bundleRun.Variable $bundleRun.Hands)) `
+        "$($bundleRun.Name) doesn't hand on the bundle by the path of a handle it holds for the whole run, or the check passes it without that."
+}
+# A kept run is copied from the handles the run held, never from a path.
+$verifyAllAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'verify-all-patches.ps1'), [ref]$null, [ref]$null)
+$keepCalls = @(Get-NamedCommands $verifyAllAst 'Save-AppliedRecord' | ForEach-Object { $_.Extent.Text })
+Assert-True ($keepCalls.Count -eq 1 -and $keepCalls[0] -clike '*-PatchedApk $outHandle*' -and $keepCalls[0] -clike '*-Result $resultHandle *') `
+    "verify-all-patches.ps1 keeps a run from something other than its held handles: $($keepCalls -join '; ')"
 # The receipt builder checks its whole fixture list before it merges any fixture.
 $receiptAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'build-release-receipt.ps1'), [ref]$null, [ref]$null)
 $fixtureCheckAt = Get-FirstCommandOffset $receiptAst { param($node) $node.GetCommandName() -eq 'Assert-AuthenticInput' }
 Assert-True ($fixtureCheckAt -ge 0 -and $fixtureCheckAt -lt (Get-FirstCommandOffset $receiptAst $isMerge)) `
     'build-release-receipt.ps1 merges a fixture before it has checked every fixture (Assert-AuthenticInput), or never checks them.'
-# The verifier holds whatever merge it compares to the record, a merge it was handed included, so
-# that check can't sit behind a condition.
+# It names each fixture by the digest the held merge was made from, never by hashing its path: the
+# hashes it takes itself are the bundle's, which the scan has to find, and the extension payloads'
+# inside it (Get-ExtensionPayloads, handed the bundle alone), and the target's source.sha256 is
+# what Get-HeldSourceSha256 gives.
+$sourceDigests = @(Get-NamedCommands $receiptAst 'Get-HeldSourceSha256' | ForEach-Object { $_.Extent.Text })
+$receiptHashNodes = @(foreach ($name in 'Get-Sha256Hex', 'Get-FileHash', 'Get-StreamSha256') { Get-NamedCommands $receiptAst $name })
+$receiptHashNodes += @($receiptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.InvokeMemberExpressionAst] -and
+            $node.Member.Extent.Text -match '^(ComputeHash|HashData|TransformBlock|TransformFinalBlock)$' }, $true))
+$payloadFunction = @($receiptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and
+            $node.Name -ceq 'Get-ExtensionPayloads' }, $true))
+$payloadCalls = @(Get-NamedCommands $receiptAst 'Get-ExtensionPayloads' | ForEach-Object { $_.Extent.Text })
+$receiptHashes = @($receiptHashNodes | Where-Object { $payloadFunction.Count -ne 1 -or
+        $_.Extent.StartOffset -lt $payloadFunction[0].Extent.StartOffset -or $_.Extent.EndOffset -gt $payloadFunction[0].Extent.EndOffset } |
+    ForEach-Object { $_.Extent.Text })
+Assert-True ($payloadFunction.Count -eq 1 -and ($payloadCalls -join '; ') -ceq 'Get-ExtensionPayloads -BundlePath $Bundle') `
+    "build-release-receipt.ps1 hashes extension payloads of something other than the bundle: $($payloadCalls -join '; ')"
+$sourceEntries = @($receiptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.HashtableAst] }, $true) |
+    ForEach-Object { $_.KeyValuePairs } | Where-Object { $_.Item1.Extent.Text -ceq 'source' } | ForEach-Object { $_.Item2.Extent.Text })
+$heldSourceEntries = @($sourceEntries | Where-Object {
+        $_ -match '(?m)^\s*sha256\s*=\s*\(Get-HeldSourceSha256 -Merged \$patchInput\)\.ToUpperInvariant\(\)\r?$' -and
+        @([regex]::Matches($_, '(?m)^\s*sha256\s*=')).Count -eq 1 })
+# The bundle an unsigned universal APK was trusted on is named the same way, from the held merge.
+$vouchDigests = @(Get-NamedCommands $receiptAst 'Get-HeldSignedFormSha256' | ForEach-Object {
+        $statement = $_
+        while ($null -ne $statement -and $statement -isnot [System.Management.Automation.Language.AssignmentStatementAst]) { $statement = $statement.Parent }
+        if ($statement) { $statement.Extent.Text } else { $_.Extent.Text } })
+$vouchEntries = @($sourceEntries | Where-Object {
+        $_ -match '(?m)^\s*signedFormSha256\s*=\s*if \(\$vouchedBy\) \{ \$vouchedBy\.ToUpperInvariant\(\) \} else \{ \$null \}\r?$' -and
+        @([regex]::Matches($_, '(?m)^\s*signedFormSha256\s*=')).Count -eq 1 })
+# And $vouchedBy is that and nothing else: set once and read twice, in that entry. A second
+# assignment would name the bundle by whatever it computed.
+$receiptTokens = $null
+[void][System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'build-release-receipt.ps1'), [ref]$receiptTokens, [ref]$null)
+$vouchTokens = @($receiptTokens | Where-Object { $_.Text -match 'vouchedBy' })
+Assert-True (($vouchDigests -join '; ') -ceq '$vouchedBy = Get-HeldSignedFormSha256 -Merged $patchInput' -and $vouchEntries.Count -eq 1 -and
+    $vouchTokens.Count -eq 3) `
+    "build-release-receipt.ps1 doesn't name the bundle that vouched for a fixture by the held merge: $($vouchDigests -join '; ') ($($vouchTokens.Count) uses of `$vouchedBy)"
+Assert-True ($sourceDigests.Count -eq 1 -and $sourceDigests[0] -ceq 'Get-HeldSourceSha256 -Merged $patchInput' -and
+    ($receiptHashes -join '; ') -ceq 'Get-Sha256Hex -Path $Bundle' -and $sourceEntries.Count -eq 1 -and $heldSourceEntries.Count -eq 1) `
+    ("build-release-receipt.ps1 doesn't name its fixtures by the held merge's input alone: $($sourceDigests + $receiptHashes -join '; ') " +
+        "($($sourceEntries.Count) source entries, $($heldSourceEntries.Count) named by Get-HeldSourceSha256)")
+# It never reads a kept run: a kept run is a record and an APK any program of the same user can
+# write together, so it can't show which bundle made the APK, and the receipt is what a release is
+# trusted on. Every fixture is patched and checked here, with no condition around any of the three.
+$receiptReuse = @(foreach ($name in 'Get-AppliedRecordStore', 'Get-AppliedRecordKey', 'Find-AppliedRecord', 'Get-AppliedRecords', 'Close-AppliedRecord', 'Save-AppliedRecord') {
+        Get-NamedCommands $receiptAst $name | ForEach-Object { $_.Extent.Text } })
+$receiptReuse += @($receiptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.VariableExpressionAst] -and
+            @('recorded', 'AppliedDir') -contains $node.VariablePath.UserPath }, $true) | ForEach-Object { $_.Extent.Text })
+$receiptRuns = @($receiptAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
+            ((& $isCliPatch $node) -or $node.Extent.Text -match "^&[^\r\n]*ResourceTableCheck\.java" -or
+                $node.Extent.Text -match "^&\s*\(Join-Path \`$PSScriptRoot 'verify-injected-registers\.ps1'\)") }, $true))
+$guardedRuns = @($receiptRuns | Where-Object {
+        $inside = $false
+        for ($parent = $_.Parent; $null -ne $parent; $parent = $parent.Parent) {
+            if ($parent -is [System.Management.Automation.Language.IfStatementAst]) { $inside = $true }
+        }
+        $inside } | ForEach-Object { $_.Extent.Text })
+Assert-True ($receiptReuse.Count -eq 0 -and $receiptRuns.Count -eq 3 -and $guardedRuns.Count -eq 0) `
+    ("build-release-receipt.ps1 reads a kept run, or doesn't patch and check every fixture itself: " +
+        "$($receiptReuse + $guardedRuns -join '; ') ($($receiptRuns.Count) of 3 runs found)")
+# The release stage hands the receipt only parameters it has, so a release doesn't stop at a
+# parameter the receipt dropped (-AppliedDir went with the kept-run reuse). Each is named in the
+# call, so none can hide in a splatted table.
+$receiptParameters = @($receiptAst.ParamBlock.Parameters | ForEach-Object { $_.Name.VariablePath.UserPath })
+$releaseAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'release/release.ps1'), [ref]$null, [ref]$null)
+$receiptCalls = @($releaseAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
+            $node.Extent.Text -match "^&\s*\(Join-Path \`$Root 'scripts/build-release-receipt\.ps1'\)" }, $true))
+$unknownToReceipt = @($receiptCalls | ForEach-Object { $_.CommandElements } |
+    Where-Object { ($_ -is [System.Management.Automation.Language.CommandParameterAst] -and $receiptParameters -notcontains $_.ParameterName) -or
+        ($_ -is [System.Management.Automation.Language.VariableExpressionAst] -and $_.Splatted) } |
+    ForEach-Object { $_.Extent.Text })
+Assert-True ($receiptCalls.Count -eq 1 -and $unknownToReceipt.Count -eq 0) `
+    "release.ps1 doesn't call build-release-receipt.ps1 once with parameters it has: $($unknownToReceipt -join ', ')"
+# The verifier holds whatever merge it compares to the APKs that were checked, a merge it was
+# handed included, so that check can't sit behind a condition.
 $verifierAst = [System.Management.Automation.Language.Parser]::ParseFile((Join-Path $PSScriptRoot 'verify-injected-registers.ps1'),
     [ref]$null, [ref]$null)
 $recordChecks = @($verifierAst.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
@@ -4537,7 +5107,7 @@ $conditional = @($recordChecks | Where-Object {
         }
         $inside })
 Assert-True ($recordChecks.Count -eq 1 -and $conditional.Count -eq 0) `
-    'verify-injected-registers.ps1 does not hold the merge it compares to the record of its signer check on every run.'
+    'verify-injected-registers.ps1 does not hold the merge it compares to the APKs whose signer was checked on every run.'
 
 # Every script that patches holds the APK it made to what a device with 16 KB pages needs
 # (Assert-PageAlignment), against the stock APK the CLI was handed, once the CLI has patched. The
@@ -4558,6 +5128,43 @@ foreach ($name in @('patch-for-device.ps1', 'build-release-receipt.ps1', 'verify
             $pageChecks[0].Extent.Text -match '-Apk \$recorded\.PatchedApk -Stock \$patchInput ' -and $pageChecks[1].Extent.StartOffset -gt $signAt) `
             'patch-for-device.ps1 does not hold a kept APK to the 16 KB page check before it signs it, and the signed APK after.'
     }
+}
+# patch-for-device.ps1 holds the APK it hands on to the certificate of -KeyAlias in -Keystore: once,
+# by the path its handle is at, after the report check and before the copy to -OutputApk and the
+# install. The certificate is read off the keystore by the path it's held at, before apksigner or
+# the CLI signs with it. Each cut copy has to fail the rule.
+$checksDeviceSigner = {
+    param([string]$Text)
+    $ast = [System.Management.Automation.Language.Parser]::ParseInput($Text, [ref]$null, [ref]$null)
+    $named = { param([string]$Name) @($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.CommandAst] -and
+                    $node.GetCommandName() -eq $Name }, $true)) }
+    $signerReads = & $named 'Get-ApkSigners'
+    $certificateReads = & $named 'Get-KeystoreCertificate'
+    $assigned = { param([string]$Left, [string]$Right) @($ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.AssignmentStatementAst] -and
+                    $node.Left.Extent.Text -ceq $Left -and $node.Right.Extent.Text -ceq $Right }, $true)) }
+    $held = & $assigned '$out' 'Get-HeldPath -Stream $outHandle'
+    $keystoreHeld = & $assigned '$Keystore' 'Get-HeldPath -Stream $keystoreHeld'
+    $earlyRead = $Text.IndexOf('if (Test-Path -LiteralPath $Keystore -PathType Leaf) { . $readKeystore }')
+    $signs = @($Text.IndexOf('& $apksigner sign '), $Text.IndexOf("'--keystore', `$Keystore"))
+    $reportCheck = Get-FirstCommandOffset $ast { param($node) $node.GetCommandName() -eq 'Test-PatchingReport' }
+    $install = Get-FirstCommandOffset $ast { param($node) $node.GetCommandName() -eq 'Install-HushAndroidApk' }
+    $copy = $Text.IndexOf('$outputReservation.Write(')
+    $keystoreHeld.Count -eq 1 -and $earlyRead -ge 0 -and @($signs | Where-Object { $_ -le $earlyRead }).Count -eq 0 -and
+    $signerReads.Count -eq 1 -and $certificateReads.Count -eq 1 -and $held.Count -eq 1 -and $reportCheck -ge 0 -and $install -ge 0 -and $copy -ge 0 -and
+        $signerReads[0].Extent.Text -cmatch '^Get-ApkSigners -Apk \$out -Apksigner ' -and
+        $certificateReads[0].Extent.Text -cmatch '^Get-KeystoreCertificate -Keystore \$Keystore -Alias \$KeyAlias ' -and
+        $signerReads[0].Extent.StartOffset -gt $held[0].Extent.EndOffset -and $signerReads[0].Extent.StartOffset -gt $reportCheck -and
+        $signerReads[0].Extent.EndOffset -lt $copy -and $signerReads[0].Extent.EndOffset -lt $install
+}
+$deviceText = [IO.File]::ReadAllText((Join-Path $PSScriptRoot 'patch-for-device.ps1'))
+Assert-True (& $checksDeviceSigner $deviceText) `
+    "patch-for-device.ps1 doesn't hold the APK it hands on to the keystore alias's certificate, by its held path, before the copy and the install."
+foreach ($cut in @(@{ From = 'Get-ApkSigners -Apk $out '; To = 'Get-ApkSigners -Apk $recorded.PatchedApk ' },
+        @{ From = '$keyCertificate = Get-KeystoreCertificate '; To = '$keyCertificate = Get-Item ' },
+        @{ From = 'if (Test-Path -LiteralPath $Keystore -PathType Leaf) { . $readKeystore }'; To = '' },
+        @{ From = '$Keystore = Get-HeldPath -Stream $keystoreHeld'; To = '$Keystore = $Keystore' })) {
+    Assert-True ($deviceText.Contains($cut.From) -and -not (& $checksDeviceSigner $deviceText.Replace($cut.From, $cut.To))) `
+        "The device signer rule passed a copy of patch-for-device.ps1 with '$($cut.From)' made '$($cut.To)'."
 }
 
 Write-Host '[scripts] split bundle contracts passed'
@@ -5001,7 +5608,7 @@ try {
         'if /i "%~nx4"=="ResourceTableCheck.java" goto resources',
         'if /i "%~nx4"=="DexDiff.java" goto dexdiff',
         'if /i "%~nx4"=="HostReferences.java" goto references',
-        'set "OUT=" & set "RESULT=" & set "LAST=" & set "PREV=" & set "FORCED=0"',
+        'set "OUT=" & set "RESULT=" & set "LAST=" & set "PREV=" & set "FORCED=0" & set "ENABLED=" & set "SIGNS=0"',
         'shift',
         'shift',
         'rem patch-for-device.ps1 hands the CLI one argument file, a quoted value a line with',
@@ -5024,7 +5631,11 @@ try {
         ':take',
         'if "!PREV!"=="-o" set "OUT=!V!"',
         'if "!PREV!"=="-r" set "RESULT=!V!"',
+        'rem An option value is logged with the patch enabled before it, the one the CLI gives it to.',
+        'if "!PREV!"=="-e" set "ENABLED=!V!"',
+        'if "!PREV!"=="-O" >>"!HERE!options.log" echo !ENABLED!: !V!',
         'if "!V!"=="-f" set "FORCED=1"',
+        'if "!V!"=="--keystore" set "SIGNS=1"',
         'set "PREV=!V!"',
         'set "LAST=!V!"',
         'exit /b 0',
@@ -5046,11 +5657,18 @@ try {
         'rem A case that needs something to change while a fixture is patched leaves this behind.',
         'if exist "!HERE!during-patch.cmd" call "!HERE!during-patch.cmd"',
         'copy /y "!SRC!.result.json" "!RESULT!" >nul || exit /b 3',
+        'rem A case that leaves cli-leaves-no-apk.txt behind gets a clean exit with the report and no APK.',
+        'if exist "!HERE!cli-leaves-no-apk.txt" exit /b 0',
         'copy /y "!HERE!patched.apk" "!OUT!" >nul || exit /b 4',
         'copy /y "!SRC!.patched.txt" "!OUT!.xmltree" >nul || exit /b 5',
+        'rem Given a keystore it signs with that alias, which the stand-in apksigner reads off a .signer file.',
+        'del "!OUT!.signer" >nul 2>&1',
+        'if "!SIGNS!"=="1" >"!OUT!.signer" echo stand-in alias',
         'exit /b 0',
         'rem MergeSplits.java <split directory> <merged.apk>. The base APK the scripts unpacked into that',
-        'rem directory names the fixture it came from. A case can make it fail, or leave no APK behind.',
+        'rem directory names the fixture it came from. It prints the digest of what it wrote on standard',
+        'rem output, as the merger does. A case can make it fail, leave no APK behind, or print no digest,',
+        'rem two, one on standard error alone, or one of other bytes.',
         ':merge',
         'set "BUNDLE="',
         'for %%F in ("%~5\*.apk") do for /f "tokens=1,* delims==" %%A in (''findstr /b /l /c:"N: stand-in-bundle=" "%%~F"'') do set "BUNDLE=%%B"',
@@ -5063,9 +5681,22 @@ try {
         'if not defined BUNDLE exit /b 6',
         'copy /y "!BUNDLE!.merged.txt" "%~6" >nul || exit /b 7',
         '>"%~6.source" echo !BUNDLE!',
+        'set "DIGEST="',
+        'for /f "skip=1 delims=" %%H in (''certutil -hashfile "%~6" SHA256'') do if not defined DIGEST set "DIGEST=%%H"',
+        'if exist "!HERE!merge-prints-no-digest.txt" exit /b 0',
+        'if exist "!HERE!merge-prints-digest-on-stderr.txt" (',
+        '    echo [merge] sha256 !DIGEST! 1>&2',
+        '    exit /b 0',
+        ')',
+        'if exist "!HERE!merge-prints-other-digest.txt" set "DIGEST=0000000000000000000000000000000000000000000000000000000000000000"',
+        'echo [merge] sha256 !DIGEST!',
+        'if exist "!HERE!merge-prints-two-digests.txt" echo [merge] sha256 !DIGEST!',
         'exit /b 0',
-        'rem ResourceTableCheck.java <stock> <patched> <report>: keeps what it was handed as the stock side.',
+        ('rem ResourceTableCheck.java <stock> <patched> <report> <allowlist>: keeps what it was handed as the stock side, ' +
+            'and stops on a run that hands it no allowlist or no patch selection.'),
         ':resources',
+        'if not exist "%~8" exit /b 9',
+        'if not defined HUSHTUMBLR_PATCH_SELECTION exit /b 10',
         'copy /y "%~5" "!HERE!resource-stock.txt" >nul || exit /b 8',
         'echo Note: the source launcher compiled with a warning 1>&2',
         'echo [resources] stand-in: every stock resource resolves in the patched table',
@@ -5118,10 +5749,18 @@ try {
     # says how this one is signed: stand-in-unsigned and stand-in-tampered don't verify,
     # stand-in-foreign is signed by another certificate alone, stand-in-second-signer by another
     # one beside Tumblr's, and stand-in-stamp carries a Source Stamp beside Tumblr's, which is the
-    # store's certificate and doesn't count. Without a marker the answer is Tumblr's signer.
+    # store's certificate and doesn't count. stand-in-late-signer adds one that sorts after the
+    # alias's, and stand-in-unverified names the alias's signer but doesn't verify. Without a
+    # marker the answer is the alias's certificate for an APK with a .signer file beside it, which
+    # the stand-in signers leave, and Tumblr's otherwise.
     # It signs too: patch-for-device.ps1 signs a kept gate run with it. "sign ... --out <apk> <in>"
-    # copies the input and the manifest beside it, and notes the call in apksigner.log.
+    # copies the input (or apksigner-swap.apk, when a case leaves one beside it) and the manifest
+    # beside the input, notes the call in apksigner.log and leaves the .signer file, unless a case
+    # leaves apksigner-unmarked.txt behind. A case that leaves apksigner-swaps-keystore.txt has it
+    # try to copy that over the keystore it was handed first, and log whether it could.
     $foreignSigner = '0123456789abcdef' * 4
+    $aliasSigner = '89abcdef01234567' * 4
+    $lateSigner = 'fedcba9876543210' * 4
     Set-Content -LiteralPath (Join-Path $tools 'apksigner.bat') -Encoding ASCII -Value @(
         '@echo off',
         'setlocal EnableExtensions EnableDelayedExpansion',
@@ -5137,26 +5776,86 @@ try {
         'findstr /l /c:"stand-in-unsigned" "!APK!" >nul 2>&1 && (echo DOES NOT VERIFY& echo ERROR: Missing META-INF/MANIFEST.MF& exit /b 1)',
         ('findstr /l /c:"stand-in-tampered" "!APK!" >nul 2>&1 && (echo DOES NOT VERIFY& echo ERROR: APK Signature Scheme v2 ' +
             'signer #1: APK integrity check failed. CHUNKED_SHA256 digest mismatch.& exit /b 1)'),
+        ("findstr /l /c:`"stand-in-unverified`" `"!APK!`" >nul 2>&1 && (echo Signer #1 certificate SHA-256 digest: $aliasSigner& " +
+            'echo DOES NOT VERIFY& echo ERROR: APK Signature Scheme v2 signer #1: malformed additional attribute& exit /b 1)'),
         "findstr /l /c:`"stand-in-foreign`" `"!APK!`" >nul 2>&1 && (echo Signer #1 certificate SHA-256 digest: $foreignSigner& exit /b 0)",
+        'if exist "!APK!.signer" goto alias',
         "echo Signer #1 certificate SHA-256 digest: $($releaseSigner[0])",
+        'goto more',
+        ':alias',
+        "echo Signer #1 certificate SHA-256 digest: $aliasSigner",
+        ':more',
         "findstr /l /c:`"stand-in-second-signer`" `"!APK!`" >nul 2>&1 && echo Signer #2 certificate SHA-256 digest: $foreignSigner",
+        "findstr /l /c:`"stand-in-late-signer`" `"!APK!`" >nul 2>&1 && echo Signer #2 certificate SHA-256 digest: $lateSigner",
         "findstr /l /c:`"stand-in-stamp`" `"!APK!`" >nul 2>&1 && echo Source Stamp Signer certificate SHA-256 digest: $foreignSigner",
         'exit /b 0',
         ':sign',
-        'set "OUT=" & set "LAST=" & set "PREV=" & set "ALIAS="',
+        'set "OUT=" & set "LAST=" & set "PREV=" & set "ALIAS=" & set "KS="',
         ':next',
         'shift',
         'if "%~1"=="" goto signed',
         'if "!PREV!"=="--out" set "OUT=%~1"',
         'if "!PREV!"=="--ks-key-alias" set "ALIAS=%~1"',
+        'if "!PREV!"=="--ks" set "KS=%~1"',
         'set "PREV=%~1"',
         'set "LAST=%~1"',
         'goto next',
         ':signed',
         '>>"!HERE!apksigner.log" echo sign alias=!ALIAS! in=!LAST! out=!OUT!',
-        'copy /y "!LAST!" "!OUT!" >nul || exit /b 3',
+        'if not exist "!HERE!apksigner-swaps-keystore.txt" goto copied',
+        'copy /y "!HERE!apksigner-swaps-keystore.txt" "!KS!" >nul 2>&1 && (>>"!HERE!apksigner.log" echo keystore swapped) || (>>"!HERE!apksigner.log" echo keystore held)',
+        ':copied',
+        'set "FROM=!LAST!"',
+        'if exist "!HERE!apksigner-swap.apk" set "FROM=!HERE!apksigner-swap.apk"',
+        'copy /y "!FROM!" "!OUT!" >nul || exit /b 3',
         'if exist "!LAST!.xmltree" copy /y "!LAST!.xmltree" "!OUT!.xmltree" >nul',
+        'del "!OUT!.signer" >nul 2>&1',
+        'if not exist "!HERE!apksigner-unmarked.txt" >"!OUT!.signer" echo stand-in alias',
         'exit /b 0')
+    # A keytool beside the stand-in java, which patch-for-device.ps1 reads the signing alias's
+    # certificate with (Get-KeystoreCertificate). It prints the alias's own certificate, which isn't
+    # Tumblr's, the way keytool -list -v prints a fingerprint, and notes what it was handed, with the
+    # password it found in the environment, in keytool.log. A case that leaves keytool-fails.txt
+    # behind gets the error a wrong password brings, and one that leaves keytool-bks-only.txt has a
+    # keystore it reads only as BKS through the BouncyCastle provider.
+    $keytoolLog = Join-Path $tools 'keytool.log'
+    $keytoolFlag = Join-Path $tools 'keytool-fails.txt'
+    $keytoolBksFlag = Join-Path $tools 'keytool-bks-only.txt'
+    Set-Content -LiteralPath (Join-Path $tools 'keytool.cmd') -Encoding ASCII -Value @(
+        '@echo off',
+        '>>"%~dp0keytool.log" echo %* pass=%HUSHTUMBLR_KEYTOOL_STOREPASS%',
+        'if exist "%~dp0keytool-fails.txt" (echo keytool error: java.io.IOException: keystore password was incorrect& exit /b 1)',
+        'if not exist "%~dp0keytool-bks-only.txt" goto read',
+        'echo %* | findstr /l /c:"-storetype BKS -providerclass org.bouncycastle.jce.provider.BouncyCastleProvider -providerpath " >nul && goto read',
+        'echo keytool error: java.io.IOException: Invalid keystore format',
+        'exit /b 1',
+        ':read',
+        'echo Alias name: sideload',
+        'echo Certificate chain length: 1',
+        'echo Certificate[1]:',
+        'echo Owner: CN=Stand-in',
+        'echo Certificate fingerprints:',
+        "echo 	 SHA1: $(@('00') * 20 -join ':')",
+        "echo 	 SHA256: $([regex]::Replace($aliasSigner.ToUpperInvariant(), '(..)(?!$)', '$1:'))",
+        'exit /b 0')
+    $standInKeystore = Join-Path $tools 'sideload.jks'
+    Set-Content -LiteralPath $standInKeystore -Value 'stand-in keystore' -Encoding ASCII
+    # A java launcher with no keytool beside it, such as Oracle's javapath shim: the keytool read is
+    # the one in the bin folder of the runtime it names, and with none named there's no keytool.
+    $shimHome = Join-Path $tools 'shim-runtime'
+    New-Item -ItemType Directory -Force -Path (Join-Path $shimHome 'bin'), (Join-Path $tools 'shim'), (Join-Path $tools 'bare') | Out-Null
+    Copy-Item -LiteralPath (Join-Path $tools 'keytool.cmd') -Destination (Join-Path $shimHome 'bin\keytool.cmd')
+    Set-Content -LiteralPath (Join-Path $tools 'shim\java.cmd') -Encoding ASCII -Value @(
+        '@echo off',
+        "if /i `"%~1`"==`"-XshowSettings:properties`" (echo Property settings:& echo     java.home = $shimHome& echo     java.version = 21) 1>&2",
+        'exit /b 0')
+    Set-Content -LiteralPath (Join-Path $tools 'bare\java.cmd') -Encoding ASCII -Value @('@echo off', 'exit /b 0')
+    $shimCertificate = Get-KeystoreCertificate -Keystore $standInKeystore -Alias 'sideload' -Password 'shim-password' -Java (Join-Path $tools 'shim\java.cmd') -DesktopJar $stubJar
+    Assert-True ($shimCertificate -ceq $aliasSigner -and
+        (Get-Content -LiteralPath (Join-Path $shimHome 'bin\keytool.log') -Raw) -like '*-alias sideload -storepass:env HUSHTUMBLR_KEYTOOL_STOREPASS pass=shim-password*') `
+        "The alias's certificate wasn't read with the keytool of the runtime a java launcher shim starts: '$shimCertificate'"
+    Assert-Throws { Get-KeystoreCertificate -Keystore $standInKeystore -Alias 'sideload' -Password 'p' -Java (Join-Path $tools 'bare\java.cmd') -DesktopJar $stubJar } `
+        '*No keytool beside *bare\java.cmd or in the bin folder of the runtime it starts*' 'A java with no keytool beside it or in its runtime found one.'
     # And a zipalign beside them, which every patched APK is held to for devices with 16 KB pages
     # (Assert-PageAlignment). It notes what it was asked in zipalign.log and passes the APK, unless
     # a case leaves zipalign-fails.txt behind. The real one is run against real archives in
@@ -5168,8 +5867,9 @@ try {
         'if exist "%~dp0zipalign-fails.txt" (echo Verification FAILED& exit /b 1)',
         'echo Verification successful',
         'exit /b 0')
+    # With the Source Stamp's certificate digest a Play build carries, which apksigner drops.
     New-TestBundleArchive -Path (Join-Path $tools 'patched.apk') -Entries ([ordered]@{
-        'AndroidManifest.xml' = 'binary manifest'; 'classes.dex' = "dex`n035" })
+        'AndroidManifest.xml' = 'binary manifest'; 'classes.dex' = "dex`n035"; 'stamp-cert-sha256' = 'stamp' })
 
     $dependencyNamesHere = @(Get-PatchDependencyNames -PatchList $releaseCatalog -RequestedNames $releaseNames)
     $fixturePaths = @{}
@@ -5283,6 +5983,8 @@ try {
         (@($stampedRecord.signers) -join ',') -ceq $releaseSigner[0] -and
         $stampedRecord.baseSha256 -ceq (Get-TextSha256 $stampedBase) -and
         $stampedRecord.mergedSha256 -ceq (Get-Sha256Hex -Path $authMerge).ToLowerInvariant() -and
+        $stampedRecord.sourceSha256 -ceq (Get-Sha256Hex -Path $stampedBundle).ToLowerInvariant() -and
+        (Get-HeldSourceSha256 -Merged $authMerge) -ceq $stampedRecord.sourceSha256 -and
         ((@($stampedRecord.apks | ForEach-Object { "$($_.name)=$($_.sha256)=$($_.split)" }) | Sort-Object) -join ';') -ceq
             ((@("com.tumblr.apk=$(Get-TextSha256 $stampedBase)=", "config.arm64_v8a.apk=$(Get-TextSha256 $stampedSplit)=config.arm64_v8a") |
                 Sort-Object) -join ';') -and
@@ -5296,8 +5998,9 @@ try {
     $plainRecord = Get-Content -LiteralPath "$authMerge.authentic.json" -Raw | ConvertFrom-Json
     Assert-True ($plainCopy -eq $authMerge -and [System.IO.File]::ReadAllText($authMerge) -ceq $authBase -and
         -not (Test-Path -LiteralPath $mergeLog) -and $plainRecord.baseSha256 -ceq (Get-TextSha256 $authBase) -and
-        $plainRecord.mergedSha256 -ceq $plainRecord.baseSha256 -and -not $plainRecord.signedForm) `
-        'A plain APK signed by Tumblr was not handed on as a checked copy with its record.'
+        $plainRecord.mergedSha256 -ceq $plainRecord.baseSha256 -and -not $plainRecord.signedForm -and
+        $plainRecord.sourceSha256 -ceq (Get-TextSha256 $authBase) -and (Get-HeldSourceSha256 -Merged $authMerge) -ceq $plainRecord.sourceSha256) `
+        'A plain APK signed by Tumblr was not handed on as a checked copy with its record, named by its own digest.'
     $keptCopy = Get-Sha256Hex -Path $authMerge
     $keptRecord = Get-Sha256Hex -Path "$authMerge.authentic.json"
     foreach ($plainCase in @(
@@ -5315,6 +6018,19 @@ try {
             @(Get-ChildItem -LiteralPath $authRoot -Force -Filter '.splits-*').Count -eq 0) `
             "Refusing a plain APK $($plainCase.Case) changed the last checked copy or left something behind."
     }
+    # What Get-MergedApk hands back is held, in this process, from that moment until Close-MergedApk:
+    # no handle that could write to it opens (a sharing violation, 0x80070020), so the CLI, the
+    # signer and every check read the bytes that were checked. Let go, it is an ordinary file again.
+    # A second process is tried against the real merger in test-resource-table-check.ps1.
+    $openToWrite = { [System.IO.File]::Open($authMerge, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Write,
+            [System.IO.FileShare]'ReadWrite, Delete').Dispose() }
+    $turnedAway = $null
+    try { & $openToWrite } catch { $turnedAway = $_.Exception.GetBaseException() }
+    Assert-True ((Get-HeldMerges).ContainsKey($authMerge) -and $turnedAway -is [System.IO.IOException] -and
+        $turnedAway.HResult -eq -2147024864) "A checked copy that Get-MergedApk still holds could be opened to write: $turnedAway"
+    Close-MergedApk -Merged $authMerge
+    & $openToWrite
+    Assert-True (-not (Get-HeldMerges).ContainsKey($authMerge)) 'Close-MergedApk left the checked copy held.'
     $releaseBundle = Get-ReleaseBundlePath -Root $releaseRepo
     New-Item -ItemType Directory -Path (Split-Path -Parent $releaseBundle) -Force | Out-Null
     New-TestBundleArchive -Path $releaseBundle -Entries ([ordered]@{
@@ -5331,8 +6047,7 @@ try {
     # above, and what the builder says is kept in $builderSaid, warnings included.
     $builderSaid = ''
     function Invoke-ReceiptBuilder([string[]]$Fixtures, [string]$Bundle,
-            [string]$WorkDir = (Join-Path $releaseRoot 'work'), [string]$DesktopJar = $stubJar, [switch]$SkipAdvisoryCheck,
-            [string]$AppliedDir) {
+            [string]$WorkDir = (Join-Path $releaseRoot 'work'), [string]$DesktopJar = $stubJar, [switch]$SkipAdvisoryCheck) {
         Remove-Item -LiteralPath $javaLog, $mergeLog -Force -ErrorAction SilentlyContinue
         $saved = @{}
         foreach ($variable in @(Get-ChildItem Env: | Where-Object { $_.Name -like 'GIT_*' })) {
@@ -5346,7 +6061,6 @@ try {
                 Java = $stubJava; Aapt2 = $stubAapt2; AndroidJar = $stubAndroidJar; ApiVersions = $stubApiVersions }
             if ($Bundle) { $arguments['Bundle'] = $Bundle }
             if ($SkipAdvisoryCheck) { $arguments['SkipAdvisoryCheck'] = $true }
-            if ($AppliedDir) { $arguments['AppliedDir'] = $AppliedDir }
             $script:builderSaid = @(& (Join-Path $PSScriptRoot 'build-release-receipt.ps1') @arguments 3>&1 6>&1 |
                 ForEach-Object { "$_" }) -join "`n"
             if ($LASTEXITCODE -ne 0) { throw "build-release-receipt.ps1 exited $LASTEXITCODE." }
@@ -5394,6 +6108,9 @@ try {
             "The receipt says $label was $(if ($builtTarget.source.forced) { 'forced' } else { 'not forced' })."
         Assert-True ($builtTarget.source.sha256 -eq (Get-Sha256Hex -Path $fixturePaths[$label])) `
             "The receipt does not hash the $label fixture it was given."
+        # These fixtures are bundles, which vouch for themselves: the field is there, and null.
+        Assert-True ($null -ne $builtTarget.source.PSObject.Properties['signedFormSha256'] -and $null -eq $builtTarget.source.signedFormSha256) `
+            "The receipt names a bundle that vouched for the $label bundle: $($builtTarget.source.signedFormSha256)"
         Assert-True (@($builtTarget.patches | Where-Object { $_.applied }).Count -eq $releaseNames.Count) `
             "The receipt does not record every patch applied to $label."
         $stockMinSdk = if ($label -eq $newerBuild) { 36 } else { 21 }
@@ -5486,10 +6203,20 @@ try {
 
     # A merge that fails, and one that exits 0 and writes nothing, stop the run before the CLI
     # patches anything. base.apk is not what the CLI patches, so there's no receipt to fall back to.
+    # So does a merger that doesn't say what it wrote: the scripts take the merged APK only as the
+    # bytes whose digest the merger printed on its standard output, one line of it, and a merger
+    # that prints none, two, or one on standard error alone leaves nothing to hold the file to.
+    # One that prints the digest of other bytes is the same to them as a file swapped after it.
     $builtReceiptBeforeMerge = [System.IO.File]::ReadAllBytes($releaseReceipt)
     $brokenMerges = @(
         @{ Flag = 'merge-fails.txt'; Pattern = '*Could not merge tumblr-*.xapk into one APK (exit 9)*could not read the bundle*' },
-        @{ Flag = 'merge-writes-nothing.txt'; Pattern = '*The merge of tumblr-*.xapk wrote no APK at *stock-merged.apk*' })
+        @{ Flag = 'merge-writes-nothing.txt'; Pattern = '*The merge of tumblr-*.xapk wrote no APK at *stock-merged.apk*' },
+        @{ Flag = 'merge-prints-no-digest.txt'; Pattern = '*The merge of tumblr-*.xapk printed 0 digests of what it wrote on its standard output, where it prints one*' },
+        @{ Flag = 'merge-prints-digest-on-stderr.txt'; Pattern = '*The merge of tumblr-*.xapk printed 0 digests of what it wrote on its standard output, where it prints one*' },
+        @{ Flag = 'merge-prints-two-digests.txt'; Pattern = '*The merge of tumblr-*.xapk printed 2 digests of what it wrote on its standard output, where it prints one*' },
+        @{ Flag = 'merge-prints-other-digest.txt'
+            Pattern = ("*The merge of tumblr-*.xapk at *stock-merged.apk isn't what was written there: read through a handle nothing else can " +
+                "write past, it hashes to *, and what was written hashed to $('0' * 64).*") })
     foreach ($broken in $brokenMerges) {
         $flag = Join-Path $tools $broken.Flag
         Set-Content -LiteralPath $flag -Value 'on' -Encoding ASCII
@@ -5631,16 +6358,32 @@ try {
         (Test-Path -LiteralPath (Join-Path $keptRecord 'result.json')) -and (Test-Path -LiteralPath $javaLog)) `
         "A passing run with -KeepIn did not patch once and keep exactly one record: $said"
     $keptFacts = Get-Content -LiteralPath (Join-Path $keptRecord 'record.json') -Raw | ConvertFrom-Json
+    # The fixture is named by what its merge was made from: the APKs in it, each by the name it
+    # unpacks to (its file name, the extension in lower case) and its digest.
+    $fixtureZip = [System.IO.Compression.ZipFile]::OpenRead($newestFixture)
+    try {
+        $memberApks = @($fixtureZip.Entries | Where-Object { $_.FullName -like '*.apk' } | ForEach-Object {
+                $memberStream = $_.Open()
+                $memberSha = [System.Security.Cryptography.SHA256]::Create()
+                try {
+                    [pscustomobject]@{ Name = $_.Name.Substring(0, $_.Name.Length - 4) + '.apk'
+                        Sha256 = -join @($memberSha.ComputeHash($memberStream) | ForEach-Object { $_.ToString('x2') }) }
+                } finally { $memberSha.Dispose(); $memberStream.Dispose() } })
+    } finally { $fixtureZip.Dispose() }
     # Get-Sha256Hex writes upper case and the record lower case.
     Assert-True ($keptFacts.key -ceq $keptKey -and $keptFacts.inputs.bundle -eq (Get-Sha256Hex -Path $releaseBundle) -and
-        $keptFacts.inputs.fixture -eq (Get-Sha256Hex -Path $newestFixture) -and
+        $memberApks.Count -eq 2 -and $keptFacts.inputs.input -ceq (Get-InputIdentity -Apks $memberApks) -and
+        $null -eq $keptFacts.inputs.fixture -and
         $keptFacts.inputs.files.'DexDiff.java' -eq (Get-Sha256Hex -Path (Join-Path $PSScriptRoot 'DexDiff.java')) -and
-        $keptFacts.patchedSha256 -eq (Get-Sha256Hex -Path (Join-Path $keptRecord 'patched.apk'))) `
+        $keptFacts.patchedSha256 -eq (Get-Sha256Hex -Path (Join-Path $keptRecord 'patched.apk')) -and
+        $keptFacts.resultSha256 -eq (Get-Sha256Hex -Path (Join-Path $keptRecord 'result.json'))) `
         "The kept record doesn't name the bundle, fixture and verifier hashes it was made from: $($keptFacts | ConvertTo-Json -Depth 6 -Compress)"
+    # The second run merges the fixture as any run does, since the key names what the held merge
+    # was made from, and stops there: no patch and no resource check.
     $said = Invoke-VerifyAll -Apk $newestFixture -KeepIn $recordStore
     Assert-True ($said -like "*reusing the run kept as $keptKey*" -and -not (Test-Path -LiteralPath $javaLog) -and
-        -not (Test-Path -LiteralPath $mergeLog) -and -not (Test-Path -LiteralPath $resourceStock)) `
-        "A second run with the same key patched again or didn't say it reused the kept run: $said"
+        (Test-Path -LiteralPath $mergeLog) -and -not (Test-Path -LiteralPath $resourceStock)) `
+        "A second run with the same key patched again, didn't merge to key on what it holds, or didn't say it reused the kept run: $said"
     # The machine-wide store variable stands in for -KeepIn.
     $env:HUSHTUMBLR_APPLY_RECORDS = $recordStore
     try {
@@ -5673,6 +6416,21 @@ try {
         $said -like "*kept this run as $keptKey*" -and
         (Get-Sha256Hex -Path $keptApk) -eq (Get-Content -LiteralPath (Join-Path $keptRecord 'record.json') -Raw | ConvertFrom-Json).patchedSha256) `
         "A record whose APK changed was reused, or the passing run didn't replace it: $said"
+    # A kept run whose report doesn't pass the report check, here one forged along with its digest
+    # so the record still holds together, is let go before the run patches again: a held file's
+    # folder can't be moved aside, so the passing run couldn't take its place otherwise.
+    $keptResult = Join-Path $keptRecord 'result.json'
+    $keptRecordFile = Join-Path $keptRecord 'record.json'
+    [IO.File]::WriteAllText($keptResult, '{"forged":true}')
+    $forged = Get-Content -LiteralPath $keptRecordFile -Raw | ConvertFrom-Json
+    $forged.resultSha256 = (Get-Sha256Hex -Path $keptResult).ToLowerInvariant()
+    [IO.File]::WriteAllText($keptRecordFile, ($forged | ConvertTo-Json -Depth 8))
+    $said = Invoke-VerifyAll -Apk $newestFixture -KeepIn $recordStore
+    $replaced = Get-Content -LiteralPath $keptRecordFile -Raw | ConvertFrom-Json
+    Assert-True ($said -like "*kept run $keptKey doesn't pass the report check*" -and (Test-Path -LiteralPath $javaLog) -and
+        $said -like "*kept this run as $keptKey*" -and (Get-Content -LiteralPath $keptResult -Raw) -notlike '*forged*' -and
+        $replaced.resultSha256 -eq (Get-Sha256Hex -Path $keptResult)) `
+        "A kept run whose report failed wasn't let go and replaced by the run that patched again: $said"
     # A run that fails a check, in a store of its own, leaves the store empty: no record and no
     # staging folder.
     $failedStore = Join-Path $releaseRoot 'applied-records-failed'
@@ -5704,10 +6462,17 @@ try {
         @(Get-Content -LiteralPath $zipalignLog).Count -eq 1) `
         "verify-all-patches.ps1 did not hold the patched APK to zipalign -c -P 16 -v 4 once: $(@(Get-Content -LiteralPath $zipalignLog -ErrorAction SilentlyContinue) -join '; ')"
 
-    # The receipt reads a kept run of each fixture instead of patching it, and still checks the
-    # report, manifests and delta, so the release check takes what it writes. The stand-in aapt2
-    # reads a manifest written beside an APK and a record keeps the APK alone, so the manifest the
-    # CLI stand-in wrote goes beside each kept APK here. A real aapt2 reads the APK itself.
+    # The receipt never reads a kept run, though the release gate keeps one of each fixture: a kept
+    # run is a record and an APK any program of the same user can write together, so it can't show
+    # which bundle made the APK. With a run of every fixture kept in the store
+    # HUSHTUMBLR_APPLY_RECORDS names, the receipt still patches each one, and the release check
+    # takes what it writes. The stand-in aapt2 reads a manifest written beside an APK and a record
+    # keeps the APK alone, so the manifest the CLI stand-in wrote goes beside each kept APK here for
+    # patch-for-device.ps1 below. A real aapt2 reads the APK itself. Nor can the receipt be handed
+    # a store: the parent of the commit that dropped reuse read kept runs only from -AppliedDir.
+    $storeParameters = @((Get-Command (Join-Path $PSScriptRoot 'build-release-receipt.ps1')).Parameters.Keys |
+        Where-Object { $_ -match 'Applied|Record|Kept|Keep|Reuse|Store' })
+    Assert-True ($storeParameters.Count -eq 0) "build-release-receipt.ps1 takes a store of kept runs: -$($storeParameters -join ', -')"
     $receiptStore = Join-Path $releaseRoot 'applied-records-receipt'
     foreach ($build in $builtBuilds) {
         $said = Invoke-VerifyAll -Apk $fixturePaths[$build] -KeepIn $receiptStore -Force:($build -eq $newerBuild)
@@ -5718,18 +6483,21 @@ try {
     Assert-True (@(Get-AppliedRecords -Store $receiptStore).Count -eq $builtBuilds.Count) `
         "The store doesn't hold one kept run per fixture: $(@(Get-StoreEntries $receiptStore).Name -join ', ')"
     $receiptBeforeKept = [IO.File]::ReadAllBytes($releaseReceipt)
+    $recordsBefore = $env:HUSHTUMBLR_APPLY_RECORDS
     try {
-        Invoke-ReceiptBuilder -Fixtures $allFixtures -AppliedDir $receiptStore
-        Assert-True (-not (Test-Path -LiteralPath $javaLog)) `
-            "The receipt patched a fixture a kept run covers: $(@(Get-Content -LiteralPath $javaLog -ErrorAction SilentlyContinue) -join '; ')"
-        Assert-True ([regex]::Matches($builderSaid, 'passed every check with this bundle in the run kept as').Count -eq $builtBuilds.Count) `
-            "The receipt did not say it read each fixture's kept run: $builderSaid"
+        $env:HUSHTUMBLR_APPLY_RECORDS = $receiptStore
+        Invoke-ReceiptBuilder -Fixtures $allFixtures
+        $keptPatchRuns = @(Get-Content -LiteralPath $javaLog -ErrorAction SilentlyContinue)
+        Assert-True (($keptPatchRuns -join "`n") -eq ($expectedRuns -join "`n")) `
+            "The receipt didn't patch every fixture while a kept run of each was in the store: $($keptPatchRuns -join '; ')"
+        Assert-True ($builderSaid -notlike '*run kept as*') "The receipt said it read a kept run: $builderSaid"
         $keptReceipt = Get-Content -LiteralPath $releaseReceipt -Raw | ConvertFrom-Json
         Assert-True ((@($keptReceipt.targets | ForEach-Object { [string]$_.source.versionName }) -join ',') -eq ($builtBuilds -join ',')) `
-            "The receipt read from kept runs does not hold one target per fixture: $($keptReceipt.targets.source.versionName -join ', ')"
+            "The receipt written beside kept runs does not hold one target per fixture: $($keptReceipt.targets.source.versionName -join ', ')"
         $said = Invoke-ReleaseCheck
-        Assert-True ($said -like "*$builtProved*") "The release check did not accept a receipt read from kept runs: $said"
+        Assert-True ($said -like "*$builtProved*") "The release check did not accept the receipt written beside kept runs: $said"
     } finally {
+        $env:HUSHTUMBLR_APPLY_RECORDS = $recordsBefore
         [IO.File]::WriteAllBytes($releaseReceipt, $receiptBeforeKept)
     }
 
@@ -5738,14 +6506,27 @@ try {
     $apksignerLog = Join-Path $tools 'apksigner.log'
     $keptDevice = @{ Root = $releaseRepo; DesktopJar = $stubJar; Java = $stubJava; Aapt2 = $stubAapt2
         OutDir = (Join-Path $releaseRoot 'device-kept'); AndroidJar = $stubAndroidJar; ApiVersions = $stubApiVersions
-        Apk = $newestFixture; AppliedDir = $receiptStore }
-    Remove-Item -LiteralPath $javaLog, $apksignerLog, $zipalignLog -Force -ErrorAction SilentlyContinue
-    $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6>&1 | ForEach-Object { "$_" })
+        Apk = $newestFixture; AppliedDir = $receiptStore; Keystore = $standInKeystore }
+    Remove-Item -LiteralPath $javaLog, $apksignerLog, $zipalignLog, $resourceStock, $keytoolLog -Force -ErrorAction SilentlyContinue
+    # The signing password, of its own here, goes to keytool in the environment and never on its
+    # command line, and the variable is gone again afterwards.
+    $passwordBefore = $env:HUSHTUMBLR_SIDELOAD_KEYSTORE_PASSWORD
+    try {
+        $env:HUSHTUMBLR_SIDELOAD_KEYSTORE_PASSWORD = 'stand-in-password'
+        $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6>&1 | ForEach-Object { "$_" })
+    } finally { $env:HUSHTUMBLR_SIDELOAD_KEYSTORE_PASSWORD = $passwordBefore }
     $handed = [string]$said[-1]
-    Assert-True (-not (Test-Path -LiteralPath $javaLog) -and (Test-Path -LiteralPath $handed -PathType Leaf) -and
+    Assert-True (-not (Test-Path -LiteralPath $javaLog) -and -not (Test-Path -LiteralPath $resourceStock) -and
+        (Test-Path -LiteralPath $handed -PathType Leaf) -and
         ($said -join "`n") -like '*passed every check in the gate run kept as*' -and
         (Get-Content -LiteralPath $apksignerLog -Raw) -like '*sign alias=sideload in=*patched.apk out=*') `
         "patch-for-device.ps1 did not sign the kept run instead of patching: $($said -join ' | ')"
+    $keytoolCalls = @(Get-Content -LiteralPath $keytoolLog -ErrorAction SilentlyContinue)
+    Assert-True ($keytoolCalls.Count -eq 1 -and
+        $keytoolCalls[0] -clike '-list -v -keystore *\sideload.jks* -alias sideload -storepass:env HUSHTUMBLR_KEYTOOL_STOREPASS pass=stand-in-password' -and
+        $keytoolCalls[0].Substring(0, $keytoolCalls[0].LastIndexOf(' pass=')) -cnotlike '*stand-in-password*' -and
+        $null -eq [Environment]::GetEnvironmentVariable('HUSHTUMBLR_KEYTOOL_STOREPASS', [EnvironmentVariableTarget]::Process)) `
+        "patch-for-device.ps1 didn't read the alias's certificate with the password in the environment alone: $($keytoolCalls -join ' | ')"
     # zipalign can't put a signed APK right, so the kept APK is held to the 16 KB layout before it's
     # signed and the signed one after. A kept APK that fails is never signed, and nothing is left.
     Assert-True ((@(Get-Content -LiteralPath $zipalignLog) -join '|') -like '-c -P 16 -v 4 *patched.apk*|-c -P 16 -v 4 *-signed.apk*' -and
@@ -5762,12 +6543,191 @@ try {
     Assert-True (-not (Test-Path -LiteralPath $apksignerLog) -and
         @(Get-ChildItem -LiteralPath $keptDevice.OutDir -Directory).Count -eq $keptRunsBefore) `
         'patch-for-device.ps1 signed a kept APK that failed the 16 KB layout check, or left its run folder behind.'
+    # apksigner writes the signed APK to a path nothing held, so it's held to the kept APK entry by
+    # entry: signing adds signature files, drops the Source Stamp's certificate digest as real
+    # apksigner does, and changes nothing else. A signed APK with an entry of its own, an entry
+    # that isn't the kept one's bytes, a stamp digest of other bytes or a name only a case fold
+    # makes a signature file is refused before anything reads it.
+    $signSwap = Join-Path $tools 'apksigner-swap.apk'
+    $keptEntries = [ordered]@{ 'AndroidManifest.xml' = 'binary manifest'; 'classes.dex' = "dex`n035"; 'stamp-cert-sha256' = 'stamp' }
+    try {
+        $signedEntries = [ordered]@{}
+        foreach ($name in $keptEntries.Keys) { if ($name -cne 'stamp-cert-sha256') { $signedEntries[$name] = $keptEntries[$name] } }
+        foreach ($name in 'META-INF/MANIFEST.MF', 'META-INF/SIDELOAD.SF', 'META-INF/SIDELOAD.RSA') { $signedEntries[$name] = "signature $name" }
+        New-TestBundleArchive -Path $signSwap -Entries $signedEntries
+        $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6>&1 | ForEach-Object { "$_" })
+        Assert-True (Test-Path -LiteralPath ([string]$said[-1]) -PathType Leaf) `
+            "patch-for-device.ps1 refused a kept APK signed with signature files added and the stamp digest dropped: $($said -join ' | ')"
+        foreach ($swapped in @(
+                @{ What = 'an entry of its own'; Name = 'assets/extra.bin'; Value = 'extra' },
+                @{ What = 'other bytes'; Name = 'classes.dex'; Value = "dex`n036" },
+                @{ What = 'a stamp digest of other bytes'; Name = 'stamp-cert-sha256'; Value = 'other stamp' },
+                @{ What = 'a case-folded signature name'; Name = "META-INF/PAYLOAD.$([char]0x17F)F"; Value = 'payload' })) {
+            $entries = [ordered]@{}
+            foreach ($name in $keptEntries.Keys) { $entries[$name] = $keptEntries[$name] }
+            $entries[$swapped.Name] = $swapped.Value
+            Remove-Item -LiteralPath $signSwap -Force
+            New-TestBundleArchive -Path $signSwap -Entries $entries
+            Assert-Throws { & (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6> $null } `
+                '*The signed APK holds other entries than the kept APK it was signed from, beyond the signature files.*' `
+                "patch-for-device.ps1 took a signed APK with $($swapped.What)."
+        }
+        # Whatever its entries, the signed APK has to be the alias's key's alone: signed by another
+        # key, by another one beside it (sorting before the alias's or after), not at all, or by the
+        # alias's key without verifying, it's refused, while a Source Stamp beside the alias's
+        # signature doesn't count. The stand-in apksigner reads the marker in an entry name.
+        $notAlone = "*The signed APK isn't signed by the sideload key of sideload.jks ($aliasSigner) alone: apksigner says"
+        foreach ($signed in @(
+                @{ Marker = 'stand-in-foreign.RSA'; Says = "$notAlone Signer #1 certificate SHA-256 digest: $foreignSigner*" },
+                @{ Marker = 'stand-in-second-signer.RSA'; Says = "$notAlone*Signer #2 certificate SHA-256 digest: $foreignSigner*" },
+                @{ Marker = 'stand-in-late-signer.RSA'; Says = "$notAlone*Signer #2 certificate SHA-256 digest: $lateSigner*" },
+                @{ Marker = 'stand-in-unsigned.SF'; Says = "$notAlone DOES NOT VERIFY*" },
+                @{ Marker = 'stand-in-unverified.RSA'; Says = "$notAlone Signer #1 certificate SHA-256 digest: $aliasSigner DOES NOT VERIFY*" },
+                @{ Marker = 'stand-in-stamp.RSA'; Says = '' })) {
+            $entries = [ordered]@{}
+            foreach ($name in $keptEntries.Keys) { if ($name -cne 'stamp-cert-sha256') { $entries[$name] = $keptEntries[$name] } }
+            $entries["META-INF/$($signed.Marker)"] = 'signature'
+            Remove-Item -LiteralPath $signSwap -Force
+            New-TestBundleArchive -Path $signSwap -Entries $entries
+            if ($signed.Says) {
+                Assert-Throws { & (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6> $null } $signed.Says `
+                    "patch-for-device.ps1 took a kept APK signed as $($signed.Marker) marks it."
+            } else {
+                $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6>&1 | ForEach-Object { "$_" })
+                Assert-True (Test-Path -LiteralPath ([string]$said[-1]) -PathType Leaf) `
+                    "patch-for-device.ps1 counted a Source Stamp as a second signer: $($said -join ' | ')"
+                # Signing the kept APK put the password in the environment for apksigner and left
+                # the variable as it was, unset included (not set to nothing).
+                $passwordAfter = [Environment]::GetEnvironmentVariable('HUSHTUMBLR_SIDELOAD_KEYSTORE_PASSWORD', [EnvironmentVariableTarget]::Process)
+                Assert-True (($null -eq $passwordBefore -and $null -eq $passwordAfter) -or ($null -ne $passwordBefore -and $passwordAfter -ceq $passwordBefore)) `
+                    "Signing a kept APK left HUSHTUMBLR_SIDELOAD_KEYSTORE_PASSWORD otherwise than it was: '$passwordAfter'"
+            }
+        }
+    } finally { Remove-Item -LiteralPath $signSwap -Force -ErrorAction SilentlyContinue }
+    # An APK still signed as Tumblr's, which the stand-in apksigner hands back when it leaves no
+    # .signer file, isn't the alias's.
+    $unmarkedFlag = Join-Path $tools 'apksigner-unmarked.txt'
+    Set-Content -LiteralPath $unmarkedFlag -Value 'on' -Encoding ASCII
+    try {
+        Assert-Throws { & (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6> $null } `
+            "$notAlone Signer #1 certificate SHA-256 digest: $($releaseSigner[0])*" 'patch-for-device.ps1 took a kept APK still signed by Tumblr''s key.'
+    } finally { Remove-Item -LiteralPath $unmarkedFlag -Force -ErrorAction SilentlyContinue }
+    # The keystore is held from the certificate read, before anything signs, to the end of the run:
+    # signing can't write another one over it. A keystore keytool reads only as BKS is read through
+    # the desktop jar's BouncyCastle provider, with the password in the environment for both tries,
+    # and a variable set before the run is put back.
+    $keystoreSwap = Join-Path $tools 'apksigner-swaps-keystore.txt'
+    Set-Content -LiteralPath $keystoreSwap -Value 'another keystore' -Encoding ASCII
+    Set-Content -LiteralPath $keytoolBksFlag -Value 'on' -Encoding ASCII
+    Remove-Item -LiteralPath $apksignerLog, $keytoolLog -Force -ErrorAction SilentlyContinue
+    $storepassBefore = $env:HUSHTUMBLR_KEYTOOL_STOREPASS
+    try {
+        $env:HUSHTUMBLR_KEYTOOL_STOREPASS = 'set before the run'
+        $env:HUSHTUMBLR_SIDELOAD_KEYSTORE_PASSWORD = 'stand-in-password'
+        $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6>&1 | ForEach-Object { "$_" })
+        $storepassAfter = $env:HUSHTUMBLR_KEYTOOL_STOREPASS
+    } finally {
+        $env:HUSHTUMBLR_KEYTOOL_STOREPASS = $storepassBefore
+        $env:HUSHTUMBLR_SIDELOAD_KEYSTORE_PASSWORD = $passwordBefore
+        Remove-Item -LiteralPath $keystoreSwap, $keytoolBksFlag -Force -ErrorAction SilentlyContinue
+    }
+    $keytoolCalls = @(Get-Content -LiteralPath $keytoolLog -ErrorAction SilentlyContinue)
+    Assert-True ((Test-Path -LiteralPath ([string]$said[-1]) -PathType Leaf) -and
+        @(Get-Content -LiteralPath $apksignerLog) -ccontains 'keystore held' -and
+        (Get-Content -LiteralPath $standInKeystore -Raw).Trim() -ceq 'stand-in keystore') `
+        "Signing a kept APK could write over the keystore its certificate was read from: $(@(Get-Content -LiteralPath $apksignerLog -ErrorAction SilentlyContinue) -join ' | ')"
+    # The control: handed a keystore nothing holds, the same stand-in does write over it, so the
+    # "keystore held" above is the hold and not a copy that could never land.
+    $looseKeystore = Join-Path $tools 'loose.jks'
+    $looseIn = Join-Path $tools 'loose-in.apk'
+    Set-Content -LiteralPath $looseKeystore -Value 'stand-in keystore' -Encoding ASCII
+    Set-Content -LiteralPath $looseIn -Value 'loose' -Encoding ASCII
+    Set-Content -LiteralPath $keystoreSwap -Value 'another keystore' -Encoding ASCII
+    Remove-Item -LiteralPath $apksignerLog -Force -ErrorAction SilentlyContinue
+    try {
+        & (Join-Path $tools 'apksigner.bat') sign --ks $looseKeystore --ks-key-alias sideload --out (Join-Path $tools 'loose-out.apk') $looseIn | Out-Null
+    } finally { Remove-Item -LiteralPath $keystoreSwap -Force -ErrorAction SilentlyContinue }
+    Assert-True (@(Get-Content -LiteralPath $apksignerLog) -ccontains 'keystore swapped' -and
+        (Get-Content -LiteralPath $looseKeystore -Raw).Trim() -ceq 'another keystore') `
+        "The stand-in apksigner couldn't write over a keystore nothing held: $(@(Get-Content -LiteralPath $apksignerLog -ErrorAction SilentlyContinue) -join ' | ')"
+    Remove-Item -LiteralPath $looseKeystore, $looseIn, (Join-Path $tools 'loose-out.apk'), (Join-Path $tools 'loose-out.apk.signer') -Force -ErrorAction SilentlyContinue
+    Assert-True ($keytoolCalls.Count -eq 2 -and $keytoolCalls[0] -cnotlike '*-storetype*' -and
+        $keytoolCalls[1] -clike ('-list -v -keystore *\sideload.jks* -alias sideload -storepass:env HUSHTUMBLR_KEYTOOL_STOREPASS -storetype BKS ' +
+            "-providerclass org.bouncycastle.jce.provider.BouncyCastleProvider -providerpath *$(Split-Path -Leaf $stubJar)* pass=stand-in-password") -and
+        $storepassAfter -ceq 'set before the run') `
+        "A keystore keytool reads only as BKS wasn't read through the provider, or the password variable wasn't put back: '$storepassAfter' $($keytoolCalls -join ' | ')"
     $keptDevice['NoReuse'] = $true
-    Remove-Item -LiteralPath $javaLog, $apksignerLog -Force -ErrorAction SilentlyContinue
-    $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6> $null)
+    Remove-Item -LiteralPath $javaLog, $apksignerLog, $resourceStock -Force -ErrorAction SilentlyContinue
+    $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6>&1 | ForEach-Object { "$_" })
     Assert-True ((@(Get-Content -LiteralPath $javaLog) -join '; ') -eq "patch $newestFixture merged forced=0" -and
         -not (Test-Path -LiteralPath $apksignerLog)) `
         "patch-for-device.ps1 -NoReuse did not patch with the CLI: $(@(Get-Content -LiteralPath $javaLog -ErrorAction SilentlyContinue) -join '; ')"
+    # What it patched is held to the merge's resource table and archive, as verify-all's runs are,
+    # and the check's report lines are shown. The kept run above was checked when it was kept.
+    Assert-True ((Test-Path -LiteralPath $resourceStock) -and
+        (Get-Content -LiteralPath $resourceStock -Raw) -ceq (Get-Content -LiteralPath "$newestFixture.merged.txt" -Raw) -and
+        ($said -join "`n") -like '*`[device`] `[resources`] stand-in: every stock resource resolves*') `
+        "patch-for-device.ps1 -NoReuse didn't check what it patched against the merge's resource table and archive: $($said -join ' | ')"
+    # What the CLI signed is held to the alias's certificate too: here it hands back a build another
+    # key signed. A certificate keytool can't read stops the run, as does a keystore that isn't there.
+    $cliOutput = Join-Path $tools 'patched.apk'
+    $cliBytes = [IO.File]::ReadAllBytes($cliOutput)
+    try {
+        Remove-Item -LiteralPath $cliOutput -Force
+        New-TestBundleArchive -Path $cliOutput -Entries ([ordered]@{ 'AndroidManifest.xml' = 'binary manifest'; 'classes.dex' = "dex`n035"
+            'stamp-cert-sha256' = 'stamp'; 'META-INF/stand-in-foreign.RSA' = 'signature' })
+        Assert-Throws { & (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6> $null } `
+            "$notAlone Signer #1 certificate SHA-256 digest: $foreignSigner*" 'patch-for-device.ps1 -NoReuse took a build the CLI handed back signed by another key.'
+    } finally { [IO.File]::WriteAllBytes($cliOutput, $cliBytes) }
+    # A CLI that exits cleanly with its report and no APK leaves nothing to hold, so the report is
+    # turned down for the APK: the report check is handed no path, whatever turns up there later.
+    $noApkFlag = Join-Path $tools 'cli-leaves-no-apk.txt'
+    Set-Content -LiteralPath $noApkFlag -Value 'on' -Encoding ASCII
+    try {
+        Assert-Throws { & (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6> $null } `
+            '*Patching did not produce a complete APK: saved APK is missing or invalid*' 'patch-for-device.ps1 went on when the CLI left no APK.'
+    } finally { Remove-Item -LiteralPath $noApkFlag -Force -ErrorAction SilentlyContinue }
+    Set-Content -LiteralPath $keytoolFlag -Value 'on' -Encoding ASCII
+    try {
+        Assert-Throws { & (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6> $null } `
+            ('*keytool could not read the sideload certificate of sideload.jks: as it is, keytool error: java.io.IOException: keystore password ' +
+                'was incorrect; as BKS, keytool error:*') "patch-for-device.ps1 went on without the alias's certificate."
+    } finally { Remove-Item -LiteralPath $keytoolFlag -Force -ErrorAction SilentlyContinue }
+    Assert-True ([Environment]::GetEnvironmentVariable('HUSHTUMBLR_KEYTOOL_STOREPASS', [EnvironmentVariableTarget]::Process) -ceq $storepassBefore) `
+        'A keytool that failed left the keystore password in HUSHTUMBLR_KEYTOOL_STOREPASS.'
+    $noKeystore = @{} + $keptDevice
+    $noKeystore['Keystore'] = Join-Path $tools 'no-such.jks'
+    Assert-Throws { & (Join-Path $PSScriptRoot 'patch-for-device.ps1') @noKeystore 6> $null } '*No keystore at *no-such.jks to read the sideload certificate from.*' `
+        'patch-for-device.ps1 read a certificate out of a keystore that is not there.'
+
+    # -Option hands a named patch an option value: the CLI's -O, right after that patch's -e. The
+    # kept run above was patched with the options as the bundle ships them, so a run with one
+    # patches with the CLI without -NoReuse too. Anything that isn't 'Patch name:key=value', a patch
+    # that isn't in the build and a key the patch doesn't declare stop the run before the CLI starts.
+    $optionsLog = Join-Path $tools 'options.log'
+    $keptDevice.Remove('NoReuse')
+    $keptDevice['Option'] = @('Dark background color:backgroundColor=#121212')
+    Remove-Item -LiteralPath $javaLog, $apksignerLog, $optionsLog -Force -ErrorAction SilentlyContinue
+    $said = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6>&1 | ForEach-Object { "$_" })
+    Assert-True ((@(Get-Content -LiteralPath $javaLog) -join '; ') -eq "patch $newestFixture merged forced=0" -and
+        -not (Test-Path -LiteralPath $apksignerLog) -and
+        (@(Get-Content -LiteralPath $optionsLog) -join '; ') -ceq 'Dark background color: backgroundColor=#121212' -and
+        ($said -join "`n") -like '*option for Dark background color: backgroundColor=#121212*') `
+        ("patch-for-device.ps1 -Option did not patch with the CLI and hand the value over after its patch's -e: " +
+            "$(@(Get-Content -LiteralPath $optionsLog -ErrorAction SilentlyContinue) -join '; ') | $($said -join ' | ')")
+    foreach ($refused in @(
+            @{ Option = 'backgroundColor=#121212'; Says = "*-Option takes 'Patch name:key=value', not 'backgroundColor=#121212'*" },
+            @{ Option = 'No such patch:backgroundColor=#121212'; Says = "*No patch named 'No such patch' in this build*" },
+            @{ Option = 'Dark background color:foregroundColor=#121212'
+                Says = "*Dark background color has no option 'foregroundColor'. It declares: backgroundColor*" })) {
+        $keptDevice['Option'] = @($refused.Option)
+        Remove-Item -LiteralPath $javaLog, $apksignerLog, $optionsLog -Force -ErrorAction SilentlyContinue
+        Assert-Throws { & (Join-Path $PSScriptRoot 'patch-for-device.ps1') @keptDevice 6> $null } $refused.Says `
+            "patch-for-device.ps1 took -Option '$($refused.Option)'."
+        Assert-True (-not (Test-Path -LiteralPath $javaLog) -and -not (Test-Path -LiteralPath $apksignerLog)) `
+            "patch-for-device.ps1 patched or signed after refusing -Option '$($refused.Option)'."
+    }
+    $keptDevice.Remove('Option')
 
     # The newest build alone, or beside the undeclared one, is not enough for a receipt: the older
     # declared build has no run. The builder says so before it patches anything. It used to patch
@@ -5903,11 +6863,12 @@ try {
     # refused before the CLI starts. No -Serial, so nothing goes near adb.
     $deviceOut = Join-Path $releaseRoot 'device'
     function Invoke-DeviceBuild([string]$Apk, [string]$OutDir = $deviceOut, [string]$DesktopJar = $stubJar,
-            [string]$OutputApk) {
+            [string]$OutputApk, [string]$Keystore = $standInKeystore) {
         Remove-Item -LiteralPath $javaLog, $mergeLog -Force -ErrorAction SilentlyContinue
         # An empty record store of its own, so no kept run, the machine's included, answers for the CLI.
         $arguments = @{ Root = $releaseRepo; DesktopJar = $DesktopJar; Java = $stubJava; Aapt2 = $stubAapt2; OutDir = $OutDir
-            AndroidJar = $stubAndroidJar; ApiVersions = $stubApiVersions; AppliedDir = (Join-Path $releaseRoot 'applied-records-none') }
+            AndroidJar = $stubAndroidJar; ApiVersions = $stubApiVersions; AppliedDir = (Join-Path $releaseRoot 'applied-records-none')
+            Keystore = $Keystore }
         if ($Apk) { $arguments['Apk'] = $Apk }
         if ($OutputApk) { $arguments['OutputApk'] = $OutputApk }
         $paths = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') @arguments 6> $null)
@@ -5941,6 +6902,58 @@ try {
             "With no -Apk, patch-for-device.ps1 did not take the newest declared build from the fixture folder."
     } finally {
         $env:HUSHTUMBLR_FIXTURE_DIR = $savedFixtureDir
+    }
+    # A report that leaves out its failed patch list, as kotlinx leaves out a field equal to its
+    # default, prints no failure: @($null) holds one item, which verify-all-patches.ps1 printed as
+    # FAILED unknown patch and patch-for-device.ps1 counted as one failure, of a report the check
+    # had passed.
+    $newestReport = "$newestFixture.result.json"
+    $fullReport = [IO.File]::ReadAllText($newestReport)
+    try {
+        $failless = $fullReport | ConvertFrom-Json
+        $failless.PSObject.Properties.Remove('failedPatches')
+        Set-Content -LiteralPath $newestReport -Encoding ASCII -Value ($failless | ConvertTo-Json -Depth 6)
+        $said = Invoke-VerifyAll -Apk $newestFixture
+        Assert-True ($said -like '*: applied *, failed 0, CLI exit 0*' -and $said -cnotlike '*FAILED*' -and
+            $said -like '*success: every requested patch applied*') `
+            "verify-all-patches.ps1 printed a failure for a report with no failed patch list: $said"
+        $deviceSaid = @(& (Join-Path $PSScriptRoot 'patch-for-device.ps1') -Root $releaseRepo -DesktopJar $stubJar -Java $stubJava `
+            -Aapt2 $stubAapt2 -OutDir (Join-Path $releaseRoot 'device-failless') -AndroidJar $stubAndroidJar `
+            -ApiVersions $stubApiVersions -AppliedDir (Join-Path $releaseRoot 'applied-records-none') -Apk $newestFixture -Keystore $standInKeystore 6>&1 |
+            ForEach-Object { "$_" }) -join "`n"
+        Assert-True ($deviceSaid -like '*`[device`] applied *, failed 0, target *') `
+            "patch-for-device.ps1 counted a failure in a report with no failed patch list: $deviceSaid"
+    } finally {
+        [IO.File]::WriteAllText($newestReport, $fullReport)
+    }
+    # The build a run is let through on is read off the base APK before any APK has been checked:
+    # by path, of a copy another process of the same user could change while aapt2 read it, or of
+    # an input replaced before Get-MergedApk came to it. So each script reads the same facts again
+    # off the merge it holds, and stops before the CLI starts when they aren't the ones it decided
+    # on (Assert-SameBuild). A merge of another version code stands in for either here.
+    $sameBuildFixture = $fixturePaths[$releaseTarget.PackageVersion]
+    $sameBuildMerge = "$sameBuildFixture.merged.txt"
+    $sameBuildBytes = [System.IO.File]::ReadAllBytes($sameBuildMerge)
+    $sameBuildCode = [regex]::Match([System.IO.File]::ReadAllText($sameBuildMerge), 'versionCode\(0x0101021b\)=(\d+)').Groups[1].Value
+    $sameBuildReceipt = if (Test-Path -LiteralPath $releaseReceipt -PathType Leaf) { [System.IO.File]::ReadAllBytes($releaseReceipt) } else { $null }
+    $sameBuildSays = ("*$(Split-Path -Leaf $sameBuildFixture) read as com.tumblr $($releaseTarget.PackageVersion) ($sameBuildCode) before its APKs " +
+        "were checked, and the APK made from the checked ones is com.tumblr $($releaseTarget.PackageVersion) (7). What was read first is " +
+        'not what was checked, so nothing was patched.*')
+    try {
+        [System.IO.File]::WriteAllText($sameBuildMerge, ([System.IO.File]::ReadAllText($sameBuildMerge) -replace
+                '(versionCode\(0x0101021b\)=)\d+', '${1}7'), [System.Text.Encoding]::ASCII)
+        foreach ($run in @(
+                @{ Script = 'verify-all-patches.ps1'; Do = { Invoke-VerifyAll -Apk $sameBuildFixture } },
+                @{ Script = 'build-release-receipt.ps1'
+                    Do = { Invoke-ReceiptBuilder -Fixtures (@($sameBuildFixture) + @($allFixtures | Where-Object { $_ -ne $sameBuildFixture })) } },
+                @{ Script = 'patch-for-device.ps1'
+                    Do = { Invoke-DeviceBuild -Apk $sameBuildFixture -OutDir (Join-Path $releaseRoot 'same-build-device') } })) {
+            Assert-Throws $run.Do $sameBuildSays "$($run.Script) went ahead on a build that isn't the one it read first."
+            Assert-True (-not (Test-Path -LiteralPath $javaLog)) "$($run.Script) started the CLI on a build that isn't the one it read first."
+        }
+    } finally {
+        [System.IO.File]::WriteAllBytes($sameBuildMerge, $sameBuildBytes)
+        if ($null -ne $sameBuildReceipt) { [System.IO.File]::WriteAllBytes($releaseReceipt, $sameBuildReceipt) }
     }
     # A consumer may compile an APK while reporting a failed patch. Neither local runner may
     # deliver that retained output. Each failed run must clean only its own workspace.
@@ -6194,7 +7207,7 @@ try {
         Assert-True ($LASTEXITCODE -eq 0) "The release check exited $LASTEXITCODE on a relative -ArtifactPath."
         try {
             Invoke-DeviceBuild -Apk (& $inRoot $fixturePaths[$releaseTarget.PackageVersion]) -OutDir 'device-relative' `
-                -DesktopJar (& $inRoot $stubJar)
+                -DesktopJar (& $inRoot $stubJar) -Keystore (& $inRoot $standInKeystore)
         } catch {
             throw "patch-for-device.ps1 refused relative paths: $($_.Exception.Message)"
         }

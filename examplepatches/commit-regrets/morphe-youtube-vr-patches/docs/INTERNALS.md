@@ -76,6 +76,12 @@ something we tested.
   `mqx.r` and `mgn.g` included — and, unlike blanking the response's field, mutates nothing the
   playback director holds (blanking it was measured to reset it: `bestVideoFormat=0`,
   `STOPPAGE_DIRECTOR_RESET_INTERNALLY`).
+- **Any other ad slot type, the VR180/immersive one included** — **covered by the same fix, statically
+  (not measured)**. Every slot type is carried in the single list `mgn.d` returns; the AdSlotRenderer
+  `mqy.a(vmo, mwh)` walks that one list and dispatches per type by enum ordinal (the immersive branch,
+  `SLOT_TYPE_BELOW_PLAYER_IMMERSIVE` = 9, is ordinal 17), so emptying the accessors empties all of them
+  at once and no per-renderer hook is needed. What would *not* be covered is a slot obtained through a
+  response field other than `zjp.n`.
 - **Quality / resolution preferences, autoplay, background behaviour** — **hypothesis**. These live
   in the player response and the format-selection path; start from the `adaptiveFormats` the VISIONOS
   profile returns and follow what the legacy player selects.
@@ -165,7 +171,7 @@ something we tested.
   display a nested screen. 1.88.10 has a **second, parallel settings stack** (`fqg`/`fqa`/`fnj`,
   sharing the same XMLs) — anything re-keying or relabelling the settings UIs must handle both
   stacks. Two more dead surfaces make a two-level hub possible without minting anything (the
-  SponsorBlock patch's Mod-settings hub, SPONSORBLOCK-PLAN.md Addendum 18): the `developer_settings`
+  SponsorBlock patch's Mod-settings hub, SPONSORBLOCK-NOTES.md Addendum 18): the `developer_settings`
   screen (its row is removed by `fzb.aD` at startup) and the generic preferences XML of the app's
   unreferenced framework `PreferenceFragment` (its id maps back to a file via
   `res/values/public.xml`). `fzf.aH` skips a swap to the class already showing — a same-class

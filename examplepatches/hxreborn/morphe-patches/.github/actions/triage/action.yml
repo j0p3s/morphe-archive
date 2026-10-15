@@ -16,47 +16,14 @@ inputs:
   dry-run:
     description: Print app request verdicts without commenting, labeling or closing.
     default: "false"
-  responses:
-    description: >-
-      Path to a JSON map of label name to {message, labels, reason} for canned replies. An `ac: `
-      label closes the issue after replying, an `r: ` label only replies.
-    default: .github/triage-responses.json
 
 runs:
   using: composite
   steps:
-    - name: Post the canned reply for a triage label
-      if: >-
-        github.event.action == 'labeled' && (startsWith(github.event.label.name, 'r: ') || startsWith(github.event.label.name, 'ac: '))
-      shell: bash
-      env:
-        GH_TOKEN: ${{ inputs.token }}
-        ISSUE: ${{ github.event.issue.number }}
-        REPO: ${{ github.repository }}
-        LABEL: ${{ github.event.label.name }}
-        RESPONSES: ${{ inputs.responses }}
-      run: |
-        [ -f "$RESPONSES" ] || exit 0
-        message=$(jq -r --arg l "$LABEL" '.[$l].message // empty' "$RESPONSES")
-        [ -z "$message" ] && exit 0
-        if [[ "$message" == *"{latest_release}"* ]]; then
-          release=$(gh release view --repo "$REPO" --json tagName,url -q '"[" + .tagName + "](" + .url + ")"' 2>/dev/null)
-          message=${message//"{latest_release}"/${release:-the latest release}}
-        fi
-        printf '%s\n' "$message" > "$RUNNER_TEMP/comment.md"
-        gh issue comment "$ISSUE" --repo "$REPO" --body-file "$RUNNER_TEMP/comment.md"
-        labels=$(jq -r --arg l "$LABEL" '.[$l].labels // [] | join(",")' "$RESPONSES")
-        [ -n "$labels" ] && gh issue edit "$ISSUE" --repo "$REPO" --add-label "$labels"
-        if [[ "$LABEL" == "ac: "* ]]; then
-          reason=$(jq -r --arg l "$LABEL" '.[$l].reason // "not planned"' "$RESPONSES")
-          gh issue close "$ISSUE" --repo "$REPO" --reason "$reason"
-        fi
-
     - name: Triage app requests
       if: >-
         github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
-        (github.event.action != 'labeled' &&
-         contains(github.event.issue.labels.*.name, 'app request'))
+        contains(github.event.issue.labels.*.name, 'app request')
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.token }}
@@ -121,7 +88,6 @@ runs:
 
     - name: Triage app update requests
       if: >-
-        github.event.action != 'labeled' &&
         contains(github.event.issue.labels.*.name, 'app-update') &&
         github.event.issue.user.type != 'Bot' &&
         !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
@@ -180,7 +146,6 @@ runs:
 
     - name: Check the report
       if: >-
-        github.event.action != 'labeled' &&
         contains(github.event.issue.labels.*.name, 'bug')
       shell: bash
       env:
@@ -192,7 +157,6 @@ runs:
 
     - name: Act on the verdict
       if: >-
-        github.event.action != 'labeled' &&
         contains(github.event.issue.labels.*.name, 'bug')
       shell: bash
       env:

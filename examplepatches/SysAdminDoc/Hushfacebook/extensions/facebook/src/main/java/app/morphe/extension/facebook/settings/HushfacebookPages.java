@@ -123,6 +123,15 @@ final class HushfacebookPages {
             // Asked each time Facebook moves the top bar, so it takes effect on the next scroll.
             appearance.addPreference(toggle(context, Settings.KEEP_TOP_BAR,
                     L10n.t("The top bar with search and Messenger stays put while you scroll down, instead of sliding away.")));
+            // Facebook decides on its big screen layout as its main screen starts, so a change waits for a restart.
+            appearance.addPreference(toggle(context, Settings.PHONE_LAYOUT_ON_BIG_SCREENS,
+                    L10n.t("A tablet or an unfolded phone gets the layout Facebook uses on a phone, so the tab bar switches "
+                            + "above work on the big screen too. Facebook's wider big screen layout goes away. Untested on a "
+                            + "big screen, so it starts off. Restart Facebook to see the change.")));
+            // Asked as each frame of the main screen draws, so a change shows right away.
+            appearance.addPreference(toggle(context, Settings.TRANSLUCENT_BARS,
+                    L10n.t("The top bar and the tab bar turn see-through, so the feed shows through them as you scroll. "
+                            + "On Android 12 and newer the feed behind them is blurred.")));
         }
         if (build.contains(PatchFamily.HIDDEN_TABS)) {
             // Facebook builds the tab bar once, so a change waits for a restart.
@@ -143,6 +152,15 @@ final class HushfacebookPages {
             appearance.addPreference(toggle(context, Settings.HIDE_APP_ICON_COUNT,
                     L10n.t("No number on Facebook's app icon. Notifications still arrive. Some launchers add their own count, "
                             + "which this can't remove.")));
+        }
+        if (build.contains(PatchFamily.CARRIER_BANNERS)) {
+            // Asked each time Facebook shows its carrier banner, which it does as screens open and the mode changes.
+            appearance.addPreference(toggle(context, Settings.HIDE_DATA_MODE_BANNER,
+                    L10n.t("On carriers with Facebook Flex, hides the Data mode bar under the top bar and its button to "
+                            + "buy mobile data.")));
+            appearance.addPreference(toggle(context, Settings.HIDE_FREE_MODE_BANNER,
+                    L10n.t("On carriers with Facebook Flex, hides the purple Free mode bar. That bar is also how you go "
+                            + "back to Data mode, so turn this off when you want to switch.")));
         }
         if (build.contains(PatchFamily.FORCE_DARK_MODE)) {
             // Facebook asks for dark mode as each screen applies its theme, so a change shows fully after a restart.

@@ -162,7 +162,7 @@ public final class ScheduledDeletionTest {
 
     private static void throwOnFailure(Object result) throws Exception {
         try {
-            final Method method = ScheduledDeletion.class.getDeclaredMethod("throwOnFailure", Object.class);
+            final Method method = UniffiCalls.class.getDeclaredMethod("throwOnFailure", Object.class);
             method.setAccessible(true);
             method.invoke(null, result);
         } catch (InvocationTargetException ex) {
@@ -173,27 +173,28 @@ public final class ScheduledDeletionTest {
     }
 
     private static boolean isCoroutineSuspended(Object value) throws ReflectiveOperationException {
-        final Method method = ScheduledDeletion.class.getDeclaredMethod("isCoroutineSuspended", Object.class);
+        final Method method = UniffiCalls.class.getDeclaredMethod("isCoroutineSuspended", Object.class);
         method.setAccessible(true);
         return (Boolean) method.invoke(null, value);
     }
 
-    private static Object newParkedContinuation(Object dispatcher) throws ReflectiveOperationException {
-        final Class<?> type = Class.forName(ScheduledDeletion.class.getName() + "$ParkedContinuation");
+    private static Object newBlockingContinuation(Object dispatcher) throws ReflectiveOperationException {
+        final Class<?> type = Class.forName(UniffiCalls.class.getName() + "$BlockingContinuation");
         final Constructor<?> constructor = type.getDeclaredConstructor(Object.class);
         constructor.setAccessible(true);
         return constructor.newInstance(dispatcher);
     }
 
-    private static Object parkedField(Object parked, String name) throws ReflectiveOperationException {
-        final Field field = parked.getClass().getDeclaredField(name);
+    private static Object continuationField(Object blockingContinuation, String name)
+            throws ReflectiveOperationException {
+        final Field field = blockingContinuation.getClass().getDeclaredField(name);
         field.setAccessible(true);
-        return field.get(parked);
+        return field.get(blockingContinuation);
     }
 
-    private static Continuation continuationFor(Object parked) {
+    private static Continuation continuationFor(Object blockingContinuation) {
         return (Continuation) Proxy.newProxyInstance(ScheduledDeletionTest.class.getClassLoader(),
-                new Class<?>[] { Continuation.class }, (InvocationHandler) parked);
+                new Class<?>[] { Continuation.class }, (InvocationHandler) blockingContinuation);
     }
 
     @Test
@@ -256,7 +257,7 @@ public final class ScheduledDeletionTest {
         final ShadowLog.LogItem failure = logged("Failed to empty Trash and Spam");
         assertNotNull(failure);
         assertTrue(failure.throwable instanceof ClassNotFoundException);
-        assertTrue(failure.throwable.getMessage(), failure.throwable.getMessage().contains("Mail_uniffiKt"));
+        assertTrue(failure.throwable.getMessage(), failure.throwable.getMessage().contains(UniffiCalls.UNIFFI_PACKAGE));
         assertEquals(overdue, stamped("TRASH", "account"));
     }
 
@@ -504,19 +505,19 @@ public final class ScheduledDeletionTest {
     @Test
     public void continuationReportsTheDispatcherItWasGiven() throws ReflectiveOperationException {
         final Object dispatcher = new Object();
-        final Continuation continuation = continuationFor(newParkedContinuation(dispatcher));
+        final Continuation continuation = continuationFor(newBlockingContinuation(dispatcher));
         assertSame(dispatcher, continuation.getContext());
         assertSame(dispatcher, continuation.getContext());
     }
 
     @Test
-    public void continuationStaysParkedUntilResumed() throws Exception {
-        final Object parked = newParkedContinuation(new Object());
-        final Continuation continuation = continuationFor(parked);
-        final CountDownLatch resumed = (CountDownLatch) parkedField(parked, "resumed");
+    public void continuationBlocksUntilResumed() throws Exception {
+        final Object blockingContinuation = newBlockingContinuation(new Object());
+        final Continuation continuation = continuationFor(blockingContinuation);
+        final CountDownLatch resumed = (CountDownLatch) continuationField(blockingContinuation, "resumed");
 
         assertEquals(1, resumed.getCount());
-        assertNull(parkedField(parked, "result"));
+        assertNull(continuationField(blockingContinuation, "result"));
         continuation.getContext();
         continuation.unrelated();
         assertEquals(1, resumed.getCount());
@@ -526,49 +527,49 @@ public final class ScheduledDeletionTest {
     @Test
     public void resumeReleasesTheWaiterWithTheStoredResult() throws Exception {
         // given
-        final Object parked = newParkedContinuation(new Object());
+        final Object blockingContinuation = newBlockingContinuation(new Object());
         final Object result = new Ok("value");
 
         // when
-        continuationFor(parked).resumeWith(result);
+        continuationFor(blockingContinuation).resumeWith(result);
 
         // then
-        final CountDownLatch resumed = (CountDownLatch) parkedField(parked, "resumed");
+        final CountDownLatch resumed = (CountDownLatch) continuationField(blockingContinuation, "resumed");
         assertEquals(0, resumed.getCount());
-        assertSame(result, parkedField(parked, "result"));
+        assertSame(result, continuationField(blockingContinuation, "result"));
         assertTrue(resumed.await(0, TimeUnit.MILLISECONDS));
     }
 
     @Test
     public void resumeKeepsAFailureResultForTheCallerToUnwrap() throws ReflectiveOperationException {
         // given
-        final Object parked = newParkedContinuation(new Object());
+        final Object blockingContinuation = newBlockingContinuation(new Object());
         final Failure failure = new Failure(new IOException("offline"));
 
         // when
-        continuationFor(parked).resumeWith(failure);
+        continuationFor(blockingContinuation).resumeWith(failure);
 
         // then
-        assertSame(failure, parkedField(parked, "result"));
+        assertSame(failure, continuationField(blockingContinuation, "result"));
     }
 
     @Test
     public void continuationAnswersObjectMethodsItself() throws ReflectiveOperationException {
-        final Continuation first = continuationFor(newParkedContinuation(new Object()));
-        final Continuation second = continuationFor(newParkedContinuation(new Object()));
+        final Continuation first = continuationFor(newBlockingContinuation(new Object()));
+        final Continuation second = continuationFor(newBlockingContinuation(new Object()));
 
-        assertEquals("ScheduledDeletion", first.toString());
+        assertEquals("UniffiCalls", first.toString());
         assertEquals(System.identityHashCode(first), first.hashCode());
         assertTrue(first.equals(first));
         assertFalse(first.equals(second));
         assertFalse(first.equals(null));
-        assertFalse(first.equals("ScheduledDeletion"));
+        assertFalse(first.equals("UniffiCalls"));
     }
 
     @Test
     public void continuationIgnoresMethodsItDoesNotModel() throws ReflectiveOperationException {
         // given
-        final Continuation continuation = continuationFor(newParkedContinuation(new Object()));
+        final Continuation continuation = continuationFor(newBlockingContinuation(new Object()));
 
         // when
         final Object result = continuation.unrelated();

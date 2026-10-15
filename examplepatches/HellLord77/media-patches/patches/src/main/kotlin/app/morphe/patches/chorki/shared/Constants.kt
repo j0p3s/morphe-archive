@@ -5,14 +5,13 @@ import app.morphe.patcher.patch.AppTarget
 import app.morphe.patcher.patch.Compatibility
 
 object Constants {
-    val COMPATIBILITY_CHORKI = Compatibility(
-        name = "Chorki",
-        packageName = "com.prothomalo",
-        apkFileType = ApkFileType.XAPK,
-        appIconColor = 0XE11D48,
-        signatures = setOf("297da502a4aa81631233b95c2b8179b6a4182685a9f373e6515fe842935cf375"),
-        targets = listOf(
-            AppTarget(version = "2.4.3", versionCode = 311, minSdk = 24),
+    val COMPATIBILITY_CHORKI =
+        Compatibility(
+            name = "Chorki",
+            packageName = "com.prothomalo",
+            apkFileType = ApkFileType.XAPK,
+            appIconColor = 0XE11D48,
+            signatures = setOf("297da502a4aa81631233b95c2b8179b6a4182685a9f373e6515fe842935cf375"),
+            targets = listOf(AppTarget(version = "2.4.3", versionCode = 311, minSdk = 24)),
         )
-    )
 }

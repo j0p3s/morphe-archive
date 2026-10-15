@@ -339,7 +339,7 @@ function Get-BaseApk {
                     "the $(1MB) bytes it may take. Nothing was unpacked.")
             }
             $buffer = New-Object System.IO.MemoryStream
-            Copy-BundleMember -Entry $manifestEntry -Sink $buffer -Label $label
+            [void](Copy-BundleMember -Entry $manifestEntry -Sink $buffer -Label $label)
             $buffer.Position = 0
             $reader = New-Object System.IO.StreamReader($buffer)
             try { $manifestText = $reader.ReadToEnd() } finally { $reader.Dispose() }
@@ -369,7 +369,7 @@ function Get-BaseApk {
             [System.IO.FileShare]::None)
         $copied = $false
         try {
-            Copy-BundleMember -Entry $entry -Sink $sink -Label $label
+            [void](Copy-BundleMember -Entry $entry -Sink $sink -Label $label)
             $copied = $true
         } finally {
             $sink.Dispose()
@@ -384,8 +384,13 @@ function Get-BaseApk {
 function Copy-BundleMember {
     <#
     .SYNOPSIS
-        One member of a bundle written to -Sink, refusing a byte more than the member declares.
+        One member of a bundle written to -Sink, refusing a byte more than the member declares, and
+        the SHA-256 of what was written, lower case.
     .DESCRIPTION
+        The digest is of the bytes as they went to -Sink, so Lock-SplitFiles can hold the file to
+        them when it opens it again: the sink is closed in between, and anything could write to it
+        then.
+
         The size limits read each member's declared size before anything is written, and the
         archive is what declares it, so nothing past it is written: .NET Framework's inflater
         (Windows PowerShell 5.1) reads a deflated member to its end whatever it declares, where
@@ -399,7 +404,9 @@ function Copy-BundleMember {
     )
 
     $source = $Entry.Open()
+    $sha = $null
     try {
+        $sha = [System.Security.Cryptography.SHA256]::Create()
         $buffer = New-Object byte[] 1048576
         $written = 0L
         while ($true) {
@@ -411,9 +418,13 @@ function Copy-BundleMember {
                 throw "Refusing ${Label}: its member '$($Entry.FullName)' unpacks to more than the $($Entry.Length) bytes it declares. Nothing was kept."
             }
             $Sink.Write($buffer, 0, $read)
+            [void]$sha.TransformBlock($buffer, 0, $read, $null, 0)
         }
+        [void]$sha.TransformFinalBlock((New-Object byte[] 0), 0, 0)
+        return ([System.BitConverter]::ToString($sha.Hash) -replace '-', '').ToLowerInvariant()
     } finally {
         $source.Dispose()
+        if ($null -ne $sha) { $sha.Dispose() }
     }
 }
 
@@ -472,7 +483,13 @@ function Expand-SplitBundle {
         fill the disk, and no member unpacks past what it declares (Copy-BundleMember).
 
         The archive stays open, and so unwritable, from the first name read to the last byte
-        unpacked. The result goes to Lock-SplitFiles, then Invoke-SplitMerge, and to
+        unpacked. It is hashed through that handle before anything is read from it, so Sha256 in
+        the answer is the digest of the bytes every APK came out of, which is what the release
+        receipt names the fixture by (Get-HeldSourceSha256). Each APK's Written is the digest of
+        the bytes written for it, and Lock-SplitFiles holds the file to it: the file is closed in
+        between, and anything could write to it then.
+
+        The result goes to Lock-SplitFiles, then Invoke-SplitMerge, and to
         Remove-SplitDirectory when done. Production scripts call none of these themselves: they
         go through Get-MergedApk, which checks every APK's signature between the lock and the
         merge. Only the resource table test calls them straight, for the unsigned APKs aapt2
@@ -488,8 +505,18 @@ function Expand-SplitBundle {
     $Apk = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Apk)
     $Destination = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Destination)
     $label = Split-Path -Leaf $Apk
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $zip = [System.IO.Compression.ZipFile]::OpenRead($Apk)
+    Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
+    # Opened the way ZipFile.OpenRead opens it, sharing reads alone, so the bytes hashed here are
+    # the ones unpacked below. The archive takes the handle and closes it with itself.
+    $archive = [System.IO.File]::Open($Apk, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read)
+    try {
+        $archiveSha256 = Get-StreamSha256 -Stream $archive
+        $archive.Position = 0
+        $zip = [System.IO.Compression.ZipArchive]::new($archive, [System.IO.Compression.ZipArchiveMode]::Read, $false)
+    } catch {
+        $archive.Dispose()
+        throw
+    }
     $directory = $null
     $files = New-Object System.Collections.Generic.List[object]
     try {
@@ -507,7 +534,10 @@ function Expand-SplitBundle {
             if (-not $problem -and -not $name.EndsWith('/')) {
                 $leaf = $name.Substring($name.LastIndexOf('/') + 1)
                 if ($leaf -match '\.apk$') {
-                    if ($leaf.Length -gt 128 -or $leaf -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*\.apk$') {
+                    # Case-sensitive, and to the end of the text: matched without case, [A-Za-z] takes
+                    # the Kelvin sign and a dotted capital I as letters, and $ allows a line break.
+                    # Get-InputIdentity holds the names to the same rule.
+                    if ($leaf.Length -gt 128 -or $leaf -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._-]*\.[Aa][Pp][Kk]\z') {
                         $problem = 'is an APK whose file name holds more than letters, digits, dots, dashes and underscores'
                     } elseif ($entry.Length -gt $MemberLimit) {
                         $problem = "would unpack to $($entry.Length) bytes, more than the $MemberLimit bytes one APK may take"
@@ -546,8 +576,9 @@ function Expand-SplitBundle {
             # CreateNew: a file already at that path, however it got there, is refused.
             $sink = [System.IO.File]::Open($path, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write,
                 [System.IO.FileShare]::None)
-            try { Copy-BundleMember -Entry $item.Entry -Sink $sink -Label $label } finally { $sink.Dispose() }
-            $files.Add([pscustomobject]@{ Name = $item.Name; Path = $path; Member = $item.Member; Sha256 = $null; Handle = $null })
+            try { $written = Copy-BundleMember -Entry $item.Entry -Sink $sink -Label $label } finally { $sink.Dispose() }
+            $files.Add([pscustomobject]@{ Name = $item.Name; Path = $path; Member = $item.Member; Written = $written
+                    Sha256 = $null; Handle = $null })
         }
     } catch {
         if ($directory) { Remove-Item -LiteralPath $directory -Recurse -Force -ErrorAction SilentlyContinue }
@@ -555,7 +586,7 @@ function Expand-SplitBundle {
     } finally {
         $zip.Dispose()
     }
-    return [pscustomobject]@{ Bundle = $Apk; Directory = $directory; Files = $files.ToArray() }
+    return [pscustomobject]@{ Bundle = $Apk; Directory = $directory; Sha256 = $archiveSha256; Files = $files.ToArray() }
 }
 
 function Test-SplitBundlePath {
@@ -575,7 +606,9 @@ function Copy-ApkToSplitDirectory {
         in the shape Expand-SplitBundle returns.
     .DESCRIPTION
         So a plain APK is checked, and patched, from a copy nothing else can write, as a bundle's
-        APKs are. The name is fixed, so nothing in the caller's file name reaches a tool.
+        APKs are. The name is fixed, so nothing in the caller's file name reaches a tool. The APK
+        is hashed through the handle it's copied from, which shares reads alone, and that digest is
+        both Sha256 in the answer, as for a bundle, and the copy's Written.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Apk,
@@ -594,6 +627,8 @@ function Copy-ApkToSplitDirectory {
     try {
         $source = [System.IO.File]::OpenRead($Apk)
         try {
+            $copied = Get-StreamSha256 -Stream $source
+            $source.Position = 0
             $sink = [System.IO.File]::Open($path, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write,
                 [System.IO.FileShare]::None)
             try { $source.CopyTo($sink) } finally { $sink.Dispose() }
@@ -602,8 +637,9 @@ function Copy-ApkToSplitDirectory {
         Remove-Item -LiteralPath $directory -Recurse -Force -ErrorAction SilentlyContinue
         throw
     }
-    return [pscustomobject]@{ Bundle = $Apk; Directory = $directory
-        Files = @([pscustomobject]@{ Name = 'input.apk'; Path = $path; Member = (Split-Path -Leaf $Apk); Sha256 = $null; Handle = $null }) }
+    return [pscustomobject]@{ Bundle = $Apk; Directory = $directory; Sha256 = $copied
+        Files = @([pscustomobject]@{ Name = 'input.apk'; Path = $path; Member = (Split-Path -Leaf $Apk); Written = $copied
+                Sha256 = $null; Handle = $null }) }
 }
 
 function Lock-SplitFiles {
@@ -614,20 +650,244 @@ function Lock-SplitFiles {
         From here until Remove-SplitDirectory, apksigner, aapt2 and the merger can read the files
         and nothing can write, replace or delete them, so the bytes whose signatures are checked
         are the bytes the merger reads. MergeSplits.java holds each file to these hashes again
-        before it merges.
+        before it merges. A file another process already has open to write, or mapped, can't be
+        opened this way and is refused (Open-HeldFile), since what it holds could still change.
+
+        Each file is held to Written, the digest of the bytes Expand-SplitBundle or
+        Copy-ApkToSplitDirectory wrote for it. Nothing held the file between that write and this
+        open, so one changed in between is refused here rather than hashed as it now is, and the
+        APKs that are checked and merged are the ones that came out of the input.
     #>
     param([Parameter(Mandatory = $true)]$Splits)
 
     foreach ($file in @($Splits.Files)) {
-        $handle = [System.IO.File]::Open($file.Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read,
-            [System.IO.FileShare]::Read)
-        $file.Handle = $handle
-        $sha = [System.Security.Cryptography.SHA256]::Create()
-        try {
-            $handle.Position = 0
-            $file.Sha256 = ([System.BitConverter]::ToString($sha.ComputeHash($handle)) -replace '-', '').ToLowerInvariant()
-        } finally { $sha.Dispose() }
+        $written = $file.PSObject.Properties['Written']
+        if ($null -eq $written -or [string]$written.Value -cnotmatch '^[0-9a-f]{64}$') {
+            throw "$($file.Member) at $($file.Path) has no digest of what was written for it, so it can't be held to the input it came from."
+        }
+        $file.Handle = Open-HeldFile -Path $file.Path -Sha256 ([string]$written.Value) -What $file.Member
+        $file.Sha256 = [string]$written.Value
     }
+}
+
+function Get-StreamSha256 {
+    <#
+    .SYNOPSIS
+        The SHA-256 of everything an open file holds, lower case, read through that handle.
+    #>
+    param([Parameter(Mandatory = $true)][System.IO.Stream]$Stream)
+
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $Stream.Position = 0
+        return ([System.BitConverter]::ToString($sha.ComputeHash($Stream)) -replace '-', '').ToLowerInvariant()
+    } finally { $sha.Dispose() }
+}
+
+function Copy-HeldStream {
+    <#
+    .SYNOPSIS
+        Everything a held file holds, read through its handle and written to a new -Destination,
+        and the SHA-256 of what was written, lower case.
+    .DESCRIPTION
+        -Destination is created and refused if anything is already there. The digest is taken as
+        the bytes go out, so it is of what this copy wrote, whatever a path read later gives.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][System.IO.Stream]$Stream,
+        [Parameter(Mandatory = $true)][string]$Destination
+    )
+
+    $sha = $null
+    $sink = $null
+    try {
+        $sha = [System.Security.Cryptography.SHA256]::Create()
+        $sink = [System.IO.File]::Open($Destination, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write,
+            [System.IO.FileShare]::None)
+        $Stream.Position = 0
+        $buffer = New-Object byte[] 1048576
+        while (($read = $Stream.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $sink.Write($buffer, 0, $read)
+            [void]$sha.TransformBlock($buffer, 0, $read, $null, 0)
+        }
+        $sink.Flush($true)
+        [void]$sha.TransformFinalBlock((New-Object byte[] 0), 0, 0)
+        return ([System.BitConverter]::ToString($sha.Hash) -replace '-', '').ToLowerInvariant()
+    } finally {
+        if ($null -ne $sink) { $sink.Dispose() }
+        if ($null -ne $sha) { $sha.Dispose() }
+    }
+}
+
+function Open-HeldFile {
+    <#
+    .SYNOPSIS
+        A file opened so that it can be read and nothing else, by this process or any other, until
+        the handle is closed. With -Sha256, only when its bytes, read through that handle, hash to
+        it; a throw otherwise, with nothing left open.
+    .DESCRIPTION
+        Another process of the same user can write to anything this one can, so a hash taken from
+        a path says nothing about what the next reader of that path gets. Windows keeps a handle's
+        sharing mode whoever asks: opened for reading with only reading shared, the open fails
+        while any other handle or mapping can write to the file, and while it is open nothing can
+        open the file to write, delete or rename it, or rename a folder above it. So the bytes
+        hashed through the handle are the bytes every reader of the path gets for as long as the
+        handle is kept, which is what the caller keeps it for.
+
+        A tool that writes a file can't hand its own handle over: one that can write and one that
+        refuses writers can't be open together. MergeSplits.java hashes the merged APK through the
+        channel it wrote it with and prints the digest, and this is the other half, the path
+        opened afresh and held to that digest. Whatever was done to the path in between is either
+        refused here or made no difference.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [string]$Sha256,
+        [string]$What = 'The file'
+    )
+
+    try {
+        $handle = [System.IO.File]::Open($Path, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read,
+            [System.IO.FileShare]::Read)
+    } catch {
+        $why = if ($_.Exception.InnerException) { $_.Exception.InnerException.Message } else { $_.Exception.Message }
+        throw "$What at $Path can't be opened so that nothing else can write to it, so it isn't used: $why"
+    }
+    if ($Sha256) {
+        try { $found = Get-StreamSha256 -Stream $handle } catch { $handle.Dispose(); throw }
+        if ($found -cne $Sha256) {
+            $handle.Dispose()
+            throw ("$What at $Path isn't what was written there: read through a handle nothing else can write past, it hashes to " +
+                "$found, and what was written hashed to $Sha256. Something changed it in between, so it isn't used.")
+        }
+    }
+    return $handle
+}
+
+function Get-NativeMethod {
+    <#
+    .SYNOPSIS
+        A kernel32 call .NET has no wrapper for: GetFinalPathNameByHandleW or ReOpenFile.
+    .DESCRIPTION
+        The declarations are emitted in memory rather than compiled with Add-Type, which in Windows
+        PowerShell 5.1 writes C# and a DLL to the temp folder and loads what it finds there. They
+        are kept for the process, since every script that loads this file again would otherwise
+        emit them again. ReOpenFile is declared through a DllImport attribute, the one way an
+        emitted method gets SetLastError, so Marshal.GetLastWin32Error has its error.
+    #>
+    param([Parameter(Mandatory = $true)][ValidateSet('GetFinalPathNameByHandleW', 'ReOpenFile')][string]$Name)
+
+    $native = Get-Variable -Name HushTumblrNative -Scope Global -ValueOnly -ErrorAction SilentlyContinue
+    if ($null -eq $native) {
+        $assembly = [System.Reflection.Emit.AssemblyBuilder]::DefineDynamicAssembly(
+            (New-Object System.Reflection.AssemblyName('HushTumblrNative')), [System.Reflection.Emit.AssemblyBuilderAccess]::Run)
+        $type = $assembly.DefineDynamicModule('HushTumblrNative').DefineType('HushTumblrNative',
+            [System.Reflection.TypeAttributes]'Public, Class, Abstract, Sealed')
+        $handle = [Microsoft.Win32.SafeHandles.SafeFileHandle]
+        $finalPath = $type.DefinePInvokeMethod('GetFinalPathNameByHandleW', 'kernel32.dll',
+            [System.Reflection.MethodAttributes]'Public, Static, PinvokeImpl',
+            [System.Reflection.CallingConventions]::Standard, [uint32], [type[]]@($handle, [System.Text.StringBuilder], [uint32], [uint32]),
+            [System.Runtime.InteropServices.CallingConvention]::Winapi, [System.Runtime.InteropServices.CharSet]::Unicode)
+        $reOpen = $type.DefineMethod('ReOpenFile', [System.Reflection.MethodAttributes]'Public, Static, PinvokeImpl, HideBySig', $handle,
+            [type[]]@($handle, [uint32], [uint32], [uint32]))
+        $dllImport = [System.Runtime.InteropServices.DllImportAttribute]
+        $reOpen.SetCustomAttribute((New-Object System.Reflection.Emit.CustomAttributeBuilder($dllImport.GetConstructor([type[]]@([string])),
+            [object[]]@('kernel32.dll'), [System.Reflection.FieldInfo[]]@($dllImport.GetField('SetLastError'), $dllImport.GetField('ExactSpelling')),
+            [object[]]@($true, $true))))
+        foreach ($method in @($finalPath, $reOpen)) {
+            $method.SetImplementationFlags($method.GetMethodImplementationFlags() -bor [System.Reflection.MethodImplAttributes]::PreserveSig)
+        }
+        $created = $type.CreateType()
+        $native = @{}
+        # Not $name, which is $Name: PowerShell variable names ignore case.
+        foreach ($declared in @('GetFinalPathNameByHandleW', 'ReOpenFile')) { $native[$declared] = $created.GetMethod($declared) }
+        $global:HushTumblrNative = $native
+    }
+    return $native[$Name]
+}
+
+function Get-ReOpenError {
+    <#
+    .SYNOPSIS
+        What Windows answers to opening the file an open handle reads again, as it is now, with
+        -Access (Read or Write) and sharing only -Share with whatever else has it open: 0 when it
+        opens, otherwise the Win32 error (32 is a sharing violation, 5 access denied).
+    .DESCRIPTION
+        ReOpenFile opens the handle's own file, wherever it has been renamed to, so the answer is
+        about that file and not about whatever holds its old name. The handle it opens is closed
+        straight away.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][System.IO.FileStream]$Stream,
+        [Parameter(Mandatory = $true)][ValidateSet('Read', 'Write')][string]$Access,
+        [Parameter(Mandatory = $true)][System.IO.FileShare]$Share
+    )
+
+    # GENERIC_READ is 0x80000000, written out since PowerShell reads that literal as a negative int.
+    $desired = if ($Access -eq 'Read') { [uint32]2147483648 } else { [uint32]0x40000000 }
+    $opened = (Get-NativeMethod -Name ReOpenFile).Invoke($null, [object[]]@($Stream.SafeFileHandle, $desired, [uint32]$Share, [uint32]0))
+    $code = [System.Runtime.InteropServices.Marshal]::GetLastWin32Error()
+    try {
+        if (-not $opened.IsInvalid) { return 0 }
+        if ($code -eq 0) { return -1 }
+        return $code
+    } finally { $opened.Dispose() }
+}
+
+function Get-HeldPath {
+    <#
+    .SYNOPSIS
+        The path Windows gives for an open file: where the handle is, with every link, junction
+        and mapped drive on the way already followed.
+    .DESCRIPTION
+        GetFinalPathNameByHandleW, which .NET has no call for (Get-NativeMethod).
+    #>
+    param([Parameter(Mandatory = $true)][System.IO.FileStream]$Stream)
+
+    $native = Get-NativeMethod -Name GetFinalPathNameByHandleW
+    $capacity = 1024
+    while ($true) {
+        # ::new, not New-Object, whose answer is wrapped and won't pass for a StringBuilder in Invoke.
+        $buffer = [System.Text.StringBuilder]::new($capacity)
+        $length = [uint32]$native.Invoke($null, [object[]]@($Stream.SafeFileHandle, $buffer, [uint32]$capacity, [uint32]0))
+        if ($length -eq 0) { throw "Windows gave no path for the open file $($Stream.Name)." }
+        if ($length -lt $capacity) { break }
+        $capacity = [int]$length + 1
+    }
+    $path = $buffer.ToString()
+    if ($path.StartsWith('\\?\UNC\', [System.StringComparison]::OrdinalIgnoreCase)) { return '\\' + $path.Substring(8) }
+    if ($path.StartsWith('\\?\', [System.StringComparison]::Ordinal)) { return $path.Substring(4) }
+    return $path
+}
+
+function Open-HeldDirectory {
+    <#
+    .SYNOPSIS
+        A directory, made if it isn't there, by the path Windows gives for a file created and kept
+        open in it, with that file's handle.
+    .DESCRIPTION
+        A path is looked up afresh by every tool it is handed to, and a junction or link anywhere
+        along it can be pointed somewhere else between two of them by any process of the same
+        user. -Path is followed once here, when the file is created, and the path returned is the
+        one the handle itself reports, with nothing left in it to re-point. While that file stays
+        open, NTFS refuses to rename or delete any folder above it, so the path returned keeps
+        naming the same folder. Everything a merge writes and every path it hands on is under it.
+        The file is deleted when its handle closes.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    $Path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
+    New-Item -ItemType Directory -Force -Path $Path | Out-Null
+    $anchor = New-Object System.IO.FileStream((Join-Path $Path ('.held-' + [guid]::NewGuid().ToString('N'))),
+        [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write, [System.IO.FileShare]::None, 1,
+        [System.IO.FileOptions]::DeleteOnClose)
+    try {
+        $real = [System.IO.Path]::GetDirectoryName((Get-HeldPath -Stream $anchor))
+    } catch {
+        $anchor.Dispose()
+        throw
+    }
+    return [pscustomobject]@{ Path = $real; Anchor = $anchor }
 }
 
 function Remove-SplitDirectory {
@@ -662,6 +922,14 @@ function Invoke-SplitMerge {
         checked and unpacks nothing itself, and it is handed each file's hash, which it holds the
         directory to before it merges: exactly those files, with exactly those bytes. There is
         nothing to fall back to, so a merge that fails or writes no APK throws.
+
+        The answer is the merged APK already held: Path, Sha256 and Handle. The merger hashes what
+        it wrote through the channel it wrote it with and prints that on its standard output,
+        which is a pipe no other process has an end of. Standard error is left out of the search,
+        since a tool's warnings go there. -Destination is then opened so nothing can write to it
+        and held to that digest (Open-HeldFile), so a file swapped or rewritten in the moment
+        between the merger closing it and this opening it is refused, not hashed and believed.
+        Whoever calls this closes Handle.
     #>
     param(
         [Parameter(Mandatory = $true)]$Splits,
@@ -688,13 +956,16 @@ function Invoke-SplitMerge {
     try {
         $ErrorActionPreference = 'Continue'
         $global:LASTEXITCODE = -1
-        $output = @(& $Java '-Xmx6g' '-cp' $DesktopJar (Join-Path $PSScriptRoot 'MergeSplits.java') `
-            $Splits.Directory $Destination @digests 2>&1 | ForEach-Object { "$_" })
+        # Left as records: a line of standard output is a string, and one of standard error an
+        # ErrorRecord, in both shells.
+        $records = @(& $Java '-Xmx6g' '-cp' $DesktopJar (Join-Path $PSScriptRoot 'MergeSplits.java') `
+            $Splits.Directory $Destination @digests 2>&1)
         $exitCode = $LASTEXITCODE
     } finally {
         $ErrorActionPreference = $preference
         Exit-HushTumblrQueue $queued
     }
+    $output = @($records | ForEach-Object { "$_" })
     # What the merger said, without the stack frames under an exception.
     $said = @($output | Where-Object { $_ -notmatch '^\s+at ' } | Select-Object -Last 3) -join ' '
     if ($exitCode -ne 0) {
@@ -704,7 +975,16 @@ function Invoke-SplitMerge {
         throw ("The merge of $label wrote no APK at $Destination, and base.apk is not what " +
             'the CLI patches, so there is nothing to hold the patched APK to.')
     }
-    return $Destination
+    $printed = @($records | Where-Object { $_ -is [string] } | ForEach-Object {
+            $match = [regex]::Match($_, '^\[merge\] sha256 ([0-9a-f]{64})\s*$')
+            if ($match.Success) { $match.Groups[1].Value }
+        })
+    if ($printed.Count -ne 1) {
+        throw ("The merge of $label printed $($printed.Count) digests of what it wrote on its standard output, where it prints one, " +
+            "so nothing says what $Destination should hold and it isn't used: $said")
+    }
+    $handle = Open-HeldFile -Path $Destination -Sha256 $printed[0] -What "The merge of $label"
+    return [pscustomobject]@{ Path = $Destination; Sha256 = $printed[0]; Handle = $handle }
 }
 
 function Get-DeclaredSigners {
@@ -775,6 +1055,83 @@ function Get-ApkSigners {
         Signers  = $signers
         Said     = (@($lines | Where-Object { $_ } | Select-Object -Last 3) -join ' ')
     }
+}
+
+function Get-KeystoreCertificate {
+    <#
+    .SYNOPSIS
+        The SHA-256 digest of the certificate a keystore alias signs with, lower case, as apksigner
+        prints it for an APK that key signed. Read with the keytool beside java, or else the one of
+        the runtime java starts.
+    .DESCRIPTION
+        The alias's own certificate is the first of its chain. A keystore keytool can't read as it
+        is gets read as a BouncyCastle BKS store, the kind the desktop CLI makes, with the CLI's jar
+        as the provider. The password goes over in the environment, so it stays off the command line,
+        and so it can't be empty: Windows PowerShell removes a variable set to nothing.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Keystore,
+        [Parameter(Mandatory = $true)][string]$Alias,
+        [Parameter(Mandatory = $true)][string]$Password,
+        [Parameter(Mandatory = $true)][string]$Java,
+        [Parameter(Mandatory = $true)][string]$DesktopJar
+    )
+
+    # keytool.exe beside java.exe, and beside a stand-in java.cmd a keytool.cmd. A launcher shim,
+    # such as Oracle's javapath, has none beside it, so then the runtime it starts says where it is.
+    $name = 'keytool' + [System.IO.Path]::GetExtension($Java)
+    $keytool = Join-Path (Split-Path -Parent $Java) $name
+    if (-not (Test-Path -LiteralPath $keytool -PathType Leaf)) {
+        $preference = $ErrorActionPreference
+        try {
+            $ErrorActionPreference = 'Continue'
+            $settings = @(& $Java '-XshowSettings:properties' '-version' 2>&1 | ForEach-Object { "$_" })
+        } finally {
+            $ErrorActionPreference = $preference
+        }
+        $javaHome = @($settings | ForEach-Object { [regex]::Match($_, '^\s*java\.home = (.+?)\s*$') } | Where-Object { $_.Success } | Select-Object -First 1)
+        if ($javaHome.Count -eq 1) { $keytool = Join-Path (Join-Path $javaHome[0].Groups[1].Value 'bin') $name }
+    }
+    if (-not (Test-Path -LiteralPath $keytool -PathType Leaf)) {
+        throw "No keytool beside $Java or in the bin folder of the runtime it starts, to read the $Alias certificate with."
+    }
+    if (-not (Test-Path -LiteralPath $Keystore -PathType Leaf)) { throw "No keystore at $Keystore to read the $Alias certificate from." }
+    $variable = 'HUSHTUMBLR_KEYTOOL_STOREPASS'
+    $saved = [Environment]::GetEnvironmentVariable($variable, [EnvironmentVariableTarget]::Process)
+    $said = @()
+    $preference = $ErrorActionPreference
+    try {
+        [Environment]::SetEnvironmentVariable($variable, $Password, [EnvironmentVariableTarget]::Process)
+        $ErrorActionPreference = 'Continue'
+        foreach ($storeType in '', 'BKS') {
+            $kind = @()
+            if ($storeType) {
+                $kind = @('-storetype', $storeType, '-providerclass', 'org.bouncycastle.jce.provider.BouncyCastleProvider', '-providerpath', $DesktopJar)
+            }
+            $global:LASTEXITCODE = -1
+            $lines = @(& $keytool -list -v -keystore $Keystore -alias $Alias -storepass:env $variable @kind 2>&1 | ForEach-Object { "$_" })
+            $as = if ($storeType) { "as $storeType" } else { 'as it is' }
+            if ($LASTEXITCODE -ne 0) {
+                # Its error line, without the stack trace a provider's failure brings along.
+                $said += "$as, $(@($lines | Where-Object { $_.Trim() } | Select-Object -First 1) -join '')"
+                continue
+            }
+            $chain = [array]::IndexOf(@($lines | ForEach-Object { $_.Trim() }), 'Certificate[1]:')
+            if ($chain -lt 0) { $chain = 0 }
+            foreach ($line in @($lines | Select-Object -Skip $chain)) {
+                $match = [regex]::Match($line, '^\s*SHA256:\s*((?:[0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2})\s*$')
+                if ($match.Success) { return $match.Groups[1].Value.Replace(':', '').ToLowerInvariant() }
+            }
+            $said += "$as, no SHA-256 fingerprint for $Alias"
+        }
+    } finally {
+        $ErrorActionPreference = $preference
+        # [NullString]: PowerShell hands $null to a string parameter as '', which PowerShell 7 keeps
+        # as a variable set to nothing instead of the unset one it was.
+        [Environment]::SetEnvironmentVariable($variable, $(if ($null -eq $saved) { [NullString]::Value } else { $saved }),
+            [EnvironmentVariableTarget]::Process)
+    }
+    throw "keytool could not read the $Alias certificate of $(Split-Path -Leaf $Keystore): $($said -join '; ')"
 }
 
 function Get-SignerProblem {
@@ -977,10 +1334,33 @@ function Get-MergedApk {
         checks live in Open-AuthenticInput, which Assert-AuthenticInput runs on its own for a caller
         that refuses a list of inputs before merging the first.
 
-        Beside -Destination goes <Destination>.authentic.json, the hashes of what was merged and of
-        the base APK whose signer stands for it, which verify-injected-registers.ps1 holds a
-        -CleanMerged it is handed to (Assert-AuthenticMerge). A merge that fails or writes no APK
-        throws, and so does every refusal, before -Destination is touched.
+        The APK that comes back is held, not just written. Another process of the same user can
+        write to anything this one can, so between the merger closing the file and the next tool
+        reading its path anything could have happened to it, and a hash taken from the path would
+        have described whatever was there by then. The merger hashes what it wrote through the
+        channel it wrote it with (MergeSplits.java), a plain APK's copy is known by the hash of
+        the locked file it was copied from, and -Destination is opened so nothing can write to it
+        and held to that digest before anything reads it (Open-HeldFile). The handle then stays
+        open, in this process, until Close-MergedApk: the patch, the manifest and alignment reads,
+        the resource check and the dex comparison all read a file nothing can write, replace,
+        delete or rename. Every caller calls Close-MergedApk before it cleans up, or the file
+        can't be deleted.
+
+        The path that comes back is -Destination by its real path (Open-HeldDirectory), so a
+        junction on the way to it can't be pointed elsewhere under a later reader. It is the path
+        to hand on, and the one Close-MergedApk takes.
+
+        What was checked is kept with the handle: the digest, the package, the version code, the
+        hash of the base APK whose signer stands for the merge, what the merge was made from
+        (Get-InputIdentity), which a kept run is looked up by (Get-HeldInputIdentity), and the
+        digest of -Apk itself, taken through the handle it was unpacked or copied from, which the
+        release receipt names it by (Get-HeldSourceSha256).
+        Assert-AuthenticMerge holds a -CleanMerged to that, and nothing else counts as evidence of
+        where a merged APK came from.
+        <Destination>.authentic.json beside it is the same facts written down for whoever reads
+        the run afterwards. Nothing reads it back: whoever could swap the APK could write the
+        record to match. A merge that fails or writes no APK throws, and so does every refusal,
+        before -Destination is touched.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Apk,
@@ -993,46 +1373,267 @@ function Get-MergedApk {
     )
 
     $Apk = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Apk)
-    $Destination = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Destination)
-    $record = "$Destination.authentic.json"
+    $record = $null
     $opened = $null
+    $merge = $null
     $writing = $false
     try {
         $opened = Open-AuthenticInput -Apk $Apk -Destination $Destination -Java $Java -DesktopJar $DesktopJar `
             -Aapt2 $Aapt2 -PackageName $PackageName -Signers $Signers
+        $Destination = $opened.Destination
+        $record = "$Destination.authentic.json"
         $facts = $opened.Facts
         $writing = $true
+        # A merge made here before is let go only now, once this input has passed: a refusal above
+        # leaves it held and as it was.
+        Close-MergedApk -Merged $Destination
         if (Test-Path -LiteralPath $record) { Remove-Item -LiteralPath $record -Force }
         if ($opened.Plain) {
             if (Test-Path -LiteralPath $Destination) { Remove-Item -LiteralPath $Destination -Force }
             # The CLI patches the bytes that were checked, read through the handle that kept them.
+            # CreateNew, so a file another process still has open or mapped is never written into.
             $opened.Plain.Handle.Position = 0
             $sink = [System.IO.File]::Open($Destination, [System.IO.FileMode]::CreateNew, [System.IO.FileAccess]::Write,
                 [System.IO.FileShare]::None)
             try { $opened.Plain.Handle.CopyTo($sink) } finally { $sink.Dispose() }
+            $merge = [pscustomobject]@{ Path = $Destination; Sha256 = [string]$opened.Plain.Sha256; Handle = $null }
+            $merge.Handle = Open-HeldFile -Path $Destination -Sha256 $merge.Sha256 -What "The copy of $(Split-Path -Leaf $Apk)"
         } else {
-            Invoke-SplitMerge -Splits $opened.Splits -Destination $Destination -Java $Java -DesktopJar $DesktopJar | Out-Null
+            $merge = Invoke-SplitMerge -Splits $opened.Splits -Destination $Destination -Java $Java -DesktopJar $DesktopJar
         }
-        $merged = (Get-FileHash -LiteralPath $Destination -Algorithm SHA256).Hash.ToLowerInvariant()
+        # What the merge was made from, by the digests taken through the handles that were checked.
+        # A plain APK's facts can name the bundle that vouched for it, so it is named by its copy.
+        $inputIdentity = if ($opened.Plain) { Get-InputIdentity -Plain $merge.Sha256 } else {
+            Get-InputIdentity -Apks @($facts.Apks) }
+        $sourceSha256 = [string]$opened.Splits.Sha256
+        if ($sourceSha256 -cnotmatch '^[0-9a-f]{64}$') { throw "$Apk was unpacked or copied without a digest of its own bytes." }
+        # The bundle an unsigned universal APK was held to, by the digest taken through the handle
+        # it was unpacked from: the signers it vouched with are that bundle's, not the APK's.
+        $signedFormSha256 = $null
+        if ($opened.SignedForm) {
+            $signedFormSha256 = [string]$opened.SignedForm.Sha256
+            if ($signedFormSha256 -cnotmatch '^[0-9a-f]{64}$') {
+                throw "$($opened.SignedForm.Bundle), which vouches for $Apk, was unpacked without a digest of its own bytes."
+            }
+        }
         $recordFacts = [ordered]@{
             input        = $Apk
+            sourceSha256 = $sourceSha256
             package      = $PackageName
             versionCode  = [string]$facts.VersionCode
             signers      = @($facts.Signers)
             signedForm   = if ($opened.SignedForm) { $opened.SignedForm.Bundle } else { $null }
+            signedFormSha256 = $signedFormSha256
             baseSha256   = [string]$facts.Base.Sha256
-            mergedSha256 = $merged
+            mergedSha256 = $merge.Sha256
+            inputIdentity = $inputIdentity
             apks         = @($facts.Apks | ForEach-Object {
                 [ordered]@{ member = [string]$_.Member; name = [string]$_.Name; sha256 = [string]$_.Sha256; split = [string]$_.Split } })
         }
         [System.IO.File]::WriteAllText($record, ($recordFacts | ConvertTo-Json -Depth 5), (New-Object System.Text.UTF8Encoding($false)))
+        (Get-HeldMerges)[$Destination] = [pscustomobject]@{
+            Path        = $Destination
+            Input       = $Apk
+            Sha256      = $merge.Sha256
+            Handle      = $merge.Handle
+            Package     = $PackageName
+            VersionCode = [string]$facts.VersionCode
+            BaseSha256  = [string]$facts.Base.Sha256
+            InputIdentity = $inputIdentity
+            SourceSha256 = $sourceSha256
+            SignedFormSha256 = $signedFormSha256
+        }
         $writing = $false
         return $Destination
     } catch {
-        if ($writing) { Remove-Item -LiteralPath $Destination, $record -Force -ErrorAction SilentlyContinue }
+        if ($writing) {
+            if ($merge -and $merge.Handle) { $merge.Handle.Dispose() }
+            Remove-Item -LiteralPath $Destination, $record -Force -ErrorAction SilentlyContinue
+        }
         throw
     } finally {
         Close-AuthenticInput -Opened $opened
+    }
+}
+
+function Get-HeldMerges {
+    <#
+    .SYNOPSIS
+        The merged APKs this process has made and still holds, by path: what Get-MergedApk checked
+        about each, and the handle that keeps it.
+    .DESCRIPTION
+        Kept in the process, where no other process can write, which is the point of it. It is a
+        global because one script runs another in the same process (verify-all-patches.ps1 runs
+        verify-injected-registers.ps1 and hands it the merge it made), and each loads this file
+        for itself: a script-scoped table would be a new, empty one for the second script.
+    #>
+    $held = Get-Variable -Name HushTumblrHeldMerges -Scope Global -ValueOnly -ErrorAction SilentlyContinue
+    if ($null -eq $held) {
+        $held = New-Object 'System.Collections.Generic.Dictionary[string,object]' ([System.StringComparer]::OrdinalIgnoreCase)
+        $global:HushTumblrHeldMerges = $held
+    }
+    return , $held
+}
+
+function Close-MergedApk {
+    <#
+    .SYNOPSIS
+        Let go of a merged APK Get-MergedApk returned, so it can be deleted. A path that isn't held,
+        or no path at all, is left alone.
+    .DESCRIPTION
+        For the finally of every script that calls Get-MergedApk, before it deletes its work. After
+        this the file is an ordinary one again and nothing more should be read from it.
+    #>
+    param([string]$Merged)
+
+    if (-not $Merged) { return }
+    $Merged = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Merged)
+    $held = Get-HeldMerges
+    $entry = $null
+    if ($held.TryGetValue($Merged, [ref]$entry)) {
+        [void]$held.Remove($Merged)
+        if ($entry.Handle) { $entry.Handle.Dispose() }
+    }
+}
+
+function Get-InputIdentity {
+    <#
+    .SYNOPSIS
+        What a merge was made from, as one SHA-256 in lower-case hex: a plain APK by the digest of
+        its copy, a bundle by the name and digest of each of its APKs.
+    .DESCRIPTION
+        A plain APK is what the CLI patches, byte for byte. A bundle's merge is named by the APKs it
+        was made from, in name order, rather than by the merge's own digest, which nothing has
+        shown the merger keeps from one run to the next; the merger itself is part of the desktop
+        CLI, which the kept-run key names on its own. The names count because the merger orders
+        and names its modules by them (MergeSplits.java), so the same APKs under other names can
+        merge to other bytes. -Apks takes the Facts.Apks entries Assert-SplitsAuthentic returns,
+        each with the Name it was unpacked to and its Sha256. Give exactly one of -Plain or -Apks.
+    #>
+    param(
+        [string]$Plain,
+        [object[]]$Apks
+    )
+
+    # @($null) holds one item, so the list is counted once the empty ones are out.
+    $listed = @($Apks | Where-Object { $null -ne $_ })
+    if ([bool]$Plain -eq ($listed.Count -gt 0)) { throw 'Give an input identity -Plain or -Apks, not both or neither.' }
+    $digests = if ($Plain) { @($Plain) } else { @($listed | ForEach-Object { [string]$_.Sha256 }) }
+    foreach ($digest in @($digests)) {
+        if ($digest -cnotmatch '^[0-9a-f]{64}$') { throw "Not a SHA-256 in lower-case hex: $digest" }
+    }
+    $lines = New-Object System.Collections.Generic.List[string]
+    $lines.Add('hushtumblr input 2')
+    if ($Plain) {
+        $lines.Add("plain $Plain")
+    } else {
+        $byName = New-Object 'System.Collections.Generic.SortedDictionary[string,string]' ([System.StringComparer]::Ordinal)
+        foreach ($apk in $listed) {
+            $name = [string]$apk.Name
+            # The names Expand-SplitBundle unpacks to, so a line can't run into the next.
+            if ($name -cnotmatch '^[A-Za-z0-9][A-Za-z0-9._-]*\.apk\z') { throw "Not the name of an unpacked APK: $name" }
+            if ($byName.ContainsKey($name)) { throw "The input names $name twice." }
+            $byName[$name] = [string]$apk.Sha256
+        }
+        foreach ($pair in $byName.GetEnumerator()) { $lines.Add("apk $($pair.Value) $($pair.Key)") }
+    }
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $digest = $sha.ComputeHash([System.Text.Encoding]::UTF8.GetBytes(($lines -join "`n") + "`n"))
+    } finally { $sha.Dispose() }
+    return -join @($digest | ForEach-Object { $_.ToString('x2') })
+}
+
+function Get-HeldInputIdentity {
+    <#
+    .SYNOPSIS
+        What a merge this process holds was made from (Get-InputIdentity), as Get-MergedApk worked
+        it out from the digests it checked. A throw for a path that isn't held.
+    .DESCRIPTION
+        For the kept-run key, which used to hash the input by its path: a hash nothing held, taken
+        after Get-MergedApk had let the input go, so it could describe other bytes than the ones
+        merged and patched.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Merged)
+
+    $Merged = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Merged)
+    $entry = $null
+    if (-not (Get-HeldMerges).TryGetValue($Merged, [ref]$entry) -or -not $entry.InputIdentity) {
+        throw "$Merged isn't a merge this process holds, so nothing checked says what it was made from."
+    }
+    return [string]$entry.InputIdentity
+}
+
+function Get-HeldSourceSha256 {
+    <#
+    .SYNOPSIS
+        The SHA-256, lower case, of the input a merge this process holds was made from: the .apkm,
+        .apks or .xapk, or the plain APK, as Get-MergedApk read it. A throw for a path that isn't held.
+    .DESCRIPTION
+        Taken through the handle the input was unpacked or copied from, which shared reads alone,
+        so it is the digest of the bytes the merge came out of (Expand-SplitBundle,
+        Copy-ApkToSplitDirectory). The release receipt used to hash the fixture by its path once
+        the run was over, so it could name other bytes than the ones it patched.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Merged)
+
+    $Merged = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Merged)
+    $entry = $null
+    if (-not (Get-HeldMerges).TryGetValue($Merged, [ref]$entry) -or -not $entry.SourceSha256) {
+        throw "$Merged isn't a merge this process holds, so nothing checked says what it was made from."
+    }
+    return [string]$entry.SourceSha256
+}
+
+function Get-HeldSignedFormSha256 {
+    <#
+    .SYNOPSIS
+        The SHA-256, lower case, of the bundle that vouched for the unsigned universal APK a merge
+        this process holds was copied from, or $null when the input was a bundle or a signed APK.
+        A throw for a path that isn't held.
+    .DESCRIPTION
+        Taken through the handle that bundle was unpacked from while it was checked in the APK's
+        place (Open-AuthenticInput), so the receipt can name the bundle whose signers it relied on.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Merged)
+
+    $Merged = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Merged)
+    $entry = $null
+    if (-not (Get-HeldMerges).TryGetValue($Merged, [ref]$entry) -or -not $entry.SourceSha256) {
+        throw "$Merged isn't a merge this process holds, so nothing checked says what vouched for it."
+    }
+    if (-not $entry.SignedFormSha256) { return $null }
+    return [string]$entry.SignedFormSha256
+}
+
+function Assert-SameBuild {
+    <#
+    .SYNOPSIS
+        Hold the build a script decided on, read off the base APK before anything was checked, to
+        the APK it then checked and holds, or throw.
+    .DESCRIPTION
+        Every script reads the package, the version name and the version code off the base APK
+        first: it is cheap, and it decides whether the run goes ahead at all and whether the CLI
+        is told to force. That read is by path, of a copy another process of the same user could
+        change for as long as aapt2 took over it, or of an input that was replaced before
+        Get-MergedApk came to check it. A hash of the copy afterwards says nothing about what was
+        there while it was read. So the same three facts are read again off the merge
+        Get-MergedApk returned, which nothing can write to, before the CLI is started, and they
+        have to be the ones the decision was made on. -Decided and -Held are what
+        Get-ApkManifestFacts returns for each.
+    #>
+    param(
+        [Parameter(Mandatory = $true)]$Decided,
+        [Parameter(Mandatory = $true)]$Held,
+        [Parameter(Mandatory = $true)][string]$Label
+    )
+
+    foreach ($fact in 'package', 'versionName', 'versionCode') {
+        if ([string]$Decided.$fact -cne [string]$Held.$fact) {
+            throw ("$Label read as $($Decided.package) $($Decided.versionName) ($($Decided.versionCode)) before its APKs were checked, and " +
+                "the APK made from the checked ones is $($Held.package) $($Held.versionName) ($($Held.versionCode)). " +
+                'What was read first is not what was checked, so nothing was patched.')
+        }
     }
 }
 
@@ -1051,6 +1652,11 @@ function Open-AuthenticInput {
         neither this nor Close-AuthenticInput themselves. -Java and -DesktopJar are for the one
         input that needs a merge to be checked at all: an unsigned universal APK, held to the merge
         of the bundle beside it.
+
+        -Destination's folder is taken by its real path and kept where it is for as long as the
+        answer is open (Open-HeldDirectory), and Destination in the answer is -Destination under
+        that path. Everything here is unpacked, copied and merged under it, so a junction on the
+        way to -Destination can't be turned to make one tool read another folder's files.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Apk,
@@ -1067,8 +1673,12 @@ function Open-AuthenticInput {
     $label = Split-Path -Leaf $Apk
     $refuse = { param([string]$Why) throw "Refusing ${label}: $Why. Nothing was merged or patched." }
     # Each folder goes on here the moment it exists, so a throw at any later step deletes it.
-    $opened = [pscustomobject]@{ Apk = $Apk; Splits = $null; SignedForm = $null; Plain = $null; Facts = $null }
+    $opened = [pscustomobject]@{ Apk = $Apk; Destination = $Destination; Held = $null; Splits = $null; SignedForm = $null
+        Plain = $null; Facts = $null }
     try {
+        $opened.Held = Open-HeldDirectory -Path (Split-Path -Parent $Destination)
+        $Destination = Join-Path $opened.Held.Path (Split-Path -Leaf $Destination)
+        $opened.Destination = $Destination
         if (Test-SplitBundlePath -Path $Apk) {
             $opened.Splits = Expand-SplitBundle -Apk $Apk -Destination $Destination
             Lock-SplitFiles -Splits $opened.Splits
@@ -1151,15 +1761,17 @@ function Open-AuthenticInput {
                 # merges them, and this APK has to hold exactly that merge's files, each with the same
                 # bytes, the manifest and resource table among them. The merge is what drops a
                 # qualifier or keeps one copy of a file two APKs carry, so nothing here counts the
-                # files the APKs held between them. The merge is read through a handle of its own and
-                # deleted. Another process of the same user swapping files mid-run is a separate gap.
+                # files the APKs held between them. The merge comes back held to the digest the merger
+                # took of it as it wrote it (Invoke-SplitMerge), is read through that handle, and is
+                # deleted.
                 $trustedPath = Join-Path (Split-Path -Parent $Destination) ('.trusted-' + [guid]::NewGuid().ToString('N') + '.apk')
+                $trustedMerge = $null
                 try {
-                    Invoke-SplitMerge -Splits $opened.SignedForm -Destination $trustedPath -Java $Java -DesktopJar $DesktopJar | Out-Null
-                    $trustedFile = [pscustomobject]@{ Member = "the merge of $bundleLabel"
-                        Handle = [System.IO.File]::Open($trustedPath, [System.IO.FileMode]::Open, [System.IO.FileAccess]::Read, [System.IO.FileShare]::Read) }
-                    try { $trusted = Get-ApkEntryDigests -File $trustedFile -Pattern '.' } finally { $trustedFile.Handle.Dispose() }
+                    $trustedMerge = Invoke-SplitMerge -Splits $opened.SignedForm -Destination $trustedPath -Java $Java -DesktopJar $DesktopJar
+                    $trusted = Get-ApkEntryDigests -File ([pscustomobject]@{ Member = "the merge of $bundleLabel"
+                            Handle = $trustedMerge.Handle }) -Pattern '.'
                 } finally {
+                    if ($trustedMerge) { $trustedMerge.Handle.Dispose() }
                     Remove-Item -LiteralPath $trustedPath -Force -ErrorAction SilentlyContinue
                 }
                 foreach ($pair in $trusted.GetEnumerator()) {
@@ -1198,6 +1810,11 @@ function Close-AuthenticInput {
     if ($null -eq $Opened) { return }
     Remove-SplitDirectory -Splits $Opened.Splits
     Remove-SplitDirectory -Splits $Opened.SignedForm
+    # Last: until here it kept the folder everything above was in from being moved.
+    if ($Opened.Held) {
+        $Opened.Held.Anchor.Dispose()
+        $Opened.Held = $null
+    }
 }
 
 function Assert-AuthenticInput {
@@ -1234,36 +1851,74 @@ function Assert-AuthenticInput {
 function Assert-AuthenticMerge {
     <#
     .SYNOPSIS
-        Hold a merged clean APK to the record Get-MergedApk wrote beside it, and its base APK to
-        the one whose signer was checked, or throw.
+        Hold a merged clean APK to what this process itself checked and merged, and its base APK
+        to the one whose signer was checked, or throw.
     .DESCRIPTION
         A merge carries no signature of its own, so nothing in the file says its splits were
-        Tumblr's. Get-MergedApk records the hash of what it wrote and of the base APK whose signer
-        stands for it. A merged APK with no record, or bytes other than the ones recorded, or a
-        base other than the recorded one, wasn't made from APKs that passed.
+        Tumblr's. The only evidence is having made it: Get-MergedApk keeps, in this process, the
+        digest of each merge it made and the handle that has kept the file unwritable since
+        (Get-HeldMerges). A -Merged that is one of those is that merge, still.
+
+        Any other -Merged came from somewhere this process can't see: another run, or anybody.
+        <Merged>.authentic.json used to vouch for it, and a file is no voucher, since whoever
+        could write the APK could write the record to match. So the merge is made again here from
+        -Apk, every APK of it checked against the declared signer (Get-MergedApk, under -Scratch),
+        and -Merged, opened so nothing can write to it, has to be that merge byte for byte. The
+        merger gives the same bytes for the same APKs, which is what makes that a fair test.
+
+        -Base is the clean base APK's open handle (Open-HeldFile), taken before anything was read
+        from it, so what was read is what is hashed here. It has to be the base whose signer was
+        checked for the merge.
+
+        Returns the handle that now holds -Merged when it was opened here, for the caller to close
+        when it has finished reading, and nothing when the merge was already held.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Merged,
-        [Parameter(Mandatory = $true)][string]$Base,
-        [Parameter(Mandatory = $true)][string]$PackageName
+        [Parameter(Mandatory = $true)][System.IO.FileStream]$Base,
+        [Parameter(Mandatory = $true)][string]$Apk,
+        [Parameter(Mandatory = $true)][string]$Scratch,
+        [Parameter(Mandatory = $true)][string]$Java,
+        [Parameter(Mandatory = $true)][string]$DesktopJar,
+        [Parameter(Mandatory = $true)][string]$Aapt2,
+        [Parameter(Mandatory = $true)][string]$PackageName,
+        [Parameter(Mandatory = $true)][string[]]$Signers
     )
 
-    $record = "$Merged.authentic.json"
-    if (-not (Test-Path -LiteralPath $record -PathType Leaf)) {
-        throw ("$Merged has no record of the signature check Get-MergedApk makes before it merges ($record), so nothing says " +
-            'the APKs it was made from were Tumblr''s. Leave -CleanMerged out to have the clean side merged and checked here.')
-    }
-    try { $facts = Get-Content -LiteralPath $record -Raw | ConvertFrom-Json }
-    catch { throw "The record beside $Merged can't be read: $($_.Exception.Message)" }
-    $mergedHash = (Get-FileHash -LiteralPath $Merged -Algorithm SHA256).Hash.ToLowerInvariant()
-    $baseHash = (Get-FileHash -LiteralPath $Base -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ([string]$facts.package -cne $PackageName) { throw "$Merged was checked as $($facts.package), not $PackageName." }
-    if ([string]$facts.mergedSha256 -cne $mergedHash) {
-        throw "$Merged changed after the APKs it was made from were checked: it hashes to $mergedHash, and the record says $($facts.mergedSha256)."
-    }
-    if ([string]$facts.baseSha256 -cne $baseHash) {
-        throw ("The clean base APK $Base hashes to $baseHash, and the base whose signer stands for $Merged hashed to " +
-            "$($facts.baseSha256), so they aren't the same build.")
+    $Merged = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Merged)
+    $held = Get-HeldMerges
+    $facts = $null
+    $handle = $null
+    $rebuilt = $null
+    try {
+        if (-not $held.TryGetValue($Merged, [ref]$facts)) {
+            $rebuilt = Get-MergedApk -Apk $Apk -Destination (Join-Path $Scratch ('.rebuilt-' + [guid]::NewGuid().ToString('N') + '.apk')) `
+                -Java $Java -DesktopJar $DesktopJar -Aapt2 $Aapt2 -PackageName $PackageName -Signers $Signers
+            $facts = $held[$rebuilt]
+            $handle = Open-HeldFile -Path $Merged -What 'The merged clean APK'
+            $found = Get-StreamSha256 -Stream $handle
+            if ($found -cne $facts.Sha256) {
+                throw ("$Merged is not the merge of $(Split-Path -Leaf $Apk): read through a handle nothing else can write past, it hashes to " +
+                    "$found, and that input's APKs, checked against the declared signer and merged here, hash to $($facts.Sha256). " +
+                    'A record beside it is not evidence, since whoever wrote the APK could write that too. ' +
+                    'Leave -CleanMerged out to have the clean side merged and checked here.')
+            }
+        }
+        if ([string]$facts.Package -cne $PackageName) { throw "$Merged was checked as $($facts.Package), not $PackageName." }
+        $baseHash = Get-StreamSha256 -Stream $Base
+        if ([string]$facts.BaseSha256 -cne $baseHash) {
+            throw ("The clean base APK $($Base.Name) hashes to $baseHash, and the base whose signer stands for $Merged hashed to " +
+                "$($facts.BaseSha256), so they aren't the same build.")
+        }
+        return $handle
+    } catch {
+        if ($handle) { $handle.Dispose() }
+        throw
+    } finally {
+        if ($rebuilt) {
+            Close-MergedApk -Merged $rebuilt
+            Remove-Item -LiteralPath $rebuilt, "$rebuilt.authentic.json" -Force -ErrorAction SilentlyContinue
+        }
     }
 }
 
@@ -1592,7 +2247,8 @@ function Get-AppliedRecordVerifierFiles {
         'patch-target.ps1', 'common.ps1', 'Resolve-Java.ps1',
         'DexDiff.java', 'HostReferences.java', 'ResourceTableCheck.java', 'MergeSplits.java',
         'injected-mutation-contracts.txt', 'injected-register-removal-allowlist.txt',
-        'host-reference-contracts.txt', 'manifest-delta-allowlist.txt'
+        'host-reference-contracts.txt', 'manifest-delta-allowlist.txt', 'resource-delta-allowlist.txt',
+        'dex-delta-allowlist.txt'
     )
 }
 
@@ -1618,14 +2274,21 @@ function Get-AppliedRecordKey {
     .SYNOPSIS
         The key a fixture apply is kept under, and the inputs it was made from.
     .DESCRIPTION
-        SHA-256 over one line per input: the bundle, the fixture, the catalog, the selected patch
-        names in ordinal order, whether the run was forced, the desktop CLI, the SDK stubs the host
-        reference check reads, and every file Get-AppliedRecordVerifierFiles names. A change to
-        any one of them gives another key, so nothing kept before it can be found.
+        SHA-256 over one line per input: the bundle, what the patched merge was made from, the
+        catalog, the selected patch names in ordinal order, whether the run was forced, the desktop
+        CLI, the SDK stubs the host reference check reads, and every file
+        Get-AppliedRecordVerifierFiles names. A change to any one of them gives another key, so
+        nothing kept before it can be found.
+
+        The input is named by -InputIdentity, which every caller takes from the merge it holds
+        (Get-HeldInputIdentity), so a kept run is looked up by the bytes this run checked and will
+        patch. It used to hash the fixture by its path once the merge had let it go, which could
+        name other bytes than those.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Bundle,
-        [Parameter(Mandatory = $true)][string]$Fixture,
+        # ValidatePattern ignores case unless told not to, and Get-InputIdentity writes lower case.
+        [Parameter(Mandatory = $true)][ValidatePattern('^[0-9a-f]{64}$', Options = 'None')][string]$InputIdentity,
         [Parameter(Mandatory = $true)][string]$PatchList,
         [Parameter(Mandatory = $true)][string[]]$PatchNames,
         [Parameter(Mandatory = $true)][bool]$Forced,
@@ -1650,7 +2313,7 @@ function Get-AppliedRecordKey {
     }
     $inputs = [ordered]@{
         bundle      = & $hash $Bundle 'bundle'
-        fixture     = & $hash $Fixture 'fixture'
+        input       = $InputIdentity
         patchList   = & $hash $PatchList 'patch list'
         patches     = $names
         forced      = [bool]$Forced
@@ -1660,8 +2323,8 @@ function Get-AppliedRecordKey {
         files       = $files
     }
     $lines = New-Object System.Collections.Generic.List[string]
-    $lines.Add('hushtumblr applied record 1')
-    foreach ($field in @('bundle', 'fixture', 'patchList')) { $lines.Add("$field $($inputs[$field])") }
+    $lines.Add('hushtumblr applied record 2')
+    foreach ($field in @('bundle', 'input', 'patchList')) { $lines.Add("$field $($inputs[$field])") }
     foreach ($name in $names) { $lines.Add("patch $name") }
     $lines.Add("forced $($inputs.forced.ToString().ToLowerInvariant())")
     foreach ($field in @('desktopCli', 'androidJar', 'apiVersions')) { $lines.Add("$field $($inputs[$field])") }
@@ -1697,8 +2360,18 @@ function Find-AppliedRecord {
         The record kept under -Key, or $null when there is none or it doesn't hold together.
     .DESCRIPTION
         A record counts only when its record.json names this key, and its patched APK and result
-        report are there with the APK hashing to what was recorded. Anything less is said and
-        passed over, so the caller patches in full.
+        report are there, each hashing to what was recorded. Anything less is said and passed
+        over, so the caller patches in full.
+
+        The patched APK and the result report come back held (Open-HeldFile): hashed through a
+        handle nothing can write past, and kept open so the report check, the signer and the
+        manifest and alignment reads get the bytes that were hashed. PatchedApk and Result are the
+        paths those handles are at. The signed copy patch-for-device installs is apksigner's own
+        output, which this doesn't hold. The caller lets go of both with Close-AppliedRecord, in a
+        finally. What the hold doesn't do is say who wrote the
+        record: the store is a folder of the user's own, and a process that can write a
+        record.json and a patched.apk to match can as well write the verifier scripts the key
+        hashes. The hold makes the check describe the bytes read; it isn't provenance.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Store,
@@ -1718,30 +2391,69 @@ function Find-AppliedRecord {
     }
     $patched = Join-Path $directory 'patched.apk'
     $result = Join-Path $directory 'result.json'
+    $held = $null
+    $heldResult = $null
     if (-not $problem) {
         if ([int]$record.schema -ne 1 -or [string]$record.key -cne $Key) {
             $problem = 'record.json names another key'
         } elseif (-not (Test-Path -LiteralPath $patched -PathType Leaf) -or -not (Test-Path -LiteralPath $result -PathType Leaf)) {
             $problem = 'its patched APK or result report is missing'
-        } elseif ((Get-FileHash -LiteralPath $patched -Algorithm SHA256).Hash.ToLowerInvariant() -cne [string]$record.patchedSha256) {
-            $problem = 'its patched APK changed after it was kept'
+        } elseif ([string]$record.patchedSha256 -cnotmatch '^[0-9a-f]{64}$') {
+            # Open-HeldFile skips the comparison without a digest, so none is never a match.
+            $problem = 'record.json names no patched APK digest'
+        } elseif ([string]$record.resultSha256 -cnotmatch '^[0-9a-f]{64}$') {
+            $problem = 'record.json names no result report digest'
+        } else {
+            $holding = 'patched APK'
+            try {
+                $held = Open-HeldFile -Path $patched -Sha256 ([string]$record.patchedSha256) -What 'The kept patched APK'
+                $holding = 'result report'
+                $heldResult = Open-HeldFile -Path $result -Sha256 ([string]$record.resultSha256) -What 'The kept result report'
+            } catch {
+                $problem = if ($_.Exception.Message -like '*hashes to*') { "its $holding changed after it was kept" } else {
+                    "its $holding can't be held: $($_.Exception.Message)" }
+                if ($held) { $held.Dispose(); $held = $null }
+            }
         }
     }
     if ($problem) {
         Write-Warning "The applied record $Key in $Store doesn't hold together ($problem), so it isn't used."
         return $null
     }
-    # PowerShell 7 reads an ISO time in JSON as a date, Windows PowerShell as the text.
-    $recordedAt = if ($record.recordedAt -is [datetime]) {
-        $record.recordedAt.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
-    } else { [string]$record.recordedAt }
+    try {
+        # PowerShell 7 reads an ISO time in JSON as a date, Windows PowerShell as the text.
+        $recordedAt = if ($record.recordedAt -is [datetime]) {
+            $record.recordedAt.ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
+        } else { [string]$record.recordedAt }
+        $heldPath = Get-HeldPath -Stream $held
+        $heldResultPath = Get-HeldPath -Stream $heldResult
+    } catch { $held.Dispose(); $heldResult.Dispose(); throw }
     return [pscustomobject]@{
-        Directory  = $directory
-        Key        = $Key
-        PatchedApk = $patched
-        Result     = $result
-        RecordedAt = $recordedAt
-        Record     = $record
+        Directory    = $directory
+        Key          = $Key
+        PatchedApk   = $heldPath
+        Handle       = $held
+        Result       = $heldResultPath
+        ResultHandle = $heldResult
+        RecordedAt   = $recordedAt
+        Record       = $record
+    }
+}
+
+function Close-AppliedRecord {
+    <#
+    .SYNOPSIS
+        Let go of the patched APK and result report Find-AppliedRecord holds, so the store can
+        replace or delete them. No record, or one already let go, is left alone.
+    #>
+    param($Record)
+
+    if ($null -eq $Record) { return }
+    foreach ($name in @('Handle', 'ResultHandle')) {
+        if ($null -ne $Record.$name) {
+            $Record.$name.Dispose()
+            $Record.$name = $null
+        }
     }
 }
 
@@ -1756,12 +2468,17 @@ function Save-AppliedRecord {
         stops halfway leaves nothing under a key (Find-AppliedRecord and Get-AppliedRecords never
         read a staging folder). The newest -Keep records stay and older ones go, as do staging
         folders a killed run left more than a day ago.
+
+        -PatchedApk and -Result are the handles the run held them by since the CLI exited
+        (Open-HeldFile), and each is copied from its handle and hashed as it's written: the
+        digests record.json holds them to are of the bytes every check read, not of whatever was
+        at a path once the checks were over.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Store,
         [Parameter(Mandatory = $true)]$Identity,
-        [Parameter(Mandatory = $true)][string]$PatchedApk,
-        [Parameter(Mandatory = $true)][string]$Result,
+        [Parameter(Mandatory = $true)][System.IO.FileStream]$PatchedApk,
+        [Parameter(Mandatory = $true)][System.IO.FileStream]$Result,
         # Name in the record to the report it copies. A report the run didn't write is left out.
         [System.Collections.IDictionary]$Reports = @{},
         $Target,
@@ -1771,9 +2488,26 @@ function Save-AppliedRecord {
     )
 
     $key = [string]$Identity.Key
-    if ($key -notmatch '^[0-9a-f]{64}$') { throw "Not an applied record key: $key" }
+    if ($key -cnotmatch '^[0-9a-f]{64}\z') { throw "Not an applied record key: $key" }
     foreach ($required in @($PatchedApk, $Result)) {
-        if (-not (Test-Path -LiteralPath $required -PathType Leaf)) { throw "Nothing to keep: $required is missing." }
+        if (-not $required.CanRead -or $required.CanWrite) { throw "Nothing to keep: $($required.Name) isn't held open for reading alone." }
+        # Held as Open-HeldFile holds it: while the handle shares reading alone, no writer opens,
+        # and none had it open when it did. Both are asked of the handle's own file, not of the
+        # name it was opened by, which a handle that shares deleting lets the file leave for
+        # another one held properly. Only a sharing violation answers the first: a read-only
+        # attribute or a deny entry also turns a writer away, and its owner can take either off.
+        # A writer that got in first and shares reading alone would keep the first probe out too,
+        # so the second asks whether any writer has it open.
+        $everyShare = [System.IO.FileShare]::ReadWrite -bor [System.IO.FileShare]::Delete
+        $writeError = Get-ReOpenError -Stream $required -Access Write -Share $everyShare
+        if ($writeError -eq 0) { throw "Nothing to keep: $($required.Name) is open in a way that lets another program write to it." }
+        if ($writeError -ne 32) {
+            throw ("Nothing to keep: whether $($required.Name) is open in a way that lets another program write to it can't be told, " +
+                "since opening it to write met Windows error $writeError rather than its sharing.")
+        }
+        if ((Get-ReOpenError -Stream $required -Access Read -Share Read) -ne 0) {
+            throw "Nothing to keep: $($required.Name) is open for writing somewhere else too, so its bytes could change while they're copied."
+        }
     }
     New-Item -ItemType Directory -Force -Path $Store | Out-Null
     $storeRoot = (Resolve-Path -LiteralPath $Store).Path
@@ -1781,8 +2515,8 @@ function Save-AppliedRecord {
     $staging = Resolve-WithinRoot -Path (Join-Path $storeRoot ('.partial-' + [guid]::NewGuid().ToString('N'))) -Root $storeRoot
     New-Item -ItemType Directory -Path $staging | Out-Null
     try {
-        Copy-Item -LiteralPath $PatchedApk -Destination (Join-Path $staging 'patched.apk')
-        Copy-Item -LiteralPath $Result -Destination (Join-Path $staging 'result.json')
+        $patchedSha256 = Copy-HeldStream -Stream $PatchedApk -Destination (Join-Path $staging 'patched.apk')
+        $resultSha256 = Copy-HeldStream -Stream $Result -Destination (Join-Path $staging 'result.json')
         $kept = @()
         foreach ($name in @($Reports.Keys)) {
             if ([string]$name -notmatch '^[A-Za-z0-9][A-Za-z0-9._-]*$' -or $name -in @('patched.apk', 'result.json', 'record.json')) {
@@ -1805,7 +2539,8 @@ function Save-AppliedRecord {
             recordedAt    = (Get-Date).ToUniversalTime().ToString('yyyy-MM-ddTHH:mm:ssZ')
             inputs        = $Identity.Inputs
             target        = $targetFacts
-            patchedSha256 = (Get-FileHash -LiteralPath (Join-Path $staging 'patched.apk') -Algorithm SHA256).Hash.ToLowerInvariant()
+            patchedSha256 = $patchedSha256
+            resultSha256  = $resultSha256
             reports       = $kept
         }
         [System.IO.File]::WriteAllText((Join-Path $staging 'record.json'), ($record | ConvertTo-Json -Depth 8),
@@ -1822,7 +2557,9 @@ function Save-AppliedRecord {
             [System.IO.Directory]::Move($staging, $final)
         } catch [System.IO.IOException] {
             # Another run kept the same key first. Its record is the same result.
-            if (-not (Find-AppliedRecord -Store $storeRoot -Key $key)) { throw }
+            $theirs = Find-AppliedRecord -Store $storeRoot -Key $key
+            if (-not $theirs) { throw }
+            Close-AppliedRecord -Record $theirs
         }
     } finally {
         if (Test-Path -LiteralPath $staging) { Remove-Item -LiteralPath $staging -Recurse -Force -ErrorAction SilentlyContinue }

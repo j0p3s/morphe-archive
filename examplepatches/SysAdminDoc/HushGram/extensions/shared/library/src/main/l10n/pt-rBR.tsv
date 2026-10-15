@@ -264,11 +264,15 @@ Show the Reels tab	Mostrar a aba Reels
 Puts Reels back on the tab bar if Instagram left it off yours. Hide the Reels tab wins if both are on. Restart Instagram to see the change.	Coloca o Reels de volta na barra de abas se o Instagram o deixou de fora da sua. Ocultar a aba Reels tem prioridade se as duas estiverem ativadas. Reinicie o Instagram para ver a mudança.
 Show the Messages tab	Mostrar a aba Mensagens
 Puts Messages on the tab bar, before Profile, if Instagram left it off yours. Tab order can move it. Restart Instagram to see the change.	Coloca Mensagens na barra de abas, antes do Perfil, se o Instagram a deixou de fora da sua. Ordem das abas pode movê-la. Reinicie o Instagram para ver a mudança.
+Show the Activity tab	Mostrar a aba Atividade
+Puts Activity, the screen the heart opens, on the tab bar before Profile. Tab order can move it, and Hide notifications on Home's header takes the heart away. Restart Instagram to see the change.	Coloca Atividade, a tela que o coração abre, na barra de abas antes do Perfil. Ordem das abas pode movê-la, e Ocultar notificações no cabeçalho da Página inicial tira o coração. Reinicie o Instagram para ver a mudança.
 Keep the reel speed	Manter a velocidade do reel
 Keep a seek bar	Manter a barra de progresso
 Instagram's seek bar stays under every reel, short ones too, with the time played and the reel's length above it. Ads keep Instagram's own rules.	A barra de progresso do Instagram fica embaixo de todo reel, inclusive dos curtos, com o tempo reproduzido e a duração do reel acima dela. Os anúncios seguem as regras do próprio Instagram.
 Keep auto scroll on	Manter a rolagem automática ativada
 Once you turn on Instagram's auto scroll in Reels, it stays on after a restart or after you leave Reels, until you turn it off.	Depois que você ativa a rolagem automática do Instagram no Reels, ela continua ativada depois de reiniciar ou de sair do Reels, até você desativá-la.
+Move on when a reel ends	Avançar quando um reel terminar
+When a reel ends, Reels moves on to the next one instead of playing it again. It uses Instagram's own auto scroll, even on accounts where Instagram doesn't offer it. While it's on, Instagram's own Auto scroll switch can't turn it off. Restart Instagram to see the change.	Quando um reel termina, o Reels passa para o próximo em vez de tocá-lo de novo. Usa a rolagem automática do próprio Instagram, mesmo em contas em que o Instagram não a oferece. Enquanto estiver ativado, o botão de rolagem automática do próprio Instagram não consegue desativá-lo. Reinicie o Instagram para ver a mudança.
 Stop Reels scrolling	Parar a rolagem no Reels
 A swipe in Reels no longer moves on to the next reel, and pulling down doesn't load new ones. The reel you opened still plays. Restart Instagram to see the change.	Deslizar no Reels não passa mais para o próximo reel, e puxar para baixo não carrega novos. O reel que você abriu continua tocando. Reinicie o Instagram para ver a mudança.
 Lock a reel at 2x (hold its edge, then slide down) and the next reels play at 2x too. Slide the lock off, or hold the edge and let go, to go back to normal speed.	Trave um reel em 2x (segure a borda e deslize para baixo) e os próximos reels também tocam em 2x. Deslize a trava para tirá-la, ou segure a borda e solte, para voltar à velocidade normal.
@@ -315,6 +319,8 @@ Hide Instants	Ocultar Instants
 Removes the stack of Instants (quick photos from friends) from your messages. Restart Instagram to see the change.	Tira das suas mensagens a pilha de Instants (fotos rápidas de amigos). Reinicie o Instagram para ver a mudança.
 Read messages without the seen receipt	Ler mensagens sem a confirmação de visto
 Opening a chat doesn't tell people you've seen their messages, and you still see when they've seen yours. To let one chat know, long press it in your messages and tap Mark as read.	Abrir uma conversa não avisa às pessoas que você viu as mensagens delas, e você continua vendo quando elas viram as suas. Para avisar uma conversa, mantenha-a pressionada nas suas mensagens e toque em Marcar como lida.
+Keep chats unread here	Manter conversas não lidas aqui
+A chat you open stays unread in your messages on this phone until you long press it and tap Mark as read. A newer message in it stays unread too.	Uma conversa que você abre continua não lida nas suas mensagens neste celular até você mantê-la pressionada e tocar em Marcar como lida. Uma mensagem mais nova nela também continua não lida.
 # context: the toasts after tapping Mark as read on a chat's long press while seen receipts are held
 Marked as read	Marcada como lida
 Couldn't mark as read	Não foi possível marcar como lida
@@ -338,8 +344,11 @@ the start-up fix for x86 devices	a correção de inicialização para dispositiv
 Developer	Desenvolvedor
 Developer options on a long press of Home	Opções do desenvolvedor ao tocar e segurar o Início
 Opens Instagram's own developer options, where you can look at and change its hidden settings. A wrong change can break parts of Instagram until you reset it.	Abre as opções de desenvolvedor do próprio Instagram, onde você pode ver e mudar as configurações ocultas dele. Uma mudança errada pode quebrar partes do Instagram até você redefinir.
+# context: toasts when a long press of Home gave up waiting on Instagram's developer options to load
+Instagram's developer options didn't load, so MetaConfig opened instead.	As opções de desenvolvedor do Instagram não carregaram, então o MetaConfig foi aberto no lugar.
+Instagram's developer options didn't load. Try the long press again later.	As opções de desenvolvedor do Instagram não carregaram. Tente tocar e segurar o Início de novo mais tarde.
 Pure black dark mode	Modo escuro preto puro
-Instagram's dark mode uses pure black instead of its near-black gray. Menus, sheets and buttons keep their own grays.	O modo escuro do Instagram usa preto puro em vez do cinza quase preto. Menus, painéis e botões mantêm os próprios tons de cinza.
+Instagram's dark mode uses pure black instead of its near-black gray, and so do the menus that slide up from the bottom. Buttons keep their own grays.	O modo escuro do Instagram usa preto puro em vez do cinza quase preto, também nos menus que sobem da parte de baixo. Os botões mantêm os próprios tons de cinza.
 the pure black dark mode	o modo escuro preto puro
 No Play Store updates	Sem atualizações da Play Store
 Google Play won't offer Meta's updates over this build. To go back to the normal Instagram, uninstall this one first, which deletes Instagram's data on this phone. Later HushGram builds need Change version code too, or they won't install over this one.	O Google Play não vai oferecer as atualizações da Meta sobre esta versão. Para voltar ao Instagram normal, desinstale esta primeiro, o que apaga os dados do Instagram neste celular. As próximas versões do HushGram também precisam de Change version code, ou não serão instaladas por cima desta.
@@ -348,7 +357,7 @@ Sharing	Compartilhamento
 Hide group buttons	Ocultar botões de grupo
 Leaves New group out of the share sheet, and the button that sends to the people you picked as a group. Send separately stays, and you can still start a group from your messages.	Tira Novo grupo do menu de compartilhamento e o botão que envia para as pessoas escolhidas como grupo. Enviar separadamente continua, e você ainda pode criar um grupo nas suas mensagens.
 Story ring size	Tamanho dos anéis dos stories
-Draws the rings in the stories row at the top of Home at the size below. Restart Instagram to see the change.	Desenha os anéis da fileira de stories no topo do Início no tamanho abaixo. Reinicie o Instagram para ver a mudança.
+Draws the rings in the stories row at the top of Home at the size below, and the rings of stories you haven't watched in the color below. Restart Instagram to see a change.	Desenha os anéis da fileira de stories no topo do Início no tamanho abaixo, e os anéis dos stories que você ainda não viu na cor abaixo. Reinicie o Instagram para ver uma mudança.
 Ring size	Tamanho dos anéis
 Much smaller	Bem menor
 Smaller	Menor
@@ -357,6 +366,12 @@ Larger	Maior
 Much larger	Bem maior
 The rings are the size Instagram picks for your screen.	Os anéis têm o tamanho que o Instagram escolhe para a sua tela.
 The rings are %1$s of the size Instagram picks for your screen.	Os anéis têm %1$s do tamanho que o Instagram escolhe para a sua tela.
+# context: Stories list under Story ring size; it picks the color of the ring around a story you haven't watched
+Ring color	Cor dos anéis
+Instagram's colors	Cores do Instagram
+# context: two more colors in the Ring color list, beside Purple, Red and Orange
+Blue	Azul
+Gold	Dourado
 Hide the Repost button	Ocultar o botão Repostar
 Takes Repost and its count off posts and reels, so nothing gets reposted to your followers by mistake. Share still sends a post or reel to someone.	Tira Repostar e a contagem dos posts e reels, para nada ser repostado para seus seguidores sem querer. Compartilhar continua enviando um post ou reel para alguém.
 Layout	Layout
@@ -381,6 +396,10 @@ Hide Suggested for you on follow lists	Ocultar Sugestões para você nas listas 
 Leaves the Suggested for you section off the bottom of the followers and following lists. Every account in the list stays.	Tira a seção Sugestões para você do fim das listas de seguidores e seguindo. Todas as contas da lista continuam lá.
 Hide Complete your profile	Ocultar Complete seu perfil
 Takes the Complete your profile cards, like Add bio and Find people to follow, off your own profile. Your bio, counts and posts stay.	Tira do seu próprio perfil os cartões de Complete seu perfil, como Adicionar bio e Encontrar pessoas para seguir. Sua bio, seus números e suas publicações ficam.
+Hide People you don't follow back	Ocultar Pessoas que você não segue de volta
+Takes the People you don't follow back section off the bottom of your notifications. Notifications about new followers stay.	Tira a seção Pessoas que você não segue de volta do fim das suas notificações. As notificações de novos seguidores continuam.
+Hide suggestions in notifications	Ocultar sugestões nas notificações
+Takes rows that only suggest something off your notifications, like a thread from an account you don't follow or someone you might know. Likes, comments, mentions and new followers stay.	Tira das suas notificações as linhas que só sugerem algo, como um thread de uma conta que você não segue ou alguém que você talvez conheça. Curtidas, comentários, menções e novos seguidores continuam.
 Hide highlights	Ocultar destaques
 Takes the row of story highlights off profiles, yours included. Bios, counts and posts stay, and so does Add to highlight on your stories.	Tira a fileira de destaques dos stories dos perfis, incluindo o seu. Bios, contagens e posts continuam lá, e Adicionar ao destaque nos seus stories também.
 Hide the Threads button	Ocultar o botão do Threads
@@ -515,6 +534,8 @@ Round handle on the seek bar	Mostrar controle circular nos Reels
 Adds a white round handle to the seek bar that you can drag. Ads keep their own bar.	Adiciona à barra de progresso uma alça redonda branca que você pode arrastar. Os anúncios mantêm a barra deles.
 Bigger seek bar on reels	Barra de progresso maior nos Reels
 Makes the seek bar thicker, with a round white handle and the time above it, over a soft dark fade so it shows on any video. Drag it to seek. It also keeps the bar on short reels.	Deixa a barra de progresso mais grossa, com um controle redondo branco e o tempo acima, sobre um degradê escuro suave para aparecer em qualquer vídeo. Arraste para avançar. Também mantém a barra em Reels curtos.
+Seek bar like DM videos	Barra de progresso como nos vídeos de mensagens
+Gives reels the seek bar of a video in a chat, a thin gray line that turns white as it plays, with a big round white handle. The time shows above it. Drag it to seek. When Bigger seek bar is on too, this look wins. It also keeps the bar on short reels.	Dá aos Reels a barra de progresso de um vídeo em uma conversa, uma linha cinza fina que fica branca conforme toca, com um controle redondo branco grande. O tempo aparece acima. Arraste para avançar. Se a barra de progresso maior também estiver ligada, este estilo vale. Também mantém a barra em Reels curtos.
 Blur the bars around a reel	Desfocar as barras ao redor de um reel
 A reel that doesn't fill the screen shows a blurred copy of itself above and below it instead of black bars. Open Reels again after a change.	Um reel que não preenche a tela mostra uma cópia desfocada de si mesmo acima e abaixo, em vez de barras pretas. Abra os Reels de novo depois de uma alteração.
 # Chosen navigation long-press settings entry. Account tab availability varies.
@@ -685,6 +706,10 @@ Save profile picture	Salvar foto do perfil
 Adds Save profile picture to the menu on someone's profile. Saves their picture at the largest size Instagram has.	Adiciona Salvar foto do perfil ao menu no perfil de alguém. Salva a foto no maior tamanho que o Instagram tiver.
 Show a post's exact time	Mostrar o horário exato de um post
 Shows when a post and its comments went up, like Oct 2, 3:45 PM, instead of how long ago. Posts you load after a change show it.	Mostra quando um post e os comentários dele foram publicados, como 2 de out., 15:45, em vez de há quanto tempo. Posts carregados depois de uma mudança mostram isso.
+Show a reel's exact time	Mostrar o horário exato de um reel
+Shows the date and time a reel was posted under the author's name, like Oct 2, 3:45 PM. A change shows from the next reel.	Mostra a data e a hora em que um reel foi publicado abaixo do nome do autor, como 2 de out., 15:45. A mudança aparece a partir do próximo reel.
+Show seconds in a reel's time	Mostrar os segundos no horário de um reel
+Adds the seconds to a reel's time, like Oct 2, 3:45:30 PM.	Adiciona os segundos ao horário de um reel, como 2 de out., 15:45:30.
 Show like counts the poster hid	Mostrar curtidas que o autor ocultou
 Shows how many likes a post or reel has when its owner hid the count, but only when Instagram still sends the number. If it doesn't, nothing changes. Posts you load after a change show it.	Mostra quantas curtidas um post ou reel tem quando o dono ocultou o número, mas só quando o Instagram ainda envia esse número. Se não enviar, nada muda. Posts carregados depois de uma mudança mostram isso.
 Back leaves Home as it is	Voltar sai do Início como está
@@ -719,6 +744,12 @@ Hide the comment bar on reposted reels	Ocultar a barra de comentários nos reels
 Puts the answer in a chip under the profile's posts, followers and following counts instead, and says Following each other when you follow them too.	Mostra a resposta em um chip abaixo dos números de posts, seguidores e seguindo do perfil e diz Vocês se seguem quando você também segue a conta.
 Saving a voice message	Salvando uma mensagem de voz
 Show it as a chip	Mostrar como chip
+Follow label	Etiqueta de seguidor
+Under the counts	Abaixo dos números
+Small, under the picture	Pequena, abaixo da foto
+The chip sits under the posts, followers and following counts.	O chip fica abaixo dos números de posts, seguidores e seguindo.
+A smaller chip, centered under the profile picture. A profile with no room there gets the small chip under the counts.	Um chip menor, centralizado abaixo da foto do perfil. Um perfil sem espaço ali mostra o chip pequeno abaixo dos números.
+Turn on Show it as a chip to use this choice.	Ative Mostrar como chip para usar esta opção.
 The Add comment bar under a reel you open from a profile's reposts. The comment button still opens the comments.	A barra Adicionar comentário abaixo de um reel que você abre a partir dos reposts de um perfil. O botão de comentários continua abrindo os comentários.
 Hide the comment bar on all reels	Ocultar a barra de comentários em todos os reels
 The Add a comment bar under every reel, including the ones in the Reels tab. The comment button still opens the comments.	A barra Adicionar um comentário abaixo de cada reel, inclusive os da aba Reels. O botão de comentários continua abrindo os comentários.
@@ -782,6 +813,8 @@ Adds Download cover to the menu of a feed post with a video, and of a carousel s
 # context: Downloads switch under the feed video and photo downloads; it puts a Download icon in a feed post's action row beside Save
 Download button on feed posts	Botão de download nas publicações do feed
 Puts a download icon in the row under a post, left of Save, so one tap saves it without opening the menu. On a carousel it asks for this page or all of them.	Coloca um ícone de download na linha abaixo da publicação, à esquerda de Salvar, para que um toque a salve sem abrir o menu. Em um carrossel, ele pergunta se é só esta página ou todas.
+Download button on reels	Botão de download nos reels
+Puts a download icon under Save beside a reel, so one tap saves it the way Download in its menu does. Needs Download on reels.	Coloca um ícone de download abaixo de Salvar ao lado de um reel, para que um toque o salve como Baixar no menu dele. Precisa de Baixar nos reels.
 Nothing to download on this post	Nada para baixar nesta publicação
 # context: Downloads switch; a hold with two or three fingers on a feed post or a reel saves it
 Hold to download	Segurar para baixar
@@ -815,6 +848,10 @@ Takes the accounts Instagram suggests off the bottom of your messages. Your chat
 A light tick each time the highlight slides past a tab, so it follows the bar as you tap or swipe between screens.	Um toque leve cada vez que o destaque passa por uma aba, para acompanhar a barra quando você toca ou desliza entre telas.
 Blur behind the tab bar	Desfoque atrás da barra de abas
 Blurs what's behind the pill on Android 12 and newer. Off, the pill is a frosted tint.	Desfoca o que está atrás da pílula no Android 12 e mais recentes. Desativado, a pílula é um tom fosco.
+Slide across the tabs	Deslizar pelas abas
+Put a finger on the pill and slide it sideways. The highlight follows your finger, and letting go opens the tab under it. Taps and long presses on a tab work as before. Restart Instagram after changing it.	Coloque um dedo na pílula e deslize para o lado. O destaque acompanha seu dedo, e ao soltar abre a aba que está embaixo. Tocar e manter pressionada uma aba funcionam como antes. Reinicie o Instagram depois de alterar.
+Liquid glass look	Visual de vidro líquido
+Rounds the pill and its highlight and puts Search in a glass circle of its own. Scrolling a list down shrinks the bar to the tab you're on and Search, unless Hide the tab bar as you scroll is on. Restart Instagram after changing it.	Arredonda a pílula e o destaque e coloca a Pesquisa em um círculo de vidro próprio. Ao rolar uma lista para baixo, a barra encolhe para a aba em que você está e a Pesquisa, a menos que Ocultar a barra de abas ao rolar esteja ativado. Reinicie o Instagram depois de alterar.
 Draws Instagram's tab bar as a floating, rounded glass pill with a highlight on the tab you're on. Restart Instagram after changing it.	Desenha a barra de abas do Instagram como uma pílula de vidro flutuante e arredondada, com destaque na aba atual. Reinicie o Instagram depois de alterar.
 Glass tab bar	Barra de abas de vidro
 Haptics on the tab bar	Vibração na barra de abas
@@ -856,7 +893,8 @@ Long press %1$s to pick the playback quality instead of that tab's usual action.
 Playback quality: %1$s. The next video you open uses it.	Qualidade de reprodução: %1$s. O próximo vídeo que você abrir vai usá-la.
 Couldn't save the playback quality. Open HushGram settings to set it.	Não foi possível salvar a qualidade de reprodução. Abra as configurações do HushGram para defini-la.
 Support HushGram	Apoie o HushGram
-Buy me a coffee on Ko-fi	Me pague um café no Ko-fi
+Hide the Home tab	Ocultar a aba Início
+Takes Home off the tab bar. Your Start tab opens wherever Home would, so pick one other than Home that's on the bar, or Home stays. Restart Instagram to see the change.	Tira o Início da barra de abas. A Aba inicial abre onde o Início abriria, então escolha uma diferente do Início que esteja na barra, ou o Início fica. Reinicie o Instagram para ver a mudança.
 Hide the Search tab	Ocultar a aba Pesquisar
 Takes Search off the tab bar and closes up the gap. Restart Instagram to see the change.	Tira a Pesquisa da barra de abas e fecha o espaço. Reinicie o Instagram para ver a mudança.
 Hide the Create tab	Ocultar a aba Criar
@@ -871,10 +909,17 @@ Ghost mode button on Home's header	Botão do modo fantasma no cabeçalho da Pág
 Adds a ghost button at the top of Home, next to Messages when it's there and at the end of the buttons when it isn't. Tap it to turn Ghost mode on or off. Restart Instagram to see the change.	Adiciona um botão de fantasma no topo da Página inicial, ao lado de Mensagens quando ele estiver lá e no fim dos botões quando não estiver. Toque nele para ativar ou desativar o modo fantasma. Reinicie o Instagram para ver a mudança.
 Search button on Home's header	Botão de Pesquisa no cabeçalho da Página inicial
 Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works with the Search tab hidden too, unless you swipe between your tabs. Restart Instagram to see the change.	Adiciona uma lupa no topo da Página inicial que abre a Pesquisa, como a aba Pesquisar. Funciona também com a aba Pesquisar oculta, a não ser que você deslize entre as abas. Reinicie o Instagram para ver a mudança.
+Messages button on Home's header	Botão de Mensagens no cabeçalho da Página inicial
+Adds a Messages button at the top of Home when Instagram moved Messages to your tab bar. A tap opens your messages like the tab does. Restart Instagram to see the change.	Adiciona um botão de Mensagens no topo da Página inicial quando o Instagram moveu as Mensagens para a sua barra de abas. Um toque abre suas mensagens como a aba. Reinicie o Instagram para ver a mudança.
+# context: toasts when the Messages button on Home's header can't open Messages because it isn't on the swiping tab bar
+To open Messages here, turn on Show the Messages tab and restart.	Para abrir as Mensagens aqui, ative Mostrar a aba Mensagens e reinicie.
+Restart Instagram to put Messages on your tab bar.	Reinicie o Instagram para colocar as Mensagens na sua barra de abas.
 Center the logo on Home's header	Centralizar o logo no cabeçalho da Página inicial
 Puts Instagram's logo in the middle of the top of Home, even with header buttons hidden or added. A feed's name shown there is centered too. Restart Instagram to see the change.	Coloca o logo do Instagram no meio do topo da Página inicial, mesmo com botões do cabeçalho ocultos ou adicionados. O nome de um feed mostrado ali também fica centralizado. Reinicie o Instagram para ver a mudança.
 Center the name on profiles	Centralizar o nome nos perfis
 Puts the username in the middle of the bar at the top of a profile, yours and other people's. The buttons stay where they are.	Coloca o nome de usuário no meio da barra no topo de um perfil, o seu e o de outras pessoas. Os botões ficam onde estão.
+Center titles on other screens	Centralizar títulos em outras telas
+Puts the title in the middle of the bar at the top of other screens, like notifications, as far as the buttons beside it allow. The buttons stay where they are.	Coloca o título no meio da barra no topo de outras telas, como as notificações, até onde os botões ao lado deixam. Os botões ficam onde estão.
 Search isn't on your tab bar, so this button can't open it here.	A Pesquisa não está na sua barra de abas, então este botão não consegue abri-la aqui.
 To open Search here, turn off Hide the Search tab and restart.	Para abrir a Pesquisa aqui, desative Ocultar a aba Pesquisar e reinicie.
 Restart Instagram to bring Search back to your tab bar.	Reinicie o Instagram para a Pesquisa voltar à sua barra de abas.
@@ -885,7 +930,9 @@ Tap a tab to move it up	Toque em uma aba para subi-la
 Instagram's order	Ordem do Instagram
 Create	Criar
 Start tab	Aba inicial
-Instagram opens the way it always has.	O Instagram abre do jeito de sempre.
+Instagram opens the way it always has, which can be Reels if you left it there.	O Instagram abre do jeito de sempre, que pode ser no Reels se você saiu de lá.
+Instagram opens on Home when you start it from its icon, even if you left it on Reels. A notification or a link still opens what it's for. Restart Instagram to see the change.	O Instagram abre no Início quando você o inicia pelo ícone, mesmo que tenha saído pelo Reels. Uma notificação ou um link continua abrindo o que foi pedido. Reinicie o Instagram para ver a mudança.
+Always Home	Sempre Início
 Instagram opens on %1$s when you start it from its icon. A notification or a link still opens what it's for. If that tab isn't on your bar, it opens on Home. Restart Instagram to see the change.	O Instagram abre em %1$s quando você o inicia pelo ícone. Uma notificação ou um link continua abrindo o que foi pedido. Se essa aba não estiver na sua barra, abre o Início. Reinicie o Instagram para ver a mudança.
 A tap on a reel	Toque em um reel
 Pause	Pausar
@@ -917,8 +964,19 @@ A little more	Um pouco mais
 More	Mais
 Hide the tab bar as you scroll	Ocultar a barra de abas ao rolar
 Scrolling a list down slides the pill out of the way. Scrolling up, reaching the top, or changing tab brings it back. Restart Instagram after changing it.	Rolar uma lista para baixo tira a pílula do caminho. Rolar para cima, chegar ao topo ou trocar de aba a traz de volta. Reinicie o Instagram depois de alterar.
+Hide the tab bar on Reels	Ocultar a barra de abas nos Reels
+# context: a choice in the Hide the tab bar on Reels list under Glass tab bar; the bar is never hidden there
+Never	Nunca
+# context: a choice in the Hide the tab bar on Reels list; %1$d is 2, 3, 5 or 8
+After %1$d seconds	Depois de %1$d segundos
+# context: summary of the Hide the tab bar on Reels row while its choice is Never
+Never. Pick a time and the pill slides away once a reel has played that long without a touch. Restart Instagram after changing it.	Nunca. Escolha um tempo e a pílula desliza para fora quando um reel é reproduzido por esse tempo sem toque. Reinicie o Instagram depois de alterar.
+# context: summary of the Hide the tab bar on Reels row; %1$d is the seconds picked, 2, 3, 5 or 8
+On Reels, the pill slides away after %1$d seconds without a touch. Tap the bottom edge of the screen, change tab or press Back to bring it back. Restart Instagram after changing it.	Nos Reels, a pílula desliza para fora após %1$d segundos sem toque. Toque na borda inferior da tela, troque de aba ou pressione Voltar para trazê-la de volta. Reinicie o Instagram depois de alterar.
 Start feed videos with sound	Iniciar vídeos do feed com som
 The first video on Home plays with its sound on, the same as tapping its speaker. Your phone's ringer and volume still count, so on silent or with the volume down, it stays quiet.	O primeiro vídeo do Início toca com o som ligado, igual a tocar no alto-falante dele. O toque e o volume do celular continuam valendo, então no silencioso ou com o volume zerado, ele fica mudo.
+Tap a feed video to pause it	Tocar em um vídeo do feed para pausar
+Tap the video playing in a feed to pause it in place instead of opening it in Reels. Ads keep Instagram's own tap.	Toque no vídeo que está tocando em um feed para pausar em vez de abri-lo no Reels. Os anúncios continuam com o toque do próprio Instagram.
 Long press a photo to zoom	Toque e segure uma foto para ampliar
 Press and hold a photo in a feed to see it twice as big around your finger, and slide to look around. Let go to close it. While this is on, it takes the place of Instagram's own long press on a photo.	Toque e segure uma foto em um feed para vê-la duas vezes maior em volta do seu dedo, e deslize para explorar. Solte para fechar. Enquanto isso estiver ativado, substitui o toque longo do próprio Instagram em uma foto.
 Keep the zoom open	Manter o zoom aberto
@@ -967,6 +1025,8 @@ On the Reels screen, the buttons, caption and bars fade after 5 seconds without 
 On the Reels screen, the buttons, caption and bars fade after 5 seconds without a touch, and the screen moves a step every 2 minutes. A touch brings them back.	Na tela de Reels, os botões, a legenda e as barras ficam mais fracos após 5 segundos sem toque, e a tela se move um pouco a cada 2 minutos. Um toque os traz de volta.
 Off. It can fade a reel's buttons while the screen sits untouched, so they don't burn into an OLED screen.	Desativado. Pode deixar os botões de um reel mais fracos enquanto a tela fica sem toque, para que não marquem uma tela OLED.
 Takes the Save button out of the column of buttons beside a reel, and the count under it. Posts in your feed keep theirs.	Tira o botão Salvar da coluna de botões ao lado de um reel, junto com o número embaixo dele. As publicações do seu feed continuam com o delas.
+Keep clear mode on	Manter o modo limpo ativado
+Turn on Instagram's clear mode on a reel and the next reels open in it too. Leave clear mode yourself and the next reels show their buttons again.	Ative o modo limpo do Instagram em um reel e os próximos reels também abrem nele. Saia do modo limpo você mesmo e os próximos reels voltam a mostrar os botões.
 Unlock with	Desbloquear com
 Phone lock	Bloqueio do celular
 HushGram PIN	PIN do HushGram
@@ -1022,7 +1082,13 @@ Report a problem	Relatar um problema
 Opens a GitHub report with your versions and settings filled in. Add what happened.	Abre um relatório no GitHub com suas versões e configurações já preenchidas. Conte o que aconteceu.
 # context: the settings row under Search, and the title of its dialog of one-tap choices
 Quick setups	Configurações rápidas
-Turn on a set of switches in one tap, or put every switch back the way it started.	Ative um conjunto de opções com um toque ou volte todas as opções ao estado inicial.
+Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Ative um conjunto de opções com um toque ou volte todas as opções ao estado inicial. Toque e segure para ocultar esta linha.
+# context: row on Settings backup that hides or shows the Quick setups row on the home page, and its two summaries
+Quick setups on the home page	Configurações rápidas na página inicial
+Shown. Tap to hide it.	Visível. Toque para ocultar.
+Hidden. Tap to show it again.	Oculta. Toque para mostrar de novo.
+# context: toast after a long press hides Quick setups; the page named is Settings backup
+Quick setups hidden. Bring it back from %1$s.	Configurações rápidas ocultas. Traga de volta em %1$s.
 # context: a Quick setups choice that hides ads, suggestions and promotions
 Quiet	Tranquilo
 # context: a Quick setups choice that turns on the privacy switches
@@ -1036,3 +1102,24 @@ Puts every switch back the way it started. Your locks stay as they are.	Volta to
 Changed %1$d setting	%1$d configuração alterada
 # context: the same toast for any other count, zero included; %1$d is how many
 Changed %1$d settings	%1$d configurações alteradas
+Hide the reply bar on reels from chats	Ocultar a barra de resposta nos reels das conversas
+The Reply to box under a reel you open from a chat, with its reactions and plus button. The chat's own message box stays.	A caixa de resposta abaixo de um reel que você abre de uma conversa, com as reações e o botão de mais. A caixa de mensagens da própria conversa continua.
+# context: Layout list title; it picks the font Instagram's text draws in
+Font	Fonte
+# context: the three choices in the Font list
+Instagram's font	Fonte do Instagram
+Your phone's font	Fonte do seu celular
+A font file	Um arquivo de fonte
+# context: the line under the Font list for each choice
+Instagram's own font. You can also pick your phone's font or a .ttf or .otf file. Restart Instagram to see a change.	A fonte do próprio Instagram. Você também pode escolher a fonte do seu celular ou um arquivo .ttf ou .otf. Reinicie o Instagram para ver uma mudança.
+Instagram's text uses your phone's font. Restart Instagram to see a change.	O texto do Instagram usa a fonte do seu celular. Reinicie o Instagram para ver uma mudança.
+Instagram's text uses the font file you picked. Pick it again to change the file. Restart Instagram to see a change.	O texto do Instagram usa o arquivo de fonte que você escolheu. Escolha de novo para trocar o arquivo. Reinicie o Instagram para ver uma mudança.
+# context: toasts after a font file is picked in the Font list
+That file isn't a font HushGram can use. Your font hasn't changed.	Esse arquivo não é uma fonte que o HushGram consiga usar. Sua fonte não mudou.
+Font saved. Restart Instagram to see it.	Fonte salva. Reinicie o Instagram para vê-la.
+# context: toast when Instagram starts and the picked font file won't load
+Couldn't load your font file, so Instagram's font shows. Pick it again in HushGram settings > Layout.	Não foi possível carregar seu arquivo de fonte, então a fonte do Instagram aparece. Escolha de novo em Configurações do HushGram > Layout.
+# context: Reels switch title; it leaves out reels that carry Instagram's own AI label
+Hide AI-labeled reels	Ocultar reels com rótulo de IA
+# context: the line under the Hide AI-labeled reels switch
+Leaves out reels that carry Instagram's own AI label. A reel without that label stays, even if AI made it.	Deixa de fora os reels que têm o rótulo de IA do próprio Instagram. Um reel sem esse rótulo continua, mesmo que tenha sido feito com IA.

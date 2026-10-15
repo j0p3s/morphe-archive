@@ -52,12 +52,13 @@ import app.morphe.extension.shared.settings.preference.LogBufferManager;
 /**
  * Export settings and Import settings.
  *
- * <p>Both open Android's file picker from the settings page. The picker is an activity of its
- * own, so Android may rebuild Threads' activity behind it, and the settings dialog and its page
- * with it. The result still reaches the page: Android hands it to the fragment the request came
- * from by the name the framework gave it, and a rebuilt page is given the same one. So nothing
- * about a request is kept on the page. Its code says which it was, and the file's address comes
- * with the result.
+ * <p>Both open Android's file picker through {@link SettingsFilePicker}. The picker is an activity
+ * of its own, so Android may rebuild Threads' activity behind it, and the settings dialog and its
+ * page with it. Threads rebuilds without the framework's fragment state, so an answer addressed to
+ * the page that asked would find no page; SettingsFilePicker takes it instead, and the newest page
+ * takes the file when it's on screen. Without SettingsFilePicker in the manifest the page asks
+ * itself, as it used to. Nothing about a request is kept on the page: the request code says which
+ * row it was, and the file's address comes with the answer.
  *
  * <p>An import reads the file first and shows how many switches it changes. Nothing is written
  * until the person says so, and then everything is written in one commit. The preview is kept in
@@ -67,6 +68,10 @@ import app.morphe.extension.shared.settings.preference.LogBufferManager;
  * {@link #timeoutMs} at most, then gives the rows back, cancels the open and closes the file.
  * Whatever that app does afterwards shows nothing and changes nothing. An export is read back, so
  * a file that won't import isn't called saved.
+ *
+ * <p>How a run ended is said twice: in a toast, and under the row until the next run starts.
+ * Android 12 and newer cut a text toast at two lines, and a refusal, a longer translation or a
+ * larger text size runs past that.
  */
 @SuppressWarnings("deprecation") // Framework preferences are what the shared settings page builds on.
 public class SettingsBackupPreference extends Preference {
@@ -101,6 +106,8 @@ public class SettingsBackupPreference extends Preference {
 
     /** One read, write or import, with what the screen needs to stop waiting for it. */
     private static final class Run {
+        /** The row it was started from, which says how it ended. */
+        final int action;
         /** Reaches the file's app while it opens the file, for an app that honours it. */
         final CancellationSignal cancel = new CancellationSignal();
         /** The file the worker has open, closed when the screen stops waiting. */
@@ -108,6 +115,10 @@ public class SettingsBackupPreference extends Preference {
         volatile Closeable open;
         /** The worker has returned. */
         volatile boolean ended;
+
+        Run(int action) {
+            this.action = action;
+        }
 
         /** Keeps [file] where the screen can close it, or closes it now when the screen has stopped waiting. */
         AssetFileDescriptor hold(@Nullable AssetFileDescriptor file) throws IOException {
@@ -135,6 +146,7 @@ public class SettingsBackupPreference extends Preference {
      */
     private static WeakReference<HushThreadsPreferenceFragment> latestPage = new WeakReference<>(null);
 
+    private final HushThreadsPreferenceFragment owner;
     private final int rowAction;
     private final CharSequence restingSummary;
     /** The operation or waiting explanation this row shows while a file action runs. */
@@ -144,22 +156,24 @@ public class SettingsBackupPreference extends Preference {
     SettingsBackupPreference(HushThreadsPreferenceFragment page, Context context, int action,
                              CharSequence title, CharSequence summary) {
         super(context);
+        owner = page;
         rowAction = action;
         restingSummary = summary;
         setKey(action == EXPORT ? "action_export_settings" : "action_import_settings");
         setPersistent(false);
         setTitle(title);
-        setSummary(summary);
         setOnPreferenceClickListener(preference -> {
             // Rows are out of reach while a run is going, so this is only the race between a tap
-            // and that.
-            if (OWNER.get() == null && !stillStalled()) pickFile(page, action);
+            // and that. A second tap before the picker covers the page opens nothing.
+            if (OWNER.get() == null && !asking && !stillStalled()) pickFile(page, action);
             return true;
         });
         latestPage = new WeakReference<>(page);
         ROWS.add(new WeakReference<>(this));
         int running = runningAction;
+        // A page rebuilt after a run still shows how it ended.
         if (running != 0) showBusy(running, runningLine);
+        else showResting();
     }
 
     /** A readable, sortable name for the file, stamped in UTC like the diagnostic report. */
@@ -175,35 +189,132 @@ public class SettingsBackupPreference extends Preference {
         } else {
             intent.setType("*/*").putExtra(Intent.EXTRA_MIME_TYPES, OPENABLE_TYPES);
         }
+        // An older pick that never reached a page is let go: this one replaces it.
+        dropPicked(null);
+        Activity activity = page.getActivity();
+        Intent around = activity == null ? null : SettingsFilePicker.around(activity, intent, action);
+        asking = true;
         try {
-            page.startActivityForResult(intent, action);
-        } catch (ActivityNotFoundException missing) {
-            Logger.printInfo(() -> "No file picker for the settings file");
-            Utils.showToastLong(L10n.t("This phone has no file picker, so there's no way to choose a file here."));
+            if (around != null) page.startActivity(around);
+            else page.startActivityForResult(intent, action);
         } catch (RuntimeException error) {
+            couldNotPick(action, error);
+        }
+    }
+
+    static boolean isFileAction(int action) {
+        return action == EXPORT || action == IMPORT;
+    }
+
+    /**
+     * A picker was asked for and hasn't answered. Two quick taps used to open two, and the second
+     * answer let go of the access the first had just kept when both named the same file. Ends with
+     * the answer, a picker that didn't open, or the page back on screen, since no picker covers it then.
+     */
+    private static boolean asking;
+
+    /** The picker didn't open, from the page or from {@link SettingsFilePicker}. */
+    static void couldNotPick(int action, RuntimeException error) {
+        asking = false;
+        if (error instanceof ActivityNotFoundException) {
+            Logger.printInfo(() -> "No file picker for the settings file");
+            tell(action, L10n.t("This phone has no file picker, so there's no way to choose a file here."));
+        } else {
             Logger.printInfo(() -> "Could not open the file picker: " + error.getClass().getSimpleName());
-            Utils.showToastLong(L10n.t("Couldn't open the file picker. Try again."));
+            tell(action, L10n.t("Couldn't open the file picker. Try again."));
         }
     }
 
     /**
-     * A picker's answer, from the page's onActivityResult.
+     * A picker's answer, from the page's onActivityResult, when the page asked from its own
+     * fragment because {@link SettingsFilePicker} isn't in Threads' manifest.
      *
      * @return whether the request was one of these rows'.
      */
     static boolean onResult(HushThreadsPreferenceFragment page, int request, int result, @Nullable Intent data) {
-        if (request != EXPORT && request != IMPORT) return false;
+        if (!isFileAction(request)) return false;
+        asking = false;
         Uri uri = result == Activity.RESULT_OK && data != null ? data.getData() : null;
         if (uri == null) return true; // Cancelled: nothing to do and nothing to say.
-        if (request == EXPORT) export(page, uri);
-        else readForPreview(page, uri);
+        if (request == EXPORT) export(page, uri, 0);
+        else readForPreview(page, uri, 0);
         return true;
     }
 
-    private static void export(HushThreadsPreferenceFragment page, Uri uri) {
+    /** A file picked through {@link SettingsFilePicker} that no page has taken yet, with its row and lasting grant. */
+    @Nullable
+    private static Uri picked;
+    private static int pickedAction;
+    private static int pickedGrant;
+
+    /** How long a picked file waits for the settings to be on screen again before it's let go. A test sets its own. */
+    static long pickKeptMs = 120_000L;
+
+    /**
+     * {@link SettingsFilePicker}'s answer, holding [grant] on [file] when it's not zero. The newest
+     * page takes the file now if it's on screen, or when it next resumes: after the picker
+     * that's the page Threads rebuilt, if it rebuilt one. Main thread.
+     */
+    static void picked(int action, @Nullable Uri file, int grant) {
+        asking = false;
+        if (file == null) return; // Cancelled: nothing to do and nothing to say.
+        if (!isFileAction(action)) {
+            letGo(Utils.getContext(), file, grant);
+            return;
+        }
+        dropPicked(file);
+        picked = file;
+        pickedAction = action;
+        pickedGrant = grant;
+        HushThreadsPreferenceFragment page = latestPage.get();
+        if (page != null && page.isResumed()) {
+            takePicked(page);
+            return;
+        }
+        // The settings didn't come back, so the file isn't held on to forever.
+        Utils.runOnMainThreadDelayed(() -> {
+            if (picked != file) return;
+            Logger.printInfo(() -> "Settings file: no settings page took the picked file");
+            dropPicked(null);
+        }, pickKeptMs);
+    }
+
+    private static void takePicked(HushThreadsPreferenceFragment page) {
+        Uri file = picked;
+        if (file == null) return;
+        picked = null;
+        if (pickedAction == EXPORT) export(page, file, pickedGrant);
+        else readForPreview(page, file, pickedGrant);
+    }
+
+    /**
+     * Lets go of a pick no page took, unless it's [unless]: Android keeps one lasting grant per
+     * file, so letting go of an older pick of the same file would end the one just kept.
+     */
+    private static void dropPicked(@Nullable Uri unless) {
+        Uri file = picked;
+        picked = null;
+        if (file != null && !file.equals(unless)) letGo(Utils.getContext(), file, pickedGrant);
+    }
+
+    /** No picker asked for and no pick waiting, so a test that stopped early leaves none behind. For tests. */
+    static void forgetPickForTests() {
+        asking = false;
+        dropPicked(null);
+    }
+
+    /** Lets go of the lasting [grant] {@link SettingsFilePicker} took on [file], if it took one. */
+    private static void letGo(@Nullable Context context, Uri file, int grant) {
+        SettingsFileGrants.release(context, file, grant);
+    }
+
+    private static void export(HushThreadsPreferenceFragment page, Uri uri, int grant) {
         Context context = appContext(page);
         Run run = start(EXPORT, L10n.t("Saving the settings file"));
-        if (run == null) return;
+        if (run == null) {
+            letGo(context, uri, grant);
+            return;
+        }
         boolean accepted = Utils.runOnBackgroundThread(() -> {
             String said = null;
             try {
@@ -212,12 +323,15 @@ public class SettingsBackupPreference extends Preference {
                 Logger.printInfo(() -> "Settings export failed: " + error.getClass().getSimpleName());
                 said = L10n.t("Couldn't save the settings file. Try again.");
             } finally {
+                letGo(context, uri, grant);
                 String result = said;
-                ended(run, result == null ? null : () -> Utils.showToastLong(result));
+                ended(run, result == null ? null : () -> tell(EXPORT, result));
             }
         });
-        if (!accepted) notStarted(run);
-        else watch(run, L10n.t("The app holding the settings file is taking too long, so HushThreads stopped waiting. "
+        if (!accepted) {
+            letGo(context, uri, grant);
+            notStarted(run);
+        } else watch(run, L10n.t("The app holding the settings file is taking too long, so HushThreads stopped waiting. "
                 + "That app may still finish saving it, so check the file before you rely on it."));
     }
 
@@ -253,10 +367,13 @@ public class SettingsBackupPreference extends Preference {
                 + "Save it again as a new file.");
     }
 
-    private static void readForPreview(HushThreadsPreferenceFragment page, Uri uri) {
+    private static void readForPreview(HushThreadsPreferenceFragment page, Uri uri, int grant) {
         Context context = appContext(page);
         Run run = start(IMPORT, L10n.t("Reading the settings file"));
-        if (run == null) return;
+        if (run == null) {
+            letGo(context, uri, grant);
+            return;
+        }
         boolean accepted = Utils.runOnBackgroundThread(() -> {
             Runnable result = null;
             try {
@@ -265,13 +382,17 @@ public class SettingsBackupPreference extends Preference {
             } catch (SettingsBackup.Rejected refused) {
                 Logger.printInfo(() -> "Settings file refused: " + refused.reason);
                 String said = refusal(refused.reason);
-                result = () -> Utils.showToastLong(said);
+                result = () -> tell(IMPORT, said);
             } finally {
+                // The import itself works from what was read, so the file is done with.
+                letGo(context, uri, grant);
                 ended(run, result);
             }
         });
-        if (!accepted) notStarted(run);
-        else watch(run, L10n.t("The app holding that file is taking too long, so HushThreads stopped waiting. "
+        if (!accepted) {
+            letGo(context, uri, grant);
+            notStarted(run);
+        } else watch(run, L10n.t("The app holding that file is taking too long, so HushThreads stopped waiting. "
                 + "Nothing was changed."));
     }
 
@@ -322,8 +443,13 @@ public class SettingsBackupPreference extends Preference {
         if (page.isResumed()) showPreview(page);
     }
 
-    /** Called when the page resumes: a preview waiting on an answer is shown again. */
+    /**
+     * Called when the page resumes: it takes a file picked while it was covered, and a preview
+     * waiting on an answer is shown again.
+     */
     static void onPageResumed(HushThreadsPreferenceFragment page) {
+        asking = false;
+        takePicked(page);
         if (page.pendingImport != null) showPreview(page);
     }
 
@@ -396,20 +522,24 @@ public class SettingsBackupPreference extends Preference {
             Map<Setting<?>, Object> before = new LinkedHashMap<>();
             for (Setting<?> setting : snapshot.changes().keySet()) before.put(setting, setting.savedValue());
             accepted = Utils.runOnBackgroundThread(() -> {
+                String said = null;
                 try {
                     SettingsBackup.apply(snapshot);
-                    Utils.showToastLong(done);
+                    said = done;
                 } catch (SettingsBackup.ApplyFailed failure) {
                     Logger.printInfo(() -> "Settings import failed: " + failure.getMessage()
                             + (failure.rolledBack ? ", rolled back" : ", not rolled back"));
-                    Utils.showToastLong(failure.rolledBack
+                    said = failure.rolledBack
                             ? L10n.t("Couldn't import the settings. Nothing was changed.")
                             : L10n.t("Couldn't import the settings, and couldn't put back the ones you had. "
-                                    + "Check the switches on this screen."));
+                                    + "Check the switches on this screen.");
                 } finally {
+                    String result = said;
                     Utils.runOnMainThread(() -> {
                         AbstractPreferenceFragment.settingImportInProgress = false;
                         finish(run);
+                        // First, so nothing below can keep the person from hearing how it went.
+                        if (result != null) tell(IMPORT, result);
                         // An imported switch that waits for a restart owes one like a flipped one
                         // does. Measured against the store, so a failed import owes what it left.
                         for (Map.Entry<Setting<?>, Object> entry : before.entrySet()) {
@@ -434,7 +564,7 @@ public class SettingsBackupPreference extends Preference {
         }
     }
 
-    /** What the toast after an import says: how many switches changed. */
+    /** What an import says when it's done: how many switches changed. */
     static String importedMessage(int switches) {
         return switches == 0 ? L10n.t("Settings imported.") : L10n.quantity(switches,
                 "Settings imported. %1$d switch changed.", "Settings imported. %1$d switches changed.", switches);
@@ -450,11 +580,15 @@ public class SettingsBackupPreference extends Preference {
     @Nullable
     private static Run start(int action, String line) {
         if (stillStalled()) return null;
-        Run run = new Run();
+        Run run = new Run(action);
         if (!OWNER.compareAndSet(null, run)) {
+            // Toast only, like the other refusals to start: the rows keep how the last run ended.
             Utils.showToastLong(L10n.t("Couldn't start that. Try again in a moment."));
             return null;
         }
+        // The last run's outcome is old news once another starts.
+        HushThreadsPreferenceFragment page = latestPage.get();
+        if (page != null) page.backupOutcome = null;
         runningAction = action;
         runningLine = line;
         setRowsBusy(action, line);
@@ -506,16 +640,37 @@ public class SettingsBackupPreference extends Preference {
             // Closing can wait on the app too, so not on the main thread.
             if (open != null) new Thread(() -> closeQuietly(open), "hushthreads-settings-file").start();
             Logger.printInfo(() -> "Settings file: stopped waiting on the app holding it");
-            Utils.showToastLong(message);
+            tell(run.action, message);
         }, timeoutMs);
     }
 
-    /** Says so, and answers true, while a run the screen stopped waiting for still holds a worker. */
+    /**
+     * Says so, and answers true, while a run the screen stopped waiting for still holds a worker.
+     * A toast only: under the row, it would outlast the stall it describes, and the stalled run's
+     * own warning stays there.
+     */
     private static boolean stillStalled() {
         Run held = stalled;
         if (held == null || held.ended) return false;
         Utils.showToastLong(L10n.t("The app holding the last settings file still hasn't answered. Try again later."));
         return true;
+    }
+
+    /**
+     * Says how [action]'s run ended in a toast, and under its row on the newest page until another
+     * run starts. Main thread only.
+     */
+    private static void tell(int action, String message) {
+        Utils.showToastLong(message);
+        HushThreadsPreferenceFragment page = latestPage.get();
+        if (page == null) return;
+        page.backupOutcomeAction = action;
+        page.backupOutcome = message;
+        for (WeakReference<SettingsBackupPreference> held : ROWS) {
+            SettingsBackupPreference row = held.get();
+            // A busy row keeps its explanation, and shows this when the rows come back.
+            if (row != null && row.busyLine == null) row.showResting();
+        }
     }
 
     private static void closeQuietly(@Nullable Closeable open) {
@@ -550,10 +705,12 @@ public class SettingsBackupPreference extends Preference {
         setSummary(busyLine);
     }
 
+    /** Usable again, under how this row's last run ended, or its own summary. */
     private void showResting() {
         busyLine = null;
         setEnabled(true);
-        setSummary(restingSummary);
+        String said = owner.backupOutcomeAction == rowAction ? owner.backupOutcome : null;
+        setSummary(said != null ? said : restingSummary);
     }
 
     @Override

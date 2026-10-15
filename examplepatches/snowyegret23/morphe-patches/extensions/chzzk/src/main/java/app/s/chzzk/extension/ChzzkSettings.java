@@ -62,6 +62,7 @@ public final class ChzzkSettings {
                 throw new IllegalStateException("CHZZK Compose state bridge is unavailable", e);
             }
         }
+        updateAudio();
         ChatUi.attach(host);
     }
 
@@ -120,7 +121,15 @@ public final class ChzzkSettings {
         }
     }
 
+    private static void updateAudio() {
+        if (preferences == null) return;
+        AudioEffects.update(preferences.getBoolean("audio_compression", false),
+            preferences.getInt("audio_compression_strength", 1),
+            preferences.getBoolean("audio_boost", false), preferences.getInt("audio_volume", 100));
+    }
+
     static void changed() {
+        updateAudio();
         if (revision == null) return;
         try {
             writeRevision.invoke(revision, ++revisionNumber);
@@ -355,7 +364,10 @@ public final class ChzzkSettings {
         row.setPadding(0, dp(context, 16), 0, dp(context, 4));
         row.addView(text(context, title, 14, TEXT), new LinearLayout.LayoutParams(0, -2, 1));
         int current = number(key, fallback);
-        TextView value = text(context, current + unit + ("chat_width_scale".equals(key) && current == 100 ? " · 기본" : ""), 13, GREEN);
+        boolean seconds = "live_catch_up_buffer_seconds".equals(key);
+        boolean stepped = seconds || "chat_width_scale".equals(key) || "font_scale".equals(key) || "audio_volume".equals(key);
+        int stepSize = seconds ? 1 : 5;
+        TextView value = text(context, current + unit + (stepped && current == fallback ? " · 기본" : ""), 13, GREEN);
         value.setTypeface(null, Typeface.BOLD);
         row.addView(value);
         panel.addView(row);
@@ -367,19 +379,19 @@ public final class ChzzkSettings {
         seek.setThumbTintList(ColorStateList.valueOf(GREEN));
         seek.setContentDescription(title);
         panel.addView(seek, new LinearLayout.LayoutParams(-1, dp(context, 44)));
-        if ("chat_width_scale".equals(key)) {
+        if (stepped) {
             value.setGravity(Gravity.CENTER);
             value.setMinWidth(dp(context, 96));
-            for (int delta : new int[] {-5, 5}) {
+            for (int delta : new int[] {-stepSize, stepSize}) {
                 TextView step = text(context, delta < 0 ? "−" : "+", 24, GREEN);
                 step.setGravity(Gravity.CENTER);
-                step.setContentDescription(delta < 0 ? "채팅 폭 5% 줄이기" : "채팅 폭 5% 늘리기");
+                step.setContentDescription(title + " " + stepSize + unit + (delta < 0 ? " 줄이기" : " 늘리기"));
                 row.addView(step, delta < 0 ? 1 : row.getChildCount(),
                     new LinearLayout.LayoutParams(dp(context, 40), dp(context, 40)));
                 step.setOnClickListener(view -> {
                     int next = Math.max(min, Math.min(max, number(key, fallback) + delta));
                     seek.setProgress(next - min);
-                    value.setText(next + unit + (next == 100 ? " · 기본" : ""));
+                    value.setText(next + unit + (next == fallback ? " · 기본" : ""));
                     setNumber(key, next);
                 });
             }
@@ -388,7 +400,7 @@ public final class ChzzkSettings {
             public void onProgressChanged(SeekBar bar, int progress, boolean fromUser) {
                 if (!fromUser) return;
                 int next = progress + min;
-                value.setText(next + unit + ("chat_width_scale".equals(key) && next == 100 ? " · 기본" : ""));
+                value.setText(next + unit + (stepped && next == fallback ? " · 기본" : ""));
                 setNumber(key, next);
             }
             public void onStartTrackingTouch(SeekBar bar) {}
@@ -640,7 +652,7 @@ public final class ChzzkSettings {
             case "drag_chat_width": case "device_icons": case "hide_role_badge":
             case "hide_subscription_badge": case "hide_donation_badge": case "hide_activity_badge":
             case "hide_verified_badge": case "hide_channel_badge": case "hide_clip_button":
-            case "live_catch_up":
+            case "live_catch_up": case "audio_compression": case "audio_boost":
             case "hide_cast_button": case "hide_share_button":
                 return true;
             default: return false;
@@ -655,6 +667,9 @@ public final class ChzzkSettings {
             case "font_scale": case "emoji_scale": case "badge_scale": return new int[] {80, 200};
             case "line_scale": return new int[] {80, 160};
             case "timestamp_format": return new int[] {0, 3};
+            case "audio_compression_strength": return new int[] {0, 2};
+            case "audio_volume": return new int[] {100, 300};
+            case "live_catch_up_buffer_seconds": return new int[] {1, 10};
             case "timestamp_size": return new int[] {60, 100};
             default: return null;
         }
@@ -756,6 +771,7 @@ public final class ChzzkSettings {
         navigation(sheet.content, "닉네임과 배지", "닉네임과 각 배지를 따로 표시", () -> badgePage(sheet));
         navigation(sheet.content, "메시지와 채팅 주변", "원문 표시 · 안내 메시지 · 순위", () -> messagePage(sheet));
         navigation(sheet.content, "플레이어", "실시간 따라잡기 · 버튼 표시", () -> playerPage(sheet));
+        navigation(sheet.content, "소리", "소리 평준화 · 추가 증폭", () -> audioPage(sheet));
         navigation(sheet.content, "최근 채팅", "화면에 표시된 대화 다시 보기", () -> showHistory(sheet));
         navigation(sheet.content, "설정 관리", "설정 복사 · 붙여넣기 · 초기화", () -> managePage(sheet));
     }
@@ -832,11 +848,34 @@ public final class ChzzkSettings {
     private static void playerPage(Sheet sheet) {
         LinearLayout content = page(sheet, "플레이어");
         toggle(content, "실시간 따라잡기 버튼", "live_catch_up", true);
-        label(content, "동심원 버튼을 누르면 플레이어가 제공하는 실시간 위치로 이동합니다.");
+        slider(content, "남길 버퍼", "live_catch_up_buffer_seconds", 1, 10, 3, "초");
+        label(content, "동심원 버튼으로 앞으로 이동할 때 남길 영상의 길이입니다. 값을 줄이면 더 최신 위치로 이동하지만 끊김이 늘 수 있습니다.");
         toggle(content, "클립 만들기 버튼 숨기기", "hide_clip_button", false);
         toggle(content, "크롬캐스트 버튼 숨기기", "hide_cast_button", false);
         toggle(content, "공유 버튼 숨기기", "hide_share_button", false);
         if (autoClaimAvailable()) toggle(content, "통나무 파워 자동 수령", "auto_claim", true);
+    }
+
+    private static void audioPage(Sheet sheet) {
+        LinearLayout content = page(sheet, "소리");
+        toggle(content, "소리 평준화", "audio_compression", false);
+        label(content, "작은 소리는 키우고 큰 소리는 눌러 소리 크기의 차이를 줄입니다.");
+        String[] strengths = {"약하게", "보통", "강하게"};
+        navigation(content, "평준화 강도", strengths[number("audio_compression_strength", 1)], () -> {
+            LinearLayout choices = page(sheet, "평준화 강도");
+            sheet.onBack = () -> audioPage(sheet);
+            for (int i = 0; i < strengths.length; i++) {
+                final int strength = i;
+                action(choices, (number("audio_compression_strength", 1) == i ? "✓  " : "") + strengths[i], () -> {
+                    setNumber("audio_compression_strength", strength);
+                    audioPage(sheet);
+                });
+            }
+        });
+        toggle(content, "추가 증폭", "audio_boost", false);
+        slider(content, "증폭 배율", "audio_volume", 100, 300, 100, "%");
+        label(content, "100%는 원래 음량입니다. 큰 소리가 찌그러지지 않도록 출력 한도를 제한합니다.");
+        label(content, "이 기기에서 재생되는 소리에 바로 적용됩니다.");
     }
 
     private static void managePage(Sheet sheet) {
@@ -847,7 +886,7 @@ public final class ChzzkSettings {
         action(content, "설정 초기화", () -> {
             LinearLayout confirm = page(sheet, "설정 초기화");
             sheet.onBack = () -> managePage(sheet);
-            label(confirm, "모든 채팅·플레이어 설정과 최근 채팅을 초기화합니다.");
+            label(confirm, "모든 채팅·플레이어·소리 설정과 최근 채팅을 초기화합니다.");
             action(confirm, "기본 설정으로 되돌리기", () -> {
                 preferences.edit().clear().apply();
                 keywords = new String[0];

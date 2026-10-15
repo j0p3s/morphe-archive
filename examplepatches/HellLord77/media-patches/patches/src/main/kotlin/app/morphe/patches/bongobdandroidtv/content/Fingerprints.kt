@@ -6,15 +6,17 @@ import app.morphe.patches.shared.Type
 import app.morphe.patches.shared.isNotExtension
 import com.android.tools.smali.dexlib2.Opcode
 
-object GetVideoDetailsDataMethodCallFingerprint : Fingerprint(
-    filters = listOf(
-        methodCall(
-            definingClass = "Lsaas/ott/smarttv/ui/details/data/DetailsEndPoint;",
-            name = "getVideoDetailsData",
-            parameters = listOf(Type.STRING),
-            returnType = "Lretrofit2/Call;",
-            opcode = Opcode.INVOKE_INTERFACE
-        )
-    ),
-    custom = ::isNotExtension
-)
+object GetVideoDetailsDataMethodCallFingerprint :
+    Fingerprint(
+        filters =
+            listOf(
+                methodCall(
+                    definingClass = "Lsaas/ott/smarttv/ui/details/data/DetailsEndPoint;",
+                    name = "getVideoDetailsData",
+                    parameters = listOf(Type.STRING),
+                    returnType = "Lretrofit2/Call;",
+                    opcode = Opcode.INVOKE_INTERFACE,
+                )
+            ),
+        custom = ::isNotExtension,
+    )

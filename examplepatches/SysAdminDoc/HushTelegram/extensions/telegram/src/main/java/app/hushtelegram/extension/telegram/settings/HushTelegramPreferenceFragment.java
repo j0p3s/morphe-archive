@@ -20,9 +20,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.Typeface;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.Preference;
 import android.preference.PreferenceCategory;
+import android.preference.PreferenceGroup;
 import android.preference.PreferenceScreen;
 import android.preference.SwitchPreference;
 import android.preference.TwoStatePreference;
@@ -53,10 +55,14 @@ import androidx.annotation.Nullable;
 import java.text.NumberFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.WeakHashMap;
+import java.util.function.BooleanSupplier;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -74,8 +80,10 @@ import app.hushtelegram.extension.shared.settings.preference.ImmediateAction;
 import app.hushtelegram.extension.shared.settings.preference.LogBufferManager;
 import app.hushtelegram.extension.shared.settings.preference.QuickSetups;
 import app.hushtelegram.extension.telegram.misc.ChatTypeFolders;
+import app.hushtelegram.extension.telegram.misc.DataSaverDownloads;
 import app.hushtelegram.extension.telegram.misc.FirebasePush;
 import app.hushtelegram.extension.telegram.misc.KeepDeleted;
+import app.hushtelegram.extension.telegram.misc.LaunchFolder;
 import app.hushtelegram.extension.telegram.misc.OutsideTranslate;
 import app.hushtelegram.extension.telegram.misc.StickerSize;
 import app.hushtelegram.extension.telegram.misc.UnifiedPush;
@@ -110,6 +118,8 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
     static final String CLEAR_KEPT = "action_clear_kept_messages";
     /** The Sticker size row's key. The size itself is saved under {@link Settings#STICKER_SIZE}. */
     static final String STICKER_SIZE_ROW = "action_sticker_size";
+    /** The Folder to open row's key. The picks are kept by {@link LaunchFolder}, one for each account. */
+    static final String LAUNCH_FOLDER_ROW = "action_launch_folder";
 
     /** Thrown by the next initialize() and then cleared: how a test reaches the recovery page. */
     static volatile RuntimeException failNextInitialization;
@@ -242,10 +252,14 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         SettingsBackupPreference.onResult(this, requestCode, resultCode, data);
     }
 
-    /** Shows what the switches are saved as, after an import wrote them. */
+    /**
+     * Shows what the switches are saved as, which are in reach and whether a restart is owed, as an
+     * import starts and when it ends.
+     */
     void refreshSwitches() {
         updateUIToSettingValues();
-        // An import can change the filter lists too, and their rows say how many each holds.
+        onRestartPendingChanged();
+        // An import can change the filter lists, the sticker size and the title emoji too, and their rows say so.
         if (getPreferenceScreen() == null) return;
         Preference groups = findPreference(FilterEditor.GROUPS);
         if (groups != null) groups.setSummary(FilterEditor.summary(Settings.MESSAGE_FILTERS_GROUPS));
@@ -253,6 +267,8 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         if (channels != null) channels.setSummary(FilterEditor.summary(Settings.MESSAGE_FILTERS_CHANNELS));
         Preference size = findPreference(STICKER_SIZE_ROW);
         if (size != null) size.setSummary(stickerSizeSummary());
+        Preference emoji = findPreference(TitleEmojiEditor.KEY);
+        if (emoji != null) emoji.setSummary(TitleEmojiEditor.summary(Settings.TITLE_EMOJI.savedValue()));
     }
 
     @Override
@@ -301,7 +317,7 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         addLinksPage(context, screen, build);
         addUpdatesPage(context, screen, build);
         addPausePage(context, screen, build);
-        addBackupPage(context, screen);
+        addBackupPage(context, screen, build);
         addDiagnosticsPage(context, screen);
         addAboutPage(context, screen);
     }
@@ -333,6 +349,19 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
             on(pages, PatchFamily.HIDE_POPULAR_APPS).addPreference(toggle(context, Settings.HIDE_POPULAR_APPS, L10n.t("Hide popular apps"),
                     PatchFamily.HIDE_POPULAR_APPS.coverageSummary(L10n.t("Hides the Popular apps list on the Apps tab of search, and doesn't ask Telegram "
                             + "for it. Apps you've opened and other results stay."))));
+            if (PatchFamily.Capability.MY_CHATS_SEARCH.installed()) {
+                on(pages, PatchFamily.HIDE_POPULAR_APPS).addPreference(toggle(context, Settings.SEARCH_ONLY_MY_CHATS,
+                        L10n.t("Search only my chats"),
+                        L10n.t("Search finds your chats, contacts and messages from chats you're in, and nothing public. The "
+                                + "Channels, Apps and Posts tabs go away, and a hashtag's public posts don't load.")));
+            }
+            if (PatchFamily.Capability.NAME_FOLD.installed()) {
+                on(pages, PatchFamily.HIDE_POPULAR_APPS).addPreference(toggle(context, Settings.SEARCH_STYLED_NAMES,
+                        L10n.t("Find names in styled letters"),
+                        L10n.t("Searching your chats and contacts also finds names written in letters like 𝐁𝐨𝐥𝐝, 𝘐𝘵𝘢𝘭𝘪𝘤 or "
+                                + "Ｗｉｄｅ when you type plain ones. Names still show as they're written and numbers aren't "
+                                + "changed. A name found this way isn't highlighted.")));
+            }
         }
     }
 
@@ -354,15 +383,24 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
                             + " read. Press and hold still offers every action."))));
         }
         if (build.contains(PatchFamily.HIDE_FOLDER_COUNTERS)) {
-            on(pages, PatchFamily.HIDE_FOLDER_COUNTERS).addPreference(toggle(context, Settings.HIDE_FOLDER_COUNTERS, L10n.t("Hide folder tab counters"),
+            PreferenceCategory folderTabs = on(pages, PatchFamily.HIDE_FOLDER_COUNTERS);
+            folderTabs.addPreference(toggle(context, Settings.HIDE_FOLDER_COUNTERS, L10n.t("Hide folder tab counters"),
                     PatchFamily.HIDE_FOLDER_COUNTERS.coverageSummary(L10n.t("Folder tabs above the chat list show just their names, without unread counts. "
                             + "Chats stay unread and the app icon badge doesn't change."))));
+            if (PatchFamily.Capability.LAUNCH_FOLDER.installed()) {
+                folderTabs.addPreference(toggle(context, Settings.LAUNCH_FOLDER, L10n.t("Open a folder at launch"),
+                        L10n.t("The chat list opens on the folder you pick below instead of All Chats. Each account keeps its "
+                                + "own pick, and the folder order doesn't change. If that folder is gone, renamed or locked, "
+                                + "All Chats opens as usual.")));
+                folderTabs.addPreference(launchFolderRow(context));
+            }
         }
         if (build.contains(PatchFamily.CHAT_TYPE_FOLDERS)) {
             SwitchPreference folders = toggle(context, Settings.CHAT_TYPE_FOLDERS, L10n.t("Folders by chat type"),
                     PatchFamily.CHAT_TYPE_FOLDERS.coverageSummary(L10n.t("Turning this on makes Private, Groups, Channels and Bots "
                             + "folders, as tabs above the chat list and on your other devices. Turning it off removes the ones it "
-                            + "made, unless you renamed or changed them.")));
+                            + "made, unless you renamed or changed them.") + " "
+                            + L10n.t("Both work on the account you have open.")));
             folders.setOnPreferenceChangeListener((row, value) -> {
                 // Once the switch is saved, so the folders follow what it says.
                 Utils.runOnMainThreadDelayed(() -> {
@@ -383,6 +421,19 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
                     PatchFamily.HIDE_CONTACTS_TAB.coverageSummary(L10n.t("The Contacts tab leaves the bar at the bottom of the main screen, and "
                             + "swiping doesn't open its page either. The Calls or Settings tab stays as Telegram has it, and the chat "
                             + "list's new message button still opens your contacts. Restart Telegram to see the change."))));
+            if (PatchFamily.Capability.COMPACT_TAB_BAR.installed()) {
+                on(pages, PatchFamily.HIDE_CONTACTS_TAB).addPreference(toggle(context, Settings.COMPACT_TAB_BAR,
+                        L10n.t("Compact bottom bar"),
+                        L10n.t("The bar at the bottom of the main screen gets shorter and only as wide as its tabs need. "
+                                + "The tabs keep their full height, so they're just as easy to tap. Restart Telegram to see the change.")));
+            }
+            if (PatchFamily.Capability.SIDE_MENU.installed()) {
+                on(pages, PatchFamily.HIDE_CONTACTS_TAB).addPreference(toggle(context, Settings.SIDE_MENU,
+                        L10n.t("Side menu"),
+                        L10n.t("Swipe right on your first chat folder and a menu slides in, like the one older Telegram had. It has "
+                                + "your profile, new message, contacts, calls, saved messages and settings, plus a way to switch "
+                                + "accounts. Back or a tap beside it closes it.")));
+            }
         }
     }
 
@@ -490,7 +541,8 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
                     PatchFamily.OUTSIDE_TRANSLATE.coverageSummary(L10n.t("Adds Translate here to a message's menu and Translate this chat to a chat's menu, "
                             + "using the translation service you choose. The text you ask to translate is sent to that service, "
                             + "one message at a time. Nothing leaves your "
-                            + "phone until you turn a chat or message on.")));
+                            + "phone until you turn a chat or message on.") + " "
+                            + L10n.t("A chat or message you turn on stays on only in the account you turned it on in.")));
             // Off means off: switching back on later starts with no chat or message turned on.
             outside.setOnPreferenceChangeListener((row, value) -> {
                 if (Boolean.FALSE.equals(value)) OutsideTranslate.forgetChats();
@@ -511,6 +563,13 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         if (build.contains(PatchFamily.VOICE_ONE_AT_A_TIME)) {
             on(pages, PatchFamily.VOICE_ONE_AT_A_TIME).addPreference(toggle(context, Settings.VOICE_ONE_AT_A_TIME, L10n.t("Play voice messages one at a time"),
                     PatchFamily.VOICE_ONE_AT_A_TIME.coverageSummary(L10n.t("When a voice or video message ends, the next one doesn't start by itself."))));
+            if (PatchFamily.Capability.LOCKED_VOICE.installed()) {
+                on(pages, PatchFamily.VOICE_ONE_AT_A_TIME).addPreference(toggle(context, Settings.LOCKED_VOICE_GUARD,
+                        L10n.t("Keep voice messages quiet while locked"),
+                        L10n.t("While your phone is locked, voice and round video messages don't start, resume or skip to the next one, "
+                                + "whether from headphones, a car, the notification or the lock screen. One that's already playing "
+                                + "finishes. Music and other videos play as usual.")));
+            }
         }
         if (build.contains(PatchFamily.VOICE_MUSIC_PLAYER)) {
             on(pages, PatchFamily.VOICE_MUSIC_PLAYER).addPreference(toggle(context, Settings.VOICE_MUSIC_PLAYER, L10n.t("Voice messages in the music player"),
@@ -521,6 +580,16 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
             on(pages, PatchFamily.FASTER_DOWNLOADS).addPreference(toggle(context, Settings.FASTER_DOWNLOADS, L10n.t("Faster downloads"),
                     PatchFamily.FASTER_DOWNLOADS.coverageSummary(L10n.t("Files download in 512 KB pieces, 8 at a time, instead of 128 KB pieces"
                             + " 4 at a time. If a big piece fails, Telegram goes back to small ones. The next download picks this up."))));
+            if (PatchFamily.Capability.DATA_SAVER_DOWNLOADS.installed()) {
+                SwitchPreference dataSaver = toggle(context, Settings.DATA_SAVER_DOWNLOADS,
+                        L10n.t("Hold automatic downloads on Data Saver"), dataSaverSummary(DataSaverDownloads.status(context)));
+                dataSaver.setOnPreferenceChangeListener((row, value) -> {
+                    // Once the switch is saved, so Telegram's queue follows it now rather than at the next network change.
+                    Utils.runOnMainThreadDelayed(DataSaverDownloads::switched, 0);
+                    return true;
+                });
+                on(pages, PatchFamily.FASTER_DOWNLOADS).addPreference(dataSaver);
+            }
         }
         if (build.contains(PatchFamily.SAVE_DOWNLOADS)) {
             on(pages, PatchFamily.SAVE_DOWNLOADS).addPreference(toggle(context, Settings.SAVE_DOWNLOADS, L10n.t("Save downloaded files"),
@@ -532,10 +601,46 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
 
     /** The Notifications page: the status on this phone and the two push switches lead. */
     static String notificationSummary(FirebasePush.LocalStatus status) {
-        return L10n.f("Notification permission: %1$s", status.notificationPermission == null ? L10n.t("Unknown")
-                : status.notificationPermission ? L10n.t("Allowed") : L10n.t("Blocked"))
+        return status.permissionLine() + "\n" + status.backgroundLine()
                 + "\n" + L10n.f("Signed-in accounts: %1$s", status.activeAccounts < 0 ? L10n.t("Unknown") : status.activeAccounts)
                 + "\n" + L10n.t("Tap for details and Android settings.");
+    }
+
+    /**
+     * Whether the battery optimization list is where the person can let Telegram run. Before Android
+     * 12, App info holds the background setting and only reaches battery optimization a few taps in,
+     * so when only that applies, the list itself is the shorter way.
+     */
+    static boolean batteryListFirst(FirebasePush.LocalStatus status) {
+        return Build.VERSION.SDK_INT < Build.VERSION_CODES.S && !Boolean.TRUE.equals(status.backgroundRestricted)
+                && Boolean.TRUE.equals(status.batteryOptimized);
+    }
+
+    /** Android's battery optimization list, or App info when the list won't open. Opening either changes nothing. */
+    static void openBatteryOptimization(Context context) {
+        Intent list = new Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS);
+        Intent details = new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                Uri.parse("package:" + context.getPackageName()));
+        for (Intent intent : new Intent[]{list, details}) {
+            try {
+                context.startActivity(intent);
+                return;
+            } catch (ActivityNotFoundException | SecurityException exception) {
+                Logger.printException(() -> "Could not open battery optimization", exception);
+            }
+        }
+        Utils.showToastLong(L10n.t("Couldn't open battery optimization. Open Android settings."));
+    }
+
+    /** App info, where Android keeps an app's background setting, and from Android 12 its battery one. Opening it changes nothing. */
+    static void openAppInfo(Context context) {
+        try {
+            context.startActivity(new Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + context.getPackageName())));
+        } catch (ActivityNotFoundException | SecurityException exception) {
+            Logger.printException(() -> "Could not open app info", exception);
+            Utils.showToastLong(L10n.t("Couldn't open app info. Open Android settings."));
+        }
     }
 
     void openNotificationSettings(Context context) {
@@ -564,11 +669,19 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
             localNotificationStatus.setKey("local_notification_status");
             localNotificationStatus.setIcon(SettingsIcons.icon(context, SettingsIcons.ABOUT, ScreenColors.DEFAULT.heading));
             localNotificationStatus.setOnPreferenceClickListener(row -> {
-                show(new AlertDialog.Builder(themed(context))
+                FirebasePush.LocalStatus status = FirebasePush.localStatus(context);
+                AlertDialog.Builder details = new AlertDialog.Builder(themed(context))
                         .setTitle(L10n.t("Notification status on this phone"))
-                        .setMessage(FirebasePush.localStatus(context).summary())
+                        .setMessage(status.summary())
                         .setPositiveButton(L10n.t("Open notification settings"), (dialog, which) -> openNotificationSettings(context))
-                        .setNegativeButton(L10n.t("Close"), null));
+                        .setNegativeButton(L10n.t("Close"), null);
+                // Only when Android holds Telegram back, and to the page where the person can change that.
+                if (batteryListFirst(status)) {
+                    details.setNeutralButton(L10n.t("Open battery optimization"), (dialog, which) -> openBatteryOptimization(context));
+                } else if (status.androidLimitsBackground()) {
+                    details.setNeutralButton(L10n.t("Open app info"), (dialog, which) -> openAppInfo(context));
+                }
+                show(details);
                 return true;
             });
             notifications.addPreference(localNotificationStatus);
@@ -590,7 +703,10 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
                 UnifiedPush.switched(context, on);
                 // The app answers in a moment, so the row reads its state again after.
                 app.setSummary(UnifiedPush.status(context, on));
-                Utils.runOnMainThreadDelayed(() -> app.setSummary(UnifiedPush.status(context, Settings.UNIFIED_PUSH.savedValue())), 2000);
+                Utils.runOnMainThreadDelayed(() -> {
+                    // A page closed in the meantime has nothing to show it on.
+                    if (isAdded()) app.setSummary(UnifiedPush.status(context, Settings.UNIFIED_PUSH.savedValue()));
+                }, 2000);
                 return true;
             });
             on(pages, PatchFamily.UNIFIED_PUSH).addPreference(push);
@@ -608,8 +724,14 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         }
     }
 
-    /** The Look and feel page: theme, messages and stickers, profiles, touch, less clutter. */
+    /**
+     * The Look and feel page: theme, messages and stickers, profiles, touch, less clutter. Its first
+     * row is the look of these settings themselves, which sits on Settings backup instead in a build
+     * without the page.
+     */
     private void addLookPage(Context context, Map<PatchFamily.Page, PreferenceCategory> pages, Set<PatchFamily> build) {
+        PreferenceCategory look = pages.get(PatchFamily.Page.LOOK);
+        if (look != null) look.addPreference(settingsLookRow(context));
         if (build.contains(PatchFamily.HIDE_RECOMMENDATIONS)) {
             on(pages, PatchFamily.HIDE_RECOMMENDATIONS).addPreference(toggle(context, Settings.HIDE_RECOMMENDATIONS, L10n.t("Hide recommendations"),
                     PatchFamily.HIDE_RECOMMENDATIONS.coverageSummary(L10n.t("Hides suggested similar channels and bots, including ones already saved, and "
@@ -632,6 +754,9 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
             on(pages, PatchFamily.HOLIDAY_LOOK).addPreference(toggle(context, Settings.HOLIDAY_LOOK, L10n.t("New Year look all year"),
                     PatchFamily.HOLIDAY_LOOK.coverageSummary(L10n.t("Shows Telegram's Santa hat and New Year snow all year, not only around New Year."
                             + " Snow falls on the chat list's top bar and on chat backgrounds once Wallpaper rotation is on under Power Saving, in Effects in Chats."))));
+            if (PatchFamily.Capability.TITLE_EMOJI.installed()) {
+                on(pages, PatchFamily.HOLIDAY_LOOK).addPreference(titleEmojiRow(context));
+            }
         }
         if (build.contains(PatchFamily.USE_SYSTEM_FONT)) {
             on(pages, PatchFamily.USE_SYSTEM_FONT).addPreference(toggle(context, Settings.USE_SYSTEM_FONT, L10n.t("Use system font"),
@@ -737,13 +862,15 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
                 if (PatchFamily.Capability.LOCAL_DRAFTS.installed()) {
                     privacy.addPreference(toggle(context, Settings.LOCAL_DRAFTS, L10n.t("Keep drafts on this phone"),
                             L10n.t("A message you start but don't send stays on this phone and stops syncing to your other "
-                                    + "devices. Clearing a draft still clears it there.")));
+                                    + "devices. Clearing a draft still clears it there.") + " "
+                                    + L10n.t("This covers every account in this Telegram app.")));
                 }
                 if (PatchFamily.Capability.LOCAL_SEARCH.installed()) {
                     privacy.addPreference(toggle(context, Settings.LOCAL_SEARCH, L10n.t("Keep searches on this phone"),
-                            L10n.t("What you type in search's Chats tab isn't sent to Telegram. It finds the chats, contacts and "
-                                    + "recent searches on this phone, but not messages, public accounts or posts. The other "
-                                    + "tabs search as usual.")));
+                            L10n.t("What you type in the main search isn't sent to Telegram, except in the Posts tab. The "
+                                    + "Chats tab finds your chats and contacts on this phone, plus recent searches, but not "
+                                    + "messages or public accounts. Channels, Apps, the media tabs and chat or date filters "
+                                    + "don't search for typed text. Search inside a chat still goes to Telegram.")));
                 }
             }
             if (build.contains(PatchFamily.GALLERY_CAMERA_ON_TAP)) {
@@ -754,7 +881,7 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         }
         if (build.contains(PatchFamily.HIDE_PHONE_NUMBER)) {
             on(pages, PatchFamily.HIDE_PHONE_NUMBER).addPreference(toggle(context, Settings.HIDE_PHONE_NUMBER, L10n.t("Hide phone number"),
-                    PatchFamily.HIDE_PHONE_NUMBER.coverageSummary(L10n.t("Your own phone number shows as dots in the side menu, Settings and your profile,"
+                    PatchFamily.HIDE_PHONE_NUMBER.coverageSummary(L10n.t("Your own phone number shows as dots in Settings and your profile,"
                             + " which helps with screenshots. Others' numbers stay visible."))));
             if (PatchFamily.Capability.SHARE_NUMBER_UNTICKED.installed()) {
                 on(pages, PatchFamily.HIDE_PHONE_NUMBER).addPreference(toggle(context, Settings.SHARE_NUMBER_UNTICKED,
@@ -781,6 +908,12 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
             links.addPreference(mark(toggle(context, Settings.OPEN_EXTERNAL_LINKS, L10n.t("Open links externally"),
                     PatchFamily.OPEN_EXTERNAL_LINKS.coverageSummary(L10n.t("Opens normal web links in your browser. Telegram links, sign-in and payment pages "
                             + "keep working the way they did."))), SettingsIcons.LINKS));
+            if (PatchFamily.Capability.MINI_APP_LOCATION.installed()) {
+                links.addPreference(toggle(context, Settings.MINI_APP_LOCATION_OFF, L10n.t("Keep your location from Mini Apps"),
+                        L10n.t("Mini Apps are told your phone's location isn't available, and web pages opened in Telegram are "
+                                + "refused it. A page that already had it keeps it until you close it. Sites can still guess a "
+                                + "rough area from your connection. Sending your location in a chat works as before.")));
+            }
         }
         if (build.contains(PatchFamily.STRIP_LINK_TRACKING)) {
             links.addPreference(toggle(context, Settings.STRIP_LINK_TRACKING, L10n.t("Remove link tracking tags"),
@@ -828,20 +961,81 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
     }
 
     /** Settings backup: the switches to a file and back. */
-    private void addBackupPage(Context context, PreferenceScreen screen) {
+    private void addBackupPage(Context context, PreferenceScreen screen, Set<PatchFamily> build) {
         PreferenceCategory backup = category(screen, L10n.t("Settings backup"));
         // Morphe Manager can export the patch choices and the signing key, not these switches.
         backup.addPreference(mark(new BackupRow(this, context, SettingsBackupPreference.EXPORT,
-                L10n.t("Export settings"),
-                L10n.t("Saves your switches, filter lists and sticker size to a file, for all accounts in this Telegram"
-                        + " app. Pause, Debug logging, the HushTelegram release check, UnifiedPush and Folders by chat type"
-                        + " stay out.")),
+                L10n.t("Export settings"), exportSummary(build)),
                 SettingsIcons.EXPORT));
         // The preview gives the count of the switches and each one by name.
         backup.addPreference(mark(new BackupRow(this, context, SettingsBackupPreference.IMPORT,
                 L10n.t("Import settings"),
                 L10n.t("Loads your switches, filter lists and sticker size from a saved file. You see what will "
                         + "change before anything is applied. It applies to all accounts.")), SettingsIcons.DOWNLOADS));
+        backup.addPreference(mark(restoreQuickSetupsRow(context), SettingsIcons.TOOLS));
+        if (!PatchFamily.Page.LOOK.inBuild(build)) backup.addPreference(settingsLookRow(context));
+    }
+
+    /**
+     * What Export settings says it saves and what it leaves out. The left-out list follows
+     * SettingsBackup's own decisions and names only what this build has, so the row never promises
+     * a backup of Telegram itself or names a switch that isn't there.
+     */
+    static String exportSummary(Set<PatchFamily> build) {
+        List<String> leftOut = new ArrayList<>(Arrays.asList(L10n.t("Pause HushTelegram"), L10n.t("Debug logging"),
+                L10n.t("Check for new HushTelegram releases"), L10n.t("Lock HushTelegram settings"),
+                L10n.t("Quick setups on the home page"), L10n.t("Settings look")));
+        if (build.contains(PatchFamily.UNIFIED_PUSH)) leftOut.add(L10n.t("UnifiedPush notifications"));
+        if (build.contains(PatchFamily.CHAT_TYPE_FOLDERS)) leftOut.add(L10n.t("Folders by chat type"));
+        if (build.contains(PatchFamily.OUTSIDE_TRANSLATE)) {
+            leftOut.add(L10n.t("the translation service, its key and the chats you turned translation on for"));
+        }
+        return L10n.t("Saves your switches, filter lists, sticker size and chat list emoji to a file, for all the accounts "
+                + "in this Telegram app. Your chats, drafts and kept messages aren't in it.") + " "
+                + L10n.f("Left out of the file: %1$s.", L10n.join(leftOut));
+    }
+
+    /** Hides the Quick setups row on the home page, or shows it again. The home page follows the next time it's drawn. */
+    private static Preference restoreQuickSetupsRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(SettingsNavigation.RESTORE_QUICK_SETUPS);
+        row.setTitle(L10n.t("Quick setups on the home page"));
+        row.setSummary(restoreQuickSetupsSummary());
+        row.setPersistent(false);
+        row.actsAtOnce = true;
+        row.setOnPreferenceClickListener(p -> {
+            SettingsNavigation.HIDE_QUICK_SETUPS.save(!SettingsNavigation.HIDE_QUICK_SETUPS.get());
+            p.setSummary(restoreQuickSetupsSummary());
+            return true;
+        });
+        return row;
+    }
+
+    static String restoreQuickSetupsSummary() {
+        return SettingsNavigation.HIDE_QUICK_SETUPS.get() ? L10n.t("Hidden. Tap to show it again.") : L10n.t("Shown. Tap to hide it.");
+    }
+
+    /**
+     * Switches these pages between cards and plain rows with a thin line between them (#18). The
+     * new summary redraws the list, and every row is painted again as it's drawn.
+     */
+    private static Preference settingsLookRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(SettingsNavigation.SETTINGS_LOOK);
+        row.setTitle(L10n.t("Settings look"));
+        row.setSummary(settingsLookSummary());
+        row.setPersistent(false);
+        row.actsAtOnce = true;
+        row.setOnPreferenceClickListener(p -> {
+            SettingsNavigation.PLAIN_ROWS.save(!SettingsNavigation.PLAIN_ROWS.get());
+            p.setSummary(settingsLookSummary());
+            return true;
+        });
+        return row;
+    }
+
+    static String settingsLookSummary() {
+        return SettingsNavigation.PLAIN_ROWS.get() ? L10n.t("Plain rows. Tap for cards.") : L10n.t("Cards. Tap for plain rows.");
     }
 
     /** Diagnostics: Debug logging, the report, and clearing what a report would hold. */
@@ -858,7 +1052,7 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         export.setSummary(L10n.t("Copy a short report or save the full one to a file. The saved location is shown afterward. Links, IDs and sign-in details are "
                 + "left out. Look it over before sharing."));
         diagnostics.addPreference(mark(export, SettingsIcons.LICENSE));
-        ClearLogBufferPreference clear = new ClearRow(context);
+        ClearLogBufferPreference clear = new ClearRow(this, context);
         clear.setTitle(L10n.t("Clear diagnostic data"));
         clear.setClearAndUndoSummaries(L10n.t("Clears the activity log and patch checks that a report would include."),
                 L10n.t("Diagnostic data cleared. Tap again to put it back."));
@@ -872,7 +1066,9 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
                 L10n.isolate(Utils.getPatchesReleaseVersion()), L10n.isolate(Utils.getAppVersionName()))), SettingsIcons.ABOUT));
         // Switches live in one application-wide store, while Telegram can hold several accounts.
         about.addPreference(mark(info(context, L10n.t("Accounts"), L10n.t("Every switch here applies to all the "
-                + "accounts in this Telegram app, not only the one you have open.")), SettingsIcons.ABOUT));
+                + "accounts in this Telegram app, not only the one you have open.") + " "
+                + L10n.t("A few things belong to the account you have open instead, and their descriptions say so.")),
+                SettingsIcons.ABOUT));
 
         Preference source = new Row(context);
         source.setTitle(L10n.t("Source code and issues"));
@@ -950,6 +1146,61 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
     private void own(Dialog dialog) {
         shownDialogs.add(dialog);
         dialog.setOnDismissListener(shownDialogs::remove);
+    }
+
+    /** The dialogs with a save still on its way. Read and written on the main thread only. */
+    private static final Set<Dialog> SAVING = Collections.newSetFromMap(new WeakHashMap<>());
+
+    /**
+     * Runs [write], the save one of [dialog]'s actions asked for, off the main thread and behind
+     * every save asked for before it, then hands [then] whether it was saved. Until the answer is
+     * back the dialog's actions wait dimmed and it can't be closed, so a second tap starts nothing.
+     * A dialog that went with its page in the meantime is told nothing: there's no row left to show
+     * it on. A save the worker has no room for counts as not saved.
+     *
+     * <p>While a settings import is writing, nothing is saved and the dialog stays as it is: the
+     * import runs on another worker, so a save in between could be written over after it said it
+     * was saved.
+     *
+     * @return whether the save started; false when it was held back for an import or one is already on its way
+     */
+    static boolean save(AlertDialog dialog, BooleanSupplier write, Consumer<Boolean> then) {
+        if (AbstractPreferenceFragment.settingImportInProgress) {
+            Utils.showToastLong(L10n.t("Wait for the settings import to finish, then save again."));
+            return false;
+        }
+        if (!SAVING.add(dialog)) return false;
+        reach(dialog, false);
+        Consumer<Boolean> finish = saved -> {
+            SAVING.remove(dialog);
+            if (!dialog.isShowing()) return;
+            reach(dialog, true);
+            then.accept(saved);
+        };
+        boolean queued = Utils.runInOrderOnBackgroundThread(() -> {
+            boolean saved = false;
+            try {
+                saved = write.getAsBoolean();
+            } finally {
+                boolean result = saved;
+                Utils.runOnMainThread(() -> finish.accept(result));
+            }
+        });
+        if (!queued) finish.accept(false);
+        return true;
+    }
+
+    /** Puts [dialog]'s buttons and list, and the way out of it, in or out of reach. */
+    private static void reach(AlertDialog dialog, boolean inReach) {
+        dialog.setCancelable(inReach);
+        for (View control : new View[]{dialog.getButton(AlertDialog.BUTTON_POSITIVE),
+                dialog.getButton(AlertDialog.BUTTON_NEUTRAL), dialog.getButton(AlertDialog.BUTTON_NEGATIVE),
+                dialog.getListView()}) {
+            if (control == null) continue;
+            control.setEnabled(inReach);
+            // A dialog's actions are painted one colour whatever their state, so a waiting one is dimmed.
+            control.setAlpha(inReach ? 1f : 0.5f);
+        }
     }
 
     /** The section headings on the page, in order. */
@@ -1137,32 +1388,141 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         return row;
     }
 
-    /** The choices with the saved one checked. A tap saves it at once and closes the list. */
+    /**
+     * The choices with the saved one checked. A tap saves it and the list closes once it's saved;
+     * a pick that can't be saved, or is held back while a settings import writes, leaves the list
+     * open with what's saved by then checked again, which an import may have changed.
+     */
     void showStickerSizes(Context context, Preference row) {
-        int saved = StickerSize.percent(Settings.STICKER_SIZE.savedValue());
+        if (SettingsLock.refuses()) return;
         CharSequence[] labels = new CharSequence[StickerSize.CHOICES.length];
-        int checked = -1;
-        for (int i = 0; i < labels.length; i++) {
-            labels[i] = percent(StickerSize.CHOICES[i]);
-            if (StickerSize.CHOICES[i] == saved) checked = i;
-        }
-        final int savedChoice = checked;
+        for (int i = 0; i < labels.length; i++) labels[i] = percent(StickerSize.CHOICES[i]);
         show(new AlertDialog.Builder(context)
                 .setTitle(L10n.t("Sticker size"))
-                .setSingleChoiceItems(labels, checked, (dialog, which) -> {
-                    if (Settings.STICKER_SIZE.save(StickerSize.CHOICES[which])) {
-                        row.setSummary(stickerSizeSummary());
-                        dialog.dismiss();
-                    } else {
-                        ((AlertDialog) dialog).getListView().setItemChecked(savedChoice, true);
-                        Utils.showToastLong(L10n.t("Couldn't save the size. Try again in a moment."));
-                    }
+                .setSingleChoiceItems(labels, savedStickerChoice(), (dialog, which) -> {
+                    boolean started = save((AlertDialog) dialog,
+                            () -> Settings.STICKER_SIZE.saveCommitted(StickerSize.CHOICES[which]), landed -> {
+                                if (landed) {
+                                    row.setSummary(stickerSizeSummary());
+                                    dialog.dismiss();
+                                } else {
+                                    checkSavedStickerSize((AlertDialog) dialog);
+                                    Utils.showToastLong(L10n.t("Couldn't save the size. Try again in a moment."));
+                                }
+                            });
+                    if (!started) checkSavedStickerSize((AlertDialog) dialog);
                 })
                 .setNegativeButton(L10n.t("Cancel"), null));
     }
 
+    /** Where the saved sticker size sits among the choices. One that's none of them reads as the default. */
+    static int savedStickerChoice() {
+        int saved = StickerSize.percent(Settings.STICKER_SIZE.savedValue());
+        for (int i = 0; i < StickerSize.CHOICES.length; i++) {
+            if (StickerSize.CHOICES[i] == saved) return i;
+        }
+        return -1;
+    }
+
+    /** Checks the size saved now, read at the moment a pick is refused rather than when the list opened. */
+    private static void checkSavedStickerSize(AlertDialog dialog) {
+        dialog.getListView().setItemChecked(savedStickerChoice(), true);
+    }
+
     static String stickerSizeSummary() {
         return L10n.f("%1$s of Telegram's size", percent(StickerSize.percent(Settings.STICKER_SIZE.savedValue())));
+    }
+
+    /** The folder the chat list opens on for the account shown now: the row says which, and a tap lists the others. */
+    private Preference launchFolderRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(LAUNCH_FOLDER_ROW);
+        row.setTitle(L10n.t("Folder to open"));
+        row.setPersistent(false);
+        row.setSummary(launchFolderSummary());
+        row.setOnPreferenceClickListener(p -> {
+            showLaunchFolders(context, p);
+            return true;
+        });
+        return row;
+    }
+
+    /**
+     * All Chats and the account's folders, with its pick checked. A tap saves it and the list closes
+     * once it's saved; a pick that can't be saved leaves the list open with the saved one checked.
+     */
+    void showLaunchFolders(Context context, Preference row) {
+        if (SettingsLock.refuses()) return;
+        LaunchFolder.Shown shown = LaunchFolder.shown();
+        if (shown == null) {
+            Utils.showToastLong(L10n.t("Couldn't read your folders."));
+            return;
+        }
+        if (shown.user == 0) {
+            Utils.showToastLong(L10n.t("Sign in to Telegram first."));
+            return;
+        }
+        List<LaunchFolder.Folder> folders = shown.folders;
+        if (folders.isEmpty()) {
+            Utils.showToastLong(L10n.t("You don't have any folders yet."));
+            return;
+        }
+        CharSequence[] labels = new CharSequence[folders.size() + 1];
+        labels[0] = L10n.t("All Chats");
+        for (int i = 0; i < folders.size(); i++) labels[i + 1] = folders.get(i).name;
+        show(new AlertDialog.Builder(context)
+                .setTitle(L10n.t("Folder to open"))
+                .setSingleChoiceItems(labels, shown.choice(), (dialog, which) -> {
+                    LaunchFolder.Folder folder = which == 0 ? null : folders.get(which - 1);
+                    boolean started = save((AlertDialog) dialog, () -> LaunchFolder.pick(shown.user, folder), landed -> {
+                        if (landed) {
+                            row.setSummary(launchFolderSummary());
+                            dialog.dismiss();
+                        } else {
+                            ((AlertDialog) dialog).getListView().setItemChecked(savedChoice(shown), true);
+                            Utils.showToastLong(L10n.t("Couldn't save the folder. Try again in a moment."));
+                        }
+                    });
+                    if (!started) ((AlertDialog) dialog).getListView().setItemChecked(savedChoice(shown), true);
+                })
+                .setNegativeButton(L10n.t("Cancel"), null));
+    }
+
+    /** Where the saved pick sits in the list [shown] drew, read again after a pick that didn't land. */
+    private static int savedChoice(LaunchFolder.Shown shown) {
+        return shown.choiceOf(LaunchFolder.picked(shown.user));
+    }
+
+    /** The picked folder's name for the account shown now, or All Chats, for a pick that's gone too. */
+    static String launchFolderSummary() {
+        LaunchFolder.Shown shown = LaunchFolder.shown();
+        int choice = shown == null ? 0 : shown.choice();
+        return choice == 0 ? L10n.t("All Chats") : shown.folders.get(choice - 1).name;
+    }
+
+    /** What the Data Saver switch does, then what Android reports right now, read when the page opens. */
+    static String dataSaverSummary(DataSaverDownloads.Status status) {
+        String saver;
+        switch (status.dataSaver) {
+            case ON:
+                saver = L10n.t("Android's Data Saver is on.");
+                break;
+            case OFF:
+                saver = L10n.t("Android's Data Saver is off.");
+                break;
+            case ALLOWED:
+                saver = L10n.t("Android's Data Saver is on, but Telegram may use data freely.");
+                break;
+            default:
+                saver = L10n.t("Android doesn't say whether Data Saver is on.");
+                break;
+        }
+        String metered = status.metered == null
+                ? L10n.t("Android doesn't say whether this network is metered.")
+                : status.metered ? L10n.t("This network is metered.") : L10n.t("This network isn't metered.");
+        return L10n.t("While Android's Data Saver is on and the network is metered, Telegram doesn't start photos, videos,"
+                + " files, voice messages, music or stories downloading on its own, and stops the ones in its download queue."
+                + " What you tap still downloads.") + "\n" + saver + " " + metered;
     }
 
     /** A percent the way this language writes one. */
@@ -1179,10 +1539,34 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         row.setSummary(FilterEditor.summary(list));
         row.setOnPreferenceClickListener(p -> {
             Activity activity = getActivity();
+            if (SettingsLock.refuses()) return true;
             if (activity != null && !activity.isFinishing() && !activity.isDestroyed()) own(FilterEditor.open(activity, p, list, title));
             return true;
         });
         return row;
+    }
+
+    /** The text beside the chat list's title: the row shows it, and a tap opens its editor. */
+    private Preference titleEmojiRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(TitleEmojiEditor.KEY);
+        row.setTitle(L10n.t("Emoji next to the chat list title"));
+        row.setPersistent(false);
+        row.setSummary(TitleEmojiEditor.summary(Settings.TITLE_EMOJI.savedValue()));
+        row.setOnPreferenceClickListener(p -> {
+            Activity activity = getActivity();
+            if (activity != null && !activity.isFinishing() && !activity.isDestroyed()) {
+                own(TitleEmojiEditor.open(activity, p, before -> titleEmojiSaved(activity, before)));
+            }
+            return true;
+        });
+        return row;
+    }
+
+    /** The chat list builds its title once, so a new text waits for a restart unless it's the one running. */
+    private void titleEmojiSaved(Context context, String before) {
+        if (noteRestartPending(Settings.TITLE_EMOJI, before)) showRestartDialog(context);
+        else Utils.showToastShort(L10n.t("Saved."));
     }
 
     /** Where the outside translate sends text: the row names the service, and a tap opens its editor. */
@@ -1194,6 +1578,7 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         row.setSummary(TranslateServiceEditor.summary(OutsideTranslate.service()));
         row.setOnPreferenceClickListener(p -> {
             Activity activity = getActivity();
+            if (SettingsLock.refuses()) return true;
             if (activity != null && !activity.isFinishing() && !activity.isDestroyed()) own(TranslateServiceEditor.open(activity, p));
             return true;
         });
@@ -1219,6 +1604,7 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         row.setSummary(UnifiedPush.status(context, Settings.UNIFIED_PUSH.savedValue()));
         row.setOnPreferenceClickListener(p -> {
             Activity activity = getActivity();
+            if (SettingsLock.refuses()) return true;
             if (activity != null && !activity.isFinishing() && !activity.isDestroyed()) {
                 AlertDialog picker = UnifiedPushPicker.open(activity, p);
                 if (picker != null) own(picker);
@@ -1299,22 +1685,34 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
     /**
      * Quick setups: Quiet, Privacy or Back to defaults, each changing its switches at once
      * ({@link QuickSetupKeys}), then a toast saying how many changed. A switch that needs a restart
-     * brings up the restart row the way a tap on it would.
+     * brings up the restart row the way a tap on it would. After a choice that changed something,
+     * a last card names those switches and puts them back ({@link QuickSetups#undo}).
      */
     void showQuickSetups() {
         Context context = getContext();
-        if (context == null) return;
+        if (context == null || SettingsLock.refuses()) return;
         List<Map<BooleanSetting, Boolean>> choices = Arrays.asList(
                 QuickSetupKeys.quiet(), QuickSetupKeys.privacy(), QuickSetupKeys.defaults());
-        CharSequence[] names = {L10n.t("Quiet"), L10n.t("Privacy"), L10n.t("Back to defaults")};
-        CharSequence[] details = {
+        List<CharSequence> names = new ArrayList<>(Arrays.asList(
+                L10n.t("Quiet"), L10n.t("Privacy"), L10n.t("Back to defaults")));
+        List<CharSequence> details = new ArrayList<>(Arrays.asList(
                 L10n.t("Hides ads, suggestions, stories, promotions and nags."),
                 L10n.t("Stops usage reports, strips tracking from links and covers your own phone number on screen."),
-                L10n.t("Puts every feature switch back the way it started.")};
+                L10n.t("Puts every feature switch back the way it started.")));
+        QuickSetups.Outcome last = QuickSetups.last();
+        PreferenceScreen screen = getPreferenceScreen();
+        if (last != null && screen != null) {
+            names.add(L10n.t("Undo the last setup"));
+            details.add(undoDetail(screen, last, QuickSetups.writtenSince()));
+        }
         AlertDialog dialog = show(new AlertDialog.Builder(themed(context))
                 .setTitle(L10n.t("Quick setups"))
-                .setAdapter(new ChoiceCards(ScreenColors.DEFAULT, names, details),
-                        (shown, which) -> applyQuickSetup(choices.get(which)))
+                .setAdapter(new ChoiceCards(ScreenColors.DEFAULT, names.toArray(new CharSequence[0]),
+                                details.toArray(new CharSequence[0])),
+                        (shown, which) -> {
+                            if (which < choices.size()) applyQuickSetup(choices.get(which));
+                            else undoQuickSetup();
+                        })
                 .setNegativeButton(L10n.t("Cancel"), null));
         ListView list = dialog == null ? null : dialog.getListView();
         if (list != null) {
@@ -1325,13 +1723,67 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
         }
     }
 
-    /** Applies one Quick setups choice to the switches on this page and says how many changed. */
+    /**
+     * Applies one Quick setups choice to the switches on this page and says how many changed,
+     * pointing at the undo when something did, or how many couldn't change when nothing did.
+     */
     int applyQuickSetup(Map<BooleanSetting, Boolean> values) {
         PreferenceScreen screen = getPreferenceScreen();
-        if (screen == null) return 0;
-        int changed = QuickSetups.apply(screen, values);
-        Utils.showToastLong(L10n.quantity(changed, "Changed %1$d setting", "Changed %1$d settings", changed));
+        if (screen == null || SettingsLock.refuses()) return 0;
+        QuickSetups.Outcome outcome = QuickSetups.apply(screen, values);
+        int changed = outcome.changed.size();
+        if (changed > 0) {
+            Utils.showToastLong(L10n.quantity(changed, "Changed %1$d setting. Undo it from Quick setups.",
+                    "Changed %1$d settings. Undo them from Quick setups.", changed));
+        } else if (outcome.refused > 0) {
+            Utils.showToastLong(L10n.quantity(outcome.refused, "Nothing changed. %1$d switch couldn't change now.",
+                    "Nothing changed. %1$d switches couldn't change now.", outcome.refused));
+        } else {
+            Utils.showToastLong(L10n.quantity(changed, "Changed %1$d setting", "Changed %1$d settings", changed));
+        }
         return changed;
+    }
+
+    /** Puts back what the last Quick setups choice changed, through the rows, and says how many went back. */
+    int undoQuickSetup() {
+        PreferenceScreen screen = getPreferenceScreen();
+        if (screen == null || SettingsLock.refuses()) return 0;
+        int back = QuickSetups.undo(screen);
+        Utils.showToastLong(L10n.quantity(back, "Put back %1$d switch", "Put back %1$d switches", back));
+        return back;
+    }
+
+    /**
+     * The undo card's text: what the last choice turned on and off, by the rows' titles, how many it
+     * found set already or couldn't change, how many were changed again since, and that only switches
+     * go back.
+     */
+    static String undoDetail(PreferenceGroup screen, QuickSetups.Outcome last, int writtenSince) {
+        List<String> on = new ArrayList<>();
+        List<String> off = new ArrayList<>();
+        for (Map.Entry<BooleanSetting, Boolean> change : last.changed.entrySet()) {
+            Preference row = screen.findPreference(change.getKey().key);
+            if (row == null || row.getTitle() == null) continue;
+            (change.getValue() ? on : off).add(String.valueOf(row.getTitle()));
+        }
+        List<String> parts = new ArrayList<>();
+        if (!on.isEmpty()) parts.add(L10n.f("Turned on: %1$s.", L10n.join(on)));
+        if (!off.isEmpty()) parts.add(L10n.f("Turned off: %1$s.", L10n.join(off)));
+        if (last.already > 0) {
+            parts.add(L10n.quantity(last.already, "%1$d other switch was already set.",
+                    "%1$d other switches were already set.", last.already));
+        }
+        if (last.refused > 0) {
+            parts.add(L10n.quantity(last.refused, "%1$d switch couldn't change.",
+                    "%1$d switches couldn't change.", last.refused));
+        }
+        if (writtenSince > 0) {
+            parts.add(L10n.quantity(writtenSince, "%1$d switch you changed since stays as you set it.",
+                    "%1$d switches you changed since stay as you set them.", writtenSince));
+        }
+        parts.add(L10n.t("Only switches go back. Anything a switch already cleared, like chats' translate "
+                + "choices, stays cleared."));
+        return String.join(" ", parts);
     }
 
     /**
@@ -1501,6 +1953,16 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
             return ScreenColors.switchRow(getContext());
         }
 
+        /**
+         * A tap on the row or its switch asks here first. While the settings are locked the switch
+         * stays as it is and a note says why, with two exceptions ({@link SettingsLock#exempts}).
+         */
+        @Override
+        protected boolean callChangeListener(Object newValue) {
+            if (!SettingsLock.exempts(getKey(), newValue) && SettingsLock.refuses()) return false;
+            return super.callChangeListener(newValue);
+        }
+
         @Override
         protected void onBindView(View view) {
             super.onBindView(view);
@@ -1528,21 +1990,24 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
             return page.getView() != null && activity != null && !activity.isFinishing() && !activity.isDestroyed();
         }
 
-        /** The two choices as cards, each saying what it does under its name. */
+        /** The three choices as cards, each saying what it does under its name. */
         @Override
         protected ListAdapter choices(Context dialogContext) {
             ScreenColors colors = ScreenColors.DEFAULT;
             return new ChoiceCards(colors,
                     new CharSequence[]{L10n.t(getContext(), "Copy quick report"),
-                            L10n.t(getContext(), "Save full report")},
+                            L10n.t(getContext(), "Save full report"), L10n.t(getContext(), "Preview the report")},
                     new CharSequence[]{L10n.t(getContext(), "Copy a short report to the clipboard."),
-                            L10n.t(getContext(), "Save the full report to a file. The saved location is shown afterward.")});
+                            L10n.t(getContext(), "Save the full report to a file. The saved location is shown afterward."),
+                            L10n.t(getContext(), "See the report first and leave out any part you'd rather not share, "
+                                    + "then copy or save it.")});
         }
 
         /**
          * The screen's colours, before the dialog is shown so its first layout measures them. The
          * cards bring their own spacing and press ripple, so the list draws no divider and, under
-         * a finger, no highlight of its own over them. A keyboard's place shows as a ring.
+         * a finger, no highlight of its own over them. A keyboard's place shows as a ring. The
+         * preview's text and boxes take the screen's colours too.
          */
         @Override
         protected void onDialogCreated(AlertDialog dialog) {
@@ -1554,6 +2019,21 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
                 list.setDrawSelectorOnTop(true);
             }
             ScreenColors.dialog(dialog);
+            View preview = dialog.getWindow() == null ? null
+                    : dialog.getWindow().getDecorView().findViewWithTag(ExportDiagnosticReportPreference.PREVIEW_TAG);
+            if (preview instanceof ViewGroup) paintPreview((ViewGroup) preview, ScreenColors.DEFAULT);
+        }
+
+        private static void paintPreview(ViewGroup preview, ScreenColors colors) {
+            for (int i = 0; i < preview.getChildCount(); i++) {
+                View child = preview.getChildAt(i);
+                if (child instanceof android.widget.CheckBox) {
+                    ((android.widget.CheckBox) child).setTextColor(colors.title);
+                    ((android.widget.CheckBox) child).setButtonTintList(android.content.res.ColorStateList.valueOf(colors.accent));
+                } else if (child instanceof TextView) {
+                    ((TextView) child).setTextColor(colors.summary);
+                }
+            }
         }
 
         @Override
@@ -1571,8 +2051,17 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
     }
 
     static final class ClearRow extends ClearLogBufferPreference {
-        ClearRow(Context context) {
+        private final HushTelegramPreferenceFragment page;
+
+        ClearRow(HushTelegramPreferenceFragment page, Context context) {
             super(context);
+            this.page = page;
+        }
+
+        @Override
+        protected boolean isOwned() {
+            Activity activity = page.getActivity();
+            return page.getView() != null && activity != null && !activity.isFinishing() && !activity.isDestroyed();
         }
 
         @Override

@@ -33,6 +33,7 @@ import java.util.TreeMap;
 import app.morphe.extension.shared.L10n;
 import app.morphe.extension.shared.SettingsContextRule;
 import app.morphe.extension.shared.settings.BaseSettings;
+import app.morphe.extension.shared.settings.BooleanSetting;
 import app.morphe.extension.shared.settings.FailingStore;
 import app.morphe.extension.shared.settings.HushThreadsPause;
 import app.morphe.extension.shared.settings.PauseForTests;
@@ -86,10 +87,17 @@ public class SettingsNavigationTest {
         PauseForTests.resume();
     }
 
+    /**
+     * The home page: the status card, Quick setups, the Browse settings heading over Feed, Privacy,
+     * Downloads and Posts, the More settings heading over Appearance, Links, Updates, Set when you
+     * patched, Pause, backup and diagnostics and About, then Report a problem and Support HushThreads.
+     * Every page is one tap from home.
+     */
+    private static final int HOME_ROWS = 16;
+
     @Test public void homeAndEveryCategoryAreReachableWithoutRemovingTheModel() {
         assertNotNull(page.navigation);
-        // The status card, Browse settings, Feed, Privacy, Downloads, Posts, More settings and Support HushThreads.
-        assertEquals(8, list().getCount());
+        assertEquals(HOME_ROWS, list().getCount());
         assertEquals(10, page.sections().size());
         int total = page.getPreferenceScreen().getRootAdapter().getCount();
         for (Preference section : page.sections()) {
@@ -98,13 +106,14 @@ public class SettingsNavigationTest {
             assertEquals(total, page.getPreferenceScreen().getRootAdapter().getCount());
             assertNotNull(page.findPreference(Settings.HIDE_ADS.key));
             assertTrue(page.navigation.back());
-            while (page.navigation.back()) { }
+            assertEquals("Back from " + section.getTitle() + " didn't go home", HOME_ROWS, list().getCount());
+            assertFalse(page.navigation.back());
         }
-        assertEquals(8, list().getCount());
+        assertEquals(HOME_ROWS, list().getCount());
     }
 
     /**
-     * The home page ends with Support HushThreads, under More settings, as a name with no line
+     * The home page ends with Support HushThreads, under Report a problem, as a name with no line
      * under it. A tap opens the Ko-fi page in a browser of its own, and with no browser a tip names
      * the address and Threads keeps running.
      */
@@ -115,7 +124,7 @@ public class SettingsNavigationTest {
         assertEquals(HushThreadsPreferenceFragment.SUPPORT, row.getKey());
         assertEquals("Support HushThreads", String.valueOf(row.getTitle()));
         assertNull("the Support row carries a line under its name", row.getSummary());
-        assertEquals("More settings", String.valueOf(((Preference) list().getItemAtPosition(last - 1)).getTitle()));
+        assertEquals("Report a problem", String.valueOf(((Preference) list().getItemAtPosition(last - 1)).getTitle()));
         assertTrue(list().getAdapter().isEnabled(last));
 
         tap(HushThreadsPreferenceFragment.SUPPORT);
@@ -135,6 +144,155 @@ public class SettingsNavigationTest {
                 ShadowToast.getTextOfLatestToast());
         assertFalse(controller.get().isFinishing());
         assertEquals(before, savedValues());
+    }
+
+    /**
+     * A long press takes Quick setups off the home page for good, and the row on Pause, backup and
+     * diagnostics brings it back. No other row answers a long press.
+     */
+    @Test public void quickSetupsHidesOnALongPressAndComesBackFromItsRow() {
+        Preference row = (Preference) list().getItemAtPosition(1);
+        assertEquals(SettingsNavigation.QUICK_SETUPS, row.getKey());
+        assertTrue(String.valueOf(row.getSummary()), String.valueOf(row.getSummary()).endsWith(" Press and hold to hide this row."));
+        assertFalse("a long press on another row did something", list().getOnItemLongClickListener()
+                .onItemLongClick(list(), null, position("section_Feed"), 0));
+        assertTrue(list().getOnItemLongClickListener().onItemLongClick(list(), null, 1, 0));
+        ShadowLooper.idleMainLooper();
+        assertTrue(BaseSettings.HIDE_QUICK_SETUPS.savedValue());
+        assertEquals("Quick setups hidden. Bring it back from Pause, backup and diagnostics.", ShadowToast.getTextOfLatestToast());
+        assertFalse(contains(SettingsNavigation.QUICK_SETUPS));
+        assertEquals(HOME_ROWS - 1, list().getCount());
+
+        // Back to defaults leaves it as it is, and so does a restart of the screen.
+        page.applyQuickSetup(QuickSetupKeys.defaults());
+        assertTrue(BaseSettings.HIDE_QUICK_SETUPS.savedValue());
+        recreate();
+        assertFalse(contains(SettingsNavigation.QUICK_SETUPS));
+
+        tap("section_Pause, backup and diagnostics");
+        assertEquals("Hidden. Tap to show it again.",
+                String.valueOf(((Preference) list().getItemAtPosition(position(HushThreadsPreferenceFragment.QUICK_SETUPS_HOME))).getSummary()));
+        tap(HushThreadsPreferenceFragment.QUICK_SETUPS_HOME);
+        assertFalse(BaseSettings.HIDE_QUICK_SETUPS.savedValue());
+        assertEquals("Shown. Tap to hide it.",
+                String.valueOf(((Preference) list().getItemAtPosition(position(HushThreadsPreferenceFragment.QUICK_SETUPS_HOME))).getSummary()));
+        assertFalse("the row asked for a restart", contains(SettingsNavigation.RESTART));
+        assertTrue(page.navigation.back());
+        assertEquals(SettingsNavigation.QUICK_SETUPS, ((Preference) list().getItemAtPosition(1)).getKey());
+        assertEquals(HOME_ROWS, list().getCount());
+
+        // The same row hides it again.
+        tap("section_Pause, backup and diagnostics");
+        tap(HushThreadsPreferenceFragment.QUICK_SETUPS_HOME);
+        assertTrue(page.navigation.back());
+        assertFalse(contains(SettingsNavigation.QUICK_SETUPS));
+    }
+
+    /** A screen reader is offered a long press on Quick setups alone, and that long press hides it. */
+    @Test public void onlyQuickSetupsOffersAScreenReaderALongPress() {
+        layout(dialog.getView());
+        View quick = list().getChildAt(position(SettingsNavigation.QUICK_SETUPS) - list().getFirstVisiblePosition());
+        View feed = list().getChildAt(position("section_Feed") - list().getFirstVisiblePosition());
+        android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction hold =
+                android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK;
+        assertTrue(quick.createAccessibilityNodeInfo().getActionList().contains(hold));
+        assertTrue(quick.createAccessibilityNodeInfo().isLongClickable());
+        assertFalse("a row with no long press offers one", feed.createAccessibilityNodeInfo().getActionList().contains(hold));
+        assertFalse(feed.createAccessibilityNodeInfo().isLongClickable());
+        assertFalse(feed.performAccessibilityAction(hold.getId(), null));
+        assertFalse(BaseSettings.HIDE_QUICK_SETUPS.savedValue());
+
+        assertTrue(quick.performAccessibilityAction(hold.getId(), null));
+        ShadowLooper.idleMainLooper();
+        assertTrue(BaseSettings.HIDE_QUICK_SETUPS.savedValue());
+        assertFalse(contains(SettingsNavigation.QUICK_SETUPS));
+    }
+
+    /**
+     * The long-press listener makes the list itself long-clickable, and TalkBack stopped on the
+     * whole list to say "List, double-tap and hold to long press". The list keeps the touch long
+     * press its rows need and offers a screen reader none of its own.
+     */
+    @Test public void theListItselfOffersAScreenReaderNoLongPress() {
+        layout(dialog.getView());
+        android.view.accessibility.AccessibilityNodeInfo info = list().createAccessibilityNodeInfo();
+        assertFalse("the list offers a long press", info.isLongClickable());
+        assertFalse(info.getActionList().contains(
+                android.view.accessibility.AccessibilityNodeInfo.AccessibilityAction.ACTION_LONG_CLICK));
+        assertTrue("a touch long press on a row needs the list long-clickable", list().isLongClickable());
+    }
+
+    /** Each Quick setups choice changes its switches through their rows and says how many changed. */
+    @Test public void quickSetupsChangeTheirSwitchesAndSayHowMany() {
+        assertEquals("Quick setups isn't under the status card", 1, position(SettingsNavigation.QUICK_SETUPS));
+        assertEquals("Quick setups", String.valueOf(((Preference) list().getItemAtPosition(1)).getTitle()));
+        try {
+            // All three of Quiet's switches start on, so they go off first.
+            Map<BooleanSetting, Boolean> off = new java.util.LinkedHashMap<>();
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) off.put(setting, false);
+            assertEquals(3, page.applyQuickSetup(off));
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) assertFalse(setting.key, setting.savedValue());
+
+            tap(SettingsNavigation.QUICK_SETUPS);
+            AlertDialog choices = (AlertDialog) org.robolectric.shadows.ShadowDialog.getLatestDialog();
+            assertNotNull("Quick setups opened no dialog", choices);
+            android.widget.ListAdapter cards = choices.getListView().getAdapter();
+            assertEquals(3, cards.getCount());
+            assertTrue(String.valueOf(cards.getItem(0)).startsWith("Quiet\n"));
+            assertTrue(String.valueOf(cards.getItem(1)).startsWith("Privacy\n"));
+            assertTrue(String.valueOf(cards.getItem(2)).startsWith("Back to defaults\n"));
+            choices.getListView().performItemClick(null, 0, 0);
+            ShadowLooper.idleMainLooper();
+            for (BooleanSetting setting : QuickSetupKeys.QUIET) assertTrue(setting.key, setting.savedValue());
+            assertEquals("Changed 3 settings", ShadowToast.getTextOfLatestToast());
+            assertEquals("the choice left the home page", HOME_ROWS, list().getCount());
+
+            assertEquals(0, page.applyQuickSetup(QuickSetupKeys.quiet()));
+            assertEquals("Changed 0 settings", ShadowToast.getTextOfLatestToast());
+            // Of Privacy's three, only Hide screenshots from Threads starts off.
+            assertEquals(1, page.applyQuickSetup(QuickSetupKeys.privacy()));
+            assertEquals("Changed 1 setting", ShadowToast.getTextOfLatestToast());
+            for (BooleanSetting setting : QuickSetupKeys.PRIVACY) assertTrue(setting.key, setting.savedValue());
+            assertEquals(1, page.applyQuickSetup(QuickSetupKeys.defaults()));
+            for (BooleanSetting setting : QuickSetupKeys.DEFAULTS) {
+                assertEquals(setting.key, setting.defaultValue, setting.savedValue());
+            }
+            assertFalse("nothing waits, yet a restart row showed", contains(SettingsNavigation.RESTART));
+        } finally {
+            for (BooleanSetting setting : QuickSetupKeys.DEFAULTS) setting.resetToDefault();
+        }
+    }
+
+    /** Report a problem opens GitHub's bug form in a browser with the versions and switches filled in. */
+    @Test public void reportAProblemOpensAFilledInGitHubForm() throws Exception {
+        Map<String, Object> before = savedValues();
+        assertEquals("Report a problem isn't just above Support", list().getCount() - 2, position(SettingsNavigation.REPORT));
+        tap(SettingsNavigation.REPORT);
+        android.content.Intent started = org.robolectric.Shadows.shadowOf(controller.get()).getNextStartedActivity();
+        assertNotNull("nothing opened", started);
+        assertEquals(android.content.Intent.ACTION_VIEW, started.getAction());
+        assertTrue(started.hasCategory(android.content.Intent.CATEGORY_BROWSABLE));
+        assertTrue((started.getFlags() & android.content.Intent.FLAG_ACTIVITY_NEW_TASK) != 0);
+        String url = started.getDataString();
+        assertTrue(url, url.startsWith("https://github.com/SysAdminDoc/HushThreads/issues/new?template=bug_report.yml&"));
+        assertTrue(url, url.length() <= app.morphe.extension.shared.settings.preference.ReportProblem.MAX_LENGTH);
+        String decoded = java.net.URLDecoder.decode(url, "UTF-8");
+        assertTrue(decoded, decoded.contains("&versions=HushThreads "));
+        assertTrue(decoded, decoded.contains(" on Threads "));
+        assertTrue(decoded, decoded.contains("&device="));
+        assertTrue(decoded, decoded.contains("What happened:"));
+        assertTrue(decoded, decoded.contains("What I expected:"));
+        // Hide ads starts on, Hide screenshots from Threads starts off.
+        assertTrue(decoded, decoded.contains("&additional_context=Switches on: "));
+        assertTrue(decoded, decoded.contains("Hide ads"));
+        assertFalse(decoded, decoded.contains("Hide screenshots from Threads"));
+        assertEquals(before, savedValues());
+
+        org.robolectric.Shadows.shadowOf(org.robolectric.RuntimeEnvironment.getApplication()).checkActivities(true);
+        tap(SettingsNavigation.REPORT);
+        assertEquals("No app on this phone can open the link. The address is "
+                + L10n.isolate("github.com/SysAdminDoc/HushThreads/issues") + ".", ShadowToast.getTextOfLatestToast());
+        assertFalse(controller.get().isFinishing());
     }
 
     @Test public void categoryClickChangesOnlyTheSettingWhoseRowWasTapped() {
@@ -355,13 +513,12 @@ public class SettingsNavigationTest {
         page.navigation.navigate("Privacy");
         assertEquals(0, position(SettingsNavigation.RESTART));
         assertEquals(categoryCount("Privacy") + 1, list().getCount());
-        page.navigation.navigate("more");
+        page.navigation.navigate("Appearance");
         assertEquals(0, position(SettingsNavigation.RESTART));
-        // The six pages under More settings, and the row.
-        assertEquals(7, list().getCount());
+        assertEquals(categoryCount("Appearance") + 1, list().getCount());
         while (page.navigation.back()) { }
         assertEquals("the row isn't under the status card", 1, position(SettingsNavigation.RESTART));
-        assertEquals(9, list().getCount());
+        assertEquals(HOME_ROWS + 1, list().getCount());
         findSearch(dialog.getView()).setText("Hide ads");
         ShadowLooper.idleMainLooper();
         assertEquals(0, position(SettingsNavigation.RESTART));
@@ -376,7 +533,7 @@ public class SettingsNavigationTest {
         AbstractPreferenceFragment.restartPending.clear();
         page.navigation.restartChanged();
         assertFalse("the row stayed with nothing waiting", contains(SettingsNavigation.RESTART));
-        assertEquals(8, list().getCount());
+        assertEquals(HOME_ROWS, list().getCount());
     }
 
     /**
@@ -446,24 +603,25 @@ public class SettingsNavigationTest {
     }
 
     /**
-     * After that restart the screen is opened on the page the marker named, with Back leading up
-     * through More settings as if the page had been reached by hand. A page this build doesn't
-     * have opens the first page.
+     * After that restart the screen is opened on the page the marker named, with Back leading home
+     * as if the page had been reached by hand. A page this build doesn't have opens the first
+     * page, and so does "more", the page More settings had before it joined the home page.
      */
     @Test public void aScreenAskedToStartOnAPageOpensThere() {
         showOn("Appearance");
         assertTrue("the screen didn't open on Appearance", contains(Settings.PURE_BLACK.key));
         assertEquals(categoryCount("Appearance"), list().getCount());
         assertTrue(page.navigation.back());
-        assertTrue("Back didn't lead to More settings", contains("section_Appearance"));
-        assertTrue(page.navigation.back());
-        assertEquals(8, list().getCount());
+        assertTrue("Back didn't lead home", contains("section_Appearance") && contains(SettingsNavigation.REPORT));
+        assertEquals(HOME_ROWS, list().getCount());
+        assertFalse(page.navigation.back());
 
         showOn("more");
-        assertTrue("the screen didn't open on More settings", contains("section_Appearance"));
+        assertEquals("a saved More settings page didn't open home", HOME_ROWS, list().getCount());
+        assertFalse(page.navigation.back());
 
         showOn("A page from another build");
-        assertEquals(8, list().getCount());
+        assertEquals(HOME_ROWS, list().getCount());
         assertFalse(page.navigation.back());
     }
 
@@ -623,7 +781,7 @@ public class SettingsNavigationTest {
         assertEquals("No matching settings", ((Preference) list().getItemAtPosition(0)).getTitle());
         assertTrue(page.navigation.back());
         assertEquals("", search.getText().toString());
-        assertEquals(8, list().getCount());
+        assertEquals(HOME_ROWS, list().getCount());
     }
 
     /**
@@ -676,16 +834,16 @@ public class SettingsNavigationTest {
         page.navigation.back();
         layout(dialog.getView());
         assertEquals("Privacy", focusedTitle(a11y));
-        page.navigation.navigate("more");
+        // About used to sit behind More settings. It opens from home now, from the foot of the list
+        // where a person scrolls to reach it, and Back returns there.
+        list().setSelection(list().getCount() - 1);
         layout(dialog.getView());
         page.navigation.navigate("About");
         layout(dialog.getView());
         page.navigation.back();
         layout(dialog.getView());
         assertEquals("About", focusedTitle(a11y));
-        page.navigation.back();
-        layout(dialog.getView());
-        assertEquals("More settings", focusedTitle(a11y));
+        assertFalse("Back from About didn't go home", page.navigation.back());
     }
 
     /** The first text of the last row that took accessibility focus. */
@@ -729,20 +887,19 @@ public class SettingsNavigationTest {
         page.navigation.open(page.findPreference(Settings.HIDE_ADS.key));
         SettingsL10nTest.backOf(dialog).performClick();
         assertTrue(dialog.getDialog().isShowing());
-        assertEquals(8, list().getCount());
+        assertEquals(HOME_ROWS, list().getCount());
         page.navigation.navigate("About");
         dialog.getDialog().onBackPressed();
-        // More settings: Appearance, Links, Updates, Set when you patched, Pause, backup and diagnostics, and About.
-        assertEquals(6, list().getCount());
-        dialog.getDialog().onBackPressed();
-        assertEquals(8, list().getCount());
+        // About opens from home, so one Back returns there.
+        assertTrue(dialog.getDialog().isShowing());
+        assertEquals(HOME_ROWS, list().getCount());
         dialog.getDialog().onBackPressed();
         ShadowLooper.idleMainLooper();
         assertFalse(controller.get().isFinishing());
     }
 
-    // A window as short as the layouts below, 400 px, so the window's own layout leaves both the
-    // overview and More settings taller than the list and neither snaps back to the top.
+    // A window as short as the layouts below, 400 px, so the window's own layout leaves the
+    // overview taller than the list and it doesn't snap back to the top.
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(qualifiers = "w390dp-h200dp-night-xhdpi")
     public void aNewPageStartsAtTheTopAfterThePreviousPageWasScrolled() {
@@ -757,24 +914,12 @@ public class SettingsNavigationTest {
             int homePosition = list().getFirstVisiblePosition();
             int homeOffset = list().getChildAt(0).getTop();
             assertTrue(homePosition > 0 || homeOffset < 0);
-            page.navigation.navigate("more");
-            layout(dialog.getView(), 400);
-            assertEquals(0, list().getFirstVisiblePosition());
-            assertEquals(list().getPaddingTop(), list().getChildAt(0).getTop());
-            list().scrollListBy(100);
-            int morePosition = list().getFirstVisiblePosition();
-            int moreOffset = list().getChildAt(0).getTop();
-            assertTrue(morePosition > 0 || moreOffset < 0);
             page.navigation.navigate("Pause, backup and diagnostics");
             // Preference updates can arrive after navigation but before the next layout.
             ((android.widget.BaseAdapter) page.getPreferenceScreen().getRootAdapter()).notifyDataSetChanged();
             layout(dialog.getView(), 400);
             assertEquals(0, list().getFirstVisiblePosition());
             assertEquals(list().getPaddingTop(), list().getChildAt(0).getTop());
-            assertTrue(page.navigation.back());
-            layout(dialog.getView(), 400);
-            assertEquals(morePosition, list().getFirstVisiblePosition());
-            assertEquals(moreOffset, list().getChildAt(0).getTop());
             assertTrue(page.navigation.back());
             layout(dialog.getView(), 400);
             assertEquals(homePosition, list().getFirstVisiblePosition());
@@ -787,9 +932,10 @@ public class SettingsNavigationTest {
 
     @Test public void visibleNavigationAndSearchKeepTheirAccessibilityRoles() {
         layout(dialog.getView());
-        View heading = list().getChildAt(1);
+        // Quick setups sits between the status card and the Browse settings heading.
+        View heading = list().getChildAt(2);
         assertTrue(heading.createAccessibilityNodeInfo().isHeading());
-        View feed = list().getChildAt(2);
+        View feed = list().getChildAt(3);
         assertEquals(android.widget.Button.class.getName(), feed.createAccessibilityNodeInfo().getClassName());
         assertTrue(feed.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK, null));
         assertEquals("Hide ads", ((Preference) list().getItemAtPosition(0)).getTitle());
@@ -800,6 +946,19 @@ public class SettingsNavigationTest {
         assertEquals(android.widget.Switch.class.getName(), toggle.createAccessibilityNodeInfo().getClassName());
         assertTrue(toggle.performAccessibilityAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK, null));
         assertFalse(Settings.HIDE_ADS.savedValue());
+
+        // More settings is a heading over its page rows, not a row that opens a page of its own.
+        page.navigation.back();
+        // A scroll set from here is synced away by the header's resize, so lay the whole home
+        // page out at once and read the rows where they are.
+        layout(dialog.getView(), 6000);
+        int moreAt = position("section_Appearance") - 1;
+        assertEquals("More settings", String.valueOf(((Preference) list().getItemAtPosition(moreAt)).getTitle()));
+        View more = list().getChildAt(moreAt - list().getFirstVisiblePosition());
+        assertNotNull("More settings isn't laid out", more);
+        assertTrue("More settings isn't a heading", more.createAccessibilityNodeInfo().isHeading());
+        View appearance = list().getChildAt(moreAt + 1 - list().getFirstVisiblePosition());
+        assertEquals(android.widget.Button.class.getName(), appearance.createAccessibilityNodeInfo().getClassName());
     }
 
     /** Both coverage states are rendered through the settings dialog's actual layout. */
@@ -856,6 +1015,11 @@ public class SettingsNavigationTest {
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     public void renderEveryPageAndSearchOffscreen() throws Exception {
         capture("00-overview", 1734);
+        // The rows that used to sit on a More settings page of their own, at the foot of home.
+        list().setSelection(list().getCount() - 1);
+        capture("00-overview-bottom", 1734);
+        assertEquals("Support HushThreads", String.valueOf(((Preference) list().getItemAtPosition(
+                list().getLastVisiblePosition())).getTitle()));
         for (Preference section : page.sections()) {
             page.navigation.open(section);
             String name = section.getTitle().toString().toLowerCase(java.util.Locale.ROOT).replaceAll("[^a-z]+", "-");
@@ -866,9 +1030,6 @@ public class SettingsNavigationTest {
                 capture(name + "-end", height);
             }
         }
-        page.navigation.navigate("more");
-        capture("more-settings", 1734);
-        page.navigation.back();
         findSearch(dialog.getView()).setText("links");
         ShadowLooper.idleMainLooper(1, java.util.concurrent.TimeUnit.SECONDS);
         capture("search-results");
@@ -906,9 +1067,12 @@ public class SettingsNavigationTest {
         AlertDialog notice = (AlertDialog) org.robolectric.shadows.ShadowDialog.getLatestDialog();
         captureDialog("dialog-licenses", notice);
         notice.dismiss();
+        // Home again, so the screen recreated below opens on home rather than About.
+        assertTrue(page.navigation.back());
 
         PatchFamily.inBuildForTests = PatchFamily.DEFAULT_SELECTION;
         recreate();
+        assertTrue("the default overview isn't home", contains(SettingsNavigation.QUICK_SETUPS));
         capture("default-overview", 1734);
         for (Preference section : page.sections()) {
             page.navigation.open(section);
@@ -1116,7 +1280,7 @@ public class SettingsNavigationTest {
         page = page(dialog);
         Map<String, Object> before = savedValues();
 
-        assertEquals(9, list().getCount());
+        assertEquals(HOME_ROWS + 1, list().getCount());
         assertEquals(1, position(HushThreadsPreferenceFragment.MISSING_DEFAULTS));
         Preference row = (Preference) list().getItemAtPosition(1);
         assertEquals("1 default patch isn't in this build", String.valueOf(row.getTitle()));

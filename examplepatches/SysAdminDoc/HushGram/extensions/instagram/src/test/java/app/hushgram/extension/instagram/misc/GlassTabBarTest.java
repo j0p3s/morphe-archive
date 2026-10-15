@@ -20,11 +20,14 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.RippleDrawable;
+import android.os.SystemClock;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -52,6 +55,7 @@ import org.robolectric.util.ReflectionHelpers;
 
 import app.hushgram.extension.instagram.settings.Settings;
 import app.hushgram.extension.shared.SettingsContextRule;
+import app.hushgram.extension.shared.diagnostics.HookStatus;
 import app.hushgram.extension.shared.settings.BaseSettings;
 import app.hushgram.extension.shared.settings.HushgramPause;
 import app.hushgram.extension.shared.settings.PauseForTests;
@@ -71,8 +75,11 @@ public class GlassTabBarTest {
         Settings.GLASS_TAB_BAR_OPACITY.resetToDefault();
         Settings.GLASS_TAB_BAR_HAPTICS.resetToDefault();
         Settings.GLASS_TAB_BAR_HIDE_ON_SCROLL.resetToDefault();
+        Settings.GLASS_TAB_BAR_SLIDE.resetToDefault();
+        Settings.GLASS_TAB_BAR_LIQUID.resetToDefault();
         BaseSettings.PAUSED.save(false);
         PauseForTests.resume();
+        GlassTabBar.resetForTests();
     }
 
     @Test
@@ -208,6 +215,98 @@ public class GlassTabBarTest {
         }
     }
 
+    /**
+     * #144: while a floating pill shows in the front window, the navigation bar's height Instagram pads
+     * its screens by is answered 0, so no strip of Instagram's color is left under the pill, and the
+     * pill makes that much more room under itself to stay above the gesture handle. When the pill shows
+     * or hides, or its activity comes back, the window's insets go round again so Instagram reads the
+     * height anew. Hidden, with another activity in front, or paused, the real height goes through.
+     */
+    @Test
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void aFloatingPillShownInFrontTakesTheNavigationBarsHeight() {
+        GlassTabBar.resetForTests();
+        HookStatus.clear();
+        try (GlassHost host = new GlassHost(Color.BLACK, true, GlassHeight.STANDARD, false, false)) {
+            int nav = host.dp(24);
+            assertEquals("not restyled yet", nav, GlassTabBar.navBarHeight(nav));
+            AtomicInteger insets = new AtomicInteger();
+            host.activity.getWindow().getDecorView().setOnApplyWindowInsetsListener((view, given) -> {
+                insets.incrementAndGet();
+                return view.onApplyWindowInsets(given);
+            });
+            host.controller.pause().resume();
+            host.frame();
+            int height = host.bar.getLayoutParams().height;
+            int under = host.bar.getPaddingBottom();
+
+            assertEquals("shown in front", 0, GlassTabBar.navBarHeight(nav));
+            host.frame();
+            assertEquals("the pill makes room for the handle", height + nav, host.bar.getLayoutParams().height);
+            assertEquals("and sits above it", under + nav, host.bar.getPaddingBottom());
+
+            int asked = insets.get();
+            host.bar.setVisibility(View.GONE);
+            host.frame();
+            assertTrue("hidden, the insets went round again", insets.get() > asked);
+            assertEquals("hidden", nav, GlassTabBar.navBarHeight(nav));
+            host.frame();
+            assertEquals("hidden, no room for the handle", height, host.bar.getLayoutParams().height);
+
+            asked = insets.get();
+            host.bar.setVisibility(View.VISIBLE);
+            host.frame();
+            assertTrue("shown again, the insets went round again", insets.get() > asked);
+            assertEquals("shown again", 0, GlassTabBar.navBarHeight(nav));
+
+            // A screen without the bar, in an activity of its own, comes to the front.
+            host.controller.pause();
+            ActivityController<Activity> other = Robolectric.buildActivity(Activity.class).setup();
+            try {
+                assertEquals("another activity in front", nav, GlassTabBar.navBarHeight(nav));
+            } finally {
+                other.pause().stop().destroy();
+            }
+            asked = insets.get();
+            host.controller.resume();
+            host.frame();
+            assertTrue("back in front, the insets went round again", insets.get() > asked);
+            assertEquals("back in front", 0, GlassTabBar.navBarHeight(nav));
+
+            BaseSettings.PAUSED.save(true);
+            PauseForTests.pause(HushgramPause.Reason.SWITCH);
+            asked = insets.get();
+            assertEquals("paused", nav, GlassTabBar.navBarHeight(nav));
+            host.frame();
+            assertTrue("paused, the insets went round again", insets.get() > asked);
+            assertEquals("paused, no room for the handle", height, host.bar.getLayoutParams().height);
+
+            String report = String.join("\n", HookStatus.report());
+            assertTrue(report, report.contains(GlassTabBar.COUNT_NAV_BEHIND));
+            assertTrue(report, report.contains(GlassTabBar.COUNT_INSETS_AGAIN));
+        }
+    }
+
+    /** A pill over Instagram's own place, not floating, leaves the navigation bar's height alone and never asks for insets. */
+    @Test
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void aPillThatDoesNotFloatLeavesTheNavigationBarsHeight() {
+        GlassTabBar.resetForTests();
+        HookStatus.clear();
+        try (GlassHost host = new GlassHost(Color.BLACK, false, GlassHeight.STANDARD, false, false)) {
+            int nav = host.dp(24);
+            host.controller.pause().resume();
+            host.frame();
+            int height = host.bar.getLayoutParams().height;
+            assertEquals(nav, GlassTabBar.navBarHeight(nav));
+            host.frame();
+            assertEquals(height, host.bar.getLayoutParams().height);
+            String report = String.join("\n", HookStatus.report());
+            assertFalse(report, report.contains(GlassTabBar.COUNT_NAV_BEHIND));
+            assertFalse(report, report.contains(GlassTabBar.COUNT_INSETS_AGAIN));
+        }
+    }
+
     /** Only a floating pill is lifted, by its step's dp; Standard, no choice and a bar that doesn't float stay put. */
     @Test
     public void onlyAFloatingPillIsLiftedByItsStep() {
@@ -326,6 +425,297 @@ public class GlassTabBarTest {
         }
     }
 
+    /**
+     * Slide across the tabs (#136): a finger slid along the pill carries the capsule, centered on the
+     * finger, nothing opens while it's down, and lifting it over a tab opens that tab, where the capsule
+     * then settles.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void aFingerSlidAlongThePillCarriesTheCapsuleAndOpensTheTabItLiftsOver() {
+        GlassTabBar.animationsOnForTests = false;
+        try (GlassHost host = new GlassHost(Color.BLACK, true, GlassHeight.STANDARD, false, false)) {
+            Settings.GLASS_TAB_BAR_SLIDE.save(true);
+            assertTrue(host.bar.getChildAt(0).performClick());
+            GlassTabBar.apply(host.activity);
+            host.layout();
+            Window.Callback callback = host.activity.getWindow().getCallback();
+            int[] at = new int[2];
+            host.bar.getLocationOnScreen(at);
+            float y = at[1] + host.bar.getHeight() / 2f;
+            View first = host.bar.getChildAt(0);
+            View fourth = host.bar.getChildAt(3);
+            float from = (first.getLeft() + first.getRight()) / 2f;
+            float to = (fourth.getLeft() + fourth.getRight()) / 2f;
+            long down = SystemClock.uptimeMillis();
+            send(callback, down, down, MotionEvent.ACTION_DOWN, at[0] + from, y);
+            send(callback, down, down + 16, MotionEvent.ACTION_MOVE, at[0] + from + host.dp(30), y);
+            send(callback, down, down + 32, MotionEvent.ACTION_MOVE, at[0] + to, y);
+            try (Pixels ignored = host.background()) {
+                RectF slot = ReflectionHelpers.getField(host.bar.getBackground(), "capsule");
+                assertEquals("the capsule sits on the finger", to, slot.centerX(), 0.5f);
+            }
+            assertEquals("nothing opens while the finger is down", 1, host.clicks.get());
+
+            send(callback, down, down + 48, MotionEvent.ACTION_UP, at[0] + to, y);
+            assertEquals(2, host.clicks.get());
+            assertTrue(fourth.isSelected());
+            try (Pixels ignored = host.background()) {
+                RectF slot = ReflectionHelpers.getField(host.bar.getBackground(), "capsule");
+                assertEquals("the capsule settles on the tab", to, slot.centerX(), 0.5f);
+            }
+        }
+    }
+
+    /** Off, the same slide is Instagram's: the window isn't wrapped and the capsule stays on the open tab. */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void withTheSwitchOffASlideMovesNothing() {
+        GlassTabBar.animationsOnForTests = false;
+        try (GlassHost host = new GlassHost(Color.BLACK, true, GlassHeight.STANDARD, false, false)) {
+            Window.Callback before = host.activity.getWindow().getCallback();
+            assertTrue(host.bar.getChildAt(0).performClick());
+            GlassTabBar.apply(host.activity);
+            host.layout();
+            assertSame("no watcher without the switch", before, host.activity.getWindow().getCallback());
+            View first = host.bar.getChildAt(0);
+            int[] at = new int[2];
+            host.bar.getLocationOnScreen(at);
+            float y = at[1] + host.bar.getHeight() / 2f;
+            float from = (first.getLeft() + first.getRight()) / 2f;
+            long down = SystemClock.uptimeMillis();
+            send(before, down, down, MotionEvent.ACTION_DOWN, at[0] + from, y);
+            send(before, down, down + 16, MotionEvent.ACTION_MOVE, at[0] + from + host.dp(200), y);
+            try (Pixels ignored = host.background()) {
+                RectF slot = ReflectionHelpers.getField(host.bar.getBackground(), "capsule");
+                assertTrue("the capsule stays on the open tab", slot.centerX() < first.getRight());
+            }
+            send(before, down, down + 32, MotionEvent.ACTION_CANCEL, at[0] + from + host.dp(200), y);
+        }
+    }
+
+    @Test
+    public void aSlidCapsuleCentersOnTheFingerInsideThePill() {
+        assertEquals(150f, GlassTabBar.followLeft(200f, 100f, 10f, 500f), 0f);
+        assertEquals("held at the left end", 10f, GlassTabBar.followLeft(20f, 100f, 10f, 500f), 0f);
+        assertEquals("held at the right end", 400f, GlassTabBar.followLeft(490f, 100f, 10f, 500f), 0f);
+        assertEquals("no room to move", 10f, GlassTabBar.followLeft(200f, 600f, 10f, 500f), 0f);
+    }
+
+    /** The liquid look's shapes (#65): Search's circle at the pill's end, and the pill shrinking to a circle at its start. */
+    @Test
+    public void theLiquidLookSplitsSearchOffAndShrinksThePillToACircle() {
+        RectF pill = new RectF(40, 2, 780, 102);
+        RectF holder = new RectF();
+        RectF circle = new RectF();
+        assertTrue(GlassTabBar.splitOffSearch(pill, 16, false, holder, circle));
+        assertEquals(new RectF(680, 2, 780, 102), circle);
+        assertEquals(new RectF(40, 2, 664, 102), holder);
+        assertTrue("right to left, Search goes to the left", GlassTabBar.splitOffSearch(pill, 16, true, holder, circle));
+        assertEquals(new RectF(40, 2, 140, 102), circle);
+        assertEquals(new RectF(156, 2, 780, 102), holder);
+        RectF narrow = new RectF(0, 0, 300, 100);
+        assertFalse("no room for two tabs beside the circle", GlassTabBar.splitOffSearch(narrow, 16, false, holder, circle));
+        assertEquals(narrow, holder);
+        assertTrue(circle.isEmpty());
+
+        RectF from = new RectF(40, 2, 664, 102);
+        RectF into = new RectF();
+        GlassTabBar.shrunkHolder(from, false, 0f, into);
+        assertEquals(from, into);
+        GlassTabBar.shrunkHolder(from, false, 0.5f, into);
+        assertEquals(new RectF(40, 2, 402, 102), into);
+        GlassTabBar.shrunkHolder(from, false, 1f, into);
+        assertEquals(new RectF(40, 2, 140, 102), into);
+        GlassTabBar.shrunkHolder(from, true, 1f, into);
+        assertEquals("right to left, the circle is at the right", new RectF(564, 2, 664, 102), into);
+
+        assertEquals(50f, GlassTabBar.slotMiddle(0f, 400f, 4, 0), 0f);
+        assertEquals(350f, GlassTabBar.slotMiddle(0f, 400f, 4, 3), 0f);
+    }
+
+    /** Where [tab] shows across the bar: its middle as laid out, plus how far it was moved. */
+    private static float shownMiddle(View tab) {
+        return (tab.getLeft() + tab.getRight()) / 2f + tab.getTranslationX();
+    }
+
+    /**
+     * #65: the liquid look puts Search in a round glass circle of its own at the pill's end (the left, right to
+     * left), spreads the other tabs over the round pill beside it in their order, and leaves the gap between
+     * the two clear. On dark and light glass. Opened, Search gets a round highlight inside its circle.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void theLiquidLookPutsSearchInItsOwnCircleBesideARoundPill() throws Exception {
+        GlassTabBar.animationsOnForTests = false;
+        for (int base : new int[]{Color.BLACK, Color.WHITE}) {
+            for (boolean rtl : new boolean[]{false, true}) {
+                try (GlassHost host = new GlassHost(base, true, GlassHeight.STANDARD, rtl, false)) {
+                    host.nameSearch(1);
+                    Settings.GLASS_TAB_BAR_LIQUID.save(true);
+                    assertTrue(host.bar.getChildAt(0).performClick());
+                    GlassTabBar.apply(host.activity);
+                    host.frame();
+                    host.frame();
+                    String where = (base == Color.BLACK ? "dark" : "light") + (rtl ? " rtl" : " ltr");
+                    Object glass = host.glass();
+                    RectF holder = new RectF(ReflectionHelpers.<RectF>getField(glass, "holder"));
+                    RectF circle = new RectF(ReflectionHelpers.<RectF>getField(glass, "circle"));
+                    assertFalse(where, circle.isEmpty());
+                    assertEquals(where + ": a circle", circle.width(), circle.height(), 0.01f);
+                    assertTrue(where + ": at the pill's end", rtl ? circle.right < holder.left : circle.left > holder.right);
+                    View search = host.bar.getChildAt(1);
+                    assertEquals(where + ": Search sits in its circle", circle.centerX(), shownMiddle(search), 1f);
+                    java.util.List<View> others = new java.util.ArrayList<>();
+                    for (int i : new int[]{0, 2, 3, 4}) others.add(host.bar.getChildAt(i));
+                    others.sort((one, other) -> Integer.compare(one.getLeft(), other.getLeft()));
+                    float gap = -1f;
+                    for (int k = 0; k < others.size(); k++) {
+                        float middle = shownMiddle(others.get(k));
+                        assertTrue(where + ": tab " + k + " sits on the pill", middle > holder.left && middle < holder.right);
+                        if (k > 0) {
+                            float step = middle - shownMiddle(others.get(k - 1));
+                            assertTrue(where + ": order kept", step > 0f);
+                            if (gap >= 0f) assertEquals(where + ": evenly spread", gap, step, 1.5f);
+                            gap = step;
+                        }
+                    }
+                    try (Pixels pixels = host.background()) {
+                        int y = Math.round(circle.centerY());
+                        int clear = base == Color.BLACK ? 1 : 60;
+                        int between = Math.round(rtl ? (circle.right + holder.left) / 2f : (holder.right + circle.left) / 2f);
+                        assertTrue(where + ": the gap shows what's behind", Color.alpha(pixels.bitmap.getPixel(between, y)) < clear);
+                        assertTrue(where + ": the pill is drawn", Color.alpha(pixels.bitmap.getPixel(Math.round(holder.centerX()), y)) > 200);
+                        assertTrue(where + ": the circle is drawn", Color.alpha(pixels.bitmap.getPixel(Math.round(circle.centerX()), y)) > 200);
+                        int cornerX = Math.round(holder.left) + host.dp(6);
+                        int cornerY = Math.round(holder.top) + host.dp(3);
+                        assertTrue(where + ": the pill's ends are round, past where a 12dp corner fills",
+                                Color.alpha(pixels.bitmap.getPixel(cornerX, cornerY)) < clear);
+                    }
+                    host.capture("liquid-" + (base == Color.BLACK ? "dark" : "light") + (rtl ? "-rtl" : "-ltr"));
+
+                    assertTrue(search.performClick());
+                    try (Pixels ignored = host.background()) {
+                        RectF slot = ReflectionHelpers.getField(host.bar.getBackground(), "capsule");
+                        assertEquals(where + ": the highlight sits in Search's circle", circle.centerX(), slot.centerX(), 1f);
+                        assertEquals(where + ": and is round", slot.width(), slot.height(), 1f);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * #65: the compact row keeps the tab you're on, in a circle at the pill's start, and Search in its circle. The
+     * other tabs fade and take no touches, the middle shows what's behind, and a slide can't start there. Grown
+     * back, every tab is where it was. With Search open there's nothing to shrink to.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void theCompactRowKeepsTheOpenTabAndSearchAndGrowsBackWhole() throws Exception {
+        GlassTabBar.animationsOnForTests = false;
+        for (boolean rtl : new boolean[]{false, true}) {
+            try (GlassHost host = new GlassHost(Color.BLACK, true, GlassHeight.STANDARD, rtl, false)) {
+                host.nameSearch(1);
+                Settings.GLASS_TAB_BAR_LIQUID.save(true);
+                View reels = host.bar.getChildAt(3);
+                View search = host.bar.getChildAt(1);
+                assertTrue(reels.performClick());
+                GlassTabBar.apply(host.activity);
+                host.frame();
+                host.frame();
+                String where = rtl ? "rtl" : "ltr";
+                Object glass = host.glass();
+                RectF holder = new RectF(ReflectionHelpers.<RectF>getField(glass, "holder"));
+                RectF circle = new RectF(ReflectionHelpers.<RectF>getField(glass, "circle"));
+                float[] spread = new float[host.bar.getChildCount()];
+                for (int i = 0; i < spread.length; i++) spread[i] = shownMiddle(host.bar.getChildAt(i));
+
+                GlassScrollHide.Shrinker shrinker = (GlassScrollHide.Shrinker) glass;
+                assertTrue(shrinker.shrink(true, false));
+                host.frame();
+                float size = holder.height();
+                float start = rtl ? holder.right - size / 2f : holder.left + size / 2f;
+                assertEquals(where + ": the open tab sits in the circle at the start", start, shownMiddle(reels), 1f);
+                assertEquals(where + ": Search stays in its circle", circle.centerX(), shownMiddle(search), 1f);
+                for (int i : new int[]{0, 2, 4}) {
+                    View tab = host.bar.getChildAt(i);
+                    assertEquals(where + ": tab " + i + " faded", 0f, tab.getAlpha(), 0f);
+                    assertEquals(where + ": tab " + i + " takes no touch", View.INVISIBLE, tab.getVisibility());
+                }
+                assertFalse(where + ": no slide on the compact row", ((GlassTabSlide.Host) glass).onPill(start, holder.centerY()));
+                try (Pixels pixels = host.background()) {
+                    int y = Math.round(holder.centerY());
+                    assertEquals(where + ": the middle shows what's behind", 0,
+                            Color.alpha(pixels.bitmap.getPixel(Math.round(holder.centerX()), y)));
+                    assertTrue(where + ": the open tab's circle is drawn", Color.alpha(pixels.bitmap.getPixel(Math.round(start), y)) > 200);
+                    assertTrue(where + ": Search's circle is drawn", Color.alpha(pixels.bitmap.getPixel(Math.round(circle.centerX()), y)) > 200);
+                }
+                host.capture("liquid-compact-" + where);
+
+                assertTrue(shrinker.shrink(false, false));
+                host.frame();
+                for (int i = 0; i < spread.length; i++) {
+                    View tab = host.bar.getChildAt(i);
+                    assertEquals(where + ": tab " + i + " back in place", spread[i], shownMiddle(tab), 1f);
+                    assertEquals(1f, tab.getAlpha(), 0f);
+                    assertEquals(View.VISIBLE, tab.getVisibility());
+                }
+                assertTrue(search.performClick());
+                host.frame();
+                assertFalse(where + ": Search open, nothing to shrink to", shrinker.shrink(true, false));
+            }
+        }
+    }
+
+    /** Off, or paused after it showed, the liquid look moves no tab, and the bar is the floating pill of before. */
+    @Test
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void offOrPausedTheLiquidLookLeavesEveryTabWhereItWas() {
+        GlassTabBar.animationsOnForTests = false;
+        for (boolean on : new boolean[]{false, true}) {
+            try (GlassHost host = new GlassHost(Color.BLACK, true, GlassHeight.STANDARD, false, false)) {
+                host.nameSearch(1);
+                Settings.GLASS_TAB_BAR_LIQUID.save(on);
+                assertTrue(host.bar.getChildAt(0).performClick());
+                GlassTabBar.apply(host.activity);
+                host.frame();
+                host.frame();
+                GlassScrollHide.Shrinker shrinker = (GlassScrollHide.Shrinker) host.glass();
+                if (on) {
+                    assertTrue("on, Search moved", host.bar.getChildAt(1).getTranslationX() != 0f);
+                    assertTrue(shrinker.shrink(true, true));
+                    host.frame();
+                    BaseSettings.PAUSED.save(true);
+                    PauseForTests.pause(HushgramPause.Reason.SWITCH);
+                    host.frame();
+                }
+                for (int i = 0; i < host.bar.getChildCount(); i++) {
+                    View tab = host.bar.getChildAt(i);
+                    assertEquals((on ? "paused" : "off") + ": tab " + i, 0f, tab.getTranslationX(), 0f);
+                    assertEquals(1f, tab.getAlpha(), 0f);
+                    assertEquals(View.VISIBLE, tab.getVisibility());
+                }
+                assertFalse("nothing shrinks", shrinker.shrink(true, true));
+                BaseSettings.PAUSED.save(false);
+                PauseForTests.resume();
+            }
+        }
+    }
+
+    private static void send(Window.Callback callback, long down, long time, int action, float x, float y) {
+        MotionEvent event = MotionEvent.obtain(down, time, action, x, y, 0);
+        try {
+            callback.dispatchTouchEvent(event);
+        } finally {
+            event.recycle();
+        }
+    }
+
     private static Map<View, ?> registry() {
         return ReflectionHelpers.getStaticField(GlassTabBar.class, "applied");
     }
@@ -341,6 +731,9 @@ public class GlassTabBarTest {
     /** A native host strip. The tab bar and its listeners remain the host's views. */
     private static final class GlassHost implements AutoCloseable {
         private static final int BAR_ID = 0x7f0b0120;
+        private static final int SEARCH_ID = 0x7f0b0121;
+        private Integer previousSearchId;
+        private boolean searchNamed;
         final ActivityController<Activity> controller;
         final Activity activity;
         final FrameLayout root;
@@ -361,6 +754,8 @@ public class GlassTabBarTest {
             Settings.GLASS_TAB_BAR_BLUR.save(blur);
             Settings.GLASS_TAB_BAR_HAPTICS.save(false);
             Settings.GLASS_TAB_BAR_HIDE_ON_SCROLL.save(false);
+            Settings.GLASS_TAB_BAR_SLIDE.save(false);
+            Settings.GLASS_TAB_BAR_LIQUID.save(false);
             controller = Robolectric.buildActivity(Activity.class).setup();
             activity = controller.get();
             activity.getApplicationInfo().flags |= android.content.pm.ApplicationInfo.FLAG_SUPPORTS_RTL;
@@ -416,6 +811,31 @@ public class GlassTabBarTest {
 
         int dp(int value) { return Math.round(value * density); }
 
+        /** Gives the tab at [index] the id Instagram's Search tab has, as the liquid look looks it up. */
+        void nameSearch(int index) {
+            Map<String, Integer> ids = ReflectionHelpers.getStaticField(GlassTabBar.class, "IDS");
+            synchronized (ids) {
+                if (!searchNamed) previousSearchId = ids.put(GlassTabBar.SEARCH_TAB, SEARCH_ID);
+            }
+            searchNamed = true;
+            bar.getChildAt(index).setId(SEARCH_ID);
+        }
+
+        /** The glass restyling this host's bar. */
+        Object glass() {
+            Object held = registry().get(bar);
+            Object glass = held == null ? null : ((java.lang.ref.WeakReference<?>) held).get();
+            assertTrue("the bar wasn't restyled", glass != null);
+            return glass;
+        }
+
+        /** One frame: the bar's pre-draw, what it posted and the window's own pass, then the test's layout. */
+        void frame() {
+            bar.getViewTreeObserver().dispatchOnPreDraw();
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(java.time.Duration.ofMillis(100));
+            layout();
+        }
+
         void layout() {
             ShadowLooper.idleMainLooper();
             root.measure(View.MeasureSpec.makeMeasureSpec(dp(411), View.MeasureSpec.EXACTLY),
@@ -449,6 +869,8 @@ public class GlassTabBarTest {
             synchronized (ids) {
                 if (previousId == null) ids.remove(GlassTabBar.TAB_BAR);
                 else ids.put(GlassTabBar.TAB_BAR, previousId);
+                if (searchNamed && previousSearchId == null) ids.remove(GlassTabBar.SEARCH_TAB);
+                else if (searchNamed) ids.put(GlassTabBar.SEARCH_TAB, previousSearchId);
             }
             controller.close();
             activity.getApplication().unregisterActivityLifecycleCallbacks(watcher);

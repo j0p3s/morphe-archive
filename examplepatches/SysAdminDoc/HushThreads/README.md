@@ -72,13 +72,13 @@ HushThreads v0.0.14 has 19 patches. Morphe Manager's default selection has all b
 | `Disable screenshot detection` | Threads isn't told when you take a screenshot. It stops watching your photos for new screenshots. Good if you want to screenshot without Threads noticing. Starts off. Turn it on in HushThreads settings > Privacy. |
 | `Disable video autoplay` | Videos in your feed wait for a tap instead of playing as you scroll. Good for a calmer feed and less data use. Starts off. Turn it on in HushThreads settings > Feed. |
 | `Hide ads` | Removes sponsored posts from your feed before Threads shows them, so they leave no gap. Good for a cleaner feed. On by default. Turn it off in HushThreads settings > Feed. |
-| `Hide ghost post bubbles` | Takes the ghost post bubbles off profile pictures, on profiles and in the row at the top of your feed. The pictures and the ghost posts themselves stay. Good for a calmer look. Starts off. Turn it on in HushThreads settings > More settings > Appearance. |
-| `Hide suggested users` | Removes the cards that suggest accounts to follow, in your feed and on profiles. Normal posts and reposts stay, and so does the rest of a profile. Good if you only want posts in your feed. On by default. Turn it off in HushThreads settings > Feed. |
-| `Hide the Instagram button` | Takes the Instagram button off the top of profiles, yours and other people's. The other buttons stay. Good for a tidier profile. Starts off. Turn it on in HushThreads settings > More settings > Appearance. |
+| `Hide ghost post bubbles` | Takes the ghost post bubbles off profile pictures, on profiles and in the row at the top of your feed. The pictures and the ghost posts themselves stay. Good for a calmer look. Starts off. Turn it on in HushThreads settings > Appearance. |
+| `Hide suggested users` | Removes the cards that suggest accounts to follow, in your feed and on profiles, and the Follow suggestions row in Search. Normal posts and reposts stay, and so does the rest of a profile or Search. Good if you only want posts in your feed. On by default. Its two switches are in HushThreads settings > Feed. |
+| `Hide the Instagram button` | Takes the Instagram button off the top of profiles, yours and other people's. The other buttons stay. Good for a tidier profile. Starts off. Turn it on in HushThreads settings > Appearance. |
 | `HushThreads settings` | Adds a HushThreads page to Threads where you turn features on or off, pause HushThreads, back up your settings and read the licenses. Open it from Threads' own settings, or long-press the Threads logo at the top of your feed. Works as soon as you patch it in, with no switch. |
 | `Max image quality` | Loads photos at the largest size Threads has, instead of one picked for your screen. Photos look sharper but use more data. Starts off. Turn it on in HushThreads settings > Feed. |
 | `Open links in browser` | Opens links you tap in your regular browser instead of inside Threads, and skips Threads' link tracking. Threads, Instagram and other Meta pages still open in Threads. On by default. Turn it off in HushThreads settings > Privacy. |
-| `Pure black dark mode` | Makes Threads' dark mode truly black instead of dark gray behind your feed and posts. It looks deeper and can save battery on OLED screens. Starts off. Turn it on in HushThreads settings > More settings > Appearance. |
+| `Pure black dark mode` | Makes Threads' dark mode truly black instead of dark gray behind your feed and posts. It looks deeper and can save battery on OLED screens. Starts off. Turn it on in HushThreads settings > Appearance. |
 | `Remove share targets` | Takes Threads out of the share menu in other apps, so it isn't offered when you share a link, photo or video. Sharing from Threads still works. It isn't selected by default. Works as soon as you patch it in, with no switch. |
 | `Remove the advertising ID` | Stops Threads from reading your phone's advertising ID. It gets a string of zeros instead. Good for making your phone harder to track across apps. Works as soon as you patch it in, with no switch. |
 | `Restore screens on re-signed builds` | Fixes Threads screens that fail on a patched app because they check who signed it. Also lets Threads share sign-in with an Instagram signed with this build's key. Works as soon as you patch it in, with no switch. |
@@ -96,7 +96,7 @@ In Threads, open your profile, tap the settings button at the top and tap HushTh
 
 If Threads crashes within a minute of starting three times in a row, HushThreads pauses itself and says why at the top of its settings. Your switches stay saved. Tap Resume and restart Threads to turn it back on. Threads has a crash guard of its own. Five quick crashes inside four hours make it delete its data, which signs you out and clears HushThreads' settings. Safe mode usually gets there first, but it can't help when the crash comes from one of the patches without a switch. If Threads keeps crashing, patch again without them.
 
-<p><img src="assets/settings-overview.png" width="320" alt="HushThreads settings with search, Pause, Feed, Privacy, Downloads and More settings"><img src="assets/settings-privacy.png" width="320" alt="Privacy with link tracking, browser, analytics and screenshot controls"></p>
+<p><img src="assets/settings-overview.png" width="320" alt="HushThreads settings with search, Pause, Quick setups and the Feed, Privacy, Downloads and Posts pages"><img src="assets/settings-privacy.png" width="320" alt="Privacy with link tracking, browser, analytics and screenshot controls"></p>
 
 These screenshots show the redesigned settings from the source build. The redesign isn't in a release yet.
 
@@ -110,7 +110,7 @@ If you also patch Instagram with [HushGram](https://github.com/SysAdminDoc/HushG
 
 - **Threads says your password is wrong when it isn't.** Reset your Instagram password and sign in with the new one. That fixed it in [issue #3](https://github.com/SysAdminDoc/HushThreads/issues/3).
 - **A feature you used stopped after updating from v0.0.12 or older.** `Block background-return feed refresh`, `Disable screenshot detection`, `Disable video autoplay`, `Max image quality` and `Pure black dark mode` joined the default selection in v0.0.13 with their switches off. Turn yours back on in HushThreads settings.
-- **Instagram says "Sorry, we weren't able to load that website" when you tap a Threads post.** That message is Instagram's, not a patch you're missing. The regular Instagram app only hands posts over to a Threads signed by Meta, and a patched Threads carries your Morphe Manager key instead. Opening the post from inside Threads still works. Reported in [issue #8](https://github.com/SysAdminDoc/HushThreads/issues/8).
+- **Instagram says "Sorry, we weren't able to load that website" when you tap a Threads post.** That message is Instagram's, not a patch you're missing. The regular Instagram app only hands posts over to a Threads signed by Meta, and a patched Threads carries your Morphe Manager key instead. Opening the post from inside Threads still works, and the Links page in HushThreads settings says so when it finds Meta's Instagram on your phone. Reported in [issue #8](https://github.com/SysAdminDoc/HushThreads/issues/8).
 - **Android won't install the patched app.** Uninstall the stock Threads first. An update to your patched Threads needs the same signing key as the copy on your phone.
 - **Patching stops with a patch's name.** That usually means your Threads isn't the supported build. Check the version name and version code against the [table above](#supported-threads-build).
 
@@ -124,12 +124,12 @@ Meta's terms ask for its permission before anyone modifies its apps. I haven't h
 
 HushThreads doesn't collect anything and has no server. The patched app goes online on HushThreads' behalf for two things only.
 
-- **A save you ask for.** Tap Save in a post's menu and HushThreads fetches that post's photos or videos over HTTPS from Meta's media servers (`cdninstagram.com`, `fbcdn.net` and `fbsbx.com`), where Threads loads them from too. Any other address is refused.
+- **A save you ask for.** Tap Save in a post's menu and HushThreads fetches that post's photos or videos over HTTPS from Meta's media servers (`cdninstagram.com`, `fbcdn.net` and `fbsbx.com`), where Threads loads them from too. Any other address is refused. The request carries no cookie or password, even through a proxy, and any cookie the server sends back is dropped.
 - **The release check**, which is off until you turn it on. Then it asks `api.github.com` for the latest release at most once a day when Threads starts, and again when you tap Check now. The request sends `HushThreads/<version>` as its User-Agent and carries no cookies and nothing about you or your phone. GitHub sees your IP address, as any site you visit does.
 
 The About and Licenses screens link to `github.com`, `gitlab.com` and `www.gnu.org`, and Support HushThreads at the bottom of the settings home page links to `ko-fi.com`. Those open in your browser, and only when you tap one.
 
-`Disable analytics` points the analytics uploads it recognizes at `127.0.0.1`, on a port nothing listens on, so they fail on the phone. Other telemetry isn't covered. `Open links in browser` hands Android only the real address behind Threads' click tracker, with tags like `fbclid` removed. Links to Threads, Instagram, Facebook, Messenger and Meta stay in Threads, because sign-in and Accounts Center need its session, and so do links in the photo viewer and in ads.
+`Disable analytics` points the analytics uploads it recognizes at `127.0.0.1`, on a port nothing listens on, so they fail on the phone. Other telemetry isn't covered. `Open links in browser` hands Android only the real address behind Threads' click tracker, with tags like `fbclid` removed. Links to Threads, Instagram, Facebook, Messenger and Meta stay in Threads, because sign-in and Accounts Center need its session. On 451 ads go through the same check, from the link button or a swipe up in the photo viewer, and so do the links on a lead form.
 
 ## Verify a download
 
@@ -139,7 +139,7 @@ Each release ships `SHA256SUMS.txt` beside the bundle, along with a CycloneDX SB
 c5ca5217bf24a5599abd5e466c956dc06bd2f1a170b5e963fa28744343d38368  patches-0.0.14.mpp
 ```
 
-On Windows, run `Get-FileHash -Algorithm SHA256 .\patches-0.0.14.mpp`. Inside the patched app, More settings > About shows the bundle's payload hash and the source it was built from.
+On Windows, run `Get-FileHash -Algorithm SHA256 .\patches-0.0.14.mpp`. Inside the patched app, the About page in HushThreads settings shows the bundle's payload hash and the source it was built from.
 
 ## Reporting a problem
 

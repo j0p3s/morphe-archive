@@ -12,11 +12,11 @@ import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patches.protonmail.misc.banner.autoDeleteBannerStatePatch
 import app.morphe.patches.shared.misc.proton.markPatchApplied
 import app.morphe.patches.protonmail.misc.settings.patchesSettingsPatch
+import app.morphe.patches.protonmail.shared.uniffiCallsPatch
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.util.getFreeRegisterProvider
 import app.morphe.util.indexOfFirstInstructionReversedOrThrow
 import app.morphe.util.matchSingle
-import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
@@ -56,6 +56,7 @@ val scheduledDeletionPatch = bytecodePatch(
         patchesSettingsPatch,
         autoDeleteBannerStatePatch,
         scheduledDeletionStringsPatch,
+        uniffiCallsPatch,
     )
     extendWith("extensions/extension.mpe")
 
@@ -89,26 +90,6 @@ val scheduledDeletionPatch = bytecodePatch(
                     move-result v$enabledRegister
                 """,
             )
-        }
-
-        with(
-            IoDispatcherFingerprint.matchAll(1..2)
-                .map { it.classDef }
-                .single { "Ljava/util/concurrent/Executor;" in it.interfaces },
-        ) {
-            val dispatcherInstanceField = fields.single {
-                it.type == type && AccessFlags.STATIC.isSet(it.accessFlags)
-            }
-
-            mutableClassDefBy(EXTENSION_CLASS).methods
-                .single { it.name == "ioDispatcher" }
-                .addInstructions(
-                    0,
-                    """
-                        sget-object v0, $type->${dispatcherInstanceField.name}:${dispatcherInstanceField.type}
-                        return-object v0
-                    """,
-                )
         }
 
         listOf(ScrollMessagesForLabelFingerprint, ScrollConversationsForLabelFingerprint)

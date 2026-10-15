@@ -3,59 +3,93 @@ package app.morphe.patches.hoichoi.content
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.fieldAccess
 import app.morphe.patches.shared.Type
+import app.morphe.patches.shared.morphe.java.lang.Iterable
+import app.morphe.patches.shared.morphe.java.util.Collection
+import app.morphe.patches.shared.morphe.java.util.List
 import app.morphe.patches.shared.morphe.kotlin.String
 import app.morphe.patches.shared.morphe.okhttp3.MediaType
 import app.morphe.patches.shared.morphe.okhttp3.ResponseBody
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 
-object MediaTypeCompanionFieldAccessFingerprint : Fingerprint(
-    definingClass = MediaType.toString(),
-    name = "<clinit>",
-    accessFlags = listOf(AccessFlags.STATIC, AccessFlags.CONSTRUCTOR),
-    returnType = Type.void,
-    parameters = emptyList(),
-    filters = listOf(
-        fieldAccess(
-            definingClass = MediaType.toString(),
-            type = MediaType.Companion.toString(),
-            opcode = Opcode.SPUT_OBJECT,
-        )
-    ),
-)
+object EmptyListFingerprint :
+    Fingerprint(
+        name = "emptyList",
+        accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
+        returnType = List.toString(),
+        parameters = emptyList(),
+    )
 
-object ResponseBodyCompanionFieldAccessFingerprint : Fingerprint(
-    definingClass = ResponseBody.toString(),
-    name = "<clinit>",
-    accessFlags = listOf(AccessFlags.STATIC, AccessFlags.CONSTRUCTOR),
-    returnType = Type.void,
-    parameters = emptyList(),
-    filters = listOf(
-        fieldAccess(
-            definingClass = ResponseBody.toString(),
-            type = ResponseBody.Companion.toString(),
-            opcode = Opcode.SPUT_OBJECT,
-        )
-    ),
-)
+object CollectionSizeOrDefaultFingerprint :
+    Fingerprint(
+        name = "collectionSizeOrDefault",
+        accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
+        returnType = Type.int,
+        parameters = listOf(Iterable.toString(), Type.int),
+    )
 
-internal object GetMonetizationModelFingerprint : Fingerprint(
-    name = "getMonetizationModel",
-    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
-    returnType = String.toString(),
-    parameters = emptyList(),
-)
+object ConvertToListIfNotCollectionFingerprint :
+    Fingerprint(
+        name = "convertToListIfNotCollection",
+        accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC, AccessFlags.FINAL),
+        returnType = Collection.toString(),
+        parameters = listOf(Iterable.toString()),
+    )
 
-internal object IsFreeContentFingerprint : Fingerprint(
-    name = "isFreeContent",
-    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
-    returnType = Type.boolean,
-    parameters = emptyList(),
-)
+object MediaTypeCompanionFieldAccessFingerprint :
+    Fingerprint(
+        definingClass = MediaType.toString(),
+        name = "<clinit>",
+        accessFlags = listOf(AccessFlags.STATIC, AccessFlags.CONSTRUCTOR),
+        returnType = Type.void,
+        parameters = emptyList(),
+        filters =
+            listOf(
+                fieldAccess(
+                    definingClass = MediaType.toString(),
+                    type = MediaType.Companion.toString(),
+                    opcode = Opcode.SPUT_OBJECT,
+                )
+            ),
+    )
 
-internal object IsLoginRequiredFingerprint : Fingerprint(
-    name = "isLoginRequired",
-    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
-    returnType = Type.boolean,
-    parameters = emptyList(),
-)
+object ResponseBodyCompanionFieldAccessFingerprint :
+    Fingerprint(
+        definingClass = ResponseBody.toString(),
+        name = "<clinit>",
+        accessFlags = listOf(AccessFlags.STATIC, AccessFlags.CONSTRUCTOR),
+        returnType = Type.void,
+        parameters = emptyList(),
+        filters =
+            listOf(
+                fieldAccess(
+                    definingClass = ResponseBody.toString(),
+                    type = ResponseBody.Companion.toString(),
+                    opcode = Opcode.SPUT_OBJECT,
+                )
+            ),
+    )
+
+internal object GetMonetizationModelFingerprint :
+    Fingerprint(
+        name = "getMonetizationModel",
+        accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+        returnType = String.toString(),
+        parameters = emptyList(),
+    )
+
+internal object IsFreeContentFingerprint :
+    Fingerprint(
+        name = "isFreeContent",
+        accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+        returnType = Type.boolean,
+        parameters = emptyList(),
+    )
+
+internal object IsLoginRequiredFingerprint :
+    Fingerprint(
+        name = "isLoginRequired",
+        accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+        returnType = Type.boolean,
+        parameters = emptyList(),
+    )

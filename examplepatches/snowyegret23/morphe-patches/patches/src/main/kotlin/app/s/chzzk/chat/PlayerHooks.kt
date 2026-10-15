@@ -36,7 +36,7 @@ internal fun BytecodePatchContext.addPlayerHooks() {
     val model = "${COMMUNITY}core/feature/feature/player/BasePlayerViewModel;"
     val context = "Lcom/naver/prismplayer/ui/PrismUiContext;"
     val media = "Lcom/naver/prismplayer/Media;"
-    uiBridge("seekToLive", 4, """
+    uiBridge("seekToLive", 11, """
         check-cast p0, $model
         invoke-virtual {p0}, $model->R()$context
         move-result-object v0
@@ -53,11 +53,32 @@ internal fun BytecodePatchContext.addPlayerHooks() {
         invoke-virtual {v1}, $media->z()Z
         move-result v1
         if-eqz v1, :unavailable
-        invoke-static {v0}, Lcom/naver/prismplayer/player/PrismPlayerCompatKt;->h($PLAYER)Z
+        invoke-interface {v0}, $PLAYER->getCurrentPosition()J
+        move-result-wide v2
+        const-wide/16 v8, 0x0
+        cmp-long v1, v2, v8
+        if-ltz v1, :unavailable
+        invoke-interface {v0}, $PLAYER->getBufferedPosition()J
+        move-result-wide v4
+        invoke-interface {v0}, $PLAYER->getDuration()J
+        move-result-wide v6
+        invoke-static/range {v2 .. v7}, $CHAT_UI->catchUpPosition(JJJ)J
+        move-result-wide v4
+        cmp-long v1, v4, v8
+        if-ltz v1, :reload
+        invoke-interface {v0, v4, v5}, $PLAYER->seekTo(J)Z
+        move-result v1
+        if-eqz v1, :reload
+        invoke-interface {v0}, $PLAYER->play()Z
+        const/4 v0, 0x1
+        return v0
+        :reload
+        const-wide/16 v4, -0x1
+        invoke-interface {v0, v4, v5}, $PLAYER->Z(J)Z
         move-result v1
         if-eqz v1, :unavailable
         invoke-interface {v0}, $PLAYER->play()Z
-        const/4 v0, 0x1
+        const/4 v0, 0x2
         return v0
         :unavailable
         const/4 v0, 0x0

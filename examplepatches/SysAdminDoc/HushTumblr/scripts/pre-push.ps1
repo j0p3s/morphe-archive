@@ -149,8 +149,8 @@ function Invoke-ReleaseFixtureApply {
         its own push) patches every declared fixture with the bundle this gate just built from the
         pushed commit, through that commit's verify-all-patches.ps1: report, manifest delta,
         resource table, DexDiff and host references. -KeepIn keeps each passing run under its key,
-        so the receipt and patch-for-device.ps1 can take it for that same bundle instead of
-        patching again. A record is accepted only when its key matches, and the key holds this
+        so patch-for-device.ps1 can take it for that same bundle instead of patching again. The
+        release receipt doesn't read it and patches every fixture itself. A record is accepted only when its key matches, and the key holds this
         bundle's hash, so a record from any other build is never read. With none, the fixture is
         patched in full.
     #>
@@ -172,13 +172,17 @@ function Invoke-ReleaseFixtureApply {
     $verifyAll = Join-Path $GateRoot 'scripts/verify-all-patches.ps1'
     $store = Get-AppliedRecordStore
     # A pushed commit from before records existed has no -KeepIn, and is patched without keeping.
-    $keeps = (Get-Command $verifyAll).Parameters.ContainsKey('KeepIn')
+    # A release is patched in full whatever is kept (-NoReuse), and each passing run is kept for
+    # patch-for-device.ps1: a kept run is a record and an APK anything of this user can write.
+    $verifyParameters = (Get-Command $verifyAll).Parameters
+    $keeps = $verifyParameters.ContainsKey('KeepIn')
     $work = Join-Path ([System.IO.Path]::GetTempPath()) ('hushtumblr-release-gate-' + [guid]::NewGuid().ToString('N'))
     try {
         foreach ($fixture in $Fixtures) {
             Write-Step "release push: patching $(Split-Path -Leaf $fixture) with the bundle built from $Commit"
             $arguments = @{ Apk = $fixture; DesktopJar = $desktopJar; WorkDir = $work; Bundle = $bundle }
             if ($keeps) { $arguments['KeepIn'] = $store }
+            if ($verifyParameters.ContainsKey('NoReuse')) { $arguments['NoReuse'] = $true }
             $global:LASTEXITCODE = 0
             Invoke-CommitScript -Script $verifyAll -Arguments $arguments
             if ($LASTEXITCODE -ne 0) {
@@ -614,6 +618,8 @@ try {
         'scripts/BadDexFixture.java',
         'scripts/ControlFlowFixture.java',
         'scripts/DexDiff.java',
+        'scripts/DexDeltaFixture.java',
+        'scripts/dex-delta-allowlist.txt',
         'scripts/FeatureDexFixture.java',
         'scripts/SelectorDexFixture.java',
         'scripts/AccountDexFixture.java',
@@ -640,6 +646,7 @@ try {
         'scripts/common.ps1',
         'scripts/MergeSplits.java',
         'scripts/ResourceTableCheck.java',
+        'scripts/resource-delta-allowlist.txt',
         'scripts/test-resource-table-check.ps1',
         'scripts/verify-all-patches.ps1'
     )

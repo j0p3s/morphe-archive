@@ -228,11 +228,11 @@ jobs:
 
           if [ "$RELEASE_KIND" = "dev" ]; then
             gh release create "${ARGS[@]}" \
-              --title "Release ${VERSION}" \
+              --title "${TAG}" \
               --notes-file RELEASE_NOTES.md \
               --prerelease
           else
             gh release create "${ARGS[@]}" \
-              --title "Release ${VERSION}" \
+              --title "${TAG}" \
               --notes-file RELEASE_NOTES.md
           fi

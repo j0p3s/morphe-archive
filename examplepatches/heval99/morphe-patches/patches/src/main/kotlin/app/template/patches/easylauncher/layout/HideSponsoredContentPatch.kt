@@ -1,0 +1,36 @@
+package app.template.patches.easylauncher.layout
+
+import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.patch.bytecodePatch
+import app.template.patches.shared.Constants.COMPATIBILITY_EASYLAUNCHER
+
+@Suppress("unused")
+val hideSponsoredContentPatch = bytecodePatch(
+    name = "Hide sponsored content",
+    description = "Removes sponsored links, sites, suggestions and articles from search and the " +
+        "news feed. The news feed is built from the sponsored article list, so it may show fewer " +
+        "posts or none at all.",
+    default = false,
+) {
+    compatibleWith(COMPATIBILITY_EASYLAUNCHER)
+
+    execute {
+        // Every getter hands back an empty list. The suspend suggestion provider may return its
+        // result directly instead of suspending, so it does the same.
+        listOf(
+            SponsoredLinksDataFingerprint,
+            SponsoredSitesFingerprint,
+            SponsoredPostsArticlesFingerprint,
+            SponsoredLinkSuggestionsFingerprint,
+        ).forEach { fingerprint ->
+            fingerprint.method.addInstructions(
+                0,
+                """
+                    invoke-static {}, Lkotlin/collections/CollectionsKt;->emptyList()Ljava/util/List;
+                    move-result-object v0
+                    return-object v0
+                """,
+            )
+        }
+    }
+}

@@ -15,6 +15,8 @@ import static org.robolectric.Shadows.shadowOf;
 
 import android.app.Activity;
 import android.app.Application;
+import android.content.Context;
+import android.content.ContextWrapper;
 import android.content.Intent;
 import android.net.Uri;
 
@@ -27,8 +29,10 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
+import org.robolectric.shadows.ShadowLog;
 
 import java.util.Collections;
+import java.util.List;
 
 import app.morphe.extension.hushthreads.settings.Settings;
 import app.morphe.extension.shared.SettingsContextRule;
@@ -45,6 +49,7 @@ public class ExternalBrowserTest {
     @Before
     public void openFeed() {
         HookStatus.clear();
+        ShadowLog.clear();
         feed = Robolectric.buildActivity(Activity.class).create().get();
     }
 
@@ -191,6 +196,36 @@ public class ExternalBrowserTest {
         assertTrue(ExternalBrowser.open(feed, "https://example.org/"));
     }
 
+    /**
+     * Before the settings are ready the switch can't be read, so every caller keeps its own
+     * browser: the launcher and the three 451 places that make the browser Intent themselves.
+     */
+    @Test
+    public void beforeTheSettingsAreReadyEveryLinkStaysWithThreads() {
+        SettingsContextRule.beforeThePauseIsDecided(() -> {
+            assertFalse(ExternalBrowser.open(feed, "https://example.org/"));
+            assertNull(opened());
+        });
+        assertTrue("the flag came back", ExternalBrowser.open(feed, "https://example.org/"));
+    }
+
+    /** The app that answered may refuse the launch. The link stays in Threads and isn't lost. */
+    @Test
+    public void aRefusedLaunchKeepsTheLinkInThreads() {
+        Context refusing = new ContextWrapper(feed) {
+            @Override
+            public void startActivity(Intent intent) {
+                throw new SecurityException("refused " + intent.getDataString());
+            }
+        };
+
+        assertFalse(ExternalBrowser.open(refusing, "https://example.org/private-path"));
+        String report = String.join("\n", HookStatus.report());
+        assertTrue(report, report.contains("links nothing else could open 1"));
+        assertFalse("the report never carries the link", report.contains("private-path"));
+        assertLoggedWithoutTheLink("SecurityException");
+    }
+
     /** A phone with nothing that opens web links keeps the link in Threads' browser. */
     @Test
     public void withNoBrowserTheLinkStaysInThreads() {
@@ -201,5 +236,21 @@ public class ExternalBrowserTest {
         String report = String.join("\n", HookStatus.report());
         assertTrue(report, report.contains("links nothing else could open 1"));
         assertFalse("the report never carries the link", report.contains("private-path"));
+        assertLoggedWithoutTheLink("ActivityNotFoundException");
+    }
+
+    /**
+     * The hook status report holds fixed labels only, so it can't show a leak. The link could only
+     * get out through the error line, and the exported report redacts addresses, so this reads the
+     * line as Android's log got it.
+     */
+    private static void assertLoggedWithoutTheLink(String kind) {
+        List<ShadowLog.LogItem> lines = ShadowLog.getLogsForTag("morphe: ExternalBrowser");
+        assertEquals(lines.toString(), 1, lines.size());
+        ShadowLog.LogItem line = lines.get(0);
+        assertTrue(line.msg, line.msg.contains("(" + kind + ")"));
+        assertFalse("the log line never carries the link: " + line.msg,
+                line.msg.contains("example.org") || line.msg.contains("private-path"));
+        assertNull("the exception quotes the intent, so it isn't logged", line.throwable);
     }
 }

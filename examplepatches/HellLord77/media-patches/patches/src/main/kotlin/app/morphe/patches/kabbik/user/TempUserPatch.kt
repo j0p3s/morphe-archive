@@ -12,29 +12,31 @@ import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodRefere
 private const val EXTENSION_CLASS = "Lapp/morphe/extension/kabbik/patches/TempUserPatch;"
 
 @Suppress("unused")
-val tempUserPatch = bytecodePatch(
-    name = "Temp user",
-    description = "Log in as subscribed temp user.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_KABBIK)
+val tempUserPatch =
+    bytecodePatch(
+        name = "Temp user",
+        description = "Log in as subscribed temp user.",
+        default = true,
+    ) {
+        compatibleWith(COMPATIBILITY_KABBIK)
 
-    dependsOn(sharedExtensionPatch)
+        dependsOn(sharedExtensionPatch)
 
-    execute {
-        KabbikApplicationOnCreateFingerprint.matchSingle().method.apply {
-            addInstruction(
-                0, BuilderInstruction35c(
-                    Opcode.INVOKE_STATIC,
+        execute {
+            KabbikApplicationOnCreateFingerprint.matchSingle().method.apply {
+                addInstruction(
                     0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    0,
-                    ImmutableMethodReference(EXTENSION_CLASS, name, parameters, returnType),
+                    BuilderInstruction35c(
+                        Opcode.INVOKE_STATIC,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        0,
+                        ImmutableMethodReference(EXTENSION_CLASS, name, parameters, returnType),
+                    ),
                 )
-            )
+            }
         }
     }
-}

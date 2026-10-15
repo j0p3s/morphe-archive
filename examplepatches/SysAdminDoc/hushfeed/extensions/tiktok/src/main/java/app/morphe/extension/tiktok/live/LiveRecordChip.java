@@ -8,6 +8,7 @@ import android.app.Activity;
 import android.app.Application;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
@@ -31,7 +32,11 @@ import app.morphe.extension.tiktok.settings.SettingsStatus;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.WeakHashMap;
 
 /**
  * The Record button in a LIVE room (#37). The room's page tells this class it is resuming; while
@@ -50,6 +55,12 @@ public final class LiveRecordChip {
     private static final Handler HANDLER = new Handler(Looper.getMainLooper());
 
     // Everything below is touched on the main thread only.
+    /**
+     * Every room page seen resuming. The one in front is picked from these by what is on screen:
+     * on 47.1.4 the pager resumes the next room right after the one being watched, so the last
+     * page to resume is usually one that isn't shown.
+     */
+    private static final Map<Object, Boolean> PAGES = new WeakHashMap<>();
     private static WeakReference<Object> page = new WeakReference<>(null);
     private static WeakReference<Activity> host = new WeakReference<>(null);
     private static TextView chip;
@@ -75,14 +86,16 @@ public final class LiveRecordChip {
 
     private static void onRoomResumed(Object fragment) {
         try {
-            Object previous = page.get();
-            if (previous != null && previous != fragment) leave(LiveRecorder.End.LEFT_ROOM);
             Object activityObject = Reflect.invoke(fragment, "getActivity");
             if (!(activityObject instanceof Activity)) return;
             Activity activity = (Activity) activityObject;
-            page = new WeakReference<>(fragment);
+            PAGES.put(fragment, Boolean.TRUE);
             host = new WeakReference<>(activity);
             registerCallbacks(activity);
+            // A page laid out on screen already wins over one only now resuming; before the first
+            // layout nothing is on screen, so the resuming page is taken and the tick settles it.
+            Object front = pageInFront(activity);
+            follow(front != null ? front : fragment);
             if (!enabled()) {
                 removeChip();
                 return;
@@ -151,10 +164,78 @@ public final class LiveRecordChip {
         FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT,
                 Gravity.TOP | Gravity.END);
-        params.topMargin = dp(activity, 132);
+        params.topMargin = dp(activity, TOP_DP);
         params.rightMargin = dp(activity, 12);
         content.addView(view, params);
         chip = view;
+        view.post(() -> stayClear(activity));
+    }
+
+    /** Below the room's top bar, where the chip sits unless something to tap is there. */
+    private static final int TOP_DP = 132;
+    /** The gap left between the chip and a tap target it moved below. */
+    private static final int GAP_DP = 8;
+
+    /**
+     * Moves the chip below anything to tap that TikTok draws where it sits, such as the avatar row
+     * of the Discover panel when that opens over the room, and back up once it's gone. A view a
+     * quarter of the screen or bigger is the room's own surface and doesn't count.
+     */
+    private static void stayClear(Activity activity) {
+        TextView view = chip;
+        if (view == null || !(view.getParent() instanceof ViewGroup)) return;
+        ViewGroup content = (ViewGroup) view.getParent();
+        Rect area = new Rect();
+        if (!content.isShown() || !content.getGlobalVisibleRect(area)) return;
+        List<Rect> taken = new ArrayList<>();
+        tapTargets(content, view, area, (long) area.width() * area.height() / 4, taken);
+        FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) view.getLayoutParams();
+        int width = view.getWidth() > 0 ? view.getWidth() : dp(activity, 96);
+        int height = view.getHeight() > 0 ? view.getHeight() : dp(activity, 48);
+        int right = area.width() - params.rightMargin;
+        int top = freeTop(dp(activity, TOP_DP), height, right - width, right, taken,
+                dp(activity, GAP_DP), area.height() * 2 / 3);
+        if (top != params.topMargin) {
+            params.topMargin = top;
+            view.setLayoutParams(params);
+        }
+    }
+
+    /** Every visible view under {@code root} that takes a tap, other than {@code skip}, in {@code area}'s coordinates. */
+    static void tapTargets(View root, View skip, Rect area, long largest, List<Rect> out) {
+        if (root == skip || root.getVisibility() != View.VISIBLE || root.getAlpha() == 0f) return;
+        Rect rect = new Rect();
+        if ((root.isClickable() || root.isLongClickable()) && root.getGlobalVisibleRect(rect)
+                && (long) rect.width() * rect.height() < largest) {
+            rect.offset(-area.left, -area.top);
+            out.add(rect);
+        }
+        if (root instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) root;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                tapTargets(group.getChildAt(i), skip, area, largest, out);
+            }
+        }
+    }
+
+    /**
+     * The first top, from {@code wanted} down, where a chip {@code height} tall between {@code left}
+     * and {@code right} covers none of {@code taken}. Past {@code lowest} the chip would sit among
+     * the room's own controls, so it stays at {@code wanted} then.
+     */
+    static int freeTop(int wanted, int height, int left, int right, List<Rect> taken, int gap, int lowest) {
+        int top = wanted;
+        boolean moved = true;
+        while (moved && top <= lowest) {
+            moved = false;
+            for (Rect rect : taken) {
+                if (rect.left < right && rect.right > left && rect.top < top + height && rect.bottom > top) {
+                    top = rect.bottom + gap;
+                    moved = true;
+                }
+            }
+        }
+        return top <= lowest ? top : wanted;
     }
 
     private static void removeChip() {
@@ -240,6 +321,13 @@ public final class LiveRecordChip {
         refresh();
     }
 
+    /** Makes {@code fragment} the page the button belongs to; a recording of another page stops. */
+    private static void follow(Object fragment) {
+        Object previous = page.get();
+        if (previous != null && previous != fragment) leave(LiveRecorder.End.LEFT_ROOM);
+        page = new WeakReference<>(fragment);
+    }
+
     /** Stops a running recording because the room is no longer in front. */
     private static void leave(LiveRecorder.End why) {
         LiveRecorder running = recorder;
@@ -260,19 +348,21 @@ public final class LiveRecordChip {
     private static void tick() {
         ticking = false;
         try {
-            Object fragment = page.get();
             Activity activity = host.get();
-            boolean showing = fragment != null && activity != null && enabled() && roomInFront(fragment, activity);
+            Object fragment = activity != null && enabled() ? pageInFront(activity) : null;
+            boolean showing = fragment != null;
             if (!showing) {
                 leave(LiveRecorder.End.LEFT_ROOM);
                 removeChip();
             } else {
+                follow(fragment);
                 LiveRecorder running = recorder;
                 if (running != null && running.active() && !sameRoom(running, fragment)) {
                     leave(LiveRecorder.End.LEFT_ROOM);
                 }
                 showChip(activity);
                 refresh();
+                stayClear(activity);
             }
             // Keep watching while a recording runs or the chip is up; a new resume restarts it.
             if (recorder != null || (showing && chip != null)) scheduleTick();
@@ -281,15 +371,43 @@ public final class LiveRecordChip {
         }
     }
 
-    private static boolean roomInFront(Object fragment, Activity activity) {
-        if (activity.isFinishing() || activity.isDestroyed()) return false;
-        if (Boolean.FALSE.equals(Reflect.invoke(fragment, "isResumed"))) return false;
-        if (Boolean.FALSE.equals(Reflect.invoke(fragment, "getUserVisibleHint"))) return false;
-        if (Boolean.TRUE.equals(Reflect.invoke(fragment, "isRemoving"))) return false;
-        if (Boolean.TRUE.equals(Reflect.invoke(fragment, "isDetached"))) return false;
-        if (Boolean.TRUE.equals(Reflect.invoke(fragment, "isHidden"))) return false;
+    /** The resumed room page of {@code activity} with the most of itself on screen, or null. */
+    private static Object pageInFront(Activity activity) {
+        if (activity.isFinishing() || activity.isDestroyed()) return null;
         View decor = activity.getWindow() == null ? null : activity.getWindow().getDecorView();
-        return decor != null && decor.isShown();
+        if (decor == null || !decor.isShown()) return null;
+        Object best = null;
+        int bestHeight = 0;
+        for (Object fragment : new ArrayList<>(PAGES.keySet())) {
+            if (fragment == null || Reflect.invoke(fragment, "getActivity") != activity) continue;
+            int shown = heightOnScreen(fragment);
+            if (shown > bestHeight) {
+                best = fragment;
+                bestHeight = shown;
+            }
+        }
+        return best;
+    }
+
+    /** How much of a room page is on screen, in pixels; 0 unless it is resumed and mostly shown. */
+    private static int heightOnScreen(Object fragment) {
+        if (Boolean.FALSE.equals(Reflect.invoke(fragment, "isResumed"))) return 0;
+        if (Boolean.TRUE.equals(Reflect.invoke(fragment, "isRemoving"))) return 0;
+        if (Boolean.TRUE.equals(Reflect.invoke(fragment, "isDetached"))) return 0;
+        if (Boolean.TRUE.equals(Reflect.invoke(fragment, "isHidden"))) return 0;
+        Object view = Reflect.invoke(fragment, "getView");
+        if (!(view instanceof View) || !((View) view).isShown()) return 0;
+        Rect rect = new Rect();
+        if (!((View) view).getGlobalVisibleRect(rect)) return 0;
+        return mostlyShown(rect.height(), ((View) view).getHeight()) ? rect.height() : 0;
+    }
+
+    /**
+     * Whether a page is in front by how much of it is on screen: at least half, which only one
+     * page of a pager can be, even mid-swipe, while the rooms beside it sit off screen.
+     */
+    static boolean mostlyShown(int visibleHeight, int height) {
+        return height > 0 && visibleHeight > 0 && visibleHeight * 2 >= height;
     }
 
     private static boolean sameRoom(LiveRecorder running, Object fragment) {

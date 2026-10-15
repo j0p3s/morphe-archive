@@ -1,11 +1,14 @@
 package app.template.patches.flashscore.ads
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_FLASHSCORE
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
 // Flashscore uses Google's next-generation Mobile Ads SDK
 // (com.google.android.libraries.ads.mobile.sdk). Its class and method names are stable
@@ -14,6 +17,11 @@ import app.template.patches.shared.Constants.COMPATIBILITY_FLASHSCORE
 //   - every *AdPreloader.start(...) reports failure, so nothing gets preloaded;
 //   - the ad classes' load()/loadAd() entry points become no-ops;
 //   - pollAd() yields nothing for anything that still tries to fetch a preloaded ad.
+// Two app-side hooks cover what does not go through the SDK:
+//   - AdvertZone (every ad slot, including its bookmaker WebView provider) collapses itself
+//     instead of loading, so no empty placeholder is left behind. The sponsored bookmaker
+//     strip, bonus strip and odds are not ad slots; Hide betting content covers them;
+//   - the video player never receives a VMAP response, so IMA video ads are never requested.
 private const val SDK = "Lcom/google/android/libraries/ads/mobile/sdk/"
 
 private val PRELOADERS = listOf(
@@ -45,7 +53,8 @@ private fun BytecodePatchContext.methods(relative: String): Set<MutableMethod> =
 @Suppress("unused")
 val disableAdsPatch = bytecodePatch(
     name = "Disable ads",
-    description = "Disables banner, interstitial, native, app-open and rewarded ads."
+    description = "Disables Google ads, in-app ad slots and video ads. " +
+        "Bookmaker strips and odds are hidden by Hide betting content."
 ) {
     compatibleWith(COMPATIBILITY_FLASHSCORE)
 
@@ -90,5 +99,32 @@ val disableAdsPatch = bytecodePatch(
                     .forEach { it.returnEarly() }
             }
         }
+
+        // AdvertZone: do what the app itself does when ads are disabled (GONE, then the
+        // (I)V helper that resets the min height and reports the visibility) and return
+        // before any provider is picked. The helper is found by its setMinHeight call.
+        val collapse = mutableClassDefBy(ADVERT_ZONE).methods.singleOrNull { method ->
+            method.returnType == "V" &&
+                method.parameterTypes.map(CharSequence::toString) == listOf("I") &&
+                method.implementation?.instructions?.any { insn ->
+                    val ref = (insn as? ReferenceInstruction)?.reference as? MethodReference
+                    ref?.definingClass == "Landroidx/constraintlayout/widget/ConstraintLayout;" &&
+                        ref.name == "setMinHeight"
+                } == true
+        } ?: throw PatchException("AdvertZone has no single (I)V setMinHeight helper")
+        // The load method has 34 locals, so p0 is beyond the 4-bit range of invoke-virtual.
+        AdvertZoneLoadFingerprint.method.addInstructions(
+            0,
+            """
+                move-object/from16 v0, p0
+                const/16 v1, 0x8
+                invoke-virtual {v0, v1}, Landroid/view/View;->setVisibility(I)V
+                invoke-virtual {v0, v1}, $ADVERT_ZONE->${collapse.name}(I)V
+                return-void
+            """.trimIndent()
+        )
+
+        // Video ads: drop the VMAP response before it is stored on the media item.
+        VideoMediaConstructorFingerprint.method.addInstructions(0, "const/4 p3, 0x0")
     }
 }

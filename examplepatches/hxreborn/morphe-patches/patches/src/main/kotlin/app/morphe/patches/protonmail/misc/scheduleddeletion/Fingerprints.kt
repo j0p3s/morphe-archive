@@ -51,10 +51,3 @@ internal object AutoDeleteBannerTextFingerprint : Fingerprint(
         ),
     ),
 )
-
-internal object IoDispatcherFingerprint : Fingerprint(
-    name = "toString",
-    returnType = "Ljava/lang/String;",
-    parameters = emptyList(),
-    strings = listOf("Dispatchers.IO"),
-)

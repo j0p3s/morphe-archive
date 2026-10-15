@@ -27,10 +27,20 @@
     HUSHTUMBLR_APPLY_RECORDS, else the default one in the temp folder; -NoReuse always patches.
     Nothing this script makes is kept there: it skips the resource table check.
 
+    -Option gives a named patch an option value, written 'Patch name:key=value'. The CLI gets it as
+    -O right after that patch's -e. A kept gate run was patched with the options as the bundle ships
+    them and its key doesn't cover them, so a run with -Option always patches.
+
     The signed APK has to pass zipalign -c -P 16 -v 4, with the zipalign beside aapt2, and its
     64-bit libraries have to be Tumblr's own bytes (Assert-PageAlignment). A kept APK is held to
     that before it's signed as well. A library of Tumblr's that doesn't fit 16 KB pages is printed
     as a warning naming it a target limitation, and is never rewritten.
+
+    Whichever signed it, the APK has to verify with apksigner as signed by -KeyAlias's certificate
+    in -Keystore and no other, read with the keytool of the runtime java starts (a BKS store through
+    the desktop CLI's BouncyCastle provider), before it's copied to -OutputApk or installed. The
+    keystore is held from that read, before anything signs, to the end of the run, so nothing can
+    swap the key between signing and the check.
 
 .EXAMPLE
     scripts/patch-for-device.ps1 -Serial $env:HUSHTUMBLR_DEVICE_SERIAL
@@ -48,6 +58,9 @@ param(
     # that is off by default, so a check of what Tumblr does without one of them needs a build
     # that leaves it out.
     [string[]]$Exclude = @(),
+    # Option values for named patches, each written 'Patch name:key=value', like
+    # 'Dark background color:backgroundColor=#121212'. Without one a patch keeps the bundle's default.
+    [string[]]$Option = @(),
     # Patch with the release bundle even when a source file is newer than it, for replaying
     # an earlier build on purpose. Without it a stale bundle stops the run.
     [switch]$AllowStaleBundle,
@@ -78,7 +91,9 @@ if ($Replace) { throw '-Replace is refused. Development installs never uninstall
 if (-not $Root) { $Root = Split-Path -Parent $PSScriptRoot }
 # The argument file is written with [IO.File], which reads a relative path against the process
 # directory, while java is handed the same path from PowerShell's location. Absolute, they agree.
+# The keystore likewise: Open-HeldFile holds it by [IO.File] and the signers read it by that path.
 $OutDir = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutDir)
+$Keystore = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Keystore)
 . (Join-Path $PSScriptRoot 'patch-target.ps1')
 . (Join-Path $PSScriptRoot 'patch-report.ps1')
 . (Join-Path $PSScriptRoot 'common.ps1')
@@ -121,6 +136,13 @@ try {
 $complete = $false
 $outputReservation = $null
 $reservedPath = $null
+$patchInput = $null
+$recorded = $null
+$outHandle = $null
+$resultHandle = $null
+$reservedHandle = $null
+$bundleHeld = $null
+$keystoreHeld = $null
 try {
 if ($OutputApk) {
     $reservedPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($OutputApk)
@@ -154,9 +176,25 @@ if ([string]::IsNullOrEmpty($keystorePassword)) {
     $keystorePassword = 'sideload'
     Write-Host "[device] $passwordVariable is unset; using the documented local test-key fallback"
 }
+# The alias's certificate, off the keystore held from then to the end of the run, so the key that
+# signs the APK and the certificate the check below holds it to come from the same bytes. Read
+# here, before anything signs, or at the check when the CLI made the keystore on its first run.
+# Dot-sourced, so what it sets is the script's.
+$readKeystore = {
+    if (Test-Path -LiteralPath $Keystore -PathType Leaf) {
+        $keystoreHeld = Open-HeldFile -Path $Keystore -What 'The keystore'
+        $Keystore = Get-HeldPath -Stream $keystoreHeld
+    }
+    $keyCertificate = Get-KeystoreCertificate -Keystore $Keystore -Alias $KeyAlias -Password $keystorePassword -Java $Java -DesktopJar $DesktopJar
+}
+if (Test-Path -LiteralPath $Keystore -PathType Leaf) { . $readKeystore }
 $version = Get-BundleVersion -Root $root
 $bundle = Get-ReleaseBundlePath -Root $root -Version $version
 if (-not (Test-Path $bundle)) { throw "No bundle at $bundle. Build it first: :patches:generatePatchesList then :patches:buildAndroid, through the governor." }
+# Held from here to the end of the run: the applied record's key, the CLI and the register check's
+# comparison with the bundle's extensions all read these bytes, and nothing can write them between.
+$bundleHeld = Open-HeldFile -Path $bundle -What 'The bundle'
+$bundle = Get-HeldPath -Stream $bundleHeld
 # Only buildAndroid writes this bundle; a test run after a patch change leaves it behind, and the
 # phone would get the previous hooks while the result reads as a verdict on the new ones.
 if (-not $AllowStaleBundle) {
@@ -172,6 +210,27 @@ foreach ($excluded in $Exclude) {
     if ($excluded -notin ($catalog.patches | ForEach-Object { $_.name })) { throw "No patch named '$excluded' to exclude." }
 }
 if ($Exclude.Count -gt 0) { Write-Host "[device] leaving out: $($Exclude -join ', ')" }
+# Each -Option is held to the catalog before anything is merged or patched: the patch has to be in
+# this build and has to declare the key. The CLI ignores an option it can't place, and the APK
+# would then read as a verdict on a value it never got.
+$patchOptions = @{}
+foreach ($entry in $Option) {
+    $parsed = [regex]::Match([string]$entry, '^(?<patch>.+?):(?<key>[A-Za-z][A-Za-z0-9_]*)=(?<value>.*)$')
+    if (-not $parsed.Success) { throw "-Option takes 'Patch name:key=value', not '$entry'." }
+    $optionPatch = $parsed.Groups['patch'].Value
+    $optionKey = $parsed.Groups['key'].Value
+    $declaring = @($catalog.patches | Where-Object { $_.name -ceq $optionPatch })
+    if ($declaring.Count -ne 1 -or $optionPatch -notin $names) { throw "No patch named '$optionPatch' in this build to give an option to." }
+    $declaredKeys = @($declaring[0].options | ForEach-Object { [string]$_.key })
+    if ($optionKey -cnotin $declaredKeys) {
+        throw "$optionPatch has no option '$optionKey'. It declares: $(if ($declaredKeys.Count) { $declaredKeys -join ', ' } else { 'none' })."
+    }
+    if (-not $patchOptions.ContainsKey($optionPatch)) { $patchOptions[$optionPatch] = @() }
+    $patchOptions[$optionPatch] += "$optionKey=$($parsed.Groups['value'].Value)"
+    Write-Host "[device] option for ${optionPatch}: $optionKey=$($parsed.Groups['value'].Value)"
+}
+# A kept gate run was patched with every option as the bundle ships it.
+if ($patchOptions.Count -gt 0) { $NoReuse = $true }
 $dependencyNames = @(Get-PatchDependencyNames -PatchList $catalog -RequestedNames $names)
 
 New-Item -ItemType Directory -Force $OutDir | Out-Null
@@ -183,10 +242,15 @@ if (Test-Path -LiteralPath $out) { throw 'The new run already has an APK output.
 Write-Host "[device] $($names.Count) patches from $(Split-Path -Leaf $bundle) onto $(Split-Path -Leaf $Apk)"
 # Every APK the merge is made from, or the plain APK, has to carry Tumblr's declared signer
 # (Get-MergedApk), before anything is merged, signed or installed.
+# It comes back held: nothing can write to it or put another file in its place until the finally,
+# through the patch or signing run and every check that reads it, and the path is its real one.
 $declaredSigners = @(Get-DeclaredSigners -PatchList $catalog -PackageName $target.PackageName)
 $patchInput = Get-MergedApk -Apk $Apk -Destination (Join-Path $OutDir 'stock-merged.apk') `
     -Java $Java -DesktopJar $DesktopJar -Aapt2 $Aapt2 -PackageName $target.PackageName -Signers $declaredSigners
 $stockManifest = Get-ApkManifestFacts -Apk $patchInput -Aapt2 $Aapt2
+# The build this run was let through on was read off the base APK before anything was checked. It
+# has to be the build of the APK that is held now (Assert-SameBuild).
+Assert-SameBuild -Decided $stock -Held $stockManifest -Label (Split-Path -Leaf $Apk)
 
 # A gate run that patched this exact bundle onto this APK with these patches and passed every check,
 # as verify-all-patches.ps1 -KeepIn keeps it. Nothing is hashed while the store holds no record.
@@ -197,8 +261,11 @@ if (-not $NoReuse) {
         $hostStubs = Resolve-HostReferenceStubs -AndroidJar $AndroidJar -ApiVersions $ApiVersions -Aapt2 $Aapt2
         $AndroidJar = $hostStubs.AndroidJar
         $ApiVersions = $hostStubs.ApiVersions
-        $identity = Get-AppliedRecordKey -Bundle $bundle -Fixture $Apk -PatchList $catalogPath -PatchNames $names `
-            -Forced $false -DesktopJar $DesktopJar -AndroidJar $AndroidJar -ApiVersions $ApiVersions
+        # Keyed on what the merge held above was made from, and the kept APK comes back held to the
+        # digest it was kept with, through the signing below (Find-AppliedRecord).
+        $identity = Get-AppliedRecordKey -Bundle $bundle -InputIdentity (Get-HeldInputIdentity -Merged $patchInput) `
+            -PatchList $catalogPath -PatchNames $names -Forced $false -DesktopJar $DesktopJar -AndroidJar $AndroidJar `
+            -ApiVersions $ApiVersions
         $recorded = Find-AppliedRecord -Store $store -Key $identity.Key
     }
 }
@@ -225,15 +292,24 @@ if ($recorded) {
         $signExitCode = $LASTEXITCODE
     } finally {
         $ErrorActionPreference = $preference
-        [Environment]::SetEnvironmentVariable($passwordVariable, $savedPassword, [EnvironmentVariableTarget]::Process)
+        # Unset again when it was: PowerShell hands $null over as '', which PowerShell 7 keeps.
+        [Environment]::SetEnvironmentVariable($passwordVariable, $(if ($null -eq $savedPassword) { [NullString]::Value } else { $savedPassword }),
+            [EnvironmentVariableTarget]::Process)
     }
     if ($signExitCode -ne 0 -or -not (Test-Path -LiteralPath $out -PathType Leaf)) {
         throw "apksigner could not sign the kept APK (exit $signExitCode): $($signOutput -join ' ')"
     }
+    # The copy is the run's output, for whoever reads it afterwards. The check below reads the kept
+    # report through the path its held handle is at, since nothing holds the copy.
     Copy-Item -LiteralPath $recorded.Result -Destination $result
+    $reportPath = $recorded.Result
 } else {
 $enable = @()
-foreach ($name in $names) { $enable += '-e'; $enable += $name }
+foreach ($name in $names) {
+    $enable += '-e'; $enable += $name
+    # The CLI reads -O as an option of the patch enabled just before it.
+    if ($patchOptions.ContainsKey($name)) { foreach ($pair in $patchOptions[$name]) { $enable += '-O'; $enable += $pair } }
+}
 $arguments = @('patch', '--exclusive', '-p', $bundle, '-o', $out, '-t', $temp, '-r', $result,
     '--keystore', $Keystore, '--keystore-password', $keystorePassword,
     '--keystore-entry-alias', $KeyAlias, '--keystore-entry-password', $keystorePassword) + $enable + @($patchInput)
@@ -274,15 +350,54 @@ try {
     }
     Remove-Item -LiteralPath $argumentFile -Force -ErrorAction SilentlyContinue
 }
+# The CLI's report is held from the moment it exits and read by the path its handle is at. One
+# that wasn't there to hold is no report, whatever is at the path later.
+if (Test-Path -LiteralPath $result -PathType Leaf) {
+    $resultHandle = Open-HeldFile -Path $result -What 'The result report'
+    $reportPath = Get-HeldPath -Stream $resultHandle
+} else {
+    $reportPath = $null
+}
+}
+# The signed APK is held from here to the install, the copy to -OutputApk included, and every
+# check reads it by the path its handle is at: nothing can swap it once it's been checked.
+if (Test-Path -LiteralPath $out -PathType Leaf) {
+    $outHandle = Open-HeldFile -Path $out -What 'The signed APK'
+    $out = Get-HeldPath -Stream $outHandle
+}
+if ($recorded -and $null -ne $outHandle) {
+    # Signing adds signature files and changes nothing else, so the signed APK has to hold the kept
+    # one's entries, byte for byte, and nothing more: apksigner wrote it to a path nothing held. It
+    # drops stamp-cert-sha256 too, the Play Source Stamp's certificate digest, since a stamp doesn't
+    # survive signing again, so that one may be gone and may not be other bytes.
+    $keptEntries = Get-ApkEntryDigests -File ([pscustomobject]@{ Member = 'The kept APK'; Handle = $recorded.Handle }) -Pattern '.'
+    $signedEntries = Get-ApkEntryDigests -File ([pscustomobject]@{ Member = 'The signed APK'; Handle = $outHandle }) -Pattern '.'
+    $stamp = 'stamp-cert-sha256'
+    $isSigners = { param([string]$Name) $Name -ceq $stamp -or $Name -cmatch '^META-INF/(MANIFEST\.MF|[A-Za-z0-9._-]+\.(SF|RSA|DSA|EC))\z' }
+    $unsigned = { param($Entries) @(foreach ($pair in $Entries.GetEnumerator()) { if (-not (& $isSigners $pair.Key)) { "$($pair.Key)=$($pair.Value)" } }) -join "`n" }
+    if ((& $unsigned $signedEntries) -cne (& $unsigned $keptEntries) -or
+        ($signedEntries.ContainsKey($stamp) -and (-not $keptEntries.ContainsKey($stamp) -or $signedEntries[$stamp] -cne $keptEntries[$stamp]))) {
+        throw 'The signed APK holds other entries than the kept APK it was signed from, beyond the signature files.'
+    }
 }
 # The same report check the throwaway verification applies: every requested patch, every
-# step, the target, and a real APK. The build that goes onto a phone deserves no less.
+# step, the target, and a real APK. The build that goes onto a phone deserves no less. Only
+# what is held is read: an APK that wasn't there to hold is no APK.
 $report = $null
-if (Test-Path -LiteralPath $result -PathType Leaf) { $report = Get-Content -LiteralPath $result -Raw | ConvertFrom-Json }
+if ($reportPath) { $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json }
 $validation = Test-PatchingReport -Report $report -ExpectedNames $names `
-    -AllowedDependencyNames $dependencyNames -OutputPath $out `
+    -AllowedDependencyNames $dependencyNames -OutputPath $(if ($null -ne $outHandle) { $out } else { '' }) `
     -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $stock.versionName
 if (-not $validation.Valid) { throw "Patching did not produce a complete APK: $($validation.Reason)" }
+# Whoever signed it, the APK that goes on a phone is signed by the keystore alias's key and no other.
+# The kept-run comparison above skips the signature files and the v2 and v3 blocks aren't entries,
+# and the CLI's output was written to a path nothing held, so another key's build, or an unsigned
+# one, would pass everything else here.
+if ($null -eq $keystoreHeld) { . $readKeystore }
+$signedBy = Get-ApkSigners -Apk $out -Apksigner (Resolve-Apksigner -Aapt2 $Aapt2)
+if (-not $signedBy.Verified -or (@($signedBy.Signers) -join ', ') -cne $keyCertificate) {
+    throw "The signed APK isn't signed by the $KeyAlias key of $(Split-Path -Leaf $Keystore) ($keyCertificate) alone: apksigner says $($signedBy.Said)"
+}
 $manifestSelection = @($names) + @($dependencyNames)
 $approvedChanges = @(Read-ManifestDeltaAllowlist -Path (Join-Path $PSScriptRoot 'manifest-delta-allowlist.txt') `
     -SelectedPatchNames $manifestSelection)
@@ -299,21 +414,59 @@ if ($recorded) {
     # host reference check when the gate kept the run.
     Write-Host '[device] the structural and host reference checks passed on this dex in the kept run'
 } else {
+# The rebuilt resource table against the merge's, and every archive entry patching doesn't write
+# against the merge's bytes: the CLI rebuilt a copy of the merge nothing held while it was copied.
+# What the table and its files changed is held to resource-delta-allowlist.txt, for the patches
+# this build selected.
+$resourceReport = Join-Path $OutDir 'resources.txt'
+$preference = $ErrorActionPreference
+$selectionBefore = $env:HUSHTUMBLR_PATCH_SELECTION
+$queued = Enter-HushTumblrQueue -Job 'device resources'
+try {
+    $ErrorActionPreference = 'Continue'
+    $env:HUSHTUMBLR_PATCH_SELECTION = (@($names) + @($dependencyNames)) -join "`n"
+    $global:LASTEXITCODE = -1
+    $resourceOutput = @(& $Java '-Xmx4g' '-cp' $DesktopJar (Join-Path $PSScriptRoot 'ResourceTableCheck.java') `
+        $patchInput $out $resourceReport (Join-Path $PSScriptRoot 'resource-delta-allowlist.txt') 2>&1)
+    $resourceExitCode = $LASTEXITCODE
+} finally {
+    $env:HUSHTUMBLR_PATCH_SELECTION = $selectionBefore
+    $ErrorActionPreference = $preference
+    Exit-HushTumblrQueue $queued
+}
+$resourceOutput | ForEach-Object { Write-Host "[device] $_" }
+if ($resourceExitCode -ne 0) {
+    throw ("The patched resource table or archive failed its check against the merge (exit $resourceExitCode). " +
+        "Report: $resourceReport. $(@($resourceOutput | Select-Object -Last 2) -join ' ')")
+}
 $registerReport = Join-Path $OutDir 'injected-registers.txt'
 $global:LASTEXITCODE = -1
 & (Join-Path $PSScriptRoot 'verify-injected-registers.ps1') -CleanApk $Apk -CleanMerged $patchInput `
     -PatchedApk $out -ReportPath $registerReport -Java $java -DesktopJar $DesktopJar -Aapt2 $Aapt2 `
-    -SelectedPatchNames $manifestSelection -AndroidJar $AndroidJar -ApiVersions $ApiVersions
+    -SelectedPatchNames $manifestSelection -AndroidJar $AndroidJar -ApiVersions $ApiVersions -Bundle $bundle
 if ($LASTEXITCODE -ne 0) { throw 'Patched bytecode failed its compiled mutation or structural checks.' }
 }
-Write-Host "[device] applied $(@($report.appliedPatches).Count), failed $(@($report.failedPatches).Count), target $($report.packageName) $($report.packageVersion)"
+# As the report check counted them, so a list the report leaves out isn't counted as one entry.
+Write-Host "[device] applied $($validation.Applied), failed $($validation.Failed), target $($report.packageName) $($report.packageVersion)"
 if ($outputReservation) {
-    $input = [IO.File]::OpenRead($out)
-    try { $input.CopyTo($outputReservation); $outputReservation.Flush($true) }
-    finally { $input.Dispose() }
+    # Copied from the held handle and hashed as it goes, then the copy is held to that digest
+    # through the install: the reserved file is closed in between, and anything could write to it.
+    $sha = [System.Security.Cryptography.SHA256]::Create()
+    try {
+        $outHandle.Position = 0
+        $buffer = New-Object byte[] 1048576
+        while (($read = $outHandle.Read($buffer, 0, $buffer.Length)) -gt 0) {
+            $outputReservation.Write($buffer, 0, $read)
+            [void]$sha.TransformBlock($buffer, 0, $read, $null, 0)
+        }
+        $outputReservation.Flush($true)
+        [void]$sha.TransformFinalBlock((New-Object byte[] 0), 0, 0)
+        $copied = ([System.BitConverter]::ToString($sha.Hash) -replace '-', '').ToLowerInvariant()
+    } finally { $sha.Dispose() }
     $outputReservation.Dispose()
     $outputReservation = $null
-    $out = $reservedPath
+    $reservedHandle = Open-HeldFile -Path $reservedPath -Sha256 $copied -What 'The APK copied to -OutputApk'
+    $out = Get-HeldPath -Stream $reservedHandle
 }
 $complete = $true
 Write-Host "[device] $out"
@@ -334,13 +487,18 @@ try {
 
 } finally {
     if ($outputReservation) { $outputReservation.Dispose() }
+    # Held until every reader is done, and a held file can't be deleted.
+    foreach ($held in @($outHandle, $resultHandle, $reservedHandle, $bundleHeld, $keystoreHeld)) { if ($null -ne $held) { $held.Dispose() } }
+    Close-AppliedRecord -Record $recorded
+    Close-MergedApk -Merged $patchInput
     # These are this run's paths only. A missing or replaced owner marker fails closed.
     $safeRun = Resolve-WithinRoot -Path $OutDir -Root $runParent
     if (-not (Test-Path -LiteralPath $ownerFile -PathType Leaf) -or [IO.File]::ReadAllText($ownerFile) -cne $runToken) {
         throw 'Patch workspace ownership changed. Cleanup refused.'
     }
     foreach ($path in @((Join-Path $safeRun 'tmp'), (Join-Path $safeRun 'morphe-patch.args'),
-            (Join-Path $safeRun 'stock-merged.apk'), (Join-Path $safeRun 'stock-merged.apk.source'),
+            (Join-Path $safeRun 'stock-merged.apk'), (Join-Path $safeRun 'stock-merged.apk.buffer'),
+            (Join-Path $safeRun 'stock-merged.apk.source'),
             (Join-Path $safeRun 'stock-merged.apk.xmltree'), (Join-Path $safeRun 'stock-merged.apk.authentic.json'))) {
         $safePath = Resolve-WithinRoot -Path $path -Root $safeRun
         if (Test-Path -LiteralPath $safePath) { Remove-Item -LiteralPath $safePath -Recurse -Force }

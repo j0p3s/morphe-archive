@@ -5,7 +5,11 @@
 package app.morphe.patches.publicvideos.ads
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.InstructionLocation.MatchAfterImmediately
 import app.morphe.patcher.methodCall
+import app.morphe.patcher.opcode
+import app.morphe.patcher.string
+import com.android.tools.smali.dexlib2.Opcode
 
 internal object InitializeMobileAdsFingerprint : Fingerprint(
     name = "invokeSuspend",
@@ -25,5 +29,14 @@ internal object InitializeAudienceNetworkFingerprint : Fingerprint(
     returnType = "V",
     filters = listOf(
         methodCall(definingClass = "Lcom/facebook/ads/AudienceNetworkAds;", name = "initialize"),
+    ),
+)
+
+internal object SplashForegroundImageFingerprint : Fingerprint(
+    returnType = "V",
+    filters = listOf(
+        string("SPLASH_SCREEN_IMAGE_URL"),
+        methodCall(definingClass = "Landroid/content/SharedPreferences;", name = "getString"),
+        opcode(Opcode.MOVE_RESULT_OBJECT, location = MatchAfterImmediately()),
     ),
 )

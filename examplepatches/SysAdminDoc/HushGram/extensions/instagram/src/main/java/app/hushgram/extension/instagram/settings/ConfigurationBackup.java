@@ -67,7 +67,10 @@ public final class ConfigurationBackup {
         for (PatchFamily family : PatchFamily.inThisBuild()) {
             for (Setting<?> setting : family.switches) settings.put(setting.key, setting);
         }
-        if (PatchFamily.STORY_RING.inBuild()) settings.put(Settings.STORY_RING_SCALE.key, Settings.STORY_RING_SCALE);
+        if (PatchFamily.STORY_RING.inBuild()) {
+            settings.put(Settings.STORY_RING_SCALE.key, Settings.STORY_RING_SCALE);
+            settings.put(Settings.STORY_RING_COLOR.key, Settings.STORY_RING_COLOR);
+        }
         if (PatchFamily.ROUNDED_POST_CORNERS.inBuild()) settings.put(Settings.ROUNDED_CORNER_SIZE.key, Settings.ROUNDED_CORNER_SIZE);
         if (PatchFamily.SPOOF_LOCATION.inBuild()) settings.put(Settings.SPOOF_LOCATION_PLACE.key, Settings.SPOOF_LOCATION_PLACE);
         if (PatchFamily.SANITIZE_SHARING_LINKS.inBuild()) settings.put(Settings.SHARING_DOMAIN.key, Settings.SHARING_DOMAIN);
@@ -86,6 +89,7 @@ public final class ConfigurationBackup {
         if (PatchFamily.REEL_TAP_AND_VOLUME.inBuild()) settings.put(Settings.REEL_TAP_CHOICE.key, Settings.REEL_TAP_CHOICE);
         if (PatchFamily.REEL_DECLUTTER.inBuild()) settings.put(Settings.BURN_IN_GUARD.key, Settings.BURN_IN_GUARD);
         if (PatchFamily.STORY_TIME.inBuild()) settings.put(Settings.STORY_TIME_MODE.key, Settings.STORY_TIME_MODE);
+        if (PatchFamily.FRIENDSHIP_STATUS.inBuild()) settings.put(Settings.FOLLOW_LABEL_PLACE.key, Settings.FOLLOW_LABEL_PLACE);
         if (PatchFamily.REELS_TAB.inBuild()) {
             settings.put(Settings.START_TAB.key, Settings.START_TAB);
             settings.put(Settings.TAB_ORDER.key, Settings.TAB_ORDER);
@@ -95,9 +99,17 @@ public final class ConfigurationBackup {
             settings.put(Settings.GLASS_TAB_BAR_OPACITY.key, Settings.GLASS_TAB_BAR_OPACITY);
             settings.put(Settings.GLASS_TAB_BAR_HEIGHT.key, Settings.GLASS_TAB_BAR_HEIGHT);
             settings.put(Settings.GLASS_TAB_BAR_LIFT.key, Settings.GLASS_TAB_BAR_LIFT);
+            settings.put(Settings.GLASS_TAB_BAR_REELS_HIDE.key, Settings.GLASS_TAB_BAR_REELS_HIDE);
         }
         if (PatchFamily.ACCENT_COLOR.inBuild()) settings.put(Settings.ACCENT_HUE.key, Settings.ACCENT_HUE);
-        if (PatchFamily.REEL_DOWNLOAD.inBuild()) settings.put(Settings.DOWNLOAD_REEL_COVER.key, Settings.DOWNLOAD_REEL_COVER);
+        if (PatchFamily.FONT.inBuild()) settings.put(Settings.FONT.key, Settings.FONT);
+        if (PatchFamily.REEL_DOWNLOAD.inBuild()) {
+            settings.put(Settings.DOWNLOAD_REEL_COVER.key, Settings.DOWNLOAD_REEL_COVER);
+            settings.put(Settings.REEL_DOWNLOAD_BUTTON.key, Settings.REEL_DOWNLOAD_BUTTON);
+        }
+        if (PatchFamily.REEL_POST_TIME.inBuild()) {
+            settings.put(Settings.REEL_POST_TIME_SECONDS.key, Settings.REEL_POST_TIME_SECONDS);
+        }
         if (PatchFamily.VIDEO_DOWNLOAD.inBuild()) settings.put(Settings.DOWNLOAD_FEED_COVER.key, Settings.DOWNLOAD_FEED_COVER);
         if (PatchFamily.VIDEO_DOWNLOAD.inBuild()) {
             settings.put(Settings.FEED_DOWNLOAD_BUTTON.key, Settings.FEED_DOWNLOAD_BUTTON);

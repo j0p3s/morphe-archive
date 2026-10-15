@@ -4,6 +4,5 @@ import app.morphe.patches.all.misc.extension.activityOnCreateExtensionHook
 
 internal val kabbikActivityOnCreateHook = activityOnCreateExtensionHook()
 
-internal val kabbikApplicationOnCreateHook = activityOnCreateExtensionHook(
-    activityClassType = "Lcom/kabbik/app/KabbikApplication;"
-)
+internal val kabbikApplicationOnCreateHook =
+    activityOnCreateExtensionHook(activityClassType = "Lcom/kabbik/app/KabbikApplication;")

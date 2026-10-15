@@ -1,3 +1,34 @@
+## [1.15.2](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.15.1...v1.15.2) (2026-10-15)
+
+### Bug Fixes
+
+* **twitter:** adapt navigation ui grok tab for 12.34.0 ([c94a67b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/c94a67be3348ba0057724cc2b18e8b0dd223111a))
+* **twitter:** adapt remove ads presenter fingerprints for 12.34.0 ([d0052b5](https://github.com/kveld9/kveld-extra-morphe-patches/commit/d0052b5b0145572bb19b2af9f1dc789cc1ddb669))
+* **twitter:** adapt remove premium upsell profile verified surface for 12.34.0 ([7cdb397](https://github.com/kveld9/kveld-extra-morphe-patches/commit/7cdb397cadc838601c5cb558e861faa25daeae15))
+* **twitter:** adapt round off numbers iterator check for 12.34.0 ([7065fe6](https://github.com/kveld9/kveld-extra-morphe-patches/commit/7065fe6677532df0c1e908665dda8fb4c77962d1))
+* **twitter:** adapt timeline ui presenters and top bar for 12.34.0 ([09857c1](https://github.com/kveld9/kveld-extra-morphe-patches/commit/09857c187747245d4f954883fb410ac9695d371f))
+* **twitter:** eliminate user-visible patch duplication and overlap ([7c5849b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/7c5849b0a407905cd0a09df4a6403cbe0972dc9c))
+* **twitter:** intercept and filter who-to-follow module in timeline ingestion ([25fbc85](https://github.com/kveld9/kveld-extra-morphe-patches/commit/25fbc85b82531aa746d18e8819a879d8fa749a2e))
+* **twitter:** update supported version to 12.34.0-prod.01 ([520d46a](https://github.com/kveld9/kveld-extra-morphe-patches/commit/520d46ab5e766c75f03792b747d7234d3fe14768))
+
+## [1.15.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.15.0...v1.15.1) (2026-10-14)
+
+### Bug Fixes
+
+* **harness:** prevent regex backtracking when scanning download targets ([410f415](https://github.com/kveld9/kveld-extra-morphe-patches/commit/410f415ca00424a5076290b4bb97f6d7e996107a))
+* **tooling:** prevent path traversal during split extraction ([5709ba7](https://github.com/kveld9/kveld-extra-morphe-patches/commit/5709ba7b87472f1778da8a9d060202010a25c523))
+
+## [1.15.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.14.2...v1.15.0) (2026-10-14)
+
+### Bug Fixes
+
+* **extra:** align Lightroom single-APK description and harden variant check ([b642855](https://github.com/kveld9/kveld-extra-morphe-patches/commit/b642855605f531a33cfc34e1f204fa21dcaafcaa))
+* **instagram:** remove Breakpad slimmer that crashed the app at startup ([e64569a](https://github.com/kveld9/kveld-extra-morphe-patches/commit/e64569a7d3adad8f35b65fe7efc72e9863c37493))
+
+### New Features
+
+* **capcut:** bypass the unofficial-version security notice ([e69b62e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/e69b62e011b36568493f5441bfcd137c5de8ad1e))
+
 ## [1.14.2](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.14.1...v1.14.2) (2026-10-13)
 
 ### Bug Fixes

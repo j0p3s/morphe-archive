@@ -1,3 +1,17 @@
+## [1.3.4](https://github.com/HellLord77/media-patches/compare/v1.3.3...v1.3.4) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* Gracefully handle hoichoi extension failure ([d215437](https://github.com/HellLord77/media-patches/commit/d21543764d831a82c6a95bc5d19b8ba9e22030df))
+* Restore Next Episode button for platform8 shows ([7d15165](https://github.com/HellLord77/media-patches/commit/7d1516521f142786aaa9d92a2f3867744140db48))
+
+## [1.3.4-dev.1](https://github.com/HellLord77/media-patches/compare/v1.3.3...v1.3.4-dev.1) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* Gracefully handle hoichoi extension failure ([d215437](https://github.com/HellLord77/media-patches/commit/d21543764d831a82c6a95bc5d19b8ba9e22030df))
+* Restore Next Episode button for platform8 shows ([7d15165](https://github.com/HellLord77/media-patches/commit/7d1516521f142786aaa9d92a2f3867744140db48))
+
 ## [1.3.3](https://github.com/HellLord77/media-patches/compare/v1.3.2...v1.3.3) (2026-10-11)
 
 ### 🐛 Bug Fixes

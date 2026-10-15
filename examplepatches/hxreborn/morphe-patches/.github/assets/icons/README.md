@@ -25,6 +25,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `devcheck.png` | DevCheck (`flar2.devcheck`) | flar2 | APK 6.57, adaptive icon `res/mipmap-xxxhdpi-v4/ic_launcher_background.webp` under `ic_launcher_foreground.webp` |
 | `psiphon.png` | Psiphon (`com.psiphon3.subscription`) | Psiphon Inc. | APK 2.5.11, `res/mipmap-xxhdpi-v4/ic_launcher.webp` (square icon cut to a circle) |
 | `projectivy.png` | Projectivy Launcher (`com.spocky.projengmenu`) | Spocky | APK 4.71, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml` |
+| `focusnow.png` | FocusNow (`com.ferdinandobermeier.focusmate`) | Ferdinand Obermeier | APK 3.8.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `forus.png` | ForusApp (`com.myvitale.forus`) | MyVitale | APK 3.0.15, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `showly.png` | Showly (`com.michaldrabik.showly2`) | Michał Drabik / Trakt | APK 3.70.0, `mipmap/ic_launcher_round`, xxxhdpi |
 | `tiktok.png` | TikTok (`com.zhiliaoapp.musically`) | TikTok Pte. Ltd. | APK 47.0.3, adaptive icon `mipmap/c` |
@@ -78,6 +79,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `catzy.png` | Catzy (`com.nieruo.healthapp`) | Nieruo | APK 1.61.0, `res/mipmap-xxxhdpi-v4/ic_launcher_103.webp` |
 | `one4home.png` | One4Home Launcher (`com.one4studio.one4home`) | One4Studio | APK 0.4.72, adaptive icon `res/mipmap-anydpi-v26/ic_launcher_round.xml` |
 | `moviebox.png` | MovieBox (`com.community.oneroom`) | Not on Google Play | APK 4.0.03.0918.03, adaptive round icon |
+| `movieboxtv.png` | MovieBox TV (`com.community.mbox.tv`) | Not on Google Play | APK 1.2.0.0923, `res/d2.webp` (square icon cut to a circle) |
 | `musixmatch.png` | Musixmatch (`com.musixmatch.android.lyrify`) | Musixmatch | APK 8.4.2, `mipmap/mxm_icon_manifest_round` xxxhdpi (`res/raw/MZ`) |
 | `pocketwhip.png` | Pocket Whip (`com.greenstone.pocketwhip`) | Original Pocket Whip | APK 2.3, `res/mipmap-hdpi-v4/pocket_whip_icon_round.png` |
 | `memoneet.png` | MemoNeet (`com.adithya.memoneet`) | MemoNeet | APK 62.6, `res/mipmap-xxxhdpi-v4/ic_launcher.png`, cut to a circle |
@@ -91,6 +93,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `storywise.png` | Storywise (`com.storywise.storywise`) | Storywise | APK 1.0.3, `res/mipmap-xxxhdpi-v4/launcher_icon.png`, cut to a circle |
 | `sqcom.png` | SQCOM (`com.sqcom.shangqing`) | Shenzhen SHANGQING INDUSTRIAL CO., LTD | APK 1.1.0, `mipmap/wd_path_executor` (round icon), xxxhdpi |
 | `publicvideos.png` | Public (`com.cardfeed.video_public`) | Public App | APK 3.3.4, vector `res/drawable/ic_public_app_icon.xml` rasterized at 96x96 |
+| `lagguy.png` | Lagguy Wallpapers (`com.lagguy.wallpapers`) | Lagguy | APK 40.0.44, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 
 Showly's icon is also published under GPLv3 in [`trakt/showly`](https://github.com/trakt/showly),
 so its copyright terms are compatible with this one. The rest are used under nominative fair

@@ -16,7 +16,9 @@ fun maskedHexPatch(
     block: MaskedHexPatchBuilder.() -> Unit,
 ) = rawResourcePatch {
     execute {
-        MaskedHexPatchBuilder().apply(block).groupBy { it.targetFilePath }
+        MaskedHexPatchBuilder()
+            .apply(block)
+            .groupBy { it.targetFilePath }
             .forEach { (targetFilePath, replacements) ->
                 val targetFile = get(targetFilePath, true)
                 if (ignoreMissingTargetFiles && !targetFile.exists()) return@forEach
@@ -29,12 +31,15 @@ fun maskedHexPatch(
 }
 
 @Suppress("JavaDefaultMethodsNotOverriddenByDelegation")
-class MaskedHexPatchBuilder internal constructor(
-    private val replacements: MutableSet<MaskedReplacement> = mutableSetOf(),
-) : Set<MaskedReplacement> by replacements {
-    infix fun String.asPatternTo(replacementPattern: String) = Triple(
-        byteArrayOf(getPattern()), byteArrayOf(getMaskPattern()), byteArrayOf(replacementPattern)
-    )
+class MaskedHexPatchBuilder
+internal constructor(private val replacements: MutableSet<MaskedReplacement> = mutableSetOf()) :
+    Set<MaskedReplacement> by replacements {
+    infix fun String.asPatternTo(replacementPattern: String) =
+        Triple(
+            byteArrayOf(getPattern()),
+            byteArrayOf(getMaskPattern()),
+            byteArrayOf(replacementPattern),
+        )
 
     infix fun <T> Triple<T, T, T>.inFile(filePath: String) {
         when (first) {
@@ -43,9 +48,13 @@ class MaskedHexPatchBuilder internal constructor(
                 val second = (second as String).getMaskPattern()
                 val third = third as String
 
-                replacements += MaskedReplacement(
-                    first.toByteArray(), second.toByteArray(), third.toByteArray(), filePath
-                )
+                replacements +=
+                    MaskedReplacement(
+                        first.toByteArray(),
+                        second.toByteArray(),
+                        third.toByteArray(),
+                        filePath,
+                    )
             }
 
             is ByteArray if second is ByteArray && third is ByteArray -> {
@@ -56,7 +65,10 @@ class MaskedHexPatchBuilder internal constructor(
                 replacements += MaskedReplacement(first, second, third, filePath)
             }
 
-            else -> throw PatchException("Unsupported types for pattern, mask and replacement: $first, $second, $third")
+            else ->
+                throw PatchException(
+                    "Unsupported types for pattern, mask and replacement: $first, $second, $third"
+                )
         }
     }
 }

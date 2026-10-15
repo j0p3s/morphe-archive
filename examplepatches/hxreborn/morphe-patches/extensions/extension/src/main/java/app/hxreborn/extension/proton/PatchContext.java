@@ -21,7 +21,7 @@ public final class PatchContext {
 
     }
 
-    static Activity resumedActivity() {
+    public static Activity resumedActivity() {
         return resumedActivityReference.get();
     }
 

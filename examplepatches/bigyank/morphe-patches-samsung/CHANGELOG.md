@@ -1,8 +1,22 @@
-## [1.2.1](https://github.com/bigyank/morphe-patches-samsung/compare/v1.2.0...v1.2.1) (2026-06-30)
+## [1.3.0](https://github.com/bigyank/morphe-patches-samsung/compare/v1.2.1...v1.3.0) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* promote Samsung Health 7.00.6.011 to stable ([1dfb249](https://github.com/bigyank/morphe-patches-samsung/commit/1dfb24949a0047a82c688f6eb549b4f72c257ffe))
+
+### ✨ New Features
+
+* add Samsung Health 7.00.6.011 support (experimental) ([88cf823](https://github.com/bigyank/morphe-patches-samsung/commit/88cf823b815e9bde7b5f1ddb4e635bd2c5b157cb))
+
+## [1.3.0-dev.1](https://github.com/bigyank/morphe-patches-samsung/compare/v1.2.0...v1.3.0-dev.1) (2026-10-11)
 
 ### 🐛 Bug Fixes
 
 * **Samsung Health:** skip empty c6r fingerprint on Health 7.x ([036254a](https://github.com/bigyank/morphe-patches-samsung/commit/036254a6ad640248db59b7e07c038c1e5fb7046a))
+
+### ✨ New Features
+
+* add Samsung Health 7.00.6.011 support (experimental) ([88cf823](https://github.com/bigyank/morphe-patches-samsung/commit/88cf823b815e9bde7b5f1ddb4e635bd2c5b157cb))
 
 ## [1.2.0](https://github.com/bigyank/morphe-patches-samsung/compare/v1.1.0...v1.2.0) (2026-06-30)
 

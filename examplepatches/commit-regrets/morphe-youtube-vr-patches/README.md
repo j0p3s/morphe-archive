@@ -115,7 +115,7 @@ Three behaviours surprise people: a skip is per *pass*, so dragging the seek bar
 makes it skip again; dragging *into* a segment lets that segment play out; and a category set to
 **Disable** does nothing at all, silently — VR has no skip button, so a video whose only segments are
 `filler` or `music_offtopic` looks like SponsorBlock is broken until that category is switched on.
-Measured behaviour and the design: [docs/SPONSORBLOCK-PLAN.md](docs/SPONSORBLOCK-PLAN.md).
+Measured behaviour and the design: [docs/SPONSORBLOCK-NOTES.md](docs/SPONSORBLOCK-NOTES.md).
 
 ### Patch settings (in the headset)
 
@@ -138,7 +138,7 @@ override the patch options, which stay the defaults. The streaming spoof and the
 rather than a switch.
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.26.0](https://github.com/commit-regrets/morphe-youtube-vr-patches/releases/tag/v1.26.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;10 patches total
+> **[v1.27.0](https://github.com/commit-regrets/morphe-youtube-vr-patches/releases/tag/v1.27.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;10 patches total
 <details open>
 <summary>📦 YouTube VR&nbsp;&nbsp;•&nbsp;&nbsp;10 patches</summary>
 <br>

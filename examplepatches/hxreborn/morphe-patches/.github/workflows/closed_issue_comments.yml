@@ -35,7 +35,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           python3 .github/scripts/closed_issue_comment.py "$GITHUB_EVENT_PATH" patches-list.json > "$RUNNER_TEMP/comment.md" || exit 0
-          replied=$(gh api "repos/$REPO/issues/$ISSUE/comments" --paginate --slurp \
-            --jq '[.[][] | select(.body | contains("<!-- closed-issue-bot -->"))] | length')
-          [ "$replied" = 0 ] || exit 0
+          replied=$(gh api "repos/$REPO/issues/$ISSUE/comments" --paginate \
+            --jq '.[] | select(.body | contains("<!-- closed-issue-bot -->")) | .id')
+          [ -z "$replied" ] || exit 0
           gh issue comment "$ISSUE" --repo "$REPO" --body-file "$RUNNER_TEMP/comment.md"

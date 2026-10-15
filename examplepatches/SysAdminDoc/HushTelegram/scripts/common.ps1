@@ -61,6 +61,148 @@ function Remove-GeneratedPath {
     }
 }
 
+function Write-RunOwner {
+    <#
+    .SYNOPSIS
+        Record which process owns a run folder: its id and the moment it started.
+    .DESCRIPTION
+        An id alone isn't enough, because Windows hands an id to a new process once the old one is
+        gone. The start time with it tells a live run from a killed one whose id was reused. The
+        file holds no secret.
+    #>
+    param([Parameter(Mandatory = $true)][string]$RunDir)
+
+    $me = [System.Diagnostics.Process]::GetCurrentProcess()
+    $record = [ordered]@{ processId = $me.Id; startedUtcTicks = $me.StartTime.ToUniversalTime().Ticks }
+    $path = Join-Path $RunDir 'owner.json'
+    [System.IO.File]::WriteAllText($path, ($record | ConvertTo-Json -Compress), (New-Object System.Text.UTF8Encoding($false)))
+}
+
+function Test-RunFolderStale {
+    <#
+    .SYNOPSIS
+        Whether a run folder belongs to no live run: $true when its owner is gone.
+    .DESCRIPTION
+        Live means the process in owner.json is running and started at the moment the file says,
+        within two seconds. Anything this can't read for certain counts as live, so a concurrent run
+        is never swept. The one exception is a folder with no readable owner older than -GraceSeconds:
+        a run writes its owner right after it makes the folder, so one that has none long after was
+        killed in that gap or made by an older version of this script, and it holds nothing a live
+        run needs.
+    #>
+    param([Parameter(Mandatory = $true)][string]$Folder, [int]$GraceSeconds = 120)
+
+    $record = $null
+    $ownerPath = Join-Path $Folder 'owner.json'
+    if (Test-Path -LiteralPath $ownerPath -PathType Leaf) {
+        try { $record = [System.IO.File]::ReadAllText($ownerPath) | ConvertFrom-Json } catch { $record = $null }
+    }
+    $ownerId = 0
+    $ownerTicks = [long]0
+    $readable = $null -ne $record -and
+        [int]::TryParse("$($record.processId)", [ref]$ownerId) -and $ownerId -gt 0 -and
+        [long]::TryParse("$($record.startedUtcTicks)", [ref]$ownerTicks) -and $ownerTicks -gt 0
+    if (-not $readable) {
+        $age = [DateTime]::UtcNow - (Get-Item -LiteralPath $Folder).LastWriteTimeUtc
+        return $age.TotalSeconds -gt $GraceSeconds
+    }
+    try { $process = [System.Diagnostics.Process]::GetProcessById($ownerId) }
+    catch [System.ArgumentException] { return $true }
+    catch { return $false }
+    try { return Test-RunOwnerGone -Process $process -OwnerTicks $ownerTicks } finally { $process.Dispose() }
+}
+
+function Test-RunOwnerGone {
+    <#
+    .SYNOPSIS
+        Whether -Process, found under a run owner's id, is a different process or one that ended.
+    .DESCRIPTION
+        A process this can't read the start of is an elevated one or one that just exited, so
+        HasExited settles it. An elevated one can deny that read too, and the denial used to throw
+        out of the sweep and stop the run; it counts as live, like anything else this can't read.
+    #>
+    param([Parameter(Mandatory = $true)]$Process, [Parameter(Mandatory = $true)][long]$OwnerTicks)
+
+    try {
+        $started = $Process.StartTime.ToUniversalTime().Ticks
+        return [Math]::Abs($started - $OwnerTicks) -gt ([TimeSpan]::TicksPerSecond * 2)
+    } catch {
+        try { return [bool]$Process.HasExited } catch { return $false }
+    }
+}
+
+function Remove-StaleRunFolders {
+    <#
+    .SYNOPSIS
+        Delete the run-<guid> folders in -OutDir that no live run owns, and answer their names.
+    .DESCRIPTION
+        A device build killed outright never reaches its cleanup, and the argument file in its folder
+        holds the signing password. The next run clears them. Only folders named run- and 32 hex
+        digits are looked at, a link is never followed, and a failed delete is a warning.
+    #>
+    param([Parameter(Mandatory = $true)][string]$OutDir, [string]$Keep, [int]$GraceSeconds = 120)
+
+    $removed = New-Object System.Collections.Generic.List[string]
+    if (-not (Test-Path -LiteralPath $OutDir -PathType Container)) { return @() }
+    foreach ($folder in @(Get-ChildItem -LiteralPath $OutDir -Directory -Force -ErrorAction SilentlyContinue)) {
+        if ($folder.Name -cnotmatch '^run-[0-9a-f]{32}$') { continue }
+        if ($Keep -and $folder.FullName -ieq $Keep) { continue }
+        if (($folder.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) { continue }
+        if (-not (Test-RunFolderStale -Folder $folder.FullName -GraceSeconds $GraceSeconds)) { continue }
+        Remove-GeneratedPath -Root $OutDir -Path $folder.FullName
+        if (-not (Test-Path -LiteralPath $folder.FullName)) { $removed.Add($folder.Name) }
+    }
+    return $removed.ToArray()
+}
+
+function Resolve-DeviceLeaseDirectory {
+    <#
+    .SYNOPSIS
+        The whole-device lease directory a device run may use, or a throw.
+    .DESCRIPTION
+        Every task on this host takes its phone leases in one directory, the one
+        HUSHTELEGRAM_DEVICE_LEASE_DIRECTORY names. A lease kept anywhere else says nothing about
+        who holds the phone: the installer took a valid lease in a directory the caller chose as
+        leave to install on a serial another task held in the shared one. So the variable has to
+        be set, to the absolute path of a directory that exists, and a directory the caller names
+        has to be that one, by an absolute path. Its spelling may differ (letter case, a trailing
+        separator, forward slashes, dot segments) and the answer is the configured spelling
+        either way. A relative path, a junction to the pool or a short name is not the pool's
+        name and is refused, as any other directory is.
+
+        -TestInvoker is the stand-in a contract test injects in adb's place. Only a caller that
+        hands one over may keep leases in a directory of its own, and the variable is not read for
+        it. No environment variable and no switch does the same for a run that reaches adb.
+    #>
+    param([string]$LeaseDirectory, [scriptblock]$TestInvoker)
+
+    $shared = $env:HUSHTELEGRAM_DEVICE_LEASE_DIRECTORY
+    $isAbsolute = {
+        param([string]$Path)
+        $pathRoot = [System.IO.Path]::GetPathRoot($Path)
+        [System.IO.Path]::IsPathRooted($Path) -and $pathRoot -notmatch '^[A-Za-z]:$' -and $pathRoot -cne '\'
+    }
+    if (-not $TestInvoker) {
+        if ([string]::IsNullOrWhiteSpace($shared)) {
+            throw 'Configure HUSHTELEGRAM_DEVICE_LEASE_DIRECTORY for the shared whole-device lease directory.'
+        }
+        if (-not (& $isAbsolute $shared)) {
+            throw 'HUSHTELEGRAM_DEVICE_LEASE_DIRECTORY must be an absolute shared pool path.'
+        }
+    }
+    if (-not $LeaseDirectory) { $LeaseDirectory = $shared }
+    if ($TestInvoker) { return [System.IO.Path]::GetFullPath($LeaseDirectory).TrimEnd('\', '/') }
+    $sharedRoot = [System.IO.Path]::GetFullPath($shared).TrimEnd('\', '/')
+    if (-not (& $isAbsolute $LeaseDirectory) -or -not [System.IO.Path]::GetFullPath($LeaseDirectory).TrimEnd('\', '/').Equals(
+            $sharedRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Device runs require the shared whole-device lease directory.'
+    }
+    if (-not [System.IO.Directory]::Exists($sharedRoot)) {
+        throw 'The shared whole-device lease directory HUSHTELEGRAM_DEVICE_LEASE_DIRECTORY names does not exist.'
+    }
+    return $sharedRoot
+}
+
 function Get-BundleVersion {
     <#
     .SYNOPSIS

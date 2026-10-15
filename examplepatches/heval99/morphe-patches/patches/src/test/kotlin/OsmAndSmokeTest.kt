@@ -25,7 +25,7 @@ class OsmAndSmokeTest {
             apk = apk,
             workDir = workDir,
             pkg = PKG,
-            version = "5.4.9",
+            version = "5.4.10",
             patchNames = setOf("Enable Premium"),
             allPatches = loadAllPatches(newestPatchBundle(root)),
         )

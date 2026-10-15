@@ -208,7 +208,7 @@ public class SettingsRowAccessibilityTest {
         for (String key : new String[]{"hushgram_export_configuration", "action_export_diagnostic_report",
                 "action_clear_diagnostic_data", Settings.SAVE_FOLDER.key, Settings.FILENAME_TEMPLATE.key,
                 Settings.DOWNLOAD_QUALITY.key, Settings.PLAYBACK_QUALITY.key, Settings.STORY_RING_SCALE.key,
-                Settings.NAVIGATION_SETTINGS_TARGET.key}) {
+                Settings.STORY_RING_COLOR.key, Settings.NAVIGATION_SETTINGS_TARGET.key}) {
             Preference preference = page.findPreference(key);
             assertNotNull(key, preference);
             View view = row(preference);
@@ -435,6 +435,14 @@ public class SettingsRowAccessibilityTest {
         open(PatchFamily.HIDE_ADS);
         Preference preference = page.findPreference(Settings.HIDE_ADS.key);
         View view = row(preference);
+        // TalkBack brings a row it focuses fully on screen. Quick setups (216e5598) pushed this one
+        // past the bottom, and on API 28 a row cut off there came back as a new view once its summary
+        // shortened.
+        ListView list = page.getView().findViewById(android.R.id.list);
+        if (view.getBottom() > list.getHeight()) {
+            list.scrollListBy(view.getBottom() - list.getHeight());
+            view = row(preference);
+        }
         assertTrue(view.performAccessibilityAction(AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS, null));
         assertTrue(view.createAccessibilityNodeInfo().isAccessibilityFocused());
         preference.setSummary("Updated visible explanation");

@@ -6,6 +6,7 @@ package app.morphe.patches.vpnsuper.premium
 
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.fieldAccess
+import app.morphe.patcher.string
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 
@@ -59,4 +60,13 @@ internal object TvSplashDestinationFingerprint : Fingerprint(
     classFingerprint = TvEverythingLoadedFingerprint,
     returnType = "Ljava/lang/Object;",
     parameters = listOf("Ljava/lang/Object;"),
+)
+
+internal object CrownClickFingerprint : Fingerprint(
+    returnType = "V",
+    parameters = listOf("Landroid/view/View;"),
+    filters = listOf(
+        string("home_tap_crown"),
+        string("billing_iap_page_enter_from_crown"),
+    ),
 )

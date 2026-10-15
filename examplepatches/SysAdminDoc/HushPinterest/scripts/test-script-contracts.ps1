@@ -1489,6 +1489,51 @@ try {
     # OSV has to answer, and answer with something the gate can read.
     Assert-Throws { Invoke-Gate @('pkg:maven/com.example/unknown@1.0') } '*could not be asked about pkg:maven/com.example/unknown@1.0*fails closed*' `
         'The gate read an OSV it could not reach as no advisories.'
+    # A dropped connection is asked again a bounded number of times, and a connection that stays
+    # down still fails closed. A status OSV refuses the query with is not asked again. The stand-in
+    # throws what this shell's Invoke-RestMethod does: HttpRequestException in PowerShell 7 and
+    # WebException in Windows PowerShell 5.1, which doesn't load System.Net.Http at all.
+    $coreShell = $PSVersionTable.PSEdition -eq 'Core'
+    if (-not $coreShell -and -not ('OsvStandInResponse' -as [type])) {
+        Add-Type -TypeDefinition @'
+public class OsvStandInResponse : System.Net.WebResponse {
+    public System.Net.HttpStatusCode StatusCode { get; set; }
+}
+'@
+    }
+    $dropping = {
+        param([int]$Drops, [int]$Status = 0)
+        $asked = New-Object System.Collections.Generic.List[string]
+        function Invoke-RestMethod {
+            param($Uri, $Method, $ContentType, $Body, $TimeoutSec)
+            $asked.Add($Uri)
+            if ($asked.Count -le $Drops) {
+                $message = if ($Status) { "Response status code does not indicate success: $Status." } else { 'An error occurred while sending the request.' }
+                if ($coreShell) {
+                    if ($Status) { throw [System.Net.Http.HttpRequestException]::new($message, $null, [System.Net.HttpStatusCode]$Status) }
+                    throw [System.Net.Http.HttpRequestException]::new($message)
+                }
+                if ($Status) {
+                    $response = New-Object OsvStandInResponse
+                    $response.StatusCode = [System.Net.HttpStatusCode]$Status
+                    throw (New-Object System.Net.WebException($message, $null, [System.Net.WebExceptionStatus]::ProtocolError, $response))
+                }
+                throw (New-Object System.Net.WebException($message))
+            }
+            return ('{}' | ConvertFrom-Json)
+        }
+        $said = @(Invoke-OsvQuery -Purl $cleanPurl -RetryDelaySeconds @(0, 0) 3>&1 | ForEach-Object { "$_" }) -join "`n"
+        return [pscustomobject]@{ Asked = $asked.Count; Said = $said }
+    }
+    $recovered = & $dropping 2
+    Assert-True ($recovered.Asked -eq 3 -and $recovered.Said -like '*OSV dropped the query about*asking again in 0 s*') `
+        "Two dropped connections were not asked again: asked $($recovered.Asked) times, said $($recovered.Said)"
+    $recovered = & $dropping 1 503
+    Assert-True ($recovered.Asked -eq 2) "A busy OSV (503) was not asked again: asked $($recovered.Asked) times"
+    Assert-Throws { & $dropping 3 } '*could not be asked about*sending the request (asked 3 times)*fails closed*' `
+        'A connection that stayed down was read as no advisories, or asked more than three times.'
+    Assert-Throws { & $dropping 1 400 } '*could not be asked about*success: 400. The advisory check fails closed*' `
+        'A query OSV refused (400) was asked again.'
     $unreadable = @(
         @{ Name = 'a page of HTML'; Answer = '<html>Service Unavailable</html>'; Pattern = '*isn''t a query result*' },
         @{ Name = 'an advisory with no id'; Answer = '{"vulns":[{"summary":"no id"}]}'; Pattern = '*has no id*' })
@@ -3453,6 +3498,20 @@ try {
         $env:GITHUB_TOKEN = $savedToken
     }
 } finally {
+    # Pushed-commit cases give the hook a gate worktree of $hookRoot, made in the temp directory
+    # beside it. Removing the fixture alone left that worktree behind on every run. This runs
+    # before Git's hook variables come back, so they can't point these commands elsewhere.
+    if (Test-Path -LiteralPath (Join-Path $hookRoot '.git') -PathType Container) {
+        foreach ($line in @(& git -C $hookRoot worktree list --porcelain)) {
+            if ($line -notlike 'worktree *') { continue }
+            $listed = [IO.Path]::GetFullPath($line.Substring('worktree '.Length)).TrimEnd('\', '/')
+            if ($listed -ieq [IO.Path]::GetFullPath($hookRoot).TrimEnd('\', '/')) { continue }
+            if ([IO.Path]::GetFileName($listed) -notmatch '^hushpinterest-pre-push-[a-f0-9]{12}$') {
+                throw "Refusing to remove unexpected fixture worktree $listed."
+            }
+            & git -C $hookRoot worktree remove --force $listed
+        }
+    }
     $env:HUSHPINTEREST_SKIP_PRE_PUSH = $savedSkip
     $env:HUSHPINTEREST_BUILD_WRAPPER = $savedRoutingWrapper
     $env:HUSHPINTEREST_FIXTURE_DIR = $savedRoutingFixtures

@@ -47,7 +47,6 @@ HushThreads %1$s targets Threads %2$s.	O HushThreads %1$s é compatível com o T
 HushThreads pauses when Threads restarts.	O HushThreads será pausado quando o Threads for reiniciado.
 HushThreads turns back on when Threads restarts.	O HushThreads será reativado quando o Threads for reiniciado.
 It targets Threads %1$s.	Compatível com o Threads %1$s.
-Links, updates, backup and more	Links, atualizações, backup e mais
 None of Threads' web addresses are selected for this app, so their links open elsewhere. Tap to select them in Android's settings.	Nenhum endereço web do Threads está selecionado para este app, então os links deles abrem em outro lugar. Toque para selecioná-los nas configurações do Android.
 Only some of Threads' web addresses are selected for this app, and links to the rest open elsewhere. Tap to select them in Android's settings.	Só alguns endereços web do Threads estão selecionados para este app, e os links para os outros abrem em outro lugar. Toque para selecioná-los nas configurações do Android.
 Privacy	Privacidade
@@ -300,3 +299,34 @@ Posts	Publicações
 Copy text when you hold a post	Copiar texto ao tocar e segurar uma publicação
 Copy text on long press	Copiar texto ao tocar e segurar
 Holding a post's text opens Copy text, on an opened post too, so you get the whole post with its links instead of picking out words.	Tocar e segurar o texto de uma publicação abre Copiar texto, até numa publicação aberta, para você copiar a publicação inteira com os links em vez de escolher palavras.
+# Quick setups: the main page row and its summary, the three choices, the toast after one applies (%1$d is how many switches changed). Quiet, Privacy and Back to defaults are names of a set of switches.
+Quick setups	Configurações rápidas
+Quiet	Tranquilo
+Hides ads and the cards that suggest accounts to follow.	Oculta os anúncios e os cartões que sugerem contas para seguir.
+Stops most usage reports and takes tracking off the links you share. Threads isn't told about your screenshots either.	Bloqueia a maioria dos relatórios de uso e tira o rastreamento dos links que você compartilha. O Threads também não fica sabendo das suas capturas de tela.
+Back to defaults	Voltar ao padrão
+Puts every feature switch back the way it started.	Volta cada opção de recurso ao estado inicial.
+Changed %1$d setting	%1$d configuração alterada
+Changed %1$d settings	%1$d configurações alteradas
+# Report a problem: the main page row and its summary. A tap opens a new GitHub bug report in the browser.
+Report a problem	Relatar um problema
+Opens a GitHub report with your versions and settings filled in. Add what happened.	Abre um relato no GitHub com suas versões e configurações já preenchidas. Conte o que aconteceu.
+# The Links page's line beside a Meta-signed Instagram (#8): Instagram's own launcher won't hand a post or profile to a patched Threads, and the error is Instagram's.
+Instagram won't open posts here	O Instagram não abre publicações aqui
+Your Instagram is signed by Meta, and it only opens Threads posts and profiles in a Threads signed by Meta. Tapping one in Instagram shows an error saying it couldn't load the website. Posts you open in Threads itself work as usual.	Seu Instagram é assinado pela Meta e só abre publicações e perfis do Threads em um Threads assinado pela Meta. Tocar em um deles no Instagram mostra um erro dizendo que não foi possível carregar o site. As publicações que você abre no próprio Threads funcionam normalmente.
+Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Ative um conjunto de opções com um toque ou volte todas as opções ao estado inicial. Toque e segure esta linha para ocultá-la.
+Quick setups on the home page	Configurações rápidas na página inicial
+Hidden. Tap to show it again.	Ocultas. Toque para mostrar de novo.
+Shown. Tap to hide it.	Visíveis. Toque para ocultar.
+Quick setups hidden. Bring it back from Pause, backup and diagnostics.	Configurações rápidas ocultas. Traga de volta em Pausa, backup e diagnóstico.
+# Android 9 only, a save without Threads' Storage permission: the toast, then the same advice as the line under a carousel's counts. Storage and Permissions are the names Android's app info screen shows in this language.
+Not saved: Threads needs the Storage permission to save on Android 9. Turn it on in Threads' app info under Permissions, then save again.	Não foi salvo: no Android 9, o Threads precisa da permissão de Armazenamento para salvar. Ative-a nas informações do app Threads, em Permissões, e salve de novo.
+Threads needs the Storage permission to save on Android 9. Turn it on in Threads' app info under Permissions, then save again.	No Android 9, o Threads precisa da permissão de Armazenamento para salvar. Ative-a nas informações do app Threads, em Permissões, e salve de novo.
+# A save whose download took longer than its time limit (ten minutes for one file): the toast. The connection is the phone's internet connection.
+Not saved: the download was too slow to finish. Try again on a faster connection.	Não foi salvo: o download estava lento demais para terminar. Tente de novo com uma conexão mais rápida.
+Hide follow suggestions in Search	Ocultar sugestões para seguir na pesquisa
+Takes the Follow suggestions row off the Search screen. Your searches and topics stay.	Remove a fileira de sugestões para seguir da tela de pesquisa. Suas pesquisas e tópicos continuam.
+# A save stopped because a proxy server on the phone's network (Wi-Fi or global proxy setting) asked for a user name and password: the toast. HushThreads never sends one for a download.
+Not saved: this network's proxy asks for a password, and saves never send one. Try again on another network.	Não foi salvo: o proxy desta rede pede uma senha, e os salvamentos nunca enviam uma. Tente de novo em outra rede.
+# The same, as an extra line under a carousel's 'Saved %1$d. Failed %2$d. Skipped %3$d.' summary.
+This network's proxy asks for a password, and saves never send one. Try again on another network.	O proxy desta rede pede uma senha, e os salvamentos nunca enviam uma. Tente de novo em outra rede.

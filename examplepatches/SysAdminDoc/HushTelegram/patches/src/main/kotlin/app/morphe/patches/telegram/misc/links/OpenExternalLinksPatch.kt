@@ -8,6 +8,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.telegram.misc.extension.enableCapability
 import app.morphe.patches.telegram.misc.extension.enableStatus
+import app.morphe.patches.telegram.misc.extension.patchLog
 import app.morphe.patches.telegram.misc.extension.requireStatusMethod
 import app.morphe.patches.telegram.misc.extension.telegramExtensionPatch
 import app.morphe.patches.telegram.misc.settings.settingsPatch
@@ -18,7 +19,8 @@ val openExternalLinksPatch = bytecodePatch(
     name = "Open links externally",
     description = "Opens ordinary web links in your browser instead of inside Telegram. Telegram links, sign-in and " +
         "payment pages work as before. On by default. Turn it off in HushTelegram settings > More settings > " +
-        "Links.",
+        "Links. A second switch there, Keep your location from Mini Apps, starts off. With it on, Mini Apps and web " +
+        "pages opened in Telegram are told your location isn't available.",
     default = true,
 ) {
     category("Privacy")
@@ -26,10 +28,20 @@ val openExternalLinksPatch = bytecodePatch(
     compatibleWith(*AppCompatibilities.telegram())
     execute {
         listOf("openExternalLinks", "externalBrowserRouting").forEach { requireStatusMethod(it) }
+        requireMiniAppLocationRuntime()
         val plan = resolveLinkHooks()
         requireRuntime("tryOpenExternal", listOf(CONTEXT, URI, "Z", "[Z", "Ljava/lang/String;"), "Z")
+        // The location switch rides along while the catalog is held. A build without its shape keeps
+        // the link routing and leaves the switch out.
+        val location = resolveMiniAppLocation()
         writeProtection(plan)
         plan.browser.addInstructionsAtControlFlowLabel(plan.routingIndex, plan.routingCode)
+        if (location.missing == null) {
+            location.apply()
+            enableCapability("miniAppLocation")
+        } else {
+            patchLog.warning("Open links externally: ${location.missing}. The patch goes on without keeping location from Mini Apps.")
+        }
         enableCapability("externalBrowserRouting")
         enableStatus("openExternalLinks")
     }

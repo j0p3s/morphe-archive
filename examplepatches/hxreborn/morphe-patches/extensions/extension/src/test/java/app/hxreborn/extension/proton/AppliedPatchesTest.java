@@ -53,10 +53,10 @@ public final class AppliedPatchesTest {
         // then
         assertEquals(Arrays.asList("Custom accent color", "AMOLED dark theme", "Hide upgrade promotions",
                 "Hide promotional messages", "Remove 'Sent from' signature", "Remove free accounts limit",
-                "Scheduled Trash and Spam deletion", "Unlock custom time picker", "Remove server change delay",
-                "Unlock split tunneling", "Unlock LAN connections", "Unlock custom DNS", "Unlock NetShield",
-                "Unlock connection preferences", "Unlock profiles", "Show free server locations", "Disable telemetry"),
-                names);
+                "Scheduled Trash and Spam deletion", "Unlock custom time picker", "Swipe to switch accounts",
+                "Remove server change delay", "Unlock split tunneling", "Unlock LAN connections", "Unlock custom DNS",
+                "Unlock NetShield", "Unlock connection preferences", "Unlock profiles", "Show free server locations",
+                "Disable telemetry"), names);
     }
 
     @Test

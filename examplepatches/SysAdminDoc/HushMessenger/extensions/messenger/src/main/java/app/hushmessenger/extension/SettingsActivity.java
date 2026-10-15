@@ -129,7 +129,7 @@ public final class SettingsActivity extends Activity {
     private static Toast toast;
     static final String SUPPORT_PAGE = "https://ko-fi.com/X8K126YVER";
     /** Switches whose effect hasn't been confirmed on a phone. Each shows the Experimental badge. */
-    static final Set<String> EXPERIMENTAL = Set.of("ads", "pinned_chats", "nearby_scans");
+    static final Set<String> EXPERIMENTAL = Set.of("ads", "pinned_chats", "nearby_scans", "phone_id_sync", "mark_read_button", "story_hold");
     static final String[][] CONTROLS = {
         {"ads", "Hide inbox ads", "Hides ad cards in your chat list. Meta stopped selling these ads in November 2025, so this only matters if they come back.", "inbox"},
         {"people", "Hide People You May Know", "Hides suggested people in chats, search and stories, and on the People and Notifications tabs. Good if you only want people you know.", "inbox"},
@@ -140,7 +140,7 @@ public final class SettingsActivity extends Activity {
         {"stories", "Hide stories and notes", "Hides the row of stories and notes above your chats.", "inbox"},
         {"subtabs", "Hide inbox tabs", "Hides the Home and Channels tabs inside your inbox.", "inbox"},
         {"mark_read_action", "Hide Mark as read", "Hides Mark as read in the menu you get when you press and hold a chat in your chat list, so you can't mark a chat read by accident. Mark as unread stays.", "inbox"},
-        {"pinned_chats", "Pin more chats", "Raises Messenger's limit of three pinned chats to 20, so you can keep more chats at the top of your chat list.", "inbox"},
+        {"pinned_chats", "Pin more chats", "Raises Messenger's limit of three pinned chats to 20, so you can keep more chats at the top of your chat list. Messenger's servers can still stop you sooner.", "inbox"},
         {"facebook", "Hide Facebook shortcuts", "Hides Facebook buttons, profile and sharing shortcuts, and the Also from Meta and Subscriptions sections in the Menu tab. Handy if you only use Messenger.", "navigation"},
         {"meta_ai", "Hide Meta AI", "Hides the Meta AI floating button, toolbar button, tab and menu entries, plus AI in search and in @ suggestions. Restart Messenger to see the tab go.", "navigation"},
         {"moments", "Hide Chat Moments", "Hides Chat Moments in the menu.", "navigation"},
@@ -148,6 +148,7 @@ public final class SettingsActivity extends Activity {
         {"tab_people", "Hide People tab", "Hides the People tab in the bar at the bottom. Restart Messenger to see the tab go.", "navigation"},
         {"tab_notifications", "Hide Notifications tab", "Hides the Notifications tab in the bar at the bottom. Restart Messenger to see the tab go.", "navigation"},
         {"chat_animation", "Slide chats in and out", "Slides a chat in from the side when you open it and out when you go back. Chat heads and bubbles aren't affected.", "navigation"},
+        {"story_hold", "Hold stories at the end", "Keeps a story on screen when it ends instead of moving on to the next one, so you go on with a tap or a swipe. Photos and videos both wait, and the last story stays open until you close it.", "navigation"},
         {"ai_stickers", "Hide AI sticker tools", "Hides the Generate AI sticker buttons, the AI sticker tab and AI sticker suggestions.", "stickers"},
         {"avatar_stickers", "Hide avatar stickers", "Hides the avatar tab in the sticker keyboard.", "stickers"},
         {"emoji_drawer", "Restore old emoji drawer", "Brings back the earlier emoji keyboard layout by turning off Meta's redesign. Restart Messenger to see the change. Nothing changes if you never got the redesign.", "stickers"},
@@ -161,7 +162,7 @@ public final class SettingsActivity extends Activity {
         {"use_system_emoji", "Use system emoji", "Shows emoji in your phone's own style instead of Messenger's built-in set.", "conversations"},
         {"original_photo", "Send photos at original quality", "With HD on, sends JPEG photos as the original image, not a smaller copy. Location is still removed. Photos over 20 MB are still compressed.", "conversations"},
         {"original_video", "Send videos without re-encoding", "Sends a video as the original file when Messenger allows it, instead of a recompressed copy. Videos over 25 MB and edited videos are still compressed.", "conversations"},
-        {"xhe_audio", "Fix shared videos with xHE-AAC sound", "A video you share into Messenger from another app whose only sound is xHE-AAC, which Messenger can't send, gets that sound converted to regular AAC first. The picture isn't touched.", "conversations"},
+        {"xhe_audio", "Fix videos that won't send", "Videos whose only sound is xHE-AAC and some Samsung screen recordings fail with \"Unable to send\", even in stock Messenger. Whether you share one into Messenger or pick it in a chat, the sound is converted to regular AAC, or the tag Samsung's recorder adds is dropped, before it's sent. The picture isn't touched.", "conversations"},
         {"disappearing_swipe", "Turn off the swipe up for disappearing messages", "Swiping up at the bottom of a chat no longer turns on disappearing messages. Scrolling works as usual, and you can still set them in the chat's settings.", "conversations"},
         {"auto_reply", "Auto reply", "Answers a message with a reply you write below when it has words you pick, or any message if you leave the words empty. Replies go out through Messenger's own notification reply, encrypted chats too, at most once every five minutes per chat. One-to-one chats only unless you allow groups. A chat with disappearing messages on gets no notification reply from Messenger, so it isn't answered.", "conversations"},
         {"system_camera", "Use the phone's camera app", "The camera button in a chat opens your phone's camera app. The photo opens in Messenger's editor, ready to send. Photos only.", "conversations"},
@@ -173,9 +174,11 @@ public final class SettingsActivity extends Activity {
         {"ad_events", "Stop inbox and ad link logging", "Stops two reports Messenger logs. One says which part of your chat list was on screen, which Messenger files under inbox ads. The other says which ad brought you in when a link from an ad opens a chat.", "privacy"},
         {"mqtt_telemetry", "Stop MQTT logging", "Drops the health reports and push logging Messenger's MQTT client sends. Messenger sends most of its traffic another way, so there's often little for it to drop. Messages, calls and active status keep working.", "privacy"},
         {"nearby_scans", "Stop nearby scans", "Stops Messenger from reading the list of Wi-Fi networks around you, and hides the name and hardware address of the one you're connected to, the way Android does when Messenger can't see your location. Also stops the timer it can run while it's open to check your location and scan for Wi-Fi networks and Bluetooth devices.", "privacy"},
+        {"phone_id_sync", "Stop app list and device ID sharing", "Stops Messenger from going through the apps on your phone to find other Meta apps, and from asking them for the device ID Meta uses to link the apps on one phone. Messenger keeps the ID it already has.", "privacy"},
         {"message_log", "Keep a message log", "Saves each message when its notification arrives, so you can read it after it's unsent. Works in encrypted chats. Stays on your phone. In a chat with disappearing messages on, Messenger leaves the words out of its notification, so those messages aren't logged.", "privacy"},
         {"allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, such as view-once photos and Quicksnap, and stops screenshot notices. It doesn't add replay or saving.", "privacy"},
         {"hide_read_receipts", "Hide read receipts", "Opening a chat no longer tells people you read their message, and the chat stays unread here. Marking it read yourself or replying marks it read and shows Seen, like Messenger does. Group chats aren't tested. Messenger's own Read receipts setting under Privacy & safety marks chats read without Seen.", "privacy"},
+        {"mark_read_button", "Mark as read button", "Puts Messenger's Mark as read icon in a chat's top bar while Hide read receipts is on. Opening the chat still sends nothing. Tap the icon when you want the sender to see Seen, and the chat turns read here too. It takes the place of the chat details button (tapping the chat's name opens the same page), so the call buttons stay put.", "privacy"},
         {"keep_unsent", "Keep unsent messages", "Keeps messages on screen after someone unsends them, in chats where it works. Encrypted chats aren't supported and group chats aren't tested. Your own unsends may be limited.", "privacy"},
         {"anonymous_stories", "View stories anonymously", "Opens other people's stories without adding you to their viewer list. Messenger still marks them as seen on your side.", "privacy"},
         {"save_stories", "Save any story", "Adds Save to the More options menu on other people's stories, so you can keep the photo or video on your phone.", "privacy"},
@@ -256,8 +259,11 @@ public final class SettingsActivity extends Activity {
                 super.onLayout(changed, left, top, right, bottom);
                 if (!revealSearch) return;
                 revealSearch = false;
-                if (search.hasFocus() && search.isShown())
-                    search.requestRectangleOnScreen(new Rect(0, 0, search.getWidth(), search.getHeight()), false);
+                if (!search.hasFocus() || !search.isShown()) return;
+                // From the search row down a whole page, so its filters and first matches show above the keyboard too.
+                View row = (View) search.getParent();
+                int viewport = controlsScroll.getHeight() - controlsScroll.getPaddingTop() - controlsScroll.getPaddingBottom();
+                row.requestRectangleOnScreen(new Rect(0, 0, row.getWidth(), Math.max(row.getHeight(), viewport)), false);
             }
         };
         root.setOrientation(LinearLayout.VERTICAL);
@@ -1233,7 +1239,9 @@ public final class SettingsActivity extends Activity {
         LinearLayout labels = ui.column();
         labels.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
         LinearLayout titleLine = ui.row();
-        if (overlay) titleLine.setPaddingRelative(0, 0, ui.dp(60), 0);
+        LinearLayout.LayoutParams titleSpace = new LinearLayout.LayoutParams(-1, -2);
+        // A margin, since relative padding set before the row is attached stays on the right in a mirrored layout.
+        if (overlay) titleSpace.setMarginEnd(ui.dp(60));
         if (ui.largeText) titleLine.setOrientation(LinearLayout.VERTICAL);
         titleLine.addView(ui.text(text.display(title), appRow ? 14 : 16, ui.text, false), new LinearLayout.LayoutParams(-2, -2));
         if (EXPERIMENTAL.contains(key)) {
@@ -1244,7 +1252,7 @@ public final class SettingsActivity extends Activity {
             params.setMarginStart(ui.dp(ui.largeText ? 0 : 8));
             titleLine.addView(badge, params);
         }
-        ui.add(labels, titleLine, 0);
+        labels.addView(titleLine, titleSpace);
         if (!description.isEmpty()) ui.add(labels, ui.text(text.display(description), appRow ? 13 : 14, ui.muted, false), appRow ? 4 : 6);
         // A switch records a use only when Messenger reaches its screen or event, so an off switch shows nothing.
         // A failure newer than the last use means the switch isn't doing its job, so that shows instead.
@@ -1864,6 +1872,9 @@ public final class SettingsActivity extends Activity {
 
     private Dialog messageLogDialog;
     private LinearLayout messageLogList;
+    private ScrollView messageLogScroll;
+    /** Builds the log's next page of cards, while one is left. */
+    private Runnable messageLogMore;
     private Button messageLogClear;
     private long messageLogGeneration;
     private boolean messageLogClearFailed;
@@ -1904,11 +1915,17 @@ public final class SettingsActivity extends Activity {
             if (messageLogDialog == dismissed) {
                 messageLogDialog = null;
                 messageLogList = null;
+                messageLogScroll = null;
+                messageLogMore = null;
                 messageLogClear = null;
                 messageLogGeneration++;
             }
         });
         messageLogList = sheet.body;
+        messageLogScroll = sheet.scroll;
+        // Scrolling near the end builds the next page, and so does a layout that leaves the end in view.
+        sheet.scroll.setOnScrollChangeListener((view, x, y, oldX, oldY) -> moreMessageLogIfNear());
+        sheet.scroll.getViewTreeObserver().addOnGlobalLayoutListener(this::moreMessageLogIfNear);
         messageLogClear = ui.button(text.get("message_log_clear"));
         messageLogClear.setTag("message_log_dialog_clear");
         messageLogClear.setOnClickListener(clicked -> clearMessageLog());
@@ -1951,6 +1968,7 @@ public final class SettingsActivity extends Activity {
         final LinearLayout list = messageLogList;
         if (list == null) return;
         final long generation = ++messageLogGeneration;
+        messageLogMore = null;
         list.removeAllViews();
         TextView loading = ui.text(text.get("message_log_loading"), 14, ui.muted, false);
         loading.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
@@ -1999,9 +2017,35 @@ public final class SettingsActivity extends Activity {
                     }
                 }
                 if (!result.entries.isEmpty()) ui.add(list, ui.text(text.get("message_log_retention"), 13, ui.muted, false), list.getChildCount() > 0 ? 12 : 0);
-                for (MessageLog.Entry entry : result.entries) list.addView(messageLogEntry(entry));
+                showMessageLogPage(list, generation, result.entries, 0);
             });
         }, "HushMessageLogView").start();
+    }
+
+    /** Cards built at a time. A full log is 500 of them, and building them all at once froze the screen for two seconds. */
+    static final int MESSAGE_LOG_PAGE = 20;
+
+    private void showMessageLogPage(LinearLayout list, long generation, List<MessageLog.Entry> entries, int from) {
+        messageLogMore = null;
+        if (messageLogList != list || generation != messageLogGeneration) return;
+        int to = Math.min(entries.size(), from + MESSAGE_LOG_PAGE);
+        for (int i = from; i < to; i++) list.addView(messageLogEntry(entries.get(i)));
+        if (to < entries.size()) messageLogMore = () -> showMessageLogPage(list, generation, entries, to);
+    }
+
+    /**
+     * Builds the next page once the log is scrolled within a screen of its end. A list still waiting for its layout is
+     * measured after it, so a page that was just added can't count as the end and pull in the rest. The dismiss listener
+     * runs a message after the sheet goes, so a page asked for just before then checks the sheet is still up.
+     */
+    private void moreMessageLogIfNear() {
+        ScrollView scroll = messageLogScroll;
+        Runnable more = messageLogMore;
+        if (scroll == null || more == null || scroll.getChildCount() == 0) return;
+        View content = scroll.getChildAt(0);
+        int height = scroll.getHeight();
+        if (height == 0 || content.isLayoutRequested()) return;
+        if (content.getBottom() - (scroll.getScrollY() + height) < height) scroll.post(() -> { if (messageLogMore == more && scroll.isAttachedToWindow()) more.run(); });
     }
 
     private void removeSetAsideLog() {

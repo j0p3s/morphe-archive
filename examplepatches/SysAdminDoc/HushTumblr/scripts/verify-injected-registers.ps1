@@ -46,10 +46,18 @@
     split_heliumcore.apk, and against base.apk its methods read as some 12,000 added and 212
     changed. The merge carries no signature, so Tumblr's signer is checked on base.apk, and on
     every split before the merge is made (Get-MergedApk), and a merge handed over with
-    -CleanMerged has to match the record of that check and this base.apk (Assert-AuthenticMerge).
+    -CleanMerged has to be one this process made and still holds, or the bytes -CleanApk merges to
+    here, and its base this base.apk (Assert-AuthenticMerge).
     DexDiff holds the merge to base.apk's classes*.dex byte for byte (handed base.apk as its last
     argument), and it fails a clean side that holds any of the bundle's own code. The device half
     runs base.apk, the same app code.
+
+    Every changed or added method and class shape is also held to what accounts for it: a mutation
+    contract that validated it, the bundle's extension classes (-Bundle, held while DexDiff reads
+    it, and by default the bundle the repo builds now, so an APK patched with another one needs its
+    .mpp passed), or a line of scripts/dex-delta-allowlist.txt under a selected patch, which names the
+    SHA-256 of what that patch writes there. A Tumblr method edited in the CLI's working copy, or an
+    extension class swapped in, fails even when its code is well formed.
 
 .EXAMPLE
     scripts/verify-injected-registers.ps1 -PatchedApk C:\work\patched.apk
@@ -78,7 +86,8 @@ param(
     [string]$Aapt2,
     [string[]]$SelectedPatchNames,
     [string]$AndroidJar,
-    [string]$ApiVersions
+    [string]$ApiVersions,
+    [string]$Bundle
 )
 
 $ErrorActionPreference = 'Stop'
@@ -170,7 +179,8 @@ function Invoke-DexDiff {
         $output = @(& $Java '-Xmx8g' '-cp' $DesktopJar (Join-Path $PSScriptRoot 'DexDiff.java') `
             $CleanMerged $PatchedApk $ReportPath `
             (Join-Path $PSScriptRoot 'injected-register-removal-allowlist.txt') `
-            (Join-Path $PSScriptRoot 'injected-mutation-contracts.txt') $cleanBase $selectionFile 2>&1 | ForEach-Object { "$_" })
+            (Join-Path $PSScriptRoot 'injected-mutation-contracts.txt') $cleanBase $selectionFile `
+            $bundlePath (Join-Path $PSScriptRoot 'dex-delta-allowlist.txt') 2>&1 | ForEach-Object { "$_" })
         $exitCode = $LASTEXITCODE
     } finally {
         Exit-HushTumblrQueue $queued
@@ -193,8 +203,10 @@ function Invoke-HostReferences {
     [pscustomobject]@{ ExitCode = $exitCode; Output = $output }
 }
 
-$work = Join-Path ([System.IO.Path]::GetTempPath()) ("hushtumblr-regs-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
-New-Item -ItemType Directory -Force -Path $work | Out-Null
+# By its real path, with a file kept open in it until the finally (Open-HeldDirectory): no junction
+# on the way to it can be turned, and no folder above it renamed, while the clean side is read here.
+$workHeld = Open-HeldDirectory -Path (Join-Path ([System.IO.Path]::GetTempPath()) ("hushtumblr-regs-" + [guid]::NewGuid().ToString('N').Substring(0, 8)))
+$work = $workHeld.Path
 # The report stays where the caller can read it after the run: at -ReportPath when one is given,
 # and otherwise in the working directory, which is kept whenever the run failed or stopped short,
 # because that is when the FAIL line points at the report. The pulled and extracted APKs never
@@ -206,6 +218,12 @@ if ($reportInWork) { $ReportPath = Join-Path $work 'injected-registers.txt' }
 $failed = $false
 $completed = $false
 $deviceLease = $null
+# What this run holds of the clean side, let go in the finally before anything is deleted.
+$cleanSourceHeld = $null
+$cleanBaseHeld = $null
+$cleanMergedHeld = $null
+$madeCleanMerge = $false
+$bundleHeld = $null
 try {
 
 $selectionFile = '-'
@@ -219,6 +237,19 @@ if ($PSBoundParameters.ContainsKey('SelectedPatchNames')) {
     $selectionFile = Join-Path $work 'selected-patches.txt'
     [IO.File]::WriteAllLines($selectionFile, $SelectedPatchNames, (New-Object Text.UTF8Encoding($false)))
 }
+
+# The bundle the patched APK was patched with: DexDiff holds the classes the patch added to its
+# extensions, and what else it changed to dex-delta-allowlist.txt. The scripts that patch hand theirs
+# over, held. Run on its own, this checks against the bundle the repo builds now, which only fits
+# an APK patched with that build.
+if (-not $Bundle) {
+    $Bundle = Get-ReleaseBundlePath -Root $root -Version (Get-BundleVersion -Root $root)
+    if (-not (Test-Path -LiteralPath $Bundle -PathType Leaf)) {
+        throw "No -Bundle was given, and the bundle this repo builds now isn't at $Bundle. Pass -Bundle with the .mpp the APK was patched with."
+    }
+}
+$bundleHeld = Open-HeldFile -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Bundle) -What 'The bundle'
+$bundlePath = Get-HeldPath -Stream $bundleHeld
 
 $adbPath = $null
 if ($FromDevice -or $Serial) { $adbPath = Resolve-Adb -Explicit $Adb }
@@ -271,7 +302,18 @@ $signedBundle = Get-SignedBundleFor -Apk $CleanApk
 $cleanSource = if ($signedBundle) { $signedBundle } else { $CleanApk }
 # Resolve the signed container before extracting the single clean baseline. The static and device
 # checks must keep this same base APK for the rest of the run.
-$cleanBase = Get-BaseApk -Apk $cleanSource -Destination (Join-Path $work 'clean-base.apk')
+# Get-BaseApk hands a signed plain APK back as the path it was given, so it is given the path the
+# held source's handle is at: no junction is left on the way for another process to point
+# elsewhere under the readers below.
+$cleanSourceHeld = Open-HeldFile -Path $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($cleanSource) `
+    -What 'The clean APK'
+$cleanBase = Get-BaseApk -Apk (Get-HeldPath -Stream $cleanSourceHeld) -Destination (Join-Path $work 'clean-base.apk')
+# Held from here to the end of the run, before anything is read from it: the manifest, the signer
+# check, the dex comparison and the device verifier all read a file no other process can write, and
+# Assert-AuthenticMerge below holds those same bytes to the base APK whose signer was checked.
+$cleanBaseHeld = Open-HeldFile -Path $cleanBase -What 'The clean base APK'
+$cleanSourceHeld.Dispose()
+$cleanSourceHeld = $null
 if ($signedBundle) {
     Write-Host "[registers] $(Split-Path -Leaf $CleanApk) is a merge of $(Split-Path -Leaf $signedBundle); its signer is read from that bundle's base.apk, whose dex it carries unchanged"
 }
@@ -296,14 +338,21 @@ if ($cleanSigners.Count -eq 0 -or $foreignSigners.Count -gt 0) {
 # The dex comparison's clean side: the whole bundle, merged as the CLI merged it before patching,
 # so a split's dex (the Facebook sibling's 580 in-app browser shipped one) is on both sides. DexDiff
 # holds it to the signed base.apk's classes*.dex. A plain APK is its own merge. Every APK the merge
-# is made from passes the signer check first (Get-MergedApk), and a merge handed over with
-# -CleanMerged is held to the record of that check and to this base APK (Assert-AuthenticMerge).
+# is made from passes the signer check first (Get-MergedApk), which hands the merge back held, so
+# nothing can write to it while it is compared. A merge handed over with -CleanMerged has to be one
+# this process made and still holds, as the scripts that run this one hand theirs over, or the very
+# bytes -CleanApk merges to here (Assert-AuthenticMerge). No file beside it counts as proof.
 if (-not $CleanMerged) {
     $CleanMerged = Get-MergedApk -Apk $CleanApk -Destination (Join-Path $work 'clean-merged.apk') -Java $Java -DesktopJar $DesktopJar `
         -Aapt2 $Aapt2 -PackageName $package -Signers $metaSigners
+    $madeCleanMerge = $true
 }
 if (-not (Test-Path -LiteralPath $CleanMerged -PathType Leaf)) { throw "No merged clean APK at $CleanMerged." }
-Assert-AuthenticMerge -Merged $CleanMerged -Base $cleanBase -PackageName $package
+$cleanMergedHeld = Assert-AuthenticMerge -Merged $CleanMerged -Base $cleanBaseHeld -Apk $CleanApk -Scratch $work `
+    -Java $Java -DesktopJar $DesktopJar -Aapt2 $Aapt2 -PackageName $package -Signers $metaSigners
+# A merge handed over is read from here on by the path its handle is at, whatever the path given
+# leads to by then.
+if ($cleanMergedHeld) { $CleanMerged = Get-HeldPath -Stream $cleanMergedHeld }
 
 # Found the way an applied record's key finds them (common.ps1), so a kept result and this run
 # can't read different stubs.
@@ -371,6 +420,13 @@ if ($Serial -and -not $failed) {
 $completed = $true
 } finally {
     try {
+    # Held files can't be deleted, so the clean side is let go first.
+    if ($cleanMergedHeld) { $cleanMergedHeld.Dispose() }
+    if ($madeCleanMerge) { Close-MergedApk -Merged $CleanMerged }
+    if ($cleanBaseHeld) { $cleanBaseHeld.Dispose() }
+    if ($cleanSourceHeld) { $cleanSourceHeld.Dispose() }
+    if ($bundleHeld) { $bundleHeld.Dispose() }
+    $workHeld.Anchor.Dispose()
     $keepReport = $reportInWork -and ($failed -or -not $completed) -and
         (Test-Path -LiteralPath $ReportPath -PathType Leaf)
     if ($keepReport) {

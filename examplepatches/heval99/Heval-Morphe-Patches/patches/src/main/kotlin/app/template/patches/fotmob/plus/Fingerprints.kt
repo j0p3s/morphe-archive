@@ -18,3 +18,16 @@ import app.morphe.patcher.Fingerprint
 object StaffAccountFingerprint : Fingerprint(
     strings = listOf("norapps.as@"),
 )
+
+/**
+ * The Compose lambda that draws MembershipActivity's content. It switches on the RevenueCat
+ * entitlement state; three entitlement branches end with the "Exclusive app icons" picker, the
+ * NoEntitlement branch only shows this hard-coded text (no string resource), so the literal is
+ * unique to the lambda (`pp8.invoke` in 238.17794, `xp8.invoke` in 238.17666). Optional: builds
+ * without this screen just skip the app-icon step.
+ */
+object MembershipScreenFingerprint : Fingerprint(
+    strings = listOf(NO_SUBSCRIPTION_TEXT),
+)
+
+internal const val NO_SUBSCRIPTION_TEXT = "No active subscriptions found"

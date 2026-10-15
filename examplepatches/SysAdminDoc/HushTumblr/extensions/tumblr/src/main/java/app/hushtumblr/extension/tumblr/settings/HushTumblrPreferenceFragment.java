@@ -498,7 +498,7 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
                         + "posts from blogs you don't follow yet."), SettingsIcons.BLOCK);
             patchToggle(posts, context, build, PatchFamily.HIDE_NOTE_COUNTS, Settings.HIDE_NOTE_COUNTS,
                     L10n.t("Hide note counts"), L10n.t("Takes the like, reblog and comment counts off the footer "
-                        + "under posts, and keeps the buttons."), SettingsIcons.BLOCK);
+                        + "under posts and off a post's notes, and keeps the buttons."), SettingsIcons.BLOCK);
             patchToggle(posts, context, build, PatchFamily.HIDE_LIKE_BUTTON, Settings.HIDE_LIKE_BUTTON,
                     L10n.t("Hide the like button"), L10n.t("Takes the like button out of the footer under posts, "
                         + "and the reactions off community posts."),
@@ -678,6 +678,7 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
         hushtumblr.addPreference(mark(new BackupRow(this, context, SettingsBackupPreference.UNDO,
                 L10n.t("Undo import"),
                 L10n.t("There's no import to undo.")), SettingsIcons.UPDATES));
+        hushtumblr.addPreference(mark(restoreQuickSetupsRow(context), SettingsIcons.TOOLS));
         // Debug logging also fills the exported report and turns on error toasts (Logger).
         hushtumblr.addPreference(mark(toggle(context, BaseSettings.DEBUG, L10n.t("Debug logging"),
                 L10n.t("Record patch activity and show errors for a bug report. Leave off during normal use.")), SettingsIcons.BUG));
@@ -733,6 +734,26 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
             return true;
         });
         about.addPreference(mark(licenses, SettingsIcons.LICENSE));
+    }
+
+    /** Hides the Quick setups row on the home page, or shows it again. The home page follows the next time it's drawn. */
+    private static Preference restoreQuickSetupsRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(SettingsNavigation.RESTORE_QUICK_SETUPS);
+        row.setTitle(L10n.t("Quick setups on the home page"));
+        row.setSummary(restoreQuickSetupsSummary());
+        row.setPersistent(false);
+        row.actsAtOnce = true;
+        row.setOnPreferenceClickListener(p -> {
+            SettingsNavigation.HIDE_QUICK_SETUPS.save(!SettingsNavigation.HIDE_QUICK_SETUPS.get());
+            p.setSummary(restoreQuickSetupsSummary());
+            return true;
+        });
+        return row;
+    }
+
+    static String restoreQuickSetupsSummary() {
+        return SettingsNavigation.HIDE_QUICK_SETUPS.get() ? L10n.t("Hidden. Tap to show it again.") : L10n.t("Shown. Tap to hide it.");
     }
 
     /**
@@ -1058,6 +1079,11 @@ public final class HushTumblrPreferenceFragment extends AbstractPreferenceFragme
                 .setPositiveButton(L10n.t("Save"), null)
                 .setNegativeButton(L10n.t("Cancel"), null));
         if (dialog == null) return;
+        // With no mode of its own the dialog pans for the keyboard: it slid up to the cursor and
+        // left Save and Cancel under the Samsung keyboard at twice the text size. Resized, the
+        // body scrolls and the buttons stay above the keyboard.
+        android.view.Window window = dialog.getWindow();
+        if (window != null) window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE);
         wordsDialog = dialog;
         wordsField = field;
         restoreWordsEditor = false;

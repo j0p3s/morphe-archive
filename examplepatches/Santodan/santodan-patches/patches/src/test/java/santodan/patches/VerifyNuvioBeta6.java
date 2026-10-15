@@ -1,0 +1,424 @@
+package santodan.patches;
+
+import app.morphe.patcher.util.proxy.mutableTypes.MutableClass;
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile;
+import com.android.tools.smali.dexlib2.Opcodes;
+import com.android.tools.smali.dexlib2.iface.*;
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction;
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction;
+import com.android.tools.smali.dexlib2.iface.reference.FieldReference;
+import software.santodan.extension.nuviomerged.NuvioProviderLayout;
+import com.android.tools.smali.dexlib2.immutable.ImmutableDexFile;
+import com.android.tools.smali.dexlib2.writer.pool.DexPool;
+import java.io.*;
+import java.lang.reflect.InvocationTargetException;
+import java.util.*;
+
+/** Checks beta.6 hooks on original DEX, including the extension reflection contracts. */
+public final class VerifyNuvioBeta6 {
+    private static final Map<String, MutableClass> classes = new HashMap<>();
+    private static final Set<ClassDef> used = new HashSet<>();
+    private static MutableClass owner(String type) {
+        MutableClass result = classes.get(type);
+        if (result == null) throw new AssertionError("Missing class: " + type);
+        used.add(result);
+        return result;
+    }
+    private static void method(String type, String name, int count) {
+        long matches = owner(type).getMethods().stream().filter(m -> m.getName().equals(name)
+            && m.getParameterTypes().size() == count).count();
+        if (matches != 1) throw new AssertionError("Ambiguous/missing runtime method: " + type + "->" + name);
+    }
+    private static void field(String type, String name, String expected) {
+        for (Field f : owner(type).getFields())
+            if (f.getName().equals(name) && f.getType().equals(expected)) return;
+        throw new AssertionError("Missing runtime field: " + type + "->" + name + ":" + expected);
+    }
+
+    private static void progressFlow(String provider, String accessor) {
+        for (Method method : owner(provider).getMethods()) {
+            if (!accessor.equals(method.getName()) || !method.getParameterTypes().isEmpty()) continue;
+            for (var ins : method.getImplementation().getInstructions()) {
+                if (!(ins instanceof ReferenceInstruction)) continue;
+                var reference = ((ReferenceInstruction) ins).getReference();
+                if (reference instanceof FieldReference) {
+                    FieldReference field = (FieldReference) reference;
+                    // In both real Trakt implementations, f is the progress-list flow;
+                    // beta4 q instead returns g, the Boolean remote-loaded StateFlow.
+                    if ("f".equals(field.getName()) && "Lkotlinx/coroutines/flow/Flow;".equals(field.getType())) return;
+                }
+            }
+        }
+        throw new AssertionError("Accessor does not carry Trakt progress lists: " + provider + "->" + accessor);
+    }
+    private static void hook(String name, Class<?>[] types, Object... args) throws Exception {
+        java.lang.reflect.Method method = NuvioMergedProgressPatch.class.getDeclaredMethod(name, types);
+        method.setAccessible(true);
+        try { method.invoke(null, args); }
+        catch (InvocationTargetException error) { throw new AssertionError(name, error.getCause()); }
+        System.out.println("PASS: " + name);
+    }
+    private static void hook(String name, MutableClass target) throws Exception {
+        hook(name, new Class<?>[]{MutableClass.class}, target);
+    }
+    public static void main(String[] args) throws Exception {
+        String version = args[0];
+        if (!NuvioLayout.BETA6.equals(version)) throw new AssertionError("This verifier targets beta.6 only");
+        NuvioRemainingEpisodesPatch.validateTarget("com.nuvio.tv", version);
+        for (String[] invalid : new String[][]{{"wrong.package", version}, {"com.nuvio.tv", "1.1.0-beta.999"}, {"com.nuvio.tv", "1.1.0-beta.2"}, {"com.nuvio.tv", "1.1.0-beta.4"}, {"com.nuvio.tv", "1.1.0-beta.5"}}) {
+            boolean rejected = false;
+            try { NuvioRemainingEpisodesPatch.validateTarget(invalid[0], invalid[1]); }
+            catch (IllegalStateException expected) { rejected = true; }
+            if (!rejected) throw new AssertionError("Invalid patch execution target accepted");
+        }
+        NuvioLayout.use(version);
+        System.out.println("PASS: remaining-episode execution accepts supported targets and rejects invalid targets");
+        boolean newer = NuvioLayout.modern(version);
+        File[] inputs = new File(args[1]).listFiles((dir, name) -> name.matches("classes.*\\.dex"));
+        if (inputs == null || inputs.length == 0) throw new AssertionError("No local DEX inputs");
+        for (File input : inputs) try (InputStream in = new BufferedInputStream(new FileInputStream(input))) {
+            for (ClassDef c : DexBackedDexFile.fromInputStream(null, in).getClasses())
+                classes.put(c.getType(), new MutableClass(c));
+        }
+        String repository = "Lz9/zc;";
+        String provider = "Lo9/z;";
+        NuvioProviderLayout runtime = NuvioProviderLayout.forRepository(
+            repository.substring(1, repository.length() - 1).replace('/', '.'));
+        if (!provider.equals("L" + runtime.providerInterface.replace('.', '/') + ";"))
+            throw new AssertionError("Runtime provider interface differs from patch layout");
+        progressFlow("Lz9/jb;", runtime.allProgressMethod);
+        method(provider, runtime.allProgressMethod, 0);
+        {
+            boolean rejected = false;
+            try { progressFlow("Lz9/jb;", "q"); }
+            catch (AssertionError expected) { rejected = true; }
+            if (!rejected) throw new AssertionError("Boolean remote-loaded flow accepted as progress");
+        }
+        System.out.println("PASS: runtime uses progress lists and rejects beta4's Boolean flow");
+        String registry = "Lo9/a0;";
+        field(repository, "k", registry);
+        String localStore = null;
+        for (Field f : owner(repository).getFields()) if (f.getName().equals("a")) localStore = f.getType();
+        field(localStore, "q", "Lkotlinx/coroutines/flow/Flow;");
+        for (String accessor : List.of("a", "b", "f", "q")) method(provider, accessor, 0);
+        for (String accessor : List.of("d", "j")) method(provider, accessor, 0);
+        method(provider, "g", 1);
+        method(provider, runtime.siblingsMethod, 1);
+        {
+            String rowOwner = "Lxa/ub;";
+            method(rowOwner, "a", 18);
+            method(rowOwner, "j", 11);
+            String playbackRows = "Lxa/za;";
+            method(playbackRows, "b", 9);
+            method(playbackRows, "c", 9);
+            method(playbackRows, "h", 14);
+            method("Ld2/z;", "<init>", 1);
+            field("Lh3/s0;", "a", "Lh3/i0;");
+            field("Lh3/i0;", "b", "J");
+            String picker = "Lxa/cc;";
+            method(picker, "<init>", 6);
+            for (String alignment : List.of("a", "b", "c", "d", "e", "f", "g", "h", "i"))
+                field("Lw1/b;", alignment, "Lw1/i;");
+            System.out.println("PASS: native date-label settings, pickers and nine alignments");
+        }
+        method(provider, runtime.refreshMethod, 2);
+        var refresh = owner(provider).getMethods().stream()
+            .filter(m -> m.getName().equals(runtime.refreshMethod) && m.getParameterTypes().size() == 2)
+            .findFirst().orElseThrow();
+        String refreshIntent = refresh.getParameterTypes().get(0).toString();
+        owner(refreshIntent);
+        if (!refresh.getParameterTypes().get(1).equals("Lkotlin/coroutines/jvm/internal/ContinuationImpl;"))
+            throw new AssertionError("Native refresh continuation changed");
+        System.out.println("PASS: native provider refresh contract");
+        String watchedStore = null;
+        for (Field f : owner(repository).getFields()) if (f.getName().equals("e")) watchedStore = f.getType();
+        field(watchedStore, runtime.localWatchedField, "Lkotlinx/coroutines/flow/Flow;");
+        String profileType = null;
+        for (Field f : owner(repository).getFields()) if (f.getName().equals("j")) profileType = f.getType();
+        field(profileType, "f", "Lkotlinx/coroutines/flow/StateFlow;");
+        String watchedModel = "Lcom/nuvio/tv/domain/model/WatchedItem;";
+        method(watchedModel, "<init>", 11);
+        for (String getter : List.of("getContentId", "getContentType", "getTitle", "getSeason",
+            "getEpisode", "getWatchedAt", "getPoster", "getReleaseInfo", "getTrackingProviderId",
+            "getTrackingProviderItemId", "getTrackingSourceUrl")) method(watchedModel, getter, 0);
+        System.out.println("PASS: profile cache key and watched-item serialization contracts");
+        method(registry, "b", 0);
+        String model = "Lqa/y9;";
+        for (String name : List.of("a", "c")) field(model, name, "Ljava/lang/String;");
+        for (String name : List.of("h", "i")) field(model, name, "I");
+        for (String name : List.of("x", "y")) field(model, name, "Ljava/lang/Integer;");
+        field("Lfa/v1;", "r", "Ljava/lang/String;");
+        method("Lxa/ub;", "m", 13);
+        method("Lx5/f2;", "b", 19);
+        method("Lg1/j;", "r", 1);
+        for (String type : List.of("Lab/z0;",
+                "Lx5/h2;", "Lab/l0;",
+                "Lfa/q2;", "Lw1/n;", "Ld2/g0;")) owner(type);
+        {
+            field("Lw1/b;", "h", "Lw1/i;");
+            method("Le0/v;", "a", 2);
+            field("Le0/v;", "a", "Le0/v;");
+        }
+        String composerType = "Lg1/m0;";
+        method(composerType, "d0", 1);
+        method(composerType, "p", 1);
+        System.out.println("PASS: isolated badge composition group start/end contracts");
+        System.out.println("PASS: reflection contracts for " + version);
+        {
+            method("Lw1/v;", "<init>", 1);
+            method("Lw1/q;", "d", 1);
+            boolean zIndex = false;
+            for (Method m : owner("Lw1/v;").getMethods()) if ("toString".equals(m.getName()))
+                for (var i : m.getImplementation().getInstructions()) if (i instanceof ReferenceInstruction
+                    && ((ReferenceInstruction)i).getReference().toString().contains("ZIndexElement(zIndex=")) zIndex = true;
+            if (!zIndex) throw new AssertionError("Badge overlay modifier is not ZIndexElement");
+        }
+        hook("hookRepository", owner(repository));
+        if (newer) {
+            NuvioMergedProgressPatch.hookPlaybackPause(owner("Lz9/k4;"));
+            NuvioRemainingEpisodesPatch.hookCard(owner("Lfa/v1;"), "Lc7/a;",
+                "Lsoftware/santodan/extension/nuviomerged/NuvioMergedProgress;", "prepareProviderBadge", "renderProviderBadge");
+            field("Lfa/v1;", "x", "Lcom/nuvio/tv/domain/model/WatchProgress;");
+            String nextCard = "Lqa/f0;";
+            field("Lfa/v1;", "y", nextCard);
+            field("Lqa/e0;", "a", "Lqa/y9;");
+            field("Lw1/b;", "i", "Lw1/i;");
+            field("Lu2/l;", "b", "Lu2/b1;");
+            method("La/a;", "b", 15);
+            method("Landroidx/compose/foundation/layout/b;", "m", 2);
+            method("Le0/b;", "u", 2);
+            method("Ly/l;", "g", 3);
+            System.out.println("PASS: merged provider badge identity, image, size, and bottom-right alignment contracts");
+            hook("hookInlinedCutoff", owner("Lqa/g5;"));
+            hook("hookInlinedCutoff", owner("Lqa/y1;"));
+            NuvioMergedProgressPatch.hookBadgeCacheHit(owner("Ln9/k0;"));
+            NuvioMergedProgressPatch.hookBadgeGroupProgress(owner("Lqa/s5;"));
+            field("Lqa/a4;", "X0", "Ljava/util/Set;");
+            field("Lqa/a4;", "u", "Lcom/nuvio/tv/data/local/wc;");
+            field("Lcom/nuvio/tv/data/local/wc;", "f", "Lkotlinx/coroutines/flow/StateFlow;");
+            field("Lcom/nuvio/tv/data/local/wc;", "g", "Ljava/util/Map;");
+            System.out.println("PASS: unchanged-ID badge retry and incremental metadata publication hooks");
+        } else hook("hookMergedProviderPolicies", owner(repository));
+        hook("hookInlinedNextUpSeedPolicy", owner("Lqa/s5;"));
+        hook("hookMergedProvider", owner("Lz9/sb;"));
+        hook("hookEffectiveSource", owner("Lio/sentry/o;"));
+        hook("hookWatchProgressEnum", owner("Lcom/nuvio/tv/data/local/dc;"));
+        if (!newer) hook("hookWatchProgressPicker", new Class<?>[]{MutableClass.class, String.class, String.class},
+            owner("Lfb/h3;"), "W0", "Lfb/sj;");
+        else {
+            NuvioMergedProgressPatch.hookSettingsStore(owner("Lo9/a1;"));
+            field("Lp8/e;", "I3", "Lsb/c;");
+            verifyCoordinatorProvider(owner("Lp8/g;"));
+            NuvioMergedProgressPatch.hookSettingsComponent(owner("Lp8/e;"));
+            verifyComponentRegistration(owner("Lp8/e;"));
+        }
+        hook("hookWatchProgressSelection", owner("Lxa/o7;"));
+        hook("hookWatchProgressSummary", new Class<?>[]{MutableClass.class, String.class},
+            owner("Lxa/bh;"), "z");
+        NuvioRemainingEpisodesPatch.hookNextUpModel(owner(model));
+        NuvioRemainingEpisodesPatch.hookEpisodeSets(owner("Lqa/s5;"),
+            "Lqa/a4;");
+        if (newer) verifyRemainingAiredMap(owner("Lqa/s5;"));
+
+        NuvioRemainingEpisodesPatch.hookCard(owner("Lfa/v1;"),
+            "Lc7/a;");
+        System.out.println("PASS: remaining-episode hooks");
+        {
+            NuvioAiringSeriesPatch.hookNextUpModel(owner(model));
+            NuvioAiringSeriesPatch.hookUpcomingSplit(owner("Lqa/s5;"));
+            verifyAiringSplitCall(owner("Lqa/s5;"));
+            NuvioAiringSeriesPatch.hookCard(owner("Lfa/v1;"), "Lc7/a;");
+            NuvioAiringSeriesPatch.hookWide(owner("Lfa/q2;"));
+            System.out.println("PASS: standalone airing-series hooks");
+            field("Lfa/e3;", "m", "Lcom/nuvio/tv/domain/model/MetaPreview;");
+            field("Lfa/i1;", "o", "Lcom/nuvio/tv/domain/model/MetaPreview;");
+            for (String getter : List.of("getApiType", "getImdbId", "getId", "getReleased", "getReleaseInfo"))
+                method("Lcom/nuvio/tv/domain/model/MetaPreview;", getter, 0);
+            NuvioFinaleDatesPatch.hookItems(owner("Lfa/d1;"));
+            NuvioFinaleDatesPatch.hookCard(owner("Lfa/e3;"));
+            NuvioFinaleDatesPatch.hookCard(owner("Lfa/i1;"));
+            for (String type : List.of("Lfa/e3;", "Lfa/i1;", "Lfa/f3;", "Lfa/k1;"))
+                NuvioFinaleDatesPatch.hookContext(owner(type));
+            System.out.println("PASS: library and collection finale-date hooks");
+            NuvioFinaleDatesPatch.hookItems(owner("Lfa/d1;"), NuvioMovieReleaseDatesPatch.EXTENSION);
+            NuvioFinaleDatesPatch.hookCard(owner("Lfa/e3;"), NuvioMovieReleaseDatesPatch.EXTENSION);
+            NuvioFinaleDatesPatch.hookCard(owner("Lfa/i1;"), NuvioMovieReleaseDatesPatch.EXTENSION);
+            for (String type : List.of("Lfa/e3;", "Lfa/i1;", "Lfa/f3;", "Lfa/k1;"))
+                NuvioFinaleDatesPatch.hookContext(owner(type), NuvioMovieReleaseDatesPatch.EXTENSION);
+            System.out.println("PASS: movie release hooks coexist with series finale hooks");
+            method("Lg0/i;", "q", 4);
+            method("Lq1/s;", "<init>", 3);
+            method("Lxa/bd;", "a", 11);
+            method("Lxa/bd;", "e", 6);
+            String streamRepository = "Lz9/k4;";
+            method(streamRepository, "j", 5);
+            field(streamRepository, "e", "Le9/f;");
+            field(streamRepository, "l", "Lkotlinx/coroutines/flow/MutableStateFlow;");
+            field("Lp8/e;", "V2", "Lsb/c;");
+            field("Lp8/e;", "B", "Lsb/c;");
+            field("Le9/f;", "f", "Lkotlinx/coroutines/flow/StateFlow;");
+            field("La9/n;", "a", "Ljava/lang/Object;");
+            method("Lcom/nuvio/tv/domain/model/AddonStreams;", "getStreams", 0);
+            String detailModel = "Lpa/a9;";
+            method(detailModel, "u", 0);
+            field(detailModel, "G", "Lkotlinx/coroutines/flow/StateFlow;");
+            String detailState = "Lpa/n7;";
+            field(detailState, "b", "Lcom/nuvio/tv/domain/model/Meta;");
+            field(detailState, "h", "Lcom/nuvio/tv/domain/model/NextToWatch;");
+            field(detailState, "f", "Ljava/util/List;");
+            method("Lpa/z0;", "C", 3);
+            for (String getter : List.of("getNextVideoId", "getNextSeason", "getNextEpisode", "getWatchProgress"))
+                method("Lcom/nuvio/tv/domain/model/NextToWatch;", getter, 0);
+            for (String getter : List.of("getId", "getSeason", "getEpisode"))
+                method("Lcom/nuvio/tv/domain/model/Video;", getter, 0);
+            field("Lfa/v1;", "x", "Lcom/nuvio/tv/domain/model/WatchProgress;");
+            field("Lfa/v1;", "y", "Lqa/f0;");
+            NuvioStreamPreloadPatch.hookComponent(owner("Lp8/e;"));
+            NuvioStreamPreloadPatch.hookContinueWatching(owner("Lfa/v1;"));
+            NuvioStreamPreloadPatch.hookDetails(owner(detailModel));
+            String playerModel = "Lsa/df;";
+            String playerController = "Lsa/p8;";
+            String playerState = "Lsa/af;";
+            String nextInfo = "Lsa/e2;";
+            field(playerModel, "Y", playerController);
+            method(playerModel, "f", 0);
+            field(playerController, "E0", "Lkotlinx/coroutines/flow/StateFlow;");
+            for (String name : List.of("a", "b", "c")) field(playerState, name, "Z");
+            for (String name : List.of("g", "z0", "c1")) field(playerState, name, "Ljava/lang/String;");
+            field(playerState, "o1", nextInfo);
+            field(playerState, "d", "Lsa/n6;");
+            field(nextInfo, "a", "Ljava/lang/String;");
+            field(nextInfo, "g", "Ljava/lang/String;");
+            field(nextInfo, "h", "Z");
+            field(nextInfo, "i", "Ljava/lang/Boolean;");
+            field(nextInfo, "b", "I");
+            field(nextInfo, "c", "I");
+            String pluginSearch = "Lz9/d4;";
+            field(pluginSearch, "o", streamRepository);
+            for (String name : List.of("p", "q")) field(pluginSearch, name, "Ljava/lang/String;");
+            for (String name : List.of("r", "s")) field(pluginSearch, name, "Ljava/lang/Integer;");
+            NuvioStreamPreloadPatch.hookPlayer(owner(playerModel));
+            NuvioStreamPreloadPatch.hookNextEpisodePluginPause(owner(pluginSearch));
+            String nextTransition = "Lsa/wb;";
+            method("Lsa/ec;", "C", 3);
+            NuvioStreamPreloadPatch.hookNextEpisodePicker(owner(nextTransition));
+            for (Runnable duplicate : List.<Runnable>of(
+                    () -> NuvioStreamPreloadPatch.hookPlayer(owner(playerModel)),
+                    () -> NuvioStreamPreloadPatch.hookNextEpisodePluginPause(owner(pluginSearch)),
+                    () -> NuvioStreamPreloadPatch.hookNextEpisodePicker(owner(nextTransition)))) {
+                boolean rejected = false;
+                try { duplicate.run(); } catch (IllegalStateException expected) { rejected = true; }
+                if (!rejected) throw new AssertionError("Duplicate next-episode hook accepted");
+            }
+            System.out.println("PASS: next-episode player hooks, playback-state contracts and scoped local-scraper pause hook");
+            boolean duplicateStreamHookRejected = false;
+            try { NuvioStreamPreloadPatch.hookContinueWatching(owner("Lfa/v1;")); }
+            catch (IllegalStateException expected) { duplicateStreamHookRejected = true; }
+            if (!duplicateStreamHookRejected) throw new AssertionError("Duplicate stream hook accepted");
+            System.out.println("PASS: stream preload hooks, native cache/profile contracts, and duplicate rejection");
+            field("Lo9/a1;", "k", "Lkotlinx/coroutines/flow/StateFlow;");
+            field("Lo9/a1;", "j", "Le9/f;");
+            field("Le9/f;", "f", "Lkotlinx/coroutines/flow/StateFlow;");
+            method("Lo9/a1;", "f", 2);
+            NuvioSettingsMenuPatch.hookLayoutList(owner("Loa/m;"));
+            verifyMenuRelocation(owner("Loa/m;"), owner("Lxa/za;"));
+            System.out.println("PASS: shared native Layout submenu and merged settings persistence contracts");
+        }
+
+        File output = new File(args[2]);
+        output.getParentFile().mkdirs();
+        DexPool.writeTo(output.getPath(), new ImmutableDexFile(Opcodes.getDefault(), used));
+        try (InputStream in = new BufferedInputStream(new FileInputStream(output))) {
+            DexBackedDexFile reloaded = DexBackedDexFile.fromInputStream(null, in);
+            if (reloaded.getClasses().size() != used.size()) throw new AssertionError("DEX round trip changed class count");
+        }
+        System.out.println("PASS: modified DEX writes and reloads");
+    }
+
+    private static void verifyCoordinatorProvider(MutableClass provider) {
+        for (Method method : provider.getMethods()) {
+            if (!method.getName().equals("get")) continue;
+            List<Instruction> instructions = new ArrayList<>();
+            method.getImplementation().getInstructions().forEach(instructions::add);
+            for (int i = 0; i + 4 < instructions.size(); i++) {
+                if (!(instructions.get(i) instanceof ReferenceInstruction)) continue;
+                if (!((ReferenceInstruction) instructions.get(i)).getReference().toString().equals("Lp8/e;->I3:Lsb/c;")) continue;
+                if (instructions.get(i + 4) instanceof ReferenceInstruction &&
+                    ((ReferenceInstruction) instructions.get(i + 4)).getReference().toString().equals("Lo9/a1;")) return;
+            }
+        }
+        throw new AssertionError("Native tracking settings no longer resolve the w3 coordinator provider");
+    }
+
+    private static void verifyComponentRegistration(MutableClass component) {
+        int calls = 0;
+        for (Method method : component.getMethods()) {
+            if (!method.getName().equals("<init>")) continue;
+            for (Instruction instruction : method.getImplementation().getInstructions()) {
+                if (!(instruction instanceof ReferenceInstruction) || !((ReferenceInstruction) instruction).getReference()
+                    .toString().contains("->registerSettingsComponent(")) continue;
+                com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction call =
+                    (com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction) instruction;
+                if (call.getStartRegister() != method.getImplementation().getRegisterCount() - 2 || call.getRegisterCount() != 1)
+                    throw new AssertionError("Settings component registration uses the wrong receiver");
+                calls++;
+            }
+        }
+        if (calls != 1) throw new AssertionError("Settings component was not registered exactly once");
+    }
+
+    private static void verifyMenuRelocation(MutableClass list, MutableClass settings) {
+        int menus = 0;
+        for (Method method : list.getMethods()) {
+            if (method.getImplementation() == null) continue;
+            for (Instruction instruction : method.getImplementation().getInstructions())
+                if (NuvioAiringSeriesPatch.calls(instruction, NuvioSettingsMenuPatch.EXTENSION, "addMenu")) menus++;
+        }
+        if (menus != 1) throw new AssertionError("Shared Layout menu was not installed exactly once");
+        for (Method method : settings.getMethods()) {
+            if (method.getImplementation() == null) continue;
+            for (Instruction instruction : method.getImplementation().getInstructions()) {
+                if (!(instruction instanceof ReferenceInstruction)) continue;
+                String reference = ((ReferenceInstruction) instruction).getReference().toString();
+                if (reference.contains("software/santodan/extension/") && reference.contains("renderSettings"))
+                    throw new AssertionError("Patch setting remains in its original section");
+            }
+        }
+    }
+
+    private static void verifyAiringSplitCall(MutableClass owner) {
+        for (Method method : owner.getMethods()) {
+            if (!"E".equals(method.getName()) || method.getParameterTypes().size() != 2) continue;
+            for (var instruction : method.getImplementation().getInstructions()) {
+                if (!(instruction instanceof com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction)
+                    || !(instruction instanceof ReferenceInstruction)) continue;
+                Object reference = ((ReferenceInstruction) instruction).getReference();
+                if (!(reference instanceof com.android.tools.smali.dexlib2.iface.reference.MethodReference)) continue;
+                var called = (com.android.tools.smali.dexlib2.iface.reference.MethodReference) reference;
+                if (!called.getDefiningClass().contains("NuvioAiringSeries") || !"effectiveHasAired".equals(called.getName())) continue;
+                var invoke = (com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction) instruction;
+                if (called.getParameterTypes().size() != 1
+                    || !"Ljava/lang/Object;".contentEquals(called.getParameterTypes().get(0)))
+                    throw new AssertionError("Airing split bridge descriptor has unsafe register types");
+                System.out.println("PASS: airing split bridge consumes the model before v"
+                    + invoke.getRegisterC() + " is overwritten with the boolean result");
+                return;
+            }
+        }
+        throw new AssertionError("Airing split bridge call not found");
+    }
+
+    private static void verifyRemainingAiredMap(MutableClass owner) {
+        for (Method method : owner.getMethods()) {
+            if (!"g".equals(method.getName()) || method.getParameterTypes().size() != 2) continue;
+            Instruction first = method.getImplementation().getInstructions().iterator().next();
+            if (first instanceof ReferenceInstruction) {
+                Object reference = ((ReferenceInstruction) first).getReference();
+                if (reference instanceof FieldReference && "Lqa/a4;".equals(((FieldReference) reference).getDefiningClass())
+                    && "T0".equals(((FieldReference) reference).getName())) return;
+            }
+        }
+        throw new AssertionError("Remaining hook does not read beta4's aired-episode map T0");
+    }
+
+}

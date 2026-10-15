@@ -6,12 +6,13 @@ import app.morphe.patches.klikk.shared.patches.models.videos.isPaidPatch
 import app.morphe.patches.klikk.shared.patches.models.videos.isSubscribedPatch
 
 @Suppress("unused")
-val freeContentPatch = bytecodePatch(
-    name = "Free content",
-    description = "Mark all content as free.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_KLIKK)
+val freeContentPatch =
+    bytecodePatch(
+        name = "Free content",
+        description = "Marks content as free.",
+        default = true,
+    ) {
+        compatibleWith(COMPATIBILITY_KLIKK)
 
-    dependsOn(isPaidPatch, isSubscribedPatch)
-}
+        dependsOn(isPaidPatch, isSubscribedPatch)
+    }

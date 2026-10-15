@@ -204,7 +204,7 @@
         "https://github.com/andrewliang25/morphe-patches"
       ],
       "license": "GPL-3.0",
-      "changes": "Renamed for Threads, with one entry point the browser launcher calls with its context and link in place of the browser activity's intent, Threads' own click trackers (l.threads.com, l.threads.net, l.instagram.com and /linkshim) unwrapped as Threads reads them, and Threads, Instagram and the other Meta sites kept in the app."
+      "changes": "Renamed for Threads, with one entry point that the browser launcher, and each place on 451 that makes the browser Intent itself, calls with its context and link in place of the browser activity's intent, Threads' own click trackers (l.threads.com, l.threads.net, l.instagram.com and /linkshim) unwrapped as Threads reads them, and Threads, Instagram and the other Meta sites kept in the app."
     },
     {
       "paths": [
@@ -216,7 +216,7 @@
         "https://github.com/SysAdminDoc/Hushfacebook"
       ],
       "license": "GPL-3.0-only",
-      "changes": "Open links in browser: the extension asked first thing in Threads' browser launcher, found by the message it logs and the link it parses."
+      "changes": "Open links in browser: the extension asked first thing in Threads' browser launcher, found by the message it logs and the link it parses, and in front of the browser Intent wherever 451 makes it without the launcher, each place proven by its context, link and ending before anything changes."
     },
     {
       "paths": [
@@ -276,6 +276,17 @@
     },
     {
       "paths": [
+        "extensions/threads/src/main/java/app/morphe/extension/hushthreads/search/SearchSuggestions.java",
+        "patches/src/main/kotlin/app/morphe/patches/threads/ads/SearchSuggestedUsers.kt"
+      ],
+      "origin": "original",
+      "upstream": "https://github.com/SysAdminDoc/HushThreads",
+      "via": [],
+      "license": "GPL-3.0-only",
+      "changes": "Hide suggested users in Search: the method that builds Search's list asks the extension first thing past its check that the Follow suggestions list isn't empty, and leaves by that check's other side while the switch is on, so the carousel's item is never added. Found by reading Search's DiscoveryContent and the list item it keys standalone_suggested_users in 451, with no outside code."
+    },
+    {
+      "paths": [
         "extensions/threads/src/main/java/app/morphe/extension/hushthreads/misc/ScreenshotDetection.java",
         "patches/src/main/kotlin/app/morphe/patches/threads/misc/screenshot/**"
       ],
@@ -308,6 +319,16 @@
       "via": [],
       "license": "GPL-3.0-only",
       "changes": "A long press on the Threads logo at the top of the home feed that opens HushThreads settings, made by sending the logo's Compose clickable to the combined clickable with Threads' own tap kept, found by the LogoTap refresh reason and the main feed's Compose notes in 450, with no outside code."
+    },
+    {
+      "paths": [
+        "extensions/threads/src/main/java/app/morphe/extension/hushthreads/settings/SettingsUpgrade.java"
+      ],
+      "origin": "original",
+      "upstream": "https://github.com/SysAdminDoc/HushThreads",
+      "via": [],
+      "license": "GPL-3.0-only",
+      "changes": "A receipt of each build's patch families and switch defaults kept in the settings store by the main process, so a switch nobody stored keeps an earlier build's default when a later build changes it, with no outside code."
     },
     {
       "paths": [
@@ -481,6 +502,7 @@
     },
     {
       "paths": [
+        "extensions/threads/src/main/java/app/morphe/extension/hushthreads/download/MediaConnection.java",
         "extensions/threads/src/main/java/app/morphe/extension/hushthreads/download/PostSave.java",
         "extensions/threads/src/main/java/app/morphe/extension/hushthreads/download/SaveMediaRow.java",
         "patches/src/main/kotlin/app/morphe/patches/threads/download/SaveMediaPatch.kt"
@@ -514,6 +536,22 @@
       ],
       "license": "GPL-3.0-only",
       "changes": "HushPinterest's restart marker and its count of the changes a restart applies, moved from app.hushpinterest.extension.shared to app.morphe.extension.shared with HushThreads' pause class. The restart row that uses it is drawn by SettingsNavigation, and SettingsEntry reads the marker when Threads starts."
+    },
+    {
+      "paths": [
+        "extensions/shared/library/src/main/java/app/morphe/extension/shared/settings/preference/QuickSetups.java",
+        "extensions/shared/library/src/main/java/app/morphe/extension/shared/settings/preference/ReportProblem.java",
+        "extensions/threads/src/main/java/app/morphe/extension/hushthreads/settings/QuickSetupKeys.java",
+        "extensions/threads/src/main/java/app/morphe/extension/hushthreads/settings/ReportProblemForm.java"
+      ],
+      "origin": "ported",
+      "upstream": "https://github.com/SysAdminDoc/HushPinterest",
+      "commit": "44fb93384a319d8e5d324f51b416efdc3d3147e6",
+      "via": [
+        "https://github.com/SysAdminDoc/hushfeed"
+      ],
+      "license": "GPL-3.0-only",
+      "changes": "HushPinterest's Quick setups and Report a problem, moved from app.hushpinterest.extension to app.morphe.extension. QuickSetupKeys picks Threads' switches (Quiet: ads and suggested accounts; Privacy: usage reports, link tracking and screenshots), ReportProblemForm names HushThreads' repository and its bug form's field ids, and the no-browser message reuses the Ko-fi row's wording with the issues address. SettingsNavigation draws both rows on the home page and the fragment shows the choices with HushThreads' ChoiceCards."
     }
   ]
 }

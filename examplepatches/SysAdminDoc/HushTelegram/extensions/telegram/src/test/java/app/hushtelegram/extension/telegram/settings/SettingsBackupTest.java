@@ -69,6 +69,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
@@ -88,6 +89,7 @@ import app.hushtelegram.extension.shared.settings.Setting;
 import app.hushtelegram.extension.shared.settings.StringSetting;
 import app.hushtelegram.extension.shared.settings.preference.AbstractPreferenceFragment;
 import app.hushtelegram.extension.shared.settings.preference.LogBufferManager;
+import app.hushtelegram.extension.shared.settings.preference.QuickSetups;
 import app.hushtelegram.extension.shared.settings.preference.SharedPrefCategory;
 
 /**
@@ -144,6 +146,7 @@ public class SettingsBackupTest {
         for (BooleanSetting setting : SettingsBackup.ALLOWLIST) setting.resetToDefault();
         for (StringSetting list : SettingsBackup.FILTER_LISTS) list.resetToDefault();
         for (IntegerSetting number : SettingsBackup.NUMBERS) number.resetToDefault();
+        for (StringSetting text : SettingsBackup.TEXTS) text.resetToDefault();
         PatchFamily.inBuildForTests = java.util.EnumSet.allOf(PatchFamily.class);
         ShadowToast.reset();
         ShadowAlertDialog.reset();
@@ -162,6 +165,7 @@ public class SettingsBackupTest {
         for (BooleanSetting setting : SettingsBackup.ALLOWLIST) setting.resetToDefault();
         for (StringSetting list : SettingsBackup.FILTER_LISTS) list.resetToDefault();
         for (IntegerSetting number : SettingsBackup.NUMBERS) number.resetToDefault();
+        for (StringSetting text : SettingsBackup.TEXTS) text.resetToDefault();
         // The release check stays out of every file, so the list above doesn't reach it.
         Settings.CHECK_FOR_RELEASES.resetToDefault();
         BaseSettings.PAUSED.resetToDefault();
@@ -191,28 +195,29 @@ public class SettingsBackupTest {
         assertTrue("STAYS_OUT names a switch Settings no longer has", switches.containsAll(STAYS_OUT.keySet()));
         assertEquals("the list names a switch twice", SettingsBackup.ALLOWLIST.size(),
                 new HashSet<>(SettingsBackup.ALLOWLIST).size());
-        // A file carries true or false, the message filters as lists of lines and the sticker size
-        // as one of its choices. Any other setting in Settings that isn't a switch needs a format
-        // that can carry it before it can be decided on.
+        // A file carries true or false, the message filters as lists of lines, the sticker size
+        // as one of its choices and the title emoji as short text. Any other setting in Settings
+        // that isn't a switch needs a format that can carry it before it can be decided on.
         List<String> notSwitches = new ArrayList<>();
         for (Setting<?> setting : declaredSettings(Settings.class)) {
             if (!(setting instanceof BooleanSetting) && !SettingsBackup.FILTER_LISTS.contains(setting)
-                    && !SettingsBackup.NUMBERS.contains(setting)) notSwitches.add(setting.key);
+                    && !SettingsBackup.NUMBERS.contains(setting) && !SettingsBackup.TEXTS.contains(setting)) notSwitches.add(setting.key);
         }
         assertEquals("a setting in Settings isn't a switch, and a settings file has no format for it",
                 Collections.emptyList(), notSwitches);
         assertEquals(Arrays.asList(Settings.MESSAGE_FILTERS_GROUPS, Settings.MESSAGE_FILTERS_CHANNELS), SettingsBackup.FILTER_LISTS);
         assertEquals(Collections.singletonList(Settings.STICKER_SIZE), SettingsBackup.NUMBERS);
+        assertEquals(Collections.singletonList(Settings.TITLE_EMOJI), SettingsBackup.TEXTS);
         assertEquals(Arrays.asList(Settings.HIDE_ADS, Settings.HIDE_STORIES,
                         Settings.HIDE_RECOMMENDATIONS, Settings.HIDE_COMMERCE,
                         Settings.HIDE_PROMOTIONAL_BANNERS,
-                        Settings.HIDE_SPONSORED_PROXY, Settings.HIDE_POPULAR_APPS, Settings.HIDE_CONTACTS_BLOCK, Settings.HIDE_GREETING_STICKERS, Settings.DISABLE_CHAT_SWIPE, Settings.DISABLE_CHANNEL_PULL, Settings.DISABLE_TOPIC_PULL,
+                        Settings.HIDE_SPONSORED_PROXY, Settings.HIDE_POPULAR_APPS, Settings.SEARCH_ONLY_MY_CHATS, Settings.SEARCH_STYLED_NAMES, Settings.HIDE_CONTACTS_BLOCK, Settings.HIDE_GREETING_STICKERS, Settings.DISABLE_CHAT_SWIPE, Settings.DISABLE_CHANNEL_PULL, Settings.DISABLE_TOPIC_PULL,
                         Settings.NORMAL_PASTE, Settings.SHOW_LOCAL_IDS, Settings.PROFILE_DATA_CENTER, Settings.DISABLE_DOUBLE_TAP_REACTIONS,
-                        Settings.QUIET_CONTACTS_NAG, Settings.HOLIDAY_LOOK, Settings.USE_SYSTEM_FONT, Settings.AMOLED_BLACK, Settings.HIDE_TRANSLATE_BAR, Settings.EXACT_NUMBERS, Settings.REVEAL_SPOILERS, Settings.HIDE_KEYBOARD_ON_SCROLL, Settings.KEEP_VIDEOS_MUTED, Settings.SWIPE_BACK_ON_PROFILES, Settings.HIDE_PHONE_NUMBER, Settings.SHARE_NUMBER_UNTICKED, Settings.MESSAGE_SECONDS, Settings.ALLOW_CHAT_BLUR, Settings.VOICE_ONE_AT_A_TIME, Settings.NO_HAPTICS, Settings.REACTION_EFFECTS_OFF, Settings.HIDE_FOLDER_COUNTERS, Settings.FORWARD_HIDE_SENDER, Settings.VOICE_MUSIC_PLAYER, Settings.SILENCE_NON_CONTACTS, Settings.DISABLE_ARCHIVE_PULL, Settings.REAR_CAMERA_FIRST, Settings.HIDE_GALLERY_CAMERA_TILE, Settings.HIDE_STICKER_TIME, Settings.CHANGE_STICKER_SIZE, Settings.IGNORE_MUTED_MENTIONS, Settings.HIDE_BLOCKED_IN_GROUPS, Settings.HIDE_BY_KEYWORD, Settings.HIDE_FEATURES_AND_INVITE, Settings.MESSAGE_MENU_REPEAT, Settings.KEEP_DELETED_MESSAGES, Settings.ASK_BEFORE_STICKER, Settings.BETA_LOGS_OFF, Settings.OUTSIDE_TRANSLATE, Settings.HIDE_CHANNEL_BUTTONS, Settings.HIDE_SEND_AS, Settings.HIDE_CONTACTS_TAB, Settings.FASTER_DOWNLOADS, Settings.SAVE_DOWNLOADS, Settings.ASK_BEFORE_GIF, Settings.ASK_BEFORE_VOICE_VIDEO, Settings.ASK_BEFORE_CALL, Settings.MESSAGE_MENU_COPY_PHOTO, Settings.MESSAGE_MENU_DETAILS, Settings.MESSAGE_MENU_QUICK_FORWARD,
+                        Settings.QUIET_CONTACTS_NAG, Settings.HOLIDAY_LOOK, Settings.USE_SYSTEM_FONT, Settings.AMOLED_BLACK, Settings.HIDE_TRANSLATE_BAR, Settings.EXACT_NUMBERS, Settings.REVEAL_SPOILERS, Settings.HIDE_KEYBOARD_ON_SCROLL, Settings.KEEP_VIDEOS_MUTED, Settings.SWIPE_BACK_ON_PROFILES, Settings.HIDE_PHONE_NUMBER, Settings.SHARE_NUMBER_UNTICKED, Settings.MESSAGE_SECONDS, Settings.ALLOW_CHAT_BLUR, Settings.VOICE_ONE_AT_A_TIME, Settings.LOCKED_VOICE_GUARD, Settings.NO_HAPTICS, Settings.REACTION_EFFECTS_OFF, Settings.HIDE_FOLDER_COUNTERS, Settings.LAUNCH_FOLDER, Settings.FORWARD_HIDE_SENDER, Settings.VOICE_MUSIC_PLAYER, Settings.SILENCE_NON_CONTACTS, Settings.DISABLE_ARCHIVE_PULL, Settings.REAR_CAMERA_FIRST, Settings.HIDE_GALLERY_CAMERA_TILE, Settings.HIDE_STICKER_TIME, Settings.CHANGE_STICKER_SIZE, Settings.IGNORE_MUTED_MENTIONS, Settings.HIDE_BLOCKED_IN_GROUPS, Settings.HIDE_BY_KEYWORD, Settings.HIDE_FEATURES_AND_INVITE, Settings.MESSAGE_MENU_REPEAT, Settings.KEEP_DELETED_MESSAGES, Settings.ASK_BEFORE_STICKER, Settings.BETA_LOGS_OFF, Settings.OUTSIDE_TRANSLATE, Settings.HIDE_CHANNEL_BUTTONS, Settings.HIDE_SEND_AS, Settings.HIDE_CONTACTS_TAB, Settings.COMPACT_TAB_BAR, Settings.SIDE_MENU, Settings.FASTER_DOWNLOADS, Settings.DATA_SAVER_DOWNLOADS, Settings.SAVE_DOWNLOADS, Settings.ASK_BEFORE_GIF, Settings.ASK_BEFORE_VOICE_VIDEO, Settings.ASK_BEFORE_CALL, Settings.MESSAGE_MENU_COPY_PHOTO, Settings.MESSAGE_MENU_DETAILS, Settings.MESSAGE_MENU_QUICK_FORWARD,
                         Settings.DISABLE_ANALYTICS, Settings.DISABLE_CALL_DEBUG, Settings.DISABLE_DRAFT_PREVIEWS,
                         Settings.LOCAL_DRAFTS, Settings.LOCAL_SEARCH, Settings.GALLERY_CAMERA_ON_TAP,
-                        Settings.OPEN_EXTERNAL_LINKS, Settings.STRIP_LINK_TRACKING, Settings.SKIP_AUTOLOGIN,
-                        Settings.DISABLE_UPDATE_CHECKS,
+                        Settings.OPEN_EXTERNAL_LINKS, Settings.MINI_APP_LOCATION_OFF, Settings.STRIP_LINK_TRACKING,
+                        Settings.SKIP_AUTOLOGIN, Settings.DISABLE_UPDATE_CHECKS,
                         Settings.REPAIR_FIREBASE_PUSH),
                 SettingsBackup.ALLOWLIST);
     }
@@ -257,7 +262,9 @@ public class SettingsBackupTest {
         Set<String> carried = keys(SettingsBackup.ALLOWLIST);
         carried.addAll(keys(SettingsBackup.FILTER_LISTS));
         carried.addAll(keys(SettingsBackup.NUMBERS));
+        carried.addAll(keys(SettingsBackup.TEXTS));
         assertEquals(carried, names(switches));
+        assertEquals("", switches.get(Settings.TITLE_EMOJI.key));
         for (StringSetting list : SettingsBackup.FILTER_LISTS) {
             assertEquals(list.key, 0, switches.getJSONArray(list.key).length());
         }
@@ -271,7 +278,7 @@ public class SettingsBackupTest {
         assertEquals(true, switches.get(Settings.DISABLE_ANALYTICS.key));
         for (Setting<?> setting : Setting.allLoadedSettings()) {
             if (SettingsBackup.ALLOWLIST.contains(setting) || SettingsBackup.FILTER_LISTS.contains(setting)
-                    || SettingsBackup.NUMBERS.contains(setting)) continue;
+                    || SettingsBackup.NUMBERS.contains(setting) || SettingsBackup.TEXTS.contains(setting)) continue;
             assertFalse(setting.key + " is in the file", text.contains(setting.key));
         }
         for (String leak : new String[]{"sentinel", "sessionid", "ds_user_id", "100012345678901", "secret-session",
@@ -364,6 +371,33 @@ public class SettingsBackupTest {
         }
     }
 
+    /** A file that changes the Data Saver switch runs Telegram's download check, as the row does. */
+    @Test
+    public void aFileThatChangesTheDataSaverSwitchRunsTelegramsCheck() throws Exception {
+        Object downloads = new Object();
+        List<String> checks = new ArrayList<>();
+        app.hushtelegram.extension.telegram.misc.DataSaverDownloadsForTests.checkWith(
+                checked -> checks.add((checked == downloads) + " " + Settings.DATA_SAVER_DOWNLOADS.get()), downloads);
+        try {
+            assertEquals(1, SettingsBackup.apply(SettingsBackup.parse(fileWith(Settings.DATA_SAVER_DOWNLOADS, true))));
+            ShadowLooper.idleMainLooper();
+            assertEquals(Collections.singletonList("true true"), checks);
+            // A file that leaves the switch as it is doesn't run it.
+            assertEquals(1, SettingsBackup.apply(SettingsBackup.parse(fileWith(Settings.HIDE_ADS, false))));
+            ShadowLooper.idleMainLooper();
+            assertEquals(Collections.singletonList("true true"), checks);
+            // Nor does one that names it at the value it already has.
+            assertEquals(1, SettingsBackup.apply(SettingsBackup.parse(
+                    fileWith(Settings.DATA_SAVER_DOWNLOADS, true, Settings.HIDE_ADS, true))));
+            ShadowLooper.idleMainLooper();
+            assertEquals(Collections.singletonList("true true"), checks);
+        } finally {
+            Settings.DATA_SAVER_DOWNLOADS.resetToDefault();
+            Settings.HIDE_ADS.resetToDefault();
+            app.hushtelegram.extension.telegram.misc.DataSaverDownloadsForTests.reset();
+        }
+    }
+
     @Test
     public void aFailedCommitIsPutBackAndSaysSo() throws Exception {
         String file = fileWith(Settings.HIDE_ADS, false, Settings.DISABLE_UPDATE_CHECKS, false);
@@ -402,6 +436,40 @@ public class SettingsBackupTest {
                 });
         assertFalse("a store left changed was reported as put back", failure.rolledBack);
         assertEquals(2, counts.commits.get());
+    }
+
+    /**
+     * A rollback puts back what the file named and nothing else. A switch the file doesn't name,
+     * saved the way its row saves it while the import's commit was still out, keeps that value in
+     * the store and in the process.
+     */
+    @Test
+    public void aRollbackLeavesASwitchSavedSinceAlone() throws Exception {
+        SettingsBackup.Snapshot snapshot = SettingsBackup.parse(fileWith(Settings.HIDE_ADS, false));
+        SharedPreferences real = Setting.preferences.preferences;
+        SettingsBackup.ApplyFailed failure;
+        try (FailingStore store = FailingStore.holding(FailingStore.Fault.COMMIT_THROWS_AFTER_LANDING)) {
+            Future<SettingsBackup.ApplyFailed> applied = Utils.submitOnBackgroundThread(() -> {
+                try {
+                    SettingsBackup.apply(snapshot);
+                    return null;
+                } catch (SettingsBackup.ApplyFailed failed) {
+                    return failed;
+                }
+            });
+            assertTrue("the import never reached its commit", store.awaitHeld());
+            assertTrue(real.edit().putBoolean(Settings.NORMAL_PASTE.key, true).commit());
+            BooleanSetting.privateSetValue(Settings.NORMAL_PASTE, true);
+            store.letGo();
+            failure = applied.get(5, TimeUnit.SECONDS);
+        }
+        assertNotNull("a failed commit was reported as written", failure);
+        assertTrue("the switch the file named isn't back", failure.rolledBack);
+        assertTrue(Settings.HIDE_ADS.savedValue());
+        assertFalse(store().containsKey(Settings.HIDE_ADS.key));
+        assertEquals("the rollback took a later write to another switch with it",
+                true, store().get(Settings.NORMAL_PASTE.key));
+        assertTrue(Settings.NORMAL_PASTE.savedValue());
     }
 
     /**
@@ -553,8 +621,10 @@ public class SettingsBackupTest {
         // A line that isn't a working filter, such as an expression edited by hand, still comes in:
         // the editor shows it and a chat leaves it out.
         JSONObject file = new JSONObject(SettingsBackup.create());
-        file.getJSONObject("settings").put(Settings.MESSAGE_FILTERS_GROUPS.key, new org.json.JSONArray(Arrays.asList("/(unclosed/", "/(a+)+/")));
-        assertEquals("/(unclosed/\n/(a+)+/", SettingsBackup.parse(file.toString()).lists.get(Settings.MESSAGE_FILTERS_GROUPS));
+        file.getJSONObject("settings").put(Settings.MESSAGE_FILTERS_GROUPS.key,
+                new org.json.JSONArray(Arrays.asList("/(unclosed/", "/(a+)+/", "/(?:(?=x)){16777215}(?!x)/")));
+        assertEquals("/(unclosed/\n/(a+)+/\n/(?:(?=x)){16777215}(?!x)/",
+                SettingsBackup.parse(file.toString()).lists.get(Settings.MESSAGE_FILTERS_GROUPS));
     }
 
     /**
@@ -596,6 +666,56 @@ public class SettingsBackupTest {
         assertTrue(SettingsBackup.Snapshot.fromBundle(state).numbers.isEmpty());
         state.getBundle("numbers").putString(Settings.STICKER_SIZE.key, "150");
         assertTrue(SettingsBackup.Snapshot.fromBundle(state).numbers.isEmpty());
+    }
+
+    /**
+     * The title emoji goes out as the text it is and comes back only as text the editor would have
+     * saved, and a file from before it leaves the text alone.
+     */
+    @Test
+    public void theTitleEmojiRoundTripsAsTextTheTitleCanShow() throws Exception {
+        String tree = new String(Character.toChars(0x1F384));
+        Settings.TITLE_EMOJI.save(tree);
+        String file = SettingsBackup.create();
+        assertEquals(tree, new JSONObject(file).getJSONObject("settings").get(Settings.TITLE_EMOJI.key));
+
+        Settings.TITLE_EMOJI.save("");
+        SettingsBackup.Snapshot snapshot = SettingsBackup.parse(file);
+        assertEquals(0, snapshot.switchChanges());
+        assertEquals("it isn't a filter list", 0, snapshot.listChanges());
+        assertFalse(snapshot.sizeChanges());
+        assertTrue(snapshot.titleEmojiChanges());
+        SettingsBackup.Snapshot kept = SettingsBackup.Snapshot.fromBundle(snapshot.toBundle());
+        assertEquals(snapshot.texts, kept.texts);
+        assertEquals(1, SettingsBackup.apply(kept));
+        assertEquals(tree, Settings.TITLE_EMOJI.savedValue());
+        assertEquals("a file read back is the file", file, SettingsBackup.create());
+        assertFalse(SettingsBackup.parse(file).titleEmojiChanges());
+
+        SettingsBackup.Snapshot older = SettingsBackup.parse(fileWith(Settings.HIDE_ADS, false));
+        assertTrue(older.texts.isEmpty());
+        SettingsBackup.apply(older);
+        assertEquals("a file without the text left it alone", tree, Settings.TITLE_EMOJI.savedValue());
+
+        StringBuilder tooLong = new StringBuilder();
+        for (int i = 0; i <= app.hushtelegram.extension.telegram.misc.TitleEmoji.MAX_CODE_POINTS; i++) tooLong.append(tree);
+        String turned = new String(Character.toChars(0x202E)) + tree;
+        for (Object bad : new Object[]{tooLong.toString(), " " + tree, "a\nb", turned, 1, true, JSONObject.NULL, new org.json.JSONArray()}) {
+            JSONObject wrong = new JSONObject(file);
+            wrong.getJSONObject("settings").put(Settings.TITLE_EMOJI.key, bad);
+            assertEquals(String.valueOf(bad), SettingsBackup.Reason.VALUE, reasonFor(wrong.toString()));
+        }
+        // Empty is a choice: it clears the text.
+        JSONObject cleared = new JSONObject(file);
+        cleared.getJSONObject("settings").put(Settings.TITLE_EMOJI.key, "");
+        assertEquals("", SettingsBackup.parse(cleared.toString()).texts.get(Settings.TITLE_EMOJI));
+
+        // A saved state is read back as strictly: text the title can't show is left out.
+        Bundle state = snapshot.toBundle();
+        state.getBundle("texts").putString(Settings.TITLE_EMOJI.key, tooLong.toString());
+        assertTrue(SettingsBackup.Snapshot.fromBundle(state).texts.isEmpty());
+        state.getBundle("texts").putInt(Settings.TITLE_EMOJI.key, 1);
+        assertTrue(SettingsBackup.Snapshot.fromBundle(state).texts.isEmpty());
     }
 
     // ---- Refusals ------------------------------------------------------------------------------
@@ -900,6 +1020,31 @@ public class SettingsBackupTest {
         }
     }
 
+    /**
+     * An import can write a switch to the value a Quick setups choice left there, which no write
+     * listener hears, so it ends that choice's undo rather than let Undo take back what was imported.
+     */
+    @Test
+    public void anImportEndsTheLastQuickSetupsUndo() throws Exception {
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            Activity activity = controller.get();
+            HushTelegramPreferenceFragment page = SettingsL10nTest.pageOf(SettingsL10nTest.show(activity));
+            assertEquals(1, page.applyQuickSetup(Collections.singletonMap(Settings.REVEAL_SPOILERS, true)));
+            assertNotNull(QuickSetups.last());
+            // The file keeps spoilers revealed, as the choice left them, and turns Hide ads off.
+            deliver(activity, tap(activity, page, IMPORT_ROW),
+                    fileWith(Settings.REVEAL_SPOILERS, true, Settings.HIDE_ADS, false));
+            shownPreview().getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            settle();
+            assertFalse(Settings.HIDE_ADS.savedValue());
+            assertNull("Undo would take back the imported spoiler switch", QuickSetups.last());
+            assertEquals(0, page.undoQuickSetup());
+            assertTrue(Settings.REVEAL_SPOILERS.savedValue());
+        } finally {
+            QuickSetups.forget();
+        }
+    }
+
     @Test
     public void aFileThatChangesNothingSaysSoAndOffersNoImport() throws Exception {
         try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
@@ -935,6 +1080,33 @@ public class SettingsBackupTest {
             assertEquals(125, (int) Settings.STICKER_SIZE.savedValue());
             assertEquals("the row shows the imported size", "125% of Telegram's size",
                     String.valueOf(page.findPreference(HushTelegramPreferenceFragment.STICKER_SIZE_ROW).getSummary()));
+        }
+    }
+
+    @Test
+    public void aFileThatChangesOnlyTheTitleEmojiSaysSoAndImportsIt() throws Exception {
+        String tree = new String(Character.toChars(0x1F384));
+        Settings.TITLE_EMOJI.save(tree);
+        String file = SettingsBackup.create();
+        Settings.TITLE_EMOJI.resetToDefault();
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            Activity activity = controller.get();
+            HushTelegramPreferenceFragment page = SettingsL10nTest.pageOf(SettingsL10nTest.show(activity));
+            deliver(activity, tap(activity, page, IMPORT_ROW), file);
+            AlertDialog preview = shownPreview();
+            assertEquals("The emoji next to the chat list title will change.\n\nEmoji next to the chat list title: none to "
+                    + app.hushtelegram.extension.shared.L10n.isolate(tree), String.valueOf(shadowOf(preview).getMessage()));
+            assertEquals("Import", String.valueOf(preview.getButton(AlertDialog.BUTTON_POSITIVE).getText()));
+            preview.getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            settle();
+            assertEquals("Settings imported.", ShadowToast.getTextOfLatestToast());
+            assertEquals(tree, Settings.TITLE_EMOJI.savedValue());
+            assertTrue("the row shows the imported text",
+                    String.valueOf(page.findPreference(TitleEmojiEditor.KEY).getSummary()).contains(tree));
+            // The title only changes at the next start, like a switch that waits for one, and an
+            // import used to leave it off the restart row.
+            assertEquals(Collections.singleton(Settings.TITLE_EMOJI.key), new TreeSet<>(AbstractPreferenceFragment.restartPending));
+            assertEquals("Restart Telegram to apply this change", restartRow(page));
         }
     }
 
@@ -1098,6 +1270,39 @@ public class SettingsBackupTest {
     }
 
     /**
+     * Export settings names what a file leaves out, from the same decisions this class checks:
+     * every switch STAYS_OUT names, by the title its row shows, along with Pause and Debug logging.
+     * A build without a feature doesn't name it, and the row never promises a backup of Telegram
+     * itself.
+     */
+    @Test
+    public void theExportRowNamesWhatAFileLeavesOut() throws Exception {
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushTelegramPreferenceFragment page = SettingsL10nTest.pageOf(SettingsL10nTest.show(controller.get()));
+            String summary = String.valueOf(page.findPreference(EXPORT_ROW).getSummary());
+            List<String> named = new ArrayList<>(STAYS_OUT.keySet());
+            named.add(BaseSettings.PAUSED.key);
+            named.add(BaseSettings.DEBUG.key);
+            for (String key : named) {
+                Preference row = page.findPreference(key);
+                assertNotNull(key, row);
+                assertTrue(key + " isn't named: " + summary, summary.contains(String.valueOf(row.getTitle())));
+            }
+            assertTrue(summary, summary.contains("the translation service, its key and the chats you turned translation on for"));
+            assertTrue(summary, summary.contains("Your chats, drafts and kept messages aren't in it."));
+        }
+        String partial = HushTelegramPreferenceFragment.exportSummary(java.util.EnumSet.noneOf(PatchFamily.class));
+        assertTrue(partial, partial.contains("Left out of the file: Pause HushTelegram"));
+        assertTrue(partial, partial.contains("Check for new HushTelegram releases"));
+        // The lock and the hidden Quick setups row keep their own state, which a file doesn't carry.
+        assertTrue(partial, partial.contains("Lock HushTelegram settings"));
+        assertTrue(partial, partial.contains("Quick setups on the home page"));
+        for (String missing : new String[]{"UnifiedPush", "Folders by chat type", "translation service"}) {
+            assertFalse("a build without it named " + missing, partial.contains(missing));
+        }
+    }
+
+    /**
      * While a file is read, both rows are out of reach and the one acting says what it's doing,
      * which is also what a screen reader hears as its state. A second picker can't be opened.
      */
@@ -1208,6 +1413,77 @@ public class SettingsBackupTest {
             shownPreview().getButton(AlertDialog.BUTTON_POSITIVE).performClick();
             settle();
             assertFalse(Settings.HIDE_ADS.savedValue());
+        }
+    }
+
+    /**
+     * A switch that takes effect at the next start owes a restart when a file changes it, the same
+     * as when its row does. The card and the restart row say so, on the page and on one rebuilt
+     * afterwards, until a file puts back the value Telegram is running with, and then only for that
+     * switch. A file that names the switch as it is, or whose write is put back, owes nothing new.
+     * Nothing is asked along the way: the preview is the only dialog.
+     *
+     * <p>An import used to skip that bookkeeping, and the card said "Your switches are working."
+     * over a font, a theme or a tab bar that hadn't changed yet.
+     */
+    @Test
+    public void anImportedSwitchThatWaitsForARestartSaysSoUntilItsRunningValueIsBack() throws Exception {
+        List<BooleanSetting> gated = Arrays.asList(Settings.USE_SYSTEM_FONT, Settings.AMOLED_BLACK,
+                Settings.DISABLE_ARCHIVE_PULL, Settings.HIDE_CONTACTS_TAB);
+        String on = fileWith(Settings.USE_SYSTEM_FONT, true, Settings.AMOLED_BLACK, true,
+                Settings.DISABLE_ARCHIVE_PULL, true, Settings.HIDE_CONTACTS_TAB, true);
+        String off = fileWith(Settings.USE_SYSTEM_FONT, false, Settings.AMOLED_BLACK, false,
+                Settings.DISABLE_ARCHIVE_PULL, false, Settings.HIDE_CONTACTS_TAB, false);
+        String working = "Your switches are working.";
+        String waiting = "A change here applies after Telegram restarts.";
+        Set<String> owed = AbstractPreferenceFragment.restartPending;
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushTelegramPreferenceFragment page = SettingsL10nTest.pageOf(SettingsL10nTest.show(controller.get()));
+            for (BooleanSetting setting : gated) assertTrue(setting.key + " takes effect at once", setting.rebootApp);
+
+            // Named as they are, next to a switch that does change.
+            JSONObject asTheyAre = new JSONObject(off);
+            asTheyAre.getJSONObject("settings").put(Settings.HIDE_ADS.key, false);
+            importFile(controller.get(), page, asTheyAre.toString());
+            assertFalse(Settings.HIDE_ADS.savedValue());
+            assertEquals("a switch a file left as it was owes a restart", Collections.emptySet(), new TreeSet<>(owed));
+            assertEquals(working, overview(page));
+
+            // A write that's put back changed nothing.
+            importFile(controller.get(), page, on, FailingStore.Fault.COMMIT_THROWS);
+            assertEquals("Couldn't import the settings. Nothing was changed.", ShadowToast.getTextOfLatestToast());
+            assertEquals("a write that was put back owes a restart", Collections.emptySet(), new TreeSet<>(owed));
+            assertEquals(working, overview(page));
+
+            importFile(controller.get(), page, on);
+            assertEquals("Settings imported. 4 switches changed.", ShadowToast.getTextOfLatestToast());
+            assertFalse("the import asked something after its preview", ShadowAlertDialog.getLatestAlertDialog().isShowing());
+            assertEquals(keys(gated), new TreeSet<>(owed));
+            assertEquals(waiting, overview(page));
+            assertEquals("Restart Telegram to apply 4 changes", restartRow(page));
+
+            // The page is rebuilt. Telegram runs what it ran, so it owes what it owed.
+            controller.recreate();
+            ShadowLooper.idleMainLooper();
+            page = SettingsL10nTest.pageOf(dialogOf(controller.get()));
+            assertEquals(keys(gated), new TreeSet<>(owed));
+            assertEquals(waiting, overview(page));
+            assertEquals("Restart Telegram to apply 4 changes", restartRow(page));
+
+            // A file that would put them back, whose write doesn't land.
+            importFile(controller.get(), page, off, FailingStore.Fault.COMMIT_THROWS);
+            assertEquals(keys(gated), new TreeSet<>(owed));
+            assertEquals(waiting, overview(page));
+
+            // Back to the running value one at a time: each takes its own debt off and no other.
+            Set<String> left = keys(gated);
+            for (BooleanSetting setting : gated) {
+                importFile(controller.get(), page, fileWith(setting, false));
+                left.remove(setting.key);
+                assertEquals("after " + setting.key + " went back", left, new TreeSet<>(owed));
+                assertEquals("after " + setting.key + " went back", left.isEmpty() ? working : waiting, overview(page));
+            }
+            assertNull("the restart row outlived the changes it was for", restartRow(page));
         }
     }
 
@@ -1469,6 +1745,36 @@ public class SettingsBackupTest {
         Uri uri = SettingsFileProvider.put(AUTHORITY, System.nanoTime() + ".json", text.getBytes(StandardCharsets.UTF_8));
         shadowOf(activity).receiveResult(started.intent, Activity.RESULT_OK, new Intent().setData(uri));
         settle();
+    }
+
+    /**
+     * Imports [file] the whole way: the picker, the preview and its Import button, through a store
+     * with [faults], and waits for it to end.
+     */
+    private static void importFile(Activity activity, HushTelegramPreferenceFragment page, String file,
+                                   FailingStore.Fault... faults) throws Exception {
+        deliver(activity, tap(activity, page, IMPORT_ROW), file);
+        try (FailingStore ignored = FailingStore.install(faults)) {
+            shownPreview().getButton(AlertDialog.BUTTON_POSITIVE).performClick();
+            settle();
+        }
+    }
+
+    /** What the card at the top of the settings home page says, as it's drawn. */
+    private static String overview(HushTelegramPreferenceFragment page) {
+        while (page.navigation.back()) { }
+        android.widget.ListView list = page.getView().findViewById(android.R.id.list);
+        android.view.View card = page.navigation.getView(0, null, list);
+        return ((android.widget.TextView) card.findViewById(android.R.id.summary)).getText().toString();
+    }
+
+    /** The restart row's title on the page showing, or null when the row isn't there. */
+    private static String restartRow(HushTelegramPreferenceFragment page) {
+        for (int position = 0; position < page.navigation.getCount(); position++) {
+            Preference row = page.navigation.getItem(position);
+            if (SettingsNavigation.RESTART.equals(row.getKey())) return String.valueOf(row.getTitle());
+        }
+        return null;
     }
 
     private static AlertDialog shownPreview() {

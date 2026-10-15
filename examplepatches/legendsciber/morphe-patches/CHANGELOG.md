@@ -1,3 +1,31 @@
+## [1.51.0](https://github.com/legendsciber/morphe-patches/compare/v1.50.0...v1.51.0) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* **zombietsunami:** drop access flags from the billing fingerprint ([d16e579](https://github.com/legendsciber/morphe-patches/commit/d16e57963647fbb2b95cc98728fd473655651a4e))
+
+### ✨ New Features
+
+* **zombietsunami:** add installer check bypass ([3631b90](https://github.com/legendsciber/morphe-patches/commit/3631b906a0fed560d5ee1f4ee4fc5f9f09ad813b))
+
+## [1.50.0](https://github.com/legendsciber/morphe-patches/compare/v1.49.0...v1.50.0) (2026-10-14)
+
+### ✨ New Features
+
+* **zombietsunami:** add free IAP patch ([7f322c9](https://github.com/legendsciber/morphe-patches/commit/7f322c9c4a9c8d8faeb8ba30f0cdbf8dfab6f762))
+
+## [1.49.0](https://github.com/legendsciber/morphe-patches/compare/v1.48.0...v1.49.0) (2026-10-14)
+
+### ✨ New Features
+
+* **deathrover:** keep coin upgrades buyable and add unlimited turbo ([9f83faf](https://github.com/legendsciber/morphe-patches/commit/9f83faf882ffd0f20d5ce07eef0f1f66bb2a0ae3))
+
+## [1.48.0](https://github.com/legendsciber/morphe-patches/compare/v1.47.0...v1.48.0) (2026-10-14)
+
+### ✨ New Features
+
+* **deathrover:** add free IAP patch ([4333dc4](https://github.com/legendsciber/morphe-patches/commit/4333dc447e732c3d9ccc77fd3d695a45215c583e))
+
 ## [1.47.0](https://github.com/legendsciber/morphe-patches/compare/v1.46.0...v1.47.0) (2026-10-13)
 
 ### ✨ New Features

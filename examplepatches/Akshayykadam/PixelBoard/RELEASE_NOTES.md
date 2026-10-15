@@ -1,49 +1,45 @@
-# PixelBoard Stable Release (v18.4.1 / Patch v1.0.5)
+# PixelBoard Stable Release (v18.4.1-V3 / Patch v1.0.7)
 
 ## Summary
-PixelBoard v18.4.1 (Patch Bundle v1.0.5) brings the rock-solid in-line AI feature set directly to Google's latest **Gboard v18.4.1 Release** (`18.4.1.985164140-release-arm64-v8a`), introducing **Writing Tools V2 Gating**, **Device-Gated AI Inference Backend Selection**, and idle battery optimizations for Gemini Rambler Voice Typing.
+PixelBoard v18.4.1-V3 (Patch Bundle v1.0.7) brings key quality-of-life enhancements, typing engine fixes, and customization features directly to Google's latest **Gboard v18.4.1 Release** (`18.4.1.985164140-release-arm64-v8a`). This update introduces **Instant Word Learning & 2-Letter Prefix Suggestions**, **Contextual Emoji Suggestions**, **Stable Autocorrect & Fluid Glide Typing**, **PixelBoard Spell Checker & Settings Branding**, **Inline Autofill / Password Manager Support**, **Restored Emoji Size Slider**, **Vibrant Candidate Strip Emojis**, **Samsung & Vivo Clipboard History Sync**, **Material 3 Expressive Rounded Keys**, and a streamlined Advanced Settings experience with zero required restarts.
 
 ---
 
-## What's New & Changed
+## What's New & Fixed in This Release
 
-### 1. Updated to Gboard v18.4.1 Release Base
-- Rebased primary build to official **Gboard 18.4.1 Release** (`18.4.1.985164140-release-arm64-v8a`, ~122 MB base).
-- Fully supports arm64-v8a devices running Android 10 through Android 16 Preview.
-- Backward compatibility maintained for Gboard 18.3.1.
+### 1. Improved Autocorrect, Fast Word Learning, Emoji Suggestions & Glide Typing ([#33](https://github.com/Akshayykadam/PixelBoard/issues/33))
+- **Instant Word Learning & 2-Letter Prefix Suggestions**: Lowered `intended_oov_min_count` threshold from 4 to 1 and enabled Delight5 language model user history n-gram frequency, continuation scoring, and timestamp tracking (`enable_pc_user_history_ngram_count`, `populate_ngram_count_with_context`, `enable_dynamic_lm_unigram_continuation_scoring`, `enable_multiword_predictions_from_user_history`). Frequently typed words are learned immediately and suggested after typing just the first two letters.
+- **Contextual Emoji Suggestions**: Activated the Delight5 concept prediction engine and emoji shortcut candidates (`enable_concept_prediction_engine`, `enable_rule_based_concept_prediction`, `enable_emoji_suggestion_from_top_candidate`, `enable_predictions_from_emoji_shortcuts`, `config_expression`). In addition, `res/xml/setting_expression.xml` defaults `pref_key_enable_emoji_suggestion` to `true`, displaying relevant emojis directly in the suggestion strip when typing associated words.
+- **Stable Autocorrect & Consistent Glide Typing**: Enabled streaming touch gesture tagging (`update_streaming_touch_data_set_is_gesture`) so continuous glide paths are accurately recognized as gestures without stroke stutter. Activated the Delight5 two-stage beam decoder (`enable_two_stage_decoder`), spatial model features, and auto-correction trigger predictors (`enable_space_transposition_post_correction`, `enable_pk_spatial_model_features`, `enable_pk_auto_correction_trigger_predictor`), providing accurate, consistent word completions and auto-corrections.
 
-### 2. Writing Tools V2 Gating (New)
-- **"Suggested" Style Chips & Freeform Prompt Bar**: Unlocks Google's modern writing tools interface with quick style chips and "Describe your edit".
-- **Hardware & Model Eligibility Gating**: Automatically hides V2 elements on unsupported devices to prevent errors or UI glitches.
-- **Dedicated Advanced Settings Toggle**: Toggle Writing Tools V2 inside Advanced Settings with a Material You **BETA** badge.
+### 2. PixelBoard Spell Checker & Settings Rebranding
+- **PixelBoard Spell Checker**: Rebranded the text services spell checker component to **PixelBoard Spell Checker** with full multi-locale support across all 100+ language resource directories.
+- **Valid Resource ID Resolution**: Preserved compiled XML resource references (`@string/string_0x7f140d61`) in `res/xml/spell_checker.xml` to ensure Android's OS `SpellCheckerInfo` framework correctly retrieves the display label in the system "Choose spellchecker" selector.
+- **PixelBoard Settings Branding**: Updated main settings header, activity label, and preferences screens (`res/xml/settings.xml`, `res/xml/settings_legacy.xml`) from *Gboard settings* to **PixelBoard Settings**.
 
-### 3. Device-Gated AI Inference Backend Selector (New)
-- On supported Pixel devices (e.g. Pixel 8 Pro / Pixel 9 series), users can select their preferred inference backend:
-  - `GBOARD_SERVER` (Google Cloud Server Inference)
-  - `PRIVATE_INFERENCE_AICORE` (On-Device Private Android AICore)
-  - `PRIVATE_INFERENCE_ASTREA` (On-Device Astrea Framework)
-- Dynamically hidden on unsupported hardware for a clean, native experience.
+### 3. Inline Autofill & Password Manager Support ([#24](https://github.com/Akshayykadam/PixelBoard/pull/24))
+- **Fix Password Manager Chips**: Resolved an issue where password manager suggestions (Bitwarden, 1Password, KeePass, Proton Pass, etc.) failed to show inline above the keyboard on the renamed package.
+- **DeviceIntelligence Module Activation**: The renamed package does not receive server-side Phenotype configuration, leaving Android's `DeviceIntelligence` module disabled. Overriding `enable_device_intelligence=true` at runtime allows `onCreateInlineSuggestionsRequest` to load and render inline autofill credentials seamlessly (credits: @alincornel).
 
-### 4. Gemini "Rambler" Natural Voice Typing & Battery Fix
-- Unlocked Google's state-of-the-art Rambler dictation model.
-- **Speech Cleanup**: Automatically filters hesitation, stutters, and filler words ("um", "ah", "like").
-- **Thought Correction**: Seamlessly corrects self-revisions on the fly.
-- **Context-Aware Punctuation**: Real-time auto-punctuation and capitalization.
-- **Rambler ASR Battery & Service Lifecycle Fix**: Eliminated background `GoogleAsrService` (`com.google.android.tts`) service binder persistence after closing the keyboard by enforcing `immediately_end_dictation_on_keyboard_hidden=true` (credits: @PaoloDelCasale).
+### 4. Restored Emoji Size Slider Preference ([#26](https://github.com/Akshayykadam/PixelBoard/issues/26))
+- **Unlocked Native Slider**: Overrides the `emoji_scale_supported` Phenotype flag to restore the missing interactive **Emoji size** slider and live row preview under **PixelBoard Settings > Emojis, stickers & GIFs**.
+- **Adjustable Key Scale**: Freely adjust the size and number of emojis displayed in a row directly within native Gboard preferences.
 
-### 5. Offline Language Pack Download Loop Fix (#5)
-- **Eliminated 150 req/sec Download Loop**: Fixed an aggressive loop where Gboard repeatedly retried downloading offline language packs for secondary dictation languages (e.g., Italian + English) after Google Speech (`com.google.android.tts`) rejected silent downloads for the modified package ID.
-- **In-Process Download Guard**: Integrated `GboardLanguageDownloadGuard` to ensure each language pack download is requested at most once per process, slashing idle CPU usage from ~15% to 0.02% and reducing battery drain from 3.68 mAh/h to 0.43 mAh/h (investigation & candidate fix: @PaoloDelCasale).
-- **Dual-Version Support**: Bytecode patch targets both Gboard 18.3.1 (`Lsnm;->c`) and 18.4.1 (`Lsqk;->c`).
+### 5. Vibrant Suggestion Strip Emojis ([#26](https://github.com/Akshayykadam/PixelBoard/issues/26))
+- **100% Paint Vibrancy**: Fixed faded, washed-out emojis appearing in the candidate suggestion strip while typing.
+- **Candidate View Hook**: Hooked `AutoCenterScaleTextView.onDraw` to ensure candidate text paint renders with full 100% opacity (`alpha = 255`) when emojis are present, eliminating secondary candidate dimming and matching the vibrant look of the emoji drawer.
 
-### 6. Fix Advanced Voice Typing Reboot Persistence (#4)
-- **Immediate Reboot Readiness**: Resolved an issue where Advanced Voice Typing did not initialize on cold boot (e.g., on Xiaomi HyperOS / Android 14–16) until "Restart Gboard" was tapped manually.
-- **Direct Boot & Device-Protected Storage**: Migrated PixelBoard settings to Device-Protected (DE) storage with automatic seamless migration from Credential-Encrypted (CE) storage, ensuring preferences are accessible as soon as Gboard's `directBootAware` IME service launches.
-- **Selector State De-Poisoning**: Fixed runtime selection gate so unconfigured/boot state defaults to enabled, and guarded against spurious background checks (`Laaeo.a`) overwriting the active selection to `false` during boot or keyboard typing sessions.
+### 6. Clipboard History Sync for Samsung One UI & Vivo Devices ([#17](https://github.com/Akshayykadam/PixelBoard/issues/17))
+- **Empty Clipboard Fix**: Fixed the issue where copied text appeared in the immediate suggestion chip but failed to save into the clipboard drawer history on Samsung One UI and Vivo (OriginOS / FuntouchOS) devices.
+- **Foreground Clip Sync**: Hooked `onStartInputView` to guarantee `ClipboardManager` listener initialization and sync copied text into clipboard drawer history when typing, overcoming OEM background clipboard suppression on Samsung and Vivo devices.
 
-### 7. Standalone Coexistence & Signature Bypass
-- Packaged under independent application ID `com.akshaykadam.pixelboard` with app label `PixelBoard` for safe side-by-side use alongside factory Gboard.
-- Signature verification bypassed so patched APKs pass integrity and whitelist checks without root.
+### 7. Material 3 Expressive Rounded Keys (Belka UI) ([#14](https://github.com/Akshayykadam/PixelBoard/issues/14))
+- **Pill-Shaped Keycaps**: Added a toggle under **★ Advanced settings** to activate Google's expressive Material 3 Belka rounded keyboard styling.
+- **Dynamic Flag Management**: Automatically forces `belka_rounded_keyboard`, `belka_ui`, `belka_background`, `more_pill_keys`, and `enable_rounded_keys` flags at runtime without restarting.
+
+### 8. Clean Advanced Settings & Hot-Reload
+- **Streamlined Preferences Screen**: Cleaned up Advanced Settings to focus on rock-solid core toggles (**Enable AI Writing Tools**, **Support All Keyboards**, **Inference Backend Type**, **Enable Advanced Voice Typing**, and **Rounded Keys**); the experimental V2 toggle has been hidden.
+- **Zero-Restart Architecture**: All changes take effect immediately on the fly without restarting Gboard, force-closing the app, or rebooting your device.
 
 ---
 
@@ -51,22 +47,23 @@ PixelBoard v18.4.1 (Patch Bundle v1.0.5) brings the rock-solid in-line AI featur
 
 | File | Size | Description |
 | :--- | :--- | :--- |
-| **PixelBoard.apk** | ~127 MB | Ready-to-install signed Stable APK (v18.4.1 release base) |
-| **PixelBoard.mpp** | ~1.4 MB | Standalone patch bundle (v1.0.5) for Morphe Manager |
+| [**PixelBoard-18.4.1-V3.apk**](https://github.com/Akshayykadam/PixelBoard/releases/download/v18.4.1-Stable-V3/PixelBoard-18.4.1-V3.apk) | ~127 MB | Ready-to-install signed Stable APK (v18.4.1 release base, versionCode 176027079) |
+| [**PixelBoard.mpp**](https://github.com/Akshayykadam/PixelBoard/raw/main/patches/PixelBoard.mpp) | ~1.5 MB | Standalone patch bundle (v1.0.7) for Morphe Manager |
+| [**patches-1.0.7.mpp**](https://github.com/Akshayykadam/PixelBoard/releases/download/v18.4.1-Stable-V3/patches-1.0.7.mpp) | ~1.5 MB | Versioned standalone patch bundle (v1.0.7) |
 
 ---
 
 ## Installation
 
 ### Option 1: Direct APK Installation (Recommended)
-1. Download `PixelBoard.apk` directly to your Android device.
+1. Download [**PixelBoard-18.4.1-V3.apk**](https://github.com/Akshayykadam/PixelBoard/releases/download/v18.4.1-Stable-V3/PixelBoard-18.4.1-V3.apk) directly to your Android device.
 2. Tap the downloaded APK in your file manager or browser downloads.
-3. Allow installation from unknown sources if prompted, and complete installation.
+3. Allow installation from unknown sources if prompted, and complete installation (supports updating in-place over earlier v18.4.1 builds).
 4. Enable PixelBoard in **Settings > System > Languages & input > On-screen keyboard**.
 
 ### Option 2: ADB Sideload
 ```bash
-adb install -r PixelBoard.apk
+adb install -r PixelBoard-18.4.1-V3.apk
 adb shell am force-stop com.akshaykadam.pixelboard
 ```
 
@@ -75,7 +72,7 @@ Add the custom patch source in Morphe Manager:
 ```text
 https://raw.githubusercontent.com/Akshayykadam/PixelBoard/main/patches-bundle.json
 ```
-Select stock Gboard `v18.4.1.985164140-release-arm64-v8a` (or `v18.3.1`) and apply patches.
+Select stock Gboard [**v18.4.1.985164140-release-arm64-v8a**](https://www.apkmirror.com/apk/google-inc/gboard/gboard-the-google-keyboard-18-4-1-985164140-release/) (or `v18.3.1`) and apply patches.
 
 ---
 

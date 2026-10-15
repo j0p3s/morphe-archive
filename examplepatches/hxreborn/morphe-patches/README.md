@@ -15,7 +15,7 @@
 ## 🩹 Patches list
 
 <!-- PATCHES_START -->
-> **[v1.50.0](https://github.com/hxreborn/morphe-patches/releases/tag/v1.50.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;174 patches total
+> **[v1.52.0](https://github.com/hxreborn/morphe-patches/releases/tag/v1.52.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;183 patches total
 <a id="1weather"></a>
 <details>
 <summary><img src=".github/assets/icons/oneweather.png" width="18" align="top">&nbsp;&nbsp;1Weather&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
@@ -144,8 +144,8 @@
 
 **🎯 Supported versions:**
 
-| 26.30.05 | 26.38.08 |
-| :---: | :---: |
+| 26.30.05 | 26.38.08 | 26.41.06 |
+| :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -193,8 +193,8 @@
 
 **🎯 Supported versions:**
 
-| 2.9.8 |
-| :---: |
+| 2.9.8 | 3.0.0 |
+| :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -350,8 +350,8 @@
 
 **🎯 Supported versions:**
 
-| 2.84 |
-| :---: |
+| 2.84 | 2.91 |
+| :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -366,12 +366,30 @@
 
 **🎯 Supported versions:**
 
-| v7.8.4-Build-1-gms-release |
-| :---: |
+| v7.8.4-Build-1-gms-release | v7.8.5-Build-1-gms-release |
+| :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
 | <a id="fddb-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/fddb/misc/premium/UnlockPremiumPatch.kt) | Unlocks the weekly report, intermittent fasting, the calorie and nutrient planners, and custom nutrient targets. |
+
+</details>
+
+<a id="focusnow"></a>
+<details>
+<summary><img src=".github/assets/icons/focusnow.png" width="18" align="top">&nbsp;&nbsp;FocusNow&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 3.8.0 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="focusnow-disable-tracking"></a>[Disable tracking](patches/src/main/kotlin/app/morphe/patches/focusnow/misc/tracking/DisableTrackingPatch.kt) | Stops Firebase Analytics and Crashlytics from collecting usage data. |
+| <a id="focusnow-gmscore-support"></a>GmsCore support | Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed. |
+| <a id="focusnow-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/focusnow/misc/premium/UnlockPremiumPatch.kt) | Unlocks FocusNow Pro. |
 
 </details>
 
@@ -498,8 +516,8 @@
 
 **🎯 Supported versions:**
 
-| 6.2.1 |
-| :---: |
+| 6.2.1 | 6.3.1 |
+| :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -543,6 +561,23 @@
 
 </details>
 
+<a id="lagguy-wallpapers"></a>
+<details>
+<summary><img src=".github/assets/icons/lagguy.png" width="18" align="top">&nbsp;&nbsp;Lagguy Wallpapers&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 40.0.44 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="lagguy-wallpapers-gmscore-support"></a>GmsCore support | Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed. |
+| <a id="lagguy-wallpapers-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/lagguy/misc/premium/UnlockPremiumPatch.kt) | Unlocks Pro collections, wide walls, original-size downloads and unlimited saves. Requires a signed-in account. |
+
+</details>
+
 <a id="led-blinker"></a>
 <details>
 <summary><img src=".github/assets/icons/ledblinker.png" width="18" align="top">&nbsp;&nbsp;LED Blinker&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
@@ -556,23 +591,6 @@
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
 | <a id="led-blinker-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/ledblinker/misc/premium/UnlockPremiumPatch.kt) | Unlocks pocket mode, notification history and statistics, and removes ads. |
-
-</details>
-
-<a id="lumo"></a>
-<details>
-<summary><img src=".github/assets/icons/lumo.png" width="18" align="top">&nbsp;&nbsp;Lumo&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
-<br>
-
-**🎯 Supported versions:**
-
-| 2.1.4-gms |
-| :---: |
-
-| 💊&nbsp;Patch | 📜&nbsp;Description |
-|----------|----------------|
-| <a id="lumo-material-3-switches"></a>[Material 3 switches](patches/src/main/kotlin/app/morphe/patches/lumo/misc/materialswitch/MaterialSwitchesPatch.kt) | Shows switches in the Material 3 style with check and close icons. |
-| <a id="lumo-remove-tap-highlight"></a>[Remove tap highlight](patches/src/main/kotlin/app/morphe/patches/lumo/misc/taphighlight/RemoveWebTapHighlightPatch.kt) | Removes the highlight flash on tapped buttons and links. |
 
 </details>
 
@@ -633,12 +651,28 @@
 
 **🎯 Supported versions:**
 
-| 4.0.02.0828.03 | 4.0.02.0831.03 | 4.0.02.0903.02 | 4.0.03.0918.03 |
-| :---: | :---: | :---: | :---: |
+| 4.0.03.0918.03 |
+| :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
 | <a id="moviebox-all-in-one"></a>[All-In-One](patches/src/main/kotlin/app/morphe/patches/moviebox/misc/allinone/AllInOnePatch.kt) | Enables video playback and downloads, removes ads and upsell prompts, bypasses the region block, and unlocks the hidden Laboratory menu. Requires Android 10 or later. |
+
+</details>
+
+<a id="moviebox-tv"></a>
+<details>
+<summary><img src=".github/assets/icons/movieboxtv.png" width="18" align="top">&nbsp;&nbsp;MovieBox TV&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 1.2.0.0923.web_socialmedia |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="moviebox-tv-all-in-one"></a>[All-In-One](patches/src/main/kotlin/app/morphe/patches/movieboxtv/misc/allinone/AllInOnePatch.kt) | Unlocks premium playback and removes ads, the region block and forced updates. Requires Android 10 or later. |
 
 </details>
 
@@ -714,8 +748,8 @@
 
 **🎯 Supported versions:**
 
-| 0.4.72 | 0.4.97 | 0.4.98 |
-| :---: | :---: | :---: |
+| 0.4.72 | 0.4.97 | 0.4.98 | 0.5.38 |
+| :---: | :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -810,9 +844,27 @@
 
 </details>
 
+<a id="proton-lumo"></a>
+<details>
+<summary><img src=".github/assets/icons/lumo.png" width="18" align="top">&nbsp;&nbsp;Proton Lumo&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 2.1.4-gms |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="proton-lumo-material-3-switches"></a>[Material 3 switches](patches/src/main/kotlin/app/morphe/patches/lumo/misc/materialswitch/MaterialSwitchesPatch.kt) | Shows switches in the Material 3 style with check and close icons. |
+| <a id="proton-lumo-remove-tap-highlight"></a>[Remove tap highlight](patches/src/main/kotlin/app/morphe/patches/lumo/misc/taphighlight/RemoveWebTapHighlightPatch.kt) | Removes the highlight flash on tapped buttons and links. |
+| <a id="proton-lumo-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/lumo/misc/premium/UnlockPremiumPatch.kt) | Unlocks unlimited projects and removes upgrade prompts. Usage limits for models, messages and images still apply. |
+
+</details>
+
 <a id="proton-mail"></a>
 <details>
-<summary><img src=".github/assets/icons/protonmail.png" width="18" align="top">&nbsp;&nbsp;Proton Mail&nbsp;&nbsp;•&nbsp;&nbsp;8 patches</summary>
+<summary><img src=".github/assets/icons/protonmail.png" width="18" align="top">&nbsp;&nbsp;Proton Mail&nbsp;&nbsp;•&nbsp;&nbsp;9 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -829,24 +881,26 @@
 | <a id="proton-mail-remove-sent-from-signature"></a>[Remove 'Sent from' signature](patches/src/main/kotlin/app/morphe/patches/protonmail/signature/RemoveSentFromSignaturePatch.kt) | Removes the 'Sent from Proton Mail' signature and unlocks the mobile signature setting. |
 | <a id="proton-mail-remove-free-accounts-limit"></a>[Remove free accounts limit](patches/src/main/kotlin/app/morphe/patches/protonmail/account/RemoveFreeAccountsLimitPatch.kt) | Removes the limit for maximum free accounts logged in. |
 | <a id="proton-mail-scheduled-trash-and-spam-deletion"></a>[Scheduled Trash and Spam deletion](patches/src/main/kotlin/app/morphe/patches/protonmail/misc/scheduleddeletion/ScheduledDeletionPatch.kt) | Deletes all messages in Trash and Spam on separate configurable schedules. Deleted messages cannot be recovered. |
+| <a id="proton-mail-swipe-to-switch-accounts"></a>[Swipe to switch accounts](patches/src/main/kotlin/app/morphe/patches/protonmail/misc/accountswipe/SwipeToSwitchAccountsPatch.kt) | Switches between signed-in accounts by swiping up or down on the account avatar. |
 | <a id="proton-mail-unlock-custom-time-picker"></a>[Unlock custom time picker](patches/src/main/kotlin/app/morphe/patches/protonmail/misc/scheduling/UnlockCustomTimePickerPatch.kt) | Enables picking a custom date and time when snoozing conversations and scheduling messages. |
 
 </details>
 
 <a id="proton-pass"></a>
 <details>
-<summary><img src=".github/assets/icons/protonpass.png" width="18" align="top">&nbsp;&nbsp;Proton Pass&nbsp;&nbsp;•&nbsp;&nbsp;5 patches</summary>
+<summary><img src=".github/assets/icons/protonpass.png" width="18" align="top">&nbsp;&nbsp;Proton Pass&nbsp;&nbsp;•&nbsp;&nbsp;6 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 1.40.3 | 1.41.2 |
-| :---: | :---: |
+| 1.40.3 | 1.41.2 | 1.41.3 |
+| :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
 | <a id="proton-pass-amoled-dark-theme"></a>[AMOLED dark theme](patches/src/main/kotlin/app/morphe/patches/protonpass/misc/theme/AmoledThemePatch.kt) | Replaces the dark theme background with pure black. |
 | <a id="proton-pass-custom-accent-color"></a>[Custom accent color](patches/src/main/kotlin/app/morphe/patches/protonpass/misc/theme/AccentColorPatch.kt) | Changes the accent color. Choose a color in the patches menu. |
+| <a id="proton-pass-hide-layout-components"></a>[Hide layout components](patches/src/main/kotlin/app/morphe/patches/protonpass/misc/layout/HideLayoutComponentsPatch.kt) | Adds settings to hide the Help center, Spread the word and About sections. |
 | <a id="proton-pass-hide-promotional-messages"></a>[Hide promotional messages](patches/src/main/kotlin/app/morphe/patches/protonpass/misc/inappmessages/HidePromotionalMessagesPatch.kt) | Hides promotional banners, offers and pop-up messages. |
 | <a id="proton-pass-hide-upgrade-promotions"></a>[Hide upgrade promotions](patches/src/main/kotlin/app/morphe/patches/protonpass/misc/upselling/HideUpgradePromotionsPatch.kt) | Hides the Upgrade buttons, upgrade prompts and the welcome offer after signing in. Plan limits still apply. |
 | <a id="proton-pass-material-3-switches"></a>[Material 3 switches](patches/src/main/kotlin/app/morphe/patches/protonpass/misc/theme/MaterialSwitchesPatch.kt) | Shows switches in the Material 3 style with check and close icons. |
@@ -911,7 +965,7 @@
 |----------|----------------|
 | <a id="public-disable-tracking"></a>[Disable tracking](patches/src/main/kotlin/app/morphe/patches/publicvideos/tracking/DisableTrackingPatch.kt) | Stops AppsFlyer, Flurry, comScore, Firebase Analytics and Facebook from collecting usage data. |
 | <a id="public-gmscore-support"></a>GmsCore support | Signs in through GmsCore instead of Google Play Services. Requires GmsCore to be installed. |
-| <a id="public-hide-ads"></a>[Hide ads](patches/src/main/kotlin/app/morphe/patches/publicvideos/ads/HideAdsPatch.kt) | Removes ads from the feed, app open, interstitial and rewarded placements. |
+| <a id="public-hide-ads"></a>[Hide ads](patches/src/main/kotlin/app/morphe/patches/publicvideos/ads/HideAdsPatch.kt) | Removes ads from the feed, app open, interstitial and rewarded placements, and the sponsor banner on the launch screen. |
 
 </details>
 
@@ -1039,8 +1093,8 @@
 
 **🎯 Supported versions:**
 
-| 1.01.99.0909 | 1.01.98.0831 | 1.01.98.0824 | 1.01.97.0818 | 1.01.96.0716 | 1.01.94.0602 | 1.01.90.0421 |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 1.01.100.1012 | 1.01.99.0909 | 1.01.98.0831 | 1.01.98.0824 | 1.01.97.0818 | 1.01.96.0716 | 1.01.94.0602 | 1.01.90.0421 |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -1199,8 +1253,8 @@
 
 **🎯 Supported versions:**
 
-| 407.0.0.178994 | 415.0.0.182623 | 415.0.0.182626 |
-| :---: | :---: | :---: |
+| 407.0.0.178994 | 415.0.0.182623 | 415.0.0.182626 | 416.0.0.183472 |
+| :---: | :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -1248,8 +1302,8 @@
 
 **🎯 Supported versions:**
 
-| 2.32.0 | 2.33.0 | 2.33.1 |
-| :---: | :---: | :---: |
+| 2.32.0 | 2.33.0 | 2.33.1 | 2.34.1 |
+| :---: | :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|

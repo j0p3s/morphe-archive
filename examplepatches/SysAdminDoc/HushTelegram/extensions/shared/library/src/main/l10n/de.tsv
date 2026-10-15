@@ -29,6 +29,8 @@ Couldn't open the file picker. Try again.	Die Dateiauswahl ließ sich nicht öff
 Couldn't put back the diagnostic data. Try again.	Die Diagnosedaten ließen sich nicht wiederherstellen. Versuche es noch einmal.
 Couldn't save the settings file. Try again.	Die Einstellungsdatei ließ sich nicht speichern. Versuche es noch einmal.
 Couldn't start that. Try again in a moment.	Das ließ sich nicht starten. Versuche es gleich noch einmal.
+# context: Toast when the person saves a filter list, translation service, sticker size or chat list emoji while a settings import is still being written. The dialog stays open with what they typed.
+Wait for the settings import to finish, then save again.	Warte, bis der Einstellungsimport fertig ist, und speichere dann erneut.
 Couldn't start the report export. Try again in a moment.	Der Export des Berichts ließ sich nicht starten. Versuche es gleich noch einmal.
 Couldn't turn HushTelegram back on. Try again.	HushTelegram ließ sich nicht wieder einschalten. Versuche es noch einmal.
 Debug logging	Debug-Protokollierung
@@ -43,7 +45,6 @@ After Telegram restarts, every switch except Debug logging acts as if it were of
 Hide ads	Werbung ausblenden
 Links, updates, backup and more	Links, Updates, Sicherung und mehr
 Privacy	Datenschutz
-Saves your switches, filter lists and sticker size to a file, for all accounts in this Telegram app. Pause, Debug logging, the HushTelegram release check, UnifiedPush and Folders by chat type stay out.	Speichert deine Schalter, Filterlisten und die Stickergröße in einer Datei, für alle Konten in dieser Telegram-App. Pause, Debug-Protokollierung, die Suche nach HushTelegram-Versionen, UnifiedPush und Ordner nach Chat-Typ bleiben außen vor.
 Settings exported but not checked. Open the file to make sure.	Einstellungen exportiert, aber nicht geprüft. Öffne die Datei zur Kontrolle.
 That app is slow to answer. Nothing was changed. Try again.	Die App antwortet langsam. Es wurde nichts geändert. Versuche es noch einmal.
 That file's app still hasn't answered. Try again later.	Die App dieser Datei hat noch nicht geantwortet. Versuche es später noch einmal.
@@ -161,7 +162,17 @@ Opens a GitHub report with your versions and settings filled in. Add what happen
 # context: home page row under the status card, and the title of the dialog it opens
 Quick setups	Schnelleinstellungen
 # context: that row's summary
-Turn on a set of switches in one tap, or put every switch back the way it started.	Schalte mehrere Schalter mit einem Tippen ein oder setze alle Schalter auf ihren Ausgangszustand zurück.
+Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Schalte mehrere Schalter mit einem Tippen ein oder setze alle Schalter auf ihren Ausgangszustand zurück. Halte gedrückt, um diese Zeile auszublenden.
+# context: row on Settings backup that hides or shows the Quick setups row on the home page, and its two summaries
+Quick setups on the home page	Schnelleinstellungen auf der Startseite
+Shown. Tap to hide it.	Angezeigt. Tippe, um sie auszublenden.
+Hidden. Tap to show it again.	Ausgeblendet. Tippe, um sie wieder einzublenden.
+# context: Row on the Look and feel page that switches how the HushTelegram settings pages are drawn: each group of rows on a rounded card with an outline, or plain rows with a thin line between them. Its line says which look is on and what a tap changes it to.
+Settings look	Aussehen der Einstellungen
+Cards. Tap for plain rows.	Karten. Tippe für schlichte Zeilen.
+Plain rows. Tap for cards.	Schlichte Zeilen. Tippe für Karten.
+# context: toast after a long press hides Quick setups; the page named is Settings backup
+Quick setups hidden. Bring it back from %1$s.	Schnelleinstellungen ausgeblendet. Du findest sie wieder unter „%1$s“.
 # context: Quick setups choice that turns on the switches that hide ads, suggestions and nags
 Quiet	Ruhig
 # context: what Quiet does, under its name
@@ -258,10 +269,10 @@ Telegram doesn't look up link previews for messages you haven't sent yet, includ
 Keep drafts on this phone	Entwürfe auf diesem Handy behalten
 # context: Summary under that switch. Clearing a draft (emptying the text box) is still sent so other devices drop it too.
 A message you start but don't send stays on this phone and stops syncing to your other devices. Clearing a draft still clears it there.	Eine Nachricht, die du anfängst, aber nicht sendest, bleibt auf diesem Handy und wird nicht mehr mit deinen anderen Geräten synchronisiert. Wenn du einen Entwurf leerst, verschwindet er dort trotzdem.
-# context: Privacy page switch title. When on, text typed in the Chats tab of Telegram's main search is no longer sent to Telegram's server.
+# context: Privacy page switch title. When on, text typed in Telegram's main search is no longer sent to Telegram's server, except in its Posts tab. Search inside a chat still is.
 Keep searches on this phone	Suchen auf diesem Handy behalten
-# context: Summary under that switch. Chats is the name of the first tab in Telegram's search, so use Telegram's own word for that tab in your language. Public accounts means people, bots and channels found by username.
-What you type in search's Chats tab isn't sent to Telegram. It finds the chats, contacts and recent searches on this phone, but not messages, public accounts or posts. The other tabs search as usual.	Was du im Tab „Chats“ der Suche eingibst, wird nicht an Telegram gesendet. Gefunden werden die Chats, Kontakte und letzten Suchen auf diesem Handy, aber keine Nachrichten, öffentlichen Konten oder Beiträge. Die anderen Tabs suchen wie gewohnt.
+# context: Summary under that switch. Chats, Channels, Apps and Posts are tabs in Telegram's search, and the media tabs are Media, Links, Files, Music and Voice, so use Telegram's own words for those tabs in your language. Public accounts means people, bots and channels found by username.
+What you type in the main search isn't sent to Telegram, except in the Posts tab. The Chats tab finds your chats and contacts on this phone, plus recent searches, but not messages or public accounts. Channels, Apps, the media tabs and chat or date filters don't search for typed text. Search inside a chat still goes to Telegram.	Was du in der Hauptsuche eingibst, wird nicht an Telegram gesendet, außer im Tab „Beiträge“. Der Tab „Chats“ findet deine Chats und Kontakte auf diesem Handy und die letzten Suchen, aber keine Nachrichten oder öffentlichen Konten. „Kanäle“, „Apps“, die Medien-Tabs und Chat- oder Datumsfilter suchen nicht nach eingegebenem Text. Die Suche in einem Chat geht weiter an Telegram.
 # context: Extra line under Telegram's "No results" message in the Chats tab of search, shown while Keep searches on this phone is on. It explains why nothing from Telegram's server turned up.
 Only chats and contacts on this phone were searched.	Es wurden nur Chats und Kontakte auf diesem Handy durchsucht.
 Draft link previews	Linkvorschau in Entwürfen
@@ -290,6 +301,28 @@ After you say no to contacts access, the Contacts tab stops asking again and its
 
 New Year look all year	Neujahrs-Look das ganze Jahr
 Shows Telegram's Santa hat and New Year snow all year, not only around New Year. Snow falls on the chat list's top bar and on chat backgrounds once Wallpaper rotation is on under Power Saving, in Effects in Chats.	Zeigt Telegrams Weihnachtsmütze und den Neujahrsschnee das ganze Jahr, nicht nur zum Jahreswechsel. Der Schnee fällt auf die obere Leiste der Chatliste und auf Chat-Hintergründe, sobald unter Energie sparen bei Chateffekte die Option Hintergrunddrehung an ist.
+# context: Look and feel page row title, and the title of its editor dialog. The person picks an emoji or a few letters shown after Telegram's name (its logo) at the top of the chat list.
+Emoji next to the chat list title	Emoji neben dem Titel der Chatliste
+# context: Summary under that row while nothing is set. Premium emoji status is Telegram's own paid status emoji next to the name, which this doesn't change.
+Add an emoji or a few letters after Telegram's name at the top of the chat list. It stays on this phone, and your Premium emoji status is left alone.	Füge nach Telegrams Namen oben in der Chatliste ein Emoji oder ein paar Buchstaben hinzu. Das bleibt auf diesem Handy, und dein Premium-Emoji-Status bleibt unberührt.
+# context: Summary under that row once something is set. %1$s is the emoji or letters the person saved.
+%1$s shows after Telegram's name at the top of the chat list, on this phone only. Tap to change it.	%1$s steht nach Telegrams Namen oben in der Chatliste, nur auf diesem Handy. Tippe, um es zu ändern.
+# context: Lowercase word for an empty value in the import preview line "%1$s: %2$s to %3$s", for example "Emoji next to the chat list title: none to X".
+none	keins
+# context: Label and hint of the one text field in the editor dialog.
+Emoji or a few letters	Emoji oder ein paar Buchstaben
+# context: Instructions at the top of the editor dialog.
+Shown after Telegram's name at the top of the chat list. It stays on this phone, so nothing goes to Telegram and your Premium emoji status is left alone. Leave it empty to show nothing, and restart Telegram to see a change.	Erscheint nach Telegrams Namen oben in der Chatliste. Es bleibt auf diesem Handy, also geht nichts an Telegram und dein Premium-Emoji-Status bleibt unberührt. Lass das Feld leer, damit nichts erscheint, und starte Telegram neu, um eine Änderung zu sehen.
+# context: Error under the field and toast when the text is too long to save. Keep it under about 64 characters.
+That's too long. Try an emoji or two, or a short word.	Das ist zu lang. Versuch ein oder zwei Emojis oder ein kurzes Wort.
+# context: Error under the field and toast when saving failed. Keep it under about 64 characters.
+Couldn't save the emoji. Try again in a moment.	Das Emoji ließ sich nicht speichern. Versuch es gleich noch einmal.
+# context: Short toast after the editor saved text that needs no restart, such as clearing it again before restarting.
+Saved.	Gespeichert.
+# context: Sentence in the settings import preview when the imported file changes that text.
+The emoji next to the chat list title will change.	Das Emoji neben dem Titel der Chatliste ändert sich.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Holiday look all year that draws the emoji after the chat list title.
+emoji next to the chat list title	Emoji neben dem Titel der Chatliste
 Use system font	Systemschrift verwenden
 Bold, italic and code text use your phone's font instead of Telegram's built-in one. Restart Telegram to see the change.	Fetter, kursiver und Code-Text verwenden die Schrift deines Handys statt der in Telegram eingebauten. Starte Telegram neu, um die Änderung zu sehen.
 AMOLED black	AMOLED-Schwarz
@@ -307,7 +340,7 @@ Volume keys only change the volume. They no longer start the video or round vide
 Swipe back on profiles	Auf Profilen zurückwischen
 Swiping right on a profile's photos or media tabs goes back, like the rest of the profile, instead of showing the previous photo or tab.	Wischen nach rechts auf den Fotos oder Medien-Tabs eines Profils geht zurück, wie im Rest des Profils, statt das vorherige Foto oder den vorherigen Tab zu zeigen.
 Hide phone number	Telefonnummer ausblenden
-Your own phone number shows as dots in the side menu, Settings and your profile, which helps with screenshots. Others' numbers stay visible.	Deine eigene Telefonnummer erscheint als Punkte im Seitenmenü, in den Einstellungen und in deinem Profil, was bei Screenshots hilft. Die Nummern anderer bleiben sichtbar.
+Your own phone number shows as dots in Settings and your profile, which helps with screenshots. Others' numbers stay visible.	Deine eigene Telefonnummer erscheint als Punkte in den Einstellungen und in deinem Profil, was bei Screenshots hilft. Die Nummern anderer bleiben sichtbar.
 # context: Privacy page switch title, under Hide phone number. When on, the box on Telegram's add contact screen that shares your own phone number with the new contact starts unticked.
 Don't share my number by default	Meine Nummer nicht standardmäßig teilen
 # context: Summary under that switch. The box is Telegram's own checkbox on the add contact screen, and the person can still tick it.
@@ -320,6 +353,14 @@ Allow chat blur on slower phones	Chat-Unschärfe auf langsameren Handys erlauben
 Telegram only blurs chat headers and panels on fast phones. This lets any phone do it, once Blur in chat is on under Power saving.	Telegram weichzeichnet Chat-Kopfzeilen und Leisten nur auf schnellen Handys. Das erlaubt es jedem Handy, sobald unter Energiesparen die Option Unschärfe im Chat an ist.
 Play voice messages one at a time	Sprachnachrichten einzeln abspielen
 When a voice or video message ends, the next one doesn't start by itself.	Wenn eine Sprach- oder Videonachricht endet, startet die nächste nicht von selbst.
+# context: Playback page switch title, under Play voice messages one at a time and independent of it. When on, voice and round video messages can't be started while the phone's lock screen shows.
+Keep voice messages quiet while locked	Sprachnachrichten bei gesperrtem Handy stumm lassen
+# context: Summary under that switch. Round video messages are Telegram's circular video notes; the notification is Telegram's music player notification.
+While your phone is locked, voice and round video messages don't start, resume or skip to the next one, whether from headphones, a car, the notification or the lock screen. One that's already playing finishes. Music and other videos play as usual.	Solange dein Handy gesperrt ist, starten Sprach- und runde Videonachrichten nicht, laufen nicht weiter und springen nicht zur nächsten, ob über Kopfhörer, ein Auto, die Benachrichtigung oder den Sperrbildschirm. Eine, die schon läuft, spielt zu Ende. Musik und andere Videos laufen wie gewohnt.
+# context: Short toast when a voice or round video message was asked to play while the phone is locked and the switch is on.
+Unlock your phone to play voice and video messages.	Entsperre dein Handy, um Sprach- und Videonachrichten abzuspielen.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the locked phone part of Play voice messages one at a time.
+voice playback while locked	Sprachwiedergabe bei gesperrtem Handy
 Stop vibrations on taps	Vibrationen bei Berührungen stoppen
 Taps, long presses, swipes and wrong entries no longer vibrate the phone. Incoming calls still vibrate, and notifications follow your own settings.	Tippen, langes Drücken, Wischen und falsche Eingaben lassen das Handy nicht mehr vibrieren. Eingehende Anrufe vibrieren weiterhin, und Benachrichtigungen folgen deinen eigenen Einstellungen.
 Turn off reaction effects	Reaktionseffekte ausschalten
@@ -438,10 +479,18 @@ Notification ID saved on this phone: %1$s	Benachrichtigungs-ID auf diesem Handy 
 Signed-in accounts: %1$s	Angemeldete Konten: %1$s
 Accounts Telegram confirmed for notifications: %1$s	Konten, die Telegram für Benachrichtigungen bestätigt hat: %1$s
 Telegram's reply to notification sign-up: %1$s	Telegrams Antwort auf die Anmeldung für Benachrichtigungen: %1$s
+# context: Notification status lines about Telegram's own Keep-Alive Service and Background Connection switches. Use exactly the labels Telegram shows in this language (translations.telegram.org keys NotificationsService, NotificationsServiceConnection, Settings, SettingsNotifications and NotificationsOther).
+Keep-Alive Service and Background Connection on: %1$s	Keep-Alive-Dienst und Hintergrundverbindung an: %1$s
+Without push, turn both on to get messages on time. They're in Telegram's own Settings > Notifications, under Other.	Ohne Push schalte beide ein, damit Nachrichten pünktlich ankommen. Sie sind in Telegrams eigenen Einstellungen > Benachrichtungen unter Sonstiges.
 No reply since Telegram started	Keine Antwort seit dem Start von Telegram
 Accepted	Angenommen
 Refused	Abgelehnt
 Refused (%1$s)	Abgelehnt (%1$s)
+# context: One line per account and push service in the notification status. %1$s is the account number, %2$s is Firebase or UnifiedPush, %3$s is Accepted or Refused, %4$s is how long ago.
+Telegram's reply to account %1$s on %2$s: %3$s, %4$s	Telegrams Antwort an Konto %1$s über %2$s: %3$s, %4$s
+less than a minute ago	vor weniger als einer Minute
+%1$s min ago	vor %1$s Min.
+%1$s h ago	vor %1$s Std.
 This only shows what's saved on this phone. It doesn't prove notifications will arrive.	Das zeigt nur, was auf diesem Handy gespeichert ist. Es beweist nicht, dass Benachrichtigungen ankommen.
 Unknown	Unbekannt
 Allowed	Erlaubt
@@ -484,6 +533,20 @@ Your picture next to the message box goes away in groups and channels where you 
 # context: Hide Contacts tab. Contacts, Calls and Settings are Telegram's own names for the tabs in the bar at the bottom of the main screen; the new message button is the round pencil button on the chat list.
 Hide Contacts tab	Kontakte-Tab ausblenden
 The Contacts tab leaves the bar at the bottom of the main screen, and swiping doesn't open its page either. The Calls or Settings tab stays as Telegram has it, and the chat list's new message button still opens your contacts. Restart Telegram to see the change.	Der Tab Kontakte verschwindet aus der Leiste unten auf dem Hauptbildschirm, und ein Wischen öffnet seine Seite auch nicht. Der Tab Anrufe oder Einstellungen bleibt, wie Telegram ihn zeigt, und die Taste für eine neue Nachricht in der Chatliste öffnet weiterhin deine Kontakte. Starte Telegram neu, um die Änderung zu sehen.
+# context: Chat list page switch title, under Hide Contacts tab and independent of it. When on, the bar at the bottom of the main screen (Chats, Contacts, Calls or Settings, Profile) is drawn shorter and narrower.
+Compact bottom bar	Kompakte untere Leiste
+# context: Summary under that switch. The tabs are the buttons in that bar; they keep their height so they stay as easy to tap.
+The bar at the bottom of the main screen gets shorter and only as wide as its tabs need. The tabs keep their full height, so they're just as easy to tap. Restart Telegram to see the change.	Die Leiste unten auf dem Hauptbildschirm wird niedriger und nur so breit, wie ihre Tabs es brauchen. Die Tabs behalten ihre volle Höhe, du triffst sie also genauso leicht. Starte Telegram neu, um die Änderung zu sehen.
+# context: Chat list page switch title, under Hide Contacts tab. When on, swiping right on the first chat folder slides in a menu from the left edge, like the navigation drawer older Telegram versions had.
+Side menu	Seitenmenü
+# context: Summary under that switch. The list names the menu's rows: My Profile, New Message, Contacts, Calls, Saved Messages, Settings, and an account switcher. Back is the phone's back gesture or button.
+Swipe right on your first chat folder and a menu slides in, like the one older Telegram had. It has your profile, new message, contacts, calls, saved messages and settings, plus a way to switch accounts. Back or a tap beside it closes it.	Wische auf deinem ersten Chatordner nach rechts, und ein Menü gleitet herein, wie das im älteren Telegram. Es hat dein Profil, neue Nachricht, Kontakte, Anrufe, gespeicherte Nachrichten und Einstellungen, dazu einen Kontowechsel. Zurück oder ein Tippen daneben schließt es.
+# context: Row near the top of that side menu, under the account name. Tapping it shows Telegram's list of signed-in accounts to switch between, or add one.
+Switch account	Konto wechseln
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Hide Contacts tab that makes the bottom bar compact.
+bottom bar size	Größe der unteren Leiste
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Hide Contacts tab that adds the menu sliding in from the left of the chat list.
+side menu	Seitenmenü
 # context: Hide messages by keyword. A filter is one line of text the person writes; a line in slashes is a regular expression. The settings page has one list for groups and one for channels, each edited in a dialog with Save and Cancel. Keep /crypto|airdrop/ exactly as written.
 Hide messages by keyword	Nachrichten nach Stichwort ausblenden
 Messages in groups and channels that match one of your filters are left out when you open the chat. Private chats and your own messages stay as they are. Nothing is deleted, and your filters stay on this phone.	Nachrichten in Gruppen und Kanälen, die zu einem deiner Filter passen, werden beim Öffnen des Chats ausgelassen. Private Chats und deine eigenen Nachrichten bleiben, wie sie sind. Nichts wird gelöscht, und deine Filter bleiben auf diesem Telefon.
@@ -526,8 +589,6 @@ Touch and keyboard	Berührung und Tastatur
 Less clutter	Weniger Ablenkung
 # context: title of the last row on the settings home page; a tap opens the maintainer's Ko-fi page in a browser
 Support HushTelegram	HushTelegram unterstützen
-# context: that row's summary; Ko-fi is a tipping site's name and stays as it is
-Buy me a coffee on Ko-fi	Spendier mir einen Kaffee auf Ko-fi
 # context: Faster downloads, a switch on the Playback page. Telegram downloads a file in pieces; this makes them bigger and asks for more at once.
 Faster downloads	Schnellere Downloads
 # context: that switch's summary. KB is kilobytes. "Goes back to small ones" means Telegram drops to the small pieces on its own if a big one fails.
@@ -540,6 +601,7 @@ Your AI service at %1$s, model %2$s.	Dein KI-Dienst bei %1$s, Modell %2$s.
 # context: hints in the three fields of that dialog: the web address of the AI service, the model to ask, and the secret key the service gave the person.
 Service address	Adresse des Dienstes
 Model	Modell
+How to translate (optional)	Wie übersetzt werden soll (optional)
 API key	API-Schlüssel
 # context: the dialog's explanation. OpenAI, OpenRouter, DeepSeek and Groq are company names and stay as they are.
 With a key, the text you translate goes to this AI service instead of Google. Any service that takes OpenAI's chat format works, like OpenAI, OpenRouter, DeepSeek or Groq. The key stays on this phone and never goes in a settings file.	Mit einem Schlüssel geht der Text, den du übersetzt, an diesen KI-Dienst statt an Google. Jeder Dienst, der OpenAIs Chat-Format versteht, funktioniert, etwa OpenAI, OpenRouter, DeepSeek oder Groq. Der Schlüssel bleibt auf diesem Telefon und kommt nie in eine Einstellungsdatei.
@@ -662,3 +724,141 @@ Loads your switches, filter lists and sticker size from a saved file. You see wh
 # context: Readable actions, validation, import details and notification recovery.
 Close	Schließen
 Couldn't open notification settings. Open Android settings.	Benachrichtigungen nicht erreichbar. Öffne die Android-Einstellungen.
+# context: Search only my chats, the second switch under Hide popular apps on the Ads page.
+Search only my chats	Nur in meinen Chats suchen
+Search finds your chats, contacts and messages from chats you're in, and nothing public. The Channels, Apps and Posts tabs go away, and a hashtag's public posts don't load.	Die Suche findet deine Chats, Kontakte und Nachrichten aus Chats, in denen du bist, und nichts Öffentliches. Die Tabs Kanäle, Apps und Beiträge verschwinden, und die öffentlichen Beiträge zu einem Hashtag werden nicht geladen.
+public search lookups	öffentliche Suchanfragen
+# context: Settings lock row under Quick setups on the home page, its notes, and what a refused change says (#17).
+Lock HushTelegram settings	HushTelegram-Einstellungen sperren
+Makes every setting here read-only. To change one again, start an unlock here and wait 24 hours.	Macht jede Einstellung hier schreibgeschützt. Um wieder etwas zu ändern, starte hier das Entsperren und warte 24 Stunden.
+Start unlock	Entsperren starten
+Your settings are locked. Tap to start the 24-hour wait. You can cancel it while it runs.	Deine Einstellungen sind gesperrt. Tippe, um die Wartezeit von 24 Stunden zu starten. Du kannst sie abbrechen, solange sie läuft.
+Cancel unlock	Entsperren abbrechen
+Settings unlock in %1$d h %2$d min. Tap to cancel and keep them locked.	Die Einstellungen werden in %1$d Std. %2$d Min. entsperrt. Tippe, um abzubrechen und sie gesperrt zu lassen.
+Settings locked. Unlocking takes 24 hours.	Einstellungen gesperrt. Das Entsperren dauert 24 Stunden.
+Unlock started. Settings open in 24 hours unless you cancel.	Entsperren gestartet. In 24 Stunden sind die Einstellungen wieder offen, wenn du nicht abbrichst.
+Unlock canceled. Settings stay locked.	Entsperren abgebrochen. Die Einstellungen bleiben gesperrt.
+Couldn't change the lock. Try again in a moment.	Die Sperre ließ sich nicht ändern. Versuche es gleich noch einmal.
+Settings are locked. They unlock in %1$d h %2$d min.	Die Einstellungen sind gesperrt. Sie werden in %1$d Std. %2$d Min. entsperrt.
+Settings are locked. Tap Start unlock, then wait 24 hours.	Einstellungen gesperrt. Tippe auf Entsperren starten und warte 24 Stunden.
+# context: Export settings row, its first sentence: what a settings file holds. The sentence after it lists what the file leaves out.
+Saves your switches, filter lists, sticker size and chat list emoji to a file, for all the accounts in this Telegram app. Your chats, drafts and kept messages aren't in it.	Speichert deine Schalter, Filterlisten, die Stickergröße und das Emoji der Chatliste in einer Datei, für alle Konten in dieser Telegram-App. Deine Chats, Entwürfe und behaltenen Nachrichten sind nicht darin.
+# context: Export settings row. %1$s is a list joined the language's own way: row titles as they show (Pause HushTelegram, Debug logging, Check for new HushTelegram releases, Lock HushTelegram settings, Quick setups on the home page, UnifiedPush notifications, Folders by chat type) and the lowercase phrase below it, which ends the list.
+Left out of the file: %1$s.	Nicht in der Datei: %1$s.
+the translation service, its key and the chats you turned translation on for	der Übersetzungsdienst, sein Schlüssel und die Chats, für die du die Übersetzung eingeschaltet hast
+# context: Sentences added after a description to say which account it works on. "Both" is turning Folders by chat type on and turning it off. The last one closes the About page's Accounts row.
+Both work on the account you have open.	Beides gilt für das gerade geöffnete Konto.
+A chat or message you turn on stays on only in the account you turned it on in.	Ein Chat oder eine Nachricht, die du einschaltest, bleibt nur in dem Konto eingeschaltet, in dem du sie eingeschaltet hast.
+This covers every account in this Telegram app.	Das gilt für alle Konten in dieser Telegram-App.
+A few things belong to the account you have open instead, and their descriptions say so.	Ein paar Dinge gehören stattdessen zum gerade geöffneten Konto, und ihre Beschreibungen sagen das.
+# context: The message filter editor's tester. The person types a message under the list and taps Try; the answer names the first line that would hide it. %1$d is that line's number, %2$s the line itself. The message is never saved.
+Try a message below to see which line would hide it. It isn't saved anywhere.	Probiere unten eine Nachricht aus, um zu sehen, welche Zeile sie ausblenden würde. Sie wird nirgends gespeichert.
+Try a message	Nachricht ausprobieren
+Paste or type a message	Nachricht einfügen oder eintippen
+Try	Testen
+Type a message to try the filters on.	Gib eine Nachricht ein, um die Filter daran auszuprobieren.
+There are no filters to try yet.	Es gibt noch keine Filter zum Ausprobieren.
+No filter here would hide this message.	Kein Filter hier würde diese Nachricht ausblenden.
+Line %1$d would hide this message: %2$s	Zeile %1$d würde diese Nachricht ausblenden: %2$s
+# context: The settings home page's Changed switches row and the page it opens, which lists every switch whose saved value isn't the one it starts with; flipping one there puts it back and takes it off the page. %1$d is how many switches.
+Changed switches	Geänderte Schalter
+No changed switches	Keine geänderten Schalter
+A switch you turn on or off shows up here until you put it back.	Ein Schalter, den du ein- oder ausschaltest, erscheint hier, bis du ihn zurückstellst.
+Every switch is the way it started.	Alle Schalter sind im Ausgangszustand.
+%1$d switch differs from how it started. Open to flip it back.	%1$d Schalter weicht vom Ausgangszustand ab. Öffne dies, um ihn zurückzustellen.
+%1$d switches differ from how they started. Open to flip any of them back.	%1$d Schalter weichen vom Ausgangszustand ab. Öffne dies, um sie zurückzustellen.
+# context: Quick setups dialog, the last card. It shows after a choice changed switches and puts those switches back the way they were
+Undo the last setup	Letzte Schnelleinstellung rückgängig machen
+# context: toast after a Quick setups choice changed switches, pointing at the undo card in the Quick setups dialog; %1$d is how many, first for exactly one and then for any other count
+Changed %1$d setting. Undo it from Quick setups.	%1$d Einstellung geändert. Rückgängig unter Schnelleinstellungen.
+Changed %1$d settings. Undo them from Quick setups.	%1$d Einstellungen geändert. Rückgängig unter Schnelleinstellungen.
+# context: toast after a Quick setups choice changed nothing because some switches couldn't take the change just then, for example while a settings import writes; %1$d is how many
+Nothing changed. %1$d switch couldn't change now.	Nichts geändert. %1$d Schalter ließ sich gerade nicht ändern.
+Nothing changed. %1$d switches couldn't change now.	Nichts geändert. %1$d Schalter ließen sich gerade nicht ändern.
+# context: toast after Undo the last setup; %1$d is how many switches went back the way they were
+Put back %1$d switch	%1$d Schalter zurückgestellt
+Put back %1$d switches	%1$d Schalter zurückgestellt
+# context: Undo the last setup card, under its name: what the last Quick setups choice did. %1$s is a list of switch titles joined the language's own way; %1$d counts switches. The last sentence says Undo turns switches back but can't bring back what a switch deleted as it changed
+Turned on: %1$s.	Eingeschaltet: %1$s.
+Turned off: %1$s.	Ausgeschaltet: %1$s.
+%1$d other switch was already set.	%1$d weiterer Schalter war schon so eingestellt.
+%1$d other switches were already set.	%1$d weitere Schalter waren schon so eingestellt.
+%1$d switch couldn't change.	%1$d Schalter ließ sich nicht ändern.
+%1$d switches couldn't change.	%1$d Schalter ließen sich nicht ändern.
+%1$d switch you changed since stays as you set it.	%1$d Schalter, den du seitdem geändert hast, bleibt, wie du ihn eingestellt hast.
+%1$d switches you changed since stay as you set them.	%1$d Schalter, die du seitdem geändert hast, bleiben, wie du sie eingestellt hast.
+Only switches go back. Anything a switch already cleared, like chats' translate choices, stays cleared.	Nur Schalter werden zurückgestellt. Was ein Schalter schon gelöscht hat, etwa die Übersetzungswahl von Chats, bleibt gelöscht.
+# context: Headings that split the Notification status on this phone dialog into three parts: what Android allows on this phone, the push service Telegram signs up with, and what Telegram's servers answered for each signed-in account
+On this phone	Auf diesem Handy
+Push service	Push-Dienst
+Telegram accounts	Telegram-Konten
+# context: Notification status lines read from Android. Background use is Android's own Restricted setting for the app, and %1$s is Allowed, Restricted or Unknown. The three battery optimization lines are whole: Android's battery saving for the app is on, off or unknown, so make the value agree with the setting's name
+Background use: %1$s	Hintergrundnutzung: %1$s
+Restricted	Eingeschränkt
+Battery optimization: Unknown	Akku-Optimierung: Unbekannt
+Battery optimization: On	Akku-Optimierung: An
+Battery optimization: Off	Akku-Optimierung: Aus
+# context: Notification status line naming the UnifiedPush app's state; %1$s is a whole sentence such as "Telegram's wake-ups come through ntfy."
+UnifiedPush: %1$s	UnifiedPush: %1$s
+# context: Notification status, under a reply from Telegram that carries the error name APP_PUSH_APIKEY_MISSING. Keep the error name as it is
+APP_PUSH_APIKEY_MISSING means Telegram's servers have no push key set up for this app. That's configured on Telegram's side, so no setting on this phone fixes it.	APP_PUSH_APIKEY_MISSING heißt, dass auf den Servern von Telegram kein Push-Schlüssel für diese App eingerichtet ist. Das wird bei Telegram festgelegt, deshalb behebt es keine Einstellung auf diesem Handy.
+# context: Button in the Notification status dialog, shown when Android restricts Telegram in the background, or from Android 12 when it optimizes Telegram's battery; it opens Android's App info page for Telegram, where those are set. Then the toast when that page can't open
+Open app info	App-Info öffnen
+Couldn't open app info. Open Android settings.	App-Info nicht erreichbar. Öffne die Android-Einstellungen.
+# context: Filter editor, under Try a message, when the phone is too busy to check the message against the filters right now
+Couldn't try it now. Try again in a moment.	Das ging gerade nicht. Versuch es gleich noch einmal.
+# context: Second switch under Faster downloads on the Playback page. Data Saver is Android's own setting (use Android's name for it); metered means a network Android counts as paid per use, like mobile data
+Hold automatic downloads on Data Saver	Automatische Downloads im Datensparmodus anhalten
+While Android's Data Saver is on and the network is metered, Telegram doesn't start photos, videos, files, voice messages, music or stories downloading on its own, and stops the ones in its download queue. What you tap still downloads.	Solange der Datensparmodus von Android an ist und das Netzwerk getaktet ist, lädt Telegram Fotos, Videos, Dateien, Sprachnachrichten, Musik und Stories nicht von selbst herunter und stoppt die Downloads in seiner Warteschlange. Was du antippst, wird trotzdem heruntergeladen.
+# context: Under Hold automatic downloads on Data Saver, what Android reports when the page opens. One of these four, then one of the three network lines
+Android's Data Saver is on.	Der Datensparmodus von Android ist an.
+Android's Data Saver is off.	Der Datensparmodus von Android ist aus.
+Android's Data Saver is on, but Telegram may use data freely.	Der Datensparmodus von Android ist an, aber Telegram darf Daten uneingeschränkt nutzen.
+Android doesn't say whether Data Saver is on.	Android sagt nicht, ob der Datensparmodus an ist.
+This network is metered.	Dieses Netzwerk ist getaktet.
+This network isn't metered.	Dieses Netzwerk ist nicht getaktet.
+Android doesn't say whether this network is metered.	Android sagt nicht, ob dieses Netzwerk getaktet ist.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the Data Saver part of Faster downloads: holding automatic media downloads while Android's Data Saver is on
+automatic downloads on Data Saver	automatische Downloads im Datensparmodus
+# context: Button in the Notification status dialog before Android 12, shown when Android optimizes Telegram's battery but doesn't restrict it in the background. It opens Android's battery optimization list, where Telegram can be set not to be optimized. Then the toast when neither that list nor App info can open
+Open battery optimization	Akku-Optimierung öffnen
+Couldn't open battery optimization. Open Android settings.	Akku-Optimierung konnte nicht geöffnet werden. Öffne die Android-Einstellungen.
+# context: Switch on the Links page, under Open links externally, off by default. Mini Apps are the web apps bots open inside Telegram (use Telegram's own name for them). Location means the phone's GPS position; the summary also says a site can still guess a rough area from the internet connection, and that sending a location in a chat isn't affected
+Keep your location from Mini Apps	Standort vor Mini-Apps verbergen
+Mini Apps are told your phone's location isn't available, and web pages opened in Telegram are refused it. A page that already had it keeps it until you close it. Sites can still guess a rough area from your connection. Sending your location in a chat works as before.	Mini-Apps erfahren, dass der Standort deines Handys nicht verfügbar ist, und Webseiten, die in Telegram geöffnet werden, bekommen ihn nicht. Eine Seite, die ihn schon hatte, behält ihn, bis du sie schließt. Websites können anhand deiner Verbindung trotzdem ungefähr erraten, wo du bist. Deinen Standort in einem Chat zu senden funktioniert wie bisher.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the location part of Open links externally: keeping the phone's location from Mini Apps and web pages opened in Telegram
+Mini App and web page location	Standortzugriff von Mini-Apps und Webseiten
+# context: Third choice in the Export diagnostic report dialog, after Copy quick report and Save full report, and the title of the preview dialog it opens. Short, like the other two choices
+Preview the report	Bericht vorher ansehen
+# context: Line under the Preview the report choice. The preview shows the report and lets you untick its parts before Copy or Save
+See the report first and leave out any part you'd rather not share, then copy or save it.	Sieh dir den Bericht zuerst an und lass Teile weg, die du nicht teilen möchtest. Dann kopiere oder speichere ihn.
+# context: Line at the top of the report preview, above one checkbox per part of the report. Copy and Save are the dialog's buttons, so use the same words as those buttons
+Untick a part to leave it out. Copy and Save use only what's ticked.	Entferne das Häkchen bei einem Teil, um ihn wegzulassen. Kopieren und Speichern nehmen nur, was angehakt ist.
+# context: Note in the report preview when the report is too long to show whole. %1$s and %2$s are numbers already formatted for the phone's language. Save writes the whole report to a file; Copy puts what fits on the clipboard, dropping the oldest log events first
+Showing the first %1$s of %2$s characters. Save keeps all of it, and Copy keeps what fits, leaving out the oldest events first.	Angezeigt werden die ersten %1$s von %2$s Zeichen. Speichern behält alles, Kopieren behält, was passt, und lässt zuerst die ältesten Ereignisse weg.
+# context: Switch on the Ads page under Search only my chats, off by default. Styled letters are the decorative Unicode letters some people use in their names, like mathematical bold or fullwidth letters. With it on, local search finds those names when plain letters are typed
+Find names in styled letters	Namen in Zierschrift finden
+# context: Summary of Find names in styled letters. The three sample words are written in styled letters (bold, italic, wide): keep them styled, use words in your language that mean bold, italic and wide, and avoid letters with accents since those can't be styled. Highlighted means the matched part of a search result is colored
+Searching your chats and contacts also finds names written in letters like 𝐁𝐨𝐥𝐝, 𝘐𝘵𝘢𝘭𝘪𝘤 or Ｗｉｄｅ when you type plain ones. Names still show as they're written and numbers aren't changed. A name found this way isn't highlighted.	Die Suche in deinen Chats und Kontakten findet auch Namen in Buchstaben wie 𝐅𝐞𝐭𝐭, 𝘒𝘶𝘳𝘴𝘪𝘷 oder Ｂｒｅｉｔ, wenn du normale Buchstaben tippst. Namen werden weiter so angezeigt, wie sie geschrieben sind, und Zahlen bleiben unverändert. Ein so gefundener Name wird nicht hervorgehoben.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Hide popular apps that lets search find names written in styled letters
+styled names in search	Namen in Zierschrift bei der Suche
+# context: Toast after Save in the report preview when some parts were left out, so it isn't the full report. %1$s is where the file went, like Download/Morphe/name.txt. Match the wording of Full report saved to %1$s
+Report saved to %1$s	Bericht gespeichert unter %1$s
+# context: Note in the report preview when the text couldn't be redrawn after a box was ticked or unticked. Copy and Save are the dialog's buttons, so use the same words as those buttons
+Couldn't update the preview. Copy and Save still use only what's ticked.	Die Vorschau konnte nicht aktualisiert werden. Kopieren und Speichern nehmen trotzdem nur, was angehakt ist.
+# context: Switch on the Chat list page under Hide folder tab counters, off by default. With it on, the chat list opens on a folder the user picked instead of All Chats when the app starts
+Open a folder at launch	Beim Start einen Ordner öffnen
+# context: Summary of Open a folder at launch. All Chats is Telegram's own name for the first folder tab: use Telegram's translation of it. Locked means a folder Telegram locks because the account has more folders than its limit allows
+The chat list opens on the folder you pick below instead of All Chats. Each account keeps its own pick, and the folder order doesn't change. If that folder is gone, renamed or locked, All Chats opens as usual.	Die Chatliste öffnet sich im unten gewählten Ordner statt in Alle Chats. Jedes Konto behält seine eigene Auswahl, und die Reihenfolge der Ordner ändert sich nicht. Ist der Ordner weg, umbenannt oder gesperrt, öffnet sich wie gewohnt Alle Chats.
+# context: Row under Open a folder at launch. Its summary is the picked folder's name, and a tap lists All Chats and the account's folders to pick from
+Folder to open	Zu öffnender Ordner
+# context: Telegram's own name for the folder tab with every chat (FilterAllChats). Use Telegram's translation
+All Chats	Alle Chats
+# context: Toast when Folder to open is tapped and the account has no chat folders
+You don't have any folders yet.	Du hast noch keine Ordner.
+# context: Toast when the picked folder couldn't be written to the phone's storage
+Couldn't save the folder. Try again in a moment.	Der Ordner ließ sich nicht speichern. Versuch es gleich noch einmal.
+# context: Toast when Folder to open is tapped and Telegram's folder list can't be read
+Couldn't read your folders.	Deine Ordner ließen sich nicht lesen.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Hide folder tab counters that opens the chat list on a picked folder
+which folder the chat list opens on	Ordner, in dem die Chatliste startet

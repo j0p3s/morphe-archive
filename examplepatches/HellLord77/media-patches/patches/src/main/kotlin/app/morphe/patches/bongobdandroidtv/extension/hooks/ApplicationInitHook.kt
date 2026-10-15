@@ -8,7 +8,8 @@ internal val bongobdandroidtvActivityOnCreateHook =
         targetBundleMethod = true,
     )
 
-internal val bongobdandroidtvApplicationOnCreateHook = activityOnCreateExtensionHook(
-    activityClassType = "Lsaas/ott/smarttv/MainApplication;",
-    targetBundleMethod = false,
-)
+internal val bongobdandroidtvApplicationOnCreateHook =
+    activityOnCreateExtensionHook(
+        activityClassType = "Lsaas/ott/smarttv/MainApplication;",
+        targetBundleMethod = false,
+    )

@@ -32,8 +32,10 @@ internal fun Document.addSettingsEntry() {
     }
     application.child("provider", "name" to "app.hushmessenger.extension.SettingsProvider",
         "authorities" to MessengerTarget.PACKAGE + SETTINGS_AUTHORITY_SUFFIX, "exported" to "false")
+    // Settings get their own task, so Recents left a second card for them beside Messenger's (#54). Android still shows
+    // the card while settings are in front, and drops it once anything else is.
     application.child("activity", "name" to "app.hushmessenger.extension.SettingsActivity",
-        "label" to "HushMessenger settings", "exported" to "true",
+        "label" to "HushMessenger settings", "exported" to "true", "excludeFromRecents" to "true",
         "icon" to "@android:drawable/ic_menu_preferences", "taskAffinity" to "app.hushmessenger.settings")
     // The app drawer entry is an alias, so settings can hide it while the shortcuts and Menu tab row keep working.
     val launcher = application.child("activity-alias", "name" to "app.hushmessenger.extension.SettingsLauncher",
@@ -107,6 +109,7 @@ internal val settingsExtension = bytecodePatch(description = "Load HushMessenger
         menuTitleLongPressSites = emptyList()
         messageLogContract = null
         readReceiptThreadFields = emptyMap()
+        markReadRecipe = null
     }
 }
 
@@ -128,58 +131,66 @@ internal fun Document.addFeature(key: String) {
     })
 }
 
+/** The checks [hook]'s method has to pass before its control makes any edit. It edits nothing. */
+internal fun MutableMethod.validateHook(hook: String) {
+    if (hook in pluginGates) validatePluginGate()
+    when (hook) {
+        "ai_sticker_cell" -> validateAiStickerCell()
+        "screenshot_viewers" -> validateScreenshotViewer()
+        "subtabs" -> validateSubtabs()
+        "browser" -> validateBrowserPreference()
+        "ads" -> validateAdFilter()
+        "people_jewel" -> validatePeopleSection()
+        "people_tab" -> validatePeopleTab()
+        "people_search" -> validatePeopleSearch()
+        "people_story" -> validatePeopleStory()
+        INBOX_REFRESH_HOOK -> validateInboxItems()
+        "keep_unsent" -> validateKeepUnsent()
+        "unsent_indicator" -> validateUnsentIndicator()
+        "delta_unsent" -> validateDeltaUnsent()
+        "emoji_typeface" -> validateEmojiTypeface()
+        EMOJI_DRAWER -> validateEmojiDrawer()
+        EMOJI_SEARCH -> validateEmojiSearch()
+        AI_MENTIONS -> validateAiMentions()
+        AI_COMMANDS -> validateAiCommands()
+        AI_SEARCH_HINT -> validateAiSearchHint()
+        AI_MENTION_ROWS -> validateAiMentionRows()
+        XHE_AUDIO -> validateXheAudio()
+        XHE_TRANSCODE -> validateXheTranscode()
+        DISAPPEARING_SWIPE -> validateDisappearingSwipe()
+        HIDE_READ_RECEIPTS -> validateChatSeen()
+        REPLY_READ -> validateReplyRead()
+        MARK_READ_BAR -> validateMarkReadBar()
+        MARK_READ_CLICK -> validateMarkReadClick()
+        ANALYTICS_UPLOADS -> validateAnalyticsUpload()
+        ATTRIBUTION_UPLOADS -> validateAttributionUpload()
+        AD_EVENTS -> validateAdEvent()
+        MQTT_TELEMETRY -> validateMqttTelemetry()
+        PINNED_CHATS -> validatePinnedChatLimit()
+        NEARBY_SCANS -> validateNearbyScans()
+        WIFI_IDENTITY -> validateWifiIdentity()
+        PHONE_ID_SYNC -> validatePhoneIdSync()
+        STORY_HOLD -> validateStoryHold()
+        TEXT_STYLE -> validateTextStyleField()
+        MESSAGE_LOG, AUTO_REPLY -> validateMessageLog()
+        "original_photo" -> validateOriginalPhoto()
+        ORIGINAL_VIDEO -> validateOriginalVideo()
+        SYSTEM_CAMERA -> validateSystemCamera()
+        in CUSTOM_FONT_HOOKS -> validateCustomFont(hook)
+        "avatar_tabs" -> validateKeyboardTabsInline()
+        "typing_mailbox" -> validateOutgoingTyping()
+        "anonymous_stories" -> validateStorySeen()
+        "growth_notes" -> validateNotesTips()
+        "bubbles" -> validateBubbleEligibility()
+        "bubble_mode" -> validateNativeBubbleMode()
+        APP_ICONS -> validateAppIconGate()
+        else -> validateSwitch()
+    }
+}
+
 internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>>) {
     // A multi-method control must pass every contract before its first edit.
-    for ((hook, selectedMethods) in methods) for (method in selectedMethods) {
-        if (hook in pluginGates) method.validatePluginGate()
-        when (hook) {
-            "ai_sticker_cell" -> method.validateAiStickerCell()
-            "screenshot_viewers" -> method.validateScreenshotViewer()
-            "subtabs" -> method.validateSubtabs()
-            "browser" -> method.validateBrowserPreference()
-            "ads" -> method.validateAdFilter()
-            "people_jewel" -> method.validatePeopleSection()
-            "people_tab" -> method.validatePeopleTab()
-            "people_search" -> method.validatePeopleSearch()
-            "people_story" -> method.validatePeopleStory()
-            INBOX_REFRESH_HOOK -> method.validateInboxItems()
-            "keep_unsent" -> method.validateKeepUnsent()
-            "unsent_indicator" -> method.validateUnsentIndicator()
-            "delta_unsent" -> method.validateDeltaUnsent()
-            "emoji_typeface" -> method.validateEmojiTypeface()
-            EMOJI_DRAWER -> method.validateEmojiDrawer()
-            EMOJI_SEARCH -> method.validateEmojiSearch()
-            AI_MENTIONS -> method.validateAiMentions()
-            AI_COMMANDS -> method.validateAiCommands()
-            AI_SEARCH_HINT -> method.validateAiSearchHint()
-            AI_MENTION_ROWS -> method.validateAiMentionRows()
-            XHE_AUDIO -> method.validateXheAudio()
-            DISAPPEARING_SWIPE -> method.validateDisappearingSwipe()
-            HIDE_READ_RECEIPTS -> method.validateChatSeen()
-            REPLY_READ -> method.validateReplyRead()
-            ANALYTICS_UPLOADS -> method.validateAnalyticsUpload()
-            ATTRIBUTION_UPLOADS -> method.validateAttributionUpload()
-            AD_EVENTS -> method.validateAdEvent()
-            MQTT_TELEMETRY -> method.validateMqttTelemetry()
-            PINNED_CHATS -> method.validatePinnedChatLimit()
-            NEARBY_SCANS -> method.validateNearbyScans()
-            WIFI_IDENTITY -> method.validateWifiIdentity()
-            TEXT_STYLE -> method.validateTextStyleField()
-            MESSAGE_LOG, AUTO_REPLY -> method.validateMessageLog()
-            "original_photo" -> method.validateOriginalPhoto()
-            ORIGINAL_VIDEO -> method.validateOriginalVideo()
-            SYSTEM_CAMERA -> method.validateSystemCamera()
-            in CUSTOM_FONT_HOOKS -> method.validateCustomFont(hook)
-            "avatar_tabs" -> method.validateKeyboardTabsInline()
-            "typing_mailbox" -> method.validateOutgoingTyping()
-            "anonymous_stories" -> method.validateStorySeen()
-            "growth_notes" -> method.validateNotesTips()
-            "bubbles" -> method.validateBubbleEligibility()
-            "bubble_mode" -> method.validateNativeBubbleMode()
-            APP_ICONS -> method.validateAppIconGate()
-            else -> method.validateSwitch()
-        }
-    }
+    for ((hook, selectedMethods) in methods) for (method in selectedMethods) method.validateHook(hook)
     for ((hook, selectedMethods) in methods) for (method in selectedMethods) {
         when (hook) {
             "ai_sticker_cell" -> method.injectAiStickerCell()
@@ -205,6 +216,8 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             "allow_screenshot" -> method.injectSwitch("$SETTINGS->allowScreenshot()Z", "0x0")
             HIDE_READ_RECEIPTS -> method.injectChatSeen()
             REPLY_READ -> method.injectReplyRead()
+            MARK_READ_BAR -> method.injectMarkReadBar()
+            MARK_READ_CLICK -> method.injectMarkReadClick()
             "keep_unsent" -> method.injectKeepUnsent()
             "unsent_indicator" -> method.injectUnsentIndicator()
             "delta_unsent" -> method.injectDeltaUnsent()
@@ -216,6 +229,7 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             AI_SEARCH_HINT -> method.injectAiSearchHint()
             AI_MENTION_ROWS -> method.injectAiMentionRows()
             XHE_AUDIO -> method.injectXheAudio()
+            XHE_TRANSCODE -> method.injectXheTranscode()
             DISAPPEARING_SWIPE -> method.injectDisappearingSwipe()
             ANALYTICS_UPLOADS -> method.injectAnalyticsUpload()
             ATTRIBUTION_UPLOADS -> method.injectAttributionUpload()
@@ -224,6 +238,8 @@ internal fun injectControl(key: String, methods: Map<String, List<MutableMethod>
             PINNED_CHATS -> method.injectPinnedChatLimit()
             NEARBY_SCANS -> method.injectNearbyScans()
             WIFI_IDENTITY -> method.injectWifiIdentity()
+            PHONE_ID_SYNC -> method.injectPhoneIdSync()
+            STORY_HOLD -> method.injectStoryHold()
             TEXT_STYLE -> method.injectTextStyleField()
             MESSAGE_LOG -> method.injectMessageLog()
             AUTO_REPLY -> method.injectAutoReply()
@@ -309,6 +325,22 @@ private fun controlPatch(key: String, title: String, summary: String, group: Str
                 // Settings then treats the control as unavailable (Settings.available), and the patcher log says why.
                 if (!nativeBubbleRoutesVerified) java.util.logging.Logger.getLogger("").warning(
                     "Allow chat bubbles: this Messenger's native bubble routes don't match the tested build, so the switch shows as unavailable in HushMessenger settings")
+            } else if (key == MARK_READ_BUTTON) {
+                val recipe = markReadRecipe ?: throw PatchException("Messenger controls: the chat top bar's button recipe is missing")
+                val host = mutableClassDefBy(MARK_READ)
+                fun stub(id: String) = host.methods.singleOrNull { it.hookId() == id }
+                    ?: throw PatchException("Messenger controls: the Mark as read button's extension stub is missing")
+                // Built before the first edit, so a changed stub stops the patch with Messenger untouched.
+                val built = listOf(stub(MARK_READ_BUILD).let { it to markReadSocketBuilder(it, recipe) },
+                    stub(MARK_READ_BUTTON_BUILD).let { it to markReadBuilder(it, recipe) })
+                injectControl(key, methods)
+                // MutableMethod.implementation has no setter. Keep both method indexes in sync when replacing it.
+                for ((old, new) in built) {
+                    host.methods.remove(old)
+                    host.directMethods.remove(old)
+                    host.methods.add(new)
+                    host.directMethods.add(new)
+                }
             } else {
                 injectControl(key, methods)
                 inboxRoute?.let { (route, stub) -> stub.writeInboxRefreshRoute(route) }
@@ -348,7 +380,7 @@ val hideSubtabsPatch = controlPatch("subtabs", "Hide inbox tabs", "Hides the Hom
 @Suppress("unused")
 val hideMarkReadPatch = controlPatch("mark_read_action", "Hide Mark as read", "Hides Mark as read in the menu you get when you press and hold a chat in your chat list, so you can't mark a chat read by accident. Mark as unread stays.", "Inbox")
 @Suppress("unused")
-val pinMoreChatsPatch = controlPatch("pinned_chats", "Pin more chats", "Raises Messenger's limit of three pinned chats to 20, so you can keep more chats at the top of your chat list.", "Inbox")
+val pinMoreChatsPatch = controlPatch("pinned_chats", "Pin more chats", "Raises Messenger's limit of three pinned chats to 20, so you can keep more chats at the top of your chat list. Messenger's servers can still stop you sooner.", "Inbox")
 @Suppress("unused")
 val hideFacebookPatch = controlPatch("facebook", "Hide Facebook shortcuts", "Hides Facebook buttons, profile and sharing shortcuts, and the Also from Meta and Subscriptions sections in the Menu tab. Handy if you only use Messenger.", "Navigation")
 @Suppress("unused")
@@ -361,6 +393,8 @@ val hideReelsBadgePatch = controlPatch("reels_badge", "Hide Reels badge", "Hides
 val hidePeopleTabPatch = controlPatch("tab_people", "Hide People tab", "Hides the People tab in the bar at the bottom. Restart Messenger to see the tab go.", "Navigation")
 @Suppress("unused")
 val hideNotificationsTabPatch = controlPatch("tab_notifications", "Hide Notifications tab", "Hides the Notifications tab in the bar at the bottom. Restart Messenger to see the tab go.", "Navigation")
+@Suppress("unused")
+val holdStoriesPatch = controlPatch("story_hold", "Hold stories at the end", "Keeps a story on screen when it ends instead of moving on to the next one, so you go on with a tap or a swipe. Photos and videos both wait, and the last story stays open until you close it.", "Navigation")
 @Suppress("unused")
 val hideAiStickersPatch = controlPatch("ai_stickers", "Hide AI sticker tools", "Hides the Generate AI sticker buttons, the AI sticker tab and AI sticker suggestions.", "Stickers", "ai_stickers", "ai_sticker_cell")
 @Suppress("unused")
@@ -396,8 +430,8 @@ val originalPhotoPatch = controlPatch("original_photo", "Send photos at original
 val originalVideoPatch = controlPatch("original_video", "Send videos without re-encoding",
     "Sends a video as the original file instead of a recompressed copy, when Messenger allows it. Videos over 25 MB, edited videos and some formats are still compressed.", "Conversations")
 @Suppress("unused")
-val xheAudioPatch = controlPatch("xhe_audio", "Fix shared videos with xHE-AAC sound",
-    "Messenger can't send a video whose only sound is xHE-AAC, which Facebook and Instagram now use. When you share one into Messenger from another app, its sound is converted to regular AAC first, so it sends. The picture isn't touched.", "Conversations")
+val xheAudioPatch = controlPatch("xhe_audio", "Fix videos that won't send",
+    "Messenger stops two kinds of video with \"Unable to send\". One is a video whose only sound is xHE-AAC, which Facebook and Instagram now use. The other is a Samsung screen recording whose recorder tag Messenger's media check rejects. Whether you share one into Messenger from another app or pick it in a chat, the sound is converted to regular AAC, or the tag is dropped, so it sends. The picture isn't touched.", "Conversations", XHE_AUDIO, XHE_TRANSCODE)
 @Suppress("unused")
 val disappearingSwipePatch = controlPatch("disappearing_swipe", "Turn off the swipe up for disappearing messages",
     "Swiping up at the bottom of a chat no longer turns on disappearing messages, so a scroll can't set the timer by accident. You can still change it in the chat's settings.", "Conversations")
@@ -428,9 +462,14 @@ val stopNearbyScansPatch = controlPatch("nearby_scans", "Stop nearby scans",
     "Stops Messenger from reading the list of Wi-Fi networks around you, and hides the name and hardware address of the one you're connected to, the way Android does when Messenger can't see your location. Also stops the timer it can run while it's open to check your location and scan for Wi-Fi networks and Bluetooth devices.", "Privacy",
     NEARBY_SCANS, WIFI_IDENTITY)
 @Suppress("unused")
+val stopPhoneIdSyncPatch = controlPatch("phone_id_sync", "Stop app list and device ID sharing",
+    "Stops Messenger from going through the apps on your phone to find other Meta apps, and from asking them for the device ID Meta uses to link the apps on one phone. Messenger keeps the ID it already has.", "Privacy")
+@Suppress("unused")
 val allowScreenshotPatch = controlPatch("allow_screenshot", "Allow screenshots", "Lets you screenshot protected chat media, such as view-once photos and Quicksnap, and stops screenshot notices. It doesn't add replay or saving.", "Privacy", "allow_screenshot", "screenshot_viewers")
 @Suppress("unused")
 val hideReadReceiptsPatch = controlPatch("hide_read_receipts", "Hide read receipts", "Opening a chat no longer tells people you read their message, and the chat stays unread on this phone. Marking it read yourself or replying in it marks it read and shows Seen, like Messenger does. Group chats aren't tested. Messenger's own Read receipts setting under Privacy & safety marks chats read without showing Seen.", "Privacy", HIDE_READ_RECEIPTS, REPLY_READ)
+@Suppress("unused")
+val markReadButtonPatch = controlPatch("mark_read_button", "Mark as read button", "Puts Messenger's Mark as read icon in a chat's top bar while Hide read receipts is on. Opening the chat still sends nothing, and a tap on the icon sends Seen and marks the chat read. It takes the place of the chat details button, since tapping the chat's name opens the same page, so the call buttons stay put.", "Privacy", MARK_READ_BAR, MARK_READ_CLICK)
 @Suppress("unused")
 val keepUnsentPatch = controlPatch("keep_unsent", "Keep unsent messages", "Keeps messages on screen after someone unsends them, in chats where it works. Encrypted chats aren't supported, and group chats aren't tested.", "Privacy", "keep_unsent", "unsent_indicator", "delta_unsent")
 @Suppress("unused")
@@ -566,8 +605,9 @@ val chatAnimationPatch = bytecodePatch(
         val inbox = original("chat_inbox").definingClass
         // Everything is checked before the first edit, so a changed build fails with the APK untouched.
         for (type in listOf(chat, inbox)) validateInheritsFragmentAnimation(type) { classDefByOrNull(it) }
-        // The extension slides chats opened from search and notifications by this activity's name.
-        if (classDefByOrNull(CHAT_ACTIVITY) == null) throw PatchException(
+        // The extension slides chats opened from search and notifications, and page and business chats, by these
+        // activities' names.
+        if (listOf(CHAT_ACTIVITY, BUSINESS_CHAT_ACTIVITY).any { classDefByOrNull(it) == null }) throw PatchException(
             "Slide chats in and out: Messenger's chat activity differs from the tested builds. Start with an unmodified supported APK.",
         )
         val base = mutable("chat_animation").apply { validateFragmentAnimation() }

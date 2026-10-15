@@ -6,12 +6,13 @@ import app.morphe.patches.hoichoi.shared.Constants.COMPATIBILITY_HOICHOI
 import app.morphe.patches.hoichoi.shared.Constants.COMPATIBILITY_HOICHOITV
 
 @Suppress("unused")
-val stripPairIPPatch = rawResourcePatch(
-    name = "Strip PairIP",
-    description = "Strips PairIP checks.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_HOICHOI, COMPATIBILITY_HOICHOITV)
+val stripPairIPPatch =
+    rawResourcePatch(
+        name = "Strip PairIP",
+        description = "Strips PairIP checks.",
+        default = true,
+    ) {
+        compatibleWith(COMPATIBILITY_HOICHOI, COMPATIBILITY_HOICHOITV)
 
-    dependsOn(stripPairIPPatch)
-}
+        dependsOn(stripPairIPPatch)
+    }

@@ -84,6 +84,7 @@ internal object AppCompatibilities {
         targets = listOf(
             AppTarget(version = "26.30.05", versionCode = 2090263005, minSdk = 28),
             AppTarget(version = "26.38.08", versionCode = 2090263808, minSdk = 28),
+            AppTarget(version = "26.41.06", versionCode = 2090264106, minSdk = 28),
         ),
     )
 
@@ -117,7 +118,10 @@ internal object AppCompatibilities {
         signatures = setOf(
             "9f2432d1e831e49c5fbfc4d8a089062ee6ad42f3e3f1402e9085c0973a71ef24",
         ),
-        targets = listOf(AppTarget(version = "2.9.8", versionCode = 31, minSdk = 23)),
+        targets = listOf(
+            AppTarget(version = "2.9.8", versionCode = 31, minSdk = 23),
+            AppTarget(version = "3.0.0", versionCode = 32, minSdk = 24),
+        ),
     )
 
     val CATZY = Compatibility(
@@ -222,7 +226,10 @@ internal object AppCompatibilities {
         signatures = setOf(
             "925c7b1df5689fef2371e1f6e71e98a3956295df95221baa06145222aa89f769",
         ),
-        targets = listOf(AppTarget(version = "2.84", versionCode = 309, minSdk = 24)),
+        targets = listOf(
+            AppTarget(version = "2.84", versionCode = 309, minSdk = 24),
+            AppTarget(version = "2.91", versionCode = 329, minSdk = 24),
+        ),
     )
 
     val FDDB = Compatibility(
@@ -233,7 +240,21 @@ internal object AppCompatibilities {
         signatures = setOf(
             "9caf67d3efca4ffb9f888256a5963c6117c28051a0669bc3d8bb098291ea9f4f",
         ),
-        targets = listOf(AppTarget(version = "v7.8.4-Build-1-gms-release", versionCode = 7080401, minSdk = 26)),
+        targets = listOf(
+            AppTarget(version = "v7.8.4-Build-1-gms-release", versionCode = 7080401, minSdk = 26),
+            AppTarget(version = "v7.8.5-Build-1-gms-release", versionCode = 7080501, minSdk = 26),
+        ),
+    )
+
+    val FOCUS_NOW = Compatibility(
+        name = "FocusNow",
+        packageName = "com.ferdinandobermeier.focusmate",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0xFF5800,
+        signatures = setOf(
+            "7ea799fb96bbbe7cc574ce4667a75dcb96291fe8cf5d61f31d053d4f28aea3fa",
+        ),
+        targets = listOf(AppTarget(version = "3.8.0", versionCode = 237, minSdk = 24)),
     )
 
     val FORUS = Compatibility(
@@ -323,7 +344,10 @@ internal object AppCompatibilities {
         signatures = setOf(
             "43329e3a67415def40f307e5a7b3343498db9a821f436785d0a5487c636b9bcd",
         ),
-        targets = listOf(AppTarget(version = "6.2.1", versionCode = 56014, minSdk = 30)),
+        targets = listOf(
+            AppTarget(version = "6.2.1", versionCode = 56014, minSdk = 30),
+            AppTarget(version = "6.3.1", versionCode = 56714, minSdk = 30),
+        ),
     )
 
     val KLASSIK_RADIO = Compatibility(
@@ -332,6 +356,17 @@ internal object AppCompatibilities {
         apkFileType = ApkFileType.APKS,
         appIconColor = 0x000000,
         targets = listOf(AppTarget(version = "p5.12.0", versionCode = 50138, minSdk = 29)),
+    )
+
+    val LAGGUY_WALLPAPERS = Compatibility(
+        name = "Lagguy Wallpapers",
+        packageName = "com.lagguy.wallpapers",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0xFFFFFF,
+        signatures = setOf(
+            "d39a40cf5446332eff3e40b9b203b5a8aa9b1f1d834f683df5bb1cc4d1d45edf",
+        ),
+        targets = listOf(AppTarget(version = "40.0.44", versionCode = 37, minSdk = 24)),
     )
 
     val LED_BLINKER = Compatibility(
@@ -346,7 +381,7 @@ internal object AppCompatibilities {
     )
 
     val LUMO = Compatibility(
-        name = "Lumo",
+        name = "Proton Lumo",
         packageName = "me.proton.android.lumo",
         apkFileType = ApkFileType.APKS_REQUIRED,
         appIconColor = 0x6D4AFF,
@@ -389,10 +424,20 @@ internal object AppCompatibilities {
             "03d4b741632d136bc23e2de4c6adcdb7712f1980b619c183221801730bbd0410",
         ),
         targets = listOf(
-            AppTarget(version = "4.0.02.0828.03", versionCode = 50020125, minSdk = 29),
-            AppTarget(version = "4.0.02.0831.03", versionCode = 50020126, minSdk = 29),
-            AppTarget(version = "4.0.02.0903.02", versionCode = 50020128, minSdk = 29),
             AppTarget(version = "4.0.03.0918.03", versionCode = 50020129, minSdk = 29),
+        ),
+    )
+
+    val MOVIEBOX_TV = Compatibility(
+        name = "MovieBox TV",
+        packageName = "com.community.mbox.tv",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x30E66D,
+        signatures = setOf(
+            "03d4b741632d136bc23e2de4c6adcdb7712f1980b619c183221801730bbd0410",
+        ),
+        targets = listOf(
+            AppTarget(version = "1.2.0.0923.web_socialmedia", versionCode = 50040018, minSdk = 29),
         ),
     )
 
@@ -451,6 +496,7 @@ internal object AppCompatibilities {
             AppTarget(version = "0.4.72", versionCode = 284, minSdk = 29),
             AppTarget(version = "0.4.97", versionCode = 309, minSdk = 29),
             AppTarget(version = "0.4.98", versionCode = 310, minSdk = 29),
+            AppTarget(version = "0.5.38", versionCode = 350, minSdk = 32),
         ),
     )
 
@@ -552,6 +598,7 @@ internal object AppCompatibilities {
         targets = listOf(
             AppTarget(version = "1.40.3", versionCode = 14003373, minSdk = 27),
             AppTarget(version = "1.41.2", versionCode = 14102398, minSdk = 27),
+            AppTarget(version = "1.41.3", versionCode = 14103401, minSdk = 27),
         ),
     )
 
@@ -658,6 +705,7 @@ internal object AppCompatibilities {
         apkFileType = ApkFileType.APKS,
         appIconColor = 0x243ECA,
         targets = listOf(
+            AppTarget(version = "1.01.100.1012", versionCode = 10157, minSdk = 24),
             AppTarget(version = "1.01.99.0909", versionCode = 10153, minSdk = 24),
             AppTarget(version = "1.01.98.0831", versionCode = 10151, minSdk = 24),
             AppTarget(version = "1.01.98.0824", versionCode = 10146, minSdk = 24),
@@ -783,6 +831,7 @@ internal object AppCompatibilities {
             AppTarget(version = "407.0.0.178994", versionCode = 1278994, minSdk = 26),
             AppTarget(version = "415.0.0.182623", versionCode = 1282623, minSdk = 26),
             AppTarget(version = "415.0.0.182626", versionCode = 1282626, minSdk = 26),
+            AppTarget(version = "416.0.0.183472", versionCode = 1283472, minSdk = 26),
         ),
     )
 
@@ -823,6 +872,7 @@ internal object AppCompatibilities {
             AppTarget(version = "2.32.0", versionCode = 23200, minSdk = 26),
             AppTarget(version = "2.33.0", versionCode = 23300, minSdk = 26),
             AppTarget(version = "2.33.1", versionCode = 23301, minSdk = 26),
+            AppTarget(version = "2.34.1", versionCode = 23401, minSdk = 26),
         ),
     )
 

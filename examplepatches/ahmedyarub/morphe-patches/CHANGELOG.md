@@ -1,3 +1,52 @@
+## [1.16.0](https://github.com/ahmedyarub/morphe-patches/compare/v1.15.0...v1.16.0) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **Instagram:** Drop injected story cards with Only organic stories off ([2a08da5](https://github.com/ahmedyarub/morphe-patches/commit/2a08da5eb8c394f48616c8d2d5d44a5f319e6bb1))
+
+### ✨ New Features
+
+* **Instagram:** Add "Only organic stories" to Filter stories ([8857a63](https://github.com/ahmedyarub/morphe-patches/commit/8857a6378810a771ecd36765c289a308a0387441))
+
+## [1.16.0-dev.2](https://github.com/ahmedyarub/morphe-patches/compare/v1.16.0-dev.1...v1.16.0-dev.2) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **Instagram:** Drop injected story cards with Only organic stories off ([2a08da5](https://github.com/ahmedyarub/morphe-patches/commit/2a08da5eb8c394f48616c8d2d5d44a5f319e6bb1))
+
+## [1.16.0-dev.1](https://github.com/ahmedyarub/morphe-patches/compare/v1.15.0...v1.16.0-dev.1) (2026-10-14)
+
+### ✨ New Features
+
+* **Instagram:** Add "Only organic stories" to Filter stories ([8857a63](https://github.com/ahmedyarub/morphe-patches/commit/8857a6378810a771ecd36765c289a308a0387441))
+
+## [1.15.0](https://github.com/ahmedyarub/morphe-patches/compare/v1.14.1...v1.15.0) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **Instagram:** Only auto-answer the Not Interested reasons popup ([4352215](https://github.com/ahmedyarub/morphe-patches/commit/4352215ef1f78a01c9c63416af2022f24e2ab66f))
+* **X:** Support 12.34.0 ([f438472](https://github.com/ahmedyarub/morphe-patches/commit/f43847299d060e80206cec5f8d79c3a5617658f7))
+
+### ✨ New Features
+
+* **Instagram:** Support 451.0.0.53.80 ([45e0382](https://github.com/ahmedyarub/morphe-patches/commit/45e0382a4297b1942ed7a2eebcd37f72235b66c5))
+
+## [1.15.0-dev.1](https://github.com/ahmedyarub/morphe-patches/compare/v1.14.2-dev.1...v1.15.0-dev.1) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **Instagram:** Only auto-answer the Not Interested reasons popup ([4352215](https://github.com/ahmedyarub/morphe-patches/commit/4352215ef1f78a01c9c63416af2022f24e2ab66f))
+
+### ✨ New Features
+
+* **Instagram:** Support 451.0.0.53.80 ([45e0382](https://github.com/ahmedyarub/morphe-patches/commit/45e0382a4297b1942ed7a2eebcd37f72235b66c5))
+
+## [1.14.2-dev.1](https://github.com/ahmedyarub/morphe-patches/compare/v1.14.1...v1.14.2-dev.1) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **X:** Support 12.34.0 ([f438472](https://github.com/ahmedyarub/morphe-patches/commit/f43847299d060e80206cec5f8d79c3a5617658f7))
+
 ## [1.14.1](https://github.com/ahmedyarub/morphe-patches/compare/v1.14.0...v1.14.1) (2026-10-11)
 
 ### 🐛 Bug Fixes

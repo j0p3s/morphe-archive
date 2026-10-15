@@ -3,6 +3,32 @@
   "version": "0.10.1",
   "patches": [
     {
+      "name": "Car Scanner - Premium status",
+      "description": "Makes the managed premium-status getter return true in Car Scanner 2.1.50.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.ovz.carscanner",
+          "name": "Car Scanner ELM OBD2",
+          "description": null,
+          "apkFileType": "APK",
+          "appIconColor": null,
+          "signatures": null,
+          "targets": [
+            {
+              "version": "2.1.50",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 21,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "MEO - Side-by-side installation",
       "description": "Installs a separately named MEO clone using a configurable package name and app name.",
       "default": true,
@@ -91,14 +117,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "1.1.0-beta.4",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.5",
+              "version": "1.1.0-beta.6",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -126,14 +145,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "1.1.0-beta.4",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.5",
+              "version": "1.1.0-beta.6",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -161,14 +173,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "1.1.0-beta.4",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.5",
+              "version": "1.1.0-beta.6",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -196,21 +201,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "1.1.0-beta.2",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.4",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.5",
+              "version": "1.1.0-beta.6",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -238,14 +229,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "1.1.0-beta.4",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.5",
+              "version": "1.1.0-beta.6",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -273,14 +257,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "1.1.0-beta.4",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.5",
+              "version": "1.1.0-beta.6",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -308,14 +285,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "1.1.0-beta.4",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.5",
+              "version": "1.1.0-beta.6",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -328,7 +298,7 @@
     },
     {
       "name": "NuvioTV - Remaining episodes in Continue Watching",
-      "description": "Adds a disabled-by-default setting that displays aired, unwatched episode counts for every tracking integration. Controlled by Layout > Santodan-Patches on beta4 and beta5.",
+      "description": "Adds a disabled-by-default setting that displays aired, unwatched episode counts for every tracking integration. Controlled by Layout > Santodan-Patches on beta6.",
       "default": false,
       "dependencies": [
         "BytecodePatch"
@@ -343,21 +313,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "1.1.0-beta.2",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.4",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.5",
+              "version": "1.1.0-beta.6",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -383,21 +339,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "1.1.0-beta.2",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.4",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.5",
+              "version": "1.1.0-beta.6",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,
@@ -444,14 +386,7 @@
           "signatures": null,
           "targets": [
             {
-              "version": "1.1.0-beta.4",
-              "versionCodes": null,
-              "isExperimental": false,
-              "minSdk": null,
-              "description": null
-            },
-            {
-              "version": "1.1.0-beta.5",
+              "version": "1.1.0-beta.6",
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": null,

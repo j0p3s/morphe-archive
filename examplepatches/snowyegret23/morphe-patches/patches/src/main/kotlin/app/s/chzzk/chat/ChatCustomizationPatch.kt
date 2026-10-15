@@ -53,7 +53,7 @@ private fun BytecodePatchContext.bridge(name: String, body: String) {
 val chatCustomizationPatch = bytecodePatch(
     name = "Chat customization",
     description = "Adds in-player Morphe settings, draggable chat width, chat styling, individual badge controls, " +
-        "device icons, live catch-up, player button visibility, recent chat and settings copy/paste.",
+        "device icons, live catch-up, audio compression and volume boost, player button visibility, recent chat and settings copy/paste.",
 ) {
     compatibleWith(COMPATIBILITY_CHZZK)
     extendWith("extensions/chzzk.mpe")
@@ -63,6 +63,7 @@ val chatCustomizationPatch = bytecodePatch(
         addSettingsEntry()
         addChatUiHooks()
         addPlayerHooks()
+        addAudioHooks()
         val stateFactory = classDefBy("Landroidx/compose/runtime/SnapshotStateKt;").methods.single {
             it.returnType == "Landroidx/compose/runtime/MutableState;" &&
                 it.parameterTypeNames == listOf("Ljava/lang/Object;")

@@ -5,6 +5,8 @@ import app.morphe.patcher.util.proxy.mutableTypes.*;
 import com.android.tools.smali.dexlib2.Opcode;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction11x;
 import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction3rc;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction10x;
+import com.android.tools.smali.dexlib2.builder.instruction.BuilderInstruction21t;
 import com.android.tools.smali.dexlib2.iface.instruction.*;
 import com.android.tools.smali.dexlib2.iface.reference.*;
 import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodReference;
@@ -48,12 +50,19 @@ final class NuvioStreamPreloadPatch {
             builder.execute(context -> {
                 validateTarget(context.getPackageMetadata().getPackageName(), context.getPackageMetadata().getVersionName());
                 if ("next_episode".equals(mode)) {
-                    hookPlayer(context.mutableClassDefBy(NuvioLayout.current("Lna/le;")));
-                    hookNextEpisodePluginPause(context.mutableClassDefBy(NuvioLayout.current("Lv9/d4;")));
-                    hookNextEpisodePicker(context.mutableClassDefBy(NuvioLayout.current("Lna/cb;")));
+                    {
+                        MutableClass controller = context.mutableClassDefBy("Lsa/p8;");
+                        if (controller.getFields().stream().filter(f -> f.getName().equals("S")
+                            && f.getType().equals("Ljava/lang/String;")).count() != 1)
+                            throw NuvioRemainingEpisodesPatch.unsupported("Beta6 native playback request type changed");
+                    }
+                    hookPlayer(context.mutableClassDefBy("Lsa/df;"));
+                    hookNextEpisodePluginPause(context.mutableClassDefBy("Lz9/d4;"));
+                    hookNextEpisodeRoutesBeta6(context.mutableClassDefBy("Lsa/ec;"));
+
                 }
-                else if ("details".equals(mode)) hookDetails(context.mutableClassDefBy(NuvioLayout.current("Lka/l9;")));
-                else hookContinueWatching(context.mutableClassDefBy(NuvioLayout.current("Lba/e2;")));
+                else if ("details".equals(mode)) hookDetails(context.mutableClassDefBy("Lpa/a9;"));
+                else hookContinueWatching(context.mutableClassDefBy("Lfa/v1;"));
                 return Unit.INSTANCE;
             });
             return Unit.INSTANCE;
@@ -61,8 +70,8 @@ final class NuvioStreamPreloadPatch {
     }
 
     static void validateTarget(String name, String version) {
-        if (!"com.nuvio.tv".equals(name) || (!NuvioLayout.BETA4.equals(version) && !NuvioLayout.BETA5.equals(version)))
-            throw NuvioRemainingEpisodesPatch.unsupported("Stream preloading requires com.nuvio.tv beta.4 or beta.5");
+        if (!"com.nuvio.tv".equals(name) || !NuvioLayout.BETA6.equals(version))
+            throw NuvioRemainingEpisodesPatch.unsupported("Stream preloading requires com.nuvio.tv beta.6");
         NuvioLayout.use(version);
     }
 
@@ -81,7 +90,10 @@ final class NuvioStreamPreloadPatch {
     }
 
     static void hookPlayer(MutableClass owner) {
-        hookReturn(NuvioRemainingEpisodesPatch.unique(owner, "<init>", 50), "observeNextEpisode");
+        if ("Lsa/df;".equals(owner.getType()) && owner.getFields().stream().filter(f ->
+            f.getName().equals("Y") && f.getType().equals("Lsa/p8;")).count() != 1)
+            throw NuvioRemainingEpisodesPatch.unsupported("Beta6 native playback controller changed");
+        hookReturn(NuvioRemainingEpisodesPatch.unique(owner, "<init>", 52), "observeNextEpisode");
         insert(NuvioRemainingEpisodesPatch.unique(owner, "onCleared", 0), 0, "stopNextEpisode");
     }
 
@@ -89,7 +101,7 @@ final class NuvioStreamPreloadPatch {
     static void hookNextEpisodePluginPause(MutableClass owner) {
         MutableMethod target = NuvioRemainingEpisodesPatch.unique(owner, "invokeSuspend", 1);
         List<Instruction> instructions = NuvioRemainingEpisodesPatch.instructions(target);
-        String pause = NuvioLayout.current("Lv9/i4;") + "->k:Lkotlinx/coroutines/flow/MutableStateFlow;";
+        String pause = "Lz9/k4;" + ("->l:") + "Lkotlinx/coroutines/flow/MutableStateFlow;";
         int index = -1;
         for (int i = 0; i < instructions.size(); i++) {
             Instruction instruction = instructions.get(i);
@@ -116,7 +128,7 @@ final class NuvioStreamPreloadPatch {
     static void hookNextEpisodePicker(MutableClass owner) {
         MutableMethod target = NuvioRemainingEpisodesPatch.unique(owner, "invokeSuspend", 1);
         List<Instruction> instructions = NuvioRemainingEpisodesPatch.instructions(target);
-        String picker = NuvioLayout.current("Lna/jb;") + "->C(" + NuvioLayout.current("Lna/h8;")
+        String picker = "Lsa/ec;" + "->C(" + "Lsa/p8;"
             + "Lcom/nuvio/tv/domain/model/Video;Z)V";
         List<Integer> calls = new ArrayList<>();
         for (int i = 0; i < instructions.size(); i++) {
@@ -140,6 +152,49 @@ final class NuvioStreamPreloadPatch {
                     new ImmutableMethodReference(EXTENSION, "nextEpisodePickerRefresh", List.of("Z"), "Z")));
             target.getImplementation().addInstruction(index + 1, new BuilderInstruction11x(Opcode.MOVE_RESULT, force));
         }
+    }
+
+    /** Beta6: method-entry hooks cannot be skipped by branches into the caller's picker calls. */
+    static void hookNextEpisodeRoutesBeta6(MutableClass owner) {
+        if (!"Lsa/ec;".equals(owner.getType()))
+            throw NuvioRemainingEpisodesPatch.unsupported("Unexpected beta6 next-episode routes");
+        MutableMethod picker = NuvioRemainingEpisodesPatch.unique(owner, "C", 3);
+        MutableMethod threshold = NuvioRemainingEpisodesPatch.unique(owner, "w", 1);
+        if (!picker.getParameterTypes().equals(List.of("Lsa/p8;", "Lcom/nuvio/tv/domain/model/Video;", "Z"))
+            || !threshold.getParameterTypes().equals(List.of("Lsa/p8;"))
+            || !picker.getReturnType().equals("V") || !threshold.getReturnType().equals("V")
+            || (picker.getAccessFlags() & 8) == 0 || (threshold.getAccessFlags() & 8) == 0)
+            throw NuvioRemainingEpisodesPatch.unsupported("Beta6 next-episode route signatures changed");
+        List<Instruction> pickerInstructions = NuvioRemainingEpisodesPatch.instructions(picker);
+        List<Instruction> thresholdInstructions = NuvioRemainingEpisodesPatch.instructions(threshold);
+        for (Instruction instruction : pickerInstructions)
+            if (NuvioRemainingEpisodesPatch.calls(instruction, EXTENSION, "nextEpisodePickerRefresh"))
+                throw NuvioRemainingEpisodesPatch.unsupported("Next-episode picker entry hook already installed");
+        for (Instruction instruction : thresholdInstructions)
+            if (NuvioRemainingEpisodesPatch.calls(instruction, EXTENSION, "useNativeNextEpisodeThresholdPreload"))
+                throw NuvioRemainingEpisodesPatch.unsupported("Next-episode threshold hook already installed");
+        long delegates = pickerInstructions.stream().filter(i ->
+            NuvioRemainingEpisodesPatch.calls(i, "Lsa/ec;", "p")).count();
+        long triggeredReads = thresholdInstructions.stream().filter(i -> i.getOpcode() == Opcode.IGET_BOOLEAN
+            && i instanceof ReferenceInstruction && ((ReferenceInstruction) i).getReference().toString()
+                .equals("Lsa/p8;" + ("->n2:Z"))).count();
+        if (delegates != 1 || triggeredReads != 1 || threshold.getImplementation().getRegisterCount() != (12)
+            || thresholdInstructions.isEmpty() || thresholdInstructions.get(0).getOpcode() != Opcode.CONST_STRING
+            || ((OneRegisterInstruction) thresholdInstructions.get(0)).getRegisterA() != 0)
+            throw NuvioRemainingEpisodesPatch.unsupported("Beta6 next-episode route bodies changed");
+        int force = picker.getImplementation().getRegisterCount() - 1;
+        picker.getImplementation().addInstruction(0,
+            new BuilderInstruction3rc(Opcode.INVOKE_STATIC_RANGE, force, 1,
+                new ImmutableMethodReference(EXTENSION, "nextEpisodePickerRefresh", List.of("Z"), "Z")));
+        picker.getImplementation().addInstruction(1, new BuilderInstruction11x(Opcode.MOVE_RESULT, force));
+
+        var implementation = threshold.getImplementation();
+        var nativeEntry = implementation.newLabelForIndex(0);
+        implementation.addInstruction(0, new BuilderInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 0, 0,
+            new ImmutableMethodReference(EXTENSION, "useNativeNextEpisodeThresholdPreload", List.of(), "Z")));
+        implementation.addInstruction(1, new BuilderInstruction11x(Opcode.MOVE_RESULT, 0));
+        implementation.addInstruction(2, new BuilderInstruction21t(Opcode.IF_NEZ, 0, nativeEntry));
+        implementation.addInstruction(3, new BuilderInstruction10x(Opcode.RETURN_VOID));
     }
 
     private static void hookReturn(MutableMethod target, String callback) {

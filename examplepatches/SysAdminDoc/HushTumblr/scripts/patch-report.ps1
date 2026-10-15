@@ -15,7 +15,8 @@
 
 function Test-ApkFile {
     param([string]$Path)
-    if (-not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
+    # No path is no APK: a script hands an empty one for an output it couldn't hold.
+    if (-not $Path -or -not (Test-Path -LiteralPath $Path -PathType Leaf)) { return $false }
     # ZipFile reads a relative path against the process directory, not the location Test-Path used.
     $Path = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Path)
     try {
@@ -159,12 +160,20 @@ function Test-PatchingReport {
     # and it is what catches the case these scripts exist for, a result file written from a
     # finally block after a failed compile, because the step that failed reports success false.
     $success = $Report.PSObject.Properties['success']
-    $steps = @($Report.patchingSteps)
-    $stepsOk = $steps.Count -gt 0 -and @($steps | Where-Object {
-        $property = $_.PSObject.Properties['success']
-        $null -eq $property -or -not (Test-TrueBoolean $property.Value)
-    }).Count -eq 0
-    $failed = @($Report.failedPatches)
+    # @($null) holds one item, so a report with no steps has none rather than one null step, and
+    # a null step in a list is one that didn't report success. A list, since an if statement's
+    # output unrolls a one-step array, and Windows PowerShell gives a lone object no Count.
+    $steps = New-Object System.Collections.Generic.List[object]
+    if ($null -ne $Report.patchingSteps) { foreach ($step in @($Report.patchingSteps)) { $steps.Add($step) } }
+    $stepsOk = $steps.Count -gt 0
+    foreach ($step in $steps) {
+        $property = if ($null -eq $step) { $null } else { $step.PSObject.Properties['success'] }
+        if ($null -eq $property -or -not (Test-TrueBoolean $property.Value)) { $stepsOk = $false }
+    }
+    # Left out or null, the field is no failed patch (kotlinx leaves out a field that equals its
+    # default), not the one null item @($null) would count. A null entry in the list still counts.
+    $failed = New-Object System.Collections.Generic.List[object]
+    if ($null -ne $Report.failedPatches) { foreach ($failure in @($Report.failedPatches)) { $failed.Add($failure) } }
     $applied = Get-ReportPatchNames $Report.appliedPatches
     $namesOk = Test-ReportedPatchNames -Expected $ExpectedNames -Actual $applied `
         -AllowedDependencies $AllowedDependencyNames

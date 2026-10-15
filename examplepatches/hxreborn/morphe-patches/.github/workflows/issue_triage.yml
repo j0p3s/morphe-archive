@@ -2,7 +2,7 @@ name: Triage issues
 
 on:
   issues:
-    types: [opened, edited, labeled]
+    types: [opened, edited]
   schedule:
     - cron: "30 6 * * *"
   workflow_dispatch:
@@ -22,7 +22,6 @@ jobs:
   triage:
     if: >-
       github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
-      (github.event.action == 'labeled' && (startsWith(github.event.label.name, 'r: ') || startsWith(github.event.label.name, 'ac: '))) ||
       (contains(github.event.issue.labels.*.name, 'app-update') &&
        github.event.issue.user.type != 'Bot' &&
        !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) &&
@@ -36,8 +35,7 @@ jobs:
         (github.event.action == 'edited' && github.event.issue.state == 'open' &&
          toJSON(github.event.changes.body) != 'null' &&
          contains(github.event.issue.labels.*.name, 'needs info')))) ||
-      (github.event.action != 'labeled' &&
-       contains(github.event.issue.labels.*.name, 'bug') &&
+      (contains(github.event.issue.labels.*.name, 'bug') &&
        !contains(github.event.issue.labels.*.name, 'bot-wrong') &&
        !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) &&
        (github.event.action != 'edited' || toJSON(github.event.changes.body) != 'null') &&

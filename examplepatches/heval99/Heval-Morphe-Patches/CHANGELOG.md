@@ -1,3 +1,143 @@
+## [1.14.0](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.13.0...v1.14.0) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **aiscore:** restore goal alerts on patched builds ([a0151aa](https://github.com/heval99/Heval-Morphe-Patches/commit/a0151aa6f6c4161bdd5e623bcaa9429fa6204296))
+* **aiscore:** updated to version 4.3.2 ([9afe622](https://github.com/heval99/Heval-Morphe-Patches/commit/9afe622e149875a68425ad29a67e66f12804a7d8))
+* **boxbox:** make Disable ads and Enable Premium work; updated to version 5.4.17 ([b86d275](https://github.com/heval99/Heval-Morphe-Patches/commit/b86d275e25ca52b01d3c93c6418c683e1ae171be))
+* correct APK file types and version strings for Morphe's APK finder ([69542d3](https://github.com/heval99/Heval-Morphe-Patches/commit/69542d3cd1060c8c2b0ac0722dd993dc125226b4))
+* **flashscore:** support 26.10.2 and point downloads to apkcube ([c123a35](https://github.com/heval99/Heval-Morphe-Patches/commit/c123a3592a37309a2f15dfc52b1caf15799eeb58))
+* **futbin:** block Nimbus and Anzu ads and remove empty ad slots; updated to version 27.06 ([9f8a9fd](https://github.com/heval99/Heval-Morphe-Patches/commit/9f8a9fd08a52377d30f3be61969b7df12822465c))
+* **futbin:** remove the 27.5 target, which was a malicious repack ([f287ab7](https://github.com/heval99/Heval-Morphe-Patches/commit/f287ab70051e99a63adba7c1ba48f4cb279a0e09))
+* **kakaotalk:** warn that Kakao Pay and certificates may not work ([36dfacb](https://github.com/heval99/Heval-Morphe-Patches/commit/36dfacba8c3562c056c853d432181eb991379cd8))
+* **librepods:** updated to version 1.0.1-rc1-play ([16404ed](https://github.com/heval99/Heval-Morphe-Patches/commit/16404eddb40e374cf340b29d3c6da7b11256b22a))
+* **shared:** anchor GmsCore availability check on its signature warning and route Google ID requests to BeginSignIn ([b2bfc41](https://github.com/heval99/Heval-Morphe-Patches/commit/b2bfc41cd8682a0df11ab75d84ecf956ad15f253))
+* **shared:** clear stale GmsCore library fingerprint matches between patcher runs ([9e9cfa0](https://github.com/heval99/Heval-Morphe-Patches/commit/9e9cfa0e7350331612d90b62e26fca6451dfc8ee))
+* **simpleradio:** stop the crash on first launch; updated to version 6.2.4 ([d884624](https://github.com/heval99/Heval-Morphe-Patches/commit/d88462447164fa92bcc8b12414247f4c22c5a66a))
+* support new versions of MyFitnessPal, Livescore, OsmAnd, Simple Radio, Shazam and Native Camera ([4884eb6](https://github.com/heval99/Heval-Morphe-Patches/commit/4884eb691e55349ee5efcd40cc7aec6f7152029d))
+* **tasker:** updated to version 6.6.20 ([3884316](https://github.com/heval99/Heval-Morphe-Patches/commit/38843164f7c8435aa63647d3730535b657d78955))
+* **truecaller:** stop "premium expired" notices and Max resets; add tab hiding ([3dfc968](https://github.com/heval99/Heval-Morphe-Patches/commit/3dfc968c7cb55e1795a9740a3ff57009df24762e)), closes [#54](https://github.com/heval99/Heval-Morphe-Patches/issues/54) [#52](https://github.com/heval99/Heval-Morphe-Patches/issues/52) [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53)
+* **wifianalyzer:** updated to version 3.11.2 ([08f8987](https://github.com/heval99/Heval-Morphe-Patches/commit/08f8987e78be26e61af2127703586b9d75ede1f4))
+
+### ✨ New Features
+
+* **365scores:** add Enable Premium, Disable update prompts, GmsCore support and Spoof signature ([5406caa](https://github.com/heval99/Heval-Morphe-Patches/commit/5406caa551a11114226054e3eef8bb4d67069902))
+* add universal Remove screenshot restriction patch ([199fe45](https://github.com/heval99/Heval-Morphe-Patches/commit/199fe45dd7a3a64b3ad8725efe0d84cae55083ec))
+* **bluemail:** add Disable ads patch for BlueMail ([01e67dc](https://github.com/heval99/Heval-Morphe-Patches/commit/01e67dc402e3d932e0e9e12e356787c16c176678))
+* **crex:** add CREX 26.10.06 patches ([c0dbe87](https://github.com/heval99/Heval-Morphe-Patches/commit/c0dbe87b65f51392418e88ccb2c08b41cd48b3d6))
+* **easylauncher:** add Easy Homescreen 1.10.28 patches ([043bd03](https://github.com/heval99/Heval-Morphe-Patches/commit/043bd03315cfb1feaac96c94b2f4961f181c54f8))
+* **expertplayer:** add Disable ads patch for TV Smarters Player Expert ([63d53b8](https://github.com/heval99/Heval-Morphe-Patches/commit/63d53b881eee78dc4c95d817ef3f22740108a2a6))
+* **expertplayer:** add experimental Enable Premium patch ([da6b609](https://github.com/heval99/Heval-Morphe-Patches/commit/da6b609329b0a02ef520598d602ba494fed07412))
+* **flashscore:** add Hide betting content patch ([ecd8985](https://github.com/heval99/Heval-Morphe-Patches/commit/ecd89850f29ddbb7f44d5254897c5e2fc67c94a2))
+* **flashscore:** add telemetry, rating, marketing-popup and update-prompt patches; extend Disable ads ([ac5c592](https://github.com/heval99/Heval-Morphe-Patches/commit/ac5c592861647d94d3f9c62dafad5de258c2eff9))
+* **fotmob:** unlock the exclusive app icons; updated to version 238.17794 ([4648c22](https://github.com/heval99/Heval-Morphe-Patches/commit/4648c22bfe0811e6a1856e20cb0ca822167b39b6))
+* **hevy:** add Hevy 3.1.16 patches ([3e64123](https://github.com/heval99/Heval-Morphe-Patches/commit/3e641232f06157951ae8e9fd3b56fa169272d225))
+* **kakaotalk:** add KakaoTalk 26.8.3 patches ([81c9793](https://github.com/heval99/Heval-Morphe-Patches/commit/81c9793d273c194af8a2edeb18ee8fb3a7b5dfd3))
+* **line:** add LINE 26.15.1 patches ([74d40fc](https://github.com/heval99/Heval-Morphe-Patches/commit/74d40fc0e3ccb16007fbbc10814f2d72cee8cdcd))
+* **shared:** add GmsCore support and Spoof signature builders ([1fd1110](https://github.com/heval99/Heval-Morphe-Patches/commit/1fd1110a3e3b6a2a61a190157cf5a62f0278ff06))
+* **shazam:** add Open in Morphe YouTube apps patch ([#48](https://github.com/heval99/Heval-Morphe-Patches/issues/48)) ([1d84449](https://github.com/heval99/Heval-Morphe-Patches/commit/1d84449ecf6db84742ac6544354f3f870a1df2f3))
+* **smartwod:** add Disable ads and Enable Premium patches for SmartWOD Timer ([489f002](https://github.com/heval99/Heval-Morphe-Patches/commit/489f0024771daad298b62309371a922dbd063644))
+* **sofascore:** add GmsCore support and Spoof signature, block Firebase In-App Messaging ([d6932aa](https://github.com/heval99/Heval-Morphe-Patches/commit/d6932aa48de4f22a88499a22eb8268bb434086eb)), closes [#24](https://github.com/heval99/Heval-Morphe-Patches/issues/24) [#25](https://github.com/heval99/Heval-Morphe-Patches/issues/25)
+* **truecaller:** add Truecaller 26.39.6 patches ([2273598](https://github.com/heval99/Heval-Morphe-Patches/commit/2273598360b979ee07c3f167a9acb49505a59756))
+
+## [1.14.0-dev.11](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0-dev.10...v1.14.0-dev.11) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **truecaller:** stop "premium expired" notices and Max resets; add tab hiding ([3dfc968](https://github.com/heval99/Heval-Morphe-Patches/commit/3dfc968c7cb55e1795a9740a3ff57009df24762e)), closes [#54](https://github.com/heval99/Heval-Morphe-Patches/issues/54) [#52](https://github.com/heval99/Heval-Morphe-Patches/issues/52) [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53)
+
+## [1.14.0-dev.10](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0-dev.9...v1.14.0-dev.10) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **futbin:** block Nimbus and Anzu ads and remove empty ad slots; updated to version 27.06 ([9f8a9fd](https://github.com/heval99/Heval-Morphe-Patches/commit/9f8a9fd08a52377d30f3be61969b7df12822465c))
+
+### ✨ New Features
+
+* add universal Remove screenshot restriction patch ([199fe45](https://github.com/heval99/Heval-Morphe-Patches/commit/199fe45dd7a3a64b3ad8725efe0d84cae55083ec))
+
+## [1.14.0-dev.9](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0-dev.8...v1.14.0-dev.9) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **aiscore:** restore goal alerts on patched builds ([a0151aa](https://github.com/heval99/Heval-Morphe-Patches/commit/a0151aa6f6c4161bdd5e623bcaa9429fa6204296))
+* **kakaotalk:** warn that Kakao Pay and certificates may not work ([36dfacb](https://github.com/heval99/Heval-Morphe-Patches/commit/36dfacba8c3562c056c853d432181eb991379cd8))
+
+## [1.14.0-dev.8](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0-dev.7...v1.14.0-dev.8) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **simpleradio:** stop the crash on first launch; updated to version 6.2.4 ([d884624](https://github.com/heval99/Heval-Morphe-Patches/commit/d88462447164fa92bcc8b12414247f4c22c5a66a))
+* **tasker:** updated to version 6.6.20 ([3884316](https://github.com/heval99/Heval-Morphe-Patches/commit/38843164f7c8435aa63647d3730535b657d78955))
+
+## [1.14.0-dev.7](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0-dev.6...v1.14.0-dev.7) (2026-10-13)
+
+### ✨ New Features
+
+* **flashscore:** add Hide betting content patch ([ecd8985](https://github.com/heval99/Heval-Morphe-Patches/commit/ecd89850f29ddbb7f44d5254897c5e2fc67c94a2))
+
+## [1.14.0-dev.6](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0-dev.5...v1.14.0-dev.6) (2026-10-13)
+
+### ✨ New Features
+
+* **line:** add LINE 26.15.1 patches ([74d40fc](https://github.com/heval99/Heval-Morphe-Patches/commit/74d40fc0e3ccb16007fbbc10814f2d72cee8cdcd))
+
+## [1.14.0-dev.5](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0-dev.4...v1.14.0-dev.5) (2026-10-13)
+
+### 🐛 Bug Fixes
+
+* **aiscore:** updated to version 4.3.2 ([9afe622](https://github.com/heval99/Heval-Morphe-Patches/commit/9afe622e149875a68425ad29a67e66f12804a7d8))
+* **boxbox:** make Disable ads and Enable Premium work; updated to version 5.4.17 ([b86d275](https://github.com/heval99/Heval-Morphe-Patches/commit/b86d275e25ca52b01d3c93c6418c683e1ae171be))
+* **flashscore:** support 26.10.2 and point downloads to apkcube ([c123a35](https://github.com/heval99/Heval-Morphe-Patches/commit/c123a3592a37309a2f15dfc52b1caf15799eeb58))
+* **futbin:** remove the 27.5 target, which was a malicious repack ([f287ab7](https://github.com/heval99/Heval-Morphe-Patches/commit/f287ab70051e99a63adba7c1ba48f4cb279a0e09))
+* **librepods:** updated to version 1.0.1-rc1-play ([16404ed](https://github.com/heval99/Heval-Morphe-Patches/commit/16404eddb40e374cf340b29d3c6da7b11256b22a))
+* **shared:** anchor GmsCore availability check on its signature warning and route Google ID requests to BeginSignIn ([b2bfc41](https://github.com/heval99/Heval-Morphe-Patches/commit/b2bfc41cd8682a0df11ab75d84ecf956ad15f253))
+* **shared:** clear stale GmsCore library fingerprint matches between patcher runs ([9e9cfa0](https://github.com/heval99/Heval-Morphe-Patches/commit/9e9cfa0e7350331612d90b62e26fca6451dfc8ee))
+* support new versions of MyFitnessPal, Livescore, OsmAnd, Simple Radio, Shazam and Native Camera ([4884eb6](https://github.com/heval99/Heval-Morphe-Patches/commit/4884eb691e55349ee5efcd40cc7aec6f7152029d))
+* **wifianalyzer:** updated to version 3.11.2 ([08f8987](https://github.com/heval99/Heval-Morphe-Patches/commit/08f8987e78be26e61af2127703586b9d75ede1f4))
+
+### ✨ New Features
+
+* **365scores:** add Enable Premium, Disable update prompts, GmsCore support and Spoof signature ([5406caa](https://github.com/heval99/Heval-Morphe-Patches/commit/5406caa551a11114226054e3eef8bb4d67069902))
+* **crex:** add CREX 26.10.06 patches ([c0dbe87](https://github.com/heval99/Heval-Morphe-Patches/commit/c0dbe87b65f51392418e88ccb2c08b41cd48b3d6))
+* **easylauncher:** add Easy Homescreen 1.10.28 patches ([043bd03](https://github.com/heval99/Heval-Morphe-Patches/commit/043bd03315cfb1feaac96c94b2f4961f181c54f8))
+* **flashscore:** add telemetry, rating, marketing-popup and update-prompt patches; extend Disable ads ([ac5c592](https://github.com/heval99/Heval-Morphe-Patches/commit/ac5c592861647d94d3f9c62dafad5de258c2eff9))
+* **fotmob:** unlock the exclusive app icons; updated to version 238.17794 ([4648c22](https://github.com/heval99/Heval-Morphe-Patches/commit/4648c22bfe0811e6a1856e20cb0ca822167b39b6))
+* **hevy:** add Hevy 3.1.16 patches ([3e64123](https://github.com/heval99/Heval-Morphe-Patches/commit/3e641232f06157951ae8e9fd3b56fa169272d225))
+* **kakaotalk:** add KakaoTalk 26.8.3 patches ([81c9793](https://github.com/heval99/Heval-Morphe-Patches/commit/81c9793d273c194af8a2edeb18ee8fb3a7b5dfd3))
+* **shared:** add GmsCore support and Spoof signature builders ([1fd1110](https://github.com/heval99/Heval-Morphe-Patches/commit/1fd1110a3e3b6a2a61a190157cf5a62f0278ff06))
+* **sofascore:** add GmsCore support and Spoof signature, block Firebase In-App Messaging ([d6932aa](https://github.com/heval99/Heval-Morphe-Patches/commit/d6932aa48de4f22a88499a22eb8268bb434086eb)), closes [#24](https://github.com/heval99/Heval-Morphe-Patches/issues/24) [#25](https://github.com/heval99/Heval-Morphe-Patches/issues/25)
+* **truecaller:** add Truecaller 26.39.6 patches ([2273598](https://github.com/heval99/Heval-Morphe-Patches/commit/2273598360b979ee07c3f167a9acb49505a59756))
+
+## [1.14.0-dev.4](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0-dev.3...v1.14.0-dev.4) (2026-10-12)
+
+### 🐛 Bug Fixes
+
+* correct APK file types and version strings for Morphe's APK finder ([69542d3](https://github.com/heval99/Heval-Morphe-Patches/commit/69542d3cd1060c8c2b0ac0722dd993dc125226b4))
+
+### ✨ New Features
+
+* **bluemail:** add Disable ads patch for BlueMail ([01e67dc](https://github.com/heval99/Heval-Morphe-Patches/commit/01e67dc402e3d932e0e9e12e356787c16c176678))
+* **smartwod:** add Disable ads and Enable Premium patches for SmartWOD Timer ([489f002](https://github.com/heval99/Heval-Morphe-Patches/commit/489f0024771daad298b62309371a922dbd063644))
+
+## [1.14.0-dev.3](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0-dev.2...v1.14.0-dev.3) (2026-10-11)
+
+### ✨ New Features
+
+* **shazam:** add Open in Morphe YouTube apps patch ([#48](https://github.com/heval99/Heval-Morphe-Patches/issues/48)) ([1d84449](https://github.com/heval99/Heval-Morphe-Patches/commit/1d84449ecf6db84742ac6544354f3f870a1df2f3))
+
+## [1.14.0-dev.2](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0-dev.1...v1.14.0-dev.2) (2026-10-11)
+
+### ✨ New Features
+
+* **expertplayer:** add experimental Enable Premium patch ([da6b609](https://github.com/heval99/Heval-Morphe-Patches/commit/da6b609329b0a02ef520598d602ba494fed07412))
+
+## [1.14.0-dev.1](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.13.0...v1.14.0-dev.1) (2026-10-11)
+
+### ✨ New Features
+
+* **expertplayer:** add Disable ads patch for TV Smarters Player Expert ([63d53b8](https://github.com/heval99/Heval-Morphe-Patches/commit/63d53b881eee78dc4c95d817ef3f22740108a2a6))
+
 ## [1.13.0](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.12.0...v1.13.0) (2026-10-11)
 
 ### 🐛 Bug Fixes

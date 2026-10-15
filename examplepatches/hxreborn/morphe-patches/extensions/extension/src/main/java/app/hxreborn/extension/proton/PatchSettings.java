@@ -20,12 +20,12 @@ public final class PatchSettings {
         return patched && isEnabled(key, true);
     }
 
-    static boolean isEnabled(String key, boolean fallback) {
+    public static boolean isEnabled(String key, boolean fallback) {
         final SharedPreferences preferences = preferences();
         return (preferences != null) ? preferences.getBoolean(key, fallback) : fallback;
     }
 
-    static void setEnabled(String key, boolean enabled) {
+    public static void setEnabled(String key, boolean enabled) {
         final SharedPreferences preferences = preferences();
         if (preferences == null) {
             return;
@@ -34,12 +34,12 @@ public final class PatchSettings {
         preferences.edit().putBoolean(key, enabled).apply();
     }
 
-    static String getString(String key, String fallback) {
+    public static String getString(String key, String fallback) {
         final SharedPreferences preferences = preferences();
         return (preferences != null) ? preferences.getString(key, fallback) : fallback;
     }
 
-    static void setString(String key, String value) {
+    public static void setString(String key, String value) {
         final SharedPreferences preferences = preferences();
         if (preferences == null) {
             return;

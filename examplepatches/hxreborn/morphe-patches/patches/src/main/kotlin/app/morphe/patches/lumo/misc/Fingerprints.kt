@@ -12,3 +12,10 @@ internal object PageFinishedFingerprint : Fingerprint(
     parameters = listOf("Landroid/webkit/WebView;", "Ljava/lang/String;"),
     strings = listOf(">>> onPageFinished CALLED for URL: "),
 )
+
+internal object PageStartedFingerprint : Fingerprint(
+    name = "onPageStarted",
+    returnType = "V",
+    parameters = listOf("Landroid/webkit/WebView;", "Ljava/lang/String;", "Landroid/graphics/Bitmap;"),
+    strings = listOf(">>> onPageStarted CALLED for URL: "),
+)

@@ -62,6 +62,12 @@ buildscript {
             if (requested.group == "org.bouncycastle") {
                 useVersion("1.86")
             }
+            // Guava up to 33.7.1 has CVE-2026-102554. The Morphe plugin's patcher asks for 33.5.0 here;
+            // gradle/libs.versions.toml pins the same fixed release for the other graphs. Move both together.
+            if (requested.group == "com.google.guava" && requested.name == "guava") {
+                useVersion(if (requested.version?.endsWith("-android") == true) "33.7.2-android" else "33.7.2-jre")
+                because("The settings plugin must use the Guava release with the CVE-2026-102554 fix.")
+            }
             // AGP's settings-plugin dependencies are build inputs, not shipped libraries.
             // jose4j <=0.9.5 has GHSA-3677-xxcr-wjqv; JDOM <=2.0.6 has
             // GHSA-2363-cqg2-863c. Keep the fixes on their existing release lines.

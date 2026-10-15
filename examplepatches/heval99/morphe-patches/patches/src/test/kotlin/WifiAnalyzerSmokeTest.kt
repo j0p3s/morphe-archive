@@ -34,7 +34,7 @@ class WifiAnalyzerSmokeTest {
             apk = apk,
             workDir = workDir,
             pkg = PKG,
-            version = "3.10.5-L",
+            version = "3.11.2",
             patchNames = setOf("Disable ads"),
             allPatches = loadAllPatches(newestPatchBundle(root)),
         )

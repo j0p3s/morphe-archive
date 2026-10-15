@@ -5,9 +5,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.iscreen.extension.sharedExtensionPatch
 import app.morphe.patches.iscreen.shared.Constants.COMPATIBILITY_ISCREEN
-import app.morphe.patches.iscreen.shared.patches.util.preferenceUtil.isLoginPatch
-import app.morphe.patches.iscreen.shared.patches.util.preferenceUtil.isSubscribedPatch
-import app.morphe.patches.iscreen.shared.patches.util.preferenceUtil.isTVodSubscribedPatch
+import app.morphe.patches.iscreen.shared.morphe.com.rockstreamer.iscreen.util.PreferenceUtil
 import app.morphe.util.getReference
 import app.morphe.util.matchAllMethodIndicesForEach
 import com.android.tools.smali.dexlib2.Opcode
@@ -19,37 +17,44 @@ import com.android.tools.smali.dexlib2.immutable.reference.ImmutableMethodRefere
 private const val EXTENSION_CLASS = "Lapp/morphe/extension/iscreen/patches/TempUserPatch;"
 
 @Suppress("unused")
-val tempUserPatch = bytecodePatch(
-    name = "Temp user",
-    description = "Log in as subscribed temp user.",
-    default = true,
-) {
-    compatibleWith(COMPATIBILITY_ISCREEN)
+val tempUserPatch =
+    bytecodePatch(
+        name = "Temp user",
+        description = "Log in as subscribed temp user.",
+        default = true,
+    ) {
+        compatibleWith(COMPATIBILITY_ISCREEN)
 
-    dependsOn(sharedExtensionPatch, isSubscribedPatch, isTVodSubscribedPatch, isLoginPatch)
+        dependsOn(
+            sharedExtensionPatch,
+            PreferenceUtil.isSubscribedPatch,
+            PreferenceUtil.isTVodSubscribedPatch,
+            PreferenceUtil.isLoginPatch,
+        )
 
-    execute {
-        GetRefreshTokenMethodCallFingerprint.matchAllMethodIndicesForEach {
-            val instruction = getInstruction<FiveRegisterInstruction>(it)
-            val reference = instruction.getReference<MethodReference>()!!
+        execute {
+            GetRefreshTokenMethodCallFingerprint.matchAllMethodIndicesForEach {
+                val instruction = getInstruction<FiveRegisterInstruction>(it)
+                val reference = instruction.getReference<MethodReference>()!!
 
-            replaceInstruction(
-                it, BuilderInstruction35c(
-                    Opcode.INVOKE_STATIC,
-                    instruction.registerCount,
-                    instruction.registerC,
-                    instruction.registerD,
-                    instruction.registerE,
-                    instruction.registerF,
-                    instruction.registerG,
-                    ImmutableMethodReference(
-                        EXTENSION_CLASS,
-                        reference.name,
-                        listOf(reference.definingClass) + reference.parameterTypes,
-                        reference.returnType
-                    )
+                replaceInstruction(
+                    it,
+                    BuilderInstruction35c(
+                        Opcode.INVOKE_STATIC,
+                        instruction.registerCount,
+                        instruction.registerC,
+                        instruction.registerD,
+                        instruction.registerE,
+                        instruction.registerF,
+                        instruction.registerG,
+                        ImmutableMethodReference(
+                            EXTENSION_CLASS,
+                            reference.name,
+                            listOf(reference.definingClass) + reference.parameterTypes,
+                            reference.returnType,
+                        ),
+                    ),
                 )
-            )
+            }
         }
     }
-}

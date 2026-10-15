@@ -41,8 +41,11 @@ import java.lang.ref.WeakReference;
 import java.nio.charset.StandardCharsets;
 import java.text.NumberFormat;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -54,6 +57,7 @@ import app.hushtelegram.extension.shared.settings.Setting;
 import app.hushtelegram.extension.shared.settings.StringSetting;
 import app.hushtelegram.extension.shared.settings.preference.AbstractPreferenceFragment;
 import app.hushtelegram.extension.shared.settings.preference.LogBufferManager;
+import app.hushtelegram.extension.shared.settings.preference.QuickSetups;
 import app.hushtelegram.extension.telegram.misc.MessageFilters;
 import app.hushtelegram.extension.telegram.misc.StickerSize;
 
@@ -143,6 +147,8 @@ public class SettingsBackupPreference extends Preference {
      */
     private static WeakReference<HushTelegramPreferenceFragment> latestPage = new WeakReference<>(null);
 
+    /** The page this row is on, so a run reaches every page still on screen, not only the newest. */
+    private final HushTelegramPreferenceFragment page;
     private final int rowAction;
     private final CharSequence restingSummary;
     /** The line this row shows while it's the one running, else null. */
@@ -152,6 +158,7 @@ public class SettingsBackupPreference extends Preference {
     SettingsBackupPreference(HushTelegramPreferenceFragment page, Context context, int action,
                              CharSequence title, CharSequence summary) {
         super(context);
+        this.page = page;
         rowAction = action;
         restingSummary = summary;
         setKey(action == EXPORT ? "action_export_settings" : "action_import_settings");
@@ -159,6 +166,8 @@ public class SettingsBackupPreference extends Preference {
         setTitle(title);
         setSummary(summary);
         setOnPreferenceClickListener(preference -> {
+            // Locked settings can still be saved to a file, but not loaded from one.
+            if (action == IMPORT && SettingsLock.refuses()) return true;
             // Rows are out of reach while a run is going, so this is only the race between a tap
             // and that.
             if (OWNER.get() == null && !stillStalled()) pickFile(page, action);
@@ -355,7 +364,8 @@ public class SettingsBackupPreference extends Preference {
         int switches = snapshot.switchChanges();
         int lists = snapshot.listChanges();
         boolean size = snapshot.sizeChanges();
-        boolean nothing = switches == 0 && lists == 0 && !size;
+        boolean emoji = snapshot.titleEmojiChanges();
+        boolean nothing = switches == 0 && lists == 0 && !size && !emoji;
         String message = nothing
                 ? L10n.t("Your switches already match that file, so nothing will change.")
                 : switches == 0 ? "" : L10n.quantity(switches, "%1$d switch will change.", "%1$d switches will change.", switches);
@@ -365,6 +375,9 @@ public class SettingsBackupPreference extends Preference {
         }
         if (size) {
             message += (message.isEmpty() ? "" : " ") + L10n.t("The sticker size will change.");
+        }
+        if (emoji) {
+            message += (message.isEmpty() ? "" : " ") + L10n.t("The emoji next to the chat list title will change.");
         }
         // Each switch by name, so a file someone shared can't turn Open links externally or Disable
         // analytics around without it showing here.
@@ -406,11 +419,17 @@ public class SettingsBackupPreference extends Preference {
         return lines;
     }
 
-    /** Name the affected lists without showing their private filters, and show the actual size change. */
+    /**
+     * Name the affected lists without showing their private filters, and show the actual size and
+     * title emoji changes.
+     */
     static List<String> changeLines(HushTelegramPreferenceFragment page, SettingsBackup.Snapshot snapshot) {
         List<String> lines = switchLines(page, snapshot);
         for (Map.Entry<Setting<?>, Object> change : snapshot.changes().entrySet()) {
-            if (change.getKey() instanceof StringSetting) {
+            if (change.getKey() == Settings.TITLE_EMOJI) {
+                lines.add(L10n.f("%1$s: %2$s to %3$s", L10n.t("Emoji next to the chat list title"),
+                        TitleEmojiEditor.shown(Settings.TITLE_EMOJI.savedValue()), TitleEmojiEditor.shown((String) change.getValue())));
+            } else if (change.getKey() instanceof StringSetting) {
                 String title = L10n.t(change.getKey() == Settings.MESSAGE_FILTERS_GROUPS ? "Filters for groups" : "Filters for channels");
                 int count = MessageFilters.lines((String) change.getValue()).size();
                 lines.add(title + ": " + L10n.quantity(count, "%1$d filter", "%1$d filters", count));
@@ -444,11 +463,23 @@ public class SettingsBackupPreference extends Preference {
 
     private static void apply(HushTelegramPreferenceFragment page, @Nullable Bundle chosen) {
         SettingsBackup.Snapshot snapshot = SettingsBackup.Snapshot.fromBundle(chosen);
-        if (snapshot == null) return;
+        // A preview read before the lock went on is answered by the lock too.
+        if (snapshot == null || SettingsLock.refuses()) return;
         Run run = start(IMPORT, L10n.t("Importing settings"));
         if (run == null) return;
-        // The page shows what the store now holds rather than reading its own switches back into it.
-        AbstractPreferenceFragment.settingImportInProgress = true;
+        // For what the file names, a page shows what the store now holds rather than reading its own
+        // row back into it. Named, not only changed: which of them change is worked out again on
+        // the worker. Every other switch stays the person's to change.
+        Set<Setting<?>> named = new HashSet<>(snapshot.values.keySet());
+        named.addAll(snapshot.lists.keySet());
+        named.addAll(snapshot.numbers.keySet());
+        // The title emoji is text, and it waits for a restart like a switch does.
+        named.addAll(snapshot.texts.keySet());
+        // What each is saved as now. A switch that waits for a restart is running that, unless a
+        // change before this one already put its running value on record.
+        Map<Setting<?>, Object> before = new HashMap<>();
+        for (Setting<?> setting : named) before.put(setting, setting.savedValue());
+        importing(named);
         boolean accepted = false;
         try {
             // Counted before the write, which makes every change match the store.
@@ -465,10 +496,11 @@ public class SettingsBackupPreference extends Preference {
                             : L10n.t("Couldn't import or restore old settings. Check the switches."));
                 } finally {
                     Utils.runOnMainThread(() -> {
-                        AbstractPreferenceFragment.settingImportInProgress = false;
+                        // A row's own change notes the restart it owes. The import's skipped that,
+                        // and the card went on saying every switch was working.
+                        AbstractPreferenceFragment.noteRestartPending(before);
+                        importing(null);
                         finish(run);
-                        HushTelegramPreferenceFragment current = latestPage.get();
-                        if (current != null && current.isAdded()) current.refreshSwitches();
                     });
                 }
             });
@@ -477,10 +509,31 @@ public class SettingsBackupPreference extends Preference {
         } finally {
             // This path has no wait that runs out, so nothing else would give the rows back.
             if (!accepted) {
-                AbstractPreferenceFragment.settingImportInProgress = false;
+                importing(null);
                 notStarted(run);
             }
         }
+    }
+
+    /**
+     * Says which settings a running import may write, or with null that it ended, and has every
+     * page on screen show it. While it runs their rows are out of reach and take their value from
+     * what was written; when it ends every row shows what its switch is saved as.
+     */
+    private static void importing(@Nullable Set<Setting<?>> owned) {
+        // An import may write a switch to the value Quick setups left there, which no write
+        // listener hears, and Undo would then take back the import's choice.
+        if (owned != null) QuickSetups.forget();
+        Set<String> keys = new HashSet<>();
+        if (owned != null) for (Setting<?> setting : owned) keys.add(setting.key);
+        AbstractPreferenceFragment.settingImportKeys = keys;
+        AbstractPreferenceFragment.settingImportInProgress = owned != null;
+        List<HushTelegramPreferenceFragment> pages = new ArrayList<>();
+        for (WeakReference<SettingsBackupPreference> held : ROWS) {
+            SettingsBackupPreference row = held.get();
+            if (row != null && row.page.isAdded() && !pages.contains(row.page)) pages.add(row.page);
+        }
+        for (HushTelegramPreferenceFragment page : pages) page.refreshSwitches();
     }
 
     /** What the toast after an import says: how many switches changed. */

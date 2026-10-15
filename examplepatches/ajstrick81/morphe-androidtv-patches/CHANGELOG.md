@@ -1,3 +1,10 @@
+## [1.40.6](https://github.com/ajstrick81/morphe-androidtv-patches/compare/v1.40.5...v1.40.6) (2026-10-15)
+
+
+### Bug Fixes
+
+* **vix:** restore ad suppression on 4.51.0 by emptying the Lura break schedule ([3692391](https://github.com/ajstrick81/morphe-androidtv-patches/commit/36923917e245dbfc3e920ff70fd4ecdf83606e6f))
+
 ## [1.40.5](https://github.com/ajstrick81/morphe-androidtv-patches/compare/v1.40.4...v1.40.5) (2026-10-06)
 
 

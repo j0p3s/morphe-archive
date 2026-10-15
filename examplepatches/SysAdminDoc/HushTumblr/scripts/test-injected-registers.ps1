@@ -30,7 +30,9 @@
     an object among them, so a check made stricter still has to pass them. Each bad build has to
     fail with findings of its own category only, so a check that fires for the wrong reason fails
     here too. Removed methods and DEX entries, the removal allowlist, and the device tally
-    comparison are held to what they did before.
+    comparison are held to what they did before. DexDeltaFixture.java's builds hold the dex delta:
+    what the patches changed beyond the contracts is named line by line, the allowlist's sections
+    apply for the patches a run selects, and the bundle's extension classes are held to the bundle.
     verify-injected-registers.ps1 also runs end to end with stand-in tools, and its wiring is read
     through the parser (script-wiring.ps1), with the wiring checks themselves tried on copies that
     drop the calls but keep their text, at least one for each rule of what a script can't reach.
@@ -84,12 +86,14 @@ function New-DexApk {
 }
 
 function Invoke-DexDiff {
-    param([string]$Clean, [string]$Patched, [string]$Allowlist, [string]$Name, [string]$Contracts, [string]$Base, [string]$Selected)
+    param([string]$Clean, [string]$Patched, [string]$Allowlist, [string]$Name, [string]$Contracts, [string]$Base, [string]$Selected,
+        [string]$Bundle, [string]$DeltaAllowlist)
     $report = Join-Path $caseRoot "$Name-report.txt"
     $arguments = @('-Xmx1g', '-cp', $classPath, 'DexDiff', $Clean, $Patched, $report, $Allowlist)
     if ($Contracts) { $arguments += $Contracts }
-    if ($Base) { $arguments += $Base } elseif ($Selected) { $arguments += '-' }
-    if ($Selected) { $arguments += $Selected }
+    if ($Base) { $arguments += $Base } elseif ($Selected -or $Bundle) { $arguments += '-' }
+    if ($Selected) { $arguments += $Selected } elseif ($Bundle) { $arguments += '-' }
+    if ($Bundle) { $arguments += $Bundle, $DeltaAllowlist }
     $ErrorActionPreference = 'Continue'
     $global:LASTEXITCODE = 0
     $output = @(& $Java @arguments 2>&1 | ForEach-Object { "$_" })
@@ -200,6 +204,16 @@ try {
                 $Node -is [System.Management.Automation.Language.ParenExpressionAst] -and
                 $Node.Extent.Text -like '*injected-mutation-contracts.txt*' } { param($Text) '' }) +
                 "`nWrite-Host '[registers] DexDiff.java runs without injected-mutation-contracts.txt now'`n" }
+        # The bundle and the dex delta allowlist ride on the same call: dropped, swapped for the
+        # unheld path, or swapped for another allowlist, the call holds nothing to them.
+        @{ Name = 'the bundle and the dex delta allowlist dropped from the DexDiff call'; Check = $runsDexDiff
+            Text = Edit-ScriptNode $verifierText $dexDiffCall { param($Text)
+                $Text.Replace("`$bundlePath (Join-Path `$PSScriptRoot 'dex-delta-allowlist.txt') ", '') } }
+        @{ Name = 'the unheld bundle path handed to DexDiff'; Check = $runsDexDiff
+            Text = Edit-ScriptNode $verifierText $dexDiffCall { param($Text) $Text.Replace('$bundlePath', '$Bundle') } }
+        @{ Name = 'the resource allowlist handed to DexDiff for the dex delta one'; Check = $runsDexDiff
+            Text = Edit-ScriptNode $verifierText $dexDiffCall { param($Text)
+                $Text.Replace("'dex-delta-allowlist.txt'", "'resource-delta-allowlist.txt'") } }
         @{ Name = 'the DexDiff function left uncalled'; Check = $runsDexDiff
             Text = Edit-ScriptNode $verifierText { param($Node)
                 $Node -is [System.Management.Automation.Language.CommandAst] -and $Node.GetCommandName() -eq 'Invoke-DexDiff'
@@ -468,14 +482,19 @@ $foreignSigner = '0123456789abcdef' * 4
 
 # -CleanMarker marks the clean APK. -Bundle makes the clean side clean.apkm, a base.apk and a
 # config.arm64_v8a split, with -SplitMarker on the split; the java plays the merger by copying the
-# base, and logs each tool it was started for in java.log. -Merged hands the verifier a merge of its
-# own with -CleanMerged: without a record of the signature check (NoRecord), with a record of other
-# bytes (WrongMerge) or of another base APK (WrongBase), or with a true record (Valid).
+# base and printing the digest of what it wrote, as MergeSplits.java does, and logs each tool it was
+# started for in java.log. -Merged hands the verifier a merge of its own with -CleanMerged: the
+# bytes the clean side merges to here (Handed), which for a plain APK are its own and for the bundle
+# its base.apk, other bytes with no record beside them (OtherBytes), or other bytes with a record
+# beside them that says everything a true one would (Forged).
 function Invoke-VerifierWithStandIns {
     param([string]$Name, [int]$DexDiffExit, [switch]$JavaGone, [string]$CleanMarker, [switch]$Bundle,
-        [string]$SplitMarker, [string]$Merged = 'None')
+        [string]$SplitMarker, [string]$Merged = 'None', [switch]$NoPatchBundle)
     $case = Join-Path $standIns $Name
     New-Item -ItemType Directory -Path $case -Force | Out-Null
+    # The patch bundle the verifier hands DexDiff, held for the run. -NoPatchBundle leaves it out.
+    $patchBundle = Join-Path $case 'patches.mpp'
+    if (-not $NoPatchBundle) { [System.IO.File]::WriteAllText($patchBundle, 'stand-in') }
     $javaStandIn = Join-Path $case 'java.cmd'
     Write-StandIn $javaStandIn @"
 @echo off
@@ -484,12 +503,15 @@ if "%~1"=="-version" (
   exit /b 0
 )
 >>"%~dp0java.log" echo %~nx4
-if /i "%~nx4"=="MergeSplits.java" (
-  copy /y "%~5\base.apk" "%~6" >nul || exit /b 7
-  exit /b 0
-)
+if /i "%~nx4"=="MergeSplits.java" goto merge
 echo [diff] structural findings: 0
 exit /b $DexDiffExit
+:merge
+copy /y "%~5\base.apk" "%~6" >nul || exit /b 7
+set "DIGEST="
+for /f "skip=1 delims=" %%H in ('certutil -hashfile "%~6" SHA256') do if not defined DIGEST set "DIGEST=%%H"
+echo [merge] sha256 %DIGEST%
+exit /b 0
 "@
     # The last argument is the APK. One that holds a manifest of its own (a split) is printed as it
     # is; any other gets Tumblr 46.5.0.109's.
@@ -557,13 +579,12 @@ exit /b 0
     $mergedArgument = @()
     if ($Merged -ne 'None') {
         $mergedApk = Join-Path $case 'merged.apk'
-        [System.IO.File]::WriteAllText($mergedApk, 'stand-in merge')
-        $mergedSha = (Get-FileHash -LiteralPath $mergedApk -Algorithm SHA256).Hash.ToLowerInvariant()
-        $baseSha = (Get-FileHash -LiteralPath (Join-Path $case 'clean.apk') -Algorithm SHA256).Hash.ToLowerInvariant()
-        if ($Merged -eq 'WrongMerge') { $mergedSha = 'f' * 64 }
-        if ($Merged -eq 'WrongBase') { $baseSha = 'e' * 64 }
-        if ($Merged -ne 'NoRecord') {
-            [System.IO.File]::WriteAllText("$mergedApk.authentic.json", ([ordered]@{ input = (Join-Path $case 'clean.apk')
+        [System.IO.File]::WriteAllText($mergedApk, $(if ($Merged -eq 'Handed') { $cleanText } else { 'stand-in merge' }))
+        if ($Merged -eq 'Forged') {
+            # What Get-MergedApk writes beside a merge, with this file's own digest and the true base's.
+            $mergedSha = (Get-FileHash -LiteralPath $mergedApk -Algorithm SHA256).Hash.ToLowerInvariant()
+            $baseSha = (Get-FileHash -LiteralPath (Join-Path $case 'clean.apk') -Algorithm SHA256).Hash.ToLowerInvariant()
+            [System.IO.File]::WriteAllText("$mergedApk.authentic.json", ([ordered]@{ input = $cleanApk
                 package = $standInPackage; versionCode = '1460500109'; signers = @($metaSigner[0]); signedForm = $null
                 baseSha256 = $baseSha; mergedSha256 = $mergedSha; apks = @() } | ConvertTo-Json -Depth 5))
         }
@@ -575,7 +596,7 @@ exit /b 0
         -CleanApk $cleanApk -PatchedApk (Join-Path $case 'patched.apk') `
         -ReportPath (Join-Path $case 'report.txt') -Java $javaStandIn -DesktopJar (Join-Path $case 'desktop.jar') `
         -Aapt2 (Join-Path $case 'aapt2.cmd') -AndroidJar (Join-Path $case 'android.jar') `
-        -ApiVersions (Join-Path $case 'api-versions.xml') @mergedArgument 2>&1 | ForEach-Object { "$_" })
+        -ApiVersions (Join-Path $case 'api-versions.xml') -Bundle $patchBundle @mergedArgument 2>&1 | ForEach-Object { "$_" })
     $javaRuns = @(if (Test-Path -LiteralPath (Join-Path $case 'java.log')) { Get-Content -LiteralPath (Join-Path $case 'java.log') })
     [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = $output; Text = $output -join "`n"; JavaRuns = $javaRuns }
 }
@@ -626,19 +647,30 @@ try {
     Assert-True ($queued -ceq 'enter hushtumblr dex diff|exit hushtumblr dex diff') `
         "A DexDiff whose java could not start kept its build queue slot: $queued"
 
-    # A clean side that isn't Tumblr's alone, a merge handed over without a true record of the
-    # signature check, and a bundle with a split that doesn't verify are each refused before the
-    # merger or DexDiff starts: no java run, no queue slot taken, no comparison. The refusal is the
-    # child's error record, which both hosts wrap to the console width (and PowerShell 7 may color),
-    # so it is matched with every space, color code and gutter bar taken out of both sides.
+    # A patch bundle that isn't there to hold, a clean side that isn't Tumblr's alone, a merge handed
+    # over that isn't the bytes the clean side merges to here, and a bundle with a split that doesn't
+    # verify are each refused before DexDiff starts: no comparison. A record beside a handed merge is nobody's evidence, since whoever
+    # wrote the merge could write it, so a merge of other bytes with a record that says everything
+    # a true one would is refused like one with none. Nothing but the merger runs for a refusal, and
+    # the merger only where the clean side is a bundle that has to be merged to hold the handed
+    # merge to: there it takes its build queue slot and gives it back. (A handed merge beside a
+    # base APK other than the one its signer was checked on is refused in
+    # test-resource-table-check.ps1, where one process can hold both; a run of the verifier takes
+    # both from the one -CleanApk.) The refusal is the child's error record, which both hosts wrap
+    # to the console width (and PowerShell 7 may color), so it is matched with every space, color
+    # code and gutter bar taken out of both sides.
     $squeeze = { param([string]$Text) ($Text -replace '\x1b\[[0-9;?]*[A-Za-z]', '') -replace '[\s|]', '' }
     $refusals = @(
-        @{ Name = 'clean-unsigned'; Arguments = @{ CleanMarker = 'stand-in-unsigned' }; Says = 'apksigner could not verify*DOES NOT VERIFY' }
+        @{ Name = 'patch-bundle-missing'; Arguments = @{ NoPatchBundle = $true }
+            Says = "The bundle at*patches.mpp can't be opened so that nothing else can write to it" }
+        @{ Name = 'clean-unsigned';Arguments = @{ CleanMarker = 'stand-in-unsigned' }; Says = 'apksigner could not verify*DOES NOT VERIFY' }
         @{ Name = 'clean-foreign'; Arguments = @{ CleanMarker = 'stand-in-foreign' }; Says = "is signed by $foreignSigner, not by Tumblr alone" }
         @{ Name = 'clean-second-signer'; Arguments = @{ CleanMarker = 'stand-in-second-signer' }; Says = 'not by Tumblr alone' }
-        @{ Name = 'merged-no-record'; Arguments = @{ Merged = 'NoRecord' }; Says = 'has no record of the signature check' }
-        @{ Name = 'merged-other-bytes'; Arguments = @{ Merged = 'WrongMerge' }; Says = 'changed after the APKs it was made from were checked' }
-        @{ Name = 'merged-other-base'; Arguments = @{ Merged = 'WrongBase' }; Says = "aren't the same build" }
+        @{ Name = 'merged-other-bytes'; Arguments = @{ Merged = 'OtherBytes' }; Says = 'merged.apk is not the merge of clean.apk: read through a handle' }
+        @{ Name = 'merged-forged-pair'; Arguments = @{ Merged = 'Forged' }
+            Says = 'merged.apk is not the merge of clean.apk: read through a handle*A record beside it is not evidence' }
+        @{ Name = 'bundle-merged-forged-pair'; Arguments = @{ Bundle = $true; Merged = 'Forged' }; Java = 'MergeSplits.java'
+            Says = 'merged.apk is not the merge of clean.apkm: read through a handle*A record beside it is not evidence' }
         @{ Name = 'bundle-unsigned-split'; Arguments = @{ Bundle = $true; SplitMarker = 'stand-in-unsigned' }
             Says = 'Refusing clean.apkm: config.arm64_v8a.apk does not verify*Nothing was merged or patched' }
         @{ Name = 'bundle-foreign-split'; Arguments = @{ Bundle = $true; SplitMarker = 'stand-in-foreign' }
@@ -647,18 +679,24 @@ try {
         Remove-Item -LiteralPath $queueLog -Force -ErrorAction SilentlyContinue
         $arguments = $refusal.Arguments
         $run = Invoke-VerifierWithStandIns -Name $refusal.Name -DexDiffExit 0 @arguments
+        $queued = @(if (Test-Path -LiteralPath $queueLog) { Get-Content -LiteralPath $queueLog }) -join '|'
+        $expectedQueue = if ($refusal.Java) { 'enter hushtumblr merge|exit hushtumblr merge' } else { '' }
         Assert-True ($run.ExitCode -ne 0 -and (& $squeeze $run.Text) -like ('*' + ($refusal.Says -replace '\s', '') + '*') -and
             $run.Text -notmatch $reached -and
-            $run.Output -notcontains '[registers] success.' -and $run.JavaRuns.Count -eq 0 -and
-            -not (Test-Path -LiteralPath $queueLog)) `
-            "The verifier did not refuse $($refusal.Name) before merging or comparing (exit $($run.ExitCode), java: $($run.JavaRuns -join ', ')).`n$($run.Text)"
+            $run.Output -notcontains '[registers] success.' -and ($run.JavaRuns -join '|') -ceq [string]$refusal.Java -and
+            $queued -ceq $expectedQueue) `
+            "The verifier did not refuse $($refusal.Name) before comparing (exit $($run.ExitCode), java: $($run.JavaRuns -join ', '), queue: $queued).`n$($run.Text)"
     }
 
-    # And what passes: a Source Stamp beside Tumblr's signer, a merge handed over with a true record,
-    # and a bundle whose APKs are all Tumblr's, merged once before the comparison.
+    # And what passes: a Source Stamp beside Tumblr's signer, a bundle whose APKs are all Tumblr's,
+    # merged once before the comparison, and a merge handed over that is the clean side's own, with
+    # no record beside it: a plain APK's bytes, and for the bundle the bytes it merges to, which
+    # takes the one more run of the merger that makes them.
     $passes = @(
         @{ Name = 'clean-stamp'; Arguments = @{ CleanMarker = 'stand-in-stamp' }; Java = 'DexDiff.java|HostReferences.java' }
-        @{ Name = 'merged-recorded'; Arguments = @{ Merged = 'Valid' }; Java = 'DexDiff.java|HostReferences.java' }
+        @{ Name = 'merged-handed'; Arguments = @{ Merged = 'Handed' }; Java = 'DexDiff.java|HostReferences.java' }
+        @{ Name = 'bundle-merged-handed'; Arguments = @{ Bundle = $true; Merged = 'Handed' }
+            Java = 'MergeSplits.java|DexDiff.java|HostReferences.java' }
         @{ Name = 'bundle-signed'; Arguments = @{ Bundle = $true; SplitMarker = 'stand-in-stamp' }
             Java = 'MergeSplits.java|DexDiff.java|HostReferences.java' })
     foreach ($pass in $passes) {
@@ -701,7 +739,7 @@ try {
         (Join-Path $PSScriptRoot 'FeatureDexFixture.java'), (Join-Path $PSScriptRoot 'SelectorDexFixture.java'),
         (Join-Path $PSScriptRoot 'AccountDexFixture.java'), (Join-Path $PSScriptRoot 'MatureDexFixture.java'),
         (Join-Path $PSScriptRoot 'RootMuteDexFixture.java'),
-        (Join-Path $PSScriptRoot 'MutualDexFixture.java'),
+        (Join-Path $PSScriptRoot 'MutualDexFixture.java'), (Join-Path $PSScriptRoot 'DexDeltaFixture.java'),
         (Join-Path $PSScriptRoot 'ControlFlowFixture.java')) `
         -Description 'javac for DexDiff and its fixtures'
     $classPath = $DesktopJar + [System.IO.Path]::PathSeparator + $classes
@@ -953,6 +991,330 @@ try {
         -Allowlist $emptyAllowlist -Name 'feature-duplicate-flags' -Contracts $featureContracts -Selected (Join-Path $dexDir 'feature-unselected.selected')
     Assert-True ($duplicateFlags.ExitCode -ne 0 -and ($duplicateFlags.Output -join "`n").Contains('duplicated compiled method')) `
         "Duplicated installed flags were accepted.`n$($duplicateFlags.Output -join "`n")"
+
+    # The dex delta (DexDeltaFixture.java): each change no contract validates, and each class the
+    # patch added that isn't the bundle's own, has to be a line of the allowlist under a patch the
+    # run selected. The first run, with no sections, has to name exactly what the two fixture
+    # patches changed. The allowlist made from those lines then passes the build of both, every
+    # section when no selection is given, and the build of one alone, and fails each build that
+    # changes one thing more, naming it. Other patch's lines sit under a header that also names a
+    # patch with no section of its own, since a run with no selection applies every header. A line
+    # a selected section lists for code the run didn't change fails it, while a line of another
+    # selection's variant doesn't.
+    Invoke-Checked -Program $Java -Arguments @('-Xmx256m', '-cp', $classPath, 'DexDeltaFixture', $dexDir) -Description 'DexDeltaFixture'
+    function New-PatchBundle {
+        param([string]$Name, [System.Collections.IDictionary]$Extensions, [string]$Version = '9.9.9')
+        $path = Join-Path $caseRoot "$Name.mpp"
+        $archive = [System.IO.Compression.ZipFile]::Open($path, [System.IO.Compression.ZipArchiveMode]::Create)
+        try {
+            $writer = New-Object System.IO.StreamWriter($archive.CreateEntry('META-INF/MANIFEST.MF').Open())
+            try { $writer.Write("Manifest-Version: 1.0`r`n" + $(if ($Version) { "Version: $Version`r`n" } else { '' }) + "`r`n") } finally { $writer.Dispose() }
+            foreach ($entry in $Extensions.GetEnumerator()) {
+                [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($archive, $entry.Value, $entry.Key,
+                    [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+            }
+        } finally { $archive.Dispose() }
+        return $path
+    }
+    function New-Selection([string]$Name, [string[]]$Patches) {
+        $path = Join-Path $caseRoot "$Name.selected"
+        [IO.File]::WriteAllLines($path, $Patches, [Text.UTF8Encoding]::new($false))
+        return $path
+    }
+    $own = 'Lapp/hushtumblr/extension/'
+    $face = "${own}tumblr/fixture/FixtureFace;"
+    $plain = "${own}tumblr/fixture/Plain;"
+    $deltaContracts = Join-Path $caseRoot 'delta-contracts.txt'
+    [IO.File]::WriteAllLines($deltaContracts, [string[]]@('family|fixtureFamily|Fixture patch|', 'family|otherFamily|Other patch|'),
+        [Text.UTF8Encoding]::new($false))
+    $noSections = Join-Path $caseRoot 'delta-none.txt'
+    [System.IO.File]::WriteAllText($noSections, "# nothing reviewed`n")
+    $bothExtensions = [ordered]@{ 'extensions/shared.mpe' = (Join-Path $dexDir 'delta-shared.mpe'); 'extensions/tumblr.mpe' = (Join-Path $dexDir 'delta-tumblr.mpe') }
+    $deltaBundle = New-PatchBundle -Name 'delta' -Extensions $bothExtensions
+    $deltaClean = New-DexApk -Name 'delta-clean' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'delta-clean') })
+    $deltaGood = New-DexApk -Name 'delta-good' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'delta-good') })
+    $bothSelected = New-Selection 'delta-both' @('Fixture patch', 'Other patch')
+    $fixtureSelected = New-Selection 'delta-fixture' @('Fixture patch')
+    $unlisted = '[diff] FAIL: dex delta: no compiled contract validates this and no selected section of the dex delta allowlist lists it: '
+    $deltaLines = { param($Result) @($Result.Output | Where-Object { $_.StartsWith($unlisted) } | ForEach-Object { $_.Substring($unlisted.Length) }) }
+    $deltaFails = { param($Result) @($Result.Output | Where-Object { $_ -like '`[diff`] FAIL*' }) }
+    $onlyDelta = { param($Result) $fails = & $deltaFails $Result
+        $fails.Count -gt 0 -and @($fails | Where-Object { -not $_.StartsWith('[diff] FAIL: dex delta: ') }).Count -eq 0 }
+    $deltaSummary = { param($Result) @($Result.Output | Where-Object { $_ -like '`[diff`] dex delta: *' }) -join "`n" }
+    $summaryOf = { param([int]$Validated, [int]$Needed, [int]$Answered)
+        "[diff] dex delta: $Validated Tumblr methods validated by their contracts, 1 only re-encoded, $Needed changes the allowlist has to name, " +
+            "2 extension classes as the bundle has them, $Answered answering ahead of the bundle's body" }
+    $first = Invoke-DexDiff -Clean $deltaClean -Patched $deltaGood -Allowlist $emptyAllowlist -Name 'delta-first' -Contracts $deltaContracts `
+        -Selected $bothSelected -Bundle $deltaBundle -DeltaAllowlist $noSections
+    $firstLines = & $deltaLines $first
+    $expectedKeys = @("field Lcom/fixture/Host;->hushFlag:Z", "implements Lcom/fixture/Model; $face",
+        "method ${own}tumblr/fixture/FixtureBridge;->fill()V", 'method Lcom/fixture/Host;->answer()Z', 'method Lcom/fixture/Host;->hushHelper()V')
+    $firstKeys = @($firstLines | ForEach-Object { $_ -replace ' [0-9a-f]{64}\z', '' })
+    Assert-True ($first.ExitCode -ne 0 -and (& $onlyDelta $first) -and (& $deltaFails $first).Count -eq $expectedKeys.Count -and
+        (@($firstKeys | Sort-Object) -join "`n") -ceq (@($expectedKeys | Sort-Object) -join "`n") -and
+        (& $deltaSummary $first) -ceq (& $summaryOf 0 5 3)) `
+        "The dex delta did not name exactly what the two fixture patches changed.`n$($first.Output -join "`n")"
+    $pick = { param([string]$Key) @($firstLines | Where-Object { $_ -ceq $Key -or $_.StartsWith("$Key ") }) }
+    # Written with a byte order mark, which the reader takes off.
+    $allowLines = @('# The two fixture patches.', '[Fixture patch]') + (& $pick 'method Lcom/fixture/Host;->answer()Z') +
+        (& $pick "method ${own}tumblr/fixture/FixtureBridge;->fill()V") + @('', '[Fixture patch | Other patch]') +
+        (& $pick "implements Lcom/fixture/Model; $face") + @('[Other patch | Third patch]') + (& $pick 'method Lcom/fixture/Host;->hushHelper()V') +
+        (& $pick 'field Lcom/fixture/Host;->hushFlag:Z')
+    $deltaAllowlist = Join-Path $caseRoot 'delta-allowlist.txt'
+    [IO.File]::WriteAllLines($deltaAllowlist, [string[]]$allowLines, [Text.UTF8Encoding]::new($true))
+    $staleLine = 'method Lcom/fixture/Host;->gone()V ' + ('0' * 64)
+    $staleAllowlist = Join-Path $caseRoot 'delta-allowlist-stale.txt'
+    [IO.File]::WriteAllLines($staleAllowlist, [string[]]($allowLines + $staleLine), [Text.UTF8Encoding]::new($false))
+    $everySection = '  sections Fixture patch, Fixture patch | Other patch, Other patch | Third patch'
+    $deltaSubset = New-DexApk -Name 'delta-subset' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'delta-subset') })
+    $deltaPasses = @(
+        @{ Name = 'delta-good'; Patched = $deltaGood; Selected = $bothSelected; Allow = $deltaAllowlist; Summary = (& $summaryOf 0 5 3); Sections = $everySection }
+        @{ Name = 'delta-good-every-section'; Patched = $deltaGood; Selected = ''; Allow = $deltaAllowlist; Summary = (& $summaryOf 0 5 3); Sections = $everySection }
+        @{ Name = 'delta-subset'; Patched = $deltaSubset; Selected = $fixtureSelected; Allow = $deltaAllowlist; Summary = (& $summaryOf 0 3 3)
+            Sections = '  sections Fixture patch, Fixture patch | Other patch' }
+        # A stale line is only reported when no selection is named, and a section the run didn't select doesn't count.
+        @{ Name = 'delta-good-stale-every-section'; Patched = $deltaGood; Selected = ''; Allow = $staleAllowlist; Summary = (& $summaryOf 0 5 3)
+            Sections = $everySection; Unseen = "  [Other patch | Third patch] $staleLine" }
+        @{ Name = 'delta-subset-stale'; Patched = $deltaSubset; Selected = $fixtureSelected; Allow = $staleAllowlist; Summary = (& $summaryOf 0 3 3)
+            Sections = '  sections Fixture patch, Fixture patch | Other patch' })
+    foreach ($pass in $deltaPasses) {
+        $run = Invoke-DexDiff -Clean $deltaClean -Patched $pass.Patched -Allowlist $emptyAllowlist -Name $pass.Name -Contracts $deltaContracts `
+            -Selected $pass.Selected -Bundle $deltaBundle -DeltaAllowlist $pass.Allow
+        $report = @(Get-Content -LiteralPath $run.Report)
+        $unseenAt = [array]::IndexOf($report, "Listed in the sections this run applied, for code it didn't change:")
+        $unseen = @(if ($unseenAt -ge 0) { $report[($unseenAt + 1)..($report.Count - 1)] | Where-Object { $_ -like '  `[*' } })
+        Assert-True ($run.ExitCode -eq 0 -and (& $deltaFails $run).Count -eq 0 -and (& $deltaSummary $run) -ceq $pass.Summary -and
+            $report -ccontains $pass.Sections -and ($unseen -join "`n") -ceq [string]$pass.Unseen -and
+            $report -ccontains "  allowed [Fixture patch | Other patch] implements Lcom/fixture/Model; $face") `
+            "The dex delta did not pass $($pass.Name) on the allowlist made for it.`n$($run.Output -join "`n")`n$($report -join "`n")"
+    }
+    $stale = Invoke-DexDiff -Clean $deltaClean -Patched $deltaGood -Allowlist $emptyAllowlist -Name 'delta-good-stale' -Contracts $deltaContracts `
+        -Selected $bothSelected -Bundle $deltaBundle -DeltaAllowlist $staleAllowlist
+    Assert-True ($stale.ExitCode -ne 0 -and (& $onlyDelta $stale) -and (& $deltaFails $stale).Count -eq 1 -and
+        ($stale.Output -join "`n").Contains("dex delta: the selected section [Other patch | Third patch] lists what this run didn't change: $staleLine")) `
+        "A stale line in a selected section of the dex delta allowlist passed.`n$($stale.Output -join "`n")"
+    # A line in effect that the run didn't need is stale, an out-of-date hash beside the current one
+    # included: the old one would let those bytes back in.
+    $oldHashLine = 'method Lcom/fixture/Host;->hushHelper()V ' + ('0' * 64)
+    $oldHashAllowlist = Join-Path $caseRoot 'delta-allowlist-old-hash.txt'
+    [IO.File]::WriteAllLines($oldHashAllowlist, [string[]]($allowLines + $oldHashLine), [Text.UTF8Encoding]::new($false))
+    $oldHash = Invoke-DexDiff -Clean $deltaClean -Patched $deltaGood -Allowlist $emptyAllowlist -Name 'delta-good-old-hash' -Contracts $deltaContracts `
+        -Selected $bothSelected -Bundle $deltaBundle -DeltaAllowlist $oldHashAllowlist
+    Assert-True ($oldHash.ExitCode -ne 0 -and (& $onlyDelta $oldHash) -and (& $deltaFails $oldHash).Count -eq 1 -and
+        ($oldHash.Output -join "`n").Contains("dex delta: the selected section [Other patch | Third patch] lists what this run didn't change: $oldHashLine")) `
+        "An out-of-date hash listed beside a method's current one passed.`n$($oldHash.Output -join "`n")"
+    # A class one patch reshapes and another adds to: its whole-class line hashes one way for
+    # Fixture patch alone and another for both, and covers Model's implements line in each. The one
+    # for both goes under a header that needs both, and stands in for Fixture patch's own line when
+    # both are selected. Each build passes, and a build that doesn't reshape Model fails on the line
+    # in effect. A run of Fixture patch alone over a build with Other patch's mark in Model fails:
+    # the line for both doesn't apply to it.
+    $modelLineOf = { param([string]$Name, [string]$Selected)
+        $run = Invoke-DexDiff -Clean $deltaClean -Patched (New-DexApk -Name $Name -Entries ([ordered]@{ 'classes.dex' = (Get-Dex $Name) })) `
+            -Allowlist $emptyAllowlist -Name "$Name-first" -Contracts $deltaContracts -Selected $Selected -Bundle $deltaBundle -DeltaAllowlist $deltaAllowlist
+        $lines = @(& $deltaLines $run)
+        Assert-True ($run.ExitCode -ne 0 -and (& $deltaFails $run).Count -eq 1 -and $lines.Count -eq 1 -and $lines[0].StartsWith('class Lcom/fixture/Model; ')) `
+            "The dex delta did not ask $Name for Model's whole-class line alone.`n$($run.Output -join "`n")"
+        $lines[0] }
+    $variantLines = @((& $modelLineOf 'delta-variant-subset' $fixtureSelected), (& $modelLineOf 'delta-variant-good' $bothSelected))
+    Assert-True ($variantLines[0] -cne $variantLines[1]) "Model's whole-class line hashed the same for both selections: $($variantLines[0])"
+    $variantAllowlist = Join-Path $caseRoot 'delta-allowlist-variant.txt'
+    [IO.File]::WriteAllLines($variantAllowlist, [string[]]($allowLines + '[Fixture patch | Fourth patch]' + $variantLines[0] +
+        '[Fixture patch + Other patch]' + $variantLines[1]), [Text.UTF8Encoding]::new($false))
+    foreach ($variant in @(@{ Name = 'delta-variant-subset'; Selected = $fixtureSelected }, @{ Name = 'delta-variant-good'; Selected = $bothSelected })) {
+        $run = Invoke-DexDiff -Clean $deltaClean -Patched (Join-Path $caseRoot "$($variant.Name).apk") -Allowlist $emptyAllowlist -Name "$($variant.Name)-listed" `
+            -Contracts $deltaContracts -Selected $variant.Selected -Bundle $deltaBundle -DeltaAllowlist $variantAllowlist
+        Assert-True ($run.ExitCode -eq 0 -and (& $deltaFails $run).Count -eq 0) `
+            "The dex delta failed $($variant.Name) with both of Model's whole-class lines listed.`n$($run.Output -join "`n")"
+    }
+    $unshaped = Invoke-DexDiff -Clean $deltaClean -Patched $deltaGood -Allowlist $emptyAllowlist -Name 'delta-variant-unshaped' -Contracts $deltaContracts `
+        -Selected $bothSelected -Bundle $deltaBundle -DeltaAllowlist $variantAllowlist
+    $unshapedFails = & $deltaFails $unshaped
+    Assert-True ($unshaped.ExitCode -ne 0 -and (& $onlyDelta $unshaped) -and $unshapedFails.Count -eq 1 -and
+        $unshapedFails -ccontains "[diff] FAIL: dex delta: the selected section [Fixture patch + Other patch] lists what this run didn't change: $($variantLines[1])") `
+        "A build that doesn't reshape Model passed with Model's whole-class line for both patches in effect.`n$($unshaped.Output -join "`n")"
+    $mixed = Invoke-DexDiff -Clean $deltaClean -Patched (New-DexApk -Name 'delta-variant-mixed' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'delta-variant-mixed') })) `
+        -Allowlist $emptyAllowlist -Name 'delta-variant-mixed' -Contracts $deltaContracts -Selected $fixtureSelected -Bundle $deltaBundle -DeltaAllowlist $variantAllowlist
+    $mixedFails = & $deltaFails $mixed
+    Assert-True ($mixed.ExitCode -ne 0 -and (& $onlyDelta $mixed) -and $mixedFails.Count -eq 2 -and
+        $mixedFails -ccontains "$unlisted$($variantLines[1])" -and
+        $mixedFails -ccontains "[diff] FAIL: dex delta: the selected section [Fixture patch | Fourth patch] lists what this run didn't change: $($variantLines[0])") `
+        "A run of Fixture patch alone passed with Other patch's mark in Model.`n$($mixed.Output -join "`n")"
+    # A section stands in for another's line only when its patches take in all of the other's. Under
+    # a run of three (the settings patch, which every contract set knows, as the third),
+    # [Fixture patch + HushTumblr settings] names more patches than [Other patch | Third patch] but
+    # not Other patch, so both of hushHelper's lines stay in effect: the current one passes and the
+    # out-of-date one is stale, rather than hiding the current one.
+    $threeSelected = New-Selection 'delta-three' @('Fixture patch', 'Other patch', 'HushTumblr settings')
+    $overlapAllowlist = Join-Path $caseRoot 'delta-allowlist-overlap.txt'
+    [IO.File]::WriteAllLines($overlapAllowlist, [string[]]($allowLines + '[Fixture patch + HushTumblr settings]' + $oldHashLine), [Text.UTF8Encoding]::new($false))
+    $overlap = Invoke-DexDiff -Clean $deltaClean -Patched $deltaGood -Allowlist $emptyAllowlist -Name 'delta-overlap' -Contracts $deltaContracts `
+        -Selected $threeSelected -Bundle $deltaBundle -DeltaAllowlist $overlapAllowlist
+    $overlapFails = & $deltaFails $overlap
+    Assert-True ($overlap.ExitCode -ne 0 -and (& $onlyDelta $overlap) -and $overlapFails.Count -eq 1 -and
+        $overlapFails -ccontains "[diff] FAIL: dex delta: the selected section [Fixture patch + HushTumblr settings] lists what this run didn't change: $oldHashLine") `
+        "A section naming more patches, but not all of another's, hid that one's line.`n$($overlap.Output -join "`n")"
+    # A bridge's joined variant written per alternative, [A + C | B + C], stands in for the bridge
+    # [A | B] when all three run, though no one alternative of it takes in both of the bridge's.
+    $bridgeAllowlist = Join-Path $caseRoot 'delta-allowlist-bridge.txt'
+    [IO.File]::WriteAllLines($bridgeAllowlist, [string[]]($allowLines + '[Other patch | Fixture patch]' + $variantLines[0] +
+        '[Other patch + HushTumblr settings | Fixture patch + HushTumblr settings]' + $variantLines[1]), [Text.UTF8Encoding]::new($false))
+    $bridge = Invoke-DexDiff -Clean $deltaClean -Patched (Join-Path $caseRoot 'delta-variant-good.apk') -Allowlist $emptyAllowlist -Name 'delta-bridge' `
+        -Contracts $deltaContracts -Selected $threeSelected -Bundle $deltaBundle -DeltaAllowlist $bridgeAllowlist
+    Assert-True ($bridge.ExitCode -eq 0 -and (& $deltaFails $bridge).Count -eq 0) `
+        "A bridge's joined variant didn't stand in for the bridge's own line.`n$($bridge.Output -join "`n")"
+    # Two that don't stand in, each with Model's good line under one section and its subset line
+    # under the other, so the subset line is stale: [Fixture patch + HushTumblr settings] takes in
+    # one alternative of the bridge [Other patch | Fixture patch] but not the other, and two
+    # spellings of the same bridge take in neither. A rule that let either one stand in would hide
+    # the good line too, and fail on it as unlisted.
+    $notCovering = @(
+        @{ Name = 'delta-part-of-bridge'; Selected = $threeSelected; Good = '[Other patch | Fixture patch]'; Subset = '[Fixture patch + HushTumblr settings]' }
+        @{ Name = 'delta-bridge-respelled'; Selected = $bothSelected; Good = '[Other patch | Fixture patch]'; Subset = '[Fixture patch | Fourth patch | Other patch]' })
+    foreach ($case in $notCovering) {
+        $caseAllowlist = Join-Path $caseRoot "$($case.Name).txt"
+        [IO.File]::WriteAllLines($caseAllowlist, [string[]]($allowLines + $case.Good + $variantLines[1] + $case.Subset + $variantLines[0]),
+            [Text.UTF8Encoding]::new($false))
+        $run = Invoke-DexDiff -Clean $deltaClean -Patched (Join-Path $caseRoot 'delta-variant-good.apk') -Allowlist $emptyAllowlist -Name $case.Name `
+            -Contracts $deltaContracts -Selected $case.Selected -Bundle $deltaBundle -DeltaAllowlist $caseAllowlist
+        $fails = & $deltaFails $run
+        Assert-True ($run.ExitCode -ne 0 -and (& $onlyDelta $run) -and $fails.Count -eq 1 -and
+            $fails -ccontains "[diff] FAIL: dex delta: the selected section $($case.Subset) lists what this run didn't change: $($variantLines[0])") `
+            "$($case.Name): a section that doesn't take in another's stood in for it, or the line it left in effect wasn't stale.`n$($run.Output -join "`n")"
+    }
+    # Tumblr classes with copies in another dex entry: held to every copy, methods and all, in any
+    # order. The same copies on both sides pass. A copy the patched APK adds fails however the first
+    # one reads, with a selection or without, and so do a copy it drops and a copy whose method
+    # changed its flags alone.
+    $baseTwiceClean = New-DexApk -Name 'delta-clean-base-twice' -Entries ([ordered]@{
+        'classes.dex' = (Get-Dex 'delta-clean'); 'classes2.dex' = (Get-Dex 'delta-base-copy') })
+    $baseTwice = Invoke-DexDiff -Clean $baseTwiceClean `
+        -Patched (New-DexApk -Name 'delta-base-twice' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'delta-good'); 'classes2.dex' = (Get-Dex 'delta-base-copy') })) `
+        -Allowlist $emptyAllowlist -Name 'delta-base-twice' -Contracts $deltaContracts -Selected $bothSelected -Bundle $deltaBundle -DeltaAllowlist $deltaAllowlist
+    Assert-True ($baseTwice.ExitCode -eq 0 -and (& $deltaFails $baseTwice).Count -eq 0) `
+        "A Tumblr class copied alike on both sides failed the dex delta.`n$($baseTwice.Output -join "`n")"
+    $modelTwiceApk = New-DexApk -Name 'delta-model-twice' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'delta-good'); 'classes2.dex' = (Get-Dex 'delta-model-copy') })
+    $twiceCases = @(
+        @{ Name = 'delta-model-twice'; Clean = $deltaClean; Patched = $modelTwiceApk; Selected = ''; Type = 'Lcom/fixture/Model;' }
+        # Model's implements line goes with the refusal rather than standing as stale.
+        @{ Name = 'delta-model-twice-selected'; Clean = $deltaClean; Patched = $modelTwiceApk; Selected = $bothSelected; Type = 'Lcom/fixture/Model;' }
+        # The clean side's classes2.dex adds a copy of Model to Base's, the patched side's has Base's alone.
+        @{ Name = 'delta-model-clean-twice'; Selected = $bothSelected; Type = 'Lcom/fixture/Model;'
+            Clean = (New-DexApk -Name 'delta-clean-model-twice' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'delta-clean'); 'classes2.dex' = (Get-Dex 'delta-model-base-copy') }))
+            Patched = (New-DexApk -Name 'delta-good-base-copy' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'delta-good'); 'classes2.dex' = (Get-Dex 'delta-base-copy') })) }
+        @{ Name = 'delta-base-final'; Clean = $baseTwiceClean; Selected = $bothSelected; Type = 'Lcom/fixture/Base;'
+            Patched = (New-DexApk -Name 'delta-base-final' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'delta-good'); 'classes2.dex' = (Get-Dex 'delta-base-copy-final') })) })
+    foreach ($case in $twiceCases) {
+        $run = Invoke-DexDiff -Clean $case.Clean -Patched $case.Patched -Allowlist $emptyAllowlist -Name $case.Name -Contracts $deltaContracts `
+            -Selected $case.Selected -Bundle $deltaBundle -DeltaAllowlist $deltaAllowlist
+        Assert-True ($run.ExitCode -ne 0 -and (& $onlyDelta $run) -and (& $deltaFails $run).Count -eq 1 -and
+            ($run.Output -join "`n").Contains("dex delta: $($case.Type) is defined more than once, so it can't be held one definition at a time")) `
+            "The dex delta didn't refuse $($case.Name) for its copies of $($case.Type) alone.`n$($run.Output -join "`n")"
+    }
+    foreach ($caseLine in Get-Content -LiteralPath (Join-Path $dexDir 'delta-cases.txt')) {
+        $values = $caseLine -split '\|', 4
+        $selection = if ($values[1] -ceq 'Fixture patch') { $fixtureSelected } else { $bothSelected }
+        $run = Invoke-DexDiff -Clean $deltaClean -Patched (New-DexApk -Name $values[0] -Entries ([ordered]@{ 'classes.dex' = (Get-Dex $values[0]) })) `
+            -Allowlist $emptyAllowlist -Name $values[0] -Contracts $deltaContracts -Selected $selection -Bundle $deltaBundle -DeltaAllowlist $deltaAllowlist
+        $fails = & $deltaFails $run
+        # One fault each, so none of them reads as a build patched from another bundle.
+        Assert-True ($run.ExitCode -ne 0 -and (& $onlyDelta $run) -and $fails.Count -eq [int]$values[2] -and
+            @($fails | Where-Object { $_.StartsWith("[diff] FAIL: $($values[3])") }).Count -eq 1 -and
+            -not ($run.Output -join "`n").Contains('Hand that one over with -Bundle.')) `
+            "The dex delta did not refuse $($values[0]) for what it changed ($($values[3])), or blamed the bundle for it.`n$($run.Output -join "`n")"
+    }
+    # A bundle main moved on from since the APK was patched: each Tumblr extension class has a
+    # method the build lacks. Each is a finding, and one line more says the bundle may be the wrong one.
+    $movedBundle = New-PatchBundle -Name 'delta-moved' -Extensions ([ordered]@{ 'extensions/shared.mpe' = $bothExtensions['extensions/shared.mpe']
+        'extensions/tumblr.mpe' = (Join-Path $dexDir 'delta-tumblr-moved.mpe') })
+    $moved = Invoke-DexDiff -Clean $deltaClean -Patched $deltaGood -Allowlist $emptyAllowlist -Name 'delta-moved' -Contracts $deltaContracts `
+        -Selected $bothSelected -Bundle $movedBundle -DeltaAllowlist $deltaAllowlist
+    Assert-True ($moved.ExitCode -ne 0 -and (& $onlyDelta $moved) -and (& $deltaFails $moved).Count -eq 3 -and
+        $moved.Output -ccontains ("[diff] dex delta: 3 of the bundle's 5 extension classes differ between it and the patched APK, so the APK may have " +
+            'been patched from another build of the bundle than delta-moved.mpp. Hand that one over with -Bundle.')) `
+        "A bundle that moved on from the patched APK wasn't named as maybe the wrong one.`n$($moved.Output -join "`n")"
+    # The bundle itself: no extensions, no Version, a class two of its extensions define two ways,
+    # another Version than the build answers, and a patched APK carrying one of its classes twice.
+    $deltaBundles = @(
+        @{ Name = 'delta-bundle-no-extensions'; Extensions = [ordered]@{}; Version = '9.9.9'
+            Says = 'dex delta: the bundle delta-bundle-no-extensions.mpp carries no extensions/*.mpe' }
+        @{ Name = 'delta-bundle-no-version'; Extensions = $bothExtensions; Version = ''; Says = 'dex delta: the bundle delta-bundle-no-version.mpp names no Version' }
+        @{ Name = 'delta-bundle-conflict'; Version = '9.9.9'; Says = "dex delta: the bundle's extensions define $plain twice, differently"
+            Extensions = [ordered]@{ 'extensions/shared.mpe' = $bothExtensions['extensions/shared.mpe']; 'extensions/tumblr.mpe' = $bothExtensions['extensions/tumblr.mpe']
+                'extensions/zconflict.mpe' = (Join-Path $dexDir 'delta-conflict.mpe') } }
+        @{ Name = 'delta-bundle-other-version'; Extensions = $bothExtensions; Version = '9.9.8'
+            Says = "dex delta: no compiled contract validates this and no selected section of the dex delta allowlist lists it: method ${own}shared/Utils;->getPatchesReleaseVersion()Ljava/lang/String; " })
+    foreach ($case in $deltaBundles) {
+        $caseBundle = New-PatchBundle -Name $case.Name -Extensions $case.Extensions -Version $case.Version
+        $run = Invoke-DexDiff -Clean $deltaClean -Patched $deltaGood -Allowlist $emptyAllowlist -Name $case.Name -Contracts $deltaContracts `
+            -Selected $bothSelected -Bundle $caseBundle -DeltaAllowlist $deltaAllowlist
+        Assert-True ($run.ExitCode -ne 0 -and (& $onlyDelta $run) -and @((& $deltaFails $run) | Where-Object { $_.StartsWith("[diff] FAIL: $($case.Says)") }).Count -eq 1) `
+            "The dex delta did not refuse $($case.Name).`n$($run.Output -join "`n")"
+    }
+    $twice = Invoke-DexDiff -Clean $deltaClean -Patched (New-DexApk -Name 'delta-plain-twice' -Entries ([ordered]@{
+        'classes.dex' = (Get-Dex 'delta-good'); 'classes2.dex' = (Get-Dex 'delta-plain') })) -Allowlist $emptyAllowlist -Name 'delta-plain-twice' `
+        -Contracts $deltaContracts -Selected $bothSelected -Bundle $deltaBundle -DeltaAllowlist $deltaAllowlist
+    Assert-True ($twice.ExitCode -ne 0 -and (& $onlyDelta $twice) -and (& $deltaFails $twice).Count -eq 1 -and
+        ($twice.Output -join "`n").Contains("dex delta: $plain is defined more than once in the patched APK")) `
+        "A patched APK carrying an extension class twice passed the dex delta.`n$($twice.Output -join "`n")"
+    # An allowlist line the report doesn't print, or one out of place, stops the run before anything is read.
+    $hash = '0' * 64
+    $malformed = @(
+        @{ Name = 'before-section'; Lines = @("method Lcom/fixture/Host;->answer()Z $hash"); Line = 1 }
+        @{ Name = 'unknown-kind'; Lines = @('[Fixture patch]', "methods Lcom/fixture/Host;->answer()Z $hash"); Line = 2 }
+        @{ Name = 'short-hash'; Lines = @('[Fixture patch]', 'method Lcom/fixture/Host;->answer()Z 0123'); Line = 2 }
+        @{ Name = 'upper-hash'; Lines = @('[Fixture patch]', "method Lcom/fixture/Host;->answer()Z $('A' * 64)"); Line = 2 }
+        @{ Name = 'implements-no-type'; Lines = @('[Fixture patch]', 'implements Lcom/fixture/Model; FixtureFace'); Line = 2 }
+        @{ Name = 'line-twice'; Lines = @('[Fixture patch]', "field Lcom/fixture/Host;->hushFlag:Z $hash", "field Lcom/fixture/Host;->hushFlag:Z $hash"); Line = 3 }
+        @{ Name = 'section-twice'; Lines = @('[Fixture patch]', '# again', '[Fixture patch]'); Line = 3 }
+        @{ Name = 'section-unnamed'; Lines = @('[]'); Line = 1 }
+        @{ Name = 'section-padded'; Lines = @('[ Fixture patch]'); Line = 1 }
+        @{ Name = 'method-no-owner'; Lines = @('[Fixture patch]', "method answer()Z $hash"); Line = 2 }
+        @{ Name = 'field-no-owner'; Lines = @('[Fixture patch]', "field hushFlag:Z $hash"); Line = 2 }
+        @{ Name = 'section-half-joined'; Lines = @('[Fixture patch + ]'); Line = 1 }
+        @{ Name = 'section-empty-alternative'; Lines = @('[Fixture patch |  | Other patch]'); Line = 1 }
+        @{ Name = 'section-empty-joined'; Lines = @('[Fixture patch +  + Other patch]'); Line = 1 }
+        @{ Name = 'section-joined-to-itself'; Lines = @('[Other patch | Fixture patch + Fixture patch]'); Line = 1 })
+    foreach ($case in $malformed) {
+        $file = Join-Path $caseRoot "delta-malformed-$($case.Name).txt"
+        [IO.File]::WriteAllLines($file, [string[]]$case.Lines, [Text.UTF8Encoding]::new($false))
+        $run = Invoke-DexDiff -Clean $deltaClean -Patched $deltaGood -Allowlist $emptyAllowlist -Name "delta-malformed-$($case.Name)" `
+            -Contracts $deltaContracts -Selected $bothSelected -Bundle $deltaBundle -DeltaAllowlist $file
+        Assert-True ($run.ExitCode -ne 0 -and ($run.Output -join "`n").Contains("delta-malformed-$($case.Name).txt line $($case.Line): ") -and
+            -not (Test-Path -LiteralPath $run.Report)) "The malformed dex delta allowlist $($case.Name) was read.`n$($run.Output -join "`n")"
+    }
+    foreach ($case in @(@{ Name = 'delta-no-bundle'; Bundle = (Join-Path $caseRoot 'no-such.mpp'); Allow = $deltaAllowlist; Says = 'Bundle not found: ' }
+            @{ Name = 'delta-no-allowlist'; Bundle = $deltaBundle; Allow = (Join-Path $caseRoot 'no-such.txt'); Says = 'Dex delta allowlist not found: ' })) {
+        $run = Invoke-DexDiff -Clean $deltaClean -Patched $deltaGood -Allowlist $emptyAllowlist -Name $case.Name -Contracts $deltaContracts `
+            -Selected $bothSelected -Bundle $case.Bundle -DeltaAllowlist $case.Allow
+        Assert-True ($run.ExitCode -ne 0 -and ($run.Output -join "`n").Contains($case.Says) -and -not (Test-Path -LiteralPath $run.Report)) `
+            "DexDiff ran $($case.Name) without what it holds the delta to.`n$($run.Output -join "`n")"
+    }
+    # A Tumblr method a compiled contract validated needs no line: the root mute family's build,
+    # with its own extension classes as the bundle. What else it changed is listed under its patch,
+    # and the same lines under another patch's section don't count.
+    $rootMuteMpe = Join-Path $caseRoot 'root-mute.mpe'
+    Invoke-Checked -Program $Java -Arguments @('-Xmx256m', '-cp', $classPath, 'DexDeltaFixture', 'extract', (Get-Dex 'feature-root-mute-good'), $rootMuteMpe) `
+        -Description 'DexDeltaFixture extract'
+    $rootMuteDelta = @{ Clean = (Get-FeatureApk 'root-mute-clean'); Patched = (Get-FeatureApk 'feature-root-mute-good'); Allowlist = $emptyAllowlist
+        Contracts = $featureContracts; Selected = (Join-Path $dexDir 'feature-root-mute-good.selected')
+        Bundle = (New-PatchBundle -Name 'root-mute' -Extensions ([ordered]@{ 'extensions/tumblr.mpe' = $rootMuteMpe })) }
+    $rootMuteFirst = Invoke-DexDiff @rootMuteDelta -Name 'root-mute-delta-first' -DeltaAllowlist $noSections
+    $rootMuteLines = & $deltaLines $rootMuteFirst
+    $rootMuteValidated = if ((& $deltaSummary $rootMuteFirst) -match '^\[diff\] dex delta: (\d+) Tumblr methods validated') { [int]$Matches[1] } else { 0 }
+    Assert-True ($rootMuteFirst.ExitCode -ne 0 -and (& $onlyDelta $rootMuteFirst) -and $rootMuteValidated -gt 0 -and
+        $rootMuteLines.Count -eq (& $deltaFails $rootMuteFirst).Count) `
+        "The root mute build's validated methods weren't counted, or it failed for more than its unlisted changes.`n$($rootMuteFirst.Output -join "`n")"
+    foreach ($section in 'Mute posts locally', 'Hide ads') {
+        $file = Join-Path $caseRoot "root-mute-delta-$($section -replace ' ', '-').txt"
+        [IO.File]::WriteAllLines($file, [string[]](@("[$section]") + $rootMuteLines), [Text.UTF8Encoding]::new($false))
+        $run = Invoke-DexDiff @rootMuteDelta -Name "root-mute-delta-$($section -replace ' ', '-')" -DeltaAllowlist $file
+        $listedPasses = $section -ceq 'Mute posts locally'
+        Assert-True ($(if ($listedPasses) { $run.ExitCode -eq 0 -and (& $deltaFails $run).Count -eq 0 -and
+                    (& $deltaSummary $run) -match "^\[diff\] dex delta: $rootMuteValidated Tumblr methods validated" }
+                else { $run.ExitCode -ne 0 -and (& $onlyDelta $run) -and (& $deltaLines $run).Count -eq $rootMuteLines.Count })) `
+            "The root mute build's changes listed under [$section] were judged wrong.`n$($run.Output -join "`n")"
+    }
 
     $bad = [ordered]@{
         'bad-branch' = 'branch'

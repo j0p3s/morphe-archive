@@ -7,6 +7,8 @@ package app.hxreborn.extension.proton;
 import java.util.ArrayList;
 import java.util.List;
 
+import app.hxreborn.extension.protonpass.LayoutComponents;
+
 @SuppressWarnings("unused")
 public final class AppliedPatches {
 
@@ -15,6 +17,8 @@ public final class AppliedPatches {
     static final String ACCENT_COLOR = "Custom accent color";
     static final String HIDE_UPGRADE_PROMOTIONS = "Hide upgrade promotions";
     static final String MATERIAL_SWITCHES = "Material 3 switches";
+
+    static final String SWIPE_TO_SWITCH_ACCOUNTS = "Swipe to switch accounts";
 
     private AppliedPatches() {
 
@@ -49,6 +53,10 @@ public final class AppliedPatches {
     }
 
     public static boolean unlockCustomTimePicker() {
+        return false;
+    }
+
+    public static boolean swipeToSwitchAccounts() {
         return false;
     }
 
@@ -102,6 +110,9 @@ public final class AppliedPatches {
         if (MaterialSwitches.isPatched()) {
             names.add(MATERIAL_SWITCHES);
         }
+        if (LayoutComponents.isPatched()) {
+            names.add("Hide layout components");
+        }
         if (hidePromotionalMessages()) {
             names.add("Hide promotional messages");
         }
@@ -116,6 +127,9 @@ public final class AppliedPatches {
         }
         if (unlockCustomTimePicker()) {
             names.add("Unlock custom time picker");
+        }
+        if (swipeToSwitchAccounts()) {
+            names.add(SWIPE_TO_SWITCH_ACCOUNTS);
         }
         if (removeServerChangeDelay()) {
             names.add("Remove server change delay");

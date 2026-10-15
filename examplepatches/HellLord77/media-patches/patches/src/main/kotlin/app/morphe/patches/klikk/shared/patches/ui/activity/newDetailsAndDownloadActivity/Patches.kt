@@ -17,11 +17,12 @@ val deviceCheckFieldAccessPatch = bytecodePatch {
             val instruction = getInstruction<TwoRegisterInstruction>(it)
 
             replaceInstruction(
-                it, BuilderInstruction11n(
+                it,
+                BuilderInstruction11n(
                     Opcode.CONST_4,
                     instruction.registerA,
                     true.toInt(),
-                )
+                ),
             )
         }
     }
