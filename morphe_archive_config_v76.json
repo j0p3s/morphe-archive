@@ -2883,14 +2883,6 @@
                 "updatedAt": 1791873464223
             },
             {
-                "name": "moon-patches",
-                "source": "https://raw.githubusercontent.com/noire342/moon-patches/main/patches-bundle.json",
-                "autoUpdate": true,
-                "sortOrder": 391,
-                "createdAt": 1791873467481,
-                "updatedAt": 1791873467481
-            },
-            {
                 "name": "penguin-patches",
                 "source": "https://raw.githubusercontent.com/pengusto/penguin-patches/main/patches-bundle.json",
                 "autoUpdate": true,
@@ -3025,6 +3017,78 @@
                 "sortOrder": 408,
                 "createdAt": 1791953450091,
                 "updatedAt": 1791953450091
+            },
+            {
+                "name": "morpheArc",
+                "source": "https://raw.githubusercontent.com/020krJ/morpheArc/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 409,
+                "createdAt": 1792039048940,
+                "updatedAt": 1792039048940
+            },
+            {
+                "name": "Quest",
+                "source": "https://raw.githubusercontent.com/archivesteak/Quest/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 410,
+                "createdAt": 1792039052941,
+                "updatedAt": 1792039052941
+            },
+            {
+                "name": "GoogleDialerEnableCallRecording",
+                "source": "https://raw.githubusercontent.com/balu100/GoogleDialerEnableCallRecording/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 411,
+                "createdAt": 1792039054169,
+                "updatedAt": 1792039054169
+            },
+            {
+                "name": "cappys-patches",
+                "source": "https://raw.githubusercontent.com/CappyT/cappys-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 412,
+                "createdAt": 1792039054838,
+                "updatedAt": 1792039054838
+            },
+            {
+                "name": "InfinityPlus-Patches",
+                "source": "https://raw.githubusercontent.com/Dabrogost/InfinityPlus-Patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 413,
+                "createdAt": 1792039056282,
+                "updatedAt": 1792039056282
+            },
+            {
+                "name": "morphe-patches-action",
+                "source": "https://raw.githubusercontent.com/janowakps/morphe-patches-action/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 414,
+                "createdAt": 1792039063376,
+                "updatedAt": 1792039063376
+            },
+            {
+                "name": "lurk-morphe-patches",
+                "source": "https://raw.githubusercontent.com/jordanwoodson/lurk-morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 415,
+                "createdAt": 1792039065318,
+                "updatedAt": 1792039065318
+            },
+            {
+                "name": "piko",
+                "source": "https://raw.githubusercontent.com/Manishrdy/piko/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 416,
+                "createdAt": 1792039067116,
+                "updatedAt": 1792039067116
+            },
+            {
+                "name": "moon-patches",
+                "source": "https://raw.githubusercontent.com/noire342/moon-patches/master/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 417,
+                "createdAt": 1792039069665,
+                "updatedAt": 1792039069665
             }
         ]
     }

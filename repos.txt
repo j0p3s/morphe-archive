@@ -1,4 +1,5 @@
 0-BlackSpectrum-0/channel-blacklist-patch
+020krJ/morpheArc
 0x0day-0wl/morphe-patches
 0xtalos/365score-patches
 2eno/2eno-patches
@@ -45,6 +46,7 @@ Apostolique/apos-morphe-patches
 arandomhooman/hoomans-morphe-patches
 archie9211/morphe-patches
 archivesteak/pinterest-patches
+archivesteak/Quest
 areteruhiro/Haiagaru-Morphe
 ARHCOS/arhcos-patches
 ariecos/gemini-patches
@@ -57,6 +59,7 @@ azksama/aniskip-stremio
 AzukiSensei/aniskip-stremio
 babyhuehnchen/morphe-patches
 bakwudo/uyu
+balu100/GoogleDialerEnableCallRecording
 bartlomiejfornalczyk/morphe-patches
 bdgerszewski/morphe-patches-ihealth
 bearinmindcat/morphe-patches
@@ -82,6 +85,7 @@ byehi98/okish-morphe-patches
 ByXuXy88/wallapop-oled-noads-patches
 canh0chua/Morphe-patches
 Canic/twitch-morphe-patch
+CappyT/cappys-patches
 CasketPizza/morphe-waze-system-tts
 catsmoker/anime-witcher-patches
 cesbar/zpatches
@@ -102,6 +106,7 @@ crimera/piko-ig-lite
 crimera/piko-newx
 csagataj2/morphe-patches
 d0nj/morphe-patches
+Dabrogost/InfinityPlus-Patches
 Dan1elTheMan1el/Morphe-Patches
 DarioDKM/ringconn-patches
 david419kr/niconico-yt-morphe-patches
@@ -205,6 +210,7 @@ JacobPlaysGames/CrimeRadar-Morphe-Patches
 Jagannath70086/jagas-morphe-patches
 JamQueueSharing/Jam-Patches
 jancerny2001/morphe-patches
+janowakps/morphe-patches-action
 jaredcat/morphe-patches
 jasonwu1994/Gboard-patches
 JCapretta/chessable-patches
@@ -217,6 +223,7 @@ Jman-Github/Patch-Bundle-Registry
 Jman-Github/ReVanced-Patch-Bundles
 Jman-Github/Universal-ReVanced-Manager
 Joly0/joly0-patches
+jordanwoodson/lurk-morphe-patches
 Joristdh/Platypatch
 Joussflls10/Jouss-Patches
 jrddupont/discord-patches
@@ -262,6 +269,7 @@ lyyako/realme-link-patches
 madhu-gowda6/atharv-patches
 mahirsn/mahirsn-patches
 Manishrdy/honista-patches
+Manishrdy/piko
 MarcaDian/morphe-patches-yavot
 matthewclso/chrome-morphe
 MauroGamerVN/Morphe-Patches
@@ -372,8 +380,8 @@ Sudashiii/servus-patches
 Supperelias2/sbs-morphe-patches
 Supperelias2/sbs-tv-morphe-patches
 sushruth/imgur-patches
-SysAdminDoc/HushFacebook
 SysAdminDoc/Hushfacebook
+SysAdminDoc/HushFacebook
 SysAdminDoc/hushfeed
 SysAdminDoc/HushFeed
 SysAdminDoc/HushGram
