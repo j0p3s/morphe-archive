@@ -66,6 +66,12 @@ public final class Settings {
         }
     }
 
+    /** The text typed for the text setting {@code key}, or its patch-time default (usually empty). Never null. */
+    public static String getText(String key) {
+        String text = getString(key);
+        return text == null ? "" : text;
+    }
+
     /**
      * Injection point. A {@code kotlin.jvm.functions.Function0} that opens the settings screen, for use as
      * a Compose onClick. Made through a proxy, since the extension doesn't compile against Kotlin.
@@ -147,6 +153,10 @@ public final class Settings {
     static void restart(Activity activity) {
         Intent launch = activity.getPackageManager().getLaunchIntentForPackage(activity.getPackageName());
         if (launch == null || launch.getComponent() == null) return;
+        // Changes are saved with apply(), which writes in the background; exit() doesn't wait for it.
+        // A commit is queued behind those writes and returns once they're on disk.
+        SharedPreferences preferences = preferences();
+        if (preferences != null) preferences.edit().commit();
         activity.startActivity(Intent.makeRestartActivityTask(launch.getComponent()));
         Runtime.getRuntime().exit(0);
     }

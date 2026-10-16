@@ -650,6 +650,7 @@ Keep a paused video paused,Biarkan video yang dijeda tetap dijeda
 Keep captions in Clear display,Pertahankan keterangan saat tampilan bersih
 Keep going,Lanjutkan
 Keep the Favorites tab,Pertahankan tab Favorit
+Keep the LIVE quality after TikTok restarts,Pertahankan kualitas LIVE setelah TikTok dimulai ulang
 Dark Favorites popup,Popup Favorit gelap
 "When TikTok is in dark mode, the list of collections you get by holding the Favorites button is dark too instead of white.","Saat TikTok dalam mode gelap, daftar koleksi yang muncul saat kamu menahan tombol Favorit juga gelap, bukan putih."
 Keep the clock and status icons off the screen while TikTok is open. Swipe down from the top to peek at them.,Sembunyikan jam dan ikon status selama TikTok terbuka. Geser dari atas untuk mengintipnya.
@@ -1180,10 +1181,13 @@ This video has no link to copy,Video ini tidak punya tautan untuk disalin
 This video has no original sound to save,Video ini tidak punya suara asli untuk disimpan
 This video has no sound of its own,Video ini tidak punya suara sendiri
 Thumbs down blocks the commenter,Jempol ke bawah memblokir pengomentar
+Block from a comment's menu,Blokir dari menu komentar
+Press and hold a comment to find Block this commenter in its menu. Their comments leave the list right away and an undo banner follows.,Tekan lama komentar untuk menemukan Blokir pengomentar ini di menunya. Komentar mereka langsung hilang dari daftar dan banner batalkan muncul setelahnya.
 TikTok default,Bawaan TikTok
 "TikTok default (hold to speed up, quick share)","Bawaan TikTok (tahan untuk mempercepat, bagikan cepat)"
 TikTok didn't block %1$s. Try again in a moment.,TikTok tidak memblokir %1$s. Coba lagi sebentar lagi.
 TikTok didn't unblock %1$s. Try again in a moment.,TikTok tidak membuka blokir %1$s. Coba lagi sebentar lagi.
+TikTok forgets the LIVE quality you picked when it closes. This starts rooms at that quality again after a restart. A room whose stream doesn't have it opens at TikTok's choice.,TikTok melupakan kualitas LIVE yang kamu pilih saat ditutup. Ini membuat ruang dimulai lagi dengan kualitas itu setelah dimulai ulang. Ruang yang streamingnya tidak memilikinya terbuka dengan pilihan TikTok.
 TikTok didn't accept the feedback. Try again later.,TikTok tidak menerima masukannya. Coba lagi nanti.
 "TikTok hasn't loaded this setting yet. Open the part of the app that uses it, then come back.","TikTok belum memuat pengaturan ini. Buka bagian aplikasi yang memakainya, lalu kembali."
 TikTok read it,TikTok sudah membacanya
@@ -1380,7 +1384,7 @@ Hide the Products block and product cards in search results.,Sembunyikan blok Pr
 Hide TikTok's Auto scroll button,Sembunyikan tombol Auto scroll TikTok
 Takes TikTok's own Auto scroll action out of the video panel. Auto-advance keeps working.,Menghapus aksi Auto scroll milik TikTok dari panel video. Video tetap dilanjutkan secara otomatis.
 Hide the unread badges on the bottom tabs,Sembunyikan lencana belum dibaca di tab bawah
-"Hide the red counts and dots on every bottom tab, Inbox and Profile included. The inbox itself still shows what came in.","Menyembunyikan angka dan titik merah di semua tab bawah, termasuk Kotak Masuk dan Profil. Kotak masuk sendiri tetap menampilkan yang masuk."
+"Hide the red counts and dots on every bottom tab, Inbox and Profile included, and the bubble over Inbox that counts new likes, followers, comments and who's LIVE. The inbox itself still shows what came in.","Menyembunyikan angka dan titik merah di semua tab bawah, termasuk Kotak Masuk dan Profil, serta gelembung di atas Kotak Masuk yang menghitung suka, pengikut, dan komentar baru, juga siapa yang sedang LIVE. Kotak masuk sendiri tetap menampilkan yang masuk."
 Speed while you hold the video,Kecepatan saat video ditahan
 Hide mini dramas,Sembunyikan drama mini
 Hide TikTok's short drama episodes and the cards that promote them.,Sembunyikan episode drama pendek TikTok dan kartu yang mempromosikannya.
@@ -2079,6 +2083,7 @@ Your earlier settings are back,Pengaturan sebelumnya sudah kembali
 "See-through bottom bar","Bilah bawah transparan"
 "Let the video reach the bottom of the screen on the main feed and show the tabs over it with no bar behind them.","Biarkan video di feed utama menjangkau bagian bawah layar dan tampilkan tab di atasnya tanpa bilah di belakangnya."
 "LIVE chat auto-translate","Terjemahan otomatis chat LIVE"
+"The Translate comments button in a LIVE room also needs a Japanese SIM. Turn on Override SIM details in Hushfeed settings > Region, set SIM country preset to Japan, NTT DOCOMO (44010), then restart TikTok.","Tombol Terjemahkan komentar di ruang LIVE juga memerlukan SIM Jepang. Aktifkan Timpa detail SIM di pengaturan Hushfeed > Wilayah, atur Praset negara SIM ke Japan, NTT DOCOMO (44010), lalu mulai ulang TikTok."
 
 Pick videos to save from profile grids,Pilih video untuk disimpan dari grid profil
 "Puts a circle on each video in a profile, Liked or Favorites grid. Pick up to %1$s, then tap Save to save them one after another, with a count and Cancel.","Menaruh lingkaran di setiap video pada grid profil, Disukai, atau Favorit. Pilih hingga %1$s, lalu ketuk Simpan untuk menyimpannya satu per satu, dengan hitungan dan Batal."
@@ -2142,5 +2147,13 @@ Floating bottom bar,Bilah bawah mengambang
 "Show the main feed's tabs on a rounded, see-through dark pill that floats over the video. Needs See-through bottom bar.","Tampilkan tab feed utama di atas kapsul gelap yang membulat dan transparan, yang mengambang di atas video. Perlu Bilah bawah transparan."
 Show translation options in Language settings,Tampilkan opsi terjemahan di pengaturan Bahasa
 "Brings back the translation rows on TikTok's Language page, under Settings and privacy, for accounts that only see App language there.","Mengembalikan baris terjemahan di halaman Bahasa TikTok, di Pengaturan dan privasi, untuk akun yang di sana hanya melihat Bahasa aplikasi."
+Only on the sides of the video,Hanya di sisi video
+Your Long press choice runs only on the left and right thirds of the video. A press in the middle still opens TikTok's own menu. It needs a Long press choice other than TikTok default.,Pilihan Tekan lama hanya berjalan di sepertiga kiri dan kanan video. Tekan di tengah tetap membuka menu bawaan TikTok. Perlu pilihan Tekan lama selain Bawaan TikTok.
 "Dark LIVE panels in dark mode","Panel LIVE gelap di mode gelap"
 "With TikTok in dark mode, a LIVE room still opens its share menu, fan club and other panels in light colors. This opens them dark.","Saat TikTok dalam mode gelap, ruang LIVE tetap membuka menu bagikan, klub penggemar, dan panel lainnya dengan warna terang. Ini membukanya dalam warna gelap."
+Where the time goes,Posisi waktu
+Beside the bar,Di samping bilah
+Above the bar,Di atas bilah
+"Above puts the time over the left end of the bar while nothing on screen is in the way, and beside the bar when something is.","Di atas bilah menampilkan waktu di atas ujung kiri bilah selama tidak ada yang menghalangi di layar, dan di samping bilah saat ada yang menghalangi."
+Full-width progress bar,Bilah progres selebar layar
+"Run the progress bar from one screen edge to the other, without the gap TikTok leaves at each end.","Bilah progres membentang dari satu tepi layar ke tepi lainnya, tanpa celah yang disisakan TikTok di kedua ujung."

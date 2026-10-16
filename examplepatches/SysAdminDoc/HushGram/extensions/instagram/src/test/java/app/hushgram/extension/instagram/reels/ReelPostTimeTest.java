@@ -122,6 +122,7 @@ public class ReelPostTimeTest {
         PauseForTests.resume();
         Settings.SHOW_REEL_POST_TIME.save(true);
         Settings.REEL_POST_TIME_SECONDS.resetToDefault();
+        Settings.REEL_POST_TIME_AGO.resetToDefault();
         HookStatus.clear();
         now = postedOnOctober2(0) * 1000L + 2 * HOUR;
         // The date leaves the year out for this year, which is the year of the phone's clock.
@@ -136,6 +137,7 @@ public class ReelPostTimeTest {
         TimeZone.setDefault(zone);
         Settings.SHOW_REEL_POST_TIME.resetToDefault();
         Settings.REEL_POST_TIME_SECONDS.resetToDefault();
+        Settings.REEL_POST_TIME_AGO.resetToDefault();
         BaseSettings.PAUSED.save(false);
         PauseForTests.resume();
         HookStatus.clear();
@@ -149,7 +151,7 @@ public class ReelPostTimeTest {
         return new Title(new Post(takenAt));
     }
 
-    /** The words of the line [title] gets, or null when its parts come back as they went in. */
+    /** The words of the lines [title] gets, one per text line, or null when its parts come back as they went in. */
     private String lineOf(Object title) {
         List<Object> parts = parts();
         ReelPostTime.line(title, parts, reader, now);
@@ -157,10 +159,15 @@ public class ReelPostTimeTest {
             assertEquals(Arrays.asList(nameRow, audio), parts);
             return null;
         }
-        assertEquals("one line at most", 3, parts.size());
-        Subtitle made = (Subtitle) parts.get(2);
-        assertSame(title, made.title);
-        return String.valueOf(ReelPostTime.lineText(made.state));
+        assertTrue("two lines at most: " + parts, parts.size() <= 4);
+        StringBuilder words = new StringBuilder();
+        for (Object part : parts.subList(2, parts.size())) {
+            Subtitle made = (Subtitle) part;
+            assertSame(title, made.title);
+            if (words.length() > 0) words.append('\n');
+            words.append(ReelPostTime.lineText(made.state));
+        }
+        return words.toString();
     }
 
     /** On, a reel with a posting time gets one more part after Instagram's own, made for its title. */
@@ -193,6 +200,55 @@ public class ReelPostTimeTest {
 
         Settings.REEL_POST_TIME_SECONDS.save(false);
         assertEquals("Oct 2, 3:45 PM", plain(lineOf(title)));
+    }
+
+    /**
+     * How long ago shows only when asked for, on a line of its own under the time, with the seconds
+     * or without them (#195). Next to the Follow button the two on one line ran out of room.
+     */
+    @Test
+    public void howLongAgoShowsOnlyWhenAskedFor() {
+        Title title = reel(postedOnOctober2(0));
+        assertEquals("off to start", Boolean.FALSE, Settings.REEL_POST_TIME_AGO.defaultValue);
+        assertEquals("Oct 2, 3:45 PM", plain(lineOf(title)));
+
+        Settings.REEL_POST_TIME_AGO.save(true);
+        assertEquals("Oct 2, 3:45 PM\n2h ago", plain(lineOf(title)));
+        Settings.REEL_POST_TIME_SECONDS.save(true);
+        assertEquals("Oct 2, 3:45:30 PM\n2h ago", plain(lineOf(title)));
+
+        assertEquals("a minute ahead of the phone's clock is a clock that's off, so just the time",
+                "Oct 2, 5:46:30 PM", plain(lineOf(reel(now / 1000L + 60))));
+    }
+
+    /** Days, hours and minutes, the ones that aren't none, and the seconds under a minute. */
+    @Test
+    public void howLongAgoCountsDaysHoursAndMinutes() {
+        long second = 1000L;
+        long minute = 60 * second;
+        long day = 24 * HOUR;
+        assertEquals("1d 1h 1m ago", ReelPostTime.ago(context, day + HOUR + minute));
+        assertEquals("1d 5m ago", ReelPostTime.ago(context, day + 5 * minute + 59 * second));
+        assertEquals("2d ago", ReelPostTime.ago(context, 2 * day));
+        assertEquals("1h 1m ago", ReelPostTime.ago(context, 61 * minute));
+        assertEquals("59m ago", ReelPostTime.ago(context, HOUR - second));
+        assertEquals("30s ago", ReelPostTime.ago(context, 30 * second + 999));
+        assertEquals("0s ago", ReelPostTime.ago(context, 0));
+        assertEquals("400d ago", ReelPostTime.ago(context, 400 * day));
+        assertNull("ahead of the phone's clock", ReelPostTime.ago(context, -1));
+        assertNull(ReelPostTime.ago(null, HOUR));
+    }
+
+    /** A phone in Turkish, which HushGram speaks, gets the units and the ago in Turkish, never half in English. */
+    @Test
+    public void howLongAgoIsInTheLanguageOfHushGramsWords() {
+        RuntimeEnvironment.setQualifiers("+tr");
+        try {
+            String ago = ReelPostTime.ago(RuntimeEnvironment.getApplication(), 24 * HOUR + HOUR + 60 * 1000L);
+            assertEquals("ICU's short Turkish units: gün, saat, dakika", "1g 1 sa 1d önce", ago);
+        } finally {
+            RuntimeEnvironment.setQualifiers("+en-rUS");
+        }
     }
 
     /** A phone on a 24-hour clock gets its own clock, with the seconds and without. */

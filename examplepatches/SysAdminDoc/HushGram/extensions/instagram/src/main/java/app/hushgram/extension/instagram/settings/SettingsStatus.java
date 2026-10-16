@@ -215,6 +215,11 @@ public final class SettingsStatus {
         return false;
     }
 
+    /** Recent unfollowers, the friendship patch's switch reading your own Followers list, which a build can lack. */
+    public static boolean unfollowers() {
+        return false;
+    }
+
     public static boolean profileSuggestions() {
         return false;
     }
@@ -260,6 +265,10 @@ public final class SettingsStatus {
     }
 
     public static boolean aiLabeledReels() {
+        return false;
+    }
+
+    public static boolean captionWordReels() {
         return false;
     }
 

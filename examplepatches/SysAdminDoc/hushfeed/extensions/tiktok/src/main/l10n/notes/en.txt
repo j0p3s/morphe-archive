@@ -1,3 +1,21 @@
+## Unreleased
+
+* **TikTok:** Remove content credential and card scanner assets and Remove creation tools no longer leave parts of TikTok in English on a phone set to another language. Patch again to get yours back (#125).
+
+* **TikTok:** A new switch opens LIVE panels like the fan club dark while TikTok is in dark mode (#159).
+
+* **TikTok:** The LIVE Video quality list no longer shows its rows white on white in dark mode (#57).
+
+* **TikTok:** With Hide the Tako bubble on, a caption that fits no longer shows a "more" on videos with Tako content (#162).
+
+* **TikTok:** Accent color has a new Follow the wallpaper option that takes the color from your wallpaper on Android 12 and up (#163).
+
+* **TikTok:** Two new choices for the progress bar: the time can sit above the bar, and the bar can run edge to edge (#173).
+
+* **TikTok:** A new switch keeps your Long press choice to the sides of the video, so a press in the middle still opens TikTok's menu (#136).
+
+* **TikTok:** A new switch adds Block this commenter to the menu a long press on a comment opens (#169).
+
 ## 0.74.0 (2026-10-14)
 
 * **TikTok:** A new switch keeps the LIVE quality you picked after TikTok restarts (#57).

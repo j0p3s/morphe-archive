@@ -1,13 +1,31 @@
 # Patches
 
-Branding presets for YouTube and YT Music. Pick a logo pack, a button style,
-patch, install. Works with Morphe Manager and Morphe Desktop.
+Preset icon packs, headers and button styles for YouTube and YT Music.
 
 <p align="center">
   <a href="https://morphe.software/add-source?github=sahilwasgood/patches">
     <img src=".github/assets/add-to-manager.svg" alt="Add to Morphe" width="380">
   </a>
 </p>
+
+## Preview
+
+### YouTube
+
+<img src=".github/assets/preview-yt.png" alt="YouTube logo pack previews" width="720">
+
+### YT Music
+
+<img src=".github/assets/preview-ytm.png" alt="YT Music logo pack previews" width="720">
+
+## Quickstart
+
+1. Tap the button above to add this source in Morphe Manager.
+2. Pick YouTube or YT Music and select the patches.
+3. Choose a preset in each App icon or Button style option, then patch and install.
+
+<details>
+<summary>Contents, patch list, custom art, build, license</summary>
 
 ## Included
 
@@ -19,27 +37,10 @@ Overlay buttons. Bold, Rounded and Thin player button styles for YouTube.
 Shorts buttons. Cairo, Outline, Outline Circle, Round and YouTube Outline
 styles for YouTube Shorts. Stock leaves the app untouched.
 
-Custom art. Bring your own icon folder and header folder instead of a preset.
-See the Custom icon and Custom header options inside each patch. Ready made
-Vanced Light folders live in folders/ in this repo.
-
-## Logo pack previews
-
-Every preset below is selectable in the App icon option. Match the name,
-then patch.
-
-### YouTube
-
-<img src=".github/assets/preview-yt.png" alt="YouTube logo pack previews" width="720">
-
-### YT Music
-
-<img src=".github/assets/preview-ytm.png" alt="YT Music logo pack previews" width="720">
-
 ## Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.0.6](https://github.com/sahilwasgood/patches/releases/tag/v1.0.6)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;4 patches total
+> **[v1.2.1](https://github.com/sahilwasgood/patches/releases/tag/v1.2.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;4 patches total
 <details open>
 <summary>📦 YouTube Music&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
 <br>
@@ -67,12 +68,18 @@ then patch.
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
 | [Logo packs](#logo-packs) | Applies a preset app icon (all packs incl. Vanced Light). Turn off Morphe's Custom branding patch, both set the launcher icon. Use Custom icon with a folder for your own art. | • App icon<br>• Custom icon |
-| [Overlay button style](#overlay-button-style) | Player overlay button style (Bold / Rounded / Thin). Different buttons from Morphe's Player icon style patch, keep both on. Files whose references no longer exist in the app are skipped, so new app versions degrade to fewer styled buttons instead of failing. | • Button style |
+| [Overlay button style](#overlay-button-style) | Player overlay button style (Bold, Rounded, Thin). Covers different buttons than Morphe's Player icon style, keep both on. Files that reference renamed drawables are skipped, so new app versions degrade to fewer styled buttons instead of failing. | • Button style |
 | [Shorts button style](#shorts-button-style) | Shorts action button style. Stock leaves the app untouched. Turn off Morphe's Shorts icon style patch, both style the same buttons. | • Button style |
 
 </details>
 
 <!-- PATCHES_END -->
+
+## Custom art
+
+Bring your own icon folder and header folder instead of a preset.
+See the Custom icon and Custom header options inside each patch. Ready made
+Vanced Light folders live in folders/ in this repo.
 
 ## Build it yourself
 
@@ -83,3 +90,5 @@ Needs Java 21 and `./gradlew buildAndroid`. The bundle lands in
 ## License
 
 GPLv3. See [LICENSE](LICENSE).
+
+</details>

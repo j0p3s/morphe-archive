@@ -2,6 +2,23 @@
 
 * **TikTok:** Sakelar baru membuka panel LIVE seperti Bagikan dan klub penggemar dalam warna gelap saat TikTok dalam mode gelap (#159).
 
+* **TikTok:** Daftar Kualitas video LIVE tidak lagi menampilkan barisnya putih di atas putih dalam mode gelap (#57).
+
+* **TikTok:** Saat Sembunyikan gelembung Tako aktif, keterangan yang muat seluruhnya tidak lagi menampilkan "selengkapnya" di video dengan konten Tako (#162).
+
+* **TikTok:** Accent color punya opsi baru, Ikuti wallpaper, yang mengambil warna dari wallpaper Anda di Android 12 ke atas (#163).
+
+* **TikTok:** Dua pilihan baru untuk bilah progres: waktu bisa ditampilkan di atas bilah, dan bilah bisa membentang dari tepi ke tepi (#173).
+
+* **TikTok:** Sakelar baru membatasi pilihan Tekan lama di sisi video, jadi tekan di tengah tetap membuka menu TikTok (#136).
+
+* **TikTok:** Sakelar baru menambahkan Blokir pengomentar ini ke menu yang terbuka saat komentar ditekan lama (#169).
+
+## 0.74.0 (2026-10-14)
+
+* **TikTok:** Sakelar baru mempertahankan kualitas LIVE yang kamu pilih setelah TikTok dimulai ulang (#57).
+
+
 * **TikTok:** Hide the comment bar on opened videos kini juga menyembunyikan bilah Pesan di video teman yang saling mengikuti, yang menutupi deskripsi dan bilah progres (#153).
 
 * **TikTok:** Accent color sekarang juga mewarnai tanda plus untuk mengikuti di bawah avatar kreator di feed (#84).

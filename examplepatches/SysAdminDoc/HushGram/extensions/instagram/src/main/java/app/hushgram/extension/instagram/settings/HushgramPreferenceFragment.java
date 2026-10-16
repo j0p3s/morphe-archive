@@ -32,6 +32,7 @@ import android.preference.SwitchPreference;
 import android.preference.TwoStatePreference;
 import android.text.Layout;
 import android.text.Editable;
+import android.text.InputFilter;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -48,7 +49,6 @@ import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.AbsListView;
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.FrameLayout;
@@ -73,6 +73,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -113,10 +114,13 @@ import app.hushgram.extension.instagram.misc.Fonts;
 import app.hushgram.extension.instagram.misc.GlassOpacity;
 import app.hushgram.extension.instagram.misc.HapticStyle;
 import app.hushgram.extension.instagram.reels.BurnInMode;
+import app.hushgram.extension.instagram.reels.BurnInWait;
+import app.hushgram.extension.instagram.reels.CaptionWordReels;
 import app.hushgram.extension.instagram.reels.ReelTapChoice;
 import app.hushgram.extension.instagram.reels.StartTab;
 import app.hushgram.extension.instagram.reels.TabOrder;
 import app.hushgram.extension.instagram.download.DownloadHistory;
+import app.hushgram.extension.instagram.profile.Unfollowers;
 import app.hushgram.extension.instagram.download.FileNameTemplate;
 import app.hushgram.extension.instagram.download.HoldFingers;
 import app.hushgram.extension.instagram.download.HoldTime;
@@ -169,6 +173,9 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     static final String SIGN_IN_NOTICE_KEY = "hushgram_sign_in_notice";
     static final String CLEAR_MEDIA_CACHE_NOW = "hushgram_clear_media_cache_now";
     static final String CLEAR_DOWNLOAD_HISTORY = "hushgram_clear_download_history";
+    /** The row listing who left your Followers list, and the row that forgets them. */
+    static final String UNFOLLOWERS_ROW = "hushgram_unfollowers_row";
+    static final String CLEAR_UNFOLLOWERS = "hushgram_clear_unfollowers";
     /** The row that lists the chats locked one at a time. */
     static final String LOCKED_CHATS_ROW = "hushgram_locked_chats_row";
     /** The row that lists the chats hidden one at a time. */
@@ -836,6 +843,17 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     L10n.t("Leaves out reels that carry Instagram's own AI label. A reel without that label stays, "
                             + "even if AI made it.")));
         }
+        if (build.contains(PatchFamily.CAPTION_WORD_REELS)) {
+            reels.add(toggle(context, Settings.HIDE_CAPTION_WORD_REELS, L10n.t("Hide reels by caption words"),
+                    L10n.t("Leaves out reels in the Reels tab whose caption holds a word or phrase from the list below. "
+                            + "A reel you open yourself still plays.")));
+            reels.add(blockedWordsRow(context));
+            if (PatchFamily.feedTypesInBuild()) {
+                reels.add(toggle(context, Settings.HIDE_CAPTION_WORD_HOME, L10n.t("Also on Home"),
+                        L10n.t("Leaves out posts on Home whose caption holds a word or phrase from the list too. "
+                                + "Pull down on Home to refresh after changing it.")));
+            }
+        }
         if (build.contains(PatchFamily.REEL_DECLUTTER)) {
             reels.add(toggle(context, Settings.HIDE_REEL_FOLLOW_BUTTON, L10n.t("Hide the Follow button"),
                     L10n.t("The Follow button beside a reel's author. Their profile still has one.")));
@@ -863,6 +881,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     L10n.t("Takes the Save button out of the column of buttons beside a reel, and the count under it. "
                             + "Posts in your feed keep theirs.")));
             reels.add(burnInGuardRow(context));
+            reels.add(burnInWaitRow(context));
             reels.add(toggle(context, Settings.KEEP_REEL_CLEAR_MODE, L10n.t("Keep clear mode on"),
                     L10n.t("Turn on Instagram's clear mode on a reel and the next reels open in it too. Leave clear "
                             + "mode yourself and the next reels show their buttons again.")));
@@ -923,6 +942,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                             + "A change shows from the next reel.")));
             reels.add(toggle(context, Settings.REEL_POST_TIME_SECONDS, L10n.t("Show seconds in a reel's time"),
                     L10n.t("Adds the seconds to a reel's time, like Oct 2, 3:45:30 PM.")));
+            reels.add(toggle(context, Settings.REEL_POST_TIME_AGO, L10n.t("Show how long ago a reel was posted"),
+                    L10n.t("Shows the days, hours and minutes since it went up on a line under the time, like 1d 2h 5m ago.")));
         }
         if (build.contains(PatchFamily.REEL_SEEK_BAR)) {
             reels.add(toggle(context, Settings.REEL_SEEK_BAR, L10n.t("Keep a seek bar"),
@@ -1176,6 +1197,25 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                             L10n.t("On your own Following list, moves the accounts that don't follow you back to the top and "
                                     + "keeps Instagram's order within each group. Accounts Instagram hasn't checked yet stay below.")));
                 }
+                if (PatchFamily.unfollowersInBuild()) {
+                    profiles.addPreference(toggle(context, Settings.TRACK_UNFOLLOWERS, L10n.t("Recent unfollowers"),
+                            L10n.t("Each time you scroll your own Followers list to the end, compares it with the last time "
+                                    + "and lists who's gone. Nothing extra is asked of Instagram, and the list stays on your phone.")));
+                    Preference unfollowersList = unfollowersRow(context);
+                    profiles.addPreference(unfollowersList);
+                    Row clearUnfollowers = new Row(context);
+                    clearUnfollowers.setKey(CLEAR_UNFOLLOWERS);
+                    clearUnfollowers.setPersistent(false);
+                    clearUnfollowers.actsAtOnce = true;
+                    clearUnfollowers.setTitle(L10n.t("Clear unfollower list"));
+                    clearUnfollowers.setSummary(L10n.t("Forgets the saved Followers lists and everyone listed above, "
+                            + "for all your accounts."));
+                    clearUnfollowers.setOnPreferenceClickListener(p -> {
+                        clearUnfollowers(p, unfollowersList);
+                        return true;
+                    });
+                    profiles.addPreference(mark(clearUnfollowers, SettingsIcons.DELETE));
+                }
             }
             if (build.contains(PatchFamily.PROFILE_SUGGESTIONS)) {
                 profiles.addPreference(toggle(context, Settings.HIDE_PROFILE_SUGGESTIONS, L10n.t("Hide suggested people"),
@@ -1285,11 +1325,14 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                                 + "Restart Instagram to see the change.")));
                 glass.addPreference(toggle(context, Settings.SEARCH_BUTTON_ON_HOME, L10n.t("Search button on Home's header"),
                         L10n.t("Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works "
-                                + "with the Search tab hidden too, unless you swipe between your tabs. Restart Instagram "
+                                + "with the Search tab hidden too. Restart Instagram "
                                 + "to see the change.")));
                 glass.addPreference(toggle(context, Settings.MESSAGES_BUTTON_ON_HOME, L10n.t("Messages button on Home's header"),
                         L10n.t("Adds a Messages button at the top of Home when Instagram moved Messages to your tab bar. "
                                 + "A tap opens your messages like the tab does. Restart Instagram to see the change.")));
+                glass.addPreference(toggle(context, Settings.HIDE_HOME_MESSAGES_BUTTON, L10n.t("Hide Messages on Home's header"),
+                        L10n.t("Takes Instagram's Messages button off the top of Home, for when Messages is on your tab "
+                                + "bar too. Restart Instagram to see the change.")));
                 if (!GhostMode.switches(build).isEmpty()) {
                     glass.addPreference(toggle(context, Settings.GHOST_BUTTON_ON_HOME, L10n.t("Ghost mode button on Home's header"),
                             L10n.t("Adds a ghost button at the top of Home, next to Messages when it's there and at the end "
@@ -1399,6 +1442,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 downloads.addPreference(toggle(context, Settings.FEED_DOWNLOAD_BUTTON, L10n.t("Download button on feed posts"),
                         L10n.t("Puts a download icon in the row under a post, left of Save, so one tap saves it without "
                                 + "opening the menu. On a carousel it asks for this page or all of them.")));
+                downloads.addPreference(toggle(context, Settings.FEED_DOWNLOAD_ALL_PAGES, L10n.t("Save every page without asking"),
+                        L10n.t("On a carousel, the download icon saves all of its pages at once instead of asking.")));
                 if (build.contains(PatchFamily.REEL_DOWNLOAD)) downloads.addPreference(reelDownloadButtonRow(context));
                 downloads.addPreference(toggle(context, Settings.HOLD_TO_DOWNLOAD, L10n.t("Hold to download"),
                         L10n.t("Hold two fingers still on a feed post's picture or video, or on a reel, and it saves what's "
@@ -1792,24 +1837,30 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                             || Settings.STORY_RING_COLOR.key.equals(key));
                     belongs |= family == PatchFamily.ROUNDED_POST_CORNERS && Settings.ROUNDED_CORNER_SIZE.key.equals(key);
                     belongs |= family == PatchFamily.REEL_TAP_AND_VOLUME && Settings.REEL_TAP_CHOICE.key.equals(key);
-                    belongs |= family == PatchFamily.REEL_DECLUTTER && Settings.BURN_IN_GUARD.key.equals(key);
+                    belongs |= family == PatchFamily.REEL_DECLUTTER && (Settings.BURN_IN_GUARD.key.equals(key)
+                            || Settings.BURN_IN_WAIT.key.equals(key));
                     belongs |= family == PatchFamily.PLAYBACK_QUALITY && Settings.PLAYBACK_QUALITY.key.equals(key);
                     belongs |= family == PatchFamily.PLAYBACK_QUALITY && Settings.QUALITY_TAB_TARGET.key.equals(key);
                     belongs |= family == PatchFamily.TAP_TO_PLAY && Settings.TAP_TO_PLAY_SCOPE.key.equals(key);
                     belongs |= family == PatchFamily.STORY_TIME && Settings.STORY_TIME_MODE.key.equals(key);
+                    belongs |= family == PatchFamily.REEL_POST_TIME && (Settings.REEL_POST_TIME_SECONDS.key.equals(key)
+                            || Settings.REEL_POST_TIME_AGO.key.equals(key));
                     belongs |= family == PatchFamily.FRIENDSHIP_STATUS && Settings.FOLLOW_LABEL_PLACE.key.equals(key);
                     belongs |= family == PatchFamily.GLASS_TAB_BAR && Settings.GLASS_TAB_BAR_HAPTIC_STYLE.key.equals(key);
                     belongs |= family == PatchFamily.GLASS_TAB_BAR && (Settings.GLASS_TAB_BAR_OPACITY.key.equals(key)
                             || Settings.GLASS_TAB_BAR_HEIGHT.key.equals(key) || Settings.GLASS_TAB_BAR_LIFT.key.equals(key)
                             || Settings.GLASS_TAB_BAR_REELS_HIDE.key.equals(key));
                     belongs |= family == PatchFamily.VIDEO_DOWNLOAD && (Settings.HOLD_TO_DOWNLOAD.key.equals(key)
-                            || Settings.HOLD_FINGERS.key.equals(key) || Settings.HOLD_TIME.key.equals(key));
+                            || Settings.HOLD_FINGERS.key.equals(key) || Settings.HOLD_TIME.key.equals(key)
+                            || Settings.FEED_DOWNLOAD_BUTTON.key.equals(key) || Settings.FEED_DOWNLOAD_ALL_PAGES.key.equals(key));
                     belongs |= family == PatchFamily.REEL_DOWNLOAD && Settings.REEL_DOWNLOAD_BUTTON.key.equals(key);
                     belongs |= family == PatchFamily.ACCENT_COLOR && Settings.ACCENT_HUE.key.equals(key);
                     belongs |= family == PatchFamily.FONT && Settings.FONT.key.equals(key);
                     belongs |= family == PatchFamily.REELS_TAB
                             && (Settings.START_TAB.key.equals(key) || Settings.TAB_ORDER.key.equals(key));
                     belongs |= family == PatchFamily.LIKE_ANIMATION && Settings.LIKE_ANIMATION.key.equals(key);
+                    belongs |= family == PatchFamily.CAPTION_WORD_REELS && (Settings.REELS_BLOCKED_WORDS.key.equals(key)
+                            || Settings.HIDE_CAPTION_WORD_HOME.key.equals(key));
                     belongs |= family == PatchFamily.MESSAGES_LOCK
                             && (Settings.LOCK_AGAIN.key.equals(key) || LOCKED_CHATS_ROW.equals(key)
                             || HIDDEN_CHATS_ROW.equals(key) || Settings.UNLOCK_WITH.key.equals(key)
@@ -4246,6 +4297,73 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         }
     }
 
+    /** How many of the newest unfollowers the list row shows. */
+    static final int UNFOLLOWERS_SHOWN = 50;
+
+    /**
+     * The row listing who left your Followers list, newest first with the day each was seen gone, and
+     * when the list was last seen in full. Read off the main thread, so it says so until it's read.
+     */
+    static Preference unfollowersRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(UNFOLLOWERS_ROW);
+        row.setPersistent(false);
+        row.setSelectable(false);
+        row.setTitle(L10n.t("Who unfollowed you"));
+        row.setSummary(L10n.t("Reading the list…"));
+        Context application = context.getApplicationContext() != null ? context.getApplicationContext() : context;
+        if (!Utils.runOnBackgroundThread(() -> {
+            String summary = unfollowersSummary(Unfollowers.shown(application));
+            Utils.runOnMainThread(() -> row.setSummary(summary));
+        })) {
+            row.setSummary(unfollowersSummary(Unfollowers.shown(application)));
+        }
+        return mark(row, SettingsIcons.PERSON);
+    }
+
+    /** What the unfollowers row says for [record]. */
+    static String unfollowersSummary(Unfollowers.Record record) {
+        if (record.checked <= 0) {
+            return L10n.t("Nothing to compare yet. With Recent unfollowers on, open your own Followers list and "
+                    + "scroll to the end. The next time you do, anyone missing shows here.");
+        }
+        java.text.DateFormat day = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM);
+        String last = L10n.f("Last seen in full on %1$s.", day.format(new java.util.Date(record.checked)));
+        if (record.left.isEmpty()) return L10n.t("No one has left since then.") + "\n" + last;
+        StringBuilder text = new StringBuilder();
+        int shown = 0;
+        for (Unfollowers.Left left : record.left) {
+            if (shown == UNFOLLOWERS_SHOWN) break;
+            String who = left.username.isEmpty() ? L10n.f("Account %1$s", left.id) : "@" + left.username;
+            text.append(L10n.f("%1$s, gone by %2$s", who, day.format(new java.util.Date(left.when)))).append('\n');
+            shown++;
+        }
+        if (record.left.size() > UNFOLLOWERS_SHOWN) text.append(L10n.t("Only the newest 50 are shown.")).append('\n');
+        return text.append(last).toString();
+    }
+
+    /**
+     * Forgets every account's saved Followers list and unfollowers, off the main thread, says so, and
+     * empties [list]. It's handed over rather than looked up, since a search that hides the list row
+     * takes it off the screen, and it came back still naming everyone (S22, 2026-10-15).
+     */
+    static void clearUnfollowers(Preference row, Preference list) {
+        Context context = row.getContext();
+        if (!Utils.runOnBackgroundThread(() -> {
+            boolean cleared = Unfollowers.clear(context);
+            Utils.runOnMainThread(() -> {
+                if (cleared) {
+                    Utils.showToastShort(L10n.t("Unfollower list cleared."));
+                    list.setSummary(unfollowersSummary(Unfollowers.Record.NONE));
+                } else {
+                    Utils.showToastLong(L10n.t("Couldn't clear the unfollower list. Try again."));
+                }
+            });
+        })) {
+            Utils.showToastLong(L10n.t("Couldn't clear the unfollower list. Try again."));
+        }
+    }
+
     /** Forgets every save Skip what's already saved remembers, off the main thread, and says so. */
     private static void clearDownloadHistory(Preference row) {
         Context context = row.getContext();
@@ -4339,15 +4457,46 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     static String burnInSummary(BurnInMode mode) {
         switch (mode) {
             case DIM:
-                return L10n.t("On the Reels screen, the buttons, caption and bars fade after 5 seconds without a touch. "
-                        + "A touch brings them back.");
+                return L10n.t("On the Reels screen, the buttons, caption and bars fade when you leave them alone. "
+                        + "Touching one of them brings them back.");
             case DIM_AND_SHIFT:
-                return L10n.t("On the Reels screen, the buttons, caption and bars fade after 5 seconds without a touch, "
-                        + "and the screen moves a step every 2 minutes. A touch brings them back.");
+                return L10n.t("On the Reels screen, the buttons, caption and bars fade when you leave them alone, "
+                        + "and the screen moves a step every 2 minutes. Touching one of them brings them back.");
             default:
                 return L10n.t("Off. It can fade a reel's buttons while the screen sits untouched, so they don't burn into "
                         + "an OLED screen.");
         }
+    }
+
+    /** How long Burn-in guard waits before it dims (#162). Its summary says the choice and what counts as a touch. */
+    static BurnInWaitRow burnInWaitRow(Context context) {
+        BurnInWaitRow row = new BurnInWaitRow(context);
+        row.setKey(Settings.BURN_IN_WAIT.key);
+        row.setTitle(L10n.t("Dim after"));
+        row.setDialogTitle(L10n.t("Dim after"));
+        row.setNegativeButtonText(L10n.t("Cancel"));
+        BurnInWait[] waits = BurnInWait.values();
+        CharSequence[] entries = new CharSequence[waits.length];
+        CharSequence[] values = new CharSequence[waits.length];
+        for (int i = 0; i < waits.length; i++) {
+            entries[i] = burnInWaitLabel(waits[i]);
+            values[i] = waits[i].name();
+        }
+        row.setEntries(entries);
+        row.setEntryValues(values);
+        row.setValue(Settings.BURN_IN_WAIT.savedValue().name());
+        return row;
+    }
+
+    /** What the list calls [wait]. */
+    static String burnInWaitLabel(BurnInWait wait) {
+        return wait == BurnInWait.AT_ONCE ? L10n.t("At once") : L10n.f("After %1$d seconds", wait.millis / 1000);
+    }
+
+    /** [wait], then what doesn't count as a touch, for the row's summary. */
+    static String burnInWaitSummary(BurnInWait wait) {
+        return burnInWaitLabel(wait) + ". " + L10n.t("Tapping the video, double-tapping it to like, and Save and "
+                + "Download don't count as a touch, so the buttons stay faded.");
     }
 
     /** What a single tap on a reel does. Its summary says what the choice does. */
@@ -4701,40 +4850,42 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     }
 
     /**
-     * The tabs on the bar in the order chosen. A tap on one moves it a place up and saves the order
-     * at once, keeping the list open, so a tab can be walked to the top. Instagram's order clears
-     * the choice. The bar is built as Instagram starts, so it shows after a restart.
+     * Every tab with a box for whether it's on the bar and a handle to drag it up or down, like
+     * Piko's (#207, {@link TabPicker}). OK saves what changed, Reset puts the list back to
+     * Instagram's order and tabs without saving, and Cancel leaves everything as it was. The bar is
+     * built as Instagram starts, so it shows after a restart.
      */
     void showTabOrder(Row row) {
         Context context = getActivity();
         if (context == null) return;
-        List<String> order = new ArrayList<>(TabOrder.choices(Settings.TAB_ORDER.get()));
-        ArrayAdapter<String> labels = new ArrayAdapter<>(context, android.R.layout.simple_list_item_1, tabLabels(order));
+        List<String> order = TabPicker.rows(Settings.TAB_ORDER.get());
+        Set<String> ticked = new LinkedHashSet<>();
+        for (String tab : order) {
+            if (TabPicker.shown(tab)) ticked.add(tab);
+        }
+        LinearLayout list = TabPicker.list(context, order, ticked);
+        ScrollView scroll = new ScrollView(context);
+        scroll.addView(list);
         AlertDialog dialog = show(new AlertDialog.Builder(context)
-                .setTitle(L10n.t("Tap a tab to move it up"))
-                .setAdapter(labels, null)
-                .setNeutralButton(L10n.t("Instagram's order"), (shown, which) -> {
-                    Settings.TAB_ORDER.save("");
-                    row.setSummary(tabOrderSummary(""));
-                })
-                .setPositiveButton(L10n.t("OK"), null));
+                .setTitle(L10n.t("Show and reorder tabs"))
+                .setView(scroll)
+                .setNeutralButton(L10n.t("Reset"), null)
+                .setNegativeButton(L10n.t("Cancel"), null)
+                .setPositiveButton(L10n.t("OK"), (shown, which) -> {
+                    AbstractPreferenceFragment.restartNoteOnce(context,
+                            () -> TabPicker.save(TabPicker.orderOf(list), TabPicker.tickedOf(list)));
+                    row.setSummary(tabOrderSummary(Settings.TAB_ORDER.get()));
+                }));
         if (dialog == null) return;
-        // A click listener of its own, so a tap moves the tab without closing the list.
-        dialog.getListView().setOnItemClickListener((parent, view, position, id) -> {
-            List<String> moved = TabOrder.movedUp(order, position);
-            order.clear();
-            order.addAll(moved);
-            Settings.TAB_ORDER.save(TabOrder.join(order));
-            labels.clear();
-            labels.addAll(tabLabels(order));
-            row.setSummary(tabOrderSummary(Settings.TAB_ORDER.get()));
+        // A click listener of its own, so Reset changes the list without closing it.
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(tapped -> {
+            List<String> instagrams = TabPicker.rows("");
+            Set<String> defaults = new LinkedHashSet<>();
+            for (String tab : instagrams) {
+                if (TabPicker.shownByDefault(tab)) defaults.add(tab);
+            }
+            TabPicker.fill(list, instagrams, defaults);
         });
-    }
-
-    private static List<String> tabLabels(List<String> names) {
-        List<String> labels = new ArrayList<>(names.size());
-        for (String name : names) labels.add(tabLabel(name));
-        return labels;
     }
 
     /** The tab Instagram opens on when it's started from its icon. Its summary says what the choice does. */
@@ -5031,6 +5182,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         switch (color) {
             case BLUE:
                 return L10n.t("Blue");
+            case TEAL:
+                return L10n.t("Teal");
             case PURPLE:
                 return L10n.t("Purple");
             case RED:
@@ -5066,6 +5219,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             ((ReelTapChoiceRow) preference).showSummary();
         } else if (preference instanceof BurnInGuardRow) {
             ((BurnInGuardRow) preference).showSummary();
+        } else if (preference instanceof BurnInWaitRow) {
+            ((BurnInWaitRow) preference).showSummary();
         } else if (preference instanceof StoryTimeModeRow) {
             ((StoryTimeModeRow) preference).showSummary();
         } else if (preference instanceof FollowLabelPlaceRow) {
@@ -5628,6 +5783,72 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     }
 
     /**
+     * The words Hide reels by caption words looks for, typed with commas or new lines between them,
+     * as Hushfeed's Blocked caption words are, so a list from there pastes in as it is.
+     */
+    static WordsRow blockedWordsRow(Context context) {
+        WordsRow row = new WordsRow(context);
+        row.setKey(Settings.REELS_BLOCKED_WORDS.key);
+        row.setTitle(L10n.t("Blocked words"));
+        row.setDialogTitle(L10n.t("Blocked words"));
+        row.setDialogMessage(L10n.t("Words or phrases, with a comma or a new line between them. Capital letters don't "
+                + "matter, and a hashtag works too."));
+        row.setPositiveButtonText(L10n.t("Save"));
+        row.setNegativeButtonText(L10n.t("Cancel"));
+        EditText field = row.getEditText();
+        field.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        field.setMaxLines(6);
+        field.setFilters(new InputFilter[]{new InputFilter.LengthFilter(ConfigurationBackup.MAX_WORDS_TEXT)});
+        row.setText(Settings.REELS_BLOCKED_WORDS.savedValue());
+        return row;
+    }
+
+    /** What the blocked words row says under its title: how many words it holds, or that it has none. */
+    static String blockedWordsSummary(String stored) {
+        int count = CaptionWordReels.words(stored).size();
+        return count == 0 ? L10n.t("No words yet")
+                : L10n.quantity(count, "%1$d word", "%1$d words", count);
+    }
+
+    /**
+     * The blocked words' row. Its summary follows its text, whoever sets it: the person, the shared
+     * page syncing it from the setting, or an import.
+     */
+    static final class WordsRow extends EditTextPreference {
+        WordsRow(Context context) {
+            super(context);
+        }
+
+        @Override protected View onCreateDialogView() { return editDialogBody(this); }
+
+        @Override protected void onBindDialogView(View view) {
+            getEditText().setText(getText());
+        }
+
+        @Override
+        public void setText(String text) {
+            super.setText(text);
+            setSummary(blockedWordsSummary(text));
+        }
+
+        @Override
+        protected void onBindView(View view) {
+            super.onBindView(view);
+            showAllText(view);
+            ScreenColors.row(view, this);
+            view.setAccessibilityDelegate(new RowSemantics(this, Button.class));
+        }
+
+        /** Its edit dialog takes the screen's colours, as the other rows' dialogs do. */
+        @Override
+        protected void showDialog(Bundle state) {
+            super.showDialog(state);
+            if (getDialog() instanceof AlertDialog) ScreenColors.dialog((AlertDialog) getDialog());
+            fitAboveKeyboard(getDialog());
+        }
+    }
+
+    /**
      * The save folder's row. Its summary follows its text, whoever sets it: the person, the shared
      * page syncing it from the setting, or an import.
      */
@@ -6097,6 +6318,42 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 if (candidate.name().equals(getValue())) mode = candidate;
             }
             setSummary(burnInSummary(mode));
+        }
+
+        @Override
+        protected void onBindView(View view) {
+            super.onBindView(view);
+            showAllText(view);
+            ScreenColors.row(view, this);
+            view.setAccessibilityDelegate(new RowSemantics(this, Button.class));
+        }
+
+        /** Its list takes the screen's colours, as the other rows' dialogs do. */
+        @Override
+        protected void showDialog(Bundle state) {
+            super.showDialog(state);
+            if (getDialog() instanceof AlertDialog) ScreenColors.dialog((AlertDialog) getDialog());
+        }
+    }
+
+    /** The Burn-in guard wait (#162). Its summary says the choice, as the Burn-in guard row's does. */
+    static final class BurnInWaitRow extends ListPreference {
+        BurnInWaitRow(Context context) {
+            super(context);
+        }
+
+        @Override
+        public void setValue(String value) {
+            super.setValue(value);
+            showSummary();
+        }
+
+        void showSummary() {
+            BurnInWait wait = BurnInWait.FIVE_SECONDS;
+            for (BurnInWait candidate : BurnInWait.values()) {
+                if (candidate.name().equals(getValue())) wait = candidate;
+            }
+            setSummary(burnInWaitSummary(wait));
         }
 
         @Override

@@ -133,6 +133,7 @@ public final class ChzzkSettings {
         if (revision == null) return;
         try {
             writeRevision.invoke(revision, ++revisionNumber);
+            ViewerCountOverlay.refreshAll();
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException(e);
         }
@@ -365,8 +366,9 @@ public final class ChzzkSettings {
         row.addView(text(context, title, 14, TEXT), new LinearLayout.LayoutParams(0, -2, 1));
         int current = number(key, fallback);
         boolean seconds = "live_catch_up_buffer_seconds".equals(key);
-        boolean stepped = seconds || "chat_width_scale".equals(key) || "font_scale".equals(key) || "audio_volume".equals(key);
-        int stepSize = seconds ? 1 : 5;
+        boolean viewer = key.startsWith("viewer_");
+        boolean stepped = seconds || viewer || "chat_width_scale".equals(key) || "font_scale".equals(key) || "audio_volume".equals(key);
+        int stepSize = seconds || "viewer_outline_width".equals(key) || "viewer_margin".equals(key) ? 1 : 5;
         TextView value = text(context, current + unit + (stepped && current == fallback ? " · 기본" : ""), 13, GREEN);
         value.setTypeface(null, Typeface.BOLD);
         row.addView(value);
@@ -653,7 +655,7 @@ public final class ChzzkSettings {
             case "hide_subscription_badge": case "hide_donation_badge": case "hide_activity_badge":
             case "hide_verified_badge": case "hide_channel_badge": case "hide_clip_button":
             case "live_catch_up": case "audio_compression": case "audio_boost":
-            case "hide_cast_button": case "hide_share_button":
+            case "hide_cast_button": case "hide_share_button": case "viewer_count":
                 return true;
             default: return false;
         }
@@ -671,6 +673,12 @@ public final class ChzzkSettings {
             case "audio_volume": return new int[] {100, 300};
             case "live_catch_up_buffer_seconds": return new int[] {1, 10};
             case "timestamp_size": return new int[] {60, 100};
+            case "viewer_corner": return new int[] {0, 3};
+            case "viewer_color": case "viewer_outline_color": return new int[] {0, 0xffffff};
+            case "viewer_size": return new int[] {50, 250};
+            case "viewer_outline_width": return new int[] {0, 8};
+            case "viewer_opacity": return new int[] {0, 100};
+            case "viewer_margin": return new int[] {0, 20};
             default: return null;
         }
     }
@@ -847,6 +855,7 @@ public final class ChzzkSettings {
 
     private static void playerPage(Sheet sheet) {
         LinearLayout content = page(sheet, "플레이어");
+        navigation(content, "시청자 수 표시", "모서리 위치 · 색 · 크기 · 외곽선 · 투명도", () -> viewerPage(sheet));
         toggle(content, "실시간 따라잡기 버튼", "live_catch_up", true);
         slider(content, "남길 버퍼", "live_catch_up_buffer_seconds", 1, 10, 3, "초");
         label(content, "동심원 버튼으로 앞으로 이동할 때 남길 영상의 길이입니다. 값을 줄이면 더 최신 위치로 이동하지만 끊김이 늘 수 있습니다.");
@@ -854,6 +863,102 @@ public final class ChzzkSettings {
         toggle(content, "크롬캐스트 버튼 숨기기", "hide_cast_button", false);
         toggle(content, "공유 버튼 숨기기", "hide_share_button", false);
         if (autoClaimAvailable()) toggle(content, "통나무 파워 자동 수령", "auto_claim", true);
+    }
+
+    private static void viewerPage(Sheet sheet) {
+        LinearLayout content = page(sheet, "시청자 수 표시");
+        sheet.onBack = () -> playerPage(sheet);
+        toggle(content, "방송 화면에 시청자 수 표시", "viewer_count", true);
+        label(content, "앱이 받는 시청자 수에 맞춰 자동 갱신됩니다. 보통 약 30초 간격입니다.");
+        viewerPreview(content);
+        label(content, "표시 위치");
+        String[] corners = {"↖ 왼쪽 위", "↗ 오른쪽 위", "↙ 왼쪽 아래", "↘ 오른쪽 아래"};
+        TextView[] choices = new TextView[4];
+        for (int rowIndex = 0; rowIndex < 2; rowIndex++) {
+            LinearLayout row = new LinearLayout(sheet.host);
+            for (int column = 0; column < 2; column++) {
+                int index = rowIndex * 2 + column;
+                TextView choice = text(sheet.host, corners[index], 14,
+                    number("viewer_corner", 1) == index ? GREEN : TEXT);
+                choice.setGravity(Gravity.CENTER);
+                choice.setBackground(background(sheet.host, SURFACE, 10));
+                choice.setSelected(number("viewer_corner", 1) == index);
+                LinearLayout.LayoutParams layout = new LinearLayout.LayoutParams(0, dp(sheet.host, 44), 1);
+                layout.setMargins(0, 0, column == 0 ? dp(sheet.host, 8) : 0, dp(sheet.host, 8));
+                row.addView(choice, layout);
+                choices[index] = choice;
+                choice.setOnClickListener(view -> {
+                    setNumber("viewer_corner", index);
+                    for (int i = 0; i < choices.length; i++) {
+                        choices[i].setTextColor(i == index ? GREEN : TEXT);
+                        choices[i].setSelected(i == index);
+                    }
+                });
+            }
+            content.addView(row);
+        }
+        slider(content, "글자 크기", "viewer_size", 50, 250, 100, "%");
+        navigation(content, "글자 색", hexColor(number("viewer_color", 0xffffff)),
+            () -> viewerColorPage(sheet, "글자 색", "viewer_color", 0xffffff));
+        slider(content, "외곽선 두께", "viewer_outline_width", 0, 8, 2, "px");
+        label(content, "0px로 설정하면 외곽선을 숨깁니다.");
+        navigation(content, "외곽선 색", hexColor(number("viewer_outline_color", 0)),
+            () -> viewerColorPage(sheet, "외곽선 색", "viewer_outline_color", 0));
+        slider(content, "불투명도", "viewer_opacity", 0, 100, 90, "%");
+        label(content, "0%는 완전히 투명하고, 100%는 불투명합니다.");
+        slider(content, "모서리 여백", "viewer_margin", 0, 20, 3, "%");
+    }
+
+    private static void viewerPreview(LinearLayout content) {
+        label(content, "미리보기 · 예시 시청자 수");
+        View preview = ViewerCountOverlay.preview(content.getContext());
+        preview.setBackground(background(content.getContext(), 0xff303844, 12));
+        content.addView(preview, new LinearLayout.LayoutParams(-1, dp(content.getContext(), 150)));
+    }
+
+    private static String hexColor(int color) {
+        return String.format(Locale.ROOT, "#%06X", color & 0xffffff);
+    }
+
+    private static void viewerColorPage(Sheet sheet, String title, String key, int fallback) {
+        LinearLayout content = page(sheet, title);
+        sheet.onBack = () -> viewerPage(sheet);
+        viewerPreview(content);
+        label(content, "색상을 고르거나 #RRGGBB 형식의 색상 코드를 입력하세요.");
+        EditText field = input(sheet, "#FFFFFF");
+        field.setMinLines(1);
+        field.setMaxLines(1);
+        field.setSingleLine(true);
+        field.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+            | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        field.setText(hexColor(number(key, fallback)));
+        LinearLayout palette = new LinearLayout(sheet.host);
+        for (int rgb : new int[] {0xffffff, 0x000000, 0x00efa3, 0xffdc62, 0xff7d91, 0x7eb8ff}) {
+            TextView swatch = text(sheet.host, "●", 28, rgb | 0xff000000);
+            swatch.setGravity(Gravity.CENTER);
+            swatch.setContentDescription(hexColor(rgb));
+            swatch.setBackground(background(sheet.host, 0xff555b65, 8));
+            LinearLayout.LayoutParams layout = new LinearLayout.LayoutParams(0, dp(sheet.host, 44), 1);
+            layout.setMargins(dp(sheet.host, 2), 0, dp(sheet.host, 2), dp(sheet.host, 12));
+            palette.addView(swatch, layout);
+            swatch.setOnClickListener(view -> {
+                field.setText(hexColor(rgb));
+                field.setError(null);
+                setNumber(key, rgb);
+            });
+        }
+        content.addView(palette);
+        action(content, "색상 적용", () -> {
+            String value = field.getText().toString().trim();
+            if (!value.matches("#?[0-9a-fA-F]{6}")) {
+                field.setError("6자리 색상 코드를 입력하세요. 예: #00EFA3");
+                return;
+            }
+            setNumber(key, Integer.parseInt(value.replace("#", ""), 16));
+            ((android.view.inputmethod.InputMethodManager) sheet.host.getSystemService(Context.INPUT_METHOD_SERVICE))
+                .hideSoftInputFromWindow(field.getWindowToken(), 0);
+            viewerPage(sheet);
+        });
     }
 
     private static void audioPage(Sheet sheet) {

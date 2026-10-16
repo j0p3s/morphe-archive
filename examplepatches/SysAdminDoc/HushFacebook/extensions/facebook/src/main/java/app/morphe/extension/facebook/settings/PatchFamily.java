@@ -46,7 +46,7 @@ public enum PatchFamily {
     SUGGESTED_POSTS(FamilyNames.SUGGESTED_POSTS, "suggestedPosts", null,
             Settings.HIDE_SUGGESTED_POSTS, Settings.HIDE_SUGGESTED_FOR_YOU, Settings.HIDE_PEOPLE_YOU_MAY_KNOW,
             Settings.HIDE_SUGGESTED_GROUPS, Settings.HIDE_STORIES_YOU_MIGHT_LIKE, Settings.HIDE_FEED_MEMORIES,
-            Settings.HIDE_FEED_FRIEND_REQUESTS, Settings.HIDE_FRIENDS_LOCATIONS),
+            Settings.HIDE_FEED_FRIEND_REQUESTS, Settings.HIDE_FRIENDS_LOCATIONS, Settings.HIDE_NOTIFICATION_POST_FOOTER),
     STORIES_TRAY(FamilyNames.STORIES_TRAY, "storiesTray", null,
             Settings.HIDE_TOP_STORIES_TRAY, Settings.HIDE_STORIES_BETWEEN_POSTS, Settings.HIDE_HOME_COMPOSER),
     FEED_REELS(FamilyNames.FEED_REELS, "feedReels", null,
@@ -166,7 +166,8 @@ public enum PatchFamily {
     FOLLOWING_HOME(FamilyNames.FOLLOWING_HOME, "followingHome", null,
             Settings.FOLLOWING_FEED_HOME),
     MARKETPLACE_ONLY(FamilyNames.MARKETPLACE_ONLY, "marketplaceOnly", null,
-            Settings.MARKETPLACE_ONLY, Settings.MARKETPLACE_QUIET_NOTIFICATIONS, Settings.MARKETPLACE_SKIP_FEED_PREFETCH),
+            Settings.MARKETPLACE_ONLY, Settings.EVENTS_ONLY, Settings.MARKETPLACE_QUIET_NOTIFICATIONS,
+            Settings.MARKETPLACE_SKIP_FEED_PREFETCH),
     SELLER_VIEW_PROFILE(FamilyNames.SELLER_VIEW_PROFILE, "sellerViewProfile", null,
             Settings.SHOW_SELLER_VIEW_PROFILE),
     REELS_TAB(FamilyNames.REELS_TAB, "reelsTab", null,
@@ -183,7 +184,8 @@ public enum PatchFamily {
             Settings.HIDE_PROFESSIONAL_DASHBOARD_TAB, Settings.HIDE_SAVED_TAB, Settings.HIDE_AD_CENTER_TAB,
             Settings.HIDE_CREATE_TAB, Settings.HIDE_EXPLORE_TAB, Settings.HIDE_JOBS_TAB),
     BOTTOM_TAB_BAR(FamilyNames.BOTTOM_TAB_BAR, "bottomTabBar", null,
-            Settings.BOTTOM_TAB_BAR, Settings.TAB_BAR_SCROLL_AWAY, Settings.KEEP_TAB_BAR, Settings.KEEP_TOP_BAR,
+            Settings.BOTTOM_TAB_BAR, Settings.TOP_TAB_BAR, Settings.TAB_BAR_SCROLL_AWAY, Settings.KEEP_TAB_BAR,
+            Settings.KEEP_TOP_BAR,
             Settings.PHONE_LAYOUT_ON_BIG_SCREENS, Settings.TRANSLUCENT_BARS),
     FORCE_DARK_MODE(FamilyNames.FORCE_DARK_MODE, "forceDarkMode", null,
             Settings.FORCE_DARK_MODE),
@@ -455,7 +457,7 @@ public enum PatchFamily {
         boolean anyOn = false;
         for (BooleanSetting setting : switches) anyOn |= setting.savedValue();
         // Options cannot enable these families without their main switch.
-        if (this == MARKETPLACE_ONLY) anyOn = Settings.MARKETPLACE_ONLY.savedValue();
+        if (this == MARKETPLACE_ONLY) anyOn = Settings.MARKETPLACE_ONLY.savedValue() || Settings.EVENTS_ONLY.savedValue();
         if (this == VIDEO_DOWNLOAD) anyOn = Settings.DOWNLOAD_VIDEOS.savedValue();
         if (this == TAP_TO_PLAY) anyOn = Settings.TAP_TO_PLAY.savedValue();
         // The time switch starts on, and does nothing without the bar kept; Tap the bar to seek works alone.

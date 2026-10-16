@@ -907,7 +907,7 @@ Takes the heart off the top of Home and closes up the gap. Alerts still arrive. 
 Ghost mode button on Home's header	홈 상단의 고스트 모드 버튼
 Adds a ghost button at the top of Home, next to Messages when it's there and at the end of the buttons when it isn't. Tap it to turn Ghost mode on or off. Restart Instagram to see the change.	홈 상단에 고스트 버튼을 추가합니다. 메시지 버튼이 있으면 그 옆에, 없으면 버튼들의 끝에 놓입니다. 탭하면 고스트 모드를 켜거나 끌 수 있습니다. 변경 사항을 보려면 Instagram을 다시 시작하세요.
 Search button on Home's header	홈 상단의 검색 버튼
-Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works with the Search tab hidden too, unless you swipe between your tabs. Restart Instagram to see the change.	홈 상단에 검색 탭처럼 검색을 여는 돋보기를 추가합니다. 검색 탭을 숨겨도 작동하지만, 탭 사이를 스와이프하는 경우는 예외입니다. 변경 사항을 보려면 Instagram을 다시 시작하세요.
+Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works with the Search tab hidden too. Restart Instagram to see the change.	홈 상단에 검색 탭처럼 검색을 여는 돋보기를 추가합니다. 검색 탭을 숨겨도 작동합니다. 변경 사항을 보려면 Instagram을 다시 시작하세요.
 Messages button on Home's header	홈 상단의 메시지 버튼
 Adds a Messages button at the top of Home when Instagram moved Messages to your tab bar. A tap opens your messages like the tab does. Restart Instagram to see the change.	Instagram이 메시지를 탭 바로 옮긴 경우 홈 상단에 메시지 버튼을 추가합니다. 탭하면 메시지 탭처럼 메시지가 열립니다. 변경 사항을 보려면 Instagram을 다시 시작하세요.
 # context: toasts when the Messages button on Home's header can't open Messages because it isn't on the swiping tab bar
@@ -925,8 +925,9 @@ Restart Instagram to bring Search back to your tab bar.	검색을 하단바에 �
 Tab order	탭 순서
 The tab bar keeps Instagram's order.	하단바는 Instagram의 순서를 유지합니다.
 Tabs go in this order: %1$s. Restart Instagram to see the change.	탭 순서: %1$s. 변경 사항을 보려면 Instagram을 다시 시작하세요.
-Tap a tab to move it up	탭을 눌러 위로 옮기세요
-Instagram's order	Instagram 순서
+Show and reorder tabs	탭 표시 및 순서 변경
+Drag to move %1$s	드래그해서 %1$s 이동
+Reset	초기화
 Create	만들기
 Start tab	시작 탭
 Instagram opens the way it always has, which can be Reels if you left it there.	Instagram이 지금까지처럼 열립니다. 릴스에서 나갔다면 릴스에서 열릴 수 있습니다.
@@ -1020,8 +1021,11 @@ Hide the Save button on reels	릴스의 저장 버튼 숨기기
 Burn-in guard	번인 방지
 Dim when idle	사용하지 않을 때 어둡게
 Dim when idle and shift	사용하지 않을 때 어둡게 하고 이동
-On the Reels screen, the buttons, caption and bars fade after 5 seconds without a touch. A touch brings them back.	릴스 화면에서 5초 동안 터치가 없으면 버튼, 설명, 바가 흐려집니다. 터치하면 다시 보입니다.
-On the Reels screen, the buttons, caption and bars fade after 5 seconds without a touch, and the screen moves a step every 2 minutes. A touch brings them back.	릴스 화면에서 5초 동안 터치가 없으면 버튼, 설명, 바가 흐려지고, 화면이 2분마다 조금씩 이동합니다. 터치하면 다시 보입니다.
+On the Reels screen, the buttons, caption and bars fade when you leave them alone. Touching one of them brings them back.	릴스 화면에서 버튼, 설명, 바를 그대로 두면 흐려집니다. 그중 하나를 터치하면 다시 보입니다.
+On the Reels screen, the buttons, caption and bars fade when you leave them alone, and the screen moves a step every 2 minutes. Touching one of them brings them back.	릴스 화면에서 버튼, 설명, 바를 그대로 두면 흐려지고, 화면이 2분마다 조금씩 이동합니다. 그중 하나를 터치하면 다시 보입니다.
+Dim after	흐려지기까지
+At once	바로
+Tapping the video, double-tapping it to like, and Save and Download don't count as a touch, so the buttons stay faded.	동영상 탭, 두 번 탭해서 좋아요, 저장과 다운로드는 터치로 치지 않으므로 버튼이 흐린 채로 있습니다.
 Off. It can fade a reel's buttons while the screen sits untouched, so they don't burn into an OLED screen.	사용 안함. 화면을 터치하지 않는 동안 릴스 버튼을 흐리게 해서 OLED 화면에 번인이 생기지 않게 할 수 있습니다.
 Takes the Save button out of the column of buttons beside a reel, and the count under it. Posts in your feed keep theirs.	릴스 옆 버튼 열에서 저장 버튼과 그 아래 숫자를 없앱니다. 피드 게시물의 저장 버튼은 그대로 남습니다.
 Keep clear mode on	클리어 모드 유지
@@ -1122,3 +1126,41 @@ Couldn't load your font file, so Instagram's font shows. Pick it again in HushGr
 Hide AI-labeled reels	AI 라벨이 있는 릴스 숨기기
 # context: the line under the Hide AI-labeled reels switch
 Leaves out reels that carry Instagram's own AI label. A reel without that label stays, even if AI made it.	Instagram 자체 AI 라벨이 붙은 릴스를 뺍니다. 그 라벨이 없는 릴스는 AI로 만들었더라도 그대로 둡니다.
+# context: Downloads switch under Download button on feed posts; on a carousel the icon saves every page instead of asking which
+Save every page without asking	묻지 않고 모든 페이지 저장
+On a carousel, the download icon saves all of its pages at once instead of asking.	캐러셀에서는 다운로드 아이콘이 묻지 않고 모든 페이지를 한 번에 저장합니다.
+# context: Reels switch Hide reels by caption words, its Blocked words list row and that row's summary; %1$d is how many words
+Hide reels by caption words	캡션 단어로 릴스 숨기기
+Also on Home	홈에도 적용
+Leaves out posts on Home whose caption holds a word or phrase from the list too. Pull down on Home to refresh after changing it.	캡션에 목록의 단어나 문구가 있는 홈 게시물도 숨깁니다. 바꾼 뒤에는 홈을 아래로 당겨 새로고침하세요.
+Leaves out reels in the Reels tab whose caption holds a word or phrase from the list below. A reel you open yourself still plays.	릴스 탭에서 캡션에 아래 목록의 단어나 문구가 들어 있는 릴스를 뺍니다. 직접 연 릴스는 그대로 재생됩니다.
+Blocked words	차단한 단어
+Words or phrases, with a comma or a new line between them. Capital letters don't matter, and a hashtag works too.	단어나 문구를 쉼표나 줄바꿈으로 구분해 입력하세요. 대소문자는 상관없고 해시태그도 됩니다.
+No words yet	아직 단어 없음
+%1$d word	단어 %1$d개
+%1$d words	단어 %1$d개
+# context: Reels > Show a reel's exact time: how long ago a reel was posted (#195). %1$s is a short span like 1d 2h 5m, already in this language.
+Show how long ago a reel was posted	릴스가 게시된 지 얼마나 됐는지 표시
+Shows the days, hours and minutes since it went up on a line under the time, like 1d 2h 5m ago.	게시된 뒤 지난 일, 시간, 분을 시각 아래 한 줄에 1일 2시간 5분 전처럼 보여 줍니다.
+%1$s ago	%1$s 전
+# context: Profiles > Recent unfollowers: the switch's title (#208).
+Recent unfollowers	최근 언팔로우
+Each time you scroll your own Followers list to the end, compares it with the last time and lists who's gone. Nothing extra is asked of Instagram, and the list stays on your phone.	내 팔로워 목록을 끝까지 스크롤할 때마다 지난번과 비교해서 떠난 사람을 보여줍니다. Instagram에 따로 요청하지 않으며 목록은 휴대폰에만 저장됩니다.
+# context: Profiles > Recent unfollowers: the row listing accounts that left your Followers list.
+Who unfollowed you	나를 언팔로우한 사람
+Reading the list…	목록을 읽는 중…
+Nothing to compare yet. With Recent unfollowers on, open your own Followers list and scroll to the end. The next time you do, anyone missing shows here.	아직 비교할 내용이 없습니다. 최근 언팔로우를 켠 상태에서 내 팔로워 목록을 열고 끝까지 스크롤하세요. 다음에 다시 하면 빠진 사람이 여기에 표시됩니다.
+# context: %1$s is a date, already in this language.
+Last seen in full on %1$s.	마지막으로 전체를 본 날짜: %1$s
+No one has left since then.	그 이후로 떠난 사람이 없습니다.
+# context: %1$s is an account's number, shown when it has no username.
+Account %1$s	계정 %1$s
+# context: %1$s is @username, %2$s a date already in this language: the day the account was first seen missing.
+%1$s, gone by %2$s	%1$s, %2$s까지 떠남
+Only the newest 50 are shown.	최신 50명만 표시됩니다.
+Clear unfollower list	언팔로우 목록 지우기
+Forgets the saved Followers lists and everyone listed above, for all your accounts.	저장된 팔로워 목록과 위에 표시된 모든 사람을 모든 계정에서 지웁니다.
+Unfollower list cleared.	언팔로우 목록을 지웠습니다.
+Couldn't clear the unfollower list. Try again.	언팔로우 목록을 지우지 못했습니다. 다시 시도하세요.
+Hide Messages on Home's header	홈 상단의 메시지 숨기기
+Takes Instagram's Messages button off the top of Home, for when Messages is on your tab bar too. Restart Instagram to see the change.	메시지가 탭 바에도 있을 때를 위해 홈 상단에서 Instagram의 메시지 버튼을 제거합니다. 변경 사항을 보려면 Instagram을 다시 시작하세요.

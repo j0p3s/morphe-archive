@@ -9,6 +9,7 @@ import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import io.github.jordanwoodson.patches.shared.settings.Section
 import io.github.jordanwoodson.patches.shared.settings.SwitchSetting
@@ -27,7 +28,8 @@ private const val PRIVACY = "Lio/github/jordanwoodson/extension/shared/twitch/Tw
 val disableAnalyticsPatch = bytecodePatch(
     name = "Disable analytics",
     description = "Stops Twitch's native and React Native Spade event uploads, denies local analytics SDK " +
-        "consent, enables Branch's limited tracking mode, blocks Crashlytics uploads and prevents Sentry initialization. Watch progress, viewing statistics and rewards may " +
+        "consent, enables Branch's limited tracking mode, blocks Crashlytics uploads, Nielsen audience pings and Sprig surveys, " +
+        "and prevents Sentry initialization. Watch progress, viewing statistics and rewards may " +
         "stop updating. Restart Twitch after changing this setting. Playback requests still run.",
 ) {
     compatibleWith(COMPATIBILITY_TWITCH)
@@ -140,14 +142,24 @@ val disableAnalyticsPatch = bytecodePatch(
         mutableClassDefBy(crashlytics).methods.filter { it.returnType == "V" &&
             it.name in setOf("sendUnsentReports", "log", "recordException", "setUserId", "setCustomKey", "setCustomKeys") &&
             it.implementation != null }.forEach { method ->
-            // Some optimized overloads have no locals. Reuse the first argument for the lookup
-            // only on early return: the off path requires the original argument, so use the helper
-            // only when a safe local exists; the overloads without locals simply delegate or throw.
+            // Some optimized overloads have no locals for the switch lookup: setCustomKeys only
+            // throws, and every setCustomKey overload hands its key to the method guarded below.
             val locals = method.implementation!!.registerCount - 1 - method.parameterTypes.sumOf {
                 if (it.toString() in setOf("J", "D")) 2 else 1
             }
             if (locals >= 1) method.addInstructionsIfEnabled(KEY, "return-void")
         }
+        val stringPair = listOf("Ljava/lang/String;", "Ljava/lang/String;")
+        val setCustomKey = mutableClassDefBy(crashlytics).methods.single {
+            it.name == "setCustomKey" && it.parameterTypes.map { type -> type.toString() } == stringPair
+        }
+        val storeKey = setCustomKey.implementation!!.instructions.mapNotNull {
+            (it as? ReferenceInstruction)?.reference as? MethodReference
+        }.singleOrNull { it.returnType == "V" && it.parameterTypes.map { type -> type.toString() } == stringPair }
+            ?: throw PatchException("Twitch: Crashlytics custom key storage changed")
+        mutableClassDefBy(storeKey.definingClass).methods.single {
+            it.name == storeKey.name && it.returnType == "V" && it.parameterTypes.map { type -> type.toString() } == stringPair
+        }.addInstructionsIfEnabled(KEY, "return-void")
 
         // Synchronous reporter methods return undefined; the reporter object and its page/session
         // APIs stay available. Identify anonymous/shared names by unique actual instruction anchors.
@@ -158,8 +170,12 @@ val disableAnalyticsPatch = bytecodePatch(
         if (flush.name != "flush") throw PatchException("Twitch: unexpected Spade flush function")
         twitchHermes.returnUndefined(flush, KEY)
 
+        // Nielsen audience measurement and Sprig surveys report outside Spade and the consent model.
+        NielsenPingFingerprint.twitchMatch("Nielsen ping").method.addInstructionsIfEnabled(KEY, "return-void")
+        SprigConfigureFingerprint.twitchMatch("Sprig configuration").method.addInstructionsIfEnabled(KEY, "return-void")
+
         twitchSettings.add(SwitchSetting(KEY, "Disable analytics",
-            "Stops Spade, limits Branch tracking, denies SDK consent, disables Crashlytics uploads and Sentry. Watch progress/rewards may be affected.",
+            "Stops Spade, Nielsen and Sprig, limits Branch tracking, denies SDK consent, disables Crashlytics uploads and Sentry. Watch progress/rewards may be affected.",
             Section.PRIVACY, restart = true))
     }
 }

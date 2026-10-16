@@ -6,9 +6,9 @@ Unofficial [Morphe](https://github.com/MorpheApp) patch bundle for the **MuseSco
 <!-- 🩹 Patches list -->
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.0.0](https://github.com/CappyT/cappys-patches/releases/tag/v1.0.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;1 patches total
+> **[v1.1.4](https://github.com/CappyT/cappys-patches/releases/tag/v1.1.4)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;3 patches total
 <details open>
-<summary>📦 MuseScore: Music Chords & Tabs&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<summary>📦 MuseScore: Music Chords & Tabs&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -18,7 +18,9 @@ Unofficial [Morphe](https://github.com/MorpheApp) patch bundle for the **MuseSco
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
-| [Unlock Pro](#unlock-pro) | Unlocks MuseScore Pro / Off-Scores entitlements locally by patching the React Native Hermes bundle (paywalls, offline scores gating, feature flags). |  |
+| [Disable tracking](#disable-tracking) | Disables Sentry crash reporting, AppsFlyer attribution and Firebase Analytics collection. |  |
+| [Fix Google Play detection](#fix-google-play-detection) | Disables pairipcore's license and signature checks that complain the app was not installed from Google Play and shut it down. |  |
+| [Unlock Pro](#unlock-pro) | Unlocks MuseScore Pro / Off-Scores entitlements by patching the React Native Hermes bundle (paywalls, offline scores gating, feature flags). Also hides the device-compatibility attestation popup shown when opening scores. |  |
 
 </details>
 
@@ -28,7 +30,9 @@ Unofficial [Morphe](https://github.com/MorpheApp) patch bundle for the **MuseSco
 
 | Patch | Description |
 |---|---|
-| **Unlock Pro** | Unlocks MuseScore Pro / Off-Scores entitlements locally by patching the React Native Hermes bundle (`assets/index.android.bundle`): the access-rights sync always grants Pro flags, so paywalls, offline-scores gating, transposition/parts gates and feature flags open up. Byte-verified in-place rewrites + Hermes SHA-1 trailer recomputed. |
+| **Unlock Pro** | Unlocks MuseScore Pro / Off-Scores entitlements locally by patching the React Native Hermes bundle (`assets/index.android.bundle`): the access-rights sync always grants Pro flags, so paywalls, offline-scores gating, transposition/parts gates and feature flags open up. Byte-verified in-place rewrites + Hermes SHA-1 trailer recomputed. Also no-ops `showAndroidIntegrityErrorPopup` (the "we're having trouble verifying your device…" popup shown when opening scores from a re-signed install). |
+| **Fix Google Play detection** | Disables every path that makes Google Play complain, on sideloaded installs: pairipcore's signature check (throws on re-signed APKs), the license state machine entries and every UI/shutdown sink (the "Check that Google Play is enabled…" dialog, the Play Store paywall interstitial, the 30 s app shutdown), and the Play Core in-app review flow (`react-native-rate`), which the app auto-triggers on the third score opened in a session and which the Play Store renders as "install this app from the Play Store". The pairip VM runtime is left running (no-oping its startup program crashes the app). |
+| **Disable tracking** | Kills third-party telemetry at its source: the hardcoded Sentry DSN and the AppsFlyer devKey inside the Hermes string table are corrupted (invalid scheme / invalid key → SDKs disable themselves instead of reporting), and Firebase Analytics / Crashlytics / ADID collection is switched off via manifest flags. |
 
 ## 🎯 Compatibility
 
@@ -36,8 +40,9 @@ Unofficial [Morphe](https://github.com/MorpheApp) patch bundle for the **MuseSco
 |---|---|---|
 | MuseScore: Music Chords & Tabs | `com.musescore.playerlite` | **2.14.48** (versionCode 2701674, APKMirror universal `.apkm`) |
 
-The Unlock Pro patch carries a full SHA-256 integrity check of the bundle and **fails loudly** on
-any other build — the Hermes bytecode offsets are version-specific.
+The Unlock Pro patch verifies the bundle SHA-256 and **warns** on any other build — the per-region
+expected-bytes verification then decides whether the Hermes offsets still apply (they are
+version-specific and will fail loudly on a mismatching build).
 
 ## 🔧 How it works (for patch authors)
 

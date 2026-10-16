@@ -2,6 +2,23 @@
 
 * **TikTok:** Yeni bir anahtar, TikTok karanlık moddayken Paylaş ve hayran kulübü gibi LIVE panellerini koyu açar (#159).
 
+* **TikTok:** LIVE Video kalitesi listesi karanlık modda satırlarını artık beyaz üstüne beyaz göstermiyor (#57).
+
+* **TikTok:** Tako balonunu gizle açıkken, tamamen sığan bir açıklama Tako içerikli videolarda artık "daha fazla" göstermiyor (#162).
+
+* **TikTok:** Accent color'a Android 12 ve üstünde rengi duvar kağıdından alan yeni bir Duvar kağıdını takip et seçeneği geldi (#163).
+
+* **TikTok:** İlerleme çubuğu için iki yeni seçenek: süre çubuğun üstünde görünebilir ve çubuk kenardan kenara uzanabilir (#173).
+
+* **TikTok:** Yeni bir anahtar Uzun basma seçimini videonun kenarlarıyla sınırlar, böylece ortada basmak yine TikTok menüsünü açar (#136).
+
+* **TikTok:** Yeni bir anahtar, bir yoruma basılı tutunca açılan menüye Bu yorumu yazanı engelle seçeneğini ekler (#169).
+
+## 0.74.0 (2026-10-14)
+
+* **TikTok:** Yeni bir anahtar, seçtiğin LIVE kalitesini TikTok yeniden başladıktan sonra da korur (#57).
+
+
 * **TikTok:** Hide the comment bar on opened videos artık karşılıklı arkadaşların videolarındaki Mesaj çubuğunu da gizliyor, bu çubuk açıklamayı ve ilerleme çubuğunu kapatıyordu (#153).
 
 * **TikTok:** Accent color artık akıştaki içerik üreticisinin avatarının altındaki takip artısını da senin rengine boyuyor (#84).

@@ -1184,6 +1184,8 @@ This video has no link to send, so TikTok's own save runs instead	Este vídeo no
 This video has no original sound to save	Este vídeo no tiene sonido original que guardar
 This video has no sound of its own	Este vídeo no tiene sonido propio
 Thumbs down blocks the commenter	El pulgar hacia abajo bloquea a quien comenta
+Block from a comment's menu	Bloquear desde el menú de un comentario
+Press and hold a comment to find Block this commenter in its menu. Their comments leave the list right away and an undo banner follows.	Mantén pulsado un comentario para encontrar Bloquear a quien comenta en su menú. Sus comentarios salen de la lista al instante y aparece un banner para deshacer.
 TikTok default	Predeterminado de TikTok
 TikTok default (hold to speed up, quick share)	Predeterminado de TikTok (mantener para acelerar, compartir rápido)
 TikTok didn't block %1$s. Try again in a moment.	TikTok no bloqueó a %1$s. Inténtalo de nuevo en un momento.
@@ -1386,7 +1388,7 @@ Hide the Products block and product cards in search results.	Ocultar el bloque d
 Hide TikTok's Auto scroll button	Ocultar el botón Auto scroll de TikTok
 Takes TikTok's own Auto scroll action out of the video panel. Auto-advance keeps working.	Quita la acción Auto scroll de TikTok del panel del vídeo. Los vídeos siguen avanzando automáticamente.
 Hide the unread badges on the bottom tabs	Ocultar las insignias de no leídos en las pestañas inferiores
-Hide the red counts and dots on every bottom tab, Inbox and Profile included. The inbox itself still shows what came in.	Oculta los contadores y puntos rojos de todas las pestañas inferiores, incluidas Bandeja de entrada y Perfil. La bandeja de entrada sigue mostrando lo que ha llegado.
+Hide the red counts and dots on every bottom tab, Inbox and Profile included, and the bubble over Inbox that counts new likes, followers, comments and who's LIVE. The inbox itself still shows what came in.	Oculta los contadores y puntos rojos de todas las pestañas inferiores, incluidas Bandeja de entrada y Perfil, y la burbuja sobre Bandeja de entrada que cuenta los nuevos me gusta, seguidores, comentarios y quién está en LIVE. La bandeja de entrada sigue mostrando lo que ha llegado.
 Speed while you hold the video	Velocidad mientras mantienes pulsado el vídeo
 Hide mini dramas	Ocultar minidramas
 Hide TikTok's short drama episodes and the cards that promote them.	Ocultar los episodios de dramas cortos de TikTok y las tarjetas que los promocionan.
@@ -1732,6 +1734,8 @@ Show exact LIVE viewer counts	Mostrar el número exacto de espectadores en LIVE
 A LIVE room shows how many people are watching as a rounded number like 1.2K. This shows the exact count instead.	Una sala LIVE muestra cuánta gente la ve con un número redondeado como 1,2K. Esto muestra el número exacto.
 Offer LIVE quality in more rooms	Ofrecer la calidad de LIVE en más salas
 TikTok lets you pick a LIVE's quality only in some rooms. This adds Video quality to the menu in most of the others, and the next room opens at the quality you picked last.	TikTok solo te deja elegir la calidad de un LIVE en algunas salas. Esto añade Calidad de video al menú de casi todas las demás, y la siguiente sala se abre con la última calidad que elegiste.
+Keep the LIVE quality after TikTok restarts	Mantener la calidad de LIVE al reiniciar TikTok
+TikTok forgets the LIVE quality you picked when it closes. This starts rooms at that quality again after a restart. A room whose stream doesn't have it opens at TikTok's choice.	TikTok olvida la calidad de LIVE que elegiste cuando se cierra. Esto hace que las salas vuelvan a empezar con esa calidad después de reiniciar. Una sala cuya transmisión no la tiene se abre con la que elija TikTok.
 Offer clear screen in every LIVE room	Ofrecer pantalla limpia en todas las salas LIVE
 Clear screen hides a LIVE's chat, gifts and buttons so only the stream shows. TikTok puts it in the menu of only some rooms. This adds it to the others.	La pantalla limpia oculta el chat, los regalos y los botones de un LIVE para que solo se vea la transmisión. TikTok la pone en el menú de solo algunas salas. Esto la añade a las demás.
 Dark LIVE panels in dark mode	Paneles de LIVE oscuros en modo oscuro
@@ -2101,6 +2105,8 @@ See-through bottom bar	Barra inferior transparente
 Let the video reach the bottom of the screen on the main feed and show the tabs over it with no bar behind them.	Deja que el vídeo llegue en el feed principal hasta el borde inferior de la pantalla y muestra las pestañas encima, sin barra detrás.
 LIVE chat auto-translate	Traducción automática del chat de LIVE
 
+The Translate comments button in a LIVE room also needs a Japanese SIM. Turn on Override SIM details in Hushfeed settings > Region, set SIM country preset to Japan, NTT DOCOMO (44010), then restart TikTok.	El botón Traducir comentarios de una sala LIVE también necesita una SIM japonesa. Activa Sustituir los datos de la SIM en los ajustes de Hushfeed > Región, pon País preestablecido de la SIM en Japan, NTT DOCOMO (44010) y reinicia TikTok.
+
 Pick videos to save from profile grids	Elegir videos para guardar en las cuadrículas de perfil
 Puts a circle on each video in a profile, Liked or Favorites grid. Pick up to %1$s, then tap Save to save them one after another, with a count and Cancel.	Pone un círculo en cada video de una cuadrícula de perfil, Me gusta o Favoritos. Elige hasta %1$s y toca Guardar para guardarlos uno tras otro, con un contador y Cancelar.
 Pick for saving	Elegir para guardar
@@ -2164,3 +2170,11 @@ Show the main feed's tabs on a rounded, see-through dark pill that floats over t
 # context: a switch on the Comments page. Language, Settings and privacy and App language are TikTok's own labels: its language page, the menu that page sits in, and the page's first row
 Show translation options in Language settings	Mostrar opciones de traducción en los ajustes de idioma
 Brings back the translation rows on TikTok's Language page, under Settings and privacy, for accounts that only see App language there.	Recupera las filas de traducción en la página Idioma de TikTok, en Ajustes y privacidad, para las cuentas que allí solo ven Idioma de la app.
+Only on the sides of the video	Solo en los lados del video
+Your Long press choice runs only on the left and right thirds of the video. A press in the middle still opens TikTok's own menu. It needs a Long press choice other than TikTok default.	Tu elección de Pulsación larga se aplica solo en el tercio izquierdo y derecho del video. Una pulsación en el centro sigue abriendo el menú propio de TikTok. Necesita una opción de Pulsación larga distinta de Predeterminado de TikTok.
+Where the time goes	Dónde se muestra el tiempo
+Beside the bar	Junto a la barra
+Above the bar	Encima de la barra
+Above puts the time over the left end of the bar while nothing on screen is in the way, and beside the bar when something is.	Encima de la barra pone el tiempo sobre el extremo izquierdo de la barra mientras nada en pantalla estorbe, y junto a la barra cuando algo estorba.
+Full-width progress bar	Barra de progreso a todo el ancho
+Run the progress bar from one screen edge to the other, without the gap TikTok leaves at each end.	La barra de progreso va de un borde de la pantalla al otro, sin el hueco que TikTok deja en cada extremo.

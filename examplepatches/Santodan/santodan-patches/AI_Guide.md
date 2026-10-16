@@ -1,5 +1,19 @@
 # Santodan Patches
 
+## TFD Companion
+
+For `com.nexon.tfdc` 1.1.5, use the default-enabled **TFD Companion - Remove illegal
+apps detection** resource patch (Android 11+). It removes the two broad
+MAIN/VIEW package queries while preserving NGSM and authentication. The user
+reported successful tests with Shizuku and an autoclicker installed. Optional
+**NGSM validation diagnostics - Troubleshooting purpose** stays disabled by default. The failed native
+shutdown-suppression implementation was removed after causing validation 5000;
+do not restore it as the supported approach. Read
+[FirstDescendantCompanion.md](docs/FirstDescendantCompanion.md) for the single
+app reference and current verification tasks. Preserve the original APKS splits
+and package identity; the successful setup also used the separate Google Play
+installer-source spoof.
+
 ## Start here: creating or modifying a patch
 
 This is the working guide for coding agents, including local models in LM Studio.
@@ -138,6 +152,11 @@ have applied or tested it. Keep inspection notes compact so the local model can
 retain the target contracts within its context window.
 
 ## NuvioTV launcher channels
+
+For merged tracking progress, see `docs/NuvioMergedProgress.md`. Its automatic
+sync gate follows the root navigation flow and activity lifecycle, not stream-search
+pause signals. Main-service playback writes and service inclusion are configured
+in the Tracking progress submenu; verify standalone and combined bundles.
 
 NuvioTV patches target only `com.nuvio.tv` `1.1.0-beta.6`. See
 `docs/NuvioBeta6.md` for native contracts, input provenance, and verification.

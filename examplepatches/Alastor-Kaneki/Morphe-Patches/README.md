@@ -6,7 +6,7 @@ patches are added to this project and built together into one `.mpp` bundle.
 ## Included patches
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.14.1](https://github.com/Alastor-Kaneki/Morphe-Patches/releases/tag/v1.14.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;10 patches total
+> **[v1.16.0](https://github.com/Alastor-Kaneki/Morphe-Patches/releases/tag/v1.16.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;12 patches total
 <details open>
 <summary>📦 Mods AddOns for Minecraft PE&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
 <br>
@@ -48,12 +48,23 @@ patches are added to this project and built together into one `.mpp` bundle.
 </details>
 
 <details open>
+<summary>📦 Reddit&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| [Download Reddit gallery originals](#download-reddit-gallery-originals) | Adds an in-app Download Originals button and share target. Fetches gallery metadata from Arctic Shift (fallback to Reddit) and saves original-quality images or a ZIP. |  |
+| [Reddit native post-menu originals (2026.41.0)](#reddit-native-post-menu-originals-2026-41-0) | Use Reddit's actual post overflow-menu event to identify the current post, show a contextual Save Originals action, and let the existing downloader save the original images or ZIP without a share link. |  |
+
+</details>
+
+<details open>
 <summary>📦 Google Chrome&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
 <br>
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
-| [MonkeyScript userscript manager](#monkeyscript-userscript-manager) | Adds a Chrome 150 Material You userscript manager using a Violentmonkey-derived parser, native app-menu integration, guaranteed Fork-page installation, Greasy Fork/Sleazy Fork support, publishing, and configurable app/package cloning. |  |
+| [MonkeyScript userscript manager](#monkeyscript-userscript-manager) | Adds the Chrome 150 Material You userscript manager and cloning. Trichrome builds need the matching original Trichrome Library APK installed before the patched Chrome APK. |  |
 
 </details>
 
@@ -185,6 +196,51 @@ processes, task affinities, provider authorities, authority string resources,
 and the injected providers. This is intended to let the patched build install
 beside `com.android.chrome`.
 
+**Trichrome dependency / installation (issue #35).** Modern Android Chrome
+uses a separate, required `TrichromeLibrary.apk` for its native browser code.
+The Chrome APK's `<uses-static-library>` entry pins the library **name,
+version, and certificate**. Renaming or re-signing the Chrome APK does not
+supply that library. If a matching Trichrome version is not on the device,
+Android rejects the patched Chrome installation with a missing-library error.
+The patch deliberately preserves the dependency: deleting the manifest entry
+does not create the native code Chrome needs.
+
+For a Trichrome-based Chrome APK:
+
+1. Obtain the **original Trichrome Library APK belonging to the same Chrome
+   release/build variant**, from a trusted source. It must match the exact
+   static-library version and signer certificate pinned in the Chrome manifest.
+   A random newer/older library or a re-signed library will **not** work.
+2. Install that library first if the matching version is not already installed,
+   then install the patched Chrome clone. Android can retain multiple versions
+   of static shared libraries. **Do not remove or replace** your system WebView
+   or its Trichrome Library in an attempt to force a match.
+3. For a desktop/ADB-assisted install, the repository includes a verifier
+   which checks the manifests and Trichrome signing certificate before install:
+
+```sh
+python3 tools/install-chrome-trichrome.py \
+  --chrome path/to/patched-chrome.apk \
+  --library path/to/matching-original-TrichromeLibrary.apk \
+  --install
+```
+
+Requires Android SDK `aapt2` and `apksigner` on `PATH` and, for
+`--install`, a connected ADB device. Omit `--install` to verify only.
+If Chrome has split APKs, supply **each correctly patched and re-signed**
+split using `--split path/to/split.apk`; the script then uses
+`adb install-multiple`. It does not download, patch, or re-sign any APK.
+You can also install the matched original library and patched Chrome APK in
+that order using an Android package installer that supports these APK types.
+
+If no matching library is available, this Trichrome Chrome APK **cannot be
+made standalone by editing the manifest**. Use an independently packaged
+Chromium build supported by the patcher, or a compatible Chrome build with
+its actual library dependency supplied. Android split-package and Chrome
+runtime/signature compatibility remain separate limitations; passing the
+library check alone does not guarantee a working Chrome clone. The script's
+tests use fixture manifests rather than actual APK installation.
+
 Changing Chrome's package and signing certificate can break Google-account
 sign-in, Chrome Sync, Play Integrity relationships, trusted WebAPK relationships,
 or other Google services that authorize the official package/signature pair.
@@ -234,6 +290,108 @@ MonkeyScript stores its database, cached dependencies, and temporary publishing
 source in the patched app's private storage. It does not upload the script
 library, browser history, credentials, or page contents. Files without a valid
 userscript metadata block are rejected or disabled until reviewed.
+
+### Reddit 2026.41.0 — Native post overflow integration
+
+This **additional opt-in patch**, `Reddit native post-menu originals (2026.41.0)`,
+was developed against the user's real Reddit 2026.41.0 APK bundle
+(versionCode `2641021`, base APK + density/ABI/language splits). It depends on
+**Download Reddit gallery originals** and keeps the working Android Share target.
+
+Static DEX inspection established that
+`com.reddit.feeds.ui.events.OnOverflowMenuOpened` has a primary
+constructor beginning with `String linkKindWithId`. The first instruction
+invokes the superclass constructor, so a passive `invoke-static { p1 }`
+post-context hook is inserted immediately afterward. A separate Android
+bridge validates `t3_<post ID>` (rejecting comments/subreddits), caches it
+briefly, and shows a contextual **Save originals** quick action in the Reddit
+activity. The existing **↓ Originals** button now uses that exact native
+context before attempting the old generic fragment/activity detector. Images
+and ZIPs still come from the original `i.redd.it` CDN via the existing
+Arctic Shift resolver; no clipboard or manually entered URL is needed after
+opening a supported post's overflow menu.
+
+**Compatibility/limitations:** This hook is restricted to the exact
+`2026.41.0` app. The contextual action is an in-app Android view, **not
+yet** a row inserted into Reddit's proprietary action sheet; some dialog
+window implementations can obscure the quick action. Close the native menu
+then tap **↓ Originals** if the contextual action is covered. APK splitting,
+patch application, signing, installation and on-device behavior still require
+testing. The original APK is *not* copied into this repository. This patch
+does not modify the unrelated Morphe patches.
+
+### Reddit — Download gallery originals
+
+Targets the official Android Reddit app (`com.reddit.frontpage`). The **opt-in,
+experimental** Morphe patch adds an in-app **↓ Originals** pill and a text/plain
+share target. Tap it on a post, paste a Reddit gallery link (or use a copied
+post URL), and choose:
+
+- **Save original images to Pictures** — `Pictures/RedditGallery/<post ID>/`.
+- **Download originals as ZIP** — `Downloads/reddit_gallery_<post ID>.zip`.
+
+The patch tries Arctic Shift's public archived post metadata first and Reddit
+JSON second. Only URLs built for `https://i.redd.it/` are downloaded; Reddit
+preview URLs, their resizing parameters and third-party image hosts are never
+used. It recognizes `image/jpg` as JPEG, fixes the MIME mismatch found in
+Gallery Goblin v4, checks original image signatures before saving, and enforces
+per-image bounds. File writes use Android MediaStore, so **Android 10 or newer**
+is required for this initial implementation.
+
+**Native current-post detection:** Tap the in-app **↓ Originals** pill while
+viewing an individual post. The patch inspects active/resumed Reddit navigation
+fragments, the current visible post's UI metadata, and the Activity's deep-link
+intent (in that order). When it finds a unique post ID, a native Android
+dialog offers **Images · Pictures** or **ZIP · Downloads**; selecting a mode
+starts the download immediately, without pasting a link. It also accepts
+Reddit's native **Share → Reddit Gallery Originals** action, which carries the
+post URL directly. A clipboard/paste fallback remains optional.
+
+No background clipboard scraping, accessibility permissions, private account
+credentials, or broad arbitrary-object traversal are used. The detector
+deliberately refuses ambiguous feed screens rather than downloading the wrong
+post. Since Reddit's internal navigation models vary by APK version, post
+detection is best-effort until verified against the exact installed Reddit APK.
+The activity still needs to remain running for completion; background survival
+has not yet been tested. Private/deleted media might not be available in Arctic
+Shift or on Reddit's original CDN.
+
+**Reddit Share token compatibility:** Reddit's Android Share action can provide
+`reddit.com/r/<community>/s/<token>` instead of a conventional `/comments/`
+post URL. The patch now recognizes those shortlinks and safely follows only
+HTTPS redirects on Reddit-controlled hosts to obtain the canonical post ID
+before fetching Arctic Shift metadata. The native Share target opens an
+Images/ZIP chooser immediately and needs no link paste.
+
+**403 handling:** Reddit may return HTTP 403 while expanding opaque
+`/r/<community>/s/<token>` Share URLs, even though Arctic Shift can retrieve
+gallery metadata once a post ID is known. When the normal HTTP redirect
+resolver fails, the patch now tries the device's Android WebView browser
+stack (Reddit HTTPS hosts only). If both fail, the user sees an explicit
+**SHARE LINK / REDIRECT** error instead of a misleading gallery/CDN error.
+The metadata and image/storage stages also report their own failures.
+
+**Known limitation:** On some modern Reddit builds the visible post is hosted
+inside a single `com.reddit.launch.main.MainActivity` with no exposed
+post-bearing Fragment or deep-link Intent. The floating Originals button
+cannot reliably infer the current post from those Android APIs alone.
+A version-specific hook based on an actual Reddit APK will be needed for
+fully automatic in-feed detection. Until then, the native Reddit Share action
+is preferred and may still fail when Reddit blocks both redirect clients.
+No network method can guarantee expansion of an opaque `/s/` token.
+
+**Native detection diagnostics:** If the floating ↓ Originals button cannot
+identify the active post, tap **Copy diagnostics** in its failure dialog.
+This copies the Android API, active Activity/Fragment class names,
+recognized post-related argument *keys* (not values), and whether the
+current screen exposes a post ID. It does not copy Reddit cookies, account
+details, private storage, or arbitrary app state. The report is meant to
+identify the relevant navigation shape in the installed Reddit APK.
+
+**Testing:** `bash tools/test-reddit-gallery.sh` and
+`gradle buildAndroid`. Validate on a patched Reddit APK before relying on it
+for large gallery downloads. Source remains modular under `patches/.../reddit/`
+and `extensions/.../reddit/`.
 
 ## Build
 

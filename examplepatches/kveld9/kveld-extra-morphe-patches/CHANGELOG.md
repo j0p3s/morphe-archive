@@ -1,3 +1,78 @@
+## [1.17.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.16.3...v1.17.0) (2026-10-16)
+
+### Bug Fixes
+
+* **instagram:** prevent startup crash by leaving dynamic-delivery components enabled ([974b72c](https://github.com/kveld9/kveld-extra-morphe-patches/commit/974b72c971b0e18d95824d3cc4e731dffe4a0230))
+* **lrmobile:** align pinned input hash with validated Uptodown variant ([8ed4edd](https://github.com/kveld9/kveld-extra-morphe-patches/commit/8ed4eddd00df159061b5a65d5e4a942f65899b76))
+* **lrmobile:** block Branch attribution and Adobe Analytics edge collection ([c84cc55](https://github.com/kveld9/kveld-extra-morphe-patches/commit/c84cc555cdcc9e1718b67f09e50e2aca134e9348))
+* **lrmobile:** cut Analytics edge transport and tag-manager fetch ([01a0778](https://github.com/kveld9/kveld-extra-morphe-patches/commit/01a077890ce167752290e4e07bf69050bbc7ce48))
+* **lrmobile:** log explicit skip reasons in telemetry guards ([4942178](https://github.com/kveld9/kveld-extra-morphe-patches/commit/4942178b3b8299a2d6c9893b049db2e0e8d33eba))
+* **lrmobile:** tolerate missing analytics SDK classes in telemetry patch ([b5f4317](https://github.com/kveld9/kveld-extra-morphe-patches/commit/b5f4317cf490053e564884401e25afbc0989ef57))
+* **twitter:** hide the + tab in the home tab row with Hide Timeline Add Tab ([a6076ca](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a6076ca579b3816e2097ae6f1535154849cd7f24))
+* **twitter:** hide the pinned timelines button in every home top bar layout ([e5392f0](https://github.com/kveld9/kveld-extra-morphe-patches/commit/e5392f090302d0bc4b935d6b255ddd3d50018e40))
+* **twitter:** keep post pages working if X changes the reply renderer ([fe67e1e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/fe67e1ecc40f96b7cf7b943cd238e1af34863920))
+* **twitter:** label the add tab option "Hide Timeline Add Tab" ([cb03a0d](https://github.com/kveld9/kveld-extra-morphe-patches/commit/cb03a0daa080810f90dcfc354ba6dd877a90e6c7))
+* **twitter:** make Hide FAB Menu remove the floating button menu ([102d742](https://github.com/kveld9/kveld-extra-morphe-patches/commit/102d74254e36c3f8239dc23a629b1e280fb2d60e))
+* **twitter:** prevent a crash when opening posts with Hide Discover More enabled ([72001e6](https://github.com/kveld9/kveld-extra-morphe-patches/commit/72001e6b8361e139fafb982f1a4d1e896f8b6247))
+* **twitter:** prevent a crash when opening posts with Remove ads enabled ([f1d1c88](https://github.com/kveld9/kveld-extra-morphe-patches/commit/f1d1c885767c48e2579b41d874e0e68cd303a5cb))
+
+### New Features
+
+* **scripts:** add an ART verifier gate for patched APKs ([d21c640](https://github.com/kveld9/kveld-extra-morphe-patches/commit/d21c6406ea3c42a67ff06d18c69353def46339da))
+
+### Code Refactoring
+
+* **twitter:** fail patching when a flag override would be skipped on some paths ([266611e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/266611e717a957852e034396ea7d871b309f5bb3))
+* **twitter:** name telemetry fingerprints for contract sync ([3b8e747](https://github.com/kveld9/kveld-extra-morphe-patches/commit/3b8e7478ba2442bc596315c09933ba4945467a5b))
+
+## [1.16.3](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.16.2...v1.16.3) (2026-10-15)
+
+### Bug Fixes
+
+* **twitter:** make DM Debloat reliably hide the DM call buttons ([2c8c578](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2c8c578899f27f902ff01eef20e6a54735533148))
+* **twitter:** make Navigation UI reliably hide the FAB menu ([336670b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/336670b442a88802d185cc10e0eeecf00a2e7d0b))
+
+## [1.16.2](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.16.1...v1.16.2) (2026-10-15)
+
+### Bug Fixes
+
+* **ci:** drop harness tests step, harness is local-only ([01651ef](https://github.com/kveld9/kveld-extra-morphe-patches/commit/01651ef3408965111268c364179ddcc001ed0211))
+
+## [1.16.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.16.0...v1.16.1) (2026-10-15)
+
+### Bug Fixes
+
+* **ci:** skip harness tests when harness directory is untracked ([269fe57](https://github.com/kveld9/kveld-extra-morphe-patches/commit/269fe57703e40f96abae2e2dbb415a4b68e3c8f1))
+
+## [1.16.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.15.4...v1.16.0) (2026-10-15)
+
+### Bug Fixes
+
+* **twitter:** prefix labels in TwitterRemoveAdsPatch with rmad_ ([a27098a](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a27098ab698ebf610d88c931665363df8c5a3b48))
+* **twitter:** prefix labels in TwitterTimelineUiPatch with tlflt_ and tluid_ ([4184d29](https://github.com/kveld9/kveld-extra-morphe-patches/commit/4184d2960b86df2ae5104190c16e297e90f3cd8a))
+
+### New Features
+
+* **harness:** add smali member reference verifier for target DEX ([360d2bd](https://github.com/kveld9/kveld-extra-morphe-patches/commit/360d2bd84fc54e8c38f5fffa88e79e213144fafd))
+
+## [1.15.4](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.15.3...v1.15.4) (2026-10-15)
+
+### Bug Fixes
+
+* **twitter:** update timeline ad suppression item models and descriptors for 12.34.0 ([1d2e5ff](https://github.com/kveld9/kveld-extra-morphe-patches/commit/1d2e5fffc46a232ee5ed8706d6ce0adafe168174))
+* **twitter:** update timeline recommendation filter fields for 12.34.0 ([7635555](https://github.com/kveld9/kveld-extra-morphe-patches/commit/763555582b6d5ee91404a2280516e13f1612ff7e))
+
+## [1.15.3](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.15.2...v1.15.3) (2026-10-15)
+
+### Bug Fixes
+
+* **twitter:** use renamed empty timeline presenter in Remove Ads suppression ([f646b5b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/f646b5b2b811e32e3acb30e0b3f148673efbc8ab))
+* **twitter:** use renamed empty timeline presenter in Timeline UI discover filter ([4f528b9](https://github.com/kveld9/kveld-extra-morphe-patches/commit/4f528b9c2aed0d8b228b8a33605db35e2f2ae707))
+
+### Code Refactoring
+
+* **twitter:** extract neutralizeFlag helper into TwitterFlagUtils ([359f50a](https://github.com/kveld9/kveld-extra-morphe-patches/commit/359f50af0546b2a645687615be5590f78ce959a2))
+
 ## [1.15.2](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.15.1...v1.15.2) (2026-10-15)
 
 ### Bug Fixes

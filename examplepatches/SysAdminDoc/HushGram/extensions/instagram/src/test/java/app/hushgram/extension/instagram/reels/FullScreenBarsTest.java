@@ -4,18 +4,26 @@
  */
 package app.hushgram.extension.instagram.reels;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.robolectric.Shadows.shadowOf;
 
 import android.app.Activity;
 import android.os.Build;
+import android.os.Looper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 
 import org.junit.After;
 import org.junit.Before;
@@ -50,8 +58,11 @@ public class FullScreenBarsTest {
     private View reelsTab, homeTab, otherTab;
 
     @Before public void prepare() {
+        FullScreenBars.resetHeightsForTests(null);
         Settings.FULL_SCREEN_REELS.resetToDefault();
         Settings.FULL_SCREEN_HOME.resetToDefault();
+        Settings.GLASS_TAB_BAR.resetToDefault();
+        Settings.GLASS_TAB_BAR_FLOAT.resetToDefault();
         FullScreenBars.idForTests(FullScreenBars.VIEWER, VIEWER);
         FullScreenBars.idForTests(FullScreenBars.TAB_BAR, BAR);
         FullScreenBars.idForTests(FullScreenBars.REELS_TAB, REELS_TAB);
@@ -77,6 +88,8 @@ public class FullScreenBarsTest {
         controller.close();
         Settings.FULL_SCREEN_REELS.resetToDefault();
         Settings.FULL_SCREEN_HOME.resetToDefault();
+        Settings.GLASS_TAB_BAR.resetToDefault();
+        Settings.GLASS_TAB_BAR_FLOAT.resetToDefault();
     }
 
     private View tab(int id) {
@@ -172,6 +185,232 @@ public class FullScreenBarsTest {
         assertEquals(63, FullScreenBars.barHeight(63));
         assertEquals("without a glass pill the navigation bar's height goes through", 63, FullScreenBars.navBarHeight(63));
         assertEquals(63, GlassTabBar.navBarHeight(63));
+    }
+
+    /**
+     * #209: the keyboard brings the navigation bar back, and Instagram lifts a comment box above it
+     * by the keyboard's height less that bar's, so the 0 kept the box behind the keys. While the
+     * keyboard shows the height goes through, and once it closes the hidden bars take it again.
+     */
+    @Test public void theKeyboardGetsTheNavigationBarsHeight() {
+        boolean[] up = {false};
+        FullScreenBars.keyboardForTests(() -> up[0]);
+        Settings.FULL_SCREEN_REELS.save(true);
+        showViewer(W, H);
+        assertTrue(watch().isHidden());
+        assertEquals(0, FullScreenBars.navBarHeight(63));
+
+        up[0] = true;
+        assertEquals("the comment box sat behind the keyboard", 63, FullScreenBars.navBarHeight(63));
+        assertEquals("the status bar stays hidden", 0, FullScreenBars.barHeight(128));
+        assertEquals("an unset height changed", -1, FullScreenBars.navBarHeight(-1));
+        assertArrayEquals("a height that went through isn't owed", new int[] {128, 0}, FullScreenBars.heightsToGiveBack());
+
+        up[0] = false;
+        assertEquals("the keyboard closed and the strip came back", 0, FullScreenBars.navBarHeight(63));
+    }
+
+    /**
+     * #196: a chat opens in an activity of its own and reads the bar heights Instagram kept before
+     * that window's insets reach the listener, so each height answered 0 is owed back as the activity
+     * pauses, at the height Instagram last offered for it, and only once.
+     */
+    @Test public void aPauseGivesBackTheHeightsAnsweredZero() {
+        assertEquals(128, FullScreenBars.barHeight(128));
+        assertEquals(63, FullScreenBars.navBarHeight(63));
+        assertArrayEquals("nothing was answered 0", new int[] {0, 0}, FullScreenBars.heightsToGiveBack());
+
+        Settings.FULL_SCREEN_REELS.save(true);
+        showViewer(W, H);
+        FullScreenBars.Session session = watch();
+        assertTrue(session.isHidden());
+        assertEquals(0, FullScreenBars.barHeight(128));
+        assertEquals(0, FullScreenBars.navBarHeight(63));
+        // While the bars are hidden Instagram offers what it kept, the 0 it was given.
+        assertEquals(0, FullScreenBars.barHeight(0));
+        assertEquals(0, FullScreenBars.navBarHeight(0));
+        assertArrayEquals("the heights Instagram last offered", new int[] {128, 63}, FullScreenBars.heightsToGiveBack());
+        assertArrayEquals("owed once", new int[] {0, 0}, FullScreenBars.heightsToGiveBack());
+
+        assertEquals(0, FullScreenBars.navBarHeight(63));
+        FullScreenBars.giveBackBarHeights();
+        assertArrayEquals("the pause paid it", new int[] {0, 0}, FullScreenBars.heightsToGiveBack());
+
+        assertEquals(0, FullScreenBars.navBarHeight(63));
+        FullScreenBars.release(activity);
+        assertEquals("the bars came back", 63, FullScreenBars.navBarHeight(63));
+        assertArrayEquals("a height that went through isn't owed", new int[] {0, 0}, FullScreenBars.heightsToGiveBack());
+    }
+
+    /** #196: coming back under a floating pill, Instagram's copy goes back to 0 once, and is owed back again. */
+    @Test public void aPillComingBackTakesTheNavigationBarsHeightOnce() {
+        FullScreenBars.takeNavBarHeight();
+        assertArrayEquals("nothing offered yet, nothing taken", new int[] {0, 0}, FullScreenBars.heightsToGiveBack());
+        assertEquals(63, FullScreenBars.navBarHeight(63));
+        FullScreenBars.takeNavBarHeight();
+        FullScreenBars.takeNavBarHeight();
+        assertArrayEquals("taken, so owed back once", new int[] {0, 63}, FullScreenBars.heightsToGiveBack());
+        assertArrayEquals(new int[] {0, 0}, FullScreenBars.heightsToGiveBack());
+    }
+
+    /**
+     * #200: on a cold start into Reels the viewer's bar heights listener heard the bars' heights
+     * before Full screen Reels hid them, and Instagram let it go, so the strips stayed. While a switch
+     * is on, an activity's listeners are kept and told each new pair once Instagram's pass is over.
+     */
+    @Test public void keptListenersHearTheHeightsTheHideBrings() {
+        List<String> told = new ArrayList<>();
+        FullScreenBars.resetHeightsForTests((listener, status, nav) -> told.add(listener + " " + status + " " + nav));
+        FullScreenBars.registeredForTests(true);
+        try {
+            Object reels = "reels";
+            FullScreenBars.heightsAsked(activity, reels);
+            assertTrue("both switches off, nothing kept", FullScreenBars.askersForTests(activity).isEmpty());
+
+            Settings.FULL_SCREEN_REELS.save(true);
+            FullScreenBars.nowResumed(activity);
+            FullScreenBars.heightsAsked(activity, reels);
+            FullScreenBars.heightsAsked(activity, reels);
+            assertEquals("kept once", 1, FullScreenBars.askersForTests(activity).size());
+
+            heights(128, 63);
+            assertEquals(Collections.singletonList("reels 128 63"), told);
+            heights(128, 63);
+            assertEquals("the same pair isn't told again", 1, told.size());
+
+            showViewer(W, H);
+            assertTrue(watch().isHidden());
+            heights(128, 63);
+            assertEquals("the hide's pair", "reels 0 0", told.get(1));
+
+            FullScreenBars.heightsDropped(activity, reels);
+            assertTrue("dropped by Instagram", FullScreenBars.askersForTests(activity).isEmpty());
+            FullScreenBars.release(activity);
+            heights(128, 63);
+            assertEquals("a dropped listener isn't told", 2, told.size());
+        } finally {
+            FullScreenBars.registeredForTests(false);
+            FullScreenBars.resetHeightsForTests(null);
+        }
+    }
+
+    /**
+     * #200: back on Reels from another window, Instagram's copy holds the heights the pause gave back
+     * and its listener keeps them while the bars are hidden, so the hide takes both to 0 itself and the
+     * kept listeners hear it.
+     */
+    @Test public void comingBackToReelsTakesTheHeightsThePauseGaveBack() {
+        List<String> told = new ArrayList<>();
+        FullScreenBars.resetHeightsForTests((listener, status, nav) -> told.add(listener + " " + status + " " + nav));
+        FullScreenBars.registeredForTests(true);
+        try {
+            Settings.FULL_SCREEN_REELS.save(true);
+            FullScreenBars.nowResumed(activity);
+            FullScreenBars.heightsAsked(activity, "reels");
+            heights(75, 135);
+            showViewer(W, H);
+            FullScreenBars.Session session = watch();
+            assertTrue(session.isHidden());
+            shadowOf(Looper.getMainLooper()).idle();
+            assertEquals(Arrays.asList("reels 75 135", "reels 0 0"), told);
+
+            FullScreenBars.giveBackBarHeights();
+            session.show();
+            assertFalse(session.isHidden());
+            session.evaluate();
+            assertTrue(session.isHidden());
+            shadowOf(Looper.getMainLooper()).idle();
+            assertEquals("the hide took them again", Arrays.asList("reels 75 135", "reels 0 0", "reels 0 0"), told);
+            assertArrayEquals("and owes them back", new int[] {75, 135}, FullScreenBars.heightsToGiveBack());
+        } finally {
+            FullScreenBars.registeredForTests(false);
+            FullScreenBars.resetHeightsForTests(null);
+        }
+    }
+
+    /**
+     * #203: with Full screen Home on, the first tab opened from Home (Messages, Profile) was built
+     * while Home had the bars hidden, so it heard 0 and drew under the status bar until the next
+     * switch. Its kept listener hears the real heights once the bars come back.
+     */
+    @Test public void aTabBuiltUnderHomesHiddenBarsHearsTheHeightsWhenTheyComeBack() {
+        List<String> told = new ArrayList<>();
+        FullScreenBars.resetHeightsForTests((listener, status, nav) -> told.add(listener + " " + status + " " + nav));
+        FullScreenBars.registeredForTests(true);
+        try {
+            Settings.FULL_SCREEN_HOME.save(true);
+            FullScreenBars.nowResumed(activity);
+            heights(75, 135);
+            select(homeTab);
+            FullScreenBars.Session session = watch();
+            assertTrue(session.isHidden());
+            heights(75, 135);
+            FullScreenBars.heightsAsked(activity, "messages");
+
+            select(otherTab);
+            session.evaluate();
+            assertFalse(session.isHidden());
+            heights(75, 135);
+            assertEquals("the new tab hears the bars' heights", "messages 75 135", told.get(told.size() - 1));
+        } finally {
+            FullScreenBars.registeredForTests(false);
+            FullScreenBars.resetHeightsForTests(null);
+        }
+    }
+
+    /**
+     * #209: with only Glass tab bar on and its pill floating, a reel's comments or a chat built while
+     * the pill had the navigation bar's height at 0 heard 0 and put its text box under the navigation
+     * bar. Its listener is kept and hears the real height when the insets go round again. A pill that
+     * doesn't float changes no height, so nothing is kept for it.
+     */
+    @Test public void aFloatingGlassPillKeepsListenersSoAScreenOverItHearsTheRealHeight() {
+        List<String> told = new ArrayList<>();
+        FullScreenBars.resetHeightsForTests((listener, status, nav) -> told.add(listener + " " + status + " " + nav));
+        FullScreenBars.registeredForTests(true);
+        try {
+            Settings.GLASS_TAB_BAR.save(true);
+            Settings.GLASS_TAB_BAR_FLOAT.save(false);
+            FullScreenBars.nowResumed(activity);
+            FullScreenBars.heightsAsked(activity, "comments");
+            assertTrue("a pill that doesn't float, nothing kept", FullScreenBars.askersForTests(activity).isEmpty());
+
+            Settings.GLASS_TAB_BAR_FLOAT.save(true);
+            FullScreenBars.heightsAsked(activity, "comments");
+            assertEquals("kept for the floating pill", 1, FullScreenBars.askersForTests(activity).size());
+            heights(75, 135);
+            assertEquals(Collections.singletonList("comments 75 135"), told);
+
+            Settings.GLASS_TAB_BAR.save(false);
+            heights(75, 0);
+            assertEquals("Glass tab bar off, nobody is told", 1, told.size());
+        } finally {
+            FullScreenBars.registeredForTests(false);
+            FullScreenBars.resetHeightsForTests(null);
+        }
+    }
+
+    /** An activity keeps its newest listeners only, so a screen built again and again doesn't pile them up. */
+    @Test public void anActivityKeepsItsNewestListeners() {
+        FullScreenBars.registeredForTests(true);
+        try {
+            Settings.FULL_SCREEN_REELS.save(true);
+            for (int i = 0; i <= FullScreenBars.ASKERS_KEPT; i++) FullScreenBars.heightsAsked(activity, "screen " + i);
+            List<Object> kept = FullScreenBars.askersForTests(activity);
+            assertEquals(FullScreenBars.ASKERS_KEPT, kept.size());
+            assertFalse("the oldest went", kept.contains("screen 0"));
+            assertEquals("screen " + FullScreenBars.ASKERS_KEPT, kept.get(kept.size() - 1));
+        } finally {
+            FullScreenBars.registeredForTests(false);
+            FullScreenBars.resetHeightsForTests(null);
+        }
+    }
+
+    /** One pass of Instagram's insets listener with these offered heights, then the main loop's next turn. */
+    private static void heights(int status, int nav) {
+        FullScreenBars.barHeight(status);
+        FullScreenBars.navBarHeight(nav);
+        shadowOf(Looper.getMainLooper()).idle();
     }
 
     @Test public void aViewerOnlyPartlyOnScreenIsNotReels() {

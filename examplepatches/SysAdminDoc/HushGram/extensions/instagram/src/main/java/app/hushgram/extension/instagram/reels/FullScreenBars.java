@@ -25,6 +25,8 @@ import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
 import java.lang.ref.WeakReference;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.WeakHashMap;
 
 import app.hushgram.extension.instagram.misc.GlassTabBar;
@@ -83,6 +85,31 @@ public final class FullScreenBars {
     private static final java.util.HashMap<String, Integer> IDS = new java.util.HashMap<>();
     private static volatile boolean registered;
     private static final WeakHashMap<Activity, Session> sessions = new WeakHashMap<>();
+    /** The heights above 0 Instagram's listener last offered for each bar. Main thread only. */
+    private static int statusOffered;
+    private static int navOffered;
+    /** Whether Instagram's copy of each bar's height holds a 0 HushGram answered (#196). */
+    private static boolean statusTaken;
+    private static boolean navTaken;
+    /** The status bar's answer of the listener pass in progress, -1 before one. */
+    private static int statusAnswer = -1;
+    /** The pair of heights the listener last kept, -1 before the first. */
+    private static int keptStatus = -1;
+    private static int keptNav = -1;
+    /** How many of an activity's bar heights listeners are kept to be told a new pair (#200). */
+    static final int ASKERS_KEPT = 16;
+    static final String COUNT_TOLD = "screens told the bars' new heights";
+    /**
+     * Each activity's kept bar heights listeners, newest last. Held strongly, since Instagram lets a
+     * listener go once it has called it, and each listener holds its screen, which holds the activity:
+     * an activity's entry goes when it's destroyed. Main thread only.
+     */
+    private static final WeakHashMap<Activity, ArrayList<Object>> askers = new WeakHashMap<>();
+    /** The activity last resumed, whose window Instagram's listener passes are for. */
+    private static WeakReference<Activity> resumed = new WeakReference<>(null);
+    private static Teller teller = FullScreenBars::tellHeights;
+    static final String COUNT_KEYBOARD = "kept the navigation bar's space for the keyboard";
+    private static Keyboard keyboard = FullScreenBars::keyboardInFront;
 
     private FullScreenBars() {
     }
@@ -179,6 +206,16 @@ public final class FullScreenBars {
         return Settings.FULL_SCREEN_REELS.get() || Settings.FULL_SCREEN_HOME.get();
     }
 
+    /**
+     * Whether screens' bar heights listeners are kept and told each new pair: with either switch on,
+     * or with Glass tab bar's pill floating. The pill has the navigation bar's height answered 0 while
+     * it shows, so a screen built just then, like a reel's comments or a chat opened over it, heard 0
+     * and put its text box under the navigation bar, and Instagram never told it the real height (#209).
+     */
+    static boolean keepsListeners() {
+        return eitherOn() || (Settings.GLASS_TAB_BAR.get() && Settings.GLASS_TAB_BAR_FLOAT.get());
+    }
+
     /** Tests give the names ids of their own, since a test app has none of Instagram's. */
     static void idForTests(String name, int id) {
         synchronized (IDS) {
@@ -209,6 +246,14 @@ public final class FullScreenBars {
      * to the edges. Otherwise, or if anything throws, the height goes through as it came.
      */
     public static int barHeight(int height) {
+        int kept = hiddenBarHeight(height);
+        if (height > 0) statusOffered = height;
+        statusTaken = taken(height, kept, statusTaken);
+        statusAnswer = kept;
+        return kept;
+    }
+
+    private static int hiddenBarHeight(int height) {
         try {
             if (height <= 0 || !anyHidden()) return height;
             HookStatus.counted(FamilyNames.FULL_SCREEN_BARS, COUNT_NO_BAR_SPACE);
@@ -228,13 +273,244 @@ public final class FullScreenBars {
      * ({@link GlassTabBar#navBarHeight}). If anything throws, the height goes through as it came.
      */
     public static int navBarHeight(int height) {
-        int kept = barHeight(height);
-        try {
-            return GlassTabBar.navBarHeight(kept);
-        } catch (Throwable failure) {
-            HookStatus.threw(FamilyNames.GLASS_TAB_BAR, "navigation bar height", failure);
-            return kept;
+        int kept = height;
+        if (height <= 0 || !keyboardUp()) {
+            kept = hiddenBarHeight(height);
+            try {
+                kept = GlassTabBar.navBarHeight(kept);
+            } catch (Throwable failure) {
+                HookStatus.threw(FamilyNames.GLASS_TAB_BAR, "navigation bar height", failure);
+            }
         }
+        if (height > 0) navOffered = height;
+        navTaken = taken(height, kept, navTaken);
+        heightsKept(statusAnswer, kept);
+        return kept;
+    }
+
+    /**
+     * Whether the keyboard shows in the front window. It brings the navigation bar back with it, hidden
+     * or under a pill, and Instagram lifts a comment box or a chat's message box above the keyboard by
+     * the keyboard's height less this bar's, then pads it by the height it kept. A 0 kept the box a
+     * bar's height low, behind the keys (#209), so while the keyboard shows the height goes through.
+     */
+    static boolean keyboardUp() {
+        try {
+            if (!keyboard.shown()) return false;
+            HookStatus.counted(FamilyNames.FULL_SCREEN_BARS, COUNT_KEYBOARD);
+            return true;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FULL_SCREEN_BARS, "keyboard", failure);
+            return false;
+        }
+    }
+
+    private static boolean keyboardInFront() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return false;
+        Activity activity = resumed.get();
+        if (activity == null) activity = GlassTabBar.activityInFront();
+        Window window = activity == null ? null : activity.getWindow();
+        WindowInsets insets = window == null ? null : window.getDecorView().getRootWindowInsets();
+        return insets != null && insets.isVisible(WindowInsets.Type.ime());
+    }
+
+    /** How the keyboard is looked for: the front window's insets outside tests. */
+    interface Keyboard {
+        boolean shown();
+    }
+
+    /**
+     * Called by Instagram's registration of a screen's bar heights listener in [activity], before it
+     * runs (#200). Instagram calls a listener once with the heights it keeps and then lets most of them
+     * go, so a screen built before the bars were hidden, like the Reels viewer on a cold start into
+     * Reels, kept the old heights as black strips until it resumed. While a full screen switch is on,
+     * or the glass pill floats ({@link #keepsListeners}), the last {@link #ASKERS_KEPT} listeners of
+     * each activity are kept and told each new pair ({@link #heightsKept}). Otherwise nothing is kept.
+     */
+    public static void heightsAsked(Activity activity, Object listener) {
+        try {
+            if (activity == null || listener == null || !registered || !Utils.settingsReady()
+                    || HushgramPause.isPaused() || !keepsListeners()) return;
+            ArrayList<Object> held = askers.get(activity);
+            if (held == null) {
+                held = new ArrayList<>();
+                askers.put(activity, held);
+            }
+            forgetListener(held, listener);
+            held.add(listener);
+            while (held.size() > ASKERS_KEPT) held.remove(0);
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FULL_SCREEN_BARS, "heights listener", failure);
+        }
+    }
+
+    /** Called by Instagram's removal of a screen's bar heights listener in [activity]: it isn't told again. */
+    public static void heightsDropped(Activity activity, Object listener) {
+        try {
+            ArrayList<Object> held = activity == null ? null : askers.get(activity);
+            if (held != null) forgetListener(held, listener);
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FULL_SCREEN_BARS, "heights listener", failure);
+        }
+    }
+
+    private static void forgetListener(ArrayList<Object> held, Object listener) {
+        for (int at = held.size() - 1; at >= 0; at--) {
+            if (held.get(at) == listener) held.remove(at);
+        }
+    }
+
+    /**
+     * The pair of heights Instagram's listener just kept. When it changed and listeners are being kept
+     * ({@link #keepsListeners}), the resumed activity's kept listeners are told it on the next turn of
+     * the main loop, once Instagram's pass is over, with whatever pair is kept by then.
+     */
+    static void heightsKept(int status, int nav) {
+        try {
+            boolean changed = status != keptStatus || nav != keptNav;
+            keptStatus = status;
+            keptNav = nav;
+            if (!changed || !registered || !keepsListeners()) return;
+            Activity activity = resumed.get();
+            ArrayList<Object> held = activity == null ? null : askers.get(activity);
+            if (held == null || held.isEmpty()) return;
+            List<Object> listeners = new ArrayList<>(held);
+            new Handler(Looper.getMainLooper()).post(() -> tellAll(listeners));
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FULL_SCREEN_BARS, "heights kept", failure);
+        }
+    }
+
+    private static void tellAll(List<Object> listeners) {
+        for (Object listener : listeners) {
+            try {
+                teller.tell(listener, keptStatus, keptNav);
+            } catch (Throwable failure) {
+                HookStatus.threw(FamilyNames.FULL_SCREEN_BARS, "heights told", failure);
+            }
+        }
+        HookStatus.counted(FamilyNames.FULL_SCREEN_BARS, COUNT_TOLD);
+    }
+
+    /** How a kept listener is told a pair of heights: the patch-filled stub outside tests. */
+    interface Teller {
+        void tell(Object listener, int status, int nav);
+    }
+
+    /**
+     * Whether Instagram's copy of a bar's height holds HushGram's 0 after it offered [offered] and
+     * was answered [kept]. An offer of 0 is Instagram handing back what it kept while the bar is
+     * hidden, so whatever was true [before] still is.
+     */
+    static boolean taken(int offered, int kept, boolean before) {
+        return offered > 0 ? kept != offered : before;
+    }
+
+    /**
+     * Called as an activity pauses. Instagram's screens read the bar heights its listener kept when
+     * they're built, and a screen in the next activity (a chat opens in its own) is built before that
+     * activity's window hands the listener its insets. So the 0 the Reels viewer or a floating glass
+     * pill was given stayed: a chat's message box sat a navigation bar's height too low, under the
+     * buttons and under the keyboard (#196). Each bar answered 0 gets the height Instagram last offered
+     * for it back, written where its listener writes it; the activity coming back asks again.
+     */
+    public static void giveBackBarHeights() {
+        try {
+            int[] heights = heightsToGiveBack();
+            if (heights[0] > 0) {
+                keepStatusBarHeight(heights[0]);
+                keptStatus = heights[0];
+            }
+            if (heights[1] > 0) {
+                keepNavBarHeight(heights[1]);
+                keptNav = heights[1];
+            }
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FULL_SCREEN_BARS, "bar heights back", failure);
+        }
+    }
+
+    /**
+     * Called as a session hides the bars. Coming back to Reels from another window (HushGram's
+     * settings, a chat), Instagram's copy holds the real heights the pause gave back, and its listener
+     * keeps them while the bars are hidden, so the viewer kept a strip at the top and the bottom (#200).
+     * Each height not already 0 goes to 0 here, and the activity's kept listeners hear it.
+     */
+    static void takeHiddenHeights() {
+        try {
+            boolean took = false;
+            if (!statusTaken && statusOffered > 0) {
+                keepStatusBarHeight(0);
+                statusTaken = true;
+                took = true;
+            }
+            if (!navTaken && navOffered > 0) {
+                keepNavBarHeight(0);
+                navTaken = true;
+                took = true;
+            }
+            if (took) heightsKept(0, 0);
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FULL_SCREEN_BARS, "bar heights hidden", failure);
+        }
+    }
+
+    /**
+     * Called as an activity with a floating glass pill showing resumes, before its screens do. The
+     * window it came back from (a chat) stored the navigation bar's real height, and a screen resuming
+     * under the pill (the inbox) read that before the pill's insets came round again, so it kept a
+     * strip under the pill (#196). Instagram's copy goes back to the pill's 0 at once.
+     */
+    public static void takeNavBarHeight() {
+        try {
+            if (navTaken || navOffered <= 0) return;
+            keepNavBarHeight(0);
+            navTaken = true;
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.GLASS_TAB_BAR, "navigation bar height again", failure);
+        }
+    }
+
+    /** The status bar's and the navigation bar's heights owed back, 0 for one not answered 0. Owed once. */
+    static int[] heightsToGiveBack() {
+        int[] heights = {statusTaken ? statusOffered : 0, navTaken ? navOffered : 0};
+        statusTaken = false;
+        navTaken = false;
+        return heights;
+    }
+
+    /** Tests start with nothing offered, taken, kept or held, and tell their own [tells]. */
+    static void resetHeightsForTests(@Nullable Teller tells) {
+        statusOffered = 0;
+        navOffered = 0;
+        statusTaken = false;
+        navTaken = false;
+        statusAnswer = -1;
+        keptStatus = -1;
+        keptNav = -1;
+        askers.clear();
+        teller = tells == null ? FullScreenBars::tellHeights : tells;
+        keyboard = FullScreenBars::keyboardInFront;
+    }
+
+    /** Tests say whether the keyboard shows. */
+    static void keyboardForTests(Keyboard shows) {
+        keyboard = shows;
+    }
+
+    static void nowResumed(Activity activity) {
+        resumed = new WeakReference<>(activity);
+    }
+
+    /** Tests stand in for the application start, which registers the watcher. */
+    static void registeredForTests(boolean value) {
+        registered = value;
+    }
+
+    /** The listeners held for [activity], for tests. */
+    static List<Object> askersForTests(Activity activity) {
+        ArrayList<Object> held = askers.get(activity);
+        return held == null ? new ArrayList<>() : new ArrayList<>(held);
     }
 
     /** Whether a watched activity has the bars hidden. Main thread, as Instagram's listener is. */
@@ -275,18 +551,23 @@ public final class FullScreenBars {
 
     private static final class Watcher implements Application.ActivityLifecycleCallbacks {
         @Override public void onActivityResumed(@NonNull Activity activity) {
+            nowResumed(activity);
             track(activity);
         }
 
         @Override public void onActivityPaused(@NonNull Activity activity) {
             release(activity);
+            giveBackBarHeights();
         }
 
         @Override public void onActivityCreated(@NonNull Activity activity, @Nullable Bundle state) { }
         @Override public void onActivityStarted(@NonNull Activity activity) { }
         @Override public void onActivityStopped(@NonNull Activity activity) { }
         @Override public void onActivitySaveInstanceState(@NonNull Activity activity, @NonNull Bundle state) { }
-        @Override public void onActivityDestroyed(@NonNull Activity activity) { }
+        @Override public void onActivityDestroyed(@NonNull Activity activity) {
+            // Its listeners hold it, so the weak key alone would never let it go.
+            askers.remove(activity);
+        }
     }
 
     /** One resumed activity, watched for Reels or Home coming and going. */
@@ -399,6 +680,7 @@ public final class FullScreenBars {
             }
             saved = true;
             hidden = true;
+            takeHiddenHeights();
             HookStatus.invoked(FamilyNames.FULL_SCREEN_BARS);
             HookStatus.counted(FamilyNames.FULL_SCREEN_BARS, COUNT_HID);
         }
@@ -426,5 +708,19 @@ public final class FullScreenBars {
                 HookStatus.threw(FamilyNames.FULL_SCREEN_BARS, "show", failure);
             }
         }
+    }
+
+    // ------------------------------------------------------------------ what the patch fills in
+
+    /** Filled in by the patch: stores [height] where Instagram's listener keeps the status bar's height. */
+    public static void keepStatusBarHeight(int height) {
+    }
+
+    /** Filled in by the patch: stores [height] where Instagram's listener keeps the navigation bar's height. */
+    public static void keepNavBarHeight(int height) {
+    }
+
+    /** Filled in by the patch: tells [listener], one of Instagram's bar heights listeners, a pair of heights. */
+    public static void tellHeights(Object listener, int status, int nav) {
     }
 }

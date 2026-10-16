@@ -2,12 +2,18 @@ package app.morphe.patches.lrmobile
 
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.extensions.InstructionExtensions.instructionsOrNull
+import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patches.shared.Constants
 import app.morphe.patches.shared.setApplicationMetaData
 import app.morphe.patches.shared.stripPermissionsWhere
+import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import org.w3c.dom.Element
 
 private val blockedPermissions = setOf(
@@ -40,7 +46,7 @@ private val lightroomTelemetryResourcePatch = resourcePatch(
     execute {
         val manifestFile = get("AndroidManifest.xml")
         if (!manifestFile.exists()) {
-            println("[Lightroom Telemetry] Skipped: AndroidManifest.xml not found.")
+            println("[Block Telemetry & Trackers] Skipped: AndroidManifest.xml not found.")
             return@execute
         }
 
@@ -64,7 +70,7 @@ private val lightroomTelemetryResourcePatch = resourcePatch(
             }
         }
 
-        println("[Lightroom Telemetry] Stripped $removedPermissions permissions and injected $injectedMetadata opt-out flags in AndroidManifest.xml (analytics components preserved for boot stability).")
+        println("[Block Telemetry & Trackers] Stripped $removedPermissions permissions and injected $injectedMetadata opt-out flags in AndroidManifest.xml (analytics components preserved for boot stability).")
     }
 }
 
@@ -87,10 +93,41 @@ private fun hookVoidMethod(
     }
 }
 
+private fun BytecodePatchContext.rewriteStringLiteralInClass(
+    definingClass: String,
+    targetString: String,
+    replacementString: String,
+    hookedMethods: MutableList<String>,
+    label: String,
+) {
+    val classDef = classDefByOrNull(definingClass) ?: return
+    val mutableClass = mutableClassDefBy(classDef)
+    var count = 0
+    for (method in mutableClass.methods) {
+        val instructions = method.instructionsOrNull?.toList() ?: continue
+        for ((index, instruction) in instructions.withIndex().reversed()) {
+            val opcode = instruction.opcode
+            if (opcode != Opcode.CONST_STRING && opcode != Opcode.CONST_STRING_JUMBO) continue
+            val ref = (instruction as? ReferenceInstruction)?.reference as? StringReference ?: continue
+            if (ref.string == targetString) {
+                val register = (instruction as? OneRegisterInstruction)?.registerA ?: continue
+                val op = if (register > 255) "const-string/jumbo" else "const-string"
+                method.replaceInstruction(index, "$op v$register, \"${replacementString.replace("\"", "\\\"")}\"")
+                count++
+            }
+        }
+    }
+    if (count > 0) {
+        hookedMethods.add("$label ($count rewrites -> $replacementString)")
+    } else {
+        println("[Block Telemetry & Trackers] Skipped: $label literal \"$targetString\" absent in $definingClass.")
+    }
+}
+
 @Suppress("unused")
 val lightroomBlockTelemetryPatch = bytecodePatch(
     name = "Block Telemetry & Trackers",
-    description = "Neutralizes Google AppMeasurement and Firebase Crashlytics dispatchers, strips advertising permissions, and injects analytics opt-out flags.",
+    description = "Neutralizes Google AppMeasurement, Firebase Crashlytics, Branch attribution, and Adobe Creative SDK analytics dispatchers, redirects Adobe Edge and DTM endpoints to 0.0.0.0, strips advertising permissions, and injects analytics opt-out flags.",
     default = true,
 ) {
     compatibleWith(Constants.COMPATIBILITY_LRMOBILE)
@@ -101,108 +138,219 @@ val lightroomBlockTelemetryPatch = bytecodePatch(
 
         // Google AppMeasurement
         val appMeasurementClass = "Lcom/google/android/gms/measurement/AppMeasurement;"
-        hookVoidMethod(
-            definingClass = appMeasurementClass,
-            name = "logEventInternal",
-            parameters = listOf("Ljava/lang/String;", "Ljava/lang/String;", "Landroid/os/Bundle;"),
-            hookedMethods = hookedMethods,
-            label = "AppMeasurement.logEventInternal",
-        )
-        hookVoidMethod(
-            definingClass = appMeasurementClass,
-            name = "logEventInternalNoInterceptor",
-            parameters = listOf("Ljava/lang/String;", "Ljava/lang/String;", "Landroid/os/Bundle;", "J"),
-            hookedMethods = hookedMethods,
-            label = "AppMeasurement.logEventInternalNoInterceptor",
-        )
+        if (classDefByOrNull(appMeasurementClass) != null) {
+            hookVoidMethod(
+                definingClass = appMeasurementClass,
+                name = "logEventInternal",
+                parameters = listOf("Ljava/lang/String;", "Ljava/lang/String;", "Landroid/os/Bundle;"),
+                hookedMethods = hookedMethods,
+                label = "AppMeasurement.logEventInternal",
+            )
+            hookVoidMethod(
+                definingClass = appMeasurementClass,
+                name = "logEventInternalNoInterceptor",
+                parameters = listOf("Ljava/lang/String;", "Ljava/lang/String;", "Landroid/os/Bundle;", "J"),
+                hookedMethods = hookedMethods,
+                label = "AppMeasurement.logEventInternalNoInterceptor",
+            )
+        } else {
+            println("[Block Telemetry & Trackers] Skipped: AppMeasurement absent (analytics SDK stripped from input).")
+        }
 
         // Firebase Crashlytics
         val crashlyticsClass = "Lcom/google/firebase/crashlytics/FirebaseCrashlytics;"
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "recordException",
-            parameters = listOf("Ljava/lang/Throwable;"),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.recordException(Throwable)",
-        )
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "recordException",
-            parameters = listOf("Ljava/lang/Throwable;", "Lc70/g;"),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.recordException(Throwable, CustomKeysAndValues)",
-        )
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "log",
-            parameters = listOf("Ljava/lang/String;"),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.log",
-        )
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "sendUnsentReports",
-            parameters = emptyList(),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.sendUnsentReports",
-        )
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "setUserId",
-            parameters = listOf("Ljava/lang/String;"),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.setUserId",
-        )
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "setCustomKey",
-            parameters = listOf("Ljava/lang/String;", "D"),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.setCustomKey(double)",
-        )
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "setCustomKey",
-            parameters = listOf("Ljava/lang/String;", "F"),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.setCustomKey(float)",
-        )
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "setCustomKey",
-            parameters = listOf("Ljava/lang/String;", "I"),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.setCustomKey(int)",
-        )
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "setCustomKey",
-            parameters = listOf("Ljava/lang/String;", "J"),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.setCustomKey(long)",
-        )
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "setCustomKey",
-            parameters = listOf("Ljava/lang/String;", "Ljava/lang/String;"),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.setCustomKey(String)",
-        )
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "setCustomKey",
-            parameters = listOf("Ljava/lang/String;", "Z"),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.setCustomKey(boolean)",
-        )
-        hookVoidMethod(
-            definingClass = crashlyticsClass,
-            name = "setCustomKeys",
-            parameters = listOf("Lc70/g;"),
-            hookedMethods = hookedMethods,
-            label = "FirebaseCrashlytics.setCustomKeys",
-        )
+        if (classDefByOrNull(crashlyticsClass) != null) {
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "recordException",
+                parameters = listOf("Ljava/lang/Throwable;"),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.recordException(Throwable)",
+            )
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "recordException",
+                parameters = listOf("Ljava/lang/Throwable;", "Lc70/g;"),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.recordException(Throwable, CustomKeysAndValues)",
+            )
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "log",
+                parameters = listOf("Ljava/lang/String;"),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.log",
+            )
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "sendUnsentReports",
+                parameters = emptyList(),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.sendUnsentReports",
+            )
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "setUserId",
+                parameters = listOf("Ljava/lang/String;"),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.setUserId",
+            )
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "setCustomKey",
+                parameters = listOf("Ljava/lang/String;", "D"),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.setCustomKey(double)",
+            )
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "setCustomKey",
+                parameters = listOf("Ljava/lang/String;", "F"),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.setCustomKey(float)",
+            )
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "setCustomKey",
+                parameters = listOf("Ljava/lang/String;", "I"),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.setCustomKey(int)",
+            )
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "setCustomKey",
+                parameters = listOf("Ljava/lang/String;", "J"),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.setCustomKey(long)",
+            )
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "setCustomKey",
+                parameters = listOf("Ljava/lang/String;", "Ljava/lang/String;"),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.setCustomKey(String)",
+            )
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "setCustomKey",
+                parameters = listOf("Ljava/lang/String;", "Z"),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.setCustomKey(boolean)",
+            )
+            hookVoidMethod(
+                definingClass = crashlyticsClass,
+                name = "setCustomKeys",
+                parameters = listOf("Lc70/g;"),
+                hookedMethods = hookedMethods,
+                label = "FirebaseCrashlytics.setCustomKeys",
+            )
+        } else {
+            println("[Block Telemetry & Trackers] Skipped: FirebaseCrashlytics absent (analytics SDK stripped from input).")
+        }
 
-        println("[Lightroom Telemetry] Neutralized ${hookedMethods.size} telemetry dispatch methods: ${hookedMethods.joinToString(", ")}.")
+        // Branch Attribution
+        val branchSessionBuilderClass = "Lio/branch/referral/c\$i;"
+        if (classDefByOrNull(branchSessionBuilderClass) != null) {
+            hookVoidMethod(
+                definingClass = branchSessionBuilderClass,
+                name = "b",
+                parameters = emptyList(),
+                hookedMethods = hookedMethods,
+                label = "Branch.InitSessionBuilder.initSession",
+            )
+            hookVoidMethod(
+                definingClass = branchSessionBuilderClass,
+                name = "d",
+                parameters = emptyList(),
+                hookedMethods = hookedMethods,
+                label = "Branch.InitSessionBuilder.reInitSession",
+            )
+        } else {
+            println("[Block Telemetry & Trackers] Skipped: Branch InitSessionBuilder absent (Branch SDK stripped from input).")
+        }
+
+        val branchServerRequestQueueClass = "Lio/branch/referral/n0;"
+        if (classDefByOrNull(branchServerRequestQueueClass) != null) {
+            hookVoidMethod(
+                definingClass = branchServerRequestQueueClass,
+                name = "v",
+                parameters = listOf("Ljava/lang/String;"),
+                hookedMethods = hookedMethods,
+                label = "Branch.ServerRequestQueue.processNextQueueItem",
+            )
+        } else {
+            println("[Block Telemetry & Trackers] Skipped: Branch ServerRequestQueue absent (Branch SDK stripped from input).")
+        }
+
+        // Adobe Creative SDK Analytics (cc-api-data.adobe.io)
+        val csdkAnalyticsEventClass = "Lcom/adobe/creativesdk/foundation/adobeinternal/analytics/a;"
+        if (classDefByOrNull(csdkAnalyticsEventClass) != null) {
+            hookVoidMethod(
+                definingClass = csdkAnalyticsEventClass,
+                name = "l",
+                parameters = emptyList(),
+                hookedMethods = hookedMethods,
+                label = "AdobeInternalAnalytics.postEvent",
+            )
+        } else {
+            println("[Block Telemetry & Trackers] Skipped: AdobeInternalAnalytics absent (CSDK stripped from input).")
+        }
+
+        val csdkAnalyticsQueueClass = "Lcom/adobe/creativesdk/foundation/internal/analytics/e;"
+        if (classDefByOrNull(csdkAnalyticsQueueClass) != null) {
+            hookVoidMethod(
+                definingClass = csdkAnalyticsQueueClass,
+                name = "b",
+                parameters = listOf("Lcom/adobe/creativesdk/foundation/internal/analytics/c;"),
+                hookedMethods = hookedMethods,
+                label = "CSDKAnalyticsQueue.enqueueEvent",
+            )
+            hookVoidMethod(
+                definingClass = csdkAnalyticsQueueClass,
+                name = "k",
+                parameters = listOf("Z"),
+                hookedMethods = hookedMethods,
+                label = "CSDKAnalyticsQueue.sendEvents",
+            )
+        } else {
+            println("[Block Telemetry & Trackers] Skipped: CSDKAnalyticsQueue absent (CSDK stripped from input).")
+        }
+
+        // Adobe Experience Platform Edge Endpoints (edge.adobedc.net)
+        val edgeEndpointClass = "Lcom/adobe/marketing/mobile/EdgeEndpoint;"
+        if (classDefByOrNull(edgeEndpointClass) != null) {
+            rewriteStringLiteralInClass(
+                definingClass = edgeEndpointClass,
+                targetString = "edge.adobedc.net",
+                replacementString = "0.0.0.0",
+                hookedMethods = hookedMethods,
+                label = "EdgeEndpoint.edge.adobedc.net",
+            )
+            rewriteStringLiteralInClass(
+                definingClass = edgeEndpointClass,
+                targetString = "edge-int.adobedc.net",
+                replacementString = "0.0.0.0",
+                hookedMethods = hookedMethods,
+                label = "EdgeEndpoint.edge-int.adobedc.net",
+            )
+        } else {
+            println("[Block Telemetry & Trackers] Skipped: EdgeEndpoint absent (AEP Edge SDK stripped from input).")
+        }
+
+        // Adobe Dynamic Tag Management (assets.adobedtm.com)
+        val dtmConfigStateClass = "Llv/i;"
+        if (classDefByOrNull(dtmConfigStateClass) != null) {
+            rewriteStringLiteralInClass(
+                definingClass = dtmConfigStateClass,
+                targetString = "https://assets.adobedtm.com/%s.json",
+                replacementString = "https://0.0.0.0/%s.json",
+                hookedMethods = hookedMethods,
+                label = "DTM.assetsUrl",
+            )
+        } else {
+            println("[Block Telemetry & Trackers] Skipped: ConfigurationStateManager (lv.i) absent (DTM fetch stripped from input).")
+        }
+
+        println("[Block Telemetry & Trackers] Neutralized ${hookedMethods.size} telemetry dispatch methods and endpoints: ${hookedMethods.joinToString(", ")}.")
     }
 }

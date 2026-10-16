@@ -126,7 +126,8 @@ public enum PatchFamily {
     HDR_BOOST(FamilyNames.HDR_BOOST, "hdrBoost", null, Settings.TURN_OFF_HDR_BOOSTS),
     MEDIA_CACHE(FamilyNames.MEDIA_CACHE, "mediaCache", null, Settings.CLEAR_MEDIA_CACHE),
     FRIENDSHIP_STATUS(FamilyNames.FRIENDSHIP_STATUS, "friendshipStatus", null, Settings.SHOW_FRIENDSHIP_STATUS,
-            Settings.MARK_FOLLOWING_LIST, Settings.FRIENDSHIP_STATUS_CHIP, Settings.FOLLOWING_NOT_BACK_FIRST),
+            Settings.MARK_FOLLOWING_LIST, Settings.FRIENDSHIP_STATUS_CHIP, Settings.FOLLOWING_NOT_BACK_FIRST,
+            Settings.TRACK_UNFOLLOWERS),
     PROFILE_SUGGESTIONS(FamilyNames.PROFILE_SUGGESTIONS, "profileSuggestions", null, Settings.HIDE_PROFILE_SUGGESTIONS,
             Settings.HIDE_FOLLOW_LIST_SUGGESTIONS, Settings.HIDE_PROFILE_COMPLETION, Settings.HIDE_FOLLOW_BACK_SUGGESTIONS,
             Settings.HIDE_NOTIFICATION_SUGGESTIONS),
@@ -153,11 +154,13 @@ public enum PatchFamily {
             Settings.HIDE_CREATE_TAB, Settings.HIDE_PROFILE_TAB, Settings.HIDE_HOME_CREATE_BUTTON,
             Settings.HIDE_HOME_NOTIFICATIONS_BUTTON, Settings.SEARCH_BUTTON_ON_HOME, Settings.GHOST_BUTTON_ON_HOME,
             Settings.CENTER_HOME_LOGO, Settings.CENTER_PROFILE_NAME, Settings.CENTER_SCREEN_TITLES, Settings.SHOW_REELS_TAB,
-            Settings.SHOW_MESSAGES_TAB, Settings.MESSAGES_BUTTON_ON_HOME, Settings.SHOW_ACTIVITY_TAB, Settings.HIDE_HOME_TAB),
+            Settings.SHOW_MESSAGES_TAB, Settings.MESSAGES_BUTTON_ON_HOME, Settings.HIDE_HOME_MESSAGES_BUTTON,
+            Settings.SHOW_ACTIVITY_TAB, Settings.HIDE_HOME_TAB),
     REELS_SUGGESTIONS(FamilyNames.REELS_SUGGESTIONS, "reelsSuggestions", null, Settings.HIDE_REELS_SUGGESTIONS),
     PAID_PARTNERSHIP_REELS(FamilyNames.PAID_PARTNERSHIP_REELS, "paidPartnershipReels", null,
             Settings.HIDE_PAID_PARTNERSHIP_REELS),
     AI_LABELED_REELS(FamilyNames.AI_LABELED_REELS, "aiLabeledReels", null, Settings.HIDE_AI_LABELED_REELS),
+    CAPTION_WORD_REELS(FamilyNames.CAPTION_WORD_REELS, "captionWordReels", null, Settings.HIDE_CAPTION_WORD_REELS),
     KEEP_REEL_SPEED(FamilyNames.KEEP_REEL_SPEED, "keepReelSpeed", null, Settings.KEEP_REEL_SPEED),
     REEL_POST_TIME(FamilyNames.REEL_POST_TIME, "reelPostTime", null, Settings.SHOW_REEL_POST_TIME),
     REEL_SEEK_BAR(FamilyNames.REEL_SEEK_BAR, "reelSeekBar", null, Settings.REEL_SEEK_BAR, Settings.REEL_SEEK_THUMB, Settings.BIG_REEL_SEEK_BAR,
@@ -238,6 +241,21 @@ public enum PatchFamily {
         Set<PatchFamily> families = inBuildForTests;
         if (families != null) return families.contains(FRIENDSHIP_STATUS);
         return FRIENDSHIP_STATUS.inBuild() && SettingsStatus.followingListMark();
+    }
+
+    /** Whether a test says this build keeps Recent unfollowers, instead of asking {@link SettingsStatus}. */
+    @Nullable
+    static volatile Boolean unfollowersForTests;
+
+    /**
+     * Whether this build keeps Recent unfollowers. It goes in only with the Following list switches,
+     * and without them or when Instagram's follow list pager has moved, it isn't offered.
+     */
+    public static boolean unfollowersInBuild() {
+        Boolean forced = unfollowersForTests;
+        if (forced != null) return forced;
+        if (!followingListMarkInBuild()) return false;
+        return inBuildForTests != null || SettingsStatus.unfollowers();
     }
 
     /** Whether a test says this build copies a commenter's username, instead of asking {@link SettingsStatus}. */
@@ -363,6 +381,8 @@ public enum PatchFamily {
                 }
                 if (family == FRIENDSHIP_STATUS && !followingListMarkInBuild()) {
                     lines.add("  Mark who doesn't follow you back: not in this build (Instagram's follow list didn't match)");
+                } else if (family == FRIENDSHIP_STATUS && !unfollowersInBuild()) {
+                    lines.add("  Recent unfollowers: not in this build (Instagram's follow list pager didn't match)");
                 }
                 if (family == DEVELOPER_OPTIONS && !overrideExchangeInBuild()) {
                     lines.add("  Export, Validate and Import overrides: not in this build (Instagram's override reader didn't match)");

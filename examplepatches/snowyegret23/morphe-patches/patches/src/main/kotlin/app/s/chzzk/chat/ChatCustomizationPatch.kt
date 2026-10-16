@@ -53,7 +53,7 @@ private fun BytecodePatchContext.bridge(name: String, body: String) {
 val chatCustomizationPatch = bytecodePatch(
     name = "Chat customization",
     description = "Adds in-player Morphe settings, draggable chat width, chat styling, individual badge controls, " +
-        "device icons, live catch-up, audio compression and volume boost, player button visibility, recent chat and settings copy/paste.",
+        "device icons, live viewer count, live catch-up, audio compression and volume boost, player button visibility, recent chat and settings copy/paste.",
 ) {
     compatibleWith(COMPATIBILITY_CHZZK)
     extendWith("extensions/chzzk.mpe")
@@ -64,6 +64,7 @@ val chatCustomizationPatch = bytecodePatch(
         addChatUiHooks()
         addPlayerHooks()
         addAudioHooks()
+        addViewerCountHooks()
         val stateFactory = classDefBy("Landroidx/compose/runtime/SnapshotStateKt;").methods.single {
             it.returnType == "Landroidx/compose/runtime/MutableState;" &&
                 it.parameterTypeNames == listOf("Ljava/lang/Object;")
@@ -167,6 +168,7 @@ val chatCustomizationPatch = bytecodePatch(
         val widthOwners = when (packageMetadata.versionName) {
             "3.14.0" -> setOf("Low0;", "Lzp0;")
             "3.14.10" -> setOf("Lpw0;", "Laq0;")
+            "3.15.0" -> setOf("Lvx0;", "Lmm0;")
             else -> error("Unsupported CHZZK version: ${packageMetadata.versionName}")
         }
         var widthMethods = 0

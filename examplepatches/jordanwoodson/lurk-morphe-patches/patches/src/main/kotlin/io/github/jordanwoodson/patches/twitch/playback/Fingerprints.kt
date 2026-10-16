@@ -1,6 +1,7 @@
 package io.github.jordanwoodson.patches.twitch.playback
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.methodCall
 import com.android.tools.smali.dexlib2.AccessFlags
 
 internal object AutoplayPreferenceFingerprint : Fingerprint(
@@ -16,6 +17,16 @@ internal object AutoplayObserverFingerprint : Fingerprint(
 internal object QualityPreferencesFingerprint : Fingerprint(
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.CONSTRUCTOR),
     returnType = "V", strings = listOf("should_video_auto_quality_downgrade", "last_used_video_quality", "auto"),
+)
+
+// The native player's select-by-name (live, VOD and vertical video): Twitch matches the requested name
+// against each IVS Quality's name. A pending request is retried through this method once qualities load.
+internal object PlayerQualityByNameFingerprint : Fingerprint(
+    returnType = "V", parameters = listOf("Ljava/lang/String;", "Z"), strings = listOf("auto"),
+    filters = listOf(
+        methodCall(definingClass = "Lcom/amazonaws/ivs/player/Player;", name = "getQualities"),
+        methodCall(definingClass = "Lcom/amazonaws/ivs/player/Quality;", name = "getName"),
+    ),
 )
 
 // Stable React Native library boundary. Exactly one pushNull produces an absent-key result row.
@@ -35,4 +46,17 @@ internal object RecommendationAutoplayFingerprint : Fingerprint(
 internal object RecommendationCountdownFingerprint : Fingerprint(
     parameters = listOf("L"), returnType = "V",
     strings = listOf("progress", "Recommended model: ", " cannot be bound"),
+)
+
+// The app setting "Continue Playing Audio in the Background", which every player reads when the app is
+// left. Twitch's fallback when none is saved is "never".
+internal object BackgroundAudioSettingFingerprint : Fingerprint(
+    returnType = "L", parameters = emptyList(),
+    strings = listOf("background_audio_setting", "never", "headphones_speaker", "always"),
+)
+
+// Whether the native player's video stats panel is available: staff accounts with a debug preference.
+internal object VideoDebugPanelFingerprint : Fingerprint(
+    returnType = "Z", parameters = emptyList(), strings = listOf("showVideoDebugPanel"),
+    filters = listOf(methodCall(definingClass = "Landroid/content/SharedPreferences;", name = "getBoolean")),
 )

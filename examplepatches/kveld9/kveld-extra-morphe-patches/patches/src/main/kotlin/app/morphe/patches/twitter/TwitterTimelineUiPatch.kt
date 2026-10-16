@@ -27,6 +27,8 @@ import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.Constants
+import app.morphe.patches.shared.wrapWithScratchRegisters
+import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
@@ -114,80 +116,10 @@ private val liveBannerFingerprint = Fingerprint(
     strings = listOf("x_lite_livestream_pill_enabled"),
 )
 
-context(_: BytecodePatchContext)
-private fun neutralizeFlag(
-    fingerprint: Fingerprint,
-    flagKey: String,
-    patchName: String,
-): Boolean {
-    val method = fingerprint.method
-    val instructions = method.implementation?.instructions?.toList() ?: return false
-    val stringIndex = instructions.indexOfFirst { ins ->
-        (ins as? ReferenceInstruction)?.reference?.let { ref ->
-            (ref as? StringReference)?.string == flagKey
-        } == true
-    }
-    if (stringIndex < 0) {
-        println("[$patchName] Flag string '$flagKey' not found in instructions.")
-        return false
-    }
+private val homeTopicsTabFlagFingerprint = Fingerprint(
+    strings = listOf("hometimeline_pinned_tabs_topics_enabled"),
+)
 
-    val invokeIndex = (stringIndex + 1 until minOf(instructions.size, stringIndex + 15)).firstOrNull { i ->
-        instructions[i].opcode.name.startsWith("invoke-")
-    }
-    if (invokeIndex == null || invokeIndex + 1 >= instructions.size) {
-        println("[$patchName] No invoke instruction found after flag '$flagKey'.")
-        return false
-    }
-
-    val resultIns = instructions[invokeIndex + 1]
-    when (resultIns.opcode) {
-        Opcode.MOVE_RESULT -> {
-            val reg = (resultIns as OneRegisterInstruction).registerA
-            val constIns = if (reg <= 15) "const/4 v$reg, 0x0" else "const/16 v$reg, 0x0"
-            method.addInstructions(invokeIndex + 2, constIns)
-            return true
-        }
-        Opcode.MOVE_RESULT_OBJECT -> {
-            val reg = (resultIns as OneRegisterInstruction).registerA
-            method.addInstructions(
-                invokeIndex + 2,
-                "sget-object v$reg, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;",
-            )
-
-            val updatedInstructions = method.implementation?.instructions?.toList() ?: emptyList()
-            val booleanValueInvoke = (invokeIndex + 2 until minOf(updatedInstructions.size, invokeIndex + 10)).firstOrNull { i ->
-                val ins = updatedInstructions[i]
-                ins.opcode.name.startsWith("invoke-") &&
-                    ((ins as? ReferenceInstruction)?.reference as? MethodReference)?.name == "booleanValue"
-            }
-            if (booleanValueInvoke != null && booleanValueInvoke + 1 < updatedInstructions.size &&
-                updatedInstructions[booleanValueInvoke + 1].opcode == Opcode.MOVE_RESULT
-            ) {
-                val boolReg = (updatedInstructions[booleanValueInvoke + 1] as OneRegisterInstruction).registerA
-                val constIns = if (boolReg <= 15) "const/4 v$boolReg, 0x0" else "const/16 v$boolReg, 0x0"
-                method.addInstructions(booleanValueInvoke + 2, constIns)
-            }
-            return true
-        }
-        else -> {
-            val branchIndex = (invokeIndex until minOf(instructions.size, invokeIndex + 5)).firstOrNull { i ->
-                instructions[i].opcode.name.startsWith("if-")
-            }
-            if (branchIndex != null) {
-                val branchIns = instructions[branchIndex]
-                val reg = (branchIns as? OneRegisterInstruction)?.registerA
-                if (reg != null) {
-                    val constIns = if (reg <= 15) "const/4 v$reg, 0x0" else "const/16 v$reg, 0x0"
-                    method.addInstructions(branchIndex, constIns)
-                    return true
-                }
-            }
-            println("[$patchName] Unexpected instruction '${resultIns.opcode}' after invoke for flag '$flagKey'.")
-            return false
-        }
-    }
-}
 
 @Suppress("unused")
 val twitterTimelineUiPatch = bytecodePatch(
@@ -288,7 +220,7 @@ val twitterTimelineUiPatch = bytecodePatch(
     val timelineAddTab by booleanOption(
         key = "timelineAddTab",
         default = true,
-        title = "Timeline Add Tab",
+        title = "Hide Timeline Add Tab",
         description = "Hide add tab (+) button in home timeline tab header.",
         required = false,
     )
@@ -488,7 +420,7 @@ val twitterTimelineUiPatch = bytecodePatch(
                 0,
                 """
                     move-object/from16 v0, p1
-                    if-eqz v0, :cond_filter_end
+                    if-eqz v0, :tlflt_cond_filter_end
 
                     new-instance v1, Ljava/util/ArrayList;
                     invoke-direct {v1}, Ljava/util/ArrayList;-><init>()V
@@ -496,64 +428,48 @@ val twitterTimelineUiPatch = bytecodePatch(
                     invoke-interface {v0}, Ljava/util/List;->iterator()Ljava/util/Iterator;
                     move-result-object v0
 
-                    :loop_start
+                    :tlflt_loop_start
                     invoke-interface {v0}, Ljava/util/Iterator;->hasNext()Z
                     move-result v2
-                    if-eqz v2, :loop_end
+                    if-eqz v2, :tlflt_loop_end
 
                     invoke-interface {v0}, Ljava/util/Iterator;->next()Ljava/lang/Object;
                     move-result-object v2
                     check-cast v2, Lcom/x/models/timelines/items/p0;
 
                     instance-of v3, v2, Lcom/x/models/timelines/items/b1;
-                    if-eqz v3, :cond_add_item
+                    if-eqz v3, :tlflt_cond_add_item
 
                     move-object v3, v2
                     check-cast v3, Lcom/x/models/timelines/items/b1;
 
                     # Check 1: entryId contains who-to-follow, who_to_follow, or user_recommendations
                     iget-object v4, v3, Lcom/x/models/timelines/items/b1;->f:Ljava/lang/String;
-                    if-eqz v4, :cond_check_controller
+                    if-eqz v4, :tlflt_cond_check_inner
 
                     const-string v5, "who-to-follow"
                     invoke-virtual {v4, v5}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
                     move-result v5
-                    if-nez v5, :cond_drop_item
+                    if-nez v5, :tlflt_cond_drop_item
 
                     const-string v5, "who_to_follow"
                     invoke-virtual {v4, v5}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
                     move-result v5
-                    if-nez v5, :cond_drop_item
+                    if-nez v5, :tlflt_cond_drop_item
 
                     const-string v5, "user_recommendations"
                     invoke-virtual {v4, v5}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
                     move-result v5
-                    if-nez v5, :cond_drop_item
+                    if-nez v5, :tlflt_cond_drop_item
 
-                    :cond_check_controller
-                    # Check 2: clientEventInfo.suggestionDetails.controllerData contains wtf_user
-                    iget-object v4, v3, Lcom/x/models/timelines/items/b1;->g:Lcom/x/models/u0;
-                    if-eqz v4, :cond_check_inner
-
-                    iget-object v4, v4, Lcom/x/models/u0;->d:Lcom/x/models/xc;
-                    if-eqz v4, :cond_check_inner
-
-                    iget-object v4, v4, Lcom/x/models/xc;->a:Ljava/lang/String;
-                    if-eqz v4, :cond_check_inner
-
-                    const-string v5, "wtf_user"
-                    invoke-virtual {v4, v5}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
-                    move-result v5
-                    if-nez v5, :cond_drop_item
-
-                    :cond_check_inner
-                    # Check 3: innerContent contains c2 (UrtTimelineUser)
+                    :tlflt_cond_check_inner
+                    # Check 3: innerContent contains d2 (UrtTimelineUser)
                     iget-object v4, v3, Lcom/x/models/timelines/items/b1;->a:Ljava/util/List;
-                    if-eqz v4, :cond_add_item
+                    if-eqz v4, :tlflt_cond_add_item
 
                     invoke-interface {v4}, Ljava/util/List;->isEmpty()Z
                     move-result v5
-                    if-nez v5, :cond_add_item
+                    if-nez v5, :tlflt_cond_add_item
 
                     const/4 v5, 0x0
                     invoke-interface {v4, v5}, Ljava/util/List;->get(I)Ljava/lang/Object;
@@ -561,24 +477,24 @@ val twitterTimelineUiPatch = bytecodePatch(
 
                     # Defect 2 guard: verify instance-of e1 before casting
                     instance-of v5, v4, Lcom/x/models/timelines/items/e1;
-                    if-eqz v5, :cond_add_item
+                    if-eqz v5, :tlflt_cond_add_item
 
                     check-cast v4, Lcom/x/models/timelines/items/e1;
                     iget-object v4, v4, Lcom/x/models/timelines/items/e1;->a:Lcom/x/models/timelines/items/p0;
-                    instance-of v5, v4, Lcom/x/models/timelines/items/c2;
-                    if-nez v5, :cond_drop_item
+                    instance-of v5, v4, Lcom/x/models/timelines/items/d2;
+                    if-nez v5, :tlflt_cond_drop_item
 
-                    :cond_add_item
+                    :tlflt_cond_add_item
                     invoke-interface {v1, v2}, Ljava/util/List;->add(Ljava/lang/Object;)Z
-                    goto :loop_start
+                    goto :tlflt_loop_start
 
-                    :cond_drop_item
-                    goto :loop_start
+                    :tlflt_cond_drop_item
+                    goto :tlflt_loop_start
 
-                    :loop_end
+                    :tlflt_loop_end
                     move-object/from16 p1, v1
 
-                    :cond_filter_end
+                    :tlflt_cond_filter_end
                     nop
                 """.trimIndent(),
             )
@@ -589,42 +505,65 @@ val twitterTimelineUiPatch = bytecodePatch(
 
         // 5. hideDiscoverMore
         if (hideDiscoverMore ?: true) {
-            val suppressionSmali = """
-                move-object/from16 v0, p2
-                if-nez v0, :cond_check_item
-                goto :cond_continue
-
-                :cond_check_item
+            val discoverItemTestSmali = """
+                :tluid_cond_check_item
                 invoke-interface {v0}, Lcom/x/models/timelines/items/p0;->c()Ljava/lang/String;
                 move-result-object v1
-                if-eqz v1, :cond_continue
+                if-eqz v1, :tluid_cond_continue
 
-                :cond_check_entry_id
+                :tluid_cond_check_entry_id
                 const-string v2, "discover"
                 invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
                 move-result v2
-                if-nez v2, :cond_suppress_discover
+                if-nez v2, :tluid_cond_suppress_discover
 
                 const-string v2, "Discover"
                 invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
                 move-result v2
-                if-nez v2, :cond_suppress_discover
+                if-nez v2, :tluid_cond_suppress_discover
 
-                goto :cond_continue
+                goto :tluid_cond_continue
 
-                :cond_suppress_discover
-                sget-object v0, Lcom/x/urt/b0;->a:Lcom/x/urt/b0;
+                :tluid_cond_suppress_discover
+                sget-object v0, Lcom/x/urt/e0;->a:Lcom/x/urt/e0;
                 return-object v0
+            """.trimIndent()
 
-                :cond_continue
+            val inlineSmali = """
+                move-object/from16 v0, p2
+                if-nez v0, :tluid_cond_check_item
+                goto :tluid_cond_continue
+
+                $discoverItemTestSmali
+
+                :tluid_cond_continue
                 nop
             """.trimIndent()
 
+            val wrapperSmali = """
+                move-object/from16 v0, p2
+                if-nez v0, :tluid_cond_check_item
+                goto :tluid_cond_continue
+
+                $discoverItemTestSmali
+
+                :tluid_cond_continue
+                invoke-virtual {p0, p1, p2}, Lcom/x/postdetail/m;->morphePostDetailPresenterTimelineUi(ILcom/x/models/timelines/items/p0;)Lcom/x/presenter/a;
+                move-result-object v0
+                return-object v0
+            """.trimIndent()
+
             val discBefore = patched
-            urtItemPresenterFingerprint.method.addInstructionsWithLabels(0, suppressionSmali)
+            urtItemPresenterFingerprint.method.addInstructionsWithLabels(0, inlineSmali)
             patched++
 
-            postDetailPresenterFingerprint.method.addInstructionsWithLabels(0, suppressionSmali)
+            val wrapped = postDetailPresenterFingerprint.method.wrapWithScratchRegisters(
+                mutableClassDefBy(postDetailPresenterFingerprint.method.definingClass),
+                "morphePostDetailPresenterTimelineUi",
+                3,
+                wrapperSmali,
+            )
+            if (!wrapped) postDetailPresenterFingerprint.method.addInstructionsWithLabels(0, inlineSmali)
             patched++
 
             if (patched == discBefore) {
@@ -883,6 +822,7 @@ val twitterTimelineUiPatch = bytecodePatch(
                 if (ifEqzIdx >= 0 && pagerConstIdx - ifEqzIdx <= 3) {
                     val reg = (pagerInstructions[ifEqzIdx] as OneRegisterInstruction).registerA
                     val constIns = if (reg <= 15) "const/4 v$reg, 0x0" else "const/16 v$reg, 0x0"
+                    requireNotJumpTarget(pagerMethod, ifEqzIdx, "Timeline UI")
                     pagerMethod.addInstructions(ifEqzIdx, constIns)
                     patched++
                 } else {
@@ -905,6 +845,7 @@ val twitterTimelineUiPatch = bytecodePatch(
                 if (ifEqzIdx >= 0 && headerConstIdx - ifEqzIdx <= 3) {
                     val reg = (headerInstructions[ifEqzIdx] as OneRegisterInstruction).registerA
                     val constIns = if (reg <= 15) "const/4 v$reg, 0x0" else "const/16 v$reg, 0x0"
+                    requireNotJumpTarget(headerMethod, ifEqzIdx, "Timeline UI")
                     headerMethod.addInstructions(ifEqzIdx, constIns)
                     patched++
                 } else {
@@ -912,6 +853,12 @@ val twitterTimelineUiPatch = bytecodePatch(
                 }
             } else {
                 error("[Timeline UI] Target group constant -868946867 not found in Lcom/x/home/tabbed/a;->f.")
+            }
+
+            if (neutralizeFlag(homeTopicsTabFlagFingerprint, "hometimeline_pinned_tabs_topics_enabled", "Timeline UI")) {
+                patched++
+            } else {
+                error("[Timeline UI] Failed to neutralize 'hometimeline_pinned_tabs_topics_enabled' flag.")
             }
         } else {
             println("[Timeline UI] Skipped timelineAddTab: disabled by patch option.")
@@ -935,8 +882,14 @@ val twitterTimelineUiPatch = bytecodePatch(
                 if (ifEqzIdx >= 0) {
                     val reg = (instructions[ifEqzIdx] as OneRegisterInstruction).registerA
                     val constIns = if (reg <= 15) "const/4 v$reg, 0x0" else "const/16 v$reg, 0x0"
-                    method.addInstructions(ifEqzIdx, constIns)
-                    patched++
+                    val paramRegs = method.parameterTypes.sumOf { if (it.toString() == "J" || it.toString() == "D") 2 else 1 } + (if (AccessFlags.STATIC.isSet(method.accessFlags)) 0 else 1)
+                    val registerCount = method.implementation!!.registerCount
+                    if (reg >= registerCount - paramRegs) {
+                        method.addInstructions(0, constIns)
+                        patched++
+                    } else {
+                        error("[Timeline UI] Top bar branch register v$reg is not a method parameter in Lcom/x/home/tabbed/a;->i.")
+                    }
                 } else {
                     error("[Timeline UI] Preceding if-eqz branch not found before follow button field in Lcom/x/home/tabbed/a;->i.")
                 }

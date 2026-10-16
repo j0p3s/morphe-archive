@@ -94,8 +94,12 @@ Until you resume, every switch but Debug logging and Lock Facebook acts as if it
 Shows your phone's own emoji instead of Facebook's. Reactions and stickers don't change. Restart Facebook to see the change.	Zeigt die Emoji deines Telefons statt der von Facebook. Reaktionen und Sticker bleiben gleich. Starte Facebook neu, um die Änderung zu sehen.
 # context: switch title under Appearance; the tab bar is Facebook's row of tabs, Home, Video, Marketplace and the rest
 Tab bar at the bottom	Tab-Leiste unten
+# context: switch title under Appearance, next to Tab bar at the bottom; puts Facebook's row of tabs at the top of the screen
+Tab bar at the top	Tab-Leiste oben
 # context: description of that switch; Facebook shows the tab bar at the top of the screen on some accounts and at the bottom on others
 Moves Facebook's tab bar to the bottom, within thumb reach, on accounts that show it at the top. Restart Facebook to see the change.	Verschiebt Facebooks Tab-Leiste nach unten, in Reichweite des Daumens, wenn sie bei deinem Konto oben steht. Starte Facebook neu, um die Änderung zu sehen.
+# context: summary of that switch; the search row is the top bar with the Facebook logo, search and Messenger
+Moves Facebook's tab bar to the top, under the search row, as older Facebook had it. Restart Facebook to see the change.	Verschiebt Facebooks Tab-Leiste nach oben, unter die Suchleiste, wie im älteren Facebook. Starte Facebook neu, um die Änderung zu sehen.
 # context: switch title under Appearance, right after Tab bar at the bottom; the bar slides off the screen while you scroll the feed down
 Hide the tab bar while scrolling	Tab-Leiste beim Scrollen ausblenden
 # context: description of that switch; it does nothing while the tab bar is at the top of the screen
@@ -369,6 +373,8 @@ Feeds	Feeds
 Video	Video
 Friends	Freunde
 Marketplace	Marketplace
+# context: a tab's name, as Facebook's tab bar shows it; the list of tabs Facebook can open on
+Events	Veranstaltungen
 Notifications	Benachrichtigungen
 Menu	Menü
 # context: summary of the tab list; %1$s is one of the tab names above
@@ -416,7 +422,7 @@ Tapping the Messenger icon at the top of Facebook opens the Messenger app instea
 # context: switch title under Chats; on, Facebook leaves ringing for calls and notifying about chats to the Messenger app
 Leave calls and chats to Messenger	Anrufe und Chats Messenger überlassen
 # context: summary of that switch; signed out means not logged in to the Messenger app, turned off means the app is disabled in Android's settings
-Facebook stops ringing for calls and notifying you about chats while Messenger is installed, so only Messenger does. Without Messenger, or with it turned off, Facebook rings and notifies as before. If you're signed out of Messenger, you'll miss calls and messages.	Facebook klingelt nicht mehr bei Anrufen und benachrichtigt dich nicht mehr über Chats, solange Messenger installiert ist, sodass nur Messenger das tut. Ohne Messenger oder wenn es ausgeschaltet ist, klingelt und benachrichtigt Facebook wie bisher. Bist du in Messenger abgemeldet, verpasst du Anrufe und Nachrichten.
+Facebook leaves calls and chat notifications to Messenger while Messenger is installed and enabled. Restart Facebook after changing this switch, or after installing, removing, enabling or disabling Messenger, so call routing updates. If you're signed out of Messenger, you'll miss calls and messages.	Facebook überlässt Anrufe und Chat-Benachrichtigungen Messenger, solange Messenger installiert und aktiviert ist. Starte Facebook nach einer Änderung dieses Schalters oder nach dem Installieren, Entfernen, Aktivieren oder Deaktivieren von Messenger neu, damit die Anrufweiterleitung aktualisiert wird. Bist du in Messenger abgemeldet, verpasst du Anrufe und Nachrichten.
 # context: settings section heading for the Tap to play switch
 Playback	Wiedergabe
 # context: switch title; on, videos and music wait for a tap before they play
@@ -425,6 +431,8 @@ Tap to play	Zum Abspielen tippen
 Videos, reels, stories and music wait for your tap instead of playing by themselves. Facebook's own Autoplay setting shows Off while this is on.	Videos, Reels, Stories und Musik warten auf dein Antippen, statt von selbst zu starten. Facebooks eigene Autoplay-Einstellung zeigt Aus, solange das aktiv ist.
 # context: switch title under Opening Facebook; Marketplace is Facebook's tab and keeps its name
 Marketplace only	Nur Marketplace
+# context: switch title under Opening Facebook, next to Marketplace only; Events is Facebook's tab and keeps its name
+Events only	Nur Veranstaltungen
 # context: summary of that switch; the tab names are Facebook's own, as its tab bar shows them
 # context: switch title under Menu; Upgrades is the name of a section in Facebook's own Menu
 Hide Upgrades	„Upgrades“ ausblenden
@@ -515,9 +523,13 @@ Hide "Stories you might like"	„Stories, die dir gefallen könnten“ ausblende
 Hide Memories in the feed	Erinnerungen im Feed ausblenden
 Hide friend requests in the feed	Freundschaftsanfragen im Feed ausblenden
 Hide friends' locations	Standorte von Freunden ausblenden
+# context: switch title under News feed, part of Hide suggested and promoted posts; a post opened by tapping a notification
+Hide more posts under notification posts	Weitere Beiträge unter Beiträgen aus Benachrichtigungen ausblenden
 Hides Memories between posts, like "On this day" and friendship anniversaries. Your Memories page stays.	Blendet Erinnerungen zwischen Beiträgen aus, etwa „An diesem Tag“ und Freundschaftsjubiläen. Deine Erinnerungsseite bleibt.
 Hides friend requests shown between posts. Your requests stay under Friends.	Blendet Freundschaftsanfragen zwischen Beiträgen aus. Deine Anfragen bleiben unter Freunde.
 Hides the card between posts that shows where your friends are.	Blendet die Karte zwischen Beiträgen aus, die zeigt, wo deine Freunde sind.
+# context: summary of that switch; "More from your friends" is the heading Facebook shows over that list
+A post you open from a notification ends without the "More from your friends" list Facebook adds under it, which can carry ads.	Ein Beitrag, den du über eine Benachrichtigung öffnest, endet ohne die Liste „Mehr von deinen Freunden“, die Facebook darunter anhängt und die Werbung enthalten kann.
 # context: summary of that switch; the Stories tray is the row of Stories at the top of the feed
 Hides the row of Stories from people you aren't connected to, between posts. Your friends' Stories and the Stories tray stay.	Blendet die Reihe mit Stories von Personen aus, mit denen du nicht verbunden bist, zwischen Beiträgen. Die Stories deiner Freunde und die Stories-Leiste bleiben.
 # context: switch title under Notifications; trending videos Facebook sends as push notifications
@@ -667,26 +679,42 @@ Hides posts featuring Meta's AI characters, the chatbots people make with Meta A
 Also hides posts their creator labeled as made with AI, not just the ones Facebook detects itself. Untested on a real feed, so it starts off.	Blendet auch Beiträge aus, die ihr Urheber als mit KI erstellt gekennzeichnet hat, nicht nur die, die Facebook selbst erkennt. Auf einem echten Feed noch nicht getestet, daher startet es ausgeschaltet.
 Return to regular Facebook	Zurück zum normalen Facebook
 Restore the normal tabs at the next restart. Your other settings stay saved.	Beim nächsten Neustart werden die normalen Tabs wiederhergestellt. Deine anderen Einstellungen bleiben gespeichert.
-Marketplace only is off. Restart Facebook to restore its normal tabs.	Marketplace-Modus ist aus. Starte Facebook neu, um die normalen Tabs wiederherzustellen.
+Marketplace only and Events only are off. Restart Facebook to restore its normal tabs.	Nur Marketplace und Nur Veranstaltungen sind aus. Starte Facebook neu, um die normalen Tabs wiederherzustellen.
 Couldn't save the change. Try again.	Die Änderung konnte nicht gespeichert werden. Versuch es erneut.
 Marketplace only chooses the opening tab. Your previous choice stays saved.	Der Marketplace-Modus bestimmt den Start-Tab. Deine bisherige Auswahl bleibt gespeichert.
+# context: summary of the tab rows under Opening Facebook while Events only is on
+Events only chooses the opening tab. Your previous choice stays saved.	Der Veranstaltungs-Modus bestimmt den Start-Tab. Deine bisherige Auswahl bleibt gespeichert.
 Restart needed. Marketplace only will turn on the next time Facebook starts.	Neustart erforderlich. Der Marketplace-Modus wird beim nächsten Start von Facebook aktiviert.
+# context: status line under the Events only switch
+Restart needed. Events only will turn on the next time Facebook starts.	Neustart erforderlich. Der Veranstaltungs-Modus wird beim nächsten Start von Facebook aktiviert.
 Restart needed. The normal tabs will return the next time Facebook starts.	Neustart erforderlich. Die normalen Tabs kehren beim nächsten Start von Facebook zurück.
 Marketplace is hidden in Facebook's tab settings. Show it under Settings, Tab bar, Customize the bar. Your normal tabs stay available.	Marketplace ist in Facebooks Tab-Einstellungen ausgeblendet. Blende es unter Einstellungen, Tab-Leiste, Leiste anpassen ein. Deine normalen Tabs bleiben verfügbar.
+# context: status line under the Events only switch; Settings, Tab bar and Customize the bar are Facebook's own names
+Events is hidden in Facebook's tab settings. Pin it under Settings, Tab bar, Customize the bar. Your normal tabs stay available.	Veranstaltungen ist in Facebooks Tab-Einstellungen ausgeblendet. Hefte den Tab unter Einstellungen, Tab-Leiste, Leiste anpassen an. Deine normalen Tabs bleiben verfügbar.
 Marketplace unavailable. Facebook hasn't supplied a Marketplace tab for this account. Your normal tabs stay available.	Marketplace nicht verfügbar. Facebook hat für dieses Konto keinen Marketplace-Tab bereitgestellt. Deine normalen Tabs bleiben verfügbar.
+# context: status line under the Events only switch
+Events isn't on your tab bar. Pin it under Settings, Tab bar, Customize the bar, then restart Facebook. Your normal tabs stay available.	Veranstaltungen ist nicht in deiner Tab-Leiste. Hefte den Tab unter Einstellungen, Tab-Leiste, Leiste anpassen an und starte Facebook neu. Deine normalen Tabs bleiben verfügbar.
 Couldn't check the tab bar. Your normal tabs stay available. Restart Facebook to try again.	Die Tab-Leiste konnte nicht geprüft werden. Deine normalen Tabs bleiben verfügbar. Starte Facebook neu, um es erneut zu versuchen.
 Waiting for Facebook's tab bar. Marketplace only will apply when Facebook builds it.	Warten auf Facebooks Tab-Leiste. Der Marketplace-Modus wird angewendet, sobald Facebook sie erstellt.
+# context: status line under the Events only switch
+Waiting for Facebook's tab bar. Events only will apply when Facebook builds it.	Warten auf Facebooks Tab-Leiste. Der Veranstaltungs-Modus wird angewendet, sobald Facebook sie erstellt.
 Off. Turn on to open Marketplace and hide the feed and other social tabs after restarting Facebook.	Aus. Aktiviere den Modus, um nach einem Neustart von Facebook Marketplace zu öffnen und den Feed sowie andere soziale Tabs auszublenden.
+# context: status line under the Events only switch
+Off. Turn on to open Events and hide the feed and other social tabs after restarting Facebook.	Aus. Aktiviere den Modus, um nach einem Neustart von Facebook Veranstaltungen zu öffnen und den Feed sowie andere soziale Tabs auszublenden.
 Quiet social notifications	Soziale Benachrichtigungen stummschalten
 Skip feed preloading	Feed-Vorladen überspringen
-Marketplace only is off.	Marketplace-Modus ist aus.
+Marketplace only and Events only are off.	Nur Marketplace und Nur Veranstaltungen sind aus.
 Paused with Hushfacebook. Your Marketplace choice stays saved. Tabs already hidden return after a restart while paused.	Mit Hushfacebook pausiert. Deine Marketplace-Auswahl bleibt gespeichert. Bereits ausgeblendete Tabs kehren nach einem Neustart zurück, solange Hushfacebook pausiert ist.
+# context: status line under the Events only switch
+Paused with Hushfacebook. Your Events choice stays saved. Tabs already hidden return after a restart while paused.	Mit Hushfacebook pausiert. Deine Veranstaltungen-Auswahl bleibt gespeichert. Bereits ausgeblendete Tabs kehren nach einem Neustart zurück, solange Hushfacebook pausiert ist.
 While Marketplace only is on, silences video suggestions, memories, birthdays and friend suggestions. Messages and trading updates still arrive.	Solange der Marktplatz-Modus an ist, werden Videovorschläge, Erinnerungen, Geburtstage und Freundschaftsvorschläge stummgeschaltet. Nachrichten und Handelsmeldungen kommen weiterhin an.
 While Marketplace only is on, loads less of the feed in the background. Some loading still happens at startup.	Solange der Marktplatz-Modus an ist, wird weniger vom Feed im Hintergrund geladen. Beim Start wird trotzdem noch etwas geladen.
 Active. Marketplace, Notifications and Profile/Menu stay. Find Hushfacebook settings in Menu, under Settings and privacy.	Aktiv. Marketplace, Benachrichtigungen und Profil/Menü bleiben erhalten. Die Hushfacebook-Einstellungen findest du im Menü unter Einstellungen und Privatsphäre.
+# context: status line under the Events only switch; Menu is Facebook's tab
+Active. Events, Notifications and Profile/Menu stay. Find Hushfacebook settings in Menu, under Settings and privacy.	Aktiv. Veranstaltungen, Benachrichtigungen und Profil/Menü bleiben erhalten. Die Hushfacebook-Einstellungen findest du im Menü unter Einstellungen und Privatsphäre.
 
 # context: Settings overview, category navigation and search.
-Marketplace only and your start tab	Marketplace-Modus und Starttab
+Marketplace only, Events only and your start tab	Marketplace-Modus, Veranstaltungs-Modus und Starttab
 Ads, suggestions and word filters	Werbung, Vorschläge und Wortfilter
 Suggestions, saving, auto-advance and viewing anonymously	Vorschläge, Speichern, automatischer Wechsel und anonymes Ansehen
 Cleaner reels and video controls	Reels und Videosteuerung
@@ -968,7 +996,7 @@ Adds Watch history, the videos and reels you've watched, to the menu you get by 
 Adds Watch history, the videos and reels you've watched, to the menu you get by holding Facebook's icon, if there's room. Existing shortcuts stay.	Fügt Wiedergabeverlauf, also die Videos und Reels, die du angesehen hast, zum Menü hinzu, das beim langen Drücken des Facebook-Symbols erscheint, wenn Platz ist. Vorhandene Verknüpfungen bleiben.
 # context: The optional matching mode for both post word lists.
 Match whole words	Ganze Wörter abgleichen
-Matches whole words only, in both lists. For example, hat matches hat! but not what or hats.	Gleicht nur ganze Wörter ab, in beiden Listen. Zum Beispiel passt hat zu hat!, aber nicht zu what oder hats.
+Matches whole words only, in both lists. For example, "hat" matches "hat!" but not "what" or "hats".	Gleicht nur ganze Wörter ab, in beiden Listen. Zum Beispiel passt „hat“ zu „hat!“, aber nicht zu „what“ oder „hats“.
 Off	Aus
 On	Ein
 Saved now %1$s. After import %2$s.	Aktuell gespeichert %1$s. Nach dem Import %2$s.
@@ -984,7 +1012,7 @@ Stops the small vibrations Facebook makes when you tap or swipe. Your keyboard a
 Turn off screen transitions	Bildschirmübergänge ausschalten
 Tabs, the Menu and screens that open over Facebook appear at once instead of sliding in. Swiping between tabs still works.	Tabs, das Menü und Seiten, die sich über Facebook öffnen, erscheinen sofort, ohne einzugleiten. Das Wischen zwischen Tabs funktioniert weiterhin.
 Unlock app icons	App-Symbole freischalten
-Lets you pick the app icons Facebook keeps for Facebook Plus, on Facebook's App icon page. The Pick an app icon row opens that page. Your pick stays if you turn this off, so pick the blue one first to go back.	Du kannst auch die App-Symbole wählen, die Facebook für Facebook Plus vorbehält, auf Facebooks Seite „App-Symbol“. Die Zeile „App-Symbol wählen“ öffnet sie. Deine Wahl bleibt, wenn du das ausschaltest. Wähle also zuerst das blaue, um zurückzuwechseln.
+Lets you pick the app icons Facebook keeps for Facebook Plus, on Facebook's App icon page. The Pick an app icon row opens that page. Your pick also replaces the Facebook wordmark at the top of Home. Your pick stays if you turn this off, so pick the blue one first to go back.	Du kannst auch die App-Symbole wählen, die Facebook für Facebook Plus vorbehält, auf Facebooks Seite „App-Symbol“. Die Zeile „App-Symbol wählen“ öffnet sie. Deine Wahl ersetzt auch den Facebook-Schriftzug oben auf der Startseite. Deine Wahl bleibt, wenn du das ausschaltest. Wähle also zuerst das blaue, um zurückzuwechseln.
 # context: settings row under Appearance, right below the Unlock app icons switch; opens Facebook's own App icon page, so use Facebook's name for that page in this language
 Pick an app icon	App-Symbol wählen
 Opens Facebook's App icon page, even on accounts where Facebook doesn't list it in Settings and privacy.	Öffnet Facebooks Seite „App-Symbol“, auch bei Konten, bei denen Facebook sie nicht unter Einstellungen und Privatsphäre anzeigt.
@@ -1334,6 +1362,8 @@ Posts you've scrolled past stay out of the feed when it loads again. The list st
 # context: title of the row under that switch that picks how many days a seen post stays hidden
 Keep seen posts hidden for	Gesehene Beiträge ausgeblendet lassen für
 Turn on %1$s to use this.	Schalte %1$s ein, um das zu nutzen.
+# context: added to a greyed-out switch's summary; %1$s is the title of another switch that overrides it while on
+Turn off %1$s to use this.	Schalte %1$s aus, um das zu nutzen.
 # context: choice in that row
 1 day	1 Tag
 # context: choice in that row
@@ -1371,7 +1401,7 @@ Share to a group	In einer Gruppe teilen
 Share to a Page	Auf einer Seite teilen
 Copy link	Link kopieren
 Share sheet items to hide	Beim Teilen ausgeblendete Einträge
-None. The share sheet shows everything Facebook offers.	Keine. Beim Teilen zeigt Facebook alles, was es anbietet.
+None picked yet.	Noch nichts ausgewählt.
 Hidden: %s	Ausgeblendet: %s
 Hide from the share sheet	Beim Teilen ausblenden
 # context: last item of the opened list of default patches a build lacks, after eight names; the count of patches not named, always 2 or more
@@ -1481,6 +1511,8 @@ Restart Facebook to apply this change	Starte Facebook neu, um diese Änderung zu
 Restart Facebook to apply %1$d changes	Starte Facebook neu, um %1$d Änderungen zu übernehmen
 # context: summary of that row; after the restart the settings screen opens again on the same page
 Facebook closes and reopens on this page.	Facebook schließt sich und öffnet sich wieder auf dieser Seite.
+# context: title of the row just above Support at the end of the settings home page; a tap restarts Facebook at any time
+Restart Facebook	Facebook neu starten
 # context: row near the end of the settings home page; opens a new bug report on GitHub
 Report a problem	Problem melden
 Opens a GitHub report with your versions and settings filled in. Add what happened.	Öffnet eine GitHub-Meldung, in der deine Versionen und Einstellungen schon stehen. Ergänze, was passiert ist.

@@ -38,8 +38,13 @@ public final class ConfigurationBackup {
     public static final long UNDO_WINDOW_MS = 10_000;
     /** The longest text a file may set. The longest real one, a sharing domain, is 253. */
     static final int MAX_TEXT = 256;
+    /**
+     * The longest list of blocked words, which its row also holds to: the longest text the file's
+     * reader takes, so a list that's saved always comes back.
+     */
+    static final int MAX_WORDS_TEXT = 4096;
     private static final SettingsJson.Limits LIMITS =
-            new SettingsJson.Limits(4, 2048, 4096, MAX_ENTRIES, MAX_BYTES);
+            new SettingsJson.Limits(4, 2048, MAX_WORDS_TEXT, MAX_ENTRIES, MAX_BYTES);
     private static Map<Setting<?>, Object> undoValues;
     private static Map<Setting<?>, Object> importedValues;
     private static Map<Setting<?>, Long> importedRevisions;
@@ -73,6 +78,7 @@ public final class ConfigurationBackup {
         }
         if (PatchFamily.ROUNDED_POST_CORNERS.inBuild()) settings.put(Settings.ROUNDED_CORNER_SIZE.key, Settings.ROUNDED_CORNER_SIZE);
         if (PatchFamily.SPOOF_LOCATION.inBuild()) settings.put(Settings.SPOOF_LOCATION_PLACE.key, Settings.SPOOF_LOCATION_PLACE);
+        if (PatchFamily.CAPTION_WORD_REELS.inBuild()) settings.put(Settings.REELS_BLOCKED_WORDS.key, Settings.REELS_BLOCKED_WORDS);
         if (PatchFamily.SANITIZE_SHARING_LINKS.inBuild()) settings.put(Settings.SHARING_DOMAIN.key, Settings.SHARING_DOMAIN);
         if (PatchFamily.LIKE_ANIMATION.inBuild()) settings.put(Settings.LIKE_ANIMATION.key, Settings.LIKE_ANIMATION);
         if (PatchFamily.NOTIFICATION_GROUPS.inBuild()) {
@@ -87,7 +93,10 @@ public final class ConfigurationBackup {
         }
         if (PatchFamily.TAP_TO_PLAY.inBuild()) settings.put(Settings.TAP_TO_PLAY_SCOPE.key, Settings.TAP_TO_PLAY_SCOPE);
         if (PatchFamily.REEL_TAP_AND_VOLUME.inBuild()) settings.put(Settings.REEL_TAP_CHOICE.key, Settings.REEL_TAP_CHOICE);
-        if (PatchFamily.REEL_DECLUTTER.inBuild()) settings.put(Settings.BURN_IN_GUARD.key, Settings.BURN_IN_GUARD);
+        if (PatchFamily.REEL_DECLUTTER.inBuild()) {
+            settings.put(Settings.BURN_IN_GUARD.key, Settings.BURN_IN_GUARD);
+            settings.put(Settings.BURN_IN_WAIT.key, Settings.BURN_IN_WAIT);
+        }
         if (PatchFamily.STORY_TIME.inBuild()) settings.put(Settings.STORY_TIME_MODE.key, Settings.STORY_TIME_MODE);
         if (PatchFamily.FRIENDSHIP_STATUS.inBuild()) settings.put(Settings.FOLLOW_LABEL_PLACE.key, Settings.FOLLOW_LABEL_PLACE);
         if (PatchFamily.REELS_TAB.inBuild()) {
@@ -109,10 +118,12 @@ public final class ConfigurationBackup {
         }
         if (PatchFamily.REEL_POST_TIME.inBuild()) {
             settings.put(Settings.REEL_POST_TIME_SECONDS.key, Settings.REEL_POST_TIME_SECONDS);
+            settings.put(Settings.REEL_POST_TIME_AGO.key, Settings.REEL_POST_TIME_AGO);
         }
         if (PatchFamily.VIDEO_DOWNLOAD.inBuild()) settings.put(Settings.DOWNLOAD_FEED_COVER.key, Settings.DOWNLOAD_FEED_COVER);
         if (PatchFamily.VIDEO_DOWNLOAD.inBuild()) {
             settings.put(Settings.FEED_DOWNLOAD_BUTTON.key, Settings.FEED_DOWNLOAD_BUTTON);
+            settings.put(Settings.FEED_DOWNLOAD_ALL_PAGES.key, Settings.FEED_DOWNLOAD_ALL_PAGES);
             settings.put(Settings.HOLD_TO_DOWNLOAD.key, Settings.HOLD_TO_DOWNLOAD);
             settings.put(Settings.HOLD_FINGERS.key, Settings.HOLD_FINGERS);
             settings.put(Settings.HOLD_TIME.key, Settings.HOLD_TIME);
@@ -235,13 +246,15 @@ public final class ConfigurationBackup {
     /**
      * [value] as [setting] would save it, declared as [declared], or null when this build can't take
      * it: another type than the setting's, an enum constant it doesn't have, text over
-     * {@link #MAX_TEXT} characters or text {@link #textAllowed} refuses.
+     * {@link #MAX_TEXT} characters ({@link #MAX_WORDS_TEXT} for the blocked words) or text
+     * {@link #textAllowed} refuses.
      */
     @Nullable
     static Object accepted(Setting<?> setting, String declared, Object value) {
         Object fallback = setting.defaultValue;
         if (fallback instanceof Boolean) return "boolean".equals(declared) && value instanceof Boolean ? value : null;
-        if (!(value instanceof String) || ((String) value).length() > MAX_TEXT) return null;
+        int longest = setting == Settings.REELS_BLOCKED_WORDS ? MAX_WORDS_TEXT : MAX_TEXT;
+        if (!(value instanceof String) || ((String) value).length() > longest) return null;
         if (fallback instanceof Enum) {
             if (!"enum".equals(declared)) return null;
             for (Object choice : ((Enum<?>) fallback).getDeclaringClass().getEnumConstants()) {
@@ -251,6 +264,15 @@ public final class ConfigurationBackup {
         }
         if (fallback instanceof String) return "string".equals(declared) && textAllowed(setting, (String) value) ? value : null;
         return null;
+    }
+
+    /** Whether [text] is a list of blocked words its row could have saved: no control characters but line breaks. */
+    static boolean blockedWordsAllowed(String text) {
+        for (int at = 0; at < text.length(); at++) {
+            char character = text.charAt(at);
+            if (Character.isISOControl(character) && character != '\n' && character != '\r') return false;
+        }
+        return true;
     }
 
     /**
@@ -264,6 +286,8 @@ public final class ConfigurationBackup {
         // The Place row keeps what was typed, spaces too, and takes blank as no place.
         if (setting == Settings.SPOOF_LOCATION_PLACE) return text.trim().isEmpty() || SpoofLocation.parse(text) != null;
         if (setting == Settings.TAB_ORDER) return text.equals(TabOrder.join(TabOrder.parse(text)));
+        // The words Hide reels by caption words looks for: any text without control characters but line breaks.
+        if (setting == Settings.REELS_BLOCKED_WORDS) return blockedWordsAllowed(text);
         // An enum constant name of Instagram's; a name this Instagram lacks keeps its heart.
         if (setting == Settings.LIKE_ANIMATION) return text.matches("[A-Za-z0-9_$]{0,64}");
         return false;

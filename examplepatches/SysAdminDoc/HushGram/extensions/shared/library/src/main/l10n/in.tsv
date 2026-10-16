@@ -908,7 +908,7 @@ Takes the heart off the top of Home and closes up the gap. Alerts still arrive. 
 Ghost mode button on Home's header	Tombol mode hantu di header Beranda
 Adds a ghost button at the top of Home, next to Messages when it's there and at the end of the buttons when it isn't. Tap it to turn Ghost mode on or off. Restart Instagram to see the change.	Menambahkan tombol hantu di bagian atas Beranda, di samping Pesan jika ada, dan di ujung deretan tombol jika tidak ada. Ketuk untuk mengaktifkan atau menonaktifkan mode hantu. Mulai ulang Instagram untuk melihat perubahannya.
 Search button on Home's header	Tombol Cari di header Beranda
-Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works with the Search tab hidden too, unless you swipe between your tabs. Restart Instagram to see the change.	Menambahkan kaca pembesar di bagian atas Beranda yang membuka Cari, seperti tab Cari. Ini juga berfungsi saat tab Cari disembunyikan, kecuali kamu menggeser di antara tab. Mulai ulang Instagram untuk melihat perubahannya.
+Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works with the Search tab hidden too. Restart Instagram to see the change.	Menambahkan kaca pembesar di bagian atas Beranda yang membuka Cari, seperti tab Cari. Ini juga berfungsi saat tab Cari disembunyikan. Mulai ulang Instagram untuk melihat perubahannya.
 Messages button on Home's header	Tombol Pesan di header Beranda
 Adds a Messages button at the top of Home when Instagram moved Messages to your tab bar. A tap opens your messages like the tab does. Restart Instagram to see the change.	Menambahkan tombol Pesan di bagian atas Beranda saat Instagram memindahkan Pesan ke bilah tab kamu. Ketuk untuk membuka pesanmu seperti tab-nya. Mulai ulang Instagram untuk melihat perubahannya.
 # context: toasts when the Messages button on Home's header can't open Messages because it isn't on the swiping tab bar
@@ -926,8 +926,9 @@ Restart Instagram to bring Search back to your tab bar.	Mulai ulang Instagram ag
 Tab order	Urutan tab
 The tab bar keeps Instagram's order.	Bilah tab memakai urutan Instagram.
 Tabs go in this order: %1$s. Restart Instagram to see the change.	Tab diurutkan seperti ini: %1$s. Mulai ulang Instagram untuk melihat perubahannya.
-Tap a tab to move it up	Ketuk tab untuk memindahkannya ke atas
-Instagram's order	Urutan Instagram
+Show and reorder tabs	Tampilkan dan atur ulang tab
+Drag to move %1$s	Seret untuk memindahkan %1$s
+Reset	Atur ulang
 Create	Buat
 Start tab	Tab awal
 Instagram opens the way it always has, which can be Reels if you left it there.	Instagram terbuka seperti biasa, bisa di Reels kalau terakhir kamu di sana.
@@ -1021,8 +1022,11 @@ Hide the Save button on reels	Sembunyikan tombol Simpan di reel
 Burn-in guard	Pelindung burn-in
 Dim when idle	Redupkan saat diam
 Dim when idle and shift	Redupkan saat diam dan geser
-On the Reels screen, the buttons, caption and bars fade after 5 seconds without a touch. A touch brings them back.	Di layar Reels, tombol, keterangan, dan bilah memudar setelah 5 detik tanpa sentuhan. Sentuhan mengembalikannya.
-On the Reels screen, the buttons, caption and bars fade after 5 seconds without a touch, and the screen moves a step every 2 minutes. A touch brings them back.	Di layar Reels, tombol, keterangan, dan bilah memudar setelah 5 detik tanpa sentuhan, dan layar bergeser sedikit setiap 2 menit. Sentuhan mengembalikannya.
+On the Reels screen, the buttons, caption and bars fade when you leave them alone. Touching one of them brings them back.	Di layar Reels, tombol, keterangan, dan bilah memudar saat dibiarkan. Menyentuh salah satunya mengembalikannya.
+On the Reels screen, the buttons, caption and bars fade when you leave them alone, and the screen moves a step every 2 minutes. Touching one of them brings them back.	Di layar Reels, tombol, keterangan, dan bilah memudar saat dibiarkan, dan layar bergeser sedikit setiap 2 menit. Menyentuh salah satunya mengembalikannya.
+Dim after	Redupkan setelah
+At once	Langsung
+Tapping the video, double-tapping it to like, and Save and Download don't count as a touch, so the buttons stay faded.	Mengetuk video, mengetuk dua kali untuk menyukai, serta Simpan dan Unduh tidak dihitung sebagai sentuhan, jadi tombol tetap pudar.
 Off. It can fade a reel's buttons while the screen sits untouched, so they don't burn into an OLED screen.	Nonaktif. Bisa meredupkan tombol reel saat layar tidak disentuh, agar tidak membekas di layar OLED.
 Takes the Save button out of the column of buttons beside a reel, and the count under it. Posts in your feed keep theirs.	Menghapus tombol Simpan dari deretan tombol di samping reel, beserta angka di bawahnya. Postingan di feed-mu tetap punya tombolnya.
 Keep clear mode on	Tetap aktifkan mode bersih
@@ -1123,3 +1127,41 @@ Couldn't load your font file, so Instagram's font shows. Pick it again in HushGr
 Hide AI-labeled reels	Sembunyikan reel berlabel AI
 # context: the line under the Hide AI-labeled reels switch
 Leaves out reels that carry Instagram's own AI label. A reel without that label stays, even if AI made it.	Menghilangkan reel yang membawa label AI milik Instagram. Reel tanpa label itu tetap ada, meski dibuat dengan AI.
+# context: Downloads switch under Download button on feed posts; on a carousel the icon saves every page instead of asking which
+Save every page without asking	Simpan semua halaman tanpa bertanya
+On a carousel, the download icon saves all of its pages at once instead of asking.	Pada carousel, ikon unduh menyimpan semua halamannya sekaligus tanpa bertanya.
+# context: Reels switch Hide reels by caption words, its Blocked words list row and that row's summary; %1$d is how many words
+Hide reels by caption words	Sembunyikan reel berdasarkan kata di keterangan
+Also on Home	Juga di Beranda
+Leaves out posts on Home whose caption holds a word or phrase from the list too. Pull down on Home to refresh after changing it.	Juga menyembunyikan postingan di Beranda yang keterangannya memuat kata atau frasa dari daftar. Tarik Beranda ke bawah untuk menyegarkan setelah mengubahnya.
+Leaves out reels in the Reels tab whose caption holds a word or phrase from the list below. A reel you open yourself still plays.	Menyisihkan reel di tab Reels yang keterangannya memuat kata atau frasa dari daftar di bawah. Reel yang kamu buka sendiri tetap diputar.
+Blocked words	Kata yang diblokir
+Words or phrases, with a comma or a new line between them. Capital letters don't matter, and a hashtag works too.	Kata atau frasa, dipisahkan koma atau baris baru. Huruf besar tidak berpengaruh, dan tagar juga bisa.
+No words yet	Belum ada kata
+%1$d word	%1$d kata
+%1$d words	%1$d kata
+# context: Reels > Show a reel's exact time: how long ago a reel was posted (#195). %1$s is a short span like 1d 2h 5m, already in this language.
+Show how long ago a reel was posted	Tampilkan sudah berapa lama reel diposting
+Shows the days, hours and minutes since it went up on a line under the time, like 1d 2h 5m ago.	Menampilkan hari, jam, dan menit sejak diposting di baris di bawah waktunya, seperti 1 hr, 2 j, 5 mnt yang lalu.
+%1$s ago	%1$s yang lalu
+# context: Profiles > Recent unfollowers: the switch's title (#208).
+Recent unfollowers	Berhenti mengikuti baru-baru ini
+Each time you scroll your own Followers list to the end, compares it with the last time and lists who's gone. Nothing extra is asked of Instagram, and the list stays on your phone.	Setiap kali kamu menggulir daftar Pengikut milikmu sampai akhir, daftar itu dibandingkan dengan terakhir kali dan menampilkan siapa yang pergi. Tidak ada permintaan tambahan ke Instagram, dan daftarnya tetap di ponselmu.
+# context: Profiles > Recent unfollowers: the row listing accounts that left your Followers list.
+Who unfollowed you	Siapa yang berhenti mengikutimu
+Reading the list…	Membaca daftar…
+Nothing to compare yet. With Recent unfollowers on, open your own Followers list and scroll to the end. The next time you do, anyone missing shows here.	Belum ada yang bisa dibandingkan. Dengan Berhenti mengikuti baru-baru ini aktif, buka daftar Pengikut milikmu dan gulir sampai akhir. Lain kali kamu melakukannya, siapa pun yang hilang muncul di sini.
+# context: %1$s is a date, already in this language.
+Last seen in full on %1$s.	Terakhir dilihat lengkap pada %1$s.
+No one has left since then.	Belum ada yang pergi sejak itu.
+# context: %1$s is an account's number, shown when it has no username.
+Account %1$s	Akun %1$s
+# context: %1$s is @username, %2$s a date already in this language: the day the account was first seen missing.
+%1$s, gone by %2$s	%1$s, pergi sebelum %2$s
+Only the newest 50 are shown.	Hanya 50 terbaru yang ditampilkan.
+Clear unfollower list	Hapus daftar berhenti mengikuti
+Forgets the saved Followers lists and everyone listed above, for all your accounts.	Melupakan daftar Pengikut yang tersimpan dan semua yang tercantum di atas, untuk semua akunmu.
+Unfollower list cleared.	Daftar berhenti mengikuti dihapus.
+Couldn't clear the unfollower list. Try again.	Tidak bisa menghapus daftar berhenti mengikuti. Coba lagi.
+Hide Messages on Home's header	Sembunyikan Pesan di header Beranda
+Takes Instagram's Messages button off the top of Home, for when Messages is on your tab bar too. Restart Instagram to see the change.	Menghapus tombol Pesan Instagram dari bagian atas Beranda, untuk saat Pesan juga ada di bilah tab kamu. Mulai ulang Instagram untuk melihat perubahannya.

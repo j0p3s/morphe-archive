@@ -46,7 +46,8 @@ internal fun BytecodePatchContext.addSettingsEntry() {
         return-void
     """.trimIndent())
     screen.methods.add(entry)
-    val list = mutableClassDefBy("Lu0;").methods.single { method ->
+    val listOwner = if (packageMetadata.versionName == "3.15.0") "Lx0;" else "Lu0;"
+    val list = mutableClassDefBy(listOwner).methods.single { method ->
         method.implementation?.instructions?.any {
             it.getReference<StringReference>()?.string == "시청 환경 설정"
         } == true

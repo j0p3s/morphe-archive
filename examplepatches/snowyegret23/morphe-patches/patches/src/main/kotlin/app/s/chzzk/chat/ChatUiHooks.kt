@@ -38,10 +38,11 @@ internal fun BytecodePatchContext.uiBridge(name: String, registers: Int, body: S
 }
 
 internal fun BytecodePatchContext.addChatUiHooks() {
-    val layoutWidth = mutableClassDefBy("Lh7;").methods.single { it.name == "invoke" }
+    val layoutOwner = if (packageMetadata.versionName == "3.15.0") "Lj7;" else "Lh7;"
+    val layoutWidth = mutableClassDefBy(layoutOwner).methods.single { it.name == "invoke" }
     check(layoutWidth.localRegisterCount >= 4)
     layoutWidth.addInstructionsWithLabels(0, """
-        iget v0, p0, Lh7;->Z:I
+        iget v0, p0, $layoutOwner->Z:I
         const/4 v1, 0x4
         if-eq v0, v1, :chat_width
         const/4 v1, 0x5
@@ -50,18 +51,18 @@ internal fun BytecodePatchContext.addChatUiHooks() {
         if-eq v0, v1, :video_width
         goto :original_width
         :chat_width
-        iget-object v0, p0, Lh7;->a0:Landroidx/compose/runtime/State;
+        iget-object v0, p0, $layoutOwner->a0:Landroidx/compose/runtime/State;
         invoke-interface {v0}, Landroidx/compose/runtime/State;->getValue()Ljava/lang/Object;
         move-result-object v0
         check-cast v0, Landroidx/compose/ui/unit/Dp;
         iget v0, v0, Landroidx/compose/ui/unit/Dp;->Z:F
-        iget-object v1, p0, Lh7;->b0:Landroidx/compose/runtime/State;
+        iget-object v1, p0, $layoutOwner->b0:Landroidx/compose/runtime/State;
         invoke-interface {v1}, Landroidx/compose/runtime/State;->getValue()Ljava/lang/Object;
         move-result-object v1
         check-cast v1, Landroidx/compose/ui/unit/Dp;
         iget v1, v1, Landroidx/compose/ui/unit/Dp;->Z:F
         add-float/2addr v0, v1
-        iget-object v1, p0, Lh7;->c0:Landroidx/compose/runtime/MutableState;
+        iget-object v1, p0, $layoutOwner->c0:Landroidx/compose/runtime/MutableState;
         invoke-interface {v1}, Landroidx/compose/runtime/State;->getValue()Ljava/lang/Object;
         move-result-object v1
         check-cast v1, Landroidx/compose/ui/unit/Dp;
@@ -75,19 +76,19 @@ internal fun BytecodePatchContext.addChatUiHooks() {
         move-result v0
         goto :width_result
         :video_width
-        iget-object v0, p0, Lh7;->c0:Landroidx/compose/runtime/MutableState;
+        iget-object v0, p0, $layoutOwner->c0:Landroidx/compose/runtime/MutableState;
         invoke-interface {v0}, Landroidx/compose/runtime/State;->getValue()Ljava/lang/Object;
         move-result-object v0
         check-cast v0, Landroidx/compose/ui/unit/Dp;
         iget v0, v0, Landroidx/compose/ui/unit/Dp;->Z:F
-        iget-object v1, p0, Lh7;->a0:Landroidx/compose/runtime/State;
+        iget-object v1, p0, $layoutOwner->a0:Landroidx/compose/runtime/State;
         invoke-interface {v1}, Landroidx/compose/runtime/State;->getValue()Ljava/lang/Object;
         move-result-object v1
         check-cast v1, Ljava/lang/Boolean;
         invoke-virtual {v1}, Ljava/lang/Boolean;->booleanValue()Z
         move-result v1
         if-eqz v1, :width_result
-        iget-object v1, p0, Lh7;->b0:Landroidx/compose/runtime/State;
+        iget-object v1, p0, $layoutOwner->b0:Landroidx/compose/runtime/State;
         invoke-interface {v1}, Landroidx/compose/runtime/State;->getValue()Ljava/lang/Object;
         move-result-object v1
         check-cast v1, Landroidx/compose/ui/unit/Dp;

@@ -5,6 +5,9 @@
 package app.hushgram.extension.instagram.reels;
 
 import android.content.Context;
+import android.icu.text.MeasureFormat;
+import android.icu.util.Measure;
+import android.icu.util.MeasureUnit;
 import android.text.format.DateFormat;
 import android.text.format.DateUtils;
 import android.view.View;
@@ -12,12 +15,14 @@ import android.view.View;
 import androidx.annotation.Nullable;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
 import app.hushgram.extension.instagram.settings.FamilyNames;
 import app.hushgram.extension.instagram.settings.Settings;
 import app.hushgram.extension.instagram.stories.StoryTime;
+import app.hushgram.extension.shared.L10n;
 import app.hushgram.extension.shared.Utils;
 import app.hushgram.extension.shared.diagnostics.HookStatus;
 
@@ -42,8 +47,11 @@ import app.hushgram.extension.shared.diagnostics.HookStatus;
  * <p>The time is the post's taken_at, the server's own posting time in seconds, written the way a
  * post's exact time is: the date and the time in the phone's language, time zone and 12 or 24-hour
  * setting, like Oct 2, 3:45 PM, with the year for another year. {@link Settings#REEL_POST_TIME_SECONDS}
- * adds the seconds, like Oct 2, 3:45:30 PM. A time that is zero, negative, too large to be one, or
- * more than a day past the phone's clock isn't a posting time, and gets no line.
+ * adds the seconds, like Oct 2, 3:45:30 PM, and {@link Settings#REEL_POST_TIME_AGO} how long ago that
+ * was, like 1d 2h 5m ago (#195), on a line of its own under the time, worked out as the reel's title
+ * is made. A time that
+ * is zero, negative, too large to be one, or more than a day past the phone's clock isn't a posting
+ * time, and gets no line.
  *
  * <p>Off, paused, before the settings are read, or when anything throws, the list is left as
  * Instagram made it.
@@ -57,6 +65,8 @@ public final class ReelPostTime {
 
     /** The date alone, as {@link StoryTime#FORMAT} writes it. */
     private static final int DATE = StoryTime.FORMAT & ~DateUtils.FORMAT_SHOW_TIME;
+
+    private static final long MINUTE = 60L * 1000;
 
     /** What a tap on the line does: nothing. Instagram's subtitle text has to be given a listener. */
     private static final View.OnClickListener NO_CLICK = new View.OnClickListener() {
@@ -148,7 +158,8 @@ public final class ReelPostTime {
             Object media = reader.media(title);
             Long posted = media == null ? null : reader.takenAt(media);
             if (posted == null) return;
-            String text = label(Utils.getContext(), posted, Settings.REEL_POST_TIME_SECONDS.get(), now);
+            Context context = Utils.getContext();
+            String text = label(context, posted, Settings.REEL_POST_TIME_SECONDS.get(), now);
             if (text == null) return;
             Object component = reader.component(title, new Line(text));
             if (component == null) return;
@@ -156,6 +167,11 @@ public final class ReelPostTime {
             List<Object> parts = (List<Object>) children;
             parts.add(component);
             HookStatus.bound(FamilyNames.REEL_POST_TIME, "reel time");
+            if (!Settings.REEL_POST_TIME_AGO.get()) return;
+            // A line of its own: next to the Follow button the two together ran out of room.
+            String ago = ago(context, now - posted * 1000L);
+            Object below = ago == null ? null : reader.component(title, new Line(ago));
+            if (below != null) parts.add(below);
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.REEL_POST_TIME, "reel time", failure);
         }
@@ -190,6 +206,31 @@ public final class ReelPostTime {
         if (!exact) return whole;
         String withSeconds = withSeconds(context, posted, whole);
         return withSeconds == null ? whole : withSeconds;
+    }
+
+    /**
+     * How long [elapsed] milliseconds is, like 1d 2h 5m ago: the days, hours and minutes that
+     * aren't none, or the seconds under a minute. The units are written short in the language
+     * HushGram's own words come out in, so the line never mixes two. Null for a time ahead of the
+     * phone's clock, which is a clock a little off rather than a reel from the future.
+     */
+    @Nullable
+    static String ago(@Nullable Context context, long elapsed) {
+        if (context == null || elapsed < 0) return null;
+        long minutes = elapsed / MINUTE;
+        List<Measure> parts = new ArrayList<>(3);
+        if (minutes == 0) {
+            parts.add(new Measure(elapsed / 1000L, MeasureUnit.SECOND));
+        } else {
+            long days = minutes / (24 * 60);
+            long hours = minutes / 60 % 24;
+            if (days > 0) parts.add(new Measure(days, MeasureUnit.DAY));
+            if (hours > 0) parts.add(new Measure(hours, MeasureUnit.HOUR));
+            if (minutes % 60 > 0) parts.add(new Measure(minutes % 60, MeasureUnit.MINUTE));
+        }
+        String span = MeasureFormat.getInstance(L10n.textLocale(context), MeasureFormat.FormatWidth.NARROW)
+                .formatMeasures(parts.toArray(new Measure[0]));
+        return L10n.f(context, "%1$s ago", span);
     }
 
     /**

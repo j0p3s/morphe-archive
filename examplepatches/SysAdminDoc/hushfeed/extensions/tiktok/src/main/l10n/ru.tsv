@@ -1268,6 +1268,8 @@ This video has no link to send, so TikTok's own save runs instead	У этого 
 This video has no original sound to save	У этого видео нет оригинального звука для сохранения
 This video has no sound of its own	У этого видео нет собственного звука
 Thumbs down blocks the commenter	Палец вниз блокирует автора комментария
+Block from a comment's menu	Блокировка из меню комментария
+Press and hold a comment to find Block this commenter in its menu. Their comments leave the list right away and an undo banner follows.	Нажмите и удерживайте комментарий, чтобы найти в меню пункт «Заблокировать этого комментирующего». Его комментарии сразу исчезнут из списка, а затем появится баннер отмены.
 TikTok default	Стандарт TikTok
 TikTok default (hold to speed up, quick share)	Стандарт TikTok (удержание ускоряет, быстрая отправка)
 TikTok didn't block %1$s. Try again in a moment.	TikTok не заблокировал %1$s. Повторите попытку через момент.
@@ -1506,7 +1508,7 @@ Hide the Products block and product cards in search results.	Скрывать б
 Hide TikTok's Auto scroll button	Скрывать кнопку автопрокрутки TikTok
 Takes TikTok's own Auto scroll action out of the video panel. Auto-advance keeps working.	Убирает собственную функцию автопрокрутки TikTok из панели видео. Автоматическое переключение продолжает работать.
 Hide the unread badges on the bottom tabs	Скрывать значки непрочитанного на нижних вкладках
-Hide the red counts and dots on every bottom tab, Inbox and Profile included. The inbox itself still shows what came in.	Скрывать красные счётчики и точки на всех нижних вкладках, включая «Входящие» и «Профиль». Сами входящие по-прежнему показывают, что пришло.
+Hide the red counts and dots on every bottom tab, Inbox and Profile included, and the bubble over Inbox that counts new likes, followers, comments and who's LIVE. The inbox itself still shows what came in.	Скрывать красные счётчики и точки на всех нижних вкладках, включая «Входящие» и «Профиль», а также всплывающий значок над «Входящими» с числом новых лайков, подписчиков, комментариев и тех, кто в LIVE. Сами входящие по-прежнему показывают, что пришло.
 Speed while you hold the video	Скорость при удержании видео
 Hide mini dramas	Скрывать мини-драмы
 Hide TikTok's short drama episodes and the cards that promote them.	Скрывать короткие драма-эпизоды TikTok и карточки, которые их продвигают.
@@ -1877,6 +1879,8 @@ Keep the LIVE quality after TikTok restarts	Сохранять качество 
 TikTok forgets the LIVE quality you picked when it closes. This starts rooms at that quality again after a restart. A room whose stream doesn't have it opens at TikTok's choice.	TikTok забывает выбранное качество LIVE, когда закрывается. Этот переключатель снова запускает комнаты в этом качестве после перезапуска. Комната, в трансляции которой его нет, открывается в качестве, которое выберет TikTok.
 Offer clear screen in every LIVE room	Чистый экран в любой комнате LIVE
 Clear screen hides a LIVE's chat, gifts and buttons so only the stream shows. TikTok puts it in the menu of only some rooms. This adds it to the others.	Чистый экран скрывает чат, подарки и кнопки LIVE, и остаётся только трансляция. TikTok добавляет его в меню лишь некоторых комнат. Этот переключатель добавляет его в остальные.
+Dark LIVE panels in dark mode	Тёмные панели LIVE в тёмной теме
+With TikTok in dark mode, a LIVE room still opens its share menu, fan club and other panels in light colors. This opens them dark.	Даже в тёмной теме комната LIVE открывает меню «Поделиться», фан-клуб и другие панели в светлых цветах. С этим переключателем они открываются тёмными.
 Keep watching in a small window	Смотреть в маленьком окне
 When you leave TikTok while a video plays, it keeps playing in a small window over your other apps, with a button to pause it. Works in the feed and on videos you open from a profile, search or a sound. Needs Android 8 or later.	Если выйти из TikTok во время воспроизведения видео, оно продолжит воспроизводиться в маленьком окне поверх других приложений, с кнопкой паузы. Работает в ленте и в видео, открытых из профиля, поиска или звука. Требуется Android 8 или новее.
 Play	Воспроизвести
@@ -2272,6 +2276,8 @@ See-through bottom bar	Прозрачная нижняя панель
 Let the video reach the bottom of the screen on the main feed and show the tabs over it with no bar behind them.	В основной ленте видео доходит до нижнего края экрана, а вкладки показываются поверх него без панели под ними.
 LIVE chat auto-translate	Автоперевод чата LIVE
 
+The Translate comments button in a LIVE room also needs a Japanese SIM. Turn on Override SIM details in Hushfeed settings > Region, set SIM country preset to Japan, NTT DOCOMO (44010), then restart TikTok.	Кнопке «Перевести комментарии» в LIVE-комнате нужна ещё и японская SIM. Включите «Переопределять данные SIM» в настройках Hushfeed > Регион, выберите в «Предустановка страны SIM» вариант Japan, NTT DOCOMO (44010) и перезапустите TikTok.
+
 Pick videos to save from profile grids	Выбирать видео для сохранения в сетках профилей
 Puts a circle on each video in a profile, Liked or Favorites grid. Pick up to %1$s, then tap Save to save them one after another, with a count and Cancel.	Ставит кружок на каждое видео в сетке профиля, «Понравилось» или «Избранное». Выберите до %1$s, затем нажмите «Сохранить», чтобы сохранить их по очереди, со счётчиком и кнопкой «Отмена».
 Pick for saving	Выбрать для сохранения
@@ -2344,3 +2350,11 @@ Show the main feed's tabs on a rounded, see-through dark pill that floats over t
 # context: a switch on the Comments page. Language, Settings and privacy and App language are TikTok's own labels: its language page, the menu that page sits in, and the page's first row
 Show translation options in Language settings	Показывать параметры перевода в настройках языка
 Brings back the translation rows on TikTok's Language page, under Settings and privacy, for accounts that only see App language there.	Возвращает строки перевода на страницу «Язык» в TikTok (Настройки и конфиденциальность) для аккаунтов, которые видят там только «Язык приложения».
+Only on the sides of the video	Только по бокам видео
+Your Long press choice runs only on the left and right thirds of the video. A press in the middle still opens TikTok's own menu. It needs a Long press choice other than TikTok default.	Выбранное действие для долгого нажатия работает только на левой и правой трети видео. Нажатие посередине по-прежнему открывает собственное меню TikTok. Нужен вариант долгого нажатия, отличный от стандарта TikTok.
+Where the time goes	Где показывать время
+Beside the bar	Рядом с полосой
+Above the bar	Над полосой
+Above puts the time over the right end of the bar while nothing on screen is in the way, and beside the bar when something is.	Над полосой ставит время над правым краем полосы, пока ничто на экране не мешает, а рядом с полосой, когда что-то мешает.
+Full-width progress bar	Полоса прогресса во всю ширину
+Run the progress bar from one screen edge to the other, without the gap TikTok leaves at each end.	Полоса прогресса идёт от одного края экрана до другого, без зазора, который TikTok оставляет с каждого конца.

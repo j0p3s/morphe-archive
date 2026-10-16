@@ -30,6 +30,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `showly.png` | Showly (`com.michaldrabik.showly2`) | Michał Drabik / Trakt | APK 3.70.0, `mipmap/ic_launcher_round`, xxxhdpi |
 | `tiktok.png` | TikTok (`com.zhiliaoapp.musically`) | TikTok Pte. Ltd. | APK 47.0.3, adaptive icon `mipmap/c` |
 | `protonmail.png` | Proton Mail (`ch.protonmail.android`) | Proton AG | APK 7.11.8, adaptive icon `ic_launcher_round` |
+| `protonauthenticator.png` | Proton Authenticator (`proton.android.authenticator`) | Proton AG | APK 1.3.10, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `protonpass.png` | Proton Pass (`proton.android.pass`) | Proton AG | APK 1.40.3, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `audible.png` | Audible (`com.audible.application`) | Audible, Inc. | APK 26.30.05, adaptive icon `adaptive_app_icon_orange_round` |
 | `symfonium.png` | Symfonium (`app.symfonik.music.player`) | Tolriq | APK 14.1.0, adaptive icon `res/mipmap-anydpi-v21/ic_default_launcher.xml` |
@@ -48,12 +49,14 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `vpnsuper.png` | VPN Super Unlimited Proxy (`com.free.vpn.super.hotspot.open`) | VPN Super Unlimited Proxy Master | APK 2.32.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `klassikradio.png` | Klassik Radio+ (`de.klassikradio.app`) | Klassik Radio AG | APK p5.11.1, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `atlomaps.png` | AtloMaps (`com.atlogis.atlomaps`) | ATLOGIS Geoinformatics GmbH & Co. KG | APK 1.0.6, adaptive icon `res/mipmap-anydpi-v26/icon.xml` |
+| `wallmaa.png` | Wallmaa (`com.wallmaa.minimal.wallpapers`) | Bract Studio | APK 1.0.1, `res/mipmap-xxxhdpi-v4/launcher_icon.png` (square icon cut to a circle) |
 | `anytracker.png` | AnyTracker (`com.shervinkoushan.anyTracker`) | Shervin Koushan | APK 7.5.4, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `atvtools.png` | atvTools (`dev.vodik7.atvtools`) | tvDev | APK 1.3.2, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `bettersleep.png` | BetterSleep (`ipnossoft.rma.free`) | BetterSleep Health | APK 26.15, `res/mipmap-xxxhdpi/ic_launcher_round.png` |
 | `dwgfastview.png` | DWG FastView (`com.gstarmc.android`) | Gstarsoft Co., Ltd. | APK 5.21.0, `drawable/ic_launcher`, xxxhdpi, cut to a circle |
 | `mymoveset.png` | MyMoveset (`com.soulbreakers.mymoveset`) | soulBREAKERS | APK downloaded 2026-09-27, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `quranify.png` | Quranify (`com.mchutov.Quranify`) | Media Content Labs, LLC | APK 2.2.8, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
+| `prayertimes.png` | Prayer Times and Qibla (`com.reworewo.prayertimes`) | reworewo | APK 3.8.3, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `rateglance.png` | RateGlance (`com.sry.rateglance`) | choyoworks | APK 1.14.8, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `realmelink.png` | realme Link (`com.realme.link`) | realme Ltd. | APK 5.5.514.11421, `res/mipmap-xxxhdpi-v4/ic_launcher_me.png`, cut to a circle |
 | `ringtonemaker.png` | Ringtone Maker (`ringtonemaker.musiccutter.customringtones.freeringtonemaker`) | Dairy App & Notes & Audio Editor & Voice Recorder | APK 1.01.99.0909, `res/drawable-xxhdpi-v4/logo_oval.png` |
@@ -94,6 +97,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `sqcom.png` | SQCOM (`com.sqcom.shangqing`) | Shenzhen SHANGQING INDUSTRIAL CO., LTD | APK 1.1.0, `mipmap/wd_path_executor` (round icon), xxxhdpi |
 | `publicvideos.png` | Public (`com.cardfeed.video_public`) | Public App | APK 3.3.4, vector `res/drawable/ic_public_app_icon.xml` rasterized at 96x96 |
 | `lagguy.png` | Lagguy Wallpapers (`com.lagguy.wallpapers`) | Lagguy | APK 40.0.44, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
+| `netanalyzer.png` | Network Analyzer (`net.techet.netanalyzerlite.an`) | Jiri Techet | APK 5.1, adaptive icon `res/mipmap-xxxhdpi-v4/lite_background.png` under `lite_foreground.png` |
 
 Showly's icon is also published under GPLv3 in [`trakt/showly`](https://github.com/trakt/showly),
 so its copyright terms are compatible with this one. The rest are used under nominative fair

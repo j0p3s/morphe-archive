@@ -77,6 +77,8 @@ Most runtime features need the patch selected and their setting on. The Pause co
 
 Patch success has two separate checks. A successful apply shows that the patch found its targets and produced an APK. It doesn't show that Facebook served the screen or content the hook expects. Runtime hooks report missing, ambiguous, or thrown states through `HookStatus`, and `scripts/phone-smoke.ps1` checks those reports while opening common screens.
 
+`scripts/device-audit.ps1` goes further and needs no taps from you. It turns on nearly every switch, walks Facebook, compares the hook report with `scripts/device-audit-expectations.json`, and screenshots every settings page in dark and light (`-Locales de` adds a language). When it's done it puts your switches back. It drives Hushfacebook through a folder only adb can create (`Android/data/com.facebook.katana/files/hushfacebook-audit`), so the extras it sends do nothing on a phone that hasn't been set up for an audit. After a move to a new Facebook version, run it on a build you trust and add `-WriteBaseline` to record which hooks the walk reaches. Open `index.html` in its output folder to look through the screens.
+
 ## Adding or changing a patch
 
 Start from the stock Facebook build that the patch should support. Facebook renames much of its code between releases, so an obfuscated class name from one APK is not a reliable anchor for the next one.
@@ -306,6 +308,10 @@ Seen on a Samsung phone (582, 2026-10-10, a signed-in account without Facebook P
 An update loses a picked icon without more. `LoginActivity` and every icon alias carry `enable-stage=enable-cold-pretos` meta-data, and the aliases also carry `default-state=false`. On the first start after an update (a same-version reinstall counts), Facebook's component manager `LX/02t;->A00(Context, PackageManager, Integer[], I)I` (it logs as AppComponentManager and loads `cmp_manager.persist_state`) puts every component back to that state with its one `setComponentEnabledSetting` call. That turned `vaporwave_ic` off and `LoginActivity` on. It isn't the rollback job, which would give `blue_fb`.
 
 `Unlock app icons` answers both checks. It goes first in `8VS.A0A` for that one benefit, and after DCK's move-result. The component manager's call goes through `AppIcons.componentState`, which skips `LoginActivity` and every `LoginActivity.*` alias while the switch is on. Seen on the same phone: the build without it reset `vaporwave_ic` to `LoginActivity` on the first start after `adb install -r`. With it, the pick stayed through the update and two cold starts. With the switch off the update reset it as before. The benefit_usage event still goes. The `XFL` tap handler and the `6Fu` GetCustomAppIcon Bloks action weren't traced.
+
+The Home header uses `WordmarkNavigationBar#createWordmarkView`. Its logo gets the settings long-press listener, then Facebook loads the stock wordmark. The app icon hook runs after that load and hands the same view to `AppIcons.dressLogo`. The extension checks every 582 launcher alias with `getComponentEnabledSetting`, loads the enabled alias with `getActivityIcon`, and fits it inside the existing wordmark height. `LoginActivity` and `LoginActivity.blue_fb` keep the stock wordmark. The two 582 ABI fixtures pin the listener, the stock load and the added call.
+
+Seen on the API 36 emulator with Facebook 582. With `Unlock app icons` on, saving Vaporwave changed the launcher to `LoginActivity.vaporwave_ic`; after a cold start the Home header showed the same full-color icon in place of the wordmark. Saving the normal blue icon changed the launcher to `LoginActivity.blue_fb`; after another cold start the stock wordmark was back. The switch and all launcher components were then restored to their original states. No attached phone was used.
 
 ### Measurement method
 

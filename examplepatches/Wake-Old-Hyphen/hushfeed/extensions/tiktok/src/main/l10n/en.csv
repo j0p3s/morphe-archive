@@ -156,6 +156,8 @@ About,About
 About %1$s of storage at this limit,About %1$s of storage at this limit
 About Hushfeed,About Hushfeed
 About overrides,About overrides
+"Above puts the time over the left end of the bar while nothing on screen is in the way, and beside the bar when something is.","Above puts the time over the left end of the bar while nothing on screen is in the way, and beside the bar when something is."
+Above the bar,Above the bar
 Account facts,Account facts
 Account facts copied,Account facts copied
 Account facts on profiles,Account facts on profiles
@@ -268,11 +270,13 @@ Back,Back
 Back to defaults,Back to defaults
 Back up settings,Back up settings
 Backup and restore,Backup and restore
+Beside the bar,Beside the bar
 Bigger progress bar handle,Bigger progress bar handle
 Bio copied,Bio copied
 Black,Black
 Block clipboard reads,Block clipboard reads
 Block contact list access,Block contact list access
+Block from a comment's menu,Block from a comment's menu
 Block installed app scanning,Block installed app scanning
 Block location,Block location
 Block motion sensors,Block motion sensors
@@ -625,6 +629,7 @@ Full link copied,Full link copied
 Full long-press menu in search results,Full long-press menu in search results
 Full long-press menu on a creator's videos,Full long-press menu on a creator's videos
 Full report saved to %1$s,Full report saved to %1$s
+Full-width progress bar,Full-width progress bar
 GIF,GIF
 Galaxy Store,Galaxy Store
 Gate data unavailable,Gate data unavailable
@@ -780,7 +785,7 @@ Hide the purple rewards button beside Add friends on your profile.,Hide the purp
 Hide the question cards TikTok slides over a video near its end.,Hide the question cards TikTok slides over a video near its end.
 Hide the question cards TikTok sometimes puts in a comment list to ask what you think.,Hide the question cards TikTok sometimes puts in a comment list to ask what you think.
 Hide the quick emoji row and automatic sticker suggestions that appear while you type. The emoji and sticker buttons still work.,Hide the quick emoji row and automatic sticker suggestions that appear while you type. The emoji and sticker buttons still work.
-"Hide the red counts and dots on every bottom tab, Inbox and Profile included. The inbox itself still shows what came in.","Hide the red counts and dots on every bottom tab, Inbox and Profile included. The inbox itself still shows what came in."
+"Hide the red counts and dots on every bottom tab, Inbox and Profile included, and the bubble over Inbox that counts new likes, followers, comments and who's LIVE. The inbox itself still shows what came in.","Hide the red counts and dots on every bottom tab, Inbox and Profile included, and the bubble over Inbox that counts new likes, followers, comments and who's LIVE. The inbox itself still shows what came in."
 Hide the restriction notice on your own profile on this phone. TikTok's restrictions and appeals still apply.,Hide the restriction notice on your own profile on this phone. TikTok's restrictions and appeals still apply.
 Hide the rewards shortcut,Hide the rewards shortcut
 Hide the right column,Hide the right column
@@ -888,6 +893,7 @@ Keep offline videos until you delete them,Keep offline videos until you delete t
 Keep playing in the background,Keep playing in the background
 "Keep playing in the background is on in Hushfeed's Playback settings, so TikTok gets 2 for this key and an override here has no effect until that switch is off.","Keep playing in the background is on in Hushfeed's Playback settings, so TikTok gets 2 for this key and an override here has no effect until that switch is off."
 Keep the Favorites tab,Keep the Favorites tab
+Keep the LIVE quality after TikTok restarts,Keep the LIVE quality after TikTok restarts
 Keep the clock and status icons off the screen while TikTok is open. Swipe down from the top to peek at them.,Keep the clock and status icons off the screen while TikTok is open. Swipe down from the top to peek at them.
 Keep the language picked in TikTok,Keep the language picked in TikTok
 Keep the music disc still,Keep the music disc still
@@ -1129,6 +1135,7 @@ One was already saved,One was already saved
 Only bottom tabs TikTok has loaded on this device are shown here. This doesn't force unavailable tabs to appear.,Only bottom tabs TikTok has loaded on this device are shown here. This doesn't force unavailable tabs to appear.
 Only fields the Lab can check and copy safely are shown.,Only fields the Lab can check and copy safely are shown.
 Only from these countries,Only from these countries
+Only on the sides of the video,Only on the sides of the video
 Only tabs TikTok has loaded on this device are shown here. This doesn't force unavailable tabs to appear.,Only tabs TikTok has loaded on this device are shown here. This doesn't force unavailable tabs to appear.
 Only the first %1$s characters of the sample were checked.,Only the first %1$s characters of the sample were checked.
 Only these caption languages,Only these caption languages
@@ -1226,6 +1233,7 @@ Prefer H.264 video,Prefer H.264 video
 Preset,Preset
 Preset applied. Restart TikTok to use it.,Preset applied. Restart TikTok to use it.
 Preset saved. Turn on overrides in the Lab to use it.,Preset saved. Turn on overrides in the Lab to use it.
+Press and hold a comment to find Block this commenter in its menu. Their comments leave the list right away and an undo banner follows.,Press and hold a comment to find Block this commenter in its menu. Their comments leave the list right away and an undo banner follows.
 Press and hold a profile picture to save the full size original to your photo destination.,Press and hold a profile picture to save the full size original to your photo destination.
 "Press and hold a story to save it. Stories have no save button of their own, and holding one is how TikTok pauses it, so this takes that gesture over.","Press and hold a story to save it. Stories have no save button of their own, and holding one is how TikTok pauses it, so this takes that gesture over."
 Press and hold the Home tab to open these settings. A tap on Home works as before.,Press and hold the Home tab to open these settings. A tap on Home works as before.
@@ -1356,6 +1364,7 @@ Right away,Right away
 Right column,Right column
 Right edge strip,Right edge strip
 Rows,Rows
+"Run the progress bar from one screen edge to the other, without the gap TikTok leaves at each end.","Run the progress bar from one screen edge to the other, without the gap TikTok leaves at each end."
 SIM country preset,SIM country preset
 SOCKS5,SOCKS5
 STEM,STEM
@@ -1775,6 +1784,7 @@ The Lab couldn't open. Go back and open it again.,The Lab couldn't open. Go back
 The Message requests row leaves the Inbox. Requests keep arriving and wait there until you turn this off.,The Message requests row leaves the Inbox. Requests keep arriving and wait there until you turn this off.
 The New followers row leaves the top of the Inbox. The accounts still follow you.,The New followers row leaves the top of the Inbox. The accounts still follow you.
 The Tako assistant's conversation leaves the Inbox list. The Tako bubble on the feed has its own switch under Feed tabs.,The Tako assistant's conversation leaves the Inbox list. The Tako bubble on the feed has its own switch under Feed tabs.
+"The Translate comments button in a LIVE room also needs a Japanese SIM. Turn on Override SIM details in Hushfeed settings > Region, set SIM country preset to Japan, NTT DOCOMO (44010), then restart TikTok.","The Translate comments button in a LIVE room also needs a Japanese SIM. Turn on Override SIM details in Hushfeed settings > Region, set SIM country preset to Japan, NTT DOCOMO (44010), then restart TikTok."
 The accounts TikTok suggests you follow no longer take up rows in the Inbox.,The accounts TikTok suggests you follow no longer take up rows in the Inbox.
 The activity status control leaves the Inbox header. Whether others see you as active is unchanged.,The activity status control leaves the Inbox header. Whether others see you as active is unchanged.
 "The add people icon leaves the Inbox header. Only the shortcut goes, so friend suggestions elsewhere are unchanged.","The add people icon leaves the Inbox header. Only the shortcut goes, so friend suggestions elsewhere are unchanged."
@@ -1907,6 +1917,7 @@ TikTok default (open the creator's profile),TikTok default (open the creator's p
 TikTok didn't accept the feedback. Try again later.,TikTok didn't accept the feedback. Try again later.
 TikTok didn't block %1$s. Try again in a moment.,TikTok didn't block %1$s. Try again in a moment.
 TikTok didn't unblock %1$s. Try again in a moment.,TikTok didn't unblock %1$s. Try again in a moment.
+TikTok forgets the LIVE quality you picked when it closes. This starts rooms at that quality again after a restart. A room whose stream doesn't have it opens at TikTok's choice.,TikTok forgets the LIVE quality you picked when it closes. This starts rooms at that quality again after a restart. A room whose stream doesn't have it opens at TikTok's choice.
 "TikTok gets a blank advertising ID, like the one Android gives after you delete yours. Apps can't use it to recognize your phone.","TikTok gets a blank advertising ID, like the one Android gives after you delete yours. Apps can't use it to recognize your phone."
 TikTok gets no location from your phone. The Region settings change your country and time zone. This switch stops the exact position.,TikTok gets no location from your phone. The Region settings change your country and time zone. This switch stops the exact position.
 "TikTok hasn't loaded this setting yet. Open the part of the app that uses it, then come back.","TikTok hasn't loaded this setting yet. Open the part of the app that uses it, then come back."
@@ -2091,6 +2102,7 @@ What's new,What's new
 When to send,When to send
 "When you leave TikTok while a video plays, it keeps playing in a small window over your other apps, with a button to pause it. Works in the feed and on videos you open from a profile, search or a sound. Needs Android 8 or later.","When you leave TikTok while a video plays, it keeps playing in a small window over your other apps, with a button to pause it. Works in the feed and on videos you open from a profile, search or a sound. Needs Android 8 or later."
 "When you open TikTok from its icon, the first video in the feed waits for one tap before it plays. A link, a notification or a shortcut opens as usual.","When you open TikTok from its icon, the first video in the feed waits for one tap before it plays. A link, a notification or a shortcut opens as usual."
+Where the time goes,Where the time goes
 "While Clear display is on, also hide the progress bar, the close button and the pause and speed buttons at the bottom. You can still drag along the bottom edge to move through the video. To leave Clear display, press and hold the video and tap Restore display, or pinch the screen.","While Clear display is on, also hide the progress bar, the close button and the pause and speed buttons at the bottom. You can still drag along the bottom edge to move through the video. To leave Clear display, press and hold the video and tap Restore display, or pinch the screen."
 "While diagnostic logging is on, a message names the part of Hushfeed that failed. Off keeps failures in the report only.","While diagnostic logging is on, a message names the part of Hushfeed that failed. Off keeps failures in the report only."
 Who to message,Who to message
@@ -2114,6 +2126,7 @@ Yes,Yes
 You can pick up to %1$s at a time,You can pick up to %1$s at a time
 YouTube Music couldn't be opened. Open it yourself and search for the sound.,YouTube Music couldn't be opened. Open it yourself and search for the sound.
 YouTube Music isn't installed,YouTube Music isn't installed
+Your Long press choice runs only on the left and right thirds of the video. A press in the middle still opens TikTok's own menu. It needs a Long press choice other than TikTok default.,Your Long press choice runs only on the left and right thirds of the video. A press in the middle still opens TikTok's own menu. It needs a Long press choice other than TikTok default.
 Your TikTok account changed. Choose the file again for this account.,Your TikTok account changed. Choose the file again for this account.
 Your account changed. Close this list and open it again.,Your account changed. Close this list and open it again.
 Your account changed. Open the count editor again.,Your account changed. Open the count editor again.

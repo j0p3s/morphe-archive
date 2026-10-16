@@ -1,12 +1,27 @@
-## [1.3.0](https://github.com/bigyank/morphe-patches-samsung/compare/v1.2.1...v1.3.0) (2026-10-14)
+## [1.4.0](https://github.com/bigyank/morphe-patches-samsung/compare/v1.3.0...v1.4.0) (2026-10-15)
+
+### ✨ New Features
+
+* add dex diff stage, version-watch automation, emulator smoke test ([add054b](https://github.com/bigyank/morphe-patches-samsung/commit/add054b77766a5bac34256f1736ad883435276d2))
+* add hide-home-promotion-panel patch (issue [#6](https://github.com/bigyank/morphe-patches-samsung/issues/6)) ([5fa506b](https://github.com/bigyank/morphe-patches-samsung/commit/5fa506bd8c1522b1e0efbfd9efa986f619689519))
+
+## [1.4.0-dev.2](https://github.com/bigyank/morphe-patches-samsung/compare/v1.4.0-dev.1...v1.4.0-dev.2) (2026-10-15)
+
+### ✨ New Features
+
+* add dex diff stage, version-watch automation, emulator smoke test ([add054b](https://github.com/bigyank/morphe-patches-samsung/commit/add054b77766a5bac34256f1736ad883435276d2))
+
+## [1.4.0-dev.1](https://github.com/bigyank/morphe-patches-samsung/compare/v1.3.0...v1.4.0-dev.1) (2026-10-15)
+
+### ✨ New Features
+
+* add hide-home-promotion-panel patch (issue [#6](https://github.com/bigyank/morphe-patches-samsung/issues/6)) ([5fa506b](https://github.com/bigyank/morphe-patches-samsung/commit/5fa506bd8c1522b1e0efbfd9efa986f619689519))
+
+## [1.3.0-dev.2](https://github.com/bigyank/morphe-patches-samsung/compare/v1.3.0-dev.1...v1.3.0-dev.2) (2026-10-14)
 
 ### 🐛 Bug Fixes
 
 * promote Samsung Health 7.00.6.011 to stable ([1dfb249](https://github.com/bigyank/morphe-patches-samsung/commit/1dfb24949a0047a82c688f6eb549b4f72c257ffe))
-
-### ✨ New Features
-
-* add Samsung Health 7.00.6.011 support (experimental) ([88cf823](https://github.com/bigyank/morphe-patches-samsung/commit/88cf823b815e9bde7b5f1ddb4e635bd2c5b157cb))
 
 ## [1.3.0-dev.1](https://github.com/bigyank/morphe-patches-samsung/compare/v1.2.0...v1.3.0-dev.1) (2026-10-11)
 

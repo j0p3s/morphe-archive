@@ -908,7 +908,7 @@ Takes the heart off the top of Home and closes up the gap. Alerts still arrive. 
 Ghost mode button on Home's header	Botão do modo fantasma no cabeçalho da Página inicial
 Adds a ghost button at the top of Home, next to Messages when it's there and at the end of the buttons when it isn't. Tap it to turn Ghost mode on or off. Restart Instagram to see the change.	Adiciona um botão de fantasma no topo da Página inicial, ao lado de Mensagens quando ele estiver lá e no fim dos botões quando não estiver. Toque nele para ativar ou desativar o modo fantasma. Reinicie o Instagram para ver a mudança.
 Search button on Home's header	Botão de Pesquisa no cabeçalho da Página inicial
-Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works with the Search tab hidden too, unless you swipe between your tabs. Restart Instagram to see the change.	Adiciona uma lupa no topo da Página inicial que abre a Pesquisa, como a aba Pesquisar. Funciona também com a aba Pesquisar oculta, a não ser que você deslize entre as abas. Reinicie o Instagram para ver a mudança.
+Adds a magnifier at the top of Home that opens Search, like the Search tab does. It works with the Search tab hidden too. Restart Instagram to see the change.	Adiciona uma lupa no topo da Página inicial que abre a Pesquisa, como a aba Pesquisar. Funciona também com a aba Pesquisar oculta. Reinicie o Instagram para ver a mudança.
 Messages button on Home's header	Botão de Mensagens no cabeçalho da Página inicial
 Adds a Messages button at the top of Home when Instagram moved Messages to your tab bar. A tap opens your messages like the tab does. Restart Instagram to see the change.	Adiciona um botão de Mensagens no topo da Página inicial quando o Instagram moveu as Mensagens para a sua barra de abas. Um toque abre suas mensagens como a aba. Reinicie o Instagram para ver a mudança.
 # context: toasts when the Messages button on Home's header can't open Messages because it isn't on the swiping tab bar
@@ -926,8 +926,9 @@ Restart Instagram to bring Search back to your tab bar.	Reinicie o Instagram par
 Tab order	Ordem das abas
 The tab bar keeps Instagram's order.	A barra de abas mantém a ordem do Instagram.
 Tabs go in this order: %1$s. Restart Instagram to see the change.	As abas ficam nesta ordem: %1$s. Reinicie o Instagram para ver a mudança.
-Tap a tab to move it up	Toque em uma aba para subi-la
-Instagram's order	Ordem do Instagram
+Show and reorder tabs	Mostrar e reordenar abas
+Drag to move %1$s	Arraste para mover %1$s
+Reset	Redefinir
 Create	Criar
 Start tab	Aba inicial
 Instagram opens the way it always has, which can be Reels if you left it there.	O Instagram abre do jeito de sempre, que pode ser no Reels se você saiu de lá.
@@ -1021,8 +1022,11 @@ Hide the Save button on reels	Ocultar o botão Salvar nos reels
 Burn-in guard	Proteção contra burn-in
 Dim when idle	Escurecer quando parado
 Dim when idle and shift	Escurecer quando parado e mover
-On the Reels screen, the buttons, caption and bars fade after 5 seconds without a touch. A touch brings them back.	Na tela de Reels, os botões, a legenda e as barras ficam mais fracos após 5 segundos sem toque. Um toque os traz de volta.
-On the Reels screen, the buttons, caption and bars fade after 5 seconds without a touch, and the screen moves a step every 2 minutes. A touch brings them back.	Na tela de Reels, os botões, a legenda e as barras ficam mais fracos após 5 segundos sem toque, e a tela se move um pouco a cada 2 minutos. Um toque os traz de volta.
+On the Reels screen, the buttons, caption and bars fade when you leave them alone. Touching one of them brings them back.	Na tela de Reels, os botões, a legenda e as barras ficam mais fracos quando você não mexe neles. Tocar em um deles os traz de volta.
+On the Reels screen, the buttons, caption and bars fade when you leave them alone, and the screen moves a step every 2 minutes. Touching one of them brings them back.	Na tela de Reels, os botões, a legenda e as barras ficam mais fracos quando você não mexe neles, e a tela se move um pouco a cada 2 minutos. Tocar em um deles os traz de volta.
+Dim after	Escurecer após
+At once	Na hora
+Tapping the video, double-tapping it to like, and Save and Download don't count as a touch, so the buttons stay faded.	Tocar no vídeo, tocar duas vezes para curtir, Salvar e Baixar não contam como toque, então os botões continuam fracos.
 Off. It can fade a reel's buttons while the screen sits untouched, so they don't burn into an OLED screen.	Desativado. Pode deixar os botões de um reel mais fracos enquanto a tela fica sem toque, para que não marquem uma tela OLED.
 Takes the Save button out of the column of buttons beside a reel, and the count under it. Posts in your feed keep theirs.	Tira o botão Salvar da coluna de botões ao lado de um reel, junto com o número embaixo dele. As publicações do seu feed continuam com o delas.
 Keep clear mode on	Manter o modo limpo ativado
@@ -1123,3 +1127,41 @@ Couldn't load your font file, so Instagram's font shows. Pick it again in HushGr
 Hide AI-labeled reels	Ocultar reels com rótulo de IA
 # context: the line under the Hide AI-labeled reels switch
 Leaves out reels that carry Instagram's own AI label. A reel without that label stays, even if AI made it.	Deixa de fora os reels que têm o rótulo de IA do próprio Instagram. Um reel sem esse rótulo continua, mesmo que tenha sido feito com IA.
+# context: Downloads switch under Download button on feed posts; on a carousel the icon saves every page instead of asking which
+Save every page without asking	Salvar todas as páginas sem perguntar
+On a carousel, the download icon saves all of its pages at once instead of asking.	Em um carrossel, o ícone de download salva todas as páginas de uma vez em vez de perguntar.
+# context: Reels switch Hide reels by caption words, its Blocked words list row and that row's summary; %1$d is how many words
+Hide reels by caption words	Ocultar reels por palavras da legenda
+Also on Home	Também no Início
+Leaves out posts on Home whose caption holds a word or phrase from the list too. Pull down on Home to refresh after changing it.	Tira também do Início os posts cuja legenda tem uma palavra ou frase da lista. Puxe o Início para baixo para atualizar depois de mudar.
+Leaves out reels in the Reels tab whose caption holds a word or phrase from the list below. A reel you open yourself still plays.	Deixa de fora da aba Reels os reels cuja legenda tem uma palavra ou frase da lista abaixo. Um reel que você mesmo abre continua tocando.
+Blocked words	Palavras bloqueadas
+Words or phrases, with a comma or a new line between them. Capital letters don't matter, and a hashtag works too.	Palavras ou frases, separadas por vírgula ou por uma nova linha. Maiúsculas não fazem diferença, e uma hashtag também funciona.
+No words yet	Nenhuma palavra ainda
+%1$d word	%1$d palavra
+%1$d words	%1$d palavras
+# context: Reels > Show a reel's exact time: how long ago a reel was posted (#195). %1$s is a short span like 1d 2h 5m, already in this language.
+Show how long ago a reel was posted	Mostrar há quanto tempo um reel foi publicado
+Shows the days, hours and minutes since it went up on a line under the time, like 1d 2h 5m ago.	Mostra os dias, horas e minutos desde a publicação em uma linha abaixo do horário, como há 1 dia 2 h 5 min.
+%1$s ago	há %1$s
+# context: Profiles > Recent unfollowers: the switch's title (#208).
+Recent unfollowers	Deixaram de seguir você
+Each time you scroll your own Followers list to the end, compares it with the last time and lists who's gone. Nothing extra is asked of Instagram, and the list stays on your phone.	Sempre que você rola sua própria lista de seguidores até o fim, ela é comparada com a última vez e mostra quem saiu. Nada a mais é pedido ao Instagram, e a lista fica no seu celular.
+# context: Profiles > Recent unfollowers: the row listing accounts that left your Followers list.
+Who unfollowed you	Quem deixou de seguir você
+Reading the list…	Lendo a lista…
+Nothing to compare yet. With Recent unfollowers on, open your own Followers list and scroll to the end. The next time you do, anyone missing shows here.	Ainda não há nada para comparar. Com Deixaram de seguir você ativado, abra sua própria lista de seguidores e role até o fim. Na próxima vez que fizer isso, quem estiver faltando aparece aqui.
+# context: %1$s is a date, already in this language.
+Last seen in full on %1$s.	Vista completa pela última vez em %1$s.
+No one has left since then.	Ninguém saiu desde então.
+# context: %1$s is an account's number, shown when it has no username.
+Account %1$s	Conta %1$s
+# context: %1$s is @username, %2$s a date already in this language: the day the account was first seen missing.
+%1$s, gone by %2$s	%1$s, saiu até %2$s
+Only the newest 50 are shown.	Só as 50 mais recentes aparecem.
+Clear unfollower list	Limpar a lista de quem deixou de seguir
+Forgets the saved Followers lists and everyone listed above, for all your accounts.	Esquece as listas de seguidores salvas e todos listados acima, em todas as suas contas.
+Unfollower list cleared.	Lista limpa.
+Couldn't clear the unfollower list. Try again.	Não foi possível limpar a lista. Tente de novo.
+Hide Messages on Home's header	Ocultar Mensagens no cabeçalho da Página inicial
+Takes Instagram's Messages button off the top of Home, for when Messages is on your tab bar too. Restart Instagram to see the change.	Tira o botão de Mensagens do Instagram do topo da Página inicial, para quando as Mensagens também estão na sua barra de abas. Reinicie o Instagram para ver a mudança.

@@ -1321,8 +1321,12 @@ once-call Lapp/hushgram/extension/instagram/misc/EmojiStyle;->replaceStrategy(I)
 # told by what it lacks: it is a bare resolve-and-getColor, and every other method that resolves
 # a theme attribute and asks for its color (the first read, and the few that ask for one fixed
 # attribute) first calls a static helper taking an object to check it. The first read has its own
-# rule above, so each rule picks one.
-once-call Lapp/hushgram/extension/instagram/misc/AccentColor;->list(Landroid/content/res/ColorStateList;)Landroid/content/res/ColorStateList; in static (Landroid/content/Context;I)Landroid/content/res/ColorStateList; sites 3 holding Failed\sto\sinflate\sColorStateList,\sleaving\sit\sto\sthe\sframework
+# rule above, so each rule picks one. AccentColor.list is shared, not once: since 773e6d54 each
+# getColorStateList form of Instagram's own Resources classes (05Ck, 0USG and 0USH on 385713073) passes
+# its answer through it too, and those classes hold no string a rule could pick them by on every
+# build. AccentColorHookTest holds those sites on the eight 451 builds; this rule holds the loader to
+# its three and keeps it out of any other method holding the log line.
+shared-call Lapp/hushgram/extension/instagram/misc/AccentColor;->list(Landroid/content/res/ColorStateList;)Landroid/content/res/ColorStateList; in static (Landroid/content/Context;I)Landroid/content/res/ColorStateList; sites 3 holding Failed\sto\sinflate\sColorStateList,\sleaving\sit\sto\sthe\sframework
 shared-call Lapp/hushgram/extension/instagram/misc/AccentColor;->color(I)I in static (Landroid/content/Context;I)I holding LX/*;->*(Ljava/lang/Object;I)V LX/*;->*(Landroid/content/Context;I)I
 shared-call Lapp/hushgram/extension/instagram/misc/AccentColor;->color(I)I in static (Landroid/content/Context;I)I lacking static LX/*;->*(Ljava/lang/Object;*)V holding Landroid/content/Context;->getColor(I)I LX/*;->*(Landroid/content/Context;I)I
 # The two reads that take a fallback color resource hand theirs to AccentColor.color the same way
@@ -1535,6 +1539,12 @@ once-call Lapp/hushgram/extension/instagram/reels/PaidPartnershipReels;->page(Lj
 # HideAiLabeledReelsHookTest checks those getters on all eight 451 builds against Instagram's own
 # test for showing the AI label under a reel.
 once-call Lapp/hushgram/extension/instagram/reels/AiLabeledReels;->page(Ljava/util/List;Ljava/lang/String;)Ljava/util/List; in instance (L*;)V holding android_purge_26_q2_ClipsItemsNetworkCallback_onSuccess
+
+# Hide reels by caption words hands the same pages, at the same join, to CaptionWordReels.page
+# before the other two filters, once (#192). Its stub reads the item's post, and the caption comes
+# from the same caption bridges Details' Copy caption reads, which DownloadVideoHookTest checks on
+# all eight 451 builds. HidePaidPartnershipReelsHookTest checks the three filters meet at the join.
+once-call Lapp/hushgram/extension/instagram/reels/CaptionWordReels;->page(Ljava/util/List;Ljava/lang/String;)Ljava/util/List; in instance (L*;)V holding android_purge_26_q2_ClipsItemsNetworkCallback_onSuccess
 
 # Show a reel's exact time hands the Reels title and the list of its column's parts to
 # ReelPostTime.line just before the title makes that column (the one method loading the title's
@@ -1875,6 +1885,16 @@ once-call Lapp/hushgram/extension/instagram/stories/StoryUploadQuality;->fullQua
 # elsewhere, a height stays kept. FullScreenBarsHookTest finds both stores in all eight 451 builds.
 once-call Lapp/hushgram/extension/instagram/reels/FullScreenBars;->barHeight(I)I in instance (Landroid/view/View;L*;)L*; holding Status\sbar\sheight:\sold=%d\snew=%d,\sActivity=%s\sRetryCount=%d\sisFullScreenFlagSet=%b\swindowFlags=0x%X Nab\sbar\sheight:\sold=%d\snew=%d,\sActivity=%s\sRetryCount=%d\sisFullScreenFlagSet=%b\swindowFlags=0x%X
 once-call Lapp/hushgram/extension/instagram/reels/FullScreenBars;->navBarHeight(I)I in instance (Landroid/view/View;L*;)L*; holding Status\sbar\sheight:\sold=%d\snew=%d,\sActivity=%s\sRetryCount=%d\sisFullScreenFlagSet=%b\swindowFlags=0x%X Nab\sbar\sheight:\sold=%d\snew=%d,\sActivity=%s\sRetryCount=%d\sisFullScreenFlagSet=%b\swindowFlags=0x%X
+# The bar heights listeners (#200, #203): Instagram's registration of a screen's heights listener
+# (07tu.A06 on 451, static, the activity, the listener and a boolean) hands it to
+# FullScreenBars.heightsAsked first, and its removal (07tu.A05) to heightsDropped first, so the
+# listeners a full screen switch keeps hear each new pair of heights. Left out, a screen built while
+# the bars were hidden keeps 0 and runs under the status bar, or a screen built before keeps black
+# strips. Neither method loads a string, so each is picked by its fields and calls.
+start-call Lapp/hushgram/extension/instagram/reels/FullScreenBars;->heightsAsked(Landroid/app/Activity;Ljava/lang/Object;)V in static (Landroid/app/Activity;L*;Z)V calling static LX/*;->*(Landroid/app/Activity;)LX/*; holding LX/*;->*:Ljava/util/List; Ljava/util/List;->add(Ljava/lang/Object;)Z
+once-call Lapp/hushgram/extension/instagram/reels/FullScreenBars;->heightsAsked(Landroid/app/Activity;Ljava/lang/Object;)V in static (Landroid/app/Activity;L*;Z)V calling static LX/*;->*(Landroid/app/Activity;)LX/*; holding LX/*;->*:Ljava/util/List; Ljava/util/List;->add(Ljava/lang/Object;)Z
+start-call Lapp/hushgram/extension/instagram/reels/FullScreenBars;->heightsDropped(Landroid/app/Activity;Ljava/lang/Object;)V in static (Landroid/app/Activity;L*;)V holding LX/*;->*:Ljava/util/WeakHashMap; LX/*;->*:Ljava/util/List; Ljava/util/List;->remove(Ljava/lang/Object;)Z
+once-call Lapp/hushgram/extension/instagram/reels/FullScreenBars;->heightsDropped(Landroid/app/Activity;Ljava/lang/Object;)V in static (Landroid/app/Activity;L*;)V holding LX/*;->*:Ljava/util/WeakHashMap; LX/*;->*:Ljava/util/List; Ljava/util/List;->remove(Ljava/lang/Object;)Z
 
 # Tap a feed video to pause it (#137) asks FeedTapPause.tapped first thing in the feed's tap handler,
 # the one instance (View, Media, five objects, int, boolean) void method that loads the handler's
@@ -1906,5 +1926,6 @@ once-call Lapp/hushgram/extension/instagram/feed/FeedTapPause;->released(Ljava/l
 # (00R0.A00 on 451's 385713073). It asks FeedTapPause.opening first thing and returns on a yes. Left
 # out, such a tap still opens Reels with the switch on; later or twice, it isn't the guard the patch
 # wrote. The reader's controllerOfLauncher reaches the controller from the launcher's lazy field.
-start-call Lapp/hushgram/extension/instagram/feed/FeedTapPause;->opening(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z in instance (Landroid/view/View;L*;L*;L*;Lcom/instagram/feed/media/Media;L*;Ljava/util/List;ZZ)V holding ContextualFeedFragment.ARGUMENT_HOST_PROFILE_USER_ID
-once-call Lapp/hushgram/extension/instagram/feed/FeedTapPause;->opening(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z in instance (Landroid/view/View;L*;L*;L*;Lcom/instagram/feed/media/Media;L*;Ljava/util/List;ZZ)V holding ContextualFeedFragment.ARGUMENT_HOST_PROFILE_USER_ID
+# 385713117 asks a string pool for the argument (pooled, 00R1.A00 there).
+start-call Lapp/hushgram/extension/instagram/feed/FeedTapPause;->opening(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z in instance (Landroid/view/View;L*;L*;L*;Lcom/instagram/feed/media/Media;L*;Ljava/util/List;ZZ)V pooled holding ContextualFeedFragment.ARGUMENT_HOST_PROFILE_USER_ID
+once-call Lapp/hushgram/extension/instagram/feed/FeedTapPause;->opening(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z in instance (Landroid/view/View;L*;L*;L*;Lcom/instagram/feed/media/Media;L*;Ljava/util/List;ZZ)V pooled holding ContextualFeedFragment.ARGUMENT_HOST_PROFILE_USER_ID

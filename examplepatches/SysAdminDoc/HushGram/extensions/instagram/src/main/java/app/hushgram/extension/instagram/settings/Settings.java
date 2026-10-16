@@ -1018,6 +1018,14 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushgram_following_not_back_first", FALSE);
 
     /**
+     * Recent unfollowers ({@link app.hushgram.extension.instagram.profile.Unfollowers}): your own
+     * Followers list compared each time it has loaded to the end. Off to start. Read each time
+     * Instagram rebuilds the rows of a follow list.
+     */
+    public static final BooleanSetting TRACK_UNFOLLOWERS =
+            new BooleanSetting("hushgram_track_unfollowers", FALSE);
+
+    /**
      * Suggested for you and the Discover people button on profiles
      * ({@link app.hushgram.extension.instagram.profile.ProfileSuggestions}). Read each time Instagram
      * builds or binds a profile's header, so off or paused, the suggestions are back on the next one.
@@ -1135,6 +1143,29 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting HIDE_AI_LABELED_REELS =
             new BooleanSetting("hushgram_hide_ai_labeled_reels", FALSE);
+
+    /**
+     * Reels whose caption holds one of {@link #REELS_BLOCKED_WORDS}
+     * ({@link app.hushgram.extension.instagram.reels.CaptionWordReels}). Read as each page of reels
+     * arrives, so a change shows from the next page. Off to start (#192).
+     */
+    public static final BooleanSetting HIDE_CAPTION_WORD_REELS =
+            new BooleanSetting("hushgram_hide_caption_word_reels", FALSE);
+
+    /**
+     * The words and phrases {@link #HIDE_CAPTION_WORD_REELS} looks for in a reel's caption, split at
+     * commas and new lines. A value control, not a switch. Empty to start.
+     */
+    public static final StringSetting REELS_BLOCKED_WORDS =
+            new StringSetting("hushgram_reels_blocked_words", "", parent(HIDE_CAPTION_WORD_REELS));
+
+    /**
+     * {@link #REELS_BLOCKED_WORDS} on Home too: a post there whose caption holds one goes
+     * ({@link app.hushgram.extension.instagram.feed.FeedSuggestions#homeItem}). Waits for
+     * {@link #HIDE_CAPTION_WORD_REELS}, and is off to start (#192).
+     */
+    public static final BooleanSetting HIDE_CAPTION_WORD_HOME =
+            new BooleanSetting("hushgram_hide_caption_word_home", FALSE, parent(HIDE_CAPTION_WORD_REELS));
 
     /** An explicit Copy action for original comment text. Off until enabled. */
     public static final BooleanSetting COPY_COMMENTS =
@@ -1259,6 +1290,10 @@ public class Settings extends BaseSettings {
      */
     public static final EnumSetting<app.hushgram.extension.instagram.reels.BurnInMode> BURN_IN_GUARD =
             new EnumSetting<>("hushgram_burn_in_guard", app.hushgram.extension.instagram.reels.BurnInMode.OFF);
+
+    /** How long Burn-in guard waits before it dims (#162). 5 seconds to start, as before the choice. */
+    public static final EnumSetting<app.hushgram.extension.instagram.reels.BurnInWait> BURN_IN_WAIT =
+            new EnumSetting<>("hushgram_burn_in_wait", app.hushgram.extension.instagram.reels.BurnInWait.FIVE_SECONDS);
 
     /**
      * Download in every reel's more menu, saving the reel through the save pipeline below instead
@@ -1399,8 +1434,8 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushgram_ghost_button_on_home", FALSE, true);
 
     /**
-     * A Search button on Home's header that opens Instagram's own Search tab, with Hide the Search tab
-     * on too where the tabs don't swipe ({@link app.hushgram.extension.instagram.reels.SearchHeaderButton}).
+     * A Search button on Home's header that opens Instagram's own Search tab, or with Hide the Search tab
+     * on where the tabs swipe, Instagram's search screen ({@link app.hushgram.extension.instagram.reels.SearchHeaderButton}).
      * The header builds it as it draws, so a change takes a restart. Off to start.
      */
     public static final BooleanSetting SEARCH_BUTTON_ON_HOME =
@@ -1414,6 +1449,15 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting MESSAGES_BUTTON_ON_HOME =
             new BooleanSetting("hushgram_messages_button_on_home", FALSE, true);
+
+    /**
+     * Instagram's own Messages button is off Home's header, for accounts that still have it there and
+     * put Messages on the tab bar with Show the Messages tab (#210). Each header draw hides it, and
+     * no Messages button of HushGram's goes in ({@link app.hushgram.extension.instagram.reels.MessagesHeaderButton}).
+     * A change takes a restart. Off to start.
+     */
+    public static final BooleanSetting HIDE_HOME_MESSAGES_BUTTON =
+            new BooleanSetting("hushgram_hide_home_messages_button", FALSE, true);
 
     /**
      * Instagram's logo sits in the middle of Home's header, with the buttons on each side, as
@@ -1511,6 +1555,13 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting REEL_POST_TIME_SECONDS =
             new BooleanSetting("hushgram_reel_post_time_seconds", FALSE, parent(SHOW_REEL_POST_TIME));
+
+    /**
+     * {@link #SHOW_REEL_POST_TIME} adds how long ago the reel went up, in days, hours and minutes,
+     * like Oct 2, 3:45 PM · 1d 2h 5m ago (#195). Worked out as the reel comes up. Off to start.
+     */
+    public static final BooleanSetting REEL_POST_TIME_AGO =
+            new BooleanSetting("hushgram_reel_post_time_ago", FALSE, parent(SHOW_REEL_POST_TIME));
 
     /**
      * A reel that doesn't fill the screen shows a blurred copy of itself in the bars above and below
@@ -1619,6 +1670,14 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting FEED_DOWNLOAD_BUTTON =
             new BooleanSetting("hushgram_feed_download_button", FALSE, parentsAny(DOWNLOAD_VIDEOS, DOWNLOAD_PHOTOS));
+
+    /**
+     * Under {@link #FEED_DOWNLOAD_BUTTON}: a tap on a carousel saves every page at once, as Save all
+     * does, instead of asking for this page or all of them (#190). A post with one page saves as it
+     * always did. Starts off, so the icon keeps asking.
+     */
+    public static final BooleanSetting FEED_DOWNLOAD_ALL_PAGES =
+            new BooleanSetting("hushgram_feed_download_all_pages", FALSE, parent(FEED_DOWNLOAD_BUTTON));
 
     /**
      * A Download icon in the column beside a reel, under Save, so a tap saves the reel without

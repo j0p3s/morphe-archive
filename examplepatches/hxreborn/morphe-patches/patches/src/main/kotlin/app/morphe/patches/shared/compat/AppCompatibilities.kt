@@ -471,6 +471,17 @@ internal object AppCompatibilities {
         targets = listOf(AppTarget(version = "4.1.1", versionCode = 3231, minSdk = 26)),
     )
 
+    val NETWORK_ANALYZER = Compatibility(
+        name = "Network Analyzer",
+        packageName = "net.techet.netanalyzerlite.an",
+        apkFileType = ApkFileType.APKS,
+        appIconColor = 0x3B4A5C,
+        signatures = setOf(
+            "3961d83e6d20d3363e07c6fe330601ef6ece07d44cda2fe46a0048bc70eacdaf",
+        ),
+        targets = listOf(AppTarget(version = "5.1", versionCode = 19502, minSdk = 32)),
+    )
+
     val NOTESNOOK = Compatibility(
         name = "Notesnook",
         packageName = "com.streetwriters.notesnook",
@@ -558,6 +569,17 @@ internal object AppCompatibilities {
         targets = listOf(AppTarget(version = "2.3", versionCode = 20, minSdk = 26)),
     )
 
+    val PRAYER_TIMES = Compatibility(
+        name = "Prayer Times and Qibla",
+        packageName = "com.reworewo.prayertimes",
+        apkFileType = ApkFileType.APKS,
+        appIconColor = 0x0E9567,
+        signatures = setOf(
+            "cd1f0d9a62d0479c4b71bbc4d519698269d6dc499d3953de7528087e515a1968",
+        ),
+        targets = listOf(AppTarget(version = "3.8.3", versionCode = 742, minSdk = 24)),
+    )
+
     val PROJECTIVY = Compatibility(
         name = "Projectivy Launcher",
         packageName = "com.spocky.projengmenu",
@@ -584,6 +606,19 @@ internal object AppCompatibilities {
             AppTarget(version = "7.11.8", versionCode = 18323, minSdk = 29),
             AppTarget(version = "7.11.5", versionCode = 18317, minSdk = 29),
             AppTarget(version = "7.10.4", versionCode = 17667, minSdk = 29),
+        ),
+    )
+
+    val PROTON_AUTHENTICATOR = Compatibility(
+        name = "Proton Authenticator",
+        packageName = "proton.android.authenticator",
+        apkFileType = ApkFileType.XAPK_REQUIRED,
+        appIconColor = 0x6D4AFF,
+        signatures = setOf(
+            "dcc9439ec1a6c6a8d0203f3423ee42bcc8b970628e53cb73a0393f398dd5b853",
+        ),
+        targets = listOf(
+            AppTarget(version = "1.3.10", versionCode = 10310372, minSdk = 27),
         ),
     )
 
@@ -874,6 +909,15 @@ internal object AppCompatibilities {
             AppTarget(version = "2.33.1", versionCode = 23301, minSdk = 26),
             AppTarget(version = "2.34.1", versionCode = 23401, minSdk = 26),
         ),
+    )
+
+    val WALLMAA = Compatibility(
+        name = "Wallmaa",
+        packageName = "com.wallmaa.minimal.wallpapers",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x000000,
+        signatures = setOf("2da8b29136b6eb1735c32d87d56722bbd374ad8781119914bd7443adb64b0b0d"),
+        targets = listOf(AppTarget(version = "1.0.1", versionCode = 22, minSdk = 24)),
     )
 
     val WALP = Compatibility(

@@ -1,3 +1,57 @@
+## [1.2.1](https://github.com/sahilwasgood/patches/compare/v1.2.0...v1.2.1) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* drop test clips, keep PNG previews ([b9de5ce](https://github.com/sahilwasgood/patches/commit/b9de5ce9a4ab68931a08e0af2e3cc11560525e0a))
+* morphing test clip for mmt preview row ([98a378d](https://github.com/sahilwasgood/patches/commit/98a378d8136511b0ea8d9546bc317566a2bc074f))
+* video only previews for two packs to exercise clip path ([15a9058](https://github.com/sahilwasgood/patches/commit/15a9058d5083467dcc7aaa6574ea9c8b5d8da603))
+
+## [1.2.1-dev.3](https://github.com/sahilwasgood/patches/compare/v1.2.1-dev.2...v1.2.1-dev.3) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* drop test clips, keep PNG previews ([b9de5ce](https://github.com/sahilwasgood/patches/commit/b9de5ce9a4ab68931a08e0af2e3cc11560525e0a))
+
+## [1.2.1-dev.2](https://github.com/sahilwasgood/patches/compare/v1.2.1-dev.1...v1.2.1-dev.2) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* morphing test clip for mmt preview row ([98a378d](https://github.com/sahilwasgood/patches/commit/98a378d8136511b0ea8d9546bc317566a2bc074f))
+
+## [1.2.1-dev.1](https://github.com/sahilwasgood/patches/compare/v1.2.0...v1.2.1-dev.1) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* video only previews for two packs to exercise clip path ([15a9058](https://github.com/sahilwasgood/patches/commit/15a9058d5083467dcc7aaa6574ea9c8b5d8da603))
+
+## [1.2.0](https://github.com/sahilwasgood/patches/compare/v1.1.0...v1.2.0) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* drop broken auto PR workflow, merges are done by hand ([702ef92](https://github.com/sahilwasgood/patches/commit/702ef92a3af55e2961fea2cb19be3a9652498af5))
+
+### ✨ New Features
+
+* ship real preview art and clips for preset thumbnails ([a55c42f](https://github.com/sahilwasgood/patches/commit/a55c42fde1079afb18ed998ac33bf9a52aea6aca))
+
+## [1.2.0-dev.1](https://github.com/sahilwasgood/patches/compare/v1.1.0...v1.2.0-dev.1) (2026-10-15)
+
+### ✨ New Features
+
+* ship real preview art and clips for preset thumbnails ([a55c42f](https://github.com/sahilwasgood/patches/commit/a55c42fde1079afb18ed998ac33bf9a52aea6aca))
+
+## [1.1.0](https://github.com/sahilwasgood/patches/compare/v1.0.7...v1.1.0) (2026-10-15)
+
+### ✨ New Features
+
+* bundle preset preview art for manager thumbnails ([9aeeecc](https://github.com/sahilwasgood/patches/commit/9aeeecc4c6e50cd65209d4913faacb344009123e))
+
+## [1.0.7](https://github.com/sahilwasgood/patches/compare/v1.0.6...v1.0.7) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* tighten descriptions and comments ([f0e1c65](https://github.com/sahilwasgood/patches/commit/f0e1c65bc29b9374f1e1c751621366bf5600f85e))
+
 ## [1.0.6](https://github.com/sahilwasgood/patches/compare/v1.0.5...v1.0.6) (2026-10-14)
 
 ### 🐛 Bug Fixes

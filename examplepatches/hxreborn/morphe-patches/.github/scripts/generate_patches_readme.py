@@ -194,6 +194,7 @@ ICONS = {
     "com.adithya.memoneet": "memoneet.png",
     "com.halalfire.medicneet": "medicneet.png",
     "com.stresscodes.wallp": "walp.png",
+    "com.wallmaa.minimal.wallpapers": "wallmaa.png",
     "com.spocky.projengmenu": "projectivy.png",
     "com.myvitale.forus": "forus.png",
     "com.psiphon3.subscription": "psiphon.png",
@@ -205,6 +206,7 @@ ICONS = {
     "com.zhiliaoapp.musically": "tiktok.png",
     "ch.protonmail.android": "protonmail.png",
     "proton.android.pass": "protonpass.png",
+    "proton.android.authenticator": "protonauthenticator.png",
     "com.audible.application": "audible.png",
     "app.symfonik.music.player": "symfonium.png",
     "ai.perplexity.app.android": "perplexity.png",
@@ -224,6 +226,7 @@ ICONS = {
     "com.musixmatch.android.lyrify": "musixmatch.png",
     "com.gstarmc.android": "dwgfastview.png",
     "com.mchutov.Quranify": "quranify.png",
+    "com.reworewo.prayertimes": "prayertimes.png",
     "com.sry.rateglance": "rateglance.png",
     "com.risesci.nyx": "risesleep.png",
     "ipnossoft.rma.free": "bettersleep.png",
@@ -259,6 +262,7 @@ ICONS = {
     "com.keepa.mobile": "keepa.png",
     "com.hitrolab.audioeditor": "audiolab.png",
     "com.lagguy.wallpapers": "lagguy.png",
+    "net.techet.netanalyzerlite.an": "netanalyzer.png",
 }
 
 

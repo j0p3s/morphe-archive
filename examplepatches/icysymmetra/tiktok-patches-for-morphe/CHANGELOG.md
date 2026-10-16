@@ -1,3 +1,29 @@
+## [0.8.1](https://github.com/icysymmetra/tiktok-patches-for-morphe/compare/v0.8.0...v0.8.1) (2026-10-15)
+
+
+### Bug Fixes
+
+* **tiktok:** avoid final-field writes when rejecting cached posts ([af86357](https://github.com/icysymmetra/tiktok-patches-for-morphe/commit/af86357a3655c8048c2508824bc0c7d2f4089f78))
+
+
+
+
+
+## 0.8.1
+
+## [0.8.1-dev.1](https://github.com/icysymmetra/tiktok-patches-for-morphe/compare/v0.8.0...v0.8.1-dev.1) (2026-10-15)
+
+
+### Bug Fixes
+
+* **tiktok:** avoid final-field writes when rejecting cached posts ([af86357](https://github.com/icysymmetra/tiktok-patches-for-morphe/commit/af86357a3655c8048c2508824bc0c7d2f4089f78))
+
+
+
+
+
+## 0.8.1-dev.1
+
 # [0.8.0](https://github.com/icysymmetra/tiktok-patches-for-morphe/compare/v0.7.0...v0.8.0) (2026-09-26)
 
 

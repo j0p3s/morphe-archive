@@ -185,6 +185,18 @@ public class Settings extends BaseSettings {
     public static final StringSetting DOUBLE_TAP_ACTION = new StringSetting("double_tap_action", "default");
     public static final StringSetting LONG_PRESS_ACTION = new StringSetting("long_press_action", "default");
     /**
+     * The Long press choice runs only on the left and right thirds of the video, so a press in the
+     * middle still opens TikTok's own menu (#136). It means something only while the choice is one
+     * Hushfeed takes.
+     */
+    public static final BooleanSetting LONG_PRESS_SIDES_ONLY =
+            new BooleanSetting("long_press_sides_only", FALSE, new Setting.Availability() {
+                @Override
+                public boolean isAvailable() {
+                    return GestureActions.takesLongPress(LONG_PRESS_ACTION.savedValue());
+                }
+            });
+    /**
      * A long press on a side button plays at the hold speed only while TikTok's hold can start
      * there: the Long press row leaves the press to TikTok, and Seek from the edges isn't seeking
      * the right third, where the buttons sit. GestureActions.allowNativeEdgeSpeedup decides each
@@ -513,6 +525,14 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting SHOW_SEEKBAR = new BooleanSetting("show_seekbar", TRUE);
     /** The time played and the video's length at the end of the progress bar (#90). */
     public static final BooleanSetting SEEKBAR_TIME = new BooleanSetting("seekbar_time", FALSE);
+    /**
+     * Where that time goes: "beside" (the end of the bar's row, the default) or "above" (over the
+     * bar's left end, falling back to beside while text on screen reaches into that spot) (#173).
+     */
+    public static final StringSetting SEEKBAR_TIME_PLACEMENT = new StringSetting(
+            "seekbar_time_placement", "beside", Setting.parent(SEEKBAR_TIME));
+    /** The progress bar runs from screen edge to screen edge instead of stopping at TikTok's side gap (#173). */
+    public static final BooleanSetting SEEKBAR_FULL_WIDTH = new BooleanSetting("seekbar_full_width", FALSE);
     /** A larger handle and a slightly thicker line on the progress bar at rest (#90). */
     public static final BooleanSetting SEEKBAR_BIG_HANDLE = new BooleanSetting("seekbar_big_handle", FALSE);
     /** A line along the bottom of a video story that can be dragged to seek (#72). */
@@ -550,8 +570,7 @@ public class Settings extends BaseSettings {
      * {@link #OFFER_LIVE_QUALITY}. Read as each room picks its starting quality, so no restart.
      * A pick is saved from either of TikTok's pickers: the newer one's setter and the older
      * LiveDefinitionSelectionDialog's applied switch, which Share > Video quality opens in rooms
-     * whose stream asks for a quality button. Has no settings row yet: on the S22 the first room
-     * after a restart still opened at TikTok's own choice.
+     * whose stream asks for a quality button.
      */
     public static final BooleanSetting REMEMBER_LIVE_QUALITY = new BooleanSetting(
             "remember_live_quality", FALSE, false, Setting.parent(OFFER_LIVE_QUALITY));
@@ -564,7 +583,9 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting OFFER_LIVE_CLEAR_SCREEN = new BooleanSetting("offer_live_clear_screen", FALSE);
     /**
      * Opens LIVE panels in TikTok's dark LIVE theme while TikTok is in dark mode (#159); the LIVE
-     * controls patch. Read as each panel opens, so the next panel follows a change.
+     * controls patch. Read as each panel opens, so the next panel follows a change. The provider
+     * answer alone only turned the panels' navigation bar dark on the S25, so each themed
+     * dialog and sheet page also inflates through the dark overlay with force (LivePanelTheme).
      */
     public static final BooleanSetting DARK_LIVE_PANELS = new BooleanSetting("dark_live_panels", FALSE);
     /**
@@ -1064,6 +1085,8 @@ public class Settings extends BaseSettings {
     public static final StringSetting COMMENT_BLOCKED_KEYWORDS = new StringSetting("comment_blocked_keywords", "");
     public static final StringSetting COMMENT_BLOCKED_USERS = new StringSetting("comment_blocked_users", "");
     public static final BooleanSetting BLOCK_FROM_COMMENT = new BooleanSetting("block_from_comment", FALSE);
+    /** Adds Block this commenter to the menu a long press on a comment opens (#169). */
+    public static final BooleanSetting BLOCK_FROM_COMMENT_MENU = new BooleanSetting("block_from_comment_menu", FALSE);
     public static final BooleanSetting COMMENT_SEARCH = new BooleanSetting("comment_search", FALSE);
     /** Adds Export CSV and Export JSON under the comment search box. */
     public static final BooleanSetting COMMENT_EXPORT = new BooleanSetting("comment_export", FALSE);

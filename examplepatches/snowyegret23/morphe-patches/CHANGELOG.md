@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/snowyegret23/morphe-patches/compare/v1.4.0...v1.4.1) (2026-10-15)
+
+### ✨ New Features
+
+* support CHZZK 3.15.0 and add configurable viewer count ([2ccfb77](https://github.com/snowyegret23/morphe-patches/commit/2ccfb777bc797027cc0470ad5b3d2c53f3b84d4f))
+
 ## [1.4.0](https://github.com/snowyegret23/morphe-patches/compare/v1.3.0...v1.4.0) (2026-10-14)
 
 ### ✨ New Features

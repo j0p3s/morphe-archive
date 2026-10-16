@@ -1,3 +1,39 @@
+## [1.16.0](https://github.com/Alastor-Kaneki/Morphe-Patches/compare/v1.15.3...v1.16.0) (2026-10-15)
+
+### ✨ New Features
+
+* **reddit:** native 2026.41.0 overflow-menu post ID hook ([#42](https://github.com/Alastor-Kaneki/Morphe-Patches/issues/42)) ([72cdedb](https://github.com/Alastor-Kaneki/Morphe-Patches/commit/72cdedb1abe68f94bec8b975e3d58a3cda992bb0))
+
+## [1.15.3](https://github.com/Alastor-Kaneki/Morphe-Patches/compare/v1.15.2...v1.15.3) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* **reddit:** retry blocked share redirects in browser and label errors ([#40](https://github.com/Alastor-Kaneki/Morphe-Patches/issues/40)) ([c79016c](https://github.com/Alastor-Kaneki/Morphe-Patches/commit/c79016c5977b65c1fa94021bd167da8d1b34ba83))
+
+## [1.15.2](https://github.com/Alastor-Kaneki/Morphe-Patches/compare/v1.15.1...v1.15.2) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* **reddit:** support native Share shortlinks and current-post diagnostics ([#39](https://github.com/Alastor-Kaneki/Morphe-Patches/issues/39)) ([35a3b31](https://github.com/Alastor-Kaneki/Morphe-Patches/commit/35a3b31dec800400c4cfe614c24ac2509253655b))
+
+## [1.15.1](https://github.com/Alastor-Kaneki/Morphe-Patches/compare/v1.15.0...v1.15.1) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* **reddit:** detect current post natively for originals download ([#38](https://github.com/Alastor-Kaneki/Morphe-Patches/issues/38)) ([39f7e98](https://github.com/Alastor-Kaneki/Morphe-Patches/commit/39f7e98aed1a6baac9de48026d28a4518199eb4b))
+
+## [1.15.0](https://github.com/Alastor-Kaneki/Morphe-Patches/compare/v1.14.2...v1.15.0) (2026-10-15)
+
+### ✨ New Features
+
+* **reddit:** add original-quality gallery downloader patch ([#37](https://github.com/Alastor-Kaneki/Morphe-Patches/issues/37)) ([b6ab78c](https://github.com/Alastor-Kaneki/Morphe-Patches/commit/b6ab78ce133c61f99413f17c15eae278f10292e6))
+
+## [1.14.2](https://github.com/Alastor-Kaneki/Morphe-Patches/compare/v1.14.1...v1.14.2) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* **chrome:** verify and install matching Trichrome Library ([#36](https://github.com/Alastor-Kaneki/Morphe-Patches/issues/36)) ([def6f2d](https://github.com/Alastor-Kaneki/Morphe-Patches/commit/def6f2d2f8cd92ba4a1332c16a7d102433296ff7))
+
 ## [1.14.1](https://github.com/Alastor-Kaneki/Morphe-Patches/compare/v1.14.0...v1.14.1) (2026-08-24)
 
 ### 🐛 Bug Fixes
