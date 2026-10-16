@@ -8,6 +8,7 @@
 abhis1n/Morphe-Patches
 adderalladmiral/psychonaut-journal-patches
 adderalladmiral/psychonaut-wiki-journal-patches
+Adiker/reddit-client-patches
 Adish08/morphe-patches
 aeongdesu/morphe-patches
 AgentKosticka/Jam-Patches
@@ -188,6 +189,7 @@ HvQ/eksi-morphe
 hxreborn/hxreborn-tiktok-patches
 hxreborn/morphe-patches
 icysymmetra/tiktok-patches-for-morphe
+iGridZ/morphe-tower-patches
 ihatenodejs/aidans-patches
 Ikuradachi/ikura-patches
 ilikeadofai/vocacolle-morphe-patches
@@ -227,7 +229,9 @@ jordanwoodson/lurk-morphe-patches
 Joristdh/Platypatch
 Joussflls10/Jouss-Patches
 jrddupont/discord-patches
+Juankyyy/morphe-patches
 JZ6/Flexboard
+jzl1/morphe-patches
 k2ej/standby
 K8R8TO/kizu-morphe-patches
 kanup4m/morphe-patches
@@ -267,6 +271,7 @@ LuckyToShine/czyeru
 Lynx6319/patch-youtube-scroll-block
 lyyako/realme-link-patches
 madhu-gowda6/atharv-patches
+madushas/tele_web_patch
 mahirsn/mahirsn-patches
 Manishrdy/honista-patches
 Manishrdy/piko
@@ -345,8 +350,8 @@ RookieEnough/De-Vanced
 Rosaldivo/rosaldivo-morphe-patches
 RoundSalmon4/morphe-patches-template
 rufusin/revanced-patches
-rushiranpise/Ri-Vanced-Universal-Morphe-Patches
 rushiranpise/RI-Vanced-Universal-Morphe-Patches
+rushiranpise/Ri-Vanced-Universal-Morphe-Patches
 ryuya0124/gemini-microg-patches
 ryykitty/twitch-patched
 sabopura/sabopura-morphe-patches
@@ -382,8 +387,8 @@ Supperelias2/sbs-tv-morphe-patches
 sushruth/imgur-patches
 SysAdminDoc/Hushfacebook
 SysAdminDoc/HushFacebook
-SysAdminDoc/hushfeed
 SysAdminDoc/HushFeed
+SysAdminDoc/hushfeed
 SysAdminDoc/HushGram
 SysAdminDoc/HushMessenger
 SysAdminDoc/HushPinterest
@@ -419,6 +424,7 @@ VenusIsJaded/Venus-Patches
 VipinVIP/railone-patches
 virzak/morphe-patches
 vladon/morphe-patches-navi
+VoltoxderEchte/waze-gearslip-morphe-patch
 vomw/morphe-patches
 WaggBR/Wagg13Patch_Morphe
 Wake-Old-Hyphen/hushfeed
