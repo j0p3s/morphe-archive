@@ -193,6 +193,7 @@ ICONS = {
     "com.ferdinandobermeier.focusmate": "focusnow.png",
     "com.adithya.memoneet": "memoneet.png",
     "com.halalfire.medicneet": "medicneet.png",
+    "com.biobird.exvee": "biobird.png",
     "com.stresscodes.wallp": "walp.png",
     "com.wallmaa.minimal.wallpapers": "wallmaa.png",
     "com.spocky.projengmenu": "projectivy.png",
@@ -263,6 +264,8 @@ ICONS = {
     "com.hitrolab.audioeditor": "audiolab.png",
     "com.lagguy.wallpapers": "lagguy.png",
     "net.techet.netanalyzerlite.an": "netanalyzer.png",
+    "com.radiojavan.androidradio": "radiojavan.png",
+    "com.triovent.datingapp": "sheytoon.png",
 }
 
 

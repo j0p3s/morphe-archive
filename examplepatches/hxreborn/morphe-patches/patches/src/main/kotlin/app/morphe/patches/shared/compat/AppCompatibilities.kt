@@ -110,6 +110,17 @@ internal object AppCompatibilities {
         targets = listOf(AppTarget(version = "26.17", versionCode = 26910, minSdk = 26)),
     )
 
+    val BIOBIRD = Compatibility(
+        name = "Biobird Flashcards",
+        packageName = "com.biobird.exvee",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x075948,
+        signatures = setOf(
+            "908874fc41478d0780790e5c8a178727f83b2182c147f20689a3d5404fd4ded0",
+        ),
+        targets = listOf(AppTarget(version = "2.0.2", versionCode = 38, minSdk = 23)),
+    )
+
     val BLURWALL = Compatibility(
         name = "BlurWall",
         packageName = "apps.automan.blurwallpaper",
@@ -530,6 +541,7 @@ internal object AppCompatibilities {
         targets = listOf(
             AppTarget(version = "2.95.0", versionCode = 260642, minSdk = 26),
             AppTarget(version = "2.100.0", versionCode = 260662, minSdk = 26),
+            AppTarget(version = "2.101.0", versionCode = 260665, minSdk = 26),
         ),
     )
 
@@ -648,6 +660,7 @@ internal object AppCompatibilities {
         targets = listOf(
             AppTarget(version = "5.20.39.0", versionCode = 605203900, minSdk = 26),
             AppTarget(version = "5.20.57.0", versionCode = 605205700, minSdk = 26),
+            AppTarget(version = "5.20.74.0", versionCode = 605207400, minSdk = 26),
         ),
     )
 
@@ -704,6 +717,15 @@ internal object AppCompatibilities {
         apkFileType = ApkFileType.APKS,
         appIconColor = 0x0D192C,
         targets = listOf(AppTarget(version = "1.17.6", versionCode = 304, minSdk = 26)),
+    )
+
+    val RADIO_JAVAN = Compatibility(
+        name = "Radio Javan",
+        packageName = "com.radiojavan.androidradio",
+        apkFileType = ApkFileType.APKS,
+        appIconColor = 0xE31A1A,
+        signatures = setOf("9ed9acdad7d1e0b3eb51e1e06cccdef979624cb3b6bc18fddcf7165e36b06c44"),
+        targets = listOf(AppTarget(version = "11.20.1", versionCode = 452, minSdk = 32)),
     )
 
     val RAINDROP = Compatibility(
@@ -782,6 +804,17 @@ internal object AppCompatibilities {
             AppTarget(version = "3.9", versionCode = 291, minSdk = 26),
             AppTarget(version = "3.11", versionCode = 297, minSdk = 26),
         ),
+    )
+
+    val SHEYTOON = Compatibility(
+        name = "Sheytoon",
+        packageName = "com.triovent.datingapp",
+        apkFileType = ApkFileType.XAPK_REQUIRED,
+        appIconColor = 0x01EBFA,
+        signatures = setOf(
+            "82b7283e0421735bf62ff3dc9890695b9cfc0b1b1696e48318c931c5cf6a9c7c",
+        ),
+        targets = listOf(AppTarget(version = "6.7", versionCode = 3030, minSdk = 26)),
     )
 
     val SHOWLY = Compatibility(

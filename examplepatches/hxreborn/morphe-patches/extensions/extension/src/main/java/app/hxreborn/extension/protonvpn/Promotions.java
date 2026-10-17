@@ -76,7 +76,7 @@ public final class Promotions {
     }
 
     private static int notificationType(Object notification) {
-        return (Integer) Reflection.call(notification, "getType");
+        return (Integer) Reflection.read(notification, Members.apiNotificationType());
     }
 
 }

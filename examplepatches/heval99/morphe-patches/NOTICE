@@ -19,3 +19,14 @@ provided that such references:
 - Are accurate, factual, and non-misleading;
 - Do not suggest authorship by the Morphe project; and
 - Appear only in a secondary or descriptive context, not as part of the product or project name.
+
+Third-party code
+================
+
+Heval Controls (extensions/hevalcontrols and
+patches/src/main/kotlin/app/template/patches/shared/hevalcontrols) contains code
+based on SysAdminDoc/HushMessenger (https://github.com/SysAdminDoc/HushMessenger),
+licensed under the GNU General Public License v3.0, at commit
+5ae3ddf0acb1c56bf2330e5cfcc172df47dfb98f. It was modified for Heval's Morphe
+Patches on 2026-10-14. Each ported or adapted file starts with a header naming the
+original file, what was taken from it and how it was changed.

@@ -5,7 +5,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_SIMPLERADIO
-import com.android.tools.smali.dexlib2.AccessFlags
+import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
@@ -26,7 +26,6 @@ import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 // interstitial attempt. AdManagerInterstitialAd.load below is what actually shows ads.
 private const val GMA = "Lcom/google/android/gms/ads/"
 private const val MAX = "Lcom/applovin/mediation/"
-private const val MOBILE_ADS = GMA + "MobileAds;"
 
 private val HOOKS = mapOf(
     // Banners: AdView has no loadAd of its own; AdManagerAdView (what the app's banner
@@ -71,22 +70,8 @@ val disableAdsPatch = bytecodePatch(
         // false. getInitializationStatus also throws, but nothing in the app or its adapters
         // calls it. An uninitialized SDK keeps the ads manager's isInitialized() false, the
         // app's own gate for ad preloads, native loads and the favorites medium-rectangle row.
-        val mobileAds = mutableClassDefByOrNull(MOBILE_ADS)?.methods
-            ?: throw PatchException("Disable ads: $MOBILE_ADS not found")
-        val staticVoids = mobileAds.filter {
-            AccessFlags.STATIC.isSet(it.accessFlags) && it.returnType == "V" &&
-                it.implementation != null && it.name != "<clinit>"
-        }
-        for (required in listOf("initialize", "setAppVolume")) {
-            if (staticVoids.none { it.name == required }) {
-                throw PatchException("Disable ads: no concrete static void $MOBILE_ADS->$required")
-            }
-        }
-        staticVoids.forEach { it.returnEarly() }
-        mobileAds.filter {
-            it.name == "putPublisherFirstPartyIdEnabled" && it.returnType == "Z" &&
-                it.implementation != null
-        }.forEach { it.returnEarly(false) }
+        // initialize and setAppVolume (the crash site) are mandatory.
+        neutraliseMobileAdsStatics("initialize", "setAppVolume")
 
         // 2. Every GMA/MAX load/show entry point.
         for ((owner, names) in HOOKS) {

@@ -4,6 +4,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_365SCORES
+import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 import com.android.tools.smali.dexlib2.iface.ClassDef
 
 // The app's own ad gates. Declared on an R8-renamed interface and implemented by the readable
@@ -22,9 +23,12 @@ val disableAdsPatch = bytecodePatch(
     compatibleWith(COMPATIBILITY_365SCORES)
 
     execute {
-        // Both overloads are entry points used by the Blaze GAM SDK wrapper.
-        MobileAdsInitializeFingerprint.method.returnEarly()
-        MobileAdsInitializeWithListenerFingerprint.method.returnEarly()
+        // Google Mobile Ads (AdMob) is the primary ad network, loaded through the Blaze GAM SDK
+        // wrapper; without MobileAds.initialize no GAM-mediated format (banner, interstitial,
+        // rewarded, native) or mediated network loads. Both initialize overloads are entry points,
+        // and every other MobileAds static void is neutered too, since they throw without init
+        // (AGENTS.md rule 9).
+        neutraliseMobileAdsStatics("initialize")
 
         // The app-side gates return false, so no banner slot or interstitial is ever requested
         // and the layout keeps no empty ad space.

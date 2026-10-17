@@ -13,39 +13,75 @@ package app.morphe.patches.protonvpn.misc.restrictions
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.InstructionLocation.MatchAfterImmediately
 import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
+import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.opcode
 import app.morphe.patcher.patch.BytecodePatchContext
+import app.morphe.patcher.patch.PatchException
+import app.morphe.patches.protonvpn.misc.anchors.vpnUserType
+import app.morphe.util.getReference
+import app.morphe.util.indexOfFirstInstructionOrThrow
 import app.morphe.util.matchSingle
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
 private const val LOCAL_USER_SETTINGS = "Lcom/protonvpn/android/settings/data/LocalUserSettings;"
 
-internal open class RestrictionGuardFingerprint(settingGetter: String) : Fingerprint(
-    returnType = LOCAL_USER_SETTINGS,
-    parameters = listOf(LOCAL_USER_SETTINGS, "L", "Z", "L"),
-    strings = listOf("flags"),
-    filters = listOf(
-        opcode(Opcode.IF_EQZ),
-        methodCall(
-            definingClass = LOCAL_USER_SETTINGS,
-            name = settingGetter,
-            location = MatchAfterImmediately(),
+internal fun BytecodePatchContext.restrictionGuardFingerprint(settingGetter: String): Fingerprint {
+    val vpnUser = vpnUserType
+    return Fingerprint(
+        returnType = LOCAL_USER_SETTINGS,
+        filters = listOf(
+            opcode(Opcode.IF_EQZ),
+            methodCall(
+                definingClass = LOCAL_USER_SETTINGS,
+                name = settingGetter,
+                location = MatchAfterImmediately(),
+            ),
         ),
-    ),
-)
+        custom = { method, _ ->
+            method.parameterTypes.firstOrNull()?.toString() == LOCAL_USER_SETTINGS &&
+                method.parameterTypes.any { it.toString() == vpnUser }
+        },
+    )
+}
 
-internal fun BytecodePatchContext.unlockUserSetting(
-    viewState: Fingerprint,
-    freeUserParameter: Int,
-    restriction: RestrictionGuardFingerprint,
-) {
-    viewState.matchSingle().method.addInstruction(0, "const/16 p$freeUserParameter, 0x0")
+private fun Instruction.argumentRegisters() = when (this) {
+    is RegisterRangeInstruction -> List(registerCount) { startRegister + it }
+    is FiveRegisterInstruction -> listOf(registerC, registerD, registerE, registerF, registerG).take(registerCount)
+    else -> throw PatchException("$opcode is not an invoke")
+}
+
+private fun MethodReference.argumentSlotTypes() = (listOf(definingClass) + parameterTypes.map { it.toString() })
+    .flatMap { if (it == "J" || it == "D") listOf(it, it) else listOf(it) }
+
+internal fun BytecodePatchContext.unlockUserSetting(viewState: Fingerprint, restriction: Fingerprint) {
+    viewState.matchSingle().run {
+        val title = instructionMatches.first()
+        val titleRegister = title.getInstruction<OneRegisterInstruction>().registerA
+        val superclass = classDef.superclass
+        val superCallIndex = method.indexOfFirstInstructionOrThrow(title.index) {
+            (opcode == Opcode.INVOKE_DIRECT || opcode == Opcode.INVOKE_DIRECT_RANGE) &&
+                getReference<MethodReference>()?.let { it.name == "<init>" && it.definingClass == superclass } == true
+        }
+        val superCall = method.getInstruction(superCallIndex)
+        val arguments = superCall.argumentRegisters()
+        val slotTypes = superCall.getReference<MethodReference>()!!.argumentSlotTypes()
+        val titleSlot = arguments.indexOf(titleRegister)
+        if (titleSlot < 1 || slotTypes[titleSlot] != "I" || slotTypes[titleSlot - 1] != "Z") {
+            throw PatchException("No restricted flag beside the title resource in the super constructor call of $method")
+        }
+        method.addInstruction(superCallIndex, "const/16 v${arguments[titleSlot - 1]}, 0x0")
+    }
     keepUserSetting(restriction)
 }
 
-internal fun BytecodePatchContext.keepUserSetting(restriction: RestrictionGuardFingerprint) {
+internal fun BytecodePatchContext.keepUserSetting(restriction: Fingerprint) {
     restriction.matchSingle().run {
         method.replaceInstruction(instructionMatches.first().index, "nop")
     }

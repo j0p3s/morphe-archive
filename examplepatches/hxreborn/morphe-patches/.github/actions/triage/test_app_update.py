@@ -64,7 +64,7 @@ for name, (issue_body, issues, expected) in CASES.items():
     print(f"{'ok  ' if ok else 'FAIL'} {name}: expected {expected}, got {actual}")
 
 comment = decide(9, body("Proton VPN", "5.20.57.0"), [], PATCHES)["comment"]
-ok = comment == "<!-- app-update-bot -->\n1.49.1 already targets Proton VPN 5.20.57.0"
+ok = comment == "<!-- app-update-bot -->\nVersion 1.49.1 of the bundle already supports Proton VPN 5.20.57.0."
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} already-targeted comment names the bundle version and the app")
 

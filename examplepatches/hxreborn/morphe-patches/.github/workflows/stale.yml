@@ -24,9 +24,9 @@ jobs:
           days-before-issue-close: 7
           stale-issue-label: "stale"
           stale-issue-message: |
-            no activity for 30 days. it closes in 7 unless someone comments
+            This issue has had no activity for 30 days. It will be closed automatically after 7 more days without activity.
           close-issue-message: |
-            no activity for 37 days
+            This issue is being closed automatically after 7 more days without activity.
           days-before-pr-stale: -1
           days-before-pr-close: -1
           exempt-all-assignees: true
@@ -41,14 +41,14 @@ jobs:
           days-before-issue-close: 7
           stale-issue-label: "stale"
           stale-issue-message: |
-            still waiting on the details asked for above. it closes in 7 days without them
+            This issue is labelled `needs info` and has had no activity for 14 days. It will be closed automatically after 7 more days without activity.
           close-issue-message: |
-            the requested details never arrived
+            This issue is being closed automatically after 7 more days without activity.
           close-issue-reason: not_planned
           days-before-pr-stale: -1
           days-before-pr-close: -1
           exempt-all-assignees: true
-          exempt-issue-labels: "bot-wrong"
+          exempt-issue-labels: "bot-wrong,app request,app-update"
           operations-per-run: 30
 
   lock:

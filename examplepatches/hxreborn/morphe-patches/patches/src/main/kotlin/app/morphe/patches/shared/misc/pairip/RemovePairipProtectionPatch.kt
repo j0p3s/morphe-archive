@@ -13,6 +13,7 @@ val removePairipProtectionPatch = bytecodePatch {
     compatibleWith(
         AppCompatibilities.ANYTRACKER,
         AppCompatibilities.AUDIOLAB,
+        AppCompatibilities.BIOBIRD,
         AppCompatibilities.BLURWALL,
         AppCompatibilities.CATZY,
         AppCompatibilities.ECHO_EQUALIZER,

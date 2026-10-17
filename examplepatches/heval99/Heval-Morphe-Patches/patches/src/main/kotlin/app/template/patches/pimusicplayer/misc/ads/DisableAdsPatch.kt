@@ -5,6 +5,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_PIMUSICPLAYER
+import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 
 // Pi Music Player mediates ads through AppLovin MAX plus Google Mobile Ads
 // (AdMob and InMobi demand flow through them). The patch hooks the stable
@@ -24,11 +25,9 @@ val disableAdsPatch = bytecodePatch(
     compatibleWith(COMPATIBILITY_PIMUSICPLAYER)
 
     execute {
-        // Never initialize the ads SDK (both overloads are entry points).
-        methods(GMA + "MobileAds;")
-            .filter { it.implementation != null }
-            .filter { it.name == "initialize" }
-            .forEach { it.returnEarly() }
+        // Never initialize the ads SDK (both overloads are entry points), and neuter the other
+        // MobileAds statics, which throw without init (AGENTS.md rule 9).
+        neutraliseMobileAdsStatics()
 
         // Direct loads become no-ops.
         for (relative in listOf("AdView", "AdLoader", "interstitial/InterstitialAd")) {

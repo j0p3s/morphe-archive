@@ -8,6 +8,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_FUTBIN
+import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -93,8 +94,9 @@ val disableAdsPatch = bytecodePatch(
 
         // 6. Google Mobile Ads, belt and braces: the SDK never initializes, every load is a
         // no-op and the app-open preloader reports failure. The app calls no other MobileAds
-        // static (setAppVolume, setAppMuted, ...), so nothing trips over the missing init.
-        gmaMethods("MobileAds") { it.name == "initialize" }.forEach { it.returnEarly() }
+        // static today, but they all throw without init, so every static void is neutered too
+        // (AGENTS.md rule 9).
+        neutraliseMobileAdsStatics("initialize")
         for (relative in AD_LOAD_CLASSES) {
             gmaMethods(relative) { (it.name == "load" || it.name == "loadAd") && it.returnType == "V" }
                 .forEach { it.returnEarly() }

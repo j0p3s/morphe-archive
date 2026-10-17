@@ -13,6 +13,12 @@ import app.hxreborn.extension.proton.MaterialSwitches;
 @SuppressWarnings("unused")
 public final class SwitchThumbIcon {
 
+    private static final int TINT_FROM_CONTENT_COLOR = 0x8;
+
+    private static boolean checked;
+
+    private static long tint;
+
     private static volatile Object checkedContent;
 
     private static volatile Object uncheckedContent;
@@ -37,7 +43,18 @@ public final class SwitchThumbIcon {
         return uncheckedContent;
     }
 
-    static void drawIcon(Object composer, boolean checked) {
+    public static void remember(boolean isChecked, long checkedTrackColor, long uncheckedTrackColor) {
+        checked = isChecked;
+        tint = isChecked ? checkedTrackColor : uncheckedTrackColor;
+    }
+
+    public static void drawThumbIcon(Object composer) {
+        if (MaterialSwitches.isEnabled()) {
+            drawIcon(composer, checked, tint, 0);
+        }
+    }
+
+    static void drawIcon(Object composer, boolean isChecked, long iconTint, int defaults) {
     }
 
     private static Object newThumbContent(Class<?> composableLambdaType, boolean checked) {
@@ -66,7 +83,7 @@ public final class SwitchThumbIcon {
                 return proxy == args[0];
             }
 
-            drawIcon(args[0], this.checked);
+            drawIcon(args[0], this.checked, 0L, TINT_FROM_CONTENT_COLOR);
             return null;
         }
 

@@ -50,27 +50,27 @@ def decide(number, body, issues, patches_list):
 
     if not app:
         verdict, labels = "flag", ["needs info"]
-        lines.append("the App field doesn't name an app this bundle patches")
+        lines.append("The App field doesn't name an app this bundle supports.")
     elif not re.search(r"\d", version):
         verdict, labels = "flag", ["needs info"]
-        lines.append("the New version field is empty")
+        lines.append("No version number was found in the New version field.")
     else:
         current = max(apps[app], key=version_key, default="")
         tracker = open_tracker(app, number, issues)
         if current and compare(version, current) == 0:
             verdict, reason = "close", "completed"
-            lines.append(f"{patches_list['version']} already targets {app} {version}")
+            lines.append(f"Version {patches_list['version']} of the bundle already supports {app} {version}.")
         elif current and compare(version, current) < 0:
             verdict, reason = "close", "completed"
-            lines.append(f"{patches_list['version']} targets {app} {current}, which is newer than {version}")
+            lines.append(f"Version {patches_list['version']} of the bundle supports {app} {current}, which is newer than {version}.")
         elif tracker:
             tracked = tracker["title"][len(TITLE_PREFIX) + len(app) + 1:]
             verdict, reason, duplicate_of = "close", "duplicate", tracker["number"]
             if compare(version, tracked) > 0:
                 retitle = {"number": tracker["number"], "title": f"{TITLE_PREFIX}{app} {version}"}
-                lines.append(f"#{tracker['number']} tracks {app} updates, retitled to {version}")
+                lines.append(f"Issue #{tracker['number']} now tracks {app} {version}.")
             else:
-                lines.append(f"#{tracker['number']} already tracks {app} {tracked}")
+                lines.append(f"Issue #{tracker['number']} already tracks {app} {tracked}.")
         else:
             title = f"{TITLE_PREFIX}{app} {version}"
 

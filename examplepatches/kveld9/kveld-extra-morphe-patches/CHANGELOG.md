@@ -1,3 +1,93 @@
+## [1.21.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.21.0...v1.21.1) (2026-10-17)
+
+### Bug Fixes
+
+* **hevy:** disable residual Adjust and Facebook manifest components ([3f3220e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/3f3220e1dd0247db86457fceba26dfee5d0243ec))
+* **hevy:** disable residual background sync components and neutralize WorkManagerInitializer ([800066b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/800066bec6adad4ccaa588b9865ca2671d00ded4))
+* **hevy:** sinkhole React Native telemetry in NetworkingModule ([ef9376f](https://github.com/kveld9/kveld-extra-morphe-patches/commit/ef9376f4c747859281ea4b731d1ed01e66d7731f))
+* **hevy:** use valid 0.0.0.0 sinkhole URL and preserve push messaging components ([c4b2413](https://github.com/kveld9/kveld-extra-morphe-patches/commit/c4b24132c765bd2df4f631634ec0c2b0f932599e))
+* **moovit:** disable residual advertising activities and receiver ([683d692](https://github.com/kveld9/kveld-extra-morphe-patches/commit/683d692597fdfd360c1d280aa91270f628efdc98))
+* **nokoprint:** clear try blocks before replacing instructions in ad dispatch hooks ([1ec5ca5](https://github.com/kveld9/kveld-extra-morphe-patches/commit/1ec5ca5751a79a9b23298405b6d472557069a77e))
+* **nokoprint:** disable residual AdMob, BidMachine and Tappx manifest components ([2137a5d](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2137a5d4b6686be6e5648fac5da6ead795fa2925))
+* **nokoprint:** disable residual FirebaseInitProvider and ComponentDiscoveryService ([4ea7c5a](https://github.com/kveld9/kveld-extra-morphe-patches/commit/4ea7c5a7a42e95b50aa6ab14c646e634c34ce848))
+* **nokoprint:** preserve FirebaseInitProvider and ensure register count in ad dispatch hook ([ac65586](https://github.com/kveld9/kveld-extra-morphe-patches/commit/ac65586e747ef021a92554261c240ce08195c1ed))
+* **officehub:** ensure register count in transparency hook and fix metadata bundle string ([c53e83b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/c53e83b8819050599c68637d17658d7b98bde3e2))
+* **officehub:** escape target version in compatibility description ([010f027](https://github.com/kveld9/kveld-extra-morphe-patches/commit/010f027b2c3982d991cda1876dca004d0dceda44))
+* **officehub:** interpolate package name constant in compatibility description ([e708031](https://github.com/kveld9/kveld-extra-morphe-patches/commit/e70803199922465a52f0ce0d9737ae78c8457db4))
+* **officehub:** neutralize Singular attribution SDK and sinkhole AppCenter/events telemetry ([83c8e0d](https://github.com/kveld9/kveld-extra-morphe-patches/commit/83c8e0d4ef3ac5c3c3c4052d404b977e76537f7c))
+* **officehub:** update code transparency verification hook for 16.0.20604.20012 ([27f1656](https://github.com/kveld9/kveld-extra-morphe-patches/commit/27f1656a66c8a4b2e5ac0c92f60f5e541059f2b5))
+* **officehub:** update supported version to 16.0.20604.20012 ([e38c102](https://github.com/kveld9/kveld-extra-morphe-patches/commit/e38c1026a3c5eca16a2811ab81e5014272b3773c))
+
+## [1.21.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.20.0...v1.21.0) (2026-10-16)
+
+### Bug Fixes
+
+* **twitter:** purge Sentry manifest metadata and redirect tracker endpoints ([bbfc560](https://github.com/kveld9/kveld-extra-morphe-patches/commit/bbfc560d3ed0e19724448d6fedd27f8e3eb61c6b))
+* **twitter:** show the download option on every video and GIF ([777f05d](https://github.com/kveld9/kveld-extra-morphe-patches/commit/777f05d649e14975b5f7efcc6ba3832d91ed5a68))
+* **twitter:** stop timeline refresh when reopening the app ([d2d8f6c](https://github.com/kveld9/kveld-extra-morphe-patches/commit/d2d8f6c5aeb7610c957fbd1bb85cf95752126697))
+
+### New Features
+
+* **twitter:** block Google Ads, DoubleClick, and opt-in payments telemetry ([643d59e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/643d59e7dd37cc83a2b5bd7989458fc159991248))
+
+### Code Refactoring
+
+* **capcut:** remove redundant Screen Density Slimmer ([5fa88d2](https://github.com/kveld9/kveld-extra-morphe-patches/commit/5fa88d210cc5524f074935caaff2aad757ed3dd9))
+* **capcut:** scope Locale Slimmer to asset bundles only ([9f85e3b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/9f85e3bf6286bc3d82de7231d6c3df9043c3623d))
+* **instagram:** remove redundant MLKit Vision Slimmer ([6eff44a](https://github.com/kveld9/kveld-extra-morphe-patches/commit/6eff44a524c8f166a4d3c448965f597d868c0b21))
+* **lrmobile:** remove redundant Background Sync ([704ddb5](https://github.com/kveld9/kveld-extra-morphe-patches/commit/704ddb5fccc28d63cdf6775a8de5d6104afef72e))
+* **lrmobile:** remove redundant Junk Cleaner ([9a029bb](https://github.com/kveld9/kveld-extra-morphe-patches/commit/9a029bbdb4f2560aa48f6c148344277b205b803e))
+* **moovit:** remove redundant Locale Slimmer ([eca83ff](https://github.com/kveld9/kveld-extra-morphe-patches/commit/eca83ffa6b69de75a87ee601f9e3765e0b7959d9))
+* **moovit:** remove redundant Screen Density Slimmer ([dadf25b](https://github.com/kveld9/kveld-extra-morphe-patches/commit/dadf25be835c162d6b272dd8a0ee24d0b98cf2d8))
+* **officehub:** remove redundant DPI Slimmer ([a79fa13](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a79fa132837d8a611572e57a8e580fed2b2c1545))
+* **officehub:** remove redundant Junk Cleaner ([26b78b8](https://github.com/kveld9/kveld-extra-morphe-patches/commit/26b78b8aa904f01558cc535f3c738c5b6d213446))
+* **powerpoint:** remove redundant DPI Slimmer ([91b0db9](https://github.com/kveld9/kveld-extra-morphe-patches/commit/91b0db956faeaa848c6b38fef911d5bdf4b40f8f))
+* **powerpoint:** remove redundant Locale Slimmer ([2204a9e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2204a9e7a71e3999e5890954f4a515809672034d))
+* **twitter:** deduplicate tracker endpoint literals in Block Telemetry ([d8e91b3](https://github.com/kveld9/kveld-extra-morphe-patches/commit/d8e91b3ed5cb6da3489cb031354556278d80a055))
+* **twitter:** remove redundant MLKit Vision Slimmer ([29f73a7](https://github.com/kveld9/kveld-extra-morphe-patches/commit/29f73a70f0475f748a0fd396d947cb103d8b0474))
+
+## [1.20.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.19.0...v1.20.0) (2026-10-16)
+
+### New Features
+
+* **twitter:** open replies sorted by Likes instead of Relevance ([2881af3](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2881af3868164ec6cd6d0545f7ba6474d2f613b7)), closes [#12](https://github.com/kveld9/kveld-extra-morphe-patches/issues/12)
+
+## [1.19.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.18.0...v1.19.0) (2026-10-16)
+
+### Bug Fixes
+
+* **twitter:** hide empty Discover More section in reply threads ([a4c7c19](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a4c7c19ad562fcde944cff65632c4ee761121544))
+
+### New Features
+
+* add Hevy, NokoPrint and Xiaomi Earbuds (migrated from main repo) ([da9f835](https://github.com/kveld9/kveld-extra-morphe-patches/commit/da9f835854a5c43232457ec9021bc09aea13c02a))
+* **twitter:** download videos and GIFs without Premium ([1536948](https://github.com/kveld9/kveld-extra-morphe-patches/commit/1536948098b054bbfd8c8decab35b0bd27a02918))
+* **twitter:** stop the timeline from refreshing to new posts on its own ([93fbe09](https://github.com/kveld9/kveld-extra-morphe-patches/commit/93fbe09e8bd854e736221b64452d506385aea3fa))
+
+## [1.18.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.17.0...v1.18.0) (2026-10-16)
+
+### Bug Fixes
+
+* **capcut:** block AppsFlyer, AppLog and install attribution trackers ([9c5f6cc](https://github.com/kveld9/kveld-extra-morphe-patches/commit/9c5f6ccad528883ad19b7f8bcf26ba65bc523f63))
+* **capcut:** cover central VIP-status flags in Unlock Premium ([e605795](https://github.com/kveld9/kveld-extra-morphe-patches/commit/e6057955c967a87127171b4e584f0a8ee5d972a7))
+* **capcut:** pin access flags on export and template fingerprints ([d4a9920](https://github.com/kveld9/kveld-extra-morphe-patches/commit/d4a9920d17d2ec1e302d36284f2bab6fe9ceab98))
+* **capcut:** pin explicit parameters on unlock patch fingerprints ([e135007](https://github.com/kveld9/kveld-extra-morphe-patches/commit/e135007201f351e5d9231849b2b1d863facef458))
+* **capcut:** update target to 19.8.0 ([7862977](https://github.com/kveld9/kveld-extra-morphe-patches/commit/786297757b6628a21e72c866e13f59d12a9eea53))
+* **deps:** resolve Dependabot alert for transitive http-cache-semantics ([c5a49f5](https://github.com/kveld9/kveld-extra-morphe-patches/commit/c5a49f529db89c4f3c2f862a3e007500006ae3bf))
+* **twitter:** hide Community Notes on posts ([8d3ee89](https://github.com/kveld9/kveld-extra-morphe-patches/commit/8d3ee89596d7f5aa28f94ebf7680786c6faff1b9))
+* **twitter:** hide the call buttons in direct message conversations ([6bfd7a2](https://github.com/kveld9/kveld-extra-morphe-patches/commit/6bfd7a216681c149f1e06e90fb567c956f2d3c20))
+* **twitter:** hide the Discover more section under post replies ([12cbb2f](https://github.com/kveld9/kveld-extra-morphe-patches/commit/12cbb2f06d5183c58f5874466e31124476a96f13))
+* **twitter:** hide the floating compose button with Hide FAB ([fff6e9d](https://github.com/kveld9/kveld-extra-morphe-patches/commit/fff6e9d1d7f7429d6cb3557a4eface17bcc2576c))
+* **twitter:** hide the Follow button on opened posts with Hide Nudge Button ([fb8e098](https://github.com/kveld9/kveld-extra-morphe-patches/commit/fb8e098584600b5ec4b29238e362f04a581f9396))
+* **twitter:** hide the selected navigation drawer entries again ([29c3d2a](https://github.com/kveld9/kveld-extra-morphe-patches/commit/29c3d2a7f370708b854112a89a87ca5ec45eb8b4))
+* **twitter:** keep the Grok Imagine prompt hidden on profiles after resuming the app ([a5c82c4](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a5c82c4c57f857f6bbfd0a7dc747077b2bea98ac))
+
+### New Features
+
+* **capcut:** remove watermark on export ([0ce80a6](https://github.com/kveld9/kveld-extra-morphe-patches/commit/0ce80a65f352a91b9d501234efe69267a9c96219))
+* **capcut:** unlock premium template styles ([ddca5a0](https://github.com/kveld9/kveld-extra-morphe-patches/commit/ddca5a09f9ddb3ce2d3226979c99f7ae9c1504e0))
+* **capcut:** unlock Ultra HD export options ([a415f2f](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a415f2f8d9e88930214f0567402385b624b1bdb6))
+
 ## [1.17.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.16.3...v1.17.0) (2026-10-16)
 
 ### Bug Fixes

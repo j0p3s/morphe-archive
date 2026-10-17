@@ -357,9 +357,6 @@ public class PausedHooksTest {
                 () -> app.hushtelegram.extension.telegram.misc.SendConfirmForTests.gifOn(),
                 () -> app.hushtelegram.extension.telegram.misc.SendConfirmForTests.voiceVideoOn(),
                 () -> app.hushtelegram.extension.telegram.misc.SendConfirmForTests.callOn()));
-        // Telegram Beta stops forcing its debug logs on.
-        probes.put(PatchFamily.BETA_LOGS_OFF, Collections.singletonList(
-                () -> !app.hushtelegram.extension.telegram.misc.BetaLogs.forceLogs(true)));
         // Translation only works while the switch is on.
         probes.put(PatchFamily.OUTSIDE_TRANSLATE, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.OutsideTranslateForTests.active()));
@@ -384,17 +381,13 @@ public class PausedHooksTest {
                     return app.hushtelegram.extension.telegram.misc.GalleryCamera.openWhenReady(gallery, new Object());
                 }));
         // A channel's read time is never sent, and neither are Premium screen interactions.
-        // On Telegram Beta, Crashlytics never starts and Sessions reads its override as off.
         probes.put(PatchFamily.DISABLE_ANALYTICS, Arrays.asList(
                 () -> Analytics.skipReadMetrics(new ArrayList<>()),
                 () -> Analytics.skipPremiumAppLog("premium.promo_screen_show"),
                 () -> Analytics.skipPremiumAppLog("premium.promo_screen_tap"),
                 () -> Analytics.skipPremiumAppLog("premium.promo_screen_accept"),
                 () -> Analytics.skipPremiumAppLog("premium.promo_screen_fail"),
-                () -> Analytics.skipDeviceAppLog("android_dual_camera"),
-                () -> Analytics.skipCrashReporterStart(),
-                () -> Analytics.skipErrorReport(),
-                () -> Boolean.FALSE.equals(Analytics.sessionsEnabled(null))));
+                () -> Analytics.skipDeviceAppLog("android_dual_camera")));
         // Links open in the browser, and Mini Apps and web pages inside Telegram get no location.
         probes.put(PatchFamily.OPEN_EXTERNAL_LINKS, Arrays.asList(
                 PausedHooksTest::externalBrowserOpened,

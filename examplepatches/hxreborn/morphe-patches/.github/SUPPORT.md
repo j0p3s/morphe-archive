@@ -1,6 +1,6 @@
 # Support
 
-This bundle is a hobby project with one maintainer. Issues are the only channel, and each one tracks one thing.
+This is a hobby project run by one developer. Everything goes through issues, one issue per topic, to keep things organized. Pick the form that fits:
 
 | You want | Open |
 | --- | --- |
@@ -10,10 +10,10 @@ This bundle is a hobby project with one maintainer. Issues are the only channel,
 | The patched app opens but misbehaves | [Patched app does not work](https://github.com/hxreborn/morphe-patches/issues/new?template=not_working.yml) |
 | A new feature for a supported app | [Feature request](https://github.com/hxreborn/morphe-patches/issues/new?template=feature_request.yml) |
 
-How issues run here:
+## Good to know
 
-- A request ends with the version it shipped. The README lists the supported versions under each app. A newer version is a new app update request, one per version.
-- Closed issues lock 7 days after closing, unless labelled `discussion`. A request posted on a closed issue gets one pointer to the right form.
-- A bot reads the form fields when an issue is opened or edited. It closes reports it can't act on and reopens them once an edit fixes the gap. The `bot-wrong` label marks a misfire and stops it.
-- Issues waiting on the reporter are marked stale after 14 days and close a week later. Other open issues: 30 days, then a week. App requests and app updates don't go stale.
-- Features the server enforces can't be patched. Other bundles' patches belong to their own trackers: find the bundle at [morphe-patches.software](https://morphe-patches.software/#apps).
+- Each request covers one app version. A newer version gets its own app update request.
+- Closed issues are locked automatically after about a week without activity. Anything new goes in a new issue.
+- A bot checks the form when an issue is opened or edited. It points out anything missing and closes reports it can't act on.
+- Features the server enforces can't be patched.
+- Patches from other bundles are handled in their own repositories. Find them at [morphe-patches.software](https://morphe-patches.software/#apps).

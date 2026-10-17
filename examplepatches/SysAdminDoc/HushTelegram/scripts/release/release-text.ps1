@@ -159,6 +159,32 @@ function Get-MissingChangelogBullets {
     return @(Get-ChangelogBullets -Body $section.Body | Where-Object { -not $lines.Contains($_) })
 }
 
+function Get-ManagerChanges {
+    <#
+    .SYNOPSIS
+        The part of the Manager description that lists the release's changes: "### What's new"
+        and every bullet of the version's CHANGELOG section but the Tooling ones, word for word.
+        Empty when the section has only Tooling bullets.
+    .DESCRIPTION
+        Morphe Manager shows the bundle description, not the CHANGELOG, for the release a phone
+        was patched with, and reads a "### " heading and "* **Scope:** text" bullets in it as a
+        list of changes. Without them the newest release read as one paragraph while every older
+        one listed its changes. validate-release-facts.ps1 reads the description only above its
+        first "### " line, since a bullet may name an older build or another patch count.
+    #>
+    param(
+        [Parameter(Mandatory = $true)][string]$Changelog,
+        [Parameter(Mandatory = $true)][string]$Version
+    )
+    $section = Get-ChangelogSection -Text ($Changelog -replace "`r`n", "`n") -Name $Version
+    if (-not $section -or -not $section.Date) {
+        throw "The CHANGELOG has no dated $Version section. Run -Stage prepare first."
+    }
+    $app = @(Get-ChangelogBullets -Body $section.Body | Where-Object { -not $_.StartsWith('* **Tooling:**') })
+    if ($app.Count -eq 0) { return '' }
+    return "### What's new`n`n" + ($app -join "`n")
+}
+
 function ConvertTo-JsonText {
     <# One JSON string literal, escaped the way pwsh writes patches-bundle.json: quotes,
        backslashes and control characters, and nothing else. #>
@@ -234,11 +260,24 @@ function Set-BugFormVersion {
         { param($match) "$($match.Groups[1].Value)HushTelegram $Version on Telegram $TelegramVersion" }))
 }
 
+function Test-RepoDescriptionNamesFacts {
+    <#
+    .SYNOPSIS
+        Whether the repository description names a release version, a patch count or a Telegram
+        build. One that names none of them has nothing a release can leave stale, so a release
+        neither holds it to the catalog nor rewrites it.
+    #>
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$Description)
+    return ($Description -match '\bv\d+\.\d+\.\d+\b' -or $Description -match '(?<![\d.])\d+ patches\b' -or
+        $Description -match 'Telegram\s+\d+(?:\.\d+)+(?!\d)')
+}
+
 function Get-UpdatedRepoDescription {
     <#
     .SYNOPSIS
         The repository description with this release's version, patch count and Telegram version:
-        "HushTelegram vX ... N patches for Telegram Y." Throws when it doesn't have that shape.
+        "HushTelegram vX ... N patches for Telegram Y." One that names none of those comes back as it
+        is. Throws when it names some of them without that shape.
     #>
     param(
         [Parameter(Mandatory = $true)][string]$Description,
@@ -246,6 +285,7 @@ function Get-UpdatedRepoDescription {
         [Parameter(Mandatory = $true)][int]$Count,
         [Parameter(Mandatory = $true)][string]$TelegramVersion
     )
+    if (-not (Test-RepoDescriptionNamesFacts -Description $Description)) { return $Description }
     if ($Description -notmatch 'HushTelegram v\d+\.\d+\.\d+' -or $Description -notmatch '\b\d+ patches for Telegram \d+(?:\.\d+)*') {
         throw "The repository description doesn't name ""HushTelegram vX"" and ""N patches for Telegram Y"": $Description"
     }

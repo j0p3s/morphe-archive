@@ -102,7 +102,6 @@ public enum PatchFamily {
     MESSAGE_MENU_REPEAT(FamilyNames.MESSAGE_MENU_REPEAT, "messageMenuRepeat", null, Settings.MESSAGE_MENU_REPEAT, Settings.MESSAGE_MENU_COPY_PHOTO, Settings.MESSAGE_MENU_DETAILS, Settings.MESSAGE_MENU_QUICK_FORWARD),
     KEEP_DELETED_MESSAGES(FamilyNames.KEEP_DELETED_MESSAGES, "keepDeleted", null, Settings.KEEP_DELETED_MESSAGES),
     ASK_BEFORE_STICKER(FamilyNames.ASK_BEFORE_STICKER, "askBeforeSending", null, Settings.ASK_BEFORE_STICKER, Settings.ASK_BEFORE_GIF, Settings.ASK_BEFORE_VOICE_VIDEO, Settings.ASK_BEFORE_CALL),
-    BETA_LOGS_OFF(FamilyNames.BETA_LOGS_OFF, "betaLogsOff", null, Settings.BETA_LOGS_OFF),
     OUTSIDE_TRANSLATE(FamilyNames.OUTSIDE_TRANSLATE, "outsideTranslate", null, Settings.OUTSIDE_TRANSLATE),
     HIDE_CHANNEL_BUTTONS(FamilyNames.HIDE_CHANNEL_BUTTONS, "hideChannelButtons", null, Settings.HIDE_CHANNEL_BUTTONS),
     HIDE_SEND_AS(FamilyNames.HIDE_SEND_AS, "hideSendAs", null, Settings.HIDE_SEND_AS),
@@ -196,7 +195,7 @@ public enum PatchFamily {
                 ALLOW_CHAT_BLUR, NO_HAPTICS, REACTION_EFFECTS_OFF, HIDE_STICKER_TIME, CHANGE_STICKER_SIZE, HIDE_FEATURES_AND_INVITE,
                 HIDE_CHANNEL_BUTTONS, HIDE_SEND_AS),
         PRIVACY("Privacy", DISABLE_ANALYTICS, DISABLE_CALL_DEBUG, DISABLE_DRAFT_PREVIEWS, GALLERY_CAMERA_ON_TAP,
-                HIDE_PHONE_NUMBER, BETA_LOGS_OFF);
+                HIDE_PHONE_NUMBER);
 
         /** The English title, which is also the page's route and its translation key. */
         final String title;
@@ -320,9 +319,6 @@ public enum PatchFamily {
         PREMIUM_PROMO_ACCEPT(DISABLE_ANALYTICS, "premiumPromoAccept", "Premium promo accepts"),
         PREMIUM_PROMO_FAIL(DISABLE_ANALYTICS, "premiumPromoFail", "Premium promo failures"),
         DUAL_CAMERA_REPORTS(DISABLE_ANALYTICS, "dualCameraReport", "dual camera reports"),
-        // Telegram Beta carries these SDKs and the regular build doesn't, so a build without them isn't missing anything.
-        CRASH_REPORTS(DISABLE_ANALYTICS, "crashReports", "Firebase crash reports", true),
-        SESSION_REPORTS(DISABLE_ANALYTICS, "sessionReports", "Firebase session reports", true),
         CALL_DEBUG_UPLOAD(DISABLE_CALL_DEBUG, "callDebugUpload", "call debug reports"),
         CALL_LOG_FILE_UPLOAD(DISABLE_CALL_DEBUG, "callLogFileUpload", "call log file uploads"),
         CALL_LOG_UPLOAD(DISABLE_CALL_DEBUG, "callLogUpload", "call log reports"),
@@ -373,22 +369,11 @@ public enum PatchFamily {
         public final PatchFamily family;
         final String statusMethod;
         public final String label;
-        /**
-         * Only some declared builds carry this target. Where its flag is off, the patch found nothing
-         * to change or said in its log why it couldn't, so coverage leaves it out rather than
-         * calling it missing.
-         */
-        public final boolean onlyWhereCarried;
 
         Capability(PatchFamily family, String statusMethod, String label) {
-            this(family, statusMethod, label, false);
-        }
-
-        Capability(PatchFamily family, String statusMethod, String label, boolean onlyWhereCarried) {
             this.family = family;
             this.statusMethod = statusMethod;
             this.label = label;
-            this.onlyWhereCarried = onlyWhereCarried;
         }
 
         /** A patch-time fact, independent of whether its switch is on or the app is paused. */
@@ -425,21 +410,9 @@ public enum PatchFamily {
         return Collections.unmodifiableSet(installed);
     }
 
-    /**
-     * The targets coverage speaks of in this build: every expected one, less those only some builds
-     * carry and this one didn't get.
-     */
-    Set<Capability> shownCapabilities() {
-        Set<Capability> shown = EnumSet.noneOf(Capability.class);
-        for (Capability capability : expectedCapabilities()) {
-            if (!capability.onlyWhereCarried || capability.installed()) shown.add(capability);
-        }
-        return Collections.unmodifiableSet(shown);
-    }
-
     /** Keeps the usual description for complete builds and names precise coverage for partial ones. */
     String coverageSummary(String completeSummary) {
-        Set<Capability> expected = shownCapabilities();
+        Set<Capability> expected = expectedCapabilities();
         Set<Capability> installed = installedCapabilities();
         if (installed.size() == expected.size()) return completeSummary;
         List<String> covered = new ArrayList<>();
@@ -454,7 +427,7 @@ public enum PatchFamily {
     private String coverageReportLine() {
         List<String> covered = new ArrayList<>();
         List<String> missing = new ArrayList<>();
-        for (Capability capability : shownCapabilities()) {
+        for (Capability capability : expectedCapabilities()) {
             (capability.installed() ? covered : missing).add(capability.label);
         }
         String line = patchName + " coverage: " + (covered.isEmpty() ? "none" : String.join(", ", covered));

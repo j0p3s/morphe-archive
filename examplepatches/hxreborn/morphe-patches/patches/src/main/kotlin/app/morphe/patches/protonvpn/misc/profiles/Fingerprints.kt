@@ -6,29 +6,33 @@ package app.morphe.patches.protonvpn.misc.profiles
 
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.InstructionLocation.MatchAfterImmediately
+import app.morphe.patcher.anyInstruction
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.opcode
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patches.protonvpn.misc.anchors.ToStringFingerprint
-import app.morphe.patches.protonvpn.misc.anchors.findPropertyGetter
+import app.morphe.patches.protonvpn.misc.anchors.isFreeUserCall
+import app.morphe.patches.protonvpn.misc.anchors.propertyGetterCall
+import app.morphe.patches.protonvpn.misc.anchors.propertyRead
 import app.morphe.patches.protonvpn.misc.anchors.vpnUserType
-import app.morphe.patches.protonvpn.misc.restrictions.FreeServerCheckFingerprint
-import app.morphe.patches.protonvpn.misc.restrictions.freeUserCheckFingerprint
+import app.morphe.patches.protonvpn.misc.restrictions.freeServerCheckFingerprint
+import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 
-private const val SERVER = "Lcom/protonvpn/android/servers/Server;"
-
-internal fun BytecodePatchContext.profileAvailabilityFingerprint() = freeUserCheckFingerprint(
-    returnType = "Ljava/lang/Object;",
-    parameters = listOf(
-        "L",
-        vpnUserType,
-        "Ljava/lang/Long;",
-        "Lcom/protonvpn/android/vpn/ProtocolSelection;",
-        "Ljava/util/List;",
-        "L",
-    ),
-)
+internal fun BytecodePatchContext.profileAvailabilityFingerprint(): Fingerprint {
+    val vpnUser = vpnUserType
+    return Fingerprint(
+        returnType = "Ljava/lang/Object;",
+        filters = listOf(
+            isFreeUserCall(),
+            opcode(Opcode.MOVE_RESULT, MatchAfterImmediately()),
+        ),
+        custom = { method, _ ->
+            val parameters = method.parameterTypes.map { it.toString() }
+            vpnUser in parameters && "Ljava/lang/Long;" in parameters && "Ljava/util/List;" in parameters
+        },
+    )
+}
 
 internal object ServerListsToStringFingerprint : ToStringFingerprint("ServerLists(allServers=")
 
@@ -37,7 +41,7 @@ internal fun BytecodePatchContext.vpnCountriesFingerprint() = Fingerprint(
     returnType = "Ljava/util/List;",
     parameters = emptyList(),
     filters = listOf(
-        methodCall(findPropertyGetter(ServerListsToStringFingerprint, "vpnCountries")),
+        propertyRead(ServerListsToStringFingerprint, "vpnCountries"),
         methodCall(definingClass = "Ljava/text/Collator;", name = "getInstance"),
     ),
 )
@@ -46,23 +50,33 @@ internal val profileTypesToStringFingerprints = listOf("Standard", "SecureCore",
     ToStringFingerprint("$type(availableTypes=")
 }
 
-internal object ProfileServerFilterFingerprint : FreeServerCheckFingerprint(parameters = listOf(SERVER))
-
-internal object ProfileCitiesOrStatesFingerprint : Fingerprint(
-    returnType = "Ljava/lang/Object;",
-    parameters = listOf("Ljava/lang/String;", "Z", "L", "L"),
-    filters = listOf(
-        methodCall(definingClass = "Lcom/protonvpn/android/models/vpn/VpnCountry;", name = "getServerList"),
-        opcode(Opcode.MOVE_RESULT_OBJECT, MatchAfterImmediately()),
+internal fun BytecodePatchContext.profileServerFilterFingerprint() = freeServerCheckFingerprint(
+    anyInstruction(
+        opcode(Opcode.XOR_INT_LIT8),
+        opcode(Opcode.XOR_INT_2ADDR),
+        location = MatchAfterImmediately(),
     ),
 )
 
-internal object ProfilesListToStringFingerprint : ToStringFingerprint("ProfilesList(profiles=")
+internal object VpnCountryToStringFingerprint : ToStringFingerprint("VpnCountry(flag=")
 
-internal object ProfilesListStateFingerprint : Fingerprint(
-    classFingerprint = ProfilesListToStringFingerprint,
-    name = "<init>",
-    parameters = listOf("Ljava/util/List;"),
-)
+internal object CityStateIdToStringFingerprint : ToStringFingerprint("CityStateId(name=")
+
+internal fun BytecodePatchContext.profileCitiesOrStatesFingerprint(): Fingerprint {
+    val cityStateId = CityStateIdToStringFingerprint.originalClassDef.type
+    return Fingerprint(
+        filters = listOf(
+            propertyGetterCall(VpnCountryToStringFingerprint, "serverList"),
+            opcode(Opcode.MOVE_RESULT_OBJECT, MatchAfterImmediately()),
+        ),
+        custom = { method, _ ->
+            val parameters = method.parameterTypes.map { it.toString() }
+            !AccessFlags.STATIC.isSet(method.accessFlags) && parameters.size >= 3 &&
+                parameters.first() == "Ljava/lang/String;" && cityStateId !in parameters
+        },
+    )
+}
+
+internal object ProfilesListToStringFingerprint : ToStringFingerprint("ProfilesList(profiles=")
 
 internal object ProfileViewItemToStringFingerprint : ToStringFingerprint("ProfileViewItem(profile=")

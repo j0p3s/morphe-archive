@@ -5,8 +5,11 @@ smali = "d92701d947"
 gson = "2.14.0"
 morphe-patches-library = "1.0.4"
 agp = "9.1.0"
+junit = "4.13.2"
 
 [libraries]
 gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
 morphe-patches-library = { module = "app.morphe:morphe-patches-library", version.ref = "morphe-patches-library" }
+# Heval Controls core unit tests (extensions/hevalcontrols/core).
+junit = { module = "junit:junit", version.ref = "junit" }
 

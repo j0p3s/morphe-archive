@@ -128,3 +128,7 @@ node_modules/
 # Ignore IDEA files
 .idea/
 local.properties
+
+# Internal notes
+*NOTES*.md
+ACTION_*.md

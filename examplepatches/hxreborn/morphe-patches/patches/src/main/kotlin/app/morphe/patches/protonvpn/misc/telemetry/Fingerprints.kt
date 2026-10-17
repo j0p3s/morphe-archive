@@ -11,27 +11,24 @@
 package app.morphe.patches.protonvpn.misc.telemetry
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.InstructionLocation.MatchAfterImmediately
 import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.methodCall
+import app.morphe.patcher.opcode
 import app.morphe.patcher.resource.ResourceType
 import app.morphe.patches.protonvpn.misc.anchors.resourceField
-import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 
 private const val PAYMENT_FFI = "Lme/proton/android/payment/core/PaymentFfi;"
 
 internal object VpnTelemetryEventFingerprint : Fingerprint(
-    accessFlags = listOf(AccessFlags.PRIVATE, AccessFlags.FINAL),
     returnType = "Ljava/lang/Object;",
-    parameters = listOf("Lcom/protonvpn/android/telemetry/TelemetryEvent;", "Z", "L"),
+    strings = listOf("event added, total: "),
 )
 
-internal object CoreTelemetryUploadSchedulerFingerprint : Fingerprint(
-    returnType = "V",
-    parameters = listOf("Lme/proton/core/domain/entity/UserId;", "J"),
-    filters = listOf(
-        fieldAccess(definingClass = "Lme/proton/core/telemetry/data/worker/TelemetryWorker;", opcode = Opcode.SGET_OBJECT),
-    ),
+internal object CoreTelemetryEnqueueFingerprint : Fingerprint(
+    returnType = "Ljava/lang/Object;",
+    strings = listOf("core.telemetry.enqueue"),
 )
 
 internal object ObservabilityUploadFingerprint : Fingerprint(
@@ -46,17 +43,16 @@ internal object ObservabilityUploadFingerprint : Fingerprint(
 )
 
 internal object ObservabilityEnabledFingerprint : Fingerprint(
-    returnType = "Ljava/lang/Object;",
-    parameters = listOf("L"),
     filters = listOf(
         resourceField(ResourceType.BOOL, "core_feature_observability_enabled"),
-        methodCall(definingClass = "Landroid/content/res/Resources;", name = "getBoolean"),
+        methodCall(definingClass = "Landroid/content/res/Resources;", name = "getBoolean", location = MatchAfterImmediately()),
+        opcode(Opcode.MOVE_RESULT, MatchAfterImmediately()),
     ),
 )
 
 internal object PaymentsObservabilityWorkerFingerprint : Fingerprint(
-    name = "start",
-    returnType = "V",
-    parameters = emptyList(),
-    custom = { _, classDef -> classDef.fields.any { it.type == PAYMENT_FFI } },
+    name = "runObservabilityWorker",
+    returnType = "Ljava/lang/Object;",
+    parameters = listOf("L"),
+    custom = { method, classDef -> classDef.type == PAYMENT_FFI && method.implementation != null },
 )

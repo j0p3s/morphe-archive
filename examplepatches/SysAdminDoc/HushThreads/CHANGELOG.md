@@ -4,6 +4,12 @@ Changes in the source build, then released versions.
 
 ## Unreleased
 
+* **Threads:** Cancel and the download time limit now end a save even when the phone's proxy service stops answering. Waiting proxy calls share the fixed limit on background network checks, so repeated attempts can't keep creating threads.
+
+* **Threads:** Settings file access stays tracked when a disk write or Android's permission service fails. Cleanup retries after a restart, and retrying the same file can't keep lasting access without a saved cleanup record.
+
+* **Tooling:** Updated the build wrapper to Gradle 9.8.1, which fixes three high security advisories. The build advisory check now checks the recorded Gradle distribution separately from component libraries and refuses missing or unreadable version evidence, including when online component checks are skipped.
+
 * **Threads:** Open links in browser now also covers the places on 451 that used to skip it. An ad's link button and a swipe up on an ad in the media viewer send the ad's web link to your browser the same way post links go, and so do the privacy policy and disclaimer links on a lead form. Meta's own pages still open in Threads.
 * **Threads:** Pressing and holding the text of an opened post brings up Copy text again, the same as in your feed, so you get the whole post with its links. It had stopped doing anything on 451. A new `Copy text on long press` switch under Posts in HushThreads settings turns this on or off. It starts on and comes with every build.
 * **Threads:** The HushThreads settings home page has two new rows. `Quick setups` changes a set of switches in one tap: Quiet hides ads and suggested accounts, Privacy stops most usage reports, takes tracking off shared links and hides your screenshots from Threads, and Back to defaults puts every feature switch back. A toast says how many changed. `Report a problem` opens a new GitHub bug report with your HushThreads and Threads versions, your phone and the switches you have on already filled in.

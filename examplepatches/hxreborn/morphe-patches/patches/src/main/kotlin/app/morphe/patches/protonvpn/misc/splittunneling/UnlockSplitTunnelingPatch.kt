@@ -28,8 +28,7 @@ val unlockSplitTunnelingPatch = bytecodePatch(
         markPatchApplied("unlockSplitTunneling")
         unlockUserSetting(
             SplitTunnelingViewStateFingerprint,
-            freeUserParameter = 5,
-            SplitTunnelingRestrictionFingerprint,
+            splitTunnelingRestrictionFingerprint(),
         )
     }
 }

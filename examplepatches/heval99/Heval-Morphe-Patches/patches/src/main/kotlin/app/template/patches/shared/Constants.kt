@@ -159,17 +159,22 @@ object Constants {
     // patches apply unchanged; MyFitnessPalSmokeTest passes.
     // 2026-10-12 APK-finder audit: only distributed as a split bundle (APKMirror BUNDLE /
     // APKPure-Uptodown XAPK), so apkFileType is APKM; any "universal APK" note below is outdated.
+    // Verified 2026-10-14 against 26.41.0 (versionCode 51589, APKPure XAPK merged, arm64; the
+    // owner keeps only the latest verified version). Enable Premium+ now finds both parsers by
+    // shape (static (String) -> Entitlement/Tier on the enum's companion, reading its Unknown
+    // fallback) instead of the R8 names `$a`/`a`; the entitlement enums are unchanged. 26.41.0 adds
+    // the Datadog SDK (RUM, crash/ANR, network tracing): the new Disable Datadog telemetry makes
+    // the app's DatadogRumStartDecision function (kept return type + SkipReason.FLAG_DISABLED
+    // branch) always return Skip(FLAG_DISABLED), so the SDK core is never initialized.
+    // MyFitnessPalSmokeTest passes.
+    // Emulator 2026-10-14 (26.41.0, logged out): no crash. The app never logs Datadog start-up, so the
+    // Datadog skip is verified in bytecode only.
     val COMPATIBILITY_MYFITNESSPAL = Compatibility(
         name = "MyFitnessPal",
         packageName = "com.myfitnesspal.android",
         apkFileType = ApkFileType.APKM,
         appIconColor = 0x0072BC,
-        targets = listOf(
-            AppTarget(version = "26.37.0", versionCode = 51401),
-            AppTarget(version = "26.38.0", versionCode = 51448),
-            AppTarget(version = "26.39.0", versionCode = 51509),
-            AppTarget(version = "26.40.0", versionCode = 51555)
-        )
+        targets = listOf(AppTarget(version = "26.41.0", versionCode = 51589))
     )
 
     // Verified 2026-09-18 against club.boxbox.android 5.4.9 (versionCode 251, the current
@@ -209,6 +214,7 @@ object Constants {
     // shows "Add" instead of "Unlock" and the app logs plan Pro; no crashes. The "PRO" labels
     // in the widget list stay. Signed-in features were not tried; server-side
     // UserProfiles.isPro is untouched.
+    // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
     val COMPATIBILITY_BOXBOX = Compatibility(
         name = "BoxBox",
         packageName = "club.boxbox.android",
@@ -252,6 +258,7 @@ object Constants {
     // were dropped from the targets: the new patches were only verified on 14.9.6. The GmsCore
     // "Clone" option renames the package, which Spoof signature does not follow (it spoofs
     // com.scores365 only), so keep Clone off when notifications matter.
+    // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
     val COMPATIBILITY_365SCORES = Compatibility(
         name = "365Scores",
         packageName = "com.scores365",
@@ -270,16 +277,17 @@ object Constants {
     // Re-verified 2026-09-17 on 10.1 with morphe-cli -f: Disable ads still applies.
     // Verified 2026-10-07 against 10.2.1 (versionCode 2188, APKPure): Disable ads applies
     // unchanged; LivescoreSmokeTest passes.
+    // 2026-10-14: updated to 10.3.1 (versionCode 2226, single APK, signer CN=Sebastian/O=Cloeme
+    // as on 10.3); anchors unchanged: AdsRemovalSettings.areAdsDisabled()Z keeps its name, body and
+    // the same six callers. Only the latest verified version is supported.
+    // Emulator 2026-10-14 (10.3.1): no banner, interstitial or gap (stock shows a test banner and an
+    // interstitial); no crash. The bookmaker "Match odds" sponsor card (AD tag) is an app widget and stays.
     val COMPATIBILITY_LIVESCORE = Compatibility(
         name = "Livescore",
         packageName = "com.livescore",
         apkFileType = ApkFileType.APK,
         appIconColor = 0xC8102E,
-        targets = listOf(
-            AppTarget(version = "10.1", versionCode = 2144),
-            AppTarget(version = "10.2.1", versionCode = 2188),
-            AppTarget(version = "10.3", versionCode = 2204)
-        )
+        targets = listOf(AppTarget(version = "10.3.1", versionCode = 2226))
     )
 
     // Verified 2026-08-20 against FishBuddy v11.0.84 (universal, Android 7.0+).
@@ -672,6 +680,8 @@ object Constants {
     // league ODDS tab, the match-detail odds section, the bookmaker bonus strip with its 18+ line,
     // the gift icon and the ad slots are gone; no crashes. List-row odds and bookmaker broadcasting
     // info were not shown by stock in that region, so they are untested.
+    // 2026-10-14: Disable ads also no-ops the next-gen MobileAds (and Companion) setRequestConfiguration,
+    // setUserMutedApp and setUserControlledAppVolume, which throw without init (rule 9).
     val COMPATIBILITY_FLASHSCORE = Compatibility(
         name = "Flashscore",
         packageName = "eu.livesport.FlashScore_com",
@@ -694,6 +704,7 @@ object Constants {
     // applies unchanged; OneFootballSmokeTest passes.
     // 2026-10-12 APK-finder audit: only distributed as a split bundle (APKMirror BUNDLE /
     // APKPure-Uptodown XAPK), so apkFileType is APKM; any "universal APK" note below is outdated.
+    // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
     val COMPATIBILITY_ONEFOOTBALL = Compatibility(
         name = "OneFootball",
         packageName = "de.motain.iliga",
@@ -806,6 +817,7 @@ object Constants {
     // app starts no ad SDK. Neither stock nor patched gets past the first GlobalActivity screen on
     // this emulator (pause timeout on stock too), so the screens with ads, the squad-builder panel
     // and interstitials were NOT checked at runtime. Only 27.06 is supported now (owner request).
+    // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
     val COMPATIBILITY_FUTBIN = Compatibility(
         name = "Futbin",
         packageName = "com.futbin",
@@ -824,6 +836,7 @@ object Constants {
     // serve, so there is nothing to verify against it.
     // 2026-10-12 APK-finder audit: only distributed as a split bundle (APKMirror BUNDLE /
     // APKPure-Uptodown XAPK), so apkFileType is APKM; any "universal APK" note below is outdated.
+    // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
     val COMPATIBILITY_PCW = Compatibility(
         name = "Pocket Color Wheel",
         packageName = "com.pocketcolorwheel.PCW",
@@ -885,19 +898,30 @@ object Constants {
         targets = listOf(AppTarget(version = "26.06.0", versionCode = 70004221))
     )
 
-    // Verified 2026-10-11 against com.appgenix.bizcal 2.55.5 (versionCode 255501) from the
-    // existing apks/bizcal/base.apk. Single APK, no PairIP. The app's own code is readable.
-    // AdsUtil.showAdsForUser(Context) is the one user-level ad gate: it guards the mediation SDK
-    // start (StoreUtil.initializeMobileAds, Fyber/Chartboost/AppLovin/Vungle/Facebook/InMobi/Unity)
-    // and the interstitial preload and show path. Pro (ProUtil) is untouched: ads only.
-    // 2026-10-12 APK-finder audit: only distributed as a split bundle (APKMirror BUNDLE /
-    // APKPure-Uptodown XAPK), so apkFileType is APKM; any "universal APK" note below is outdated.
+    // Verified 2026-10-14 against com.appgenix.bizcal 2.55.7 (versionCode 255702): owner-supplied
+    // apkcube bundle, base and every split signed by the developer (CN=Michael Kopplin, O=Mikado
+    // Software, SHA-256 53d3dc3f...) with a Google Play source stamp, merged with APKEditor. Only
+    // distributed as a split bundle, so APKM. No PairIP, LVL or Play Integrity; app code readable.
+    // Disable ads: AdsUtil.showAdsForUser(Context) and showAdsAccordingToFirebase(Context) (the
+    // "ads or Pro" dialog flag) forced false, plus the FairBid backstop in StoreUtil
+    // (initializeMobileAds / preloadInterstitialAd / showInterstitialAd, pinned by their FairBid and
+    // Interstitial calls) and the Facebook AudienceNetworkContentProvider.onCreate.
+    // Disable telemetry: Fyber's crash-handler provider, the two PushNotificationsUtil promo-push
+    // methods, FirebaseAnalytics.logEvent/setUserId/setUserProperty, AppMeasurementSdk.logEvent, the
+    // Crashlytics reporting API plus its collection arbiter (found by its pref key), and the
+    // firebase_analytics_collection_deactivated manifest switch; Firebase init and Remote Config
+    // are left running. Unlock Pro (owner-supplied reference
+    // o0b/morphe-patches): SettingsHelper$ProStatus.getCompleteProStatus / getForceProStatus
+    // forced true, which every ProUtil feature gate reads first; billing is untouched.
+    // Emulator 2026-10-14 (2.55.7, all three patches): no crash, no ads or ads-or-Pro dialog, no Go
+    // Pro drawer item, location autocomplete unlocked, events persist across views/rotation/restart;
+    // Firebase logs "App measurement deactivated via the manifest".
     val COMPATIBILITY_BUSINESSCALENDAR = Compatibility(
         name = "Business Calendar 2",
         packageName = "com.appgenix.bizcal",
         apkFileType = ApkFileType.APKM,
         appIconColor = 0x009688,
-        targets = listOf(AppTarget(version = "2.55.5", versionCode = 255501))
+        targets = listOf(AppTarget(version = "2.55.7", versionCode = 255702))
     )
 
     // Verified 2026-10-11 against app.expert.player 11.2.0 (versionCode 306) from APKPure's XAPK
@@ -949,12 +973,19 @@ object Constants {
     // prior" exception; no "Ad" card (stock shows it at the top of Recommended); audio plays and
     // survives background/return; no interstitial; Enable Premium hides the paywall and the
     // Premium tab. 6.2.0 dropped: only the latest verified version is supported.
+    // 2026-10-14: updated to 6.3.0 (versionCode 899, merged bundle, same developer signer as
+    // 6.2.4); anchors unchanged: SimpleRadioBaseActivity.isPremium, the "iab_premium" IAB service
+    // (still ta/j), every listed GMA/MAX entry point and MobileAds static, and the AdsExperiment
+    // Boolean after "android_search_nativeads_show" (loader s2(), getter x2() as on 6.2.4). The app
+    // code differs from 6.2.4 only by renumbered lambdas and two Dagger injector classes.
+    // Emulator 2026-10-14 (6.3.0, fresh installs, both patches): no crash incl. after consent, no "Ad" card,
+    // no Premium tab or paywall, audio plays.
     val COMPATIBILITY_SIMPLERADIO = Compatibility(
         name = "Simple Radio",
         packageName = "com.streema.simpleradio",
         apkFileType = ApkFileType.APKM,
         appIconColor = 0xFF6D00,
-        targets = listOf(AppTarget(version = "6.2.4", versionCode = 895))
+        targets = listOf(AppTarget(version = "6.3.0", versionCode = 899))
     )
 
     // Verified 2026-09-29 against com.farproc.wifi.analyzer 3.10.5-L (versionCode 999,
@@ -995,6 +1026,7 @@ object Constants {
     // MaxInterstitialAd loadAd/showAd).
     // 2026-10-12 APK-finder audit: only distributed as a split bundle (APKMirror BUNDLE /
     // APKPure-Uptodown XAPK), so apkFileType is APKM; any "universal APK" note below is outdated.
+    // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
     val COMPATIBILITY_PIMUSICPLAYER = Compatibility(
         name = "Pi Music Player",
         packageName = "com.Project100Pi.themusicplayer",
@@ -1045,6 +1077,7 @@ object Constants {
     // onPurchasesUpdated in app code).
     // 2026-10-12: the real versionName carries a build suffix; the bare version made
     // Manager/CLI treat the patches as incompatible.
+    // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
     val COMPATIBILITY_PODCASTREPUBLIC = Compatibility(
         name = "Podcast Republic",
         packageName = "com.podcast.podcasts",
@@ -1066,6 +1099,7 @@ object Constants {
     // APKPure-Uptodown XAPK), so apkFileType is APKM; any "universal APK" note below is outdated.
     // 2026-10-12: the real versionName carries a build suffix; the bare version made
     // Manager/CLI treat the patches as incompatible.
+    // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
     val COMPATIBILITY_CASTBOX = Compatibility(
         name = "Castbox",
         packageName = "fm.castbox.audiobook.radio.podcast",
@@ -1086,6 +1120,7 @@ object Constants {
     // No PairIP or other shields in the dex. Play Billing is present for the Pro
     // subscription but the premium gates are obfuscated; premium deep-dive parked -
     // ads only.
+    // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
     val COMPATIBILITY_SOUNDHOUND = Compatibility(
         name = "SoundHound",
         packageName = "com.melodis.midomiMusicIdentifier.freemium",
@@ -1103,6 +1138,7 @@ object Constants {
     // other bundled networks (Mintegral, IronSource, Vungle, ...) are only reached via
     // AdMob mediation, so the AdMob loads are the backstop. No premium tier exists (no
     // billing code). No PairIP.
+    // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
     val COMPATIBILITY_ONECRICKET = Compatibility(
         name = "OneCricket",
         packageName = "one.cricket.app",
@@ -1268,11 +1304,12 @@ object Constants {
     // Verified 2026-10-12 against com.truecaller 26.39.6 (versionCode 2639006, APKMirror bundle
     // merged; APKPure also ships a standalone APK). Fully R8-obfuscated outside kept model/worker
     // classes, so every anchor is a pref key, a kept type in the signature, or method shape:
-    //   - Enable Premium: the "premiumLevel" tier getter (returns PremiumTierType) -> GOLD; the
-    //     plain "isPremiumExpired" getter in the same class (not the "isInGracePeriod" one) ->
-    //     true; the static (PremiumFeatureStatus)Z gate that compares with INCLUDED -> true; the
-    //     (PremiumFeature, Z)Z feature check that reads "disabledPremiumFeatures" -> true (it is
-    //     the server kill-switch list *and* the availableFeatures INCLUDED lookup in one method);
+    //   - Enable Premium: the "premiumLevel" tier getter (returns PremiumTierType) -> GOLD;
+    //     isPremium() in the same class, i.e. !getBoolean("isPremiumExpired", true) (not the
+    //     getter that also reads "isInGracePeriod") -> true; the static (PremiumFeatureStatus)Z
+    //     gate that compares with INCLUDED -> true; the (PremiumFeature, Z)Z feature check that
+    //     reads "disabledPremiumFeatures" -> true (it is the server kill-switch list *and* the
+    //     availableFeatures INCLUDED lookup in one method);
     //     PremiumState's constructor (kept types ZLPremiumTierType;LProductKind;LPremiumScope;
     //     LInsuranceState;) gets isPremium = true and tier = GOLD; and the kept
     //     PremiumSubscriptionStatusNotificationWorker.doWork returns a work Result at once (Success
@@ -1292,9 +1329,9 @@ object Constants {
     //     ads.ui.AdsContainer / AdsContainerLight / AdsSwitchView that takes the banner holder,
     //     a native holder or AdLayoutTypeX sets the view GONE and returns; the holder types are
     //     read at patch time from AdsSwitchView's (holder, AdLayoutTypeX) method and the shared
-    //     layout-config parameter. Full-screen: AdInterstitialActivity, AdAppOpeningActivity and
-    //     adsrouter AdRouterInterstitialActivity finish right after super.onCreate. Rewarded ads
-    //     (WhoViewedMeAdActivity) are left alone: they gate a feature.
+    //     layout-config parameter. Full-screen: see the 2026-10-14 entry below. Rewarded ads
+    //     (WhoViewedMeAdActivity, and the rewarded flow through AdInterstitialActivity) are left
+    //     alone: they gate a feature.
     //   - Disable update prompts: the in-app update manager's suspend (Activity, UpdateTrigger,
     //     continuation) entry, scoped by its (Activity, UpdateTrigger)CompletableFuture sibling,
     //     returns Boolean.FALSE; every soft and HardUpgrade Play Core flow starts there. Also the
@@ -1347,12 +1384,65 @@ object Constants {
     //   crash. Everything past onboarding needs SMS registration, so the premium-sync fix, the
     //   interstitial change, the hidden tabs, the family button and the classic call log were NOT
     //   checked at runtime (smoke test + CLI disassembly only).
+    // 2026-10-14: updated to 26.40.5 (versionCode 2640005, merged APKMirror bundle, signer
+    // CN=truecaller SHA-1 0ac1169a...1f25e31 as above); anchors unchanged in shape and
+    // uniqueness, only R8 names moved: premium store qbx (W tier, Z isPremium, Y grace sibling),
+    // feature status jb9.c0, isFeatureAvailable a4x.c, sync writer x8x.e (still ends with the
+    // PremiumStatusUpdate event), PremiumState obx, worker Results o9q/m9q, toggle resolver fho.a
+    // (twins ezj.a / liq.a do not call getBoolean), interstitial gate cvk.e, Call Assistant su7.c,
+    // Scam Feed xq00.a, bottom bar builder cp6.g, update manager ybn, forced update qdk.a, OtpSmsApi
+    // lambda dl70.invoke; kept classes (ads.ui views, AdAppOpeningActivity, AppStartTracker,
+    // CleverTapManager, AppsFlyerLib, TruecallerInit, PremiumFeature CALL_ASSISTANT /
+    // FAMILY_SHARING, BottomBarButtonType PREMIUM / BLOCKING / FAMILY_PROTECTION_CONFIG) unchanged.
+    // New in 26.40.5: a MessageList ad unit (AdPlacement MessageScreen.MessageList, business inbox
+    // list ads via ListAdConfig). It is an Ads V2 (Compose) placement, covered by Disable ads step 4
+    // below, not by the bind hooks; not checked at runtime.
+    // 2026-10-14: GmsCore support no longer offers the Clone package name (#50): the main provider
+    // authority is exactly "com.truecaller", the dex hard-codes content://com.truecaller, and the
+    // com.truecaller.account type clashes, so a clone cannot install next to stock.
+    // 2026-10-14 (#53, 26.40.5, smoke test only, not runtime-tested):
+    //   - Disable ads step 4: the call log's "Truecaller Premium / Upgrade for an ad-free
+    //     experience" row is the Ads V2 call log list slot (AdPlacement CallLogScreen.ClList) drawing
+    //     its AdPlaceholderType.Premium backfill when no ad fills it; the ads module ignores Premium.
+    //     The Ads V2 placement check (Object return, (AdPlacement, continuation), exact string
+    //     "featureAdsV2OnClList", ar0.a here) returns Boolean.FALSE at once. All its callers (call log
+    //     list slot and ad positions, call log promo, message list, details view, caller ID, in-call,
+    //     PACS) then lay out and load nothing. The global Ads V2 switch (ar0.c) is left alone.
+    //   - Hide Messages tab (opt-in): hideBottomBarTabs now refuses only CALLS. The builder class's
+    //     "default_tab_on_launch" getter (()BottomBarButtonType) returns CALLS; its selectTab
+    //     ((BottomBarButtonType, Z)V calling setSelectedItemId) swaps MESSAGES for CALLS, so the
+    //     launch tab, SMS notification / deep-link intents (ARG_FRAGMENT_ORDINAL) and the back
+    //     button land on Calls (selecting a missing tab on a fresh start left the screen empty, and
+    //     back kept "returning" to the old default). A new helper after the builder's
+    //     check-cast to BottomBarView (kept) sets the bar GONE with fewer than two tabs, VISIBLE
+    //     otherwise; nothing else in the app changes its visibility.
+    // 2026-10-14 (#52, 26.40.5, smoke test + CLI disassembly, not runtime-tested): Fix T9 contact search
+    //   (opt-in) clones the static RefreshT9MappingWorker helper ((Context)V with "RefreshT9MappingWorker.RebuildAll",
+    //   w6j.f here) as public morpheRefreshT9Incremental with Boolean.FALSE, called right after super.onCreate in
+    //   TruecallerInit; the unique job uses ExistingWorkPolicy.REPLACE, so launches do not stack.
+    // 2026-10-14 (#53, 26.40.5, smoke test + CLI disassembly, not runtime-tested): Hide Premium tab also hides the
+    //   Settings "Premium" row, and Hide Wear OS settings hides "Truecaller for Wear OS": every
+    //   CategoriesSettingsState constructor (a7a here, found by its toString prefix) stores false for
+    //   isPremiumItemVisible / isWatchItemVisible (fields mapped through toString's outlined append order).
+    // 2026-10-15 (#53, 26.40.5; smoke test + CLI decompile check; emulator: 2 logged-out cold starts,
+    //   no crash, no GMA init error; the Contacts-tab row and logged-in ad traffic were NOT checked at
+    //   runtime because Truecaller needs SMS registration): Disable ads step 5 forces the
+    //   master "ads allowed" check ()Z (strings "qaForceAds" + "adsDisabledUntil", static kt50.Y here,
+    //   inlined AdsAvailability.shouldShowAds) to false; step 6 overrides four toggles in the resolver
+    //   (fho.a): "featureAdsOptimisationOnListView" on (contacts yoc.<init> and classic call log g68.F
+    //   then ask kt50.Y instead of always adding the "Explore Truecaller Premium" slot),
+    //   "featureAdsRestrictCampaignProcessing" on (a30.a/b return null: no ads-segment-profile keywords
+    //   or launch prefetch), "featureConfigManagementSystem" off (no ads-config-engine sync) and
+    //   "featureEnableOfflineAds" off (no ads-router offline ads sync). All four keys are exact
+    //   const-strings read through fho.a. tagging5 (caller ID tags) is left alone. With kt50.Y false,
+    //   rewarded ads are off too (owner decision) and p10 skips GAM init when
+    //   featureDisableGamInitForPremium is on; the ad load paths still start GAM themselves.
     val COMPATIBILITY_TRUECALLER = Compatibility(
         name = "Truecaller",
         packageName = "com.truecaller",
         apkFileType = ApkFileType.APKM,
         appIconColor = 0x0087FF,
-        targets = listOf(AppTarget(version = "26.39.6", versionCode = 2639006))
+        targets = listOf(AppTarget(version = "26.40.5", versionCode = 2640005))
     )
 
     // Verified 2026-10-13 against com.kakao.talk 26.8.3 (versionCode 29260830, APKMirror bundle
@@ -1501,12 +1591,20 @@ object Constants {
     // getter's first bytes and the 6 telemetry classes changed. On the emulator the patched bundle
     // loads through Hermes and the app reaches its welcome screen like stock (no crash or JS
     // error); Pro screens need an account and were not reached.
+    // Verified 2026-10-14 against 3.2.0 (versionCode 3364731, XAPK merged, arm64; the owner keeps
+    // only the latest verified version). The bundle is still HBC v96; the three strings still
+    // pick exactly one function, the isPro getter (#33380 at 0x122b846, same 99-byte body as
+    // 3.1.16), and no new function reads is_pro or bypasses it. The bigger RevenueCat SDK is
+    // only reached from JS (no app-side native entitlement check). All telemetry hooks and both
+    // Sentry providers are unchanged; HevySmokeTest passes.
+    // Emulator 2026-10-14 (3.2.0): not runtime-tested; the merged APK fails to load libreactnative.so on the
+    // x86_64 emulator for stock and patched alike. Smoke test and CLI (bundle bytes + SHA-1 footer) pass.
     val COMPATIBILITY_HEVY = Compatibility(
         name = "Hevy",
         packageName = "com.hevy",
         apkFileType = ApkFileType.APKM,
         appIconColor = 0x101012,
-        targets = listOf(AppTarget(version = "3.1.16", versionCode = 3325935))
+        targets = listOf(AppTarget(version = "3.2.0", versionCode = 3364731))
     )
 
     // Verified 2026-10-13 against easy.launcher 1.10.28 (versionCode 11028, the owner's APKMirror
@@ -1583,5 +1681,336 @@ object Constants {
         apkFileType = ApkFileType.APKM,
         appIconColor = 0x262626,
         targets = listOf(AppTarget(version = "26.10.06", versionCode = 667))
+    )
+
+    // Added 2026-10-14 from the Reddit request queue ("the ads mess with the UI"). Verified
+    // against cc.dreamspark.intervaltimer 2.3.30 (versionCode 239030, single APK, no native code,
+    // signer CN=Su-Au Hwang O=dreamspark.cc). The only entitlement is "ad-free" (adbuster), synced
+    // from the server into two R8-renamed JSON models, AppInstallation and User. Disable ads forces
+    // both ad-state ()I getters to 3 (ad-free). They are found by the models' JSON field names
+    // ("config_ads", "local_ads_time", "local_ads_off" plus "device" or "token") and the 3/2/1
+    // returns. Every ad path reads them: the native-ad slot map and the only MobileAds.initialize
+    // call, the workout-finished banner and the toolbar's "Remove ads" item (its dialog's only
+    // entry point). Disable telemetry sets the Firebase Analytics, ad ID and Crashlytics manifest
+    // switches. IntervalTimerSmokeTest asserts both getters and the manifest. Emulator 2026-10-14:
+    // 3 fresh-install cold starts with no crash, no ad row or gap and no "Remove ads" toolbar item;
+    // a workout runs and counts down. Pause, the finish screen, sounds and an explicit config
+    // re-sync were not checked.
+    val COMPATIBILITY_INTERVALTIMER = Compatibility(
+        name = "Interval Timer",
+        packageName = "cc.dreamspark.intervaltimer",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x607D8B,
+        targets = listOf(AppTarget(version = "2.3.30", versionCode = 239030))
+    )
+
+    // Verified 2026-10-14 against com.duplila.screenshare 5.1 (versionCode 68, APKPure XAPK merged
+    // with APKEditor, armeabi-v7a only, Play source stamp) for GitHub issue #51 ("unlock premium").
+    // App classes are not obfuscated. PairIP license check only (Application wrapper, no VM
+    // shield): "Disable license check" no-ops LicenseClient.checkLicense(Context). Premium is local:
+    // every gate (main screen, banner, consent branch, preferences, checkout, the mirror screen's
+    // watermark and unlockedVideoSize) awaits BillingManager.userPaid(), which runs Play
+    // queryPurchasesAsync under a 10 s timeout; Enable Premium makes it return Boolean.TRUE at once
+    // (anchor: name + suspend shape + BuildersKt.withContext). Disable ads: the UMP consent flow
+    // (the (Z)V method calling ConsentInformation.requestConsentInfoUpdate) returns early, the
+    // banner composable (static (Modifier, Z, Composer, I, I)V in the class whose AdView factory
+    // calls setAdUnitId + loadAd) emits nothing, and every MobileAds static void plus
+    // BaseAdView.loadAd is a no-op. No signature check in the app, its scrcpy-based
+    // duplila_screen_server.apk or its native adb libs. DuplilaSmokeTest asserts every hook and the
+    // CLI (no -f) applies all three. NOT runtime-tested: the app ships armeabi-v7a libs only and the
+    // x86_64 test emulator refuses it (INSTALL_FAILED_NO_MATCHING_ABIS).
+    val COMPATIBILITY_DUPLILA = Compatibility(
+        name = "Duplila",
+        packageName = "com.duplila.screenshare",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x009FE3,
+        targets = listOf(AppTarget(version = "5.1", versionCode = 68))
+    )
+
+    // Added 2026-10-14 from the Reddit request queue ("the ads are really long and unskippable").
+    // Verified against com.peter890331.luckyclick.app 3.28 (versionCode 68, single APK, no native
+    // code, Play-signed). PairIP license check only (no VMRunner / libpairipcore): Disable license
+    // check no-ops LicenseClient.checkLicense(Context). Ad-free is local: Play purchases are
+    // stored as AD_FREE_PERMANENT / AD_FREE_EXPIRE_TIME in SharedPreferences and mirrored into one
+    // state that gates the banner, the interstitial preloads and the full-screen interstitial
+    // shown before Start. Disable ads forces every getBoolean("AD_FREE_PERMANENT") read true
+    // (MainActivity.onCreate is mandatory), makes the onQueryPurchasesResponse restore store
+    // Boolean.TRUE (found by its Boolean.valueOf + "AD_FREE_PERMANENT" putBoolean), and no-ops
+    // every MobileAds static void, InterstitialAd.load and BaseAdView.loadAd. No rewarded ads in
+    // the app. LuckyClickSmokeTest asserts every hook.
+    // The APK is the base of a split bundle (requiredSplitTypes base__abi,base__density), so it
+    // will not install alone; apkFileType is APKM. Emulator 2026-10-14 (base with the split
+    // requirement removed for the test only): stock shows PairIP's licence error; patched starts
+    // with no paywall, no banner or gap, "Ads removed (Permanent)", and Start goes straight to
+    // screen capture, also after background/resume; the accessibility service binds; no crashes.
+    // The TRADE/EVOLVE modes and the overlay window were not reached.
+    val COMPATIBILITY_LUCKYCLICK = Compatibility(
+        name = "LuckyClick",
+        packageName = "com.peter890331.luckyclick.app",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x3A362F,
+        targets = listOf(AppTarget(version = "3.28", versionCode = 68))
+    )
+
+    // Added 2026-10-14 from the Reddit request queue (ads only: premium is an account role from
+    // the server's /api/mv4, so it cannot be unlocked locally). Verified against
+    // com.astrapaging.vff 6.7.8 (versionCode 678, APKPure XAPK merged, arm64-v8a only, signer
+    // CN=Astra Paging Ltd.). Capacitor/Angular hybrid; PairIP license check only (no VMRunner /
+    // libpairipcore): Disable license check no-ops LicenseClient.checkLicense(Context). Disable
+    // ads works on the kept Capacitor plugin com.izosa.advert.AdvertPlugin (its classpath is in
+    // capacitor.plugins.json): every @PluginMethod(PluginCall) handler (show, hide, resize,
+    // fullscreen) resolves the call and returns, so no consent form, no SDK start, no WebView
+    // wrap and no banner; the method calling MobileAds.initialize returns at once; and every
+    // MobileAds static void is a no-op (rule 9). The web layer reserves no banner space.
+    // VesselFinderSmokeTest asserts every hook.
+    // Emulator 2026-10-14 (6.7.8): stock re-signed shows the PairIP licence error; patched launches to
+    // the map with no paywall, no consent form, no banner or bottom strip; panning, a vessel page and
+    // the login form work; 3 cold starts, no crash.
+    val COMPATIBILITY_VESSELFINDER = Compatibility(
+        name = "VesselFinder",
+        packageName = "com.astrapaging.vff",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x112D5A,
+        targets = listOf(AppTarget(version = "6.7.8", versionCode = 678))
+    )
+
+    // Added 2026-10-14 from a Reddit request (ads only: subscribers see ads too, and the paywall
+    // is decided server-side, so it is out of scope). Verified against wsj.reader_sp 6.43.0.33886
+    // (versionCode 643003886, universal APK, signer CN=Wall Street Journal Digital Network, no
+    // packer or PairIP). Disable ads anchors on kept class names and method shape only, never on
+    // the hashed Compose / value-class suffixes: every SectionAdPlacementStrategy implementation
+    // returns no ad indices (section, markets, For You, Magazine feeds), ArticleAdPlacementStrategy's
+    // (II)Z answers false (inline article ads), AdManagerAdViewStore only ever publishes Unit so
+    // any other slot (stock quote page) composes nothing and never requests, AdPaddingDefaults'
+    // vertical padding is 0, UACModule keeps its empty ad title lambda (its static setter is a
+    // no-op, so no "ADVERTISEMENT" caption over the emptied quote-page slot; found by emulator
+    // run 2026-10-14), the native-ads-in-sections/articles and Ozone flags are false,
+    // DJMobileAds.initialize plus every MobileAds static void are no-ops (rule 9), GMA
+    // BaseAdView / AdManagerAdView / AdLoader loads are no-ops, and video pre-rolls are gone
+    // (VideoPlayerAdsHandler returns a null IMA ad tag and loader, MediaItem.Builder drops ad
+    // configurations). Megaphone podcast ads are server-side and not covered. WsjSmokeTest
+    // asserts every hook. Not yet run on an emulator.
+    val COMPATIBILITY_WSJ = Compatibility(
+        name = "The Wall Street Journal",
+        packageName = "wsj.reader_sp",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x000000, // Black WSJ logotype on a #F7F7F7 adaptive-icon background.
+        targets = listOf(AppTarget(version = "6.43.0.33886", versionCode = 643003886))
+    )
+
+    // Verified 2026-10-14 against me.piebridge.brevent 4.2.31.1 (versionCode 539, APKPure).
+    // Donationware: donors pay via Play or WeChat/Alipay ("Brefoil"), the server (jianyv.com,
+    // pinned by CON's trust manager) returns a token parsed into fields of the Application
+    // class, and every feature tier reads one count source: the no-arg int getter whose body
+    // holds the 1185657756 XOR mask (decompiled as ui/I.v() = (P() ? mask ^ H : 0) + x()).
+    // Tier gates compare v() + w() against 5 (dynamic GMS + suspend, Q.Y1()) and 3 (further
+    // settings, Q.z4()), both XOR-masked with the same constant. The patch forces that one
+    // getter to 10, lifting every tier; the getter is located structurally (no-arg ()I with
+    // the mask literal), so R8 letter-name rotation cannot break it, and a changed mask fails
+    // loudly.
+    // No PairIP or self-signature check; the adb-started server checks only the calling UID,
+    // so a re-signed build still activates. DONOR CAVEAT: the token parse ties validation to
+    // fields a re-signed build cannot produce, so genuine donors' tokens stop being consulted
+    // (the count is forced); donors who want their donation recognized should use the official
+    // build. Runtime test pending (needs adb activation on the emulator).
+    val COMPATIBILITY_BREVENT = Compatibility(
+        name = "Brevent",
+        packageName = "me.piebridge.brevent",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x0288D1,
+        targets = listOf(AppTarget(version = "4.2.31.1", versionCode = 539))
+    )
+
+    // Added 2026-10-14 from the Reddit request queue: ads only. Pro and paywalled content are
+    // server-side (entitlements and isPremium arrive from the server). Verified against
+    // com.divum.MoneyControl 14.6.2 (versionCode 637, APKMirror bundle merged, arm64-v8a only,
+    // signer CN=Ganapathy, O=Divum Corporate Services). App classes keep their names, members
+    // are R8-renamed. No single local ad-free gate exists: the "ad_free" entitlement only hides
+    // the app wall and a few Pro rows, the interstitial checks the Pro flag, and ad-free users
+    // simply get a menu ad config without slots. Disable ads therefore makes every lookup on the
+    // ad repository return null (the class the menu's ad-config parser, found by its slot-key
+    // strings "native_ad"/"splash_top"/"splash_bottom"/"dfp_custom", hands its HashMap to;
+    // lookups = instance-of + Map.get shape), redirects Utility's sticky-ad "show" to "hide"
+    // (log prefixes "Utility hideAndShowAds Visibility VISIBLE/GONE"), nulls the BannerAd
+    // video_preroll_url/tv_preroll_url getters (every video screen then skips the IMA preroll),
+    // no-ops the GMA loads (AdLoader, Interstitial/AdManagerInterstitial/Rewarded/
+    // RewardedInterstitial/AppOpen load), hides BaseAdView/AdManagerAdView on loadAd, and hides
+    // Taboola's TBLClassicUnit on fetchContent. MobileAds.initialize is kept (the Flutter
+    // google_mobile_ads plugin and the JJT SDK wait on its listener), so rule 9 does not apply.
+    // MoneycontrolSmokeTest asserts every hook. Not yet run on an emulator; the Akamai BAP SDK
+    // reports the signing-cert hash in its sensor data, so check that the re-signed build still
+    // loads the news feed.
+    val COMPATIBILITY_MONEYCONTROL = Compatibility(
+        name = "Moneycontrol",
+        packageName = "com.divum.MoneyControl",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x0066A1,
+        // Experimental (owner decision 2026-10-14): shipped without a device test because the
+        // emulator is blocked by Akamai even on the original app.
+        targets = listOf(AppTarget(version = "14.6.2", versionCode = 637, isExperimental = true))
+    )
+
+    // Verified 2026-10-15 against projekt.launcher 2.2.7 (versionCode 20207, APKMirror bundle
+    // merged with APKEditor; signer O=projekt, SHA-256 b83ad17c...f603, same bytes on APKPure).
+    // Launcher label "hyperion". No PairIP, packer or self-signature check; no ad SDKs (Firebase
+    // Analytics/Crashlytics only). App code is R8-renamed into hype/* and the premium-related
+    // strings are encrypted, so Enable Premium anchors on shape: the holder class is the one whose
+    // static (Context, String, String, String)String token signer calls SecretKeySpec.<init>,
+    // Mac.getInstance and Base64.encodeToString (the app's only Mac user) and whose <clinit> seeds
+    // the premium MutableStateFlow<Boolean> from Boolean.FALSE. Every premium reader collects that
+    // one flow. The patch seeds it TRUE, loads 1 into the boolean App.onCreate boxes with
+    // Boolean.valueOf before its cold-start write into the flow (found by the flow's
+    // sget-object + (Object, Object)Z compare-and-set shape), and makes the holder's static
+    // no-arg reset (the void that writes FALSE into the flow) return at once. The token signer,
+    // the shared StateFlow class, Firebase and the Launcher Key AIDL are untouched.
+    // HyperionSmokeTest asserts all three hooks. The CLI (no -f) rewrites exactly two classes
+    // (App and the holder), and apkanalyzer shows the TRUE seed, the return-void reset and
+    // const/4 1 before valueOf; a full stock-vs-patched smali diff confirms only those two classes
+    // change. Emulator (morphe-test, API 35): stock shows the "plus users" upgrade dialog on
+    // Typography; patched opens it with no badge or dialog, and premium survives a force-stop
+    // and a reboot. No crashes.
+    val COMPATIBILITY_HYPERION = Compatibility(
+        name = "Hyperion Launcher",
+        packageName = "projekt.launcher",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x3C59AD, // Mid-point of the icon's blue-to-indigo background gradient.
+        targets = listOf(AppTarget(version = "2.2.7", versionCode = 20207))
+    )
+
+    // Verified 2026-10-15 against com.yahoo.mobile.client.android.sportacular 12.10.3
+    // (versionCode 11166823, APKMirror bundle merged; signer CN=Yahoo! mobile CA, O=Yahoo! Inc.,
+    // SHA-256 d3f1fb1b...614c, same as 12.9.2). No packer, PairIP or billing. App view/controller
+    // and Verizon Media player class names are kept; members and helper classes are R8-renamed.
+    // Disable ads: SportsAdCardView's typed setData (the view behind every ad card, the webview
+    // top pencil and the video-screen ad) sets GONE and returns before it builds or loads the ad
+    // view; the sponsored-moments config manager (found by its "stream_taboola_ad_enabled" and
+    // "sponsored_moments_use_gam_ads" keys) answers false from every public no-arg boolean getter
+    // (Taboola native pencil, Taboola stream ads, GAM pencils); SapiMediaItem.getAdTagUri returns
+    // null, so no IMA pre-roll is requested. MobileAds, the SponsoredMoments initializer and the
+    // generic config delegate are untouched. Not covered: ads inside web articles (server-side
+    // pages), the sponsor splash and sponsored comments.
+    // Hide betting promotions: BettingImageBannerCtrl's data method (the caller of
+    // SportsbookPromotionHelper.shouldShowBettingImageBanner) returns at once, so the BetMGM
+    // banner view stays GONE (it hides itself in its constructor) and neither promotion source is
+    // fetched. Odds, the Sportsbook hub and the six-pack betting prompt are untouched.
+    // YahooSportsSmokeTest asserts all four hooks. CLI (no -f) applies both patches and a full
+    // smali diff shows only the four target classes change. Emulator (morphe-test): stock shows
+    // ad cards (V) on home, scores, game, team and news and 19-57 IMA log lines around video;
+    // patched has every SportsAdCardView GONE, no ad containers, 0 IMA log lines, and videos
+    // play. No BetMGM banner appeared on either build, so Hide betting promotions is
+    // bytecode-verified only.
+    val COMPATIBILITY_YAHOO_SPORTS = Compatibility(
+        name = "Yahoo Sports",
+        packageName = "com.yahoo.mobile.client.android.sportacular",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x6001D2, // Yahoo purple.
+        targets = listOf(AppTarget(version = "12.10.3", versionCode = 11166823))
+    )
+
+    // Smoke-tested 2026-10-15 against com.pzolee.bluetoothscanner 1.9.3 (versionCode 93, APKPure
+    // single APK, the only source checked; signer CN=Zoltan Pallagi, SHA-256 62799dca...0e380).
+    // Launcher label "Bluetooth Scanner". The whole app, GMA included, is R8-renamed. Disable ads:
+    // MainActivity's MobileAds init-complete listener (1.9.3: ib0.a(q40)), the one place that loads
+    // both the banner and the interstitial, returns at once. It is found by the live interstitial
+    // unit "ca-app-pub-9043738977093939/5919566899" plus its (one param)V shape and its check-cast
+    // to the kept GMA AdView (the unit's only other holder, the no-arg reload after a dismissed
+    // interstitial, has neither). The banner AdView is GONE in the layout and only its onAdLoaded
+    // makes it VISIBLE; both interstitial shows are null-guarded. MobileAds.initialize is untouched.
+    // BluetoothFinderSmokeTest asserts the hook. CLI (no -f) changes only that class. Emulator:
+    // stock shows a live "Test Ad" banner; patched has myAdView GONE and no ad requests, and
+    // scanning, Settings and Filters work. The interstitial trigger was not reached at runtime.
+    val COMPATIBILITY_BLUETOOTH_FINDER = Compatibility(
+        name = "Bluetooth Scanner",
+        packageName = "com.pzolee.bluetoothscanner",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x1084F7, // The icon's Bluetooth blue (on black).
+        targets = listOf(AppTarget(version = "1.9.3", versionCode = 93))
+    )
+
+    // Smoke-tested 2026-10-15 against com.macdom.ble.blescanner 4.8 (versionCode 74, single APK,
+    // same file on APKMirror and APKPure; signer CN=Ashok Domadiya, SHA-256 bdfa4f78...0a977).
+    // App class names are kept; ads use the next-gen GMA SDK. Disable ads: AdmobBanner (found by
+    // its live unit "ca-app-pub-9113721270828121/8819258755") loadBanner(Context, RelativeLayout)
+    // sets the container GONE and returns, which covers all 6 banner screens.
+    // AdmobInterstitial (live unit "ca-app-pub-9113721270828121/2787645901")
+    // loadInterstitialAds(Context) returns at once, and HomeActivity's no-arg caller of it
+    // (4.8: loadInterADS) returns before it creates the AdmobInterstitial, so the field stays null
+    // and showAd/showAdForHelp/showAdHistoryData open the radar, help or export screen directly.
+    // The show paths, MobileAds initialization, UMP consent and billing are untouched.
+    // BleScannerSmokeTest asserts all three hooks and the unchanged showInterstitialAds. CLI (no -f)
+    // changes only AdmobBanner, AdmobInterstitial and HomeActivity. Emulator (after answering the
+    // UMP form, which ads wait for): stock shows "Test Ad" banners in all six containers and 8
+    // /mads/gma requests; patched has every container GONE, 0 ad requests, and Radar and Help
+    // open at once.
+    val COMPATIBILITY_BLE_SCANNER = Compatibility(
+        name = "BLE Scanner",
+        packageName = "com.macdom.ble.blescanner",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x2E59A8, // Mid-point of the icon's blue gradient.
+        targets = listOf(AppTarget(version = "4.8", versionCode = 74))
+    )
+
+    // Smoke-tested 2026-10-15 against ru.wasiliysoft.ircodefindernec "14.17.0 build 206 InAPP"
+    // (versionCode 206, APKPure XAPK merged with APKEditor, arm64-v8a only). Signer: v3 lineage
+    // from a Play-generated key (bd76d6d6...4849) to CN=Vitaliy Vasilchenko, O=WasiliySoft, SHA-256
+    // 79131c22...c2c3 for SDK 33+ (Play app signing key upgrade); Play source stamp. No packer or
+    // shield. The app is R8-renamed; ads are Yandex Mobile Ads 8.3.0 (Google only through Yandex
+    // mediation), whose class and method names are kept. Disable ads:
+    //   - Banners: the banner helper's constructor (14.17.0: m6.<init>(String, LinearLayout, Z, I),
+    //     the only place a BannerAdView is built; found by that shape plus its
+    //     BannerAdSize$a.sticky and BannerAdView.<init> calls) sets the container GONE and returns
+    //     right after storing it, after the super call. That covers all four units
+    //     (R-M-10827245-1/2/3 on PagerFragment, SmartScanActivity, ScanActivity and
+    //     NotFoundIrServiceActivity). Its destroy method null-checks the banner and the job, and
+    //     the refresh coroutine is only launched from the skipped tail.
+    //   - Interstitial: the suspend loader (14.17.0: xd2.a(Activity, String, long, Continuation),
+    //     the only place an InterstitialAdLoader is built; found by its "InterstitialAdLoadResult"
+    //     log tag, the InterstitialAdLoader.<init> call and its (?, String, long, ?) shape) returns
+    //     kotlin.Unit at once, like its own load-failure path. Unit (14.17.0: lp5) is found by
+    //     its toString "kotlin.Unit"; null is the fallback. MainActivity's R-M-10827245-5 is never
+    //     loaded.
+    // The Yandex SDK init, the PREF_PREMIUM / billing logic and Play Integrity are untouched.
+    // CloudActivity sends a Play Integrity token with cloud catalogue requests, so the server
+    // may reject re-signed builds there; that is a signing effect, not caused by the patch.
+    // Not patched (optional later): AppMetrica telemetry, where both public static void
+    // AppMetricaLibraryAdapter.activate overloads and AppMetrica.activateReporter are clean
+    // returnEarly() targets. IrCodeFinderSmokeTest asserts both hooks. CLI (no -f) changes only m6
+    // and xd2. Emulator: stock shows Yandex "Test Ad" banners on the Remotes and Excluded tabs and on
+    // the no-IR notice; patched has ad_container GONE, no BannerAdView, and no crash across
+    // rotations. The scan screens need IR hardware and were not reached; the interstitial did not
+    // show on either build.
+    val COMPATIBILITY_IR_CODE_FINDER = Compatibility(
+        name = "IrCode Finder",
+        packageName = "ru.wasiliysoft.ircodefindernec",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x009688, // The icon's teal background.
+        targets = listOf(AppTarget(version = "14.17.0 build 206 InAPP", versionCode = 206))
+    )
+
+    // Verified 2026-10-15 against app.prolauncher "v2.4.2" (versionCode 269, APKPure XAPK
+    // merged with APKEditor, arm64-v8a only). Signer: the Play app-signing key (CN=Android,
+    // O=Google Inc., SHA-256 07fd559f...6da7) with a Play source stamp, so there is no developer
+    // certificate to compare. No licence protection: no PairIP, LVL, Play Integrity or signature
+    // self-check. Enable Premium: isPro is computed from the RevenueCat entitlements
+    // "entitlement_id_pro" / "entitlement_id_pro_lifetime" (or the local 3-day trial) and kept in
+    // two places, each read by its own set of gates: (1) the IS_PRO SharedPreferences boolean,
+    // read through an obfuscated getter `getBoolean("IS_PRO", false) || trial` (~70 call sites:
+    // Interrupt switch, swipe gestures, app categories, the Pro/Pro Membership entries), and (2) the
+    // kept data class app.prolauncher.data.SubscriberInfo (isPro() / component1(), ~13 Compose
+    // readers). The first version forced only (2) and unlocked nothing at runtime. Both now return
+    // true: (1) found by the "IS_PRO" key plus shape (no-arg Z, SharedPreferences.getBoolean),
+    // (2) by the kept class name plus shape. RevenueCat and the stored pref are untouched.
+    // ProLauncherSmokeTest asserts all three methods. 2026-10-15: CLI build (no -f) decompile-
+    // checked (x9.u0.q, isPro, component1 = const/4 1; return); emulator-5554 re-signed stock vs
+    // patched: stock shows the Pro sheet for Interrupt, Swipe left and app categories; patched
+    // toggles Interrupt (3 apps), opens the swipe-gesture choices, adds a category, and the Pro
+    // item / Pro Membership row show the subscriber "Pro Member" sheet. Same after a cold start; no
+    // crashes.
+    val COMPATIBILITY_PRO_LAUNCHER = Compatibility(
+        name = "Pro Launcher",
+        packageName = "app.prolauncher",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x111111, // The icon's near-black background (white glyph).
+        targets = listOf(AppTarget(version = "v2.4.2", versionCode = 269))
     )
 }

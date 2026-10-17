@@ -12,11 +12,13 @@ import com.android.tools.smali.dexlib2.iface.reference.StringReference
 
 // ════════════════════════════════════════════════════════════════════════════════
 // Telegram shared fingerprints
-// Audit baseline: Telegram 13.0.0 build 71581 and Telegram Web 13.0.0 build 71589.
-// Plus-specific declarations remain legacy compatibility candidates from earlier Plus builds;
-// no Plus 13.0.0 APK was supplied for this audit. A referenced descriptor is NOT proof that
-// a class body can be patched in that APK. Fork-specific UI/story targets remain candidates
-// unless their method bodies are mapped. AccessFlags are omitted where variants differ.
+// Fresh instruction-level audit baseline: Telegram 13.0.2 build 71751,
+// Telegram Web 13.0.2 build 71759, and Plus Messenger 13.0.2.0 build 22598.
+// Current targets are distinguished from retained legacy descriptors. A descriptor found only
+// in a reference table is not considered a patchable method unless a local method body exists.
+// Several old UI owners are R8-renamed in these builds; their old named fingerprints stay below
+// for compatibility but must not be treated as current verified targets. AccessFlags are
+// omitted where APK variants differ.
 // ════════════════════════════════════════════════════════════════════════════════
 
 // ─── Premium ──────────────────────────────────────────────────────────────────
@@ -36,9 +38,8 @@ val MessagesControllerIsPremiumUserFingerprint = Fingerprint(
     parameters = listOf("Lorg/telegram/tgnet/TLRPC\$User;"),
 )
 
-// Plus Messenger 12.10.6.0: verified update UI method. This fingerprint is a Plus marker only;
-// it does not make TelegramPremiumPatch compatible with Plus because the required core
-// MessagesController method bodies are not locally declared in the supplied Plus APK.
+// Plus Messenger 13.0.2.0: verified update UI method. The core premium and translation
+// gates are separately verified in the current Plus APK; this remains an optional UI hook.
 val PlusUpdateButtonUpdateFingerprint = Fingerprint(
     definingClass = "Lorg/telegram/ui/Components/UpdateButton;",
     name = "update",
@@ -46,7 +47,7 @@ val PlusUpdateButtonUpdateFingerprint = Fingerprint(
     parameters = listOf("Z"),
 )
 
-// ─── Premium translation feature gates (Telegram + Telegram Web 12.10.6) ──────
+// ─── Premium translation feature gates (Telegram, Web, and Plus 13.0.2) ───────
 // Instruction audit: both methods return translations_*_enabled != "disabled".
 // Their values are populated from app config; these hooks force the client-side
 // feature gates open. Server-side eligibility / translation service responses are
@@ -285,8 +286,8 @@ val SetContentSettingsFingerprint = Fingerprint(
     parameters = listOf("Z"),
 )
 
-// Telegram 13.0.0 / Web 13.0.0 four-argument overloads, confirmed from the supplied clean DEX.
-// Plus descriptor remains a legacy candidate and was not re-audited against a current Plus APK.
+// Legacy 13.0.2 four-argument overloads (kept for older APKs): Telegram uses Lfe/e;, Web uses Lie/e;, and Plus uses Ldj/e$c;.
+// Each descriptor is confirmed in its corresponding clean APK; the old Plus Lej/e$c; stays legacy-only.
 val CheckCanOpenChat4NormalFingerprint = Fingerprint(
     definingClass = "Lorg/telegram/messenger/MessagesController;",
     name = "checkCanOpenChat",
@@ -336,6 +337,58 @@ val CheckCanOpenChat4PlusLegacyFingerprint = Fingerprint(
     ),
 )
 
+// Telegram 13.0.3 build 71831 changed the standard UI fragment from ActionBar/s2 to ActionBar/r2.
+// Telegram Web 13.0.3 build 71839 retains ActionBar/s2 but changed its final callback type from ie/e to je/e.
+val ShowCantOpenAlertNormal1303Fingerprint = Fingerprint(
+    definingClass = "Lorg/telegram/messenger/MessagesController;",
+    name = "showCantOpenAlert",
+    returnType = "V",
+    parameters = listOf("Lorg/telegram/ui/ActionBar/r2;", "Ljava/lang/String;"),
+)
+
+val CheckSensitiveNormal1303Fingerprint = Fingerprint(
+    definingClass = "Lorg/telegram/messenger/MessagesController;",
+    name = "checkSensitive",
+    returnType = "V",
+    parameters = listOf(
+        "Lorg/telegram/ui/ActionBar/r2;", "J", "Ljava/lang/Runnable;", "Ljava/lang/Runnable;",
+    ),
+)
+
+val CheckCanOpenChat2Normal1303Fingerprint = Fingerprint(
+    definingClass = "Lorg/telegram/messenger/MessagesController;",
+    name = "checkCanOpenChat",
+    returnType = "Z",
+    parameters = listOf("Landroid/os/Bundle;", "Lorg/telegram/ui/ActionBar/r2;"),
+)
+
+val CheckCanOpenChat3Normal1303Fingerprint = Fingerprint(
+    definingClass = "Lorg/telegram/messenger/MessagesController;",
+    name = "checkCanOpenChat",
+    returnType = "Z",
+    parameters = listOf(
+        "Landroid/os/Bundle;", "Lorg/telegram/ui/ActionBar/r2;", "Lorg/telegram/messenger/MessageObject;",
+    ),
+)
+
+val CheckCanOpenChat4Normal1303Fingerprint = Fingerprint(
+    definingClass = "Lorg/telegram/messenger/MessagesController;",
+    name = "checkCanOpenChat",
+    returnType = "Z",
+    parameters = listOf(
+        "Landroid/os/Bundle;", "Lorg/telegram/ui/ActionBar/r2;", "Lorg/telegram/messenger/MessageObject;", "Lge/e;",
+    ),
+)
+
+val CheckCanOpenChat4Web1303Fingerprint = Fingerprint(
+    definingClass = "Lorg/telegram/messenger/MessagesController;",
+    name = "checkCanOpenChat",
+    returnType = "Z",
+    parameters = listOf(
+        "Landroid/os/Bundle;", "Lorg/telegram/ui/ActionBar/s2;", "Lorg/telegram/messenger/MessageObject;", "Lje/e;",
+    ),
+)
+
 // ─── Anti-delete ──────────────────────────────────────────────────────────────
 
 val MarkMessagesAsDeletedFingerprint1 = Fingerprint(
@@ -361,7 +414,27 @@ val DeleteMessagesByPushFingerprint = Fingerprint(
     parameters = listOf("J", "Ljava/util/ArrayList;", "J"),
 )
 
-// Telegram standard and Telegram Web 12.10.6 use Lz/f;.
+// Plus Messenger 13.0.2.0 (build 22598) has no locally declared
+// deleteMessagesByPush(J, ArrayList, J)V method. The equivalent push-deletion
+// worker is the verified synthetic method below: its body schedules a UI runnable,
+// calls MessagesStorage.deletePushMessages(J, ArrayList), then
+// MessagesStorage.markMessagesAsDeleted(J, ArrayList, Z, Z, I, I). Keep the
+// named target above for Telegram/Web and legacy Plus builds; use this exact
+// current Plus descriptor only as the Plus fallback.
+val MessagesControllerDeletePushMessagesPlusFingerprint = Fingerprint(
+    definingClass = "Lorg/telegram/messenger/MessagesController;",
+    name = "m3",
+    returnType = "V",
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
+    parameters = listOf(
+        "Lorg/telegram/messenger/MessagesController;",
+        "Ljava/util/ArrayList;",
+        "J",
+        "J",
+    ),
+)
+
+// Telegram and Telegram Web 13.0.2 declare this method locally with Lz/f;.
 val NotificationsControllerRemoveDeletedMessagesFingerprint = Fingerprint(
     definingClass = "Lorg/telegram/messenger/NotificationsController;",
     name = "removeDeletedMessagesFromNotifications",
@@ -369,8 +442,7 @@ val NotificationsControllerRemoveDeletedMessagesFingerprint = Fingerprint(
     parameters = listOf("Lz/f;", "Z"),
 )
 
-// Plus descriptor observed in references, but no local NotificationsController class body was
-// found in the supplied Plus APK. Retained for downstream imports; not a confirmed target.
+// Plus Messenger 13.0.2.0 declares the current method locally with Landroidx/collection/k;.
 val NotificationsControllerRemoveDeletedMessagesPlusFingerprint = Fingerprint(
     definingClass = "Lorg/telegram/messenger/NotificationsController;",
     name = "removeDeletedMessagesFromNotifications",
@@ -536,9 +608,8 @@ val MessageObjectIsMusicFingerprint = Fingerprint(
 
 // ─── Anti-disappearing media (additional) ────────────────────────────────────
 
-// MessageObject.needDrawBluredPreview()Z — blurs self-destructing media previews.
-// Telegram/Web method body is available; the supplied Plus APK contains call references but no
-// local MessageObject class definition, so this is not a confirmed Plus target.
+// MessageObject.needDrawBluredPreview()Z — current method body verified in Telegram,
+// Telegram Web, and Plus Messenger 13.0.2.0. Retained as a shared direct target.
 val MessageObjectNeedDrawBluredPreviewFingerprint = Fingerprint(
     definingClass = "Lorg/telegram/messenger/MessageObject;",
     name = "needDrawBluredPreview",
@@ -571,6 +642,47 @@ val SendScreenshotMessageSecretFingerprint = Fingerprint(
         "Ljava/util/ArrayList;",
         "Lorg/telegram/tgnet/TLRPC\$Message;",
     ),
+)
+
+// ─── Stories hide-read receipt flow (Telegram/Web/Plus 13.0.2) ────────────────
+// Verified against the untouched Telegram 13.0.2 build 71751, Web 13.0.2 build
+// 71759, and Plus 13.0.2.0 build 22598. All three methods accept PeerStories,
+// StoryItem, boolean and return boolean. Their R8 names differ, but each body calls
+// NotificationsController.processReadStories(JI)V, constructs TL_stories_readStories,
+// and sends it through ConnectionsManager.sendRequest(...).
+val StoriesReadReceiptFlowFingerprint = Fingerprint(
+    filters = listOf(
+        methodCall(
+            definingClass = "Lorg/telegram/messenger/NotificationsController;",
+            name = "processReadStories",
+            returnType = "V",
+        ),
+        methodCall(
+            definingClass = "Lorg/telegram/tgnet/tl/TL_stories\$TL_stories_readStories;",
+            name = "<init>",
+            returnType = "V",
+        ),
+        methodCall(
+            definingClass = "Lorg/telegram/tgnet/ConnectionsManager;",
+            name = "sendRequest",
+            returnType = "I",
+        ),
+    ),
+    custom = { method, _ ->
+        method.returnType.toString() == "Z" &&
+            method.parameterTypes.map { it.toString() } == listOf(
+                "Lorg/telegram/tgnet/tl/TL_stories\$PeerStories;",
+                "Lorg/telegram/tgnet/tl/TL_stories\$StoryItem;",
+                "Z",
+            ) &&
+            method.definingClass.toString() in setOf(
+                "Ltg/p5;", // Telegram 13.0.3 build 71831
+                "Lwg/m5;", // Telegram Web 13.0.3 build 71839
+                "Lsg/q5;", // Telegram 13.0.2 legacy
+                "Lvg/o5;", // Telegram Web 13.0.2 legacy
+                "Lorg/telegram/ui/Stories/yc;", // Plus 13.0.2.0
+            )
+    },
 )
 
 // ─── User no-forwards (missing from original set) ─────────────────────────────
@@ -610,6 +722,26 @@ val SharedConfigGetDevicePerformanceClassFingerprint = Fingerprint(
     name = "getDevicePerformanceClass",
     returnType = "I",
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
+)
+
+// Plus Messenger 13.0.2.0 current ad-loader owner. The older no-argument signature is
+// retained below as a legacy fallback; do not confuse the two method descriptors.
+val PlusApplicationLoaderLoadAdsCurrentFingerprint = Fingerprint(
+    definingClass = "Lorg/telegram/messenger/ApplicationLoader;",
+    name = "loadAds",
+    returnType = "V",
+    parameters = listOf(
+        "Landroid/app/Activity;",
+        "Lorg/telegram/ui/Cells/m3;",
+    ),
+)
+
+// Legacy Plus builds used ApplicationLoader.loadAds()V.
+val PlusApplicationLoaderLoadAdsLegacyFingerprint = Fingerprint(
+    definingClass = "Lorg/telegram/messenger/ApplicationLoader;",
+    name = "loadAds",
+    returnType = "V",
+    parameters = emptyList(),
 )
 
 // MessagesController.getSponsoredMessages(J) — fetches sponsored msg cache entry
@@ -665,9 +797,9 @@ val DialogCellUpdateMessageThumbsFingerprint = Fingerprint(
 
 // ─── Plus-specific (safe to probe via methodOrNull on non-Plus builds) ────────
 
-// MessagesController.premiumFeaturesBlocked()Z
-// Present in Telegram and Telegram Web 12.10.6; body checks premiumLocked and UserConfig.isPremium().
-// The supplied Plus 12.10.6.0 APK has no local MessagesController definition, so this is not a Plus hook.
+// MessagesController.premiumFeaturesBlocked()Z — legacy catalogue entry; current Plus
+// MessagesController is present in the 13.0.2.0 APK. Keep this declaration separate from
+// active paid-entitlement behavior; signature presence alone does not authorize patching it.
 val PremiumFeaturesBlockedFingerprint = Fingerprint(
     definingClass = "Lorg/telegram/messenger/MessagesController;",
     name = "premiumFeaturesBlocked",
@@ -684,7 +816,7 @@ val PlusSendTypingFingerprint = Fingerprint(
 
 // ─── Legacy declarations restored from the original catalogue ──────────────────
 // Kept to avoid breaking downstream imports. The instruction-level audit found that these old
-// named UI/Plus targets are not declared under those names in the supplied 12.10.6 DEX sets.
+// named UI/Plus targets are not declared under those names in the supplied 13.0.2 DEX sets.
 // Do not wire them into active patches until a body-level replacement is confirmed.
 
 val StoriesControllerIsPremiumFingerprint = Fingerprint(
@@ -896,8 +1028,8 @@ val AnalyticsTrackEventMapFingerprint = Fingerprint(
 // ════════════════════════════════════════════════════════════════════════════════
 
 /**
- * Instruction-audited privacy/telemetry fingerprints for Telegram 12.10.6,
- * Telegram Web 12.10.6 and Plus Messenger 12.10.6.0.
+ * Instruction-audited privacy/telemetry fingerprints for Telegram 13.0.2,
+ * Telegram Web 13.0.2 and Plus Messenger 13.0.2.0.
  *
  * Telegram/Web do not bundle Firebase Analytics or Crashlytics in their standard
  * DEX files. Their ApplicationLoader App Center entry points are no-op stubs in
@@ -919,7 +1051,7 @@ val TelegramPrivacyAppCenterStartFingerprint = Fingerprint(
     parameters = listOf("Landroid/app/Activity;"),
 )
 
-// Plus Messenger 12.10.6.0 build 22588: FirebaseAnalytics.smali.
+// Plus Messenger 13.0.2.0 build 22598: FirebaseAnalytics.smali.
 val TelegramPrivacyFirebaseLogEventFingerprint = Fingerprint(
     definingClass = "Lcom/google/firebase/analytics/FirebaseAnalytics;",
     name = "a",
@@ -952,9 +1084,9 @@ val TelegramPrivacyFirebaseSetCurrentScreenFingerprint = Fingerprint(
     ),
 )
 
-// Plus Messenger 12.10.6.0: Firebase Crashlytics public wrapper is R8-obfuscated.
+// Plus Messenger 13.0.2.0: Firebase Crashlytics public wrapper is R8-obfuscated.
 // c(Z) forwards collection state, d(String,String) records a custom key, and
-// e(String) records a log line. Exact instruction bodies were inspected.
+// e(String) records a log line. Exact descriptors and forwarding bodies were inspected.
 val TelegramPrivacyCrashlyticsSetCollectionFingerprint = Fingerprint(
     definingClass = "Lcom/google/firebase/crashlytics/a;",
     name = "c",

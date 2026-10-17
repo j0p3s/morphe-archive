@@ -598,10 +598,10 @@ APP_CASES = {
     "only the bot commented recently": (
         54, [request(54, "AtloMaps", "com.atlogis.atlomaps", comments=[("github-actions", "2026-09-24T10:00:00Z")])],
         "close", 0),
-    "a website domain is not a package name": (
-        5, [request(5, "Moviebox.ph", "idk")], "flag", 0),
+    "a request without a package name passes": (
+        5, [request(5, "Moviebox.ph", "idk")], "pass", 0),
     "package read out of a store link": (
-        5, [request(5, "https://play.google.com/store/apps/details?id=com.duolingo", "")], "pass", 0),
+        5, [request(5, "https://play.google.com/store/apps/details?id=com.example.reader", "")], "pass", 0),
     "earlier request closed, not reopened silently": (
         9, [request(3, "Gboard", "com.google.android.inputmethod.latin", state="CLOSED"),
             request(9, "Gboard", "com.google.android.inputmethod.latin")], "flag", 0),
@@ -630,10 +630,18 @@ for name, (number, requests, expected, duplicate_of) in APP_CASES.items():
     failures += not ok
     print(f"{'ok  ' if ok else 'FAIL'} {name}: expected {(expected, duplicate_of)}, got {actual}")
 
-registry_hit = app_verdict(9, [request(9, "Proton VPN", "ch.protonvpn.android")])
-ok = registry_hit["matches"] == ["someone/patches"] and "Someone's patches" in registry_hit["comment"]
+no_package = app_verdict(5, [request(5, "Moviebox.ph", "idk")])
+ok = no_package["package"] == "" and no_package["comment"] == ""
 failures += not ok
-print(f"{'ok  ' if ok else 'FAIL'} app another bundle already patches is listed, not closed")
+print(f"{'ok  ' if ok else 'FAIL'} a website domain is not read as a package name and nothing is posted")
+
+registry_hit = app_verdict(9, [request(9, "Proton VPN", "ch.protonvpn.android")])
+ok = (registry_hit["matches"] == ["someone/patches"] and registry_hit["verdict"] == "flag"
+      and registry_hit["labels"] == ["needs info"]
+      and "[Someone's patches](https://github.com/someone/patches) (42 stars) already patches `ch.protonvpn.android`. "
+          "Which of the requested features does it not cover?" in registry_hit["comment"])
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} app another bundle already patches asks which features it lacks, not closed")
 
 untargeted = triage(f"""### App and version
 
@@ -647,7 +655,7 @@ Proton Mail (another version, type it below)
 
 {LONG}
 """)["comment"]
-ok = "not `7.5.6 (388)`" in untargeted
+ok = "value `7.5.6 (388)` does not match" in untargeted
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} untargeted version quotes only the typed version")
 
@@ -657,6 +665,6 @@ for name, (expected, body) in CASES.items():
     failures += not ok
     print(f"{'ok  ' if ok else 'FAIL'} {name}: expected {expected}, got {actual}")
 
-total = len(CASES) + len(APP_CASES) + 2
+total = len(CASES) + len(APP_CASES) + 3
 print(f"\n{total - failures}/{total} passed")
 sys.exit(1 if failures else 0)

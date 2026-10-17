@@ -22,13 +22,12 @@ import com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter
  * Removes the bottom bar tabs whose BottomBarButtonType is one of [types]. A new static helper on
  * the builder class nulls those entries of the tab array right before the builder's
  * filterNotNull, so the remaining tabs move up exactly as when Truecaller leaves a slot empty.
- * Calls and Messages are never removed, which keeps the two tabs BottomBarView requires. Each call
- * adds its own helper, so tab patches work together in any order.
+ * Calls is never removed: it is the tab the app falls back to. Only "Hide Messages tab" can leave
+ * fewer than the two tabs BottomBarView requires, and it handles that case itself. Each call adds
+ * its own helper, so tab patches work together in any order.
  */
 internal fun BytecodePatchContext.hideBottomBarTabs(vararg types: String) {
-    if (types.any { it == "CALLS" || it == "MESSAGES" }) {
-        throw PatchException("The Calls and Messages tabs must stay")
-    }
+    if ("CALLS" in types) throw PatchException("The Calls tab must stay")
     val buttonType = classDefBy(BOTTOM_BAR_BUTTON_TYPE)
     for (type in types) {
         if (buttonType.staticFields.none { it.name == type && it.type == BOTTOM_BAR_BUTTON_TYPE }) {

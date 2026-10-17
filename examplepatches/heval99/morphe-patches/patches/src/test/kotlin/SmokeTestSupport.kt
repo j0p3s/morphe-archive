@@ -2,6 +2,7 @@ import app.morphe.patcher.Patcher
 import app.morphe.patcher.PatcherConfig
 import app.morphe.patcher.patch.Patch
 import app.morphe.patcher.patch.loadPatchesFromJar
+import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.Opcodes
 import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile
@@ -128,6 +129,31 @@ fun assertReturnsEarlyVoid(method: Method, label: String, diagnostics: String = 
         method.instructions().firstOrNull()?.opcode == Opcode.RETURN_VOID,
         "$label does not return immediately; first instruction is ${method.instructions().firstOrNull()?.opcode}\n$diagnostics"
     )
+}
+
+/** The unobfuscated MobileAds static voids that throw (or start the SDK) without initialize(). */
+val GMA_THROWING_STATICS = listOf("initialize", "setAppVolume", "setAppMuted", "openDebugMenu", "setPlugin")
+
+/**
+ * AGENTS.md rule 9: every concrete static void on Google Mobile Ads' MobileAds returns at once
+ * (each of [required] must be one of them) and putPublisherFirstPartyIdEnabled, when present,
+ * answers false.
+ */
+fun assertMobileAdsStaticsNeutralised(mobileAds: ClassDef, required: List<String> = GMA_THROWING_STATICS) {
+    val staticVoids = mobileAds.methods.filter {
+        AccessFlags.STATIC.isSet(it.accessFlags) && it.returnType == "V" &&
+            it.implementation != null && it.name != "<clinit>"
+    }
+    for (name in required) {
+        assertTrue(staticVoids.any { it.name == name }, "${mobileAds.type} has no concrete static void $name")
+    }
+    assertTrue(staticVoids.isNotEmpty(), "${mobileAds.type} has no concrete static void")
+    staticVoids.forEach {
+        assertReturnsEarlyVoid(it, label = "MobileAds.${it.name}(${it.parameterTypes.joinToString()})")
+    }
+    mobileAds.methods.filter {
+        it.name == "putPublisherFirstPartyIdEnabled" && it.returnType == "Z" && it.implementation != null
+    }.forEach { assertForcedBoolean(it, expected = false, label = "MobileAds.putPublisherFirstPartyIdEnabled(Z)") }
 }
 
 /** Asserts the method was replaced by `return FlowKt.flowOf(Boolean.TRUE)`. */

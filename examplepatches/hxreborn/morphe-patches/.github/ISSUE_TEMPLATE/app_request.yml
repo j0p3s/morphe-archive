@@ -24,10 +24,10 @@ body:
     id: package_name
     attributes:
       label: Package name
-      description: The Android package name.
+      description: The Android package name, if you know it.
       placeholder: com.duolingo
     validations:
-      required: true
+      required: false
   - type: dropdown
     id: features
     attributes:

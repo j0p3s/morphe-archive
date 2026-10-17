@@ -6,6 +6,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_TRUECALLER
+import app.template.patches.truecaller.shared.overrideFeatureToggle
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -16,14 +17,17 @@ private val MutableMethod.parameterList get() = parameterTypes.map(CharSequence:
 @Suppress("unused")
 val disableAdsPatch = bytecodePatch(
     name = "Disable ads",
-    description = "Hides banner and native ads and turns off interstitial and app-open ads, so " +
-        "actions such as Click to WhatsApp run at once.",
+    description = "Hides banner and native ads and the ad slots in the call log and inbox, and " +
+        "turns off interstitial and app-open ads, so actions such as Click to WhatsApp run at once. " +
+        "Also turns off the remaining ad checks (including rewarded ads), the ad campaign and ad " +
+        "config syncs, and the \"Explore Truecaller Premium\" row in the contacts list.",
 ) {
     compatibleWith(COMPATIBILITY_TRUECALLER)
 
     execute {
-        // The ads module never consults Premium or the NO_ADS feature, so "Enable Premium" does
-        // not remove ads by itself.
+        // "Enable Premium" does not remove ads by itself: the ad views below never consult
+        // Premium, and the master ads-allowed check (step 5) can stay true for Premium users
+        // under a server experiment (EnableAdsForPremiumUsers).
 
         // 1. Banner and native ads. Each bind method makes its container VISIBLE and attaches
         // the ad view; instead it now sets the container GONE and returns, so no ad view is
@@ -71,7 +75,9 @@ val disableAdsPatch = bytecodePatch(
         // action (open WhatsApp, call details, block, pay, ...) at once. Closing the ad activities
         // instead dropped that action, which only runs when the ad is dismissed. The ads-router
         // interstitial and app-open flows start only from this gated flow. Rewarded ads, which
-        // share AdInterstitialActivity, are left alone: they gate a feature.
+        // share AdInterstitialActivity, are not touched here, but step 5 turns them off too
+        // (owner decision 2026-10-15): Who viewed me and the search soft-throttle then go
+        // straight to their no-ad fallback.
         InterstitialAdsEnabledFingerprint.method.returnEarly(false)
 
         // 3. App-open loading screen: finish it right after super.onCreate, the point where the
@@ -92,5 +98,40 @@ val disableAdsPatch = bytecodePatch(
                 return-void
             """,
         )
+
+        // 4. Ads V2 placements (Compose screens, which do not use the ad views above): the
+        // placement check returns false at once, so no slot is laid out or loaded. This also
+        // removes the "Truecaller Premium / Upgrade for an ad-free experience" row the call log
+        // list shows when its slot is active but has no ad (#53); Enable Premium cannot hide it,
+        // because the ads module does not read Premium. It is a suspend function, so the boxed
+        // Boolean is returned directly.
+        AdsV2PlacementEnabledFingerprint.method.addInstructions(
+            0,
+            """
+                sget-object p0, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;
+                return-object p0
+            """,
+        )
+
+        // 5. The master "ads allowed" check returns false, the value it has for Premium users, so
+        // every ad gate that asks it takes the ad-free path (#53).
+        AdsAllowedFingerprint.method.returnEarly(false)
+
+        // 6. Ad toggles, overridden in the toggle resolver because each is read inline at several
+        // sites (#53):
+        // - "featureAdsOptimisationOnListView" on: only then do the contacts list and the classic
+        //   call log ask the check above; otherwise they always merge an ad slot, which falls back
+        //   to an "Explore Truecaller Premium" house ad.
+        // - "featureAdsRestrictCampaignProcessing" on: the ad campaign fetches return null (every
+        //   caller handles that), which stops the ads-segment-profile keyword requests and the
+        //   launch prefetch.
+        // - "featureConfigManagementSystem" off: the ads-config-engine config sync never runs and
+        //   the ads config falls back to its defaults.
+        // - "featureEnableOfflineAds" off: no offline ads sync with ads-router.
+        // The tagging service is left alone: it serves the caller ID tag catalogue.
+        overrideFeatureToggle("featureAdsOptimisationOnListView", true)
+        overrideFeatureToggle("featureAdsRestrictCampaignProcessing", true)
+        overrideFeatureToggle("featureConfigManagementSystem", false)
+        overrideFeatureToggle("featureEnableOfflineAds", false)
     }
 }

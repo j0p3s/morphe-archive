@@ -38,6 +38,9 @@ class OneFootballSmokeTest {
             it.name == "initialize" && it.parameterTypes.size == 1
         }
         assertReturnsEarlyVoid(initialize, label = "MobileAds.initialize(Context)")
+        // Rule 9: no MobileAds static can throw for lack of init (openDebugMenu is reachable
+        // from the internal feature-flag screen).
+        assertMobileAdsStaticsNeutralised(klass(GMA + "MobileAds;"))
 
         // Every format's load entry point is a no-op.
         for (type in listOf(

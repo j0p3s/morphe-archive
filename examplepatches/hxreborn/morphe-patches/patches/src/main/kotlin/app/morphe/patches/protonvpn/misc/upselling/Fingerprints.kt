@@ -8,39 +8,72 @@ import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.InstructionFilter
 import app.morphe.patcher.InstructionLocation.MatchAfterImmediately
 import app.morphe.patcher.InstructionLocation.MatchAfterWithin
+import app.morphe.patcher.checkCast
+import app.morphe.patcher.literal
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.newInstance
 import app.morphe.patcher.opcode
 import app.morphe.patcher.patch.BytecodePatchContext
+import app.morphe.patches.protonvpn.misc.settings.WidgetSettingsRowFingerprint
 import app.morphe.patcher.resource.ResourceType
 import app.morphe.patches.protonvpn.misc.anchors.ToStringFingerprint
 import app.morphe.patches.protonvpn.misc.anchors.resourceField
 import app.morphe.patches.protonvpn.misc.restrictions.freeUserCheckFingerprint
 import app.morphe.util.getReference
+import app.morphe.util.matchSingle
+import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
+import com.android.tools.smali.dexlib2.iface.instruction.SwitchPayload
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
 
-private const val SETTINGS_UI = "com.protonvpn.android.redesign.settings.ui"
 private const val UPGRADE_ONBOARDING_ACTIVITY = "Lcom/protonvpn/android/ui/planupgrade/UpgradeOnboardingDialogActivity;"
 
-internal object SettingRowWithIconFingerprint : Fingerprint(
-    returnType = "V",
-    parameters = listOf("L", "I", "Ljava/lang/String;", "L", "Ljava/lang/Integer;", "Z", "Z", "Z", "L", "L", "I", "I"),
-    strings = listOf("$SETTINGS_UI.SettingRowWithIcon ("),
-)
+internal fun BytecodePatchContext.settingRowWithIconFingerprint(): Fingerprint {
+    val settingRow = WidgetSettingsRowFingerprint.matchSingle().instructionMatches.last()
+        .instruction.getReference<MethodReference>()!!
+    return Fingerprint(
+        definingClass = settingRow.definingClass,
+        name = settingRow.name,
+        returnType = "V",
+        parameters = listOf("L", "I", "Ljava/lang/String;", "L", "Ljava/lang/Integer;", "Z", "Z", "Z", "L", "L", "I", "I"),
+    )
+}
 
 internal object SettingsValueItemFingerprint : Fingerprint(
     returnType = "V",
     parameters = listOf("L", "L", "L", "L", "L", "I"),
-    strings = listOf("$SETTINGS_UI.SettingsValueItem ("),
+    strings = listOf("onNavigateTo", "onRestricted"),
 )
 
-internal object ActiveNotificationsFingerprint : Fingerprint(
+internal object ApiNotificationToStringFingerprint : ToStringFingerprint("ApiNotification(id=")
+
+private val BytecodePatchContext.apiNotificationType
+    get() = ApiNotificationToStringFingerprint.originalClassDef.type
+
+private fun BytecodePatchContext.apiNotificationTimeCall() = methodCall(
+    definingClass = apiNotificationType,
+    parameters = emptyList(),
+    returnType = "J",
+)
+
+internal fun BytecodePatchContext.activeNotificationsFingerprint() = Fingerprint(
     returnType = "Ljava/util/List;",
     parameters = listOf("J", "Ljava/util/List;"),
+    filters = listOf(apiNotificationTimeCall(), apiNotificationTimeCall()),
+)
+
+internal fun BytecodePatchContext.inlinedActiveNotificationsFingerprint() = Fingerprint(
+    returnType = "Ljava/lang/Object;",
     filters = listOf(
-        methodCall(definingClass = "Lcom/protonvpn/android/promooffers/data/ApiNotification;", name = "getStartTime"),
-        methodCall(definingClass = "Lcom/protonvpn/android/promooffers/data/ApiNotification;", name = "getEndTime"),
+        apiNotificationTimeCall(),
+        apiNotificationTimeCall(),
+        methodCall(
+            opcode = Opcode.INVOKE_STATIC,
+            parameters = listOf("Ljava/lang/Iterable;", "Ljava/util/Comparator;"),
+            returnType = "Ljava/util/List;",
+        ),
+        opcode(Opcode.MOVE_RESULT_OBJECT, MatchAfterImmediately()),
     ),
 )
 
@@ -55,6 +88,13 @@ internal object FreeConnectionsUpsellBannerFingerprint : Fingerprint(
     ),
 )
 
+internal object InlinedFreeConnectionsUpsellBannerFingerprint : Fingerprint(
+    filters = listOf(
+        resourceField(ResourceType.STRING, "free_connections_info_banner_text"),
+        checkCast("Landroidx/constraintlayout/widget/ConstraintLayout;", MatchAfterWithin(5)),
+    ),
+)
+
 private val upgradeOnboardingActivityClass = InstructionFilter { _, instruction ->
     instruction.opcode == Opcode.CONST_CLASS &&
         instruction.getReference<TypeReference>()?.type == UPGRADE_ONBOARDING_ACTIVITY
@@ -66,27 +106,28 @@ internal object UpgradeOnboardingLauncherFingerprint : Fingerprint(
 )
 
 internal fun BytecodePatchContext.launchOnboardingFingerprint() = Fingerprint(
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     returnType = "V",
     parameters = listOf("Landroid/content/Context;"),
     filters = listOf(newInstance(UpgradeOnboardingLauncherFingerprint.originalClassDef.type)),
 )
 
-internal object AccountSettingsViewStateToStringFingerprint : ToStringFingerprint("AccountSettingsViewState(userId=")
+private val BytecodePatchContext.legacyLaunchDefaultIndex
+    get() = UpgradeOnboardingLauncherFingerprint.originalMethod.implementation!!.instructions
+        .filterIsInstance<SwitchPayload>()
+        .single()
+        .switchElements
+        .maxOf { it.key } + 1
 
-internal object AccountSettingsViewStateFingerprint : Fingerprint(
-    classFingerprint = AccountSettingsViewStateToStringFingerprint,
-    name = "<init>",
-    parameters = listOf(
-        "Lme/proton/core/domain/entity/UserId;",
-        "Ljava/lang/String;",
-        "Ljava/lang/String;",
-        "Ljava/lang/String;",
-        "Ljava/lang/Integer;",
-        "Z",
-        "Z",
-        "Ljava/util/List;",
+internal fun BytecodePatchContext.onboardingLaunchCoroutineFingerprint() = Fingerprint(
+    returnType = "Ljava/lang/Object;",
+    filters = listOf(
+        newInstance(UpgradeOnboardingLauncherFingerprint.originalClassDef.type),
+        literal(legacyLaunchDefaultIndex, location = MatchAfterWithin(2)),
     ),
 )
+
+internal object AccountSettingsViewStateToStringFingerprint : ToStringFingerprint("AccountSettingsViewState(userId=")
 
 internal fun BytecodePatchContext.upgradeCarouselFingerprint() = freeUserCheckFingerprint(
     followingFilters = arrayOf(

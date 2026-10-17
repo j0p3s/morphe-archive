@@ -44,6 +44,8 @@ class PodcastRepublicSmokeTest {
             ),
             label = "MobileAds.initialize(Context, Listener)",
         )
+        // Rule 9: no MobileAds static can throw for lack of init.
+        assertMobileAdsStaticsNeutralised(mobileAds)
 
         // The terminal interstitial overload is showAd(String, String, Activity);
         // patching only the first match left real ads showing on other apps.

@@ -122,23 +122,23 @@ In queue order. Verdicts are first impressions; nothing has been triaged yet.
 | # | App | Package | Requested | Notes |
 |---|---|---|---|---|
 | 1 | Brevent | `me.piebridge.brevent` | Unlock all features / premium | Most upvoted request (7); owner replied "i will try" |
-| 2 | WeMuslim (Athan & Qibla) | `com.fyxtech.muslim` | Ads + analytics, premium, hide Premium tab and upgrade banners | Detailed request; promising if the entitlement check is local |
-| 3 | Interval Timer | `cc.dreamspark.intervaltimer` | Remove ads ("ads mess with the UI") | Simple ad app, likely an easy Tier 1 win |
-| 4 | Camera (Ocean Galaxy) | `com.oceangalaxy.camera.new` | Not specified | Probably ads + premium; triage |
-| 5 | Tennis app | `com.tennisrn` | Not specified | Triage |
-| 6 | `com.astrapaging.vff` | `com.astrapaging.vff` | Not specified | Triage; identify the app first |
+| 2 | WeMuslim (Athan & Qibla) | `com.fyxtech.muslim` | Ads + analytics, premium, hide Premium tab and upgrade banners | **Triaged 2026-10-14 (3.5.0, vc 141, APKMirror, developer signer CN=athan O=yalla):** premium is server-side (membership comes from the server over protobuf; purchases confirmed server-side). Ads-only is possible but large: Pangle, AppLovin MAX, Unity, GMA, Meta AN, Amazon behind obfuscated gating. No Premium bottom tab in 3.5.0 (nav: Home, Prayer, Discover, Messages, Me); upgrade banners are anchorable by layout id. **Blocked 2026-10-14** on 3.5.4 (vc 149): ads/telemetry/banner patches built and green (smoke + CLI) but the native `libagora-ey.so` JNI_OnLoad rejects re-signed builds (runtime-tested, differential control); see blocklist. Parked on `wip/wemuslim`. |
+| 3 | Interval Timer | `cc.dreamspark.intervaltimer` | Remove ads ("ads mess with the UI") | **Shipped 2026-10-14 (2.3.30)** - Disable ads + Disable telemetry; emulator: no ads or gaps, workouts run |
+| 4 | Camera (Ocean Galaxy, "Timemark") | `com.oceangalaxy.camera.new` | Not specified | **Blocked 2026-10-14** (v10.0.270) - SecNeo packer plus libInnoSecure native protection |
+| 5 | Tennis app ("TNNS Live") | `com.tennisrn` | Not specified | **Not now (2026-10-14, 8.4.1)** - React Native; ad-free decided in JS from RevenueCat (server); blocking ads would mean ~12 ad networks |
+| 6 | VesselFinder | `com.astrapaging.vff` | Not specified | **In progress 2026-10-14 (6.7.8)** - ads-only (Capacitor AdvertPlugin + GMA); premium is server-side (account roles); PairIP licence check only |
 | 7 | Textpand | unknown | Not specified | Find the package first |
-| 8 | Moneycontrol | `com.divum.MoneyControl` | Not specified | Pro content is probably server-side; ads may be doable |
-| 9 | A Better Routeplanner | `com.iternio.abrpapp` | Not specified | Premium is probably server-side |
+| 8 | Moneycontrol | `com.divum.MoneyControl` | Not specified | **In progress 2026-10-14 (14.6.2)** - ads-only; Pro content and entitlements are server-side; bundles Akamai bot protection (runtime check needed) |
+| 9 | A Better Routeplanner | `com.iternio.abrpapp` | Not specified | **Server-side (2026-10-14, 7.1.8)** - no ads; purchases verified server-side; premium data is server-backed |
 | 10 | The Wall Street Journal (+ NYT, Washington Post, Financial Times, Guardian) | `wsj.reader_sp`, ... | Paywall / ads | Subscriptions are server-side; ad removal at most |
-| 11 | Ultimate Guitar, WiFi Map Pro, The Pioneer | various | Not specified | One user; triage |
+| 11 | Ultimate Guitar, WiFi Map Pro, The Pioneer | various | Not specified | **2026-10-14:** Ultimate Guitar blocked (full PairIP VM); WiFi Map blocked (DexProtector) and premium via Adapty server-side; The Pioneer (`de.gstmb.podcasts`) server-side (RevenueCat membership, no ads) |
 | 12 | Backdrops | `com.backdrops.wallpapers` | Newer patch | Already in another Morphe bundle, and wallpapers update regardless; low priority |
-| 13 | X-VPN | unknown | Premium | VPN premium is almost always server-side; likely skip |
-| 14 | Twitch | `tv.twitch.android.app` | Remove ads | Twitch ads are mostly server-inserted; commenters point to Xtra; likely skip |
+| 13 | X-VPN | unknown | Premium | **Skipped 2026-10-14** (owner decision) |
+| 14 | Twitch | `tv.twitch.android.app` | Remove ads | **Skipped 2026-10-14** (owner decision; ads are mostly server-inserted, Xtra covers it) |
 | 15 | Cronometer | `com.cronometer.android` | Not specified | Already on the blocklist (APKMirror 403, likely server-side) |
 | 16 | UniTV | not on Google Play | Full version | Off-Play IPTV service from a download site; skip |
 
-| 17 | LuckyClick (auto clicker) | `com.peter890331.luckyclick.app` | Remove ads ("really long and unskippable") | Likely a simple ads patch; triage |
+| 17 | LuckyClick (auto clicker) | `com.peter890331.luckyclick.app` | Remove ads ("really long and unskippable") | **Triaged 2026-10-14 (3.28, vc 68):** **Shipped 2026-10-14** - Disable ads (app's own AD_FREE_PERMANENT flag + GMA backstop) and Disable license check (PairIP licence check only). Emulator: no ads, Start goes straight to capture |
 | 18 | Car Scanner ELM OBD2 | `com.ovz.carscanner` | Unlock premium | Already parked (fully obfuscated, billing path not located; see "Also covered" list). Genuine APK in apks/carscanner |
 | 19 | Cherrygram (Telegram fork) | github.com/arslan4k1390/Cherrygram | Premium | Open source; "premium" is Telegram Premium, which is server-side. Likely skip |
 | 20 | Lovora | unknown | Not specified | Find the package first |
@@ -155,6 +155,6 @@ From [the issue tracker](https://github.com/heval99/Heval-Morphe-Patches/issues)
 | [#54](https://github.com/heval99/Heval-Morphe-Patches/issues/54) | Truecaller | Bug | Repeated "your premium expired" notifications, random freezes and crashes; after a clean install, spam calls are still not blocked |
 | [#52](https://github.com/heval99/Heval-Morphe-Patches/issues/52) | Truecaller | Bug | Spam Protection falls back from Max to Basic; "Servers can't be reached" toasts; Premium tab stuck loading; Frequently called contacts enabled with its setting hidden (`isFrequentlyCalledVisible` false, per a commenter); **T9 dialer search finds no saved contacts**; unasked contact-UI, fraud-protection and SMS-tab changes. Likely the server treating the patched app as non-premium or modified (shared cause with #54) plus separate client bugs (T9, frequently called) |
 | [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53) | Truecaller | Request | Hide the Blocking, Family invite and Premium tabs; block the tracking that flags the app as modified ("install from Play Store"). Owner replied "Looking into it" |
-| [#50](https://github.com/heval99/Heval-Morphe-Patches/issues/50) | Truecaller | Request | "Clone" option: a different package name so the patched app installs next to stock Truecaller (dual SIM). Check whether Morphe's universal "Change package name" patch works with our GmsCore/Spoof signature patches |
+| [#50](https://github.com/heval99/Heval-Morphe-Patches/issues/50) | Truecaller | Request | **Declined 2026-10-14** - Truecaller hard-codes `content://com.truecaller` and the `com.truecaller.account` type, registration is attested by package, and dialer/call-screening roles have one holder. Replied; our broken GmsCore "Clone" value is being removed for Truecaller |
 | [#55](https://github.com/heval99/Heval-Morphe-Patches/issues/55) | BoxBox | Bug | "Neither Disable ads nor Enable Premium works" after a clean install. Matches the 5.4.17 breakage fixed in 71bb868 (dev pre-release v1.14.0-dev.5 and later; emulator-verified); stable v1.13.0 still ships the old patches. Confirm the reporter's bundle and BoxBox versions |
-| [#51](https://github.com/heval99/Heval-Morphe-Patches/issues/51) | Duplila - Mirror Screen | Request | `com.duplila.screenshare`, unlock premium (screen casting); triage |
+| [#51](https://github.com/heval99/Heval-Morphe-Patches/issues/51) | Duplila - Mirror Screen | Request | **Shipped 2026-10-14 (5.1)** - Enable Premium, Disable ads, Disable license check. Not runtime-tested (armeabi-v7a only) |

@@ -6,6 +6,7 @@ package app.morphe.patches.protonvpn.misc.netshield
 
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.protonvpn.misc.restrictions.clearFreeUserCheck
+import app.morphe.patches.protonvpn.misc.restrictions.clearFreeUserChecks
 import app.morphe.patches.protonvpn.misc.settings.patchesSettingsPatch
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.shared.misc.proton.markPatchApplied
@@ -20,7 +21,7 @@ val unlockNetShieldPatch = bytecodePatch(
 
     execute {
         markPatchApplied("unlockNetShield")
-        clearFreeUserCheck(netShieldAvailabilityFingerprint())
+        clearFreeUserChecks(netShieldAvailabilityFingerprint())
         clearFreeUserCheck(netShieldResetFingerprint())
     }
 }

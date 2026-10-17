@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-15T01:08:51",
-  "description": "## [1.40.6](https://github.com/ajstrick81/morphe-androidtv-patches/compare/v1.40.5...v1.40.6) (2026-10-15)\n\n\n### Bug Fixes\n\n* **vix:** restore ad suppression on 4.51.0 by emptying the Lura break schedule ([3692391](https://github.com/ajstrick81/morphe-androidtv-patches/commit/36923917e245dbfc3e920ff70fd4ecdf83606e6f))",
-  "download_url": "https://github.com/ajstrick81/morphe-androidtv-patches/releases/download/v1.40.6/patches-1.40.6.mpp",
+  "created_at": "2026-10-17T02:22:08",
+  "description": "# [1.42.0](https://github.com/ajstrick81/morphe-androidtv-patches/compare/v1.41.0...v1.42.0) (2026-10-17)\n\n\n### Features\n\n* **future:** add Skip ads patch for Fawesome Movies & TV (Android TV) ([aa21dce](https://github.com/ajstrick81/morphe-androidtv-patches/commit/aa21dcee309bc7132d4144bac7a61c7fc7c042dd)), closes [#233](https://github.com/ajstrick81/morphe-androidtv-patches/issues/233)",
+  "download_url": "https://github.com/ajstrick81/morphe-androidtv-patches/releases/download/v1.42.0/patches-1.42.0.mpp",
   "signature_download_url": "",
-  "version": "1.40.6"
+  "version": "1.42.0"
 }

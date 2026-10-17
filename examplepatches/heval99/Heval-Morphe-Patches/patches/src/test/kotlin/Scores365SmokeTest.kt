@@ -64,6 +64,8 @@ class Scores365SmokeTest {
             ),
             label = "MobileAds.initialize(Context, Listener)",
         )
+        // Rule 9: no MobileAds static can throw for lack of init.
+        assertMobileAdsStaticsNeutralised(mobileAds)
 
         // Every concrete app ad gate returns false, including the readable base activities.
         val gates = classes.flatMap { cls ->

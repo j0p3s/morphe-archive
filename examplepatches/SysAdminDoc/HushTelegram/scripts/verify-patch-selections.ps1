@@ -42,16 +42,14 @@ function Get-SelectionStatusModel {
         }
         [pscustomobject]@{ Enum = $match.Groups[1].Value; Name = $names[$match.Groups[1].Value]; Status = $match.Groups[3].Value }
     })
-    # A trailing true marks a target only some builds carry; the checker then wants the host to carry it.
     $capabilities = @(foreach ($match in [regex]::Matches($familyText,
-        '(?m)^\s+([A-Z_]+)\(([A-Z_]+), "([^"]+)", "[^"]*"(, true)?\)[,;]')) {
-        [pscustomobject]@{ Enum = $match.Groups[1].Value; Family = $match.Groups[2].Value; Status = $match.Groups[3].Value
-            Optional = $match.Groups[4].Success }
+        '(?m)^\s+([A-Z_]+)\(([A-Z_]+), "([^"]+)", "[^"]*"\)[,;]')) {
+        [pscustomobject]@{ Enum = $match.Groups[1].Value; Family = $match.Groups[2].Value; Status = $match.Groups[3].Value }
     })
     $all = @($families.Status) + @($capabilities.Status)
     $declared = @([regex]::Matches((Get-Content (Join-Path $source 'SettingsStatus.java') -Raw),
         'public static boolean ([A-Za-z]+)\(\)') | ForEach-Object { $_.Groups[1].Value })
-    if ($families.Count -ne 63 -or $all.Count -ne @($all | Sort-Object -Unique).Count -or
+    if ($families.Count -ne 62 -or $all.Count -ne @($all | Sort-Object -Unique).Count -or
         (Compare-Object ($all | Sort-Object) ($declared | Sort-Object))) { throw 'STATUS_MODEL_INVALID' }
     [pscustomobject]@{ Families = $families; Capabilities = $capabilities; StatusNames = $all }
 }
@@ -65,7 +63,7 @@ function Get-PatchSelectionCases {
     $all = @($Catalog.patches.name)
     $defaults = @($Catalog.patches | Where-Object { $_.use -is [bool] -and $_.use } | ForEach-Object { $_.name })
     $required = @($StatusModel.Families.Name) + @('HushTelegram settings', $api, $maps, $icon, $logo)
-    if ($all.Count -ne 68 -or $defaults.Count -ne 64 -or $defaults -ccontains $api -or $defaults -ccontains $maps -or $defaults -ccontains $icon -or $defaults -ccontains $logo -or
+    if ($all.Count -ne 67 -or $defaults.Count -ne 63 -or $defaults -ccontains $api -or $defaults -ccontains $maps -or $defaults -ccontains $icon -or $defaults -ccontains $logo -or
         @($Catalog.patches | Where-Object { $_.use -isnot [bool] }).Count -or
         (Compare-Object ($all | Sort-Object) ($required | Sort-Object) -CaseSensitive)) { throw 'CATALOG_INVALID' }
     $syntheticApiId = '19077001'
@@ -80,8 +78,8 @@ function Get-PatchSelectionCases {
             ApiConfigured = $ApiConfigured; MapsConfigured = $MapsConfigured; Default = $Default; Malformed = $Malformed
             ApiId = $syntheticApiId; ApiHash = $hash; MapsKey = $key; Canaries = @($syntheticApiId, $hash, $key, $sentinel) }
     }
-    New-SelectionCase 'default64' $defaults -Default $true
-    New-SelectionCase 'full68' $all
+    New-SelectionCase 'default63' $defaults -Default $true
+    New-SelectionCase 'full67' $all
     New-SelectionCase 'settings-only' @('HushTelegram settings')
     foreach ($family in $StatusModel.Families) {
         New-SelectionCase ('single-' + $family.Enum.ToLowerInvariant().Replace('_', '-')) @($family.Name)
@@ -128,8 +126,7 @@ function Get-SelectionExpectation {
         api = $Selection.ApiConfigured; maps = $Selection.MapsConfigured; icon = $closure -ccontains 'HushTelegram icon and name'
         push = $closure -ccontains 'UnifiedPush notifications'
         apiId = [int]$Selection.ApiId; apiHash = $Selection.ApiHash; mapsKey = $Selection.MapsKey
-        flags = $flags; optional = @($StatusModel.Capabilities | Where-Object Optional | ForEach-Object Status)
-        closure = $closure; dependencies = $dependencies }
+        flags = $flags; closure = $closure; dependencies = $dependencies }
 }
 
 function Test-SelectionAddedResources {
@@ -310,7 +307,7 @@ function Invoke-PatchSelectionMatrix {
     $plans = @(Get-PatchSelectionCases -Catalog $catalog -StatusModel $model)
     if ($Case.Count) {
         if (@($Case | Where-Object { $plans.Id -cnotcontains $_ }).Count) { throw 'CASE_INVALID' }
-        if ($Case -ccontains 'full-configured' -and $Case -cnotcontains 'full68') { $Case += 'full68' }
+        if ($Case -ccontains 'full-configured' -and $Case -cnotcontains 'full67') { $Case += 'full67' }
         $plans = @($plans | Where-Object { $Case -ccontains $_.Id })
     }
     $stock = Get-ApkManifestFacts -Apk $Apk -Aapt2 $Aapt2
@@ -414,7 +411,7 @@ function Invoke-PatchSelectionMatrix {
                 $compiledPath = Join-Path $caseDir 'compiled-private.json'
                 $request = @($output, $expectationPath, $compiledPath)
                 if ($selection.Id -ceq 'full-configured') {
-                    $baseline = Join-Path $run 'full68-private.apk'
+                    $baseline = Join-Path $run 'full67-private.apk'
                     if (-not (Test-Path -LiteralPath $baseline -PathType Leaf)) { throw 'FULL_BASELINE_MISSING' }
                     $request += $baseline
                 }
@@ -443,7 +440,7 @@ function Invoke-PatchSelectionMatrix {
                     changedMethods = $facts.changedMethods; addedMethods = $facts.addedMethods; structuralFindings = $facts.structuralFindings
                     nativeEntries = $native.NativeLibraries.stock.nativeEntryCount; zipalignPassed = $native.ZipAlignment.passed })
                 $casePassed = $true
-                if ($selection.Id -ceq 'full68') { Copy-Item -LiteralPath $output -Destination (Join-Path $run 'full68-private.apk') }
+                if ($selection.Id -ceq 'full67') { Copy-Item -LiteralPath $output -Destination (Join-Path $run 'full67-private.apk') }
                 Write-Host "[selections] $($selection.Id) SELECTION_PASSED"
             } catch {
                 # CLI and Java failures can contain option values. Only this fixed code reaches the console.

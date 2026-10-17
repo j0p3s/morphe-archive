@@ -36,7 +36,6 @@ private const val APP_COMPONENT_FACTORY_CLASS = "Landroid/app/AppComponentFactor
 private const val PATCHES_COMPONENT_FACTORY_CLASS = "${PROTON_EXTENSION_PACKAGE}PatchesComponentFactory;"
 private const val BUNDLE_VERSION_RESOURCE = "/proton-bundle-version.txt"
 private const val PATCHES_THEME_CLASS = "${PROTON_EXTENSION_PACKAGE}PatchesTheme;"
-private const val APP_COMPAT_PACKAGE = "Landroidx/appcompat/app/"
 private const val APP_COMPAT_MODE_NIGHT_NO = 1
 private const val APP_COMPAT_MODE_NIGHT_YES = 2
 
@@ -50,6 +49,12 @@ internal object CoreNightModeFingerprint : Fingerprint(
         opcode(Opcode.IF_EQ, location = MatchAfterImmediately()),
         literal(APP_COMPAT_MODE_NIGHT_YES, location = MatchAfterImmediately()),
         opcode(Opcode.IF_EQ, location = MatchAfterImmediately()),
+    ),
+)
+
+internal object AppCompatDelegateImplFingerprint : Fingerprint(
+    strings = listOf(
+        "Unknown value set for night mode. Please use one of the MODE_NIGHT values from AppCompatDelegate.",
     ),
 )
 
@@ -114,6 +119,7 @@ internal fun BytecodePatchContext.injectBundleVersion() {
 }
 
 internal fun BytecodePatchContext.injectAppCompatDefaultNightMode() {
+    val appCompatDelegate = AppCompatDelegateImplFingerprint.originalClassDef.superclass
     val nightModeReads = CoreNightModeFingerprint.matchAll()
         .map { (it.instructionMatches.first().instruction as ReferenceInstruction).reference }
         .filter {
@@ -122,7 +128,7 @@ internal fun BytecodePatchContext.injectAppCompatDefaultNightMode() {
                 is MethodReference -> it.definingClass
                 else -> null
             }
-            definingClass?.startsWith(APP_COMPAT_PACKAGE) == true
+            definingClass == appCompatDelegate
         }
         .distinctBy(Any::toString)
     val nightModeRead = nightModeReads.singleOrNull()

@@ -12,14 +12,19 @@ import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.literal
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.opcode
+import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.resource.ResourceType
 import app.morphe.patcher.string
 import app.morphe.patches.protonvpn.misc.anchors.resourceField
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
+internal const val SWITCH_COLORS_ARGUMENT_COUNT = 16
 private const val SWITCH_CAST_DISTANCE = 8
+private const val PAINTER_CALL_DISTANCE = 6
+private const val ICON_CALL_DISTANCE = 40
 private const val CHECKED_TRACK_COLOR_DEFAULT_BIT = 0x2
 
 internal object ProtonSwitchFingerprint : Fingerprint(
@@ -52,22 +57,34 @@ internal fun checkedTrackColorDefaultFingerprint(switchColors: MethodReference) 
     ),
 )
 
-internal object PainterResourceFingerprint : Fingerprint(
-    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC, AccessFlags.FINAL),
-    returnType = "L",
-    parameters = listOf("I", "L", "I"),
+internal object IconCallerFingerprint : Fingerprint(
     filters = listOf(
-        string("androidx.compose.ui.res.painterResource (", StringComparisonType.STARTS_WITH),
+        resourceField(ResourceType.DRAWABLE, "ic_proton_checkmark"),
+        methodCall(
+            opcodes = listOf(Opcode.INVOKE_STATIC, Opcode.INVOKE_STATIC_RANGE),
+            location = MatchAfterWithin(PAINTER_CALL_DISTANCE),
+        ),
+        methodCall(
+            opcodes = listOf(Opcode.INVOKE_STATIC, Opcode.INVOKE_STATIC_RANGE),
+            parameters = listOf("L", "Ljava/lang/String;", "L", "J", "L", "I", "I"),
+            returnType = "V",
+            location = MatchAfterWithin(ICON_CALL_DISTANCE),
+        ),
     ),
 )
 
-internal fun painterIconFingerprint(painterType: String) = Fingerprint(
+internal fun Method.isSwitchColorsConstructor() = name == "<init>" &&
+    parameterTypes.size == SWITCH_COLORS_ARGUMENT_COUNT && parameterTypes.all { it == "J" }
+
+internal fun BytecodePatchContext.switchImplFingerprint() = Fingerprint(
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC, AccessFlags.FINAL),
     returnType = "V",
-    parameters = listOf(painterType, "Ljava/lang/String;", "L", "J", "L", "I", "I"),
-    filters = listOf(
-        string("androidx.compose.material3.Icon (", StringComparisonType.STARTS_WITH),
-    ),
+    parameters = listOf("L", "Z", "Z", "L", "L", "L", "L", "I"),
+    custom = { method, _ ->
+        method.parameterTypes.any { type ->
+            classDefByOrNull(type.toString())?.methods?.any { it.isSwitchColorsConstructor() } == true
+        }
+    },
 )
 
 internal fun defaultIconSizeModifierFingerprint(iconClass: String) = Fingerprint(
@@ -80,8 +97,6 @@ internal fun defaultIconSizeModifierFingerprint(iconClass: String) = Fingerprint
 )
 
 internal object SettingsSwitchBindingFingerprint : Fingerprint(
-    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
-    parameters = listOf("Landroid/view/View;"),
     filters = listOf(
         resourceField(ResourceType.ID, "switchButton"),
         opcode(Opcode.CHECK_CAST, MatchAfterWithin(SWITCH_CAST_DISTANCE)),

@@ -12,6 +12,7 @@ package app.morphe.patches.protonvpn.misc.telemetry
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
+import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import app.morphe.patches.protonvpn.misc.anchors.resourceFieldsPatch
 import app.morphe.patches.protonvpn.misc.anchors.unitInstanceField
 import app.morphe.patches.protonvpn.misc.settings.patchesSettingsPatch
@@ -19,8 +20,6 @@ import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.shared.misc.analytics.disableAnalyticsCollectionPatch
 import app.morphe.patches.shared.misc.proton.markPatchApplied
 import app.morphe.util.matchSingle
-import app.morphe.util.returnBoxedBooleanEarly
-import app.morphe.util.returnEarly
 
 @Suppress("unused")
 val disableTelemetryPatch = bytecodePatch(
@@ -32,14 +31,20 @@ val disableTelemetryPatch = bytecodePatch(
 
     execute {
         markPatchApplied("disableTelemetry")
-        ObservabilityEnabledFingerprint.matchSingle().method.returnBoxedBooleanEarly(false)
+        ObservabilityEnabledFingerprint.matchAll().forEach {
+            val flagRead = it.instructionMatches.last()
+            it.method.addInstructions(
+                flagRead.index + 1,
+                "const/16 v${flagRead.getInstruction<OneRegisterInstruction>().registerA}, 0x0",
+            )
+        }
         val returnUnit = """
             sget-object p0, $unitInstanceField
             return-object p0
         """
         VpnTelemetryEventFingerprint.matchSingle().method.addInstructions(0, returnUnit)
         ObservabilityUploadFingerprint.matchSingle().method.addInstructions(0, returnUnit)
-        CoreTelemetryUploadSchedulerFingerprint.matchAll(2..2).forEach { it.method.returnEarly() }
-        PaymentsObservabilityWorkerFingerprint.matchSingle().method.returnEarly()
+        CoreTelemetryEnqueueFingerprint.matchSingle().method.addInstructions(0, returnUnit)
+        PaymentsObservabilityWorkerFingerprint.matchSingle().method.addInstructions(0, returnUnit)
     }
 }

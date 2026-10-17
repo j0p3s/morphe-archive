@@ -11,14 +11,12 @@ function Assert-Selection([bool]$Condition, [string]$Message) {
 
 $catalog = Get-Content (Join-Path $Root 'patches-list.json') -Raw | ConvertFrom-Json
 $model = Get-SelectionStatusModel -Root $Root
-$optional = @($model.Capabilities | Where-Object Optional | ForEach-Object Status | Sort-Object)
-Assert-Selection (($optional -join ',') -ceq 'crashReports,sessionReports') 'The targets only some builds carry changed without the checker''s markers.'
 $plans = @(Get-PatchSelectionCases -Catalog $catalog -StatusModel $model)
-Assert-Selection ($plans.Count -eq 86 -and @($plans.Id | Sort-Object -Unique).Count -eq 86) 'The matrix changed its bounded case inventory.'
+Assert-Selection ($plans.Count -eq 85 -and @($plans.Id | Sort-Object -Unique).Count -eq 85) 'The matrix changed its bounded case inventory.'
 Assert-Selection (@($plans | Where-Object Failure).Count -eq 10) 'A malformed, incomplete or typed-input refusal is missing.'
 Assert-Selection (@($plans | Where-Object Id -CEQ 'maps-array-noop').Count -eq 1) 'The CLI typed-option no-op case is missing.'
-Assert-Selection (@($plans | Where-Object Default).Count -eq 1 -and $plans[0].Id -ceq 'default64') 'Defaults must be exercised through the actual CLI defaults.'
-Assert-Selection ($plans[0].Names.Count -eq 64 -and ($plans | Where-Object Id -CEQ 'full68').Names.Count -eq 68) 'Default and full catalog counts changed.'
+Assert-Selection (@($plans | Where-Object Default).Count -eq 1 -and $plans[0].Id -ceq 'default63') 'Defaults must be exercised through the actual CLI defaults.'
+Assert-Selection ($plans[0].Names.Count -eq 63 -and ($plans | Where-Object Id -CEQ 'full67').Names.Count -eq 67) 'Default and full catalog counts changed.'
 $logoCase = @($plans | Where-Object Id -CEQ 'launch-logo')
 Assert-Selection ($logoCase.Count -eq 1 -and ($logoCase[0].Names -join ',') -ceq 'AMOLED black,Black and white launch logo') 'The launch logo needs its own case beside the switch it shows behind.'
 $hostile = $catalog | ConvertTo-Json -Depth 20 | ConvertFrom-Json
@@ -41,7 +39,6 @@ foreach ($plan in $plans) {
         $family = $model.Families | Where-Object Enum -CEQ $capability.Family
         Assert-Selection ($expectation.flags[$capability.Status] -eq ($plan.Names -ccontains $family.Name)) 'A capability was credited to an omitted family.'
     }
-    Assert-Selection ((@($expectation.optional | Sort-Object) -join ',') -ceq ($optional -join ',')) 'The checker lost which targets only some builds carry.'
     Assert-Selection ($plan.ApiId -cmatch '^[1-9][0-9]*$' -and [int]$plan.ApiId -gt 0 -and
         $plan.ApiHash -cmatch '^[0-9a-f]{32}$' -and $plan.MapsKey -cmatch '^AIza[0-9A-Za-z_-]{35}$') 'Synthetic configured values no longer fit the real validators.'
     $document = @(New-SelectionOptionsDocument -Catalog $catalog -Selection $plan -BundleName 'fixture.mpp' -BundleHash ('a' * 64) | ConvertFrom-Json)
@@ -119,7 +116,7 @@ try {
     $desktop = Resolve-DesktopCli -Root $Root -Required
     $fixtureDir = $env:HUSHTELEGRAM_FIXTURE_DIR
     if (-not $fixtureDir) { $fixtureDir = Join-Path $Root 'fixtures' }
-    $fixtures = @('telegram-web-13.0.2-71759.apk', 'telegram-beta-13.0.2-71809.apk') |
+    $fixtures = @('telegram-web-13.0.3-71839.apk', 'telegram-play-13.0.3-71831.apk') |
         ForEach-Object { Join-Path $fixtureDir $_ }
     foreach ($fixture in $fixtures) {
         Assert-Selection (Test-Path -LiteralPath $fixture -PathType Leaf) 'A native-version control fixture is missing.'
@@ -139,8 +136,8 @@ try {
     $fixtureOutput = Join-Path $scratch 'fixture-private.txt'
     $fixtureCode = Invoke-SelectionTool -Program $java -Arguments (@('-Xmx512m', '-XX:ActiveProcessorCount=2', '-cp',
         ($classes + [IO.Path]::PathSeparator + $desktop), 'SelectionCheckFixtureTest') + $fixtures) -PrivateOutput $fixtureOutput
-    Assert-Selection ($fixtureCode -eq 0 -and (Get-Content $fixtureOutput -Raw).Contains('FIXTURE_CHECKS_PASSED checks=41')) `
-        'The checker lost its beta-logs gate, its refusal controls, its Firebase markers or its launcher icon control.'
+    Assert-Selection ($fixtureCode -eq 0 -and (Get-Content $fixtureOutput -Raw).Contains('FIXTURE_CHECKS_PASSED checks=8')) `
+        'The checker lost its BuildVars refusal control or its launcher icon control.'
     # A matrix run keeps one checker, which decodes the clean fixture once and answers each case.
     $checker = Start-SelectionChecker -Java $java -ClassPath ($classes + [IO.Path]::PathSeparator + $desktop) -Apk $fixtures[0] `
         -PrivateOutput (Join-Path $scratch 'checker-private.txt')
@@ -176,7 +173,7 @@ $tail = "`r`n[resources] files named by the patched table: 7117, moved 0"
 $icons = "[resources] added resources: 3`r`n$iconLines$tail"
 $logos = "[resources] added resources: 3`r`n$logoLines$tail"
 $both = "[resources] added resources: 6`r`n$iconLines`r`n$logoLines$tail"
-$full = ($plans | Where-Object Id -CEQ 'full68').Names
+$full = ($plans | Where-Object Id -CEQ 'full67').Names
 $default = $plans[0].Names
 $logoOnly = ($plans | Where-Object Id -CEQ 'launch-logo').Names
 Assert-Selection (Test-SelectionAddedResources -Report $none -Closure $default) 'A case without the icon was refused for adding nothing.'

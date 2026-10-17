@@ -13,7 +13,8 @@ import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 // Flashscore uses Google's next-generation Mobile Ads SDK
 // (com.google.android.libraries.ads.mobile.sdk). Its class and method names are stable
 // library API, so the patch works on the SDK surface instead of the obfuscated app code:
-//   - initialize/initializeAdapters stop the SDK from ever starting;
+//   - initialize/initializeAdapters stop the SDK from ever starting, and the setters that throw
+//     without init (setRequestConfiguration, setUserMutedApp, setUserControlledAppVolume) do nothing;
 //   - every *AdPreloader.start(...) reports failure, so nothing gets preloaded;
 //   - the ad classes' load()/loadAd() entry points become no-ops;
 //   - pollAd() yields nothing for anything that still tries to fetch a preloaded ad.
@@ -23,6 +24,14 @@ import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 //     strip, bonus strip and odds are not ad slots; Hide betting content covers them;
 //   - the video player never receives a VMAP response, so IMA video ads are never requested.
 private const val SDK = "Lcom/google/android/libraries/ads/mobile/sdk/"
+
+private val MOBILE_ADS_VOIDS = setOf(
+    "initialize",
+    "initializeAdapters",
+    "setRequestConfiguration",
+    "setUserMutedApp",
+    "setUserControlledAppVolume",
+)
 
 private val PRELOADERS = listOf(
     "banner/BannerAdPreloader",
@@ -59,11 +68,13 @@ val disableAdsPatch = bytecodePatch(
     compatibleWith(COMPATIBILITY_FLASHSCORE)
 
     execute {
-        // Never initialize the ads SDK.
+        // Never initialize the ads SDK. The next-gen SDK throws from almost every MobileAds call
+        // without init (AGENTS.md rule 9), so the void setters an app calls around init return
+        // at once too.
         for (type in listOf("MobileAds", "MobileAds\$Companion")) {
             methods(type)
                 .filter { it.implementation != null }
-                .filter { it.name == "initialize" || it.name == "initializeAdapters" }
+                .filter { it.name in MOBILE_ADS_VOIDS && it.returnType == "V" }
                 .forEach { it.returnEarly() }
         }
 

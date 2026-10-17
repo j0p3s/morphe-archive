@@ -7,6 +7,7 @@ package app.morphe.patches.protonvpn.misc.restrictions
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.InstructionFilter
 import app.morphe.patcher.InstructionLocation.MatchAfterImmediately
+import app.morphe.patcher.Match
 import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.instructionsOrNull
@@ -42,13 +43,16 @@ internal fun BytecodePatchContext.freeUserCheckFingerprint(
     ) + followingFilters,
 )
 
-internal fun BytecodePatchContext.clearFreeUserCheck(check: Fingerprint) {
-    check.matchSingle().run {
-        val freeUserResult = instructionMatches[1]
-        val register = freeUserResult.getInstruction<OneRegisterInstruction>().registerA
-        method.addInstruction(freeUserResult.index + 1, "const/16 v$register, 0x0")
-    }
+private fun Match.clearFreeUserResult() {
+    val freeUserResult = instructionMatches[1]
+    val register = freeUserResult.getInstruction<OneRegisterInstruction>().registerA
+    method.addInstruction(freeUserResult.index + 1, "const/16 v$register, 0x0")
 }
+
+internal fun BytecodePatchContext.clearFreeUserCheck(check: Fingerprint) = check.matchSingle().clearFreeUserResult()
+
+internal fun BytecodePatchContext.clearFreeUserChecks(check: Fingerprint) =
+    check.matchAll().forEach { it.clearFreeUserResult() }
 
 internal fun BytecodePatchContext.clearFreeUserCheckInLambdaOf(owner: Fingerprint) {
     val instantiatedTypes = owner.originalClassDef.methods

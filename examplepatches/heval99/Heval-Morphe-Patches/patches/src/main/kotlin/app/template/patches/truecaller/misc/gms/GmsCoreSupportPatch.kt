@@ -21,4 +21,7 @@ val gmsCoreSupportPatch = gmsCoreSupportPatch(
     compatibility = COMPATIBILITY_TRUECALLER,
     default = false,
     dependencies = setOf(spoofSignaturePatch),
+    // No clone (#50): the main provider's authority is exactly "com.truecaller", the dex hard-codes
+    // content://com.truecaller, and the com.truecaller.account type would clash with stock.
+    allowClone = false,
 )

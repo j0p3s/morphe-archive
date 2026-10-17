@@ -201,6 +201,20 @@ class FlashscoreSmokeTest {
             it.name == "initialize" && it.parameterTypes.size == 2
         }
         assertReturnsEarlyVoid(initialize, label = "MobileAds.initialize(Context, InitializationConfig)")
+        // Rule 9: the next-gen setters that throw without init return at once, on MobileAds and
+        // on its Companion (which the Kotlin statics delegate to).
+        for (type in listOf(SDK + "MobileAds;", SDK + "MobileAds\$Companion;")) {
+            for ((name, parameters) in listOf(
+                "setRequestConfiguration" to listOf(SDK + "common/RequestConfiguration;"),
+                "setUserMutedApp" to listOf("Z"),
+                "setUserControlledAppVolume" to listOf("F"),
+            )) {
+                assertReturnsEarlyVoid(
+                    klass(type).method(name, parameters),
+                    label = "${type.substringAfterLast('/')}.$name(${parameters.joinToString()})",
+                )
+            }
+        }
 
         // Preloading reports failure and never hands out an ad.
         val preloader = klass(SDK + "banner/BannerAdPreloader;")

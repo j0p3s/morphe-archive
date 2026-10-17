@@ -12,46 +12,38 @@
 package app.morphe.patches.protonvpn.misc.freeservers
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.InstructionLocation.MatchAfterImmediately
 import app.morphe.patcher.methodCall
+import app.morphe.patcher.newInstance
+import app.morphe.patcher.InstructionLocation.MatchAfterImmediately
 import app.morphe.patcher.opcode
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.resource.ResourceType
 import app.morphe.patches.protonvpn.misc.anchors.ToStringFingerprint
 import app.morphe.patches.protonvpn.misc.anchors.resourceField
-import app.morphe.patches.protonvpn.misc.restrictions.FreeServerCheckFingerprint
+import app.morphe.patches.protonvpn.misc.restrictions.freeServerCheckFingerprint
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.Method
 
-internal object ServerListFilterFingerprint : FreeServerCheckFingerprint(
-    parameters = listOf(
-        "Z",
-        "L",
-        "Ljava/lang/String;",
-        "L",
-        "Z",
-        "Ljava/lang/String;",
-        "Lcom/protonvpn/android/servers/Server;",
-    ),
+internal fun BytecodePatchContext.serverListFilterFingerprint() = freeServerCheckFingerprint(
+    opcode(Opcode.IF_NEZ, MatchAfterImmediately()),
 )
 
-internal object ServerGroupItemStateFingerprint : Fingerprint(
-    parameters = listOf("L", "Ljava/lang/Integer;", "L", "L"),
-    strings = listOf("filterType"),
-)
+internal object ServerGroupToStringFingerprint : ToStringFingerprint("ServerGroup(data=")
 
-internal object CountriesHeaderLabelResourceFingerprint : Fingerprint(
-    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC, AccessFlags.FINAL),
-    returnType = "I",
-    parameters = listOf("L", "Z"),
+internal fun Method.tierParameterIndex() = parameterTypes.indexOfFirst { it.toString() == "Ljava/lang/Integer;" }
+
+internal fun BytecodePatchContext.serverGroupItemStateFingerprint(): Fingerprint {
+    val serverGroup = ServerGroupToStringFingerprint.originalClassDef.type
+    return Fingerprint(
+        returnType = serverGroup,
+        filters = listOf(newInstance(serverGroup)),
+        custom = { method, _ -> method.tierParameterIndex() > 0 },
+    )
+}
+
+internal object CountriesHeaderLabelFingerprint : Fingerprint(
     filters = listOf(resourceField(ResourceType.STRING, "country_filter_all_list_header_free")),
-)
-
-internal fun BytecodePatchContext.countriesHeaderLabelFingerprint() = Fingerprint(
-    filters = listOf(
-        methodCall(CountriesHeaderLabelResourceFingerprint.originalMethod),
-        opcode(Opcode.MOVE_RESULT, MatchAfterImmediately()),
-    ),
 )
 
 internal val saveStateToStringFingerprints = listOf(
@@ -60,11 +52,12 @@ internal val saveStateToStringFingerprints = listOf(
     "ServersScreenSaveState(countryId=",
 ).map(::ToStringFingerprint)
 
-internal object GatewayServersSaveStateToStringFingerprint :
-    ToStringFingerprint("GatewayServersScreenSaveState(gatewayName=")
-
-internal object SearchResultSectionFingerprint : Fingerprint(
-    accessFlags = listOf(AccessFlags.PRIVATE, AccessFlags.FINAL),
-    returnType = "Ljava/util/List;",
-    parameters = listOf("I", "Ljava/util/List;", "L", "Ljava/lang/Integer;", "L", "Ljava/util/Locale;"),
+internal fun BytecodePatchContext.searchResultSectionFingerprint() = Fingerprint(
+    filters = listOf(methodCall(serverGroupItemStateFingerprint().originalMethod)),
+    custom = { method, _ ->
+        val parameters = method.parameterTypes.map { it.toString() }
+            .let { if (AccessFlags.STATIC.isSet(method.accessFlags)) it.drop(1) else it }
+        !AccessFlags.SYNTHETIC.isSet(method.accessFlags) && parameters.size == 6 && parameters[0] == "I" && parameters[1] == "Ljava/util/List;" &&
+            parameters[3] == "Ljava/lang/Integer;" && parameters[5] == "Ljava/util/Locale;"
+    },
 )

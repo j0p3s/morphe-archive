@@ -13,7 +13,9 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patches.instagram.misc.extension.EXTENSION_PACKAGE
+import app.morphe.patches.instagram.misc.extension.classesCalling
 import app.morphe.patches.instagram.misc.extension.classesHolding
+import app.morphe.patches.instagram.misc.extension.classesLoadingString
 import app.morphe.patches.instagram.misc.extension.enableStatus
 import app.morphe.patches.instagram.misc.extension.instagramExtensionPatch
 import app.morphe.patches.instagram.misc.extension.jumpTargets
@@ -38,6 +40,19 @@ internal const val FONTS = "$EXTENSION_PACKAGE/misc/Fonts;"
 internal const val PRISM_TYPEFACE = "$FONTS->prismTypeface(Landroid/graphics/Typeface;)Landroid/graphics/Typeface;"
 internal const val TEXT_VIEW = "$FONTS->textView(Landroid/widget/TextView;)V"
 internal const val RESOURCE_FONT = "$FONTS->resourceFont(Landroid/content/Context;I)Landroid/graphics/Typeface;"
+internal const val EMOJI_TYPEFACE = "$FONTS->emojiTypeface(Landroid/graphics/Typeface;)Landroid/graphics/Typeface;"
+internal const val EMOJI_NAME = "$FONTS->emojiName(Ljava/lang/String;)Ljava/lang/String;"
+
+/** Instagram's emoji, a name its build keeps, and the image name it gives each emoji picture. */
+internal const val IG_EMOJI = "Lcom/instagram/ui/emoji/Emoji;"
+internal const val IMAGE_URL = "Lcom/instagram/common/typedurl/SimpleImageUrl;"
+internal const val IMAGE_URL_INIT = "$IMAGE_URL-><init>(Ljava/lang/String;)V"
+
+/** What starts the name of a sheet of emoji pictures. No other class loads it. */
+internal const val EMOJI_SHEET_MARKER = "emoji-sprite-sheet-api"
+
+/** The name Instagram's own emoji renderer gives the span it builds. No other class holds it. */
+internal const val EMOJI_MARKER = "FacebookEmoji"
 
 /** What AndroidX's ResourcesCompat says when a font resource won't load. No other class holds it. */
 internal const val FONT_RESOURCE_MARKER = "Font resource ID #0x"
@@ -52,6 +67,7 @@ internal const val INITIALIZE =
 
 private const val TYPEFACE = "Landroid/graphics/Typeface;"
 private const val CONTEXT = "Landroid/content/Context;"
+private const val STRING = "Ljava/lang/String;"
 
 /**
  * Instagram's text draws in the phone's font or a font file picked in HushGram settings. Included
@@ -68,6 +84,15 @@ private const val CONTEXT = "Landroid/content/Context;"
  * resources through AndroidX's ResourcesCompat.getFont(Context, int). The extension answers that
  * call first, with the chosen font for a Prism Sans resource and nothing for any other, which
  * then loads as before.
+ *
+ * Instagram draws some emoji as pictures rather than text: the row above the comment box, reactions
+ * and the like (#166). It draws each in the Typeface its own emoji lookup answers, null on current
+ * Android, which means the phone's emoji. Each answer goes through the extension, which gives a
+ * picked font file instead, so an emoji font picked as the Font reaches those too. Instagram picks
+ * the lookup's class when it starts (its emoji renderer or one that answers nothing), so the patch
+ * changes the calls, not either class. Instagram keeps those pictures across restarts by the start of
+ * their names, single emoji and sheets of six alike, so each name also goes through the extension
+ * before it's used, which adds the picked file's mark there.
  */
 @Suppress("unused")
 val fontPatch = bytecodePatch(
@@ -92,6 +117,12 @@ private fun refuse(why: String): Nothing = throw PatchException("$PATCH: $why")
 /** One write of a Prism Sans Typeface into the helper's fields: where it is and the register written. */
 internal class PrismWrite(val method: Method, val at: Int, val register: Int)
 
+/** One call to the emoji lookup: where it is and the register its answer is moved into, the next instruction. */
+internal class EmojiCall(val method: Method, val at: Int, val register: Int)
+
+/** Where an emoji picture's name becomes its image name: the constructor call and the register holding the name. */
+internal class EmojiNaming(val method: Method, val at: Int, val register: Int)
+
 /** Every method the patch changes, found and checked before anything changes. */
 internal class FontSites(
     val writes: List<PrismWrite>,
@@ -99,6 +130,8 @@ internal class FontSites(
     val initializeAt: Int,
     val view: Int,
     val getFont: Method,
+    val emojiCalls: List<EmojiCall>,
+    val emojiNames: List<EmojiNaming>,
 )
 
 /**
@@ -115,6 +148,17 @@ internal class FontSites(
  *
  * ResourcesCompat is the one class holding [FONT_RESOURCE_MARKER], and getFont(Context, int) its one
  * static (Context, int) Typeface method. It needs a register of its own for the extension's answer.
+ *
+ * Instagram's emoji renderer is the one class holding [EMOJI_MARKER], and its emoji lookup the one
+ * instance (String) Typeface method there. Instagram calls the lookup through the interface the
+ * renderer shares with the class that answers nothing, so the calls found are those to the lookup
+ * by the renderer's own name or any of its interfaces, each with its answer moved into a register
+ * by the next instruction. There has to be at least one.
+ *
+ * A single emoji picture's name comes from the one static (String, String) method of [IG_EMOJI]
+ * that answers an [IMAGE_URL], and a sheet's from the one static method answering an [IMAGE_URL]
+ * from an [IG_EMOJI] in the classes loading [EMOJI_SHEET_MARKER]. Each makes its [IMAGE_URL] once,
+ * from a String in a register, with nothing jumping to that call.
  */
 internal fun BytecodePatchContext.findFontSites(): FontSites {
     val helpers = classesHolding(PRISM_MARKER)
@@ -164,7 +208,55 @@ internal fun BytecodePatchContext.findFontSites(): FontSites {
         refuse("${compat.type}->${getFont.name} has no register free for the extension's answer")
     }
 
-    for (hook in listOf(PRISM_TYPEFACE, TEXT_VIEW, RESOURCE_FONT)) {
+    val renderers = classesHolding(EMOJI_MARKER)
+    val renderer = renderers.singleOrNull() ?: refuse("expected one class holding \"$EMOJI_MARKER\", found ${renderers.size}")
+    val lookups = renderer.methods.filter {
+        !AccessFlags.STATIC.isSet(it.accessFlags) && it.returnType == TYPEFACE &&
+            it.parameterTypes.map(Any::toString) == listOf(STRING)
+    }
+    val emojiLookup = lookups.singleOrNull()
+        ?: refuse("expected one (String) Typeface in ${renderer.type}, found ${lookups.size}")
+    val emojiCalls = (listOf(renderer.type) + renderer.interfaces.map(Any::toString)).flatMap { contract ->
+        val lookup = "$contract->${emojiLookup.name}($STRING)$TYPEFACE"
+        classesCalling(contract, emojiLookup.name).flatMap { caller ->
+            caller.methods.flatMap { method ->
+                val code = method.code()
+                code.withIndex().filter { (_, instruction) -> instruction.calls(lookup) }.map { (at, _) ->
+                    val moved = code.getOrNull(at + 1)
+                    if (moved?.opcode != Opcode.MOVE_RESULT_OBJECT) {
+                        refuse("${method.definingClass}->${method.name} doesn't keep the emoji lookup's answer at $at")
+                    }
+                    EmojiCall(method, at, (moved as OneRegisterInstruction).registerA)
+                }
+            }
+        }
+    }
+    if (emojiCalls.isEmpty()) refuse("nothing calls ${renderer.type}->${emojiLookup.name}, by itself or its interfaces")
+
+    val emoji = classDefByOrNull(IG_EMOJI) ?: refuse("this build has no $IG_EMOJI")
+    val singles = emoji.methods.filter {
+        AccessFlags.STATIC.isSet(it.accessFlags) && it.returnType == IMAGE_URL &&
+            it.parameterTypes.map(Any::toString) == listOf(STRING, STRING)
+    }
+    val single = singles.singleOrNull()
+        ?: refuse("expected one static (String, String) image name in $IG_EMOJI, found ${singles.size}")
+    val sheets = classesLoadingString(EMOJI_SHEET_MARKER).flatMap { it.methods }.filter {
+        AccessFlags.STATIC.isSet(it.accessFlags) && it.returnType == IMAGE_URL && IG_EMOJI in it.parameterTypes.map(Any::toString)
+    }
+    val sheet = sheets.singleOrNull()
+        ?: refuse("expected one static image name for a sheet of emoji, found ${sheets.size}")
+    val emojiNames = listOf(single, sheet).map { namer ->
+        val where = "${namer.definingClass}->${namer.name}"
+        val made = namer.code().withIndex().filter { (_, instruction) -> instruction.calls(IMAGE_URL_INIT) }
+        val (at, call) = made.singleOrNull() ?: refuse("$where makes ${made.size} image names, not one")
+        if (call.opcode != Opcode.INVOKE_DIRECT || call !is FiveRegisterInstruction || call.registerCount != 2) {
+            refuse("$where doesn't make its image name from one register")
+        }
+        if (at in namer.jumpTargets()) refuse("$where has a jump to where it makes its image name")
+        EmojiNaming(namer, at, call.registerD)
+    }
+
+    for (hook in listOf(PRISM_TYPEFACE, TEXT_VIEW, RESOURCE_FONT, EMOJI_TYPEFACE, EMOJI_NAME)) {
         if (classDefByOrNull(FONTS)?.methods?.any {
                 "${it.definingClass}->${it.name}(${it.parameterTypes.joinToString("")})${it.returnType}" == hook &&
                     AccessFlags.STATIC.isSet(it.accessFlags) && AccessFlags.PUBLIC.isSet(it.accessFlags)
@@ -173,7 +265,7 @@ internal fun BytecodePatchContext.findFontSites(): FontSites {
             refuse("the extension has no public static $hook")
         }
     }
-    return FontSites(writes, init, at, call.registerC, getFont)
+    return FontSites(writes, init, at, call.registerC, getFont, emojiCalls, emojiNames)
 }
 
 /**
@@ -182,7 +274,9 @@ internal fun BytecodePatchContext.findFontSites(): FontSites {
  * method goes in first, so the earlier ones keep their places. Then Fonts.textView gets each
  * IgTextView right after Instagram sets it up. The range form takes any register. Last,
  * ResourcesCompat.getFont answers the extension's Typeface when there is one, and loads the
- * resource as before when it answers null.
+ * resource as before when it answers null. Each answer of Instagram's emoji lookup goes through
+ * Fonts.emojiTypeface right after it's moved into its register, the latest call in each method first,
+ * and each emoji picture's name goes through Fonts.emojiName right before it becomes an image name.
  */
 internal fun BytecodePatchContext.swapFonts() {
     val found = findFontSites()
@@ -213,6 +307,27 @@ internal fun BytecodePatchContext.swapFonts() {
         """,
         ExternalLabel("resource", getFont.getInstruction(0)),
     )
+    for ((method, calls) in found.emojiCalls.groupBy { it.method }) {
+        val mutable = mutable(method)
+        for (call in calls.sortedByDescending { it.at }) {
+            mutable.addInstructions(
+                call.at + 2,
+                """
+                    invoke-static/range { v${call.register} .. v${call.register} }, $EMOJI_TYPEFACE
+                    move-result-object v${call.register}
+                """,
+            )
+        }
+    }
+    for (naming in found.emojiNames) {
+        mutable(naming.method).addInstructions(
+            naming.at,
+            """
+                invoke-static/range { v${naming.register} .. v${naming.register} }, $EMOJI_NAME
+                move-result-object v${naming.register}
+            """,
+        )
+    }
 }
 
 private fun BytecodePatchContext.mutable(method: Method): MutableMethod =

@@ -117,8 +117,8 @@ object Constants {
     )
 
     const val CAPCUT_PACKAGE_NAME = "com.lemon.lvoverseas"
-    const val CAPCUT_TARGET_VERSION = "19.7.0"
-    const val CAPCUT_INPUT_SHA256 = "b12e11cd13311b85000d0de330a7bdda245151958c01fc5316b8c42c3d0f3cdd"
+    const val CAPCUT_TARGET_VERSION = "19.8.0"
+    const val CAPCUT_INPUT_SHA256 = "68a92fb7a06b29e95d791739650709d0dd7a23ed764174ca21797af4662faa4b"
 
     val COMPATIBILITY_CAPCUT = Compatibility(
         name = "CapCut",
@@ -128,14 +128,14 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = CAPCUT_TARGET_VERSION,
-                description = "Download com.lemon.lvoverseas v\$CAPCUT_TARGET_VERSION (APK) arm64-v8a nodpi versionCode 19701600 from APKMirror",
+                description = "Download com.lemon.lvoverseas v\$CAPCUT_TARGET_VERSION (APK) arm64-v8a nodpi versionCode 19800002 from APKMirror",
             )
         )
     )
 
     const val OFFICEHUB_PACKAGE_NAME = "com.microsoft.office.officehubrow"
-    const val OFFICEHUB_TARGET_VERSION = "16.0.20527.20022"
-    const val OFFICEHUB_INPUT_SHA256 = ""
+    const val OFFICEHUB_TARGET_VERSION = "16.0.20604.20012"
+    const val OFFICEHUB_INPUT_SHA256 = "09b0ba87a2d8e630c5bc1b807b3f9cb7db3135f2e8d582fe51fdf923bf3c1201"
 
     val COMPATIBILITY_OFFICEHUB = Compatibility(
         name = "Copilot",
@@ -145,7 +145,58 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = OFFICEHUB_TARGET_VERSION,
-                description = "Download com.microsoft.office.officehubrow v\$OFFICEHUB_TARGET_VERSION (APKM) arm64-v8a 120-480dpi versionCode 45451803 (BUNDLE 32 S) from APKMirror",
+                description = "Download $OFFICEHUB_PACKAGE_NAME v$OFFICEHUB_TARGET_VERSION (APKM) arm64-v8a 120-480dpi versionCode 45489613 (BUNDLE 32 S) from APKMirror",
+            )
+        )
+    )
+
+    const val HEVY_PACKAGE_NAME = "com.hevy"
+    const val HEVY_TARGET_VERSION = "3.1.14"
+    const val HEVY_INPUT_SHA256 = ""
+
+    val COMPATIBILITY_HEVY = Compatibility(
+        name = "Hevy - Gym Log Workout Tracker",
+        packageName = HEVY_PACKAGE_NAME,
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0xFF4500,
+        targets = listOf(
+            AppTarget(
+                version = HEVY_TARGET_VERSION,
+                description = "Download com.hevy v\$HEVY_TARGET_VERSION (APKM) arm64-v8a 120-640dpi versionCode 3308730 (BUNDLE) from APKMirror",
+            )
+        )
+    )
+
+    const val NOKOPRINT_PACKAGE_NAME = "com.nokoprint"
+    const val NOKOPRINT_TARGET_VERSION = "5.28.6"
+    const val NOKOPRINT_INPUT_SHA256 = ""
+
+    val COMPATIBILITY_NOKOPRINT = Compatibility(
+        name = "NokoPrint - WiFi, Bluetooth, USB",
+        packageName = NOKOPRINT_PACKAGE_NAME,
+        apkFileType = ApkFileType.XAPK,
+        appIconColor = 0x0288D1,
+        targets = listOf(
+            AppTarget(
+                version = NOKOPRINT_TARGET_VERSION,
+                description = "Download com.nokoprint v\$NOKOPRINT_TARGET_VERSION (XAPK bundle) from APKPure",
+            )
+        )
+    )
+
+    const val XIAOMI_EARBUDS_PACKAGE_NAME = "com.mi.earphone"
+    const val XIAOMI_EARBUDS_TARGET_VERSION = "1.38.0i"
+    const val XIAOMI_EARBUDS_INPUT_SHA256 = ""
+
+    val COMPATIBILITY_XIAOMI_EARBUDS = Compatibility(
+        name = "Xiaomi Earbuds",
+        packageName = XIAOMI_EARBUDS_PACKAGE_NAME,
+        apkFileType = ApkFileType.XAPK,
+        appIconColor = 0xFF6700,
+        targets = listOf(
+            AppTarget(
+                version = XIAOMI_EARBUDS_TARGET_VERSION,
+                description = "Download com.mi.earphone v\$XIAOMI_EARBUDS_TARGET_VERSION (XAPK bundle) from APKPure",
             )
         )
     )

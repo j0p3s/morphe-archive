@@ -1,3 +1,21 @@
+## [1.2.0-dev.1](https://github.com/heyymichii/michii-patches/compare/v1.1.1...v1.2.0-dev.1) (2026-10-16)
+
+### ✨ New Features
+
+* Add Material You patch ([4c14ce2](https://github.com/heyymichii/michii-patches/commit/4c14ce2299163d770e15bf61075c678d520befd5)), closes [#6](https://github.com/heyymichii/michii-patches/issues/6)
+
+## [1.1.1](https://github.com/heyymichii/michii-patches/compare/v1.1.0...v1.1.1) (2026-10-16)
+
+### 🐛 Bug Fixes
+
+* Support LinkedIn 4.1.1261 ([dfca453](https://github.com/heyymichii/michii-patches/commit/dfca4536dc321d46136675355b0cb4b8492527b7)), closes [#5](https://github.com/heyymichii/michii-patches/issues/5)
+
+## [1.1.1-dev.1](https://github.com/heyymichii/michii-patches/compare/v1.1.0...v1.1.1-dev.1) (2026-10-16)
+
+### 🐛 Bug Fixes
+
+* Support LinkedIn 4.1.1261 ([dfca453](https://github.com/heyymichii/michii-patches/commit/dfca4536dc321d46136675355b0cb4b8492527b7)), closes [#5](https://github.com/heyymichii/michii-patches/issues/5)
+
 ## [1.1.0](https://github.com/heyymichii/michii-patches/compare/v1.0.0...v1.1.0) (2026-10-11)
 
 ### 🐛 Bug Fixes

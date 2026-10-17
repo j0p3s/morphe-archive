@@ -7,11 +7,13 @@ package app.morphe.patches.protonvpn.misc.profiles
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.bytecodePatch
-import app.morphe.patches.protonvpn.misc.anchors.findPropertyGetter
+import app.morphe.patches.protonvpn.misc.anchors.findPropertyField
 import app.morphe.patches.protonvpn.misc.anchors.setExtensionMember
 import app.morphe.patches.protonvpn.misc.restrictions.clearFreeUserCheck
+import app.morphe.patches.protonvpn.misc.restrictions.filterConstructorProperty
 import app.morphe.patches.protonvpn.misc.restrictions.filterReturnValue
 import app.morphe.patches.protonvpn.misc.restrictions.freeAccountStatePatch
+import app.morphe.patches.protonvpn.misc.restrictions.freeServerMethod
 import app.morphe.patches.protonvpn.misc.restrictions.invertFreeServerCheckForFreeAccount
 import app.morphe.patches.protonvpn.misc.settings.patchesSettingsPatch
 import app.morphe.patches.shared.compat.AppCompatibilities
@@ -34,14 +36,16 @@ val unlockProfilesPatch = bytecodePatch(
         markPatchApplied("unlockProfiles")
         setExtensionMember(
             "profileAvailability",
-            findPropertyGetter(ProfileViewItemToStringFingerprint, "availability").name,
+            findPropertyField(ProfileViewItemToStringFingerprint, "availability").name,
         )
+        setExtensionMember("serverIsFree", freeServerMethod.name)
+        setExtensionMember("countryServers", findPropertyField(VpnCountryToStringFingerprint, "serverList").name)
         clearFreeUserCheck(profileAvailabilityFingerprint())
         vpnCountriesFingerprint().matchSingle().method.filterReturnValue(
             "$FREE_SERVER_LOCATIONS->countriesForAccount(Ljava/util/List;)Ljava/util/List;",
         )
-        invertFreeServerCheckForFreeAccount(ProfileServerFilterFingerprint)
-        ProfileCitiesOrStatesFingerprint.matchSingle().run {
+        invertFreeServerCheckForFreeAccount(profileServerFilterFingerprint())
+        profileCitiesOrStatesFingerprint().matchSingle().run {
             val serverList = instructionMatches.last()
             val register = serverList.getInstruction<OneRegisterInstruction>().registerA
             method.addInstructions(
@@ -52,15 +56,15 @@ val unlockProfilesPatch = bytecodePatch(
                 """,
             )
         }
-        ProfilesListStateFingerprint.matchSingle().method.addInstructions(
-            0,
-            """
-                invoke-static { p1 }, $FREE_SERVER_LOCATIONS->profilesForAccount(Ljava/util/List;)Ljava/util/List;
-                move-result-object p1
-            """,
+        filterConstructorProperty(
+            ProfilesListToStringFingerprint,
+            "profiles",
+            "$FREE_SERVER_LOCATIONS->profilesForAccount(Ljava/util/List;)Ljava/util/List;",
         )
-        profileTypesToStringFingerprints.forEach { toString ->
-            navigate(findPropertyGetter(toString, "availableTypes")).stop().filterReturnValue(
+        profileTypesToStringFingerprints.forEach {
+            filterConstructorProperty(
+                it,
+                "availableTypes",
                 "$FREE_SERVER_LOCATIONS->profileTypesForAccount(Ljava/util/List;)Ljava/util/List;",
             )
         }

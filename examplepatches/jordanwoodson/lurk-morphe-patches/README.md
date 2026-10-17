@@ -15,28 +15,95 @@
 
 <p align="center">
   <a href="https://github.com/jordanwoodson/lurk-morphe-patches/releases/latest"><img src="https://img.shields.io/github/v/release/jordanwoodson/lurk-morphe-patches?label=release&color=39F8AE" alt="Latest release"></a>
+  <a href="https://github.com/jordanwoodson/lurk-morphe-patches/actions/workflows/release.yml"><img src="https://img.shields.io/github/actions/workflow/status/jordanwoodson/lurk-morphe-patches/release.yml?branch=main&label=build" alt="Build"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
 </p>
 
-Lurk is a set of privacy-focused patches for streaming apps, applied with [Morphe](https://morphe.software):
-Twitch, Kick and Rumble to start, more apps later. This repo is both the patch bundle and the workspace
-for building it. Lurk has no connection to Twitch, Kick, Rumble or the Morphe project.
+<p align="center">
+  <a href="#install">Install</a> &nbsp;•&nbsp;
+  <a href="#lurk-settings">Lurk settings</a> &nbsp;•&nbsp;
+  <a href="#patches">Patches</a> &nbsp;•&nbsp;
+  <a href="#documentation">Documentation</a> &nbsp;•&nbsp;
+  <a href="#reporting-problems">Reporting problems</a> &nbsp;•&nbsp;
+  <a href="#contributing">Contributing</a>
+</p>
 
-### How to use these patches
+Lurk is a set of privacy-focused patches for streaming apps, applied on your phone with
+[Morphe](https://morphe.software): Twitch, Kick and Rumble to start, more apps later. The patches
+stop analytics and tracker SDKs, drop ad and upsell requests, clean shared links, and add the
+quality-of-life features the apps leave out: third-party emotes, chat timestamps, a sleep timer,
+background audio and more. Everything runs locally; nothing goes through a server of ours.
 
-Tap **Add to Morphe** on an Android phone with [Morphe Manager](https://morphe.software) installed; on
-a computer it shows a QR code to scan with the phone. Releases from the `dev` branch are pre-releases:
-turn on pre-releases for this source in Manager to get them.
+Lurk has no connection to Twitch, Kick, Rumble or the Morphe project. The name "Morphe" is used
+only to say what the patches are for (see [NOTICE](NOTICE)).
 
-Patched apps get a **Lurk** settings screen that turns included patches off and on without patching
-again. Long-press the app icon > Lurk settings; Rumble also has Settings > App info > Lurk.
-Kick and Twitch's JavaScript settings require a restart. See the [Kick notes](docs/kick.md) for
-the experimental VOD option and the [Twitch notes](docs/twitch.md) for coverage and testing limits.
+## Install
 
-## 🩹 Patches list
+1. Install [Morphe Manager](https://morphe.software) on your Android phone.
+2. Tap **Add to Morphe** above on the phone. On a computer the link shows a QR code to scan with
+   the phone. Manager adds Lurk as a patch source.
+3. In Manager, pick Twitch, Kick or Rumble, download the version Lurk supports (Manager links to
+   APKMirror or Uptodown for it; the versions are listed under [Patches](#patches)), choose the
+   patches you want and patch. Manager installs the result.
+
+Releases from the `dev` branch are pre-releases: turn on pre-releases for this source in Manager
+to get new patches early. Android only installs an update over an app signed with the same key,
+so patch updates with the same Manager install you patched with the first time, or uninstall the
+patched app first.
+
+Patches are written for one version of each app and refuse to apply to others. When an app
+updates, wait for a Lurk release that lists the new version.
+
+## Lurk settings
+
+Patched apps get a **Lurk** settings screen that turns included patches off and on without
+patching again. Long-press the app icon › **Lurk settings**; Rumble also has Settings › App info ›
+Lurk. Kick's and Twitch's JavaScript settings apply after a restart, which the screen offers. See the [Kick notes](docs/kick.md) for the experimental VOD option and the
+[Twitch notes](docs/twitch.md) for coverage and testing limits.
+
+## Patches
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.9.0](https://github.com/jordanwoodson/lurk-morphe-patches/releases/tag/v1.9.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;71 patches total
+> **[v1.10.0](https://github.com/jordanwoodson/lurk-morphe-patches/releases/tag/v1.10.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;102 patches total
+<details open>
+<summary><img src="assets/kick-icon-round.webp" width="28" height="28" align="center" alt="">&nbsp;&nbsp;<b>Kick</b>&nbsp;&nbsp;•&nbsp;&nbsp;25 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 40.32.1 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| AMOLED black | Makes Kick's dark background pure black for OLED screens, optionally with near-black cards and sheets. Starts off. Choose it in Lurk settings > Interface. |  |
+| Background audio | Keeps live streams and videos playing as audio when you leave Kick, using Kick's own audio notification. A second switch turns off the automatic picture-in-picture window. On by default, as on Twitch. Turn it off in Lurk settings > Playback. |  |
+| Block update prompts | Stops Kick from asking for or forcing an app update. A patched Kick can't be updated from Google Play, so update by patching a newer version. On by default. Turn it off in Lurk settings > Interface. |  |
+| Bypass VOD ad sessions | Experimental: uses the original VOD URL instead of requesting a separate ad-session manifest. Does not remove ads stitched into live streams. Enable in Lurk settings after patching. |  |
+| Change app name | Changes Kick's name in the launcher and Android settings. | • App name |
+| Clean share links | Removes known campaign and advertising click parameters from kick.com links in share sheets. Keeps timestamps, clip IDs, unknown parameters and fragments. Kick's current share links are already clean. |  |
+| Clone app | Installs Kick under another package name alongside the original, with separate sign-in and settings. Sharing sign-in with Kick's broadcaster app may not work after re-signing. | • Package name |
+| Default startup tab | Adds a choice of the screen Kick opens on instead of Home: Browse or Following. Links and notifications still open what they point to. Starts on Home. Choose another in Lurk settings > Interface. |  |
+| Default video quality | Sets the default adaptive quality ceiling to the selected height when that rendition exists. Kick can still choose a lower quality. The player's Auto option uses this ceiling. A lower starting ceiling can be set for mobile data in Lurk settings > Playback; it's off until then. | • Default quality ceiling |
+| Disable analytics | Disables Firebase Analytics collection, Insider and Datadog initialization/events, Mux/Datazoom player analytics and PAL nonce requests. Playback API requests remain necessary to obtain streams. Restart Kick after changing this setting. This does not remove video ads. |  |
+| Disable autoplay | Starts Kick's feed previews switched off. Existing preferences and Kick's own autoplay switch keep working. Does not change intentionally opened streams. |  |
+| Don't save searches | Stops Kick from saving what you search for on this device. Searches you saved earlier stay until you remove them. On by default. Turn it off in Lurk settings > Privacy. |  |
+| Hide Clips | Hides Clips tabs in Browse, channels and categories, and the popular-clips row on channels. Shared clip links still open. |  |
+| Hide Home sections | Hides the featured carousel, recommended streams and categories rows on Home, each with its own switch. Starts off. Turn them on in Lurk settings > Interface. |  |
+| Hide KICKs tipping | Hides the chat gift-shop button, KICKs purchase button and leaderboard tipping prompt. |  |
+| Hide chat highlights | Hides pinned messages, polls and predictions, goals, the sub, gift and host cards above chat, event and drops banners, pinned KICKs gifts and celebration prompts, each with its own switch. Lines in the chat itself, including sub and gift messages, are unchanged. Starts off. Turn them on in Lurk settings > Interface. |  |
+| Hide rating prompt | Stops Kick from asking you to rate the app. On by default. Turn it off in Lurk settings > Interface. |  |
+| Hide subscription upsells | Hides channel Subscribe and Gift a Sub buttons and the leaderboard gift-subscription prompt. Keeps the existing subscribed indicator. |  |
+| Lurk icon | Replaces Kick's launcher icon with Lurk artwork, including Android's themed icon. |  |
+| Normal latency | Adds a switch that turns off low-latency mode for live streams: a few seconds more delay, fewer rebuffers on weak connections. Starts off. Turn it on in Lurk settings > Playback. |  |
+| Remove tracking permissions | Removes advertising ID, ad attribution and Google Play install-referrer permissions. Other identifiers and analytics require separate controls. |  |
+| Seek interval | Sets how far the rewind and forward buttons skip in videos and rewound live streams: 5, 15, 20 or 30 seconds instead of 10. Starts at Kick's 10 seconds. Choose another in Lurk settings > Playback. |  |
+| Show deleted messages | Keeps chat messages that moderators delete, or remove with a timeout or ban, struck through with a (Deleted), (Timed out) or (Banned) label, the way Kick's chat shows them to moderators, along with its ban, timeout and unban lines. Large KICKs gifts in chat also get the moderators' menu, whose Delete is meant for the channel's moderators. Chat clears still clear. On by default, as on Twitch. Turn it off in Lurk settings > Chat. |  |
+| Sleep timer | Pauses playback a chosen time after it last started or resumed, including background audio. Starts off. Choose a time in Lurk settings > Playback. |  |
+| Stay on channel when it hosts | When the channel you're watching hosts another one, stays on it instead of switching when the countdown ends. Kick's Watch now button still switches. Starts off. Turn it on in Lurk settings > Interface. |  |
+
+</details>
+
 <details open>
 <summary><img src="assets/twitch-icon-round.webp" width="28" height="28" align="center" alt="">&nbsp;&nbsp;<b>Twitch</b>&nbsp;&nbsp;•&nbsp;&nbsp;45 patches</summary>
 <br>
@@ -97,7 +164,7 @@ the experimental VOD option and the [Twitch notes](docs/twitch.md) for coverage 
 </details>
 
 <details open>
-<summary><img src="patches/src/main/resources/rumble/icon/mipmap-xxxhdpi/ic_launcher_round.webp" width="28" height="28" align="center" alt="">&nbsp;&nbsp;<b>Rumble</b>&nbsp;&nbsp;•&nbsp;&nbsp;14 patches</summary>
+<summary><img src="patches/src/main/resources/rumble/icon/mipmap-xxxhdpi/ic_launcher_round.webp" width="28" height="28" align="center" alt="">&nbsp;&nbsp;<b>Rumble</b>&nbsp;&nbsp;•&nbsp;&nbsp;32 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -109,170 +176,79 @@ the experimental VOD option and the [Twitch notes](docs/twitch.md) for coverage 
 |----------|----------------|-----------|
 | Block ads | Removes video ads (before and during videos and live streams) and the ads in feeds and under videos, signed in or not. The app never requests them, so it never sends the ad server your advertising ID, and no ad or Boosted video impressions or clicks are reported. |  |
 | Block cookie notice | Stops Rumble's Ketch consent SDK from loading, so the cookie notice never appears and no consent is recorded, and ignores consent recorded earlier. Rumble then keeps the analytics and ad tracking it gates on consent switched off. Push notifications stop too, since Rumble only starts its push service (Airship) with consent. Settings > Data Consent no longer opens. |  |
+| Block update prompts | Stops the "update required" screen and the "new version available" dialog that Rumble turns on remotely, so a patched version keeps working when Rumble raises its minimum version. Update by patching a newer version. On by default. Turn it off in Lurk settings > Interface. |  |
 | Change app name | Changes the name shown under Rumble's launcher icon and in Android's settings. | • App name |
+| Chat keywords | Highlights live chat messages that mention you or contain your highlight words with a tinted background, optionally with a vibration, and hides messages with blocked words or from blocked users. Mentions are on by default; the word and user lists start empty. On by default. Turn it off in Lurk settings > Chat. |  |
+| Chat timestamps | Shows the time each live chat message was sent in front of the sender's name. On by default. Turn it off in Lurk settings > Chat. |  |
 | Clean share links | Removes everything after the ? from Rumble links before they are shared, so tracking tags such as e9s (where you found the video) can't go out with them. Rumble 3.21.0 shares clean links; this keeps them clean if the server starts adding tags. |  |
 | Clone app | Installs Rumble under another package name, so it sits alongside the original app with its own sign-in and settings. Use "Change app name" to tell the two apart in the launcher. | • Package name |
-| Default video quality | Starts videos at the chosen quality, or the closest one available, instead of 480p. Once you pick a quality in the player, Rumble keeps using that one. Live streams stay on Auto. | • Quality |
+| Default startup tab | Opens Rumble on Home or My Feed every time, instead of the one you last chose. Starts off. Choose a tab in Lurk settings > Interface. |  |
+| Default video quality | Starts videos at the chosen quality, or the closest one available, instead of 480p. Once you pick a quality in the player, Rumble keeps using that one. Starting live streams at it too, and a lower cap on mobile data, are separate settings that start off. On by default. Change it in Lurk settings > Playback. | • Quality<br>• Live streams too<br>• On mobile data |
 | Disable analytics | Stops Rumble's own analytics, which it sends whatever the consent setting: clicks, impressions, searches, watch progress and player state, with your user ID, username, advertising ID and AppsFlyer ID, to e.rumble.com and its debug log. Signed-in watch history may stop updating unless watch progress is kept. | • Keep watch progress |
 | Disable autoplay | Stops Rumble from playing the next video when one ends, and from playing muted previews in feeds, including the featured video on Home. Only the defaults change: Settings > Playback can turn either back on. | • Next video<br>• Feed previews |
+| Don't save searches | Stops Rumble from keeping your searches on the phone and hides the ones it kept, so they no longer show under the search box. Suggestions still come from Rumble's server as you type. On by default. Turn it off in Lurk settings > Privacy. |  |
+| Fill screen | Zooms videos to fill the screen in landscape, cropping the edges instead of showing black bars, on phones taller than 16:9. Starts off. Turn it on in Lurk settings > Playback. |  |
+| Hide Create tab | Removes the Create (camera and upload) button from the bottom bar. Starts off. Turn it on in Lurk settings > Interface. |  |
+| Hide Home sections | Hides Home's categories, creators and playlists rows, each with its own switch, and any section whose title you list in Lurk settings, such as Live or Rumble Originals. Starts off. Turn them on in Lurk settings > Interface. |  |
 | Hide Premium upsells | Hides Rumble Premium promotions: the sheet that opens over videos, the Upgrade Now banner on Home and My Feed, the special offer on the account screen, the downloads pitch and Premium gifts in live chat. Premium-only videos still say so. |  |
 | Hide Shorts | Removes Shorts from the bottom bar, Home, My Feed, channel pages, categories and search. Shorts links still open. |  |
+| Hide chat clutter | Hides pinned messages, raid and gift notices and sponsor reads in live chat, each with its own switch, and optionally chat badges or the whole chat. Starts off. Turn them on in Lurk settings > Chat. |  |
 | Hide tipping and Rants | Hides the Tip buttons on channels, videos and Shorts, Rants (paid live chat messages) and paying with Rumble Wallet. Rants other viewers send still show. |  |
+| Keep playing during other sounds | Choose whether Rumble pauses when another app plays sound: always (Rumble's behavior), only for longer interruptions, or never. Calls still pause playback. Starts off. Choose it in Lurk settings > Playback. |  |
+| Keep screen on while paused | Keeps the screen on while a video is paused in the player, as it is during playback. When the video ends or you leave the player, the screen can turn off again. Starts off. Turn it on in Lurk settings > Playback. |  |
 | Lurk icon | Replaces Rumble's launcher icon with the Lurk icon, including the themed icon on Android 13+. |  |
+| Refresh stream | When a video or live stream fails, tap the error screen to reload it at the same point. On by default. Turn it off in Lurk settings > Playback. |  |
+| Remember playback speed | Keeps the playback speed you last picked for every video, including after Rumble restarts, instead of going back to 1x. Live streams without rewind still play at 1x. Starts off. Turn it on in Lurk settings > Playback. |  |
 | Remove tracking permissions | Removes the advertising ID, ad measurement, install referrer and phone state permissions. Every SDK and Rumble's own requests then get an all-zero advertising ID. |  |
+| Resume videos when signed out | Starts videos where you left off when you aren't signed in, from the positions Rumble already keeps on the phone. Signed in, Rumble's own watch progress is unchanged. On by default. Turn it off in Lurk settings > Playback. |  |
+| Seek interval | Sets how far the player's rewind and forward buttons skip, instead of 15 seconds. Starts off. Choose it in Lurk settings > Playback. |  |
+| Show deleted messages | Shows the text of live chat messages that moderators remove, or that Rumble hides because the sender was muted, after Rumble's "Message was removed by moderator" label. On by default. Turn it off in Lurk settings > Chat. |  |
+| Show exact counts | Shows view, like, comment, follower and "watching now" counts in full (12,345 instead of 12K). Starts off. Turn it on in Lurk settings > Interface. |  |
+| Sleep timer | Pauses playback a chosen time after it last started or resumed, including background play and picture-in-picture. Starts off. Choose a time in Lurk settings > Playback. |  |
 | Unlock Premium | Enables Rumble's local premium state after signing in and refreshing the profile, including ad-free playback and hiding premium upsells. Server-controlled content and subscription benefits still require server authorization. |  |
-
-</details>
-
-<details open>
-<summary><img src="assets/kick-icon-round.webp" width="28" height="28" align="center" alt="">&nbsp;&nbsp;<b>Kick</b>&nbsp;&nbsp;•&nbsp;&nbsp;12 patches</summary>
-<br>
-
-**🎯 Supported versions:**
-
-| 40.32.1 |
-| :---: |
-
-| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
-|----------|----------------|-----------|
-| Bypass VOD ad sessions | Experimental: uses the original VOD URL instead of requesting a separate ad-session manifest. Does not remove ads stitched into live streams. Enable in Lurk settings after patching. |  |
-| Change app name | Changes Kick's name in the launcher and Android settings. | • App name |
-| Clean share links | Removes known campaign and advertising click parameters from kick.com links in share sheets. Keeps timestamps, clip IDs, unknown parameters and fragments. Kick's current share links are already clean. |  |
-| Clone app | Installs Kick under another package name alongside the original, with separate sign-in and settings. Sharing sign-in with Kick's broadcaster app may not work after re-signing. | • Package name |
-| Default video quality | Sets the default adaptive quality ceiling to the selected height when that rendition exists. Kick can still choose a lower quality. The player's Auto option uses this ceiling. | • Default quality ceiling |
-| Disable analytics | Disables Firebase Analytics collection, Insider and Datadog initialization/events, Mux/Datazoom player analytics and PAL nonce requests. Playback API requests remain necessary to obtain streams. Restart Kick after changing this setting. This does not remove video ads. |  |
-| Disable autoplay | Starts Kick's feed previews switched off. Existing preferences and Kick's own autoplay switch keep working. Does not change intentionally opened streams. |  |
-| Hide Clips | Hides Clips tabs in Browse, channels and categories, and the popular-clips row on channels. Shared clip links still open. |  |
-| Hide KICKs tipping | Hides the chat gift-shop button, KICKs purchase button and leaderboard tipping prompt. |  |
-| Hide subscription upsells | Hides channel Subscribe and Gift a Sub buttons and the leaderboard gift-subscription prompt. Keeps the existing subscribed indicator. |  |
-| Lurk icon | Replaces Kick's launcher icon with Lurk artwork, including Android's themed icon. |  |
-| Remove tracking permissions | Removes advertising ID, ad attribution and Google Play install-referrer permissions. Other identifiers and analytics require separate controls. |  |
 
 </details>
 
 <!-- PATCHES_END -->
 
-## 🛠️ Workspace
+## Documentation
 
-### Setup
+- [docs/twitch.md](docs/twitch.md), [docs/kick.md](docs/kick.md), [docs/rumble.md](docs/rumble.md):
+  per app, what each patch hooks, what it can't do, what it sends where, and how it was tested.
+- [docs/development.md](docs/development.md): building the bundle, the workspace commands, writing
+  and testing a patch, releasing.
+- [CHANGELOG.md](CHANGELOG.md): what changed in each release.
 
-```sh
-bin/bootstrap
-```
+## Reporting problems
 
-It checks the JDK (21+) and Android SDK, installs jadx, apkeep and hermes-dec through mise
-(`mise.toml`), downloads Morphe Desktop and apktool into `tools/` with checksum checks, and checks
-GitHub Packages access. Morphe's Gradle plugin is only published on GitHub Packages, so the build needs
-a token with `read:packages`. `bin/build` borrows the `gh` CLI token; give it the scope once:
-
-```sh
-gh auth refresh -h github.com -s read:packages
-```
-
-(Or put `gpr.user` / `gpr.key` in `~/.gradle/gradle.properties`.)
-
-### Layout
-
-| Path | What |
-|---|---|
-| `patches/src/main/kotlin/io/github/jordanwoodson/patches/<app>/` | Patches for one app. `shared/Constants.kt` holds its package, target versions and pinned signing cert. |
-| `patches/.../patches/shared/` | Code shared across apps. |
-| `extensions/shared/` | Java code injected into patched apps (`extensions/shared.mpe`). Add `extensions/<app>/` when an app needs its own. |
-| `assets/icon.png` | The Lurk icon at full size (1254 px). `patches-bundle.png` is a 512 px copy: Manager shows it for this source, and the README header uses it. |
-| `assets/<app>-icon.png` | An app's Lurk launcher artwork, flattened to its two colors. `bin/app-icon` turns it into `patches/src/main/resources/<app>/icon/` (adaptive icon, vector logo, legacy `.webp`), which the app's icon patch copies in. The patches list shows the round legacy icon next to the app. |
-| `assets/<app>-icon-round.webp` | The patches list icon for apps whose icon patch recolors Rumble's Lurk logo while patching instead of shipping its own (`twitch`, `kick`). |
-| `apks/<app>/<version>/` | Original APKs, added with `bin/apk-add`. Not committed. |
-| `tools/` | Downloaded jars and the Exodus tracker list. Not committed. |
-| `~/scratch/morphe/` | Decompiled code, patched APKs, the test emulator, reference repos. Regenerable. |
-| `~/.local/share/morphe/` | Morphe Desktop data, including the signing keystore. Keep it: updates only install over a patched app signed with the same key. |
-
-Apps known to the workspace are the folders with a `shared/Constants.kt`: `twitch`, `kick`, `rumble`.
-Add another with `bin/new-app <slug> "<Launcher name>" <package> [0xRRGGBB]`.
-
-### Getting APKs
-
-Only from **APKMirror**, **Google Play** or **Uptodown**. No other mirrors.
-
-- APKMirror or Uptodown: download in a browser, then `bin/apk-add ~/Downloads/<file>`.
-- Google Play: `bin/apk-fetch <app>` (latest version only). It needs a Google account token in
-  `~/.config/apkeep/apkeep.ini`:
-
-  ```ini
-  [google]
-  email = someone@gmail.com
-  aas_token = aas_et/...
-  ```
-
-  Get the AAS token once with `apkeep -e <email> --oauth-token <oauth2_4/...>`, following
-  [apkeep's Google Play guide](https://github.com/EFForg/apkeep/blob/master/USAGE-google-play.md).
-  Use a spare account.
-
-`bin/apk-add` reads the package and version, checks the base APK's signature, and compares the signing
-cert with the one pinned in the app's `Constants.kt`. It pins the cert on an app's first APK and refuses
-a mismatch after that. Files land in `apks/<app>/<version>/`.
-
-All three apps ship on APKMirror as `.apkm` bundles. Kick is React Native: most of its logic is Hermes
-bytecode in `assets/index.android.bundle`. Patch it with `hermesPatch` from morphe-patches-library
-(already a dependency); its native side (dex) patches like any other app.
-
-### Workflow
+Open a [bug report](https://github.com/jordanwoodson/lurk-morphe-patches/issues/new?template=bug_report.yml)
+with the app and its version, the Lurk release, the patches you selected and, for a crash or a
+patch that seems inactive, the output of:
 
 ```sh
-bin/scan rumble          # tracker SDKs (Exodus Privacy signatures) and URL hosts in the app
-bin/decompile rumble     # jadx Java, apktool smali, Hermes disassembly → ~/scratch/morphe/rumble/<version>/
-# write patches under patches/.../rumble/
-bin/patch rumble         # build the bundle, patch the newest stored version → ~/scratch/morphe/out/
-bin/emu start            # headless Android 16 emulator (emulator-5580)
-bin/patch rumble --no-build --install=emulator-5580
-adb -s emulator-5580 logcat -s lurk    # Logger output from patched code
-bin/emu shot             # screenshot → ~/scratch/morphe/shots/
+adb logcat -s lurk AndroidRuntime
 ```
 
-`bin/app-icon <app> <artwork.png>` regenerates an app's launcher icon from square two-color artwork (a flat logo on a flat background).
-`bin/patch` passes anything after `--` to Morphe Desktop, for example
-`bin/patch twitch -- --exclusive -e "Disable analytics"`.
-`bin/refs` clones Morphe's own repos (patcher docs, patches library, official patches) for API reference.
+Check the app's page under [docs/](docs/README.md) first: some things that look like bugs are
+documented limits, for example ads Twitch stitches into the stream on the server. Problems inside
+Morphe Manager itself go to [the Morphe project](https://github.com/MorpheApp/morphe-manager/issues).
+Security issues go through [SECURITY.md](SECURITY.md), not the public tracker.
+Questions, setup help and ideas that aren't a bug go to [Discussions](https://github.com/jordanwoodson/lurk-morphe-patches/discussions).
 
-### Writing a patch
+## Contributing
 
-The [Rumble 3.21.0 notes](docs/rumble.md) cover each Rumble patch: what it changes, how it finds
-its code without obfuscated names, and how it was tested.
+Bug reports, tested patches and notes on how the apps work inside are all welcome.
+[CONTRIBUTING.md](CONTRIBUTING.md) has the rules that matter here: APKs only from APKMirror,
+Google Play or Uptodown; original patches, not ports of other bundles; fingerprints on strings
+and signatures rather than obfuscated names; a Lurk setting for every behavior change; honest
+descriptions. [docs/development.md](docs/development.md) gets you building.
 
-One folder per feature under the app, with the patch and its fingerprints:
+## Disclaimer
 
-```
-patches/.../patches/rumble/
-  shared/Constants.kt
-  analytics/DisableAnalyticsPatch.kt
-  analytics/Fingerprints.kt
-```
+Lurk modifies apps you download yourself. The services' terms may not allow modified clients,
+and a patched app can break when the service changes something on its side. Use it at your own
+risk; the software comes without warranty (see the license).
 
-```kotlin
-@Suppress("unused")
-val disableAnalyticsPatch = bytecodePatch(
-    name = "Disable analytics",
-    description = "Stops the app from sending usage analytics.",
-) {
-    compatibleWith(COMPATIBILITY_RUMBLE)
+## License
 
-    execute {
-        SomeAnalyticsFingerprint.method.returnEarly()
-    }
-}
-```
-
-Fingerprints match on strings, signatures and instruction patterns rather than class names, since R8
-renames classes between versions. See the patcher docs in `~/scratch/morphe/refs/morphe-patcher/docs/`
-(after `bin/refs`) and the [fingerprinting guide](https://github.com/MorpheApp/morphe-patcher/blob/main/docs/2_2_1_fingerprinting.md).
-
-### Releasing
-
-- Work on the `dev` branch. Pushing `feat:` or `fix:` commits there makes `release.yml` publish a
-  pre-release; `chore:` commits don't release. Merge `dev` into `main` (no squash) for a stable release.
-- Use semantic commit messages: `feat:`, `fix:`, `chore:`.
-- Don't hand-edit generated files: `patches-list.json`, `patches-bundle.json`, `CHANGELOG.md`, or the patches
-  list above. Don't create releases by hand.
-
-## 📜 License
-
-GPLv3. See [LICENSE](LICENSE) and [NOTICE](NOTICE).
+GPL-3.0. Copyright © 2026 Jordan Woodson. See [LICENSE](LICENSE) and [NOTICE](NOTICE).

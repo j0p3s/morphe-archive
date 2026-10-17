@@ -10,11 +10,16 @@ import app.morphe.patcher.patch.bytecodePatch
 
 private const val ACTION_LIST = "Lcom/linkedin/sdui/viewdata/action/ActionListViewData;"
 
-/** ClickActions(onClick, onLongClick, onDoubleClick) of the server driven UI. */
+/**
+ * ClickActions(onClick, onLongClick, onDoubleClick) of the server driven UI.
+ * 4.1.1261 added a fourth parameter (onLongClickPhases), so only the first three are matched.
+ */
 private object ClickActionsFingerprint : Fingerprint(
     definingClass = "Lcom/linkedin/sdui/viewdata/action/ClickActions;",
     name = "<init>",
-    parameters = listOf(ACTION_LIST, ACTION_LIST, ACTION_LIST),
+    custom = { method, _ ->
+        method.parameterTypes.size >= 3 && method.parameterTypes.take(3).all { it.toString() == ACTION_LIST }
+    },
 )
 
 @Suppress("unused")

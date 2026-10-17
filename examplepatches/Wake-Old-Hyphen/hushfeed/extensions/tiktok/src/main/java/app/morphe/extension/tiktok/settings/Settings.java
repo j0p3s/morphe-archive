@@ -387,8 +387,10 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting HIDE_CAPTCHA_POPUPS = new BooleanSetting("hide_browsing_captcha_popups", FALSE, true);
     public static final BooleanSetting HIDE_HOMEPAGE_COIN = new BooleanSetting("hide_homepage_coin", FALSE, true);
+    // A restart: the gift box is hidden when the profile header binds it, and a profile already
+    // drawn keeps it until TikTok starts again.
     public static final BooleanSetting HIDE_PROFILE_REWARDS_SHORTCUT =
-            new BooleanSetting("hide_profile_rewards_shortcut", FALSE);
+            new BooleanSetting("hide_profile_rewards_shortcut", FALSE, true);
     public static final StringSetting MIN_MAX_VIEWS = new StringSetting("min_max_views", "0-" + Long.MAX_VALUE, true);
     public static final StringSetting MIN_MAX_LIKES = new StringSetting("min_max_likes", "0-" + Long.MAX_VALUE, true);
     public static final StringSetting MIN_MAX_COMMENTS = new StringSetting("min_max_comments", "0-" + Long.MAX_VALUE, true);
@@ -482,10 +484,11 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting COMMENT_TRANSLATE_BUTTON_TURNED_ON =
             new BooleanSetting("comment_translate_button_turned_on", FALSE, false, false);
     /**
-     * The translation rows on TikTok's own Settings and privacy > Language page, for accounts
-     * TikTok hides them on (#143). No restart: the page asks each time it opens.
+     * TikTok's translation for accounts it takes it away from (#143): the rows on its own Settings
+     * and privacy > Language page, and See translation on videos. Restart-gated: the Language page
+     * asks each time it opens, but the videos' answer is read once per process.
      */
-    public static final BooleanSetting SHOW_TRANSLATION_SETTINGS = new BooleanSetting("show_translation_settings", FALSE);
+    public static final BooleanSetting SHOW_TRANSLATION_SETTINGS = new BooleanSetting("show_translation_settings", FALSE, true);
     // Restart-gated: the comment keyboard builds its slot tree once per session, and the
     // trigger that adds the emoji row is asked at that moment only.
     public static final BooleanSetting HIDE_COMMENT_QUICK_REACTIONS =
@@ -527,7 +530,7 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting SEEKBAR_TIME = new BooleanSetting("seekbar_time", FALSE);
     /**
      * Where that time goes: "beside" (the end of the bar's row, the default) or "above" (over the
-     * bar's left end, falling back to beside while text on screen reaches into that spot) (#173).
+     * bar's right end, falling back to beside while text on screen reaches into that spot) (#173).
      */
     public static final StringSetting SEEKBAR_TIME_PLACEMENT = new StringSetting(
             "seekbar_time_placement", "beside", Setting.parent(SEEKBAR_TIME));
@@ -897,8 +900,10 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting HIDE_INBOX_SHOP = new BooleanSetting("hide_inbox_shop", FALSE);
     public static final BooleanSetting HIDE_INBOX_BULLETIN_BOARDS =
             new BooleanSetting("hide_inbox_bulletin_boards", FALSE);
+    // A restart: the Friends tab and a profile keep the suggestion cells they already drew, and
+    // only a new bind collapses one.
     public static final BooleanSetting HIDE_INBOX_SUGGESTED_ACCOUNTS =
-            new BooleanSetting("hide_inbox_suggested_accounts", FALSE);
+            new BooleanSetting("hide_inbox_suggested_accounts", FALSE, true);
     public static final BooleanSetting HIDE_INBOX_MESSAGE_REQUESTS =
             new BooleanSetting("hide_inbox_message_requests", FALSE);
     public static final BooleanSetting HIDE_INBOX_CONVERSATIONS =

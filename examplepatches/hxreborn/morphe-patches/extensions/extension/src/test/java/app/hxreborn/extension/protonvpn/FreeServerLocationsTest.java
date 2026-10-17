@@ -77,14 +77,10 @@ public final class FreeServerLocationsTest {
 
     static final class Country {
 
-        private final List<Server> servers;
+        private final List<Server> serverList;
 
         Country(Server... servers) {
-            this.servers = Arrays.asList(servers);
-        }
-
-        public List<Server> getServerList() {
-            return this.servers;
+            this.serverList = Arrays.asList(servers);
         }
 
     }
@@ -95,10 +91,6 @@ public final class FreeServerLocationsTest {
 
         Profile(Availability availability) {
             this.availability = availability;
-        }
-
-        public Availability getAvailability() {
-            return this.availability;
         }
 
     }

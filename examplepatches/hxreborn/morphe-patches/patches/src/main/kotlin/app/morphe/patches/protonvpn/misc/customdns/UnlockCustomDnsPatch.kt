@@ -28,8 +28,7 @@ val unlockCustomDnsPatch = bytecodePatch(
         markPatchApplied("unlockCustomDns")
         unlockUserSetting(
             CustomDnsViewStateFingerprint,
-            freeUserParameter = 4,
-            CustomDnsRestrictionFingerprint,
+            customDnsRestrictionFingerprint(),
         )
     }
 }

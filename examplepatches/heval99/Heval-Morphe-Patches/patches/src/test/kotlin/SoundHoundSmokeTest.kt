@@ -58,6 +58,8 @@ class SoundHoundSmokeTest {
             ),
             label = "MobileAds.startPreload(Context, List, PreloadCallback)",
         )
+        // Rule 9: no MobileAds static can throw for lack of init.
+        assertMobileAdsStaticsNeutralised(mobileAds)
 
         // AdView only inherits loadAd from BaseAdView.
         assertReturnsEarlyVoid(

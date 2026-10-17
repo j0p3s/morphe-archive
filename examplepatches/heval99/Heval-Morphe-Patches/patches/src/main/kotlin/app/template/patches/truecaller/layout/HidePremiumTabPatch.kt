@@ -6,7 +6,8 @@ import app.template.patches.shared.Constants.COMPATIBILITY_TRUECALLER
 @Suppress("unused")
 val hidePremiumTabPatch = bytecodePatch(
     name = "Hide Premium tab",
-    description = "Removes the Premium tab from the bottom bar.",
+    description = "Removes the Premium tab from the bottom bar and the Premium entry from the " +
+        "Settings screen.",
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_TRUECALLER)
@@ -15,5 +16,8 @@ val hidePremiumTabPatch = bytecodePatch(
         // Links that open the Premium tab (upsell buttons) then leave the current tab selected:
         // selecting a tab that is not in the bar does nothing.
         hideBottomBarTabs("PREMIUM")
+
+        // The "Premium" row of the main Settings screen (#53).
+        hideSettingsCategory("isPremiumItemVisible")
     }
 }

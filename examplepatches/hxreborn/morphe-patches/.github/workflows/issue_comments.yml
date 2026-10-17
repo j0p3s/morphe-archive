@@ -1,0 +1,45 @@
+name: Reply to issue comments
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  reply:
+    if: >-
+      !github.event.issue.pull_request &&
+      !github.event.issue.locked &&
+      github.event.comment.user.type != 'Bot' &&
+      !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
+      (github.event.issue.state == 'closed' ||
+      contains(github.event.issue.labels.*.name, 'app request') ||
+      contains(github.event.issue.labels.*.name, 'app-update') ||
+      contains(github.event.issue.labels.*.name, 'enhancement'))
+    permissions:
+      issues: write
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/issue_comment.py
+            patches-list.json
+          sparse-checkout-cone-mode: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          python3 .github/scripts/issue_comment.py "$GITHUB_EVENT_PATH" patches-list.json > "$RUNNER_TEMP/comment.md" || exit 0
+          marker=$(head -n 1 "$RUNNER_TEMP/comment.md")
+          replied=$(gh api "repos/$REPO/issues/$ISSUE/comments" --paginate \
+            --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\"))) | .id")
+          [ -z "$replied" ] || exit 0
+          gh issue comment "$ISSUE" --repo "$REPO" --body-file "$RUNNER_TEMP/comment.md"

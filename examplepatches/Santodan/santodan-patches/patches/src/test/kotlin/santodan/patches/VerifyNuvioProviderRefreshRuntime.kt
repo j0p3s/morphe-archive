@@ -15,20 +15,56 @@ class RefreshFixture {
     val watched = MutableStateFlow<Any?>("cached history")
     var completion: Continuation<Any?>? = null
     var intent: RefreshIntent? = null
-    fun o(value: RefreshIntent, continuation: NuvioSourceContinuation): Any {
+    fun v(value: RefreshIntent, continuation: NuvioSourceContinuation): Any {
         intent = value
         completion = continuation
         return COROUTINE_SUSPENDED
     }
-    fun y(value: RefreshIntent, continuation: NuvioSourceContinuation): Any = o(value, continuation)
-    fun r(): Flow<Any?> = progress
+    fun q(): Flow<Any?> = progress
     fun f(): Flow<Any?> = seeds
     fun d(): Flow<Any?> = watched
 }
 
 fun main() = runBlocking {
     withTimeout(5_000) {
-        for (method in listOf("o", "y")) {
+        // MDBList progress/seed flows run ensureLoaded/refreshAsync on collection.
+        // A complete but empty snapshot is valid, especially without Nuvio Sync.
+        for ((ready, allowNative) in listOf(true to false, false to false, true to true)) {
+            val snapshot = MutableStateFlow<List<Any>>(emptyList())
+            var nativeReads = 0
+            val networkBacked = flow<Any?> {
+                nativeReads++
+                awaitCancellation()
+            }
+            val result = NuvioProviderRefresh.retainedSnapshot(networkBacked, snapshot,
+                MutableStateFlow(ready)) { allowNative }.first()
+            check(result.isEmpty() && nativeReads == 0) {
+                "Playback resume collected a native refresh flow for an empty snapshot (ready=$ready, nativeReads=$nativeReads)"
+            }
+        }
+        val emptySnapshot = MutableStateFlow<List<Any>>(emptyList())
+        val snapshotReady = MutableStateFlow(true)
+        val snapshotValues = kotlinx.coroutines.channels.Channel<List<Any>>(kotlinx.coroutines.channels.Channel.UNLIMITED)
+        val snapshotReader = launch {
+            NuvioProviderRefresh.retainedSnapshot(flow { error("Unexpected native refresh") }, emptySnapshot,
+                snapshotReady) { false }.collect { snapshotValues.send(it) }
+        }
+        check(snapshotValues.receive().isEmpty())
+        emptySnapshot.value = listOf("episode 7")
+        check(snapshotValues.receive() == listOf("episode 7")) { "Snapshot reader stopped observing Home sync publication" }
+        snapshotReader.cancelAndJoin()
+
+        val startupNative = MutableStateFlow<Any?>(emptyList<Any>())
+        val startup = async {
+            NuvioProviderRefresh.retainedSnapshot(startupNative, MutableStateFlow(emptyList()),
+                MutableStateFlow(false)) { true }.first()
+        }
+        yield(); yield()
+        check(!startup.isCompleted) { "Startup fallback forwarded the provider's temporary empty value" }
+        startupNative.value = listOf("cached episode")
+        check(startup.await() == listOf("cached episode")) { "Home startup lost the cached native fallback" }
+        println("PASS: empty completed snapshots and playback resume never collect refresh-on-start flows; Home startup fallback and live snapshot updates retained")
+        for (method in listOf("v")) {
             val provider = RefreshFixture()
             val refresh = async(start = CoroutineStart.UNDISPATCHED) {
                 NuvioProviderRefresh.await(provider, method)
@@ -54,7 +90,7 @@ fun main() = runBlocking {
 
         val provider = RefreshFixture()
         val changed = kotlinx.coroutines.channels.Channel<Unit>(kotlinx.coroutines.channels.Channel.UNLIMITED)
-        val observer = launch { NuvioProviderRefresh.observe(provider, listOf("r", "f", "d")) { changed.trySend(Unit) } }
+        val observer = launch { NuvioProviderRefresh.observe(provider, listOf("q", "f", "d")) { changed.trySend(Unit) } }
         yield(); yield()
         check(changed.tryReceive().isFailure) { "Initial cached emissions caused a refresh loop" }
         for (flow in listOf(provider.progress, provider.seeds, provider.watched)) {

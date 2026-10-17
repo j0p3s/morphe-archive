@@ -70,10 +70,58 @@ private object SubscribeCloudImplIsVipFingerprint : Fingerprint(
     parameters = listOf(),
 )
 
+private object BusinessManagerBFingerprint : Fingerprint(
+    definingClass = "Lcom/lemon/lv/clipmonetize/wrapper/BusinessManager;",
+    name = "B",
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    returnType = "Z",
+    parameters = listOf(),
+)
+
+private object BusinessManagerYFingerprint : Fingerprint(
+    definingClass = "Lcom/lemon/lv/clipmonetize/wrapper/BusinessManager;",
+    name = "y",
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    returnType = "Z",
+    parameters = listOf(),
+)
+
+private object BusinessManagerXFingerprint : Fingerprint(
+    definingClass = "Lcom/lemon/lv/clipmonetize/wrapper/BusinessManager;",
+    name = "x",
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    returnType = "Z",
+    parameters = listOf("Z"),
+)
+
+private object BusinessManagerVFingerprint : Fingerprint(
+    definingClass = "Lcom/lemon/lv/clipmonetize/wrapper/BusinessManager;",
+    name = "v",
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    returnType = "Z",
+    parameters = listOf("Lcom/lemon/lv/clipmonetize/wrapper/BenefitResource;"),
+)
+
+private object BusinessManagerAFingerprint : Fingerprint(
+    definingClass = "Lcom/lemon/lv/clipmonetize/wrapper/BusinessManager;",
+    name = "A",
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    returnType = "Z",
+    parameters = listOf("Lcom/lemon/lv/clipmonetize/wrapper/BenefitResource;"),
+)
+
+private object BusinessManagerTFingerprint : Fingerprint(
+    definingClass = "Lcom/lemon/lv/clipmonetize/wrapper/BusinessManager;",
+    name = "T",
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    returnType = "Z",
+    parameters = listOf("Lcom/lemon/lv/clipmonetize/wrapper/BenefitResource;", "Z"),
+)
+
 @Suppress("unused")
 val capcutUnlockPremiumPatch = bytecodePatch(
     name = "Unlock Premium",
-    description = "Forces CapCut VIP gates to return true (SubscribeImpl, PayVipImpl, UserVipInfo, UserDetailInfo, VipUserServiceImpl, SubscribeCloudImpl). Cloud-gated assets may still fail.",
+    description = "Forces CapCut VIP gates to return true (SubscribeImpl, PayVipImpl, UserVipInfo, UserDetailInfo, VipUserServiceImpl, SubscribeCloudImpl) plus central account status flags (BusinessManager). Cloud-gated assets may still fail.",
     default = true,
 ) {
     compatibleWith(Constants.COMPATIBILITY_CAPCUT)
@@ -100,6 +148,12 @@ val capcutUnlockPremiumPatch = bytecodePatch(
         forceTrue(UserDetailInfoGetFlagFingerprint)
         forceTrue(VipUserServiceImplIsVipFingerprint)
         forceTrue(SubscribeCloudImplIsVipFingerprint)
+        forceTrue(BusinessManagerBFingerprint)
+        forceTrue(BusinessManagerYFingerprint)
+        forceTrue(BusinessManagerXFingerprint)
+        forceTrue(BusinessManagerVFingerprint)
+        forceTrue(BusinessManagerAFingerprint)
+        forceTrue(BusinessManagerTFingerprint)
 
         println("[Unlock Premium] Applied $patched hooks -> VIP gates forced to true.")
     }

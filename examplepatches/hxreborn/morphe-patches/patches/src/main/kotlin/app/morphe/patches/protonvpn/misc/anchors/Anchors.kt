@@ -5,8 +5,11 @@
 package app.morphe.patches.protonvpn.misc.anchors
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.InstructionFilter
 import app.morphe.patcher.InstructionLocation
 import app.morphe.patcher.InstructionLocation.MatchAfterImmediately
+import app.morphe.patcher.anyInstruction
+import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.opcode
 import app.morphe.patcher.patch.BytecodePatchContext
@@ -16,12 +19,9 @@ import app.morphe.util.returnEarly
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.Method
-import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
-import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
-import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 
 internal open class ToStringFingerprint(prefix: String) : Fingerprint(
@@ -40,12 +40,6 @@ internal val BytecodePatchContext.unitInstanceField
 
 internal object ServerGroupsMainScreenStateToStringFingerprint :
     ToStringFingerprint("ServerGroupsMainScreenState(selectedFilter=")
-
-internal object ServerGroupsMainScreenStateFingerprint : Fingerprint(
-    classFingerprint = ServerGroupsMainScreenStateToStringFingerprint,
-    name = "<init>",
-    parameters = listOf("L", "Ljava/util/List;", "Ljava/util/List;"),
-)
 
 internal object VpnUserToStringFingerprint : ToStringFingerprint("VpnUser(userId=")
 
@@ -73,33 +67,54 @@ private const val EXTENSION_MEMBERS_CLASS = "Lapp/hxreborn/extension/protonvpn/M
 internal fun BytecodePatchContext.setExtensionMember(member: String, value: String) =
     mutableClassDefBy(EXTENSION_MEMBERS_CLASS).methods.single { it.name == member }.returnEarly(value)
 
+internal fun Method.parameterRegister(index: Int): String {
+    val receiver = if (AccessFlags.STATIC.isSet(accessFlags)) 0 else 1
+    val preceding = parameterTypes.take(index).sumOf { if (it == "J" || it == "D") 2 else 1 }
+    return "p${receiver + preceding}"
+}
+
 internal fun String.toJavaClassName() = substring(1, length - 1).replace('/', '.')
 
 private fun Instruction.reference() = (this as? ReferenceInstruction)?.reference
 
-internal fun BytecodePatchContext.findPropertyGetter(toString: Fingerprint, property: String): Method {
+internal fun BytecodePatchContext.findPropertyField(toString: Fingerprint, property: String): FieldReference {
     toString.matchSingle()
     val instructions = toString.originalMethod.implementation!!.instructions.toList()
-    val labelIndex = instructions.indexOfFirst { instruction ->
-        val label = (instruction.reference() as? StringReference)?.string ?: return@indexOfFirst false
+    val labels = instructions.mapNotNull { (it.reference() as? StringReference)?.string }.filter { it.endsWith("=") }
+    val labelIndex = labels.indexOfFirst { label ->
         label.endsWith("$property=") &&
             label.dropLast(property.length + 1).let { it.endsWith("(") || it.endsWith(", ") }
     }
     if (labelIndex < 0) throw PatchException("No $property in ${toString.originalMethod}")
+    val fields = instructions
+        .filter { it.opcode.name.startsWith("iget") }
+        .mapNotNull { it.reference() as? FieldReference }
+        .filter { it.definingClass == toString.originalClassDef.type }
+        .distinct()
+    if (fields.size != labels.size) {
+        throw PatchException("${toString.originalMethod} reads ${fields.size} fields for ${labels.size} labels")
+    }
+    return fields[labelIndex]
+}
 
-    val valueAppend = instructions.drop(labelIndex + 1)
-        .filter { (it.reference() as? MethodReference)?.name == "append" }
-        .getOrNull(1) as? FiveRegisterInstruction
-        ?: throw PatchException("No appended $property in ${toString.originalMethod}")
-    val field = instructions.take(instructions.indexOf(valueAppend as Instruction)).lastOrNull {
-        it is TwoRegisterInstruction && it.registerA == valueAppend.registerD && it.reference() is FieldReference
-    }?.reference() as? FieldReference
-        ?: throw PatchException("No field read for $property in ${toString.originalMethod}")
-
-    return toString.originalClassDef.methods.singleOrNull { method ->
+private fun BytecodePatchContext.propertyGetters(toString: Fingerprint, field: FieldReference) =
+    toString.originalClassDef.methods.filter { method ->
         method.parameterTypes.isEmpty() && !AccessFlags.STATIC.isSet(method.accessFlags) &&
             method.implementation?.instructions?.toList()?.let { body ->
                 body.size == 2 && body[0].reference() == field
             } == true
-    } ?: throw PatchException("No getter for $field")
+    }
+
+internal fun BytecodePatchContext.propertyGetterCall(toString: Fingerprint, property: String): InstructionFilter {
+    val field = findPropertyField(toString, property)
+    val getters = propertyGetters(toString, field)
+    if (getters.isEmpty()) throw PatchException("No getter for $field")
+    return anyInstruction(*getters.map { methodCall(it) }.toTypedArray())
+}
+
+internal fun BytecodePatchContext.propertyRead(toString: Fingerprint, property: String): InstructionFilter {
+    val field = findPropertyField(toString, property)
+    val read = fieldAccess(field, listOf(Opcode.IGET, Opcode.IGET_OBJECT, Opcode.IGET_BOOLEAN))
+    val getters = propertyGetters(toString, field)
+    return anyInstruction(read, *getters.map { methodCall(it) }.toTypedArray())
 }

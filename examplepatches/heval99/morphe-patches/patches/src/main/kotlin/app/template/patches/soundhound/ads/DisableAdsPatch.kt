@@ -5,6 +5,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_SOUNDHOUND
+import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 
 // SoundHound's app code is R8-obfuscated, but all ads run through the full public
 // Google Mobile Ads API plus Meta Audience Network, whose class and method names are
@@ -23,22 +24,15 @@ val disableAdsPatch = bytecodePatch(
 
     execute {
         // Never initialize the ad SDKs.
-        for (owner in listOf(
-            "Lcom/google/android/gms/ads/MobileAds;",
-            "Lcom/facebook/ads/AudienceNetworkAds;",
-        )) {
-            methods(owner)
-                .filter { it.implementation != null }
-                .filter { it.name == "initialize" }
-                .forEach { it.returnEarly() }
-        }
-
-        // GMA preloading never starts (the app uses MobileAds.startPreload for
-        // background prefetch).
-        methods("Lcom/google/android/gms/ads/MobileAds;")
+        methods("Lcom/facebook/ads/AudienceNetworkAds;")
             .filter { it.implementation != null }
-            .filter { it.name == "startPreload" }
+            .filter { it.name == "initialize" }
             .forEach { it.returnEarly() }
+
+        // GMA: every MobileAds static void returns at once. That covers initialize, startPreload
+        // (the app's background prefetch) and the statics that throw without init (AGENTS.md
+        // rule 9).
+        neutraliseMobileAdsStatics()
 
         // Direct loads become no-ops.
         for (relative in listOf(

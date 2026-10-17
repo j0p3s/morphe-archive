@@ -99,12 +99,12 @@ labels = []
 
 if not fields:
     blockers.append(
-        "no issue form, the checks read the form fields"
+        "The automated checks found no form fields in this issue."
     )
 
 if fields and not report_attached and len(description) < MIN_CHARS:
     flags.append(
-        f"the description is {len(description)} characters, {MIN_CHARS} needed"
+        f"The description is {len(description)} characters, and at least {MIN_CHARS} are needed."
     )
     labels.append("needs info")
 
@@ -120,7 +120,7 @@ for (name, package), versions in apps.items():
 
 if repackager:
     blockers.append(
-        f"`{repackager}` repackages apps and patches may not apply cleanly"
+        f"The APK source `{repackager}` repackages apps, which may cause patching errors."
     )
 
 if not fields:
@@ -128,17 +128,17 @@ if not fields:
 elif not matched:
     supported = ", ".join(sorted(name for name, _ in apps))
     lead = (
-        f"`{reported}` isn't patched by this bundle yet."
+        f"The reported app `{reported}` was not recognized as supported."
         if reported
-        else "the report doesn't name an app this bundle patches."
+        else "No supported app was identified in the report."
     )
     flags.append(
-        f"{lead} supported apps in {data['version']}: {supported}"
+        f"{lead} Bundle version {data['version']} supports these apps: {supported}."
     )
     labels.append("needs info")
 elif another_version:
     flags.append(
-        "\"Another version\" is picked but the version is missing"
+        "\"Another version\" is selected, but the version is missing."
     )
     labels.append("needs info")
 elif matched[1] and not (
@@ -147,14 +147,14 @@ elif matched[1] and not (
 ):
     name, versions = matched
     flags.append(
-        f"{data['version']} targets {name} {', '.join(sorted(versions))}, not "
-        f"`{typed_version or reported}`. a newer version is an [app update request]({NEW_ISSUE}?template=app_update.yml)"
+        f"Bundle version {data['version']} supports {name} {', '.join(sorted(versions))}. The reported value "
+        f"`{typed_version or reported}` does not match a supported version. A newer version belongs in an [app update request]({NEW_ISSUE}?template=app_update.yml)."
     )
     labels.append("untargeted version")
 
 if normalize(what_happened).startswith(OPTION_PATCHING_FAILED) and not report_attached:
     flags.append(
-        "patching failed but no error report is attached"
+        "Patching failed, but no error report was found in the Error logs field."
     )
     labels.append("needs info")
 
@@ -162,7 +162,7 @@ failure = normalize(field(fields, "What does not work"))
 log_text = re.sub(r"^\s*(```|~~~)\w*\s*$", "", debug_log, flags=re.M).strip()
 if failure.startswith(OPTIONS_RUNTIME_FAILURE) and not log_text:
     flags.append(
-        "the app crashes or won't open but no logcat is attached"
+        "The app crashes or won't open, but the Error logs field is empty."
     )
     labels.append("needs info")
 
@@ -173,18 +173,18 @@ single_patch = normalize(field(fields, "Does it still happen with only one patch
 
 if stock.startswith(OPTION_STOCK_FAILS_TOO):
     flags.append(
-        "the unpatched app fails the same way, so the app is the likely cause rather than a patch"
+        "The same problem also occurs in the unpatched app."
     )
     labels.append("needs info")
 elif stock.startswith(OPTION_NOT_TRIED):
     flags.append(
-        "the unpatched app hasn't been tried"
+        "The unpatched app hasn't been tried."
     )
     labels.append("needs info")
 
 if single_patch.startswith(OPTION_NOT_TRIED):
     flags.append(
-        "it hasn't been narrowed down to one patch"
+        "It hasn't been tested with only one patch selected."
     )
     if "needs info" not in labels:
         labels.append("needs info")
@@ -192,7 +192,7 @@ if single_patch.startswith(OPTION_NOT_TRIED):
 if blockers:
     verdict = "close"
     labels = []
-    lines = ["this report can't be worked on:", ""]
+    lines = ["This issue is being closed automatically for the following reasons:", ""]
     lines += [f"- {b}" for b in blockers + flags]
 elif flags:
     verdict = "flag"

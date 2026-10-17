@@ -1,10 +1,10 @@
 ![HushTelegram. Keep the chat. Cut the noise.](assets/readme-hero.png)
 
 <p align="center">
-  <img src="https://img.shields.io/badge/version-0.0.17-7CE6C4" alt="Version 0.0.17">
+  <img src="https://img.shields.io/badge/version-0.0.18-7CE6C4" alt="Version 0.0.18">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B-3DDC84" alt="Platform Android 9+">
-  <img src="https://img.shields.io/badge/Telegram-13.0.2-2AABEE" alt="Telegram 13.0.2">
+  <img src="https://img.shields.io/badge/Telegram-13.0.3-2AABEE" alt="Telegram 13.0.3">
   <img src="https://img.shields.io/badge/for-Morphe%20Manager%201.34.0%2B-8A2BE2" alt="For Morphe Manager 1.34.0 or newer">
 </p>
 
@@ -22,7 +22,7 @@
 
 HushTelegram is a set of [Morphe](https://morphe.software) patches for Telegram on Android. It takes the sponsored messages and search ads out of Telegram and keeps the app's usage reports on your phone. Everything else is a switch in its own settings screen, so you can hide Stories and the Premium upsells, keep messages other people delete, translate a whole chat, get notifications through UnifiedPush, go AMOLED black and plenty more. It doesn't give away paid Premium features or get around a channel's forwarding and saving limits.
 
-The latest release is [v0.0.17](https://github.com/SysAdminDoc/HushTelegram/releases/tag/v0.0.17), with 68 patches for Telegram 13.0.2, both telegram.org's build and the official beta. The version badge follows the source on main, which can be ahead of the release. What changed in each version is in the [changelog](CHANGELOG.md).
+The latest release is [v0.0.18](https://github.com/SysAdminDoc/HushTelegram/releases/tag/v0.0.18), with 68 patches for Telegram 13.0.3, both telegram.org's build and the official beta. The version badge follows the source on main, which can be ahead of the release. What changed in each version is in the [changelog](CHANGELOG.md).
 
 **[Add HushTelegram to Morphe Manager](https://morphe.software/add-source?github=SysAdminDoc%2FHushTelegram)** | [Download a release](https://github.com/SysAdminDoc/HushTelegram/releases/latest) | [Browse the patches](#patches)
 
@@ -33,9 +33,11 @@ The latest release is [v0.0.17](https://github.com/SysAdminDoc/HushTelegram/rele
 
 1. Install [Morphe Manager](https://github.com/MorpheApp/morphe-manager) 1.34.0 or newer.
 2. Open the [add-source link](https://morphe.software/add-source?github=SysAdminDoc%2FHushTelegram) on your phone to add HushTelegram as a patch source.
-3. Get Telegram 13.0.2 from telegram.org (version code 71759) or the [official beta](https://telegram.org/dl/android/apk-public-beta) 13.0.2 (version code 71809). telegram.org's [Download button](https://telegram.org/android) hands out whatever is newest, so check the [checksum](#supported-telegram-builds) before you patch. The Google Play version is a different package and won't work.
+3. Get Telegram 13.0.3. The [Google Play](https://play.google.com/store/apps/details?id=org.telegram.messenger) build (version code 71831) works, and so does telegram.org's build (version code 71839) from its [Download button](https://telegram.org/android) or a mirror such as [APKMirror](https://www.apkmirror.com/apk/telegram-fz-llc/telegram/). telegram.org hands out whatever is newest, so check the [checksum](#supported-telegram-builds) before you patch.
 4. Pick the file in Morphe Manager, keep the default selection and patch. It has every patch that comes with a switch.
 5. Four patches start unselected: Use registered Telegram API credentials, Use registered Maps API key, HushTelegram icon and name, and Black and white launch logo. To add one, turn on **Settings > Advanced > Expert mode** in Morphe Manager and fill in its options before you patch.
+
+The first time you sign in, Telegram turns down the API ID that ships with any patched build, so no code arrives and you see `API_ID_PUBLISHED_FLOOD`. This happens on every patched Telegram, not just this one. The one-time fix is in [Your Telegram account](#your-telegram-account): register a free app at my.telegram.org, then patch with Use registered Telegram API credentials so the app signs in as your own.
 
 **Coming from stock Telegram?** The keys differ, so you'll have to uninstall stock Telegram before the patched copy goes on. That deletes this phone's secret chats for good, though cloud chats come back when you sign in. Stay signed in on another device until the patched app is in, because that's usually where the login code shows up.
 
@@ -107,12 +109,11 @@ The current release has 68 patches. Each description is the one Morphe Manager s
 | `Hide Telegram Features and Invite Friends` | Removes the Telegram Features row from Settings and the Invite Friends rows from Contacts. Starts off. Turn it on in HushTelegram settings > Look and feel. |
 | `Hide channel bar buttons` | Removes the Search, Direct messages and Info buttons from the bar at the bottom of a channel. Mute and Join stay. Starts off. Turn it on in HushTelegram settings > Look and feel. |
 | `Hide Send as button` | Hides your picture next to the message box in groups and channels where you could post as a channel, while you're posting as yourself. Starts off. Turn it on in HushTelegram settings > Look and feel. |
-| `Disable analytics` | Stops Telegram from reporting how you use the app, like how long you read channel posts and what you tap on Premium screens, and keeps the camera from reporting your phone's maker and model. On Telegram Beta it also turns off Firebase's crash and session reports from the next start. Messages, calls and notifications work as before. On by default. Turn it off in HushTelegram settings > Privacy. |
+| `Disable analytics` | Stops Telegram from reporting how you use the app, like how long you read channel posts and what you tap on Premium screens, and keeps the camera from reporting your phone's maker and model. Messages, calls and notifications work as before. On by default. Turn it off in HushTelegram settings > Privacy. |
 | `Disable call debug upload` | Stops your phone from sending call problem reports and log files to Telegram when its server asks for them. On by default. Turn it off in HushTelegram settings > Privacy. |
 | `Disable draft link previews` | Keeps Telegram from looking up a link's preview before you send the message. Sent messages still get a preview. The same page has Keep drafts on this phone, so unsent drafts stop syncing to your other devices, and Keep searches on this phone, so what you type in the main search isn't sent to Telegram. Each starts off. Turn them on in HushTelegram settings > Privacy. |
 | `Gallery camera on tap` | Keeps the attachment gallery from starting the camera or asking for camera access when it opens. The camera starts when you tap its tile. Starts off. Turn it on in HushTelegram settings > Privacy. |
 | `Hide phone number` | Covers your own phone number with dots in Settings and your profile, which helps when you share your screen. A second switch, Don't share my number by default, leaves the share-my-number box clear when you add someone as a contact from their chat. Both start off. Turn them on in HushTelegram settings > Privacy. |
-| `Turn off beta debug logs` | Telegram Beta always writes debug logs to your phone, its connection log included, and its own debug menu can't stop that. This stops them, so the beta only logs when you turn logs on in its debug menu. The regular telegram.org build doesn't force them, so nothing changes there. Starts off. Turn it on in HushTelegram settings > Privacy, then restart Telegram. |
 | `Disable update checks` | Stops Telegram from offering its own updates from telegram.org, which can't install over a patched app. Patch each new version in Morphe Manager instead. On by default. Turn it off in HushTelegram settings > More settings > Updates. |
 | `Open links externally` | Opens ordinary web links in your browser instead of inside Telegram. Telegram links, sign-in and payment pages work as before. On by default. Turn it off in HushTelegram settings > More settings > Links. A second switch there, Keep your location from Mini Apps, starts off. With it on, Mini Apps and web pages opened in Telegram are told your location isn't available. |
 | `Strip link tracking` | Removes tracking tags like utm_source, gclid and fbclid from links you open or share. Links with any other extra part stay unchanged. A second switch, No automatic sign-in on Telegram's sites, opens links to Telegram's own websites without the sign-in token Telegram adds for your account. Both start off. Turn them on in HushTelegram settings > More settings > Links. |
@@ -169,13 +170,13 @@ The About and Licenses screens link to `github.com`, `gitlab.com` and `www.gnu.o
 
 ## Supported Telegram builds
 
-The current release patches Telegram 13.0.2 in two builds, and the patched app needs Android 9 or newer. telegram.org's build is `org.telegram.messenger.web` with version code 71759, and its APK carries every phone architecture. The [official beta](https://telegram.org/dl/android/apk-public-beta) is `org.telegram.messenger.beta` with version code 71809. Morphe Manager warns about any other build, and Google Play's `org.telegram.messenger` isn't supported.
+The current release patches Telegram 13.0.3 in two builds, and the patched app needs Android 9 or newer. telegram.org's build is `org.telegram.messenger.web` with version code 71839, and its APK carries every phone architecture. The Google Play build is `org.telegram.messenger` with version code 71831, the one most people already have on their phone. Morphe Manager warns about any other build, the public beta included.
 
 SHA-256 of the stock APKs the release was checked against:
 
 ```text
-71759  a995a057e655be77907f9ceec52953edd213c05050102e2924f29bf903e91e64
-71809  88e4d637d0af2d7556d170216122e5ad52e64dd2751614bb9320b75330fc12c1
+web    8f8c6cd824eb47cd23b30e97468ed2a2ab2134130f50362f548bf0da0faf4d0a
+play   f874b02ee8b40cc989aca90b78accd158666f3c0596c2958fa2a77f0c14e4f20
 ```
 
 On Windows, check yours with `Get-FileHash -Algorithm SHA256 .\Telegram.apk`. Each [release](https://github.com/SysAdminDoc/HushTelegram/releases) also ships `SHA256SUMS.txt` for its `.mpp` bundle, which is a patch bundle and not a Telegram APK.

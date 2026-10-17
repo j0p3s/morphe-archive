@@ -1,3 +1,129 @@
+## [1.15.0](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0...v1.15.0) (2026-10-16)
+
+### 🐛 Bug Fixes
+
+* harden Disable ads against ad SDK crashes in 11 apps ([d6e17bb](https://github.com/heval99/Heval-Morphe-Patches/commit/d6e17bb9f6146211069cd69566bbb1375f67fddb))
+* **hevy:** updated to version 3.2.0 ([092c6ef](https://github.com/heval99/Heval-Morphe-Patches/commit/092c6ef0275e38d92b3e645a15dd6d39b8f0cd35))
+* **linkedin:** remove LinkedIn support ([f0044d8](https://github.com/heval99/Heval-Morphe-Patches/commit/f0044d84eb4961435ddf5a85f457d1baa929e181))
+* **livescore:** updated to version 10.3.1 ([6439887](https://github.com/heval99/Heval-Morphe-Patches/commit/643988786f4982237a989236fd27bb7e8cf6d28a))
+* **simpleradio:** updated to version 6.3.0 ([c245318](https://github.com/heval99/Heval-Morphe-Patches/commit/c245318ad26864aa0ba3fadc962c419c1f742c2e))
+* **truecaller:** updated to version 26.40.5; remove the Clone package option ([49cb619](https://github.com/heval99/Heval-Morphe-Patches/commit/49cb6193f7474f5237495b55b82fd99be401c145)), closes [#50](https://github.com/heval99/Heval-Morphe-Patches/issues/50)
+
+### ✨ New Features
+
+* add Brevent Enable Premium patch ([f5a0ea0](https://github.com/heval99/Heval-Morphe-Patches/commit/f5a0ea07bbe069bfd375edc4c08e604d8c1f79c1))
+* add the Heval Controls in-app settings framework ([7975a99](https://github.com/heval99/Heval-Morphe-Patches/commit/7975a9955acef130cc3a3a01928a9a07ea875ada))
+* **bizcal:** add Unlock Pro and Disable telemetry; updated to version 2.55.7 ([72fb2e3](https://github.com/heval99/Heval-Morphe-Patches/commit/72fb2e3a9dca14a94e43f0d80dfac2dbd6fef03d))
+* **blescanner:** add BLE Scanner 4.8 Disable ads ([de9f93a](https://github.com/heval99/Heval-Morphe-Patches/commit/de9f93a4bc675b471494f093619ec0c48975979f))
+* **bluetoothfinder:** add Bluetooth Scanner 1.9.3 Disable ads ([88a7ec0](https://github.com/heval99/Heval-Morphe-Patches/commit/88a7ec0b0b9639f5853f5d6ef85de52d74b7402b))
+* **duplila:** add Duplila - Mirror Screen 5.1 patches ([219078a](https://github.com/heval99/Heval-Morphe-Patches/commit/219078a6ec1a7a8326a0fce1609da515dbf59a79))
+* **hyperion:** add Hyperion Launcher 2.2.7 Enable Premium ([bacd35b](https://github.com/heval99/Heval-Morphe-Patches/commit/bacd35b71ef833cd5b687f062e339dcd66eb2151))
+* **intervaltimer:** add Interval Timer 2.3.30 patches ([a55847e](https://github.com/heval99/Heval-Morphe-Patches/commit/a55847e57943c41b562416eaf1b72875bb9f13bf))
+* **ircodefinder:** add IrCode Finder 14.17.0 (build 206) Disable ads ([5d0928e](https://github.com/heval99/Heval-Morphe-Patches/commit/5d0928e1972ed8c807a5fcb2f7a7049064fdb974))
+* **linkedin:** add Heval Controls with a nav panel entry and Hide Puzzle Games ([7f69a25](https://github.com/heval99/Heval-Morphe-Patches/commit/7f69a25ada6ab858ecad774e782fd45f3f113a69))
+* **luckyclick:** add LuckyClick 3.28 patches ([1cc29e3](https://github.com/heval99/Heval-Morphe-Patches/commit/1cc29e357f5810795b1428368c3332aa19bf856e))
+* **moneycontrol:** add Moneycontrol 14.6.2 ad removal (experimental) ([38f1e84](https://github.com/heval99/Heval-Morphe-Patches/commit/38f1e846ea970d00d08f81e22d547cb532885414))
+* **myfitnesspal:** block Datadog telemetry; updated to version 26.41.0 ([2e2d3b7](https://github.com/heval99/Heval-Morphe-Patches/commit/2e2d3b7331de5894ebb73e20f7a8082d9082c526))
+* **prolauncher:** add Pro Launcher 2.4.2 Enable Premium ([9b031eb](https://github.com/heval99/Heval-Morphe-Patches/commit/9b031eb55cc658a843c9f8ceb9b352f641507b46))
+* **truecaller:** add Fix T9 contact search and Hide Wear OS settings, hide the Settings Premium row ([374c23f](https://github.com/heval99/Heval-Morphe-Patches/commit/374c23fd9730b4ca78e49bf3488f27fb429a3cd3)), closes [#52](https://github.com/heval99/Heval-Morphe-Patches/issues/52) [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53)
+* **truecaller:** Disable ads also hides the contacts Premium row and stops ad syncs ([d5af7ff](https://github.com/heval99/Heval-Morphe-Patches/commit/d5af7ff5952594ac0a48ca03bd8f22b038309457)), closes [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53)
+* **truecaller:** remove the call-list Premium promo row; add Hide Messages tab ([06aaddb](https://github.com/heval99/Heval-Morphe-Patches/commit/06aaddbd6b1395cd75bdccbb2a32bba415f2bfb7)), closes [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53) [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53)
+* **vesselfinder:** add VesselFinder 6.7.8 ad removal ([e4ed131](https://github.com/heval99/Heval-Morphe-Patches/commit/e4ed13137256b75c12311357dbe1cb2a003f3954))
+* **wsj:** add The Wall Street Journal ad removal ([7e83ebb](https://github.com/heval99/Heval-Morphe-Patches/commit/7e83ebb2335d6136e913a59af93b6e2116677bae))
+* **yahoosports:** add Yahoo Sports 12.10.3 Disable ads and Hide betting promotions ([ee0b59d](https://github.com/heval99/Heval-Morphe-Patches/commit/ee0b59d7d98601e0e77691c60ce909b75f06db73))
+
+## [1.15.0-dev.12](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0-dev.11...v1.15.0-dev.12) (2026-10-15)
+
+### ✨ New Features
+
+* **blescanner:** add BLE Scanner 4.8 Disable ads ([de9f93a](https://github.com/heval99/Heval-Morphe-Patches/commit/de9f93a4bc675b471494f093619ec0c48975979f))
+* **bluetoothfinder:** add Bluetooth Scanner 1.9.3 Disable ads ([88a7ec0](https://github.com/heval99/Heval-Morphe-Patches/commit/88a7ec0b0b9639f5853f5d6ef85de52d74b7402b))
+* **hyperion:** add Hyperion Launcher 2.2.7 Enable Premium ([bacd35b](https://github.com/heval99/Heval-Morphe-Patches/commit/bacd35b71ef833cd5b687f062e339dcd66eb2151))
+* **ircodefinder:** add IrCode Finder 14.17.0 (build 206) Disable ads ([5d0928e](https://github.com/heval99/Heval-Morphe-Patches/commit/5d0928e1972ed8c807a5fcb2f7a7049064fdb974))
+* **prolauncher:** add Pro Launcher 2.4.2 Enable Premium ([9b031eb](https://github.com/heval99/Heval-Morphe-Patches/commit/9b031eb55cc658a843c9f8ceb9b352f641507b46))
+* **yahoosports:** add Yahoo Sports 12.10.3 Disable ads and Hide betting promotions ([ee0b59d](https://github.com/heval99/Heval-Morphe-Patches/commit/ee0b59d7d98601e0e77691c60ce909b75f06db73))
+
+## [1.15.0-dev.11](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0-dev.10...v1.15.0-dev.11) (2026-10-15)
+
+### 🐛 Bug Fixes
+
+* **linkedin:** remove LinkedIn support ([f0044d8](https://github.com/heval99/Heval-Morphe-Patches/commit/f0044d84eb4961435ddf5a85f457d1baa929e181))
+
+### ✨ New Features
+
+* **moneycontrol:** add Moneycontrol 14.6.2 ad removal (experimental) ([38f1e84](https://github.com/heval99/Heval-Morphe-Patches/commit/38f1e846ea970d00d08f81e22d547cb532885414))
+* **truecaller:** add Fix T9 contact search and Hide Wear OS settings, hide the Settings Premium row ([374c23f](https://github.com/heval99/Heval-Morphe-Patches/commit/374c23fd9730b4ca78e49bf3488f27fb429a3cd3)), closes [#52](https://github.com/heval99/Heval-Morphe-Patches/issues/52) [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53)
+* **truecaller:** Disable ads also hides the contacts Premium row and stops ad syncs ([d5af7ff](https://github.com/heval99/Heval-Morphe-Patches/commit/d5af7ff5952594ac0a48ca03bd8f22b038309457)), closes [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53)
+
+## [1.15.0-dev.10](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0-dev.9...v1.15.0-dev.10) (2026-10-14)
+
+### ✨ New Features
+
+* **linkedin:** add Heval Controls with a nav panel entry and Hide Puzzle Games ([7f69a25](https://github.com/heval99/Heval-Morphe-Patches/commit/7f69a25ada6ab858ecad774e782fd45f3f113a69))
+
+## [1.15.0-dev.9](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0-dev.8...v1.15.0-dev.9) (2026-10-14)
+
+### ✨ New Features
+
+* add Brevent Enable Premium patch ([f5a0ea0](https://github.com/heval99/Heval-Morphe-Patches/commit/f5a0ea07bbe069bfd375edc4c08e604d8c1f79c1))
+
+## [1.15.0-dev.8](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0-dev.7...v1.15.0-dev.8) (2026-10-14)
+
+### ✨ New Features
+
+* add the Heval Controls in-app settings framework ([7975a99](https://github.com/heval99/Heval-Morphe-Patches/commit/7975a9955acef130cc3a3a01928a9a07ea875ada))
+
+## [1.15.0-dev.7](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0-dev.6...v1.15.0-dev.7) (2026-10-14)
+
+### ✨ New Features
+
+* **truecaller:** remove the call-list Premium promo row; add Hide Messages tab ([06aaddb](https://github.com/heval99/Heval-Morphe-Patches/commit/06aaddbd6b1395cd75bdccbb2a32bba415f2bfb7)), closes [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53) [#53](https://github.com/heval99/Heval-Morphe-Patches/issues/53)
+* **wsj:** add The Wall Street Journal ad removal ([7e83ebb](https://github.com/heval99/Heval-Morphe-Patches/commit/7e83ebb2335d6136e913a59af93b6e2116677bae))
+
+## [1.15.0-dev.6](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0-dev.5...v1.15.0-dev.6) (2026-10-14)
+
+### ✨ New Features
+
+* **bizcal:** add Unlock Pro and Disable telemetry; updated to version 2.55.7 ([72fb2e3](https://github.com/heval99/Heval-Morphe-Patches/commit/72fb2e3a9dca14a94e43f0d80dfac2dbd6fef03d))
+* **vesselfinder:** add VesselFinder 6.7.8 ad removal ([e4ed131](https://github.com/heval99/Heval-Morphe-Patches/commit/e4ed13137256b75c12311357dbe1cb2a003f3954))
+
+## [1.15.0-dev.5](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0-dev.4...v1.15.0-dev.5) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **truecaller:** updated to version 26.40.5; remove the Clone package option ([49cb619](https://github.com/heval99/Heval-Morphe-Patches/commit/49cb6193f7474f5237495b55b82fd99be401c145)), closes [#50](https://github.com/heval99/Heval-Morphe-Patches/issues/50)
+
+## [1.15.0-dev.4](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0-dev.3...v1.15.0-dev.4) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* **hevy:** updated to version 3.2.0 ([092c6ef](https://github.com/heval99/Heval-Morphe-Patches/commit/092c6ef0275e38d92b3e645a15dd6d39b8f0cd35))
+* **livescore:** updated to version 10.3.1 ([6439887](https://github.com/heval99/Heval-Morphe-Patches/commit/643988786f4982237a989236fd27bb7e8cf6d28a))
+* **simpleradio:** updated to version 6.3.0 ([c245318](https://github.com/heval99/Heval-Morphe-Patches/commit/c245318ad26864aa0ba3fadc962c419c1f742c2e))
+
+### ✨ New Features
+
+* **myfitnesspal:** block Datadog telemetry; updated to version 26.41.0 ([2e2d3b7](https://github.com/heval99/Heval-Morphe-Patches/commit/2e2d3b7331de5894ebb73e20f7a8082d9082c526))
+
+## [1.15.0-dev.3](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0-dev.2...v1.15.0-dev.3) (2026-10-14)
+
+### ✨ New Features
+
+* **luckyclick:** add LuckyClick 3.28 patches ([1cc29e3](https://github.com/heval99/Heval-Morphe-Patches/commit/1cc29e357f5810795b1428368c3332aa19bf856e))
+
+## [1.15.0-dev.2](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0-dev.1...v1.15.0-dev.2) (2026-10-14)
+
+### 🐛 Bug Fixes
+
+* harden Disable ads against ad SDK crashes in 11 apps ([d6e17bb](https://github.com/heval99/Heval-Morphe-Patches/commit/d6e17bb9f6146211069cd69566bbb1375f67fddb))
+
+## [1.15.0-dev.1](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0...v1.15.0-dev.1) (2026-10-14)
+
+### ✨ New Features
+
+* **duplila:** add Duplila - Mirror Screen 5.1 patches ([219078a](https://github.com/heval99/Heval-Morphe-Patches/commit/219078a6ec1a7a8326a0fce1609da515dbf59a79))
+* **intervaltimer:** add Interval Timer 2.3.30 patches ([a55847e](https://github.com/heval99/Heval-Morphe-Patches/commit/a55847e57943c41b562416eaf1b72875bb9f13bf))
+
 ## [1.14.0](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.13.0...v1.14.0) (2026-10-14)
 
 ### 🐛 Bug Fixes

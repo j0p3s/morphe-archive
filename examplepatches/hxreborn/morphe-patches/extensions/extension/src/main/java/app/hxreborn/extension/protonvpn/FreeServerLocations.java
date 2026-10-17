@@ -82,7 +82,7 @@ public final class FreeServerLocations {
         if (!FreeAccount.isSignedIn()) return profiles;
         List<Object> filtered = new ArrayList<>(profiles.size());
         for (Object profile : profiles) {
-            if (!UNAVAILABLE_PLAN.equals(((Enum<?>) Reflection.call(profile, Members.profileAvailability())).name())) {
+            if (!UNAVAILABLE_PLAN.equals(((Enum<?>) Reflection.read(profile, Members.profileAvailability())).name())) {
                 filtered.add(profile);
             }
         }
@@ -90,11 +90,11 @@ public final class FreeServerLocations {
     }
 
     private static boolean isFreeServer(Object server) {
-        return (Boolean) Reflection.call(server, "isFreeServer");
+        return (Boolean) Reflection.call(server, Members.serverIsFree());
     }
 
     private static boolean hasFreeServer(Object country) {
-        for (Object server : (List<?>) Reflection.call(country, "getServerList")) {
+        for (Object server : (List<?>) Reflection.read(country, Members.countryServers())) {
             if (isFreeServer(server)) return true;
         }
         return false;

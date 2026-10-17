@@ -197,6 +197,16 @@ class BoxBoxSmokeTest {
                     it.strings().any { s -> s.startsWith("Initializing on calling thread") }
             }
             assertReturnsEarlyVoid(init, label = "MobileAds.initialize")
+            // Rule 9: every other static void (the private setPlugin, stop) returns at once too.
+            assertMobileAdsStaticsNeutralised(mobileAds, required = listOf(init.name, "setPlugin"))
+            // The shared helper's fallback for a renamed MobileAds takes the static-only holder
+            // owning that init; on this R8 build it would pick this same class.
+            assertTrue(
+                mobileAds.superclass == "Ljava/lang/Object;" && mobileAds.interfaces.isEmpty() &&
+                    mobileAds.instanceFields.none() &&
+                    mobileAds.methods.all { AccessFlags.STATIC.isSet(it.accessFlags) || it.name == "<init>" },
+                "MobileAds is not a static-only holder",
+            )
 
             val fullScreenLoads = classes.flatMap { it.methods }.filter { m ->
                 AccessFlags.STATIC.isSet(m.accessFlags) && m.returnType == "V" &&

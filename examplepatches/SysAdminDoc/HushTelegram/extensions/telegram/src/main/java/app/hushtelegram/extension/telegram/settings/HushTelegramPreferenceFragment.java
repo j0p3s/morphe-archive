@@ -841,14 +841,9 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
                 || build.contains(PatchFamily.DISABLE_DRAFT_PREVIEWS) || build.contains(PatchFamily.GALLERY_CAMERA_ON_TAP)) {
             PreferenceCategory privacy = pages.get(PatchFamily.Page.PRIVACY);
             if (build.contains(PatchFamily.DISABLE_ANALYTICS)) {
-                String usage = L10n.t("Stops usage reports to Telegram, like how long you read each channel post and what "
-                        + "you tap on Premium screens. Messages and calls work as before.");
-                // Only Telegram Beta carries Firebase's reporters, so only a build that stops them says so.
-                if (PatchFamily.Capability.CRASH_REPORTS.installed() || PatchFamily.Capability.SESSION_REPORTS.installed()) {
-                    usage = usage + " " + L10n.t("Firebase crash and session reports stop too, from the next time Telegram starts.");
-                }
                 privacy.addPreference(toggle(context, Settings.DISABLE_ANALYTICS, L10n.t("Stop usage reports"),
-                    PatchFamily.DISABLE_ANALYTICS.coverageSummary(usage)));
+                    PatchFamily.DISABLE_ANALYTICS.coverageSummary(L10n.t("Stops usage reports to Telegram, like how long you read each channel post and what "
+                            + "you tap on Premium screens. Messages and calls work as before."))));
             }
             if (build.contains(PatchFamily.DISABLE_CALL_DEBUG)) {
                 privacy.addPreference(toggle(context, Settings.DISABLE_CALL_DEBUG, L10n.t("Stop call diagnostics"),
@@ -889,13 +884,6 @@ public final class HushTelegramPreferenceFragment extends AbstractPreferenceFrag
                         L10n.t("When you add someone as a contact from their chat, Telegram ticks the box that shares your phone "
                                 + "number with them. With this on, the box starts clear and your number goes only if you tick it.")));
             }
-        }
-        if (build.contains(PatchFamily.BETA_LOGS_OFF)) {
-            on(pages, PatchFamily.BETA_LOGS_OFF).addPreference(toggle(context, Settings.BETA_LOGS_OFF, L10n.t("Turn off beta debug logs"),
-                    PatchFamily.BETA_LOGS_OFF.coverageSummary(L10n.t("Telegram Beta keeps debug logs on your phone all the time, its connection log "
-                            + "included, and its own debug menu can't stop that. This stops them. Logs already saved "
-                            + "stay until you clear them, and the regular build doesn't keep them, so nothing changes "
-                            + "there. Restart Telegram to see the change."))));
         }
     }
 

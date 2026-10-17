@@ -14,6 +14,42 @@ SPEC.loader.exec_module(sync_upstream)
 
 
 class SyncUpstreamTests(unittest.TestCase):
+    def test_youtube_junit_conflict_accepts_only_verified_blobs(self):
+        path = "extensions/youtube/build.gradle.kts"
+        known = (
+            "dd3e9be7c0e4daf6445c595c6db854c45abb38ab",
+            "74a7e52d1138e3fbc43b152f80811f59ac2718be",
+            "26b9505eb5571ffcaff0551d44e2292a8a2291e6",
+        )
+        for changed_stage in (None, 0, 1, 2):
+            blobs = list(known)
+            if changed_stage is not None:
+                blobs[changed_stage] = "unknown"
+            with (
+                self.subTest(changed_stage=changed_stage),
+                mock.patch.object(sync_upstream, "unresolved_paths", return_value=[path]),
+                mock.patch.object(sync_upstream, "output_of", side_effect=blobs),
+                mock.patch.object(sync_upstream, "run") as run,
+            ):
+                sync_upstream.resolve_youtube_junit_conflict()
+                if changed_stage is None:
+                    self.assertEqual(run.call_args_list, [
+                        mock.call("git", "checkout", "--theirs", "--", path),
+                        mock.call("git", "add", "--", path),
+                    ])
+                else:
+                    run.assert_not_called()
+
+    def test_youtube_junit_resolver_ignores_unrelated_conflicts(self):
+        with (
+            mock.patch.object(sync_upstream, "unresolved_paths", return_value=["other.gradle.kts"]),
+            mock.patch.object(sync_upstream, "output_of") as output,
+            mock.patch.object(sync_upstream, "run") as run,
+        ):
+            sync_upstream.resolve_youtube_junit_conflict()
+            output.assert_not_called()
+            run.assert_not_called()
+
     def test_dev20_arrays_keep_yandex_and_custom_icon_choices(self):
         from xml.etree import ElementTree
 
@@ -274,7 +310,24 @@ class SyncUpstreamTests(unittest.TestCase):
     def test_known_dev148_settings_merge_preserves_both_engines(self):
         root = MODULE_PATH.parents[2]
         path = root / sync_upstream.DEV148_SETTINGS_PATH
-        ours = path.read_text(encoding="utf-8")
+        source = path.read_text(encoding="utf-8")
+        ours = source
+        # On dev the published file already includes upstream Series Tracker.
+        # Reconstruct the pre-merge Dual source for this isolated resolver test.
+        # This keeps the same test meaningful before AND after publication.
+        series_start = (
+            "    // Series tracking. Consent is account-bound and excluded "
+            "from settings import/export."
+        )
+        if series_start in ours:
+            original_series = sync_upstream._single_settings_block(
+                ours,
+                series_start,
+                "    public static final IntegerSetting SERIES_TRACKER_COMPLETION_SECONDS = ",
+            )
+            self.assertIn(original_series + "\n", ours)
+            ours = ours.replace(original_series + "\n", "", 1)
+            self.assertNotIn(series_start, ours)
         # A deterministic synthetic upstream projection exercises the same
         # identity/volume changes as Morphe dev.8.
         dual = sync_upstream._single_settings_block(

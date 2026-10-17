@@ -12,16 +12,15 @@
 package app.morphe.patches.protonvpn.misc.freeservers
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
+import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.bytecodePatch
-import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patcher.resource.ResourceType
 import app.morphe.patcher.resource.resourceId
-import app.morphe.patches.protonvpn.misc.anchors.ServerGroupsMainScreenStateFingerprint
-import app.morphe.patches.protonvpn.misc.anchors.findPropertyGetter
+import app.morphe.patches.protonvpn.misc.anchors.ServerGroupsMainScreenStateToStringFingerprint
+import app.morphe.patches.protonvpn.misc.anchors.parameterRegister
 import app.morphe.patches.protonvpn.misc.anchors.setExtensionMember
-import app.morphe.patches.protonvpn.misc.restrictions.filterReturnValue
+import app.morphe.patches.protonvpn.misc.restrictions.filterConstructorProperty
 import app.morphe.patches.protonvpn.misc.restrictions.freeAccountStatePatch
 import app.morphe.patches.protonvpn.misc.restrictions.invertFreeServerCheckForFreeAccount
 import app.morphe.patches.protonvpn.misc.settings.patchesSettingsPatch
@@ -29,7 +28,6 @@ import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.shared.misc.proton.markPatchApplied
 import app.morphe.util.matchSingle
 import com.android.tools.smali.dexlib2.AccessFlags
-import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 
 private const val FREE_SERVER_LOCATIONS = "Lapp/hxreborn/extension/protonvpn/FreeServerLocations;"
@@ -47,55 +45,49 @@ val showFreeServerLocationsPatch = bytecodePatch(
         markPatchApplied("showFreeServerLocations")
 
         val freeLocationsHeader = resourceId(ResourceType.STRING, "free_connections_info_server_locations")
-        invertFreeServerCheckForFreeAccount(ServerListFilterFingerprint)
+        invertFreeServerCheckForFreeAccount(serverListFilterFingerprint())
 
-        val serverGroupItem = ServerGroupItemStateFingerprint.matchSingle().originalMethod.parameterTypes.first()
-        setExtensionMember(
-            "serverGroupTier",
-            classDefBy(serverGroupItem.toString()).methods.single {
-                AccessFlags.ABSTRACT.isSet(it.accessFlags) && it.returnType == "I" && it.parameterTypes.isEmpty()
-            }.name,
-        )
-        ServerGroupItemStateFingerprint.method.addInstructions(
-            0,
-            """
-                invoke-static { p1, p2 }, $FREE_SERVER_LOCATIONS->tierForAvailabilityCheck(Ljava/lang/Object;Ljava/lang/Integer;)Ljava/lang/Integer;
-                move-result-object p2
-            """,
-        )
-
-        countriesHeaderLabelFingerprint().matchSingle().run {
-            val isFreeUser = instructionMatches.first().getInstruction<FiveRegisterInstruction>().registerD
-            val label = instructionMatches.last()
-            val labelRegister = label.getInstruction<OneRegisterInstruction>().registerA
-            method.addInstructionsWithLabels(
-                label.index + 1,
+        serverGroupItemStateFingerprint().matchSingle().method.apply {
+            val tierIndex = tierParameterIndex()
+            val serverGroupItem = parameterTypes[tierIndex - 1].toString()
+            setExtensionMember(
+                "serverGroupTier",
+                classDefBy(serverGroupItem).methods.single {
+                    AccessFlags.ABSTRACT.isSet(it.accessFlags) && it.returnType == "I" && it.parameterTypes.isEmpty()
+                }.name,
+            )
+            val itemRegister = parameterRegister(tierIndex - 1)
+            val tierRegister = parameterRegister(tierIndex)
+            addInstructions(
+                0,
                 """
-                    if-eqz v$isFreeUser, :label_chosen
-                    const v$labelRegister, $freeLocationsHeader
+                    invoke-static { $itemRegister, $tierRegister }, $FREE_SERVER_LOCATIONS->tierForAvailabilityCheck(Ljava/lang/Object;Ljava/lang/Integer;)Ljava/lang/Integer;
+                    move-result-object $tierRegister
                 """,
-                ExternalLabel("label_chosen", method.getInstruction(label.index + 1)),
             )
         }
 
-        ServerGroupsMainScreenStateFingerprint.matchSingle().method.addInstructions(
-            0,
-            """
-                invoke-static { p3 }, $FREE_SERVER_LOCATIONS->resolveFilterButtons(Ljava/util/List;)Ljava/util/List;
-                move-result-object p3
-            """,
+        CountriesHeaderLabelFingerprint.matchSingle().run {
+            val label = instructionMatches.first()
+            val labelRegister = label.getInstruction<OneRegisterInstruction>().registerA
+            method.replaceInstruction(label.index, "const v$labelRegister, $freeLocationsHeader")
+        }
+
+        filterConstructorProperty(
+            ServerGroupsMainScreenStateToStringFingerprint,
+            "filterButtons",
+            "$FREE_SERVER_LOCATIONS->resolveFilterButtons(Ljava/util/List;)Ljava/util/List;",
         )
 
-        val selectedFilterGetters = saveStateToStringFingerprints.map { findPropertyGetter(it, "selectedFilter") }
-        val gatewaySelectedFilter = GatewayServersSaveStateToStringFingerprint.matchSingle().originalClassDef.methods
-            .single { method -> selectedFilterGetters.any { it.name == method.name && it.returnType == method.returnType } }
-        (selectedFilterGetters + gatewaySelectedFilter).forEach { getter ->
-            navigate(getter).stop().filterReturnValue(
+        saveStateToStringFingerprints.forEach {
+            filterConstructorProperty(
+                it,
+                "selectedFilter",
                 "$FREE_SERVER_LOCATIONS->resolveSelectedFilter(Ljava/lang/Object;)Ljava/lang/Object;",
             )
         }
 
-        SearchResultSectionFingerprint.matchSingle().method.addInstructions(
+        searchResultSectionFingerprint().matchSingle().method.addInstructions(
             0,
             """
                 invoke-static { p2, p4 }, $FREE_SERVER_LOCATIONS->itemsVisibleToTier(Ljava/util/List;Ljava/lang/Integer;)Ljava/util/List;

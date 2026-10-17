@@ -1,26 +1,21 @@
-group = "app.ikura"
+group = "app.template"
 
 patches {
+    // TODO: Update this section with your project details.
     about {
-        name = "Ikura Patches"
-        description = "Custom Android app patches"
-        source = "https://github.com/Ikuradachi/ikura-patches"
-        author = "Ikura"
-        contact = "https://github.com/Ikuradachi/ikura-patches/issues"
-        website = "https://github.com/Ikuradachi/ikura-patches"
+        name = "UserXYZ Patches"
+        description = "Patches for apps I like"
+        source = "git@github.com:UserXYZ/morphe-patches.git"
+        author = "Awesome dev"
+        contact = "na"
+        website = "na"
         license = "GPLv3"
-    }
-}
-
-kotlin {
-    compilerOptions {
-        freeCompilerArgs.add("-Xcontext-parameters")
     }
 }
 
 // Separate configuration so gson is available at runtime for the
 // generatePatchesList task but never bundled into the APK.
-val patchListGeneratorClasspath: Configuration by configurations.creating
+val patchListGeneratorClasspath = configurations.create("patchListGeneratorClasspath")
 
 dependencies {
     compileOnly(libs.gson)

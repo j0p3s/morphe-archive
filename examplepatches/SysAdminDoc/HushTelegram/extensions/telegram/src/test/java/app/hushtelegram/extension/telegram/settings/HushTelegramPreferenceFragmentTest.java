@@ -167,7 +167,6 @@ public class HushTelegramPreferenceFragmentTest {
         ROW_TITLES.put(PatchFamily.MESSAGE_MENU_REPEAT, "Add Repeat to the message menu");
         ROW_TITLES.put(PatchFamily.KEEP_DELETED_MESSAGES, "Keep deleted messages");
         ROW_TITLES.put(PatchFamily.ASK_BEFORE_STICKER, "Ask before sending a sticker");
-        ROW_TITLES.put(PatchFamily.BETA_LOGS_OFF, "Turn off beta debug logs");
         ROW_TITLES.put(PatchFamily.OUTSIDE_TRANSLATE, "Translate with an outside service");
         ROW_TITLES.put(PatchFamily.HIDE_CHANNEL_BUTTONS, "Hide channel bar buttons");
         ROW_TITLES.put(PatchFamily.HIDE_SEND_AS, "Hide Send as button");
@@ -327,8 +326,7 @@ public class HushTelegramPreferenceFragmentTest {
                     String.valueOf(page.findPreference(Settings.HIDE_SPONSORED_PROXY.key).getSummary()));
             assertEquals("Stop usage reports", String.valueOf(page.findPreference(Settings.DISABLE_ANALYTICS.key).getTitle()));
             assertEquals("Stops usage reports to Telegram, like how long you read each channel post and what you tap "
-                    + "on Premium screens. Messages and calls work as before. Firebase crash and session reports "
-                    + "stop too, from the next time Telegram starts.",
+                    + "on Premium screens. Messages and calls work as before.",
                     String.valueOf(page.findPreference(Settings.DISABLE_ANALYTICS.key).getSummary()));
             assertEquals("Turn off Telegram's update checks", String.valueOf(page.findPreference(Settings.DISABLE_UPDATE_CHECKS.key).getTitle()));
             assertEquals("Telegram stops offering updates from telegram.org. Those can't install over this patched "
@@ -747,15 +745,6 @@ public class HushTelegramPreferenceFragmentTest {
             // Stickers, GIFs, recordings and calls go out without a question until the switch is turned on.
             assertFalse(Settings.ASK_BEFORE_STICKER.key,
                     ((SwitchPreference) page.findPreference(Settings.ASK_BEFORE_STICKER.key)).isChecked());
-            assertEquals("Turn off beta debug logs", String.valueOf(page.findPreference(Settings.BETA_LOGS_OFF.key).getTitle()));
-            assertEquals("Telegram Beta keeps debug logs on your phone all the time, its connection log included, "
-                            + "and its own debug menu can't stop that. This stops them. Logs already saved stay until you "
-                            + "clear them, and the regular build doesn't keep them, so nothing changes there. Restart "
-                            + "Telegram to see the change.",
-                    String.valueOf(page.findPreference(Settings.BETA_LOGS_OFF.key).getSummary()));
-            // The beta keeps writing its logs until the switch is turned on.
-            assertFalse(Settings.BETA_LOGS_OFF.key,
-                    ((SwitchPreference) page.findPreference(Settings.BETA_LOGS_OFF.key)).isChecked());
             assertEquals("Translate with an outside service", String.valueOf(page.findPreference(Settings.OUTSIDE_TRANSLATE.key).getTitle()));
             assertEquals("Adds Translate here to a message's menu and Translate this chat to a chat's menu, using "
                             + "the translation service you choose. The text you ask to translate is sent to that service, "
@@ -1547,11 +1536,7 @@ public class HushTelegramPreferenceFragmentTest {
             try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
                 HushTelegramPreferenceFragment page = pageOf(controller);
                 String summary = String.valueOf(page.findPreference(missing.family.switches.get(0).key).getSummary());
-                if (missing.onlyWhereCarried) {
-                    // Telegram's regular build carries no Firebase reporters, so leaving one out isn't partial.
-                    assertFalse(summary, summary.startsWith("This patched app"));
-                    assertFalse(summary, summary.contains(missing.label));
-                } else if (missing.family.expectedCapabilities().size() == 1) {
+                if (missing.family.expectedCapabilities().size() == 1) {
                     assertEquals("This patched app doesn't change " + missing.label + ".", summary);
                 } else {
                     assertTrue(summary, summary.startsWith("This patched app changes "));
@@ -1559,17 +1544,13 @@ public class HushTelegramPreferenceFragmentTest {
                     for (PatchFamily.Capability covered : missing.family.expectedCapabilities()) {
                         if (covered != missing) assertTrue(summary, summary.contains(covered.label));
                     }
-                    assertFalse(summary, summary.contains("from the next time Telegram starts"));
                 }
                 assertTrue("a build family's configuration switch was disabled", page.findPreference(missing.family.switches.get(0).key).isEnabled());
             }
         }
 
-        // The regular build: every usage report hooked and no Firebase reporter to stop, so the row doesn't mention them.
-        Set<PatchFamily.Capability> regular = EnumSet.allOf(PatchFamily.Capability.class);
-        regular.remove(PatchFamily.Capability.CRASH_REPORTS);
-        regular.remove(PatchFamily.Capability.SESSION_REPORTS);
-        PatchFamily.capabilitiesForTests = regular;
+        // A complete build: every usage report hooked, so the row keeps its plain summary.
+        PatchFamily.capabilitiesForTests = EnumSet.allOf(PatchFamily.Capability.class);
         try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
             HushTelegramPreferenceFragment page = pageOf(controller);
             assertEquals("Stops usage reports to Telegram, like how long you read each channel post and what you tap "

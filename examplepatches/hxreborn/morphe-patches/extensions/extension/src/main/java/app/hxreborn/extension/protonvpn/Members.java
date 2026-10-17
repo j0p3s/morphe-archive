@@ -11,7 +11,7 @@ public final class Members {
     }
 
     public static String userInfoVpnUser() {
-        return "getVpnUser";
+        return "vpnUser";
     }
 
     public static String vpnUserIsFreeUser() {
@@ -23,7 +23,19 @@ public final class Members {
     }
 
     public static String profileAvailability() {
-        return "getAvailability";
+        return "availability";
+    }
+
+    public static String serverIsFree() {
+        return "isFreeServer";
+    }
+
+    public static String countryServers() {
+        return "serverList";
+    }
+
+    public static String apiNotificationType() {
+        return "type";
     }
 
     public static String serverGroupBannerClass() {

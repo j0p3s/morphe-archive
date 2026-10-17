@@ -33,7 +33,11 @@ private const val ADS_CONTAINER_LIGHT = "Lcom/truecaller/ads/ui/AdsContainerLigh
 private const val ADS_SWITCH_VIEW = "Lcom/truecaller/ads/ui/AdsSwitchView;"
 private const val AD_LAYOUT_TYPE = "Lcom/truecaller/ads/AdLayoutTypeX;"
 private const val BOTTOM_BAR_BUTTON_TYPE = "Lcom/truecaller/bottombar/BottomBarButtonType;"
+private const val BOTTOM_BAR_VIEW = "Lcom/truecaller/bottombar/BottomBarView;"
+private const val AD_PLACEMENT = "Lcom/truecaller/ads/api/model/ad/AdPlacement;"
 private const val FEATURE_STATE = "Lcom/truecaller/featuretoggles/FeatureState;"
+private const val T9_REBUILD_ALL_KEY = "RefreshT9MappingWorker.RebuildAll"
+private const val T9_INCREMENTAL_HELPER = "morpheRefreshT9Incremental"
 
 class TruecallerSmokeTest {
 
@@ -82,11 +86,18 @@ class TruecallerSmokeTest {
         // absent, so CI stays green; locally it is present and the test really runs.
         assumeTrue(apk.exists(), "skipping: base.apk not present at ${apk.path}")
 
+        val allPatches = loadAllPatches(newestPatchBundle(root))
+        // No Clone package name option (#50): a com.truecaller clone cannot install next to stock.
+        val gmsCore = allPatches.single { p ->
+            p.name == "GmsCore support" && p.compatibility.orEmpty().any { it.packageName == PKG }
+        }
+        check("packageName" !in gmsCore.options.keys) { "Truecaller GmsCore support still offers the packageName option" }
+
         val classes = applyPatches(
             apk = apk,
             workDir = workDir,
             pkg = PKG,
-            version = "26.39.6",
+            version = "26.40.5",
             patchNames = setOf(
                 "Enable Premium",
                 "Disable ads",
@@ -96,13 +107,16 @@ class TruecallerSmokeTest {
                 "Hide Scam feed",
                 "Hide Premium tab",
                 "Hide Blocking tab",
+                "Hide Messages tab",
                 "Hide family button",
                 "Restore classic call log",
                 "Use SMS for verification codes",
+                "Fix T9 contact search",
+                "Hide Wear OS settings",
                 "GmsCore support",
                 "Spoof signature",
             ),
-            allPatches = loadAllPatches(newestPatchBundle(root)),
+            allPatches = allPatches,
         )
         val byType = classes.associateBy { it.type }
 
@@ -112,8 +126,11 @@ class TruecallerSmokeTest {
         assertDisableUpdatePrompts(classes)
         assertFeatureToggles(classes)
         assertHiddenTabs(classes)
+        assertHideMessagesTab(classes)
+        assertHiddenSettingsRows(classes)
         assertToggleOverrides(classes)
         assertUseSmsVerification(classes)
+        assertFixT9ContactSearch(classes, byType)
         // onGetCredential tests isAvailableOnDevice(int) in this build, so the routing applies.
         assertGmsCoreSupport(classes, workDir, PKG, TRUECALLER_INIT, SIGNATURE_SHA1, expectCredentialRouting = true)
         assertSpoofSignature(classes, PKG, SIGNATURE_SHA1)
@@ -279,6 +296,25 @@ class TruecallerSmokeTest {
         }
         assertForcedBoolean(gate, expected = false, label = "${gateClass.type}.${gate.name}() (featureInterstitialAd)")
 
+        // Ads V2 placements: the (AdPlacement, continuation) check returns Boolean.FALSE at once, which
+        // also drops the call log's "Upgrade for an ad-free experience" placeholder row.
+        val (placementClass, placement) = classes.singleMethod("Ads V2 placement check") { _, m ->
+            m.returnType == "Ljava/lang/Object;" && m.params().size == 2 && m.params().first() == AD_PLACEMENT &&
+                "featureAdsV2OnClList" in m.strings()
+        }
+        val placementInsns = placement.instructions()
+        val no = placementInsns.getOrNull(0)
+        check(no?.opcode == Opcode.SGET_OBJECT && no.field()?.definingClass == "Ljava/lang/Boolean;" && no.field()?.name == "FALSE" &&
+            placementInsns.getOrNull(1)?.opcode == Opcode.RETURN_OBJECT &&
+            (placementInsns[1] as OneRegisterInstruction).registerA == (no as OneRegisterInstruction).registerA
+        ) { "${placementClass.type}.${placement.name}(AdPlacement, ...) does not return Boolean.FALSE at once; got ${no?.opcode} ${no?.field()}" }
+
+        // The master "ads allowed" check (the only ()Z method reading both strings) returns false.
+        val (allowedClass, allowed) = classes.singleMethod("ads allowed check") { _, m ->
+            m.returnType == "Z" && m.parameterTypes.isEmpty() && m.strings().containsAll(listOf("qaForceAds", "adsDisabledUntil"))
+        }
+        assertForcedBoolean(allowed, expected = false, label = "${allowedClass.type}.${allowed.name}() (ads allowed)")
+
         // Only the app-open loading screen still finishes right after super.onCreate; the
         // interstitial activities, which deliver the pending action or reward, are untouched.
         for ((type, finishes) in listOf(
@@ -366,7 +402,7 @@ class TruecallerSmokeTest {
 
     private fun assertHiddenTabs(classes: List<ClassDef>) {
         // The bottom bar builder calls one helper per tab patch on the tab array right before
-        // filterNotNull; together they null PREMIUM, BLOCKING and FAMILY_PROTECTION_CONFIG.
+        // filterNotNull; together they null PREMIUM, BLOCKING, FAMILY_PROTECTION_CONFIG and MESSAGES.
         val (builderClass, builder) = classes.singleMethod("bottom bar builder") { _, m ->
             m.returnType == "V" && m.params() == listOf("Landroid/util/SparseIntArray;") &&
                 m.instructions().any { it.opcode == Opcode.SGET_OBJECT && it.field()?.definingClass == BOTTOM_BAR_BUTTON_TYPE && it.field()?.name == "CALLS" }
@@ -377,12 +413,12 @@ class TruecallerSmokeTest {
             it.opcode == Opcode.INVOKE_STATIC && it.call()?.returnType == "Ljava/util/List;" &&
                 it.call()?.parameterTypes?.map(CharSequence::toString) == listOf("[Ljava/lang/Object;")
         }
-        check(filter >= 2) { "$label has no filterNotNull call after the helpers" }
+        check(filter >= 3) { "$label has no filterNotNull call after the helpers" }
         val array = (insns[filter] as FiveRegisterInstruction).registerC
         val arrayType = insns.take(filter).last { it.opcode == Opcode.NEW_ARRAY && (it as TwoRegisterInstruction).registerA == array }
             .let { ((it as ReferenceInstruction).reference as TypeReference).type }
         val hidden = mutableSetOf<String>()
-        for (call in insns.subList(filter - 2, filter)) {
+        for (call in insns.subList(filter - 3, filter)) {
             val ref = call.call()
             check(call.opcode == Opcode.INVOKE_STATIC_RANGE && ref?.definingClass == builderClass.type &&
                 ref.parameterTypes.map(CharSequence::toString) == listOf(arrayType) &&
@@ -397,12 +433,104 @@ class TruecallerSmokeTest {
             hidden += helperInsns.filter { it.opcode == Opcode.SGET_OBJECT && it.field()?.definingClass == BOTTOM_BAR_BUTTON_TYPE }
                 .map { it.field()!!.name }
         }
-        check(hidden == setOf("PREMIUM", "BLOCKING", "FAMILY_PROTECTION_CONFIG")) { "$label hides $hidden" }
+        check(hidden == setOf("PREMIUM", "BLOCKING", "FAMILY_PROTECTION_CONFIG", "MESSAGES")) { "$label hides $hidden" }
+    }
+
+    private fun assertHideMessagesTab(classes: List<ClassDef>) {
+        val (builderClass, builder) = classes.singleMethod("bottom bar builder") { _, m ->
+            m.returnType == "V" && m.params() == listOf("Landroid/util/SparseIntArray;") &&
+                m.instructions().any { it.opcode == Opcode.SGET_OBJECT && it.field()?.definingClass == BOTTOM_BAR_BUTTON_TYPE && it.field()?.name == "CALLS" }
+        }
+        fun Instruction.isTabType(name: String) =
+            opcode == Opcode.SGET_OBJECT && field()?.definingClass == BOTTOM_BAR_BUTTON_TYPE && field()?.name == name
+
+        // The "default_tab_on_launch" getter returns CALLS at once.
+        val defaultTab = builderClass.methods.single {
+            it.returnType == BOTTOM_BAR_BUTTON_TYPE && it.parameterTypes.isEmpty() && "default_tab_on_launch" in it.strings()
+        }
+        val defaultInsns = defaultTab.instructions()
+        check(defaultInsns.getOrNull(0)?.isTabType("CALLS") == true && defaultInsns.getOrNull(1)?.opcode == Opcode.RETURN_OBJECT &&
+            (defaultInsns[1] as OneRegisterInstruction).registerA == (defaultInsns[0] as OneRegisterInstruction).registerA
+        ) { "${builderClass.type}.${defaultTab.name}() (default tab) does not return CALLS at once" }
+
+        // selectTab(type, Z) swaps MESSAGES for CALLS before its stock code.
+        val select = builderClass.methods.single {
+            it.returnType == "V" && it.params() == listOf(BOTTOM_BAR_BUTTON_TYPE, "Z") &&
+                it.instructions().any { insn -> insn.call()?.name == "setSelectedItemId" }
+        }
+        val selectLabel = "${builderClass.type}.${select.name}(BottomBarButtonType, Z)"
+        val selectInsns = select.instructions()
+        val p1 = select.implementation!!.registerCount - 2 // the type, then Z
+        check(selectInsns.getOrNull(0)?.isTabType("MESSAGES") == true) { "$selectLabel does not load MESSAGES first" }
+        val compare = selectInsns[1]
+        check(compare.opcode == Opcode.IF_NE && (compare as TwoRegisterInstruction).registerA == p1 &&
+            compare.registerB == (selectInsns[0] as OneRegisterInstruction).registerA && selectInsns.branchTarget(1) == 3
+        ) { "$selectLabel does not skip the swap for other tabs" }
+        check(selectInsns[2].isTabType("CALLS") && (selectInsns[2] as OneRegisterInstruction).registerA == p1) {
+            "$selectLabel does not replace MESSAGES with CALLS"
+        }
+        check(selectInsns.drop(3).any { it.call()?.name == "setSelectedItemId" }) { "$selectLabel lost its stock code" }
+
+        // Right after the BottomBarView cast, the builder passes the bar and the final tab list to a
+        // helper that hides the bar with fewer than two tabs and shows it otherwise.
+        val insns = builder.instructions()
+        val take = insns.indexOfFirst {
+            it.call()?.definingClass == "Lkotlin/collections/CollectionsKt;" &&
+                it.call()?.parameterTypes?.map(CharSequence::toString) == listOf("Ljava/lang/Iterable;", "I")
+        }
+        val cast = insns.indexOfFirst {
+            it.opcode == Opcode.CHECK_CAST && ((it as ReferenceInstruction).reference as TypeReference).type == BOTTOM_BAR_VIEW
+        }
+        check(take >= 0 && cast > take) { "bottom bar builder has no take() before its BottomBarView cast" }
+        val list = (insns[take + 1] as OneRegisterInstruction).registerA
+        val call = insns[cast + 1]
+        val ref = call.call()
+        check(call.opcode == Opcode.INVOKE_STATIC && ref?.definingClass == builderClass.type &&
+            ref.parameterTypes.map(CharSequence::toString) == listOf(BOTTOM_BAR_VIEW, "Ljava/util/List;") &&
+            (call as FiveRegisterInstruction).registerC == (insns[cast] as OneRegisterInstruction).registerA && call.registerD == list
+        ) { "bottom bar builder does not pass the bar and the tab list to a helper after the cast; got ${call.opcode} $ref" }
+        val helper = builderClass.method(ref.name, listOf(BOTTOM_BAR_VIEW, "Ljava/util/List;")).instructions()
+        check(helper.any { it.call()?.name == "size" && it.call()?.definingClass == "Ljava/util/List;" } &&
+            helper.any { it.opcode == Opcode.IF_LT } &&
+            helper.any { it.call()?.name == "setVisibility" && it.call()?.definingClass == "Landroid/view/View;" } &&
+            helper.any { it.opcode == Opcode.CONST_16 && (it as NarrowLiteralInstruction).narrowLiteral == 8 }
+        ) { "${builderClass.type}.${ref.name} does not set the bar GONE below two tabs" }
+    }
+
+    private fun assertHiddenSettingsRows(classes: List<ClassDef>) {
+        // The Settings screen state's toString reads isPremiumItemVisible and isWatchItemVisible
+        // first, in that order ("Hide Premium tab" and "Hide Wear OS settings" zero both).
+        val (stateClass, toString) = classes.singleMethod("CategoriesSettingsState.toString") { _, m ->
+            m.name == "toString" && m.parameterTypes.isEmpty() && m.strings().any { it.startsWith("CategoriesSettingsState(") }
+        }
+        check(toString.strings().containsAll(listOf("CategoriesSettingsState(isPremiumItemVisible=", ", isWatchItemVisible="))) {
+            "${stateClass.type}.toString lost the premium/watch labels: ${toString.strings()}"
+        }
+        val flags = toString.instructions().filter { it.opcode == Opcode.IGET_BOOLEAN && it.field()?.definingClass == stateClass.type }
+            .map { it.field()!!.name }
+        check(flags.size >= 3) { "${stateClass.type}.toString reads only $flags" }
+        val hidden = flags.take(2).toSet() // isPremiumItemVisible, isWatchItemVisible
+
+        val constructors = stateClass.methods.filter { it.name == "<init>" && it.implementation != null }
+        check(constructors.isNotEmpty()) { "${stateClass.type} has no constructor" }
+        for (constructor in constructors) {
+            val label = "${stateClass.type}.<init>(${constructor.params().joinToString()})"
+            val insns = constructor.instructions()
+            val zeroed = insns.indices.filter { insns[it].opcode == Opcode.IPUT_BOOLEAN && insns[it].field()?.definingClass == stateClass.type }
+                .associate { index ->
+                    val store = insns[index] as TwoRegisterInstruction
+                    val previous = insns.getOrNull(index - 1)
+                    store.field()!!.name to (previous?.opcode == Opcode.CONST_16 && (previous as OneRegisterInstruction).registerA == store.registerA &&
+                        (previous as NarrowLiteralInstruction).narrowLiteral == 0)
+                }
+            check(zeroed.filterValues { it }.keys == hidden) { "$label zeroes ${zeroed.filterValues { it }.keys}, expected $hidden" }
+        }
     }
 
     private fun assertToggleOverrides(classes: List<ClassDef>) {
-        // The SharedPreferences toggle resolver starts with one "key.equals(p1) -> return false"
+        // The SharedPreferences toggle resolver starts with one "key.equals(p1) -> return value"
         // block per override, each falling through to the next and finally to the stock code.
+        // Hide family button and Restore classic call log add one each, Disable ads four.
         val (cls, resolver) = classes.singleMethod("feature toggle resolver") { _, m ->
             m.returnType == "Z" && m.params() == listOf("Ljava/lang/String;", FEATURE_STATE) &&
                 m.instructions().any { it.call()?.definingClass == "Landroid/content/SharedPreferences;" && it.call()?.name == "getBoolean" }
@@ -410,8 +538,16 @@ class TruecallerSmokeTest {
         val label = "${cls.type}.${resolver.name}(String, FeatureState)"
         val insns = resolver.instructions()
         val keyRegister = resolver.implementation!!.registerCount - 2 // this + key + state
+        val expected = mapOf(
+            "featureFamilyProtect" to 0,
+            "featureCallLogRevamp" to 0,
+            "featureAdsOptimisationOnListView" to 1,
+            "featureAdsRestrictCampaignProcessing" to 1,
+            "featureConfigManagementSystem" to 0,
+            "featureEnableOfflineAds" to 0,
+        )
         val overrides = mutableMapOf<String, Int>()
-        for (block in 0 until 2) {
+        for (block in expected.keys.indices) {
             val start = block * 6
             val key = insns.getOrNull(start)?.stringOrNull() ?: error("$label: override block $block has no key")
             val equals = insns[start + 1]
@@ -424,7 +560,12 @@ class TruecallerSmokeTest {
             check(value.opcode == Opcode.CONST_4 && insns[start + 5].opcode == Opcode.RETURN) { "$label: $key does not return a constant" }
             overrides[key] = (value as NarrowLiteralInstruction).narrowLiteral
         }
-        check(overrides == mapOf("featureFamilyProtect" to 0, "featureCallLogRevamp" to 0)) { "$label overrides $overrides" }
+        check(overrides == expected) { "$label overrides $overrides, expected $expected" }
+        // Nothing past the override blocks is another override: the stock code follows.
+        val next = insns.getOrNull(expected.size * 6)
+        check(next?.opcode != Opcode.CONST_STRING || insns.getOrNull(expected.size * 6 + 1)?.call()?.name != "equals") {
+            "$label has more than ${expected.size} override blocks"
+        }
     }
 
     private fun assertUseSmsVerification(classes: List<ClassDef>) {
@@ -445,5 +586,49 @@ class TruecallerSmokeTest {
         check(method.instructions().none { it.opcode == Opcode.SGET_OBJECT && it.field()?.definingClass == OTP_SMS_API && it.field()?.name == "GOOGLE" }) {
             "${cls.type}.${method.name} still compares with OtpSmsApi.GOOGLE"
         }
+    }
+
+    private fun assertFixT9ContactSearch(classes: List<ClassDef>, byType: Map<String, ClassDef>) {
+        // The RebuildAll helper and its incremental copy share the shape the patch anchors on.
+        val helpers = classes.methodsWhere { _, m ->
+            m.returnType == "V" && m.params() == listOf("Landroid/content/Context;") && AccessFlags.STATIC.isSet(m.accessFlags) &&
+                m.strings().containsAll(listOf(T9_REBUILD_ALL_KEY, "RefreshT9MappingWorker"))
+        }
+        val (cloneClass, clone) = helpers.singleOrNull { (_, m) -> m.name == T9_INCREMENTAL_HELPER }
+            ?: error("expected one $T9_INCREMENTAL_HELPER, found ${helpers.map { (c, m) -> "${c.type}.${m.name}" }}")
+        val (helperClass, helper) = helpers.singleOrNull { (_, m) -> m.name != T9_INCREMENTAL_HELPER }
+            ?: error("expected one RefreshT9MappingWorker helper, found ${helpers.map { (c, m) -> "${c.type}.${m.name}" }}")
+        check(cloneClass.type == helperClass.type) { "$T9_INCREMENTAL_HELPER is in ${cloneClass.type}, not ${helperClass.type}" }
+        val label = "${cloneClass.type}.$T9_INCREMENTAL_HELPER(Context)"
+        check(AccessFlags.PUBLIC.isSet(clone.accessFlags) && AccessFlags.STATIC.isSet(clone.accessFlags)) { "$label is not public static" }
+
+        fun Method.booleanLoads(name: String) = instructions().withIndex().filter { (_, insn) ->
+            insn.opcode == Opcode.SGET_OBJECT && insn.field()?.definingClass == "Ljava/lang/Boolean;" && insn.field()?.name == name
+        }.map { it.index }
+
+        // The original still enqueues RebuildAll = TRUE; the copy is identical except for FALSE there.
+        val original = helper.booleanLoads("TRUE")
+        check(original.size == 1 && helper.booleanLoads("FALSE").isEmpty()) {
+            "${helperClass.type}.${helper.name} (RebuildAll helper) was changed: TRUE at $original"
+        }
+        check(clone.booleanLoads("FALSE") == original && clone.booleanLoads("TRUE").isEmpty()) {
+            "$label does not load Boolean.FALSE in place of TRUE; FALSE at ${clone.booleanLoads("FALSE")}, TRUE at ${clone.booleanLoads("TRUE")}"
+        }
+        check(clone.instructions().map { it.opcode } == helper.instructions().map { it.opcode } && clone.strings() == helper.strings()) {
+            "$label is not a copy of ${helperClass.type}.${helper.name}"
+        }
+
+        // TruecallerInit.onCreate calls the copy with p0 right after super.onCreate.
+        val onCreate = (byType[TRUECALLER_INIT] ?: error("$TRUECALLER_INIT not found")).method("onCreate", listOf("Landroid/os/Bundle;"))
+        val insns = onCreate.instructions()
+        val superCall = insns.indexOfFirst {
+            (it.opcode == Opcode.INVOKE_SUPER || it.opcode == Opcode.INVOKE_SUPER_RANGE) && it.call()?.name == "onCreate"
+        }
+        check(superCall >= 0) { "TruecallerInit.onCreate does not call super.onCreate" }
+        val call = insns.getOrNull(superCall + 1)
+        val p0 = onCreate.implementation!!.registerCount - 2 // this + Bundle
+        check(call?.opcode == Opcode.INVOKE_STATIC_RANGE && call.call()?.definingClass == helperClass.type &&
+            call.call()?.name == T9_INCREMENTAL_HELPER && (call as RegisterRangeInstruction).startRegister == p0 && call.registerCount == 1
+        ) { "TruecallerInit.onCreate does not call $label with p0 after super.onCreate; got ${call?.opcode} ${call?.call()}" }
     }
 }

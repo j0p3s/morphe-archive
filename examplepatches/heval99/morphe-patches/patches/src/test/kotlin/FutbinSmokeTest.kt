@@ -103,6 +103,8 @@ class FutbinSmokeTest {
         val initialize = klass(GMA + "MobileAds;").methods.filter { it.name == "initialize" }
         assertEquals(2, initialize.size, "MobileAds.initialize overloads")
         initialize.forEach { assertReturnsEarlyVoid(it, label = "MobileAds.initialize(${it.parameterTypes.size})") }
+        // Rule 9: no MobileAds static can throw for lack of init.
+        assertMobileAdsStaticsNeutralised(klass(GMA + "MobileAds;"))
 
         for (type in listOf(
             GMA + "BaseAdView;",

@@ -11,14 +11,14 @@
 package app.morphe.patches.protonvpn.misc.customdns
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.resource.ResourceType
 import app.morphe.patches.protonvpn.misc.anchors.resourceField
-import app.morphe.patches.protonvpn.misc.restrictions.RestrictionGuardFingerprint
+import app.morphe.patches.protonvpn.misc.restrictions.restrictionGuardFingerprint
 
 internal object CustomDnsViewStateFingerprint : Fingerprint(
     name = "<init>",
-    parameters = listOf("Z", "Ljava/util/List;", "L", "Z", "Z"),
     filters = listOf(resourceField(ResourceType.STRING, "settings_custom_dns_title")),
 )
 
-internal object CustomDnsRestrictionFingerprint : RestrictionGuardFingerprint("getCustomDns")
+internal fun BytecodePatchContext.customDnsRestrictionFingerprint() = restrictionGuardFingerprint("getCustomDns")

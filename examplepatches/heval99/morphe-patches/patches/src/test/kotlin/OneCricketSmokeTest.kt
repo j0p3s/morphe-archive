@@ -85,6 +85,8 @@ class OneCricketSmokeTest {
             ),
             label = "MobileAds.initialize(Context, Listener)",
         )
+        // Rule 9: no MobileAds static can throw for lack of init.
+        assertMobileAdsStaticsNeutralised(mobileAds)
         assertReturnsEarlyVoid(
             klass("${GMA}BaseAdView;").method("loadAd", listOf("Lcom/google/android/gms/ads/AdRequest;")),
             label = "BaseAdView.loadAd",

@@ -56,6 +56,12 @@ private val focalPostStateFingerprint = Fingerprint(
     strings = listOf("FocalPostState(timelinePostState="),
 )
 
+private val focalPostHeaderFingerprint = Fingerprint(
+    definingClass = "Lcom/x/urt/items/post/a2;",
+    name = "a",
+    returnType = "V",
+)
+
 private val timelineItemFilterFingerprint = Fingerprint(
     strings = listOf("surface_filter"),
 )
@@ -86,6 +92,10 @@ private val fleetlineApiResponseFingerprint = Fingerprint(
 
 private val communityNotesFingerprint = Fingerprint(
     strings = listOf("birdwatch_consumption_enabled"),
+)
+
+private val canonicalPostToStringFingerprint = Fingerprint(
+    strings = listOf("CanonicalPost(id="),
 )
 
 private val inlineActionBarItemFingerprint = Fingerprint(
@@ -410,6 +420,20 @@ val twitterTimelineUiPatch = bytecodePatch(
                 initMethod.addInstructions(index, constIns)
                 patched++
             }
+
+            // Null follow button state at composable entry instead of in state constructor (which crashed).
+            val headerMethod = focalPostHeaderFingerprint.method
+            val followParamIndex = headerMethod.parameterTypes.indexOfFirst { it.toString() == "Lcom/x/models/p2;" }
+            if (followParamIndex < 0) {
+                error("[Timeline UI] Follow button state parameter not found in focal post header.")
+            }
+
+            val followParamRegister = headerMethod.parameterTypes
+                .take(followParamIndex)
+                .sumOf { if (it.toString() == "J" || it.toString() == "D") 2 else 1 }
+
+            headerMethod.addInstructions(0, "const/16 p$followParamRegister, 0x0")
+            patched++
         } else {
             println("[Timeline UI] Skipped: Hide Nudge Button disabled.")
         }
@@ -505,6 +529,7 @@ val twitterTimelineUiPatch = bytecodePatch(
 
         // 5. hideDiscoverMore
         if (hideDiscoverMore ?: true) {
+            // Discover more module entryId has the form "tweetdetailrelatedtweets-<postId>"
             val discoverItemTestSmali = """
                 :tluid_cond_check_item
                 invoke-interface {v0}, Lcom/x/models/timelines/items/p0;->c()Ljava/lang/String;
@@ -512,12 +537,7 @@ val twitterTimelineUiPatch = bytecodePatch(
                 if-eqz v1, :tluid_cond_continue
 
                 :tluid_cond_check_entry_id
-                const-string v2, "discover"
-                invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
-                move-result v2
-                if-nez v2, :tluid_cond_suppress_discover
-
-                const-string v2, "Discover"
+                const-string v2, "relatedtweets"
                 invoke-virtual {v1, v2}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
                 move-result v2
                 if-nez v2, :tluid_cond_suppress_discover
@@ -553,7 +573,58 @@ val twitterTimelineUiPatch = bytecodePatch(
                 return-object v0
             """.trimIndent()
 
+            val listFilterSmali = """
+                move-object/from16 v0, p1
+                if-eqz v0, :tldsc_cond_filter_end
+
+                new-instance v1, Ljava/util/ArrayList;
+                invoke-direct {v1}, Ljava/util/ArrayList;-><init>()V
+
+                invoke-interface {v0}, Ljava/util/List;->iterator()Ljava/util/Iterator;
+                move-result-object v0
+
+                :tldsc_loop_start
+                invoke-interface {v0}, Ljava/util/Iterator;->hasNext()Z
+                move-result v2
+                if-eqz v2, :tldsc_loop_end
+
+                invoke-interface {v0}, Ljava/util/Iterator;->next()Ljava/lang/Object;
+                move-result-object v2
+                check-cast v2, Lcom/x/models/timelines/items/p0;
+
+                instance-of v3, v2, Lcom/x/models/timelines/items/b1;
+                if-eqz v3, :tldsc_cond_add_item
+
+                move-object v3, v2
+                check-cast v3, Lcom/x/models/timelines/items/b1;
+
+                # Null-guard on b1->f before contains
+                iget-object v4, v3, Lcom/x/models/timelines/items/b1;->f:Ljava/lang/String;
+                if-eqz v4, :tldsc_cond_add_item
+
+                const-string v5, "relatedtweets"
+                invoke-virtual {v4, v5}, Ljava/lang/String;->contains(Ljava/lang/CharSequence;)Z
+                move-result v5
+                if-nez v5, :tldsc_cond_drop_item
+
+                :tldsc_cond_add_item
+                invoke-interface {v1, v2}, Ljava/util/List;->add(Ljava/lang/Object;)Z
+                goto :tldsc_loop_start
+
+                :tldsc_cond_drop_item
+                goto :tldsc_loop_start
+
+                :tldsc_loop_end
+                move-object/from16 p1, v1
+
+                :tldsc_cond_filter_end
+                nop
+            """.trimIndent()
+
             val discBefore = patched
+            timelineItemFilterFingerprint.method.addInstructionsWithLabels(0, listFilterSmali)
+            patched++
+
             urtItemPresenterFingerprint.method.addInstructionsWithLabels(0, inlineSmali)
             patched++
 
@@ -729,6 +800,89 @@ val twitterTimelineUiPatch = bytecodePatch(
             } else {
                 error("[Timeline UI] Failed to neutralize 'birdwatch_consumption_enabled' flag.")
             }
+
+            // Flag only controls the drawer entry; null post model fields to hide notes on posts.
+            val classDescriptor = canonicalPostToStringFingerprint.method.definingClass
+            val classDef = mutableClassDefBy(classDescriptor)
+
+            val toStringMethod = canonicalPostToStringFingerprint.method
+            val toStringInstructions = toStringMethod.implementation?.instructions?.toList()
+                ?: error("[Timeline UI] toString in '$classDescriptor' has no instructions.")
+
+            var communityNoteFieldName: String? = null
+            var tombstoneCommunityNoteFieldName: String? = null
+
+            for (i in toStringInstructions.indices) {
+                val ins = toStringInstructions[i]
+                if (ins.opcode == Opcode.CONST_STRING || ins.opcode == Opcode.CONST_STRING_JUMBO) {
+                    val str = ((ins as? ReferenceInstruction)?.reference as? StringReference)?.string
+                    when (str) {
+                        ", communityNote=" -> {
+                            for (j in (i + 1)..minOf(i + 5, toStringInstructions.lastIndex)) {
+                                val nextIns = toStringInstructions[j]
+                                if (nextIns.opcode == Opcode.IGET_OBJECT) {
+                                    communityNoteFieldName = ((nextIns as? ReferenceInstruction)?.reference as? FieldReference)?.name
+                                    break
+                                }
+                            }
+                        }
+                        ", tombstoneCommunityNote=" -> {
+                            for (j in (i + 1)..minOf(i + 5, toStringInstructions.lastIndex)) {
+                                val nextIns = toStringInstructions[j]
+                                if (nextIns.opcode == Opcode.IGET_OBJECT) {
+                                    tombstoneCommunityNoteFieldName = ((nextIns as? ReferenceInstruction)?.reference as? FieldReference)?.name
+                                    break
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (communityNoteFieldName == null) {
+                error("[Timeline UI] communityNote field not found in '$classDescriptor'.")
+            }
+            if (tombstoneCommunityNoteFieldName == null) {
+                error("[Timeline UI] tombstoneCommunityNote field not found in '$classDescriptor'.")
+            }
+
+            var notesNulled = 0
+            for (method in classDef.methods) {
+                if (method.name != "<init>") continue
+                val instructions = method.implementation?.instructions?.toList() ?: continue
+
+                val targetIndices = mutableListOf<Int>()
+                for ((index, ins) in instructions.withIndex()) {
+                    if (ins.opcode == Opcode.IPUT_OBJECT) {
+                        val fieldRef = (ins as? ReferenceInstruction)?.reference as? FieldReference
+                        if (fieldRef?.definingClass == classDescriptor &&
+                            (fieldRef.name == communityNoteFieldName || fieldRef.name == tombstoneCommunityNoteFieldName)
+                        ) {
+                            targetIndices.add(index)
+                        }
+                    }
+                }
+
+                targetIndices.sortByDescending { it }
+
+                for (index in targetIndices) {
+                    val reg = (instructions[index] as? TwoRegisterInstruction)?.registerA
+                        ?: error("[Timeline UI] Failed to resolve register for iput-object in '$classDescriptor'.")
+                    val constIns = when {
+                        reg <= 15 -> "const/4 v$reg, 0x0"
+                        reg <= 255 -> "const/16 v$reg, 0x0"
+                        else -> error("[Timeline UI] Community note register v$reg out of range in '$classDescriptor'.")
+                    }
+                    method.addInstructions(index, constIns)
+                    notesNulled++
+                }
+            }
+
+            if (notesNulled == 0) {
+                error("[Timeline UI] No community note field writes found in '$classDescriptor'.")
+            }
+            patched++
+            println("[Timeline UI] Nulled $notesNulled community note field writes in '$classDescriptor'.")
         } else {
             println("[Timeline UI] Skipped hideCommunityNotes: disabled by patch option.")
         }

@@ -23,6 +23,7 @@ jobs:
     if: >-
       github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
       (contains(github.event.issue.labels.*.name, 'app-update') &&
+       !contains(github.event.issue.labels.*.name, 'bot-wrong') &&
        github.event.issue.user.type != 'Bot' &&
        !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) &&
        (github.event.action == 'opened' ||

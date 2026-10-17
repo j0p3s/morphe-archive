@@ -15,7 +15,7 @@
 ## 🩹 Patches list
 
 <!-- PATCHES_START -->
-> **[v1.52.0](https://github.com/hxreborn/morphe-patches/releases/tag/v1.52.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;183 patches total
+> **[v1.53.0](https://github.com/hxreborn/morphe-patches/releases/tag/v1.53.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;222 patches total
 <a id="1weather"></a>
 <details>
 <summary><img src=".github/assets/icons/oneweather.png" width="18" align="top">&nbsp;&nbsp;1Weather&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
@@ -725,6 +725,39 @@
 
 </details>
 
+<a id="network-analyzer"></a>
+<details>
+<summary><img src=".github/assets/icons/netanalyzer.png" width="18" align="top">&nbsp;&nbsp;Network Analyzer&nbsp;&nbsp;•&nbsp;&nbsp;18 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 5.1 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="network-analyzer-bonjour-browser"></a>[Bonjour browser](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/bonjour/BonjourBrowserPatch.kt) | Lists the Bonjour services announced on the Wi-Fi network, grouped by type, with each service's host, address, port and TXT records. |
+| <a id="network-analyzer-common-ports-list"></a>[Common ports list](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/commonports/CommonPortsPatch.kt) | Adds an editor for the ports the Common port scan checks. |
+| <a id="network-analyzer-custom-device-names"></a>[Custom device names](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/devicenames/CustomDeviceNamesPatch.kt) | Adds custom names for Wi-Fi networks and LAN devices, shown in the Wi-Fi and LAN lists. |
+| <a id="network-analyzer-export-results"></a>[Export results](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/export/ExportResultsPatch.kt) | Adds an export menu to Ping, Traceroute, Port Scan, DNS, Whois, LAN Scan, Wi-Fi Signal and Information, with plain text and CSV output. |
+| <a id="network-analyzer-external-ip-details"></a>[External IP details](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/externalip/ExternalIpDetailsPatch.kt) | Adds a Details button to the External IP rows that shows the address's hostname, network operator and location. |
+| <a id="network-analyzer-host-details"></a>[Host details](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/hostdetails/HostDetailsPatch.kt) | Adds a details page for each ping reply and traceroute hop with its address, hostname, round-trip times, TTL, AS and location. |
+| <a id="network-analyzer-lan-device-details"></a>[LAN device details](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/lan/LanDeviceDetailsPatch.kt) | Adds a details page for each device in the LAN scan with its names, Wake on LAN, Bonjour and UPnP services and web interface, plus text and CSV export of the scan. |
+| <a id="network-analyzer-lan-scan-history"></a>[LAN scan history](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/lanhistory/LanScanHistoryPatch.kt) | Saves each finished LAN scan and its devices, lets you star, delete or clear saved scans, and scans a custom IP range. |
+| <a id="network-analyzer-ping-statistics"></a>[Ping statistics](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/pingstatistics/PingStatisticsPatch.kt) | Adds a bar chart of the current or last ping's round-trip times with min, median, max and lost packets. |
+| <a id="network-analyzer-remove-ads"></a>[Remove ads](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/ads/RemoveAdsPatch.kt) | Removes the banner ads, the ad consent prompt and the Pro upgrade prompts. |
+| <a id="network-analyzer-settings"></a>[Settings](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/settings/SettingsPatch.kt) | Adds a Settings screen with the theme, Wi-Fi scan frequency and 6 GHz scan options. |
+| <a id="network-analyzer-speed-test"></a>[Speed test](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/speedtest/SpeedTestPatch.kt) | Adds an internet speed test with download and upload charts and a test history. |
+| <a id="network-analyzer-tool-options"></a>[Tool options](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/tooloptions/ToolOptionsPatch.kt) | Adds ping protocol, TCP ping, probe delay, payload size, don't fragment and audible ping, traceroute and port scan delays, whois and RDAP servers, and DNS flags. |
+| <a id="network-analyzer-tools-history"></a>[Tools history](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/toolshistory/ToolsHistoryPatch.kt) | Lists the hosts queried in Tools with their last options, and lets you star or delete them. Tapping an entry opens it in Tools. |
+| <a id="network-analyzer-upnp-browser"></a>[UPnP browser](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/upnp/UpnpBrowserPatch.kt) | Lists the UPnP devices on the Wi-Fi network with their model, manufacturer, embedded devices and services. |
+| <a id="network-analyzer-visual-traceroute"></a>[Visual traceroute](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/visualtraceroute/VisualTraceroutePatch.kt) | Shows the hops of the current or last traceroute on an OpenStreetMap map. Map tiles load from tile.openstreetmap.org. |
+| <a id="network-analyzer-wi-fi-channel-usage"></a>[Wi-Fi channel usage](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/channelusage/ChannelUsagePatch.kt) | Adds a chart of how busy each Wi-Fi channel is, stacking the networks that share it. |
+| <a id="network-analyzer-wi-fi-network-details"></a>[Wi-Fi network details](patches/src/main/kotlin/app/morphe/patches/netanalyzer/misc/wifidetails/WifiDetailsPatch.kt) | Adds a details page for each network in the Signal list with its channel range, utilization, beamforming support, maximum speed and modulation. |
+
+</details>
+
 <a id="notesnook"></a>
 <details>
 <summary><img src=".github/assets/icons/notesnook.png" width="18" align="top">&nbsp;&nbsp;Notesnook&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
@@ -827,6 +860,22 @@
 
 </details>
 
+<a id="prayer-times-and-qibla"></a>
+<details>
+<summary><img src=".github/assets/icons/prayertimes.png" width="18" align="top">&nbsp;&nbsp;Prayer Times and Qibla&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 3.8.3 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="prayer-times-and-qibla-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/prayertimes/misc/premium/UnlockPremiumPatch.kt) | Unlocks random Adhan, unlimited personal reminders, theme colors and other Pro settings. |
+
+</details>
+
 <a id="projectivy-launcher"></a>
 <details>
 <summary><img src=".github/assets/icons/projectivy.png" width="18" align="top">&nbsp;&nbsp;Projectivy Launcher&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
@@ -841,6 +890,24 @@
 |----------|----------------|
 | <a id="projectivy-launcher-disable-tracking"></a>[Disable tracking](patches/src/main/kotlin/app/morphe/patches/projectivy/misc/tracking/DisableTrackingPatch.kt) | Disables analytics and crash reporting. |
 | <a id="projectivy-launcher-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/projectivy/misc/premium/UnlockPremiumPatch.kt) | Unlocks all premium features. |
+
+</details>
+
+<a id="proton-authenticator"></a>
+<details>
+<summary><img src=".github/assets/icons/protonauthenticator.png" width="18" align="top">&nbsp;&nbsp;Proton Authenticator&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 1.3.10 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="proton-authenticator-amoled-dark-theme"></a>[AMOLED dark theme](patches/src/main/kotlin/app/morphe/patches/protonauthenticator/misc/theme/AmoledThemePatch.kt) | Replaces the dark theme background with pure black. |
+| <a id="proton-authenticator-custom-accent-color"></a>[Custom accent color](patches/src/main/kotlin/app/morphe/patches/protonauthenticator/misc/theme/AccentColorPatch.kt) | Changes the accent color. Choose a color in the patches menu. |
+| <a id="proton-authenticator-material-3-switches"></a>[Material 3 switches](patches/src/main/kotlin/app/morphe/patches/protonauthenticator/misc/theme/MaterialSwitchesPatch.kt) | Adds check and close icons to switches. |
 
 </details>
 
@@ -914,8 +981,8 @@
 
 **🎯 Supported versions:**
 
-| 5.20.39.0 | 5.20.57.0 |
-| :---: | :---: |
+| 5.20.39.0 | 5.20.57.0 | 5.20.74.0 |
+| :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
@@ -1019,6 +1086,24 @@
 
 </details>
 
+<a id="radio-javan"></a>
+<details>
+<summary><img src=".github/assets/icons/radiojavan.png" width="18" align="top">&nbsp;&nbsp;Radio Javan&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 11.20.1 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="radio-javan-disable-tracking"></a>[Disable tracking](patches/src/main/kotlin/app/morphe/patches/radiojavan/misc/tracking/DisableTrackingPatch.kt) | Stops Firebase Analytics, Crashlytics and Firebase Sessions from collecting usage data. |
+| <a id="radio-javan-hide-ads"></a>[Hide ads](patches/src/main/kotlin/app/morphe/patches/radiojavan/misc/ads/HideAdsPatch.kt) | Removes banner, interstitial, app open and podcast audio ads, the launch promo video and the ad consent form. |
+| <a id="radio-javan-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/radiojavan/misc/premium/UnlockPremiumPatch.kt) | Unlocks RJ Premium downloads, high quality audio, lyrics, unlimited skips and song selection, and hides ads. Requires a signed-in account. |
+
+</details>
+
 <a id="raindrop-io"></a>
 <details>
 <summary><img src=".github/assets/icons/raindrop.png" width="18" align="top">&nbsp;&nbsp;Raindrop.io&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
@@ -1055,7 +1140,7 @@
 
 <a id="readera"></a>
 <details>
-<summary><img src=".github/assets/icons/readera.png" width="18" align="top">&nbsp;&nbsp;ReadEra&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<summary><img src=".github/assets/icons/readera.png" width="18" align="top">&nbsp;&nbsp;ReadEra&nbsp;&nbsp;•&nbsp;&nbsp;13 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -1065,7 +1150,19 @@
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
-| <a id="readera-remove-nags"></a>[Remove nags](patches/src/main/kotlin/app/morphe/patches/readera/misc/nags/RemoveNagsPatch.kt) | Removes the rate this app dialog, the promotional dialogs shown on startup and the Premium button in the toolbar. |
+| <a id="readera-background-listening"></a>[Background listening](patches/src/main/kotlin/app/morphe/patches/readera/misc/background/BackgroundListeningPatch.kt) | Keeps text-to-speech playing while the app is in the background or the screen is off. |
+| <a id="readera-colored-quotes"></a>[Colored quotes](patches/src/main/kotlin/app/morphe/patches/readera/misc/highlightcolors/ColoredQuotesPatch.kt) | Adds a color picker for quotes and highlights each quote in its own color. |
+| <a id="readera-custom-fonts"></a>[Custom fonts](patches/src/main/kotlin/app/morphe/patches/readera/misc/fonts/CustomFontsPatch.kt) | Adds fonts from a folder you choose to the reading fonts. |
+| <a id="readera-dictionary-section"></a>[Dictionary section](patches/src/main/kotlin/app/morphe/patches/readera/misc/dictionary/DictionarySectionPatch.kt) | Adds the Dictionary section with all saved words to the main menu. |
+| <a id="readera-dictionary-word-colors"></a>[Dictionary word colors](patches/src/main/kotlin/app/morphe/patches/readera/misc/highlightcolors/DictionaryWordColorsPatch.kt) | Adds a color picker for dictionary words. |
+| <a id="readera-footnote-speech"></a>[Footnote speech](patches/src/main/kotlin/app/morphe/patches/readera/misc/footnotes/FootnoteSpeechPatch.kt) | Adds an option to read footnotes aloud during text-to-speech. |
+| <a id="readera-library-full-screen"></a>[Library full screen](patches/src/main/kotlin/app/morphe/patches/readera/misc/fullscreen/LibraryFullScreenPatch.kt) | Adds the option to use full-screen mode in the library as well as while reading. |
+| <a id="readera-library-view-modes"></a>[Library view modes](patches/src/main/kotlin/app/morphe/patches/readera/misc/viewmode/LibraryViewModesPatch.kt) | Adds the Full, Brief, Thumbnails and Grid views to book lists. |
+| <a id="readera-page-thumbnails"></a>[Page thumbnails](patches/src/main/kotlin/app/morphe/patches/readera/misc/minipages/PageThumbnailsPatch.kt) | Adds the page thumbnails button to the reader for browsing all pages of a book. |
+| <a id="readera-quotes-and-notes-section"></a>[Quotes and notes section](patches/src/main/kotlin/app/morphe/patches/readera/misc/notes/QuotesAndNotesPatch.kt) | Adds a section to the main menu with the quotes, bookmarks and reviews from all books. |
+| <a id="readera-remove-nags"></a>[Remove nags](patches/src/main/kotlin/app/morphe/patches/readera/misc/nags/RemoveNagsPatch.kt) | Removes the rate this app dialog, the promotional dialogs shown on startup and the Go to Premium buttons in the toolbar and its menu. |
+| <a id="readera-skip-headers-and-footers"></a>[Skip headers and footers](patches/src/main/kotlin/app/morphe/patches/readera/misc/skipheaders/SkipHeadersPatch.kt) | Adds an option to skip headers, footers and page numbers during text-to-speech. Applies to PDF and DjVu documents. |
+| <a id="readera-speech-rate-slider"></a>[Speech rate slider](patches/src/main/kotlin/app/morphe/patches/readera/misc/speechrate/SpeechRateSliderPatch.kt) | Adds a text-to-speech speed slider from 0.1x to 4x, saved per voice. |
 
 </details>
 
@@ -1325,6 +1422,23 @@
 |----------|----------------|
 | <a id="vpnify-disable-rating-prompt"></a>[Disable rating prompt](patches/src/main/kotlin/app/morphe/patches/vpnify/misc/review/DisableRatingPromptPatch.kt) | Stops the Google Play rating prompt from appearing. |
 | <a id="vpnify-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/vpnify/misc/premium/UnlockPremiumPatch.kt) | Unlocks premium, removes ads and the free session time limit. |
+
+</details>
+
+<a id="wallmaa"></a>
+<details>
+<summary><img src=".github/assets/icons/wallmaa.png" width="18" align="top">&nbsp;&nbsp;Wallmaa&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 1.0.1 |
+| :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description |
+|----------|----------------|
+| <a id="wallmaa-disable-tracking"></a>[Disable tracking](patches/src/main/kotlin/app/morphe/patches/wallmaa/misc/tracking/DisableTrackingPatch.kt) | Stops the LevelPlay ad mediation SDK and its ad networks from starting. Ads no longer load. |
+| <a id="wallmaa-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/wallmaa/misc/premium/UnlockPremiumPatch.kt) | Unlocks every collection and removes ads and the download and apply limits. |
 
 </details>
 

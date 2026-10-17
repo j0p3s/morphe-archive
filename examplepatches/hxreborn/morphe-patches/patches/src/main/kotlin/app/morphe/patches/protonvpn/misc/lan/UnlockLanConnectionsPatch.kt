@@ -28,8 +28,7 @@ val unlockLanConnectionsPatch = bytecodePatch(
         markPatchApplied("unlockLanConnections")
         unlockUserSetting(
             LanConnectionsViewStateFingerprint,
-            freeUserParameter = 3,
-            LanConnectionsRestrictionFingerprint,
+            lanConnectionsRestrictionFingerprint(),
         )
     }
 }

@@ -1,0 +1,35 @@
+## [1.0.0-dev.5](https://github.com/Sudashiii/at-tv-patches/compare/v1.0.0-dev.4...v1.0.0-dev.5) (2026-10-16)
+
+### ✨ New Features
+
+* Feat/orf on patches ([#7](https://github.com/Sudashiii/at-tv-patches/issues/7)) ([71c1c1e](https://github.com/Sudashiii/at-tv-patches/commit/71c1c1e7794d4b0aa3fbb40ebebfc431a0e364ba))
+
+## [1.0.0-dev.4](https://github.com/Sudashiii/servus-patches/compare/v1.0.0-dev.3...v1.0.0-dev.4) (2026-10-09)
+
+### ✨ New Features
+
+* Add "Reject cookie banner" patch ([#6](https://github.com/Sudashiii/servus-patches/issues/6)) ([2bb5bb2](https://github.com/Sudashiii/servus-patches/commit/2bb5bb20b12c8ae717306aa22c0698ed8ab00ebb))
+
+## [1.0.0-dev.3](https://github.com/Sudashiii/servus-patches/compare/v1.0.0-dev.2...v1.0.0-dev.3) (2026-10-09)
+
+### ✨ New Features
+
+* Add "Disable review prompts" patch ([#4](https://github.com/Sudashiii/servus-patches/issues/4)) ([6f79604](https://github.com/Sudashiii/servus-patches/commit/6f79604bcf00fb123071b23b2e38342eabc518c5))
+
+## [1.0.0-dev.2](https://github.com/Sudashiii/servus-patches/compare/v1.0.0-dev.1...v1.0.0-dev.2) (2026-10-09)
+
+### ✨ New Features
+
+* Add "Block forced updates" patch ([#3](https://github.com/Sudashiii/servus-patches/issues/3)) ([c77c5de](https://github.com/Sudashiii/servus-patches/commit/c77c5de46e1729d7bb15ff23185c344ad009463a))
+
+## 1.0.0-dev.1 (2026-10-09)
+
+### ✨ New Features
+
+* Add "Disable tracking" patch ([#1](https://github.com/Sudashiii/servus-patches/issues/1)) ([1cad68c](https://github.com/Sudashiii/servus-patches/commit/1cad68c5059abbd11cd64f154ebf5f825837de56))
+
+## 1.0.0 (2026-10-04)
+
+### ✨ New Features
+
+* Add "Disable video ads" patch for ServusTV On ([b7790de](https://github.com/Sudashiii/servus-patches/commit/b7790dec2bd2cedf65fdac8f6243d24913dedc37))

@@ -7,6 +7,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_ONECRICKET
+import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
@@ -118,8 +119,9 @@ val disableAdsPatch = bytecodePatch(
             name == "onStart" && params.isEmpty()
         }
 
-        // AdMob backstop: never initialize, every load is a no-op.
-        neuter("${GMA}MobileAds;", "MobileAds.initialize") { _, name -> name == "initialize" }
+        // AdMob backstop: never initialize (and neuter the other MobileAds statics, which throw
+        // without init; AGENTS.md rule 9), every load is a no-op.
+        neutraliseMobileAdsStatics("initialize")
         GMA_LOADERS.forEach { relative ->
             neuter("$GMA$relative;", relative) { _, name ->
                 name == "load" || name == "loadAd" || name == "loadAds"

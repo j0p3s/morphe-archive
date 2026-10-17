@@ -76,24 +76,19 @@ def decide(number, body, requests, patches_list, registry=None, title="", now=No
     if package and package.lower() in supported:
         verdict, reason = "close", "completed"
         lines.append(
-            f"`{package}` is already patched as {supported[package.lower()]}"
+            f"The package `{package}` is already supported as {supported[package.lower()]}."
         )
     elif open_same:
         canonical = open_same[0]
         verdict, reason, duplicate_of = "close", "duplicate", canonical["number"]
         lines.append(
-            f"duplicate of {link(canonical)}, which already requests `{package}`"
+            f"This duplicates issue {link(canonical)}, which already requests `{package}`."
         )
     elif same_package:
         prior = same_package[-1]
         verdict, labels = "flag", ["duplicate"]
         lines.append(
-            f"{link(prior)} already asked for `{package}`"
-        )
-    elif not package:
-        verdict, labels = "flag", ["needs info"]
-        lines.append(
-            "no package name found"
+            f"Closed issue {link(prior)} already requested `{package}`."
         )
 
     this = next((r for r in requests if r["number"] == number), {})
@@ -111,7 +106,7 @@ def decide(number, body, requests, patches_list, registry=None, title="", now=No
                 labels.append("duplicate")
             refs = ", ".join(f"{r['name']} (already supported)" if not r["number"] else link(r) for r in lookalikes)
             lines.append(
-                f"this may be the same app as {refs}, but the package name differs or is missing"
+                f"This may be the same app as {refs}, but the package name differs or is missing."
             )
 
     bundles = []
@@ -129,9 +124,19 @@ def decide(number, body, requests, patches_list, registry=None, title="", now=No
             ]
             if len(bundles) > MAX_LISTED:
                 rows.append(f"- {len(bundles) - MAX_LISTED} more bundles")
-            lines.append(
-                f"other bundles already patch `{package}`:\n\n" + "\n".join(rows)
-            )
+            if verdict == "pass":
+                verdict = "flag"
+            if "needs info" not in labels:
+                labels.append("needs info")
+            if len(bundles) == 1:
+                lines.append(
+                    f"{rows[0][2:]} already patches `{package}`. Which of the requested features does it not cover?"
+                )
+            else:
+                lines.append(
+                    f"These bundles already patch `{package}`:\n\n" + "\n".join(rows)
+                    + "\n\nWhich of the requested features do they not cover?"
+                )
 
     return {
         "package": package,

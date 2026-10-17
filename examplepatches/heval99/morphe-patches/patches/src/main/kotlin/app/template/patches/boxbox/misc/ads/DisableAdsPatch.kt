@@ -6,6 +6,7 @@ import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_BOXBOX
+import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.TwoRegisterInstruction
@@ -73,7 +74,10 @@ val disableAdsPatch = bytecodePatch(
 
         // 3. Google Mobile Ads (5.4.17+), belt and braces: the SDK never initialises and
         // interstitial, rewarded and banner loads do nothing. Optional, since 5.4.16 has no GMA.
-        MobileAdsInitializeFingerprint.methodOrNull?.returnEarly()
+        // MobileAds keeps its name but R8 inlines initialize into a static a(...); every static
+        // void on it (that, setPlugin, stop) returns at once, since they throw without init
+        // (AGENTS.md rule 9).
+        neutraliseMobileAdsStatics()
         FullScreenAdLoadFingerprint.matchAllOrNull()?.forEach { it.method.returnEarly() }
         BaseAdViewLoadAdFingerprint.methodOrNull?.returnEarly()
     }

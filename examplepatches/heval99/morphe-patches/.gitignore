@@ -155,3 +155,6 @@ CLAUDE.md
 .mimosa/
 .video_agent/
 Crashlogs/
+
+# Local request queue (never commit)
+docs/request-queue.local.md

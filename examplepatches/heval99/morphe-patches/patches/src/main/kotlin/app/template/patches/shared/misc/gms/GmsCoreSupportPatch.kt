@@ -92,6 +92,9 @@ private val SIGNATURE_SHA1_REGEX = Regex("^[0-9a-f]{40}$")
  * @param default Whether the patch is enabled by default.
  * @param dependencies App-specific patches applied together with this one (for example the
  *        app's "Spoof signature", which Firebase needs before FCM can register through MicroG RE).
+ * @param allowClone Whether to offer the "Package name" option (original or `<package>.morphe`
+ *        clone). When false the option is not registered and the original package is always kept,
+ *        for apps whose clone cannot install next to the stock app.
  * @param executeBlock Additional app-specific bytecode changes.
  */
 fun gmsCoreSupportPatch(
@@ -102,6 +105,7 @@ fun gmsCoreSupportPatch(
     earlyReturnFingerprints: Set<Fingerprint> = emptySet(),
     default: Boolean = true,
     dependencies: Set<Patch<*>> = emptySet(),
+    allowClone: Boolean = true,
     executeBlock: BytecodePatchContext.() -> Unit = {},
 ): BytecodePatch {
     require(PACKAGE_NAME_REGEX.matches(fromPackageName)) { "Invalid package name: $fromPackageName" }
@@ -109,7 +113,7 @@ fun gmsCoreSupportPatch(
         "Signature must be a lowercase hex SHA-1 without colons: $spoofedPackageSignature"
     }
 
-    val packageNameOption = stringOption(
+    val packageNameOption = if (!allowClone) null else stringOption(
         key = "packageName",
         default = fromPackageName,
         values = mapOf(
@@ -155,7 +159,7 @@ fun gmsCoreSupportPatch(
 
         extendWith("extensions/gmscore.mpe")
 
-        packageNameOption()
+        packageNameOption?.let { it() }
 
         execute {
             // The two library fingerprints are shared by every app's "GmsCore support" patch.
@@ -379,12 +383,16 @@ private fun BytecodePatchContext.rewriteGmsStrings(extra: Map<String, String>) {
 private fun gmsCoreSupportResourcePatch(
     fromPackageName: String,
     spoofedPackageSignature: String,
-    packageNameOption: Option<String>,
+    packageNameOption: Option<String>?,
     renamedManifestStrings: MutableMap<String, String>,
 ) = resourcePatch {
     execute {
-        val toPackageName = packageNameOption.value
-            ?: throw PatchException("Package name option is not set")
+        // No option (allowClone = false): always keep the original package.
+        val toPackageName = if (packageNameOption == null) {
+            fromPackageName
+        } else {
+            packageNameOption.value ?: throw PatchException("Package name option is not set")
+        }
 
         document("AndroidManifest.xml").use { document ->
             renamedManifestStrings.clear()

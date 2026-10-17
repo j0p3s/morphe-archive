@@ -6,6 +6,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_ONEFOOTBALL
+import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 
 // OneFootball's app code is obfuscated, but every ad runs through Google Mobile Ads
 // (com.google.android.gms.ads), whose class and method names are stable library API.
@@ -36,11 +37,10 @@ val disableAdsPatch = bytecodePatch(
     compatibleWith(COMPATIBILITY_ONEFOOTBALL)
 
     execute {
-        // Never initialize the ads SDK.
-        methods("MobileAds")
-            .filter { it.implementation != null }
-            .filter { it.name == "initialize" }
-            .forEach { it.returnEarly() }
+        // Never initialize the ads SDK, and neuter the other MobileAds statics, which throw
+        // without init (AGENTS.md rule 9): the internal feature-flag screen calls openDebugMenu
+        // with no catch.
+        neutraliseMobileAdsStatics()
 
         // Direct loads become no-ops.
         for (relative in AD_CLASSES) {

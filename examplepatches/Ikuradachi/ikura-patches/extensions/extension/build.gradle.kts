@@ -3,5 +3,5 @@ extension {
 }
 
 android {
-    namespace = "app.ikura.extension"
+    namespace = "app.template.extension"
 }

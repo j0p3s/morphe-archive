@@ -11,6 +11,7 @@ import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.LayerDrawable;
@@ -328,6 +329,107 @@ public class ReelSeekThumbTest {
         asked.set(0);
         pill.draw(new Canvas(pixels));
         assertEquals("arrived, no more frames", 0, asked.get());
+    }
+
+    /**
+     * #10, as logged on the S22: Instagram moves the bar with an animated setProgress, and Android sets the
+     * new level, then starts its own short animation over from the old one, so the level went new, old,
+     * new within a frame. The line goes by the bar's progress, so that doesn't restart its ease, and the
+     * handle stays on the line's end wherever Android's animation has it.
+     */
+    @Test public void androidsOwnProgressAnimationDoesNotRestartTheEase() {
+        Settings.BIG_REEL_SEEK_BAR.save(true);
+        refresh();
+        ReelTimeLabel.Thumb thumb = (ReelTimeLabel.Thumb) bar.getThumb();
+        ReelTimeLabel.Pill line = (ReelTimeLabel.Pill) ((LayerDrawable) bar.getProgressDrawable())
+                .findDrawableByLayerId(android.R.id.progress);
+        int room = bar.getWidth() - bar.getPaddingLeft() - bar.getPaddingRight()
+                - thumb.getIntrinsicWidth() + 2 * bar.getThumbOffset();
+        ShadowSystemClock.advanceBy(ReelTimeLabel.Pill.EASE_MAX_MS + 1, TimeUnit.MILLISECONDS);
+        bar.setProgress(30);
+        ShadowSystemClock.advanceBy(100, TimeUnit.MILLISECONDS);
+        long step = SystemClock.uptimeMillis();
+        bar.setProgress(40);
+        line.setLevel(3000);
+        ShadowSystemClock.advanceBy(10, TimeUnit.MILLISECONDS);
+        line.setLevel(4000);
+        long now = SystemClock.uptimeMillis();
+        float shown = line.shownLevel(now);
+        assertTrue("still on its way a frame later, not there at once: " + shown, shown > 3000f && shown < 3300f);
+        assertEquals("the handle on the line's end", (shown - 4000f) / 10000f * room, thumb.shift(), 0.5f);
+        line.setLevel(3000);
+        assertEquals("the handle on the line's end while Android has it back", (shown - 3000f) / 10000f * room,
+                thumb.shift(), 0.5f);
+        line.setLevel(4000);
+        assertEquals("the animation doesn't restart the ease", shown, line.shownLevel(now), 0.01f);
+        ShadowSystemClock.advanceBy(ReelTimeLabel.Pill.EASE_MAX_MS, TimeUnit.MILLISECONDS);
+        assertEquals(4000f, line.shownLevel(SystemClock.uptimeMillis()), 0.01f);
+        assertTrue("eased over the step's time", SystemClock.uptimeMillis() - step > 100);
+
+        // A real step back (a new reel) is drawn at once, and Android's animation from the old spot down
+        // to it doesn't pull the line back up.
+        bar.setProgress(0);
+        line.setLevel(4000);
+        line.setLevel(1500);
+        assertEquals(0f, line.shownLevel(SystemClock.uptimeMillis()), 0.01f);
+    }
+
+    /**
+     * #10: Android puts the handle at Instagram's stepped level, where it covered the eased line's end
+     * and still jumped. It draws back by as much as the line is behind, and where Android put it once
+     * the line arrives.
+     */
+    @Test public void theHandleSlidesAlongWithTheEasedLine() {
+        Settings.BIG_REEL_SEEK_BAR.save(true);
+        refresh();
+        assertTrue(bar.getThumb() instanceof ReelTimeLabel.Thumb);
+        ReelTimeLabel.Thumb thumb = (ReelTimeLabel.Thumb) bar.getThumb();
+        ReelTimeLabel.Pill line = (ReelTimeLabel.Pill) ((LayerDrawable) bar.getProgressDrawable())
+                .findDrawableByLayerId(android.R.id.progress);
+        int room = bar.getWidth() - bar.getPaddingLeft() - bar.getPaddingRight()
+                - thumb.getIntrinsicWidth() + 2 * bar.getThumbOffset();
+        ShadowSystemClock.advanceBy(ReelTimeLabel.Pill.EASE_MAX_MS + 1, TimeUnit.MILLISECONDS);
+        bar.setProgress(30);
+        assertEquals("after a pause, where Android put it", 0f, thumb.shift(), 0.01f);
+
+        ShadowSystemClock.advanceBy(100, TimeUnit.MILLISECONDS);
+        bar.setProgress(40);
+        float start = line.behind(SystemClock.uptimeMillis()) * room;
+        assertEquals("starts about a tenth of the bar back", -room / 10f, start, 2f);
+        assertEquals("on the line's end", start, thumb.shift(), 0.5f);
+        Bitmap pixels = Bitmap.createBitmap(400, 28, Bitmap.Config.ARGB_8888);
+        thumb.draw(new Canvas(pixels));
+        Rect placed = thumb.getBounds();
+        int y = Math.max(0, Math.min(27, placed.centerY()));
+        assertEquals("drawn on the line's end", Color.WHITE, pixels.getPixel(placed.centerX() + Math.round(start), y));
+        assertEquals("not where Android put it", 0, Color.alpha(pixels.getPixel(placed.centerX(), y)));
+
+        ShadowSystemClock.advanceBy(50, TimeUnit.MILLISECONDS);
+        float later = thumb.shift();
+        assertEquals("still on the line's end", line.behind(SystemClock.uptimeMillis()) * room, later, 0.5f);
+        assertTrue("closer to Instagram's level", later > start + 1f && later < -1f);
+        ShadowSystemClock.advanceBy(ReelTimeLabel.Pill.EASE_MAX_MS, TimeUnit.MILLISECONDS);
+        assertEquals("arrived, where Android put it", 0f, thumb.shift(), 0.01f);
+        pixels.eraseColor(Color.TRANSPARENT);
+        thumb.draw(new Canvas(pixels));
+        assertEquals(Color.WHITE, pixels.getPixel(placed.centerX(), y));
+
+        bar.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        bar.setProgress(45);
+        ShadowSystemClock.advanceBy(100, TimeUnit.MILLISECONDS);
+        bar.setProgress(55);
+        boolean rtl = bar.getLayoutDirection() == View.LAYOUT_DIRECTION_RTL;
+        float back = line.behind(SystemClock.uptimeMillis()) * room;
+        assertTrue(back < -1f);
+        assertEquals("right to left, it draws back toward the right", rtl ? -back : back, thumb.shift(), 0.5f);
+
+        Settings.BIG_REEL_SEEK_BAR.save(false);
+        Settings.REEL_SEEK_THUMB.save(true);
+        refresh();
+        ShadowSystemClock.advanceBy(100, TimeUnit.MILLISECONDS);
+        bar.setProgress(60);
+        assertEquals("Instagram's own track has no easing to follow", 0f,
+                ((ReelTimeLabel.Thumb) bar.getThumb()).shift(), 0.01f);
     }
 
     /**

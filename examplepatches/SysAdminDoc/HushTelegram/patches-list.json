@@ -1,8 +1,8 @@
 {
-  "version": "v0.0.17",
+  "version": "v0.0.18",
   "appNames": {
-    "org.telegram.messenger.web": "Telegram",
-    "org.telegram.messenger.beta": "Telegram Beta"
+    "org.telegram.messenger": "Telegram",
+    "org.telegram.messenger.web": "Telegram (telegram.org)"
   },
   "patches": [
     {
@@ -15,16 +15,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -33,28 +51,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -72,16 +72,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -90,28 +108,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -129,16 +129,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -147,28 +165,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -186,16 +186,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -204,28 +222,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -242,16 +242,34 @@
         "AMOLED black"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -260,28 +278,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -299,16 +299,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -317,28 +335,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -348,7 +348,7 @@
     },
     {
       "name": "Disable analytics",
-      "description": "Stops Telegram from reporting how you use the app, like how long you read channel posts and what you tap on Premium screens, and keeps the camera from reporting your phone's maker and model. On Telegram Beta it also turns off Firebase's crash and session reports from the next start. Messages, calls and notifications work as before. On by default. Turn it off in HushTelegram settings > Privacy.",
+      "description": "Stops Telegram from reporting how you use the app, like how long you read channel posts and what you tap on Premium screens, and keeps the camera from reporting your phone's maker and model. Messages, calls and notifications work as before. On by default. Turn it off in HushTelegram settings > Privacy.",
       "category": "Privacy",
       "use": true,
       "dependencies": [
@@ -356,16 +356,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -374,28 +392,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -413,16 +413,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -431,28 +449,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -470,16 +470,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -488,28 +506,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -527,16 +527,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -545,28 +563,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -584,16 +584,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -602,28 +620,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -641,16 +641,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -659,28 +677,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -698,16 +698,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -716,28 +734,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -755,16 +755,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -773,28 +791,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -812,16 +812,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -830,28 +848,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -869,16 +869,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -887,28 +905,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -926,16 +926,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -944,28 +962,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -983,16 +983,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1001,28 +1019,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1040,16 +1040,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1058,28 +1076,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1097,16 +1097,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1115,28 +1133,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1154,16 +1154,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1172,28 +1190,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1211,16 +1211,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1229,28 +1247,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1268,16 +1268,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1286,28 +1304,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1325,16 +1325,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1343,28 +1361,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1382,16 +1382,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1400,28 +1418,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1439,16 +1439,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1457,28 +1475,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1496,16 +1496,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1514,28 +1532,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1553,16 +1553,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1571,28 +1589,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1610,16 +1610,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1628,28 +1646,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1667,16 +1667,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1685,28 +1703,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1724,16 +1724,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1742,28 +1760,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1781,16 +1781,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1799,28 +1817,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1838,16 +1838,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1856,28 +1874,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1895,16 +1895,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1913,28 +1931,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -1952,16 +1952,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -1970,28 +1988,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2009,16 +2009,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2027,28 +2045,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2066,16 +2066,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2084,28 +2102,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2123,16 +2123,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2141,28 +2159,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2180,16 +2180,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2198,28 +2216,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2237,16 +2237,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2255,28 +2273,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2294,16 +2294,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2312,28 +2330,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2348,16 +2348,34 @@
       "use": false,
       "dependencies": [],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2366,28 +2384,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2415,16 +2415,34 @@
         "ResourcePatch"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2433,28 +2451,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2472,16 +2472,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2490,28 +2508,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2530,16 +2530,34 @@
         "Message times with seconds"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2548,28 +2566,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2587,16 +2587,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2605,28 +2623,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2644,16 +2644,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2662,28 +2680,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2702,16 +2702,34 @@
         "ResourcePatch"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2720,28 +2738,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2759,16 +2759,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2777,28 +2795,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2816,16 +2816,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2834,28 +2852,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2873,16 +2873,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2891,28 +2909,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2930,16 +2930,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -2948,28 +2966,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -2987,16 +2987,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3005,28 +3023,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3044,16 +3044,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3062,28 +3080,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3101,16 +3101,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3119,28 +3137,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3158,16 +3158,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3176,28 +3194,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3215,16 +3215,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3233,28 +3251,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3272,16 +3272,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3290,28 +3308,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3329,16 +3329,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3347,85 +3365,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
-              }
-            }
-          ]
-        }
-      ],
-      "options": []
-    },
-    {
-      "name": "Turn off beta debug logs",
-      "description": "Telegram Beta always writes debug logs to your phone, its connection log included, and its own debug menu can't stop that. This stops them, so the beta only logs when you turn logs on in its debug menu. The regular telegram.org build doesn't force them, so nothing changes there. Starts off. Turn it on in HushTelegram settings > Privacy, then restart Telegram.",
-      "category": "Privacy",
-      "use": true,
-      "dependencies": [
-        "BytecodePatch",
-        "HushTelegram settings"
-      ],
-      "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
-        ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
-        ]
-      },
-      "compatibility": [
-        {
-          "name": "Telegram",
-          "packageName": "org.telegram.messenger.web",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3443,16 +3386,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3461,28 +3422,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3500,16 +3443,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3518,28 +3479,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3558,16 +3501,34 @@
         "ResourcePatch"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3576,28 +3537,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3615,16 +3558,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3633,28 +3594,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3669,16 +3612,34 @@
       "use": false,
       "dependencies": [],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3687,28 +3648,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3733,16 +3676,34 @@
       "use": false,
       "dependencies": [],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3751,28 +3712,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3809,16 +3752,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3827,28 +3788,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]
@@ -3866,16 +3809,34 @@
         "HushTelegram settings"
       ],
       "compatiblePackages": {
-        "org.telegram.messenger.web": [
-          "13.0.2"
+        "org.telegram.messenger": [
+          "13.0.3"
         ],
-        "org.telegram.messenger.beta": [
-          "13.0.2"
+        "org.telegram.messenger.web": [
+          "13.0.3"
         ]
       },
       "compatibility": [
         {
           "name": "Telegram",
+          "packageName": "org.telegram.messenger",
+          "description": null,
+          "appIconColor": 2796526,
+          "signatures": [
+            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
+          ],
+          "targets": [
+            {
+              "version": "13.0.3",
+              "experimental": false,
+              "versionCodes": {
+                "ARM64_V8A": 71831
+              }
+            }
+          ]
+        },
+        {
+          "name": "Telegram (telegram.org)",
           "packageName": "org.telegram.messenger.web",
           "description": null,
           "appIconColor": 2796526,
@@ -3884,28 +3845,10 @@
           ],
           "targets": [
             {
-              "version": "13.0.2",
+              "version": "13.0.3",
               "experimental": false,
               "versionCodes": {
-                "ARM64_V8A": 71759
-              }
-            }
-          ]
-        },
-        {
-          "name": "Telegram Beta",
-          "packageName": "org.telegram.messenger.beta",
-          "description": null,
-          "appIconColor": 2796526,
-          "signatures": [
-            "49c1522548ebacd46ce322b6fd47f6092bb745d0f88082145caf35e14dcc38e1"
-          ],
-          "targets": [
-            {
-              "version": "13.0.2",
-              "experimental": false,
-              "versionCodes": {
-                "ARM64_V8A": 71809
+                "ARM64_V8A": 71839
               }
             }
           ]

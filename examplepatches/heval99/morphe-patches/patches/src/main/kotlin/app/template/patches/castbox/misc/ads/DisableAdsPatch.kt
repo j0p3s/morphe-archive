@@ -5,6 +5,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_CASTBOX
+import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 
 // Castbox mediates ads through AppLovin MAX plus a heavy waterfall (Google Mobile
 // Ads, Meta Audience Network, InMobi, Vungle strings, Pangle, Huawei), whose class
@@ -22,9 +23,11 @@ val disableAdsPatch = bytecodePatch(
     compatibleWith(COMPATIBILITY_CASTBOX)
 
     execute {
-        // Never initialize the ad SDKs (every init/initialize overload is an entry point).
+        // Never initialize the ad SDKs (every init/initialize overload is an entry point). For
+        // GMA every MobileAds static void returns at once, including the statics that throw
+        // without init (AGENTS.md rule 9).
+        neutraliseMobileAdsStatics()
         for (owner in listOf(
-            "Lcom/google/android/gms/ads/MobileAds;",
             "Lcom/facebook/ads/AudienceNetworkAds;",
             "Lcom/inmobi/sdk/InMobiSdk;",
         )) {

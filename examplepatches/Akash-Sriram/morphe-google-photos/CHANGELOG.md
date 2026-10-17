@@ -1,3 +1,23 @@
+## [1.15.3](https://github.com/Akash-Sriram/morphe-google-photos/compare/v1.15.2...v1.15.3) (2026-10-16)
+
+### 🐛 Bug Fixes
+
+* **Google Photos - Toolkit:** restore unlocked Locked Folder items to cloud library and fix dialog warning ([834a370](https://github.com/Akash-Sriram/morphe-google-photos/commit/834a37027e266863fc5ad8b0ae909a776f18165f))
+* **Google Photos - Ui:** introduce tablet studio layout and filter controls ([6ed8e1f](https://github.com/Akash-Sriram/morphe-google-photos/commit/6ed8e1f77a8b97af82172e61108fa57e7c9ea3fb))
+
+## [1.15.2](https://github.com/Akash-Sriram/morphe-google-photos/compare/v1.15.1...v1.15.2) (2026-10-16)
+
+### 🐛 Bug Fixes
+
+* **Google Photos - Toolkit:** validate core media loader and resolve features request for locked folder unlock ([ecd9241](https://github.com/Akash-Sriram/morphe-google-photos/commit/ecd9241f3eebdb8610720eca584f33e973527c7d))
+
+## [1.15.1](https://github.com/Akash-Sriram/morphe-google-photos/compare/v1.15.0...v1.15.1) (2026-10-16)
+
+### 🐛 Bug Fixes
+
+* **Google Photos - Gms:** resolve Official package name patch conflict with GmsCore support ([#35](https://github.com/Akash-Sriram/morphe-google-photos/issues/35)) ([5ef31c9](https://github.com/Akash-Sriram/morphe-google-photos/commit/5ef31c925606b40745253ea345e694531ebe8e40))
+* **Google Photos - Ui:** dynamically update active navigation dock tab and dialog switching ([#34](https://github.com/Akash-Sriram/morphe-google-photos/issues/34)) ([9b99977](https://github.com/Akash-Sriram/morphe-google-photos/commit/9b9997712c137b7869023f7daedc0f74433638b3))
+
 ## [1.15.0](https://github.com/Akash-Sriram/morphe-google-photos/compare/v1.14.4...v1.15.0) (2026-10-15)
 
 ### 🚀 Updated App Support

@@ -56,39 +56,46 @@ runs:
           python3 "${{ github.action_path }}/app_request.py" \
             "$n" body.md requests.json "$list" bundles.json > verdict.json
           verdict=$(jq -r .verdict verdict.json)
-          [ -z "$ISSUE" ] && [ "$verdict" = pass ] && continue
           jq -j .comment verdict.json > comment.md
+          previous=$(gh api "repos/$REPO/issues/$n/comments" --paginate \
+            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- app-request-bot -->"))) | .body | @json' |
+            tail -n 1 | jq -r '. // empty')
+          if [ "$verdict" = pass ] && [ ! -s comment.md ] && [ -n "$previous" ]; then
+            printf '<!-- app-request-bot -->\nThis app request now passes the automated checks.\n' > comment.md
+          fi
+          [ -z "$ISSUE" ] && [ "$verdict" = pass ] && [ -z "$previous" ] && continue
           echo "#$n: $(jq -c 'del(.comment)' verdict.json)"
           [ "$DRY_RUN" = "true" ] && continue
 
-          existing=$(jq -r --argjson n "$n" '.[] | select(.number == $n) | .comments
-            | map(select(.body | contains("<!-- app-request-bot -->"))) | .[0].url // empty
-            | capture("issuecomment-(?<id>[0-9]+)").id' requests.json)
-          if [ -s comment.md ]; then
-            if [ -n "$existing" ]; then
-              gh api -X PATCH "repos/$REPO/issues/comments/$existing" -F body=@comment.md >/dev/null
-            else
-              gh issue comment "$n" --repo "$REPO" --body-file comment.md
-            fi
+          if [ -s comment.md ] && [ "$(cat comment.md)" != "$previous" ]; then
+            gh issue comment "$n" --repo "$REPO" --body-file comment.md
+            labels=$(jq -r '.labels | join(",")' verdict.json)
+            [ -n "$labels" ] && gh issue edit "$n" --repo "$REPO" --add-label "$labels"
           fi
-          labels=$(jq -r '.labels | join(",")' verdict.json)
-          [ -n "$labels" ] && gh issue edit "$n" --repo "$REPO" --add-label "$labels"
+          if [ -n "$previous" ]; then
+            jq -r --argjson n "$n" '.[] | select(.number == $n) | .labels[].name' requests.json |
+            while read -r label; do
+              case "$label" in "needs info"|duplicate) ;; *) continue ;; esac
+              jq -e --arg l "$label" '.labels | index($l)' verdict.json >/dev/null && continue
+              added_by=$(gh api "repos/$REPO/issues/$n/timeline" --paginate \
+                --jq ".[] | select(.event == \"labeled\" and .label.name == \"$label\") | .actor.login" | tail -n 1)
+              [ "$added_by" = "github-actions[bot]" ] && gh issue edit "$n" --repo "$REPO" --remove-label "$label"
+              true
+            done
+          fi
           if [ "$verdict" = close ]; then
             if [ "$(jq -r .reason verdict.json)" = duplicate ]; then
               gh issue close "$n" --repo "$REPO" --duplicate-of "$(jq -r .duplicate_of verdict.json)"
             else
               gh issue close "$n" --repo "$REPO" --reason "$(jq -r .reason verdict.json)"
             fi
-          elif [ "$verdict" = pass ] && [ -n "$existing" ] && [ ! -s comment.md ]; then
-            gh issue edit "$n" --repo "$REPO" --remove-label "needs info" || true
-            printf '<!-- app-request-bot -->\nchecks pass now\n' > comment.md
-            gh api -X PATCH "repos/$REPO/issues/comments/$existing" -F body=@comment.md >/dev/null
           fi
         done
 
     - name: Triage app update requests
       if: >-
         contains(github.event.issue.labels.*.name, 'app-update') &&
+        !contains(github.event.issue.labels.*.name, 'bot-wrong') &&
         github.event.issue.user.type != 'Bot' &&
         !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association)
       shell: bash
@@ -108,21 +115,18 @@ runs:
         jq -j .comment verdict.json > comment.md
         echo "#$ISSUE: $(jq -c 'del(.comment)' verdict.json)"
 
-        existing=$(gh api "repos/$REPO/issues/$ISSUE/comments?per_page=100" \
-          --jq 'map(select(.body | contains("<!-- app-update-bot -->"))) | .[0].id // empty')
-        upsert_comment() {
-          if [ -n "$existing" ]; then
-            gh api -X PATCH "repos/$REPO/issues/comments/$existing" -F body=@comment.md >/dev/null
-          else
-            gh issue comment "$ISSUE" --repo "$REPO" --body-file comment.md
-          fi
+        previous=$(gh api "repos/$REPO/issues/$ISSUE/comments" --paginate \
+          --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- app-update-bot -->"))) | .body | @json' |
+          tail -n 1 | jq -r '. // empty')
+        post_comment() {
+          [ "$(cat comment.md)" = "$previous" ] || gh issue comment "$ISSUE" --repo "$REPO" --body-file comment.md
         }
 
         case "$verdict" in
           close)
-            upsert_comment
             retitle=$(jq -r '.retitle.number // empty' verdict.json)
             [ -n "$retitle" ] && gh issue edit "$retitle" --repo "$REPO" --title "$(jq -r .retitle.title verdict.json)"
+            post_comment
             if [ "$(jq -r .reason verdict.json)" = duplicate ]; then
               gh issue close "$ISSUE" --repo "$REPO" --duplicate-of "$(jq -r .duplicate_of verdict.json)"
             else
@@ -130,16 +134,17 @@ runs:
             fi
             ;;
           flag)
-            upsert_comment
+            post_comment
             gh issue edit "$ISSUE" --repo "$REPO" --add-label "$(jq -r '.labels | join(",")' verdict.json)"
             ;;
           pass)
             title=$(jq -r .title verdict.json)
             [ "$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")" = "$title" ] || gh issue edit "$ISSUE" --repo "$REPO" --title "$title"
-            if [ -n "$existing" ]; then
-              gh issue edit "$ISSUE" --repo "$REPO" --remove-label "needs info" || true
-              printf '<!-- app-update-bot -->\nchecks pass now\n' > comment.md
-              upsert_comment
+            if [ -n "$previous" ]; then
+              jq -e '.issue.labels | map(.name) | index("needs info")' "$GITHUB_EVENT_PATH" >/dev/null &&
+                gh issue edit "$ISSUE" --repo "$REPO" --remove-label "needs info"
+              printf '<!-- app-update-bot -->\nThis app update request now passes the automated checks.\n' > comment.md
+              post_comment
             fi
             ;;
         esac
@@ -179,40 +184,49 @@ runs:
         app=$(jq -r .app verdict.json)
         if [ -n "$app" ] && [ "$verdict" != "pass" ] && [ "$ACTION" = "opened" ]; then
           dupes=$(gh search issues "$app" --repo "$REPO" --limit 4 --json number,title --jq \
-            "map(select(.number != $ISSUE)) | .[0:3] | map(\"- #\(.number): \(.title)\") | join(\"\n\")")
+            "map(select(.number != $ISSUE)) | .[0:3] | map(\"- [#\(.number)](https://redirect.github.com/$REPO/issues/\(.number)) \`\(.title | gsub(\"\`\"; \"'\"))\`\") | join(\"\n\")")
           if [ -n "$dupes" ]; then
-            printf '\npossibly related:\n%s\n' "$dupes" >> comment.md
+            printf '\nThese issues matched a search for %s:\n%s\n' "$app" "$dupes" >> comment.md
           fi
         fi
 
-        existing=$(gh api "repos/$REPO/issues/$ISSUE/comments?per_page=100" \
-          --jq 'map(select(.body | contains("<!-- triage-bot -->"))) | .[0].id // empty')
+        previous=$(gh api "repos/$REPO/issues/$ISSUE/comments" --paginate \
+          --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- triage-bot -->"))) | .body | @json' |
+          tail -n 1 | jq -r '. // empty')
 
-        upsert_comment() {
-          if [ -n "$existing" ]; then
-            gh api -X PATCH "repos/$REPO/issues/comments/$existing" -F body=@comment.md >/dev/null
-          else
+        without_related() {
+          sed '/^These issues matched a search for /,$d'
+        }
+        post_comment() {
+          [ "$(without_related < comment.md)" = "$(printf '%s\n' "$previous" | without_related)" ] ||
             gh issue comment "$ISSUE" --repo "$REPO" --body-file comment.md
-          fi
         }
 
         case "$verdict" in
           close)
-            upsert_comment
+            post_comment
             gh issue edit "$ISSUE" --repo "$REPO" --add-label incomplete
             gh issue close "$ISSUE" --repo "$REPO" --reason "not planned"
             ;;
           flag)
-            upsert_comment
+            post_comment
             labels=$(jq -r '.labels | join(",")' verdict.json)
             [ -n "$labels" ] && gh issue edit "$ISSUE" --repo "$REPO" --add-label "$labels"
+            [ -n "$previous" ] && jq -r '.issue.labels[].name' "$GITHUB_EVENT_PATH" | while read -r label; do
+              case "$label" in "needs info"|"untargeted version") ;; *) continue ;; esac
+              jq -e --arg l "$label" '.labels | index($l)' verdict.json >/dev/null && continue
+              added_by=$(gh api "repos/$REPO/issues/$ISSUE/timeline" --paginate \
+                --jq ".[] | select(.event == \"labeled\" and .label.name == \"$label\") | .actor.login" | tail -n 1)
+              [ "$added_by" = "github-actions[bot]" ] && gh issue edit "$ISSUE" --repo "$REPO" --remove-label "$label"
+              true
+            done
             if [ "$WAS_CLOSED_BY_BOT" = "true" ]; then
               gh issue reopen "$ISSUE" --repo "$REPO"
               gh issue edit "$ISSUE" --repo "$REPO" --remove-label incomplete
             fi
             ;;
           pass)
-            if [ "$WAS_CLOSED_BY_BOT" = "true" ] || [ -n "$existing" ]; then
+            if [ "$WAS_CLOSED_BY_BOT" = "true" ] || [ -n "$previous" ]; then
               gh issue edit "$ISSUE" --repo "$REPO" \
                 --remove-label incomplete \
                 --remove-label "needs info" \
@@ -220,11 +234,11 @@ runs:
             fi
             if [ "$WAS_CLOSED_BY_BOT" = "true" ]; then
               gh issue reopen "$ISSUE" --repo "$REPO"
-              printf '<!-- triage-bot -->\nreopened, the report passes the checks now\n' > comment.md
-              upsert_comment
-            elif [ -n "$existing" ]; then
-              printf '<!-- triage-bot -->\nchecks pass now\n' > comment.md
-              upsert_comment
+              printf '<!-- triage-bot -->\nThis issue was reopened because the report now passes the automated checks.\n' > comment.md
+              post_comment
+            elif [ -n "$previous" ]; then
+              printf '<!-- triage-bot -->\nThis bug report now passes the automated checks.\n' > comment.md
+              post_comment
             fi
             ;;
         esac

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "_comment": "Credits for this repo's own issues. Structured contributions entries render links to this repo's issues via sync_contributors.py --repo.",
+  "ignoredIssues": [],
+  "contributors": [
+    {
+      "username": "aeries0x",
+      "contributions": [
+        {
+          "title": "X – Default reply sorting (open replies sorted by Likes)",
+          "issue": 12
+        }
+      ]
+    }
+  ]
+}

@@ -5,8 +5,11 @@
 package app.morphe.patches.protonvpn.misc.restrictions
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.InstructionLocation
 import app.morphe.patcher.InstructionLocation.MatchAfterImmediately
+import app.morphe.patcher.extensions.InstructionExtensions.instructionsOrNull
 import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
+import app.morphe.patcher.literal
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.opcode
 import app.morphe.patcher.patch.BytecodePatchContext
@@ -20,40 +23,51 @@ import app.morphe.util.getReference
 import app.morphe.util.matchSingle
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
-import com.android.tools.smali.dexlib2.iface.reference.MethodReference
+import com.android.tools.smali.dexlib2.iface.Method
+import com.android.tools.smali.dexlib2.iface.reference.TypeReference
 
 private const val FREE_ACCOUNT = "Lapp/hxreborn/extension/protonvpn/FreeAccount;"
 
-private fun stateFlowSetValue() = methodCall(
-    name = "setValue",
+private val stateFlowInvokes = listOf(Opcode.INVOKE_INTERFACE, Opcode.INVOKE_VIRTUAL)
+
+private fun stateFlowSetValue(location: InstructionLocation = InstructionLocation.MatchAfterAnywhere()) = methodCall(
     parameters = listOf("Ljava/lang/Object;"),
     returnType = "V",
-    opcode = Opcode.INVOKE_INTERFACE,
+    opcodes = stateFlowInvokes,
+    location = location,
 )
 
 internal object UserInfoToStringFingerprint : ToStringFingerprint("PartialJointUserInt(user=")
 
-private fun BytecodePatchContext.userInfoUpdateFingerprint() = Fingerprint(
-    returnType = "Ljava/lang/Object;",
-    parameters = listOf(UserInfoToStringFingerprint.originalClassDef.type, "L"),
-    filters = listOf(
-        methodCall(definingClass = "Ljava/lang/Number;", name = "longValue"),
-        opcode(Opcode.MOVE_RESULT_WIDE, MatchAfterImmediately()),
-        stateFlowSetValue(),
-    ),
-)
+private fun Method.referencesType(type: String) = parameterTypes.firstOrNull()?.toString() == type ||
+    instructionsOrNull?.any { it.opcode == Opcode.CHECK_CAST && it.getReference<TypeReference>()?.type == type } == true
 
-private fun userInfoInvalidateFingerprint(userProvider: String) = Fingerprint(
-    definingClass = userProvider,
+private fun BytecodePatchContext.userInfoUpdateFingerprint(): Fingerprint {
+    val userInfo = UserInfoToStringFingerprint.originalClassDef.type
+    return Fingerprint(
+        returnType = "Ljava/lang/Object;",
+        parameters = listOf("L", "L"),
+        filters = listOf(
+            methodCall(definingClass = "Ljava/lang/Number;", name = "longValue"),
+            opcode(Opcode.MOVE_RESULT_WIDE, MatchAfterImmediately()),
+            stateFlowSetValue(),
+        ),
+        custom = { method, _ -> method.referencesType(userInfo) },
+    )
+}
+
+private object UserInfoInvalidateFingerprint : Fingerprint(
     returnType = "V",
     parameters = emptyList(),
     filters = listOf(
-        stateFlowSetValue(),
+        literal(0),
+        stateFlowSetValue(MatchAfterImmediately()),
+        methodCall(definingClass = "Ljava/lang/Number;", name = "longValue"),
         methodCall(definingClass = "Ljava/lang/Long;", name = "valueOf"),
         methodCall(
             parameters = listOf("Ljava/lang/Object;", "Ljava/lang/Object;"),
             returnType = "Z",
-            opcode = Opcode.INVOKE_INTERFACE,
+            opcodes = stateFlowInvokes,
         ),
     ),
 )
@@ -65,24 +79,19 @@ internal val freeAccountStatePatch = bytecodePatch {
         val userInfo = UserInfoToStringFingerprint.originalClassDef
         setExtensionMember(
             "userInfoVpnUser",
-            userInfo.methods.first {
-                it.returnType == vpnUserType && it.parameterTypes.isEmpty() && !AccessFlags.STATIC.isSet(it.accessFlags)
+            userInfo.fields.single {
+                it.type == vpnUserType && !AccessFlags.STATIC.isSet(it.accessFlags)
             }.name,
         )
         setExtensionMember("vpnUserIsFreeUser", VpnUserIsFreeUserFingerprint.originalMethod.name)
 
-        val userProvider = userInfoUpdateFingerprint().matchSingle().run {
+        userInfoUpdateFingerprint().matchSingle().run {
             method.addInstruction(
                 instructionMatches.last().index,
                 "invoke-static { p1 }, $FREE_ACCOUNT->onUserInfoChanged(Ljava/lang/Object;)V",
             )
-            method.implementation!!.instructions.firstNotNullOf { instruction ->
-                instruction.getReference<MethodReference>()?.takeIf {
-                    instruction.opcode == Opcode.INVOKE_STATIC && it.parameterTypes.singleOrNull()?.toString() == it.definingClass
-                }?.definingClass
-            }
         }
-        userInfoInvalidateFingerprint(userProvider).matchSingle().method.addInstruction(
+        UserInfoInvalidateFingerprint.matchSingle().method.addInstruction(
             0,
             "invoke-static { }, $FREE_ACCOUNT->onUserInfoInvalidated()V",
         )

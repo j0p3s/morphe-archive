@@ -12,9 +12,12 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patcher.resource.ResourceType
 import app.morphe.patcher.resource.resourceId
-import app.morphe.patches.protonvpn.misc.anchors.ServerGroupsMainScreenStateFingerprint
+import app.morphe.patches.protonvpn.misc.anchors.ServerGroupsMainScreenStateToStringFingerprint
+import app.morphe.patches.protonvpn.misc.restrictions.filterConstructorProperty
+import app.morphe.patches.protonvpn.misc.anchors.findPropertyField
 import app.morphe.patches.protonvpn.misc.anchors.setExtensionMember
 import app.morphe.patches.protonvpn.misc.anchors.toJavaClassName
+import app.morphe.patches.protonvpn.misc.anchors.unitInstanceField
 import app.morphe.patches.protonvpn.misc.restrictions.filterReturnValue
 import app.morphe.patches.protonvpn.misc.settings.patchesSettingsPatch
 import app.morphe.patches.shared.compat.AppCompatibilities
@@ -40,7 +43,7 @@ val hideUpgradePromotionsPatch = bytecodePatch(
 
         val plusBadgeId = resourceId(ResourceType.DRAWABLE, "vpn_plus_badge")
 
-        SettingRowWithIconFingerprint.matchSingle().method.apply {
+        settingRowWithIconFingerprint().matchSingle().method.apply {
             addInstructionsWithLabels(
                 0,
                 """
@@ -59,15 +62,27 @@ val hideUpgradePromotionsPatch = bytecodePatch(
         }
 
         val settingViewState = SettingsValueItemFingerprint.matchSingle().originalMethod.parameterTypes.first().toString()
-        val isRestricted = classDefBy(settingViewState).methods.single {
+        val settingViewStateClass = classDefBy(settingViewState)
+        val isRestrictedGetter = settingViewStateClass.methods.singleOrNull {
             it.returnType == "Z" && it.parameterTypes.isEmpty() && !AccessFlags.STATIC.isSet(it.accessFlags)
+        }
+        val readIsRestricted = if (isRestrictedGetter != null) {
+            """
+                invoke-virtual/range { p0 .. p0 }, $settingViewState->${isRestrictedGetter.name}()Z
+                move-result v0
+            """
+        } else {
+            val field = settingViewStateClass.instanceFields.single { it.type == "Z" }
+            """
+                move-object/from16 v0, p0
+                iget-boolean v0, v0, $settingViewState->${field.name}:Z
+            """
         }
         SettingsValueItemFingerprint.method.apply {
             addInstructionsWithLabels(
                 0,
                 """
-                    invoke-virtual/range { p0 .. p0 }, $settingViewState->${isRestricted.name}()Z
-                    move-result v0
+                    $readIsRestricted
                     if-eqz v0, :shown
                     invoke-static { }, $IS_HIDDEN
                     move-result v0
@@ -78,20 +93,34 @@ val hideUpgradePromotionsPatch = bytecodePatch(
             )
         }
 
-        ActiveNotificationsFingerprint.matchSingle().method.filterReturnValue(
-            "$PROMOTIONS_CLASS->withoutPromoNotifications(Ljava/util/List;)Ljava/util/List;",
-        )
+        setExtensionMember("apiNotificationType", findPropertyField(ApiNotificationToStringFingerprint, "type").name)
+        val inlinedActiveNotifications = inlinedActiveNotificationsFingerprint().matchOrNull()
+        if (inlinedActiveNotifications != null) {
+            inlinedActiveNotifications.run {
+                val sorted = instructionMatches.last()
+                val register = sorted.getInstruction<OneRegisterInstruction>().registerA
+                method.addInstructions(
+                    sorted.index + 1,
+                    """
+                        invoke-static/range { v$register .. v$register }, $PROMOTIONS_CLASS->withoutPromoNotifications(Ljava/util/List;)Ljava/util/List;
+                        move-result-object v$register
+                    """,
+                )
+            }
+        } else {
+            activeNotificationsFingerprint().matchSingle().method.filterReturnValue(
+                "$PROMOTIONS_CLASS->withoutPromoNotifications(Ljava/util/List;)Ljava/util/List;",
+            )
+        }
 
         setExtensionMember("serverGroupBannerClass", ServerGroupBannerToStringFingerprint.originalClassDef.type.toJavaClassName())
-        ServerGroupsMainScreenStateFingerprint.matchSingle().method.addInstructions(
-            0,
-            """
-                invoke-static/range { p2 .. p2 }, $PROMOTIONS_CLASS->withoutUpgradeBanners(Ljava/util/List;)Ljava/util/List;
-                move-result-object p2
-            """,
+        filterConstructorProperty(
+            ServerGroupsMainScreenStateToStringFingerprint,
+            "items",
+            "$PROMOTIONS_CLASS->withoutUpgradeBanners(Ljava/util/List;)Ljava/util/List;",
         )
 
-        FreeConnectionsUpsellBannerFingerprint.matchSingle().run {
+        (FreeConnectionsUpsellBannerFingerprint.matchOrNull() ?: InlinedFreeConnectionsUpsellBannerFingerprint.matchSingle()).run {
             val bannerRoot = instructionMatches.last()
             val register = bannerRoot.getInstruction<OneRegisterInstruction>().registerA
             method.addInstruction(
@@ -112,25 +141,42 @@ val hideUpgradePromotionsPatch = bytecodePatch(
             )
         }
 
-        AccountSettingsViewStateFingerprint.matchSingle().method.addInstructions(
-            0,
-            """
-                invoke-static { p6 }, $PROMOTIONS_CLASS->showsUpsell(Z)Z
-                move-result p6
-            """,
+        filterConstructorProperty(
+            AccountSettingsViewStateToStringFingerprint,
+            "upgradeToPlusBanner",
+            "$PROMOTIONS_CLASS->showsUpsell(Z)Z",
         )
 
-        launchOnboardingFingerprint().matchSingle().method.apply {
-            addInstructionsWithLabels(
-                0,
-                """
-                    invoke-static { }, $IS_HIDDEN
-                    move-result v0
-                    if-eqz v0, :shown
-                    return-void
-                """,
-                ExternalLabel("shown", getInstruction(0)),
-            )
+        val onboardingLauncher = launchOnboardingFingerprint().matchOrNull()
+        if (onboardingLauncher != null) {
+            onboardingLauncher.method.apply {
+                addInstructionsWithLabels(
+                    0,
+                    """
+                        invoke-static { }, $IS_HIDDEN
+                        move-result v0
+                        if-eqz v0, :shown
+                        return-void
+                    """,
+                    ExternalLabel("shown", getInstruction(0)),
+                )
+            }
+        } else {
+            onboardingLaunchCoroutineFingerprint().matchSingle().run {
+                val launcher = instructionMatches.first()
+                val register = launcher.getInstruction<OneRegisterInstruction>().registerA
+                method.addInstructionsWithLabels(
+                    launcher.index,
+                    """
+                        invoke-static { }, $IS_HIDDEN
+                        move-result v$register
+                        if-eqz v$register, :shown
+                        sget-object v$register, $unitInstanceField
+                        return-object v$register
+                    """,
+                    ExternalLabel("shown", method.getInstruction(launcher.index)),
+                )
+            }
         }
     }
 }

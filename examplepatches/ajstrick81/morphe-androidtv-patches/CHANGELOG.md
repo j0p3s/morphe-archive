@@ -1,3 +1,17 @@
+# [1.42.0](https://github.com/ajstrick81/morphe-androidtv-patches/compare/v1.41.0...v1.42.0) (2026-10-17)
+
+
+### Features
+
+* **future:** add Skip ads patch for Fawesome Movies & TV (Android TV) ([aa21dce](https://github.com/ajstrick81/morphe-androidtv-patches/commit/aa21dcee309bc7132d4144bac7a61c7fc7c042dd)), closes [#233](https://github.com/ajstrick81/morphe-androidtv-patches/issues/233)
+
+# [1.41.0](https://github.com/ajstrick81/morphe-androidtv-patches/compare/v1.40.6...v1.41.0) (2026-10-16)
+
+
+### Features
+
+* **f1tv:** add Unlock UHD (4K) patch ([#245](https://github.com/ajstrick81/morphe-androidtv-patches/issues/245)) ([3d78305](https://github.com/ajstrick81/morphe-androidtv-patches/commit/3d78305dc818ee41c46d27c96c67ef3a1feb5c95)), closes [#243](https://github.com/ajstrick81/morphe-androidtv-patches/issues/243)
+
 ## [1.40.6](https://github.com/ajstrick81/morphe-androidtv-patches/compare/v1.40.5...v1.40.6) (2026-10-15)
 
 

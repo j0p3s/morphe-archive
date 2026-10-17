@@ -19,6 +19,7 @@ internal object WidgetSettingsRowFingerprint : Fingerprint(
         methodCall(
             opcode = Opcode.INVOKE_STATIC_RANGE,
             returnType = "V",
+            parameters = listOf("L", "I", "Ljava/lang/String;", "L", "L", "Z", "Z", "Z", "L", "L", "I", "I"),
             location = MatchAfterWithin(WIDGET_ROW_CALL_DISTANCE),
         ),
     ),

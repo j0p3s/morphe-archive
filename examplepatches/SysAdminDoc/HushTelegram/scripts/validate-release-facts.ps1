@@ -78,6 +78,7 @@ if (-not $Root) { $Root = Split-Path -Parent $PSScriptRoot }
 . (Join-Path $PSScriptRoot 'release-advisories.ps1')
 . (Join-Path $PSScriptRoot 'common.ps1')
 . (Join-Path $PSScriptRoot 'telegram-sources.ps1')
+. (Join-Path $PSScriptRoot 'release/release-text.ps1')
 
 function Read-JsonFile {
     param([string]$Path)
@@ -164,6 +165,10 @@ $readmePath = Join-Path $rootPath 'README.md'
 
 $patchList = Read-JsonFile $patchListPath
 $bundle = Read-JsonFile $bundlePath
+# Only the description's text above its first ### line is the release facts. The index stage puts
+# the release's CHANGELOG bullets under "### What's new" after them for Morphe Manager, and a bullet
+# there may name an older Telegram build or another patch count.
+$bundleFacts = ([string]$bundle.description -split '(?m)^### ', 2)[0]
 # Manager's MorpheAsset uses kotlinx.datetime.LocalDateTime. An Instant-style Z or
 # offset makes JSON decoding fail before Manager can read the working download URL.
 # Read the literal value: PowerShell 7 can otherwise turn it into a DateTime and
@@ -203,7 +208,7 @@ foreach ($declaredTarget in @(Get-PatchTargets -PatchList $patchList)) {
 }
 
 $bundleVersion = [string]$bundle.version
-$publishedFacts = Get-DescriptionFacts -Text ([string]$bundle.description) -Source 'The patches-bundle.json description'
+$publishedFacts = Get-DescriptionFacts -Text $bundleFacts -Source 'The patches-bundle.json description'
 $publishedFactsDifferAtSameVersion = $AllowPublishedIndexLag -and
     $bundleVersion -eq $releaseVersion -and
     $null -ne $publishedFacts.PatchCount -and $null -ne $publishedFacts.TargetVersion -and
@@ -281,7 +286,7 @@ if ($indexLagsSource) {
     if ($null -eq $publishedFacts.PatchCount -or $null -eq $publishedFacts.TargetVersion) {
         throw 'The published bundle description does not name its patch count and Telegram target.'
     }
-    Require-Match -Text ([string]$bundle.description) -Pattern "\bv$([regex]::Escape($publishedVersion))\b" -Description 'published bundle description version'
+    Require-Match -Text $bundleFacts -Pattern "\bv$([regex]::Escape($publishedVersion))\b" -Description 'published bundle description version'
     $descriptionVersion = "v$publishedVersion"
     $descriptionPatchCount = $publishedFacts.PatchCount
     $descriptionTargetVersion = $publishedFacts.TargetVersion
@@ -354,20 +359,26 @@ if ($SkipUrlCheck) {
     }
     $description = $description.Trim()
 
-    # Its count and build are read the way the index description's are, all of them at once.
-    $githubFacts = Get-DescriptionFacts -Text $description -Source "The GitHub description of $slug"
-    $missing = @()
-    if ($description -notmatch "\b$([regex]::Escape($descriptionVersion))\b") { $missing += $descriptionVersion }
-    if ($githubFacts.PatchCount -ne $descriptionPatchCount) { $missing += "$descriptionPatchCount patches" }
-    if ($githubFacts.TargetVersion -ne $descriptionTargetVersion) { $missing += "Telegram $descriptionTargetVersion" }
-    if ($missing.Count -gt 0) {
-        throw ("The GitHub description of $slug does not say " + ($missing -join ', ') + '. It reads: ' +
-            $description + [Environment]::NewLine +
-            'Set it with: gh repo edit ' + $slug + ' --description "HushTelegram ' + $descriptionVersion +
-            ': ... ' + $descriptionPatchCount + ' patches for Telegram ' + $descriptionTargetVersion + '."')
+    # A description written with no version, count or build in it can't go stale, and the
+    # release's index stage leaves it as it is (2026-10-16, after the Hush repos dropped theirs).
+    if (-not (Test-RepoDescriptionNamesFacts -Description $description)) {
+        Write-Host "[release] the GitHub description of $slug names no version, patch count or Telegram build"
+    } else {
+        # Its count and build are read the way the index description's are, all of them at once.
+        $githubFacts = Get-DescriptionFacts -Text $description -Source "The GitHub description of $slug"
+        $missing = @()
+        if ($description -notmatch "\b$([regex]::Escape($descriptionVersion))\b") { $missing += $descriptionVersion }
+        if ($githubFacts.PatchCount -ne $descriptionPatchCount) { $missing += "$descriptionPatchCount patches" }
+        if ($githubFacts.TargetVersion -ne $descriptionTargetVersion) { $missing += "Telegram $descriptionTargetVersion" }
+        if ($missing.Count -gt 0) {
+            throw ("The GitHub description of $slug does not say " + ($missing -join ', ') + '. It reads: ' +
+                $description + [Environment]::NewLine +
+                'Set it with: gh repo edit ' + $slug + ' --description "HushTelegram ' + $descriptionVersion +
+                ': ... ' + $descriptionPatchCount + ' patches for Telegram ' + $descriptionTargetVersion + '."')
+        }
+        Write-Host ("[release] the GitHub description of " + $slug + " names " + $descriptionVersion +
+            ", " + $descriptionPatchCount + " patches and Telegram " + $descriptionTargetVersion)
     }
-    Write-Host ("[release] the GitHub description of " + $slug + " names " + $descriptionVersion +
-        ", " + $descriptionPatchCount + " patches and Telegram " + $descriptionTargetVersion)
 }
 
 $testRoot = Join-Path $rootPath 'extensions/telegram/build/test-results/testDebugUnitTest'
@@ -471,7 +482,7 @@ if ($SkipDescriptionTestCount) {
     Write-Host ("[release] patches-bundle.json did not change, so its description is left " +
         "against the release it describes" + $ranHere)
 } else {
-    Require-Match -Text ([string]$bundle.description) -Pattern "\b$testCount runtime tests passed\b" -Description 'bundle description test count'
+    Require-Match -Text $bundleFacts -Pattern "\b$testCount runtime tests passed\b" -Description 'bundle description test count'
 }
 
 # The patch module's tests, which the description quotes as "All N patch tests passed". Until
@@ -552,7 +563,7 @@ if (-not $SkipDescriptionTestCount) {
         }
         $patchTestCount += @($results.testsuite.testcase).Count
     }
-    Require-Match -Text ([string]$bundle.description) -Pattern "\b$patchTestCount patch tests passed\b" `
+    Require-Match -Text $bundleFacts -Pattern "\b$patchTestCount patch tests passed\b" `
         -Description 'bundle description patch test count'
     $testFacts += ", $patchTestCount patch tests"
 }
@@ -815,7 +826,7 @@ Write-Host "[release] README requires Morphe Manager $managerFloor or newer for 
 # The index description names a floor too, and it's what Manager users read before they install.
 # It describes the published release, which needs the floor that release's own commit pinned, not
 # the one pinned since, so it's held to the catalog at the release tag. Nothing read it before.
-$descriptionFloorMatch = [regex]::Match([string]$bundle.description, '\bMorphe Manager\s+(\d+(?:\.\d+)+)\s+or newer\b')
+$descriptionFloorMatch = [regex]::Match($bundleFacts, '\bMorphe Manager\s+(\d+(?:\.\d+)+)\s+or newer\b')
 if (-not $descriptionFloorMatch.Success) {
     throw 'The bundle description does not say which Morphe Manager it needs ("Morphe Manager X or newer").'
 }
