@@ -318,6 +318,7 @@ PerfLite/morphe-patches-zona
 phamleduy04/duy-patches
 picarica/My-moprhe-patches
 pigfoot/morphe-patches
+Pilotkosinus/morphe-waze-patches
 Pilotkosinus/Muellpatch
 PixelPusher247/morphe-patches
 pixincreate/morpheus
@@ -350,8 +351,8 @@ RookieEnough/De-Vanced
 Rosaldivo/rosaldivo-morphe-patches
 RoundSalmon4/morphe-patches-template
 rufusin/revanced-patches
-rushiranpise/RI-Vanced-Universal-Morphe-Patches
 rushiranpise/Ri-Vanced-Universal-Morphe-Patches
+rushiranpise/RI-Vanced-Universal-Morphe-Patches
 ryuya0124/gemini-microg-patches
 ryykitty/twitch-patched
 sabopura/sabopura-morphe-patches
@@ -381,6 +382,7 @@ spicetify/morphe-patches
 spookyexe/morphe-patches
 sqzass/patches
 subenoeva/roadsync-patches
+Sudashiii/at-tv-patches
 Sudashiii/servus-patches
 Supperelias2/sbs-morphe-patches
 Supperelias2/sbs-tv-morphe-patches

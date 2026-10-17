@@ -3099,14 +3099,6 @@
                 "updatedAt": 1792127776430
             },
             {
-                "name": "morphe-tower-patches",
-                "source": "https://raw.githubusercontent.com/iGridZ/morphe-tower-patches/main/patches-bundle.json",
-                "autoUpdate": true,
-                "sortOrder": 419,
-                "createdAt": 1792127780452,
-                "updatedAt": 1792127780452
-            },
-            {
                 "name": "morphe-patches",
                 "source": "https://raw.githubusercontent.com/Juankyyy/morphe-patches/main/patches-bundle.json",
                 "autoUpdate": true,
@@ -3137,6 +3129,22 @@
                 "sortOrder": 423,
                 "createdAt": 1792127785723,
                 "updatedAt": 1792127785723
+            },
+            {
+                "name": "morphe-waze-patches",
+                "source": "https://raw.githubusercontent.com/Pilotkosinus/morphe-waze-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 424,
+                "createdAt": 1792217144353,
+                "updatedAt": 1792217144353
+            },
+            {
+                "name": "at-tv-patches",
+                "source": "https://raw.githubusercontent.com/Sudashiii/at-tv-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 425,
+                "createdAt": 1792217146128,
+                "updatedAt": 1792217146128
             }
         ]
     }
