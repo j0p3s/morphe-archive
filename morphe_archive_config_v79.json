@@ -2683,14 +2683,6 @@
                 "updatedAt": 1791701189820
             },
             {
-                "name": "kveld-extra-morphe-patches",
-                "source": "https://raw.githubusercontent.com/kveld9/kveld-extra-morphe-patches/main/patches-bundle.json",
-                "autoUpdate": true,
-                "sortOrder": 366,
-                "createdAt": 1791701191030,
-                "updatedAt": 1791701191030
-            },
-            {
                 "name": "morphe-patches",
                 "source": "https://raw.githubusercontent.com/o0b/morphe-patches/main/patches-bundle.json",
                 "autoUpdate": true,
