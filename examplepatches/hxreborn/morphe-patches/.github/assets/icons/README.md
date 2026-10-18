@@ -21,7 +21,9 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 |---|---|---|---|
 | `allinonecalculator.png` | All-In-One Calculator (`all.in.one.calculator`) | allinonecalculator.com | APK 3.4.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `allvideoplayer.png` | All Video Player App (`com.allformatplayer.streamvideoplayer`) | Legend eSolution | APK 1.4, `res/drawable-xhdpi-v4/small_logo.png` |
+| `aloa.png` | Aloa (`com.getaloa.app`) | Aloa | APK 1.3.3, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `alpinequest.png` | AlpineQuest (`psyberia.alpinequest.free`) | Psyberia | APK 2.4.0e, `res/drawable-xxxhdpi-v4/core_icon_free_round.png` |
+| `depthpix.png` | DepthPix (`com.androholic.wallpapersdepthpix`) | Androholic | APK 1.0.12, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `devcheck.png` | DevCheck (`flar2.devcheck`) | flar2 | APK 6.57, adaptive icon `res/mipmap-xxxhdpi-v4/ic_launcher_background.webp` under `ic_launcher_foreground.webp` |
 | `psiphon.png` | Psiphon (`com.psiphon3.subscription`) | Psiphon Inc. | APK 2.5.11, `res/mipmap-xxhdpi-v4/ic_launcher.webp` (square icon cut to a circle) |
 | `projectivy.png` | Projectivy Launcher (`com.spocky.projengmenu`) | Spocky | APK 4.71, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml` |
@@ -64,6 +66,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `vpnify.png` | vpnify (`com.vpn.free.hotspot.secure.vpnify`) | VPNIFY | APK 2.3.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `protonvpn.png` | Proton VPN (`ch.protonvpn.android`) | Proton AG | APK 5.20.39.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `hinducalendar.png` | Hindu Calendar (`com.alokmandavgane.hinducalendar`) | Alok Mandavgane | APK 9.3.0, adaptive icon `res/drawable-v26/ic_launcher_vector.xml` |
+| `banglacalendar.png` | Bangla Calendar (`com.outscar.bd.bongcal`) | Outscar | APK 3.0.01c, `res/mipmap-xxxhdpi/ic_launcher.png` (square icon cut to a circle) |
 | `walp.png` | WalP - Stock HD Wallpapers (`com.stresscodes.wallp`) | Stress Codes | APK 10.2.1, adaptive icon `res/mipmap-anydpi/ic_launcher.xml` |
 | `vllo.png` | VLLO (`com.darinsoft.vimo`) | vimosoft | APK 13.7.4, adaptive icon `res/mipmap-anydpi-v26/vllo_icon.xml` |
 | `videoeditor.png` | Video Editor (`videoeditor.videomaker.videoeditorforyoutube`) | InShot Inc. | APK 1.621.196, `res/mipmap-xxxhdpi-v4/ic_launcher.png` (square icon cut to a circle) |

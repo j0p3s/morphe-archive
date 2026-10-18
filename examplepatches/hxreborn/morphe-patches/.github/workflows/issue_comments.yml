@@ -16,6 +16,8 @@ jobs:
       !github.event.issue.pull_request &&
       !github.event.issue.locked &&
       github.event.comment.user.type != 'Bot' &&
+      !contains(github.event.issue.labels.*.name, 'bot-wrong') &&
+      !contains(github.event.issue.labels.*.name, 'incomplete') &&
       !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
       (github.event.issue.state == 'closed' ||
       contains(github.event.issue.labels.*.name, 'app request') ||
@@ -24,6 +26,7 @@ jobs:
     permissions:
       issues: write
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,7 +40,10 @@ jobs:
           ISSUE: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
         run: |
-          python3 .github/scripts/issue_comment.py "$GITHUB_EVENT_PATH" patches-list.json > "$RUNNER_TEMP/comment.md" || exit 0
+          status=0
+          python3 .github/scripts/issue_comment.py "$GITHUB_EVENT_PATH" patches-list.json > "$RUNNER_TEMP/comment.md" || status=$?
+          [ "$status" -ne 3 ] || exit 0
+          [ "$status" -eq 0 ] || exit "$status"
           marker=$(head -n 1 "$RUNNER_TEMP/comment.md")
           replied=$(gh api "repos/$REPO/issues/$ISSUE/comments" --paginate \
             --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\"))) | .id")

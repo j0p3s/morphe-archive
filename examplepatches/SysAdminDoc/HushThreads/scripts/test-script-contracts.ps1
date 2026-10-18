@@ -2145,11 +2145,12 @@ Write-Host "[scripts] $($rangeCases.Count) complete Maven range gate cases passe
 
     # The build classpath: what settings.gradle.kts resolved for the plugins, which the SBOM leaves
     # out, read from the inventory it writes and put to OSV by a gate of its own with its own list.
-    # GHSA-xxph-c9ww-hj94 (CVE-2026-102554) is a Guava deserialization advisory the plugin's
-    # Guava 33.5.0-jre is inside (4.0 to 33.7.1, fixed in 33.7.2). On 2026-10-14 it was a google/guava
+    # GHSA-xxph-c9ww-hj94 (CVE-2026-102554) is a Guava deserialization advisory the plugins'
+    # Guava 33.5.0-jre request is inside (4.0 to 33.7.1, fixed in 33.7.2). On 2026-10-14 it was a google/guava
     # repository advisory rated medium, and OSV had no entry for it (404), so this is a controlled
     # fixture in OSV's shape rather than a recording: the vulnerable and fixed builds, and the
     # request for the vulnerable one that resolved to the fixed one, which isn't on the classpath.
+    # settings.gradle.kts's floor has resolved 33.7.2-jre since 2026-10-17, with the reasons below.
     $guavaDeserialization = ('{"id":"GHSA-xxph-c9ww-hj94","summary":"CompactHashMap/CompactHashSet/MapMakerInternalMap ' +
         'deserialization triggers uncontrolled memory allocation","aliases":["CVE-2026-102554"],' +
         '"database_specific":{"severity":"MODERATE"},"affected":[{"package":{"ecosystem":"Maven","name":"com.google.guava:guava"},' +
@@ -2168,11 +2169,23 @@ Write-Host "[scripts] $($rangeCases.Count) complete Maven range gate cases passe
             $parts = [regex]::Match($purl, '^pkg:maven/([^/]+)/([^@]+)@(.+)$')
             [ordered]@{ group = $parts.Groups[1].Value; name = $parts.Groups[2].Value; version = $parts.Groups[3].Value; purl = $purl }
         })
+        # The four build files the writer hashes, beside the settings script. One a checkout lacks is
+        # made up so there is something to hash.
+        $buildInputs = [ordered]@{}
+        foreach ($relative in @('settings.gradle.kts', 'patches/build.gradle.kts', 'gradle/libs.versions.toml', 'gradle/verification-metadata.xml')) {
+            $inputPath = Join-Path (Split-Path -Parent $SettingsScript) $relative
+            if (-not (Test-Path -LiteralPath $inputPath -PathType Leaf)) {
+                New-Item -ItemType Directory -Path (Split-Path -Parent $inputPath) -Force | Out-Null
+                Set-Content -LiteralPath $inputPath -Encoding ASCII -Value "build input $relative"
+            }
+            $buildInputs[$relative] = (Get-FileHash -LiteralPath $inputPath -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
         $document = [ordered]@{
             schema = 'hushthreads-build-classpath-1'
             gradle = '9.8.1'
             settingsScript = [ordered]@{ path = 'settings.gradle.kts'
                 sha256 = (Get-FileHash -LiteralPath $SettingsScript -Algorithm SHA256).Hash.ToLowerInvariant() }
+            buildInputs = $buildInputs
             covers = 'The settings classpath.'
             leavesOut = 'What the bundle carries.'
             graphs = @(
@@ -2257,7 +2270,8 @@ Write-Host "[scripts] $($rangeCases.Count) complete Maven range gate cases passe
         # The fixed Guava: the request for 33.5.0-jre is printed as one and never put to OSV.
         $guavaRequest = [ordered]@{ requested = 'com.google.guava:guava:33.5.0-jre'; resolved = 'com.google.guava:guava:33.7.2-jre'
             requestedBy = @('app.morphe:morphe-patches-gradle-plugin:1.3.4'); requestedByCount = 1
-            reasons = @('CONFLICT_RESOLUTION: between versions 33.7.2-jre and 33.5.0-jre', 'REQUESTED: requested') }
+            reasons = @('CONFLICT_RESOLUTION: between versions 33.7.2-jre, 33.5.0-jre, 33.3.1-jre, 32.0.1-jre and 18.0',
+                'CONSTRAINT: GHSA-xxph-c9ww-hj94 affects Guava 4.0 to 33.7.1.', 'REQUESTED: requested') }
         New-TestBuildInventory -Purls @($guavaFixed) -Conflicts @($guavaRequest)
         $said = Invoke-BuildGate
         Assert-True ($said -like '*asked for com.google.guava:guava:33.5.0-jre and resolved com.google.guava:guava:33.7.2-jre*' -and
@@ -2304,6 +2318,18 @@ Write-Host "[scripts] $($rangeCases.Count) complete Maven range gate cases passe
                     Pattern = '*doesn''t say which settings.gradle.kts*' },
                 @{ Name = 'another settings script'; Write = { New-TestBuildInventory -Mutate { param($d) $d.settingsScript.sha256 = ('0' * 64) } }
                     Pattern = '*was written for another settings.gradle.kts*' },
+                @{ Name = 'no build input hashes'; Write = { New-TestBuildInventory -Mutate { param($d) $d.Remove('buildInputs') } }
+                    Pattern = '*doesn''t say which settings.gradle.kts it was written for*' },
+                @{ Name = 'no patches/build.gradle.kts hash'; Write = { New-TestBuildInventory -Mutate { param($d) $d.buildInputs.Remove('patches/build.gradle.kts') } }
+                    Pattern = '*doesn''t say which patches/build.gradle.kts it was written for*' },
+                @{ Name = 'another patches/build.gradle.kts'; Write = { New-TestBuildInventory -Mutate { param($d) $d.buildInputs['patches/build.gradle.kts'] = ('0' * 64) } }
+                    Pattern = '*was written for another patches/build.gradle.kts than*' },
+                @{ Name = 'another gradle/libs.versions.toml'; Write = { New-TestBuildInventory -Mutate { param($d) $d.buildInputs['gradle/libs.versions.toml'] = ('0' * 64) } }
+                    Pattern = '*was written for another gradle/libs.versions.toml than*' },
+                @{ Name = 'another gradle/verification-metadata.xml'; Write = { New-TestBuildInventory -Mutate { param($d) $d.buildInputs['gradle/verification-metadata.xml'] = ('0' * 64) } }
+                    Pattern = '*was written for another gradle/verification-metadata.xml than*' },
+                @{ Name = 'an upper-case hash'; Write = { New-TestBuildInventory -Mutate { param($d) $d.buildInputs['gradle/libs.versions.toml'] = $d.buildInputs['gradle/libs.versions.toml'].ToUpperInvariant() } }
+                    Pattern = '*doesn''t say which gradle/libs.versions.toml it was written for*' },
                 @{ Name = 'no classpath'; Write = { New-TestBuildInventory -Mutate { param($d) $d.graphs = @() } }; Pattern = '*lists no classpath*' },
                 @{ Name = 'a classpath with no unresolved list'; Write = { New-TestBuildInventory -Mutate { param($d) $d.graphs[1].Remove('unresolved') } }
                     Pattern = '*without a name, components, conflicts and an unresolved list*' },
@@ -2790,6 +2816,25 @@ try {
         } finally {
             Reset-FactsFile 'patches-bundle.json'
         }
+    }
+
+    # The release's CHANGELOG bullets follow the facts in the description, because Manager shows the
+    # description for the release a phone is on. A bullet there may name an older build or another
+    # count, so the facts are read up to the first ### line, in both modes.
+    Set-FactsFile 'patches-bundle.json' {
+        param($text) $text -replace '("description":\s*"(?:[^"\\]|\\.)*)"', '$1\n\n### Changes\n\n* **Threads:** Builds before Threads 9.9.9.9.9 kept 3 patches."'
+    }
+    try {
+        Assert-True ((Get-Content -LiteralPath (Join-Path $factsRoot 'patches-bundle.json') -Raw | ConvertFrom-Json).description -match
+            '(?m)^### Changes$') 'The description edit added no ### group, so the groups case would prove nothing.'
+        try {
+            Invoke-Facts
+            & $factsScript -Root $factsRoot -SkipDescriptionTestCount -AllowPublishedIndexLag -SkipUrlCheck 6> $null
+        } catch {
+            throw "The release facts check read a CHANGELOG bullet under the description's facts as one: $($_.Exception.Message)"
+        }
+    } finally {
+        Reset-FactsFile 'patches-bundle.json'
     }
 
     # The same number in the README, which is the other half of the same promise.
@@ -4997,7 +5042,8 @@ try {
     # release is held to the census, and .gitignore has to let the ledger be committed.
     $releaseFiles = @('patches-list.json', 'patches-bundle.json', 'gradle.properties', 'README.md', 'CHANGELOG.md',
         'gradle/libs.versions.toml', '.github/ISSUE_TEMPLATE/bug_report.yml', '.gitignore',
-        'sources/threads-sources.json', 'NOTICE', 'provenance.json', 'settings.gradle.kts')
+        'sources/threads-sources.json', 'NOTICE', 'provenance.json', 'settings.gradle.kts',
+        'patches/build.gradle.kts', 'gradle/verification-metadata.xml')
     foreach ($relative in $releaseFiles) {
         $destination = Join-Path $releaseRepo $relative
         New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
@@ -5773,6 +5819,8 @@ try {
                     Pattern = '*high or critical advisories for the build classpath: GHSA-4jrv-ppp4-jm57 (HIGH*build-advisory-exceptions.txt*' },
                 @{ Name = 'an inventory for another settings.gradle.kts'; Pattern = '*was written for another settings.gradle.kts*'
                     Write = { New-TestBuildInventory -Path $releaseBuildInventory -SettingsScript $releaseSettings -Mutate { param($d) $d.settingsScript.sha256 = ('0' * 64) } } },
+                @{ Name = 'an inventory for another gradle/libs.versions.toml'; Pattern = '*was written for another gradle/libs.versions.toml than*'
+                    Write = { New-TestBuildInventory -Path $releaseBuildInventory -SettingsScript $releaseSettings -Mutate { param($d) $d.buildInputs['gradle/libs.versions.toml'] = ('0' * 64) } } },
                 @{ Name = 'no build classpath inventory'; Write = { Remove-Item -LiteralPath $releaseBuildInventory }
                     Pattern = '*There is no build classpath inventory at*' })) {
             & $refused.Write

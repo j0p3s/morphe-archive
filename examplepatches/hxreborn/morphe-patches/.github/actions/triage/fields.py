@@ -1,7 +1,11 @@
 import re
+import unicodedata
 
 
 def normalize(text):
+    text = "".join(
+        str(unicodedata.decimal(c)) if c.isdecimal() else c for c in unicodedata.normalize("NFKC", text)
+    )
     return re.sub(r"[^a-z0-9]", "", text.lower())
 
 
@@ -9,16 +13,22 @@ def normalize_version(text):
     return normalize(re.sub(r"^v(?=\d)", "", text.strip(), flags=re.I))
 
 
+def code_span(text, limit=80):
+    flat = " ".join(text.replace("`", "'").split())
+    return f"`{flat[:limit]}`"
+
+
 def parse_fields(body, track_fences=True):
     fields = {}
     current = None
     fenced = False
-    for line in body.splitlines():
+    for line in re.split(r"\r\n|\r|\n", body):
         if track_fences and line.lstrip().startswith(("```", "~~~")):
             fenced = not fenced
-        heading = None if fenced else re.match(r"^###\s+(.+?)\s*$", line)
-        if heading and heading.group(1) not in fields:
-            current = heading.group(1)
+        heading = None if fenced else re.match(r"###\s+(\S.*)", line)
+        name = heading.group(1).rstrip() if heading else None
+        if name and name not in fields:
+            current = name
             fields[current] = []
         elif current:
             fields[current].append(line)

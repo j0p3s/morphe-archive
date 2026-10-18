@@ -472,7 +472,8 @@ class TruecallerSmokeTest {
         check(selectInsns.drop(3).any { it.call()?.name == "setSelectedItemId" }) { "$selectLabel lost its stock code" }
 
         // Right after the BottomBarView cast, the builder passes the bar and the final tab list to a
-        // helper that hides the bar with fewer than two tabs and shows it otherwise.
+        // helper that keeps the bar visible (it pads for the navigation bar, issue #61) and, with
+        // fewer than two tabs, hides its tab menu and drops its minimum height (saved in a new field).
         val insns = builder.instructions()
         val take = insns.indexOfFirst {
             it.call()?.definingClass == "Lkotlin/collections/CollectionsKt;" &&
@@ -489,12 +490,33 @@ class TruecallerSmokeTest {
             ref.parameterTypes.map(CharSequence::toString) == listOf(BOTTOM_BAR_VIEW, "Ljava/util/List;") &&
             (call as FiveRegisterInstruction).registerC == (insns[cast] as OneRegisterInstruction).registerA && call.registerD == list
         ) { "bottom bar builder does not pass the bar and the tab list to a helper after the cast; got ${call.opcode} $ref" }
+        val helperLabel = "${builderClass.type}.${ref.name}"
         val helper = builderClass.method(ref.name, listOf(BOTTOM_BAR_VIEW, "Ljava/util/List;")).instructions()
+        val bar = 4 // p0 of the 6-register helper
+        check(helper.getOrNull(0)?.opcode == Opcode.CONST_4 && (helper[0] as NarrowLiteralInstruction).narrowLiteral == 0 &&
+            helper.getOrNull(1)?.call()?.name == "setVisibility" && (helper[1] as FiveRegisterInstruction).registerC == bar &&
+            (helper[1] as FiveRegisterInstruction).registerD == (helper[0] as OneRegisterInstruction).registerA
+        ) { "$helperLabel does not keep the bar VISIBLE first" }
+        val barVisibility = helper.drop(2).filter { it.call()?.name == "setVisibility" }
+        check(barVisibility.size == 1 && (barVisibility.single() as FiveRegisterInstruction).registerC != bar) {
+            "$helperLabel changes the bar's visibility again instead of its children's"
+        }
         check(helper.any { it.call()?.name == "size" && it.call()?.definingClass == "Ljava/util/List;" } &&
             helper.any { it.opcode == Opcode.IF_LT } &&
-            helper.any { it.call()?.name == "setVisibility" && it.call()?.definingClass == "Landroid/view/View;" } &&
+            helper.any { it.call()?.name == "getChildAt" && it.call()?.definingClass == "Landroid/view/ViewGroup;" } &&
             helper.any { it.opcode == Opcode.CONST_16 && (it as NarrowLiteralInstruction).narrowLiteral == 8 }
-        ) { "${builderClass.type}.${ref.name} does not set the bar GONE below two tabs" }
+        ) { "$helperLabel does not hide the bar's children below two tabs" }
+        check(helper.count { it.call()?.name == "setMinimumHeight" && (it as FiveRegisterInstruction).registerC == bar } == 2 &&
+            helper.any { it.call()?.name == "getMinimumHeight" }
+        ) { "$helperLabel does not drop and restore the bar's minimum height" }
+        val savedField = helper.mapNotNull { it.field() }.distinct().singleOrNull()
+        check(savedField?.definingClass == BOTTOM_BAR_VIEW && savedField.type == "Ljava/lang/Integer;" &&
+            helper.any { it.opcode == Opcode.IPUT_OBJECT } && helper.any { it.opcode == Opcode.IGET_OBJECT }
+        ) { "$helperLabel does not save the minimum height on the bar; got $savedField" }
+        val barClass = classes.single { it.type == BOTTOM_BAR_VIEW }
+        check(barClass.fields.any { it.name == savedField.name && it.type == savedField.type && AccessFlags.PUBLIC.isSet(it.accessFlags) }) {
+            "$BOTTOM_BAR_VIEW has no public ${savedField.name} field"
+        }
     }
 
     private fun assertHiddenSettingsRows(classes: List<ClassDef>) {

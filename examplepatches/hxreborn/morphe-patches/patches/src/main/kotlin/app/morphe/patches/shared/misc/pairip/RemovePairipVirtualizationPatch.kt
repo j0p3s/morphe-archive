@@ -51,6 +51,7 @@ private const val DEX_HEADER_SIZE = 0x70
 private const val DEX_FILE_SIZE_OFFSET = 0x20
 
 private val recoveredDexFiles = mutableListOf<ByteArray>()
+private var isPairipPacked = false
 
 private fun ByteArray.indexOfSequence(sequence: ByteArray): Int {
     outer@ for (start in 0..size - sequence.size) {
@@ -91,6 +92,9 @@ internal fun recoverEmbeddedDex(asset: ByteArray): ByteArray? {
 private val extractRecoveredDexPatch = rawResourcePatch {
     execute {
         recoveredDexFiles.clear()
+        isPairipPacked = get("lib").listFiles { file -> file.isDirectory }
+            ?.any { architecture -> architecture.resolve("libpairipcore.so").exists() } == true
+        if (!isPairipPacked) return@execute
 
         get("assets").listFiles { file -> file.isFile }?.forEach { asset ->
             recoverEmbeddedDex(asset.readBytes())?.let { recoveredDexFiles += it }
@@ -103,7 +107,9 @@ private val extractRecoveredDexPatch = rawResourcePatch {
 private val mergeRecoveredDexPatch = bytecodePatch {
     dependsOn(extractRecoveredDexPatch)
 
-    setExtensionInputStream(Supplier { ByteArrayInputStream(recoveredDexFiles.single()) })
+    extendWithAll {
+        if (isPairipPacked) listOf(Supplier { ByteArrayInputStream(recoveredDexFiles.single()) }) else emptyList()
+    }
 }
 
 private val PAIRIP_HOOKED_LIBRARIES = mapOf(
@@ -164,6 +170,8 @@ private val removePairipResourcesPatch = rawResourcePatch {
     dependsOn(mergeRecoveredDexPatch)
 
     execute {
+        if (!isPairipPacked) return@execute
+
         val hookedLibraries = PAIRIP_HOOKED_LIBRARIES[packageMetadata.packageName].orEmpty()
         var restoredLibraries = 0
         var removedRuntimes = 0
@@ -249,6 +257,7 @@ val removePairipVirtualizationPatch = bytecodePatch {
     compatibleWith(
         AppCompatibilities.ALL_IN_ONE_CALCULATOR,
         AppCompatibilities.AUDIOLAB,
+        AppCompatibilities.BANGLA_CALENDAR,
         AppCompatibilities.BETTERSLEEP,
         AppCompatibilities.CATZY,
         AppCompatibilities.DEVCHECK,
@@ -261,6 +270,8 @@ val removePairipVirtualizationPatch = bytecodePatch {
     extendWith("extensions/extension.mpe")
 
     execute {
+        if (!isPairipPacked) return@execute
+
         VMRunnerStaticInitializerFingerprint.method.returnEarly()
         VMRunnerInvokeFingerprint.method.returnEarly(null)
 

@@ -1,0 +1,144 @@
+{
+  "_comment": "README app categories, in display order. generate_patches_readme.py groups apps by package name; an app missing here is listed under 'Other' and the script prints a warning, so add every new app to one category.",
+  "categories": [
+    {
+      "name": "Sports & scores",
+      "emoji": "⚽",
+      "packages": [
+        "com.scores365",
+        "com.onesports.score",
+        "com.resultadosfutbol.mobile",
+        "club.boxbox.android",
+        "in.cricketexchange.app.cricketexchange",
+        "ro.rcsrds.digisport",
+        "eu.livesport.FlashScore_com",
+        "com.mobilefootie.wc2010",
+        "com.futbin",
+        "com.livescore",
+        "one.cricket.app",
+        "de.motain.iliga",
+        "com.sofascore.results",
+        "com.yahoo.mobile.client.android.sportacular"
+      ]
+    },
+    {
+      "name": "News & finance",
+      "emoji": "📰",
+      "packages": [
+        "com.guardian",
+        "wsj.reader_sp",
+        "com.divum.MoneyControl",
+        "com.rammigsoftware.bluecoins",
+        "com.monefy.app.lite"
+      ]
+    },
+    {
+      "name": "Messaging, email & calls",
+      "emoji": "💬",
+      "packages": [
+        "org.kman.AquaMail",
+        "me.bluemail.mail",
+        "eu.faircode.email",
+        "com.kakao.talk",
+        "jp.naver.line.android",
+        "com.textra",
+        "com.truecaller"
+      ]
+    },
+    {
+      "name": "Music, podcasts & radio",
+      "emoji": "🎵",
+      "packages": [
+        "fm.castbox.audiobook.radio.podcast",
+        "com.jetappfactory.jetaudio",
+        "com.Project100Pi.themusicplayer",
+        "com.podcast.podcasts",
+        "com.shazam.android",
+        "com.streema.simpleradio",
+        "com.melodis.midomiMusicIdentifier.freemium"
+      ]
+    },
+    {
+      "name": "Video & TV",
+      "emoji": "📺",
+      "packages": [
+        "ru.iptvremote.android.iptv",
+        "app.expert.player",
+        "com.duplila.screenshare"
+      ]
+    },
+    {
+      "name": "Books & reading",
+      "emoji": "📚",
+      "packages": [
+        "com.foobnix.pdf.reader",
+        "com.flyersoft.moonreader"
+      ]
+    },
+    {
+      "name": "Health & fitness",
+      "emoji": "🏋️",
+      "packages": [
+        "com.hevy",
+        "com.myfitnesspal.android",
+        "cc.dreamspark.intervaltimer",
+        "net.smartwod.timer"
+      ]
+    },
+    {
+      "name": "Maps, weather & outdoors",
+      "emoji": "🗺️",
+      "packages": [
+        "net.osmand",
+        "com.astrapaging.vff",
+        "com.wunderground.android.weather",
+        "no.fishbuddy_playground.app",
+        "com.gregacucnik.fishingpoints"
+      ]
+    },
+    {
+      "name": "Productivity & notes",
+      "emoji": "📝",
+      "packages": [
+        "com.ztnstudio.notepad",
+        "easynotes.notes.notepad.notebook.privatenotes.note",
+        "com.appgenix.bizcal",
+        "com.alarmclock.xtreme.free",
+        "net.dinglisch.android.taskerm"
+      ]
+    },
+    {
+      "name": "Browsers",
+      "emoji": "🌐",
+      "packages": [
+        "com.brave.browser",
+        "mark.via.gp"
+      ]
+    },
+    {
+      "name": "Launchers",
+      "emoji": "🏠",
+      "packages": [
+        "easy.launcher",
+        "projekt.launcher",
+        "app.prolauncher"
+      ]
+    },
+    {
+      "name": "Tools & utilities",
+      "emoji": "🛠️",
+      "packages": [
+        "me.piebridge.brevent",
+        "com.macdom.ble.blescanner",
+        "com.pzolee.bluetoothscanner",
+        "com.farproc.wifi.analyzer",
+        "ru.wasiliysoft.ircodefindernec",
+        "com.Relmtech.Remote",
+        "me.kavishdevar.librepods",
+        "com.rawcam.app",
+        "com.pocketcolorwheel.PCW",
+        "com.peter890331.luckyclick.app"
+      ]
+    }
+  ]
+}

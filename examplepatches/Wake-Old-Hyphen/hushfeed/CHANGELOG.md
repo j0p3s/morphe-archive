@@ -4,6 +4,33 @@ Every Hushfeed release, newest first.
 
 ## Unreleased
 
+### Supported apps
+
+* **TikTok:** Hushfeed now supports TikTok 47.4.3, and only that one. 47.1.4 isn't supported anymore, so grab the 47.4.3 APK from APKMirror and patch that. PineDrama stays on 47.1.4.
+
+### Features and fixes
+
+* **TikTok:** With `Caption background` on Dark or Black, the strip's corners are TikTok's small rounded ones again. The last fix copied TikTok's shape, and on some phones that copy came out much rounder than TikTok's own captions (#158).
+* **TikTok:** With Accent color's Follow the wallpaper option, the follow plus under a creator's avatar takes the wallpaper color too. It's a picture with the red drawn in, so it used to stay red. Now the patch splits it into a white plus and a circle the phone colors (#163).
+* **TikTok:** `Hide the comment bar on opened videos` also hides the Message bar that shows up in that spot on a mutual friend's video. It used to stay behind and sit over the caption (#153).
+* **TikTok:** When the music disc is the last button on the right side, it no longer sits on top of the progress bar and the time after the comment bar is hidden. The buttons now move up far enough to clear the disc too (#153).
+* **TikTok and PineDrama:** `Hide search suggestions` also stops the trending search that rotates in the grey text inside the search box. The box keeps its plain "Search" placeholder, and tapping search on an empty box doesn't run TikTok's pick anymore.
+* **TikTok:** `Remove feed ads` also hides the hotel deals block in search results, the one with a cashback banner over hotels priced by booking sites. A landmark's place card and the Must Eat lists stay, and so do videos tagged with a hotel.
+
+### Verification
+
+* **TikTok:** The native alignment checker now catches RELRO ranges that would make writable data read-only on 16 KB devices. Safely isolated RELRO segments remain accepted.
+
+* **TikTok:** The patch audit now checks saved results against their definitions, tested APK and build receipt, including the actual evidence files. Older or incomplete runs stay marked historical. Screenshot verdicts can't be applied to a different run.
+
+* **TikTok:** Device builds and audits now require an exclusive lease before accessing a test device. An expired or lost lease stops device commands. Local builds still work without one. The probe tools (strip-hunt, record-markers and every probe action) and the injected-register check take the same lease now, and they won't start while another task holds the phone.
+
+* **TikTok:** With `Log diagnostics` on, each card in the search results also logs its type codes (origin and token type, whether it's shopping, its popup type) and the names of the keys in its data. Of what those keys hold, only one-word type codes get logged, so the search and the card's text stay out of the log. That's what it takes to tell a hotel price card or a leaked search ad apart from a normal place card.
+
+* **TikTok:** `scripts/phone.sh` checks the device lease itself now, before every adb call. Run on its own without the lease file and token, or with someone else's or an expired one, it refuses and sends nothing to the phone. strip-hunt and record-markers hand it theirs.
+
+* **TikTok:** The injected-register check compares against the 47.4.3 APK. It still expected 47.1.4 and refused every current build.
+
 ## 0.75.0 (2026-10-16)
 
 ### Features and fixes

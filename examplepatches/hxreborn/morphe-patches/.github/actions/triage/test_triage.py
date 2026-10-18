@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+import app_request
 from app_request import decide
 
 SCRIPT = Path(__file__).with_name("triage.py")
@@ -25,6 +26,19 @@ COLLIDING_APPS = {
          "targets": [{"version": "6.0"}]},
     ]}],
 }
+
+ONE_AND_TWO_PATCH_APPS = {"version": "test", "patches": [
+    {"compatiblePackages": [{"name": "Etsy", "packageName": "com.etsy.android", "targets": [{"version": "7.97.0"}]}]},
+    {"compatiblePackages": [{"name": "Fddb", "packageName": "com.fddb",
+                             "targets": [{"version": "v7.8.4-Build-1-gms-release"}]}]},
+    {"compatiblePackages": [{"name": "Fddb", "packageName": "com.fddb",
+                             "targets": [{"version": "v7.8.4-Build-1-gms-release"}]}]},
+]}
+
+PRERELEASE_APPS = {"version": "test", "patches": [{"compatiblePackages": [
+    {"name": "Demo", "packageName": "com.demo", "targets": [{"version": "2.0 beta"}]},
+    {"name": "Canary Reader", "packageName": "com.canary.reader", "targets": [{"version": "3.1"}]},
+]}]}
 
 CASES = {
     "version a target is a substring of": ("flag", f"""### App name
@@ -115,7 +129,7 @@ https://proton-mail.en.softonic.com/android
 
 {LONG}
 """),
-    "no issue form used": ("close", "the app doesnt open pls fix it\n"),
+    "no issue form used": ("flag", "the app doesnt open pls fix it\n"),
     "too short": ("flag", """### App name
 
 Proton Mail
@@ -526,6 +540,204 @@ Yes, it happens with only that one patch
 ### Error logs
 
 """),
+    "repackager named without a link asks instead of closing": ("flag", f"""### App and version
+
+Proton Mail 7.10.4
+
+### APK source
+
+APKMirror, not Softonic
+
+### Bug description
+
+{LONG}
+"""),
+    "repackager link with an uppercase scheme closes": ("close", f"""### App and version
+
+Proton Mail 7.10.4
+
+### APK source
+
+HTTPS://HAPPYMOD.COM/proton-mail
+
+### Bug description
+
+{LONG}
+"""),
+    "native crash backtrace counts as an error report": ("pass", """### App and version
+
+Proton Mail 7.10.4
+
+### Bug description
+
+Crashes on start.
+
+### Error logs
+
+Fatal signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x0
+backtrace:
+  #00 pc 000000000004f2a8  /data/app/lib/arm64/libapp.so
+"""),
+    "attached report file counts as an error report": ("pass", f"""### What happened
+
+Patching failed
+
+### App and version
+
+Proton Mail 7.10.4
+
+### Bug description
+
+{LONG}
+
+### Error logs
+
+[report.json](https://github.com/user-attachments/files/123/report.json)
+"""),
+    "build number glued to a target version passes": ("pass", f"""### App and version
+
+Proton Mail (another version, type it below)
+
+### Other version
+
+7.11.9-1234
+
+### Bug description
+
+{LONG}
+"""),
+    "version typed with Persian digits passes": ("pass", f"""### App and version
+
+Proton Mail (another version, type it below)
+
+### Other version
+
+\u06f7.\u06f1\u06f1.\u06f9
+
+### Bug description
+
+{LONG}
+"""),
+    "bare version of a suffixed target passes": ("pass", (f"""### App and version
+
+Fddb (another version, type it below)
+
+### Other version
+
+7.8.4
+
+### Bug description
+
+{LONG}
+""", ONE_AND_TWO_PATCH_APPS)),
+    "one-patch app not tried with one patch passes": ("pass", (f"""### App and version
+
+Etsy 7.97.0
+
+### What does not work
+
+The patch has no visible effect
+
+### Does it still happen with only one patch selected
+
+I have not tried it
+
+### Bug description
+
+{LONG}
+""", ONE_AND_TWO_PATCH_APPS)),
+    "another ABI of a targeted version is untargeted": ("flag", f"""### App and version
+
+Cxxdroid (another version, type it below)
+
+### Other version
+
+6.0_armv7
+
+### Bug description
+
+{LONG}
+"""),
+    "a repackager link beside the real source asks instead of closing": ("flag", f"""### App and version
+
+Proton Mail 7.10.4
+
+### APK source
+
+APKPure: https://apkpure.com/proton-mail/ch.protonmail.android ; not my APK: https://softonic.com/download
+
+### Bug description
+
+{LONG}
+"""),
+    "prerelease of a target version is untargeted": ("flag", f"""### App and version
+
+Proton Mail (another version, type it below)
+
+### Other version
+
+7.11.9-beta
+
+### Bug description
+
+{LONG}
+"""),
+    "a beta build of a target version is untargeted": ("flag", f"""### App and version
+
+Proton Mail (another version, type it below)
+
+### Other version
+
+7.11.9 beta
+
+### Bug description
+
+{LONG}
+"""),
+    "a release of a prerelease-only target is untargeted": ("flag", (f"""### App and version
+
+Demo 2.0
+
+### Bug description
+
+{LONG}
+""", PRERELEASE_APPS)),
+    "an app named after a prerelease word still matches its target": ("pass", (f"""### App and version
+
+Canary Reader 3.1
+
+### Bug description
+
+{LONG}
+""", PRERELEASE_APPS)),
+    "device ABI after a universal target version passes": ("pass", f"""### App and version
+
+Proton Mail (another version, type it below)
+
+### Other version
+
+7.11.9 arm64
+
+### Bug description
+
+{LONG}
+"""),
+    "two-patch app not tried with one patch asks for it": ("flag", (f"""### App and version
+
+Fddb v7.8.4-Build-1-gms-release
+
+### What does not work
+
+The patch has no visible effect
+
+### Does it still happen with only one patch selected
+
+I have not tried it
+
+### Bug description
+
+{LONG}
+""", ONE_AND_TWO_PATCH_APPS)),
 }
 
 
@@ -594,7 +806,7 @@ APP_CASES = {
                      "com.atlogis.atlomaps")], "close", 0),
     "supported app with a recent human comment is left alone": (
         54, [request(54, "AtloMaps", "com.atlogis.atlomaps", comments=[("someone", "2026-09-23T10:00:00Z")])],
-        "pass", 0),
+        "hold", 0),
     "only the bot commented recently": (
         54, [request(54, "AtloMaps", "com.atlogis.atlomaps", comments=[("github-actions", "2026-09-24T10:00:00Z")])],
         "close", 0),
@@ -638,10 +850,19 @@ print(f"{'ok  ' if ok else 'FAIL'} a website domain is not read as a package nam
 registry_hit = app_verdict(9, [request(9, "Proton VPN", "ch.protonvpn.android")])
 ok = (registry_hit["matches"] == ["someone/patches"] and registry_hit["verdict"] == "flag"
       and registry_hit["labels"] == ["needs info"]
-      and "[Someone's patches](https://github.com/someone/patches) (42 stars) already patches `ch.protonvpn.android`. "
+      and "[Someone's patches](https://github.com/someone/patches) already patches `ch.protonvpn.android`. "
           "Which of the requested features does it not cover?" in registry_hit["comment"])
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} app another bundle already patches asks which features it lacks, not closed")
+
+for given, expected in {"privacy notes": "[App Request]: privacy notes",
+                        "[App Request]: Gboard": "[App Request]: Gboard",
+                        "[app request]:Gboard": "[App Request]: Gboard",
+                        "[App Request]: ": "[App Request]: Gboard"}.items():
+    actual = app_verdict(9, [{**request(9, "Gboard", ""), "title": given}])["title"]
+    ok = actual == expected
+    failures += not ok
+    print(f"{'ok  ' if ok else 'FAIL'} title {given!r} becomes {expected!r}, got {actual!r}")
 
 untargeted = triage(f"""### App and version
 
@@ -659,12 +880,95 @@ ok = "value `7.5.6 (388)` does not match" in untargeted
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} untargeted version quotes only the typed version")
 
+hostile = triage(f"""### App name
+
+Zzz` @octocat [Install the fix](https://example.com/fix.apk)
+
+### App version
+
+1.0
+
+### Bug description
+
+{LONG}
+""")["comment"]
+ok = "`Zzz' @octocat [Install the fix](https://example.com/fix.apk) 1.0`" in hostile
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} a reported app name stays inside one code span")
+
+eg_requests = [{**request(n, app, ""), "body": request(n, app, "")["body"] + "\n### Additional info\n\nRemove ads, e.g. banners\n"}
+               for n, app in ((100, "Foo Player"), (101, "Bar Notes"))]
+prose_package = {**request(5, "New Quran App", ""), "body": request(5, "New Quran App", "")["body"]
+                 + "\n### Additional info\n\nLike the patch for com.atlogis.atlomaps\n"}
+linked_package = {**request(6, "GearUP", ""), "body": request(6, "GearUP", "")["body"]
+                  + "\n### Additional info\n\nLike https://play.google.com/store/apps/details?id=com.atlogis.atlomaps\n"}
+foreign_link = request(7, "Unknown https://example.com/a?id=com.atlogis.atlomaps", "")
+no_app_field = {**request(8, "x", ""), "body": "### Details\n\nhttps://play.google.com/store/apps/details?id=com.atlogis.atlomaps\n"}
+ok = [app_verdict(101, eg_requests)["verdict"], app_verdict(5, [prose_package])["verdict"],
+      app_verdict(6, [linked_package])["verdict"], app_verdict(7, [foreign_link])["verdict"],
+      app_verdict(8, [no_app_field])["verdict"]] == ["pass"] * 5
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} only a store link in the App field is read as its package")
+
+for app, expected in {"Duolingo, https://play.google.com/store/apps/details?id=com.duolingo": "[App Request]: Duolingo",
+                      "https://play.google.com/store/apps/details?id=com.example.reader": "[App Request]: com.example.reader",
+                      "[Magic Earth](https://play.google.com/store/apps/details?id=com.generalmagic.magicearth)":
+                          "[App Request]: Magic Earth"}.items():
+    actual = app_verdict(9, [{**request(9, app, ""), "title": "[App Request]:"}])["title"]
+    ok = actual == expected
+    failures += not ok
+    print(f"{'ok  ' if ok else 'FAIL'} empty title takes {expected!r} from the App field, got {actual!r}")
+
+actual = [app_verdict(9, [{**request(9, "Rubber Bands", ""), "title": title}])["title"]
+          for title in ("App Request: Rubber Bands", "[Feature]: Rubber Bands", "[App Request]\uff1aRubber Bands")]
+ok = actual == ["[App Request]: Rubber Bands"] * 3
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} other prefix spellings and another form's tag are replaced, got {actual!r}")
+
+hostile_registry = {"bundles": [{"repo": "evil/patches", "name": "x](https://example.com) @octocat [y",
+                                 "targetApps": ["ch.protonvpn.android"]},
+                                {"repo": "hxreborn/morphe-patches", "name": "Hxreborn", "targetApps": ["ch.protonvpn.android"]}]}
+app_request.REPO = "hxreborn/morphe-patches"
+this = request(9, "Proton VPN", "ch.protonvpn.android")
+listed = decide(9, this["body"], [this], SUPPORTED, hostile_registry, this["title"], NOW)
+app_request.REPO = ""
+ok = listed["matches"] == ["evil/patches"] and "](https://example.com)" not in listed["comment"] and "@" not in listed["comment"]
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} registry names are stripped of markup and this bundle is not listed")
+
+started = datetime.now(timezone.utc)
+slow_inputs = [verdict_for("### App and version\n\n" + "1" * 65000),
+               verdict_for("### App and version\n\nProton Mail" + " " * 65000 + "x\n\n### Bug description\n\nx\n")]
+ok = (datetime.now(timezone.utc) - started).total_seconds() < 5
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} long runs of digits and spaces in the app field are read in linear time")
+
+declared_domain = app_verdict(9, [request(9, "Moviebox", "moviebox.ph")])
+long_title = app_verdict(9, [{**request(9, "Gboard", ""), "title": "App Request: " + "x" * 300}])["title"]
+SUPPORTED["patches"][0]["compatiblePackages"].append({"name": "Quranify", "packageName": "com.mchutov.Quranify"})
+mixed_case = app_verdict(9, [request(9, "Quranify", "com.MCHUTOV.quranify")])
+SUPPORTED["patches"][0]["compatiblePackages"].pop()
+ok = (mixed_case["verdict"], declared_domain["package"], len(long_title)) == ("close", "", 256)
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} package case is ignored, a declared website is not a package, titles stop at 256")
+
+bad_repo = {"bundles": [{"repo": "evil/patches) [x](https://example.com", "name": "x", "targetApps": ["ch.protonvpn.android"]}]}
+this = request(9, "Proton VPN", "ch.protonvpn.android")
+ok = decide(9, this["body"], [this], SUPPORTED, bad_repo, this["title"], NOW)["matches"] == []
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} a registry entry whose repo is not owner/name is ignored")
+
+fullwidth = app_verdict(9, [request(9, "\uff21\uff54\uff4c\uff4f\uff2d\uff41\uff50\uff53", "")])
+ok = fullwidth["verdict"] == "flag" and fullwidth["labels"] == ["duplicate"]
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} a fullwidth name still matches the supported app it imitates")
+
 for name, (expected, body) in CASES.items():
     actual = verdict_for(*body) if isinstance(body, tuple) else verdict_for(body)
     ok = actual == expected
     failures += not ok
     print(f"{'ok  ' if ok else 'FAIL'} {name}: expected {expected}, got {actual}")
 
-total = len(CASES) + len(APP_CASES) + 3
+total = len(CASES) + len(APP_CASES) + 18
 print(f"\n{total - failures}/{total} passed")
 sys.exit(1 if failures else 0)

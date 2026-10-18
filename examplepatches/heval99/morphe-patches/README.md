@@ -40,78 +40,142 @@ versions may work but aren't guaranteed; if an app update breaks a patch,
 [open an issue](https://github.com/heval99/Heval-Morphe-Patches/issues/new/choose).
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.15.0](https://github.com/heval99/Heval-Morphe-Patches/releases/tag/v1.15.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**64** apps&nbsp;&nbsp;•&nbsp;&nbsp;**153** patches&nbsp;&nbsp;•&nbsp;&nbsp;updated 2026-10-16
+> **[v1.16.0](https://github.com/heval99/Heval-Morphe-Patches/releases/tag/v1.16.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;**67** apps&nbsp;&nbsp;•&nbsp;&nbsp;**165** patches&nbsp;&nbsp;•&nbsp;&nbsp;updated 2026-10-17
 
 🚫 ads&nbsp;&nbsp;🛡️ telemetry / tracking&nbsp;&nbsp;💎 premium / pro&nbsp;&nbsp;🔑 license check&nbsp;&nbsp;🔕 prompts / notifications&nbsp;&nbsp;🧪 experimental
+
+⚽ Sports & scores · 📰 News & finance · 💬 Messaging, email & calls · 🎵 Music, podcasts & radio · 📺 Video & TV · 📚 Books & reading · 🏋️ Health & fitness · 🗺️ Maps, weather & outdoors · 📝 Productivity & notes · 🌐 Browsers · 🏠 Launchers · 🛠️ Tools & utilities
+
+#### ⚽ Sports & scores <sub>14 apps</sub>
 
 | | App | Patches | Latest verified | Type |
 |:-:|---|---|---|:-:|
 | <img src="https://img.shields.io/badge/-%20-FFC107?style=flat-square" height="14" alt=""> | **365Scores** | 🚫 💎 🔕 🧩 5 | `14.9.6` | APKM |
 | <img src="https://img.shields.io/badge/-%20-00C853?style=flat-square" height="14" alt=""> | **AiScore** | 💎 🧩 2 | `4.3.2` | APKM |
-| <img src="https://img.shields.io/badge/-%20-F44336?style=flat-square" height="14" alt=""> | **Alarm Clock Xtreme** | 🚫 1 | `26.06.0` | APKM |
-| <img src="https://img.shields.io/badge/-%20-00B0FF?style=flat-square" height="14" alt=""> | **Aqua Mail** | 💎 1 | `2.7.0` | APKM |
 | <img src="https://img.shields.io/badge/-%20-2E7D32?style=flat-square" height="14" alt=""> | **BeSoccer** | 🚫 🔑 2 | `6.6.0` | APKM |
-| <img src="https://img.shields.io/badge/-%20-2E59A8?style=flat-square" height="14" alt=""> | **BLE Scanner** | 🚫 1 | `4.8` | APK |
-| <img src="https://img.shields.io/badge/-%20-2979FF?style=flat-square" height="14" alt=""> | **Bluecoins** | 💎 1 | `13.1.149` <sub>+1 older</sub> | APK |
-| <img src="https://img.shields.io/badge/-%20-006CEF?style=flat-square" height="14" alt=""> | **BlueMail** | 🚫 1 | `2.2.408` | APKM |
-| <img src="https://img.shields.io/badge/-%20-1084F7?style=flat-square" height="14" alt=""> | **Bluetooth Scanner** | 🚫 1 | `1.9.3` | APK |
 | <img src="https://img.shields.io/badge/-%20-FF0000?style=flat-square" height="14" alt=""> | **BoxBox** | 🚫 🛡️ 💎 3 | `5.4.17` <sub>+2 older</sub> | APKM |
-| <img src="https://img.shields.io/badge/-%20-FF4500?style=flat-square" height="14" alt=""> | **Brave Browser** | 🚫 🛡️ 💎 🔕 🧪 4 | `1.97.56` <sub>+2 older</sub> | APKM |
-| <img src="https://img.shields.io/badge/-%20-0288D1?style=flat-square" height="14" alt=""> | **Brevent** | 💎 1 | `4.2.31.1` | APK |
-| <img src="https://img.shields.io/badge/-%20-009688?style=flat-square" height="14" alt=""> | **Business Calendar 2** | 🚫 🛡️ 💎 3 | `2.55.7` | APKM |
-| <img src="https://img.shields.io/badge/-%20-F44336?style=flat-square" height="14" alt=""> | **Castbox** | 🚫 1 | `11.26.1-260915290` | APKM |
 | <img src="https://img.shields.io/badge/-%20-262626?style=flat-square" height="14" alt=""> | **CREX** | 🚫 💎 2 | `26.10.06` | APKM |
-| <img src="https://img.shields.io/badge/-%20-009FE3?style=flat-square" height="14" alt=""> | **Duplila** | 🚫 💎 🔑 3 | `5.1` | APKM |
-| <img src="https://img.shields.io/badge/-%20-212121?style=flat-square" height="14" alt=""> | **Easy Homescreen** | 🚫 🛡️ 💎 🔕 🧩 6 | `1.10.28` | APKM |
-| <img src="https://img.shields.io/badge/-%20-00ACFF?style=flat-square" height="14" alt=""> | **EasyNotes** | 🚫 💎 2 | `1.3.63.0921` <sub>+1 older</sub> | APKM |
-| <img src="https://img.shields.io/badge/-%20-2196F3?style=flat-square" height="14" alt=""> | **FairEmail** | 💎 1 | `1.2338` <sub>+1 older</sub> | APK |
-| <img src="https://img.shields.io/badge/-%20-0288D1?style=flat-square" height="14" alt=""> | **FishBuddy** | 💎 1 | `11.0.125` <sub>+1 older</sub> | APKM |
-| <img src="https://img.shields.io/badge/-%20-1565C0?style=flat-square" height="14" alt=""> | **Fishing Points** | 💎 1 | `4.7.3` | APK |
+| <img src="https://img.shields.io/badge/-%20-1D56A8?style=flat-square" height="14" alt=""> | **Digi Sport** | 🚫 🛡️ 💎 🔕 🧩 🧪 8 | `1.1.15` | APK |
 | <img src="https://img.shields.io/badge/-%20-1E88E5?style=flat-square" height="14" alt=""> | **Flashscore** | 🚫 🛡️ 🔕 🧩 6 | `26.10.2` | APKS |
 | <img src="https://img.shields.io/badge/-%20-00985F?style=flat-square" height="14" alt=""> | **FotMob** | 💎 1 | `238.17794.20261012` <sub>+4 older</sub> | APKM |
 | <img src="https://img.shields.io/badge/-%20-26A69A?style=flat-square" height="14" alt=""> | **Futbin** | 🚫 1 | `27.06` | APK |
-| <img src="https://img.shields.io/badge/-%20-101012?style=flat-square" height="14" alt=""> | **Hevy** | 🛡️ 💎 2 | `3.2.0` | APKM |
-| <img src="https://img.shields.io/badge/-%20-3C59AD?style=flat-square" height="14" alt=""> | **Hyperion Launcher** | 💎 1 | `2.2.7` | APKM |
-| <img src="https://img.shields.io/badge/-%20-607D8B?style=flat-square" height="14" alt=""> | **Interval Timer** | 🚫 🛡️ 2 | `2.3.30` | APK |
-| <img src="https://img.shields.io/badge/-%20-1976D2?style=flat-square" height="14" alt=""> | **IPTV** | 🚫 💎 2 | `9.1.25` | APKM |
-| <img src="https://img.shields.io/badge/-%20-009688?style=flat-square" height="14" alt=""> | **IrCode Finder** | 🚫 1 | `14.17.0 build 206 InAPP` | APKM |
-| <img src="https://img.shields.io/badge/-%20-FF6D00?style=flat-square" height="14" alt=""> | **jetAudio** | 💎 1 | `13.1.2` | APKM |
-| <img src="https://img.shields.io/badge/-%20-FEE500?style=flat-square" height="14" alt=""> | **KakaoTalk** | 🚫 🛡️ 💎 🧩 11 | `26.8.3` | APKM |
-| <img src="https://img.shields.io/badge/-%20-406C5C?style=flat-square" height="14" alt=""> | **LibrePods** | 💎 1 | `1.0.1-rc1-play` <sub>+1 older</sub> | APKM |
-| <img src="https://img.shields.io/badge/-%20-1E88E5?style=flat-square" height="14" alt=""> | **Librera** | 🚫 1 | `9.4.20` | APK |
-| <img src="https://img.shields.io/badge/-%20-06C755?style=flat-square" height="14" alt=""> | **LINE** | 🚫 🔕 🧩 17 | `26.15.1` | APKM |
 | <img src="https://img.shields.io/badge/-%20-C8102E?style=flat-square" height="14" alt=""> | **Livescore** | 🚫 1 | `10.3.1` | APK |
-| <img src="https://img.shields.io/badge/-%20-3A362F?style=flat-square" height="14" alt=""> | **LuckyClick** | 🚫 🔑 2 | `3.28` | APKM |
-| <img src="https://img.shields.io/badge/-%20-8BC34A?style=flat-square" height="14" alt=""> | **Monefy** | 💎 1 | `1.22.11` | APKM |
-| <img src="https://img.shields.io/badge/-%20-0066A1?style=flat-square" height="14" alt=""> | **Moneycontrol** | 🚫 🧪 1 | `14.6.2` | APKM |
-| <img src="https://img.shields.io/badge/-%20-283593?style=flat-square" height="14" alt=""> | **Moon+ Reader** | 🚫 1 | `10.7` | APKM |
-| <img src="https://img.shields.io/badge/-%20-0072BC?style=flat-square" height="14" alt=""> | **MyFitnessPal** | 🛡️ 💎 2 | `26.41.0` | APKM |
-| <img src="https://img.shields.io/badge/-%20-D0BCFF?style=flat-square" height="14" alt=""> | **Native Camera** | 💎 🔑 2 | `1.4.4` <sub>+1 older</sub> | APKM |
-| <img src="https://img.shields.io/badge/-%20-FFC107?style=flat-square" height="14" alt=""> | **#Notepad** | 🚫 💎 2 | `5.4.3.19019` | APKM |
 | <img src="https://img.shields.io/badge/-%20-0D47A1?style=flat-square" height="14" alt=""> | **OneCricket** | 🚫 1 | `26.08.01` | APKM |
 | <img src="https://img.shields.io/badge/-%20-00C853?style=flat-square" height="14" alt=""> | **OneFootball** | 🚫 1 | `15.145.0` <sub>+1 older</sub> | APKM |
-| <img src="https://img.shields.io/badge/-%20-7CB342?style=flat-square" height="14" alt=""> | **OsmAnd** | 💎 1 | `5.4.10` <sub>+2 older</sub> | APKM |
-| <img src="https://img.shields.io/badge/-%20-3F51B5?style=flat-square" height="14" alt=""> | **Pi Music Player** | 🚫 💎 2 | `3.2.0.0_release_2` | APKM |
-| <img src="https://img.shields.io/badge/-%20-9C27B0?style=flat-square" height="14" alt=""> | **Pocket Color Wheel** | 🚫 1 | `3.26` | APKM |
-| <img src="https://img.shields.io/badge/-%20-FF5722?style=flat-square" height="14" alt=""> | **Podcast Republic** | 🚫 1 | `9.17.0-260909124` | APK |
-| <img src="https://img.shields.io/badge/-%20-111111?style=flat-square" height="14" alt=""> | **Pro Launcher** | 💎 1 | `v2.4.2` | APKM |
-| <img src="https://img.shields.io/badge/-%20-0088FF?style=flat-square" height="14" alt=""> | **Shazam** | 🛡️ 🧩 2 | `16.63.0-261008` <sub>+2 older</sub> | APKM |
-| <img src="https://img.shields.io/badge/-%20-FF6D00?style=flat-square" height="14" alt=""> | **Simple Radio** | 🚫 💎 2 | `6.3.0` | APKM |
-| <img src="https://img.shields.io/badge/-%20-333333?style=flat-square" height="14" alt=""> | **SmartWOD Timer** | 🚫 💎 2 | `1.46.9` | APKM |
 | <img src="https://img.shields.io/badge/-%20-384CF4?style=flat-square" height="14" alt=""> | **Sofascore** | 🚫 🛡️ 💎 🔕 🧩 7 | `26.09.28` | APKM |
-| <img src="https://img.shields.io/badge/-%20-000000?style=flat-square" height="14" alt=""> | **SoundHound** | 🚫 1 | `10.5.8` | APK |
-| <img src="https://img.shields.io/badge/-%20-4CAF50?style=flat-square" height="14" alt=""> | **Tasker** | 💎 1 | `6.6.20` | APK |
-| <img src="https://img.shields.io/badge/-%20-5C6BC0?style=flat-square" height="14" alt=""> | **Textra** | 💎 1 | `4.87` <sub>+1 older</sub> | APKM |
-| <img src="https://img.shields.io/badge/-%20-000000?style=flat-square" height="14" alt=""> | **The Wall Street Journal** | 🚫 1 | `6.43.0.33886` | APK |
-| <img src="https://img.shields.io/badge/-%20-0087FF?style=flat-square" height="14" alt=""> | **Truecaller** | 🚫 🛡️ 💎 🔕 🧩 16 | `26.40.5` | APKM |
-| <img src="https://img.shields.io/badge/-%20-1565C0?style=flat-square" height="14" alt=""> | **TV Smarters Player Expert** | 🚫 💎 2 | `11.2.0` | APKM |
-| <img src="https://img.shields.io/badge/-%20-2962FF?style=flat-square" height="14" alt=""> | **Unified Remote** | 💎 1 | `3.25.1` | APK |
-| <img src="https://img.shields.io/badge/-%20-112D5A?style=flat-square" height="14" alt=""> | **VesselFinder** | 🚫 🔑 2 | `6.7.8` | APKM |
-| <img src="https://img.shields.io/badge/-%20-1565C0?style=flat-square" height="14" alt=""> | **Weather Underground** | 🚫 1 | `6.20.1` | APK |
-| <img src="https://img.shields.io/badge/-%20-00ACC1?style=flat-square" height="14" alt=""> | **WiFi Analyzer** | 🚫 1 | `3.11.2` <sub>+1 older</sub> | APK |
 | <img src="https://img.shields.io/badge/-%20-6001D2?style=flat-square" height="14" alt=""> | **Yahoo Sports** | 🚫 💎 2 | `12.10.3` | APKM |
 
+#### 📰 News & finance <sub>5 apps</sub>
+
+| | App | Patches | Latest verified | Type |
+|:-:|---|---|---|:-:|
+| <img src="https://img.shields.io/badge/-%20-2979FF?style=flat-square" height="14" alt=""> | **Bluecoins** | 💎 1 | `13.1.149` <sub>+1 older</sub> | APK |
+| <img src="https://img.shields.io/badge/-%20-8BC34A?style=flat-square" height="14" alt=""> | **Monefy** | 💎 1 | `1.22.11` | APKM |
+| <img src="https://img.shields.io/badge/-%20-0066A1?style=flat-square" height="14" alt=""> | **Moneycontrol** | 🚫 🧪 1 | `14.6.2` | APKM |
+| <img src="https://img.shields.io/badge/-%20-052962?style=flat-square" height="14" alt=""> | **The Guardian** | 🚫 🛡️ 🧩 3 | `6.238.23405` | APKM |
+| <img src="https://img.shields.io/badge/-%20-000000?style=flat-square" height="14" alt=""> | **The Wall Street Journal** | 🚫 1 | `6.43.0.33886` | APK |
+
+#### 💬 Messaging, email & calls <sub>7 apps</sub>
+
+| | App | Patches | Latest verified | Type |
+|:-:|---|---|---|:-:|
+| <img src="https://img.shields.io/badge/-%20-00B0FF?style=flat-square" height="14" alt=""> | **Aqua Mail** | 💎 1 | `2.7.0` | APKM |
+| <img src="https://img.shields.io/badge/-%20-006CEF?style=flat-square" height="14" alt=""> | **BlueMail** | 🚫 1 | `2.2.408` | APKM |
+| <img src="https://img.shields.io/badge/-%20-2196F3?style=flat-square" height="14" alt=""> | **FairEmail** | 💎 1 | `1.2338` <sub>+1 older</sub> | APK |
+| <img src="https://img.shields.io/badge/-%20-FEE500?style=flat-square" height="14" alt=""> | **KakaoTalk** | 🚫 🛡️ 💎 🧩 11 | `26.8.3` | APKM |
+| <img src="https://img.shields.io/badge/-%20-06C755?style=flat-square" height="14" alt=""> | **LINE** | 🚫 🔕 🧩 17 | `26.15.1` | APKM |
+| <img src="https://img.shields.io/badge/-%20-5C6BC0?style=flat-square" height="14" alt=""> | **Textra** | 💎 1 | `4.87` <sub>+1 older</sub> | APKM |
+| <img src="https://img.shields.io/badge/-%20-0087FF?style=flat-square" height="14" alt=""> | **Truecaller** | 🚫 🛡️ 💎 🔕 🧩 16 | `26.40.5` | APKM |
+
+#### 🎵 Music, podcasts & radio <sub>7 apps</sub>
+
+| | App | Patches | Latest verified | Type |
+|:-:|---|---|---|:-:|
+| <img src="https://img.shields.io/badge/-%20-F44336?style=flat-square" height="14" alt=""> | **Castbox** | 🚫 1 | `11.26.1-260915290` | APKM |
+| <img src="https://img.shields.io/badge/-%20-FF6D00?style=flat-square" height="14" alt=""> | **jetAudio** | 💎 1 | `13.1.2` | APKM |
+| <img src="https://img.shields.io/badge/-%20-3F51B5?style=flat-square" height="14" alt=""> | **Pi Music Player** | 🚫 💎 2 | `3.2.0.0_release_2` | APKM |
+| <img src="https://img.shields.io/badge/-%20-FF5722?style=flat-square" height="14" alt=""> | **Podcast Republic** | 🚫 1 | `9.17.0-260909124` | APK |
+| <img src="https://img.shields.io/badge/-%20-0088FF?style=flat-square" height="14" alt=""> | **Shazam** | 🛡️ 🧩 2 | `16.63.0-261008` <sub>+2 older</sub> | APKM |
+| <img src="https://img.shields.io/badge/-%20-FF6D00?style=flat-square" height="14" alt=""> | **Simple Radio** | 🚫 💎 2 | `6.3.0` | APKM |
+| <img src="https://img.shields.io/badge/-%20-000000?style=flat-square" height="14" alt=""> | **SoundHound** | 🚫 1 | `10.5.8` | APK |
+
+#### 📺 Video & TV <sub>3 apps</sub>
+
+| | App | Patches | Latest verified | Type |
+|:-:|---|---|---|:-:|
+| <img src="https://img.shields.io/badge/-%20-009FE3?style=flat-square" height="14" alt=""> | **Duplila** | 🚫 💎 🔑 3 | `5.1` | APKM |
+| <img src="https://img.shields.io/badge/-%20-1976D2?style=flat-square" height="14" alt=""> | **IPTV** | 🚫 💎 2 | `9.1.25` | APKM |
+| <img src="https://img.shields.io/badge/-%20-1565C0?style=flat-square" height="14" alt=""> | **TV Smarters Player Expert** | 🚫 💎 2 | `11.2.0` | APKM |
+
+#### 📚 Books & reading <sub>2 apps</sub>
+
+| | App | Patches | Latest verified | Type |
+|:-:|---|---|---|:-:|
+| <img src="https://img.shields.io/badge/-%20-1E88E5?style=flat-square" height="14" alt=""> | **Librera** | 🚫 1 | `9.4.20` | APK |
+| <img src="https://img.shields.io/badge/-%20-283593?style=flat-square" height="14" alt=""> | **Moon+ Reader** | 🚫 1 | `10.7` | APKM |
+
+#### 🏋️ Health & fitness <sub>4 apps</sub>
+
+| | App | Patches | Latest verified | Type |
+|:-:|---|---|---|:-:|
+| <img src="https://img.shields.io/badge/-%20-101012?style=flat-square" height="14" alt=""> | **Hevy** | 🛡️ 💎 2 | `3.2.0` | APKM |
+| <img src="https://img.shields.io/badge/-%20-607D8B?style=flat-square" height="14" alt=""> | **Interval Timer** | 🚫 🛡️ 2 | `2.3.30` | APK |
+| <img src="https://img.shields.io/badge/-%20-0072BC?style=flat-square" height="14" alt=""> | **MyFitnessPal** | 🛡️ 💎 2 | `26.41.0` | APKM |
+| <img src="https://img.shields.io/badge/-%20-333333?style=flat-square" height="14" alt=""> | **SmartWOD Timer** | 🚫 💎 2 | `1.46.9` | APKM |
+
+#### 🗺️ Maps, weather & outdoors <sub>5 apps</sub>
+
+| | App | Patches | Latest verified | Type |
+|:-:|---|---|---|:-:|
+| <img src="https://img.shields.io/badge/-%20-0288D1?style=flat-square" height="14" alt=""> | **FishBuddy** | 💎 1 | `11.0.125` <sub>+1 older</sub> | APKM |
+| <img src="https://img.shields.io/badge/-%20-1565C0?style=flat-square" height="14" alt=""> | **Fishing Points** | 💎 1 | `4.7.3` | APK |
+| <img src="https://img.shields.io/badge/-%20-7CB342?style=flat-square" height="14" alt=""> | **OsmAnd** | 💎 1 | `5.4.10` <sub>+2 older</sub> | APKM |
+| <img src="https://img.shields.io/badge/-%20-112D5A?style=flat-square" height="14" alt=""> | **VesselFinder** | 🚫 🔑 2 | `6.7.8` | APKM |
+| <img src="https://img.shields.io/badge/-%20-1565C0?style=flat-square" height="14" alt=""> | **Weather Underground** | 🚫 1 | `6.20.1` | APK |
+
+#### 📝 Productivity & notes <sub>5 apps</sub>
+
+| | App | Patches | Latest verified | Type |
+|:-:|---|---|---|:-:|
+| <img src="https://img.shields.io/badge/-%20-F44336?style=flat-square" height="14" alt=""> | **Alarm Clock Xtreme** | 🚫 1 | `26.06.0` | APKM |
+| <img src="https://img.shields.io/badge/-%20-009688?style=flat-square" height="14" alt=""> | **Business Calendar 2** | 🚫 🛡️ 💎 3 | `2.55.7` | APKM |
+| <img src="https://img.shields.io/badge/-%20-00ACFF?style=flat-square" height="14" alt=""> | **EasyNotes** | 🚫 💎 2 | `1.3.63.0921` <sub>+1 older</sub> | APKM |
+| <img src="https://img.shields.io/badge/-%20-FFC107?style=flat-square" height="14" alt=""> | **#Notepad** | 🚫 💎 2 | `5.4.3.19019` | APKM |
+| <img src="https://img.shields.io/badge/-%20-4CAF50?style=flat-square" height="14" alt=""> | **Tasker** | 💎 1 | `6.6.20` | APK |
+
+#### 🌐 Browsers <sub>2 apps</sub>
+
+| | App | Patches | Latest verified | Type |
+|:-:|---|---|---|:-:|
+| <img src="https://img.shields.io/badge/-%20-FF4500?style=flat-square" height="14" alt=""> | **Brave Browser** | 🚫 🛡️ 💎 🔕 🧪 4 | `1.97.56` <sub>+2 older</sub> | APKM |
+| <img src="https://img.shields.io/badge/-%20-FFB700?style=flat-square" height="14" alt=""> | **Via** | 🛡️ 1 | `7.3.3` | APK |
+
+#### 🏠 Launchers <sub>3 apps</sub>
+
+| | App | Patches | Latest verified | Type |
+|:-:|---|---|---|:-:|
+| <img src="https://img.shields.io/badge/-%20-212121?style=flat-square" height="14" alt=""> | **Easy Homescreen** | 🚫 🛡️ 💎 🔕 🧩 6 | `1.10.28` | APKM |
+| <img src="https://img.shields.io/badge/-%20-3C59AD?style=flat-square" height="14" alt=""> | **Hyperion Launcher** | 💎 1 | `2.2.7` | APKM |
+| <img src="https://img.shields.io/badge/-%20-111111?style=flat-square" height="14" alt=""> | **Pro Launcher** | 💎 1 | `v2.4.2` | APKM |
+
+#### 🛠️ Tools & utilities <sub>10 apps</sub>
+
+| | App | Patches | Latest verified | Type |
+|:-:|---|---|---|:-:|
+| <img src="https://img.shields.io/badge/-%20-2E59A8?style=flat-square" height="14" alt=""> | **BLE Scanner** | 🚫 1 | `4.8` | APK |
+| <img src="https://img.shields.io/badge/-%20-1084F7?style=flat-square" height="14" alt=""> | **Bluetooth Scanner** | 🚫 1 | `1.9.3` | APK |
+| <img src="https://img.shields.io/badge/-%20-0288D1?style=flat-square" height="14" alt=""> | **Brevent** | 💎 1 | `4.2.31.1` | APK |
+| <img src="https://img.shields.io/badge/-%20-009688?style=flat-square" height="14" alt=""> | **IrCode Finder** | 🚫 1 | `14.17.0 build 206 InAPP` | APKM |
+| <img src="https://img.shields.io/badge/-%20-406C5C?style=flat-square" height="14" alt=""> | **LibrePods** | 💎 1 | `1.0.1-rc1-play` <sub>+1 older</sub> | APKM |
+| <img src="https://img.shields.io/badge/-%20-3A362F?style=flat-square" height="14" alt=""> | **LuckyClick** | 🚫 🔑 2 | `3.28` | APKM |
+| <img src="https://img.shields.io/badge/-%20-D0BCFF?style=flat-square" height="14" alt=""> | **Native Camera** | 💎 🔑 2 | `1.4.4` <sub>+1 older</sub> | APKM |
+| <img src="https://img.shields.io/badge/-%20-9C27B0?style=flat-square" height="14" alt=""> | **Pocket Color Wheel** | 🚫 1 | `3.26` | APKM |
+| <img src="https://img.shields.io/badge/-%20-2962FF?style=flat-square" height="14" alt=""> | **Unified Remote** | 💎 1 | `3.25.1` | APK |
+| <img src="https://img.shields.io/badge/-%20-00ACC1?style=flat-square" height="14" alt=""> | **WiFi Analyzer** | 🚫 1 | `3.11.2` <sub>+1 older</sub> | APK |
+
 ### 🔍 Patch details
+
+#### ⚽ Sports & scores
 
 <details>
 <summary><b>365Scores</b> &nbsp;·&nbsp; 5 patches &nbsp;·&nbsp; <code>com.scores365</code></summary>
@@ -139,26 +203,6 @@ Verified on: `4.3.2`
 
 </details>
 <details>
-<summary><b>Alarm Clock Xtreme</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.alarmclock.xtreme.free</code></summary>
-
-Verified on: `26.06.0`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Turns on the ad-free entitlement so Alarm Clock Xtreme shows no banner, interstitial or consent ads. Only the ad-free feature is changed; the other shop features keep their purchase state. | ✅ |
-
-</details>
-<details>
-<summary><b>Aqua Mail</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>org.kman.AquaMail</code></summary>
-
-Verified on: `2.7.0`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 💎 **Enable Premium** | Unlocks the Pro/Premium features and lifts the free-version feature locks. | ✅ |
-
-</details>
-<details>
 <summary><b>BeSoccer</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.resultadosfutbol.mobile</code></summary>
 
 Verified on: `6.6.0`
@@ -167,46 +211,6 @@ Verified on: `6.6.0`
 |---|---|:-:|
 | 🚫 **Disable ads** | Disables banner, interstitial, native, app-open and rewarded ads and hides empty banner slots. | ✅ |
 | 🔑 **Disable license check** | Skips the Play Store license check so the patched app starts. | ✅ |
-
-</details>
-<details>
-<summary><b>BLE Scanner</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.macdom.ble.blescanner</code></summary>
-
-Verified on: `4.8`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Removes the banner and interstitial ads. | ✅ |
-
-</details>
-<details>
-<summary><b>Bluecoins</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.rammigsoftware.bluecoins</code></summary>
-
-Verified on: `13.1.149`, `13.1.79`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 💎 **Enable Premium** | Unlocks the premium version (removes ads and lifts premium limits). | ✅ |
-
-</details>
-<details>
-<summary><b>BlueMail</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>me.bluemail.mail</code></summary>
-
-Verified on: `2.2.408`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Disables banner, native, interstitial, rewarded and app-open ads. | ✅ |
-
-</details>
-<details>
-<summary><b>Bluetooth Scanner</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.pzolee.bluetoothscanner</code></summary>
-
-Verified on: `1.9.3`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Removes the banner and interstitial ads. | ✅ |
 
 </details>
 <details>
@@ -222,51 +226,6 @@ Verified on: `5.4.17`, `5.4.16`, `5.4.9`
 
 </details>
 <details>
-<summary><b>Brave Browser</b> &nbsp;·&nbsp; 4 patches &nbsp;·&nbsp; <code>com.brave.browser</code></summary>
-
-Verified on: `1.97.56`, `1.96.61`, `1.95.104`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 💎 **Brave Origin** | Unlocks Brave Origin and enables feature toggle controls. | ✅ |
-| 🚫 **Disable ads** 🧪 | Experimental: hides sponsored new tab images (including full-page takeovers) and the "Earn BAT for viewing ads" Rewards signup popup. | ➖ |
-| 🛡️ **Disable telemetry** 🧪 | Experimental: turns off P3A analytics and the usage ping on every start (overriding the in-app switches), stops crash report uploads and drops the install-referrer attribution code. | ➖ |
-| 🔕 **Hide promotional prompts** 🧪 | Experimental: stops the recurring "Set Brave as default browser" dialog, the "Rate Brave" dialog and card, retention and Rewards promo notifications, the search widget promo and the VPN card in Settings. | ➖ |
-
-</details>
-<details>
-<summary><b>Brevent</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>me.piebridge.brevent</code></summary>
-
-Verified on: `4.2.31.1`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 💎 **Enable Premium** | Unlocks all donation-gated settings, including dynamic GMS and suspend. Note: patched builds cannot validate genuine donation tokens, so the Brefoil count is forced; use the official build to have a real donation recognized. | ✅ |
-
-</details>
-<details>
-<summary><b>Business Calendar 2</b> &nbsp;·&nbsp; 3 patches &nbsp;·&nbsp; <code>com.appgenix.bizcal</code></summary>
-
-Verified on: `2.55.7`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Turns off Business Calendar 2's ad-serving gate and the "ads or Pro" dialog, stops FairBid from starting, preloading or showing interstitials, and disables Facebook Audience Network's auto-initialization. | ✅ |
-| 🛡️ **Disable telemetry** | Disables Firebase Analytics (including automatic events), Crashlytics crash reporting, Fyber's crash handler and the sale promo push notifications. Remote Config keeps working. | ✅ |
-| 💎 **Unlock Pro** | Unlocks Business Calendar 2 Pro by forcing the app's own complete-pro and force-pro status to true. Billing is not touched. | ✅ |
-
-</details>
-<details>
-<summary><b>Castbox</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>fm.castbox.audiobook.radio.podcast</code></summary>
-
-Verified on: `11.26.1-260915290`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Disables banner, interstitial, native, app-open and rewarded ads. | ✅ |
-
-</details>
-<details>
 <summary><b>CREX</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>in.cricketexchange.app.cricketexchange</code></summary>
 
 Verified on: `26.10.06`
@@ -278,71 +237,20 @@ Verified on: `26.10.06`
 
 </details>
 <details>
-<summary><b>Duplila</b> &nbsp;·&nbsp; 3 patches &nbsp;·&nbsp; <code>com.duplila.screenshare</code></summary>
+<summary><b>Digi Sport</b> &nbsp;·&nbsp; 8 patches &nbsp;·&nbsp; <code>ro.rcsrds.digisport</code></summary>
 
-Verified on: `5.1`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Removes the banner ad and skips the ad consent form, which otherwise closes the app for free users who refuse consent. | ✅ |
-| 🔑 **Disable license check** | Skips the Play Store license check so the patched app starts. | ✅ |
-| 💎 **Enable Premium** | Unlocks Duplila Premium: no watermark, the higher mirroring resolution and the other premium-only actions. Premium is checked on the device only; the license check is disabled as well so the patched app starts. | ✅ |
-
-</details>
-<details>
-<summary><b>Easy Homescreen</b> &nbsp;·&nbsp; 6 patches &nbsp;·&nbsp; <code>easy.launcher</code></summary>
-
-Verified on: `1.10.28`
+Verified on: `1.1.15`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 🚫 **Disable ads** | Removes banner, native and app-open ads and skips the ad consent form. | ✅ |
-| 🧩 **Disable default launcher reminder** | Stops the notification that asks you to set the app as the default launcher. It only appears while another launcher is the default. | ➖ |
-| 💎 **Disable promotions** | Hides the GetJar and SportsPass partner banners, tiles, search cards and suggestions, the "Discover" app offers card and the keyboard promotion notification. | ✅ |
-| 🔕 **Disable rating prompts** | Stops the app's feedback (sentiment) dialog and the Google Play review request. | ✅ |
-| 🛡️ **Disable telemetry** | Disables Firebase Analytics and Crashlytics, Amplitude, Braze, Singular and Rudderstack tracking. Push notifications keep working. | ✅ |
-| 🧩 **Hide sponsored content** | Removes sponsored links, sites, suggestions and articles from search and the news feed. The news feed is built from the sponsored article list, so it may show fewer posts or none at all. | ➖ |
-
-</details>
-<details>
-<summary><b>EasyNotes</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>easynotes.notes.notepad.notebook.privatenotes.note</code></summary>
-
-Verified on: `1.3.63.0921`, `1.3.61.0907`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Removes the 'notes_edit_banner' unit from utils/AdManager and the app-open ad from App$AppOpenAdManager. Both are gated on the single App.isAdFree() check, which normally depends on a VIP subscription. | ✅ |
-| 💎 **Enable Premium** | Unlocks the VIP-only fonts, note backgrounds, stickers and drawing tools. The app checks entitlement entirely locally — there is no license server — so forcing the App.isVip() gate to return true unlocks everything, and stays unlocked even though BillingManager resets the underlying purchase flags from Play on every startup. | ✅ |
-
-</details>
-<details>
-<summary><b>FairEmail</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>eu.faircode.email</code></summary>
-
-Verified on: `1.2338`, `1.2337`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 💎 **Enable Pro** | Unlocks the FairEmail pro features. | ✅ |
-
-</details>
-<details>
-<summary><b>FishBuddy</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>no.fishbuddy_playground.app</code></summary>
-
-Verified on: `11.0.125`, `11.0.101`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 💎 **Enable Premium** | Forces User.hasPremium() to return true, unlocking premium features locked behind the RevenueCat subscription entitlement. | ✅ |
-
-</details>
-<details>
-<summary><b>Fishing Points</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.gregacucnik.fishingpoints</code></summary>
-
-Verified on: `4.7.3`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 💎 **Enable Premium** | Unlocks Fishing Points premium features and removes ads. | ✅ |
+| 🚫 **Disable ads** | Removes the banner ads and empty ad slots in articles, listings, results and the live programme list, and the pre-roll ads before live channels and videos. | ✅ |
+| 🚫 **Disable live stream ads** 🧪 | Plays live channels from the plain stream instead of the Google DAI stream with inserted ads. Turn this off if a live channel stops playing. | ✅ |
+| 🛡️ **Disable telemetry** | Disables Firebase Analytics, Crashlytics, Performance Monitoring and Piano (Cxense) page events. Push notifications keep working. | ✅ |
+| 🔕 **Disable update prompts** | Stops the Play Store in-app update prompt. An old version may still stop working if Digi Sport's servers drop support for it. | ✅ |
+| 🧩 **Hide betting odds** | Hides the bookmaker odds block in soccer match rows. | ✅ |
+| 💎 **Hide promotions** | Hides the cross-promotion articles from other RCS&RDS apps below articles and the "Exclusive online · live" bar on Home. | ✅ |
+| 🧩 **Hide sponsored articles** | Hides sponsored articles in section listings and in the article widgets below an article. | ✅ |
+| 🧩 **Skip ad consent form** | Skips Google's ad consent form at startup and in the GDPR screens, and hides the then empty ad consent section in Settings. Use it together with Disable ads. | ✅ |
 
 </details>
 <details>
@@ -381,66 +289,148 @@ Verified on: `27.06`
 
 </details>
 <details>
-<summary><b>Hevy</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.hevy</code></summary>
+<summary><b>Livescore</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.livescore</code></summary>
 
-Verified on: `3.2.0`
+Verified on: `10.3.1`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 🛡️ **Block telemetry & trackers** | Blocks Sentry crash reporting, Adjust and Branch attribution, Facebook app events and Amplitude ad-ID and legacy event uploads. Push notifications and purchases keep working. | ✅ |
-| 💎 **Unlock Pro** | Unlocks Hevy Pro features that run on your device's workout data (unlimited routines, custom exercises, advanced stats and graphs). Pro features Hevy's servers provide, like cloud limits and Hevy Coach, can stay locked. | ✅ |
+| 🚫 **Disable ads** | Forces AdsRemovalSettings.areAdsDisabled() to return true, disabling banner, interstitial, MPU, hero placement, coverage sponsorship and announcement ads. | ✅ |
 
 </details>
 <details>
-<summary><b>Hyperion Launcher</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>projekt.launcher</code></summary>
+<summary><b>OneCricket</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>one.cricket.app</code></summary>
 
-Verified on: `2.2.7`
+Verified on: `26.08.01`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 💎 **Enable Premium** | Unlocks Hyperion Premium features without a purchase or the Launcher Key app. | ✅ |
+| 🚫 **Disable ads** | Disables banner, interstitial, native/inline and app-open ads and hides the empty ad slots. | ✅ |
 
 </details>
 <details>
-<summary><b>Interval Timer</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>cc.dreamspark.intervaltimer</code></summary>
+<summary><b>OneFootball</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>de.motain.iliga</code></summary>
 
-Verified on: `2.3.30`
+Verified on: `15.145.0`, `15.142.0`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 🚫 **Disable ads** | Disables native and banner ads and hides the "Remove ads" upsell. | ✅ |
-| 🛡️ **Disable telemetry** | Disables Firebase Analytics, advertising ID collection and Crashlytics reports. | ✅ |
+| 🚫 **Disable ads** | Disables banner, interstitial, native, app-open and rewarded ads. | ✅ |
 
 </details>
 <details>
-<summary><b>IPTV</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>ru.iptvremote.android.iptv</code></summary>
+<summary><b>Sofascore</b> &nbsp;·&nbsp; 7 patches &nbsp;·&nbsp; <code>com.sofascore.results</code></summary>
 
-Verified on: `9.1.25`
+Verified on: `26.09.28`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 🚫 **Disable ads** | Switches the app to its built-in no-ads provider, removing banner, interstitial and video pre-roll ads (Yandex, Wortise and mediated networks). | ✅ |
-| 💎 **Enable Premium** | Unlocks the Pro-only access control settings (parental PIN, locking playlist/EPG/proxy/import-export/recording settings, hiding playlist URLs) and suppresses the in-app review prompt. Start on boot and autoplay last channel are only implemented in the separate IPTV Pro app and stay unavailable. | ✅ |
+| 🔕 **Block marketing notifications** | Blocks in-app promotional prompts, modals, promotion banners and Firebase In-App Messaging popups. Note: this only affects in-app promotions. Match-alert push delivery on re-signed builds needs "GmsCore support" with MicroG RE (issue #25). | ✅ |
+| 🛡️ **Disable Facebook SDK** | Blocks Facebook Audience Network ads and disables Facebook event tracking while keeping Facebook Login working. | ✅ |
+| 🚫 **Disable ads** | Disables banner, interstitial, feed, native, preroll and rewarded ads. | ✅ |
+| 🛡️ **Disable telemetry** | Disables AppsFlyer and Firebase Analytics event logging, plus Crashlytics crash reporting. | ✅ |
+| 💎 **Enable Premium** | Marks the account as premium in the app. Note: AI insights and other premium content are served by Sofascore's servers for paying accounts and are not unlocked; use "Disable ads" for an ad-free app. | ✅ |
+| 🧩 **GmsCore support** | Makes Google sign-in and Google APIs work in the patched app by using MicroG RE instead of Google Play services. Requires MicroG RE to be installed. | ➖ |
+| 🧩 **Spoof signature** | Makes the app report its original signing certificate to itself, so Firebase and Google APIs restricted to the original app keep working. | ➖ |
 
 </details>
 <details>
-<summary><b>IrCode Finder</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>ru.wasiliysoft.ircodefindernec</code></summary>
+<summary><b>Yahoo Sports</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.yahoo.mobile.client.android.sportacular</code></summary>
 
-Verified on: `14.17.0 build 206 InAPP`
+Verified on: `12.10.3`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 🚫 **Disable ads** | Removes the banner and interstitial ads. | ✅ |
+| 🚫 **Disable ads** | Hides ad cards on the home, scores, game, team and league screens, above articles and on video screens, turns off Taboola stream ads and removes video pre-roll ads. | ✅ |
+| 💎 **Hide betting promotions** | Hides the sportsbook promotion banner. | ✅ |
+
+</details>
+
+#### 📰 News & finance
+
+<details>
+<summary><b>Bluecoins</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.rammigsoftware.bluecoins</code></summary>
+
+Verified on: `13.1.149`, `13.1.79`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Premium** | Unlocks the premium version (removes ads and lifts premium limits). | ✅ |
 
 </details>
 <details>
-<summary><b>jetAudio</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.jetappfactory.jetaudio</code></summary>
+<summary><b>Monefy</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.monefy.app.lite</code></summary>
 
-Verified on: `13.1.2`
+Verified on: `1.22.11`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 💎 **Enable Pro** | Unlocks jetAudio Premium, all plugins and the ad unlocker. | ✅ |
+| 💎 **Enable Premium** | Unlocks the Monefy Pro features. | ✅ |
+
+</details>
+<details>
+<summary><b>Moneycontrol</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.divum.MoneyControl</code></summary>
+
+Verified on: `14.6.2`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** 🧪 | Experimental, not yet tested on a device. Removes banner, native, sticky, interstitial and video preroll ads and the Taboola sponsored links under articles. Pro content stays server-side and is not unlocked. | ✅ |
+
+</details>
+<details>
+<summary><b>The Guardian</b> &nbsp;·&nbsp; 3 patches &nbsp;·&nbsp; <code>com.guardian</code></summary>
+
+Verified on: `6.238.23405`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Removes ads from fronts and articles, and the swipe-in ad pages between articles. | ✅ |
+| 🧩 **Disable article limit** | Removes the article limit wall, the warm-up prompt and the offline wall, and stops counting article views. The free sign-in prompt and the "Support the Guardian" button stay. | ✅ |
+| 🛡️ **Disable telemetry** | Disables Firebase Analytics, Crashlytics, Ophan, the push "received" beacon and the third-party tracking SDKs (Comscore, Nielsen, Adjust, Braze, Permutive). News, live blog and football alerts keep working; Braze marketing pushes and in-app messages stop. | ✅ |
+
+</details>
+<details>
+<summary><b>The Wall Street Journal</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>wsj.reader_sp</code></summary>
+
+Verified on: `6.43.0.33886`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Removes the display and native ads from section fronts, articles and market pages, without leaving empty ad slots, and the pre-roll ads before videos. | ✅ |
+
+</details>
+
+#### 💬 Messaging, email & calls
+
+<details>
+<summary><b>Aqua Mail</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>org.kman.AquaMail</code></summary>
+
+Verified on: `2.7.0`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Premium** | Unlocks the Pro/Premium features and lifts the free-version feature locks. | ✅ |
+
+</details>
+<details>
+<summary><b>BlueMail</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>me.bluemail.mail</code></summary>
+
+Verified on: `2.2.408`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Disables banner, native, interstitial, rewarded and app-open ads. | ✅ |
+
+</details>
+<details>
+<summary><b>FairEmail</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>eu.faircode.email</code></summary>
+
+Verified on: `1.2338`, `1.2337`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Pro** | Unlocks the FairEmail pro features. | ✅ |
 
 </details>
 <details>
@@ -461,26 +451,6 @@ Verified on: `26.8.3`
 | 🧩 **Remove shop tab** | Removes the shopping tab from the bottom navigation bar. | ➖ |
 | 🧩 **Show messages restricted to mobile** | Shows AlimTalk, Leverage and Universal messages that a sub device (tablet or PC login) otherwise covers with "check this message on your phone". | ➖ |
 | 🧩 **Strip image metadata** | Removes GPS location and camera details from JPEG photos before they are sent (best effort: other formats are sent unchanged). | ✅ |
-
-</details>
-<details>
-<summary><b>LibrePods</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>me.kavishdevar.librepods</code></summary>
-
-Verified on: `1.0.1-rc1-play`, `1.0.0-rc1-play`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 💎 **Enable Premium** | Unlocks the 'Advanced device settings' features (Personalized Volume, Adaptive Audio, accessibility configs, hearing protection, etc.) that LibrePods gates behind the Play Store 'Unlock advanced features' one-time purchase. The patch forces the premium entitlement (PlayBillingProvider's _isPremium StateFlow) to always be true. | ✅ |
-
-</details>
-<details>
-<summary><b>Librera</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.foobnix.pdf.reader</code></summary>
-
-Verified on: `9.4.20`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Disables Librera's banner, interstitial and rewarded ads by reporting ads as switched off and the reward window as open, so the Google Mobile Ads SDK never starts. | ✅ |
 
 </details>
 <details>
@@ -510,103 +480,47 @@ Verified on: `26.15.1`
 
 </details>
 <details>
-<summary><b>Livescore</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.livescore</code></summary>
+<summary><b>Textra</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.textra</code></summary>
 
-Verified on: `10.3.1`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Forces AdsRemovalSettings.areAdsDisabled() to return true, disabling banner, interstitial, MPU, hero placement, coverage sponsorship and announcement ads. | ✅ |
-
-</details>
-<details>
-<summary><b>LuckyClick</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.peter890331.luckyclick.app</code></summary>
-
-Verified on: `3.28`
+Verified on: `4.87`, `4.85`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 🚫 **Disable ads** | Turns on the app's own ad-free mode, which removes the banner and the full-screen video ad shown before the auto clicker starts. | ✅ |
-| 🔑 **Disable license check** | Skips the Play Store license check so the patched app starts. | ✅ |
+| 💎 **Enable Pro** | Unlocks Textra Pro: removes ads and unlocks the paid features. | ✅ |
 
 </details>
 <details>
-<summary><b>Monefy</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.monefy.app.lite</code></summary>
+<summary><b>Truecaller</b> &nbsp;·&nbsp; 16 patches &nbsp;·&nbsp; <code>com.truecaller</code></summary>
 
-Verified on: `1.22.11`
+Verified on: `26.40.5`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 💎 **Enable Premium** | Unlocks the Monefy Pro features. | ✅ |
+| 🚫 **Disable ads** | Hides banner and native ads and the ad slots in the call log and inbox, and turns off interstitial and app-open ads, so actions such as Click to WhatsApp run at once. Also turns off the remaining ad checks (including rewarded ads), the ad campaign and ad config syncs, and the "Explore Truecaller Premium" row in the contacts list. | ✅ |
+| 🛡️ **Disable telemetry** | Turns off the app start tracker, CleverTap event tracking and AppsFlyer attribution. | ✅ |
+| 🔕 **Disable update prompts** | Stops the Google Play in-app update prompts and the app's own "update required" page, so the app does not block you from using the patched version. | ✅ |
+| 💎 **Enable Premium** | Unlocks the Premium interface and the Premium features that are checked on the device. Features backed by Truecaller's servers (Call Assistant, family sharing, Who viewed / searched for me data, Identify AI, cloud call recording, fraud insurance, the verified badge) are not unlocked. | ✅ |
+| 🧩 **Fix T9 contact search** | Builds Truecaller's T9 dialer search index for new contacts each time the app opens, instead of waiting for the 12-hour background job. Helps when T9 finds no saved contacts after a fresh install. | ➖ |
+| 🧩 **GmsCore support** | Makes Google sign-in and Google APIs work in the patched app by using MicroG RE instead of Google Play services. Requires MicroG RE to be installed. | ➖ |
+| 🧩 **Hide Assistant tab** | Turns off the Call Assistant feature, which removes the Assistant tab. | ➖ |
+| 🧩 **Hide Blocking tab** | Removes the Blocking tab from the bottom bar. Spam blocking keeps working. | ➖ |
+| 🧩 **Hide Messages tab** | Removes the Messages tab from the bottom bar and always opens Calls. SMS notifications still open their conversation. When Calls is the only tab left, the bottom bar shrinks to the height of the system navigation bar. | ➖ |
+| 💎 **Hide Premium tab** | Removes the Premium tab from the bottom bar and the Premium entry from the Settings screen. | ➖ |
+| 🧩 **Hide Scam feed** | Turns off the Scam Feed, which removes its tab and menu entry and stops its notifications. | ➖ |
+| 🧩 **Hide Wear OS settings** | Removes the "Truecaller for Wear OS" entry from the Settings screen. | ✅ |
+| 🧩 **Hide family button** | Turns off Family Protect, which removes the family button at the top of the home screen and its onboarding and notifications. | ➖ |
+| 🧩 **Restore classic call log** | Experimental: turns off the redesigned call log, which brings back the classic call log and its "Frequently called" setting. | ➖ |
+| 🧩 **Spoof signature** | Makes the app report its original signing certificate to itself, so Firebase and Google APIs restricted to the original app keep working. | ➖ |
+| 🧩 **Use SMS for verification codes** | Reads the phone verification code from the SMS inbox instead of Google's SMS Retriever, for devices without Google Play services or with MicroG. Phone verification can still fail on modified builds, because Truecaller's servers check the app. | ➖ |
 
 </details>
+
+#### 🎵 Music, podcasts & radio
+
 <details>
-<summary><b>Moneycontrol</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.divum.MoneyControl</code></summary>
+<summary><b>Castbox</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>fm.castbox.audiobook.radio.podcast</code></summary>
 
-Verified on: `14.6.2`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** 🧪 | Experimental, not yet tested on a device. Removes banner, native, sticky, interstitial and video preroll ads and the Taboola sponsored links under articles. Pro content stays server-side and is not unlocked. | ✅ |
-
-</details>
-<details>
-<summary><b>Moon+ Reader</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.flyersoft.moonreader</code></summary>
-
-Verified on: `10.7`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Disables Moon+ Reader's banner, interstitial, exit and native ads by forcing the central ad gate to always report ads as disabled. | ✅ |
-
-</details>
-<details>
-<summary><b>MyFitnessPal</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.myfitnesspal.android</code></summary>
-
-Verified on: `26.41.0`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🛡️ **Disable Datadog telemetry** | Stops Datadog real-user monitoring (sessions, screens, taps, crashes, ANRs and network traces). Other analytics in the app are not changed. | ✅ |
-| 💎 **Enable Premium+** | Enables app features locked behind the subscription paywall. | ✅ |
-
-</details>
-<details>
-<summary><b>Native Camera</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.rawcam.app</code></summary>
-
-Verified on: `1.4.4`, `1.4.3`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🔑 **Disable license check** | Skips the Play Store license check so the patched app starts. | ✅ |
-| 💎 **Enable Premium** | Unlocks Native Camera premium (RAW DNG, 10-bit/HLG/UHDR video, boosted modes and the higher bitrate cap). Premium is a local flag; the license check is disabled as well so the patched app starts. | ✅ |
-
-</details>
-<details>
-<summary><b>#Notepad</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.ztnstudio.notepad</code></summary>
-
-Verified on: `5.4.3.19019`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Stops the bundled Calldorado ad SDK: no in-app ads and no after-call ad screen. | ✅ |
-| 💎 **Enable Premium** | Unlocks #Notepad premium and hides the paywall and in-app ad slots. | ✅ |
-
-</details>
-<details>
-<summary><b>OneCricket</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>one.cricket.app</code></summary>
-
-Verified on: `26.08.01`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Disables banner, interstitial, native/inline and app-open ads and hides the empty ad slots. | ✅ |
-
-</details>
-<details>
-<summary><b>OneFootball</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>de.motain.iliga</code></summary>
-
-Verified on: `15.145.0`, `15.142.0`
+Verified on: `11.26.1-260915290`
 
 | Patch | What it does | Default |
 |---|---|:-:|
@@ -614,13 +528,13 @@ Verified on: `15.145.0`, `15.142.0`
 
 </details>
 <details>
-<summary><b>OsmAnd</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>net.osmand</code></summary>
+<summary><b>jetAudio</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.jetappfactory.jetaudio</code></summary>
 
-Verified on: `5.4.10`, `5.4.9`, `5.4.5`
+Verified on: `13.1.2`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 💎 **Enable Premium** | Unlocks OsmAnd Pro, Maps+ and live updates. | ✅ |
+| 💎 **Enable Pro** | Unlocks jetAudio Premium, all plugins and the ad unlocker. | ✅ |
 
 </details>
 <details>
@@ -635,16 +549,6 @@ Verified on: `3.2.0.0_release_2`
 
 </details>
 <details>
-<summary><b>Pocket Color Wheel</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.pocketcolorwheel.PCW</code></summary>
-
-Verified on: `3.26`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Disables banner, interstitial, native, app-open and rewarded ads. | ✅ |
-
-</details>
-<details>
 <summary><b>Podcast Republic</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.podcast.podcasts</code></summary>
 
 Verified on: `9.17.0-260909124`
@@ -652,16 +556,6 @@ Verified on: `9.17.0-260909124`
 | Patch | What it does | Default |
 |---|---|:-:|
 | 🚫 **Disable ads** | Disables banner, interstitial, native, app-open and rewarded ads. | ✅ |
-
-</details>
-<details>
-<summary><b>Pro Launcher</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>app.prolauncher</code></summary>
-
-Verified on: `v2.4.2`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 💎 **Enable Premium** | Unlocks Pro Launcher Pro features without a subscription. | ✅ |
 
 </details>
 <details>
@@ -687,33 +581,6 @@ Verified on: `6.3.0`
 
 </details>
 <details>
-<summary><b>SmartWOD Timer</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>net.smartwod.timer</code></summary>
-
-Verified on: `1.46.9`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Disables banner, interstitial, rewarded and app-open ads. | ✅ |
-| 💎 **Enable Premium** | Unlocks Premium+ by reporting the lifetime and ad-free purchases as owned. | ✅ |
-
-</details>
-<details>
-<summary><b>Sofascore</b> &nbsp;·&nbsp; 7 patches &nbsp;·&nbsp; <code>com.sofascore.results</code></summary>
-
-Verified on: `26.09.28`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🔕 **Block marketing notifications** | Blocks in-app promotional prompts, modals, promotion banners and Firebase In-App Messaging popups. Note: this only affects in-app promotions. Match-alert push delivery on re-signed builds needs "GmsCore support" with MicroG RE (issue #25). | ✅ |
-| 🛡️ **Disable Facebook SDK** | Blocks Facebook Audience Network ads and disables Facebook event tracking while keeping Facebook Login working. | ✅ |
-| 🚫 **Disable ads** | Disables banner, interstitial, feed, native, preroll and rewarded ads. | ✅ |
-| 🛡️ **Disable telemetry** | Disables AppsFlyer and Firebase Analytics event logging, plus Crashlytics crash reporting. | ✅ |
-| 💎 **Enable Premium** | Marks the account as premium in the app. Note: AI insights and other premium content are served by Sofascore's servers for paying accounts and are not unlocked; use "Disable ads" for an ad-free app. | ✅ |
-| 🧩 **GmsCore support** | Makes Google sign-in and Google APIs work in the patched app by using MicroG RE instead of Google Play services. Requires MicroG RE to be installed. | ➖ |
-| 🧩 **Spoof signature** | Makes the app report its original signing certificate to itself, so Firebase and Google APIs restricted to the original app keep working. | ➖ |
-
-</details>
-<details>
 <summary><b>SoundHound</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.melodis.midomiMusicIdentifier.freemium</code></summary>
 
 Verified on: `10.5.8`
@@ -723,59 +590,30 @@ Verified on: `10.5.8`
 | 🚫 **Disable ads** | Disables banner, interstitial, native, app-open and rewarded ads. | ✅ |
 
 </details>
-<details>
-<summary><b>Tasker</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>net.dinglisch.android.taskerm</code></summary>
 
-Verified on: `6.6.20`
+#### 📺 Video & TV
+
+<details>
+<summary><b>Duplila</b> &nbsp;·&nbsp; 3 patches &nbsp;·&nbsp; <code>com.duplila.screenshare</code></summary>
+
+Verified on: `5.1`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 💎 **Enable Full Version** | Bypasses the Play license check so the paid app runs as licensed. | ✅ |
+| 🚫 **Disable ads** | Removes the banner ad and skips the ad consent form, which otherwise closes the app for free users who refuse consent. | ✅ |
+| 🔑 **Disable license check** | Skips the Play Store license check so the patched app starts. | ✅ |
+| 💎 **Enable Premium** | Unlocks Duplila Premium: no watermark, the higher mirroring resolution and the other premium-only actions. Premium is checked on the device only; the license check is disabled as well so the patched app starts. | ✅ |
 
 </details>
 <details>
-<summary><b>Textra</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.textra</code></summary>
+<summary><b>IPTV</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>ru.iptvremote.android.iptv</code></summary>
 
-Verified on: `4.87`, `4.85`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 💎 **Enable Pro** | Unlocks Textra Pro: removes ads and unlocks the paid features. | ✅ |
-
-</details>
-<details>
-<summary><b>The Wall Street Journal</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>wsj.reader_sp</code></summary>
-
-Verified on: `6.43.0.33886`
+Verified on: `9.1.25`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 🚫 **Disable ads** | Removes the display and native ads from section fronts, articles and market pages, without leaving empty ad slots, and the pre-roll ads before videos. | ✅ |
-
-</details>
-<details>
-<summary><b>Truecaller</b> &nbsp;·&nbsp; 16 patches &nbsp;·&nbsp; <code>com.truecaller</code></summary>
-
-Verified on: `26.40.5`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Hides banner and native ads and the ad slots in the call log and inbox, and turns off interstitial and app-open ads, so actions such as Click to WhatsApp run at once. Also turns off the remaining ad checks (including rewarded ads), the ad campaign and ad config syncs, and the "Explore Truecaller Premium" row in the contacts list. | ✅ |
-| 🛡️ **Disable telemetry** | Turns off the app start tracker, CleverTap event tracking and AppsFlyer attribution. | ✅ |
-| 🔕 **Disable update prompts** | Stops the Google Play in-app update prompts and the app's own "update required" page, so the app does not block you from using the patched version. | ✅ |
-| 💎 **Enable Premium** | Unlocks the Premium interface and the Premium features that are checked on the device. Features backed by Truecaller's servers (Call Assistant, family sharing, Who viewed / searched for me data, Identify AI, cloud call recording, fraud insurance, the verified badge) are not unlocked. | ✅ |
-| 🧩 **Fix T9 contact search** | Builds Truecaller's T9 dialer search index for new contacts each time the app opens, instead of waiting for the 12-hour background job. Helps when T9 finds no saved contacts after a fresh install. | ➖ |
-| 🧩 **GmsCore support** | Makes Google sign-in and Google APIs work in the patched app by using MicroG RE instead of Google Play services. Requires MicroG RE to be installed. | ➖ |
-| 🧩 **Hide Assistant tab** | Turns off the Call Assistant feature, which removes the Assistant tab. | ➖ |
-| 🧩 **Hide Blocking tab** | Removes the Blocking tab from the bottom bar. Spam blocking keeps working. | ➖ |
-| 🧩 **Hide Messages tab** | Removes the Messages tab from the bottom bar and always opens Calls. SMS notifications still open their conversation. When Calls is the only tab left, the bottom bar is hidden. | ➖ |
-| 💎 **Hide Premium tab** | Removes the Premium tab from the bottom bar and the Premium entry from the Settings screen. | ➖ |
-| 🧩 **Hide Scam feed** | Turns off the Scam Feed, which removes its tab and menu entry and stops its notifications. | ➖ |
-| 🧩 **Hide Wear OS settings** | Removes the "Truecaller for Wear OS" entry from the Settings screen. | ✅ |
-| 🧩 **Hide family button** | Turns off Family Protect, which removes the family button at the top of the home screen and its onboarding and notifications. | ➖ |
-| 🧩 **Restore classic call log** | Experimental: turns off the redesigned call log, which brings back the classic call log and its "Frequently called" setting. | ➖ |
-| 🧩 **Spoof signature** | Makes the app report its original signing certificate to itself, so Firebase and Google APIs restricted to the original app keep working. | ➖ |
-| 🧩 **Use SMS for verification codes** | Reads the phone verification code from the SMS inbox instead of Google's SMS Retriever, for devices without Google Play services or with MicroG. Phone verification can still fail on modified builds, because Truecaller's servers check the app. | ➖ |
+| 🚫 **Disable ads** | Switches the app to its built-in no-ads provider, removing banner, interstitial and video pre-roll ads (Yandex, Wortise and mediated networks). | ✅ |
+| 💎 **Enable Premium** | Unlocks the Pro-only access control settings (parental PIN, locking playlist/EPG/proxy/import-export/recording settings, hiding playlist URLs) and suppresses the in-app review prompt. Start on boot and autoplay last channel are only implemented in the separate IPTV Pro app and stay unavailable. | ✅ |
 
 </details>
 <details>
@@ -789,14 +627,107 @@ Verified on: `11.2.0`
 | 💎 **Enable Premium** | Experimental: marks every RevenueCat entitlement as active on the Java side, which is what the app's Dart premium check reads. Server-side features (account sync, recordings, the always-current EPG) still depend on the Expert backend and are not changed. | ➖ |
 
 </details>
-<details>
-<summary><b>Unified Remote</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.Relmtech.Remote</code></summary>
 
-Verified on: `3.25.1`
+#### 📚 Books & reading
+
+<details>
+<summary><b>Librera</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.foobnix.pdf.reader</code></summary>
+
+Verified on: `9.4.20`
 
 | Patch | What it does | Default |
 |---|---|:-:|
-| 💎 **Enable Pro** | Unlocks Unified Remote Full by forcing the local license status check. | ✅ |
+| 🚫 **Disable ads** | Disables Librera's banner, interstitial and rewarded ads by reporting ads as switched off and the reward window as open, so the Google Mobile Ads SDK never starts. | ✅ |
+
+</details>
+<details>
+<summary><b>Moon+ Reader</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.flyersoft.moonreader</code></summary>
+
+Verified on: `10.7`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Disables Moon+ Reader's banner, interstitial, exit and native ads by forcing the central ad gate to always report ads as disabled. | ✅ |
+
+</details>
+
+#### 🏋️ Health & fitness
+
+<details>
+<summary><b>Hevy</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.hevy</code></summary>
+
+Verified on: `3.2.0`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🛡️ **Block telemetry & trackers** | Blocks Sentry crash reporting, Adjust and Branch attribution, Facebook app events and Amplitude ad-ID and legacy event uploads. Push notifications and purchases keep working. | ✅ |
+| 💎 **Unlock Pro** | Unlocks Hevy Pro features that run on your device's workout data (unlimited routines, custom exercises, advanced stats and graphs). Pro features Hevy's servers provide, like cloud limits and Hevy Coach, can stay locked. | ✅ |
+
+</details>
+<details>
+<summary><b>Interval Timer</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>cc.dreamspark.intervaltimer</code></summary>
+
+Verified on: `2.3.30`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Disables native and banner ads and hides the "Remove ads" upsell. | ✅ |
+| 🛡️ **Disable telemetry** | Disables Firebase Analytics, advertising ID collection and Crashlytics reports. | ✅ |
+
+</details>
+<details>
+<summary><b>MyFitnessPal</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.myfitnesspal.android</code></summary>
+
+Verified on: `26.41.0`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🛡️ **Disable Datadog telemetry** | Stops Datadog real-user monitoring (sessions, screens, taps, crashes, ANRs and network traces). Other analytics in the app are not changed. | ✅ |
+| 💎 **Enable Premium+** | Enables app features locked behind the subscription paywall. | ✅ |
+
+</details>
+<details>
+<summary><b>SmartWOD Timer</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>net.smartwod.timer</code></summary>
+
+Verified on: `1.46.9`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Disables banner, interstitial, rewarded and app-open ads. | ✅ |
+| 💎 **Enable Premium** | Unlocks Premium+ by reporting the lifetime and ad-free purchases as owned. | ✅ |
+
+</details>
+
+#### 🗺️ Maps, weather & outdoors
+
+<details>
+<summary><b>FishBuddy</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>no.fishbuddy_playground.app</code></summary>
+
+Verified on: `11.0.125`, `11.0.101`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Premium** | Forces User.hasPremium() to return true, unlocking premium features locked behind the RevenueCat subscription entitlement. | ✅ |
+
+</details>
+<details>
+<summary><b>Fishing Points</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.gregacucnik.fishingpoints</code></summary>
+
+Verified on: `4.7.3`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Premium** | Unlocks Fishing Points premium features and removes ads. | ✅ |
+
+</details>
+<details>
+<summary><b>OsmAnd</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>net.osmand</code></summary>
+
+Verified on: `5.4.10`, `5.4.9`, `5.4.5`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Premium** | Unlocks OsmAnd Pro, Maps+ and live updates. | ✅ |
 
 </details>
 <details>
@@ -820,6 +751,222 @@ Verified on: `6.20.1`
 | 🚫 **Remove ads** | Unlocks the ad-free purchase. | ✅ |
 
 </details>
+
+#### 📝 Productivity & notes
+
+<details>
+<summary><b>Alarm Clock Xtreme</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.alarmclock.xtreme.free</code></summary>
+
+Verified on: `26.06.0`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Turns on the ad-free entitlement so Alarm Clock Xtreme shows no banner, interstitial or consent ads. Only the ad-free feature is changed; the other shop features keep their purchase state. | ✅ |
+
+</details>
+<details>
+<summary><b>Business Calendar 2</b> &nbsp;·&nbsp; 3 patches &nbsp;·&nbsp; <code>com.appgenix.bizcal</code></summary>
+
+Verified on: `2.55.7`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Turns off Business Calendar 2's ad-serving gate and the "ads or Pro" dialog, stops FairBid from starting, preloading or showing interstitials, and disables Facebook Audience Network's auto-initialization. | ✅ |
+| 🛡️ **Disable telemetry** | Disables Firebase Analytics (including automatic events), Crashlytics crash reporting, Fyber's crash handler and the sale promo push notifications. Remote Config keeps working. | ✅ |
+| 💎 **Unlock Pro** | Unlocks Business Calendar 2 Pro by forcing the app's own complete-pro and force-pro status to true. Billing is not touched. | ✅ |
+
+</details>
+<details>
+<summary><b>EasyNotes</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>easynotes.notes.notepad.notebook.privatenotes.note</code></summary>
+
+Verified on: `1.3.63.0921`, `1.3.61.0907`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Removes the 'notes_edit_banner' unit from utils/AdManager and the app-open ad from App$AppOpenAdManager. Both are gated on the single App.isAdFree() check, which normally depends on a VIP subscription. | ✅ |
+| 💎 **Enable Premium** | Unlocks the VIP-only fonts, note backgrounds, stickers and drawing tools. The app checks entitlement entirely locally — there is no license server — so forcing the App.isVip() gate to return true unlocks everything, and stays unlocked even though BillingManager resets the underlying purchase flags from Play on every startup. | ✅ |
+
+</details>
+<details>
+<summary><b>#Notepad</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.ztnstudio.notepad</code></summary>
+
+Verified on: `5.4.3.19019`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Stops the bundled Calldorado ad SDK: no in-app ads and no after-call ad screen. | ✅ |
+| 💎 **Enable Premium** | Unlocks #Notepad premium and hides the paywall and in-app ad slots. | ✅ |
+
+</details>
+<details>
+<summary><b>Tasker</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>net.dinglisch.android.taskerm</code></summary>
+
+Verified on: `6.6.20`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Full Version** | Bypasses the Play license check so the paid app runs as licensed. | ✅ |
+
+</details>
+
+#### 🌐 Browsers
+
+<details>
+<summary><b>Brave Browser</b> &nbsp;·&nbsp; 4 patches &nbsp;·&nbsp; <code>com.brave.browser</code></summary>
+
+Verified on: `1.97.56`, `1.96.61`, `1.95.104`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Brave Origin** | Unlocks Brave Origin and enables feature toggle controls. | ✅ |
+| 🚫 **Disable ads** 🧪 | Experimental: hides sponsored new tab images (including full-page takeovers) and the "Earn BAT for viewing ads" Rewards signup popup. | ➖ |
+| 🛡️ **Disable telemetry** 🧪 | Experimental: turns off P3A analytics and the usage ping on every start (overriding the in-app switches), stops crash report uploads and drops the install-referrer attribution code. | ➖ |
+| 🔕 **Hide promotional prompts** 🧪 | Experimental: stops the recurring "Set Brave as default browser" dialog, the "Rate Brave" dialog and card, retention and Rewards promo notifications, the search widget promo and the VPN card in Settings. | ➖ |
+
+</details>
+<details>
+<summary><b>Via</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>mark.via.gp</code></summary>
+
+Verified on: `7.3.3`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🛡️ **Disable telemetry** | Stops Firebase Analytics events. | ✅ |
+
+</details>
+
+#### 🏠 Launchers
+
+<details>
+<summary><b>Easy Homescreen</b> &nbsp;·&nbsp; 6 patches &nbsp;·&nbsp; <code>easy.launcher</code></summary>
+
+Verified on: `1.10.28`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Removes banner, native and app-open ads and skips the ad consent form. | ✅ |
+| 🧩 **Disable default launcher reminder** | Stops the notification that asks you to set the app as the default launcher. It only appears while another launcher is the default. | ➖ |
+| 💎 **Disable promotions** | Hides the GetJar and SportsPass partner banners, tiles, search cards and suggestions, the "Discover" app offers card and the keyboard promotion notification. | ✅ |
+| 🔕 **Disable rating prompts** | Stops the app's feedback (sentiment) dialog and the Google Play review request. | ✅ |
+| 🛡️ **Disable telemetry** | Disables Firebase Analytics and Crashlytics, Amplitude, Braze, Singular and Rudderstack tracking. Push notifications keep working. | ✅ |
+| 🧩 **Hide sponsored content** | Removes sponsored links, sites, suggestions and articles from search and the news feed. The news feed is built from the sponsored article list, so it may show fewer posts or none at all. | ➖ |
+
+</details>
+<details>
+<summary><b>Hyperion Launcher</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>projekt.launcher</code></summary>
+
+Verified on: `2.2.7`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Premium** | Unlocks Hyperion Premium features without a purchase or the Launcher Key app. | ✅ |
+
+</details>
+<details>
+<summary><b>Pro Launcher</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>app.prolauncher</code></summary>
+
+Verified on: `v2.4.2`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Premium** | Unlocks Pro Launcher Pro features without a subscription. | ✅ |
+
+</details>
+
+#### 🛠️ Tools & utilities
+
+<details>
+<summary><b>BLE Scanner</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.macdom.ble.blescanner</code></summary>
+
+Verified on: `4.8`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Removes the banner and interstitial ads. | ✅ |
+
+</details>
+<details>
+<summary><b>Bluetooth Scanner</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.pzolee.bluetoothscanner</code></summary>
+
+Verified on: `1.9.3`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Removes the banner and interstitial ads. | ✅ |
+
+</details>
+<details>
+<summary><b>Brevent</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>me.piebridge.brevent</code></summary>
+
+Verified on: `4.2.31.1`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Premium** | Unlocks all donation-gated settings, including dynamic GMS and suspend. Note: patched builds cannot validate genuine donation tokens, so the Brefoil count is forced; use the official build to have a real donation recognized. | ✅ |
+
+</details>
+<details>
+<summary><b>IrCode Finder</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>ru.wasiliysoft.ircodefindernec</code></summary>
+
+Verified on: `14.17.0 build 206 InAPP`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Removes the banner and interstitial ads. | ✅ |
+
+</details>
+<details>
+<summary><b>LibrePods</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>me.kavishdevar.librepods</code></summary>
+
+Verified on: `1.0.1-rc1-play`, `1.0.0-rc1-play`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Premium** | Unlocks the 'Advanced device settings' features (Personalized Volume, Adaptive Audio, accessibility configs, hearing protection, etc.) that LibrePods gates behind the Play Store 'Unlock advanced features' one-time purchase. The patch forces the premium entitlement (PlayBillingProvider's _isPremium StateFlow) to always be true. | ✅ |
+
+</details>
+<details>
+<summary><b>LuckyClick</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.peter890331.luckyclick.app</code></summary>
+
+Verified on: `3.28`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Turns on the app's own ad-free mode, which removes the banner and the full-screen video ad shown before the auto clicker starts. | ✅ |
+| 🔑 **Disable license check** | Skips the Play Store license check so the patched app starts. | ✅ |
+
+</details>
+<details>
+<summary><b>Native Camera</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.rawcam.app</code></summary>
+
+Verified on: `1.4.4`, `1.4.3`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🔑 **Disable license check** | Skips the Play Store license check so the patched app starts. | ✅ |
+| 💎 **Enable Premium** | Unlocks Native Camera premium (RAW DNG, 10-bit/HLG/UHDR video, boosted modes and the higher bitrate cap). Premium is a local flag; the license check is disabled as well so the patched app starts. | ✅ |
+
+</details>
+<details>
+<summary><b>Pocket Color Wheel</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.pocketcolorwheel.PCW</code></summary>
+
+Verified on: `3.26`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 🚫 **Disable ads** | Disables banner, interstitial, native, app-open and rewarded ads. | ✅ |
+
+</details>
+<details>
+<summary><b>Unified Remote</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.Relmtech.Remote</code></summary>
+
+Verified on: `3.25.1`
+
+| Patch | What it does | Default |
+|---|---|:-:|
+| 💎 **Enable Pro** | Unlocks Unified Remote Full by forcing the local license status check. | ✅ |
+
+</details>
 <details>
 <summary><b>WiFi Analyzer</b> &nbsp;·&nbsp; 1 patch &nbsp;·&nbsp; <code>com.farproc.wifi.analyzer</code></summary>
 
@@ -830,17 +977,8 @@ Verified on: `3.11.2`, `3.10.5-L`
 | 🚫 **Disable ads** | Disables the banner and full-screen ads. | ✅ |
 
 </details>
-<details>
-<summary><b>Yahoo Sports</b> &nbsp;·&nbsp; 2 patches &nbsp;·&nbsp; <code>com.yahoo.mobile.client.android.sportacular</code></summary>
 
-Verified on: `12.10.3`
-
-| Patch | What it does | Default |
-|---|---|:-:|
-| 🚫 **Disable ads** | Hides ad cards on the home, scores, game, team and league screens, above articles and on video screens, turns off Taboola stream ads and removes video pre-roll ads. | ✅ |
-| 💎 **Hide betting promotions** | Hides the sportsbook promotion banner. | ✅ |
-
-</details>
+#### 🌐 Universal
 
 <details>
 <summary><b>🌐 Universal</b> &nbsp;·&nbsp; 1 patches</summary>

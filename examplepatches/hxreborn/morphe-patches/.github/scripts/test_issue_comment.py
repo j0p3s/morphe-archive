@@ -2,6 +2,7 @@
 """python3 .github/scripts/test_issue_comment.py"""
 
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -104,6 +105,10 @@ NOT_PINGS = [
     "@hxreborn `FATAL EXCEPTION: main java.lang.NoSuchMethodError`",
     "Full localization support has not been implemented yet",
     "> any update?\n\nthanks, works on 1.52.0",
+    "<!-- any updates? -->",
+    "<!-- bump -->",
+    "`bump`",
+    "```\nany updates?",
     "",
 ]
 
@@ -155,6 +160,12 @@ ok = text.splitlines()[1] == "This issue is closed. For anything new, open a new
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} a title naming no app keeps the plain opening")
 
-total = len(REQUESTS) + len(NOT_REQUESTS) + len(PINGS) + len(NOT_PINGS) + 7
+started = time.monotonic()
+flood = [is_status_ping("?" * 5000 + "x"), is_status_ping("\n" * 60000 + "x"), is_request("\n" * 60000 + "x")]
+ok = flood == [False, False, False] and time.monotonic() - started < 2
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} long runs of question marks and newlines are read in linear time")
+
+total = len(REQUESTS) + len(NOT_REQUESTS) + len(PINGS) + len(NOT_PINGS) + 8
 print(f"\n{total - failures}/{total} passed")
 sys.exit(1 if failures else 0)

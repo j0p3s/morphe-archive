@@ -231,9 +231,9 @@ details and validation follow.
 | Bypass VOD ad sessions | No | Off | Experimental original-VOD-URL fallback. No live-ad removal claim. |
 | Block update prompts | Yes | On | Kick's forced-update screen and update sheet, and the Play Store version lookup behind them. |
 | Hide rating prompt | Yes | On | Kick's automatic "rate the app" prompts. |
-| Show deleted messages | Yes | On | Moderator-style struck-through deleted, timed-out and banned messages in chat. |
-| Hide chat highlights | Yes | Eight switches, all off | Pinned messages, polls and predictions, goals, the sub, gift and host cards above chat, event and drops banners, pinned KICKs, celebration prompts. |
-| Stay on channel when it hosts | Yes | Off | The host dialog's countdown no longer switches channels. |
+| Show deleted messages | Yes | On; Ignore chat clears, on | Moderator-style struck-through deleted, timed-out and banned messages in chat; a moderator's clear keeps the messages. |
+| Hide chat highlights | Yes | Nine switches, all off | Pinned messages, polls and predictions, goals, sub and gift messages, host messages, reward redemptions, event and drops banners, pinned KICKs, celebration prompts. |
+| Stay on channel when it hosts | Yes | Off | The host dialog waits for Watch now instead of switching when its countdown ends. |
 | Background audio | Yes | On; a second switch for picture-in-picture, off | Audio keeps playing through Kick's own audio service when you leave the app. |
 | Normal latency | Yes | Off | Turns off low-latency mode for live streams. |
 | Sleep timer | Yes | Off (choice) | Pauses playback a chosen time after it last started. |
@@ -242,6 +242,7 @@ details and validation follow.
 | Seek interval | Yes | Kick's 10 seconds (choice) | 5, 15, 20 or 30-second skips in videos and rewound live streams. |
 | Don't save searches | Yes | On | New searches aren't added to the search history. |
 | AMOLED black | Yes | Off (choice) | Pure black background, optionally near-black cards and sheets. |
+| Third-party emotes | Yes | 7TV emotes, off | The channel's and 7TV's global emotes in live chat. |
 
 The second batch follows one switch policy, the same in all three apps: every patch whose
 effect can be decided at run time has a Lurk setting that turns it fully off, and a new
@@ -293,7 +294,15 @@ be triggered from outside.
 redeemed reward, through `showAppRatingDialog`. That asks the rating store's
 `shouldShowAppRating` first (never shown, or more than 120 days ago), and the patch makes
 it return false. The developer-settings button that forces the sheet is untouched. The
-triggers need an account, so this was checked statically.
+follow trigger fires on a follow once you have followed ten channels and the app has been open
+for an hour in total (`app-session-time`); below that it only counts the follow. Checked on the
+emulator with a test account: after ten follows and an hour in the app, the next follow with the
+switch on (the default) showed no sheet and left the count at ten, so the trigger fired and was
+suppressed; with the switch off and Kick restarted, the next follow opened the "Rate us" sheet.
+One more path needs no account: a trigger that fires in landscape persists
+`shouldShowAppRatingOnNextPortrait`, and `AppRatingOrientationHandler` opens the sheet on the
+next portrait screen through the same check; with that flag set in Kick's AsyncStorage
+(`app-rating`), the switch off showed the sheet at start and the switch on didn't.
 
 ### Show deleted messages
 
@@ -305,7 +314,8 @@ connection and draws every chat line, including deletions, bans, subs, gifts, ho
 reward redemptions. The app's own chat store has handlers for the same events
 (`handleDeleteChatMessageEvent`, `handleClearChatEvent`, `handleSubscriptionEvent` and
 others), but in 40.32.1 nothing calls most of them, and the entries it keeps are only drawn
-by VOD chat replay. Chat lines can only be changed through that config.
+by VOD chat replay. Chat lines are changed through that config, and through a script Lurk runs in the
+page (see [Chat page script](#chat-page-script)).
 
 The page shows a removed message according to `userCanModerate`. When it's false, a deleted
 message's text becomes "Deleted by a moderator" and a ban or timeout removes the user's
@@ -323,16 +333,26 @@ the page's URL, so Kick's server also sees the value in the request for the page
 Messages removed before you opened the chat don't come back: history arrives without them.
 The page only marks messages it has already drawn. Kick's AI moderation often removes a
 message within milliseconds, while it's still waiting in the page's queue, and such a message
-then shows as an ordinary one, as in stock Kick. Twitch's second switch, "Ignore chat
-clears", has no Kick counterpart: the page clears itself when a moderator clears the chat,
-and the config has no way to stop it.
+then shows as an ordinary one, as in stock Kick.
 
-Checked on the emulator (Android 16, signed out) on a large live channel's Chat tab, by
-screenshots and the realtime event log: with the switch on, both timeouts in six minutes left
-the user's messages in place marked "(Timed out)" and added "moderator timed out X for 2
-minutes"; with it off and Kick restarted, a timeout removed the user's message and added no
-line, as in stock. Manual deletes and bans didn't happen during the tests; they go through the
-same flag.
+"Ignore chat clears", the second switch, is on by default as on Twitch. When a moderator
+clears the chat, the page empties its message list (`app.innerHTML = ""`, from its
+`ChatroomClearEvent` handler); the chat page script makes that one assignment on the list do
+nothing, so the messages stay and new ones keep arriving.
+
+Checked on the emulator (Android 16, signed out) on large live channels. Real events: with the
+switch on, 43 timeouts in about 20 minutes, a moderator's delete and a permanent ban left the
+messages in place, marked "(Timed out)", "(Deleted)" or "(Banned)", with "moderator timed out X"
+lines; with it off and Kick restarted, a timeout removed the user's message and added no line,
+as in stock. No moderator cleared a chat in 15 minutes across 14 large live channels. So for
+clears, and for both states of every event, a test build with WebView debugging on handed
+realtime frames in the page's own format (a delete, a permanent ban, a clear, a mid-tier KICKs
+gift) to the page's socket, which runs them through Kick's own handlers. With the switches on: the
+deleted and the banned user's messages stayed struck through with "(Deleted)" and "(Banned)"
+plus "X banned Y", the clear left all messages, and the KICKs gift showed the moderators' menu.
+With them off: "Deleted by a moderator", the banned user's messages removed with no line, the
+chat emptied (40 lines to none) and no menu, as in stock. Whether Kick's server refuses the
+menu's Delete from a non-moderator wasn't tested; it needs an account.
 
 ### Hide chat highlights
 
@@ -341,8 +361,9 @@ same flag.
 | Hide pinned messages | `PinnedMessage` returns null | The message pinned above chat |
 | Hide polls and predictions | `PollFloating`, `PredictionBannerView` return null | Poll and prediction cards; a hidden poll can't be voted in |
 | Hide goals | `FloatingGoalCard` returns null | The channel goal card |
-| Hide sub and gift cards | The sub and gift card callbacks return | The "just subscribed" and gift cards above chat |
-| Hide host cards | The host card callback returns | The "is hosting" card above chat |
+| Hide sub and gift messages | The sub and gift card callbacks return; the page hides its sub and gift lines | "Just subscribed" and gifted-sub lines in chat, and their cards above it |
+| Hide host messages | The host card callback returns; the page hides its host lines | "X is hosting with N viewers", in chat and as a card above it |
+| Hide reward redemptions | The page hides its reward lines | "X has redeemed ..." lines in chat |
 | Hide event and drops banners | `DropsBanner`, `StreamEventBanner` return null | Drops campaign and "Only on Kick" event banners |
 | Hide pinned KICKs | `PinnedKicks` returns null | KICKs gifts pinned above chat |
 | Hide celebration prompts | `ConsumingCelebration` returns null | The celebration button in the chat footer |
@@ -351,20 +372,41 @@ The components' parents are ordinary lists and footers, so the space closes up. 
 subscriber, a gift and a host each queue a timed card (`EventBanner`) in the floating stack
 above chat, where pinned messages, polls and goals also live. Three anonymous callbacks, which
 Kick's realtime listeners call, queue them; they now return at once. The lines for the same
-events inside the chat come from Kick's chat web page (see Show deleted messages) and still
-show, and so do reward redemptions, which only appear there; the app's own sub, gift, host and
-reward handlers are never called. Pinned KICKs sits here rather than under Hide KICKs tipping
-because it shows a gift someone already sent. Checked on the emulator: the pinned KICKs and
-prediction cards disappear, and with the sub callbacks returning no sub card appeared above
-chat while "just subscribed!" lines kept showing in the chat page.
+events inside the chat, and reward redemptions, which only appear there, come from Kick's chat
+web page (see Show deleted messages); the app's own sub, gift, host and reward handlers are
+never called. The chat page script hides those lines by the page's own classes for them
+(`subscription-container`, `subgift-container`, `host-container`, `reward-redeem-container`),
+so they take no space; the page still receives them. Pinned KICKs sits here rather than under
+Hide KICKs tipping because it shows a gift someone already sent. Checked on the emulator: the
+pinned KICKs and prediction cards disappear, and with the sub callbacks returning no sub card
+appeared above chat. On a channel with channel-point rewards, all 85 real redemptions in nine
+minutes were drawn by the page and hidden. Subs, gifts and hosts were rare during the tests, so
+those were handed to the page's socket as realtime frames in a test build (see Show deleted
+messages): with the switches on Kick drew each line and it stayed hidden; with them off each
+showed, as in stock.
 
 ### Stay on channel when it hosts
 
-When the channel you watch hosts another one, `JoinHostDialogContent` starts a countdown
-whose end callback switches to the hosted channel if you're on a stream, clip or VOD
-screen. The patch returns from that callback, so the dialog stays at zero with its buttons:
-Watch now still switches and closing it keeps you where you are. Hosting can't be
-triggered on demand, so this was checked statically.
+When the channel you watch hosts another one, Kick's realtime connection sends
+`ChatMoveToSupportedChannelEvent` and `JoinHostDialogContent` shows "X is taking you to watch
+another stream" with a countdown (`useCountdown({duration, startOnMount: true, onEnd})`). The
+component is mounted with the stream screen; the countdown restarts when an event arrives,
+and at zero `onEnd` switches to the hosted channel if you're on a stream, clip or VOD screen.
+Watch now doesn't switch by itself: it sets the dialog's `pressed` state, which hides it, and
+shows a "taking you to X in N seconds" toast, and the countdown's end does the switching.
+Cancel and close clear the event.
+
+The patch sets `startOnMount` to that `pressed` state instead of `true`, so the countdown only
+runs after Watch now. Until then the dialog waits, showing the full duration, for Watch now,
+Cancel or close. The literal's `startOnMount` is a constant, so the store goes where the
+options memo wrote its cache entry for `onEnd`; the options object is then rebuilt on each
+render, which `useCountdown`, reading only its fields, doesn't notice. (The first version
+returned from `onEnd` instead, which also stopped Watch now from switching.)
+
+Checked on the emulator with a test build that hands the app's own realtime module a host
+event, so the real dialog appears: with the switch off, the countdown ran and switched
+channels; with it on, the dialog waited at "Redirect in 10s" for over half a minute, and Watch
+now switched once Kick's countdown had run.
 
 ### Background audio
 
@@ -461,17 +503,52 @@ elements and borders) stays. `MainActivity.onCreate` also sets the window backgr
 seen during transitions, to black. The splash screen, drawn before any app code runs,
 stays Kick's `#090A0B`, and colours hardcoded in components stay as they are.
 
-### Third-party emotes (not included)
+### Chat page script
 
-Third-party (7TV) emotes, which Lurk has for Twitch, can't be added from the app's side
-in this version, because the chat is Kick's web page (see Show deleted messages). The page
-receives live messages over its own realtime connection, so the app's Pusher and
-Centrifugo listeners never see what it draws. Its emote pattern, `\[emote:(\d+):[^\]]+\]`,
-only accepts Kick's numeric emote IDs, not 7TV's 26-character ones, and its images load
-through the WebView rather than the app's OkHttp clients. The app does fetch the history
-the page starts with (`/api/v1/chat/<channel ID>/history`, handed over through
-`window.injectChatHistory`), but 7TV tokens written there would show as raw text. Showing
-7TV emotes on Kick would take a script injected into the chat page.
+The switches that change chat lines (Ignore chat clears, Hide sub and gift messages, Hide host
+messages, Hide reward redemptions and 7TV emotes) work inside Kick's chat page, since that is
+where the lines are drawn. Any patch with one of them adds a hook to react-native-webview's
+`RNCWebViewClient.onPageStarted` and `onPageFinished`, after their super calls. For a page on
+`chat.mobile.kick.com`, other than the single-gift KICKs preview (`preview=true`),
+`KickChat` evaluates the script (`patches/src/main/resources/kick/chat/chat-page.js`, copied
+into the APK as `assets/lurk-chat.js`) with the switches that are on, and logs what it did.
+With none on, nothing is evaluated. At page start the WebView can still be showing the
+previous document, so the script runs at both, checks the page's host and applies itself once
+per page. It only adds a style rule, replaces the list's `innerHTML` setter and observes the
+list for new messages; everything else on the page is Kick's. The page is served by Kick and
+can change at any time: the script then does nothing for what it no longer finds, and Lurk
+can't check it at patch time. `tests/kick/test_chat_page.py` runs it in headless Chrome on a
+copy of the page's structure.
+
+### Third-party emotes
+
+"7TV emotes" (`emotes_7tv`, the same key as on Twitch) starts off. When on, the chat page
+script loads the channel's 7TV set and 7TV's global set from 7tv.io, then turns every word of
+a message that is exactly an emote's name into that emote's image from cdn.7tv.app, in
+messages already on the page once the sets load and in new ones as they arrive. A channel
+emote wins over a global one with the same name, and text inside links and Kick's own emotes
+stays. The images use the page's emote style, so they're sized like Kick's; zero-width
+emotes show as ordinary ones. Neither request carries cookies or a referrer, so 7TV sees the
+channel, not the page's URL with Kick's config.
+
+7TV knows a Kick channel by its owner's Kick user ID, which the chat page doesn't have: its
+config only has the channel ID. Every HTTP client Kick makes starts from React Native's
+`OkHttpClientProvider.createClientBuilder()`, and while the switch is on (restart required)
+`KickHttp` adds an interceptor there that reads, without changing, Kick's own channel
+responses (`/api/v1|v2/channels/<slug>` and the channel screen's `/api/v2/channels/<slug>/info`)
+and remembers each channel ID's slug. The `/info` response has no owner, so the script asks
+Kick's channel API for the slug once per page (`kick.com/api/v2/channels/<slug>`, which the
+page may call) and gives 7TV the `user_id` it returns. A channel the app hasn't fetched gets
+global emotes only. OkHttp ships unrenamed in Kick; the patch checks every class and method
+the interceptor uses and fails instead of crashing later if one is gone.
+
+Not included: the emote picker and autocomplete (the app's own React Native UI), 7TV badges
+and paints, and live set updates. Earlier the app's Pusher and Centrifugo listeners were
+considered as hooks; they never see what the page draws, because the page has its own
+realtime connection, and its emote pattern (`\[emote:(\d+):[^\]]+\]`) only accepts Kick's
+numeric IDs. Checked on the emulator, signed out, on a large live channel: on the stream
+screen and the Chat tab the page loaded the channel's 988 and the 45 global emotes after the
+owner lookup, and 7TV images showed in live messages.
 
 ## Implementation contracts and verification
 
@@ -533,6 +610,10 @@ Verification tools retained in this repository:
   negative control reproduces the initial-only patch's 1080p-to-720p reset bug.
 - `tests/kick/verify_analytics_jobs.py`: compares actual decoded job methods with
   stock, including unchanged instructions, branches and exception handlers when off.
+- `tests/kick/test_chat_page.py`: the chat page script in headless Chrome, offline, on a copy
+  of the page's structure: host guard, one application per page, hidden lines, ignored
+  clears (with a control), 7TV words in old and new messages, the owner lookup, and no
+  referrer or cookies on its requests (with a control).
 - `tests/kick/verify_player.py`: production `KickPlayer` with boundary doubles: the
   mobile-data ceiling's decision table (with and without a Default video quality
   height), normal latency and the background audio decisions.

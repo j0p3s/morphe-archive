@@ -126,69 +126,124 @@ def cell(text):
     return (text or "").replace("|", "\\|").replace("\r", " ").replace("\n", " ").strip()
 
 
+CATEGORIES_PATH = Path(__file__).with_name("app-categories.json")
+OTHER = {"name": "Other", "emoji": "📦"}
+
+
+def load_categories():
+    """Category list in display order, and package -> category index."""
+    with open(CATEGORIES_PATH, encoding="utf-8") as f:
+        categories = json.load(f)["categories"]
+    index = {}
+    for i, category in enumerate(categories):
+        for pkg in category["packages"]:
+            if pkg in index:
+                raise ValueError(
+                    f"{pkg} is listed under both '{categories[index[pkg]]['name']}' "
+                    f"and '{category['name']}' in {CATEGORIES_PATH.name}"
+                )
+            index[pkg] = i
+    return categories, index
+
+
+def group_apps():
+    """[(category, [packages sorted by app name])] in category order, empty ones dropped."""
+    categories, index = load_categories()
+    groups = [(category, []) for category in categories] + [(OTHER, [])]
+    for pkg in by_pkg:
+        groups[index.get(pkg, len(categories))][1].append(pkg)
+    uncategorised = groups[-1][1]
+    if uncategorised:
+        sys.stderr.write(
+            f"WARNING: no category in {CATEGORIES_PATH.name} for: {', '.join(sorted(uncategorised))}; "
+            "listed under Other.\n"
+        )
+    return [
+        (category, sorted(pkgs, key=lambda p: by_pkg[p]["name"].lstrip("#").lower()))
+        for category, pkgs in groups
+        if pkgs
+    ]
+
+
+def category_title(category, count, noun):
+    return f"{category['emoji']} {category['name']} <sub>{count} {noun}{'s' if count != 1 else ''}</sub>"
+
+
 def build_content():
-    """Build the generated patches section: overview table plus per-app details."""
-    apps = sorted(by_pkg, key=lambda p: by_pkg[p]["name"].lstrip("#").lower())
+    """Build the generated patches section: per-category overview tables plus per-app details."""
+    groups = group_apps()
+    app_count = sum(len(pkgs) for _, pkgs in groups)
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
     lines = [
         f"> **[v{ver}](https://github.com/{owner}/{repo}/releases/tag/v{ver})**"
         f"&nbsp;&nbsp;•&nbsp;&nbsp;`{branch}`&nbsp;&nbsp;•&nbsp;&nbsp;"
-        f"**{len(apps)}** apps&nbsp;&nbsp;•&nbsp;&nbsp;**{total}** patches"
+        f"**{app_count}** apps&nbsp;&nbsp;•&nbsp;&nbsp;**{total}** patches"
         f"&nbsp;&nbsp;•&nbsp;&nbsp;updated {today}",
         "",
         LEGEND,
         "",
-        "| | App | Patches | Latest verified | Type |",
-        "|:-:|---|---|---|:-:|",
+        " · ".join(f"{category['emoji']} {category['name']}" for category, _ in groups),
     ]
 
-    for pkg in apps:
-        entry = by_pkg[pkg]
-        patches = sorted(entry["patches"].values(), key=lambda x: x["name"])
-        versions, apk_type, color = app_info(pkg)
-        kinds = {kind_icon(p) for p in patches}
-        icons = " ".join(i for i in ICON_ORDER if i in kinds)
-        if any(is_experimental(p, pkg) for p in patches):
-            icons += " 🧪"
-        latest = f"`{versions[-1]}`" if versions else "any"
-        if len(versions) > 1:
-            latest += f" <sub>+{len(versions) - 1} older</sub>"
-        lines.append(
-            f"| {swatch(color)} | **{cell(entry['name'])}** | {icons} {len(patches)} "
-            f"| {latest} | {apk_type or 'APK'} |"
-        )
-
-    lines += ["", "### 🔍 Patch details", ""]
-
-    for pkg in apps:
-        entry = by_pkg[pkg]
-        patches = sorted(entry["patches"].values(), key=lambda x: x["name"])
-        versions, _, _ = app_info(pkg)
-        version_list = ", ".join(f"`{v}`" for v in reversed(versions)) or "any version"
+    for category, pkgs in groups:
         lines += [
-            "<details>",
-            f"<summary><b>{entry['name']}</b> &nbsp;·&nbsp; {len(patches)} "
-            f"patch{'es' if len(patches) != 1 else ''} &nbsp;·&nbsp; <code>{pkg}</code></summary>",
             "",
-            f"Verified on: {version_list}",
+            f"#### {category_title(category, len(pkgs), 'app')}",
             "",
-            "| Patch | What it does | Default |",
-            "|---|---|:-:|",
+            "| | App | Patches | Latest verified | Type |",
+            "|:-:|---|---|---|:-:|",
         ]
-        for p in patches:
-            flag = " 🧪" if is_experimental(p, pkg) else ""
-            default = "✅" if p.get("default", True) else "➖"
+        for pkg in pkgs:
+            entry = by_pkg[pkg]
+            patches = sorted(entry["patches"].values(), key=lambda x: x["name"])
+            versions, apk_type, color = app_info(pkg)
+            kinds = {kind_icon(p) for p in patches}
+            icons = " ".join(i for i in ICON_ORDER if i in kinds)
+            if any(is_experimental(p, pkg) for p in patches):
+                icons += " 🧪"
+            latest = f"`{versions[-1]}`" if versions else "any"
+            if len(versions) > 1:
+                latest += f" <sub>+{len(versions) - 1} older</sub>"
             lines.append(
-                f"| {kind_icon(p)} **{cell(p['name'])}**{flag} "
-                f"| {cell(p.get('description')) or '—'} | {default} |"
+                f"| {swatch(color)} | **{cell(entry['name'])}** | {icons} {len(patches)} "
+                f"| {latest} | {apk_type or 'APK'} |"
             )
-        lines += ["", "</details>"]
+
+    lines += ["", "### 🔍 Patch details"]
+
+    for category, pkgs in groups:
+        lines += ["", f"#### {category['emoji']} {category['name']}", ""]
+        for pkg in pkgs:
+            entry = by_pkg[pkg]
+            patches = sorted(entry["patches"].values(), key=lambda x: x["name"])
+            versions, _, _ = app_info(pkg)
+            version_list = ", ".join(f"`{v}`" for v in reversed(versions)) or "any version"
+            lines += [
+                "<details>",
+                f"<summary><b>{entry['name']}</b> &nbsp;·&nbsp; {len(patches)} "
+                f"patch{'es' if len(patches) != 1 else ''} &nbsp;·&nbsp; <code>{pkg}</code></summary>",
+                "",
+                f"Verified on: {version_list}",
+                "",
+                "| Patch | What it does | Default |",
+                "|---|---|:-:|",
+            ]
+            for p in patches:
+                flag = " 🧪" if is_experimental(p, pkg) else ""
+                default = "✅" if p.get("default", True) else "➖"
+                lines.append(
+                    f"| {kind_icon(p)} **{cell(p['name'])}**{flag} "
+                    f"| {cell(p.get('description')) or '—'} | {default} |"
+                )
+            lines += ["", "</details>"]
 
     # Universal patches (no specific app)
     if universal:
         uni_patches = sorted(universal.values(), key=lambda x: x["name"])
         lines += [
+            "",
+            "#### 🌐 Universal",
             "",
             "<details>",
             f"<summary><b>🌐 Universal</b> &nbsp;·&nbsp; {len(uni_patches)} patches</summary>",

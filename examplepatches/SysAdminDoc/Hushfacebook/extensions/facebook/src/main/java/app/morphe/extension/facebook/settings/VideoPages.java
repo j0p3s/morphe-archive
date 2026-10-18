@@ -124,6 +124,14 @@ final class VideoPages {
                     L10n.t("Reels and videos play with the sound they were made with, not a version Facebook dubbed "
                             + "into your language with Meta AI. Off by default, since it hasn't been tried on a real "
                             + "account yet.")));
+            // The pill is built as each reel's footer is, so a change shows from the next reel.
+            reels.addPreference(toggle(context, Settings.HIDE_REEL_SEARCH_PILL,
+                    L10n.t("Hides the search suggestion under a reel's caption, the magnifier with a question to look up. "
+                            + "Off by default, since it hasn't been tried on a real account yet.")));
+            // The sidebar buttons are built as each reel is, so a change shows from the next reel.
+            reels.addPreference(toggle(context, Settings.HIDE_REEL_COUNTS,
+                    L10n.t("Takes the numbers away from under a reel's Like, Comment and Share icons. "
+                            + "The icons stay where they are. A change shows from the next reel.")));
         }
         if (build.contains(PatchFamily.REEL_WATCH_HISTORY)) {
             reels.addPreference(toggle(context, Settings.DONT_SEND_REEL_WATCH_HISTORY,
@@ -134,6 +142,15 @@ final class VideoPages {
             reels.addPreference(toggle(context, Settings.TURN_OFF_DOUBLE_TAP_LIKE,
                     L10n.t("A double tap on a reel or video no longer likes it or shows a heart. A single tap and the Like "
                             + "button work as before.")));
+        }
+        if (build.contains(PatchFamily.REEL_GESTURES)) {
+            reels.addPreference(toggle(context, Settings.DOUBLE_TAP_OPENS_COMMENTS,
+                    L10n.t("A double tap on a reel opens its comments instead of liking it. Turn off double tap to like "
+                            + "still wins when it's on. Off by default, since it hasn't been tried on a real account yet.")));
+            reels.addPreference(toggle(context, Settings.LONG_PRESS_OPENS_COMMENTS,
+                    L10n.t("Holding a reel opens its comments instead of Facebook's long-press menu or the 2x hold. The "
+                            + "reel's more button still opens that menu. Off by default, since it hasn't been tried on a real "
+                            + "account yet.")));
         }
         if (build.contains(PatchFamily.KEEP_REEL_SPEED)) {
             reels.addPreference(toggle(context, Settings.KEEP_REEL_SPEED,
@@ -202,6 +219,10 @@ final class VideoPages {
                 playback.addPreference(toggle(context, Settings.PICTURE_IN_PICTURE_FROM_MENU,
                         L10n.t("Leaving Facebook doesn't open the window. Tap Picture-in-picture in a reel's More menu "
                                 + "(the three dots) when you want one. That row is there whenever Picture-in-picture is on.")));
+                // Asked as each screen is armed and as the screen changes, so a change shows within a moment.
+                playback.addPreference(toggle(context, Settings.PICTURE_IN_PICTURE_BUTTON,
+                        L10n.t("Shows a small button at the left edge of a reel or video that has the window ready. Tap it to open "
+                                + "the window right away. Works with Picture-in-picture on.")));
             }
             if (build.contains(PatchFamily.HDR_BRIGHTNESS)) {
                 // Asked as each screen comes to the front, so a change shows from the next one.
@@ -249,6 +270,14 @@ final class VideoPages {
                         L10n.t("Add Download to phone to feed and Watch video menus. Uses the quality below. Off or paused, Facebook's menu returns.")));
                 downloads.addPreference(toggle(context, Settings.CLIPBOARD_DOWNLOAD,
                         L10n.t("With Download feed and Watch videos on, coming back to Facebook with a reel or video link copied offers to download it, once per link. Off, Facebook doesn't look at what you copied.")));
+            }
+            if (build.contains(PatchFamily.VIDEO_DOWNLOAD)) {
+                downloads.addPreference(toggle(context, Settings.OPEN_IN_ANOTHER_APP,
+                        L10n.t("Adds Open in another app to feed and Watch video menus. It hands the video to a player or casting app, such as VLC or Web Video Caster. A video with no single file to hand over says so.")));
+            }
+            if (build.contains(PatchFamily.VIDEO_DOWNLOAD) || build.contains(PatchFamily.PHOTO_DOWNLOAD)) {
+                downloads.addPreference(toggle(context, Settings.POST_MENU_DOWNLOAD_FIRST,
+                        L10n.t("Puts Download to phone and Save photo at the top of a post's three-dot menu instead of the bottom. A post with nothing to save gets neither.")));
             }
             if (build.contains(PatchFamily.PHOTO_DOWNLOAD)) {
                 downloads.addPreference(toggle(context, Settings.DOWNLOAD_PHOTOS,

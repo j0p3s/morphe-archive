@@ -11,11 +11,14 @@ import app.morphe.util.returnEarly
 
 val removePairipProtectionPatch = bytecodePatch {
     compatibleWith(
+        AppCompatibilities.ALOA,
         AppCompatibilities.ANYTRACKER,
         AppCompatibilities.AUDIOLAB,
+        AppCompatibilities.BANGLA_CALENDAR,
         AppCompatibilities.BIOBIRD,
         AppCompatibilities.BLURWALL,
         AppCompatibilities.CATZY,
+        AppCompatibilities.DEPTHPIX,
         AppCompatibilities.ECHO_EQUALIZER,
         AppCompatibilities.ECHOGRAM,
         AppCompatibilities.HINDU_CALENDAR,
@@ -35,6 +38,8 @@ val removePairipProtectionPatch = bytecodePatch {
     )
 
     execute {
+        if (classDefByOrNull(LICENSE_CLIENT_CLASS) == null) return@execute
+
         InitializeLicenseCheckFingerprint.matchSingle().method.returnEarly()
     }
 }

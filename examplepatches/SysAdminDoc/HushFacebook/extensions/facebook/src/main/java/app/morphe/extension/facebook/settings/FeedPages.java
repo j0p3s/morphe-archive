@@ -189,6 +189,12 @@ final class FeedPages {
                 feed.addPreference(toggle(context, Settings.HIDE_POST_FOLLOW_LINK,
                         L10n.t("Hides the \"Follow\" link next to the name on posts from Pages and people you don't follow. "
                                 + "Tapping the name still opens the profile. A change shows on the posts drawn after it.")));
+                feed.addPreference(toggle(context, Settings.HIDE_POST_COUNTS,
+                        L10n.t("Takes the numbers off the Like, Comment and Share buttons under posts, so each shows "
+                                + "just its word. The buttons stay where they are. A change shows on the posts drawn after it.")));
+                feed.addPreference(toggle(context, Settings.HIDE_POST_REACTIONS,
+                        L10n.t("Hides the stacked reaction icons and the reactions count under posts. The space stays, "
+                                + "so a tap where they were still opens the list of reactions.")));
             }
             if (build.contains(PatchFamily.SEEN_POSTS)) {
                 seenPosts(feed, context);
@@ -367,7 +373,8 @@ final class FeedPages {
         boolean order = build.contains(PatchFamily.DEFAULT_COMMENT_ORDER);
         boolean summaries = build.contains(PatchFamily.META_AI_SUMMARIES);
         boolean options = build.contains(PatchFamily.COMMENT_SHEET_OPTIONS);
-        if (!order && !summaries && !options) return;
+        boolean reactions = build.contains(PatchFamily.POST_PROMPTS);
+        if (!order && !summaries && !options && !reactions) return;
         PreferenceCategory comments = category(screen, L10n.t("Comments"));
         if (order) {
             comments.addPreference(toggle(context, Settings.DEFAULT_COMMENT_ORDER,
@@ -378,6 +385,11 @@ final class FeedPages {
             comments.addPreference(toggle(context, Settings.HIDE_META_AI_SUMMARIES,
                     L10n.t("Hides Meta AI's summary at the top of comments and the comment summary under a post's buttons. The "
                             + "comments themselves stay.")));
+        }
+        if (reactions) {
+            comments.addPreference(toggle(context, Settings.HIDE_COMMENT_REACTIONS,
+                    L10n.t("Hides the stacked reaction icons in the corner of a comment. The space stays, so a tap "
+                            + "where they were still opens the list of reactions.")));
         }
         if (options) {
             comments.addPreference(toggle(context, Settings.LIKE_ONLY,
@@ -399,6 +411,8 @@ final class FeedPages {
                         L10n.t("Hides comments containing a word from your Words to hide list in News feed, along with their "
                                 + "replies. Words that keep a post keep a comment too.")));
             }
+            comments.addPreference(toggle(context, Settings.HIDE_INCOMING_COMMENT_TYPING,
+                    L10n.t("Takes away the line that says someone is typing a comment. Your own typing is a separate switch under Privacy.")));
             comments.addPreference(reactionCountsRow(context));
         }
     }

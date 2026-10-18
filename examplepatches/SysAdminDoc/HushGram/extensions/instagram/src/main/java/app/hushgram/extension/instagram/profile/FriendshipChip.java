@@ -321,6 +321,8 @@ final class FriendshipChip {
         int ownBottom;
         final int room;
         private final int countsRoom;
+        /** The column's neighbors given the room too ({@link #keepNeighborsInPlace}), with their own bottom padding. */
+        private final Map<View, Integer> lifted = new WeakHashMap<>();
 
         Chip(View block, boolean small, @Nullable View column) {
             this.block = new WeakReference<>(block);
@@ -388,6 +390,14 @@ final class FriendshipChip {
             if (host != null && host.getPaddingBottom() == ownBottom + roomNow()) {
                 host.setPaddingRelative(host.getPaddingStart(), host.getPaddingTop(), host.getPaddingEnd(), ownBottom);
             }
+            for (Map.Entry<View, Integer> entry : lifted.entrySet()) {
+                View neighbor = entry.getKey();
+                int own = entry.getValue();
+                if (neighbor != null && neighbor.getPaddingBottom() == own + room) {
+                    neighbor.setPaddingRelative(neighbor.getPaddingStart(), neighbor.getPaddingTop(), neighbor.getPaddingEnd(), own);
+                }
+            }
+            lifted.clear();
         }
 
         @Override
@@ -444,10 +454,104 @@ final class FriendshipChip {
                 return;
             }
             pill.setBounds(bounds);
+            keepNeighborsInPlace(row, column);
             if (!counted) {
                 counted = true;
                 HookStatus.counted(FamilyNames.FRIENDSHIP_STATUS, UNDER_PICTURE);
             }
+        }
+
+        /**
+         * Gives the same room at their bottom to [column]'s neighbors in [row] that are placed by the
+         * row's height: stretched to it, or centered in it. The room made the row taller, and 451's
+         * name and counts beside the picture went down by half of it (#157, 0.0.12). With the room
+         * at its bottom too, what such a neighbor holds is back where Instagram put it. A neighbor
+         * that starts at the row's top and is shorter than it doesn't move, so it's left alone, and
+         * with the column short of the row's bottom the room didn't make the row taller at all.
+         * When none of that applies, the views beside the column may be centered on it instead
+         * ({@link #keepChainInPlace}).
+         */
+        private void keepNeighborsInPlace(ViewGroup row, View column) {
+            boolean grew = column.getBottom() >= rowBottom(row, column);
+            for (int i = 0; i < row.getChildCount(); i++) {
+                View child = row.getChildAt(i);
+                if (child == column || child.getVisibility() != View.VISIBLE) continue;
+                int bottom = child.getPaddingBottom();
+                Integer own = lifted.get(child);
+                if (own != null ? bottom == own + room : !grew || !placedByHeight(row, child)) continue;
+                lift(child);
+            }
+            if (lifted.isEmpty()) keepChainInPlace(row, column);
+        }
+
+        /**
+         * 451's header on a phone is one ConstraintLayout (#157, S22 2026-10-17): the bio sits in
+         * the same row under the picture's column, and the name and counts beside the column are a
+         * chain centered on its height. The room made the column taller and moved the chain down by
+         * half of it. The same room at the bottom of the chain's lowest view makes the chain that
+         * much taller, which puts it back where Instagram put it. Views beside the column that
+         * aren't centered on it are left alone.
+         */
+        private void keepChainInPlace(ViewGroup row, View column) {
+            View highest = null;
+            View lowest = null;
+            for (int i = 0; i < row.getChildCount(); i++) {
+                View child = row.getChildAt(i);
+                if (child == column || child.getVisibility() != View.VISIBLE || !beside(child, column)) continue;
+                if (highest == null || child.getTop() < highest.getTop()) highest = child;
+                if (lowest == null || child.getBottom() > lowest.getBottom()) lowest = child;
+            }
+            if (lowest != null && centeredOn(column, highest, lowest)) lift(lowest);
+        }
+
+        /** Gives [view] the room at its bottom, remembering its own padding for {@link #remove}. */
+        private void lift(View view) {
+            int bottom = view.getPaddingBottom();
+            lifted.put(view, bottom);
+            view.setPaddingRelative(view.getPaddingStart(), view.getPaddingTop(), view.getPaddingEnd(), bottom + room);
+        }
+
+        /**
+         * Whether [child] is to [column]'s side and within its height. An empty view isn't: 451
+         * keeps an empty badges row shown at the corner under the picture.
+         */
+        private static boolean beside(View child, View column) {
+            if (child.getWidth() == 0 || child.getHeight() == 0) return false;
+            boolean aside = child.getLeft() >= column.getRight() || child.getRight() <= column.getLeft();
+            return aside && child.getTop() >= column.getTop() && child.getBottom() <= column.getBottom();
+        }
+
+        /**
+         * Whether the views from [highest]'s top to [lowest]'s bottom are centered on [column]'s
+         * height, the way ConstraintLayout centers a chain: their outer margins count, and an odd
+         * pixel goes to either side.
+         */
+        private static boolean centeredOn(View column, View highest, View lowest) {
+            ViewGroup.LayoutParams top = highest.getLayoutParams();
+            ViewGroup.LayoutParams bottom = lowest.getLayoutParams();
+            int above = highest.getTop() - column.getTop()
+                    - (top instanceof ViewGroup.MarginLayoutParams ? ((ViewGroup.MarginLayoutParams) top).topMargin : 0);
+            int below = column.getBottom() - lowest.getBottom()
+                    - (bottom instanceof ViewGroup.MarginLayoutParams ? ((ViewGroup.MarginLayoutParams) bottom).bottomMargin : 0);
+            return above > 0 && Math.abs(above - below) <= 1;
+        }
+
+        /** Whether [child]'s place in [row] follows the row's height: it reaches the row's bottom, or it's centered and below its top. */
+        private static boolean placedByHeight(ViewGroup row, View child) {
+            int bottom = rowBottom(row, child);
+            if (child.getBottom() >= bottom) return true;
+            ViewGroup.LayoutParams params = child.getLayoutParams();
+            int top = row.getPaddingTop()
+                    + (params instanceof ViewGroup.MarginLayoutParams ? ((ViewGroup.MarginLayoutParams) params).topMargin : 0);
+            int above = child.getTop() - top;
+            return above > 0 && Math.abs(above - (bottom - child.getBottom())) <= 1;
+        }
+
+        /** The lowest [child]'s bottom edge can be in [row]: the row's bottom, less its padding and the child's margin. */
+        private static int rowBottom(ViewGroup row, View child) {
+            ViewGroup.LayoutParams params = child.getLayoutParams();
+            return row.getHeight() - row.getPaddingBottom()
+                    - (params instanceof ViewGroup.MarginLayoutParams ? ((ViewGroup.MarginLayoutParams) params).bottomMargin : 0);
         }
 
         /** The view under [row]'s children but [column] that shows something [bounds] touch, or null. */

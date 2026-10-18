@@ -59,3 +59,14 @@ internal object GetCredentialHandlerFingerprint : Fingerprint(
         opcode(Opcode.INVOKE_STATIC, location = MatchAfterWithin(1)),
     ),
 )
+
+internal object CredentialProviderFrameworkFingerprint : Fingerprint(
+    filters = listOf(string("In CredentialProviderFrameworkImpl onClearCredential")),
+)
+
+internal object CredentialProviderFrameworkAvailabilityFingerprint : Fingerprint(
+    classFingerprint = CredentialProviderFrameworkFingerprint,
+    name = "isAvailableOnDevice",
+    returnType = "Z",
+    parameters = listOf(),
+)

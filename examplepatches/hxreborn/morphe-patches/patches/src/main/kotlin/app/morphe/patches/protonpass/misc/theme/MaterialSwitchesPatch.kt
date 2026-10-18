@@ -15,6 +15,7 @@ import app.morphe.util.getReference
 import app.morphe.util.matchSingle
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 
+private const val COLORS_PARAMETER = 4
 private const val COMPOSER_PARAMETER = 5
 
 @Suppress("unused")
@@ -32,6 +33,12 @@ val materialSwitchesPatch = bytecodePatch(
         val modifierCompanion = match.method.getInstruction(match.instructionMatches.first().index)
             .getReference<FieldReference>()!!
 
-        drawSwitchAsView(match.method, COMPOSER_PARAMETER, modifierCompanion, ::androidViewFingerprint)
+        drawSwitchAsView(
+            match.method,
+            COMPOSER_PARAMETER,
+            modifierCompanion,
+            ::androidViewFingerprint,
+            colorsParameter = COLORS_PARAMETER,
+        )
     }
 }

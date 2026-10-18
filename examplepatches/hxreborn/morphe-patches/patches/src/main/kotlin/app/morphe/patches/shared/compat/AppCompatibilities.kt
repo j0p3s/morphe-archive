@@ -35,6 +35,17 @@ internal object AppCompatibilities {
         targets = listOf(AppTarget(version = "1.4", versionCode = 14, minSdk = 26)),
     )
 
+    val ALOA = Compatibility(
+        name = "Aloa",
+        packageName = "com.getaloa.app",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0xFAB2AA,
+        signatures = setOf(
+            "48e539b414808f7a13343b5e10310d268f63030ba3cd479db290048ca0a77e8f",
+        ),
+        targets = listOf(AppTarget(version = "1.3.3", versionCode = 29, minSdk = 32)),
+    )
+
     val ALPINEQUEST = Compatibility(
         name = "AlpineQuest",
         packageName = "psyberia.alpinequest.free",
@@ -65,6 +76,7 @@ internal object AppCompatibilities {
         targets = listOf(
             AppTarget(version = "1.0.6", versionCode = 153, minSdk = 26),
             AppTarget(version = "1.1.0", versionCode = 172, minSdk = 26),
+            AppTarget(version = "2.0.0", versionCode = 174, minSdk = 26),
         ),
     )
 
@@ -97,6 +109,17 @@ internal object AppCompatibilities {
             "d441c034a8cd999a79ec5b09f0d03627d8689a53e0441a04aaa4a16315e5cec0",
         ),
         targets = listOf(AppTarget(version = "1.3.33", versionCode = 5163, minSdk = 32)),
+    )
+
+    val BANGLA_CALENDAR = Compatibility(
+        name = "Bangla Calendar",
+        packageName = "com.outscar.bd.bongcal",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x006A4E,
+        signatures = setOf(
+            "d06b27d0bbcec5f0a462796ae16688880cc5740ca33abc9a96f4aaaf107f2cad",
+        ),
+        targets = listOf(AppTarget(version = "3.0.01c", versionCode = 302400127, minSdk = 32)),
     )
 
     val BETTERSLEEP = Compatibility(
@@ -167,6 +190,17 @@ internal object AppCompatibilities {
             AppTarget(version = "5.6_arm64", versionCode = 1074, minSdk = 21),
             AppTarget(version = "6.0_arm64", versionCode = 1075, minSdk = 21),
         ),
+    )
+
+    val DEPTHPIX = Compatibility(
+        name = "DepthPix",
+        packageName = "com.androholic.wallpapersdepthpix",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x926FC5,
+        signatures = setOf(
+            "73ddcf1fcf184dd559d6239ea2de84c2a6f08d4224b78c4491dc921b5f11d54e",
+        ),
+        targets = listOf(AppTarget(version = "1.0.12", versionCode = 45, minSdk = 32)),
     )
 
     val DEVCHECK = Compatibility(
@@ -298,7 +332,7 @@ internal object AppCompatibilities {
         signatures = setOf(
             "1dc3da6664982c69c3c7326282beaf0c6f153daa7da36bd7ec4cd4313e664651",
         ),
-        targets = listOf(AppTarget(version = "9.3.0", versionCode = 156, minSdk = 28)),
+        targets = listOf(AppTarget(version = "9.4.0", versionCode = 177, minSdk = 28)),
     )
 
     val IMO = Compatibility(
@@ -320,7 +354,10 @@ internal object AppCompatibilities {
         signatures = setOf(
             "851f5a9aa9e8287bdade98d0e41a0bdd13a685064307040133626697f16445e4",
         ),
-        targets = listOf(AppTarget(version = "1.2.5", versionCode = 104, minSdk = 24)),
+        targets = listOf(
+            AppTarget(version = "1.2.5", versionCode = 104, minSdk = 24),
+            AppTarget(version = "1.2.6", versionCode = 106, minSdk = 24),
+        ),
     )
 
     val JVDROID = Compatibility(
@@ -399,8 +436,12 @@ internal object AppCompatibilities {
         signatures = setOf(
             "a747eaee28611e25217b793c07bf302234405cfd1e19068162556c79e5bf04f0",
             "dcc9439ec1a6c6a8d0203f3423ee42bcc8b970628e53cb73a0393f398dd5b853",
+            "a5769b88d3c500f9c58c6939a7b09dc293630c8b93b69f4457888060bf1faa43",
         ),
-        targets = listOf(AppTarget(version = "2.1.4-gms", versionCode = 78, minSdk = 29)),
+        targets = listOf(
+            AppTarget(version = "2.1.4-gms", versionCode = 78, minSdk = 29),
+            AppTarget(version = "2.1.4-nogms", versionCode = 78, minSdk = 29),
+        ),
     )
 
     val MEDICNEET = Compatibility(

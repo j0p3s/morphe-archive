@@ -14,7 +14,7 @@ internal const val KODIK_AD_ACTIVITY =
     "Lcom/swiftsoft/anixartd/ui/activity/kodik/KodikAdActivity;"
 
 /**
- * DisplayCompat.ll1ll1lI1l(ContextWrapper): Z  (name is obfuscated, class name is not).
+ * DisplayCompat.lll1Illll(ContextWrapper): Z in Anixart 10.5 (name is obfuscated, class name is not).
  *
  * This is the app's own "ads are suppressed for this user" predicate. It is the ONLY
  * method in DisplayCompat that returns boolean. When it returns true the app itself:

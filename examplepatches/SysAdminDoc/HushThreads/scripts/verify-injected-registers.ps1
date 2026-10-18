@@ -22,7 +22,11 @@
     sends to SettingsEntry may be left anywhere outside the extension. Selected Threads features
     must retain their feed helpers, typed active-card guards and exact raw-wrapper recording,
     owned permalink hook, recorded analytics address mutations
-    and signature wrapper with its stock fallback. -SelectedPatches supplies the independent
+    and signature wrapper with its stock fallback; Hide suggested users also holds Search's
+    carousel hook and the profile's carousel and header row hooks; the settings row also holds Copy text's
+    override hooks in the post row lambdas and its selection hook in PostText; Save photos and videos holds
+    its row hook on the post menu's Copy link path, the stubs that draw the row, read the menu and close it,
+    and its media bridges. -SelectedPatches supplies the independent
     validated CLI selection, read with the catalog dependencies the CLI applies along with it; a
     standalone check uses the patched SettingsStatus flags.
 
@@ -142,6 +146,7 @@ function Invoke-DexDiff {
             'Block background-return feed refresh' = 'returnRefresh'
             'Disable video autoplay' = 'disableVideoAutoplay'
             'Pure black dark mode' = 'pureBlack'
+            'Save photos and videos' = 'saveMedia'
             'HushThreads settings' = 'settingsRow'
         }
         foreach ($name in $SelectedPatches) {

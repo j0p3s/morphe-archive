@@ -1979,7 +1979,149 @@ public class BadDexFixture {
         classes.add(new ImmutableClassDef(FEATURE_ROW_CLICK, AccessFlags.PUBLIC.getValue() | AccessFlags.FINAL.getValue(), OBJECT, interfaces,
                 null, null, List.of(), List.of(define(FEATURE_ROW_CLICK, "invoke", OBJECT, false,
                         body(2, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN_OBJECT, 0))))));
+        // Copy text comes with the settings patch, so its extension class rides along.
+        classes.add(featureClass(FEATURE_COPY_TEXT, OBJECT, List.of(),
+                define(FEATURE_COPY_TEXT, "longPress", OBJECT, true, body(2, op(Opcode.RETURN_OBJECT, 0)), OBJECT, OBJECT),
+                define(FEATURE_COPY_TEXT, "selection", "Z", true, body(1, op(Opcode.RETURN, 0)), "Z")));
         return classes;
+    }
+
+    private static final String FEATURE_COPY_TEXT = "Lapp/morphe/extension/hushthreads/feed/CopyText;";
+    private static final ImmutableMethodReference COPY_LONG_PRESS = method(FEATURE_COPY_TEXT, "longPress", OBJECT, OBJECT, OBJECT);
+    private static final ImmutableMethodReference COPY_SELECTION = method(FEATURE_COPY_TEXT, "selection", "Z", "Z");
+    private static final String PRESS_OVERRIDE = "Lfixture/PressOverride;";
+    private static final String POST_ROW = "Lfixture/PostRow;";
+    private static final String POST_ROW_TEXT = "Lfixture/PostRowText;";
+    private static final String POST_TEXT = "Lfixture/PostText;";
+    private static final ImmutableMethodReference POST_ROW_PLAIN = method(POST_ROW, "plain", "V", "Ljava/lang/String;");
+    private static final ImmutableMethodReference POST_ROW_PRESS = method(POST_ROW, "press", "V", "Ljava/lang/String;", FUNCTION0);
+
+    /**
+     * Copy text's host shapes. Two post row lambdas, text and link preview, each read their long
+     * press override into v1 and check it for null straight after: a null one takes the row's plain
+     * press, and any other is read for its Function0 action, which the row presses when it's set.
+     * v0 holds the row's note and is read on both sides, v2 to v4 are locals, v4 one nothing reads,
+     * this is v5 and the lambda's argument v6. PostText(state, selectable, modifier, flags) copies
+     * its boolean into v1 after its selection note and tests that. PostRow's plain press and
+     * PostText's Preview are methods a stray call can go into.
+     *
+     * When [hooked], each override check gets the patch's five instructions in front of it, taking
+     * v4, and when [asks], PostText asks selection() about its boolean first thing. The faults break
+     * one part each: the hook missing from the link lambda, after the check instead of in front of
+     * it, sending a null override past the check, testing another register for null, reading another
+     * action or reading it from another register, taking v0, the argument or the override's own
+     * register, swapping longPress's arguments, dropping its answer, casting it to Function0, put in
+     * twice, a stray call, an added instruction in Threads' own code, and the same for the selection
+     * hook. shared, none, actions, selection-written, selection-constant, selection-default,
+     * selection-unchecked and selection-twice are stock faults, on both sides: a second way into the
+     * text lambda's check, no override check in either lambda, the link lambda pressing another
+     * action, a selection check that tests a negated copy of the boolean, one that tests a constant
+     * instead of it, one whose left-out default is a call's answer rather than Compose's 0 or 1, no
+     * if-eqz after the selection note, and PostRow's plain press holding a selection note too.
+     */
+    private static List<ClassDef> copyTextClasses(boolean patched, boolean hooked, boolean asks, String fault) {
+        List<ClassDef> classes = new ArrayList<>();
+        classes.add(featureClass(PRESS_OVERRIDE, OBJECT, List.of(featureField(PRESS_OVERRIDE, "action", FUNCTION0), featureField(PRESS_OVERRIDE, "other", FUNCTION0))));
+        boolean stray = patched && (fault.equals("copy-text-stray"));
+        List<Instruction> plain = new ArrayList<>();
+        if (stray) plain.addAll(List.of(invoke(COPY_LONG_PRESS, 0, 0), op(Opcode.MOVE_RESULT_OBJECT, 0)));
+        // selection-twice gives the plain press a selection note too.
+        if (fault.equals("copy-text-selection-twice")) plain.add(string(0, "com.instagram.barcelona.feed.post.ui.rememberPostTextSelectionState (PostTextSelectionMode.kt:52)"));
+        plain.add(op(Opcode.RETURN_VOID));
+        classes.add(featureClass(POST_ROW, OBJECT, List.of(),
+                define(POST_ROW, "plain", "V", true, body(1, plain.toArray(new Instruction[0])), "Ljava/lang/String;"),
+                define(POST_ROW, "press", "V", true, body(2, op(Opcode.RETURN_VOID)), "Ljava/lang/String;", FUNCTION0)));
+        for (String owner : List.of(POST_ROW_TEXT, "Lfixture/PostRowLink;")) {
+            boolean text = owner.equals(POST_ROW_TEXT);
+            // actions has the link lambda press another action, and its hook read that one.
+            String own = text ? fault : fault.equals("copy-text-actions") ? "copy-text-actions-link" : "";
+            BrowserCode code = new BrowserCode();
+            code.add(string(0, "com.instagram.barcelona.feed.post.ui.FeedPostRow.<anonymous>.<anonymous> (FeedPostRow.kt:" + (text ? 812 : 845) + ")"));
+            code.add(objectField(Opcode.IGET_OBJECT, 1, 5, owner, "override", PRESS_OVERRIDE));
+            boolean front = hooked && !own.equals("copy-text-moved") && !(fault.equals("copy-text-missing") && !text);
+            List<Integer> skips = new ArrayList<>();
+            int entry = code.size();
+            for (int n = front ? own.equals("copy-text-double") ? 2 : 1 : 0; n > 0; n--) skips.add(copyTextHook(code, own));
+            int guard = code.branch(new ImmutableInstruction21t(Opcode.IF_NEZ, 1, 1));
+            code.add(invoke(POST_ROW_PLAIN, 0));
+            if (patched && (own.equals("copy-text-body") || own.equals("copy-text-omitted-body"))) code.add(op(Opcode.NOP));
+            code.add(new ImmutableInstruction11n(Opcode.CONST_4, 2, 0));
+            code.add(op(Opcode.RETURN_OBJECT, 2));
+            int has = code.size();
+            if (hooked && own.equals("copy-text-moved")) skips.add(copyTextHook(code, own));
+            code.add(objectField(Opcode.IGET_OBJECT, 3, 1, PRESS_OVERRIDE, own.equals("copy-text-actions-link") ? "other" : "action", FUNCTION0));
+            // none tests the action the other way round in both lambdas, so neither check is an override check.
+            int none = code.branch(new ImmutableInstruction21t(fault.equals("copy-text-none") ? Opcode.IF_EQZ : Opcode.IF_NEZ, 3, 1));
+            code.add(op(Opcode.RETURN_OBJECT, 1));
+            int act = code.size();
+            code.add(invoke(POST_ROW_PRESS, 0, 3));
+            code.add(op(Opcode.RETURN_OBJECT, 1));
+            // shared reaches the check from a goto past the end too, which lands on its hook.
+            if (fault.equals("copy-text-shared") && text) code.to(code.branch(new com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction20t(Opcode.GOTO_16, 1)), entry);
+            code.to(guard, has);
+            code.to(none, act);
+            // Each hook's null side goes to what follows it, or for target past the check to the plain press.
+            for (int skip : skips) code.to(skip, own.equals("copy-text-target") ? guard + 1 : skip + 5);
+            classes.add(featureClass(owner, OBJECT, List.of(featureField(owner, "override", PRESS_OVERRIDE)),
+                    define(owner, "invoke", OBJECT, false, body(7, code.finish()), OBJECT)));
+        }
+
+        // PostText(state, selectable, modifier, flags): v0..v2 locals, the arguments in v3 to v6. As in
+        // 451, a caller that leaves the boolean out gets Compose's 0 from code at the end, which jumps
+        // back to the check.
+        BrowserCode post = new BrowserCode();
+        if (asks && !fault.equals("copy-text-selection-missing")) {
+            int flag = fault.equals("copy-text-selection-register") ? 6 : 4;
+            post.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, flag, 1, COPY_SELECTION));
+            post.add(op(Opcode.MOVE_RESULT, fault.equals("copy-text-selection-result") ? 2 : flag));
+        }
+        post.add(string(0, "com.instagram.barcelona.feed.post.ui.rememberPostTextSelectionState (PostTextSelectionMode.kt:44)"));
+        post.add(new ImmutableInstruction22b(Opcode.AND_INT_LIT8, 2, 6, 1));
+        int defaults = post.branch(new ImmutableInstruction21t(Opcode.IF_NEZ, 2, 0));
+        post.add(fault.equals("copy-text-selection-written") ? new ImmutableInstruction22b(Opcode.XOR_INT_LIT8, 1, 4, 1)
+                : fault.equals("copy-text-selection-constant") ? new ImmutableInstruction11n(Opcode.CONST_4, 1, 1)
+                : new ImmutableInstruction12x(Opcode.MOVE, 1, 4));
+        int check = post.branch(fault.equals("copy-text-selection-unchecked") ? new ImmutableInstruction21t(Opcode.IF_NEZ, 1, 0) : ifEqz(1, 0));
+        post.add(invoke(method(POST_TEXT, "select", "V", OBJECT), 3));
+        int end = post.size();
+        if (patched && (fault.equals("copy-text-selection-body") || fault.equals("copy-text-omitted-selection-body"))) post.add(op(Opcode.NOP));
+        post.add(op(Opcode.RETURN_VOID));
+        int fallback = post.size();
+        if (fault.equals("copy-text-selection-default")) {
+            post.add(invoke(method(POST_TEXT, "selectable", "Z")));
+            post.add(op(Opcode.MOVE_RESULT, 1));
+        } else {
+            post.add(new ImmutableInstruction11n(Opcode.CONST_4, 1, 0));
+        }
+        int back = post.branch(new com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction20t(Opcode.GOTO_16, 0));
+        post.to(defaults, fallback);
+        post.to(check, end);
+        post.to(back, check);
+        List<Instruction> preview = new ArrayList<>();
+        if (patched && fault.equals("copy-text-selection-stray")) preview.addAll(List.of(invoke(COPY_SELECTION, 0), op(Opcode.MOVE_RESULT, 0)));
+        preview.add(op(Opcode.RETURN_VOID));
+        classes.add(featureClass(POST_TEXT, OBJECT, List.of(),
+                define(POST_TEXT, "PostText", "V", true, body(7, post.finish()), OBJECT, "Z", OBJECT, "I"),
+                define(POST_TEXT, "Preview", "V", true, body(1, preview.toArray(new Instruction[0])), "Z"),
+                define(POST_TEXT, "select", "V", true, body(1, op(Opcode.RETURN_VOID)), OBJECT),
+                define(POST_TEXT, "selectable", "Z", true, body(1, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN, 0)))));
+        return classes;
+    }
+
+    /**
+     * The patch's hook in front of an override check on v1, as [fault] bends it: if-eqz v1, the
+     * override's action into v4, longPress(v1, v4), its answer back into v1, cast to the override's
+     * type. Answers where the if-eqz is, for the caller to aim.
+     */
+    private static int copyTextHook(BrowserCode code, String fault) {
+        int free = fault.equals("copy-text-live") ? 0 : fault.equals("copy-text-parameter") ? 6 : fault.equals("copy-text-free-held") ? 1 : 4;
+        int skip = code.branch(ifEqz(fault.equals("copy-text-null-register") ? 2 : 1, 1));
+        code.add(objectField(Opcode.IGET_OBJECT, free, fault.equals("copy-text-action-register") ? 6 : 1, PRESS_OVERRIDE,
+                fault.equals("copy-text-action") || fault.equals("copy-text-actions-link") ? "other" : "action", FUNCTION0));
+        code.add(fault.equals("copy-text-swapped") ? invoke(COPY_LONG_PRESS, free, 1) : invoke(COPY_LONG_PRESS, 1, free));
+        code.add(op(Opcode.MOVE_RESULT_OBJECT, fault.equals("copy-text-result") ? free : 1));
+        code.add(type(Opcode.CHECK_CAST, 1, fault.equals("copy-text-cast") ? FUNCTION0 : PRESS_OVERRIDE));
+        return skip;
     }
 
     /** Three direct 451 browser boundaries, plus the shared factory and already-routed immersive screen. */
@@ -2196,6 +2338,449 @@ public class BadDexFixture {
                 define(SEARCH_LIST, "refresh", "V", false, body(2, refresh.toArray(new Instruction[0])))));
     }
 
+    private static final String SUGGESTED_ROW = "Lfixture/SuggestedUsersRow;";
+    private static final String PROFILE_CAROUSEL_ROW = "Lfixture/ProfileCarouselRow;";
+    private static final String PROFILE_INFO_ROW = "Lfixture/ProfileInfoRow;";
+    private static final String SUGGESTIONS_ROW = "Lfixture/SuggestionsRow;";
+    private static final String PROFILE_SCREEN = "Lfixture/ProfileScreen;";
+    private static final String PROFILE_VIEW_MODEL = "Lcom/instagram/barcelona/profile/viewmodel/ProfileViewModel;";
+    private static final String FEATURE_PROFILE = "Lapp/morphe/extension/hushthreads/profile/ProfileSuggestions;";
+    private static final ImmutableMethodReference PROFILE_CAROUSEL = method(FEATURE_PROFILE, "carousel", OBJECT, OBJECT);
+    private static final ImmutableMethodReference SHOW_PROFILE_ROW = method(FEATURE_PROFILE, "showRow", "Z");
+    private static final ImmutableMethodReference ROW_DEFAULT = method(SUGGESTED_ROW, "Row$default", "V", SHORTCUT_LIST, OBJECT, "I");
+
+    /**
+     * The profile's suggested accounts in 451's shape, as much of it as the contract reads. Threads'
+     * static row composable holds the row's note, and Row$default is the overload callers use. The
+     * screen's lambda hands the row the list its constructor stored, under a ProfileScreen.kt note;
+     * the info rows' lambda hands it ((SuggestionsRow) this.row).users, under a ProfileInfoRows.kt
+     * note. The screen reads the list out of the state into v1 and builds the lambda only past an
+     * if-nez on it. The view model's rows() makes the SuggestionsRow only past an if-eq of the list's
+     * size against 0: v0..v4 are locals, this is v5, then the rows, the users and an unused int v8.
+     * v0 is an int only the row's path reads and v4 one only the other side reads, since the row's
+     * path writes it first, so a hook taking either is live on one edge alone; v2 and v3 are free.
+     *
+     * [carousel] hooks the screen with the list's own register and [row] the view model with v2. The
+     * faults break one part each, and the omitted ones keep a hook, a call or a changed instruction
+     * with the patch left out. shared and compared are stock faults, on both sides: a second way onto
+     * the carousel, and a view model that reads what its check compared past the check's other side.
+     * gap, polarity, other-register and joined are stock faults of the carousel's null check, and
+     * flipped is a good layout on both sides whose row check jumps onto the row's path.
+     */
+    private static List<ClassDef> profileClasses(boolean carousel, boolean row, String fault) {
+        List<ClassDef> classes = new ArrayList<>();
+        classes.add(featureClass(SUGGESTED_ROW, OBJECT, List.of(),
+                define(SUGGESTED_ROW, "Row", "V", true, body(3, string(0, "com.instagram.barcelona.suggestedusers.ui.SuggestedUsersRow (SuggestedUsersRow.kt:120)"),
+                        op(Opcode.RETURN_VOID)), SHORTCUT_LIST, OBJECT),
+                define(SUGGESTED_ROW, "Row$default", "V", true, body(3, invoke(method(SUGGESTED_ROW, "Row", "V", SHORTCUT_LIST, OBJECT), 0, 1),
+                        op(Opcode.RETURN_VOID)), SHORTCUT_LIST, OBJECT, "I")));
+        // The screen's lambda: v0..v2 locals, this v3, the argument v4.
+        classes.add(featureClass(PROFILE_CAROUSEL_ROW, OBJECT, List.of(featureField(PROFILE_CAROUSEL_ROW, "list", SHORTCUT_LIST)),
+                define(PROFILE_CAROUSEL_ROW, "<init>", "V", false, body(2, direct(method(OBJECT, "<init>", "V"), 0),
+                        objectField(Opcode.IPUT_OBJECT, 1, 0, PROFILE_CAROUSEL_ROW, "list", SHORTCUT_LIST), op(Opcode.RETURN_VOID)), SHORTCUT_LIST),
+                define(PROFILE_CAROUSEL_ROW, "invoke", OBJECT, false, body(5,
+                        string(0, "com.instagram.barcelona.profile.ui.ProfileScreenKt$Content$1 (ProfileScreen.kt:310)"),
+                        objectField(Opcode.IGET_OBJECT, 1, 3, PROFILE_CAROUSEL_ROW, "list", SHORTCUT_LIST),
+                        new ImmutableInstruction11n(Opcode.CONST_4, 2, 0),
+                        invoke(ROW_DEFAULT, 1, 4, 2),
+                        op(Opcode.RETURN_OBJECT, 4)), OBJECT)));
+        // The info rows' lambda, laid out the same way.
+        classes.add(featureClass(PROFILE_INFO_ROW, OBJECT, List.of(featureField(PROFILE_INFO_ROW, "row", OBJECT)),
+                define(PROFILE_INFO_ROW, "invoke", OBJECT, false, body(5,
+                        string(0, "com.instagram.barcelona.profile.ui.ProfileInfoRowsKt$Rows$2 (ProfileInfoRows.kt:210)"),
+                        objectField(Opcode.IGET_OBJECT, 1, 3, PROFILE_INFO_ROW, "row", OBJECT),
+                        type(Opcode.CHECK_CAST, 1, SUGGESTIONS_ROW),
+                        objectField(Opcode.IGET_OBJECT, 2, 1, SUGGESTIONS_ROW, "users", SHORTCUT_LIST),
+                        new ImmutableInstruction11n(Opcode.CONST_4, 0, 0),
+                        invoke(ROW_DEFAULT, 2, 4, 0),
+                        op(Opcode.RETURN_OBJECT, 4)), OBJECT)));
+        classes.add(featureClass(SUGGESTIONS_ROW, OBJECT, List.of(featureField(SUGGESTIONS_ROW, "users", SHORTCUT_LIST)),
+                define(SUGGESTIONS_ROW, "<init>", "V", false, body(2, direct(method(OBJECT, "<init>", "V"), 0),
+                        objectField(Opcode.IPUT_OBJECT, 1, 0, SUGGESTIONS_ROW, "users", SHORTCUT_LIST), op(Opcode.RETURN_VOID)), SHORTCUT_LIST)));
+
+        // The screen, static Content(state, modifier): v0..v2 locals, the arguments v3 and v4.
+        BrowserCode screen = new BrowserCode();
+        screen.add(string(0, "com.instagram.barcelona.profile.ui.ProfileScreenKt$Content (ProfileScreen.kt:300)"));
+        screen.add(objectField(Opcode.IGET_OBJECT, 1, 3, "Lfixture/ProfileState;", "suggested", SHORTCUT_LIST));
+        int copies = !carousel || fault.equals("profile-carousel-missing") || fault.equals("profile-carousel-moved") ? 0
+                : fault.equals("profile-carousel-double") ? 2 : 1;
+        // result-dropped leaves carousel()'s answer behind, cast-register casts another register and
+        // leaves the list's as it was read, and uncast puts a const-class where the cast goes.
+        List<Instruction> carouselHook = List.of(
+                new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, fault.equals("profile-carousel-register") ? 0 : 1, 1, PROFILE_CAROUSEL),
+                fault.equals("profile-carousel-result-dropped") ? new ImmutableInstruction12x(Opcode.MOVE_OBJECT, 1, 1)
+                        : op(Opcode.MOVE_RESULT_OBJECT, fault.equals("profile-carousel-result") ? 0 : 1),
+                fault.equals("profile-carousel-uncast") ? type(Opcode.CONST_CLASS, 1, SHORTCUT_LIST)
+                        : type(Opcode.CHECK_CAST, fault.equals("profile-carousel-cast-register") ? 0 : 1, fault.equals("profile-carousel-cast") ? "Ljava/util/Collection;" : SHORTCUT_LIST));
+        for (int n = 0; n < copies; n++) carouselHook.forEach(screen::add);
+        // gap puts an instruction between the read and its check, polarity builds the carousel on a
+        // null list, other-register checks the modifier instead, and joined jumps back onto the
+        // check from the carousel's path.
+        if (fault.equals("profile-carousel-gap")) screen.add(new ImmutableInstruction11n(Opcode.CONST_4, 2, 0));
+        int check = screen.branch(new ImmutableInstruction21t(fault.equals("profile-carousel-polarity") ? Opcode.IF_EQZ : Opcode.IF_NEZ,
+                fault.equals("profile-carousel-other-register") ? 4 : 1, 0));
+        int second = fault.equals("profile-carousel-shared") ? screen.branch(ifEqz(4, 0)) : -1;
+        screen.add(op(Opcode.RETURN_VOID));
+        int built = screen.size();
+        // moved puts the hook past the check, on the carousel's own path.
+        if (carousel && fault.equals("profile-carousel-moved")) carouselHook.forEach(screen::add);
+        screen.add(type(Opcode.NEW_INSTANCE, 2, PROFILE_CAROUSEL_ROW));
+        screen.add(direct(method(PROFILE_CAROUSEL_ROW, "<init>", "V", SHORTCUT_LIST), 2, 1));
+        screen.add(invoke(method(PROFILE_SCREEN, "show", "V", OBJECT), 2));
+        int rejoin = fault.equals("profile-carousel-joined") ? screen.branch(ifEqz(4, 0)) : -1;
+        if (fault.equals("profile-carousel-body") || fault.equals("profile-carousel-omitted-body")) screen.add(op(Opcode.NOP));
+        screen.add(op(Opcode.RETURN_VOID));
+        screen.to(check, built);
+        if (second >= 0) screen.to(second, built);
+        if (rejoin >= 0) screen.to(rejoin, check);
+        List<Instruction> refresh = new ArrayList<>();
+        if (fault.equals("profile-carousel-stray")) refresh.addAll(List.of(invoke(PROFILE_CAROUSEL, 0), op(Opcode.MOVE_RESULT_OBJECT, 0)));
+        refresh.add(op(Opcode.RETURN_VOID));
+        classes.add(featureClass(PROFILE_SCREEN, OBJECT, List.of(),
+                define(PROFILE_SCREEN, "Content", "V", true, body(5, screen.finish()), OBJECT, OBJECT),
+                define(PROFILE_SCREEN, "show", "V", true, body(1, op(Opcode.RETURN_VOID)), OBJECT),
+                define(PROFILE_SCREEN, "refresh", "V", true, body(1, refresh.toArray(new Instruction[0])), OBJECT)));
+
+        // The view model's rows(rows, users, unused).
+        BrowserCode rows = new BrowserCode();
+        rows.add(new ImmutableInstruction11n(Opcode.CONST_4, 0, 2));
+        rows.add(new ImmutableInstruction11n(Opcode.CONST_4, 4, 1));
+        rows.add(new ImmutableInstruction35c(Opcode.INVOKE_INTERFACE, 1, 7, 0, 0, 0, 0, method(SHORTCUT_LIST, "size", "I")));
+        rows.add(op(Opcode.MOVE_RESULT, 1));
+        rows.add(new ImmutableInstruction11n(Opcode.CONST_4, 2, 0));
+        // flipped is a good build whose check jumps onto the row's path and falls into a goto to the
+        // other side, so that side sits above the hook and keeps its place.
+        boolean flipped = fault.equals("profile-row-flipped");
+        int guard = rows.branch(new ImmutableInstruction22t(flipped ? Opcode.IF_NE : Opcode.IF_EQ, 1, 2, 0));
+        int skip = flipped ? rows.branch(new com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction20t(Opcode.GOTO_16, 0)) : -1;
+        int path = rows.size();
+        List<Integer> leaves = new ArrayList<>();
+        int rowCopies = !row || fault.equals("profile-row-missing") ? 0 : fault.equals("profile-row-double") ? 2 : 1;
+        int scratch = fault.equals("profile-row-live-start") ? 0 : fault.equals("profile-row-live-away") ? 4
+                : fault.equals("profile-row-parameter") ? 8 : 2;
+        for (int n = 0; n < rowCopies; n++) {
+            rows.add(invoke(SHOW_PROFILE_ROW));
+            // ignored drops the answer and tests a constant, so the row always shows.
+            rows.add(fault.equals("profile-row-ignored") ? new ImmutableInstruction11n(Opcode.CONST_4, scratch, 1) : op(Opcode.MOVE_RESULT, scratch));
+            // tested branches on the list's size instead of the answer, so the row always shows.
+            leaves.add(rows.branch(new ImmutableInstruction21t(fault.equals("profile-row-inverted") ? Opcode.IF_NEZ : Opcode.IF_EQZ,
+                    fault.equals("profile-row-tested") ? 1 : scratch, 0)));
+        }
+        rows.add(type(Opcode.NEW_INSTANCE, 3, SUGGESTIONS_ROW));
+        rows.add(direct(method(SUGGESTIONS_ROW, "<init>", "V", SHORTCUT_LIST), 3, 7));
+        rows.add(new ImmutableInstruction35c(Opcode.INVOKE_INTERFACE, 2, 6, 3, 0, 0, 0, method(SHORTCUT_LIST, "add", "Z", OBJECT)));
+        rows.add(virtual(method(PROFILE_VIEW_MODEL, "count", "V", "I"), 5, 0));
+        rows.add(new ImmutableInstruction11n(Opcode.CONST_4, 4, 0));
+        int away = rows.size();
+        // compared reads the size the check compared again, on its other side.
+        rows.add(virtual(method(PROFILE_VIEW_MODEL, "count", "V", "I"), 5, fault.equals("profile-row-compared") ? 1 : 4));
+        if (fault.equals("profile-row-body") || fault.equals("profile-row-omitted-body")) rows.add(op(Opcode.NOP));
+        int end = rows.size();
+        rows.add(op(Opcode.RETURN_VOID));
+        if (flipped) {
+            rows.to(guard, path);
+            rows.to(skip, away);
+        } else rows.to(guard, away);
+        // target leaves for the return, past the other side's own work.
+        for (int leave : leaves) rows.to(leave, fault.equals("profile-row-target") ? end : flipped ? skip : away);
+        List<Instruction> load = new ArrayList<>();
+        if (fault.equals("profile-row-stray") || fault.equals("profile-row-omitted-call")) load.addAll(List.of(invoke(SHOW_PROFILE_ROW), op(Opcode.MOVE_RESULT, 0)));
+        load.add(op(Opcode.RETURN_VOID));
+        classes.add(featureClass(PROFILE_VIEW_MODEL, OBJECT, List.of(),
+                define(PROFILE_VIEW_MODEL, "rows", "V", false, body(9, rows.finish()), SHORTCUT_LIST, SHORTCUT_LIST, "I"),
+                define(PROFILE_VIEW_MODEL, "count", "V", false, body(2, op(Opcode.RETURN_VOID)), "I"),
+                define(PROFILE_VIEW_MODEL, "load", "V", false, body(2, load.toArray(new Instruction[0])))));
+        return classes;
+    }
+
+    // Save photos and videos: Threads' post menu, shaped like 451's, and the extension pieces the patch writes.
+    private static final String SAVE_ROW = "Lapp/morphe/extension/hushthreads/download/SaveMediaRow;";
+    private static final String SAVE_CLICK = "Lapp/morphe/extension/hushthreads/download/SaveMediaRow$Click;";
+    private static final String INSTAGRAM_MEDIA = "Lapp/morphe/extension/hushthreads/download/InstagramMedia;";
+    private static final ImmutableMethodReference ADD_SAVE_ROW = method(SAVE_ROW, "add", "V", OBJECT, OBJECT);
+    private static final String MENU_NOTE = "com.instagram.barcelona.feed.post.actionmenu.PostActionMenuSheet.<anonymous> (PostActionMenuSheet.kt:";
+    private static final String POST_MENU = "Lfixture/PostMenu;";
+    private static final String POST_MENU_HEADER = "Lfixture/PostMenuHeader;";
+    private static final String MENU_COPY_LINK = "Lfixture/MenuCopyLink;";
+    private static final String MENU_SHARE = "Lfixture/MenuShare;";
+    private static final String MENU_CONTROLLER = "Lfixture/MenuController;";
+    private static final String SHARE_CONTROLLER = "Lfixture/ShareController;";
+    private static final String MENU_COMPOSER = "Lfixture/MenuComposer;";
+    private static final String MENU_MODIFIER = "Lfixture/MenuModifier;";
+    private static final String MENU_ROLE = "Lfixture/MenuRole;";
+    private static final String MENU_STYLE = "Lfixture/MenuStyle;";
+    private static final String MENU_ICON = "Lfixture/MenuIcon;";
+    private static final String MENU_THEME = "Lfixture/MenuTheme;";
+    private static final String MENU_ROWS = "Lfixture/MenuRows;";
+    private static final String MENU_CLICK = "Lfixture/MenuClick;";
+    private static final String ACTIVITY = "Landroid/app/Activity;";
+    private static final String VIDEO_VERSION = "Lcom/instagram/api/schemas/VideoVersionIntf;";
+    private static final String PANDO_VIDEO_VERSION = "Lcom/instagram/api/schemas/ImmutablePandoVideoVersion;";
+    private static final String IMAGE_INFO = "Lcom/instagram/model/mediasize/ImageInfo;";
+    private static final String PANDO_IMAGE_INFO = "Lcom/instagram/model/mediasize/ImmutablePandoImageInfo;";
+    private static final String IMAGE_URL = "Lcom/instagram/common/typedurl/ImageUrl;";
+    private static final String INTEGER = "Ljava/lang/Integer;";
+    private static final ImmutableMethodReference MENU_ROW = method(MENU_ROWS, "row", "V", MENU_COMPOSER, MENU_MODIFIER, MENU_STYLE, MENU_ICON, "Ljava/lang/String;");
+    private static final ImmutableMethodReference MENU_HEADER = method(MENU_ROWS, "header", "V", MENU_COMPOSER, MENU_MODIFIER, MENU_STYLE, MENU_ICON, "Ljava/lang/String;");
+    private static final ImmutableMethodReference MENU_ICON_OF = method(MENU_ROWS, "icon", MENU_ICON, MENU_COMPOSER, "I", "I", "Z");
+    private static final ImmutableMethodReference MENU_STYLE_OF = method(MENU_THEME, "style", MENU_STYLE, MENU_COMPOSER);
+    private static final ImmutableMethodReference MENU_ROLE_OF = method(MENU_THEME, "role", MENU_ROLE, "I");
+    private static final ImmutableMethodReference MENU_CLICKABLE = method(MENU_MODIFIER, "click", MENU_MODIFIER, MENU_MODIFIER, MENU_ROLE, OBJECT, "Z");
+    private static final ImmutableMethodReference MENU_SEMANTICS = method(MENU_MODIFIER, "semantics", MENU_MODIFIER, MENU_MODIFIER, OBJECT);
+    private static final ImmutableMethodReference MENU_REMEMBERED = method(MENU_COMPOSER, "rememberedValue", OBJECT);
+    private static final ImmutableMethodReference MENU_REMEMBER = method(MENU_COMPOSER, "updateRememberedValue", "V", OBJECT);
+    private static final ImmutableMethodReference MENU_CLICK_INIT = method(MENU_CLICK, "<init>", "V", "Ljava/lang/String;", "Ljava/lang/String;", "I", OBJECT);
+    private static final ImmutableMethodReference MENU_DISMISS = method(MENU_CONTROLLER, "dismiss", "V");
+    private static final ImmutableMethodReference MENU_TRACK = method(MENU_CONTROLLER, "track", "V");
+    private static final ImmutableMethodReference SHARE_CLOSE = method(SHARE_CONTROLLER, "close", "V");
+
+    /** One InstagramMedia bridge: its name and answer, and the model it casts to and the getter it calls on it, by [call]. */
+    private record SaveBridgeShape(String name, String returns, String receiver, Opcode call, ImmutableMethodReference getter) {}
+
+    private static final List<SaveBridgeShape> SAVE_BRIDGES = List.of(
+            new SaveBridgeShape("videoVersions", SHORTCUT_LIST, FEATURE_MEDIA, Opcode.INVOKE_VIRTUAL, method(FEATURE_MEDIA, "videos", SHORTCUT_LIST)),
+            new SaveBridgeShape("dashManifest", "Ljava/lang/String;", FEATURE_MEDIA, Opcode.INVOKE_VIRTUAL, method(FEATURE_MEDIA, "manifest", "Ljava/lang/String;")),
+            new SaveBridgeShape("mediaId", "Ljava/lang/String;", FEATURE_MEDIA, Opcode.INVOKE_VIRTUAL, method(FEATURE_MEDIA, "getId", "Ljava/lang/String;")),
+            new SaveBridgeShape("owner", OBJECT, FEATURE_MEDIA, Opcode.INVOKE_VIRTUAL, method(FEATURE_MEDIA, "author", FEATURE_USER)),
+            new SaveBridgeShape("takenAt", "Ljava/lang/Long;", FEATURE_MEDIA, Opcode.INVOKE_VIRTUAL, method(FEATURE_MEDIA, "takenAt", "Ljava/lang/Long;")),
+            new SaveBridgeShape("carouselMedia", SHORTCUT_LIST, FEATURE_MEDIA, Opcode.INVOKE_VIRTUAL, method(FEATURE_MEDIA, "items", SHORTCUT_LIST)),
+            new SaveBridgeShape("username", "Ljava/lang/String;", FEATURE_USER, Opcode.INVOKE_VIRTUAL, method(FEATURE_USER, "username", "Ljava/lang/String;")),
+            new SaveBridgeShape("versionUrl", "Ljava/lang/String;", VIDEO_VERSION, Opcode.INVOKE_INTERFACE, method(VIDEO_VERSION, "A00", "Ljava/lang/String;")),
+            new SaveBridgeShape("versionWidth", INTEGER, VIDEO_VERSION, Opcode.INVOKE_INTERFACE, method(VIDEO_VERSION, "A01", INTEGER)),
+            new SaveBridgeShape("versionHeight", INTEGER, VIDEO_VERSION, Opcode.INVOKE_INTERFACE, method(VIDEO_VERSION, "A02", INTEGER)),
+            new SaveBridgeShape("imageVersions", OBJECT, FEATURE_MEDIA, Opcode.INVOKE_VIRTUAL, method(FEATURE_MEDIA, "images", IMAGE_INFO)),
+            new SaveBridgeShape("imageCandidates", SHORTCUT_LIST, IMAGE_INFO, Opcode.INVOKE_INTERFACE, method(IMAGE_INFO, "A03", SHORTCUT_LIST)),
+            new SaveBridgeShape("candidateUrl", "Ljava/lang/String;", IMAGE_URL, Opcode.INVOKE_INTERFACE, method(IMAGE_URL, "getUrl", "Ljava/lang/String;")),
+            new SaveBridgeShape("candidateWidth", "I", IMAGE_URL, Opcode.INVOKE_INTERFACE, method(IMAGE_URL, "getWidth", "I")),
+            new SaveBridgeShape("candidateHeight", "I", IMAGE_URL, Opcode.INVOKE_INTERFACE, method(IMAGE_URL, "getHeight", "I")));
+
+    /** An interface's getter, with no body. */
+    private static Method abstractGetter(String owner, String name, String returns) {
+        return new ImmutableMethod(owner, name, List.of(), returns, AccessFlags.PUBLIC.getValue() | AccessFlags.ABSTRACT.getValue(), null, null, null);
+    }
+
+    /**
+     * Threads' post menu, shaped like 451's: one lambda holding the menu's note checks for the Share
+     * item and then the Copy link item, and each case draws one row, Share's by a goto to Copy link's
+     * row call. Copy link's modifier is a click call on the base modifier with a role, a remembered
+     * click and literals, under one more modifier, and its click is a merged lambda over the
+     * controller whose case for Copy link closes the menu. When [hooked], Copy link's own path gets
+     * the Save patch's copy of the row call, add with the lambda and its composer, and a goto past the
+     * original. A second lambda holds the note without checking for Copy link, and the models the
+     * bridges read come along. Faults: no hook, a copy of another call, the wrong registers passed,
+     * a goto past the wrong place, a second add on the shared row call, a second host caller, Share's
+     * goto sent to the copy, and, left out, the copy and goto alone.
+     */
+    private static List<ClassDef> saveMediaClasses(boolean patched, boolean hooked, String fault) {
+        Instruction none = new ImmutableInstruction11n(Opcode.CONST_4, 0, 0);
+        // invoke(composer, flags): v0..v12 locals, the menu in v13, the composer in v14.
+        List<Instruction> menu = new ArrayList<>(List.of(string(0, MENU_NOTE + "120)"),
+                new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 12, 14), type(Opcode.CHECK_CAST, 12, MENU_COMPOSER),
+                objectField(Opcode.IGET_OBJECT, 1, 13, POST_MENU, "item", OBJECT),
+                new ImmutableInstruction22c(Opcode.INSTANCE_OF, 2, 1, new ImmutableTypeReference(MENU_SHARE)), ifEqz(2, 0),
+                staticField(Opcode.SGET_OBJECT, 3, MENU_MODIFIER, "Companion", MENU_MODIFIER), invoke(MENU_STYLE_OF, 12),
+                op(Opcode.MOVE_RESULT_OBJECT, 4), new ImmutableInstruction31i(Opcode.CONST, 6, 0x7f080124),
+                new ImmutableInstruction11n(Opcode.CONST_4, 7, 2), new ImmutableInstruction11n(Opcode.CONST_4, 8, 0),
+                invoke(MENU_ICON_OF, 12, 6, 7, 8), op(Opcode.MOVE_RESULT_OBJECT, 5), string(7, "Share"),
+                new ImmutableInstruction10t(Opcode.GOTO, 0)));
+        int skipShare = 5, shareGoto = menu.size() - 1, copyLink = menu.size();
+        menu.addAll(List.of(new ImmutableInstruction22c(Opcode.INSTANCE_OF, 2, 1, new ImmutableTypeReference(MENU_COPY_LINK)), ifEqz(2, 0),
+                staticField(Opcode.SGET_OBJECT, 3, MENU_MODIFIER, "Companion", MENU_MODIFIER), new ImmutableInstruction11n(Opcode.CONST_4, 4, 0),
+                invoke(MENU_ROLE_OF, 4), op(Opcode.MOVE_RESULT_OBJECT, 4), virtual(MENU_REMEMBERED, 12), op(Opcode.MOVE_RESULT_OBJECT, 5),
+                staticField(Opcode.SGET_OBJECT, 6, MENU_COMPOSER, "Empty", OBJECT), new ImmutableInstruction22t(Opcode.IF_NE, 5, 6, 0),
+                string(6, "copy_link"), string(7, "post_menu"), new ImmutableInstruction11n(Opcode.CONST_4, 8, 1),
+                objectField(Opcode.IGET_OBJECT, 9, 13, POST_MENU, "controller", MENU_CONTROLLER), type(Opcode.NEW_INSTANCE, 5, MENU_CLICK),
+                direct(MENU_CLICK_INIT, 5, 6, 7, 8, 9), virtual(MENU_REMEMBER, 12, 5)));
+        int skipCopyLink = copyLink + 1, remembered = copyLink + 9, clicked = menu.size();
+        menu.addAll(List.of(new ImmutableInstruction11n(Opcode.CONST_4, 6, 1), invoke(MENU_CLICKABLE, 3, 4, 5, 6), op(Opcode.MOVE_RESULT_OBJECT, 3),
+                invoke(MENU_SEMANTICS, 3, 12), op(Opcode.MOVE_RESULT_OBJECT, 3), invoke(MENU_STYLE_OF, 12), op(Opcode.MOVE_RESULT_OBJECT, 4),
+                new ImmutableInstruction31i(Opcode.CONST, 6, 0x7f080123), new ImmutableInstruction11n(Opcode.CONST_4, 7, 2),
+                new ImmutableInstruction11n(Opcode.CONST_4, 8, 0), invoke(MENU_ICON_OF, 12, 6, 7, 8), op(Opcode.MOVE_RESULT_OBJECT, 5),
+                string(7, "Copy link")));
+        Instruction row = invoke(MENU_ROW, 12, 3, 4, 5, 7);
+        int copyAt = menu.size();
+        boolean copied = hooked && !fault.equals("save-missing") || patched && fault.equals("save-omitted-menu");
+        if (copied) {
+            menu.add(fault.equals("save-copy") ? invoke(MENU_HEADER, 12, 3, 4, 5, 7) : row);
+            if (hooked) menu.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, fault.equals("save-capture") ? 12 : 13, 2, ADD_SAVE_ROW));
+            menu.add(new ImmutableInstruction10t(Opcode.GOTO, 0));
+        }
+        int rowAt = menu.size();
+        menu.add(row);
+        if (hooked && fault.equals("save-twice")) menu.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 13, 2, ADD_SAVE_ROW));
+        int rowGoto = menu.size();
+        menu.add(new ImmutableInstruction10t(Opcode.GOTO, 0));
+        int after = menu.size();
+        menu.addAll(List.of(none, op(Opcode.RETURN_OBJECT, 0)));
+        featureBranch(menu, skipShare, copyLink, Opcode.IF_EQZ, 2, 0);
+        featureBranch(menu, shareGoto, hooked && fault.equals("save-other-item") ? copyAt : rowAt, Opcode.GOTO, 0, 0);
+        featureBranch(menu, skipCopyLink, after, Opcode.IF_EQZ, 2, 0);
+        featureBranch(menu, remembered, clicked, Opcode.IF_NE, 5, 6);
+        if (copied) featureBranch(menu, rowAt - 1, hooked && fault.equals("save-goto") ? after : rowAt + 1, Opcode.GOTO, 0, 0);
+        featureBranch(menu, rowGoto, after, Opcode.GOTO, 0, 0);
+
+        List<ClassDef> classes = new ArrayList<>();
+        classes.add(featureClass(POST_MENU, OBJECT, List.of(featureField(POST_MENU, "post", FEATURE_MEDIA), featureField(POST_MENU, "activity", ACTIVITY),
+                featureField(POST_MENU, "controller", MENU_CONTROLLER), featureField(POST_MENU, "item", OBJECT)),
+                define(POST_MENU, "invoke", OBJECT, false, body(16, menu.toArray(new Instruction[0])), OBJECT, OBJECT)));
+        List<Instruction> header = new ArrayList<>(List.of(string(0, MENU_NOTE + "88)")));
+        if (hooked && fault.equals("save-duplicate")) header.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 1, 2, ADD_SAVE_ROW));
+        header.addAll(List.of(none, op(Opcode.RETURN_OBJECT, 0)));
+        classes.add(featureClass(POST_MENU_HEADER, OBJECT, List.of(), define(POST_MENU_HEADER, "invoke", OBJECT, false,
+                body(4, header.toArray(new Instruction[0])), OBJECT, OBJECT)));
+        classes.add(featureClass(MENU_COPY_LINK, OBJECT, List.of(), define(MENU_COPY_LINK, "toString", "Ljava/lang/String;", false,
+                body(1, string(0, "CopyLinkAction"), op(Opcode.RETURN_OBJECT, 0)))));
+        classes.add(featureClass(MENU_SHARE, OBJECT, List.of(), define(MENU_SHARE, "toString", "Ljava/lang/String;", false,
+                body(1, string(0, "ShareAction"), op(Opcode.RETURN_OBJECT, 0)))));
+        classes.add(featureClass(MENU_CONTROLLER, OBJECT, List.of(), define(MENU_CONTROLLER, "dismiss", "V", false, body(1, op(Opcode.RETURN_VOID))),
+                define(MENU_CONTROLLER, "track", "V", false, body(1, op(Opcode.RETURN_VOID)))));
+        classes.add(featureClass(SHARE_CONTROLLER, OBJECT, List.of(), define(SHARE_CONTROLLER, "close", "V", false, body(1, op(Opcode.RETURN_VOID)))));
+        int publicStatic = AccessFlags.PUBLIC.getValue() | AccessFlags.STATIC.getValue();
+        classes.add(featureClass(MENU_COMPOSER, OBJECT, List.of(flaggedField(MENU_COMPOSER, "Empty", OBJECT, publicStatic)),
+                define(MENU_COMPOSER, "rememberedValue", OBJECT, false, body(2, none, op(Opcode.RETURN_OBJECT, 0))),
+                define(MENU_COMPOSER, "updateRememberedValue", "V", false, body(2, op(Opcode.RETURN_VOID)), OBJECT)));
+        classes.add(featureClass(MENU_MODIFIER, OBJECT, List.of(flaggedField(MENU_MODIFIER, "Companion", MENU_MODIFIER, publicStatic)),
+                define(MENU_MODIFIER, "click", MENU_MODIFIER, true, body(5, none, op(Opcode.RETURN_OBJECT, 0)), MENU_MODIFIER, MENU_ROLE, OBJECT, "Z"),
+                define(MENU_MODIFIER, "semantics", MENU_MODIFIER, true, body(3, none, op(Opcode.RETURN_OBJECT, 0)), MENU_MODIFIER, OBJECT)));
+        classes.add(featureClass(MENU_THEME, OBJECT, List.of(),
+                define(MENU_THEME, "role", MENU_ROLE, true, body(2, none, op(Opcode.RETURN_OBJECT, 0)), "I"),
+                define(MENU_THEME, "style", MENU_STYLE, true, body(2, none, op(Opcode.RETURN_OBJECT, 0)), MENU_COMPOSER)));
+        classes.add(featureClass(MENU_ROWS, OBJECT, List.of(),
+                define(MENU_ROWS, "icon", MENU_ICON, true, body(5, none, op(Opcode.RETURN_OBJECT, 0)), MENU_COMPOSER, "I", "I", "Z"),
+                define(MENU_ROWS, "row", "V", true, body(5, op(Opcode.RETURN_VOID)), MENU_COMPOSER, MENU_MODIFIER, MENU_STYLE, MENU_ICON, "Ljava/lang/String;"),
+                define(MENU_ROWS, "header", "V", true, body(5, op(Opcode.RETURN_VOID)), MENU_COMPOSER, MENU_MODIFIER, MENU_STYLE, MENU_ICON, "Ljava/lang/String;")));
+
+        // invoke(): v0..v2 locals, this in v3. Case 0 closes the share sheet; case 1, Copy link's, logs and closes the menu.
+        List<Instruction> click = new ArrayList<>(List.of(objectField(Opcode.IGET, 1, 3, MENU_CLICK, "$t", "I"), ifEqz(1, 0),
+                new ImmutableInstruction11n(Opcode.CONST_4, 0, 1), new ImmutableInstruction22t(Opcode.IF_EQ, 1, 0, 0), new ImmutableInstruction10t(Opcode.GOTO, 0),
+                objectField(Opcode.IGET_OBJECT, 0, 3, MENU_CLICK, "A00", OBJECT), type(Opcode.CHECK_CAST, 0, SHARE_CONTROLLER), virtual(SHARE_CLOSE, 0),
+                new ImmutableInstruction10t(Opcode.GOTO, 0),
+                objectField(Opcode.IGET_OBJECT, 0, 3, MENU_CLICK, "A00", OBJECT), type(Opcode.CHECK_CAST, 0, MENU_CONTROLLER), virtual(MENU_TRACK, 0),
+                virtual(MENU_DISMISS, 0), new ImmutableInstruction10t(Opcode.GOTO, 0), none, op(Opcode.RETURN_OBJECT, 0)));
+        featureBranch(click, 1, 5, Opcode.IF_EQZ, 1, 0);
+        featureBranch(click, 3, 9, Opcode.IF_EQ, 1, 0);
+        for (int g : new int[]{4, 8, 13}) featureBranch(click, g, 14, Opcode.GOTO, 0, 0);
+        classes.add(new ImmutableClassDef(MENU_CLICK, AccessFlags.PUBLIC.getValue() | AccessFlags.FINAL.getValue(), OBJECT, List.of(FUNCTION0), null, null,
+                List.of(featureField(MENU_CLICK, "$t", "I"), featureField(MENU_CLICK, "A00", OBJECT),
+                        featureField(MENU_CLICK, "A01", "Ljava/lang/String;"), featureField(MENU_CLICK, "A02", "Ljava/lang/String;")),
+                List.of(define(MENU_CLICK, "<init>", "V", false, body(5, objectField(Opcode.IPUT, 3, 0, MENU_CLICK, "$t", "I"),
+                        objectField(Opcode.IPUT_OBJECT, 4, 0, MENU_CLICK, "A00", OBJECT),
+                        objectField(Opcode.IPUT_OBJECT, 1, 0, MENU_CLICK, "A01", "Ljava/lang/String;"),
+                        objectField(Opcode.IPUT_OBJECT, 2, 0, MENU_CLICK, "A02", "Ljava/lang/String;"),
+                        direct(method(OBJECT, "<init>", "V"), 0), op(Opcode.RETURN_VOID)), "Ljava/lang/String;", "Ljava/lang/String;", "I", OBJECT),
+                        define(MENU_CLICK, "invoke", OBJECT, false, body(4, click.toArray(new Instruction[0]))))));
+
+        // The models past Media and User keep their names; the tree-backed classes answer by Pando hash.
+        int publicInterface = AccessFlags.PUBLIC.getValue() | AccessFlags.INTERFACE.getValue() | AccessFlags.ABSTRACT.getValue();
+        int publicFinal = AccessFlags.PUBLIC.getValue() | AccessFlags.FINAL.getValue();
+        classes.add(new ImmutableClassDef(VIDEO_VERSION, publicInterface, OBJECT, List.of(), null, null, List.of(),
+                List.of(abstractGetter(VIDEO_VERSION, "A00", "Ljava/lang/String;"), abstractGetter(VIDEO_VERSION, "A01", INTEGER),
+                        abstractGetter(VIDEO_VERSION, "A02", INTEGER))));
+        classes.add(new ImmutableClassDef(PANDO_VIDEO_VERSION, publicFinal, OBJECT, List.of(VIDEO_VERSION), null, null, List.of(),
+                List.of(pandoGetter(PANDO_VIDEO_VERSION, "A00", "Ljava/lang/String;", "url"), pandoGetter(PANDO_VIDEO_VERSION, "A01", INTEGER, "width"),
+                        pandoGetter(PANDO_VIDEO_VERSION, "A02", INTEGER, "height"))));
+        classes.add(new ImmutableClassDef(IMAGE_INFO, publicInterface, OBJECT, List.of(), null, null, List.of(),
+                List.of(abstractGetter(IMAGE_INFO, "A03", SHORTCUT_LIST))));
+        classes.add(new ImmutableClassDef(PANDO_IMAGE_INFO, publicFinal, OBJECT, List.of(IMAGE_INFO), null, null, List.of(),
+                List.of(pandoGetter(PANDO_IMAGE_INFO, "A03", SHORTCUT_LIST, "candidates"))));
+        classes.add(new ImmutableClassDef(IMAGE_URL, publicInterface, OBJECT, List.of(), null, null, List.of(),
+                List.of(abstractGetter(IMAGE_URL, "getUrl", "Ljava/lang/String;"), abstractGetter(IMAGE_URL, "getWidth", "I"),
+                        abstractGetter(IMAGE_URL, "getHeight", "I"))));
+        return classes;
+    }
+
+    /**
+     * The extension's SaveMediaRow, its click and the InstagramMedia bridges, as a bundle carries
+     * them: written the way the Save patch writes them when [hooked], and otherwise the empty stubs
+     * they ship as. Faults name the one piece written wrong or, left out, the one stub written anyway.
+     */
+    private static List<ClassDef> saveMediaExtension(boolean hooked, String fault) {
+        Instruction none = new ImmutableInstruction11n(Opcode.CONST_4, 0, 0);
+        ImmutableMethodImplementation nothing = body(1, none, op(Opcode.RETURN_OBJECT, 0));
+        boolean show = hooked && !fault.equals("save-show-stub") || fault.equals("save-omitted-show");
+        boolean media = hooked || fault.equals("save-omitted-media");
+        boolean dismiss = hooked || fault.equals("save-omitted-dismiss");
+        String mediaField = fault.equals("save-media-field") ? "activity" : "post";
+        String activityField = fault.equals("save-activity-field") ? "post" : "activity";
+        String dismissField = fault.equals("save-dismiss-field") ? "post" : "controller";
+        List<Method> row = List.of(define(SAVE_ROW, "add", "V", true, body(2, op(Opcode.RETURN_VOID)), OBJECT, OBJECT),
+                define(SAVE_ROW, "showRow", "V", true, show ? body(11, saveShowRow(fault).toArray(new Instruction[0])) : body(4, op(Opcode.RETURN_VOID)),
+                        OBJECT, OBJECT, "Ljava/lang/String;", "I"),
+                define(SAVE_ROW, "media", OBJECT, true, !media ? nothing : body(1,
+                        type(Opcode.CHECK_CAST, 0, fault.equals("save-media-cast") ? MENU_CONTROLLER : POST_MENU),
+                        objectField(Opcode.IGET_OBJECT, 0, 0, POST_MENU, mediaField, mediaField.equals("post") ? FEATURE_MEDIA : ACTIVITY),
+                        op(Opcode.RETURN_OBJECT, 0)), OBJECT),
+                define(SAVE_ROW, "activity", ACTIVITY, true, !hooked ? nothing : body(1, type(Opcode.CHECK_CAST, 0, POST_MENU),
+                        objectField(Opcode.IGET_OBJECT, 0, 0, POST_MENU, activityField, activityField.equals("post") ? FEATURE_MEDIA : ACTIVITY),
+                        op(Opcode.RETURN_OBJECT, 0)), OBJECT),
+                define(SAVE_ROW, "dismiss", "V", true, !dismiss ? body(1, op(Opcode.RETURN_VOID)) : body(1,
+                        type(Opcode.CHECK_CAST, 0, fault.equals("save-dismiss-cast") ? MENU_CONTROLLER : POST_MENU),
+                        objectField(Opcode.IGET_OBJECT, 0, 0, POST_MENU, dismissField, dismissField.equals("post") ? FEATURE_MEDIA : MENU_CONTROLLER),
+                        virtual(fault.equals("save-dismiss-call") ? MENU_TRACK : MENU_DISMISS, 0), op(Opcode.RETURN_VOID)), OBJECT));
+        List<ClassDef> classes = new ArrayList<>();
+        classes.add(featureClass(SAVE_ROW, OBJECT, List.of(), row.toArray(new Method[0])));
+        List<String> interfaces = hooked && !fault.equals("save-click") ? List.of(FUNCTION0) : List.of();
+        classes.add(new ImmutableClassDef(SAVE_CLICK, AccessFlags.PUBLIC.getValue() | AccessFlags.FINAL.getValue(), OBJECT, interfaces,
+                null, null, List.of(), List.of(define(SAVE_CLICK, "invoke", OBJECT, fault.equals("save-click-static"),
+                        body(2, none, op(Opcode.RETURN_OBJECT, 0))))));
+        // Each bridge, written, casts its argument, calls the getter and returns its answer in front of the stub's own zero return.
+        List<Method> bridges = new ArrayList<>();
+        for (SaveBridgeShape bridge : SAVE_BRIDGES) {
+            boolean primitive = bridge.returns().equals("I");
+            Instruction zero = op(primitive ? Opcode.RETURN : Opcode.RETURN_OBJECT, 0);
+            List<Instruction> code = new ArrayList<>();
+            if (hooked || fault.equals("save-omitted-bridge") && bridge.name().equals("videoVersions")) {
+                String receiver = fault.equals("save-bridge-cast") && bridge.name().equals("username") ? FEATURE_MEDIA : bridge.receiver();
+                Opcode call = fault.equals("save-bridge-call") && bridge.name().equals("versionUrl") ? Opcode.INVOKE_VIRTUAL : bridge.call();
+                ImmutableMethodReference getter = fault.equals("save-bridge-getter") && bridge.name().equals("videoVersions")
+                        ? method(FEATURE_MEDIA, "items", SHORTCUT_LIST) : bridge.getter();
+                code.add(type(Opcode.CHECK_CAST, 0, receiver));
+                code.add(new ImmutableInstruction35c(call, 1, 0, 0, 0, 0, 0, getter));
+                code.add(fault.equals("save-bridge-result") && bridge.name().equals("takenAt") ? none
+                        : op(primitive ? Opcode.MOVE_RESULT : Opcode.MOVE_RESULT_OBJECT, 0));
+                code.add(zero);
+            }
+            code.addAll(List.of(none, zero));
+            bridges.add(define(INSTAGRAM_MEDIA, bridge.name(), bridge.returns(), true, body(1, code.toArray(new Instruction[0])), OBJECT));
+        }
+        classes.add(featureClass(INSTAGRAM_MEDIA, OBJECT, List.of(), bridges.toArray(new Method[0])));
+        return classes;
+    }
+
+    /**
+     * showRow as the Save patch writes it: Copy link's role, click and literals around the extension's
+     * click, the style and icon from the cast composer, and Threads' row with the extension's label.
+     * Faults: the row's composer a copy cast to another type, another role, the style from the
+     * uncast composer, another icon literal, the click passed as the label, and another row call.
+     */
+    private static List<Instruction> saveShowRow(String fault) {
+        // showRow(composer, click, label, icon): v0..v6 locals, the arguments in v7 to v10.
+        List<Instruction> code = new ArrayList<>(List.of(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 0, 7),
+                type(Opcode.CHECK_CAST, 0, MENU_COMPOSER),
+                staticField(Opcode.SGET_OBJECT, 1, MENU_MODIFIER, "Companion", MENU_MODIFIER),
+                new ImmutableInstruction11n(Opcode.CONST_4, 2, fault.equals("save-show-role") ? 1 : 0), invoke(MENU_ROLE_OF, 2),
+                op(Opcode.MOVE_RESULT_OBJECT, 2), new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 3, 8),
+                new ImmutableInstruction11n(Opcode.CONST_4, 4, 1), invoke(MENU_CLICKABLE, 1, 2, 3, 4), op(Opcode.MOVE_RESULT_OBJECT, 1)));
+        int styled = 0;
+        if (fault.equals("save-show-style")) {
+            code.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 6, 7));
+            styled = 6;
+        }
+        code.addAll(List.of(invoke(MENU_STYLE_OF, styled), op(Opcode.MOVE_RESULT_OBJECT, 2),
+                new ImmutableInstruction22x(Opcode.MOVE_FROM16, 3, 10), new ImmutableInstruction11n(Opcode.CONST_4, 4, 2),
+                new ImmutableInstruction11n(Opcode.CONST_4, 5, fault.equals("save-show-icon") ? 1 : 0), invoke(MENU_ICON_OF, 0, 3, 4, 5),
+                op(Opcode.MOVE_RESULT_OBJECT, 3), new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 4, fault.equals("save-show-label") ? 8 : 9)));
+        // The style and icon keep the right composer, so only the row's own composer argument is wrong.
+        int composer = 0;
+        if (fault.equals("save-show-composer")) {
+            code.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 6, 7));
+            code.add(type(Opcode.CHECK_CAST, 6, FEATURE_COMPOSER));
+            composer = 6;
+        }
+        code.addAll(List.of(invoke(fault.equals("save-show-row") ? MENU_HEADER : MENU_ROW, composer, 1, 2, 3, 4), op(Opcode.RETURN_VOID)));
+        return code;
+    }
+
     /** Independent small host shapes. Every faulty build still passes all structural checks. */
     private static List<ClassDef> featureBuild(boolean patched, Set<String> selected, int mask, String fault) {
         List<ClassDef> classes = new ArrayList<>(patched ? good() : clean(cleanHost()));
@@ -2249,7 +2834,14 @@ public class BadDexFixture {
                         : body(2, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN, 0))),
                 pandoGetter(FEATURE_MEDIA, "code", "Ljava/lang/String;", "code"),
                 pandoGetter(FEATURE_MEDIA, "title", "Ljava/lang/String;", "caption"),
-                pandoGetter(FEATURE_MEDIA, "author", FEATURE_USER, "user")));
+                pandoGetter(FEATURE_MEDIA, "author", FEATURE_USER, "user"),
+                // What Save photos and videos reads, under names that aren't the bridges'.
+                pandoGetter(FEATURE_MEDIA, "videos", SHORTCUT_LIST, "video_versions"),
+                pandoGetter(FEATURE_MEDIA, "manifest", "Ljava/lang/String;", "video_dash_manifest"),
+                pandoGetter(FEATURE_MEDIA, "takenAt", "Ljava/lang/Long;", "taken_at"),
+                pandoGetter(FEATURE_MEDIA, "items", SHORTCUT_LIST, "carousel_media"),
+                pandoGetter(FEATURE_MEDIA, "images", IMAGE_INFO, "image_versions2"),
+                define(FEATURE_MEDIA, "getId", "Ljava/lang/String;", false, body(2, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN_OBJECT, 0)))));
 
         List<Instruction> parser = new ArrayList<>(List.of(string(2, "permalink"), string(0, "XDTPermalinkResponse"),
                 type(Opcode.NEW_INSTANCE, 1, FEATURE_RESPONSE),
@@ -2355,6 +2947,7 @@ public class BadDexFixture {
                 "Ljava/lang/String;", "Ljava/lang/String;", "Ljava/lang/String;", "Ljava/lang/String;", OBJECT)));
         directBrowserClasses(classes, browser, fault);
         classes.addAll(searchCarouselClasses(suggestions || fault.equals("search-carousel-omitted-hook"), fault));
+        classes.addAll(profileClasses(suggestions || fault.equals("profile-carousel-omitted-hook"), suggestions || fault.equals("profile-row-omitted-hook"), fault));
 
         List<Instruction> pigeon = new ArrayList<>(List.of(string(0, "/pigeon_nest"), string(1, "/logging_client_events"),
                 ifEqz(3, fault.equals("pigeon-bypass") ? 6 : 2)));
@@ -2425,21 +3018,25 @@ public class BadDexFixture {
         classes.addAll(videoAutoplayClasses(patched && selected.contains("disableVideoAutoplay"), fault));
         classes.addAll(fault.startsWith("pure-black-fields") ? pureBlackFieldClasses(patched && selected.contains("pureBlack"), fault)
                 : pureBlackClasses(patched && selected.contains("pureBlack"), fault));
+        classes.addAll(saveMediaClasses(patched, patched && selected.contains("saveMedia"), fault));
         classes.addAll(settingsRowClasses(patched && selected.contains("settingsRow"), fault));
+        classes.addAll(copyTextClasses(patched, patched && (selected.contains("settingsRow") || fault.equals("copy-text-omitted-hook")),
+                patched && (selected.contains("settingsRow") || fault.equals("copy-text-omitted-selection")), fault));
         if (fault.startsWith("ambiguous-suggestion-") || fault.startsWith("proven-suggestion-")) corruptSuggestionStock(classes, fault);
         if (!patched) return classes;
 
         List<Method> flags = new ArrayList<>();
         for (String flag : List.of("hideAds", "hideSuggestedUsers", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust",
-                "returnRefresh", "disableVideoAutoplay", "pureBlack")) {
+                "returnRefresh", "disableVideoAutoplay", "pureBlack", "saveMedia")) {
             if ((fault.equals("status-missing") || fault.equals("historical-missing-ad-status")) && flag.equals("hideAds")) continue;
             // The published bundles came before Open links in browser, Block background-return feed refresh, Disable video
-            // autoplay and Pure black dark mode.
+            // autoplay, Pure black dark mode and Save photos and videos.
             if (fault.startsWith("historical") && (flag.equals("openLinksExternally") || flag.equals("returnRefresh")
-                    || flag.equals("disableVideoAutoplay") || flag.equals("pureBlack"))) continue;
+                    || flag.equals("disableVideoAutoplay") || flag.equals("pureBlack") || flag.equals("saveMedia"))) continue;
             if ((fault.equals("suggestion-status-missing") || fault.startsWith("historical")) && flag.equals("hideSuggestedUsers")) continue;
             boolean enabled = selected.contains(flag) && !(fault.equals("status-false") && flag.equals("hideAds"));
             if (fault.equals("suggestion-status-false") && flag.equals("hideSuggestedUsers")) enabled = false;
+            if (flag.equals("saveMedia") && (fault.equals("save-status-false") || fault.equals("save-omitted-status"))) enabled = !enabled;
             List<Instruction> status = new ArrayList<>();
             if (enabled) status.addAll(List.of(new ImmutableInstruction11n(Opcode.CONST_4, 0, 1), op(Opcode.RETURN, 0)));
             status.addAll(List.of(new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN, 0)));
@@ -2472,6 +3069,9 @@ public class BadDexFixture {
                 body(2, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN, 0)), CONTEXT, "Ljava/lang/String;")));
         classes.add(featureClass(FEATURE_SEARCH, OBJECT, List.of(), define(FEATURE_SEARCH, "showCarousel", "Z", true,
                 body(1, new ImmutableInstruction11n(Opcode.CONST_4, 0, 1), op(Opcode.RETURN, 0)))));
+        classes.add(featureClass(FEATURE_PROFILE, OBJECT, List.of(),
+                define(FEATURE_PROFILE, "carousel", OBJECT, true, body(1, op(Opcode.RETURN_OBJECT, 0)), OBJECT),
+                define(FEATURE_PROFILE, "showRow", "Z", true, body(1, new ImmutableInstruction11n(Opcode.CONST_4, 0, 1), op(Opcode.RETURN, 0)))));
         classes.add(featureClass(FEATURE_TRUST, OBJECT, List.of(), define(FEATURE_TRUST, "originalSigners", SHORTCUT_LIST, true,
                 body(2, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN_OBJECT, 0)), PACKAGE_INFO)));
         classes.add(featureClass(FEATURE_RETURN, OBJECT, List.of(),
@@ -2485,6 +3085,8 @@ public class BadDexFixture {
                 define(FEATURE_PURE_BLACK, "color", "J", true, body(2, op(Opcode.RETURN_WIDE, 0)), "J")));
         // The published bundles came before the settings row too, and their extension has no ThreadsSettingsRow.
         if (!fault.startsWith("historical")) classes.addAll(settingsRowExtension(selected.contains("settingsRow"), fault));
+        // And before Save photos and videos, whose extension classes they don't carry either.
+        if (!fault.startsWith("historical")) classes.addAll(saveMediaExtension(selected.contains("saveMedia"), fault));
         if (patched && (fault.equals("ad-body") || fault.equals("ad-helper-body") || fault.equals("getter-body")
                 || fault.equals("ad-helper-native") || fault.equals("getter-static"))) {
             String owner = fault.equals("ad-body") ? FEATURE_MEDIA : fault.startsWith("ad-helper-") ? "Lfixture/AdFlag;" : FEATURE_ITEM;
@@ -2656,7 +3258,7 @@ public class BadDexFixture {
 
         Map<String, List<ClassDef>> dexes = new LinkedHashMap<>();
         Set<String> allFeatures = Set.of("hideAds", "hideSuggestedUsers", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust",
-                "returnRefresh", "disableVideoAutoplay", "pureBlack", "settingsRow");
+                "returnRefresh", "disableVideoAutoplay", "pureBlack", "saveMedia", "settingsRow");
         dexes.put("features-clean", featureBuild(false, Set.of(), 0, ""));
         dexes.put("features-good", featureBuild(true, allFeatures, 7, ""));
         dexes.put("features-omitted", featureBuild(true, Set.of(), 0, ""));
@@ -2684,6 +3286,23 @@ public class BadDexFixture {
         for (String fault : List.of("omitted-hook", "omitted-call", "omitted-body")) {
             dexes.put("features-bad-search-carousel-" + fault, featureBuild(true, Set.of(), 0, "search-carousel-" + fault));
         }
+        // The profile's carousel and header row the same way, then the two stock faults, which need a
+        // clean build of their own.
+        for (String fault : List.of("carousel-missing", "carousel-register", "carousel-result", "carousel-result-dropped", "carousel-cast",
+                "carousel-cast-register", "carousel-uncast", "carousel-moved", "carousel-double", "carousel-stray", "carousel-body", "row-missing",
+                "row-inverted", "row-tested", "row-ignored", "row-target", "row-double", "row-stray", "row-live-start", "row-live-away", "row-parameter",
+                "row-body")) {
+            dexes.put("features-bad-profile-" + fault, featureBuild(true, Set.of("hideSuggestedUsers"), 0, "profile-" + fault));
+        }
+        for (String fault : List.of("carousel-omitted-hook", "carousel-omitted-body", "row-omitted-hook", "row-omitted-call", "row-omitted-body")) {
+            dexes.put("features-bad-profile-" + fault, featureBuild(true, Set.of(), 0, "profile-" + fault));
+        }
+        for (String fault : List.of("carousel-shared", "carousel-gap", "carousel-polarity", "carousel-other-register", "carousel-joined", "row-compared")) {
+            dexes.put("features-profile-" + fault + "-clean", featureBuild(false, Set.of(), 0, "profile-" + fault));
+            dexes.put("features-bad-profile-" + fault, featureBuild(true, Set.of("hideSuggestedUsers"), 0, "profile-" + fault));
+        }
+        dexes.put("features-profile-row-flipped-clean", featureBuild(false, Set.of(), 0, "profile-row-flipped"));
+        dexes.put("features-profile-row-flipped", featureBuild(true, Set.of("hideSuggestedUsers"), 0, "profile-row-flipped"));
         // Background-return refresh alone, so a failure can only be its own.
         for (String fault : List.of("hot-start-missing", "hot-start-inverted", "reset-missing", "reset-register",
                 "warm-start-missing", "warm-start-moved", "cached-posts-missing", "cached-posts-bypass")) {
@@ -2722,6 +3341,31 @@ public class BadDexFixture {
         // And the HushThreads settings row.
         for (String fault : List.of("settings-row-missing", "settings-row-outside", "settings-row-register", "settings-row-stub", "settings-row-click")) {
             dexes.put("features-bad-" + fault, featureBuild(true, Set.of("settingsRow"), 0, fault));
+        }
+        // And Save photos and videos: one bad build for each thing its contract checks, alone, then left out.
+        for (String fault : List.of("missing", "copy", "capture", "goto", "twice", "duplicate", "other-item", "show-stub", "show-row",
+                "show-composer", "show-role", "show-style", "show-icon", "show-label", "media-field", "media-cast", "activity-field",
+                "dismiss-cast", "dismiss-field", "dismiss-call", "click", "click-static", "bridge-getter", "bridge-call", "bridge-cast",
+                "bridge-result", "status-false")) {
+            dexes.put("features-bad-save-" + fault, featureBuild(true, Set.of("saveMedia"), 0, "save-" + fault));
+        }
+        for (String fault : List.of("omitted-menu", "omitted-show", "omitted-media", "omitted-dismiss", "omitted-bridge", "omitted-status")) {
+            dexes.put("features-bad-save-" + fault, featureBuild(true, Set.of(), 0, "save-" + fault));
+        }
+        // And Copy text, which comes with the settings row: hook faults with it selected, then left out,
+        // then the stock faults, which need a clean build of their own.
+        for (String fault : List.of("moved", "target", "null-register", "action", "action-register", "live", "parameter", "free-held", "swapped",
+                "result", "cast", "body", "missing", "double", "stray",
+                "selection-register", "selection-result", "selection-body", "selection-missing", "selection-stray")) {
+            dexes.put("features-bad-copy-text-" + fault, featureBuild(true, Set.of("settingsRow"), 0, "copy-text-" + fault));
+        }
+        for (String fault : List.of("omitted-hook", "omitted-selection", "omitted-body", "omitted-selection-body")) {
+            dexes.put("features-bad-copy-text-" + fault, featureBuild(true, Set.of(), 0, "copy-text-" + fault));
+        }
+        for (String fault : List.of("shared", "none", "actions", "selection-written", "selection-constant", "selection-default",
+                "selection-unchecked", "selection-twice")) {
+            dexes.put("features-copy-text-" + fault + "-clean", featureBuild(false, Set.of(), 0, "copy-text-" + fault));
+            dexes.put("features-bad-copy-text-" + fault, featureBuild(true, Set.of("settingsRow"), 0, "copy-text-" + fault));
         }
         // Keep the old direct-this sharing fixtures and add 451's low alias of high-register this.
         dexes.put("features-sharing-alias-clean", featureSharingAliasBuild(false, ""));
@@ -2791,7 +3435,7 @@ public class BadDexFixture {
         dexes.put("features-metadata-good", metadataPatched);
         // The settings row has no status to clear: a selection without it is what leaves it out.
         for (String feature : List.of("hideAds", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust", "returnRefresh",
-                "disableVideoAutoplay", "pureBlack", "settingsRow")) {
+                "disableVideoAutoplay", "pureBlack", "saveMedia", "settingsRow")) {
             List<ClassDef> unselected = featureBuild(true, Set.of("hideSuggestedUsers", feature), 7, "");
             omitFeatureStatus(unselected, feature, false);
             dexes.put("features-bad-omitted-" + feature, unselected);

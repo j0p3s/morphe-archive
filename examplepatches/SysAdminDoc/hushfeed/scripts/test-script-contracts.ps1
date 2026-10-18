@@ -187,6 +187,26 @@ foreach ($url in @('https://example.com/', 'https://www.tiktok.com/@a;reboot',
     Assert-True ($refused.ExitCode -eq 2 -and $refused.Output -like '*only accepts https://www.tiktok.com/*') `
         "phone.sh accepted $url for device navigation."
 }
+# Lease files for the runs that reach the fake adb. Written here rather than in bash, whose command
+# lines can't carry the JSON's double quotes through Windows PowerShell 5.1, and handed over as
+# Windows paths, which phone.sh turns into its own.
+$phoneLeaseDir = Join-Path ([IO.Path]::GetTempPath()) ('hushfeed-phone-lease-' + [guid]::NewGuid().ToString('N'))
+[void][IO.Directory]::CreateDirectory($phoneLeaseDir)
+function Write-PhoneLeaseFixture([string]$Name, [string]$Serial, [string]$Expires, [switch]$Pretty) {
+    $record = [ordered]@{
+        schemaVersion = 1; serial = $Serial; project = 'hushfeed'; chatIdentity = 'contract'
+        purpose = 'phone.sh lease contract'; ownershipToken = 'goodtoken'
+        acquiredUtc = [DateTime]::UtcNow.ToString('o'); expiresUtc = $Expires
+    }
+    $path = Join-Path $phoneLeaseDir $Name
+    [IO.File]::WriteAllText($path, ($record | ConvertTo-Json -Compress:(-not $Pretty)), [Text.UTF8Encoding]::new($false))
+    return $path.Replace("'", "'\''")
+}
+$validPhoneLease = Write-PhoneLeaseFixture 'valid.json' 'TESTPHONE01' ([DateTime]::UtcNow.AddHours(1).ToString('o'))
+$expiredPhoneLease = Write-PhoneLeaseFixture 'expired.json' 'TESTPHONE01' ([DateTime]::UtcNow.AddMinutes(-1).ToString('o')) -Pretty
+$otherPhoneLease = Write-PhoneLeaseFixture 'other.json' 'OTHERPHONE02' ([DateTime]::UtcNow.AddHours(1).ToString('o'))
+$absentPhoneLease = (Join-Path $phoneLeaseDir 'absent.json').Replace("'", "'\''")
+
 # A plain video link has to reach am start as one intact argument, or the refusals above prove
 # nothing. The fake adb reports TikTok in front on display 0 and records what am start was given.
 # No double quotes: Windows PowerShell 5.1 splits a native argument at them.
@@ -202,9 +222,10 @@ esac
 FAKE
 chmod +x $fixture/adb
 PHONE_SERIAL=TESTPHONE01 HUSHFEED_DEVICE_SERIAL=TESTPHONE01 ADB=$fixture/adb \
+    HUSHFEED_LEASE_FILE='__LEASE__' HUSHFEED_LEASE_TOKEN=goodtoken \
     PHONE_SHOTS=/tmp/hushfeed-phone-parser-contract '__PHONE_SCRIPT__' open_url 'https://www.tiktok.com/@creator/video/123' 0
 cat $fixture/am-start
-'@).Replace('__PHONE_SCRIPT__', $escapedPhoneScript)
+'@).Replace('__PHONE_SCRIPT__', $escapedPhoneScript).Replace('__LEASE__', $validPhoneLease)
 $openedUrl = @(& $bashHost @bashArguments $openUrlCommand 2> $null)
 Assert-True ($LASTEXITCODE -eq 0 -and ($openedUrl -join "`n") -like
     "*-d`nhttps://www.tiktok.com/@creator/video/123`n-p`ncom.zhiliaoapp.musically*") `
@@ -244,6 +265,83 @@ Assert-True ($otherPhoneExit -eq 2 -and ($otherPhone -join "`n") -like '*REFUSED
 Assert-True ($unnamedExit -ne 0 -and ($unnamed -join "`n") -like '*HUSHFEED_DEVICE_SERIAL*') `
     'phone.sh ran with no test phone named in HUSHFEED_DEVICE_SERIAL.'
 
+# The device lease. Every run below reaches for adb through a fake one that writes down each
+# call, so a refused run has to leave that list empty. The held lease is a real one from
+# device-lease.ps1, whose open handle shares reading alone, so phone.sh has to read through it.
+$heldPhoneLease = New-DeviceLease -LeaseDir (Join-Path $phoneLeaseDir 'held') -Serial 'TESTPHONE01' -Project 'hushfeed' `
+    -ChatIdentity 'contract' -Purpose 'phone.sh held lease contract' -LeaseMinutes 5
+try {
+    $leaseRunsCommand = (@'
+fixture=$(mktemp -d)
+trap 'rm -rf $fixture' EXIT
+cat > $fixture/adb <<'FAKE'
+#!/bin/sh
+echo $* >> ${0%/*}/calls
+case $* in
+    *dumpsys*) printf 'WINDOW MANAGER DISPLAY CONTENTS (dumpsys window displays)\n  Display: mDisplayId=0\n  mCurrentFocus=Window{1 u0 com.zhiliaoapp.musically/.MainActivity}\n';;
+esac
+FAKE
+chmod +x $fixture/adb
+run() {
+    name=$1; lease=$2; token=$3; verb=$4
+    rm -f $fixture/calls
+    if [ $lease = none ]; then
+        out=$(env -u HUSHFEED_LEASE_FILE -u HUSHFEED_LEASE_TOKEN PHONE_SERIAL=TESTPHONE01 HUSHFEED_DEVICE_SERIAL=TESTPHONE01 \
+            ADB=$fixture/adb PHONE_SHOTS=$fixture/shots '__PHONE_SCRIPT__' $verb 1 2>&1)
+    else
+        out=$(env HUSHFEED_LEASE_FILE=$lease HUSHFEED_LEASE_TOKEN=$token PHONE_SERIAL=TESTPHONE01 HUSHFEED_DEVICE_SERIAL=TESTPHONE01 \
+            ADB=$fixture/adb PHONE_SHOTS=$fixture/shots '__PHONE_SCRIPT__' $verb 1 2>&1)
+    fi
+    code=$?
+    calls=0
+    [ -f $fixture/calls ] && calls=$(( $(wc -l < $fixture/calls) ))
+    case $out in *'REFUSED: no device lease'*) refused=1;; *) refused=0;; esac
+    echo lease-run $name $code $calls $refused
+}
+run none none none top
+run absent '__ABSENT__' goodtoken top
+run foreign '__VALID__' othertoken top
+run expired '__EXPIRED__' goodtoken top
+run otherserial '__OTHER__' goodtoken top
+run foreignshot '__VALID__' othertoken shot
+run foreigntap '__VALID__' othertoken tap
+run valid '__VALID__' goodtoken top
+run held '__HELD__' __HELDTOKEN__ top
+'@).Replace('__PHONE_SCRIPT__', $escapedPhoneScript).Replace('__ABSENT__', $absentPhoneLease).
+        Replace('__VALID__', $validPhoneLease).Replace('__EXPIRED__', $expiredPhoneLease).
+        Replace('__OTHER__', $otherPhoneLease).Replace('__HELD__', $heldPhoneLease.Path.Replace("'", "'\''")).
+        Replace('__HELDTOKEN__', $heldPhoneLease.OwnershipToken)
+    $savedLeaseEAP = $ErrorActionPreference
+    $ErrorActionPreference = 'Continue'
+    try {
+        $leaseRuns = @(& $bashHost @bashArguments $leaseRunsCommand 2> $null)
+    } finally {
+        $ErrorActionPreference = $savedLeaseEAP
+    }
+} finally {
+    Remove-DeviceLease -Lease $heldPhoneLease
+}
+$leaseResults = @{}
+foreach ($line in $leaseRuns) {
+    $fields = ([string]$line).Trim() -split ' '
+    if ($fields.Count -eq 5 -and $fields[0] -eq 'lease-run') { $leaseResults[$fields[1]] = $fields[2..4] -join ' ' }
+}
+foreach ($refusal in @('none', 'absent', 'foreign', 'expired', 'otherserial', 'foreignshot', 'foreigntap')) {
+    Assert-True ($leaseResults[$refusal] -eq '2 0 1') `
+        "phone.sh reached adb or didn't refuse without a lease of its own ($refusal): exit, adb calls, refused = $($leaseResults[$refusal])"
+}
+Assert-True ($leaseResults['valid'] -eq '0 1 0') "phone.sh refused its own lease: $($leaseResults['valid'])"
+Assert-True ($leaseResults['held'] -eq '0 1 0') `
+    "phone.sh couldn't read a lease device-lease.ps1 holds open: $($leaseResults['held'])"
+Assert-True (([regex]::Matches($phoneSource, '"\$ADB" -s')).Count -eq 2) `
+    'phone.sh calls adb outside adb_call and adb_quiet, which check the lease first.'
+foreach ($caller in @('tools/verification-probe/strip-hunt.ps1', 'tools/verification-probe/record-markers.ps1')) {
+    $callerSource = Get-Content -LiteralPath (Join-Path $Root $caller) -Raw
+    Assert-True ($callerSource -match 'HUSHFEED_LEASE_FILE=\$\(\$deviceLease\.Path\)' -and
+        $callerSource -match 'HUSHFEED_LEASE_TOKEN=\$\(\$deviceLease\.OwnershipToken\)') `
+        "$caller runs phone.sh without handing it the device lease."
+}
+
 # A wslpath that fails should refuse the path rather than creating a stray directory.
 $wslpathFailCommand = (@'
 fixture=$(mktemp -d)
@@ -264,13 +362,14 @@ try {
 }
 Assert-True ($wslpathExit -eq 0) `
     'phone.sh passed through a Windows path when wslpath was present but failed.'
+Remove-Item -LiteralPath $phoneLeaseDir -Recurse -Force
 
 Write-Host '[scripts] guarded phone foreground parser contracts passed'
 
 $catalog = Get-Content -LiteralPath (Join-Path $Root 'patches-list.json') -Raw | ConvertFrom-Json
 $target = Get-PatchTarget -PatchList $catalog
 Assert-True ($target.PackageName -eq 'com.zhiliaoapp.musically') 'The catalog package was not resolved.'
-$stockTarget = [pscustomobject]@{ package = 'com.zhiliaoapp.musically'; versionName = '47.1.4' }
+$stockTarget = [pscustomobject]@{ package = 'com.zhiliaoapp.musically'; versionName = '47.4.3' }
 $normalTarget = Resolve-PatchVerificationTarget -Stock $stockTarget -Target $target
 Assert-True (-not $normalTarget.Forced -and -not $normalTarget.Probe) 'Declared support became a qualification probe.'
 $asiaTarget = [pscustomobject]@{ package = 'com.ss.android.ugc.trill'; versionName = '47.0.3' }
@@ -291,17 +390,17 @@ Assert-Throws { Resolve-PatchVerificationTarget -Stock $futureStock -Target $tar
     'A future build was accepted without force.'
 Assert-True (Resolve-PatchVerificationTarget -Stock $futureStock -Target $target -Force).Forced `
     'An explicitly forced future build was not marked forced.'
-Assert-True ((@($target.PackageVersions) -join ',') -eq '47.1.4' -and $target.PackageVersion -eq '47.1.4') `
+Assert-True ((@($target.PackageVersions) -join ',') -eq '47.4.3' -and $target.PackageVersion -eq '47.4.3') `
     "The catalog versions were not resolved: $(@($target.PackageVersions) -join ', ')."
 Assert-True ((Format-VersionList -Versions @('47.0.3')) -eq '47.0.3' -and
     (Format-VersionList -Versions @('47.0.3', '47.1.3')) -eq '47.0.3 and 47.1.3' -and
     (Format-VersionList -Versions @('1.0', '2.0', '3.0')) -eq '1.0, 2.0 and 3.0') 'A version list was not written as a sentence.'
 $twoTargets = [pscustomobject]@{ PackageVersions = @('47.1.4', '47.2.3'); PackageVersion = '47.2.3' }
 Assert-True ((Get-DeclaredReportVersion -Report ([pscustomobject]@{ packageVersion = '47.1.4' }) -Target $twoTargets) -eq '47.1.4' -and
-    (Get-DeclaredReportVersion -Report ([pscustomobject]@{ packageVersion = '47.1.4' }) -Target $target) -eq '47.1.4' -and
-    (Get-DeclaredReportVersion -Report ([pscustomobject]@{ packageVersion = '47.0.3' }) -Target $target) -eq '47.1.4' -and
-    (Get-DeclaredReportVersion -Report ([pscustomobject]@{ packageVersion = '47.2.3' }) -Target $target) -eq '47.1.4' -and
-    (Get-DeclaredReportVersion -Report $null -Target $target) -eq '47.1.4') `
+    (Get-DeclaredReportVersion -Report ([pscustomobject]@{ packageVersion = '47.4.3' }) -Target $target) -eq '47.4.3' -and
+    (Get-DeclaredReportVersion -Report ([pscustomobject]@{ packageVersion = '47.0.3' }) -Target $target) -eq '47.4.3' -and
+    (Get-DeclaredReportVersion -Report ([pscustomobject]@{ packageVersion = '47.2.3' }) -Target $target) -eq '47.4.3' -and
+    (Get-DeclaredReportVersion -Report $null -Target $target) -eq '47.4.3') `
     'A report was held to a version other than the declared one it names.'
 
 $allNames = @($catalog.patches | ForEach-Object { $_.name })
@@ -398,6 +497,7 @@ Assert-Throws { Get-PatchTarget -PatchList $missingTarget } '*has no compatible 
 $tempBase = [System.IO.Path]::GetFullPath([System.IO.Path]::GetTempPath())
 $caseRoot = [System.IO.Path]::GetFullPath((Join-Path $tempBase ("hushfeed-script-test-" + [guid]::NewGuid().ToString('N'))))
 $requiredPrefix = $tempBase.TrimEnd('\') + '\'
+$deviceLeases = @{}
 if (-not $caseRoot.StartsWith($requiredPrefix, [System.StringComparison]::OrdinalIgnoreCase)) {
     throw "Refusing to create test files outside the temporary directory: $caseRoot"
 }
@@ -517,9 +617,13 @@ exit /b 17
 exit /b 19
 '@
     [System.IO.File]::WriteAllText($fakeAdb, $fakeBody, [System.Text.Encoding]::ASCII)
+    foreach ($fixtureSerial in 'CLEAN', 'READY', 'BROKEN', 'LOCKED') {
+        $deviceLeases[$fixtureSerial] = New-DeviceLease -LeaseDir (Join-Path $caseRoot 'device-leases') `
+            -Serial $fixtureSerial -Project 'hushfeed' -ChatIdentity 'script-contracts' -Purpose 'fake replacement checks'
+    }
 
     [System.IO.File]::WriteAllText($mode, 'absent', [System.Text.Encoding]::ASCII)
-    $removed = Remove-AndroidPackageIfInstalled -Adb $fakeAdb -Serial 'CLEAN' -PackageName 'com.example.app'
+    $removed = Remove-AndroidPackageIfInstalled -Adb $fakeAdb -Serial 'CLEAN' -PackageName 'com.example.app' -Lease $deviceLeases.CLEAN
     $calls = @(Get-Content -LiteralPath $log)
     Assert-True (-not $removed) 'An absent package was reported as removed.'
     Assert-True ($calls.Count -eq 1 -and $calls[0] -like '*shell pm path com.example.app') `
@@ -528,7 +632,7 @@ exit /b 19
     # API 36's pm path exits 1 with nothing to say for a package that isn't there.
     Remove-Item -LiteralPath $log -Force
     [System.IO.File]::WriteAllText($mode, 'absent-silent', [System.Text.Encoding]::ASCII)
-    $removed = Remove-AndroidPackageIfInstalled -Adb $fakeAdb -Serial 'CLEAN' -PackageName 'com.example.app'
+    $removed = Remove-AndroidPackageIfInstalled -Adb $fakeAdb -Serial 'CLEAN' -PackageName 'com.example.app' -Lease $deviceLeases.CLEAN
     $calls = @(Get-Content -LiteralPath $log)
     Assert-True (-not $removed) 'A package API 36 reports absent was reported as removed.'
     Assert-True ($calls.Count -eq 2 -and $calls[1] -like '*get-state') `
@@ -536,7 +640,7 @@ exit /b 19
 
     Remove-Item -LiteralPath $log -Force
     [System.IO.File]::WriteAllText($mode, 'present', [System.Text.Encoding]::ASCII)
-    $removed = Remove-AndroidPackageIfInstalled -Adb $fakeAdb -Serial 'READY' -PackageName 'com.example.app'
+    $removed = Remove-AndroidPackageIfInstalled -Adb $fakeAdb -Serial 'READY' -PackageName 'com.example.app' -Lease $deviceLeases.READY
     $calls = @(Get-Content -LiteralPath $log)
     Assert-True $removed 'An installed package was not removed.'
     Assert-True ($calls.Count -eq 2 -and $calls[0] -like '*shell pm path com.example.app' -and
@@ -545,7 +649,7 @@ exit /b 19
     Remove-Item -LiteralPath $log -Force
     [System.IO.File]::WriteAllText($mode, 'check-fail', [System.Text.Encoding]::ASCII)
     Assert-Throws {
-        Remove-AndroidPackageIfInstalled -Adb $fakeAdb -Serial 'BROKEN' -PackageName 'com.example.app'
+        Remove-AndroidPackageIfInstalled -Adb $fakeAdb -Serial 'BROKEN' -PackageName 'com.example.app' -Lease $deviceLeases.BROKEN
     } '*could not check*' 'An ADB transport failure was treated as an absent package.'
     $calls = @(Get-Content -LiteralPath $log)
     Assert-True ($calls.Count -eq 2 -and $calls[1] -like '*get-state') 'The check-failure path continued after ADB failed.'
@@ -553,10 +657,11 @@ exit /b 19
     Remove-Item -LiteralPath $log -Force
     [System.IO.File]::WriteAllText($mode, 'uninstall-fail', [System.Text.Encoding]::ASCII)
     Assert-Throws {
-        Remove-AndroidPackageIfInstalled -Adb $fakeAdb -Serial 'LOCKED' -PackageName 'com.example.app'
+        Remove-AndroidPackageIfInstalled -Adb $fakeAdb -Serial 'LOCKED' -PackageName 'com.example.app' -Lease $deviceLeases.LOCKED
     } '*uninstall failed*' 'An uninstall failure was accepted.'
     $calls = @(Get-Content -LiteralPath $log)
     Assert-True ($calls.Count -eq 2) 'The uninstall-failure path did not perform exactly a check and uninstall.'
+    foreach ($context in $deviceLeases.Values) { Remove-DeviceLease -Lease $context }
 
     $emptyJdk = Join-Path $caseRoot 'empty-jdk'
     New-Item -ItemType Directory -Path $emptyJdk | Out-Null
@@ -633,6 +738,9 @@ exit /b 19
     Assert-True ($deviceScript -match '\[string\[\]\]\$Option' -and $deviceScript -match "\`$enable \+= '-O'") `
         'patch-for-device.ps1 has no way to pass a patch option to the CLI.'
 } finally {
+    foreach ($context in $deviceLeases.Values) {
+        if ($null -ne $context.Stream) { Remove-DeviceLease -Lease $context }
+    }
     if ($caseRoot.StartsWith($requiredPrefix, [System.StringComparison]::OrdinalIgnoreCase) -and
         (Test-Path -LiteralPath $caseRoot)) {
         Remove-Item -LiteralPath $caseRoot -Recurse -Force
@@ -726,8 +834,9 @@ if (Test-Path -LiteralPath $windowsPowerShell -PathType Leaf) {
         [IO.File]::WriteAllText($standInAdb, "@echo * daemon not running; starting now at tcp:5037 1>&2`r`n@exit /b 0`r`n")
         $installScript = Join-Path $PSScriptRoot 'device-install.ps1'
         $command = "`$ErrorActionPreference = 'Stop'; . '$installScript'; " +
-            "try { 'removed=' + (Remove-AndroidPackageIfInstalled -Adb '$standInAdb' -Serial 'serial' -PackageName 'com.example' 6> `$null) } " +
-            "catch { 'threw: ' + `$_.Exception.Message }"
+            "`$lease = New-DeviceLease -LeaseDir '$(Join-Path $nativeRoot 'device-leases')' -Serial 'serial' -Project 'hushfeed' -ChatIdentity 'ps51-fixture' -Purpose 'stderr fixture'; " +
+            "try { 'removed=' + (Remove-AndroidPackageIfInstalled -Adb '$standInAdb' -Serial 'serial' -PackageName 'com.example' -Lease `$lease 6> `$null) } " +
+            "catch { 'threw: ' + `$_.Exception.Message } finally { Remove-DeviceLease -Lease `$lease }"
         $answer = (& $windowsPowerShell -NoProfile -NonInteractive -ExecutionPolicy Bypass -Command $command 2>&1 |
             Out-String).Trim()
         $global:LASTEXITCODE = 0
@@ -1458,8 +1567,13 @@ try {
         $synced = $synced -replace '\b\d+ patches\b', "$count patches"
         # And the TikTok builds the catalog declares, where the index names its target: two since
         # 47.1.3 joined 47.0.3, while the published index still names the one it went out with.
+        # Only the headline: the Manager changelog groups from the first ### on quote CHANGELOG.md
+        # word for word, and a retarget left their "TikTok 47.1.4" rewritten to 47.4.3 (2026-10-17).
         $catalogTargets = Format-VersionList -Versions @((Get-PatchTarget -PatchList (Get-Content -LiteralPath (Join-Path $factsRoot 'patches-list.json') -Raw | ConvertFrom-Json)).PackageVersions)
-        $synced = [regex]::Replace($synced, 'TikTok\s+\d+(?:\.\d+)+(?:(?:,\s*|,?\s+and\s+)\d+(?:\.\d+)+)*', "TikTok $catalogTargets")
+        $groupStart = $synced.IndexOf('### ', [StringComparison]::Ordinal)
+        if ($groupStart -lt 0) { $groupStart = $synced.Length }
+        $synced = [regex]::Replace($synced.Substring(0, $groupStart), 'TikTok\s+\d+(?:\.\d+)+(?:(?:,\s*|,?\s+and\s+)\d+(?:\.\d+)+)*', "TikTok $catalogTargets") +
+            $synced.Substring($groupStart)
         # The 0.60.0 index went out on the owner's word with the gate skipped, and its description
         # quotes the runtime count alone. The cases below move one count at a time against the two
         # a gated release quotes, so the copy gains the missing one rather than every scripts change
@@ -1521,7 +1635,9 @@ try {
         $changelog = $changelog.Substring(0, $body.Index) + "`n$group`n`n" +
             $changelog.Substring($body.Index + $body.Length)
         Set-Content -LiteralPath $changelogPath -Value $changelog -Encoding UTF8 -NoNewline
-        $document.description += "`n`n$group"
+        $existing = [regex]::Match([string]$document.description, '(?m)^### ')
+        $facts = if ($existing.Success) { ([string]$document.description).Substring(0, $existing.Index).TrimEnd() } else { [string]$document.description }
+        $document.description = $facts + "`n`n$group"
         Set-Content -LiteralPath $indexPath -Value ($document | ConvertTo-Json -Depth 100) -Encoding UTF8 -NoNewline
     }
 
@@ -1545,11 +1661,22 @@ try {
     # this branch only ever ran on a real push; on 2026-09-26 it held two bugs the contracts passed:
     # one published target read as a string ("TikTok 4"), and a lookahead that refused "47.0.3." at
     # the end of a sentence.
+    $beforeLag = (Get-Content -LiteralPath (Join-Path $factsRoot 'patches-bundle.json') -Raw | ConvertFrom-Json).description
     Set-FactsFile 'patches-bundle.json' {
         param($text)
-        [regex]::Replace(($text -replace '\b\d+ patches\b', '90 patches'),
-            'TikTok\s+\d+(?:\.\d+)+(?:(?:,\s*|,?\s+and\s+)\d+(?:\.\d+)+)*', 'TikTok 47.0.3')
+        $document = $text | ConvertFrom-Json
+        $description = [string]$document.description
+        $groups = [regex]::Match($description, '(?m)^### ')
+        $facts = if ($groups.Success) { $description.Substring(0, $groups.Index) } else { $description }
+        $suffix = if ($groups.Success) { $description.Substring($groups.Index) } else { '' }
+        $document.description = [regex]::Replace(($facts -replace '\b\d+ patches\b', '90 patches'),
+            'TikTok\s+\d+(?:\.\d+)+(?:(?:,\s*|,?\s+and\s+)\d+(?:\.\d+)+)*', 'TikTok 47.0.3') + $suffix
+        $document | ConvertTo-Json -Depth 100
     }
+    $afterLag = (Get-Content -LiteralPath (Join-Path $factsRoot 'patches-bundle.json') -Raw | ConvertFrom-Json).description
+    $groupsBeforeLag = [regex]::Match($beforeLag, '(?ms)^### .*').Value
+    Assert-True ([regex]::Match($afterLag, '(?ms)^### .*').Value -ceq $groupsBeforeLag) `
+        'The lagging-index fixture changed published changelog evidence along with release facts.'
     Set-FactsFile $bugFormRelative {
         param($text) $text -replace ('Version ' + [regex]::Escape($catalogVersion) + ' for TikTok \d+(?:\.\d+)+'), "Version $catalogVersion for TikTok 47.0.3"
     }
@@ -2043,6 +2170,7 @@ try {
     $signingMarker = Join-Path $hookRoot 'signing-ran.txt'
     $attestationMarker = Join-Path $hookRoot 'attestation-ran.txt'
     $bundleSignatureMarker = Join-Path $hookRoot 'bundle-signature-ran.txt'
+    $searchLynxMarker = Join-Path $hookRoot 'search-lynx-ran.txt'
     $requireWrapper = Join-Path $hookRoot 'require-wrapper.txt'
     Set-Content -LiteralPath (Join-Path $hookRoot 'scripts/validate-release-facts.ps1') -Encoding UTF8 -Value @(
         'param([string]$Root, [switch]$SkipDescriptionTestCount, [switch]$AllowPublishedIndexLag,',
@@ -2065,10 +2193,13 @@ try {
         Set-Content -LiteralPath (Join-Path $hookRoot "scripts/$($suite[0])") -Encoding UTF8 -Value @(
             'param([string]$Root)', "Set-Content -LiteralPath '$($suite[1])' -Value 'ran'", 'exit 0')
     }
+    New-Item -ItemType Directory -Path (Join-Path $hookRoot 'tools/verification-probe') -Force | Out-Null
+    Set-Content -LiteralPath (Join-Path $hookRoot 'tools/verification-probe/test-search-lynx.ps1') -Encoding UTF8 -Value @(
+        'param([string]$Root)', "Set-Content -LiteralPath '$searchLynxMarker' -Value `"root=`$Root`"", 'exit 0')
 
     function Invoke-Hook {
         param([string[]]$Paths)
-        Remove-Item -LiteralPath $factsMarker, $contractsMarker, $signingMarker, $attestationMarker, $bundleSignatureMarker -Force -ErrorAction SilentlyContinue
+        Remove-Item -LiteralPath $factsMarker, $contractsMarker, $signingMarker, $attestationMarker, $bundleSignatureMarker, $searchLynxMarker -Force -ErrorAction SilentlyContinue
         $global:LASTEXITCODE = 0
         & $prePushScript -Root $hookRoot -ChangedPaths $Paths 6> $null
         if ($LASTEXITCODE -ne 0) { throw "pre-push exited $LASTEXITCODE for $($Paths -join ', ')" }
@@ -2097,7 +2228,7 @@ try {
     foreach ($signingInput in @(
         'scripts/apk-signing.ps1', 'scripts/SigningCertificateCheck.java',
         'scripts/SigningKeyFixtures.java', 'scripts/test-apk-signing.ps1',
-        'scripts/patch-for-device.ps1', 'scripts/device-install.ps1',
+        'scripts/patch-for-device.ps1', 'scripts/device-install.ps1', 'scripts/device-lease.ps1',
         'scripts/common.ps1', 'scripts/Resolve-Java.ps1',
         'scripts/patch-target.ps1', 'scripts/patch-report.ps1',
         'tools/verification-probe/build.ps1', 'tools/verification-probe/AndroidManifest.xml',
@@ -2118,12 +2249,29 @@ try {
     Invoke-Hook -Paths @('tools/verification-probe/tests/app/hushfeed/verification/StorageScanContract.java')
     Assert-True (Test-Path -LiteralPath $contractsMarker) 'A storage scanner test change skipped its contracts.'
     Assert-True (-not (Test-Path -LiteralPath $signingMarker)) 'A scanner JVM test selected SDK signing fixtures.'
+    Assert-True (-not (Test-Path -LiteralPath $searchLynxMarker)) 'A storage scanner test change selected the Search Lynx contracts.'
+
+    foreach ($searchLynxInput in @('tools/verification-probe/src/app/hushfeed/verification/SearchLynxEvidence.java',
+            'tools/verification-probe/src/app/hushfeed/verification/SearchLynxSnapshot.java',
+            'tools/verification-probe/tests/app/hushfeed/verification/SearchLynxEvidenceContract.java',
+            'tools/verification-probe/test-search-lynx.ps1')) {
+        Invoke-Hook -Paths @($searchLynxInput)
+        Assert-True ((Test-Path -LiteralPath $searchLynxMarker) -and
+            (Get-Content -LiteralPath $searchLynxMarker -Raw).Trim() -eq "root=$hookRoot") `
+            "Search Lynx input $searchLynxInput skipped its contracts or used another root."
+    }
 
     foreach ($probeTool in @('tools/verification-probe/probe-log.ps1', 'tools/verification-probe/strip-hunt.ps1',
             'tools/verification-probe/record-markers.ps1')) {
         Invoke-Hook -Paths @($probeTool)
         Assert-True (Test-Path -LiteralPath $contractsMarker) "A probe tool change $probeTool skipped its log-marker contracts."
         Assert-True (-not (Test-Path -LiteralPath $signingMarker)) "A probe tool change $probeTool selected SDK signing fixtures."
+    }
+
+    foreach ($auditInput in @('audit/run-audit.ps1', 'audit/evidence.ps1', 'audit/test-evidence.ps1', 'audit/catalog.json')) {
+        Invoke-Hook -Paths @($auditInput)
+        Assert-True (Test-Path -LiteralPath $contractsMarker) "Audit input $auditInput skipped its evidence contracts."
+        Assert-True (-not (Test-Path -LiteralPath $signingMarker)) "Audit-only input $auditInput selected SDK signing fixtures."
     }
 
     Invoke-Hook -Paths @('release-receipt-0.31.0.json')
@@ -3528,9 +3676,104 @@ foreach ($tool in @('strip-hunt.ps1', 'record-markers.ps1')) {
 
 Write-Host '[scripts] shared phone log contracts passed'
 
+# --- adb runs only under a device lease -----------------------------------------------------
+#
+# Two tasks must never drive one phone at once, so every script here that runs adb loads
+# scripts/device-lease.ps1, itself or through a helper it names, and checks the lease before
+# each adb command. The parser finds the commands, so adb in comments and strings doesn't count.
+#
+# A command counts as checked when an earlier statement in its block, or in a block around it,
+# takes, checks or renews the lease, or calls a function of the same file that does. The search
+# stops at a loop body and at a function or script block, since a lease checked once before a
+# loop can run out by its next pass. Invoke-WithDeviceLease checks before its -Action block runs.
+
+$leaseCalls = @('New-DeviceLease', 'Assert-DeviceLease', 'Update-DeviceLease')
+function Get-AdbCommandReport([System.Management.Automation.Language.Ast]$Ast) {
+    $adbCommands = @($Ast.FindAll({
+        param($node)
+        if ($node -isnot [System.Management.Automation.Language.CommandAst]) { return $false }
+        $first = $node.CommandElements[0]
+        ($first -is [System.Management.Automation.Language.StringConstantExpressionAst] -and $first.Value -match '^(?i)adb(\.exe)?$') -or
+            ($first -is [System.Management.Automation.Language.VariableExpressionAst] -and $first.VariablePath.UserPath -match '(?i)adb')
+    }, $true))
+    $leaseFunctions = @($Ast.FindAll({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] }, $true) |
+        Where-Object {
+            @($_.Body.FindAll({
+                param($node)
+                $node -is [System.Management.Automation.Language.CommandAst] -and $node.GetCommandName() -in $leaseCalls
+            }, $false)).Count -gt 0
+        } | ForEach-Object { $_.Name })
+    $guards = $leaseCalls + $leaseFunctions
+    $unchecked = New-Object System.Collections.Generic.List[int]
+    foreach ($command in $adbCommands) {
+        $checked = $false
+        $inner = $command
+        for ($outer = $command.Parent; $null -ne $outer -and -not $checked; $outer = $outer.Parent) {
+            if ($outer -is [System.Management.Automation.Language.StatementBlockAst] -or $outer -is [System.Management.Automation.Language.NamedBlockAst]) {
+                foreach ($statement in $outer.Statements) {
+                    if ([object]::ReferenceEquals($statement, $inner)) { break }
+                    $pipeline = if ($statement -is [System.Management.Automation.Language.AssignmentStatementAst]) { $statement.Right } else { $statement }
+                    if ($pipeline -is [System.Management.Automation.Language.PipelineAst] -and
+                        $pipeline.PipelineElements[0] -is [System.Management.Automation.Language.CommandAst] -and
+                        $pipeline.PipelineElements[0].GetCommandName() -in $guards) { $checked = $true; break }
+                }
+            }
+            if ($outer -is [System.Management.Automation.Language.LoopStatementAst]) { break }
+            if ($outer -is [System.Management.Automation.Language.ScriptBlockAst]) {
+                $checked = $checked -or ($outer.Parent -is [System.Management.Automation.Language.ScriptBlockExpressionAst] -and
+                    $outer.Parent.Parent -is [System.Management.Automation.Language.CommandAst] -and
+                    $outer.Parent.Parent.GetCommandName() -eq 'Invoke-WithDeviceLease')
+                break
+            }
+            $inner = $outer
+        }
+        if (-not $checked) { $unchecked.Add($command.Extent.StartLineNumber) }
+    }
+    $helpers = @($Ast.FindAll({
+        param($node)
+        $node -is [System.Management.Automation.Language.StringConstantExpressionAst] -and $node.Value -match '\.ps1$'
+    }, $true) | ForEach-Object { Split-Path -Leaf $_.Value })
+    [pscustomobject]@{ Adb = $adbCommands.Count; Unchecked = @($unchecked); Helpers = $helpers }
+}
+# Positive control: comments and strings aren't commands, and only lines 7, 8 and 9 run adb
+# with no check since the last loop pass or function entry.
+$sampleReport = Get-AdbCommandReport ([System.Management.Automation.Language.Parser]::ParseInput((@(
+    "# adb -s x shell input tap 1 1", "'adb -s x shell'",
+    "`$lease = New-DeviceLease -LeaseDir d -Serial s -Project p -ChatIdentity c -Purpose u",
+    "& adb -s `$serial shell input tap 1 1",
+    "if (`$x) { & `$adbPath -s `$serial pull a b }",
+    "function Test-Phone { Assert-DeviceLease -Lease `$lease; & adb -s s shell true }",
+    "foreach (`$i in 1) { & adb -s s shell true }",
+    "function Send-Tap { & adb -s s shell input tap 1 1 }",
+    "@(1) | ForEach-Object { & adb -s s shell true }",
+    "for (;;) { Test-Phone; & adb -s s shell true; Invoke-WithDeviceLease -Lease `$lease -Action { & adb -s s shell true } }"
+) -join "`n"), [ref]$null, [ref]$null))
+Assert-True ($sampleReport.Adb -eq 8 -and ($sampleReport.Unchecked -join ',') -eq '7,8,9') `
+    "The adb lease check misreads commands, comments, strings or checks: $($sampleReport.Adb) commands, unchecked lines $($sampleReport.Unchecked -join ',')"
+$leaseScripts = @(Get-ChildItem -LiteralPath (Join-Path $Root 'scripts'), (Join-Path $Root 'tools/verification-probe'), (Join-Path $Root 'audit') -Recurse -Filter '*.ps1' -File)
+$leaseLoaders = @($leaseScripts | Where-Object { (Get-Content -LiteralPath $_.FullName -Raw) -match 'device-lease\.ps1' } |
+    ForEach-Object { $_.Name })
+$adbScripts = New-Object System.Collections.Generic.List[string]
+$unleased = New-Object System.Collections.Generic.List[string]
+foreach ($scriptFile in $leaseScripts) {
+    $relative = $scriptFile.FullName.Substring($Root.Length).TrimStart('\', '/').Replace('\', '/')
+    $report = Get-AdbCommandReport ([System.Management.Automation.Language.Parser]::ParseFile($scriptFile.FullName, [ref]$null, [ref]$null))
+    if ($report.Adb -eq 0) { continue }
+    $adbScripts.Add($relative)
+    $loadsLease = $scriptFile.Name -in $leaseLoaders -or @($report.Helpers | Where-Object { $_ -in $leaseLoaders }).Count -gt 0
+    if (-not $loadsLease) { $unleased.Add("$relative (doesn't load device-lease.ps1)") }
+    elseif ($report.Unchecked.Count -gt 0) { $unleased.Add("$relative lines $($report.Unchecked -join ', ')") }
+}
+Assert-True ($adbScripts.Count -ge 9 -and 'audit/run-audit.ps1' -in $adbScripts) "The adb lease check found only $($adbScripts.Count) scripts that run adb: $($adbScripts -join ', ')"
+Assert-True ($unleased.Count -eq 0) ("Scripts run adb without checking the device lease first: " + ($unleased -join '; '))
+
+Write-Host '[scripts] adb device lease contracts passed'
+
 & (Join-Path $Root 'scripts/test-storage-probe.ps1') -Root $Root
 & (Join-Path $Root 'scripts/test-fixture-jobs.ps1') -Root $Root
 & (Join-Path $Root 'scripts/test-release-publication.ps1') -Root $Root
+& (Join-Path $Root 'scripts/test-device-lease.ps1')
+& (Join-Path $Root 'audit/test-evidence.ps1')
 
 $global:LASTEXITCODE = 0
 Write-Host '[scripts] report, target, Java and guarded replacement contracts passed'

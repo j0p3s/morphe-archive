@@ -413,7 +413,7 @@ $fixtureLedger = [ordered]@{
             hushthreads = [ordered]@{ status = 'submitted'; url = 'https://github.com/nvbangg/awesome-morphe/issues/1'; submitted = '2026-09-01' } }
         [ordered]@{ id = 'morphe-patch-tracker'; name = 'Morphe Patch Tracker'; url = 'https://drnx64.github.io/morphe-track-patches/'
             hushthreads = [ordered]@{ status = 'listed'; url = 'https://drnx64.github.io/morphe-track-patches/#/bundle/sysadmindoc'; checked = '2026-09-01' } }
-        [ordered]@{ id = 'jman-bundles'; name = 'Jman''s ReVanced Patch Bundles'; url = 'https://github.com/Jman-Github/ReVanced-Patch-Bundles'
+        [ordered]@{ id = 'jman-bundles'; name = 'Jman''s Patch Bundle Registry'; url = 'https://github.com/Jman-Github/Patch-Bundle-Registry'
             hushthreads = [ordered]@{ status = 'not-listed'; checked = '2026-09-01' } }
         [ordered]@{ id = 'morphe-archive'; name = 'Morphe Archive'; url = 'https://rushiforai.github.io/morphe-archive/'
             hushthreads = [ordered]@{ status = 'listed'; url = 'https://github.com/rushiforai/morphe-archive'; checked = '2026-09-01' } }
@@ -448,9 +448,38 @@ Reset-FixtureLedger
 Assert-True (Test-SourceLedger -Ledger ($fixtureLedgerText | ConvertFrom-Json) -Root $fixtureRoot -Today '2026-09-25').Valid `
     'The audit fixture ledger breaks the rules, so the audit would stop before any case below.'
 
+# One bundle row as Jman's registry serves it (the fields the census reads), and a page of them.
+function New-RegistryRow {
+    param([string]$Id, [string]$Url, [string]$Version = 'v1.0.0', [bool]$Latest = $true, [string]$Status = 'verified',
+        [bool]$Prerelease = $false, [string[]]$Channels = @('latest', 'stable'), [string]$Repo, [string]$Owner)
+    $parts = ([Uri]$Url).AbsolutePath.Trim('/') -split '/'
+    return [ordered]@{
+        id = $Id; version = $Version; is_latest = $Latest; is_prerelease = $Prerelease; channels = @($Channels)
+        metadata_status = $Status; packages = @('com.instagram.barcelona')
+        source = [ordered]@{ url = $Url; host = ([Uri]$Url).Host; enabled = $true; unavailable_reason = $null
+            source_metadatum = [ordered]@{ owner_name = $(if ($Owner) { $Owner } else { $parts[0] }); repo_name = $(if ($Repo) { $Repo } else { $parts[1] }) } }
+    }
+}
+function New-RegistryPage {
+    param($Rows, [int]$Total)
+    return @{ Status = 200; Content = (@{ data = @($Rows); total = $Total; limit = 100; offset = 0 } | ConvertTo-Json -Depth 10) }
+}
+# The rows the control serves: a short first page (one of three rows left unread is not the end), a
+# second page that repeats the first page's release, and an older alpha release that is history.
+function New-RegistryPages {
+    $alpha = 'https://github.com/fixture-owner/alpha-patches'
+    $latest = New-RegistryRow -Id 'a-latest' -Url $alpha -Version 'v2.0.0'
+    return @{
+        '0' = New-RegistryPage -Rows @($latest) -Total 4
+        '1' = New-RegistryPage -Rows @(
+            (New-RegistryRow -Id 'a-old' -Url $alpha -Version 'v1.0.0' -Latest $false -Channels @())
+            (New-RegistryRow -Id 'g-latest' -Url 'https://gitlab.com/fixture-group/gamma-patches' -Version 'v3.0.0')
+            $latest) -Total 4
+    }
+}
+
 # What each forge and index answers. A case changes one answer and puts it back.
 function New-FakeAnswers {
-    $tick = [string][char]96 * 3
     $answers = [ordered]@{
         official = @{ Status = 200; Content = '{"patches":[{"name":"Example","compatiblePackages":{"com.google.android.youtube":["20.1"]}}]}' }
         directory = @{ Status = 200; Content = (@{
@@ -462,11 +491,8 @@ function New-FakeAnswers {
             'sysadmindoc:stable' = @{ repo_url = 'https://github.com/SysAdminDoc/HushThreads'; apps = @(@{ package = 'com.instagram.barcelona'; patches = @(@{ name = 'Hide ads' }) }) }
             'alpha:stable' = @{ repo_url = 'https://github.com/fixture-owner/alpha-patches'; apps = @(@{ package = 'com.instagram.barcelona'; patches = @(@{ name = 'Hide ads' }) }) }
         } | ConvertTo-Json -Depth 8) }
-        jmanSources = @{ Status = 200; Content = '{"alpha-stable":{"patches":"https://api.github.com/repos/fixture-owner/alpha-patches"},"gamma-stable":{"patches":"https://gitlab.com/api/v4/projects/fixture-group%2Fgamma-patches"}}' }
-        jmanCatalog = @{ Status = 200; Content = ("# Catalog`n| [Alpha](#alpha) | 1 | 1 | Generated |`n### X Alpha Bundle Patch List:`n" +
-            "| **Name** | **Description** | **Compatible Apps** | **Compatible Versions** |`n|---|---|---|---|`n" +
-            "| ${tick}Hide ads${tick} | ${tick}Removes ads.${tick} | ${tick}Threads${tick} | ${tick}449.0.0.54.82${tick} |`n" +
-            "### X Gamma Bundle Patch List:`n| ${tick}Open links outside${tick} | ${tick}d${tick} | ${tick}Threads${tick} | ${tick}Any${tick} |`n") }
+        jmanConfig = @{ Status = 200; Content = '{"alpha":{"patches":"https://github.com/fixture-owner/alpha-patches","integrations":false,"disabled":false},"gamma":{"patches":"https://gitlab.com/fixture-group/gamma-patches","integrations":false,"disabled":false}}' }
+        jmanPages = (New-RegistryPages)
         archive = @{ Status = 200; Content = '{"name":"patches-list.json"}' }
         searchHits = @(
             @{ repository = @{ full_name = 'fixture-owner/alpha-patches' }; path = 'patches/Alpha.kt'; sha = $blobKnown }
@@ -501,7 +527,8 @@ function New-FakeAnswers {
     }
     return $answers
 }
-$fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Collections.Generic.List[object]) }
+$fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Collections.Generic.List[object])
+    Sleeps = (New-Object System.Collections.Generic.List[double]) }
 
 & {
     # Stands in for every request the audit makes, so no case needs the network. A request it
@@ -518,8 +545,8 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
             '^https://morphe-patches\.software/data/bundles\.json$' { $answer = $a.directory; break }
             '^https://raw\.githubusercontent\.com/nvbangg/awesome-morphe/main/data/hashes\.json$' { $answer = $a.awesome; break }
             '^https://raw\.githubusercontent\.com/drnx64/morphe-track-patches/main/data/bundles\.json$' { $answer = $a.tracker; break }
-            '^https://raw\.githubusercontent\.com/Jman-Github/ReVanced-Patch-Bundles/bundles/patch-bundles/bundle-sources\.json$' { $answer = $a.jmanSources; break }
-            '^https://raw\.githubusercontent\.com/Jman-Github/ReVanced-Patch-Bundles/bundles/patch-bundles/PATCH-LIST-CATALOG\.md$' { $answer = $a.jmanCatalog; break }
+            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/HEAD/config/sources\.json$' { $answer = $a.jmanConfig; break }
+            '^https://patch-bundles\.api\.jmancentral\.com/apps/com\.instagram\.barcelona/bundles\?limit=100&offset=(\d+)$' { $answer = $a.jmanPages[$Matches[1]]; break }
             '^https://api\.github\.com/repos/rushiforai/morphe-archive/contents/examplepatches/SysAdminDoc/HushThreads/patches-list\.json$' { $answer = $a.archive; break }
             '^https://api\.github\.com/search/code\?q=([^&]+)&per_page=100&page=1$' {
                 $query = [Uri]::UnescapeDataString($Matches[1])
@@ -551,18 +578,33 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
             '^https://github\.com/SysAdminDoc/HushThreads/releases/download/v9\.9\.9/release-receipt-9\.9\.9\.json$' { $answer = $a.receipt; break }
         }
         if ($null -eq $answer) { throw "The audit made a request no stand-in answers: $url" }
-        if ($answer.Status -ne 200) {
-            $failure = New-Object System.Exception "Response status code does not indicate success: $($answer.Status)."
-            Add-Member -InputObject $failure -NotePropertyName Response -NotePropertyValue ([pscustomobject]@{ StatusCode = $answer.Status })
+        if ($answer.ContainsKey('Unreachable')) { throw 'The remote name could not be resolved' }
+        # A queue of rate limits to answer first, each with the headers it carries.
+        $status = $answer.Status
+        $headers = @{}
+        if ($answer.ContainsKey('LimitedFirst') -and $answer.LimitedFirst.Count -gt 0) {
+            $status = 429
+            $headers = $answer.LimitedFirst.Dequeue()
+        }
+        if ($status -ne 200) {
+            $failure = New-Object System.Exception "Response status code does not indicate success: $status."
+            Add-Member -InputObject $failure -NotePropertyName Response -NotePropertyValue ([pscustomobject]@{ StatusCode = $status; Headers = $headers })
             throw $failure
         }
         return [pscustomobject]@{ StatusCode = 200; Content = [string]$answer.Content }
+    }
+
+    # Records each wait instead of sleeping.
+    function Start-Sleep {
+        param([double]$Seconds, [int]$Milliseconds)
+        $fakeForge.Sleeps.Add($(if ($PSBoundParameters.ContainsKey('Seconds')) { $Seconds } else { $Milliseconds / 1000 }))
     }
 
     function Invoke-Audit {
         param([hashtable]$Extra = @{})
         $report = Join-Path $caseRoot ('report-' + [guid]::NewGuid().ToString('N') + '.json')
         $fakeForge.Requests.Clear()
+        $fakeForge.Sleeps.Clear()
         $arguments = @{ Root = $fixtureRoot; GitHubToken = $fakeToken; SkipGitLabCodeSearch = $true; SearchDelaySeconds = 0
             RateLimitWaitSeconds = 0; Today = '2026-09-25'; ReportPath = $report }
         foreach ($key in $Extra.Keys) { $arguments[$key] = $Extra[$key] }
@@ -611,6 +653,15 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
         "The copy of the alpha lineage's file was not collapsed into it: $($clean.Report.notes -join ' | ')"
     Assert-True (@($clean.Report.lineages | Where-Object { $_.lineage -eq 'alpha' })[0].mirrors -contains 'https://github.com/clone/alpha-clone') `
         'The collapsed copy was not listed under its lineage.'
+    # Jman's registry is read from its paged Threads endpoint: the first page is short of the total,
+    # so the offset moves by the rows it returned, and the release the second page repeats counts once.
+    $registryOffsets = @($fakeForge.Requests | Where-Object { $_.Uri -like 'https://patch-bundles.api.jmancentral.com/*' } |
+        ForEach-Object { ($_.Uri -split 'offset=')[1] })
+    Assert-True (($registryOffsets -join ',') -eq '0,1') "The registry list was not followed past a short page: offsets $($registryOffsets -join ',')"
+    Assert-True (@($clean.Report.notes | Where-Object { $_ -like "*registry returned 1 Threads bundle row(s) twice*" }).Count -eq 1) `
+        "The repeated registry row was not counted once: $($clean.Report.notes -join ' | ')"
+    Assert-True (@($fakeForge.Requests | Where-Object { $_.Uri -like '*ReVanced-Patch-Bundles*' }).Count -eq 0) `
+        'The audit still asked for the retired Jman files.'
     $leaked = @($fakeForge.Requests | Where-Object { $_.Authorization -and $_.Uri -notlike 'https://api.github.com/*' })
     Assert-True ($leaked.Count -eq 0) "The GitHub token went to another host: $($leaked[0].Uri)"
     Assert-True (@($fakeForge.Requests | Where-Object { $_.Uri -like 'https://api.github.com/*' -and $_.Authorization -ne "Bearer $fakeToken" }).Count -eq 0) `
@@ -620,13 +671,18 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
 
     # -SkipGitLabCodeSearch holds with GITLAB_TOKEN set, as the audit's help tells a maintainer to
     # set it: no GitLab search goes out and the census keeps recording the skip.
-    $env:GITLAB_TOKEN = 'fixture-gitlab-' + [guid]::NewGuid().ToString('N')
+    $fakeGitLabToken = 'fixture-gitlab-' + [guid]::NewGuid().ToString('N')
+    $env:GITLAB_TOKEN = $fakeGitLabToken
     try { $withToken = Invoke-Audit } finally { $env:GITLAB_TOKEN = $null }
     Assert-True ($withToken.ExitCode -eq 0) "The audit refused a clean fixture once GITLAB_TOKEN was set with -SkipGitLabCodeSearch: $($withToken.Said)"
     Assert-True (@($fakeForge.Requests | Where-Object { $_.Uri -like 'https://gitlab.com/api/v4/search*' }).Count -eq 0) `
         'GitLab code search ran although -SkipGitLabCodeSearch was passed.'
     Assert-True (@(([IO.File]::ReadAllText($fixtureLedgerPath) | ConvertFrom-Json).census.skipped) -contains 'gitlab-code-search') `
         'The census stopped recording the GitLab skip because a token was set.'
+    # The run log says whether GitLab was read with a token, without printing it.
+    Assert-True ($withToken.Said -like '*GitLab reads: with a GitLab token*' -and $withToken.Said.IndexOf($fakeGitLabToken) -lt 0) `
+        "The run log did not say GitLab was read with a token, or it printed the token: $($withToken.Said)"
+    Assert-True ($clean.Said -like '*GitLab reads: without a token*') "The run log did not say GitLab was read without a token: $($clean.Said)"
     Reset-FixtureLedger
 
     # -ValidateOnly and an invalid ledger never reach the network.
@@ -696,6 +752,19 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
     Assert-Drift 'listing-changed' '*Morphe Patch Tracker no longer lists HushThreads*' 'A listing that disappeared'
     $fakeForge.Answers = New-FakeAnswers
 
+    # The tracker has listed one owner under keys that differ only in case (immortalzeus:dev and
+    # ImmortalZeus:dev). The audit reads both and counts the repository once.
+    $trackerApps = '"apps":[{"package":"com.instagram.barcelona","patches":[{"name":"Hide ads"}]}]'
+    $fakeForge.Answers.tracker.Content = '{"sysadmindoc:stable":{"repo_url":"https://github.com/SysAdminDoc/HushThreads",' + $trackerApps + '},' +
+        '"alpha:stable":{"repo_url":"https://github.com/fixture-owner/alpha-patches",' + $trackerApps + '},' +
+        '"Alpha:stable":{"repo_url":"https://github.com/fixture-owner/alpha-patches",' + $trackerApps + '}}'
+    $cased = Invoke-Audit
+    Assert-True ($cased.ExitCode -eq 0 -and $cased.Said -like '*Morphe Patch Tracker: 2 Threads bundles; HushThreads listed*') `
+        ("Tracker keys that differ only in case were not read: exit $($cased.ExitCode), " +
+            (@($cased.Report.findings | ForEach-Object { "$($_.kind): $($_.repository) $($_.detail)" }) -join ' | '))
+    Reset-FixtureLedger
+    $fakeForge.Answers = New-FakeAnswers
+
     $fakeForge.Answers.official.Content = '{"patches":[{"name":"Hide ads","compatiblePackages":[{"packageName":"com.instagram.barcelona"}]}]}'
     Assert-Drift 'official-bundle-changed' '*official bundle now patches*com.instagram.barcelona*' 'The official bundle taking on Threads'
     $fakeForge.Answers = New-FakeAnswers
@@ -732,9 +801,133 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
     Assert-Drift 'license-added' '*beta-module*now has a licence (MIT*' 'An unlicensed source that gained a licence'
     $fakeForge.Answers = New-FakeAnswers
 
-    $tick = [string][char]96 * 3
-    $fakeForge.Answers.jmanCatalog.Content += "### X Delta Bundle Patch List:`n| ${tick}Hide replies${tick} | ${tick}d${tick} | ${tick}Threads${tick} | ${tick}Any${tick} |`n"
-    Assert-Drift 'index-unresolved' "*Jman's catalog lists Threads patches under 'Delta'*" 'A Jman section no repository stands behind'
+    # Jman's registry. A repository is a Threads bundle only through a current, verified release of an
+    # enabled source; history, unverified metadata and a bare registration are not promoted to one.
+    $newcomerUrl = 'https://github.com/newcomer/threads-patches'
+    $selfUrl = 'https://github.com/SysAdminDoc/HushThreads'
+    function Set-RegistryRows {
+        param($Rows)
+        $fakeForge.Answers.jmanPages = @{ '0' = New-RegistryPage -Rows @($Rows) -Total @($Rows).Count }
+    }
+    $alphaRow = New-RegistryRow -Id 'a-latest' -Url 'https://github.com/fixture-owner/alpha-patches'
+    $gammaRow = New-RegistryRow -Id 'g-latest' -Url 'https://gitlab.com/fixture-group/gamma-patches'
+
+    Set-RegistryRows @($alphaRow, $gammaRow, (New-RegistryRow -Id 'n-latest' -Url $newcomerUrl -Version 'v0.5.0-dev.1' -Prerelease $true -Channels @('dev')))
+    $current = Invoke-Audit
+    $addition = @($current.Report.findings | Where-Object { $_.kind -eq 'addition' -and $_.repository -like '*newcomer/threads-patches' })
+    Assert-True ($current.ExitCode -eq 1 -and $addition.Count -eq 1 -and @($addition[0].evidence.packages) -contains 'com.instagram.barcelona' -and
+        @($addition[0].evidence.registry[0].latest) -contains 'v0.5.0-dev.1 prerelease [dev]') `
+        "A current prerelease the registry serves was not reported with its channel: $($current.Report.findings | ConvertTo-Json -Depth 8 -Compress)"
+    Reset-FixtureLedger
+    $fakeForge.Answers = New-FakeAnswers
+
+    Set-RegistryRows @($alphaRow, $gammaRow, (New-RegistryRow -Id 'n-old' -Url $newcomerUrl -Latest $false -Channels @()))
+    $history = Invoke-Audit
+    $addition = @($history.Report.findings | Where-Object { $_.kind -eq 'addition' -and $_.repository -like '*newcomer/threads-patches' })
+    Assert-True ($history.ExitCode -eq 1 -and $addition.Count -eq 1 -and @($addition[0].evidence.packages).Count -eq 0 -and
+        @($addition[0].evidence.mentions) -contains 'com.instagram.barcelona' -and $addition[0].evidence.registry[0].historical -eq 1) `
+        "A repository the registry holds only as history was promoted to a Threads bundle: $($history.Report.findings | ConvertTo-Json -Depth 8 -Compress)"
+    Reset-FixtureLedger
+    $fakeForge.Answers = New-FakeAnswers
+
+    Set-RegistryRows @($alphaRow, $gammaRow, (New-RegistryRow -Id 'n-latest' -Url $newcomerUrl -Status 'unverified'))
+    $incomplete = Invoke-Audit
+    $addition = @($incomplete.Report.findings | Where-Object { $_.kind -eq 'addition' -and $_.repository -like '*newcomer/threads-patches' })
+    Assert-True ($addition.Count -eq 1 -and @($addition[0].evidence.packages).Count -eq 0 -and $addition[0].evidence.registry[0].unverified -eq 1 -and
+        @($addition[0].evidence.registry[0].latest) -contains 'v1.0.0 stable [latest,stable] unverified') `
+        "A latest release with unverified metadata was promoted: $($incomplete.Report.findings | ConvertTo-Json -Depth 8 -Compress)"
+    Reset-FixtureLedger
+    $fakeForge.Answers = New-FakeAnswers
+
+    # A renamed repository is read under its current name, and a recorded source listed there is not an addition.
+    Set-RegistryRows @($gammaRow, (New-RegistryRow -Id 'a-latest' -Url 'https://github.com/fixture-owner/alpha-old' -Repo 'alpha-patches' -Owner 'fixture-owner'))
+    $renamed = Invoke-Audit
+    Assert-True ($renamed.ExitCode -eq 0 -and @($renamed.Report.notes | Where-Object { $_ -like "*registry lists https://github.com/fixture-owner/alpha-old under its current name https://github.com/fixture-owner/alpha-patches*" }).Count -eq 1) `
+        "A renamed registry repository was not read under its current name: $($renamed.Report.findings | ConvertTo-Json -Depth 8 -Compress)"
+    Reset-FixtureLedger
+    $fakeForge.Answers = New-FakeAnswers
+
+    # HushThreads' own listing needs registration and a current, verified release.
+    $fakeForge.Answers.jmanConfig.Content = '{"alpha":{"patches":"https://github.com/fixture-owner/alpha-patches","disabled":false},"gamma":{"patches":"https://gitlab.com/fixture-group/gamma-patches","disabled":false},"hushthreads":{"patches":"https://github.com/SysAdminDoc/HushThreads","disabled":false}}'
+    Set-RegistryRows @($alphaRow, $gammaRow, (New-RegistryRow -Id 'h-latest' -Url $selfUrl))
+    Assert-Drift 'listing-changed' "*Jman's Patch Bundle Registry lists HushThreads now*" 'HushThreads registered and served as a current release'
+    $fakeForge.Answers = New-FakeAnswers
+
+    $fakeForge.Answers.jmanConfig.Content = '{"alpha":{"patches":"https://github.com/fixture-owner/alpha-patches","disabled":false},"gamma":{"patches":"https://gitlab.com/fixture-group/gamma-patches","disabled":false},"hushthreads":{"patches":"https://github.com/SysAdminDoc/HushThreads","disabled":false}}'
+    Set-RegistryRows @($alphaRow, $gammaRow, (New-RegistryRow -Id 'h-old' -Url $selfUrl -Latest $false -Channels @()))
+    $selfHistory = Invoke-Audit
+    Assert-True ($selfHistory.ExitCode -eq 0 -and @($selfHistory.Report.notes | Where-Object { $_ -like "*holds HushThreads only as history*" }).Count -eq 1) `
+        "HushThreads held only as history was read as a current listing: $($selfHistory.Report.findings | ConvertTo-Json -Depth 8 -Compress)"
+    Reset-FixtureLedger
+    $fakeForge.Answers = New-FakeAnswers
+
+    $fakeForge.Answers.jmanConfig.Content = '{"hushthreads":{"patches":"https://github.com/SysAdminDoC/HushThreads","disabled":true}}'
+    Set-RegistryRows @($alphaRow, $gammaRow, (New-RegistryRow -Id 'h-latest' -Url $selfUrl))
+    $selfDisabled = Invoke-Audit
+    Assert-True ($selfDisabled.ExitCode -eq 0 -and @($selfDisabled.Report.notes | Where-Object { $_ -like "*holds HushThreads only as history*" }).Count -eq 1) `
+        "HushThreads on a disabled registration was read as a current listing: $($selfDisabled.Report.notes -join ' | ')"
+    Reset-FixtureLedger
+    $fakeForge.Answers = New-FakeAnswers
+
+    # A registered, verified current release still isn't a listing when the registry serves it from an
+    # unavailable source, or from one a later row says is disabled.
+    $selfRegistration = '{"hushthreads":{"patches":"https://github.com/SysAdminDoc/HushThreads","disabled":false}}'
+    $selfUnavailable = New-RegistryRow -Id 'h-latest' -Url $selfUrl
+    $selfUnavailable.source.unavailable_reason = 'repository archived'
+    $selfOff = New-RegistryRow -Id 'h-latest' -Url $selfUrl
+    $selfOff.source.enabled = $false
+    foreach ($case in @(@{ Name = 'an unavailable source'; Rows = @($alphaRow, $gammaRow, $selfUnavailable) },
+            @{ Name = 'a source a later row disables'; Rows = @($alphaRow, $gammaRow, (New-RegistryRow -Id 'h-old' -Url $selfUrl -Latest $false -Channels @()), $selfOff) })) {
+        $fakeForge.Answers.jmanConfig.Content = $selfRegistration
+        Set-RegistryRows $case.Rows
+        $selfSource = Invoke-Audit
+        Assert-True ($selfSource.ExitCode -eq 0 -and @($selfSource.Report.notes | Where-Object { $_ -like "*holds HushThreads only as history*" }).Count -eq 1) `
+            "HushThreads served from $($case.Name) was read as a current listing: $($selfSource.Report.notes -join ' | ')"
+        Reset-FixtureLedger
+        $fakeForge.Answers = New-FakeAnswers
+    }
+
+    # Registered twice, once disabled and once not, is still registered, whichever comes last.
+    $fakeForge.Answers.jmanConfig.Content = '{"alpha":{"patches":"https://github.com/fixture-owner/alpha-patches","disabled":false},"gamma":{"patches":"https://gitlab.com/fixture-group/gamma-patches","disabled":false},"hushthreads":{"patches":"https://github.com/SysAdminDoc/HushThreads","disabled":false},"hushthreads-old":{"patches":"https://github.com/SysAdminDoc/HushThreads","disabled":true}}'
+    Set-RegistryRows @($alphaRow, $gammaRow, (New-RegistryRow -Id 'h-latest' -Url $selfUrl))
+    Assert-Drift 'listing-changed' "*Jman's Patch Bundle Registry lists HushThreads now*" 'HushThreads registered twice with one registration disabled'
+    $fakeForge.Answers = New-FakeAnswers
+
+    # Rows the audit can't read are reported, and what it can't read of the list fails the source.
+    $noSource = New-RegistryRow -Id 'broken' -Url 'https://github.com/x/y'
+    $noSource.Remove('source')
+    $noPackages = New-RegistryRow -Id 'no-packages' -Url 'https://github.com/x/z'
+    $noPackages.Remove('packages')
+    Set-RegistryRows @($alphaRow, $gammaRow, $noSource, $noPackages)
+    Assert-Drift 'index-unresolved' "*Jman's registry returned 2 Threads bundle row(s) with no id, repository address or package list*" 'Registry rows with no repository or package list'
+    $fakeForge.Answers = New-FakeAnswers
+
+    $fakeForge.Answers.jmanPages['0'].Content = $fakeForge.Answers.jmanPages['0'].Content -replace '"total":\s*4', '"total": "many"'
+    Assert-Drift 'source-failed' "*Jman's bundle index could not be read*numeric total*" 'A registry page with no numeric total'
+    $fakeForge.Answers = New-FakeAnswers
+
+    $fakeForge.Answers.jmanPages['1'] = New-RegistryPage -Rows @() -Total 4
+    Assert-Drift 'source-failed' "*Jman's bundle index could not be read*empty page*" 'A registry list that ends before its total'
+    $fakeForge.Answers = New-FakeAnswers
+
+    $fakeForge.Answers.jmanPages['1'] = @{ Status = 500; Content = $null }
+    Assert-Drift 'source-failed' "*Jman's bundle index could not be read*HTTP 500*" 'A registry page that answers an error'
+    $fakeForge.Answers = New-FakeAnswers
+
+    $fakeForge.Answers.jmanPages['0'] = @{ Unreachable = $true; Status = 0; Content = $null }
+    Assert-Drift 'source-failed' "*Jman's bundle index could not be read*Could not reach*" 'A registry that can not be reached'
+    $fakeForge.Answers = New-FakeAnswers
+
+    $fakeForge.Answers.jmanConfig = @{ Status = 404; Content = $null }
+    Assert-Drift 'source-failed' "*Jman's bundle index could not be read*HTTP 404*" 'The registry registration moving away'
+    $fakeForge.Answers = New-FakeAnswers
+
+    foreach ($budget in @(@{ Name = 'requests'; Extra = @{ RegistryMaxRequests = 1 } }, @{ Name = 'rows'; Extra = @{ RegistryMaxRows = 1 } })) {
+        $result = Invoke-Audit $budget.Extra
+        Assert-True ($result.ExitCode -eq 1 -and @($result.Report.findings | Where-Object { $_.kind -eq 'source-failed' -and $_.detail -like "*Jman's bundle index could not be read*list is incomplete*budget*" }).Count -eq 1) `
+            "A registry list longer than the $($budget.Name) budget was not reported as incomplete: $($result.Said)"
+        Assert-True ([IO.File]::ReadAllText($fixtureLedgerPath) -ceq $fixtureLedgerText) "An audit with an exhausted registry $($budget.Name) budget changed the ledger."
+    }
     $fakeForge.Answers = New-FakeAnswers
 
     # An index still spelling a source by its old name is that source, not an addition.
@@ -755,6 +948,57 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
 
     $fakeForge.Answers.awesome = @{ Status = 500; Content = $null }
     Assert-Drift 'source-failed' '*Awesome Morphe could not be read*' 'An index that could not be read'
+    $fakeForge.Answers = New-FakeAnswers
+
+    # A rate limit is waited out until the reset the answer names: Retry-After in seconds or as a
+    # date, or GitLab's RateLimit-Reset in seconds since 1970, one second past it and never past the
+    # cap. An answer naming no reset waits RateLimitWaitSeconds, and a fourth limit is a failure.
+    function Set-LimitedForks {
+        param([object[]]$Headers)
+        $queue = New-Object 'System.Collections.Generic.Queue[object]'
+        foreach ($set in $Headers) { $queue.Enqueue($set) }
+        $fakeForge.Answers.gammaForks.LimitedFirst = $queue
+    }
+    $limitCases = @(
+        @{ Case = 'A Retry-After in seconds'; Headers = { @{ 'Retry-After' = '7' } }; Low = 8; High = 8; Named = $true }
+        @{ Case = 'A Retry-After date'; Headers = { @{ 'Retry-After' = [DateTimeOffset]::UtcNow.AddSeconds(30).ToString('r') } }
+            Low = 29; High = 32; Named = $true }
+        @{ Case = "GitLab's RateLimit-Reset"; Headers = { @{ 'RateLimit-Reset' = [string]([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + 20) } }
+            Low = 19; High = 22; Named = $true }
+        @{ Case = "GitHub's X-RateLimit-Reset"; Headers = { @{ 'X-RateLimit-Reset' = [string]([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + 15) } }
+            Low = 14; High = 17; Named = $true }
+        @{ Case = 'A RateLimit-Reset in seconds from now'; Headers = { @{ 'RateLimit-Reset' = '12' } }; Low = 13; High = 13; Named = $true }
+        @{ Case = 'An answer naming no reset'; Headers = { @{} }; Low = 5; High = 5; Named = $false; Extra = @{ RateLimitWaitSeconds = 5 } }
+        @{ Case = 'A reset past the cap'; Headers = { @{ 'Retry-After' = '100000' } }; Low = 900; High = 900; Named = $true }
+        @{ Case = 'A Retry-After too big for a number of seconds'; Headers = { @{ 'Retry-After' = [string][long]::MaxValue } }; Low = 900; High = 900; Named = $true }
+        # The header collections the two shells really hand over: Windows PowerShell's
+        # WebHeaderCollection and PowerShell 7's HttpResponseHeaders. The comma keeps each whole.
+        @{ Case = 'A WebHeaderCollection'; Headers = { $web = New-Object System.Net.WebHeaderCollection; $web.Add('Retry-After', '9'); , $web }
+            Low = 10; High = 10; Named = $true }
+        @{ Case = 'HttpResponseHeaders'; Headers = {
+                # .NET Framework's HttpStatusCode has no 429, and the headers don't depend on the status.
+                $http = ([System.Net.Http.HttpResponseMessage]::new()).Headers
+                [void]$http.TryAddWithoutValidation('RateLimit-Reset', [string]([DateTimeOffset]::UtcNow.ToUnixTimeSeconds() + 25)); , $http }
+            Low = 24; High = 27; Named = $true }
+    )
+    Add-Type -AssemblyName System.Net.Http
+    foreach ($limit in $limitCases) {
+        Set-LimitedForks @(& $limit.Headers)
+        $limitArguments = if ($limit.Extra) { $limit.Extra } else { @{} }
+        $result = Invoke-Audit $limitArguments
+        $waits = @($fakeForge.Sleeps | Where-Object { $_ -gt 0 })
+        Assert-True ($result.ExitCode -eq 0) "$($limit.Case) was not waited out: $($result.Said)"
+        Assert-True ($waits.Count -eq 1 -and $waits[0] -ge $limit.Low -and $waits[0] -le $limit.High) `
+            "$($limit.Case) waited $($waits -join ', ') s, not $($limit.Low) to $($limit.High) s."
+        Assert-True (($result.Said -like '*rate limited on gitlab.com*for the reset it names*') -eq $limit.Named) `
+            "$($limit.Case) did not say whether it waited for a named reset: $($result.Said)"
+        Reset-FixtureLedger
+        $fakeForge.Answers = New-FakeAnswers
+    }
+    Set-LimitedForks @(@{ 'Retry-After' = '3' }, @{ 'Retry-After' = '3' }, @{ 'Retry-After' = '3' }, @{ 'Retry-After' = '3' })
+    Assert-Drift 'source-failed' '*forks of fixture-group/gamma-patches answered HTTP 429*' 'A rate limit that outlasts three waits'
+    Assert-True (@($fakeForge.Sleeps | Where-Object { $_ -gt 0 }).Count -eq 3) `
+        "A rate limit that outlasts three waits was waited out $(@($fakeForge.Sleeps | Where-Object { $_ -gt 0 }).Count) time(s), not 3."
     $fakeForge.Answers = New-FakeAnswers
 
     # GitLab code search needs a token, or an explicit skip the census records.

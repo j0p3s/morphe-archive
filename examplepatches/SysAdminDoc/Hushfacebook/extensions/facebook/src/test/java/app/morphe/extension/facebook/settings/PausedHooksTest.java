@@ -15,6 +15,7 @@ import android.content.Intent;
 import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.SystemClock;
+import android.view.View;
 import android.widget.FrameLayout;
 
 import com.facebook.common.util.TriState;
@@ -113,7 +114,9 @@ import app.morphe.extension.facebook.misc.ExternalBrowser;
 import app.morphe.extension.facebook.misc.LinkCleaner;
 import app.morphe.extension.facebook.misc.OwnPostLink;
 import app.morphe.extension.facebook.misc.ShareSheetGroups;
+import app.morphe.extension.facebook.misc.ShareSheetPeople;
 import app.morphe.extension.facebook.navigation.BottomTabBar;
+import app.morphe.extension.facebook.navigation.TopBarButtons;
 import app.morphe.extension.facebook.navigation.TabBarScrollAway;
 import app.morphe.extension.facebook.navigation.TranslucentBarsForTests;
 import app.morphe.extension.facebook.navigation.MarketplaceOnlyForTests;
@@ -125,6 +128,7 @@ import app.morphe.extension.facebook.navigation.StartTabRouteForTests;
 import app.morphe.extension.facebook.notifications.NotificationKindsForTests;
 import app.morphe.extension.facebook.reels.DoubleTapLike;
 import app.morphe.extension.facebook.reels.OriginalAudio;
+import app.morphe.extension.facebook.reels.ReelGesturesForTests;
 import app.morphe.extension.facebook.reels.ReelHold;
 import app.morphe.extension.facebook.reels.ReelHoldForTests;
 import app.morphe.extension.facebook.reels.ReelCleanMode;
@@ -399,10 +403,15 @@ public class PausedHooksTest {
                 () -> FeedGuardForTests.hidesPopularPost(Category.ORGANIC),
                 () -> FeedGuardForTests.hidesRepost(Category.ORGANIC)));
         // A story with a bumper is answered as one without, so no strip is drawn and no room kept, and a
-        // header whose title plugin would add "Follow" is told it has nothing to add.
+        // header whose title plugin would add "Follow" is told it has nothing to add. A button's count
+        // builder is told to give its zero answer, so the button shows its word.
         probes.put(PatchFamily.POST_PROMPTS, Arrays.asList(
                 () -> !PostPrompts.keep(true),
-                () -> !PostPrompts.showFollowLink(true)));
+                () -> !PostPrompts.showFollowLink(true),
+                PostPrompts::hidePostCounts,
+                // The reaction preview is left undrawn only while the patch runs.
+                PostPrompts::hideReactionPreview,
+                () -> PostPrompts.hideReactionPreview(true)));
         // A post the store remembers is dropped by the feed guard while the switch is on.
         probes.put(PatchFamily.SEEN_POSTS, Collections.singletonList(SeenPostsForTests::hidesARememberedPost));
         // The pill socket's yes for Meta AI's questions is answered as a no, so it draws no row for
@@ -489,7 +498,11 @@ public class PausedHooksTest {
                 () -> ReelCleanMode.startClean(false),
                 ReelLoopForTests::stopsAReel,
                 // A video whose audio Facebook would pick in Spanish is asked for no language.
-                () -> !"es".equals(OriginalAudio.language("es"))));
+                () -> !"es".equals(OriginalAudio.language("es")),
+                // The search pill is answered as empty only while the patch runs.
+                ReelDeclutter::hideSearchPill,
+                // A sidebar button's count loses its number only while the patch runs.
+                () -> !"12".equals(ReelDeclutter.countText("12"))));
         // A reel that would get the interest prompt is answered as one that doesn't.
         probes.put(PatchFamily.REEL_PROMPTS, Collections.singletonList(() -> !ReelPrompts.keep(true)));
         // The Reels batcher's send of the reels you watched never reaches its executor.
@@ -502,6 +515,13 @@ public class PausedHooksTest {
                 () -> DoubleTapLike.likeKey("reel") == null,
                 () -> DoubleTapLike.holdBackLike("DOUBLE_TAP"),
                 DoubleTapLike::holdBackTap));
+        // A double tap on a reel opens its comments in place of a like, a long press does too, and neither
+        // a heart plays nor a like from a double tap is sent while the first switch is on.
+        probes.put(PatchFamily.REEL_GESTURES, Arrays.asList(
+                ReelGesturesForTests::doubleTapOpens,
+                ReelGesturesForTests::longPressOpens,
+                () -> DoubleTapLike.heart(new Object()) == null,
+                () -> DoubleTapLike.holdBackLike("DOUBLE_TAP")));
         // A long press on a reel goes to Facebook's speed-up wherever it lands, the reel gets its
         // release listener, a hold speed of normal becomes 2x, the lift of a hold puts the speed back,
         // and that lift's speed is the one the reel had before the hold.
@@ -584,6 +604,7 @@ public class PausedHooksTest {
         // Its copied-link option reads the clipboard as a screen comes to the front.
         probes.put(PatchFamily.VIDEO_DOWNLOAD, Arrays.asList(
                 VideoMenuItemForTests::addsAnItem,
+                VideoMenuItemForTests::addsTheOpenItem,
                 PlayerSourcesForTests::recordsAVideoPlayer,
                 ClipboardLinkForTests::readsTheClipboard));
         // Every photo the viewer opens offers Save photo, and a photo post's menu gets Save photo.
@@ -626,7 +647,18 @@ public class PausedHooksTest {
                 TabBarScrollAway::slidesAway,
                 () -> TabBarScrollAway.topBarOffset("app_header_container", -120) == 0,
                 () -> TabBarScrollAway.topBarFade("app_header_container", 1f) == 0f,
-                TranslucentBarsForTests::makesABarSeeThrough));
+                TranslucentBarsForTests::makesABarSeeThrough,
+                () -> {
+                    View button = new View(RuntimeEnvironment.getApplication());
+                    TopBarButtons.messengerButton(button);
+                    return button.getVisibility() == View.GONE;
+                },
+                () -> TopBarButtons.messengerCount(3) == 0,
+                () -> {
+                    View logo = new View(RuntimeEnvironment.getApplication());
+                    TopBarButtons.facebookLogo(logo);
+                    return logo.getAlpha() == 0f;
+                }));
         // Facebook's dark mode controller answers dark where it answered light.
         probes.put(PatchFamily.FORCE_DARK_MODE, Collections.singletonList(ForceDarkModeForTests::forcesDark));
         // A request for a post's comments that names no order asks for the chosen one, and with
@@ -651,7 +683,8 @@ public class PausedHooksTest {
                 () -> CommentSheetOptions.loadWholeReplyThreads(false),
                 () -> CommentSheetOptions.holdsBottomContent(CommentSheetOptions.RELATED_GROUPS),
                 () -> CommentSheetOptions.hidesComment(new GraphQLComment("https://s.shopee.vn/9zKs")),
-                () -> CommentSheetOptions.hidesComment(new GraphQLComment("Big SPOILER inside"))));
+                () -> CommentSheetOptions.hidesComment(new GraphQLComment("Big SPOILER inside")),
+                () -> CommentSheetOptions.incomingTypers(3) == 0));
         // A word without @ in a post or comment box looks nobody up, and a list of people left open
         // by an earlier @ is closed.
         probes.put(PatchFamily.TAG_SUGGESTIONS, Arrays.asList(
@@ -701,7 +734,8 @@ public class PausedHooksTest {
         // The share sheet's footer is built without Send to group, and a new-group entry answers off.
         probes.put(PatchFamily.SHARE_SHEET_ITEMS, Arrays.asList(
                 () -> ShareSheetGroups.sendToGroupButton(new Object()) == null,
-                () -> !ShareSheetGroups.offerNewGroup(true)));
+                () -> !ShareSheetGroups.offerNewGroup(true),
+                () -> !ShareSheetPeople.addRow(new java.util.ArrayList<>(), new Object())));
         // Search leaves out its Meta AI answer and its prompt modules, and a suggestion set to open
         // Meta AI opens the results.
         probes.put(PatchFamily.META_AI_SEARCH, Arrays.asList(
@@ -729,7 +763,8 @@ public class PausedHooksTest {
         probes.put(PatchFamily.PICTURE_IN_PICTURE, Arrays.asList(
                 PictureInPictureForTests::allowsWithTheFeature, PictureInPictureForTests::surfaceAllows,
                 PictureInPictureForTests::immersiveAllows, PictureInPictureForTests::homeGateAllows,
-                PictureInPictureForTests::homeFlagAllows, PictureInPictureForTests::offersTheMenuRow));
+                PictureInPictureForTests::homeFlagAllows, PictureInPictureForTests::offersTheMenuRow,
+                PictureInPictureForTests::offersTheButton));
         // An HDR window comes out in the default colour mode, a headroom as none, the screen
         // answers as one that shows no HDR, and a manifest loses the HDR twin of an SDR rendition.
         probes.put(PatchFamily.HDR_BRIGHTNESS, Arrays.asList(

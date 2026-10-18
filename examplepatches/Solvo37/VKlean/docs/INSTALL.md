@@ -2,12 +2,12 @@
 
 ## Скачать
 
-Актуальный APK всегда находится в [Latest Release](https://github.com/Solvo37/VKlean/releases/latest).
+**Текущий стабильный релиз: VKlean 1.166.1** — VK Видео 1.166 / versionCode 53253. После исправления класса рекламного фильтра на реальном S24 Ultra проверены Клипы, обычное видео, главная, профиль, фон/возврат и перезапуск. В тесте реклама не появлялась.
 
-Проверенный стабильный релиз: **1.165.1**, Android **1.165 / versionCode 52788**. При установке выбирайте APK из Latest Release; имя файла ниже относится к этому проверенному релизу:
+[Скачать подписанный APK 1.166.1](https://github.com/Solvo37/VKlean/releases/download/1.166.1/VK-Video-1.166.1-patched.apk) · [Страница релиза](https://github.com/Solvo37/VKlean/releases/tag/1.166.1)
 
 ```text
-VK-Video-1.165.1-patched.apk
+VK-Video-1.166.1-patched.apk
 ```
 
 В каждом публичном Release намеренно находится только **один APK**.
@@ -18,7 +18,7 @@ VK-Video-1.165.1-patched.apk
 
 1. Удалите только официальный **VK Видео** (`com.vk.vkvideo`).
 2. Обычный **VK** (`com.vkontakte.android`) оставьте установленным.
-3. Установите APK из Latest Release.
+3. Установите APK из [стабильного релиза 1.166.1](https://github.com/Solvo37/VKlean/releases/tag/1.166.1).
 4. Разрешите установку из выбранного браузера/файлового менеджера, если Android попросит.
 
 Следующие сборки проекта подписываются тем же ключом и устанавливаются поверх предыдущей проектной версии.
@@ -43,7 +43,7 @@ Release title filter при необходимости:
 ^VK Video
 ```
 
-В Obtainium включите обновление сведений перед скачиванием (`refreshBeforeDownload`) и отключите возврат к старым релизам (`fallbackToOlderReleases`). Готовые кнопки импорта находятся в [README](../README.md#obtainium).
+В Obtainium включите обновление сведений перед скачиванием (`refreshBeforeDownload`) и отключите возврат к старым релизам (`fallbackToOlderReleases`). Рекомендуется отключить сопоставление версии с Android (`versionDetection`), поскольку Android показывает `1.166`, а GitHub — `1.166.1`. После ручной установки APK в обход Obtainium отображаемую установленную версию может потребоваться обновить вручную: [документация Obtainium](https://wiki.obtainium.imranr.dev/app_tracking/). Готовые кнопки импорта находятся в [README](../README.md#obtainium).
 
 Старый URL `Solvo37/VK-Video-Morphe-Patches` перенаправляется в `Solvo37/VKlean`; существующий источник можно оставить без переустановки приложения.
 

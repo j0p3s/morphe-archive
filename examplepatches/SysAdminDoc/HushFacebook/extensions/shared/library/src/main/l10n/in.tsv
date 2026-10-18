@@ -996,10 +996,12 @@ Stops the small vibrations Facebook makes when you tap or swipe. Your keyboard a
 Turn off screen transitions	Matikan transisi layar
 Tabs, the Menu and screens that open over Facebook appear at once instead of sliding in. Swiping between tabs still works.	Tab, Menu, dan layar yang terbuka di atas Facebook langsung muncul tanpa efek geser. Menggeser antar tab tetap berfungsi.
 Unlock app icons	Buka ikon aplikasi
-Lets you pick the app icons Facebook keeps for Facebook Plus, on Facebook's App icon page. The Pick an app icon row opens that page. Your pick also replaces the Facebook wordmark at the top of Home. Your pick stays if you turn this off, so pick the blue one first to go back.	Memungkinkan memilih ikon aplikasi yang disediakan Facebook khusus untuk Facebook Plus, di halaman Ikon aplikasi Facebook. Baris Pilih ikon aplikasi membukanya. Pilihanmu juga menggantikan logo Facebook di bagian atas Beranda. Pilihan tetap berlaku meski ini dimatikan, jadi pilih ikon biru dulu untuk kembali.
+Lets you pick the app icons Facebook keeps for Facebook Plus, on Facebook's App icon page. The Pick an app icon row opens that page. Your pick stays if you turn this off, so pick the blue one first to go back.	Memungkinkan memilih ikon aplikasi yang disediakan Facebook khusus untuk Facebook Plus, di halaman Ikon aplikasi Facebook. Baris Pilih ikon aplikasi membukanya. Pilihan tetap berlaku meski ini dimatikan, jadi pilih ikon biru dulu untuk kembali.
 # context: settings row under Appearance, right below the Unlock app icons switch; opens Facebook's own App icon page, so use Facebook's name for that page in this language
 Pick an app icon	Pilih ikon aplikasi
 Opens Facebook's App icon page, even on accounts where Facebook doesn't list it in Settings and privacy.	Membuka halaman Ikon aplikasi Facebook, juga di akun yang tidak menampilkannya di Pengaturan & privasi.
+Use the icon at the top of Home	Pakai ikon di bagian atas Beranda
+Shows the app icon you picked at the top of Home instead of the Facebook wordmark. Needs Unlock app icons and a pick other than the blue one. Restart Facebook to see the change.	Menampilkan ikon aplikasi pilihanmu di bagian atas Beranda sebagai pengganti tulisan Facebook. Perlu Buka ikon aplikasi dan pilihan selain yang biru. Mulai ulang Facebook untuk melihat perubahannya.
 # context: toast when the row above finds no App icon page in this Facebook build
 This Facebook build has no App icon page.	Versi Facebook ini tidak punya halaman Ikon aplikasi.
 # context: switch title under Playback; Android's own name for the floating video window
@@ -1553,6 +1555,10 @@ On carriers with Facebook Flex, hides the purple Free mode bar. That bar is also
 Only from a reel's More menu	Hanya dari menu reel
 # context: summary of that switch; Picture-in-picture is the name of the row in the reel's menu, translated as the row is; the three dots are the reel's own menu button
 Leaving Facebook doesn't open the window. Tap Picture-in-picture in a reel's More menu (the three dots) when you want one. That row is there whenever Picture-in-picture is on.	Keluar dari Facebook tidak membuka jendela. Ketuk Gambar dalam gambar di menu reel (tiga titik) saat kamu menginginkannya. Baris itu ada setiap kali Gambar dalam gambar aktif.
+# context: switch title under Picture-in-picture on the Playback page; the button floats over a reel or video and opens the small window when tapped
+Picture-in-picture button	Tombol gambar dalam gambar
+# context: summary of that switch; "the window" is the small picture-in-picture window
+Shows a small button at the left edge of a reel or video that has the window ready. Tap it to open the window right away. Works with Picture-in-picture on.	Menampilkan tombol kecil di tepi kiri reel atau video yang jendelanya sudah siap. Ketuk untuk langsung membuka jendela. Berfungsi saat Gambar dalam gambar aktif.
 # context: switch title under Stories; it makes videos you post to your own Story ask for high quality when they upload
 Upload Stories in HD	Unggah cerita dalam HD
 # context: summary of that switch; standard is the normal upload quality, high the better one
@@ -1570,3 +1576,86 @@ Set when you patched, so Pause can't turn these off:\n%1$s\nTo rule one out, pat
 For when Marketplace only or Events only is on. Neither is on now.	Untuk saat Hanya Marketplace atau Hanya Acara aktif. Sekarang keduanya tidak aktif.
 Hide the Meta AI shortcut	Sembunyikan pintasan Meta AI
 The Meta AI shortcut leaves the Menu's list with Feeds, Marketplace, Reels and Groups, and the next shortcut moves up into its place.	Pintasan Meta AI hilang dari daftar di Menu bersama Feed, Marketplace, Reels, dan Grup, dan pintasan berikutnya naik ke tempatnya.
+Hide people to send to in the share sheet	Sembunyikan orang yang disarankan saat berbagi
+Takes the row of profile pictures off the share sheet, the people Facebook suggests sending a post to. The search box and the other ways to share stay.	Menghapus deretan foto profil dari lembar berbagi, yaitu orang-orang yang disarankan Facebook untuk dikirimi kiriman. Kotak pencarian dan cara berbagi lainnya tetap ada.
+Hide who is typing in comments	Sembunyikan siapa yang sedang mengetik di komentar
+Takes away the line that says someone is typing a comment. Your own typing is a separate switch under Privacy.	Menghapus baris yang menunjukkan seseorang sedang mengetik komentar. Saat Anda sendiri mengetik punya sakelar terpisah di Privasi.
+Hide the search pill on reels	Sembunyikan saran pencarian di reel
+Hides the search suggestion under a reel's caption, the magnifier with a question to look up. Off by default, since it hasn't been tried on a real account yet.	Menyembunyikan saran pencarian di bawah keterangan reel, ikon kaca pembesar dengan pertanyaan untuk dicari. Nonaktif secara default, karena belum dicoba pada akun sungguhan.
+# context: switch title under Appearance; the button is Facebook's Messenger icon in the top bar of Home
+Hide the Messenger button	Sembunyikan tombol Messenger
+# context: summary of that switch; the other top bar buttons move over to fill the space; Hushfacebook is the app's name
+Takes the Messenger button out of the top bar, and the buttons beside it close up the gap. Restart Facebook to see the change.	Menghapus tombol Messenger dari bilah atas, dan tombol di sebelahnya bergeser menutup celah. Mulai ulang Facebook untuk melihat perubahannya.
+# context: switch title under Appearance; the count is the unread number badge on the Messenger icon
+Hide the Messenger count	Sembunyikan hitungan Messenger
+# context: summary of that switch; the Messenger icon stays in the top bar
+Keeps the Messenger button but drops the unread count on it.	Tombol Messenger tetap ada, tetapi angka pesan yang belum dibaca di atasnya disembunyikan.
+# context: switch title under Appearance; the logo is the Facebook wordmark or icon at the left of the top bar
+Hide the Facebook logo	Sembunyikan logo Facebook
+# context: summary of that switch; Hushfacebook is the app's name and stays as it is; press and hold is a long press
+Hides the Facebook logo in the top bar. The empty spot is the same size and still opens Hushfacebook settings when you press and hold it. Restart Facebook to see the change.	Menyembunyikan logo Facebook di bilah atas. Ruang kosongnya berukuran sama dan tetap membuka pengaturan Hushfacebook saat ditekan lama. Mulai ulang Facebook untuk melihat perubahannya.
+# context: switch title under News feed; the counts are the numbers on the Like, Comment and Share buttons under a post
+Hide counts on posts	Sembunyikan angka di postingan
+# context: summary of that switch; Like, Comment and Share are Facebook's own button labels, so use Facebook's wording in your language
+Takes the numbers off the Like, Comment and Share buttons under posts, so each shows just its word. The buttons stay where they are. A change shows on the posts drawn after it.	Menghapus angka dari tombol Suka, Komentari, dan Bagikan di bawah postingan, sehingga tiap tombol hanya menampilkan katanya. Tombol tetap di tempatnya. Perubahan terlihat pada postingan yang dimuat setelahnya.
+# context: switch title under Reels and Watch; the counts are the numbers under the Like, Comment and Share icons down a reel's right side
+Hide counts on reels	Sembunyikan angka di reel
+# context: summary of that switch; Like, Comment and Share are Facebook's own button labels, so use Facebook's wording in your language
+Takes the numbers away from under a reel's Like, Comment and Share icons. The icons stay where they are. A change shows from the next reel.	Menghapus angka di bawah ikon Suka, Komentari, dan Bagikan pada reel. Ikon tetap di tempatnya. Perubahan terlihat mulai reel berikutnya.
+# context: switch title under News feed; the reaction preview is the stack of reaction icons and the line with the number of reactions under a post
+Hide the reaction preview on posts	Sembunyikan pratinjau reaksi di postingan
+# context: summary of that switch; "reactions" are Facebook's Like, Love, Haha and other reactions
+Hides the stacked reaction icons and the reactions count under posts. The space stays, so a tap where they were still opens the list of reactions.	Menyembunyikan ikon reaksi yang bertumpuk dan jumlah reaksi di bawah postingan. Ruangnya tetap ada, jadi mengetuk di tempat semula tetap membuka daftar reaksi.
+# context: switch title under Comments; the reaction preview is the stack of reaction icons in the corner of a comment
+Hide the reaction preview on comments	Sembunyikan pratinjau reaksi di komentar
+# context: summary of that switch; "reactions" are Facebook's Like, Love, Haha and other reactions
+Hides the stacked reaction icons in the corner of a comment. The space stays, so a tap where they were still opens the list of reactions.	Menyembunyikan ikon reaksi yang bertumpuk di sudut komentar. Ruangnya tetap ada, jadi mengetuk di tempat semula tetap membuka daftar reaksi.
+# context: switch title under Downloads; "Download" is the post menu row "Download to phone" and "post menus" are the three-dot menus under posts
+Download first in post menus	Unduh di urutan pertama menu kiriman
+# context: summary of that switch; "Download to phone" and "Save photo" are the menu rows, translate them as elsewhere
+Puts Download to phone and Save photo at the top of a post's three-dot menu instead of the bottom. A post with nothing to save gets neither.	Menaruh Unduh ke ponsel dan Simpan foto di bagian atas menu tiga titik sebuah kiriman, bukan di bawah. Kiriman tanpa sesuatu untuk disimpan tidak mendapat keduanya.
+# context: row title under Menu; opens a list of the Menu's tiles to hide, such as Marketplace and Gaming
+Menu tiles to hide	Ubin Menu yang disembunyikan
+# context: title of the list of Menu tiles to hide
+Hide from the Menu	Sembunyikan dari Menu
+# context: a Menu tile's name in the list of tiles to hide; Facebook's own name for it; Facebook's short videos
+Reels	Reels
+# context: a Menu tile's name in the list of tiles to hide; Facebook's own name for it; the games section
+Gaming	Game
+# context: a Menu tile's name in the list of tiles to hide; Facebook's own name for it; the look-back posts from past years
+Memories	Kenangan
+# context: a Menu tile's name in the list of tiles to hide; Facebook's own name for it; the friends' birthdays page
+Birthdays	Ulang tahun
+# context: a Menu tile's name in the list of tiles to hide; Facebook's own name for it; the charity fundraisers page
+Fundraisers	Penggalangan dana
+# context: a Menu tile's name in the list of tiles to hide; Facebook's own name for it; job listings
+Jobs	Lowongan kerja
+# context: a Menu tile's name in the list of tiles to hide; Facebook's own name for it; Facebook's dating feature
+Dating	Kencan
+# context: import preview and toast, no Menu tile will be in that list after the import
+Your list of Menu tiles to hide will be empty.	Daftar ubin Menu yang disembunyikan akan kosong.
+# context: import preview and toast, one Menu tile will be in that list after the import
+Your list of Menu tiles to hide will hold %1$d tile.	Daftar ubin Menu yang disembunyikan akan berisi %1$d ubin.
+# context: import preview and toast, several Menu tiles will be in that list after the import
+Your list of Menu tiles to hide will hold %1$d tiles.	Daftar ubin Menu yang disembunyikan akan berisi %1$d ubin.
+# context: switch title under Reels and Watch; on, a double tap on a reel opens its comments
+Double tap opens comments	Ketuk dua kali membuka komentar
+# context: switch title under Reels and Watch; on, holding a reel opens its comments
+Long press opens comments	Tekan lama membuka komentar
+# context: summary of the double tap switch
+A double tap on a reel opens its comments instead of liking it. Turn off double tap to like still wins when it's on. Off by default, since it hasn't been tried on a real account yet.	Mengetuk dua kali reel membuka komentarnya, bukan menyukainya. Jika "Matikan ketuk dua kali untuk menyukai" aktif, pengaturan itu yang berlaku. Nonaktif secara bawaan, karena belum dicoba di akun sungguhan.
+# context: summary of the long press switch
+Holding a reel opens its comments instead of Facebook's long-press menu or the 2x hold. The reel's more button still opens that menu. Off by default, since it hasn't been tried on a real account yet.	Menahan reel membuka komentarnya, bukan menu tekan lama Facebook atau pemutaran 2x. Tombol lainnya pada reel tetap membuka menu itu. Nonaktif secara bawaan, karena belum dicoba di akun sungguhan.
+# context: switch title under Downloads; the switch adds the post menu row "Open in another app" to feed and Watch videos
+Open videos in another app	Buka video di aplikasi lain
+# context: summary of that switch; "Open in another app" is the menu row; VLC and Web Video Caster are app names, keep them
+Adds Open in another app to feed and Watch video menus. It hands the video to a player or casting app, such as VLC or Web Video Caster. A video with no single file to hand over says so.	Menambahkan Buka di aplikasi lain ke menu video di beranda dan Watch. Video diteruskan ke aplikasi pemutar atau cast, seperti VLC atau Web Video Caster. Video yang tidak punya satu file untuk diteruskan akan diberi tahu.
+# context: post menu row that hands the video to a player or casting app, next to the row "Download to phone"
+Open in another app	Buka di aplikasi lain
+# context: title of Android's app chooser, shown over the apps that can play a video
+Open the video with	Buka video dengan
+# context: toast when the video has no single file to hand to another app
+Couldn't find a file for this video. Play it for a moment, then try again.	Tidak menemukan file untuk video ini. Putar sebentar, lalu coba lagi.
+# context: toast when Android has no app that plays a video file
+No app on this phone can open this video	Tidak ada aplikasi di ponsel ini yang bisa membuka video ini
+New	Baru

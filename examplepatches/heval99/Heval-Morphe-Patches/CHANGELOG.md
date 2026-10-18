@@ -1,3 +1,34 @@
+## [1.16.0](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0...v1.16.0) (2026-10-17)
+
+### 🐛 Bug Fixes
+
+* **truecaller:** keep the navigation bar space when only Calls is left ([27b9ddd](https://github.com/heval99/Heval-Morphe-Patches/commit/27b9ddd75989caea7a292d9525d7e0e9bb588133)), closes [#61](https://github.com/heval99/Heval-Morphe-Patches/issues/61)
+
+### ✨ New Features
+
+* **digisport:** add Digi Sport 1.1.15 patches ([944cb56](https://github.com/heval99/Heval-Morphe-Patches/commit/944cb56fab3bbf01c24fe29e7ec3dac225f6badf)), closes [#58](https://github.com/heval99/Heval-Morphe-Patches/issues/58)
+* **guardian:** add The Guardian 6.238.23405 patches ([1c66733](https://github.com/heval99/Heval-Morphe-Patches/commit/1c667335d98f0db0404faa419b0171f2d78ae747))
+* **via:** add Via 7.3.3 Disable telemetry ([cbdac5e](https://github.com/heval99/Heval-Morphe-Patches/commit/cbdac5ea7be803a2ae5e71cb71e3642ac3f3c5d8))
+
+## [1.16.0-dev.3](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.16.0-dev.2...v1.16.0-dev.3) (2026-10-16)
+
+### 🐛 Bug Fixes
+
+* **truecaller:** keep the navigation bar space when only Calls is left ([27b9ddd](https://github.com/heval99/Heval-Morphe-Patches/commit/27b9ddd75989caea7a292d9525d7e0e9bb588133)), closes [#61](https://github.com/heval99/Heval-Morphe-Patches/issues/61)
+
+## [1.16.0-dev.2](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.16.0-dev.1...v1.16.0-dev.2) (2026-10-16)
+
+### ✨ New Features
+
+* **digisport:** add Digi Sport 1.1.15 patches ([944cb56](https://github.com/heval99/Heval-Morphe-Patches/commit/944cb56fab3bbf01c24fe29e7ec3dac225f6badf)), closes [#58](https://github.com/heval99/Heval-Morphe-Patches/issues/58)
+* **guardian:** add The Guardian 6.238.23405 patches ([1c66733](https://github.com/heval99/Heval-Morphe-Patches/commit/1c667335d98f0db0404faa419b0171f2d78ae747))
+
+## [1.16.0-dev.1](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.15.0...v1.16.0-dev.1) (2026-10-16)
+
+### ✨ New Features
+
+* **via:** add Via 7.3.3 Disable telemetry ([cbdac5e](https://github.com/heval99/Heval-Morphe-Patches/commit/cbdac5ea7be803a2ae5e71cb71e3642ac3f3c5d8))
+
 ## [1.15.0](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.14.0...v1.15.0) (2026-10-16)
 
 ### 🐛 Bug Fixes

@@ -9,6 +9,8 @@ CASES = [
     ("2.4.0f", "2.4.0e", 1),
     ("2.4.0e", "2.4.0", 1),
     ("1.9", "1.9-beta5", 1),
+    ("2.0", "2.0 beta", 1),
+    ("2.0-rc1", "2.0.0-rc1", 0),
     ("2.0-rc1", "1.9", 1),
     ("6.0", "6.0_arm64", 0),
     ("6.1", "6.0_arm64", 1),
@@ -36,19 +38,29 @@ calls = []
 issues = [{"number": 1, "state": "OPEN", "title": "[App Update]: Cx File Explorer 2.7.9.0"},
           {"number": 2, "state": "OPEN", "title": "[App Update]: Showly 3.71.0"},
           {"number": 3, "state": "CLOSED", "title": "[App Update]: Showly 3.72.0"},
-          {"number": 4, "state": "OPEN", "title": "[App Update]: Audible 26.38.08"}]
+          {"number": 4, "state": "OPEN", "title": "[App Update]: Audible 26.38.08"},
+          {"number": 5, "state": "OPEN", "title": "[App Update]: MovieBox TV 1.2.0.0924"},
+          {"number": 6, "state": "OPEN", "title": "[App Update]: MovieBox TV"},
+          {"number": 7, "state": "OPEN", "title": "[App Update]: Newcomer 1.0.5", "author": {"is_bot": False}},
+          {"number": 8, "state": "OPEN", "title": "[App Update]: Held 1.5", "labels": [{"name": "needs info"}]},
+          {"number": 9, "state": "OPEN", "title": "[App Update]: Held 0.9", "labels": [{"name": "bot-wrong"}]},
+          {"number": 10, "state": "OPEN", "title": "[App Update]: Tagged 6.2_x86_64"}]
 app_updates.gh = lambda *args, **kw: calls.append(args) or (json.dumps(issues) if args[:2] == ("issue", "list") else "")
 apps = {p: {"package": p, "name": n, "current": c, "current_version_codes": []} for p, n, c in [
     ("cx", "Cx File Explorer", "2.7.8"), ("showly", "Showly", "3.70.0"), ("audible", "Audible", "26.38.08"),
-    ("new", "Newcomer", "1.0")]}
+    ("new", "Newcomer", "1.0"), ("moviebox", "MovieBox", "4.0.03.0918.03"), ("tv", "MovieBox TV", "1.2.0.0923"),
+    ("held", "Held", "1.0"), ("tagged", "Tagged", "6.0_arm64")]}
 record = {"status": "update", "reported_by": ["play"], "confirmed_by": ["play"], "readiness": "ready"}
 app_updates.sync_issues(apps, [{**record, "package": "cx", "candidate": "2.7.9"},
                                {**record, "package": "showly", "candidate": "3.72.0"},
                                {**record, "package": "audible", "candidate": None, "status": "current"},
-                               {**record, "package": "new", "candidate": "1.1"}], "1.38.0")
+                               {**record, "package": "new", "candidate": "1.1"},
+                               {**record, "package": "moviebox", "candidate": None, "status": "current"},
+                               {**record, "package": "held", "candidate": "2.0"},
+                               {**record, "package": "tagged", "candidate": "6.1_arm64"}], "1.38.0")
 actions = [c[1:3] for c in calls if c[0] == "issue" and c[1] != "list"]
-assert actions == [("edit", "1"), ("edit", "2"), ("close", "4"), ("create", "--title")], actions
-assert ("issue", "edit", "2", "--title", "[App Update]: Showly 3.72.0") == next(c for c in calls if c[1:3] == ("edit", "2"))[:5]
-assert any(c[3] == "[App Update]: Newcomer 1.1" for c in calls if c[1] == "create"), calls
+assert actions == [("edit", "1"), ("edit", "2"), ("close", "4"), ("edit", "7"), ("create", "--title"), ("create", "--title")], actions
+assert ("issue", "edit", "2", "--title", "[App Update]: Showly 3.72.0") == next(c for c in calls if c[1:3] == ("edit", "2"))
+assert ("issue", "edit", "7", "--title", "[App Update]: Newcomer 1.1") == next(c for c in calls if c[1:3] == ("edit", "7"))
 assert ("issue", "close", "4", "--comment", "targeted in v1.38.0") == next(c for c in calls if c[1] == "close"), calls
 print("issue sync passes")

@@ -1,3 +1,27 @@
+## [1.22.2](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.22.1...v1.22.2) (2026-10-18)
+
+### Bug Fixes
+
+* **hevy:** narrow battery-patch manifest edits ([f150d46](https://github.com/kveld9/kveld-extra-morphe-patches/commit/f150d46eb3260b76508a94c5ae0f185f0553bceb))
+* **hevy:** report why a bundle failed the Hermes HBC96 check ([2425a00](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2425a008284cc647a73a4d4ff859182364ab62a6))
+
+## [1.22.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.22.0...v1.22.1) (2026-10-18)
+
+### Bug Fixes
+
+* **nokoprint:** honest label for the network security patch ([711af71](https://github.com/kveld9/kveld-extra-morphe-patches/commit/711af71b510dd427496ea280f48702fde22f3671))
+
+## [1.22.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.21.1...v1.22.0) (2026-10-18)
+
+### Bug Fixes
+
+* **twitter:** keep comments, profiles and tabs loading with Disable Auto Refresh ([cbecf56](https://github.com/kveld9/kveld-extra-morphe-patches/commit/cbecf56fc00ea3b88f9a957404ae5ec3c140a178))
+
+### New Features
+
+* **twitter:** narrow X patch set to Piko-complementary set ([96ba044](https://github.com/kveld9/kveld-extra-morphe-patches/commit/96ba044265d858a9dffbe2fbd193daaf52d4bb13))
+* **twitter:** update to 12.35.0-prod.01 ([8404802](https://github.com/kveld9/kveld-extra-morphe-patches/commit/8404802f0c13446b870295757c968503315eff43))
+
 ## [1.21.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.21.0...v1.21.1) (2026-10-17)
 
 ### Bug Fixes

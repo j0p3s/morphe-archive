@@ -200,7 +200,7 @@ public class DexDiff {
     private static final String OUTSIDE_FIRST_CALL = "first-call-outside";
     private static final Set<String> THREADS_FEATURES = Set.of(
             "hideAds", "hideSuggestedUsers", "sanitizeSharingLinks", "openLinksExternally", "disableAnalytics", "restoreTrust",
-            "returnRefresh", "disableVideoAutoplay", "pureBlack", "settingsRow");
+            "returnRefresh", "disableVideoAutoplay", "pureBlack", "saveMedia", "settingsRow");
 
     private static final class Contract {
         final String kind;
@@ -2019,6 +2019,40 @@ public class DexDiff {
     private static final String SETTINGS_LIST_NOTE = "com.instagram.barcelona.settings.SettingsScreen.<anonymous>";
     /** The settings entry the HushThreads row goes above. Redex keeps an enum constant's name. */
     private static final String MORE_ENTRY = "MORE";
+    /** Copy text on long press, which the settings patch depends on and brings into every build it's in. */
+    private static final String COPY_TEXT = "Lapp/morphe/extension/hushthreads/feed/CopyText;";
+    private static final String COPY_LONG_PRESS = COPY_TEXT + "->longPress(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;";
+    private static final String COPY_SELECTION = COPY_TEXT + "->selection(Z)Z";
+    /**
+     * Compose's notes on the post row's lambdas that lay out a post's text and its link preview, and
+     * on PostText remembering its text selection, inlined into PostText. They name the source file.
+     */
+    private static final String POST_ROW_NOTE = "com.instagram.barcelona.feed.post.ui.FeedPostRow.<anonymous>.<anonymous> (FeedPostRow.kt:";
+    private static final String SELECTION_NOTE = "com.instagram.barcelona.feed.post.ui.rememberPostTextSelectionState (PostTextSelectionMode.kt:";
+    /** Save photos and videos' extension: the row it puts below Copy link, its click, and the bridges to Instagram's post model. */
+    private static final String SAVE_ROW = "Lapp/morphe/extension/hushthreads/download/SaveMediaRow;";
+    private static final String ADD_SAVE_ROW = SAVE_ROW + "->add(Ljava/lang/Object;Ljava/lang/Object;)V";
+    private static final String SAVE_SHOW_ROW = SAVE_ROW + "->showRow(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;I)V";
+    private static final String SAVE_MEDIA_OF = SAVE_ROW + "->media(Ljava/lang/Object;)Ljava/lang/Object;";
+    private static final String SAVE_ACTIVITY_OF = SAVE_ROW + "->activity(Ljava/lang/Object;)Landroid/app/Activity;";
+    private static final String SAVE_DISMISS = SAVE_ROW + "->dismiss(Ljava/lang/Object;)V";
+    private static final String SAVE_CLICK = "Lapp/morphe/extension/hushthreads/download/SaveMediaRow$Click;";
+    private static final String INSTAGRAM_MEDIA = "Lapp/morphe/extension/hushthreads/download/InstagramMedia;";
+    /** The bridges InstagramMedia ships as empty stubs, which only the Save patch writes. */
+    private static final List<String> SAVE_BRIDGES = List.of("videoVersions", "dashManifest", "mediaId", "owner", "takenAt", "carouselMedia",
+            "username", "versionUrl", "versionWidth", "versionHeight", "imageVersions", "imageCandidates", "candidateUrl", "candidateWidth", "candidateHeight");
+    /** Compose's note in the lambda that draws the rows of a post's menu. It names the source file, so it survives Redex. */
+    private static final String MENU_NOTE = "com.instagram.barcelona.feed.post.actionmenu.PostActionMenuSheet.<anonymous> (PostActionMenuSheet.kt:";
+    /** What the menu's Copy link item says it is. A Kotlin data object's toString keeps its source name. */
+    private static final String COPY_LINK = "CopyLinkAction";
+    private static final String FEATURE_OBJECT = "Ljava/lang/Object;";
+    private static final String ANDROID_ACTIVITY = "Landroid/app/Activity;";
+    /** The models the bridges read past Media and User, which keep their names: a video's versions, a picture's sizes and one size. */
+    private static final String VIDEO_VERSION = "Lcom/instagram/api/schemas/VideoVersionIntf;";
+    private static final String PANDO_VIDEO_VERSION = "Lcom/instagram/api/schemas/ImmutablePandoVideoVersion;";
+    private static final String IMAGE_INFO = "Lcom/instagram/model/mediasize/ImageInfo;";
+    private static final String PANDO_IMAGE_INFO = "Lcom/instagram/model/mediasize/ImmutablePandoImageInfo;";
+    private static final String IMAGE_URL = "Lcom/instagram/common/typedurl/ImageUrl;";
 
     /** Keep duplicate definitions visible: choosing whichever dex was visited last hides corruption. */
     private static Map<String, List<Method>> featureMethods(File apk, Map<String, String> parents) throws Exception {
@@ -2134,6 +2168,13 @@ public class DexDiff {
         int check(List<Instruction> body, int at);
     }
 
+    /**
+     * A hook put in front of an original instruction that branches to that instruction skip, as
+     * code inserted with labels is: a branch, case or handler aimed at it lands past the hook, on
+     * the original, and only the path that falls into it runs the hook.
+     */
+    private interface FeatureInsert extends FeatureBlock {}
+
     private static void featureBody(Method stock, Method patched, int prefix,
             Map<Integer, Integer> insertions, String callee, FieldReference recordedRaw, Map<Integer, FeatureBlock> blocks) {
         featureDeclaration(stock, patched);
@@ -2163,6 +2204,7 @@ public class DexDiff {
             }
             FeatureBlock block = blocks.get(k);
             if (block != null) at += block.check(now.instructions, at);
+            if (block instanceof FeatureInsert && at < now.addresses.size()) relocated.put(old.addresses.get(k), now.addresses.get(at));
             if (recordedRaw != null && old.instructions.get(k).getOpcode() == Opcode.RETURN_VOID) {
                 requireFeature(at + 2 < now.instructions.size(), "raw wrapper lost its constructor recorder");
                 Instruction receiver = now.instructions.get(at), value = now.instructions.get(at + 1), store = now.instructions.get(at + 2);
@@ -3095,6 +3137,7 @@ public class DexDiff {
         requireFeature(((WideLiteralInstruction) body.get(28)).getWideLiteral() == 0, "unknown suggestion cards do not return false");
         featureHostCalls(patched, featureSig(stub), Map.of());
         featureSearchCarousel(clean, patched);
+        featureProfileSuggestions(clean, patched);
     }
 
     /** The key Search's list builder adds its Follow suggestions carousel under, which Threads keeps from build to build. */
@@ -3180,6 +3223,375 @@ public class DexDiff {
     private static void featureOmittedSearchCarousel(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
         featureHostCalls(patched, SHOW_SEARCH_CAROUSEL, Map.of());
         featurePreserveTargets(clean, patched, m -> !m.getDefiningClass().startsWith(OWN) && holds(m, SEARCH_CAROUSEL_KEY));
+    }
+
+    /** The Compose note of Threads' suggested accounts row, the one Search, Activity and profiles share. */
+    private static final String SUGGESTED_ROW_NOTE = "com.instagram.barcelona.suggestedusers.ui.SuggestedUsersRow (SuggestedUsersRow.kt:";
+    /** How every Compose note of the profile's own screens begins. */
+    private static final String PROFILE_UI = "com.instagram.barcelona.profile.ui.";
+    /** Threads keeps this class's name. It builds the list of rows above a profile's tabs. */
+    private static final String PROFILE_VIEW_MODEL = "Lcom/instagram/barcelona/profile/viewmodel/ProfileViewModel;";
+    private static final String PROFILE_CAROUSEL = "Lapp/morphe/extension/hushthreads/profile/ProfileSuggestions;->carousel(Ljava/lang/Object;)Ljava/lang/Object;";
+    private static final String SHOW_PROFILE_ROW = "Lapp/morphe/extension/hushthreads/profile/ProfileSuggestions;->showRow()Z";
+    /** A Compose source note, `<function> (<File>.kt:<line>)`, which Threads keeps from build to build. */
+    private static final java.util.regex.Pattern COMPOSE_NOTE = java.util.regex.Pattern.compile("^[^ ()]+ \\(([A-Za-z0-9_]+\\.kt):\\d+\\)$");
+
+    /**
+     * The profile's two places as Threads shipped them: in [screen], the read at [read] that puts the
+     * carousel's list, a [type], in [list], with the null check right after it the only way to the
+     * carousel; in [builder], [start], the row's path past the view model's one check, and [away],
+     * where that check goes otherwise.
+     */
+    private record ProfileSites(Method screen, int read, int list, String type, Method builder, int start, int away) {}
+
+    /** One call to the suggested accounts row, at [at] of [method], and the Compose note governing it, if any. */
+    private record ProfileRowCall(Method method, int at, MethodReference callee, String note) {}
+
+    /** The Compose note [i] loads, or null. */
+    private static String featureNote(Instruction i) {
+        if (i.getOpcode() != Opcode.CONST_STRING && i.getOpcode() != Opcode.CONST_STRING_JUMBO) return null;
+        String s = ((StringReference) ((ReferenceInstruction) i).getReference()).getString();
+        return COMPOSE_NOTE.matcher(s).matches() ? s : null;
+    }
+
+    /** Whether [note] is a note of the profile's own screens from [file]. */
+    private static boolean profileNote(String note, String file) {
+        if (note == null || !note.startsWith(PROFILE_UI)) return false;
+        java.util.regex.Matcher matcher = COMPOSE_NOTE.matcher(note);
+        return matcher.matches() && matcher.group(1).equals(file);
+    }
+
+    /** Whether [to] can run after [from], along branches, switches and the handlers of every try an instruction sits in. */
+    private static boolean featureReaches(FeatureFlow flow, int from, int to) {
+        BitSet seen = new BitSet();
+        Deque<Integer> work = new ArrayDeque<>(List.of(from));
+        seen.set(from);
+        while (!work.isEmpty()) {
+            int at = work.removeFirst();
+            if (at == to) return true;
+            List<Integer> next = new ArrayList<>(flow.normal.get(at));
+            next.addAll(flow.guarded.get(at));
+            for (int n : next) if (!seen.get(n)) { seen.set(n); work.add(n); }
+        }
+        return false;
+    }
+
+    /**
+     * The Compose note nearest above [at], when it can reach [at]. A note further up, or one that can't
+     * reach it, belongs to another lambda Redex merged into the same method.
+     */
+    private static String featureGoverningNote(FeatureFlow flow, int at) {
+        for (int index = at - 1; index >= 0; index--) {
+            String note = featureNote(flow.layout.instructions.get(index));
+            if (note != null) return featureReaches(flow, index, at) ? note : null;
+        }
+        return null;
+    }
+
+    /**
+     * Where the value [register] holds at [at] was made, followed back through object moves and casts:
+     * {the write, the register it wrote}, or {-1, the register} for the value the method got. Null
+     * when more than one write can reach it, or a write and the method's entry.
+     */
+    private static int[] featureSource(FeatureFlow flow, int at, int register) {
+        List<Instruction> body = flow.layout.instructions;
+        int index = at, held = register;
+        for (int step = 0; step < body.size(); step++) {
+            Set<Integer> writes = flow.reaching(index, held);
+            if (writes.size() != 1) return null;
+            int write = writes.iterator().next();
+            if (write < 0) return new int[]{-1, held};
+            Opcode op = body.get(write).getOpcode();
+            if (op == Opcode.CHECK_CAST) index = write;
+            else if (op == Opcode.MOVE_OBJECT || op == Opcode.MOVE_OBJECT_FROM16 || op == Opcode.MOVE_OBJECT_16) {
+                index = write;
+                held = ((TwoRegisterInstruction) body.get(write)).getRegisterB();
+            } else return new int[]{write, held};
+        }
+        return null;
+    }
+
+    /** The register [m] keeps this in, past its locals and parameters' words. */
+    private static int featureThis(Method m) {
+        requireFeature(!AccessFlags.STATIC.isSet(m.getAccessFlags()), featureSig(m) + " is static, so it has no this");
+        return m.getImplementation().getRegisterCount() - m.getParameterTypes().stream().mapToInt(DexDiff::slots).sum() - 1;
+    }
+
+    /** How many words come before parameter [index] in a call to [callee], this aside. */
+    private static int featureWord(MethodReference callee, int index) {
+        int words = 0;
+        for (int p = 0; p < index; p++) words += slots(callee.getParameterTypes().get(p));
+        return words;
+    }
+
+    /**
+     * {guard, start, away, before}: walks back from [target] while each instruction is reached only by
+     * falling from the one above, and answers the conditional that is then the single way in, where
+     * it goes otherwise, and the check's one way in, or -1 when it has more than one. Refuses a jump,
+     * a switch or a handler into the stretch, or more than one way in.
+     */
+    private static int[] featureSoleEntry(FeatureFlow flow, int target, String what) {
+        List<Instruction> body = flow.layout.instructions;
+        List<List<Integer>> into = new ArrayList<>();
+        for (int n = 0; n < body.size(); n++) into.add(new ArrayList<>());
+        for (int n = 0; n < body.size(); n++) {
+            for (int next : flow.normal.get(n)) into.get(next).add(n);
+            for (int next : flow.guarded.get(n)) into.get(next).add(n);
+        }
+        int start = target;
+        while (start > 0 && into.get(start).equals(List.of(start - 1)) && !body.get(start - 1).getOpcode().name.startsWith("if-")) start--;
+        requireFeature(into.get(start).size() == 1 && body.get(into.get(start).get(0)).getOpcode().name.startsWith("if-"),
+                what + " in " + featureSig(flow.method) + " is reached from " + into.get(start) + " at instruction " + start + ", not through one check");
+        int guard = into.get(start).get(0), entry = start;
+        List<Integer> away = flow.normal.get(guard).stream().filter(n -> n != entry).toList();
+        requireFeature(away.size() == 1, "the check at " + guard + " in " + featureSig(flow.method) + " has no way past " + what);
+        return new int[]{guard, start, away.get(0), into.get(guard).size() == 1 ? into.get(guard).get(0) : -1};
+    }
+
+    /** Whether [i] makes a new [type]. */
+    private static boolean featureAllocates(Instruction i, String type) {
+        return i.getOpcode() == Opcode.NEW_INSTANCE && reference(i).equals(type);
+    }
+
+    /**
+     * Finds both profile places in the clean APK on its own, the way the patch does. Threads' one
+     * static suggested accounts row and the static overloads its class keeps are the entries; every
+     * call to one in the classes holding a profile note belongs to the nearest note above it that can
+     * reach it, and exactly one sits under a ProfileScreen.kt note and one under a ProfileInfoRows.kt
+     * note. The info rows' call reads its list from its own captured row, which names the list's type
+     * and the row's. The screen's call hands the row a list its lambda was built with, one constructor
+     * parameter fills that field, and the screen builds the lambda once, from a list it reads out of a
+     * field and checks for null right after. The view model makes the row once, past one check whose
+     * other side nothing reads what the check compared on.
+     */
+    private static ProfileSites featureProfileSites(Map<String, List<Method>> clean) {
+        Map<String, List<Method>> byClass = new TreeMap<>();
+        for (List<Method> definitions : clean.values()) byClass.computeIfAbsent(definitions.get(0).getDefiningClass(), k -> new ArrayList<>()).add(definitions.get(0));
+        Method row = featureTarget(clean, m -> !m.getDefiningClass().startsWith(OWN)
+                && instructions(m).stream().anyMatch(i -> { String note = featureNote(i); return note != null && note.startsWith(SUGGESTED_ROW_NOTE); }),
+                "Threads' suggested accounts row, the method holding \"" + SUGGESTED_ROW_NOTE + "\",");
+        String rowSig = featureSig(row);
+        requireFeature(AccessFlags.STATIC.isSet(row.getAccessFlags()), "the suggested accounts row " + rowSig + " isn't static");
+        Set<String> entries = new TreeSet<>(List.of(rowSig));
+        for (Method m : byClass.get(row.getDefiningClass())) {
+            if (AccessFlags.STATIC.isSet(m.getAccessFlags()) && !featureSig(m).equals(rowSig) && instructions(m).stream().anyMatch(i -> i instanceof ReferenceInstruction r
+                    && r.getReference() instanceof MethodReference called && featureSig(called).equals(rowSig))) entries.add(featureSig(m));
+        }
+        List<Method> profile = new ArrayList<>();
+        for (Map.Entry<String, List<Method>> e : byClass.entrySet()) {
+            if (e.getKey().startsWith(OWN) || e.getKey().equals(row.getDefiningClass())) continue;
+            if (e.getValue().stream().anyMatch(m -> holdsNote(m, PROFILE_UI))) profile.addAll(e.getValue());
+        }
+        List<ProfileRowCall> calls = new ArrayList<>();
+        for (Method m : profile) {
+            List<Instruction> body = instructions(m);
+            FeatureFlow flow = null;
+            for (int at = 0; at < body.size(); at++) {
+                if (!isStaticInvoke(body.get(at).getOpcode()) || !entries.contains(featureSig((MethodReference) ((ReferenceInstruction) body.get(at)).getReference()))) continue;
+                if (flow == null) flow = new FeatureFlow(m);
+                calls.add(new ProfileRowCall(m, at, (MethodReference) ((ReferenceInstruction) body.get(at)).getReference(), featureGoverningNote(flow, at)));
+            }
+        }
+        ProfileRowCall screen = featureOne(calls.stream().filter(c -> profileNote(c.note(), "ProfileScreen.kt")).toList(), "the suggested accounts row under a ProfileScreen.kt note");
+        ProfileRowCall infoRows = featureOne(calls.stream().filter(c -> profileNote(c.note(), "ProfileInfoRows.kt")).toList(), "the suggested accounts row under a ProfileInfoRows.kt note");
+
+        // The info rows' call hands the row ((Row) this.row).list: that names the list's type and the row's.
+        Method info = infoRows.method();
+        FeatureFlow infoFlow = new FeatureFlow(info);
+        List<Instruction> infoBody = infoFlow.layout.instructions;
+        int self = featureThis(info);
+        List<String[]> found = new ArrayList<>();
+        List<Integer> foundAt = new ArrayList<>();
+        int[] infoArguments = invokeRegisters(infoBody.get(infoRows.at()));
+        for (int index = 0; index < infoRows.callee().getParameterTypes().size(); index++) {
+            int word = featureWord(infoRows.callee(), index);
+            if (!infoRows.callee().getParameterTypes().get(index).toString().startsWith("L") || word >= infoArguments.length) continue;
+            int[] source = featureSource(infoFlow, infoRows.at(), infoArguments[word]);
+            if (source == null || source[0] < 0 || infoBody.get(source[0]).getOpcode() != Opcode.IGET_OBJECT) continue;
+            FieldReference field = (FieldReference) ((ReferenceInstruction) infoBody.get(source[0])).getReference();
+            if (field.getDefiningClass().equals(info.getDefiningClass())) continue;
+            int holder = ((TwoRegisterInstruction) infoBody.get(source[0])).getRegisterB();
+            Set<Integer> casts = infoFlow.reaching(source[0], holder);
+            int cast = casts.size() == 1 ? casts.iterator().next() : -1;
+            if (cast < 0 || infoBody.get(cast).getOpcode() != Opcode.CHECK_CAST || !reference(infoBody.get(cast)).equals(field.getDefiningClass())) continue;
+            int[] captured = featureSource(infoFlow, cast, holder);
+            if (captured == null || captured[0] < 0 || infoBody.get(captured[0]).getOpcode() != Opcode.IGET_OBJECT
+                    || !((FieldReference) ((ReferenceInstruction) infoBody.get(captured[0])).getReference()).getDefiningClass().equals(info.getDefiningClass())
+                    || !Arrays.equals(featureSource(infoFlow, captured[0], ((TwoRegisterInstruction) infoBody.get(captured[0])).getRegisterB()), new int[]{-1, self})) continue;
+            found.add(new String[]{field.getType(), field.getDefiningClass()});
+            foundAt.add(index);
+        }
+        String[] data = featureOne(found, "the list " + featureSig(info) + " reads from its own row for the suggested accounts row");
+        String list = data[0], rowType = data[1];
+        requireFeature(infoRows.callee().getParameterTypes().get(foundAt.get(0)).toString().equals(list),
+                featureSig(infoRows.callee()) + " takes a " + infoRows.callee().getParameterTypes().get(foundAt.get(0)) + " where the profile's row hands it a " + list);
+
+        // The screen's lambda hands the row a list it was built with.
+        Method lambda = screen.method();
+        String owner = lambda.getDefiningClass();
+        FeatureFlow lambdaFlow = new FeatureFlow(lambda);
+        List<Instruction> lambdaBody = lambdaFlow.layout.instructions;
+        List<Integer> listIndices = new ArrayList<>();
+        for (int p = 0; p < screen.callee().getParameterTypes().size(); p++) if (screen.callee().getParameterTypes().get(p).toString().equals(list)) listIndices.add(p);
+        int listIndex = featureOne(listIndices, "the list among " + featureSig(screen.callee()) + "'s parameters");
+        int[] screenArguments = invokeRegisters(lambdaBody.get(screen.at()));
+        requireFeature(featureWord(screen.callee(), listIndex) < screenArguments.length, featureSig(lambda) + " hands the row no list");
+        int[] handedRow = featureSource(lambdaFlow, screen.at(), screenArguments[featureWord(screen.callee(), listIndex)]);
+        requireFeature(handedRow != null && handedRow[0] >= 0, featureSig(lambda) + " sets the list it hands the row on more than one path");
+        Instruction capture = lambdaBody.get(handedRow[0]);
+        requireFeature(capture.getOpcode() == Opcode.IGET_OBJECT && ((FieldReference) ((ReferenceInstruction) capture).getReference()).getDefiningClass().equals(owner),
+                featureSig(lambda) + " doesn't hand the row a list it was built with");
+        String captured = reference(capture);
+        requireFeature(Arrays.equals(featureSource(lambdaFlow, handedRow[0], ((TwoRegisterInstruction) capture).getRegisterB()), new int[]{-1, featureThis(lambda)}),
+                featureSig(lambda) + " reads the row's list from something other than itself");
+
+        // One constructor parameter goes into that field, and nothing else writes it.
+        List<Method> storing = new ArrayList<>();
+        List<Integer> stores = new ArrayList<>();
+        for (Method m : byClass.getOrDefault(owner, List.of())) {
+            List<Instruction> body = instructions(m);
+            for (int at = 0; at < body.size(); at++) if (body.get(at).getOpcode() == Opcode.IPUT_OBJECT && reference(body.get(at)).equals(captured)) { storing.add(m); stores.add(at); }
+        }
+        Method constructor = featureOne(storing, "the one write of " + captured);
+        int store = stores.get(0);
+        FeatureFlow constructorFlow = new FeatureFlow(constructor);
+        TwoRegisterInstruction stored = (TwoRegisterInstruction) constructorFlow.layout.instructions.get(store);
+        int[] storedFrom = featureSource(constructorFlow, store, stored.getRegisterA());
+        List<Integer> parameters = new ArrayList<>();
+        int word = featureThis(constructor) + 1;
+        for (int p = 0; p < constructor.getParameterTypes().size(); p++) {
+            if (storedFrom != null && storedFrom[0] == -1 && storedFrom[1] == word) parameters.add(p);
+            word += slots(constructor.getParameterTypes().get(p));
+        }
+        requireFeature(constructor.getName().equals("<init>") && parameters.size() == 1
+                && Arrays.equals(featureSource(constructorFlow, store, stored.getRegisterB()), new int[]{-1, featureThis(constructor)}),
+                featureSig(constructor) + " doesn't fill " + captured + " from one of its own parameters");
+        int parameter = parameters.get(0);
+
+        // The screen builds that lambda once, under a profile screen note, from a list it reads and checks for null right away.
+        List<Method> builders = new ArrayList<>();
+        for (Method m : profile) {
+            List<Instruction> body = instructions(m);
+            if (body.stream().noneMatch(i -> featureAllocates(i, owner))) continue;
+            FeatureFlow flow = new FeatureFlow(m);
+            for (int at = 0; at < body.size(); at++) if (featureAllocates(body.get(at), owner) && profileNote(featureGoverningNote(flow, at), "ProfileScreen.kt")) { builders.add(m); break; }
+        }
+        Method built = featureOne(builders, "the ProfileScreen.kt method that builds the suggested accounts carousel");
+        FeatureFlow flow = new FeatureFlow(built);
+        List<Instruction> body = flow.layout.instructions;
+        List<Integer> allocations = new ArrayList<>();
+        for (int at = 0; at < body.size(); at++) if (featureAllocates(body.get(at), owner) && profileNote(featureGoverningNote(flow, at), "ProfileScreen.kt")) allocations.add(at);
+        int allocation = featureOne(allocations, "the carousel built in " + featureSig(built));
+        int init = -1;
+        for (int at = allocation + 1; at < body.size() && init < 0; at++) {
+            Instruction i = body.get(at);
+            if ((i.getOpcode() == Opcode.INVOKE_DIRECT || i.getOpcode() == Opcode.INVOKE_DIRECT_RANGE) && reference(i).equals(featureSig(constructor))) {
+                int[] made = featureSource(flow, at, invokeRegisters(i)[0]);
+                if (made != null && made[0] == allocation) init = at;
+            }
+        }
+        requireFeature(init >= 0, featureSig(built) + " never constructs the carousel it allocates at " + allocation);
+        int[] initArguments = invokeRegisters(body.get(init));
+        requireFeature(1 + featureWord(constructor, parameter) < initArguments.length, featureSig(built) + " hands the carousel no list");
+        int[] handed = featureSource(flow, init, initArguments[1 + featureWord(constructor, parameter)]);
+        requireFeature(handed != null && handed[0] >= 0, featureSig(built) + " sets the carousel's list on more than one path");
+        int read = handed[0];
+        requireFeature(body.get(read).getOpcode() == Opcode.IGET_OBJECT && ((FieldReference) ((ReferenceInstruction) body.get(read)).getReference()).getType().equals(list),
+                featureSig(built) + " doesn't hand the carousel a list it reads from a field");
+        int register = registerA(body.get(read));
+        int[] entry = featureSoleEntry(flow, allocation, "the suggested accounts carousel");
+        Instruction check = body.get(entry[0]);
+        boolean past = check.getOpcode() == Opcode.IF_NEZ ? entry[1] != entry[0] + 1 : check.getOpcode() == Opcode.IF_EQZ && entry[1] == entry[0] + 1;
+        requireFeature(past && registerA(check) == register && entry[0] == read + 1 && entry[3] == read,
+                featureSig(built) + " doesn't build its carousel only past a null check of the list it reads at " + read);
+        requireFeature(register <= 255, featureSig(built) + " keeps the carousel's list in v" + register + ", past move-result's reach");
+
+        // The view model makes the row once, past one check, and nothing past the check's other side reads what it compared.
+        requireFeature(byClass.containsKey(PROFILE_VIEW_MODEL), "Threads carries no profile view model " + PROFILE_VIEW_MODEL);
+        List<Method> makers = byClass.get(PROFILE_VIEW_MODEL).stream()
+                .filter(m -> instructions(m).stream().anyMatch(i -> featureAllocates(i, rowType))).toList();
+        Method maker = featureOne(makers, "the profile view model's method that adds the suggested accounts row");
+        FeatureFlow makerFlow = new FeatureFlow(maker);
+        List<Instruction> makerBody = makerFlow.layout.instructions;
+        List<Integer> made = new ArrayList<>();
+        for (int at = 0; at < makerBody.size(); at++) if (featureAllocates(makerBody.get(at), rowType)) made.add(at);
+        int[] rowEntry = featureSoleEntry(makerFlow, featureOne(made, "the suggested accounts row made in " + featureSig(maker)), "the suggested accounts row");
+        List<String> compared = new ArrayList<>();
+        for (int r : namedRegisters(makerBody.get(rowEntry[0]))) if (!makerFlow.readsFrom(rowEntry[2], r).isEmpty()) compared.add("v" + r);
+        requireFeature(compared.isEmpty(), featureSig(maker) + " reads " + String.join(", ", compared) + " again past its check at " + rowEntry[0]
+                + ", so leaving the row's path there wouldn't match Threads' own");
+        return new ProfileSites(built, read, register, list, maker, rowEntry[1], rowEntry[2]);
+    }
+
+    /**
+     * Hide suggested users on profiles. The screen hands the carousel's list to carousel() right
+     * after reading it, takes the answer back into the same register and casts it to the list's own
+     * type, so the null check Threads already makes drops the carousel. The view model asks showRow()
+     * first thing on the row's path, branches into it included, and only a false answer leaves, by the
+     * check's own other side, in a local nothing reads from there or from that side. Each is called
+     * once, from its own method, and every other instruction is Threads' own.
+     */
+    private static void featureProfileSuggestions(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        try {
+            ProfileSites sites = featureProfileSites(clean);
+            String screenSig = featureSig(sites.screen()), builderSig = featureSig(sites.builder());
+            featureHostCalls(patched, PROFILE_CAROUSEL, Map.of(screenSig, 1));
+            featureHostCalls(patched, SHOW_PROFILE_ROW, Map.of(builderSig, 1));
+            int guard = sites.read() + 1, list = sites.list();
+            String atCheck = " at the carousel's null check at " + guard + " in " + screenSig;
+            featureBody(sites.screen(), featureMethod(patched, screenSig), 0, Map.of(), PROFILE_CAROUSEL, null, Map.of(guard, (body, at) -> {
+                requireFeature(at + 3 <= body.size() && isStaticInvoke(body.get(at).getOpcode()) && reference(body.get(at)).equals(PROFILE_CAROUSEL)
+                        && Arrays.equals(invokeRegisters(body.get(at)), new int[]{list}), "no hook" + atCheck + " that hands carousel() the list in v" + list);
+                requireFeature(body.get(at + 1).getOpcode() == Opcode.MOVE_RESULT_OBJECT && registerA(body.get(at + 1)) == list,
+                        "the hook" + atCheck + " doesn't take carousel()'s answer back into the list's register, v" + list);
+                requireFeature(body.get(at + 2).getOpcode() == Opcode.CHECK_CAST && registerA(body.get(at + 2)) == list && reference(body.get(at + 2)).equals(sites.type()),
+                        "the hook" + atCheck + " doesn't cast carousel()'s answer back to the list's type, " + sites.type());
+                return 3;
+            }));
+            Method builder = featureMethod(patched, builderSig);
+            Layout now = new Layout(builder.getImplementation());
+            FeatureFlow old = new FeatureFlow(sites.builder());
+            int locals = sites.builder().getImplementation().getRegisterCount() - sites.builder().getParameterTypes().stream().mapToInt(DexDiff::slots).sum()
+                    - (AccessFlags.STATIC.isSet(sites.builder().getAccessFlags()) ? 0 : 1);
+            String atRow = " at the start of the row's path at " + sites.start() + " in " + builderSig;
+            featureBody(sites.builder(), builder, 0, Map.of(), SHOW_PROFILE_ROW, null, Map.of(sites.start(), (body, at) -> {
+                requireFeature(at + 3 <= body.size() && isStaticInvoke(body.get(at).getOpcode()) && reference(body.get(at)).equals(SHOW_PROFILE_ROW)
+                        && invokeRegisters(body.get(at)).length == 0 && body.get(at + 1).getOpcode() == Opcode.MOVE_RESULT,
+                        "no hook" + atRow + " that takes showRow()'s answer");
+                int scratch = registerA(body.get(at + 1));
+                requireFeature(body.get(at + 2).getOpcode() == Opcode.IF_EQZ && registerA(body.get(at + 2)) == scratch,
+                        "the hook" + atRow + " leaves on something other than a false answer");
+                int target = now.addresses.indexOf(now.addresses.get(at + 2) + ((OffsetInstruction) body.get(at + 2)).getCodeOffset());
+                int away = sites.away() + (sites.away() >= sites.start() ? 3 : 0);
+                requireFeature(target == away, "the hook" + atRow + " sends a false answer to instruction " + target + ", not the check's own other side at " + away);
+                requireFeature(scratch < locals && old.readsFrom(sites.start(), scratch).isEmpty() && old.readsFrom(sites.away(), scratch).isEmpty(),
+                        "the hook" + atRow + " clobbers v" + scratch + ", which isn't a local nothing reads from there or from the check's other side");
+                return 3;
+            }));
+            System.out.println("[diff] threads-feature hideSuggestedUsers: Profile suggestions hook the carousel at " + guard + " of " + screenSig
+                    + " and the row at " + sites.start() + " of " + builderSig);
+        } catch (IllegalArgumentException | ClassCastException | IndexOutOfBoundsException ex) {
+            throw new IllegalArgumentException("Profile suggestions: " + ex.getMessage(), ex);
+        }
+    }
+
+    /**
+     * Left out, profiles ask neither question, and the screen and view model methods the hooks go
+     * into are Threads' own. Only those two: Hide ghost post bubbles changes other profile code.
+     * A build with no suggested accounts row has nothing to keep.
+     */
+    private static void featureOmittedProfileSuggestions(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        try {
+            featureHostCalls(patched, PROFILE_CAROUSEL, Map.of());
+            featureHostCalls(patched, SHOW_PROFILE_ROW, Map.of());
+            boolean rowed = false;
+            for (List<Method> definitions : clean.values()) if (!definitions.get(0).getDefiningClass().startsWith(OWN) && holdsNote(definitions.get(0), SUGGESTED_ROW_NOTE)) rowed = true;
+            if (!rowed) return;
+            ProfileSites sites = featureProfileSites(clean);
+            for (Method stock : List.of(sites.screen(), sites.builder())) featureBody(stock, featureMethod(patched, featureSig(stock)), 0, Map.of(), "");
+        } catch (IllegalArgumentException | ClassCastException | IndexOutOfBoundsException ex) {
+            throw new IllegalArgumentException("Profile suggestions: " + ex.getMessage(), ex);
+        }
     }
 
     private static int ownedPermalinkStore(Method parser, Map<String, String> parents) {
@@ -4531,7 +4943,8 @@ public class DexDiff {
      * showRow calls Threads' Accounts Center row with that composer, the modifier the case's run
      * passes Threads' own row, the title, subtitle, click and icon, and three zeros, and nothing else.
      * The click is a kotlin Function0, which Threads' row takes. Both of Threads' rows stay stock,
-     * and the list is the only host method that calls add.
+     * and the list is the only host method that calls add. Copy text on long press, which the
+     * settings patch depends on, comes with the row and is held to its own contract.
      */
     private static void featureSettingsRow(Map<String, List<Method>> clean, Map<String, List<Method>> patched, File patchedApk) throws Exception {
         SettingsRowSites sites = featureSettingsRowSites(clean);
@@ -4556,6 +4969,182 @@ public class DexDiff {
         Method invoke = featureMethod(patched, ROW_CLICK + "->invoke()Ljava/lang/Object;");
         requireFeature(AccessFlags.PUBLIC.isSet(invoke.getAccessFlags()) && !AccessFlags.STATIC.isSet(invoke.getAccessFlags()),
                 ROW_CLICK + "'s invoke() isn't a public instance method");
+        featureCopyText(clean, patched);
+    }
+
+    /**
+     * A post row lambda's long press override as Threads shipped it: [stock] reads it at [read] into
+     * [register] and checks it for null right after, and [action] is the override's own long press.
+     */
+    private record CopyTextSite(Method stock, int read, int register, FieldReference action) {}
+
+    /** PostText [stock], and its boolean [parameter], held in [flag], that its selection check reads as it came in. */
+    private record CopyTextSelection(Method stock, int parameter, int flag) {}
+
+    /**
+     * Copy text on long press. Every override check the clean post row lambdas make gets the patch's
+     * five instructions in front of it, and nothing else in those lambdas changes: a null override
+     * goes straight to Threads' own check, and any other is read for its own action, handed to
+     * longPress as (override, action) in a local nothing reads from the check on, and taken back
+     * into the override's register cast to its type. Each lambda calls longPress once per check and
+     * no other host method calls it. PostText asks selection() about the boolean parameter its
+     * selection check reads, first thing and into that same register, and is the one host method
+     * that asks. Every refusal names Copy text.
+     */
+    private static void featureCopyText(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        try {
+            Map<String, List<CopyTextSite>> lambdas = new TreeMap<>();
+            for (CopyTextSite site : featureCopyTextSites(clean)) lambdas.computeIfAbsent(featureSig(site.stock()), k -> new ArrayList<>()).add(site);
+            Map<String, Integer> calls = new TreeMap<>();
+            for (Map.Entry<String, List<CopyTextSite>> lambda : lambdas.entrySet()) calls.put(lambda.getKey(), lambda.getValue().size());
+            featureHostCalls(patched, COPY_LONG_PRESS, calls);
+            for (Map.Entry<String, List<CopyTextSite>> lambda : lambdas.entrySet()) {
+                Method stock = lambda.getValue().get(0).stock();
+                Method changed = featureMethod(patched, lambda.getKey());
+                Layout now = new Layout(changed.getImplementation());
+                FeatureFlow old = new FeatureFlow(stock);
+                int locals = stock.getImplementation().getRegisterCount() - stock.getParameterTypes().stream().mapToInt(DexDiff::slots).sum()
+                        - (AccessFlags.STATIC.isSet(stock.getAccessFlags()) ? 0 : 1);
+                Map<Integer, FeatureBlock> blocks = new HashMap<>();
+                for (CopyTextSite site : lambda.getValue()) blocks.put(site.read() + 1, (body, at) -> featureCopyTextHook(body, now, at, site, old, locals));
+                featureBody(stock, changed, 0, Map.of(), COPY_LONG_PRESS, null, blocks);
+            }
+            CopyTextSelection selection = featureCopyTextSelection(clean);
+            featureHostCalls(patched, COPY_SELECTION, Map.of(featureSig(selection.stock()), 1));
+            Method changed = featureMethod(patched, featureSig(selection.stock()));
+            featureCall(instructions(changed), 0, COPY_SELECTION, selection.flag(), selection.flag());
+            featureBody(selection.stock(), changed, 2, Map.of(), COPY_SELECTION);
+            System.out.println("[diff] threads-feature settingsRow: Copy text hooks " + calls + " and parameter " + selection.parameter()
+                    + " of " + featureSig(selection.stock()));
+        } catch (IllegalArgumentException | ClassCastException | IndexOutOfBoundsException ex) {
+            throw new IllegalArgumentException("Copy text: " + ex.getMessage(), ex);
+        }
+    }
+
+    /** The hook the patch puts in front of [site]'s override check, at [at] of the patched lambda [body], laid out as [now]. Answers its length. */
+    private static int featureCopyTextHook(List<Instruction> body, Layout now, int at, CopyTextSite site, FeatureFlow old, int locals) {
+        int guard = site.read() + 1, held = site.register();
+        String where = " in front of the override check at " + guard + " in " + featureSig(site.stock());
+        requireFeature(at + 5 <= body.size() && body.get(at).getOpcode() == Opcode.IF_EQZ && registerA(body.get(at)) == held,
+                "no hook" + where + " that tests the override in v" + held + " for null first");
+        int skip = now.addresses.indexOf(now.addresses.get(at) + ((OffsetInstruction) body.get(at)).getCodeOffset());
+        requireFeature(skip == at + 5, "the hook" + where + " sends a null override to instruction " + skip + ", not straight to Threads' own check");
+        Instruction get = body.get(at + 1), call = body.get(at + 2), result = body.get(at + 3), cast = body.get(at + 4);
+        requireFeature(get.getOpcode() == Opcode.IGET_OBJECT && ((TwoRegisterInstruction) get).getRegisterB() == held
+                && reference(get).equals(site.action().toString()), "the hook" + where + " doesn't read the override's own action, " + site.action());
+        int free = registerA(get);
+        requireFeature(free != held && free < locals && free <= 15 && old.readsFrom(guard, free).isEmpty(),
+                "the hook" + where + " clobbers v" + free + ", which isn't a local nothing reads from the check on");
+        requireFeature(isStaticInvoke(call.getOpcode()) && reference(call).equals(COPY_LONG_PRESS) && Arrays.equals(invokeRegisters(call), new int[]{held, free}),
+                "the hook" + where + " doesn't pass " + COPY_LONG_PRESS + " the override and then its action, v" + held + " and v" + free);
+        requireFeature(result.getOpcode() == Opcode.MOVE_RESULT_OBJECT && registerA(result) == held,
+                "the hook" + where + " doesn't take longPress's answer back into the override's register, v" + held);
+        requireFeature(cast.getOpcode() == Opcode.CHECK_CAST && registerA(cast) == held && reference(cast).equals(site.action().getDefiningClass()),
+                "the hook" + where + " doesn't cast longPress's answer back to the override's type, " + site.action().getDefiningClass());
+        return 5;
+    }
+
+    /**
+     * Every long press override check in the clean post row lambdas, found the way the patch finds
+     * them: an iget-object of a field of the lambda's own class, an if-nez on it straight after, and
+     * where that jumps, within four instructions, a read of a Function0 field of the override's type
+     * from the override, with an if-nez on that. There has to be at least one, they all read the same
+     * action, each check is reached only from its read, and the override sits where a call can name it.
+     */
+    private static List<CopyTextSite> featureCopyTextSites(Map<String, List<Method>> clean) {
+        List<CopyTextSite> sites = new ArrayList<>();
+        for (List<Method> definitions : clean.values()) for (Method m : definitions) {
+            if (m.getDefiningClass().startsWith(OWN) || m.getImplementation() == null || !holdsNote(m, POST_ROW_NOTE)) continue;
+            FeatureFlow flow = new FeatureFlow(m);
+            List<Instruction> body = flow.layout.instructions;
+            for (int read = 0; read < body.size(); read++) {
+                FieldReference action = featureCopyTextAction(flow, read);
+                if (action == null) continue;
+                int guard = read + 1;
+                List<Integer> into = new ArrayList<>();
+                for (int n = 0; n < body.size(); n++) if (flow.normal.get(n).contains(guard) || flow.exceptional.get(n).contains(guard)) into.add(n);
+                requireFeature(into.equals(List.of(read)), featureSig(m) + " reaches its override check at " + guard + " from " + into + ", not only from the read at " + read);
+                int register = registerA(body.get(read));
+                requireFeature(register <= 15, featureSig(m) + " holds its override in v" + register + ", which the hook's call can't name");
+                sites.add(new CopyTextSite(m, read, register, action));
+            }
+        }
+        requireFeature(!sites.isEmpty(), "no post row lambda reads and checks a long press override");
+        Set<String> actions = new TreeSet<>();
+        for (CopyTextSite site : sites) actions.add(site.action().toString());
+        requireFeature(actions.size() == 1, "the post row's override checks read different actions, " + actions);
+        return sites;
+    }
+
+    /** The override's own long press when [read] in [flow]'s lambda is a read of the lambda's override followed by its check, or null. */
+    private static FieldReference featureCopyTextAction(FeatureFlow flow, int read) {
+        List<Instruction> body = flow.layout.instructions;
+        if (read + 1 >= body.size() || body.get(read).getOpcode() != Opcode.IGET_OBJECT || body.get(read + 1).getOpcode() != Opcode.IF_NEZ) return null;
+        FieldReference field = (FieldReference) ((ReferenceInstruction) body.get(read)).getReference();
+        int register = registerA(body.get(read));
+        if (!field.getDefiningClass().equals(flow.method.getDefiningClass()) || registerA(body.get(read + 1)) != register) return null;
+        List<Integer> jumps = flow.normal.get(read + 1).stream().filter(n -> n != read + 2).toList();
+        if (jumps.size() != 1) return null;
+        int target = jumps.get(0);
+        for (int at = target; at < Math.min(target + 4, body.size() - 1); at++) {
+            Instruction i = body.get(at);
+            if (i.getOpcode() != Opcode.IGET_OBJECT) continue;
+            FieldReference action = (FieldReference) ((ReferenceInstruction) i).getReference();
+            if (((TwoRegisterInstruction) i).getRegisterB() != register || !action.getDefiningClass().equals(field.getType())
+                    || !action.getType().equals(FUNCTION0)) continue;
+            Instruction next = body.get(at + 1);
+            return next.getOpcode() == Opcode.IF_NEZ && registerA(next) == registerA(i) ? action : null;
+        }
+        return null;
+    }
+
+    /**
+     * PostText, the one host method holding the selection note, and the parameter its selection
+     * check reads: the first if-eqz after the note has to test one boolean parameter as it came in,
+     * directly or through narrow copies, on every path but those where Compose writes the 0 or 1 a
+     * caller that leaves it out gets, so a hook first thing decides what it reads. 451 copies the
+     * parameter into a local and fills that local with 0 in code at the end that jumps back.
+     */
+    private static CopyTextSelection featureCopyTextSelection(Map<String, List<Method>> clean) {
+        Method stock = featureTarget(clean, m -> !m.getDefiningClass().startsWith(OWN) && m.getImplementation() != null && holdsNote(m, SELECTION_NOTE),
+                "PostText, the method holding the selection note,");
+        FeatureFlow flow = new FeatureFlow(stock);
+        List<Instruction> body = flow.layout.instructions;
+        int note = 0;
+        while (!(body.get(note) instanceof ReferenceInstruction r && r.getReference() instanceof StringReference s && s.getString().startsWith(SELECTION_NOTE))) note++;
+        int check = note + 1;
+        while (check < body.size() && body.get(check).getOpcode() != Opcode.IF_EQZ) check++;
+        requireFeature(check < body.size(), featureSig(stock) + " checks nothing after its selection note");
+        // The registers that arrive at the check as they came in, read directly or through narrow copies.
+        int read = registerA(body.get(check));
+        Set<Integer> sources = new TreeSet<>();
+        for (int write : flow.reaching(check, read)) {
+            Opcode op = write < 0 ? null : body.get(write).getOpcode();
+            int[] origin = write < 0 ? new int[]{-1, read} : op == Opcode.MOVE || op == Opcode.MOVE_FROM16 || op == Opcode.MOVE_16
+                    ? flow.origin(write, ((TwoRegisterInstruction) body.get(write)).getRegisterB()) : null;
+            if (origin != null && origin[0] == -1) sources.add(origin[1]);
+        }
+        List<? extends CharSequence> params = stock.getParameterTypes();
+        int parameter = -1, register = stock.getImplementation().getRegisterCount() - params.stream().mapToInt(DexDiff::slots).sum();
+        for (int p = 0; p < params.size(); p++) {
+            if (sources.size() == 1 && register == sources.iterator().next()) parameter = p;
+            register += slots(params.get(p));
+        }
+        requireFeature(parameter >= 0 && params.get(parameter).toString().equals("Z") && flow.booleanOnEveryPath(check, read, sources.iterator().next()),
+                "the selection check at " + check + " in " + featureSig(stock) + " doesn't read one boolean parameter as it came in on every path");
+        return new CopyTextSelection(stock, parameter, sources.iterator().next());
+    }
+
+    /** Left out with the settings patch, Copy text makes no call and leaves the post row lambdas and PostText as Threads wrote them. */
+    private static void featureOmittedCopyText(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        try {
+            featureHostCalls(patched, COPY_LONG_PRESS, Map.of());
+            featureHostCalls(patched, COPY_SELECTION, Map.of());
+            featurePreserveTargets(clean, patched, m -> !m.getDefiningClass().startsWith(OWN)
+                    && (holdsNote(m, POST_ROW_NOTE) || holdsNote(m, SELECTION_NOTE)));
+        } catch (IllegalArgumentException | ClassCastException | IndexOutOfBoundsException ex) {
+            throw new IllegalArgumentException("Copy text: " + ex.getMessage(), ex);
+        }
     }
 
     /**
@@ -4782,6 +5371,7 @@ public class DexDiff {
         featureFalseStub(patched, ADS + "isSuggestedUserItem(Ljava/lang/Object;)Z", true);
         featureHostCalls(patched, ADS + "isSuggestedUserItem(Ljava/lang/Object;)Z", Map.of());
         featureOmittedSearchCarousel(clean, patched);
+        featureOmittedProfileSuggestions(clean, patched);
         MultiDexContainer<? extends DexFile> dex = DexFileFactory.loadDexContainer(patchedApk, Opcodes.getDefault());
         for (String entry : dex.getDexEntryNames()) for (ClassDef cd : dex.getEntry(entry).getDexFile().getClasses())
             for (Field field : cd.getFields()) requireFeature(!field.getName().equals(RECORDED_RAW), "omitted suggestion feature added a raw recording field: " + field);
@@ -4842,6 +5432,7 @@ public class DexDiff {
     /**
      * Left out, the settings row makes no call, leaves Threads' settings list and both its rows as
      * Threads wrote them, and leaves showRow, when the extension has it, the empty stub it ships as.
+     * Copy text, which comes only with the settings patch, is left out along with it.
      */
     private static void featureOmittedSettingsRow(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
         featureHostCalls(patched, ADD_ROW, Map.of());
@@ -4850,6 +5441,655 @@ public class DexDiff {
         featurePreserveTargets(clean, patched, m -> hooked.contains(featureSig(m)));
         if (patched.containsKey(SHOW_ROW)) requireFeature(instructions(featureMethod(patched, SHOW_ROW)).stream().map(Instruction::getOpcode)
                 .toList().equals(List.of(Opcode.RETURN_VOID)), "omitted settings row wrote " + SHOW_ROW);
+        featureOmittedCopyText(clean, patched);
+    }
+
+    /**
+     * Where Save photos and videos hooks, read off the post menu's Copy link row in the clean build:
+     * the menu lambda, the index of its Copy link row call and the lambda's own register, the
+     * composer's type, the row and the calls and literals that build its arguments, the menu's post,
+     * activity and controller fields, and the call Copy link's click closes the menu with.
+     */
+    private record SaveMediaSites(Method menu, int rowAt, int self, String composerType, MethodReference row, FieldReference base,
+            MethodReference role, int roleArgument, MethodReference clickModifier, int enabled, MethodReference style,
+            MethodReference icon, List<Integer> iconArguments, FieldReference media, FieldReference activity,
+            FieldReference controller, MethodReference dismiss) {}
+
+    /** One InstagramMedia bridge: its name, the type it casts its argument to, and the getter it calls, by invoke-virtual or invoke-interface. */
+    private record SaveBridge(String name, String receiver, Opcode call, String getter) {}
+
+    private static final Set<Opcode> SAVE_OBJECT_MOVES = Set.of(Opcode.MOVE_OBJECT, Opcode.MOVE_OBJECT_FROM16, Opcode.MOVE_OBJECT_16);
+    private static final Set<Opcode> SAVE_EXITS = Set.of(Opcode.RETURN_VOID, Opcode.RETURN, Opcode.RETURN_WIDE, Opcode.RETURN_OBJECT, Opcode.THROW);
+
+    /**
+     * Save photos and videos. Copy link's own path in the post menu gets a copy of its row call,
+     * then SaveMediaRow.add with the lambda and its composer, then a goto past the original call,
+     * which every branch to it still reaches; nothing else in the menu changes, and it's the one
+     * host method that calls add. showRow draws Threads' row the way Copy link's is drawn, each
+     * argument read back to the calls and literals the patch found; media, activity and dismiss read
+     * the menu's post, activity and controller fields and close it with Copy link's call; the click
+     * is a kotlin Function0; and each InstagramMedia bridge casts its argument to the model and
+     * returns what the getter the patch found answers.
+     */
+    private static void featureSaveMedia(Map<String, List<Method>> clean, Map<String, List<Method>> patched,
+            File cleanApk, File patchedApk) throws Exception {
+        Map<String, List<ClassDef>> classes = featureClassIndex(cleanApk);
+        SaveMediaSites sites = featureSaveMediaSites(clean, classes);
+        List<SaveBridge> bridges = featureSaveBridges(classes);
+        Instruction rowCall = instructions(sites.menu()).get(sites.rowAt());
+        FeatureInsert hook = (body, at) -> {
+            requireFeature(at < body.size() && featureInstruction(body.get(at)).equals(featureInstruction(rowCall)),
+                    "Copy link's own path doesn't draw a copy of its row call, " + featureInstruction(rowCall) + ", at instruction " + at);
+            requireFeature(at + 1 < body.size() && isStaticInvoke(body.get(at + 1).getOpcode()) && reference(body.get(at + 1)).equals(ADD_SAVE_ROW),
+                    "missing " + ADD_SAVE_ROW + " at instruction " + (at + 1) + ", after the copy of Copy link's row call");
+            int[] passed = invokeRegisters(body.get(at + 1));
+            requireFeature(Arrays.equals(passed, new int[]{sites.self(), sites.self() + 1}),
+                    ADD_SAVE_ROW + " at instruction " + (at + 1) + " passes " + Arrays.toString(passed)
+                            + ", not the menu and its composer, v" + sites.self() + " and v" + (sites.self() + 1));
+            // The goto lands right past the original call, where Copy link's row call goes on to.
+            requireFeature(at + 3 < body.size() && body.get(at + 2).getOpcode().name.startsWith("goto")
+                    && ((OffsetInstruction) body.get(at + 2)).getCodeOffset() == body.get(at + 2).getCodeUnits() + body.get(at + 3).getCodeUnits(),
+                    "the Save hook doesn't go from instruction " + (at + 2) + " to where Copy link's row call goes, past the original call");
+            return 3;
+        };
+        featureBody(sites.menu(), featureMethod(patched, featureSig(sites.menu())), 0, Map.of(), ADD_SAVE_ROW, null, Map.of(sites.rowAt(), hook));
+        featureHostCalls(patched, ADD_SAVE_ROW, Map.of(featureSig(sites.menu()), 1));
+        featureSaveShowRow(featureMethod(patched, SAVE_SHOW_ROW), sites);
+        String menuType = sites.menu().getDefiningClass();
+        featureSaveReader(featureMethod(patched, SAVE_MEDIA_OF), menuType, sites.media(), "the menu's post");
+        featureSaveReader(featureMethod(patched, SAVE_ACTIVITY_OF), menuType, sites.activity(), "the menu's activity");
+        featureSaveDismiss(featureMethod(patched, SAVE_DISMISS), sites);
+        List<ClassDef> clicks = featureClassIndex(patchedApk).getOrDefault(SAVE_CLICK, List.of());
+        ClassDef click = featureOne(clicks, SAVE_CLICK);
+        requireFeature(click.getInterfaces().equals(List.of(FUNCTION0)),
+                SAVE_CLICK + " implements " + click.getInterfaces() + ", not " + FUNCTION0 + ", so Threads' row can't take it");
+        Method invoke = featureMethod(patched, SAVE_CLICK + "->invoke()Ljava/lang/Object;");
+        requireFeature(AccessFlags.PUBLIC.isSet(invoke.getAccessFlags()) && !AccessFlags.STATIC.isSet(invoke.getAccessFlags()),
+                SAVE_CLICK + "'s invoke() isn't a public instance method");
+        for (SaveBridge bridge : bridges) featureSaveBridge(patched, bridge);
+        System.out.println("[diff] threads-feature saveMedia: Copy link's row at " + sites.rowAt() + " of " + featureSig(sites.menu())
+                + ", closed by " + featureSig(sites.dismiss()));
+    }
+
+    /** Every class in [apk] by type, keeping duplicates so a lookup can refuse them. */
+    private static Map<String, List<ClassDef>> featureClassIndex(File apk) throws Exception {
+        Map<String, List<ClassDef>> classes = new HashMap<>();
+        MultiDexContainer<? extends DexFile> dex = DexFileFactory.loadDexContainer(apk, Opcodes.getDefault());
+        for (String entry : dex.getDexEntryNames()) for (ClassDef cd : dex.getEntry(entry).getDexFile().getClasses())
+            classes.computeIfAbsent(cd.getType(), k -> new ArrayList<>()).add(cd);
+        return classes;
+    }
+
+    private static ClassDef featureSaveClass(Map<String, List<ClassDef>> classes, String type) {
+        List<ClassDef> found = classes.getOrDefault(type, List.of());
+        requireFeature(found.size() == 1, "expected one definition of " + type + ", found " + found.size());
+        return found.get(0);
+    }
+
+    private static MethodReference callee(Instruction i) {
+        return (MethodReference) ((ReferenceInstruction) i).getReference();
+    }
+
+    private static List<String> featureParams(MethodReference m) {
+        List<String> params = new ArrayList<>();
+        for (CharSequence type : m.getParameterTypes()) params.add(type.toString());
+        return params;
+    }
+
+    /** The index of the instruction at [address] in [layout], refusing an address between two. */
+    private static int featureSaveIndex(Layout layout, int address) {
+        int index = layout.addresses.indexOf(address);
+        requireFeature(index >= 0, "a branch lands between instructions");
+        return index;
+    }
+
+    /** The post menu's Copy link item: the one class whose toString() says "CopyLinkAction". */
+    private static String featureSaveCopyLink(Map<String, List<Method>> clean) {
+        Set<String> owners = new TreeSet<>();
+        for (List<Method> definitions : clean.values()) for (Method m : definitions) {
+            if (m.getName().equals("toString") && m.getParameterTypes().isEmpty() && m.getReturnType().equals("Ljava/lang/String;")
+                    && holds(m, COPY_LINK)) owners.add(m.getDefiningClass());
+        }
+        return featureOne(new ArrayList<>(owners), "the post menu's Copy link item, the class whose toString says \"" + COPY_LINK + "\",");
+    }
+
+    /** The indices of [m]'s instance-of checks for [type]. */
+    private static List<Integer> featureSaveChecks(Method m, String type) {
+        List<Integer> checks = new ArrayList<>();
+        List<Instruction> body = instructions(m);
+        for (int n = 0; n < body.size(); n++) if (body.get(n).getOpcode() == Opcode.INSTANCE_OF && reference(body.get(n)).equals(type)) checks.add(n);
+        return checks;
+    }
+
+    /**
+     * Where the Save row goes, read the way the Save patch reads it and never by obfuscated name.
+     * The menu is the one lambda holding the menu's note that checks for the Copy link item, which
+     * it does once, skipping a case nothing outside branches into. That case makes one row call
+     * taking (composer, modifier, style, icon, String), which Copy link's own path falls into. Its
+     * composer is the lambda's composer parameter, cast; its modifier a click call on a static base,
+     * a role built from a literal, a new click and literals, perhaps under up to three more
+     * modifiers; its style built from the composer alone; and its icon from the composer, one of
+     * Threads' drawables and literals. The click is a merged lambda over one object, whose case for
+     * Copy link casts that object to the controller and closes the menu with one no-argument call
+     * before a goto. The menu has one field each for the post, the activity and the controller, and
+     * everything showRow and the readers use is public.
+     */
+    private static SaveMediaSites featureSaveMediaSites(Map<String, List<Method>> clean, Map<String, List<ClassDef>> classes) {
+        String copyLink = featureSaveCopyLink(clean);
+        Map<String, Method> menus = new TreeMap<>();
+        for (List<Method> definitions : clean.values()) for (Method m : definitions) {
+            if (m.getImplementation() != null && holdsNote(m, MENU_NOTE) && !featureSaveChecks(m, copyLink).isEmpty()) menus.putIfAbsent(featureSig(m), m);
+        }
+        Method menu = featureOne(new ArrayList<>(menus.values()), "the post menu, the lambda holding \"" + MENU_NOTE + "\" that checks for Copy link,");
+        FeatureFlow flow = new FeatureFlow(menu);
+        List<Instruction> body = flow.layout.instructions;
+
+        List<Integer> checks = featureSaveChecks(menu, copyLink);
+        requireFeature(checks.size() == 1, "the post menu checks for Copy link " + checks.size() + " times, not once");
+        int checkAt = checks.get(0);
+        requireFeature(checkAt + 1 < body.size() && body.get(checkAt + 1).getOpcode() == Opcode.IF_EQZ
+                && registerA(body.get(checkAt + 1)) == registerA(body.get(checkAt)),
+                "the post menu doesn't skip its Copy link case when the item isn't Copy link");
+        int skipAt = featureSaveIndex(flow.layout, flow.layout.addresses.get(checkAt + 1) + ((OffsetInstruction) body.get(checkAt + 1)).getCodeOffset());
+        requireFeature(skipAt > checkAt + 2, "the post menu's Copy link case is empty");
+
+        List<Integer> rows = new ArrayList<>();
+        for (int at = checkAt + 2; at < skipAt; at++) {
+            if (!isStaticInvoke(body.get(at).getOpcode())) continue;
+            MethodReference call = callee(body.get(at));
+            if (call.getReturnType().equals("V") && call.getParameterTypes().size() == 5
+                    && call.getParameterTypes().get(4).toString().equals("Ljava/lang/String;")) rows.add(at);
+        }
+        requireFeature(rows.size() == 1, "the post menu's Copy link case makes " + rows.size() + " row calls, not one");
+        int rowAt = rows.get(0);
+        MethodReference row = callee(body.get(rowAt));
+        List<String> rowParams = featureParams(row);
+        String composerType = rowParams.get(0);
+        int[] rowArgs = invokeRegisters(body.get(rowAt));
+
+        // The copy goes in just before the call, where only Copy link's own path runs: that path
+        // falls into the call from the instruction before it, and nothing outside the case branches
+        // or throws into the case. Other items may still branch to the call itself.
+        boolean entered = rowAt - 1 < checkAt + 2 || rowAt + 1 >= body.size() || !flow.normal.get(rowAt - 1).contains(rowAt);
+        for (int from = 0; from < body.size() && !entered; from++) {
+            boolean outside = from < checkAt + 1 || from >= rowAt;
+            for (int to : flow.normal.get(from)) if (outside && to >= checkAt + 2 && to < rowAt) entered = true;
+            for (int to : flow.guarded.get(from)) if (to >= checkAt + 2 && to < rowAt) entered = true;
+        }
+        requireFeature(!entered, "the post menu branches into its Copy link case");
+
+        // The hook passes the lambda and its composer parameter, so neither may change, and the row's
+        // composer has to be that parameter, cast.
+        requireFeature(!AccessFlags.STATIC.isSet(menu.getAccessFlags()) && !menu.getParameterTypes().isEmpty()
+                && kindOf(menu.getParameterTypes().get(0)) == 'L', "the post menu isn't a lambda taking its composer first");
+        int self = featureThis(menu);
+        for (Instruction i : body) requireFeature(!featureWrites(i, self) && !featureWrites(i, self + 1), "the post menu overwrites its own parameters");
+        int composer = rowArgs[0];
+        requireFeature(featureSaveComposer(flow, self, composerType, composer, featureSaveOnPath(flow, rowAt, composer), new HashSet<>()),
+                "the post menu's Copy link row isn't passed the menu's composer parameter");
+
+        // The modifier: Copy link's click call, perhaps under more modifiers of the same type.
+        int clickAt = featureSaveProducer(body, featureSaveOnPath(flow, rowAt, rowArgs[1]), "Copy link's modifier");
+        int hops = 0;
+        while (!featureSaveIsClick(callee(body.get(clickAt)), rowParams.get(1))) {
+            MethodReference hop = callee(body.get(clickAt));
+            List<String> params = featureParams(hop);
+            requireFeature(++hops <= 3 && !params.isEmpty() && params.get(0).equals(rowParams.get(1)) && hop.getReturnType().equals(rowParams.get(1)),
+                    "Copy link's modifier isn't built by a click call: " + featureSig(hop));
+            clickAt = featureSaveProducer(body, flow.reaching(clickAt, invokeRegisters(body.get(clickAt))[0]), "Copy link's modifier");
+        }
+        MethodReference clickModifier = callee(body.get(clickAt));
+        int[] clickArgs = invokeRegisters(body.get(clickAt));
+        Set<Integer> baseWrites = flow.reaching(clickAt, clickArgs[0]);
+        requireFeature(baseWrites.size() == 1 && !baseWrites.contains(-1) && body.get(baseWrites.iterator().next()).getOpcode() == Opcode.SGET_OBJECT,
+                "Copy link's modifier isn't built on a static base modifier");
+        FieldReference base = (FieldReference) ((ReferenceInstruction) body.get(baseWrites.iterator().next())).getReference();
+        int roleAt = featureSaveProducer(body, flow.reaching(clickAt, clickArgs[1]), "Copy link's role");
+        MethodReference role = callee(body.get(roleAt));
+        requireFeature(featureParams(role).equals(List.of("I")) && role.getReturnType().equals(clickModifier.getParameterTypes().get(1).toString()),
+                "Copy link's role isn't built from an int: " + featureSig(role));
+        int roleArgument = featureSaveLiteral(flow, roleAt, invokeRegisters(body.get(roleAt))[0], "role");
+        if (clickArgs.length == 5) requireFeature(featureSaveLiteral(flow, clickAt, clickArgs[3], "click label") == 0, "Copy link's click has a label");
+        int enabled = featureSaveLiteral(flow, clickAt, clickArgs[clickArgs.length - 1], "enabled flag");
+
+        int styleAt = featureSaveProducer(body, featureSaveOnPath(flow, rowAt, rowArgs[2]), "Copy link's style");
+        MethodReference style = callee(body.get(styleAt));
+        requireFeature(featureParams(style).equals(List.of(composerType)) && style.getReturnType().equals(rowParams.get(2)),
+                "Copy link's style isn't built from the composer alone: " + featureSig(style));
+        requireFeature(invokeRegisters(body.get(styleAt))[0] == composer, "Copy link's style isn't built from the row's composer");
+        int iconAt = featureSaveProducer(body, featureSaveOnPath(flow, rowAt, rowArgs[3]), "Copy link's icon");
+        MethodReference icon = callee(body.get(iconAt));
+        List<String> iconParams = featureParams(icon);
+        requireFeature(iconParams.size() >= 2 && iconParams.get(0).equals(composerType) && iconParams.get(1).equals("I")
+                && iconParams.subList(2, iconParams.size()).stream().allMatch(p -> p.equals("I") || p.equals("Z")),
+                "Copy link's icon isn't built from the composer, a drawable and literals: " + featureSig(icon));
+        int[] iconArgs = invokeRegisters(body.get(iconAt));
+        requireFeature(iconArgs[0] == composer, "Copy link's icon isn't built from the row's composer");
+        requireFeature(featureSaveLiteral(flow, iconAt, iconArgs[1], "icon") >>> 24 == 0x7f, "Copy link's icon isn't one of Threads' resources");
+        List<Integer> iconArguments = new ArrayList<>();
+        for (int n = 2; n < iconArgs.length; n++) iconArguments.add(featureSaveLiteral(flow, iconAt, iconArgs[n], "icon flag"));
+
+        // Copy link's click, which names the controller and how the menu closes.
+        List<Integer> news = new ArrayList<>();
+        for (int write : flow.reaching(clickAt, clickArgs[2])) if (write >= 0 && body.get(write).getOpcode() == Opcode.NEW_INSTANCE) news.add(write);
+        requireFeature(news.size() == 1, "Copy link's click isn't one new object");
+        int newAt = news.get(0);
+        String click = reference(body.get(newAt));
+        int constructAt = -1;
+        for (int at = newAt + 1; at < skipAt && constructAt < 0; at++) {
+            Opcode op = body.get(at).getOpcode();
+            if ((op == Opcode.INVOKE_DIRECT || op == Opcode.INVOKE_DIRECT_RANGE) && callee(body.get(at)).getDefiningClass().equals(click)
+                    && callee(body.get(at)).getName().equals("<init>")) constructAt = at;
+        }
+        requireFeature(constructAt >= 0, "Copy link's click is never constructed");
+        MethodReference constructor = callee(body.get(constructAt));
+        List<String> constructorParams = featureParams(constructor);
+        List<ClassDef> clickClasses = classes.getOrDefault(click, List.of());
+        requireFeature(!clickClasses.isEmpty(), "Threads carries no " + click);
+        List<Field> intFields = new ArrayList<>(), objectFields = new ArrayList<>();
+        for (Field f : clickClasses.get(0).getFields()) if (!AccessFlags.STATIC.isSet(f.getAccessFlags())) {
+            if (f.getType().equals("I")) intFields.add(f);
+            if (f.getType().equals(FEATURE_OBJECT)) objectFields.add(f);
+        }
+        // 451 captures the two strings passed to Copy link before the case id and controller. The
+        // controller remains its only Object field, whose cast and closing call are checked below.
+        boolean controllerCapture = !constructorParams.isEmpty() && constructorParams.get(0).equals(FEATURE_OBJECT)
+                || constructorParams.equals(List.of("Ljava/lang/String;", "Ljava/lang/String;", "I", FEATURE_OBJECT));
+        requireFeature(constructorParams.stream().filter("I"::equals).count() == 1 && intFields.size() == 1 && objectFields.size() == 1 && controllerCapture,
+                "Copy link's click isn't a merged lambda over one object: " + featureSig(constructor));
+        int which = featureSaveLiteral(flow, constructAt, invokeRegisters(body.get(constructAt))[1 + constructorParams.indexOf("I")], "click case");
+        MethodReference dismiss = featureSaveClickCase(clickClasses.get(0), intFields.get(0).getName(), objectFields.get(0).getName(), which);
+        String controller = dismiss.getDefiningClass();
+
+        ClassDef menuClass = featureSaveClass(classes, menu.getDefiningClass());
+        SaveMediaSites sites = new SaveMediaSites(menu, rowAt, self, composerType, row, base, role, roleArgument, clickModifier, enabled,
+                style, icon, iconArguments, featureSaveField(menuClass, MEDIA, "post"), featureSaveField(menuClass, ANDROID_ACTIVITY, "activity"),
+                featureSaveField(menuClass, controller, "controller"), dismiss);
+        for (MethodReference m : List.of(row, role, clickModifier, style, icon, dismiss)) featureSavePublic(classes, m);
+        for (FieldReference f : List.of(base, sites.media(), sites.activity(), sites.controller())) featureSavePublic(classes, f);
+        return sites;
+    }
+
+    /** What [register] holds as the row call runs on Copy link's own path, which comes from the instruction before it. */
+    private static Set<Integer> featureSaveOnPath(FeatureFlow flow, int rowAt, int register) {
+        return featureWrites(flow.layout.instructions.get(rowAt - 1), register) ? Set.of(rowAt - 1) : flow.reaching(rowAt - 1, register);
+    }
+
+    /**
+     * Whether every write in [reaching] hands [register] the menu's composer parameter, the register
+     * above [self], through object copies and casts to [composerType]. Writes that never reach the
+     * row don't count, since 450 reuses the register once the menu is drawn.
+     */
+    private static boolean featureSaveComposer(FeatureFlow flow, int self, String composerType, int register, Set<Integer> reaching, Set<Integer> followed) {
+        if (register == self + 1) return true;
+        if (reaching.isEmpty() || reaching.contains(-1)) return false;
+        for (int write : reaching) {
+            if (!followed.add(write)) continue;
+            Instruction i = flow.layout.instructions.get(write);
+            boolean passed;
+            if (SAVE_OBJECT_MOVES.contains(i.getOpcode())) {
+                int from = ((TwoRegisterInstruction) i).getRegisterB();
+                passed = featureSaveComposer(flow, self, composerType, from, flow.reaching(write, from), followed);
+            } else if (i.getOpcode() == Opcode.CHECK_CAST && reference(i).equals(composerType)) {
+                passed = featureSaveComposer(flow, self, composerType, register, flow.reaching(write, register), followed);
+            } else passed = false;
+            if (!passed) return false;
+        }
+        return true;
+    }
+
+    /** The static call whose answer is the one write in [reaching], by index. */
+    private static int featureSaveProducer(List<Instruction> body, Set<Integer> reaching, String what) {
+        int write = reaching.size() == 1 ? reaching.iterator().next() : -1;
+        requireFeature(write > 0 && body.get(write).getOpcode() == Opcode.MOVE_RESULT_OBJECT && isStaticInvoke(body.get(write - 1).getOpcode()),
+                what + " isn't the answer of one static call");
+        return write - 1;
+    }
+
+    /** The one literal [register] holds at [at] on every path there. */
+    private static int featureSaveLiteral(FeatureFlow flow, int at, int register, String what) {
+        Set<Integer> reaching = flow.reaching(at, register);
+        Set<Integer> values = new HashSet<>();
+        boolean other = reaching.isEmpty() || reaching.contains(-1);
+        for (int write : reaching) {
+            if (write < 0) continue;
+            Integer value = featureSaveConstant(flow.layout.instructions.get(write));
+            if (value == null) other = true; else values.add(value);
+        }
+        requireFeature(!other && values.size() == 1, "Copy link's " + what + " isn't one literal");
+        return values.iterator().next();
+    }
+
+    /** The narrow literal a const of one register loads, or null for anything else. */
+    private static Integer featureSaveConstant(Instruction i) {
+        switch (i.getOpcode()) {
+            case CONST_4: case CONST_16: case CONST: case CONST_HIGH16: return ((NarrowLiteralInstruction) i).getNarrowLiteral();
+            default: return null;
+        }
+    }
+
+    /** Whether [m] is a click call on [modifier]: (modifier, role, Object, [String,] boolean), answering the modifier. */
+    private static boolean featureSaveIsClick(MethodReference m, String modifier) {
+        List<String> params = featureParams(m);
+        return m.getReturnType().equals(modifier) && params.size() >= 4 && params.size() <= 5 && params.get(0).equals(modifier)
+                && params.get(2).equals(FEATURE_OBJECT) && params.get(params.size() - 1).equals("Z")
+                && (params.size() == 4 || params.get(3).equals("Ljava/lang/String;"));
+    }
+
+    /**
+     * The call Copy link's click closes the menu with: in [click]'s invoke(), the case [which] that
+     * the int field [intField] picks, by comparison with literals or a switch, casts the Object field
+     * [objectField] to the controller and makes one no-argument call on it right before a goto.
+     */
+    private static MethodReference featureSaveClickCase(ClassDef click, String intField, String objectField, int which) {
+        List<Method> invokes = new ArrayList<>();
+        for (Method m : click.getMethods()) if (m.getName().equals("invoke") && m.getParameterTypes().isEmpty()
+                && m.getReturnType().equals(FEATURE_OBJECT) && m.getImplementation() != null) invokes.add(m);
+        requireFeature(invokes.size() == 1, "Copy link's click " + click.getType() + " has no invoke()");
+        Layout layout = new Layout(invokes.get(0).getImplementation());
+        List<Instruction> code = layout.instructions;
+        int readAt = -1;
+        for (int n = 0; n < code.size() && readAt < 0; n++) if (code.get(n).getOpcode() == Opcode.IGET
+                && ((FieldReference) ((ReferenceInstruction) code.get(n)).getReference()).getDefiningClass().equals(click.getType())
+                && ((FieldReference) ((ReferenceInstruction) code.get(n)).getReference()).getName().equals(intField)) readAt = n;
+        requireFeature(readAt >= 0, "Copy link's click never reads its case");
+        int selector = registerA(code.get(readAt));
+        Map<Integer, Integer> literals = new HashMap<>(), cases = new LinkedHashMap<>();
+        dispatch:
+        for (int at = readAt + 1; at < code.size(); at++) {
+            Instruction i = code.get(at);
+            Opcode op = i.getOpcode();
+            if (op == Opcode.IF_EQZ && registerA(i) == selector) {
+                cases.putIfAbsent(0, featureSaveIndex(layout, layout.addresses.get(at) + ((OffsetInstruction) i).getCodeOffset()));
+            } else if (op == Opcode.IF_EQ && (registerA(i) == selector || ((TwoRegisterInstruction) i).getRegisterB() == selector)) {
+                Integer value = literals.get(registerA(i) == selector ? ((TwoRegisterInstruction) i).getRegisterB() : registerA(i));
+                if (value == null) break;
+                cases.putIfAbsent(value, featureSaveIndex(layout, layout.addresses.get(at) + ((OffsetInstruction) i).getCodeOffset()));
+            } else if ((op == Opcode.PACKED_SWITCH || op == Opcode.SPARSE_SWITCH) && registerA(i) == selector) {
+                Instruction payload = code.get(featureSaveIndex(layout, layout.addresses.get(at) + ((OffsetInstruction) i).getCodeOffset()));
+                for (SwitchElement e : ((SwitchPayload) payload).getSwitchElements())
+                    cases.putIfAbsent(e.getKey(), featureSaveIndex(layout, layout.addresses.get(at) + e.getOffset()));
+                break;
+            } else if (i instanceof OffsetInstruction || SAVE_EXITS.contains(op) || featureWrites(i, selector)) {
+                break;
+            } else if (op.setsRegister()) {
+                if (!(i instanceof OneRegisterInstruction)) break dispatch;
+                literals.remove(registerA(i));
+                Integer value = featureSaveConstant(i);
+                if (value != null) literals.put(registerA(i), value);
+            }
+        }
+        Integer start = cases.get(which);
+        requireFeature(start != null, "Copy link's click has no case " + which);
+        int end = code.size();
+        for (int other : cases.values()) if (other > start && other < end) end = other;
+        int loadAt = -1;
+        for (int n = start; n < end && loadAt < 0; n++) if (code.get(n).getOpcode() == Opcode.IGET_OBJECT
+                && ((FieldReference) ((ReferenceInstruction) code.get(n)).getReference()).getDefiningClass().equals(click.getType())
+                && ((FieldReference) ((ReferenceInstruction) code.get(n)).getReference()).getName().equals(objectField)) loadAt = n;
+        requireFeature(loadAt >= 0 && loadAt + 1 < code.size() && code.get(loadAt + 1).getOpcode() == Opcode.CHECK_CAST
+                && registerA(code.get(loadAt + 1)) == registerA(code.get(loadAt)), "Copy link's click doesn't cast its object to a controller");
+        String controller = reference(code.get(loadAt + 1));
+        Map<String, MethodReference> dismisses = new LinkedHashMap<>();
+        for (int n = start; n < end; n++) {
+            Opcode op = code.get(n).getOpcode();
+            if (op != Opcode.INVOKE_VIRTUAL && op != Opcode.INVOKE_VIRTUAL_RANGE || n + 1 >= code.size()) continue;
+            Opcode next = code.get(n + 1).getOpcode();
+            MethodReference call = callee(code.get(n));
+            if (call.getDefiningClass().equals(controller) && call.getParameterTypes().isEmpty() && call.getReturnType().equals("V")
+                    && (next == Opcode.GOTO || next == Opcode.GOTO_16 || next == Opcode.GOTO_32)) dismisses.putIfAbsent(featureSig(call), call);
+        }
+        return featureOne(new ArrayList<>(dismisses.values()),
+                "the call Copy link's click closes the menu with, a no-argument call on " + controller + " before a goto,");
+    }
+
+    /** The menu's one instance field of [type]. */
+    private static FieldReference featureSaveField(ClassDef menu, String type, String what) {
+        List<Field> fields = new ArrayList<>();
+        for (Field f : menu.getFields()) if (!AccessFlags.STATIC.isSet(f.getAccessFlags()) && f.getType().equals(type)) fields.add(f);
+        return featureOne(fields, "the post menu's " + what + ", its field of type " + type + ",");
+    }
+
+    /** Refuses unless [method] is declared public on a public class, since the extension calls it from outside. */
+    private static void featureSavePublic(Map<String, List<ClassDef>> classes, MethodReference method) {
+        List<ClassDef> owners = classes.getOrDefault(method.getDefiningClass(), List.of());
+        List<Method> declared = new ArrayList<>();
+        if (!owners.isEmpty()) for (Method m : owners.get(0).getMethods()) if (featureSig(m).equals(featureSig(method))) declared.add(m);
+        requireFeature(declared.size() == 1 && AccessFlags.PUBLIC.isSet(owners.get(0).getAccessFlags()) && AccessFlags.PUBLIC.isSet(declared.get(0).getAccessFlags()),
+                featureSig(method) + " isn't public");
+    }
+
+    /** The same for [field]. */
+    private static void featureSavePublic(Map<String, List<ClassDef>> classes, FieldReference field) {
+        List<ClassDef> owners = classes.getOrDefault(field.getDefiningClass(), List.of());
+        List<Field> declared = new ArrayList<>();
+        if (!owners.isEmpty()) for (Field f : owners.get(0).getFields()) if (f.toString().equals(field.toString())) declared.add(f);
+        requireFeature(declared.size() == 1 && AccessFlags.PUBLIC.isSet(owners.get(0).getAccessFlags()) && AccessFlags.PUBLIC.isSet(declared.get(0).getAccessFlags()),
+                field + " isn't public");
+    }
+
+    /**
+     * The getter on [type] for the model field [field]: the one instance method taking nothing and
+     * answering [returns] that loads the Java hash of the field's name, which the models read the
+     * server's tree by however the release shortened the getter's own name.
+     */
+    private static Method featurePandoGetter(Map<String, List<ClassDef>> classes, String type, String field, String returns) {
+        int key = field.hashCode();
+        List<Method> getters = new ArrayList<>();
+        for (Method m : featureSaveClass(classes, type).getMethods()) {
+            if (!m.getParameterTypes().isEmpty() || !m.getReturnType().equals(returns) || AccessFlags.STATIC.isSet(m.getAccessFlags())) continue;
+            if (instructions(m).stream().anyMatch(i -> java.util.Objects.equals(featureSaveConstant(i), key))) getters.add(m);
+        }
+        requireFeature(getters.size() == 1, "expected one getter on " + type + " answering " + returns + " for " + field + ", found "
+                + (getters.isEmpty() ? "none" : String.join(", ", getters.stream().map(Method::getName).toList())));
+        return getters.get(0);
+    }
+
+    /** [type], which the bridges call through invoke-interface, so it has to be an interface. */
+    private static ClassDef featureSaveInterface(Map<String, List<ClassDef>> classes, String type) {
+        ClassDef found = featureSaveClass(classes, type);
+        requireFeature(AccessFlags.INTERFACE.isSet(found.getAccessFlags()), type + " is no longer an interface");
+        return found;
+    }
+
+    /** The getter for [field] through the interface [type], by the name [pando], the tree-backed class implementing it, gives it. */
+    private static String featureSaveThrough(Map<String, List<ClassDef>> classes, String type, String pando, String field, String returns) {
+        Method getter = featurePandoGetter(classes, pando, field, returns);
+        requireFeature(featureDeclares(featureSaveInterface(classes, type), getter.getName(), returns),
+                type + " doesn't declare " + getter.getName() + ", the getter for " + field);
+        return type + "->" + getter.getName() + "()" + returns;
+    }
+
+    /** Whether [owner] declares [name], taking nothing and answering [returns]. */
+    private static boolean featureDeclares(ClassDef owner, String name, String returns) {
+        for (Method m : owner.getMethods()) if (m.getName().equals(name) && m.getParameterTypes().isEmpty() && m.getReturnType().equals(returns)) return true;
+        return false;
+    }
+
+    /** What each InstagramMedia bridge calls, found as the Save patch finds it: by Pando hash, or by kept name on Media and ImageUrl. */
+    private static List<SaveBridge> featureSaveBridges(Map<String, List<ClassDef>> classes) {
+        java.util.function.BiFunction<String, String, String> media = (field, returns) -> featureSig(featurePandoGetter(classes, MEDIA, field, returns));
+        List<Method> ids = new ArrayList<>();
+        for (Method m : featureSaveClass(classes, MEDIA).getMethods()) if (m.getName().equals("getId") && m.getParameterTypes().isEmpty()
+                && m.getReturnType().equals("Ljava/lang/String;")) ids.add(m);
+        requireFeature(ids.size() == 1, MEDIA + " has no getId()");
+        java.util.function.BiFunction<String, String, String> kept = (name, returns) -> {
+            requireFeature(featureDeclares(featureSaveInterface(classes, IMAGE_URL), name, returns), IMAGE_URL + " has no " + name + "()" + returns);
+            return IMAGE_URL + "->" + name + "()" + returns;
+        };
+        return List.of(
+                new SaveBridge("videoVersions", MEDIA, Opcode.INVOKE_VIRTUAL, media.apply("video_versions", "Ljava/util/List;")),
+                new SaveBridge("dashManifest", MEDIA, Opcode.INVOKE_VIRTUAL, media.apply("video_dash_manifest", "Ljava/lang/String;")),
+                new SaveBridge("mediaId", MEDIA, Opcode.INVOKE_VIRTUAL, featureSig(ids.get(0))),
+                new SaveBridge("owner", MEDIA, Opcode.INVOKE_VIRTUAL, media.apply("user", USER)),
+                new SaveBridge("takenAt", MEDIA, Opcode.INVOKE_VIRTUAL, media.apply("taken_at", "Ljava/lang/Long;")),
+                new SaveBridge("carouselMedia", MEDIA, Opcode.INVOKE_VIRTUAL, media.apply("carousel_media", "Ljava/util/List;")),
+                new SaveBridge("username", USER, Opcode.INVOKE_VIRTUAL, featureSig(featurePandoGetter(classes, USER, "username", "Ljava/lang/String;"))),
+                new SaveBridge("versionUrl", VIDEO_VERSION, Opcode.INVOKE_INTERFACE, featureSaveThrough(classes, VIDEO_VERSION, PANDO_VIDEO_VERSION, "url", "Ljava/lang/String;")),
+                new SaveBridge("versionWidth", VIDEO_VERSION, Opcode.INVOKE_INTERFACE, featureSaveThrough(classes, VIDEO_VERSION, PANDO_VIDEO_VERSION, "width", "Ljava/lang/Integer;")),
+                new SaveBridge("versionHeight", VIDEO_VERSION, Opcode.INVOKE_INTERFACE, featureSaveThrough(classes, VIDEO_VERSION, PANDO_VIDEO_VERSION, "height", "Ljava/lang/Integer;")),
+                new SaveBridge("imageVersions", MEDIA, Opcode.INVOKE_VIRTUAL, media.apply("image_versions2", IMAGE_INFO)),
+                new SaveBridge("imageCandidates", IMAGE_INFO, Opcode.INVOKE_INTERFACE, featureSaveThrough(classes, IMAGE_INFO, PANDO_IMAGE_INFO, "candidates", "Ljava/util/List;")),
+                new SaveBridge("candidateUrl", IMAGE_URL, Opcode.INVOKE_INTERFACE, kept.apply("getUrl", "Ljava/lang/String;")),
+                new SaveBridge("candidateWidth", IMAGE_URL, Opcode.INVOKE_INTERFACE, kept.apply("getWidth", "I")),
+                new SaveBridge("candidateHeight", IMAGE_URL, Opcode.INVOKE_INTERFACE, kept.apply("getHeight", "I")));
+    }
+
+    /** The extension's stub for the bridge [name], whatever it answers. */
+    private static List<String> featureSaveBridgeStubs(Map<String, List<Method>> patched, String name) {
+        String prefix = INSTAGRAM_MEDIA + "->" + name + "(Ljava/lang/Object;)";
+        return patched.keySet().stream().filter(s -> s.startsWith(prefix)).sorted().toList();
+    }
+
+    /**
+     * One bridge as the Save patch writes it, in front of the stub's own return: the argument cast
+     * to the model, the getter called on it, and its answer returned, an int's as an int.
+     */
+    private static void featureSaveBridge(Map<String, List<Method>> patched, SaveBridge bridge) {
+        String signature = featureOne(featureSaveBridgeStubs(patched, bridge.name()), INSTAGRAM_MEDIA + "->" + bridge.name() + "(Object)");
+        Method stub = featureMethod(patched, signature);
+        List<Instruction> body = instructions(stub);
+        requireFeature(AccessFlags.STATIC.isSet(stub.getAccessFlags()) && stub.getImplementation() != null
+                && stub.getImplementation().getTryBlocks().isEmpty() && body.size() >= 4, signature + " isn't a static bridge with an unprotected body");
+        int p = stub.getImplementation().getRegisterCount() - 1;
+        boolean primitive = bridge.getter().endsWith(")I");
+        requireFeature(body.get(0).getOpcode() == Opcode.CHECK_CAST && registerA(body.get(0)) == p && reference(body.get(0)).equals(bridge.receiver()),
+                signature + " casts its argument to " + reference(body.get(0)) + ", not " + bridge.receiver());
+        Instruction call = body.get(1);
+        requireFeature(call.getOpcode() == bridge.call() && Arrays.equals(invokeRegisters(call), new int[]{p}) && reference(call).equals(bridge.getter()),
+                signature + " calls " + call.getOpcode().name + " " + reference(call) + ", not " + bridge.call().name + " " + bridge.getter());
+        requireFeature(body.get(2).getOpcode() == (primitive ? Opcode.MOVE_RESULT : Opcode.MOVE_RESULT_OBJECT) && registerA(body.get(2)) == p
+                && body.get(3).getOpcode() == (primitive ? Opcode.RETURN : Opcode.RETURN_OBJECT) && registerA(body.get(3)) == p,
+                signature + " doesn't return what " + bridge.getter() + " answers");
+    }
+
+    /**
+     * showRow as the Save patch writes it: straight-line copies, casts, the base modifier's static
+     * read and literals into the role, click, style and icon calls Copy link's row is built with,
+     * then Threads' row, then return-void. Each of the row's arguments is read back to what it holds:
+     * the composer cast to the row's composer type, the click modifier on the base, Copy link's role
+     * and the extension's click, the style and the icon built from that composer, the icon with the
+     * extension's drawable and Copy link's literals, and the extension's label.
+     */
+    private static void featureSaveShowRow(Method stub, SaveMediaSites sites) {
+        requireFeature(AccessFlags.STATIC.isSet(stub.getAccessFlags()) && stub.getImplementation() != null
+                && stub.getImplementation().getTryBlocks().isEmpty(), SAVE_SHOW_ROW + " isn't a static method with an unprotected body");
+        List<Instruction> body = instructions(stub);
+        // The arguments sit at the top of the frame: the composer, the click, the label and the icon.
+        int first = stub.getImplementation().getRegisterCount() - 4;
+        Map<Integer, String> held = new HashMap<>();
+        for (int p = 0; p < 4; p++) held.put(first + p, "p" + p);
+        List<String> labels = List.of("role", "click", "style", "icon", "row");
+        List<String> calls = new ArrayList<>();
+        List<List<String>> passed = new ArrayList<>();
+        for (int k = 0; k < body.size(); k++) {
+            Instruction i = body.get(k);
+            switch (i.getOpcode()) {
+                case MOVE: case MOVE_FROM16: case MOVE_16: case MOVE_OBJECT: case MOVE_OBJECT_FROM16: case MOVE_OBJECT_16:
+                    held.put(registerA(i), held.get(((TwoRegisterInstruction) i).getRegisterB()));
+                    break;
+                case CHECK_CAST:
+                    held.put(registerA(i), held.get(registerA(i)) + " as " + reference(i));
+                    break;
+                case SGET_OBJECT:
+                    held.put(registerA(i), reference(i));
+                    break;
+                case CONST_4: case CONST_16: case CONST: case CONST_HIGH16:
+                    held.put(registerA(i), String.valueOf(featureSaveConstant(i)));
+                    break;
+                case INVOKE_STATIC: case INVOKE_STATIC_RANGE:
+                    List<String> arguments = new ArrayList<>();
+                    for (int register : invokeRegisters(i)) arguments.add(held.get(register));
+                    calls.add(reference(i));
+                    passed.add(arguments);
+                    break;
+                case MOVE_RESULT_OBJECT:
+                    requireFeature(k > 0 && isStaticInvoke(body.get(k - 1).getOpcode()), SAVE_SHOW_ROW + " takes an answer at instruction " + k + " that no call gave");
+                    int call = calls.size() - 1;
+                    held.put(registerA(i), (call < labels.size() ? labels.get(call) : calls.get(call)) + "(" + String.join(", ", passed.get(call)) + ")");
+                    break;
+                case RETURN_VOID:
+                    requireFeature(k == body.size() - 1, SAVE_SHOW_ROW + " returns before its last instruction");
+                    break;
+                default:
+                    throw new IllegalArgumentException(SAVE_SHOW_ROW + " runs " + i.getOpcode().name + ", which the Save patch doesn't write");
+            }
+        }
+        requireFeature(!body.isEmpty() && body.get(body.size() - 1).getOpcode() == Opcode.RETURN_VOID, SAVE_SHOW_ROW + " doesn't end in return-void");
+        List<String> expectedCalls = List.of(featureSig(sites.role()), featureSig(sites.clickModifier()), featureSig(sites.style()),
+                featureSig(sites.icon()), featureSig(sites.row()));
+        requireFeature(calls.equals(expectedCalls), SAVE_SHOW_ROW + " calls " + calls + ", not " + expectedCalls);
+        String composer = "p0 as " + sites.composerType();
+        List<String> click = new ArrayList<>(List.of(sites.base().toString(), "role(" + sites.roleArgument() + ")", "p1"));
+        if (sites.clickModifier().getParameterTypes().size() == 5) click.add("0");
+        click.add(String.valueOf(sites.enabled()));
+        List<String> icon = new ArrayList<>(List.of(composer, "p3"));
+        for (int literal : sites.iconArguments()) icon.add(String.valueOf(literal));
+        List<String> expected = List.of(composer, "click(" + String.join(", ", click) + ")", "style(" + composer + ")",
+                "icon(" + String.join(", ", icon) + ")", "p2");
+        List<String> roles = List.of("composer", "modifier", "style", "icon", "label");
+        List<String> row = passed.get(4);
+        for (int n = 0; n < roles.size(); n++) requireFeature(expected.get(n).equals(row.get(n)),
+                SAVE_SHOW_ROW + " passes Copy link's row " + row.get(n) + " as its " + roles.get(n) + ", not " + expected.get(n));
+    }
+
+    /** media or activity as the Save patch writes it: the argument cast to the post menu, [field] read off it, and returned. */
+    private static void featureSaveReader(Method stub, String menu, FieldReference field, String what) {
+        String signature = featureSig(stub);
+        List<Instruction> body = instructions(stub);
+        requireFeature(AccessFlags.STATIC.isSet(stub.getAccessFlags()) && stub.getImplementation() != null
+                && stub.getImplementation().getTryBlocks().isEmpty() && body.size() == 3, signature + " isn't the Save patch's three-instruction reader");
+        int p = stub.getImplementation().getRegisterCount() - 1;
+        requireFeature(body.get(0).getOpcode() == Opcode.CHECK_CAST && registerA(body.get(0)) == p && reference(body.get(0)).equals(menu),
+                signature + " casts its argument to " + reference(body.get(0)) + ", not the post menu, " + menu);
+        requireFeature(body.get(1).getOpcode() == Opcode.IGET_OBJECT && registerA(body.get(1)) == p && ((TwoRegisterInstruction) body.get(1)).getRegisterB() == p
+                && reference(body.get(1)).equals(field.toString()), signature + " reads " + reference(body.get(1)) + ", not " + what + ", " + field);
+        requireFeature(body.get(2).getOpcode() == Opcode.RETURN_OBJECT && registerA(body.get(2)) == p, signature + " doesn't return the field it reads");
+    }
+
+    /** dismiss as the Save patch writes it: the argument cast to the post menu, its controller read off it, and closed with Copy link's call. */
+    private static void featureSaveDismiss(Method stub, SaveMediaSites sites) {
+        List<Instruction> body = instructions(stub);
+        String menu = sites.menu().getDefiningClass();
+        requireFeature(AccessFlags.STATIC.isSet(stub.getAccessFlags()) && stub.getImplementation() != null
+                && stub.getImplementation().getTryBlocks().isEmpty() && body.size() == 4, SAVE_DISMISS + " isn't the Save patch's four-instruction close");
+        int p = stub.getImplementation().getRegisterCount() - 1;
+        requireFeature(body.get(0).getOpcode() == Opcode.CHECK_CAST && registerA(body.get(0)) == p && reference(body.get(0)).equals(menu),
+                SAVE_DISMISS + " casts its argument to " + reference(body.get(0)) + ", not the post menu, " + menu);
+        requireFeature(body.get(1).getOpcode() == Opcode.IGET_OBJECT && registerA(body.get(1)) == p && ((TwoRegisterInstruction) body.get(1)).getRegisterB() == p
+                && reference(body.get(1)).equals(sites.controller().toString()),
+                SAVE_DISMISS + " reads " + reference(body.get(1)) + ", not the menu's controller, " + sites.controller());
+        requireFeature(body.get(2).getOpcode() == Opcode.INVOKE_VIRTUAL && Arrays.equals(invokeRegisters(body.get(2)), new int[]{p})
+                && reference(body.get(2)).equals(featureSig(sites.dismiss())),
+                SAVE_DISMISS + " calls " + reference(body.get(2)) + ", not Copy link's close, " + featureSig(sites.dismiss()));
+        requireFeature(body.get(3).getOpcode() == Opcode.RETURN_VOID, SAVE_DISMISS + " doesn't return right after closing the menu");
+    }
+
+    /** [signature], when the extension has it, still the empty stub it ships as: return-void, or a zero returned. */
+    private static void featureSaveShipped(Map<String, List<Method>> patched, String signature) {
+        if (!patched.containsKey(signature)) return;
+        Method stub = featureMethod(patched, signature);
+        List<Instruction> body = instructions(stub);
+        boolean shipped = stub.getReturnType().equals("V")
+                ? body.size() == 1 && body.get(0).getOpcode() == Opcode.RETURN_VOID
+                : body.size() == 2 && java.util.Objects.equals(featureSaveConstant(body.get(0)), 0) && body.get(0).getOpcode() == Opcode.CONST_4
+                        && body.get(1).getOpcode() == (kindOf(stub.getReturnType()) == 'L' ? Opcode.RETURN_OBJECT : Opcode.RETURN)
+                        && registerA(body.get(0)) == registerA(body.get(1));
+        requireFeature(shipped, "omitted Save wrote " + signature);
+    }
+
+    /**
+     * Left out, Save photos and videos makes no call to add, leaves the post menu lambdas that check
+     * for Copy link as Threads wrote them, and leaves showRow, media, activity, dismiss and every
+     * InstagramMedia bridge, when the extension has them, the empty stubs they ship as.
+     */
+    private static void featureOmittedSaveMedia(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        featureHostCalls(patched, ADD_SAVE_ROW, Map.of());
+        String copyLink = featureSaveCopyLink(clean);
+        featurePreserveTargets(clean, patched, m -> !m.getDefiningClass().startsWith(OWN) && m.getImplementation() != null
+                && holdsNote(m, MENU_NOTE) && !featureSaveChecks(m, copyLink).isEmpty());
+        for (String stub : List.of(SAVE_SHOW_ROW, SAVE_MEDIA_OF, SAVE_ACTIVITY_OF, SAVE_DISMISS)) featureSaveShipped(patched, stub);
+        for (String name : SAVE_BRIDGES) for (String stub : featureSaveBridgeStubs(patched, name)) featureSaveShipped(patched, stub);
     }
 
     private static void featureOmitted(String feature, Map<String, List<Method>> clean, Map<String, List<Method>> patched,
@@ -4894,6 +6134,7 @@ public class DexDiff {
             case "returnRefresh": featureOmittedReturnRefresh(clean, patched); break;
             case "disableVideoAutoplay": featureOmittedVideoAutoplay(clean, patched); break;
             case "pureBlack": featureOmittedPureBlack(clean, patched); break;
+            case "saveMedia": featureOmittedSaveMedia(clean, patched); break;
             case "settingsRow": featureOmittedSettingsRow(clean, patched); break;
             default: throw new IllegalArgumentException("Unknown omitted feature " + feature);
         }
@@ -4953,7 +6194,8 @@ public class DexDiff {
                 // Historical bundles predate these independently selectable families. Existing
                 // families still require their statuses whenever an extension payload exists.
                 if (!hasStatus && selected == null && (feature.equals("hideSuggestedUsers") || feature.equals("openLinksExternally")
-                        || feature.equals("returnRefresh") || feature.equals("disableVideoAutoplay") || feature.equals("pureBlack"))) {
+                        || feature.equals("returnRefresh") || feature.equals("disableVideoAutoplay") || feature.equals("pureBlack")
+                        || feature.equals("saveMedia"))) {
                     if (hasPayload) {
                         if (clean == null) clean = featureMethods(cleanApk, parents);
                         featureOmitted(feature, clean, patched, cleanApk, patchedApk);
@@ -4985,6 +6227,7 @@ public class DexDiff {
                     case "returnRefresh": featureReturnRefresh(clean, patched); break;
                     case "disableVideoAutoplay": featureVideoAutoplay(clean, patched); break;
                     case "pureBlack": featurePureBlack(clean, patched); break;
+                    case "saveMedia": featureSaveMedia(clean, patched, cleanApk, patchedApk); break;
                     default: throw new IllegalArgumentException("Unknown feature " + feature);
                 }
                 System.out.println("[diff] threads-feature " + feature + ": verified");

@@ -2,11 +2,14 @@
 
 Every HushTelegram release, newest first.
 
-## Unreleased
+## 0.0.19 (2026-10-17)
+
+The tenth release, with 67 patches. It clears up the last release's confusion for anyone who downloaded Telegram from Google Play, and it drops the beta as a target.
 
 * **Telegram:** The Google Play version of Telegram 13.0.3 (`org.telegram.messenger`, version code 71831) can be patched now. That's the APK APKMirror and Uptodown carry, and Morphe Manager used to turn it away with "Wrong package selected" because it only knew telegram.org's build. telegram.org's build still works the same way.
 * **Telegram:** **Repair Firebase push registration** also covers the Play build, so its notifications sign up with Google like they do on telegram.org's build.
 * **Telegram:** The official Telegram beta isn't a target anymore. **Turn off beta debug logs** is gone with it, and so is the part of **Disable analytics** that only stopped the beta's crash and session reports. If you're on the beta, switch to telegram.org's build or the Play build before you patch.
+* **Tooling:** The release's clean-APK check accepts the Google Play build as a vendor baseline. It now asks that the signing certificate the catalog declares for the package be present on the APK, and it allows the extra certificate Google Play App Signing adds. Before, it required every certificate on the APK to be one the catalog declared, so the Play build's Google certificate stopped the release even though the patcher applied every patch to it.
 
 ## 0.0.18 (2026-10-16)
 

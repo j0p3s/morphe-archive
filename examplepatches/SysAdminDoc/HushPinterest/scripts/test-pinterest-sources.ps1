@@ -82,10 +82,10 @@ foreach ($package in Get-SourcePackages) {
 # an adopted provenance rule.
 $browz = @($entries | Where-Object { $_.id -eq 'browzomje' })[0]
 Assert-True ($browz.branches[0].name -eq 'main' -and $browz.branches[0].commit -eq '5fa5c61905db70f1120b8e371cb855621a40a417' -and
-    @($browz.branches | Where-Object { $_.name -eq 'dev' -and $_.commit -eq '1808c6f62217d38a61f1918ff46e57c4f853da3a' }).Count -eq 1 -and
+    @($browz.branches | Where-Object { $_.name -eq 'dev' -and $_.commit -eq 'b4773c6ea007843928564f8d6bf7a17dfdeba1fb' }).Count -eq 1 -and
     $browz.patchCounts.'com.pinterest' -eq 31 -and $browz.targetVersions.'com.pinterest' -contains '14.39.0' -and
-    @($browz.features).Count -eq 24 -and $browz.disposition -eq 'candidate') `
-    'browzomje must keep its pinned main and dev commits and its 31 Pinterest patches, as a candidate and not an adopted source.'
+    @($browz.features).Count -eq 25 -and $browz.features -contains 'Keep Home feed (dev)' -and $browz.disposition -eq 'candidate') `
+    'browzomje must keep its pinned main and dev commits, its 31 Pinterest patches on main and its dev-only Keep Home feed, as a candidate and not an adopted source.'
 $oyasumi = @($entries | Where-Object { $_.id -eq 'oyasumi' })[0]
 Assert-True ($oyasumi.branches.Count -eq 1 -and $oyasumi.branches[0].name -eq 'dev' -and
     $oyasumi.branches[0].commit -eq '1875509177dca5fa4181cce5614202547a2dea6d' -and $oyasumi.patchCounts.'com.pinterest' -eq 13 -and
@@ -109,9 +109,25 @@ Assert-True ($stale.Count -eq 2 -and @($stale | Where-Object { $_.disposition -n
     'binarymend and satanmerde have no usable anchors and must stay rejected.'
 $sabopura = @($entries | Where-Object { $_.id -eq 'sabopura' })[0]
 Assert-True ($sabopura.upstream -eq 'https://github.com/binarymend/morphe-patches' -and $sabopura.lineage -eq 'sabopura' -and
-    $sabopura.branches[0].commit -eq 'a45010d991dde3628b41b337658dc6b1aca5489d' -and $sabopura.patchCounts.'com.pinterest' -eq 3 -and
+    $sabopura.branches[0].commit -eq '28c3f2d8736f520bdd721d08aa3f1cf7b4a29c48' -and $sabopura.patchCounts.'com.pinterest' -eq 3 -and
+    $sabopura.targetVersions.'com.pinterest' -contains '14.40.0' -and $sabopura.reason -like '*declaration, not proof*' -and
     $sabopura.license.sha256 -eq '230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809' -and $sabopura.disposition -eq 'candidate') `
-    'sabopura must keep its reviewed commit, its CRLF GPL-3.0 hash and its Binarymend upstream, as a candidate.'
+    'sabopura must keep its reviewed commit, its declared-only 14.40.0, its CRLF GPL-3.0 hash and its Binarymend upstream, as a candidate.'
+# Two sources the 2026-10-18 audit found. Both declare builds nobody here has run, and neither is adopted.
+$quest = @($entries | Where-Object { $_.id -eq 'quest' })[0]
+Assert-True ($quest.repository -ceq 'https://github.com/archivesteak/Quest' -and
+    @($quest.branches | Where-Object { $_.commit -eq '64a9275fb2f27062d7fc2a170200cd73f6afc888' }).Count -eq 2 -and
+    $quest.patchCounts.'com.pinterest' -eq 6 -and @($quest.targetVersions.'com.pinterest').Count -eq 1 -and
+    $quest.targetVersions.'com.pinterest'[0] -eq '14.39.0' -and $quest.reason -like '*archivesteak/pinterest-patches*' -and
+    $quest.license.sha256 -eq '3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986' -and $quest.disposition -eq 'candidate') `
+    'Quest must keep its reviewed main and dev commit, its six 14.39.0 patches and its old name, as a candidate.'
+$wagg = @($entries | Where-Object { $_.id -eq 'wagg13patch' })[0]
+Assert-True ($wagg.repository -ceq 'https://github.com/WaggBR/Wagg13Patch_Morphe' -and
+    @($wagg.branches | Where-Object { $_.name -eq 'main' -and $_.commit -eq '99062638dc4dde907b93f428daf18a43cf4a1634' }).Count -eq 1 -and
+    $wagg.patchCounts.'com.pinterest' -eq 1 -and $wagg.targetVersions.'com.pinterest' -contains '14.40.0' -and
+    $wagg.reason -like '*obfuscated classes per version*' -and
+    $wagg.license.sha256 -eq '230184f60bae2feaf244f10a8bac053c8ff33a183bcc365b4d8b876d2b7f4809' -and $wagg.disposition -eq 'candidate') `
+    'Wagg13Patch must keep its reviewed commit, its one per-version patch and its CRLF GPL-3.0 hash, as a candidate.'
 $nagramRepository = 'https://github.com/authorisation/xterest'
 $nagram = @($ledger.outOfScope | Where-Object { $_.repository -eq $nagramRepository })[0]
 Assert-True ($nagram.reference.kind -eq 'historical' -and $nagram.reference.branch -eq 'main' -and
@@ -560,18 +576,22 @@ function New-FakeAnswers {
             'alpha:stable' = @{ repo_url = 'https://github.com/fixture-owner/alpha-patches'; apps = @(@{ package = 'com.pinterest'; patches = @(@{ name = 'Hide ads' }) }) }
         } | ConvertTo-Json -Depth 8) }
         jmanSources = @{ Status = 200; Content = '{"alpha-stable":{"patches":"https://api.github.com/repos/fixture-owner/alpha-patches"},"gamma-stable":{"patches":"https://gitlab.com/api/v4/projects/fixture-group%2Fgamma-patches"}}' }
-        jmanManifest = @{ Status = 200; Content = '{"schema_version":1,"snapshot":"snapshots/0abc"}' }
-        # Alpha's and gamma's current bundles name Pinterest; alpha's older one and a bundle for
-        # another app stay out, the way Jman's snapshot lists every release of every source.
-        jmanAppBundles = @{ Status = 200; Content = ('[{"id":"a1","is_latest":true,"packages":["com.pinterest"],"detail_file":"bundles/a1.json"},' +
-            '{"id":"a0","is_latest":false,"packages":["com.pinterest"],"detail_file":"bundles/a0.json"},' +
-            '{"id":"c1","is_latest":true,"packages":["com.example","com.pinterest"],"detail_file":"bundles/c1.json"},' +
-            '{"id":"e1","is_latest":true,"packages":["com.example"],"detail_file":"bundles/e1.json"}]') }
-        jmanDetails = @{
-            a1 = @{ Status = 200; Content = '{"version":"v1.0.0","download_url":"https://github.com/fixture-owner/alpha-patches/releases/download/v1.0.0/patches-1.0.0.mpp"}' }
-            c1 = @{ Status = 200; Content = '{"version":"v2.0.0","download_url":"https://gitlab.com/fixture-group/gamma-patches/-/releases/v2.0.0/downloads/patches.mpp"}' }
-            d1 = @{ Status = 200; Content = '{"version":"v0.1.0","download_url":"https://files.example.net/delta/patches-0.1.0.mpp"}' }
-        }
+        # Every release of every source, the way Jman's API pages them: a hundred old ones first, so
+        # alpha's and gamma's current bundles are on the second page. A retired source's last bundle,
+        # which no stand-in answers for, and a bundle for another app stay out.
+        jmanRows = New-Object System.Collections.Generic.List[object] (, [object[]]@(
+            @(1..100 | ForEach-Object { [ordered]@{ id = "o$_"; is_latest = $false; packages = @('com.pinterest'); version = "v0.0.$_"
+                download_url = "https://github.com/fixture-owner/alpha-patches/releases/download/v0.0.$_/patches-0.0.$_.mpp" } }) +
+            [ordered]@{ id = 'a1'; is_latest = $true; packages = @('com.pinterest'); version = 'v1.0.0'
+                download_url = 'https://github.com/fixture-owner/alpha-patches/releases/download/v1.0.0/patches-1.0.0.mpp' },
+            [ordered]@{ id = 'a0'; is_latest = $false; packages = @('com.pinterest'); version = 'v0.9.0'
+                download_url = 'https://github.com/fixture-owner/retired-patches/releases/download/v0.9.0/patches-0.9.0.mpp' },
+            [ordered]@{ id = 'c1'; is_latest = $true; packages = @('com.example', 'com.pinterest'); version = 'v2.0.0'
+                download_url = 'https://gitlab.com/fixture-group/gamma-patches/-/releases/v2.0.0/downloads/patches.mpp' },
+            [ordered]@{ id = 'e1'; is_latest = $true; packages = @('com.example'); version = 'v3.0.0'
+                download_url = 'https://github.com/fixture-owner/epsilon-patches/releases/download/v3.0.0/patches-3.0.0.mpp' }))
+        jmanPageSize = 100
+        jmanTotal = $true
         archive = @{ Status = 200; Content = '{"name":"patches-list.json"}' }
         searchHits = @(
             @{ repository = @{ full_name = 'fixture-owner/alpha-patches' }; path = 'patches/Alpha.kt'; sha = $blobKnown }
@@ -625,9 +645,14 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
             '^https://raw\.githubusercontent\.com/nvbangg/awesome-morphe/main/data/hashes\.json$' { $answer = $a.awesome; break }
             '^https://raw\.githubusercontent\.com/drnx64/morphe-track-patches/main/data/bundles\.json$' { $answer = $a.tracker; break }
             '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/config/sources\.json$' { $answer = $a.jmanSources; break }
-            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/database/manifest\.json$' { $answer = $a.jmanManifest; break }
-            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/database/snapshots/0abc/app-bundles\.json$' { $answer = $a.jmanAppBundles; break }
-            '^https://raw\.githubusercontent\.com/Jman-Github/Patch-Bundle-Registry/bundles/database/snapshots/0abc/bundles/([a-z0-9]+)\.json$' { $answer = $a.jmanDetails[$Matches[1]]; break }
+            '^https://patch-bundles\.api\.jmancentral\.com/apps/com\.pinterest/bundles\?limit=100&offset=(\d+)$' {
+                $offset = [int]$Matches[1]
+                $rows = @($a.jmanRows | Select-Object -Skip $offset -First $a.jmanPageSize)
+                $page = [ordered]@{ data = $rows; total = $a.jmanRows.Count; limit = $a.jmanPageSize; offset = $offset }
+                if (-not $a.jmanTotal) { $page.Remove('total') }
+                $answer = @{ Status = 200; Content = ($page | ConvertTo-Json -Depth 6) }
+                break
+            }
             '^https://api\.github\.com/repos/rushiforai/morphe-archive/contents/examplepatches/SysAdminDoc/HushPinterest/patches-list\.json$' { $answer = $a.archive; break }
             '^https://api\.github\.com/search/code\?q=([^&]+)&per_page=100&page=1$' {
                 $query = [Uri]::UnescapeDataString($Matches[1])
@@ -733,7 +758,13 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
         "The copy of the alpha lineage's file was not collapsed into it: $($clean.Report.notes -join ' | ')"
     Assert-True (@($clean.Report.lineages | Where-Object { $_.lineage -eq 'alpha' })[0].mirrors -contains 'https://github.com/clone/alpha-clone') `
         'The collapsed copy was not listed under its lineage.'
-    $leaked = @($fakeForge.Requests | Where-Object { $_.Authorization -and $_.Uri -notlike 'https://api.github.com/*' })
+    # Jman's API pages every release a hundred at a time, and the current ones were on the second page.
+    Assert-True ($clean.Said -like "*Jman's bundle index: 2 Pinterest bundles*" -and
+        @($fakeForge.Requests | Where-Object { $_.Uri -like 'https://patch-bundles.api.jmancentral.com/*&offset=100' }).Count -eq 1) `
+        "Jman's second page was not read, or its current Pinterest bundles were not counted: $($clean.Said)"
+    Assert-True (@($fakeForge.Requests | Where-Object { $_.Uri -like '*retired-patches*' }).Count -eq 0 -and $clean.ReportText.IndexOf('retired-patches') -lt 0) `
+        "A Jman bundle that isn't its source's latest was read as a source."
+    $leaked =@($fakeForge.Requests | Where-Object { $_.Authorization -and $_.Uri -notlike 'https://api.github.com/*' })
     Assert-True ($leaked.Count -eq 0) "The GitHub token went to another host: $($leaked[0].Uri)"
     Assert-True (@($fakeForge.Requests | Where-Object { $_.Uri -like 'https://api.github.com/*' -and $_.Authorization -ne "Bearer $fakeToken" }).Count -eq 0) `
         'A GitHub API request went out without the token.'
@@ -904,9 +935,25 @@ $fakeForge = @{ Answers = (New-FakeAnswers); Requests = (New-Object System.Colle
     Assert-Drift 'license-added' '*beta-module*now has a licence (MIT*' 'An unlicensed source that gained a licence'
     $fakeForge.Answers = New-FakeAnswers
 
-    $fakeForge.Answers.jmanAppBundles.Content = $fakeForge.Answers.jmanAppBundles.Content.TrimEnd(']') +
-        ',{"id":"d1","is_latest":true,"packages":["com.pinterest"],"detail_file":"bundles/d1.json"}]'
+    $fakeForge.Answers.jmanRows.Add([ordered]@{ id = 'd1'; is_latest = $true; packages = @('com.pinterest'); version = 'v0.1.0'
+        download_url = 'https://files.example.net/delta/patches-0.1.0.mpp' })
     Assert-Drift 'index-unresolved' "*Jman's index lists a Pinterest bundle (v0.1.0) whose download address names no repository*" 'A Jman bundle no repository stands behind'
+    $fakeForge.Answers = New-FakeAnswers
+
+    # An API that answers fewer rows than asked for has each page read from where the last one
+    # ended, and one that gives no total can't say when the pages end.
+    $fakeForge.Answers.jmanPageSize = 40
+    $short = Invoke-Audit
+    $jmanOffsets = @($fakeForge.Requests | Where-Object { $_.Uri -like 'https://patch-bundles.api.jmancentral.com/*' } |
+        ForEach-Object { [int]($_.Uri -replace '^.*&offset=', '') })
+    Assert-True ($short.ExitCode -eq 0 -and $short.Said -like "*Jman's bundle index: 2 Pinterest bundles*" -and
+        ($jmanOffsets -join ',') -eq '0,40,80') `
+        "Jman's pages of 40 were not each read from where the last one ended (offsets $($jmanOffsets -join ',')): $($short.Said)"
+    Reset-FixtureLedger
+    $fakeForge.Answers = New-FakeAnswers
+
+    $fakeForge.Answers.jmanTotal = $false
+    Assert-Drift 'source-failed' "*Jman's bundle index could not be read*gave no total*" 'A Jman page with no total'
     $fakeForge.Answers = New-FakeAnswers
 
     # The tracker's keys can differ only in case, which ConvertFrom-Json alone refuses.

@@ -1414,8 +1414,15 @@ object Constants {
     //     launch tab, SMS notification / deep-link intents (ARG_FRAGMENT_ORDINAL) and the back
     //     button land on Calls (selecting a missing tab on a fresh start left the screen empty, and
     //     back kept "returning" to the old default). A new helper after the builder's
-    //     check-cast to BottomBarView (kept) sets the bar GONE with fewer than two tabs, VISIBLE
-    //     otherwise; nothing else in the app changes its visibility.
+    //     check-cast to BottomBarView (kept) collapses the bar with fewer than two tabs (see below).
+    // 2026-10-16 (#61, 26.40.5; smoke test + CLI decompile check with the reporter's 14 patches, all
+    //   Applied; not runtime-tested, because the Calls screen needs SMS registration): Hide Messages tab
+    //   no longer sets the bar GONE. TruecallerInit is edge to edge and only the bar (Material
+    //   BottomNavigationView inset listener, bottom padding += nav bar inset) pads for the navigation
+    //   bar; the coordinator with the Calls pill and FAB ends at the bar's top (barrier), so a GONE
+    //   bar put them behind 3-button navigation. The helper keeps the bar VISIBLE, sets its children
+    //   (the tab menu) GONE and its minimum height to 0, saved in a new public Integer field on
+    //   BottomBarView (morpheSavedMinHeight) and restored when two or more tabs come back.
     // 2026-10-14 (#52, 26.40.5, smoke test + CLI disassembly, not runtime-tested): Fix T9 contact search
     //   (opt-in) clones the static RefreshT9MappingWorker helper ((Context)V with "RefreshT9MappingWorker.RebuildAll",
     //   w6j.f here) as public morpheRefreshT9Incremental with Boolean.FALSE, called right after super.onCreate in
@@ -1877,6 +1884,61 @@ object Constants {
         targets = listOf(AppTarget(version = "2.2.7", versionCode = 20207))
     )
 
+    // Written 2026-10-15/16 against com.guardian 6.238.23405 (versionCode 23405), the STABLE
+    // build: an owner-supplied APKCube bundle merged into one APK. The bundle's base.apk is signed
+    // by Guardian (CN=Android, O=Guardian News and Media, SHA-256 4965429e...9e7d) with a Play
+    // stamp; the merged APK's own signature no longer verifies (expected after the merge). No
+    // packer, PairIP or app signature check. R8 renames the app's own classes in this build
+    // (com.guardian.* and com.theguardian.* included), so every anchor is a string, a kept
+    // library/Retrofit/app class name or a method shape.
+    // Disable article limit (scope: no limit wall, warm-up prompt or offline wall; the free
+    // sign-in gate is kept): GetMeterApiState, the only caller of the kept Retrofit
+    // RetrofitApi.message (cross-checked by "Failed to get metering message for articleId: "),
+    // returns None(shouldTrackArticleView=false) at entry (the None class is found by its
+    // toString), so no meter request is made and no article view is counted. GetMeteringStateImpl
+    // (the only (String, continuation) caller of it, cross-checked by the SignInWall and
+    // OfflineWall singletons and "sign_in_date_key") returns that None instead of the
+    // OfflineWall; its SignInWall branch is untouched.
+    // Disable ads: the single GMA load method (strings "preparing ad request: %s", "No consent
+    // given for google ads", "Forced ad failure"; AdManagerAdView second parameter) reports a
+    // LoadAdError to the view's AdListener and returns before the GMA request and the Amazon APS
+    // bid, like its own consent path; ShouldLoadAds (no-arg Z reading a RemoteSwitches$Companion$Key
+    // and isPremium()) answers false. MobileAds, isPremium and UserTier are untouched.
+    // GuardianSmokeTest asserts all four hooks.
+    // Disable telemetry (added 2026-10-16, same build): SdkManager's gate, the only concrete
+    // (Sdk)Z method that reads the Sdk's RemoteSwitches$Companion$Key field and calls isPremium()
+    // (the Sdk data class is found by its "Sdk(remoteSwitchKey=" toString), answers false, the
+    // app's own no-consent path: InitializeAvailableSdks deinitialises every SDK and Comscore,
+    // Nielsen, Adjust, Braze, Permutive, Confiant, APS and Teads never start (Braze marketing
+    // pushes and in-app messages go too). The Ophan uploader ((NativeAppSubmission)V with
+    // "https://ophan.theguardian.com/mob" and "Ophan submission failed") returns at once, so the
+    // worker drops the queued events. In the kept FirebaseAnalytics class the only instance (Z)V
+    // (setAnalyticsCollectionEnabled) loads false first and the only (Bundle, String)V (logEvent)
+    // returns at once; in Crashlytics (R8-renamed, found by getInstance's "FirebaseCrashlytics
+    // component is not present.") the only instance (Z)V loads false first and the only
+    // (String)V (log) returns at once. The push "received" beacon (the (Object)Object method
+    // with the mobile-events notification/received URL) returns Boolean.FALSE before the request;
+    // the notification is shown before it runs. The manifest gains
+    // firebase_analytics_collection_deactivated=true. FCM, Remote Config, Sourcepoint, the
+    // consent check and AcquisitionEventsService are untouched. GuardianSmokeTest asserts every
+    // hook and the meta-data.
+    // Decompile-checked 2026-10-16: a CLI build (no -f) with all three patches, every hooked
+    // method and the manifest flag match. Resource names come out renamed (e.g. appBar).
+    // Emulator 2026-10-16 (stock control, same test key): cold starts, onboarding, Settings and
+    // Advanced Settings all render; FA logs "deactivated via the manifest", Adjust stays
+    // disabled. The Sourcepoint consent screen shows on fresh installs of both builds; the
+    // server decides (pv-data msgId 1511924). A WebView SIGSEGV in libmonochrome_64 at the same
+    // pc hits stock too (environment). The emulator gets no ads and stock showed no meter
+    // wall in about 11 articles, so ad removal and the article limit are verified in bytecode
+    // only. FCM fails with the same 403 on stock (environment).
+    val COMPATIBILITY_GUARDIAN = Compatibility(
+        name = "The Guardian",
+        packageName = "com.guardian",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x052962, // Guardian navy.
+        targets = listOf(AppTarget(version = "6.238.23405", versionCode = 23405))
+    )
+
     // Verified 2026-10-15 against com.yahoo.mobile.client.android.sportacular 12.10.3
     // (versionCode 11166823, APKMirror bundle merged; signer CN=Yahoo! mobile CA, O=Yahoo! Inc.,
     // SHA-256 d3f1fb1b...614c, same as 12.9.2). No packer, PairIP or billing. App view/controller
@@ -2012,5 +2074,91 @@ object Constants {
         apkFileType = ApkFileType.APKM,
         appIconColor = 0x111111, // The icon's near-black background (white glyph).
         targets = listOf(AppTarget(version = "v2.4.2", versionCode = 269))
+    )
+
+    // Verified 2026-10-15 against mark.via.gp 7.3.3 (versionCode 20260823, single universal
+    // APK, no native libs; signer CN=Various Tu, C=CN, SHA-256 3df7f89d...a390, same on APKMirror
+    // and APKPure; Play developer Tu Yafeng). No packer or shield. Launcher label "Via". The
+    // app and the bundled Firebase SDK are R8-renamed (FirebaseAnalytics keeps its class name, but
+    // logEvent is a(String, Bundle) and setAnalyticsCollectionEnabled is stripped). Telemetry is
+    // Firebase Analytics only; the tracker's crash method logs locally and Crashlytics never starts
+    // (no FirebaseInitProvider). Disable telemetry: the tracker's event sink (7.3.3: t8/b.a, found
+    // by its (String, Map)V shape plus its call to FirebaseAnalytics' only (String, Bundle)V
+    // method) returns at once, and the manifest gets firebase_analytics_collection_deactivated =
+    // true for the automatic events. The tracker init (t8/f.i) is left alone, because the hub
+    // queues events until a tracker registers. The remote config fetch (c.viayoo.com/api/frontend),
+    // which carries identifiers, is deliberately left alone as functional (it drives app
+    // features), as are update/sync (app.viayoo.com), report-abuse and the ad-block filter list
+    // downloads. ViaSmokeTest asserts the sink and the manifest switch. CLI (no -f) rewrites only
+    // t8/b plus the manifest; apkanalyzer shows return-void first in the sink and the meta-data set
+    // to true. Emulator (FA verbose logging): stock logs 5 events (first_open, session_start,
+    // fetch_conf, channel_new_unknown, search_google); patched logs "App measurement deactivated via
+    // the manifest" and 0 events; browsing, search, bookmarks, settings and ad blocking work. The
+    // manifest edit re-encodes resources; the UI was checked in English only.
+    val COMPATIBILITY_VIA = Compatibility(
+        name = "Via",
+        packageName = "mark.via.gp",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0xFFB700, // The icon's largest stroke (amber; with red and blue, on white).
+        targets = listOf(AppTarget(version = "7.3.3", versionCode = 20260823))
+    )
+
+    // Added 2026-10-16 against ro.rcsrds.digisport 1.1.15 (versionCode 75, single universal APK;
+    // signer CN=DigiSport, O=RCS&RDS, L=Bucharest, C=RO, SHA-256 014322fe...80c2853). Launcher label
+    // "DigiSport". App code (ro.rcsrds.digisport.*) and its player library (ro.rcsrds.lib.player.*)
+    // are not obfuscated, so every anchor is a readable class + method name with its full signature.
+    // Disable ads: AdMobManager.loadAd hides the container and returns, requestAd / putAd return at
+    // once (the app's only AdRequest / AdView.loadAd); VHSectionAd.bind sets the ad row GONE with
+    // a 0 layout height; UiLivePreroll.getEnable answers false (no live "Reclama" pre-roll);
+    // ArticleApiPayloads.getMVideoPreroll answers "" (no article/VOD pre-roll in GetArticleVod);
+    // ExtensionServiceKt.initImaAds answers null, so media3 plays any item that still carries an
+    // ad tag without ads (PlayerService.onCreate ignores the result; every mImaPreRoll reader
+    // null-checks). MobileAds (never called by the app) and SatiManager (analytics) are untouched.
+    // Disable ads also returns a new empty ArrayList from the four server
+    // "ads" list getters (ApiArticleData/ApiEpgData.getAds, listingArticles.Data.getAdsList,
+    // APIResultsResponseData.getAds), answers false from GetArticleDetailsLiveTab1.adConstraints
+    // (<ad-api> elements), null from GetArticleDetailsWidgets.addAdWidget and returns early from
+    // SyncEpgRepositoryBase.addBanner. Hide betting odds: UIResultsMatch.getBet answers null (the
+    // odds block @id/nas goes GONE). Disable telemetry: manifest Firebase switches (Analytics and
+    // Performance deactivated, Crashlytics off), FirebaseCrashlytics/FirebasePerformance collection
+    // setters forced off, Crashlytics recordException/log/sendUnsentReports, CxenseSdk.pushEvents
+    // and FirebaseAnalytics.logEvent return early; FCM is untouched. Disable update prompts:
+    // MainActivityBase.checkUpdate returns early. Skip ad consent form: GoogleConsentUmp
+    // .loadConsentInfo posts SUCCESS and returns before any UMP call, and
+    // IncludeSettingsUserDataAdsBindingImpl.executeBindings first sets its root (mboundView0) GONE,
+    // hiding the then buttonless "Publicitate" block in Settings / GDPR details. Hide sponsored articles:
+    // listing and widget cards with a non-blank ApiArticle.getSponsored are skipped / become
+    // spacing. Hide promotions: "widgetCross" cards become spacing and get no heading, and
+    // HomeViewModel.getExclusiveVideo returns early. Verified 2026-10-16: DigiSportSmokeTest
+    // (all eight patches); CLI (no -f) applies all eight and changes exactly the 23 hooked
+    // classes plus the three manifest meta-data (the manifest edit re-encodes resources.arsc; no
+    // visible effect); emulator, two cold starts, no crash: the UMP form, the Temu test-ad rows in
+    // the home feed, articles and ProgramTV (no gaps left) and the Settings "Publicitate" block
+    // are gone, an article video plays, and logcat shows "App measurement deactivated via the
+    // manifest" and Performance off. Not seen on the emulator: betting odds (none shown by stock
+    // either), a "Reclama" pre-roll (no ad fill), sponsored / cross-promo cards, the Home
+    // "Exclusive online" bar and a Play update prompt.
+    val COMPATIBILITY_DIGISPORT = Compatibility(
+        name = "Digi Sport",
+        packageName = "ro.rcsrds.digisport",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x1D56A8, // The icon's blue gradient (mid-tone).
+        targets = listOf(AppTarget(version = "1.1.15", versionCode = 75))
+    )
+
+    // Same app, used only by "Disable live stream ads", so Morphe Manager flags it as experimental
+    // (2026-10-16, 1.1.15 / versionCode 75). UiLiveDai.getEnable answers false, so live channels
+    // are built from the plain stream (UiLiveStream.getMUrl) instead of the IMA DAI ssai:// item,
+    // and ExtensionServiceKt.updateAdViewForDai returns at once. The plain stream is only fetched
+    // when the channel config carries a livestream URL, so a DAI-only channel would not play.
+    // Smoke- and decompile-verified; the emulator run passed (no crash) but live playback could not
+    // be checked: LiveTv is geo-blocked to the DIGI network ("LIVE stream-ul este disponibil doar
+    // din reteaua DIGI") for the stock app too. Stays experimental until a DIGI-network user confirms.
+    val COMPATIBILITY_DIGISPORT_EXPERIMENTAL = Compatibility(
+        name = "Digi Sport",
+        packageName = "ro.rcsrds.digisport",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x1D56A8,
+        targets = listOf(AppTarget(version = "1.1.15", versionCode = 75, isExperimental = true))
     )
 }

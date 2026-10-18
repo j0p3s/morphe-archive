@@ -154,6 +154,7 @@
       "paths": [
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/download/DownloadQuality.java",
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/download/FileNameTemplate.java",
+        "extensions/facebook/src/main/java/app/morphe/extension/facebook/download/OpenInAnotherApp.java",
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/download/PostDetails.java",
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/download/SaveFolder.java",
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/download/SaveTo.java",
@@ -246,12 +247,13 @@
       "paths": [
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/misc/ShareSheetItems.java",
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/misc/ShareSheetGroups.java",
+        "extensions/facebook/src/main/java/app/morphe/extension/facebook/misc/ShareSheetPeople.java",
         "patches/src/main/kotlin/app/morphe/patches/facebook/misc/sharesheet/**"
       ],
       "origin": "original",
       "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
       "license": "GPL-3.0-only",
-      "changes": "Written for Hushfacebook from Facebook 581: Share sheet items, the idea of the Share sheet modification patch in icysymmetra/tiktok-patches-for-morphe with none of its TikTok code. Every list of share sheet item types the item picker returns goes through the extension, which takes out the types picked under Links and keeps the rest in Facebook's order, and remembers the types it has seen so the list can offer them. The hook is its own nameless patch, which Hide Meta upsells uses for its Threads switch too. Its group switch, the idea of HushGram's Hide group buttons on the share sheet, hands the share sheet footer's Send to group FDSButton to the extension where its guards meet, and the boolean in front of each GROUP_PLUS new-group entry in the sheet's body and search row, so the switch leaves the footer without the button and answers each entry off."
+      "changes": "Written for Hushfacebook from Facebook 581: Share sheet items, the idea of the Share sheet modification patch in icysymmetra/tiktok-patches-for-morphe with none of its TikTok code. Every list of share sheet item types the item picker returns goes through the extension, which takes out the types picked under Links and keeps the rest in Facebook's order, and remembers the types it has seen so the list can offer them. The hook is its own nameless patch, which Hide Meta upsells uses for its Threads switch too. Its group switch, the idea of HushGram's Hide group buttons on the share sheet, hands the share sheet footer's Send to group FDSButton to the extension where its guards meet, and the boolean in front of each GROUP_PLUS new-group entry in the sheet's body and search row, so the switch leaves the footer without the button and answers each entry off. Its people switch, written from Facebook 583 for issue #169, hands the extension each add of the sheet body's row of people to send to and of that row's loading placeholder, and skips the add while the switch is on."
     },
     {
       "paths": [
@@ -598,6 +600,33 @@
       "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
       "license": "GPL-3.0-only",
       "changes": "Written for Hushfacebook: the list of more posts under a post opened from a notification. A post opened from Notifications is fetched with a query whose builder sets show_notification_permalink_footer to a MobileConfig answer, once per query variant, and with it true the server adds a footer of more posts that never passes the feed's edge filter. The patch hands each answer to the extension right where the builder reads it, and the extension answers false while the switch is on."
+    },
+    {
+      "paths": [
+        "patches/src/main/kotlin/app/morphe/patches/facebook/feed/postprompts/PostCounts.kt"
+      ],
+      "origin": "original",
+      "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
+      "license": "GPL-3.0-only",
+      "changes": "Written for Hushfacebook: the numbers on a post's Like, Comment and Share buttons. In Facebook 583 one static builder turns a button's count into its text, answering an empty text for a missing or zero count, and the Share button plugin (a kept class name) calls it. The patch finds the builder through that plugin by its shape and holds it to the empty answer and its plural lookup, then has it ask the extension first thing. While the switch is on the builder answers its own empty text, so each button shows its word."
+    },
+    {
+      "paths": [
+        "patches/src/main/kotlin/app/morphe/patches/facebook/feed/postprompts/ReactionPreview.kt"
+      ],
+      "origin": "original",
+      "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
+      "license": "GPL-3.0-only",
+      "changes": "Written for Hushfacebook: the reaction preview under a post. Two draw methods paint it, the facepile drawable that the FDSInlineReactions component's static factory returns and the onDraw of PillsBlingBarView (a kept class name). The patch finds each by its shape and has it ask the extension first thing, returning before it paints while the switch is on, so the views keep their size and their taps."
+    },
+    {
+      "paths": [
+        "patches/src/main/kotlin/app/morphe/patches/facebook/feed/postprompts/CommentReactionPreview.kt"
+      ],
+      "origin": "original",
+      "upstream": "https://github.com/SysAdminDoc/Hushfacebook",
+      "license": "GPL-3.0-only",
+      "changes": "Written for Hushfacebook: the reaction preview on comments. Comments draw the same facepile drawable as posts, so the patch marks the FDSInlineReactions component a comment builds (found by the kept strings FDSComment and inline_reaction_transition_key) and copies that mark onto the drawable the one paired method makes from it, letting the drawable's draw ask the comment switch instead of the post switch."
     },
     {
       "paths": [
@@ -970,6 +999,7 @@
     {
       "paths": [
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/download/PhotoFormat.java",
+        "extensions/facebook/src/main/java/app/morphe/extension/facebook/download/MenuTop.java",
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/download/PhotoMenuItem.java",
         "extensions/facebook/src/main/java/app/morphe/extension/facebook/download/PhotoSave.java",
         "patches/src/main/kotlin/app/morphe/patches/facebook/downloads/photo/DownloadPhotoPatch.kt",

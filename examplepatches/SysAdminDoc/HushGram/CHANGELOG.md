@@ -4,6 +4,40 @@ Every HushGram release, newest first.
 
 ## Unreleased
 
+### Bug Fixes
+
+* **Instagram - Hide suggested people on profiles:** A profile's buttons keep their spacing when Instagram redraws the row during a refresh. With the switch off or HushGram paused, Instagram's own button sizes stay. Reported in #220.
+
+* **Instagram - HushGram settings:** Flipping Pause HushGram, or turning HushGram back on from the card at the top, shows Restart now right away. It used to show nothing to tap. Restart now also stopped hanging on "Instagram isn't responding" when HushGram was paused. Reported in #146.
+
+* **Instagram - HushGram settings:** The Brazilian Portuguese settings read more naturally, reworded by votsz. From #230.
+
+* **Instagram - Clean up Reels:** With Burn-in guard faded, a tap that paused or played a reel lit the buttons up for up to a second before they dimmed again. They stay dim through the tap now. Reported in #162.
+
+* **Instagram - Show if a profile follows you:** With the small label under the picture, the name and counts beside it slid down on some profiles. They stay where Instagram puts them now. Reported in #157.
+
+* **Instagram - Glass tab bar:** With the glass bar on, opening a reel's comments, Share or More could leave the video stuck on its cover, or frozen while the sound played on. The reel underneath is left alone when a sheet opens now. Reported in #222 and #232.
+
+* **Instagram - Clean up Reels:** Keep clear mode on missed some reels and left their buttons up when the next reel's controls showed up late. It waits for them now. Reported in #233.
+
+* **Instagram - Find the reel you came from:** The search goes much further down a profile's reels before giving up, so an older reel many pages down is still found. It also waits out a slow page while Instagram's spinner shows. Reported in #225.
+
+* **Instagram - Hide suggested posts:** With `Hide videos` or another Home switch on, a page with a post or two, or none at all, left Home on an endless spinner or the Welcome card. Home asks for the next page by itself now. Reported in #28.
+
+* **Instagram - Hide suggested posts:** On Instagram 451 the "You've seen the latest posts" card draws the Suggested for you title itself, so it stayed with nothing under it. It goes away there too now, and Older posts stays. Reported in #104.
+
+* **Instagram - Glass tab bar:** With Hide the tab bar on Reels, a reel given the room back once the pill slid away ran under the gesture bar or the navigation buttons, where its seek bar couldn't be dragged. It stops just above them now. Reported in #221.
+
+### Improvements
+
+* **Instagram:** The diagnostic report now lists every card type the stories viewer checks, ads included, and how often Instagram asked to show the Music for you card. From #111 and #154.
+
+* **Diagnostics:** What HushGram writes to Android's system log and its error toasts now leaves out tokens, signed links and files from your storage, the same way the exported report does. Error traces go in as text, so nothing reaches the log unchecked.
+
+* **Tooling:** An everyday push now builds once and runs only the tests its changes can reach, plus the checks that read every source. A change no test reaches stops the push. A release, or `HUSHGRAM_FULL_GATE=1`, still gets the full gate.
+
+* **Tooling:** The release preflight now builds the bundle and runs every patch on the declared Instagram build, so a patch that stopped applying shows up in a few minutes rather than an hour into the release.
+
 ## 0.0.12 (2026-10-16)
 
 ### Features

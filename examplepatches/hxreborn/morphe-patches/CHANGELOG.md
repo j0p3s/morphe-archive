@@ -1,3 +1,44 @@
+## [1.54.0](https://github.com/hxreborn/morphe-patches/compare/v1.53.0...v1.54.0) (2026-10-17)
+
+### Bug Fixes
+
+* **MovieBox - All-In-One:** download full episodes after API change ([968d2d9](https://github.com/hxreborn/morphe-patches/commit/968d2d956fa203a703c23aabf6e5f5784ef9fb70))
+* **MovieBox - All-In-One:** hide Premium tab ([814c81c](https://github.com/hxreborn/morphe-patches/commit/814c81ccbca9598f7e5e8637f37399bd630712a3))
+* **MovieBox - All-In-One:** show real file sizes in the download list ([c42f81e](https://github.com/hxreborn/morphe-patches/commit/c42f81e71c88fc6ebe8fa5b568202a0910a25f31)), closes [#253](https://github.com/hxreborn/morphe-patches/issues/253)
+* **MovieBox - All-In-One:** stream series in every available resolution ([bd3b602](https://github.com/hxreborn/morphe-patches/commit/bd3b602a1d27b40c765a1b9d1269c19fd7df1ee0))
+* **Perplexity - Hide upgrade promotions:** hide upgrade cards in answers ([464c693](https://github.com/hxreborn/morphe-patches/commit/464c693493d9aa79ebc5ce5c11c2c2f130014579))
+* **Proton - Material 3 switches:** keep the thumb full size when off ([e811098](https://github.com/hxreborn/morphe-patches/commit/e8110987e8fa89450643b2a22974706d3b21c86e)), closes [#201](https://github.com/hxreborn/morphe-patches/issues/201)
+* **Proton Pass - Material 3 switches:** match each toggle's native color ([573d3c3](https://github.com/hxreborn/morphe-patches/commit/573d3c334d2ee7a4c9e1528fc14c95203963ac3c)), closes [#202](https://github.com/hxreborn/morphe-patches/issues/202)
+
+### New Features
+
+* **Aloa - GmsCore support:** sign in with Google ([4c0d709](https://github.com/hxreborn/morphe-patches/commit/4c0d709dac1d007be5061972e5d812281edaeea9))
+* **Aloa - Unlock premium:** unlock conversations, lessons and roadmaps ([ef92f83](https://github.com/hxreborn/morphe-patches/commit/ef92f833742ba13f9cef6e25011e106bec3c904e)), closes [#249](https://github.com/hxreborn/morphe-patches/issues/249)
+* **Bangla Calendar - Disable tracking:** stop Firebase data collection ([e5dd9bc](https://github.com/hxreborn/morphe-patches/commit/e5dd9bc5538372f623abb0579f4a93dbc3da9fe6))
+* **Bangla Calendar - Unlock premium:** unlock premium and remove ads ([8f130ca](https://github.com/hxreborn/morphe-patches/commit/8f130cab6f99d6d5422b8a83216821e1d7a31941)), closes [#246](https://github.com/hxreborn/morphe-patches/issues/246)
+* **Biobird Flashcards - GmsCore support:** sign in with Google ([376f41f](https://github.com/hxreborn/morphe-patches/commit/376f41fe2003837a60e1819624ab7b1a7ac05e0d))
+* **Biobird Flashcards - Unlock premium:** unlock all chapters and PYQs ([39dc280](https://github.com/hxreborn/morphe-patches/commit/39dc280b16a5e62b7972cafe57fe678d0031796b)), closes [#215](https://github.com/hxreborn/morphe-patches/issues/215)
+* **DepthPix - GmsCore support:** sign in with Google ([0ea3960](https://github.com/hxreborn/morphe-patches/commit/0ea3960cc4ed5cd3195cc1d3dfbf1a8f609a09a0))
+* **DepthPix - Hide ads:** remove ads ([a6fe155](https://github.com/hxreborn/morphe-patches/commit/a6fe155169a1d1fad98e10c2aa03e8177c295ef0)), closes [#240](https://github.com/hxreborn/morphe-patches/issues/240)
+* **DepthPix - Unlock premium:** unlock Pro wallpapers and 3D motion ([b35c3ee](https://github.com/hxreborn/morphe-patches/commit/b35c3ee193b38254e6730d6d972b7cb62c25e2cb))
+* **MovieBox - Hide BuzzBox:** remove community tabs ([96dcd85](https://github.com/hxreborn/morphe-patches/commit/96dcd85b08776efd7325cc1294fac7ee74eef10a)), closes [#86](https://github.com/hxreborn/morphe-patches/issues/86)
+* **MovieBox - Hide Midnight tab:** remove 18+ section from home ([6489e8e](https://github.com/hxreborn/morphe-patches/commit/6489e8e815b192038fd80b4388b8564475759b97))
+* **MovieBox - Hide permanent notification:** stop the sticky push alert ([adf5fed](https://github.com/hxreborn/morphe-patches/commit/adf5fedba164ebcb10ef42a1c531905abc20c4fc))
+* **Notesnook - Material You theme:** apply system accent to themes ([8f059ec](https://github.com/hxreborn/morphe-patches/commit/8f059ec88a2f832f539567b3b87ce9205b4c45db)), closes [#223](https://github.com/hxreborn/morphe-patches/issues/223)
+* **Perplexity - Disable tracking:** stop usage events and attribution ([fde5880](https://github.com/hxreborn/morphe-patches/commit/fde5880838dbd53e608ac1f449e63429562f71f2))
+* **Perplexity - GmsCore support:** sign in with Google through GmsCore ([b4d6baf](https://github.com/hxreborn/morphe-patches/commit/b4d6bafcbc1d58cbcc05843571dae719edf11aa3))
+* **Perplexity - Hide upgrade promotions:** skip the sign-in paywall ([27f213e](https://github.com/hxreborn/morphe-patches/commit/27f213e09d871e68320b50f85e5c2f898105120d))
+* **Proton Lumo - Store encryption key in TEE:** prevent Keystore errors ([39e7997](https://github.com/hxreborn/morphe-patches/commit/39e7997fdfcb548ae2bf0aa07131207c0ec6f69d))
+* **Sheytoon - Unlock premium:** unlock unlimited likes and incognito ([a423360](https://github.com/hxreborn/morphe-patches/commit/a4233605e20b641a7d119477def762d9ce91ff42))
+
+### Updated App Support
+
+* **AtloMaps:** add support for `2.0.0` ([e39dc21](https://github.com/hxreborn/morphe-patches/commit/e39dc21e5674ad2f183d2504397361bbca2da508))
+* **Hindu Calendar:** add support for `9.4.0` ([d81797e](https://github.com/hxreborn/morphe-patches/commit/d81797eba0eb2d1ca3b4a29f081b84242b177279)), closes [#227](https://github.com/hxreborn/morphe-patches/issues/227)
+* **Jujo:** add support for `1.2.6` ([93098df](https://github.com/hxreborn/morphe-patches/commit/93098dfffac05fab6770b50236da7b68efdb5f70)), closes [#244](https://github.com/hxreborn/morphe-patches/issues/244)
+* **Perplexity:** add support for `2.101.0` ([c1f540d](https://github.com/hxreborn/morphe-patches/commit/c1f540dcf4906ca09d9e96b99b2ad563c70fa766)), closes [#232](https://github.com/hxreborn/morphe-patches/issues/232)
+* **Proton Lumo:** add support for `2.1.4-nogms` ([272aaec](https://github.com/hxreborn/morphe-patches/commit/272aaec2e7474d8fa61f189f8c051988d3bd8f4b)), closes [#250](https://github.com/hxreborn/morphe-patches/issues/250)
+
 ## [1.53.0](https://github.com/hxreborn/morphe-patches/compare/v1.52.0...v1.53.0) (2026-10-16)
 
 ### Bug Fixes

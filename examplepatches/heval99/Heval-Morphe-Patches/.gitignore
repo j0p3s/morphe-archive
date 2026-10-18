@@ -158,3 +158,6 @@ Crashlogs/
 
 # Local request queue (never commit)
 docs/request-queue.local.md
+
+# Release checksum file, generated during the semantic-release publish step
+SHA256SUMS.txt

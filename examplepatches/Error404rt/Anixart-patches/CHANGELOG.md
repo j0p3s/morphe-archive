@@ -1,3 +1,18 @@
+## [2.0.0](https://github.com/Error404rt/Anixart-patches/compare/v1.0.0...v2.0.0) (2026-10-17)
+
+### ⚠ BREAKING CHANGES
+
+* target supported app version changes from Anixart 10.0 to 10.5.
+
+### 🐛 Bug Fixes
+
+* target Anixart 10.5 compatibility ([aa6d69f](https://github.com/Error404rt/Anixart-patches/commit/aa6d69f06a69b3894792b655c7753e708e4c644b))
+* update Anixart 10.5 ad fingerprints ([dcfc4ce](https://github.com/Error404rt/Anixart-patches/commit/dcfc4ce211341f6d7cb298b3a7ae9e2334758618))
+
+### ✨ New Features
+
+* publish Anixart 10.5 release v2.0.0 ([c8f99b6](https://github.com/Error404rt/Anixart-patches/commit/c8f99b631b7e79e881dab0f029cc74b6b4765122))
+
 ## 1.0.0 (2026-10-05)
 
 ### 🐛 Bug Fixes

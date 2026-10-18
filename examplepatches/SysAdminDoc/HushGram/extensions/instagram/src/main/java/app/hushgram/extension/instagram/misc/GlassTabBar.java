@@ -484,6 +484,7 @@ public final class GlassTabBar {
      * reel's comments, whose comment field sits by it (#209), while the pill keeps its room.
      */
     public static int navBarHeight(int height) {
+        answeredForASheet = false;
         Glass glass = height <= 0 ? null : floatingGlassInFront();
         if (glass == null) {
             navTaken = 0;
@@ -491,11 +492,20 @@ public final class GlassTabBar {
         }
         navTaken = height;
         if (glass.underASheet()) {
+            answeredForASheet = true;
             HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_NAV_UNDER_SHEET);
             return height;
         }
         HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_NAV_BEHIND);
         return 0;
+    }
+
+    /** Whether the last {@link #navBarHeight} answer went through as it came because a bottom sheet covers the pill. Main thread. */
+    private static boolean answeredForASheet;
+
+    /** Whether the last {@link #navBarHeight} answer was the sheet's (#222, #232). */
+    public static boolean answeredForASheet() {
+        return answeredForASheet;
     }
 
     /** Whether the front activity shows a floating glass bar: restyled, floating, and shown. */
@@ -533,6 +543,16 @@ public final class GlassTabBar {
         return floating ? navTaken : 0;
     }
 
+    /**
+     * How far above the bottom edge a Reels viewer stops while the pill is away: the navigation bar's
+     * height Instagram was answered 0 for, so the seek bar stays out of the gesture handle's reach and
+     * from under the navigation buttons (#221), or 0 when Instagram was given that height and keeps its
+     * screens above it itself.
+     */
+    static int reelsRoomWhileAway() {
+        return answeredForASheet ? 0 : navTaken;
+    }
+
     /** The activity in front, or null: where FullScreenBars looks for the keyboard (#209). */
     @Nullable
     public static Activity activityInFront() {
@@ -551,6 +571,7 @@ public final class GlassTabBar {
     static void resetForTests() {
         front = new WeakReference<>(null);
         navTaken = 0;
+        answeredForASheet = false;
     }
 
     static void diagnose(String what, @Nullable Throwable failure) {
@@ -1301,14 +1322,15 @@ public final class GlassTabBar {
          * it does over Instagram's own bar ({@link #reelsAboveTheBar}), and the bar paints black under it, as
          * Instagram paints its bar on Reels. The views are walked for viewers at most every
          * {@link #REELS_LOOK_MS}. While Instagram hides the bar, or the pill has slid all the way off (Hide
-         * the tab bar on Reels, #170), the viewers get the room back, and they stop above it again as soon as
-         * it starts back. A change the wait held back is looked at once the wait is over, since a slide that
-         * has ended draws no more frames.
+         * the tab bar on Reels, #170), the viewers get the room back down to the navigation bar
+         * ({@link #reelsRoomWhileAway}), and they stop above the pill again as soon as it starts back. A
+         * change the wait held back is looked at once the wait is over, since a slide that has ended draws
+         * no more frames.
          */
         private void keepReelsAboveThePill(View holder, @Nullable ViewGroup.LayoutParams params, long now) {
             if (params == null || params.height <= 0) return;
             boolean away = bar.getVisibility() != View.VISIBLE || (scrollHide != null && scrollHide.isOffScreen());
-            int wanted = away ? 0 : params.height;
+            int wanted = away ? reelsRoomWhileAway() : params.height;
             if (now - reelsLookedAt < REELS_LOOK_MS) {
                 if (wanted != reelsWanted) bar.postInvalidateDelayed(REELS_LOOK_MS);
                 return;

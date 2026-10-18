@@ -2,20 +2,27 @@
 """python3 app_request.py <issue-number> <issue-body-file> <requests.json> <patches-list.json> [bundles.json]"""
 
 import json
+import os
 import re
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).parent))
 from fields import field, normalize, parse_fields
 
 MARKER = "<!-- app-request-bot -->"
+REPO = os.environ.get("GITHUB_REPOSITORY", "")
+TITLE_PREFIX = re.compile(r"^\s*(?:\[[^\]]{0,30}\]|app\s*request\b)\s*[:|\-\u2013\u2014\uff1a]?\s*", re.I)
+MAX_TITLE = 256
 URL = re.compile(r"https?://\S+")
-URL_PACKAGE = re.compile(r"[?&](?:id|p)=([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+)")
+MARKDOWN_LINK = re.compile(r"\[([^\[\]]*)\]\([^)]*\)")
+REPO_PATH = re.compile(r"[\w.-]+/[\w.-]+")
 PACKAGE = re.compile(r"\b[A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z0-9_]+)+\b")
 DOMAIN_ENDINGS = {"com", "net", "org", "io", "ph", "me", "app", "co", "in", "tv", "apk", "xyz", "to"}
 NAME_NOISE = {"app", "android", "apk", "for", "the"}
+STORE_QUERY = {"play.google.com": "id", "h5-api.aoneroom.com": "p"}
 MAX_LISTED = 5
 QUIET_DAYS = 14
 
@@ -25,22 +32,41 @@ def is_package(text):
     return bool(PACKAGE.fullmatch(text)) and not (len(parts) == 2 and parts[1].lower() in DOMAIN_ENDINGS)
 
 
+def store_package(url):
+    try:
+        parts = urlparse(url)
+    except ValueError:
+        return ""
+    value = parse_qs(parts.query).get(STORE_QUERY.get(parts.hostname), [""])[0]
+    linked = PACKAGE.match(value)
+    return linked.group(0) if linked else ""
+
+
 def find_package(body):
     fields = parse_fields(body)
     declared = field(fields, "Package name", "Package").strip().strip("`").strip()
     if is_package(declared):
         return declared
-    text = "\n".join(fields.values()) or body
-    linked = URL_PACKAGE.search(text)
-    if linked:
-        return linked.group(1)
-    return next((m.group(0) for m in PACKAGE.finditer(URL.sub(" ", text)) if is_package(m.group(0))), "")
+    return next(filter(None, map(store_package, URL.findall(field(fields, "App")))), "")
+
+
+def comparable_name(raw):
+    raw = re.split(r"[,(:]| - ", URL.sub(" ", raw), maxsplit=1)[0]
+    return "".join(w for w in map(normalize, re.findall(r"\w+", raw)) if w not in NAME_NOISE)
 
 
 def app_name(body, title=""):
-    raw = field(parse_fields(body), "App") or re.sub(r"^\[App Request\]:\s*", "", title, flags=re.I)
-    raw = re.split(r"[,(:]| - ", URL.sub(" ", raw), maxsplit=1)[0]
-    return "".join(w for w in re.findall(r"[a-z0-9]+", raw.lower()) if w not in NAME_NOISE)
+    return comparable_name(field(parse_fields(body), "App") or TITLE_PREFIX.sub("", title))
+
+
+def shown_name(body):
+    raw = URL.sub(" ", MARKDOWN_LINK.sub(r"\1", field(parse_fields(body), "App")))
+    return next(iter(raw.splitlines()), "").strip(" \t,;:|`-\u2013\u2014")
+
+
+def canonical_title(title, body):
+    rest = TITLE_PREFIX.sub("", title).strip() or shown_name(body) or find_package(body)
+    return f"[App Request]: {rest}"[:MAX_TITLE] if rest else title
 
 
 def supported_apps(patches_list):
@@ -62,6 +88,19 @@ def discussed_recently(issue, now):
 
 def link(issue):
     return f"#{issue['number']}"
+
+
+def listed_bundles(registry, package):
+    return sorted(
+        (b for b in registry["bundles"]
+         if isinstance(b, dict) and REPO_PATH.fullmatch(str(b.get("repo"))) and b["repo"].lower() != REPO.lower()
+         and isinstance(b.get("targetApps"), list) and package in b["targetApps"]),
+        key=lambda b: -b["stars"] if isinstance(b.get("stars"), int) else 0,
+    )
+
+
+def bundle_name(bundle):
+    return re.sub(r"[^A-Za-z0-9 .'+&-]", "", str(bundle.get("name") or ""))[:60].strip() or bundle["repo"]
 
 
 def decide(number, body, requests, patches_list, registry=None, title="", now=None):
@@ -93,13 +132,13 @@ def decide(number, body, requests, patches_list, registry=None, title="", now=No
 
     this = next((r for r in requests if r["number"] == number), {})
     if verdict == "close" and discussed_recently(this, now or datetime.now(timezone.utc)):
-        verdict, reason, duplicate_of, lines = "pass", "", 0, []
+        verdict, reason, duplicate_of, labels, lines = "hold", "", 0, [], []
 
-    if verdict != "close" and name:
+    if verdict == "pass" and name:
         lookalikes = [r for r in earlier if r["state"] == "OPEN" and r not in same_package
                       and app_name(r["body"] or "", r.get("title", "")) == name]
         lookalikes += [{"number": 0, "name": n} for p, n in supported.items()
-                       if normalize(n) == name and p != (package or "").lower()]
+                       if comparable_name(n) == name and p != (package or "").lower()]
         if lookalikes:
             verdict = "flag"
             if "duplicate" not in labels:
@@ -110,16 +149,12 @@ def decide(number, body, requests, patches_list, registry=None, title="", now=No
             )
 
     bundles = []
-    if package and verdict != "close" and registry:
-        bundles = sorted(
-            (b for b in registry.get("bundles", []) if package in (b.get("targetApps") or [])),
-            key=lambda b: -(b.get("stars") or 0),
-        )
+    if package and verdict in ("pass", "flag") and registry:
+        bundles = listed_bundles(registry, package)
         if bundles:
             host = {"github": "https://github.com", "gitlab": "https://gitlab.com"}
             rows = [
-                f"- [{b.get('name') or b['repo']}]({host.get(b.get('source'), host['github'])}/{b['repo']})"
-                + (f" ({b['stars']} stars)" if b.get("stars") else "")
+                f"- [{bundle_name(b)}]({host.get(b.get('source'), host['github'])}/{b['repo']})"
                 for b in bundles[:MAX_LISTED]
             ]
             if len(bundles) > MAX_LISTED:
@@ -145,6 +180,7 @@ def decide(number, body, requests, patches_list, registry=None, title="", now=No
         "duplicate_of": duplicate_of,
         "labels": labels,
         "matches": [b["repo"] for b in bundles],
+        "title": canonical_title(title, body),
         "comment": MARKER + "\n" + "\n\n".join(lines) if lines else "",
     }
 
@@ -161,5 +197,7 @@ if __name__ == "__main__":
             registry = json.loads(registry_path.read_text(encoding="utf-8"))
         except ValueError:
             pass
+    if not (isinstance(registry, dict) and isinstance(registry.get("bundles"), list)):
+        registry = None
     title = next((r.get("title", "") for r in requests if r["number"] == number), "")
     print(json.dumps(decide(number, body, requests, patches_list, registry, title)))

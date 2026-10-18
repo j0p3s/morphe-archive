@@ -129,6 +129,10 @@ public final class FeedSuggestions {
     static final String SECTION_KEPT_NOTHING_TAKEN = "suggested section titles kept, empty with nothing taken out";
     static final String SECTION_KEPT_UNREAD = "suggested section titles kept, section unreadable";
 
+    /** The report's counts of how each {@link #caughtUpTitle} call went, before {@link #sectionTitle}'s decision. */
+    static final String CAUGHT_UP_CHECKED = "caught up card titles checked";
+    static final String CAUGHT_UP_KEPT_NO_SECTION = "caught up card titles kept, no section under them";
+
     private static final String END_CARD_KIND = "END_OF_FEED_DEMARCATOR";
 
     /** The end of feed card's kind. Instagram moves one that opens a section above that section's header. */
@@ -136,6 +140,9 @@ public final class FeedSuggestions {
 
     /** Reads the items a section holds, as {@link #sectionItems} does. Tests stand in. */
     static volatile Function<Object, List<?>> sections = FeedSuggestions::sectionItems;
+
+    /** Reads the section an end of feed card shows under its title, as {@link #caughtUpSection} does. Tests stand in. */
+    static volatile Function<Object, Object> caughtUpSections = FeedSuggestions::caughtUpSection;
 
     /** Set once {@link #filter} has taken an item out of the home feed in this run. Tests clear it. */
     static volatile boolean tookOut;
@@ -263,8 +270,9 @@ public final class FeedSuggestions {
      * <p>Instagram reads that flag only beside its own checks that the feed is empty and no page is
      * loading. With both true and a next page left it draws its loading placeholder, and nothing asks
      * for that page while the feed is empty, so a Home emptied of suggestions kept the placeholder for
-     * good. Saying there's no next page gets Instagram's own empty feed card instead. A feed with posts
-     * left, or one waiting on a page, draws what it did.
+     * good. Saying there's no next page gets Instagram's own empty feed card instead, and
+     * {@link HomeNextPage} still asks for For you's next page (#28), so posts it brings replace the
+     * card. A feed with posts left, or one waiting on a page, draws what it did.
      */
     public static int feedEnded(int noMorePages) {
         Object feed = READING.get();
@@ -274,14 +282,21 @@ public final class FeedSuggestions {
         if (!tookOut && !typesTookOut && !adsTookOut) return noMorePages;
         try {
             if (!Utils.settingsReady()) return noMorePages;
-            boolean suggestions = tookOut && suggestionSwitchOn();
-            boolean posts = typesTookOut && postSwitchOn();
-            boolean ads = adsTookOut && Settings.HIDE_ADS.get();
-            return (suggestions || posts || ads) && suggestionsEmptiedHome(feed) ? 1 : noMorePages;
+            return switchesTookOut() && suggestionsEmptiedHome(feed) ? 1 : noMorePages;
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "empty feed", failure);
             return noMorePages;
         }
+    }
+
+    /**
+     * Whether a switch that took something out of Home in this run is still on: a suggestion switch
+     * after {@link #filter} took an item out, a post switch after {@link #homeItem} took a post out,
+     * or Hide ads after it took an ad out of a page. Callers check {@link Utils#settingsReady} first.
+     */
+    static boolean switchesTookOut() {
+        return (tookOut && suggestionSwitchOn()) || (typesTookOut && postSwitchOn())
+                || (adsTookOut && Settings.HIDE_ADS.get());
     }
 
     /** Whether any switch {@link #homeItem} takes posts out for is on, a name on Hidden accounts included. */
@@ -487,11 +502,7 @@ public final class FeedSuggestions {
         try {
             long seqAtOpen = seqAtOpen(policy);
             if (!pageLostEverything || pageSeq <= seqAtOpen) return loading;
-            if (!Utils.settingsReady()) return loading;
-            boolean suggestions = tookOut && suggestionSwitchOn();
-            boolean posts = typesTookOut && postSwitchOn();
-            boolean ads = adsTookOut && Settings.HIDE_ADS.get();
-            if (!suggestions && !posts && !ads) return loading;
+            if (!Utils.settingsReady() || !switchesTookOut()) return loading;
             long age = clock.getAsLong() - pageLostEverythingAt;
             if (age < 0 || age > OLDER_WINDOW_NANOS) return loading;
             if (!olderEndCounted) {
@@ -817,30 +828,74 @@ public final class FeedSuggestions {
         try {
             HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, SECTION_CHECKED);
             if (!Utils.settingsReady() || !Settings.HIDE_SUGGESTED_POSTS.get()) return title;
-            List<?> items = sections.apply(section);
-            if (items == null) {
-                HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, SECTION_KEPT_UNREAD);
-                return title;
-            }
-            String kinds = kindsIn(items);
-            if (items.isEmpty()) {
-                if (!tookOut && !FeedReels.tookOut) {
-                    HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, SECTION_KEPT_NOTHING_TAKEN);
-                    Logger.printDebug(() -> "Feed suggestions: the suggested section is empty but nothing was taken out of Home, so it keeps its title");
-                    return title;
-                }
-            } else if (showsAny(items)) {
-                HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, SECTION_KEPT_SHOWS);
-                Logger.printDebug(() -> "Feed suggestions: the suggested section keeps its title, it holds " + kinds);
-                return title;
-            }
-            HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, SECTION_TITLE_DROPPED);
-            Logger.printDebug(() -> "Feed suggestions: the suggested section shows nothing (" + kinds + "), so its header keeps only its link");
-            return "";
+            return titleOver(title, section);
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "suggested section title", failure);
             return title;
         }
+    }
+
+    /**
+     * Injected in the binder of Home's end of feed card where it draws the card's group set link
+     * beside the title, with the title and the card, and the binder sets the card's title and
+     * subtitle again with the answer. On 451 the caught up card draws the Suggested for you header
+     * itself: "You've seen the latest posts from accounts you follow" on top, then the title with the
+     * Older posts link beside it, so {@link #sectionTitle}'s header binder never runs for it (#104,
+     * seen on a phone 2026-10-17). The title is the card's own text, not the section's name.
+     * Answers "" while Hide suggested posts is on and the section the card's group set has open
+     * shows nothing, as {@link #sectionTitle} decides, and [title] otherwise: for a card without a
+     * group set or with the switch off, and when anything goes wrong. 451's caught up card drops a
+     * title it's handed empty (seen on a phone), and other end of feed holders may leave a blank row
+     * instead. Its subtitle and the link stay. Never throws.
+     */
+    public static String caughtUpTitle(String title, Object card) {
+        if (title == null || title.isEmpty() || card == null) return title;
+        try {
+            HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, CAUGHT_UP_CHECKED);
+            if (!Utils.settingsReady() || !Settings.HIDE_SUGGESTED_POSTS.get()) return title;
+            Object section = caughtUpSections.apply(card);
+            if (section == null) {
+                HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, CAUGHT_UP_KEPT_NO_SECTION);
+                return title;
+            }
+            return titleOver(title, section);
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.FEED_SUGGESTIONS, "caught up card title", failure);
+            return title;
+        }
+    }
+
+    /** [title], or "" when [section] shows nothing under it, with the switch on. Counted as {@link #sectionTitle} says. */
+    private static String titleOver(String title, Object section) throws IllegalAccessException {
+        List<?> items = sections.apply(section);
+        if (items == null) {
+            HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, SECTION_KEPT_UNREAD);
+            return title;
+        }
+        String kinds = kindsIn(items);
+        if (items.isEmpty()) {
+            if (!tookOut && !FeedReels.tookOut) {
+                HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, SECTION_KEPT_NOTHING_TAKEN);
+                Logger.printDebug(() -> "Feed suggestions: the suggested section is empty but nothing was taken out of Home, so it keeps its title");
+                return title;
+            }
+        } else if (showsAny(items)) {
+            HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, SECTION_KEPT_SHOWS);
+            Logger.printDebug(() -> "Feed suggestions: the suggested section keeps its title, it holds " + kinds);
+            return title;
+        }
+        HookStatus.counted(FamilyNames.FEED_SUGGESTIONS, SECTION_TITLE_DROPPED);
+        Logger.printDebug(() -> "Feed suggestions: the suggested section shows nothing (" + kinds + "), so its header keeps only its link");
+        return "";
+    }
+
+    /**
+     * The section an end of feed card shows under its title: the one its group set has open, found by
+     * the group set's own id for it, or null when the card has no group set or no section by that id.
+     * The patch writes the body. Null as built, so the card keeps its title.
+     */
+    public static Object caughtUpSection(Object card) {
+        return null;
     }
 
     /** Whether any of [items] shows under the header: anything but an end of feed card or a unit a switch hides. */

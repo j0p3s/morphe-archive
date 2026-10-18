@@ -2,6 +2,8 @@
 
 [READMEへ戻る](../README.md)
 
+[MorpheへHaiagaruを追加](https://morphe.software/add-source?github=areteruhiro/Haiagaru-Morphe&name=Haiagaru)
+
 ## パッチ適用時にエラーが発生して適用できない
 
 Morpheでパッチを適用しようとした際にエラーが発生する場合は、Morphe右下の設定から以下のように変更してください。
@@ -11,7 +13,8 @@ Morpheでパッチを適用しようとした際にエラーが発生する場�
 設定変更後、もう一度パッチ適用をお試しください。
 
 プレ版をパッチ
-https://github.com/user-attachments/assets/db68d4d0-0b34-4635-ac31-17ca15c6ecaa
+https://github.com/user-attachments/assets/4a78bf3a-75ad-4821-ad68-d12c704a3704
+
 
 
 ---

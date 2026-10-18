@@ -35,10 +35,12 @@ runs:
       run: |
         list="$PWD/$PATCHES_LIST"
         cd "$RUNNER_TEMP"
-        curl -sSL --max-time 30 -H "Referer: https://morphe-patches.software/" \
+        curl -fsSL --max-time 30 -H "Referer: https://morphe-patches.software/" \
           -H "Accept: application/json" \
           -A "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0 Safari/537.36" \
           "$REGISTRY" -o bundles.json || rm -f bundles.json
+        jq -e --arg repo "$REPO" 'any(.bundles[]; (.repo | ascii_downcase) == ($repo | ascii_downcase)
+          and (.targetApps | length) > 0)' bundles.json >/dev/null 2>&1 || rm -f bundles.json
         gh issue list --repo "$REPO" --label "app request" --state all --limit 1000 \
           --json number,title,body,state,labels,comments > requests.json
 
@@ -48,49 +50,12 @@ runs:
           targets=$(jq -r 'map(select(.state == "OPEN")) | sort_by(.number) | .[].number' requests.json)
         fi
 
+        failed=0
         for n in $targets; do
-          jq -e --argjson n "$n" \
-            '.[] | select(.number == $n) | .labels | map(.name) | index("bot-wrong")' \
-            requests.json >/dev/null && continue
-          jq -r --argjson n "$n" '.[] | select(.number == $n) | .body // ""' requests.json > body.md
-          python3 "${{ github.action_path }}/app_request.py" \
-            "$n" body.md requests.json "$list" bundles.json > verdict.json
-          verdict=$(jq -r .verdict verdict.json)
-          jq -j .comment verdict.json > comment.md
-          previous=$(gh api "repos/$REPO/issues/$n/comments" --paginate \
-            --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- app-request-bot -->"))) | .body | @json' |
-            tail -n 1 | jq -r '. // empty')
-          if [ "$verdict" = pass ] && [ ! -s comment.md ] && [ -n "$previous" ]; then
-            printf '<!-- app-request-bot -->\nThis app request now passes the automated checks.\n' > comment.md
-          fi
-          [ -z "$ISSUE" ] && [ "$verdict" = pass ] && [ -z "$previous" ] && continue
-          echo "#$n: $(jq -c 'del(.comment)' verdict.json)"
-          [ "$DRY_RUN" = "true" ] && continue
-
-          if [ -s comment.md ] && [ "$(cat comment.md)" != "$previous" ]; then
-            gh issue comment "$n" --repo "$REPO" --body-file comment.md
-            labels=$(jq -r '.labels | join(",")' verdict.json)
-            [ -n "$labels" ] && gh issue edit "$n" --repo "$REPO" --add-label "$labels"
-          fi
-          if [ -n "$previous" ]; then
-            jq -r --argjson n "$n" '.[] | select(.number == $n) | .labels[].name' requests.json |
-            while read -r label; do
-              case "$label" in "needs info"|duplicate) ;; *) continue ;; esac
-              jq -e --arg l "$label" '.labels | index($l)' verdict.json >/dev/null && continue
-              added_by=$(gh api "repos/$REPO/issues/$n/timeline" --paginate \
-                --jq ".[] | select(.event == \"labeled\" and .label.name == \"$label\") | .actor.login" | tail -n 1)
-              [ "$added_by" = "github-actions[bot]" ] && gh issue edit "$n" --repo "$REPO" --remove-label "$label"
-              true
-            done
-          fi
-          if [ "$verdict" = close ]; then
-            if [ "$(jq -r .reason verdict.json)" = duplicate ]; then
-              gh issue close "$n" --repo "$REPO" --duplicate-of "$(jq -r .duplicate_of verdict.json)"
-            else
-              gh issue close "$n" --repo "$REPO" --reason "$(jq -r .reason verdict.json)"
-            fi
-          fi
+          bash -eo pipefail "${{ github.action_path }}/act_on_request.sh" "$n" "$list" ||
+            { echo "::error::Triage of #$n failed"; failed=1; }
         done
+        exit "$failed"
 
     - name: Triage app update requests
       if: >-
@@ -109,7 +74,7 @@ runs:
         cd "$RUNNER_TEMP"
         jq -r '.issue.body // ""' "$GITHUB_EVENT_PATH" > body.md
         gh issue list --repo "$REPO" --label app-update --state open --limit 1000 \
-          --json number,title,state > updates.json
+          --json number,title,state,labels > updates.json
         python3 "${{ github.action_path }}/app_update.py" "$ISSUE" body.md updates.json "$list" > verdict.json
         verdict=$(jq -r .verdict verdict.json)
         jq -j .comment verdict.json > comment.md
@@ -124,6 +89,12 @@ runs:
 
         case "$verdict" in
           close)
+            reopened_by=$(gh api "repos/$REPO/issues/$ISSUE/timeline" --paginate \
+              --jq '.[] | select(.event == "reopened" and .actor.login != "github-actions[bot]") | .actor.login')
+            if [ -n "$reopened_by" ]; then
+              echo "#$ISSUE: reopened by $reopened_by, not closed again"
+              exit 0
+            fi
             retitle=$(jq -r '.retitle.number // empty' verdict.json)
             [ -n "$retitle" ] && gh issue edit "$retitle" --repo "$REPO" --title "$(jq -r .retitle.title verdict.json)"
             post_comment
@@ -134,15 +105,21 @@ runs:
             fi
             ;;
           flag)
-            post_comment
-            gh issue edit "$ISSUE" --repo "$REPO" --add-label "$(jq -r '.labels | join(",")' verdict.json)"
+            if [ "$(cat comment.md)" != "$previous" ]; then
+              gh issue edit "$ISSUE" --repo "$REPO" --add-label "$(jq -r '.labels | join(",")' verdict.json)"
+              gh issue comment "$ISSUE" --repo "$REPO" --body-file comment.md
+            fi
             ;;
           pass)
             title=$(jq -r .title verdict.json)
-            [ "$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")" = "$title" ] || gh issue edit "$ISSUE" --repo "$REPO" --title "$title"
+            if [ "$(jq -r '.issue.title' "$GITHUB_EVENT_PATH")" != "$title" ]; then
+              renamed_by=$(gh api "repos/$REPO/issues/$ISSUE/timeline" --paginate \
+                --jq '.[] | select(.event == "renamed" and .actor.login != "github-actions[bot]") | .actor.login')
+              [ -n "$renamed_by" ] || gh issue edit "$ISSUE" --repo "$REPO" --title "$title"
+            fi
             if [ -n "$previous" ]; then
-              jq -e '.issue.labels | map(.name) | index("needs info")' "$GITHUB_EVENT_PATH" >/dev/null &&
-                gh issue edit "$ISSUE" --repo "$REPO" --remove-label "needs info"
+              mapfile -t outdated < <(jq -r '.issue.labels[].name | select(. == "needs info")' "$GITHUB_EVENT_PATH")
+              bash -eo pipefail "${{ github.action_path }}/remove_bot_labels.sh" "$ISSUE" "${outdated[@]}"
               printf '<!-- app-update-bot -->\nThis app update request now passes the automated checks.\n' > comment.md
               post_comment
             fi
@@ -169,22 +146,37 @@ runs:
         ISSUE: ${{ github.event.issue.number }}
         REPO: ${{ github.repository }}
         ACTION: ${{ github.event.action }}
-        WAS_CLOSED_BY_BOT: ${{ github.event.issue.state == 'closed' && contains(github.event.issue.labels.*.name, 'incomplete') }}
+        CLOSED: ${{ github.event.issue.state == 'closed' }}
       run: |
         cd "$RUNNER_TEMP"
         verdict=$(jq -r .verdict verdict.json)
         jq -r .comment verdict.json > comment.md
+        remove_bot_labels() {
+          mapfile -t outdated < <(jq -r --slurpfile verdict verdict.json --arg drop "$1" \
+            '.issue.labels[].name | select(. as $label | $drop | split(",") | index($label))
+             | select(. as $label | $verdict[0].labels | index($label) | not)' "$GITHUB_EVENT_PATH")
+          bash -eo pipefail "${{ github.action_path }}/remove_bot_labels.sh" "$ISSUE" "${outdated[@]}"
+        }
 
-        if [ "$WAS_CLOSED_BY_BOT" = "true" ]; then
+        CLOSED_BY_TRIAGE=false
+        if [ "$CLOSED" = "true" ]; then
           closer=$(gh api "repos/$REPO/issues/$ISSUE/timeline" --paginate \
             --jq '.[] | select(.event == "closed") | .actor.login' | tail -1)
-          [ "$closer" = "github-actions[bot]" ] || WAS_CLOSED_BY_BOT=false
+          labels=$(jq -r '.issue.labels[].name' "$GITHUB_EVENT_PATH")
+          if [ "$closer" != "github-actions[bot]" ] || ! grep -qxE 'incomplete|stale' <<< "$labels"; then
+            echo "#$ISSUE: closed by $closer without an incomplete or stale label, left alone"
+            exit 0
+          fi
+          if grep -qx incomplete <<< "$labels" && ! grep -qx stale <<< "$labels"; then
+            CLOSED_BY_TRIAGE=true
+          fi
         fi
 
         app=$(jq -r .app verdict.json)
         if [ -n "$app" ] && [ "$verdict" != "pass" ] && [ "$ACTION" = "opened" ]; then
           dupes=$(gh search issues "$app" --repo "$REPO" --limit 4 --json number,title --jq \
-            "map(select(.number != $ISSUE)) | .[0:3] | map(\"- [#\(.number)](https://redirect.github.com/$REPO/issues/\(.number)) \`\(.title | gsub(\"\`\"; \"'\"))\`\") | join(\"\n\")")
+            "map(select(.number != $ISSUE)) | .[0:3] | map(\"- [#\(.number)](https://redirect.github.com/$REPO/issues/\(.number)) \`\(.title | gsub(\"\`\"; \"'\") | gsub(\"\\\\s+\"; \" \"))\`\") | join(\"\n\")") ||
+            { echo "::warning::Searching for issues about $app failed"; dupes=""; }
           if [ -n "$dupes" ]; then
             printf '\nThese issues matched a search for %s:\n%s\n' "$app" "$dupes" >> comment.md
           fi
@@ -197,42 +189,45 @@ runs:
         without_related() {
           sed '/^These issues matched a search for /,$d'
         }
+        comment_changed() {
+          [ "$(without_related < comment.md)" != "$(printf '%s\n' "$previous" | without_related)" ]
+        }
         post_comment() {
-          [ "$(without_related < comment.md)" = "$(printf '%s\n' "$previous" | without_related)" ] ||
-            gh issue comment "$ISSUE" --repo "$REPO" --body-file comment.md
+          ! comment_changed || gh issue comment "$ISSUE" --repo "$REPO" --body-file comment.md
         }
 
         case "$verdict" in
           close)
+            reopened_by=$(gh api "repos/$REPO/issues/$ISSUE/timeline" --paginate \
+              --jq '.[] | select(.event == "reopened" and .actor.login != "github-actions[bot]") | .actor.login')
+            if [ -n "$reopened_by" ]; then
+              echo "#$ISSUE: reopened by $reopened_by, not closed again"
+              exit 0
+            fi
             post_comment
-            gh issue edit "$ISSUE" --repo "$REPO" --add-label incomplete
-            gh issue close "$ISSUE" --repo "$REPO" --reason "not planned"
+            if [ "$CLOSED" != "true" ]; then
+              remove_bot_labels stale
+              gh issue edit "$ISSUE" --repo "$REPO" --add-label incomplete
+              gh issue close "$ISSUE" --repo "$REPO" --reason "not planned"
+            fi
             ;;
           flag)
-            post_comment
-            labels=$(jq -r '.labels | join(",")' verdict.json)
-            [ -n "$labels" ] && gh issue edit "$ISSUE" --repo "$REPO" --add-label "$labels"
-            [ -n "$previous" ] && jq -r '.issue.labels[].name' "$GITHUB_EVENT_PATH" | while read -r label; do
-              case "$label" in "needs info"|"untargeted version") ;; *) continue ;; esac
-              jq -e --arg l "$label" '.labels | index($l)' verdict.json >/dev/null && continue
-              added_by=$(gh api "repos/$REPO/issues/$ISSUE/timeline" --paginate \
-                --jq ".[] | select(.event == \"labeled\" and .label.name == \"$label\") | .actor.login" | tail -n 1)
-              [ "$added_by" = "github-actions[bot]" ] && gh issue edit "$ISSUE" --repo "$REPO" --remove-label "$label"
-              true
-            done
-            if [ "$WAS_CLOSED_BY_BOT" = "true" ]; then
+            if comment_changed; then
+              labels=$(jq -r '.labels | join(",")' verdict.json)
+              [ -z "$labels" ] || gh issue edit "$ISSUE" --repo "$REPO" --add-label "$labels"
+              gh issue comment "$ISSUE" --repo "$REPO" --body-file comment.md
+            fi
+            [ -z "$previous" ] || remove_bot_labels "needs info,untargeted version"
+            if [ "$CLOSED_BY_TRIAGE" = "true" ]; then
               gh issue reopen "$ISSUE" --repo "$REPO"
-              gh issue edit "$ISSUE" --repo "$REPO" --remove-label incomplete
+              remove_bot_labels incomplete
             fi
             ;;
           pass)
-            if [ "$WAS_CLOSED_BY_BOT" = "true" ] || [ -n "$previous" ]; then
-              gh issue edit "$ISSUE" --repo "$REPO" \
-                --remove-label incomplete \
-                --remove-label "needs info" \
-                --remove-label "untargeted version" || true
+            if [ "$CLOSED" = "true" ] || [ -n "$previous" ]; then
+              remove_bot_labels "incomplete,needs info,untargeted version"
             fi
-            if [ "$WAS_CLOSED_BY_BOT" = "true" ]; then
+            if [ "$CLOSED" = "true" ]; then
               gh issue reopen "$ISSUE" --repo "$REPO"
               printf '<!-- triage-bot -->\nThis issue was reopened because the report now passes the automated checks.\n' > comment.md
               post_comment

@@ -6,6 +6,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.util.proxy.mutableTypes.MutableField.Companion.toMutable
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.template.patches.shared.Constants.COMPATIBILITY_TRUECALLER
@@ -16,19 +17,21 @@ import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
+import com.android.tools.smali.dexlib2.immutable.ImmutableField
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethodParameter
 
 private const val CALLS = "$BOTTOM_BAR_BUTTON_TYPE->CALLS:$BOTTOM_BAR_BUTTON_TYPE"
 private const val MESSAGES = "$BOTTOM_BAR_BUTTON_TYPE->MESSAGES:$BOTTOM_BAR_BUTTON_TYPE"
 private const val SHOW_BAR_HELPER = "morpheShowBottomBarWithTwoTabs"
+private const val SAVED_MIN_HEIGHT = "morpheSavedMinHeight"
 
 @Suppress("unused")
 val hideMessagesTabPatch = bytecodePatch(
     name = "Hide Messages tab",
     description = "Removes the Messages tab from the bottom bar and always opens Calls. SMS " +
         "notifications still open their conversation. When Calls is the only tab left, the " +
-        "bottom bar is hidden.",
+        "bottom bar shrinks to the height of the system navigation bar.",
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_TRUECALLER)
@@ -65,10 +68,20 @@ val hideMessagesTabPatch = bytecodePatch(
             )
         }
 
-        // 4. BottomBarView needs two tabs: with fewer it keeps an empty bar. A new helper hides the
-        // bar in that case (only Calls left, e.g. with every other tab patch) and shows it
-        // otherwise; nothing else in the app changes the bar's visibility. It is called right
-        // where the builder casts its bar to BottomBarView, with the final tab list.
+        // 4. BottomBarView needs two tabs: with fewer it keeps an empty bar. A new helper collapses
+        // the bar in that case (only Calls left, e.g. with every other tab patch) and restores it
+        // otherwise. It is called right where the builder casts its bar to BottomBarView, with the
+        // final tab list. The bar is not set GONE: TruecallerInit draws edge to edge, and the bar
+        // (Material BottomNavigationView) is the only view that pads for the navigation bar inset.
+        // The content area, with the Calls pill and dial pad FAB, ends at the bar's top (a layout
+        // barrier), so a GONE bar left them behind the 3-button navigation bar (issue #61).
+        // Collapsing keeps the bar's own inset listener: its tab menu (its only child) goes GONE
+        // and its minimum height (from its style) drops to 0, leaving just the inset padding as its height. The
+        // minimum height is saved in a new field (null while the bar is not collapsed).
+        mutableClassDefBy(BOTTOM_BAR_VIEW).fields.add(
+            ImmutableField(BOTTOM_BAR_VIEW, SAVED_MIN_HEIGHT, "Ljava/lang/Integer;", AccessFlags.PUBLIC.value, null, null, null)
+                .toMutable(),
+        )
         val builder = BottomBarTabsFingerprint.method
         val builderClass = BottomBarTabsFingerprint.classDef
         val instructions = builder.instructions
@@ -106,21 +119,47 @@ val hideMessagesTabPatch = bytecodePatch(
                 AccessFlags.PRIVATE.value or AccessFlags.STATIC.value,
                 null,
                 null,
-                MutableMethodImplementation(4),
+                MutableMethodImplementation(6),
             ).toMutable().apply {
                 addInstructionsWithLabels(
                     0,
                     """
-                        invoke-interface {p1}, Ljava/util/List;->size()I
-                        move-result v0
-                        const/4 v1, 0x2
-                        if-lt v0, v1, :hide
                         const/4 v0, 0x0
-                        goto :set
-                        :hide
-                        const/16 v0, 0x8
-                        :set
                         invoke-virtual {p0, v0}, Landroid/view/View;->setVisibility(I)V
+                        iget-object v1, p0, $BOTTOM_BAR_VIEW->$SAVED_MIN_HEIGHT:Ljava/lang/Integer;
+                        invoke-interface {p1}, Ljava/util/List;->size()I
+                        move-result v2
+                        const/4 v3, 0x2
+                        if-lt v2, v3, :collapse
+                        if-eqz v1, :done
+                        invoke-virtual {v1}, Ljava/lang/Integer;->intValue()I
+                        move-result v2
+                        invoke-virtual {p0, v2}, Landroid/view/View;->setMinimumHeight(I)V
+                        const/4 v1, 0x0
+                        iput-object v1, p0, $BOTTOM_BAR_VIEW->$SAVED_MIN_HEIGHT:Ljava/lang/Integer;
+                        goto :children
+                        :collapse
+                        if-nez v1, :hide_children
+                        invoke-virtual {p0}, Landroid/view/View;->getMinimumHeight()I
+                        move-result v2
+                        invoke-static {v2}, Ljava/lang/Integer;->valueOf(I)Ljava/lang/Integer;
+                        move-result-object v1
+                        iput-object v1, p0, $BOTTOM_BAR_VIEW->$SAVED_MIN_HEIGHT:Ljava/lang/Integer;
+                        invoke-virtual {p0, v0}, Landroid/view/View;->setMinimumHeight(I)V
+                        :hide_children
+                        const/16 v0, 0x8
+                        :children
+                        invoke-virtual {p0}, Landroid/view/ViewGroup;->getChildCount()I
+                        move-result v2
+                        const/4 v3, 0x0
+                        :loop
+                        if-ge v3, v2, :done
+                        invoke-virtual {p0, v3}, Landroid/view/ViewGroup;->getChildAt(I)Landroid/view/View;
+                        move-result-object v1
+                        invoke-virtual {v1, v0}, Landroid/view/View;->setVisibility(I)V
+                        add-int/lit8 v3, v3, 0x1
+                        goto :loop
+                        :done
                         return-void
                     """,
                 )

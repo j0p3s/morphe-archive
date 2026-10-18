@@ -19,7 +19,7 @@ from pathlib import Path
 from urllib.parse import unquote
 
 import requests
-from versions import compare, version_key
+from versions import build_tags, compare, tracked_version, version_key
 
 TRACKER_REPO = "https://github.com/rushiranpise/patches-tracker"
 TRACKER_SHA = "b41567ad88e784f04c8a60f1cd11e4c956d8e57a"
@@ -530,27 +530,36 @@ def sync_issues(apps, results, bundle_version):
     gh("label", "create", ISSUE_LABEL, "--force", "--color", "FBCA04",
        "--description", "newer app version confirmed upstream")
     issues = json.loads(gh("issue", "list", "--label", ISSUE_LABEL, "--state", "all", "--limit", "1000",
-                           "--json", "number,title,state"))
+                           "--json", "number,title,state,author,labels"))
     by_title = {issue["title"]: issue for issue in issues}
+    names = [app["name"] for app in apps.values()]
     for record in results:
         app = apps[record["package"]]
         prefix = f"[App Update]: {app['name']} "
         candidate = record["candidate"] if record["status"] == "update" else None
         open_same = None
+        open_newer = False
         for issue in issues:
-            if issue["state"] != "OPEN" or not issue["title"].startswith(prefix):
+            version = tracked_version(issue["title"], app["name"], names)
+            excluded = {"needs info", "bot-wrong"} & {label["name"] for label in issue.get("labels") or []}
+            if issue["state"] != "OPEN" or version is None or excluded:
                 continue
-            version = issue["title"][len(prefix):]
             if compare(app["current"], version) >= 0:
                 gh("issue", "close", str(issue["number"]), "--comment", f"targeted in v{bundle_version}")
-            elif candidate and compare(candidate, version) >= 0:
+            elif not candidate or build_tags(candidate) != build_tags(version):
+                continue
+            elif compare(candidate, version) >= 0:
                 open_same = issue
+            else:
+                open_newer = True
         if not candidate:
             continue
-        if open_same:
+        if open_same and (open_same.get("author") or {}).get("is_bot"):
             gh("issue", "edit", str(open_same["number"]), "--title", prefix + candidate, "--body-file", "-",
                input=issue_body(app, record))
-        elif prefix + candidate not in by_title:
+        elif open_same and open_same["title"] != prefix + candidate:
+            gh("issue", "edit", str(open_same["number"]), "--title", prefix + candidate)
+        elif not open_newer and prefix + candidate not in by_title:
             gh("issue", "create", "--title", prefix + candidate, "--label", ISSUE_LABEL, "--body-file", "-",
                input=issue_body(app, record))
 

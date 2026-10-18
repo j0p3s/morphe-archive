@@ -10,14 +10,28 @@ ChMate `0.8.10.191 dev` / `0.8.10.226 dev` / `0.8.10.242 dev` 対応のMorpheパ
 ChMateに追加設定・閲覧・メディア・バックアップ機能を組み込むパッチです。
 従来の機能紹介は [Haiagaru](https://github.com/areteruhiro/Haiagaru) も参照してください。
 
-最新正式版: [1.7.1](https://github.com/areteruhiro/Haiagaru-Morphe/releases/latest) ／ 最新プレ版: [1.8.10](https://github.com/areteruhiro/Haiagaru-Morphe/releases/tag/1.8.10)
+最新正式版: [1.7.1](https://github.com/areteruhiro/Haiagaru-Morphe/releases/latest) ／ 最新プレ版: [1.8.15](https://github.com/areteruhiro/Haiagaru-Morphe/releases/tag/1.8.15)
 
 以下の機能紹介にはプレ版で追加した機能も含みます。正式版1.7.1ですべての機能が使えるわけではありません。
 
 更新履歴: [CHANGELOG.md](CHANGELOG.md)  
+操作案内: [使い方.md](使い方.md)
+
+## よくある質問・困ったとき
+
+**[よくある質問（FAQ）はこちら](docs/faq.md)**
+
+Cookieエラー、ワッチョイ検索、画像一覧、高度なNGなどを案内しています。
+導入時の問題は[インストールできない場合](#インストールできない場合)、不具合の報告・相談は[サポート](#サポート)をご覧ください。
+
+## 最新版の案内
+
+1.8.11: [アーカイブの元スレURL確認・コピー](docs/archive-original-url.md)。アーカイブ一覧またはHaiagaru設定の「過去ログ・エッヂ検索」から確認でき、元URL情報もスレアーカイブと一緒にMEGA／ローカルへバックアップできます。
+
+1.8.11: [コピー履歴・分類](docs/clipboard-history.md)。Haiagaru設定の「履歴・保存件数」または書き込み画面の︙から、ChMate内でコピーした本文を検索・再コピー・カテゴリ分けできます。記録は初期オフ、最新100件まで。他アプリのコピーは収集しません。
 正式版 `1.7.1` の概要: [1.7.1の更新内容](release-notes-1.7.1.md)
 
-プレ版 `1.8.10` の概要: [1.8.10の更新内容](https://github.com/areteruhiro/Haiagaru-Morphe/releases/tag/1.8.10)
+プレ版 `1.8.15` の概要: [1.8.14からの更新内容・注意事項](docs/release-1.8.15.md)。[★スレタブ](docs/favorite-threads.md)、投稿者ごとの強調色、[ローカル自動バックアップ](docs/local-auto-backup.md)、コピー・アンカー操作、巡回ボタン・外部板検索・アイコンの改善を含みます。
 
 ## 主な機能
 
@@ -28,6 +42,7 @@ ChMateに追加設定・閲覧・メディア・バックアップ機能を組�
 * Remove MonaKey
 * GitHubから更新できるDAT落ちスレ用検索プリセット
 * 自動DAT取得経路の並べ替えと任意HTTPS経路の追加
+* SS速報VIPの過去ログdat取得と、DAT経路変数の部分取り出し（`{$key:0:4}` など）。191／226／242 dev対応。[設定・書式](docs/dat-routes.md)
 * 自動DAT取得のON/OFF切り替え
 * 古いDAT・過去ログの改行保持と`.io` URL直接起動時の自動DAT取得
 * Talkの現行・旧形式板URLからの板一覧／スレ取得と書き込み互換処理
@@ -36,6 +51,8 @@ ChMateに追加設定・閲覧・メディア・バックアップ機能を組�
 * 5ch.io板が外部板扱いと5ch扱いで重複した場合の内部板一覧一括整理
 * パッケージ名・アプリ名・アイコン・versionCodeの変更
 * クラッシュログ保存（Morpheで無効化可能、初期値ON）
+* レス本文の直接選択・コピー: 本文長押しで一部を選択し、Android標準メニューからコピーできます。Haiagaru設定、またはスレ内ツールバー設定に追加した「長押しコピー」でオン／オフ可能（初期オフ）。191／226／242 dev対応。[使い方](docs/direct-body-selection.md)
+* 画像／動画のアップロード先切り替え: Imgur、画像専用imgbox（10MB）、imgpile（API不要100MB／API方式97MB）、動画専用Sendvidを選択可能。標準添付の成功結果を本文へ挿入し標準履歴へ記録します。imgbox／imgpileの保存済み管理情報から選択・確認付きの一括削除も追加。権限・画像単位のフォーム・成功応答を確認できない場合は停止します。手動Web画面は別操作です（開発中・実送信／実削除成功は未確認）。[使い方・制限](docs/upload-hosts.md)
 * 専用ビュワーの追加　<オフに出来ないとの報告があります>
 * 動画専用ビューアの左右上下スワイプ（明るさ／音量）・左右ダブルタップの相対シーク設定、およびYouTube公式プレーヤーのアプリ内表示。[操作と制限](docs/video-viewer-controls.md)
 * エッヂ過去ログビューアーで開けない場合はエラーコードを表示し、`Download/Haiagaru` に診断ログを保存
@@ -45,7 +62,12 @@ ChMateに追加設定・閲覧・メディア・バックアップ機能を組�
   * 荒らし省略
 * エッヂ板でスレタイ末尾に記者IDを表示（初期値ON、Haiagaru設定から切り替え）
 * 端末内JavaScriptで複雑なNG条件を作れる「高度なNGルール」
+* [5chのIDなしレスを非表示](docs/hidden-id-ng.md)（初期オフ、ID付きレスのあるスレ内のみ。191／226／242 dev）
 * NGワード・NG ID・NG名前などの登録上限をHaiagaru設定から変更（0で無制限、191 dev／226 dev／242 dev共通）
+
+## 最近の追加機能
+
+[最近の追加機能・版別の説明](docs/recent-features.md)にまとめています。最新の操作方法は[使い方](使い方.md)、全変更履歴は[CHANGELOG](CHANGELOG.md)をご覧ください。
 
 ## 機能別ドキュメント
 
@@ -96,6 +118,57 @@ URLでは `{$server}`、`{$bbs}`、`{$key}`、`{$rand}` を使用できます。
   - タブレット用モードでは、エッヂ過去ログなどのツールバー機能に不具合が発生する場合があります。
 
 - 書き込み長押しメニューの **「エッジ過去ログ」**、**「未読を0にする」** は現在機能していません。
+
+### スレ内の検索長押しで「URLを開けるアプリがありません」と表示される場合
+
+Androidの「標準アプリとして設定」から、以下の項目をOFFにしてください。
+
+- `itest.5ch.io`
+- `*.5ch.io`
+
+この設定をOFFにすると、書き込みボタンを長押しした際に外部ブラウザで開けるようになります。
+
+設定例: https://i.imgur.com/lmYxXZD.jpeg
+
+なお、「標準アプリとして設定」内の項目をOFFにしても、Haiagaru内で `*.5ch.io` のURLを開いた場合は、Haiagaru内で正常に開かれます。
+
+情報提供: (ﾜｯﾁｮｲ 0de3-uUZJ)
+
+## インストールできない場合
+
+### パッチ適用時にエラーが発生して適用できない
+
+Morpheでパッチを適用しようとした際にエラーが発生する場合は、Morphe右下の設定から以下のように変更してください。
+
+`Morphe右下 → 別プロセスで実行 → 1024MB`
+
+設定変更後、もう一度パッチ適用をお試しください。
+
+以前のChMateをアプリデータを残してアンインストールした場合など、既存のパッケージとの競合が表示されることがあります。まずパッケージ名・署名の違いを確認してください。データを消す操作は最終手段です（過去の241での報告。現在241は対応対象外）。
+
+1. ChMateの設定や必要なデータをバックアップします。
+2. 以前のChMateを、アプリデータも含めて完全にアンインストールします。
+3. パッチ済みAPKをインストールします。
+4. 必要に応じて、手順1のバックアップからデータを復元します。
+
+アプリデータを削除すると、バックアップしていない設定や履歴は失われます。必ずアンインストール前にバックアップを確認してください。
+
+初期状態で有効なパッチ `Change ChMate package name` では、別アプリとしてインストールするための
+パッケージ名に加えて、アプリ名、PNG/WebPアイコン、versionCodeを設定できます。
+アイコン・versionCodeを未指定にした項目は元の値を保持します。
+
+標準設定ではShizukuを組み込みません。旧ChMateの共有データをShizukuでコピーする場合だけ、
+任意パッチ `Migrate ChMate data with Shizuku` を追加で有効にしてください。
+この任意パッチを有効にしたAPKはAndroid 7.0（API 24）以降が必要です。
+データ移行にはchmate本来のバックアップ/復元を推奨しています。
+
+備考: パッケージ名の変更により予期せぬエラーが発生する可能性がありますが、
+既存のChMateとは別アプリとして扱われるため、インストール時の競合エラーを抑えられます。
+
+任意パッチ `Save ChMate crash logs` を有効にすると、未処理例外でクラッシュした際に
+`Download/Haiagaru/` へログを保存します。投稿本文、Cookieなどのアプリデータは記録しません。
+
+情報提供: あかまつさん
 
 ## URV Manager / Morphe Managerへの追加と更新
 
@@ -179,7 +252,7 @@ APKは再署名されるため、Play版など署名が異なるChMateとはそ�
 さらにご支援いただける場合は、以下から寄付を受け付けています。
 
 - [Amazon Gift Card](https://www.amazon.co.jp/gp/product/B004N3APGO) Send to (areteruhiro@gmail.com)
-- [PayPay](https://qr.paypay.ne.jp/p2p01_I0Y0ojbYQ7RlZG1u)
+- [PayPay](https://qr.paypay.ne.jp/p2p01_Cc1k5WqxClWy8HCG)
 
 ### 謝辞
 yujirox 様 <br>

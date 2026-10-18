@@ -267,12 +267,13 @@ public class ReelOriginTest {
     @Test
     public void givesUpAfterItsStepsAndPutsTheGridBack() {
         ReelOrigin.opening(new Reel(REEL), ON);
-        openProfile(reels(12, 9000), null);
+        // Every page sits far above the reel, so even MAX_STEPS pages never reach it.
+        openProfile(reels(12, 90000), null);
         int[] page = {0};
-        grid.atEnd = () -> grid.reels.addAll(reels(12, 8000 - 100 * page[0]++));
+        grid.atEnd = () -> grid.reels.addAll(reels(12, 80000 - 100 * page[0]++));
 
         ReelOrigin.reelsTabResumed(new Tab(profile, grid, AUTHOR), ON);
-        idleSeconds(20);
+        idleSeconds((int) (ReelOrigin.GIVE_UP_MS / 1000) + 5);
         assertTrue(shown.isEmpty());
         assertEquals("the steps", ReelOrigin.MAX_STEPS, grid.drags.size());
         assertEquals("then one scroll back", 1, grid.scrolls.size());
@@ -343,6 +344,91 @@ public class ReelOriginTest {
         String report = HookStatus.report().toString();
         assertTrue(report, report.contains(ReelOrigin.FOUND + " 1"));
         assertFalse(report, report.contains(ReelOrigin.RAN_OUT));
+    }
+
+    /**
+     * A reel from months back sits dozens of pages down, each page a second and a half behind the
+     * last. The search kept going only 15 seconds and said it couldn't find it (#225); it goes on
+     * until the reel shows.
+     */
+    @Test
+    public void aReelDozensOfPagesDownIsStillFound() {
+        List<List<String>> pages = new ArrayList<>();
+        for (int page = 0; page < 30; page++) pages.add(reels(12, 9000 - page * 100));
+        pages.get(29).set(6, REEL);
+        ReelOrigin.opening(new Reel(REEL), ON);
+        openProfile(new ArrayList<>(pages.get(0)), null);
+        Handler main = new Handler(Looper.getMainLooper());
+        int[] loaded = {1};
+        boolean[] loading = {false};
+        grid.atEnd = () -> {
+            if (loading[0] || loaded[0] >= pages.size()) return;
+            loading[0] = true;
+            main.postDelayed(() -> {
+                grid.reels.addAll(pages.get(loaded[0]++));
+                loading[0] = false;
+            }, 1500);
+        };
+
+        ReelOrigin.reelsTabResumed(new Tab(profile, grid, AUTHOR), ON);
+        idleSeconds(80);
+        assertEquals(HookStatus.report() + " drags " + grid.drags.size() + " pages " + loaded[0], List.of(REEL), shown);
+        String report = HookStatus.report().toString();
+        assertTrue(report, report.contains(ReelOrigin.FOUND + " 1"));
+        assertFalse(report, report.contains(ReelOrigin.RAN_OUT));
+    }
+
+    /**
+     * Deep in a big profile a page can take longer than the end's wait, Instagram's spinner showing
+     * below the last row all the while. The search took that for the end and gave up (#225, S22
+     * 2026-10-17): it waits while the spinner shows, and finds the reel three slow pages down.
+     */
+    @Test
+    public void aSlowPageWithItsSpinnerShowingIsWaitedFor() {
+        List<List<String>> pages = new ArrayList<>();
+        for (int page = 0; page < 4; page++) pages.add(reels(12, 9000 - page * 100));
+        pages.get(3).set(5, REEL);
+        ReelOrigin.opening(new Reel(REEL), ON);
+        openProfile(new ArrayList<>(pages.get(0)), null);
+        Handler main = new Handler(Looper.getMainLooper());
+        int[] loaded = {1};
+        long slow = ReelOrigin.END_WAIT_MS + 3000;
+        grid.atEnd = () -> {
+            if (grid.loading || loaded[0] >= pages.size()) return;
+            grid.loading = true;
+            grid.bind();
+            main.postDelayed(() -> {
+                grid.reels.addAll(pages.get(loaded[0]++));
+                grid.loading = false;
+                grid.bind();
+            }, slow);
+        };
+
+        ReelOrigin.reelsTabResumed(new Tab(profile, grid, AUTHOR), ON);
+        idleSeconds(40);
+        assertEquals(HookStatus.report() + " drags " + grid.drags.size() + " pages " + loaded[0], List.of(REEL), shown);
+        assertNull(ShadowToast.getTextOfLatestToast());
+        String report = HookStatus.report().toString();
+        assertTrue(report, report.contains(ReelOrigin.FOUND + " 1"));
+        assertFalse(report, report.contains(ReelOrigin.NOT_FOUND));
+    }
+
+    /** A spinner that never stops doesn't keep the search going: it gives up after the longer wait. */
+    @Test
+    public void aSpinnerThatNeverStopsGivesUpAfterTheLongerWait() {
+        ReelOrigin.opening(new Reel(REEL), ON);
+        openProfile(reels(5, 9000), null);
+        grid.loading = true;
+        grid.bind();
+        ReelOrigin.reelsTabResumed(new Tab(profile, grid, AUTHOR), ON);
+        idleSeconds(ReelOrigin.END_WAIT_MS / 1000 + 3);
+        assertNull("still waiting while it spins", ShadowToast.getTextOfLatestToast());
+        assertEquals(REEL, ReelOrigin.heldForTests());
+        idleSeconds(ReelOrigin.LOAD_WAIT_MS / 1000);
+        assertEquals("Couldn't find the reel you came from", ShadowToast.getTextOfLatestToast());
+        assertNull(ReelOrigin.heldForTests());
+        String report = HookStatus.report().toString();
+        assertTrue("and why", report.contains(ReelOrigin.ENDED + " 1"));
     }
 
     /**

@@ -16,6 +16,8 @@ import android.widget.Switch;
 @SuppressWarnings("unused")
 public final class MaterialSwitchView {
 
+    private static final long COLOR_SPACE_MASK = 0x3F;
+
     private static volatile Object factory;
 
     private MaterialSwitchView() {
@@ -30,7 +32,16 @@ public final class MaterialSwitchView {
     }
 
     public static Object update(Class<?> functionType, boolean checked, Object onCheckedChange, boolean enabled) {
-        return function(functionType, new UpdateHandler(checked, onCheckedChange, enabled));
+        return update(functionType, checked, onCheckedChange, enabled, 0);
+    }
+
+    public static Object update(Class<?> functionType, boolean checked, Object onCheckedChange, boolean enabled,
+            int primaryColor) {
+        return function(functionType, new UpdateHandler(checked, onCheckedChange, enabled, primaryColor));
+    }
+
+    public static int composeColorArgb(long color) {
+        return ((color & COLOR_SPACE_MASK) == 0) ? (int) (color >>> 32) : 0;
     }
 
     static void invokeCallback(Object onCheckedChange, boolean checked) {
@@ -41,10 +52,14 @@ public final class MaterialSwitchView {
                 handler);
     }
 
-    private static Switch createSwitch(Context context) {
-        final Switch control = new Switch(context);
-        SwitchStyle.apply(control, AccentColor.getAccentColor(PatchesTheme.isNightMode(context)));
-        return control;
+    private static void applyStyleIfColorChanged(Switch control, int primaryColor) {
+        final Context context = control.getContext();
+        final Integer color = (primaryColor != 0) ? primaryColor
+                : AccentColor.getAccentColor(PatchesTheme.isNightMode(context));
+        if (!color.equals(control.getTag())) {
+            control.setTag(color);
+            SwitchStyle.apply(control, color);
+        }
     }
 
     private abstract static class FunctionHandler implements InvocationHandler {
@@ -72,7 +87,7 @@ public final class MaterialSwitchView {
 
         @Override
         Object apply(Object context) {
-            return createSwitch((Context) context);
+            return new Switch((Context) context);
         }
 
     }
@@ -85,15 +100,19 @@ public final class MaterialSwitchView {
 
         private final boolean enabled;
 
-        UpdateHandler(boolean checked, Object onCheckedChange, boolean enabled) {
+        private final int primaryColor;
+
+        UpdateHandler(boolean checked, Object onCheckedChange, boolean enabled, int primaryColor) {
             this.checked = checked;
             this.onCheckedChange = onCheckedChange;
             this.enabled = enabled;
+            this.primaryColor = primaryColor;
         }
 
         @Override
         Object apply(Object view) {
             final Switch control = (Switch) view;
+            applyStyleIfColorChanged(control, this.primaryColor);
             control.setOnCheckedChangeListener(null);
             control.setChecked(this.checked);
             control.setEnabled(this.enabled);

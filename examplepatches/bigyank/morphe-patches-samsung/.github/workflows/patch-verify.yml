@@ -1,0 +1,105 @@
+name: Patch verification
+
+# CI counterpart of version-loop stage 4 (desktop patch + static verify):
+# download the stock APK, patch it with a released bundle (morphe-desktop
+# CLI), and assert via verify_patched.py that every stub landed — Knox
+# fingerprints, account fetch rewrite, signin string replacement, promotion
+# display stub. ~5 minutes on ubuntu-latest, no emulator, no device.
+#
+# An earlier revision of this workflow also launched the patched APK on an
+# emulator; that half was dropped — hosted runners make arm-app emulation
+# unreliable (HVF blocked on macOS, KVM/adb/ARM-translation instability on
+# Linux). Runtime launch validation stays on the physical Knox 0x1 device.
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Samsung Health version (APKPure)"
+        required: true
+        default: "7.00.6.011"
+      bundle_tag:
+        description: "Release tag to pull the patch bundle from (empty = latest)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+env:
+  PACKAGE: com.sec.android.app.shealth
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Install tools
+        run: |
+          URL="$(curl -sL https://api.github.com/repos/EFForg/apkeep/releases/latest \
+            | jq -r '.assets[] | select(.name == "apkeep-x86_64-unknown-linux-gnu") | .browser_download_url')"
+          sudo curl -sL -o /usr/local/bin/apkeep "$URL"
+          sudo chmod +x /usr/local/bin/apkeep
+          apkeep --help >/dev/null
+          # Ubuntu 24.04 Python is PEP 668 externally-managed — venv + PATH so
+          # the verify step's `python3` resolves to it
+          python3 -m venv "$PWD/.venv"
+          "$PWD/.venv/bin/pip" install --quiet androguard
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+          "$PWD/.venv/bin/python3" -c "import androguard; print('androguard OK')"
+
+      - name: Download Samsung Health APK
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          # acknowledge_dangers: informed consent for apk-pure as the source
+          # (see EFForg/apkeep USAGE-apkpure.md)
+          apkeep -a "$PACKAGE@$VERSION" -d apk-pure -o 'acknowledge_dangers=true' "$PWD"
+          ls -lh "$PACKAGE@$VERSION.apk"
+
+      - name: Download patch bundle + patcher
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BUNDLE_TAG: ${{ inputs.bundle_tag }}
+        run: |
+          if [[ -n "$BUNDLE_TAG" ]]; then
+            gh release download "$BUNDLE_TAG" --repo "$GITHUB_REPOSITORY" --pattern 'patches-*.mpp' --dir "$PWD"
+          else
+            gh release download --repo "$GITHUB_REPOSITORY" --pattern 'patches-*.mpp' --dir "$PWD"
+          fi
+          gh release download --repo MorpheApp/morphe-desktop --pattern 'morphe-desktop-*-all.jar' --clobber --dir "$PWD"
+          ls -lh patches-*.mpp morphe-desktop-*-all.jar
+
+      - name: Patch APK
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          MARKER=$(mktemp)
+          java -jar morphe-desktop-*-all.jar patch -p patches-*.mpp "$PACKAGE@$VERSION.apk" | tail -5
+          PATCHED="$(find . -maxdepth 2 -name '*.apk' ! -name "$PACKAGE@$VERSION.apk" -newer "$MARKER" | head -1)"
+          rm -f "$MARKER"
+          [[ -n "$PATCHED" ]] || { echo "FATAL: patcher produced no output"; exit 1; }
+          echo "PATCHED=$PATCHED" >> "$GITHUB_ENV"
+          ls -lh "$PATCHED"
+
+      - name: Static verify (stubs landed)
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          python3 scripts/verify_patched.py \
+            --original "$PACKAGE@$VERSION.apk" \
+            --patched "$PATCHED"
+
+      - name: Upload patched APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: patched-${{ inputs.version }}
+          path: ${{ env.PATCHED }}
+          if-no-files-found: error

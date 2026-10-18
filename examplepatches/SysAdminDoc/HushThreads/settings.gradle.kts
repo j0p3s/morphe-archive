@@ -64,7 +64,29 @@ pluginManagement {
 // so a later plugin asking for a newer version gets it, and any other vulnerable one is the build
 // classpath inventory's to show and the release receipt's to refuse. Take a force out once the
 // plugin asks for a fixed version.
+//
+// The plugins ask for Guava from 18.0 up to 33.5.0-jre, and 33.5.0-jre is inside GHSA-xxph-c9ww-hj94
+// (CVE-2026-102554, 4.0 to 33.7.1, fixed in 33.7.2): deserializing a CompactHashMap, CompactHashSet
+// or MapMakerInternalMap can allocate without bound. A constraint is a floor rather than a force, so
+// a plugin that later asks for a newer Guava gets it. :patches pins the same 33.7.2-jre through
+// gradle/libs.versions.toml; move both together, and take this out once the plugins ask for a fixed
+// version. Gradle keeps its own embedded Guava from plugin class loaders, so this changes only the
+// copy the plugins load, and :buildClasspathInventory records which jar that is (see below).
+//
+// The Morphe plugin asks for commons-lang3 3.16.0, inside GHSA-j288-q9x7-2f5v (CVE-2025-48924,
+// 3.0 to 3.17.0, fixed in 3.18.0): ClassUtils.getClass recurses without bound on a long name. It's
+// a floor for the same reason, so it stops mattering once the plugin asks for 3.18.0 or later.
 buildscript {
+    dependencies {
+        constraints {
+            classpath("com.google.guava:guava:33.7.2-jre") {
+                because("GHSA-xxph-c9ww-hj94 affects Guava 4.0 to 33.7.1.")
+            }
+            classpath("org.apache.commons:commons-lang3:3.18.0") {
+                because("GHSA-j288-q9x7-2f5v affects commons-lang3 3.0 to 3.17.0.")
+            }
+        }
+    }
     configurations.all {
         resolutionStrategy.eachDependency {
             if (requested.group == "org.jetbrains.kotlin") {
@@ -125,7 +147,8 @@ include(":patches:stub")
 // and scripts/build-release-receipt.ps1 asks OSV about it apart from the SBOM. Only this script
 // sees this classpath. Each project's own buildscript classpath goes in too, though no project
 // declares a plugin version of its own today. A version here is the one Gradle's resolution
-// chose. That says nothing about which classes a plugin actually loads from it.
+// chose. That says nothing about which classes a plugin actually loads from it, except for Guava,
+// whose loaded jar the probe below records.
 //
 // A request for another version than the one chosen is listed with the reasons Gradle gives (the
 // forces above, or conflict resolution), so a vulnerable version that was only asked for shows as
@@ -227,14 +250,66 @@ fun buildClasspathJson(value: Any?, indent: String = ""): String {
 }
 
 buildClasspathGraphs["settings classpath"] = buildClasspathGraph("settings classpath", buildscript.configurations.getByName("classpath"))
-val buildClasspathSettingsSha256 = MessageDigest.getInstance("SHA-256")
-    .digest(settingsDir.resolve("settings.gradle.kts").readBytes()).joinToString("") { "%02x".format(it) }
+// SHA-256 of a file's raw bytes as lowercase hex, the format scripts/release-advisories.ps1 gets from
+// Get-FileHash. The inventory ties itself to these four files, and the receipt refuses one whose
+// hashes differ from the checkout it builds from.
+fun buildClasspathFileSha256(relative: String): String {
+    val file = settingsDir.resolve(relative)
+    if (!file.isFile) throw GradleException("The build classpath inventory can't hash $relative, which isn't there.")
+    return MessageDigest.getInstance("SHA-256").digest(file.readBytes()).joinToString("") { "%02x".format(it) }
+}
+val buildClasspathSettingsSha256 = buildClasspathFileSha256("settings.gradle.kts")
+val buildClasspathInputs = linkedMapOf(
+    "settings.gradle.kts" to buildClasspathSettingsSha256,
+    "patches/build.gradle.kts" to buildClasspathFileSha256("patches/build.gradle.kts"),
+    "gradle/libs.versions.toml" to buildClasspathFileSha256("gradle/libs.versions.toml"),
+    "gradle/verification-metadata.xml" to buildClasspathFileSha256("gradle/verification-metadata.xml"),
+)
 val buildClasspathGradleVersion = gradle.gradleVersion
 
+// Which jar the plugins' code actually takes Guava from. A version in a graph is only what Gradle's
+// resolution chose, so this asks the class loaders the Morphe and Android Gradle plugins run in for
+// the three classes GHSA-xxph-c9ww-hj94 names, without initialising them, and records the jar each
+// came from. Six lookups, nothing else loaded. Gradle keeps its own embedded Guava from plugin class
+// loaders, so a jar named here is the copy the plugins use, and the inventory task refuses one that
+// isn't the Guava the settings classpath resolved. A plugin or class that can't be found records no
+// jar rather than failing here, so every other task still configures and only the inventory refuses.
+fun buildClasspathGuavaLoads(): List<Map<String, Any?>> {
+    val android = try {
+        Class.forName("com.android.build.gradle.LibraryPlugin", false, javaClass.classLoader).classLoader
+    } catch (missing: ClassNotFoundException) {
+        null
+    } catch (missing: LinkageError) {
+        null
+    }
+    val loaders = linkedMapOf("app.morphe.patches plugin" to plugins.findPlugin("app.morphe.patches")?.javaClass?.classLoader,
+        "Android Gradle plugin" to android)
+    val classes = listOf("com.google.common.collect.CompactHashMap", "com.google.common.collect.CompactHashSet",
+        "com.google.common.collect.MapMakerInternalMap")
+    return loaders.flatMap { (who, loader) ->
+        classes.map { name ->
+            val jar = if (loader == null) null else try {
+                Class.forName(name, false, loader).protectionDomain?.codeSource?.location?.path?.substringAfterLast('/')
+            } catch (missing: ClassNotFoundException) {
+                null
+            } catch (missing: LinkageError) {
+                null
+            }
+            linkedMapOf("loader" to who, "class" to name, "jar" to jar)
+        }
+    }
+}
+val buildClasspathLoads = buildClasspathGuavaLoads()
+
+fun buildClasspathProjectGraphName(path: String) =
+    if (path == ":") "root project buildscript classpath" else "$path buildscript classpath"
+
 gradle.allprojects {
-    val graphName = if (path == ":") "root project buildscript classpath" else "$path buildscript classpath"
+    val graphName = buildClasspathProjectGraphName(path)
     // After the project's script has run, when its own plugins block has resolved, and in its own
-    // context, which Gradle wants for resolving a project's configuration.
+    // context, which Gradle wants for resolving a project's configuration. A project this build
+    // doesn't evaluate (configure-on-demand, an isolated-projects run) never gets here, so the
+    // inventory task checks that every project's graph arrived.
     afterEvaluate {
         val graph = buildClasspathGraph(graphName, buildscript.configurations.getByName("classpath"))
         synchronized(buildClasspathGraphs) { buildClasspathGraphs[graphName] = graph }
@@ -246,24 +321,57 @@ gradle.rootProject {
         group = "verification"
         description = "Writes the plugin classpaths this build resolved to build/build-classpath/inventory.json"
         val output = layout.buildDirectory.file("build-classpath/inventory.json")
+        val loads = buildClasspathLoads
         val document = provider {
             val graphs = synchronized(buildClasspathGraphs) { buildClasspathGraphs.values.toList() }
             buildClasspathJson(linkedMapOf(
                 "schema" to "hushthreads-build-classpath-1",
                 "gradle" to buildClasspathGradleVersion,
                 "settingsScript" to linkedMapOf("path" to "settings.gradle.kts", "sha256" to buildClasspathSettingsSha256),
+                "buildInputs" to buildClasspathInputs,
                 "covers" to ("The classpath settings.gradle.kts resolved for its plugins block, which the build's " +
                     "plugins and tools run from, and every project's buildscript classpath. Each version is the one " +
                     "Gradle's resolution chose. A request for another version is listed under conflicts."),
                 "leavesOut" to ("What the release bundle carries (the release SBOM lists that), the patcher-provided " +
                     "classpath, the compile-only, test and lint graphs, and the advisory comparator."),
+                "loads" to loads,
                 "graphs" to graphs,
             )) + "\n"
+        }
+        val expectedGraphs = listOf("settings classpath") + project.allprojects.map { buildClasspathProjectGraphName(it.path) }
+        val missingGraphs = provider {
+            val gathered = synchronized(buildClasspathGraphs) { buildClasspathGraphs.keys.toSet() }
+            expectedGraphs.filter { it !in gathered }
+        }
+        // The Guava the plugins load has to be the one the settings classpath resolved.
+        val resolvedGuava = provider {
+            @Suppress("UNCHECKED_CAST")
+            val settingsComponents = synchronized(buildClasspathGraphs) {
+                buildClasspathGraphs["settings classpath"]?.get("components") as? List<Map<String, Any?>>
+            }.orEmpty()
+            settingsComponents.filter { it["group"] == "com.google.guava" && it["name"] == "guava" }.map { "guava-${it["version"]}.jar" }
         }
         inputs.property("inventory", document)
         outputs.file(output)
         doLast {
+            // A refusal below must not leave an earlier run's inventory looking like this one's.
             val file = output.get().asFile
+            file.delete()
+            val missing = missingGraphs.get()
+            if (missing.isNotEmpty()) {
+                throw GradleException("The build classpath inventory has no graph for " + missing.joinToString(", ") +
+                    ". Those projects weren't evaluated in this build; run it without configure-on-demand.")
+            }
+            val expected = resolvedGuava.get()
+            if (expected.size != 1) {
+                throw GradleException("The settings classpath resolved ${expected.size} Guava versions, not one: $expected")
+            }
+            val strays = loads.filter { it["jar"] != expected[0] }
+            if (strays.isNotEmpty()) {
+                throw GradleException("The plugins load Guava from somewhere other than the ${expected[0]} the settings classpath " +
+                    "resolved: " + strays.joinToString("; ") { "${it["loader"]} ${it["class"]} from ${it["jar"] ?: "nowhere"}" })
+            }
+
             file.parentFile.mkdirs()
             file.writeText(document.get(), Charsets.UTF_8)
         }

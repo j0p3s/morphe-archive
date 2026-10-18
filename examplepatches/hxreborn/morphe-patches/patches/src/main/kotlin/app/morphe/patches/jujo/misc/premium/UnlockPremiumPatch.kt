@@ -29,7 +29,7 @@ internal val SUBSCRIPTION_LOOKUP =
 
 internal val SUBSCRIPTION_LOOKUP_MASK =
     ("000000fcffffffffffffffff000000fcffffffffffffffff000000fcffffffff" +
-        "ffffffffffffffff000000fcffffffffffffffffffffffffffffffffffffffff" +
+        "ffffffffffffffff000000fcffffffffffffffffffffffff1f00e0ffffffffff" +
         "1f0000ffffffffff").hexToByteArray()
 
 internal val BRANCH_TO_ACTIVE_SUBSCRIPTION = "24000014".hexToByteArray()

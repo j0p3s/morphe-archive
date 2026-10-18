@@ -11,6 +11,7 @@ from pathlib import Path
 REPO = os.environ.get("GITHUB_REPOSITORY", "hxreborn/morphe-patches")
 CLOSED_MARKER = "<!-- closed-issue-bot -->"
 PING_MARKER = "<!-- status-ping-bot -->"
+NO_REPLY = 3
 PING_WINDOW = timedelta(days=30)
 LOCK_DELAY = timedelta(days=8)
 
@@ -22,10 +23,10 @@ REQUEST = re.compile(
     re.I,
 )
 RESOLVED = re.compile(r"\b(work(s|ing)? (fine|perfectly|great|now)|now (it )?works|it works|fixed now|solved)\b", re.I)
-QUOTED = re.compile(r"^\s*>.*$", re.M)
+QUOTED = re.compile(r"^[ \t]*>.*$", re.M)
 MENTION = re.compile(r"@[\w-]+")
 OWNER_MENTION = re.compile(rf"@{re.escape(REPO.split('/')[0])}\b", re.I)
-CODE = re.compile(r"```.*?```|`[^`]*`", re.S)
+CODE = re.compile(r"```.*?(?:```|\Z)|`[^`]*`|<!--.*?(?:-->|\Z)", re.S)
 PING = re.compile(
     r"\bany\s+(updates?|news|progress)\b(?!\s+(of|to|from)\b)"
     r"|\bany\s+(chance|possibility)\s+(of|for)\s+(an?\s+)?update"
@@ -42,7 +43,8 @@ PING = re.compile(
     re.I,
 )
 NO_RUSH = re.compile(r"\bno\s+rush\b|\btake\s+your\s+time\b|\bno\s+pressure\b|\bnot\s+to\s+put\s+any\s+pressure\b", re.I)
-BARE_PING = re.compile(r"\W*(bump|up|(hello|hi|hey)?\s*\?+|patch(es)?\s+(please|pls|plz))\W*", re.I)
+BARE_PINGS = {("bump",), ("up",)} | {(patch, please) for patch in ("patch", "patches") for please in ("please", "pls", "plz")}
+GREETINGS = {(), ("hello",), ("hi",), ("hey",)}
 
 
 def normalize(text):
@@ -60,13 +62,18 @@ def targets(patches_list):
 
 def targeted_app(text, apps):
     haystack = normalize(text)
-    names = [name for name in apps if normalize(name) in haystack]
+    names = [name for name in apps if normalize(name) and normalize(name) in haystack]
     return max(names, key=len, default="")
 
 
 def is_request(comment):
-    own = QUOTED.sub("", comment)
+    own = CODE.sub("", QUOTED.sub("", comment))
     return bool(REQUEST.search(own)) and not RESOLVED.search(own)
+
+
+def is_bare_ping(text):
+    words = tuple(word.lower() for word in re.findall(r"\w+", text))
+    return words in BARE_PINGS or ("?" in text and words in GREETINGS)
 
 
 def is_status_ping(comment):
@@ -74,9 +81,10 @@ def is_status_ping(comment):
     unmentioned = MENTION.sub("", own).strip()
     if NO_RUSH.search(unmentioned):
         return False
-    if PING.search(CODE.sub("", unmentioned)):
+    visible = CODE.sub("", unmentioned)
+    if PING.search(visible):
         return True
-    if BARE_PING.fullmatch(unmentioned):
+    if visible == unmentioned and is_bare_ping(unmentioned):
         return True
     return OWNER_MENTION.search(own) is not None and not re.search(r"\w", unmentioned)
 
@@ -126,11 +134,11 @@ if __name__ == "__main__":
     issue, comment = event["issue"], event["comment"]
     if issue["state"] == "open":
         if not is_early_status_ping(issue, comment):
-            sys.exit(1)
+            sys.exit(NO_REPLY)
         print(ping_reply(), end="")
     else:
         if not is_request(comment["body"] or ""):
-            sys.exit(1)
+            sys.exit(NO_REPLY)
         patches_list = json.loads(Path(sys.argv[2]).read_text(encoding="utf-8")) if len(sys.argv) > 2 else None
         labels = {label["name"] for label in issue.get("labels") or []}
         print(closed_issue_reply(timestamp(comment["created_at"]), issue.get("title") or "", patches_list, "discussion" in labels), end="")

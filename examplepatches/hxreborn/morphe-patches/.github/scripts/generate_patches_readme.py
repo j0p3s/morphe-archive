@@ -186,9 +186,11 @@ def versions_table(targets):
 ICONS = {
     "all.in.one.calculator": "allinonecalculator.png",
     "com.allformatplayer.streamvideoplayer": "allvideoplayer.png",
+    "com.getaloa.app": "aloa.png",
     "psyberia.alpinequest.free": "alpinequest.png",
     "com.atlogis.atlomaps": "atlomaps.png",
     "com.shervinkoushan.anyTracker": "anytracker.png",
+    "com.androholic.wallpapersdepthpix": "depthpix.png",
     "flar2.devcheck": "devcheck.png",
     "com.ferdinandobermeier.focusmate": "focusnow.png",
     "com.adithya.memoneet": "memoneet.png",
@@ -241,6 +243,7 @@ ICONS = {
     "com.vpn.free.hotspot.secure.vpnify": "vpnify.png",
     "ch.protonvpn.android": "protonvpn.png",
     "com.alokmandavgane.hinducalendar": "hinducalendar.png",
+    "com.outscar.bd.bongcal": "banglacalendar.png",
     "com.darinsoft.vimo": "vllo.png",
     "videoeditor.videomaker.videoeditorforyoutube": "videoeditor.png",
     "com.dubox.drive": "terabox.png",
@@ -374,6 +377,26 @@ def spoiler(label, count, targets, tbl, expanded=False, pkg=None):
 </details>"""
 
 
+GRID_COLUMNS = 4
+
+
+def patch_count(n):
+    return f"{n} {'patch' if n == 1 else 'patches'}"
+
+
+def grid_cell(label, caption, pkg=None):
+    filename = icon_file(pkg) if pkg else None
+    icon = f'<img src=".github/assets/icons/{filename}" width="40">' if filename else "🌐"
+    return (f'<td align="center" width="{100 // GRID_COLUMNS}%"><a href="#{slug(label)}">{icon}<br>{label}</a>'
+            f"<br><sub>{caption}</sub></td>")
+
+
+def app_grid(cells):
+    rows = [cells[i:i + GRID_COLUMNS] for i in range(0, len(cells), GRID_COLUMNS)]
+    body = "\n".join("<tr>\n" + "\n".join(row) + "\n</tr>" for row in rows)
+    return f"<table>\n{body}\n</table>\n\n## 📋 Full list\n"
+
+
 def build_content(expanded=False):
     """Build the full generated patches section."""
     lines = [
@@ -383,7 +406,15 @@ def build_content(expanded=False):
     ]
     fetch_missing_icons(list(by_pkg) + [TIKTOK_PKG])
 
-    for pkg, entry in sorted(by_pkg.items(), key=lambda item: item[1]["name"].lower()):
+    apps = sorted(by_pkg.items(), key=lambda item: item[1]["name"].lower())
+    cells = [grid_cell(e["name"], patch_count(len(e["patches"])), pkg) for pkg, e in apps]
+    cells.append(grid_cell("TikTok", "separate bundle", TIKTOK_PKG))
+    if universal:
+        cells.append(grid_cell("Universal", patch_count(len(universal))))
+    lines.append("")
+    lines.append(app_grid(cells))
+
+    for pkg, entry in apps:
         patches = list(entry["patches"].values())
         label   = entry["name"]
         lines.append(spoiler(label, len(patches), entry["targets"], patches_table(patches, slug(label), pkg), expanded, pkg))
@@ -411,7 +442,8 @@ def build_content(expanded=False):
         uni_patches = list(universal.values())
         noun = "patch" if len(uni_patches) == 1 else "patches"
         tag  = "<details open>" if expanded else "<details>"
-        lines.append(f"""{tag}
+        lines.append(f"""<a id="universal"></a>
+{tag}
 <summary>🌐&nbsp;Universal&nbsp;&nbsp;•&nbsp;&nbsp;{len(uni_patches)} {noun}</summary>
 <br>
 

@@ -6,7 +6,9 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLa
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
+import app.morphe.patcher.extensions.InstructionExtensions.removeInstructions
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
@@ -603,8 +605,16 @@ val nicoidModPatch = bytecodePatch(
         }
         fun isUiResource(ref: MethodReference) = ref.name == "getString" &&
             ref.returnType == "Ljava/lang/String;" &&
+            // SharedPreferences.getString(String, String) returns application data,
+            // including credentials and IDs. Only Android resource overloads are UI.
+            ((ref.parameterTypes.size == 1 && ref.parameterTypes[0] == "I") ||
+                (ref.parameterTypes.size == 2 && ref.parameterTypes[0] == "I" &&
+                    ref.parameterTypes[1] == "[Ljava/lang/Object;")) &&
             (ref.definingClass.startsWith("Landroid/content/") || ref.definingClass.startsWith("Landroid/app/") ||
                 ref.definingClass.startsWith("Landroid/preference/") || ref.definingClass.startsWith("Lcom/sauzask/nicoid/"))
+        fun isPreferenceString(ref: MethodReference) = ref.definingClass == "Landroid/content/SharedPreferences;" &&
+            ref.name == "getString" && ref.parameterTypes.map { it.toString() } ==
+                listOf("Ljava/lang/String;", "Ljava/lang/String;")
         val uiClasses = mutableListOf<String>()
         classDefForEach { cls ->
             if ((cls.type.startsWith("Lcom/sauzask/nicoid/") || cls.type.startsWith("Le/e/a/")) &&
@@ -615,11 +625,43 @@ val nicoidModPatch = bytecodePatch(
                 if (cls.methods.any { method -> method.implementation?.instructions?.any { insn ->
                     val ref = (insn as? ReferenceInstruction)?.reference
                     (ref is StringReference && ref.string in translatedStrings) ||
-                        (ref is MethodReference && isUiResource(ref))
+                        (ref is MethodReference && (isUiResource(ref) || isPreferenceString(ref)))
                 } == true }) uiClasses.add(cls.type)
             }
         }
         for (type in uiClasses) for (method in mutableClassDefBy(type).methods) {
+            // Older method payloads already contain translation hooks. Remove only
+            // the paired hook immediately following a preference read, preserving
+            // the original result register and every resource translation.
+            val previous = method.implementation?.instructions?.toList() ?: continue
+            for (index in previous.indices.reversed()) {
+                if (index + 3 >= previous.size) continue
+                val call = (previous[index] as? ReferenceInstruction)?.reference as? MethodReference ?: continue
+                if (!isPreferenceString(call) || previous[index + 1].opcode != Opcode.MOVE_RESULT_OBJECT) continue
+                var result = (previous[index + 1] as OneRegisterInstruction).registerA
+                var cursor = index + 2
+                while (true) {
+                    val current = method.implementation!!.instructions.toList()
+                    if (cursor + 1 >= current.size || current[cursor + 1].opcode != Opcode.MOVE_RESULT_OBJECT) break
+                    val hook = current[cursor]
+                    val translate = (hook as? ReferenceInstruction)?.reference as? MethodReference ?: break
+                    val argument = when (hook) {
+                        is FiveRegisterInstruction -> if (hook.registerCount == 1) hook.registerC else -1
+                        is RegisterRangeInstruction -> if (hook.registerCount == 1) hook.startRegister else -1
+                        else -> -1
+                    }
+                    if (argument != result || translate.definingClass != "Le/e/a/UiStrings;" ||
+                        translate.name != "translate" || translate.parameterTypes.map { it.toString() } != listOf("Ljava/lang/String;")) break
+                    val target = (current[cursor + 1] as OneRegisterInstruction).registerA
+                    if (target == result) method.removeInstructions(cursor, 2)
+                    else {
+                        method.replaceInstruction(cursor, "move-object/16 v$target, v$result")
+                        method.removeInstructions(cursor + 1, 1)
+                        result = target
+                        cursor++
+                    }
+                }
+            }
             val instructions = method.implementation?.instructions?.toList() ?: continue
             for (index in instructions.indices.reversed()) {
                 val insn = instructions[index]

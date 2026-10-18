@@ -29,6 +29,7 @@ internal fun BytecodePatchContext.drawSwitchAsView(
     modifierCompanion: FieldReference?,
     androidViewFingerprint: (function: String, modifier: String, composer: String) -> Fingerprint,
     enabledParameter: Int = ENABLED_PARAMETER,
+    colorsParameter: Int? = null,
 ) {
     val modifierDefaultBit = 1 shl MODIFIER_PARAMETER
     val enabledDefaultBit = 1 shl enabledParameter
@@ -52,6 +53,17 @@ internal fun BytecodePatchContext.drawSwitchAsView(
         """
         else -> throw PatchException("Unexpected AndroidView parameters: ${descriptor(androidView)}")
     }
+    val (primaryColorArgument, loadPrimaryColor) = colorsParameter?.let { parameter ->
+        ", v5" to """
+            const/4 v5, 0x0
+            move-object/from16 v6, p$parameter
+            if-eqz v6, :colors
+            iget-wide v5, v6, ${method.parameterTypes[parameter]}->checkedThumbColor:J
+            invoke-static { v5, v6 }, $SWITCH_VIEW_CLASS->composeColorArgb(J)I
+            move-result v5
+            :colors
+        """
+    } ?: ("" to "")
 
     mutableClassDefBy(SWITCH_VIEW_CLASS).replaceStub(
         "invokeCallback",
@@ -82,7 +94,8 @@ internal fun BytecodePatchContext.drawSwitchAsView(
             if-eqz v5, :enabled
             const/4 v4, 0x1
             :enabled
-            invoke-static { v0, v2, v3, v4 }, $SWITCH_VIEW_CLASS->update(Ljava/lang/Class;ZLjava/lang/Object;Z)Ljava/lang/Object;
+            $loadPrimaryColor
+            invoke-static { v0, v2, v3, v4$primaryColorArgument }, $SWITCH_VIEW_CLASS->update(Ljava/lang/Class;ZLjava/lang/Object;Z${if (colorsParameter != null) "I" else ""})Ljava/lang/Object;
             move-result-object v3
             check-cast v3, $function
             move-object/from16 v2, p$MODIFIER_PARAMETER

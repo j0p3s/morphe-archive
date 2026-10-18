@@ -198,8 +198,12 @@ public final class SwitchStyle {
 
         @Override
         protected boolean onStateChange(int[] state) {
-            final int[] withIconState = Arrays.copyOf(state, state.length + 1);
-            withIconState[state.length] = this.stateWithIcon;
+            int stateCount = 0;
+            while (stateCount < state.length && state[stateCount] != 0) {
+                stateCount++;
+            }
+            final int[] withIconState = Arrays.copyOf(state, stateCount + 1);
+            withIconState[stateCount] = this.stateWithIcon;
             return super.onStateChange(withIconState);
         }
 

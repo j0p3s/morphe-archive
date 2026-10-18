@@ -442,6 +442,23 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_original_audio", FALSE);
 
     /**
+     * The search pill under a reel's caption, Facebook's "search this" prompt with a suggested
+     * query ({@link app.morphe.extension.facebook.reels.ReelDeclutter#hideSearchPill}, #173). The
+     * component that draws it isn't built. Off until it's turned on, since the pill depends on a
+     * server setting and nobody has seen it go on a signed-in Reels feed yet.
+     */
+    public static final BooleanSetting HIDE_REEL_SEARCH_PILL =
+            new BooleanSetting("hushfacebook_hide_reel_search_pill", FALSE);
+
+    /**
+     * The numbers under a reel's Like, Comment and Share icons go, and the icons stay where they are
+     * ({@link app.morphe.extension.facebook.reels.ReelDeclutter#countText}, #180). Off by default.
+     * A change shows on the buttons drawn after it.
+     */
+    public static final BooleanSetting HIDE_REEL_COUNTS =
+            new BooleanSetting("hushfacebook_hide_reel_counts", FALSE);
+
+    /**
      * The batches of watched reels the Reels viewer sends as FbShortsSeenStateMutation: only their
      * ids, the record Facebook ranks the Reels feed with, which nobody else sees. Held back, reels
      * already watched may come back in the feed.
@@ -481,6 +498,15 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting UNLOCK_APP_ICONS =
             new BooleanSetting("hushfacebook_unlock_app_icons", FALSE);
+
+    /**
+     * The picked app icon stands in for the Facebook wordmark at the top of Home
+     * ({@link app.morphe.extension.facebook.misc.AppIcons#dressLogo}, #172). Starts off, so Facebook's
+     * wordmark stays. Needs {@link #UNLOCK_APP_ICONS}. Facebook builds the header once, so a change
+     * waits for a restart. It never changes which launcher alias is on.
+     */
+    public static final BooleanSetting USE_APP_ICON_IN_HEADER =
+            new BooleanSetting("hushfacebook_use_app_icon_in_header", FALSE, true, Setting.parent(UNLOCK_APP_ICONS));
 
     /**
      * Facebook's haptics on its own taps and gestures ({@link app.morphe.extension.facebook.misc.Haptics}).
@@ -547,6 +573,23 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting TURN_OFF_DOUBLE_TAP_LIKE =
             new BooleanSetting("hushfacebook_turn_off_double_tap_like", FALSE);
+
+    /**
+     * A double tap on a reel opens its comments, on the sheet the Comment button opens, in place of
+     * liking it ({@link app.morphe.extension.facebook.reels.ReelGestures}, #179). Turn off double
+     * tap to like stays the stronger switch: with it on, the double tap does nothing, as before.
+     * Starts off.
+     */
+    public static final BooleanSetting DOUBLE_TAP_OPENS_COMMENTS =
+            new BooleanSetting("hushfacebook_double_tap_opens_comments", FALSE);
+
+    /**
+     * A long press on a reel opens its comments in place of Facebook's hold behavior, the long-press
+     * menu or Hold a reel for 2x ({@link app.morphe.extension.facebook.reels.ReelGestures}, #179).
+     * Starts off.
+     */
+    public static final BooleanSetting LONG_PRESS_OPENS_COMMENTS =
+            new BooleanSetting("hushfacebook_long_press_opens_comments", FALSE);
 
     /**
      * A speed picked in a reel's menu stays for the next reels where it was picked, ads and live
@@ -670,6 +713,15 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_hide_comments_with_words", FALSE);
 
     /**
+     * The "someone is typing" line under a comment box is never shown: the typer count that arrives
+     * for a post is answered as zero
+     * ({@link app.morphe.extension.facebook.comments.CommentSheetOptions}, #170). Sending your own
+     * typing is {@link #HIDE_COMMENT_TYPING}. Off by default.
+     */
+    public static final BooleanSetting HIDE_INCOMING_COMMENT_TYPING =
+            new BooleanSetting("hushfacebook_hide_incoming_comment_typing", FALSE);
+
+    /**
      * Facebook's text boxes (posts, comments, captions, a story's text) look people up to tag only
      * for a word that starts with @. Off, they also look them up for a plain word Facebook takes for
      * a name, what its code calls an implicit mention
@@ -741,6 +793,15 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting PICTURE_IN_PICTURE_FROM_MENU =
             new BooleanSetting("hushfacebook_picture_in_picture_from_menu", FALSE);
+
+    /**
+     * With Picture-in-picture on, a small button floats over the screen the window is armed on, and
+     * its tap opens the window right away (#44,
+     * {@link app.morphe.extension.facebook.media.PictureInPictureButton}). Starts off. Off, paused
+     * or with Picture-in-picture off, no button is drawn.
+     */
+    public static final BooleanSetting PICTURE_IN_PICTURE_BUTTON =
+            new BooleanSetting("hushfacebook_pip_button", FALSE);
 
     /**
      * HDR videos and photos stay in the screen's usual range instead of turning it up to full
@@ -957,12 +1018,26 @@ public class Settings extends BaseSettings {
             new StringSetting("hushfacebook_seen_share_items", "");
 
     /**
+     * The Menu tiles kept out of the shortcut list (#153), as the first word of each tile's deep link
+     * ({@code marketplace}, {@code gaming}), separated by commas. Empty, the Menu is Facebook's own.
+     */
+    public static final StringSetting HIDDEN_MENU_TILES =
+            new StringSetting("hushfacebook_hidden_menu_tiles", "");
+
+    /**
      * The share sheet's Send to group button, which makes a new group chat of the people picked,
      * and its new-group row, header icon and search button. Send separately stays. Off until it's
      * turned on.
      */
     public static final BooleanSetting HIDE_SHARE_GROUP_BUTTONS =
             new BooleanSetting("hushfacebook_hide_share_group_buttons", FALSE);
+
+    /**
+     * The share sheet's row of round profile pictures of people to send the post to, and its
+     * loading placeholder. The search box and the other ways to share stay. Off until it's turned on.
+     */
+    public static final BooleanSetting HIDE_SHARE_PEOPLE_ROW =
+            new BooleanSetting("hushfacebook_hide_share_people_row", FALSE);
 
     /**
      * The Meta Verified offer sheet after you post, and the Meta Verified label under some posts'
@@ -1172,6 +1247,22 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_post_menu_photo_save", FALSE);
 
     /**
+     * Puts Download to phone and Save photo at the top of a post's three-dot menu instead of the
+     * bottom (issue #151). The row under a post has no room for a button, so the menu is where a
+     * post's download lives. Off until you turn it on.
+     */
+    public static final BooleanSetting POST_MENU_DOWNLOAD_FIRST =
+            new BooleanSetting("hushfacebook_post_menu_download_first", FALSE);
+
+    /**
+     * Open in another app, a second item in the menu of a feed or Watch video that hands the video's
+     * file to a player or casting app (issue #182). Off until you turn it on. Off, the menu is
+     * Facebook's own (and the Download item's, if that switch is on).
+     */
+    public static final BooleanSetting OPEN_IN_ANOTHER_APP =
+            new BooleanSetting("hushfacebook_open_in_another_app", FALSE);
+
+    /**
      * A start from Facebook's launcher icon opens the tab in {@link #START_TAB} instead of the one
      * Facebook would choose. Notifications, links and shortcuts keep their own destination.
      */
@@ -1372,6 +1463,25 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_translucent_bars", FALSE);
 
     /**
+     * The home top bar loses its Messenger button and the buttons beside it close up (#181,
+     * {@link app.morphe.extension.facebook.navigation.TopBarButtons}). Facebook builds the bar as
+     * the main screen starts, so a change waits for a restart.
+     */
+    public static final BooleanSetting HIDE_MESSENGER_BUTTON =
+            new BooleanSetting("hushfacebook_hide_messenger_button", FALSE, true);
+
+    /** The Messenger button keeps its place and loses only its unread count (#181). Shows with the next count. */
+    public static final BooleanSetting HIDE_MESSENGER_COUNT =
+            new BooleanSetting("hushfacebook_hide_messenger_count", FALSE);
+
+    /**
+     * The Facebook logo in the home top bar goes invisible but keeps its size, so the empty spot
+     * still opens Hushfacebook settings on a long press (#181). A change waits for a restart.
+     */
+    public static final BooleanSetting HIDE_FACEBOOK_LOGO =
+            new BooleanSetting("hushfacebook_hide_facebook_logo", FALSE, true);
+
+    /**
      * Facebook's dark mode controller answers dark whatever its own setting says
      * ({@link app.morphe.extension.facebook.theme.ForceDarkMode}), for tablets whose Facebook
      * settings have no Dark mode row. Facebook asks as each screen applies its theme, so a change
@@ -1396,6 +1506,32 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting HIDE_POST_FOLLOW_LINK =
             new BooleanSetting("hushfacebook_hide_post_follow_link", FALSE);
+
+    /**
+     * The numbers on a post's Like, Comment and Share buttons go and each button shows its word, as
+     * on a post nobody has reacted to yet ({@link app.morphe.extension.facebook.feed.PostPrompts#hidePostCounts},
+     * #180). The buttons stay where they are. Off by default. A change shows on the posts drawn after it.
+     */
+    public static final BooleanSetting HIDE_POST_COUNTS =
+            new BooleanSetting("hushfacebook_hide_post_counts", FALSE);
+
+    /**
+     * The stacked reaction faces at the end of a post's button row and the bling bar's reaction icons
+     * with their count line are left undrawn, and a tap where they were still works
+     * ({@link app.morphe.extension.facebook.feed.PostPrompts#hideReactionPreview}, #158). Off by default.
+     * A change shows on the posts drawn after it.
+     */
+    public static final BooleanSetting HIDE_POST_REACTIONS =
+            new BooleanSetting("hushfacebook_hide_post_reactions", FALSE);
+
+    /**
+     * The stacked reaction faces in the corner of a comment bubble are left undrawn, and a tap on them
+     * still opens the list of reactions
+     * ({@link app.morphe.extension.facebook.feed.PostPrompts#hideReactionPreview(boolean)}, #158). Off by
+     * default. A change shows on the comments drawn after it.
+     */
+    public static final BooleanSetting HIDE_COMMENT_REACTIONS =
+            new BooleanSetting("hushfacebook_hide_comment_reaction_preview", FALSE);
 
     /**
      * Posts you've already scrolled past stay out of the feed on later loads

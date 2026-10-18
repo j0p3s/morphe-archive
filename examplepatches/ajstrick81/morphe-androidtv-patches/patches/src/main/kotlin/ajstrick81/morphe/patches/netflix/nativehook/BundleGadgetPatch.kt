@@ -76,12 +76,14 @@ val bundleGadgetPatch = resourcePatch(
         // runs the bundled killads script (relative path -> resolved beside
         // libgadget.so in the extracted lib dir, which is app-readable). No
         // on_load:"wait", so the app launches NORMALLY and self-applies the kills.
+        // Stability: no "on_change":"reload" — the shipped script never changes on a
+        // TV, and "reload" keeps a file-monitor thread alive and would re-run the whole
+        // script (all timers + memory scans) if the file were ever touched.
         val config = """
             {
               "interaction": {
                 "type": "script",
-                "path": "libgadget.script.so",
-                "on_change": "reload"
+                "path": "libgadget.script.so"
               }
             }
         """.trimIndent()

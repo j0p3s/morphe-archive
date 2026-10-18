@@ -12,8 +12,10 @@ package app.morphe.patches.shared.misc.pairip
 
 import app.morphe.patcher.Fingerprint
 
+internal const val LICENSE_CLIENT_CLASS = "Lcom/pairip/licensecheck/LicenseClient;"
+
 internal object InitializeLicenseCheckFingerprint : Fingerprint(
-    definingClass = "Lcom/pairip/licensecheck/LicenseClient;",
+    definingClass = LICENSE_CLIENT_CLASS,
     name = "initializeLicenseCheck",
     returnType = "V",
     parameters = emptyList(),

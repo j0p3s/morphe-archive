@@ -4,16 +4,19 @@
 import json
 import re
 import sys
+import unicodedata
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 sys.path.insert(0, str(Path(__file__).parents[2] / "scripts"))
 from fields import field, normalize, parse_fields
-from versions import compare, version_key
+from versions import build_tags, compare, same_variant, tracked_version, version_key
 
 MARKER = "<!-- app-update-bot -->"
 TITLE_PREFIX = "[App Update]: "
-VERSION_CODE = re.compile(r"\s*\(\d+\)\s*$")
+VERSION_CODE = re.compile(r"\s*\(([\w.+-]*)\)\s*$")
+VERSION = re.compile(r"[A-Za-z0-9._+-]+(?: [A-Za-z0-9._+-]+)?")
+MAX_VERSION = 64
 
 
 def targets(patches_list):
@@ -25,21 +28,30 @@ def targets(patches_list):
     return apps
 
 
+def is_version(text):
+    return bool(VERSION.fullmatch(text)) and sum(bool(re.search(r"\d\.\d", word)) for word in text.split()) == 1
+
+
 def requested_version(body):
-    raw = field(parse_fields(body), "New version", "Version").strip().strip("`")
-    raw = VERSION_CODE.sub("", raw)
-    return re.sub(r"^v(?=\d)", "", raw, flags=re.I).strip()
+    raw = unicodedata.normalize("NFKC", field(parse_fields(body), "New version", "Version")).strip().strip("`")
+    if len(raw) > 2 * MAX_VERSION:
+        return ""
+    raw = VERSION_CODE.sub(lambda m: f" {m.group(1)}" if build_tags(m.group(1)) else "", raw)
+    version = re.sub(r"^v(?=\d)", "", raw, flags=re.I).strip()
+    return version if len(version) <= MAX_VERSION and is_version(version) else ""
 
 
 def requested_app(body, apps):
     name = normalize(field(parse_fields(body), "App"))
-    return next((app for app in apps if normalize(app) == name), "")
+    return next((app for app in apps if name and normalize(app) == name), "")
 
 
-def open_tracker(app, number, issues):
-    prefix = f"{TITLE_PREFIX}{app} "
-    same = [i for i in issues if i["number"] != number and i["state"] == "OPEN" and i["title"].startswith(prefix)]
-    return max(same, key=lambda i: version_key(i["title"][len(prefix):]), default=None)
+def open_tracker(app, version, number, issues, apps):
+    tracked = [(i, tracked_version(i["title"], app, apps)) for i in issues
+               if i["number"] != number and i["state"] == "OPEN"
+               and not {"needs info", "bot-wrong"} & {label["name"] for label in i.get("labels") or []}]
+    return max(((i, v) for i, v in tracked if v and is_version(v) and build_tags(v) == build_tags(version)),
+               key=lambda iv: version_key(iv[1]), default=(None, ""))
 
 
 def decide(number, body, issues, patches_list):
@@ -53,18 +65,17 @@ def decide(number, body, issues, patches_list):
         lines.append("The App field doesn't name an app this bundle supports.")
     elif not re.search(r"\d", version):
         verdict, labels = "flag", ["needs info"]
-        lines.append("No version number was found in the New version field.")
+        lines.append("The New version field doesn't hold a single version number.")
     else:
-        current = max(apps[app], key=version_key, default="")
-        tracker = open_tracker(app, number, issues)
-        if current and compare(version, current) == 0:
+        current = max((t for t in apps[app] if same_variant(version, t)), key=version_key, default="")
+        tracker, tracked = open_tracker(app, version, number, issues, apps)
+        if any(compare(version, target) == 0 and same_variant(version, target) for target in apps[app]):
             verdict, reason = "close", "completed"
             lines.append(f"Version {patches_list['version']} of the bundle already supports {app} {version}.")
         elif current and compare(version, current) < 0:
             verdict, reason = "close", "completed"
             lines.append(f"Version {patches_list['version']} of the bundle supports {app} {current}, which is newer than {version}.")
         elif tracker:
-            tracked = tracker["title"][len(TITLE_PREFIX) + len(app) + 1:]
             verdict, reason, duplicate_of = "close", "duplicate", tracker["number"]
             if compare(version, tracked) > 0:
                 retitle = {"number": tracker["number"], "title": f"{TITLE_PREFIX}{app} {version}"}

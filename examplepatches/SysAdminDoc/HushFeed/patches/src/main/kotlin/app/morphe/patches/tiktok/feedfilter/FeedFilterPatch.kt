@@ -355,13 +355,6 @@ val feedFilterPatch = bytecodePatch(
                 "$EXTENSION_CLASS_DESCRIPTOR->filterFriendsFeed(Ljava/lang/Object;)V",
         )
 
-        // The V3 Friends feed has its own response and list, handled in one place per response.
-        FriendsV3FeedHandleResponseFingerprint.method.addInstruction(
-            0,
-            "invoke-static/range {p1 .. p1}, " +
-                "$EXTENSION_CLASS_DESCRIPTOR->filterFriendsV3Feed(Ljava/lang/Object;)V",
-        )
-
         FriendsFeedResponseFingerprint.method.apply {
             val returns = implementation!!.instructions.withIndex()
                 .filter { it.value.opcode == Opcode.RETURN_VOID }
@@ -378,6 +371,13 @@ val feedFilterPatch = bytecodePatch(
                 )
             }
         }
+
+        val repostFeedData = if (declaredBuild) RepostFeedDataFingerprint.method else RepostFeedDataFingerprint.methodOrNull
+        repostFeedData?.addInstruction(
+            0,
+            "invoke-static/range {p0 .. p0}, " +
+                "$EXTENSION_CLASS_DESCRIPTOR->filterRepostFeed(Ljava/lang/Object;)V",
+        )
 
         // Opening a video from a profile hands the list to the detail pager once, which the
         // event above covers. Scrolling past that video refills the pager through the profile

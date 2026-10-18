@@ -17,6 +17,8 @@ import android.widget.BaseAdapter;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.preference.SwitchPreference;
@@ -59,6 +61,8 @@ final class SettingsNavigation extends BaseAdapter {
     private final List<Section> sections = new ArrayList<>();
     private final List<Preference> visible = new ArrayList<>();
     private final Object guideLinks = new Object();
+    /** Which rows the person hasn't seen yet, for the dot beside them. Null when it couldn't start. */
+    @Nullable private final NewRowDots dots;
     private final Preference browse;
     private final Preference more;
     /** The home page's last row, which opens Hushfacebook's Ko-fi page in a browser. */
@@ -134,6 +138,9 @@ final class SettingsNavigation extends BaseAdapter {
         section("Set when you patched", L10n.t("Set when you patched"), null, SettingsIcons.PATCHED, false);
         section("Pause, backup and diagnostics", L10n.t("Pause, backup and diagnostics"), null, SettingsIcons.TOOLS, false);
         section("About", L10n.t("About"), null, SettingsIcons.ABOUT, false);
+        List<PreferenceCategory> pages = new ArrayList<>();
+        for (Section section : sections) pages.add(section.category);
+        dots = NewRowDots.create(context, pages);
         guideIcon(Settings.HIDE_FEED_REELS, SettingsIcons.FEED);
         guideIcon(Settings.TAP_TO_PLAY, SettingsIcons.PLAYBACK);
         guideIcon(Settings.HIDE_REELS_TAB, SettingsIcons.REELS);
@@ -222,7 +229,7 @@ final class SettingsNavigation extends BaseAdapter {
             return true;
         });
         rebuild();
-        host.showPage(title(), route.isEmpty(), query);
+        showPage();
         if (state != null) showAt(state.getInt("position"), state.getInt("offset"));
     }
 
@@ -263,14 +270,46 @@ final class SettingsNavigation extends BaseAdapter {
         return section == null ? "Hushfacebook" : section.category.getTitle();
     }
 
+    private void showPage() {
+        host.showPage(title(), route.isEmpty(), query);
+        String shownRoute = route;
+        list.post(() -> {
+            if (host.getDialog() != null && host.getDialog().isShowing() && list.isAttachedToWindow() && list.getAdapter() == this
+                    && shownRoute.equals(route)) AuditMode.pageShown(list.getContext(), route, title());
+        });
+    }
+
+    /** The page showing is left: what it listed is seen. A search result page isn't a page of its own. */
+    private void leftPage() {
+        Section section = selected();
+        if (dots == null || section == null || !query.isEmpty()) return;
+        try {
+            dots.left(section.category);
+        } catch (RuntimeException ignored) {
+            // The dot stays a visit longer.
+        }
+    }
+
+    /** Whether [item] gets the dot: a new row, or a home page row for a section with one. */
+    private boolean fresh(Preference item) {
+        if (dots == null || !query.isEmpty()) return false;
+        try {
+            for (Section section : sections) if (item == section.link) return dots.anyNew(section.category);
+            return dots.isNew(item);
+        } catch (RuntimeException failed) {
+            return false;
+        }
+    }
+
     void navigate(String destination) {
+        leftPage();
         refocus = null;
         rememberIndex();
         query = "";
         route = destination;
         if (!MORE.equals(route) && selected() == null) route = "";
         rebuild();
-        host.showPage(title(), route.isEmpty(), query);
+        showPage();
         showAt(0, 0);
         list.sendAccessibilityEvent(android.view.accessibility.AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED);
     }
@@ -300,15 +339,16 @@ final class SettingsNavigation extends BaseAdapter {
     boolean back() {
         if (!query.isEmpty()) {
             search("");
-            host.showPage(title(), true, "");
+            showPage();
             return true;
         }
         if (route.isEmpty()) return false;
+        leftPage();
         Section section = selected();
         Preference left = section != null ? section.link : more;
         route = section != null && !section.primary ? MORE : "";
         rebuild();
-        host.showPage(title(), route.isEmpty(), query);
+        showPage();
         showAt(MORE.equals(route) ? morePosition : homePosition,
                 MORE.equals(route) ? moreOffset : homeOffset);
         refocus = left;
@@ -367,6 +407,7 @@ final class SettingsNavigation extends BaseAdapter {
     }
 
     void close() {
+        leftPage();
         source.unregisterDataSetObserver(changes);
         AbstractPreferenceFragment.clearRestartFeedbackPresenter(restartFeedback);
     }
@@ -542,6 +583,7 @@ final class SettingsNavigation extends BaseAdapter {
                 row.setPaddingRelative(dp(36), dp(10), dp(36), dp(10));
             }
         }
+        NewRowDots.paint(row, fresh(item), palette().accent);
         if (item == screen.getPreference(0)) {
             TextView title = row.findViewById(android.R.id.title);
             if (title != null) title.setTypeface(android.graphics.Typeface.create("sans-serif-medium", 0));
