@@ -33,14 +33,16 @@ no-call Landroid/content/pm/ShortcutManager;->removeAllDynamicShortcuts()V outsi
 family|hideAds|Hide ads|feedAds,adViews,googleAds
 family|hideAiPins|Hide AI-labeled pins|feedAiPins
 family|hideShopping|Hide shopping and product pins|feedShopping
+family|filterFeed|Filter feed|feedVideoPins,feedMutedWords
+family|keepHomeFeed|Keep Home feed|homeFeed
 family|disableAnalytics|Disable analytics|analyticsTasks,analyticsUploads
 family|stripLinkTracking|Strip link tracking|linkTracking,plainPinLinks
 family|hideAdvertisingId|Hide advertising ID|advertisingId,browserId
 family|removeAdTrackingPermissions|Remove ad tracking permissions|
 family|spoofSignature|Spoof signature for Google sign-in|
-family|downloadPins|Download pins|pinDownloads
+family|downloadPins|Download pins|pinDownloads,copyImage,shareImage
 family|downloadBoard|Download board|boardMenu,boardPins
-family|longPressDownload|Long-press download|longPressMenu
+family|longPressDownload|Long-press download|longPressMenu,longPressChoices
 family|externalBrowser|Open links in your browser|visitLinks
 family|systemShare|System share sheet|pinShare
 family|hideScreenshotShare|No screenshot share menu|screenshotShare
@@ -48,7 +50,7 @@ family|hideSearchHistory|Hide search history|searchHistory,recentSearchRows,rece
 family|hideNavigationButtons|Hide navigation buttons|navigationButtons
 family|hideHeaderButtons|Hide header buttons|headerButtons
 family|amoledBlack|AMOLED black|blackBottomBar,blackComments,blackPinMenu
-family|hideCloseupButtons|Hide closeup buttons|closeupButtons
+family|hideCloseupButtons|Hide closeup buttons|closeupButtons,closeupSearchLabel
 family|hidePinMenuItems|Filter pin menu|pinMenuItems
 family|hideComments|Hide comments|comments,suggestedReplies
 family|hideTopicSuggestions|Hide topic suggestions|topicSuggestions
@@ -56,21 +58,24 @@ family|quietEmailReminder|Quiet email reminders|emailReminder
 family|hideSurveyPrompts|Hide survey prompts|surveyPrompts
 family|hideSaveToasts|Hide save toasts|saveToasts
 family|originalImages|Original-quality images|imageChooser,closeupImage
+family|showPostedDate|Show posted date|postedDate
 family|disableUpdateNag|Disable update nag|updateNag
 family|fixPushNotifications|Fix push notifications|firebaseCertificate
 
 mutation|settings|settings|Lcom/pinterest/ReleaseHiltApplication;|Lcom/pinterest/activity/PinterestActivity;|Lapp/hushpinterest/extension/pinterest/settings/SettingsEntry;|Lcom/pinterest/activityLibrary/activity/task/activity/MainActivity;
-mutation|feedAds,feedAiPins,feedShopping,boardPins|feed|Lapp/hushpinterest/extension/pinterest/ads/FeedFilter;->filter(Ljava/util/List;)Ljava/util/List;|, _items count:|PagedResponse(bookmark=|ModelListWithBookmark(models=
+mutation|feedAds,feedAiPins,feedShopping,feedVideoPins,feedMutedWords,boardPins|feed|Lapp/hushpinterest/extension/pinterest/ads/FeedFilter;->filter(Ljava/util/List;)Ljava/util/List;|, _items count:|PagedResponse(bookmark=|ModelListWithBookmark(models=
 mutation|adViews|views|Lapp/hushpinterest/extension/pinterest/ads/Ads;->adViewVisibility(I)I|Lapp/hushpinterest/extension/pinterest/ads/Ads;->adViewMeasureSpec(I)I|Lcom/pinterest/featurelibrary/textads/TextAdView;,Lcom/pinterest/activity/pin/view/modules/LegacyPromotedCloseupActionButtonModule;,Lcom/pinterest/feature/pin/closeup/view/PromotedPinCloseupFloatingActionBarModule;,Lcom/pinterest/feature/board/detail/header/view/lego/BoardSponsoredCuratorView;
 mutation|googleAds|guard|Lapp/hushpinterest/extension/pinterest/ads/Ads;->skipGoogleAds()Z|googleAds
+mutation|homeFeed|guard|Lapp/hushpinterest/extension/pinterest/ads/HomeFeed;->holdResumeRefresh(J)Z|homeResume|Lapp/hushpinterest/extension/pinterest/ads/HomeFeed;->holdHomeRefresh(Ljava/util/Map;I)Z|homeRefresh
 mutation|analyticsTasks,analyticsUploads|analytics|Lapp/hushpinterest/extension/pinterest/privacy/Analytics;->blockTask(Ljava/lang/Object;)Z|Ljava/net/URL;->openConnection()Ljava/net/URLConnection;|Lapp/hushpinterest/extension/pinterest/privacy/Analytics;->openConnection(Ljava/net/URL;)Ljava/net/URLConnection;|Lapp/hushpinterest/extension/pinterest/privacy/Analytics;->blockUpload()Z|Lapp/hushpinterest/extension/pinterest/privacy/Analytics;->engageService(Ljava/lang/Object;)Ljava/lang/Object;
 mutation|linkTracking|links|Landroid/content/Intent;->putExtra(Ljava/lang/String;Ljava/lang/String;)Landroid/content/Intent;|Lapp/hushpinterest/extension/pinterest/privacy/LinkTracking;->putStringExtra(Landroid/content/Intent;Ljava/lang/String;Ljava/lang/String;)Landroid/content/Intent;|Landroid/content/Intent;->putExtra(Ljava/lang/String;Ljava/lang/CharSequence;)Landroid/content/Intent;|Lapp/hushpinterest/extension/pinterest/privacy/LinkTracking;->putTextExtra(Landroid/content/Intent;Ljava/lang/String;Ljava/lang/CharSequence;)Landroid/content/Intent;|Landroid/content/ClipData;->newPlainText(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Landroid/content/ClipData;|Lapp/hushpinterest/extension/pinterest/privacy/LinkTracking;->newPlainText(Ljava/lang/CharSequence;Ljava/lang/CharSequence;)Landroid/content/ClipData;
 mutation|plainPinLinks|pinInvites|Lapp/hushpinterest/extension/pinterest/privacy/PlainPinLinks;->invite(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;)V|Lapp/hushpinterest/extension/pinterest/privacy/PlainPinLinks;->directShare(Ljava/lang/Object;Ljava/lang/Object;Landroid/content/Intent;)V
 mutation|advertisingId|answers|Lcom/google/android/gms/ads/identifier/AdvertisingIdClient$Info;->getId()Ljava/lang/String;|Lapp/hushpinterest/extension/pinterest/privacy/AdvertisingId;->id(Ljava/lang/String;)Ljava/lang/String;|Lcom/google/android/gms/ads/identifier/AdvertisingIdClient$Info;->isLimitAdTrackingEnabled()Z|Lapp/hushpinterest/extension/pinterest/privacy/AdvertisingId;->limitTracking(Z)Z
 mutation|browserId|browserId|Lapp/hushpinterest/extension/pinterest/privacy/AdvertisingId;->skipBrowserId(Ljava/lang/String;)Z|Lapp/hushpinterest/extension/pinterest/privacy/AdvertisingId;->saveBrowserId(Ljava/lang/Object;Ljava/lang/String;[BLjava/lang/Object;)Ljava/lang/Object;
-mutation|pinDownloads|downloads|Lapp/hushpinterest/extension/pinterest/actions/PinDownloads;->attach(Ljava/lang/Object;)V|Lcom/pinterest/feature/gridactions/modal/view/PinOverflowMenuModalImpl;
+mutation|pinDownloads,copyImage,shareImage|downloads|Lapp/hushpinterest/extension/pinterest/actions/PinDownloads;->attach(Ljava/lang/Object;)V|Lcom/pinterest/feature/gridactions/modal/view/PinOverflowMenuModalImpl;
 mutation|boardMenu|boardMenu|Lapp/hushpinterest/extension/pinterest/actions/BoardDownloads;->menu(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;
 mutation|longPressMenu|longPress|Lapp/hushpinterest/extension/pinterest/actions/LongPressDownload;->show(Ljava/lang/Object;Ljava/lang/Object;)V|Lcom/pinterest/ui/menu/ContextMenuView;
+mutation|longPressChoices|longPressChoices|Lapp/hushpinterest/extension/pinterest/actions/LongPressDownload;->buttonKind(Ljava/lang/Object;)I
 mutation|visitLinks|guard|Lapp/hushpinterest/extension/pinterest/actions/ExternalBrowser;->open(Ljava/lang/String;Ljava/lang/Object;)Z|visit|Lapp/hushpinterest/extension/pinterest/actions/ExternalBrowser;->openProfile(Ljava/lang/String;)Z|profileWebsite
 mutation|pinShare|guard|Lapp/hushpinterest/extension/pinterest/actions/SystemShare;->open(Ljava/lang/Object;Ljava/lang/Object;)Z|share|Lapp/hushpinterest/extension/pinterest/actions/SystemShare;->openSendable(Ljava/lang/Object;Ljava/lang/Object;)Z|shareCloseup
 mutation|screenshotShare|guard|Lapp/hushpinterest/extension/pinterest/ui/UiHooks;->hideScreenshotShare()Z|screenshot
@@ -81,6 +86,8 @@ mutation|blackBottomBar|drawWash|Lapp/hushpinterest/extension/pinterest/ui/Amole
 mutation|blackComments|builtView|Lapp/hushpinterest/extension/pinterest/ui/AmoledBlack;->comments(Landroid/view/View;)V|onCreateView|comment_bottom_bar
 mutation|blackPinMenu|builtView|Lapp/hushpinterest/extension/pinterest/ui/AmoledBlack;->pinMenu(Landroid/view/View;)V|createModalView|Lcom/pinterest/feature/gridactions/modal/view/PinOverflowMenuModalImpl;
 mutation|closeupButtons|closeupButtons|Lapp/hushpinterest/extension/pinterest/ui/CloseupButtons;->backArrow(Landroid/view/View;)V|Lapp/hushpinterest/extension/pinterest/ui/CloseupButtons;->lens(Landroid/view/View;)V|Lapp/hushpinterest/extension/pinterest/ui/CloseupButtons;->visibility(Landroid/view/View;I)I
+mutation|closeupSearchLabel|closeupSearchLabel|Lapp/hushpinterest/extension/pinterest/ui/CloseupButtons;->searchLabel(Z)Z
+mutation|postedDate|postedDate|Lapp/hushpinterest/extension/pinterest/ui/PostedDate;->show(Landroid/view/View;Ljava/lang/Object;)V
 mutation|pinMenuItems|menu|Lapp/hushpinterest/extension/pinterest/ui/InterfaceControls;->pinMenuItem(Landroid/view/View;Ljava/lang/String;)V|overflow_menu_add_to_collage,overflow_menu_remix_collage,contextmenu_visual_search_image,overflow_menu_pin_boost
 mutation|comments|comments|Lapp/hushpinterest/extension/pinterest/ui/UiHooks;->commentsVisibility(I)I|Lapp/hushpinterest/extension/pinterest/ui/UiHooks;->commentsMeasureSpec(I)I|Lapp/hushpinterest/extension/pinterest/ui/UiHooks;->commentsVisible(Z)Z|Lcom/pinterest/activity/pin/view/unifiedcomments/CommentPreviewView;|Lcom/pinterest/activity/pin/view/modules/PinCloseupBaseModule;
 mutation|suggestedReplies|views|Lapp/hushpinterest/extension/pinterest/ui/UiHooks;->suggestedRepliesVisibility(I)I|Lapp/hushpinterest/extension/pinterest/ui/UiHooks;->suggestedRepliesMeasureSpec(I)I|Lcom/pinterest/activity/pin/view/unifiedcomments/CommentsQuickReplies;

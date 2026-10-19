@@ -30,6 +30,7 @@ import android.net.Uri;
 import android.os.Environment;
 import android.view.View;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import org.junit.After;
 import org.junit.Rule;
@@ -56,6 +57,7 @@ import java.net.URLStreamHandler;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Date;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -72,6 +74,7 @@ import app.hushpinterest.extension.pinterest.actions.PinDownloads;
 import app.hushpinterest.extension.pinterest.actions.SystemShare;
 import app.hushpinterest.extension.pinterest.ads.Ads;
 import app.hushpinterest.extension.pinterest.ads.FeedFilter;
+import app.hushpinterest.extension.pinterest.ads.HomeFeed;
 import app.hushpinterest.extension.pinterest.privacy.Analytics;
 import app.hushpinterest.extension.pinterest.privacy.AdvertisingId;
 import app.hushpinterest.extension.pinterest.notifications.PushNotificationsTest;
@@ -80,6 +83,7 @@ import app.hushpinterest.extension.pinterest.privacy.PlainPinLinks;
 import app.hushpinterest.extension.pinterest.ui.AmoledBlack;
 import app.hushpinterest.extension.pinterest.ui.CloseupButtons;
 import app.hushpinterest.extension.pinterest.ui.InterfaceControls;
+import app.hushpinterest.extension.pinterest.ui.PostedDate;
 import app.hushpinterest.extension.pinterest.ui.UiHooks;
 import app.hushpinterest.extension.pinterest.ui.UiHooksForTests;
 import app.hushpinterest.extension.shared.SettingsContextRule;
@@ -125,11 +129,14 @@ public class PausedHooksTest {
         String value();
     }
 
-    /** A pin with the two fields the feed families read. */
+    /** A pin with the fields the feed families read. */
     static final class ProbePin {
         @Json("is_promoted") Boolean promoted;
         @Json("ai_disclosures") List<Integer> aiDisclosures;
         @Json("is_shoppable") Boolean shoppable;
+        @Json("grid_title") String gridTitle;
+        @Json("is_video") Boolean video;
+        @Json("created_at") Date createdAt;
     }
 
     /** One hook with its switch on: true when it changed what Pinterest would have done. */
@@ -183,6 +190,16 @@ public class PausedHooksTest {
         View row = new View(RuntimeEnvironment.getApplication());
         UiHooks.topicSuggestions(row);
         return row.getVisibility() == View.GONE;
+    }
+
+    /** A closeup title module taking a pin with a date: true when a line was added under its row. */
+    private static boolean addsPostedDate() {
+        LinearLayout module = new LinearLayout(RuntimeEnvironment.getApplication());
+        module.addView(new TextView(RuntimeEnvironment.getApplication()));
+        ProbePin pin = new ProbePin();
+        pin.createdAt = new Date(1_791_806_400_000L);
+        PostedDate.show(module, pin);
+        return module.getChildCount() > 1;
     }
 
     /** A closeup button handed over: true when it went GONE. */
@@ -244,11 +261,26 @@ public class PausedHooksTest {
             labeled.aiDisclosures = Collections.singletonList(1);
             return filtersOut(labeled);
         }));
+        // A pin whose own title says it's AI art leaves the page.
+        probes.put(Settings.HIDE_AI_SELF_DESCRIBED, Collections.singletonList(() -> {
+            ProbePin says = new ProbePin();
+            says.gridTitle = "AI art";
+            return filtersOut(says);
+        }));
         probes.put(Settings.HIDE_SHOPPING, Collections.singletonList(() -> {
             ProbePin product = new ProbePin();
             product.shoppable = true;
             return filtersOut(product);
         }));
+        // A pin Pinterest marks as a video leaves the page.
+        probes.put(Settings.HIDE_VIDEO_PINS, Collections.singletonList(() -> {
+            ProbePin video = new ProbePin();
+            video.gridTitle = "";
+            video.video = true;
+            return filtersOut(video);
+        }));
+        probes.put(Settings.KEEP_HOME_FEED, Arrays.asList(() -> HomeFeed.holdResumeRefresh(10 * 60 * 1000L),
+                () -> HomeFeed.holdHomeRefresh(null, 1)));
         probes.put(Settings.DISABLE_ANALYTICS, Arrays.asList(Analytics::blockUpload,
                 () -> Analytics.blockTask(Task.TAG_APPSFLYER_INIT), PausedHooksTest::quietsSdkConnection));
         probes.put(Settings.STRIP_LINK_TRACKING, Arrays.asList(
@@ -285,8 +317,13 @@ public class PausedHooksTest {
                 () -> queuesWithDownloadPins(request -> !request.getAllowedOverMetered())));
         probes.put(Settings.DOWNLOAD_NO_ROAMING, Collections.singletonList(
                 () -> queuesWithDownloadPins(request -> !request.getAllowedOverRoaming())));
+        probes.put(Settings.COPY_IMAGE, Collections.singletonList(() -> offersImageRow("CopyImage")));
+        probes.put(Settings.SHARE_IMAGE, Collections.singletonList(() -> offersImageRow("ShareImage")));
         probes.put(Settings.DOWNLOAD_BOARD, Collections.singletonList(() -> BoardDownloads.record(Collections.singletonList(BOARD_PIN))));
         probes.put(Settings.LONG_PRESS_DOWNLOAD, Collections.singletonList(PausedHooksTest::addsLongPressDownload));
+        probes.put(Settings.LONG_PRESS_HIDE_SAVE, Collections.singletonList(() -> LongPressDownloadForTests.hidesButton(LongPressDownloadForTests.SAVE)));
+        probes.put(Settings.LONG_PRESS_HIDE_SEND, Collections.singletonList(() -> LongPressDownloadForTests.hidesButton(LongPressDownloadForTests.SEND)));
+        probes.put(Settings.LONG_PRESS_HIDE_SEARCH, Collections.singletonList(() -> LongPressDownloadForTests.hidesButton(LongPressDownloadForTests.SEARCH)));
         probes.put(Settings.EXTERNAL_BROWSER, Collections.singletonList(() -> withActivity(activity -> {
             ResolveInfo browser = new ResolveInfo();
             browser.activityInfo = new ActivityInfo();
@@ -334,6 +371,7 @@ public class PausedHooksTest {
         probes.put(Settings.BLACK_PIN_MENU, Collections.singletonList(() -> paintsSheetBlack(false)));
         probes.put(Settings.HIDE_CLOSEUP_BACK, Arrays.asList(() -> hidesCloseupButton(true), () -> keepsCloseupButtonHidden(true)));
         probes.put(Settings.HIDE_CLOSEUP_LENS, Arrays.asList(() -> hidesCloseupButton(false), () -> keepsCloseupButtonHidden(false)));
+        probes.put(Settings.HIDE_CLOSEUP_SEARCH_LABEL, Collections.singletonList(() -> !CloseupButtons.searchLabel(true)));
         probes.put(Settings.HIDE_PIN_MENU_COLLAGE, Collections.singletonList(() -> hidesMenuItem("overflow_menu_add_to_collage")));
         probes.put(Settings.HIDE_PIN_MENU_VISUAL_SEARCH, Collections.singletonList(() -> hidesMenuItem("contextmenu_visual_search_image")));
         probes.put(Settings.HIDE_PIN_MENU_PIN_BOOST, Collections.singletonList(() -> hidesMenuItem("overflow_menu_pin_boost")));
@@ -353,6 +391,7 @@ public class PausedHooksTest {
             UiHooks.imageSizes(sizes);
             return !sizes.isEmpty();
         }));
+        probes.put(Settings.SHOW_POSTED_DATE, Collections.singletonList(PausedHooksTest::addsPostedDate));
         probes.put(Settings.DISABLE_UPDATE_NAG, Collections.singletonList(UiHooks::disableUpdateNag));
         probes.put(Settings.FIX_PUSH_NOTIFICATIONS, Collections.singletonList(PushNotificationsTest::fixesACertificate));
         return probes;
@@ -421,6 +460,29 @@ public class PausedHooksTest {
                 ShadowDownloadManager.ShadowRequest request = queuedDownload(activity);
                 return request != null && limited.apply(request);
             });
+        } finally {
+            if (!pins) Settings.DOWNLOAD_PINS.save(false);
+        }
+    }
+
+    /**
+     * Copy image and Share image ride on Download pins, so their probe turns that switch on for its own
+     * run. It answers whether the pin would get the row [action] adds.
+     */
+    private static boolean offersImageRow(String action) {
+        boolean pins = Settings.DOWNLOAD_PINS.savedValue();
+        if (!pins) Settings.DOWNLOAD_PINS.save(true);
+        try {
+            Class<?> media = Class.forName("app.hushpinterest.extension.pinterest.actions.PinMedia");
+            Method resolve = media.getDeclaredMethod("resolve", Object.class);
+            resolve.setAccessible(true);
+            Object resolved = resolve.invoke(null, PIN);
+            Class<?> row = Class.forName("app.hushpinterest.extension.pinterest.actions." + action);
+            Method offered = row.getDeclaredMethod("offered", resolved.getClass());
+            offered.setAccessible(true);
+            return (Boolean) offered.invoke(null, resolved);
+        } catch (ReflectiveOperationException failure) {
+            throw new AssertionError(failure);
         } finally {
             if (!pins) Settings.DOWNLOAD_PINS.save(false);
         }

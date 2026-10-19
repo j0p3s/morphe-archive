@@ -6,7 +6,8 @@ $auditAst = [System.Management.Automation.Language.Parser]::ParseFile($auditPath
 if ($parseErrors.Count) { throw ($parseErrors -join "`n") }
 $testFunctions = @('Assert-AuditLease', 'Assert-AuditSteps', 'Assert-AuditForeground', 'Invoke-Adb',
     'Get-AuditLocales', 'Get-AuditNightMode', 'Restore-AuditState', 'Format-Shell',
-    'New-AuditBaseline', 'Test-AuditBaseline', 'Publish-AuditBaseline', 'Save-SettingsPages', 'Write-Step', 'Test-AuditDestination', 'Get-UiNodes', 'Send-Profile', 'Test-AuditLocaleList')
+    'New-AuditBaseline', 'Test-AuditBaseline', 'Publish-AuditBaseline', 'Save-SettingsPages', 'Write-Step', 'Test-AuditDestination', 'Select-AuditTapNode', 'Get-UiNodes', 'Send-Profile', 'Test-AuditLocaleList', 'Get-AuditLauncher', 'Get-Report',
+    'Test-AuditReelViewer', 'Get-AuditReelProof', 'Test-AuditKeyboard')
 foreach ($functionName in $testFunctions) {
     $definition = $auditAst.Find({ param($node)
         $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq $functionName
@@ -15,6 +16,7 @@ foreach ($functionName in $testFunctions) {
     . ([scriptblock]::Create($definition.Extent.Text))
 }
 
+. (Join-Path $PSScriptRoot 'device-install.ps1')
 $failures = [Collections.Generic.List[string]]::new()
 $checks = 0
 function Assert-That([bool]$Condition, [string]$Message) {
@@ -41,6 +43,8 @@ $script:adbCalls = [Collections.Generic.List[string]]::new()
 $script:foreground = "topResumedActivity=ActivityRecord{1 u0 $Package/.Main t1}"
 $script:focusedWindow = "mCurrentFocus=Window{1 u0 $Package/$Package.Main}"
 $script:uiDump = "<?xml version=`"1.0`"?><hierarchy><node package=`"$Package`" text=`"Comment`" content-desc=`"Comment`" bounds=`"[0,0][20,20]`" /></hierarchy>"
+$script:imeState = '  mInputShown=false'
+$AuditQuery = 'news'
 $inputNodeLabel = 'Comment'
 function Invoke-FakeAdb {
     $command = $args -join ' '
@@ -53,6 +57,8 @@ function Invoke-FakeAdb {
     if ($command -like '*cat */page.json*') { return $script:pageAck }
     if ($command -like '*cat */import.txt*') { return 'applied 4' }
     if ($command -like '*dumpsys activity activities') { return $script:foreground }
+    if ($command -like '*dumpsys activity top') { return $script:topDump }
+    if ($command -like '*dumpsys input_method') { return $script:imeState }
     if ($command -like '*dumpsys window') {
         if ($script:changeOwnWindowAfterDump -and $null -ne $script:postDumpFocusReads) {
             $script:postDumpFocusReads++
@@ -65,8 +71,10 @@ function Invoke-FakeAdb {
         if ($script:changeOwnWindowAfterDump) { $script:postDumpFocusReads = 0 }
         return $script:uiDump
     }
+    if ($command -like '*query-activities*') { return $script:launcherQuery }
     if ($command -match "cmd locale set-app-locales .* --locales '([^']*)'$") { $script:actualLocale = $Matches[1] }
     if ($command -like '*cmd locale get-app-locales*') { return "Locales for $Package for user 0 are [$script:actualLocale]" }
+    if ($script:refuseLocale -and $command -like '*cmd locale set-app-locales*') { throw 'Mock locale refusal' }
     if ($command -match 'cmd uimode night (yes|no|auto|custom)$') {
         if ($script:refuseNight) { throw 'Mock night-mode refusal' }
         $script:actualNight = $Matches[1]
@@ -114,8 +122,10 @@ try {
         $Visit = @($unsafe)
         Assert-Throws { Assert-AuditSteps } "Unsafe step accepted: $unsafe"
     }
-    $Visit = @('fb://feed', 'tap:Comment', 'back', 'tap:Feeds', 'tap:Settings and privacy', 'longpress')
+    $Visit = @('fb://feed', 'tap:Comment', 'back', 'tap:Feeds', 'tap:Settings and privacy', 'longpress', 'fb://search', 'query')
     Assert-AuditSteps
+    $Visit = @('fb://search', 'query:hello')
+    Assert-Throws { Assert-AuditSteps } 'A query step with its own text was accepted.'
 
     $identityVerified = $false
     Assert-Throws { Invoke-Adb shell input keyevent KEYCODE_WAKEUP } 'Unverified identity permitted input.'
@@ -150,6 +160,15 @@ try {
     $inputWindow = $null
     $script:focusedWindow = "mCurrentFocus=Window{1 u0 $Package/$Package.Main}"
     Assert-Throws { Invoke-Adb shell input tap 30 30 } 'A moved navigation node permitted a stale-coordinate tap.'
+    # The S22's menu row repeats its label on an unclickable child that also holds the tap point.
+    $script:uiDump = "<?xml version=`"1.0`"?><hierarchy><node package=`"$Package`" text=`"`" content-desc=`"Settings and privacy`" clickable=`"true`" bounds=`"[0,1966][1080,2091]`"><node package=`"$Package`" text=`"`" content-desc=`"Settings and privacy`" clickable=`"false`" bounds=`"[136,2001][956,2058]`" /></node></hierarchy>"
+    $inputNodeLabel = 'Settings and privacy'
+    $script:adbCalls.Clear()
+    Invoke-Adb shell input tap 540 2028 | Out-Null
+    Assert-That (@($script:adbCalls | Where-Object { $_ -like '* input tap 540 2028' }).Count -eq 1) 'A row with its label repeated inside it refused the tap.'
+    Assert-Throws { Invoke-Adb shell input tap 540 1900 } 'A tap outside the selected row was permitted.'
+    $script:uiDump = $savedDump
+    $inputNodeLabel = 'Comment'
     $script:takeFocusOnDump = $true
     $script:adbCalls.Clear()
     Assert-Throws { Invoke-Adb shell input tap 10 10 } 'An overlay arriving during the dump permitted input.'
@@ -164,20 +183,88 @@ try {
     $script:changeOwnWindowAfterDump = $false
     $script:postDumpFocusReads = $null
     $script:focusedWindow = "mCurrentFocus=Window{1 u0 $Package/$Package.Main}"
+    # A playing reel can't be dumped, so its fragment tree proves it (the S22's layout, 2026-10-18).
+    function New-TopDump([string]$Resumed = 'true', [string]$Reel = 'true', [string]$Parent = 'true',
+            [string]$ParentName = 'VideoHomeRootFragment{5a5ee79}', [string]$ReelHeader = 'WatchFeedOrWarionFragment{90bc1ee} (cc7d9f26 id=0x7f0a06ff)') {
+        return @('TASK 10433:com.facebook.katana id=7721 userId=0',
+            "  ACTIVITY $Package/.Main ebc6768 pid=18012 userId=0",
+            '    Local Activity a1 State:',
+            "      mResumed=$Resumed mStopped=false mFinished=false",
+            "      mCreated=true mResumed=$Resumed mStopped=false    Active Fragments:",
+            '    VideoHomeRootFragment{5a5ee79} (15d18ac3 id=0x7f0a0ccd)',
+            "        mHidden=false mDetached=false mMenuVisible=$Parent mHasMenu=false",
+            "        mRetainInstance=false mUserVisibleHint=$Parent",
+            '        Child FragmentManager{1 in VideoHomeRootFragment{5a5ee79}}:',
+            '          Active Fragments:',
+            "          $ReelHeader",
+            "              mHidden=false mDetached=false mMenuVisible=$Reel mHasMenu=false",
+            "              mRetainInstance=false mUserVisibleHint=$Reel",
+            "              mParentFragment=$ParentName (15d18ac3 id=0x7f0a0ccd)",
+            '              Child FragmentManager{2 in WatchFeedOrWarionFragment{90bc1ee}}:',
+            '                mParent=WatchFeedOrWarionFragment{90bc1ee} (cc7d9f26 id=0x7f0a06ff)',
+            '            #0: WatchFeedOrWarionFragment{90bc1ee} (cc7d9f26 id=0x7f0a06ff)',
+            'TASK 10468:com.other.app id=7401 userId=0',
+            '  ACTIVITY com.other.app/.Main 30d65d pid=2364 userId=0',
+            '      mResumed=false mStopped=true mFinished=false')
+    }
+    Assert-That (Test-AuditReelViewer (New-TopDump) "$Package/.Main") 'A visible reel viewer was not proved.'
+    Assert-That (-not (Test-AuditReelViewer (New-TopDump) "$Package/.Other")) "Another screen's reel viewer passed."
+    Assert-That (-not (Test-AuditReelViewer (New-TopDump -Resumed 'false') "$Package/.Main")) 'A paused screen passed.'
+    Assert-That (-not (Test-AuditReelViewer (New-TopDump -Reel 'false') "$Package/.Main")) 'A reel viewer in a hidden tab passed.'
+    Assert-That (-not (Test-AuditReelViewer (New-TopDump -Parent 'false') "$Package/.Main")) 'A reel viewer under a hidden fragment passed.'
+    Assert-That (-not (Test-AuditReelViewer (New-TopDump -ParentName 'GoneFragment{123abc}') "$Package/.Main")) 'A reel viewer with no parent header passed.'
+    Assert-That (-not (Test-AuditReelViewer (New-TopDump -ReelHeader 'OtherFragment{77} (aa id=0x1)') "$Package/.Main")) 'A reel viewer only listed passed.'
+    Assert-That (-not (Test-AuditReelViewer @((New-TopDump) + (New-TopDump)) "$Package/.Main")) 'A screen listed twice passed.'
+    $script:topDump = (New-TopDump) -join "`n"
+    $inputReel = $true
+    $script:adbCalls.Clear()
+    Invoke-Adb shell input swipe 10 20 10 5 | Out-Null
+    Invoke-Adb shell input keyevent KEYCODE_BACK | Out-Null
+    Assert-That (@($script:adbCalls | Where-Object { $_ -like '* input *' }).Count -eq 2) 'A proved reel refused a swipe or Back.'
+    Assert-That (-not @($script:adbCalls | Where-Object { $_ -like '*uiautomator*' }).Count) 'A reel was dumped while it played.'
+    $script:adbCalls.Clear()
+    Assert-Throws { Invoke-Adb shell input tap 10 10 } 'A reel got a tap.'
+    $script:topDump = (New-TopDump -Reel 'false') -join "`n"
+    Assert-Throws { Invoke-Adb shell input swipe 10 20 10 5 } 'A swipe went to a reel viewer that is not on screen.'
+    Assert-That (-not @($script:adbCalls | Where-Object { $_ -like '* input *' }).Count) 'Input escaped the reel guard.'
+    $inputReel = $false
+    # A swipe across an open keyboard types into the focused field, and only the query is typed.
+    $script:imeState = "  mShowRequested=true`n  mInputShown=true"
+    $script:adbCalls.Clear()
+    Assert-Throws { Invoke-Adb shell input swipe 10 20 10 5 } 'A swipe went across an open keyboard.'
+    Assert-Throws { Invoke-Adb shell input tap 10 10 } 'A tap went across an open keyboard.'
+    Assert-Throws { Invoke-Adb shell input text news } 'Text was typed outside the query step.'
+    $inputQuery = $true
+    Assert-Throws { Invoke-Adb shell input text hello } 'A word other than the audit query was typed.'
+    Assert-Throws { Invoke-Adb shell input text news hello } 'Extra words went in with the audit query.'
+    Assert-That (-not @($script:adbCalls | Where-Object { $_ -like '* input *' }).Count) 'Input escaped the keyboard guard.'
+    Invoke-Adb shell input text news | Out-Null
+    Invoke-Adb shell input keyevent KEYCODE_ENTER | Out-Null
+    Assert-That (@($script:adbCalls | Where-Object { $_ -like '* input *' }).Count -eq 2) 'The query was not typed and submitted.'
+    $script:imeState = '  mInputShown=false'
+    $script:adbCalls.Clear()
+    Assert-Throws { Invoke-Adb shell input text news } 'The query was typed with no keyboard open.'
+    $inputQuery = $false
+    Assert-Throws { Invoke-Adb shell input keyevent KEYCODE_ENTER } 'Enter was sent outside the query step.'
+    Assert-Throws { Invoke-Adb shell input keyevent KEYCODE_MENU } 'An unlisted key was sent.'
+    Assert-Throws { Invoke-Adb shell input draganddrop 10 20 10 5 } 'An unlisted input command was sent.'
+    $script:imeState = 'mServedView=null'
+    Assert-Throws { Invoke-Adb shell input swipe 10 20 10 5 } 'A dump that does not say whether the keyboard is open permitted a swipe.'
+    Assert-That (-not @($script:adbCalls | Where-Object { $_ -like '* input *' }).Count) 'Input escaped the keyboard guard with no keyboard state.'
+    $script:imeState = '  mInputShown=false'
+    Invoke-Adb shell input swipe 10 20 10 5 | Out-Null
+    Assert-That (@($script:adbCalls | Where-Object { $_ -like '* input swipe *' }).Count -eq 1) 'A swipe with the keyboard closed was refused.'
     function New-TestNode([string]$Label, [string]$Class = 'android.view.View', [string]$Owner = $Package) {
         return [pscustomobject]@{ text = $Label; 'content-desc' = $Label; package = $Owner; class = $Class }
     }
     $feedNodes = @((New-TestNode "What's on your mind?"), (New-TestNode 'Go to profile'))
     Assert-That (Test-AuditDestination 'fb://feed' $feedNodes) 'A proved feed was rejected.'
     Assert-That (Test-AuditDestination 'fb://feed' @((New-TestNode 'Facebook logo'))) 'Home with its composer hidden was rejected.'
-    Assert-That (Test-AuditDestination 'fb://watch' @((New-TestNode 'Reel details'))) 'The immersive Reels destination was rejected.'
     foreach ($route in @('fb://watch', 'fb://fb_shorts/viewer', 'fb://notifications', 'fb://marketplace', 'fb://profile', 'fb://search', 'fb://bookmarks')) {
         Assert-That (-not (Test-AuditDestination $route $feedNodes)) "Home fallback passed as $route."
         Assert-That (-not (Test-AuditDestination $route @())) "Empty UI passed as $route."
     }
     $destinations = @{
-        'fb://watch' = @((New-TestNode 'Reels tab details'))
-        'fb://fb_shorts/viewer' = @((New-TestNode 'Reel details'))
         'fb://notifications' = @((New-TestNode 'Notifications'))
         'fb://marketplace' = @((New-TestNode 'Marketplace'), (New-TestNode 'Search Marketplace'))
         'fb://profile' = @((New-TestNode 'Edit profile'), (New-TestNode 'Edit profile picture'))
@@ -189,6 +276,33 @@ try {
         $foreign = @($destinations[$route] | ForEach-Object { New-TestNode $_.text $_.class 'com.other.app' })
         Assert-That (-not (Test-AuditDestination $route $foreign)) "Foreign package passed as $route."
     }
+    # The pages the links open on an account with no profile picture and a warm app.
+    $linkedPages = @{
+        'fb://notifications' = @((New-TestNode "Manage the notification$([char]0x2019)s settings" 'android.widget.Button'))
+        'fb://profile' = @((New-TestNode 'Edit profile'), (New-TestNode 'Add profile picture'))
+        'fb://bookmarks' = @((New-TestNode 'Settings'), (New-TestNode 'Settings and privacy'))
+    }
+    foreach ($route in $linkedPages.Keys) {
+        Assert-That (Test-AuditDestination $route $linkedPages[$route]) "Proved linked page rejected: $route."
+        if ($linkedPages[$route].Count -gt 1) {
+            Assert-That (-not (Test-AuditDestination $route @($linkedPages[$route][0]))) "Half a linked page passed as $route."
+        }
+        $foreign = @($linkedPages[$route] | ForEach-Object { New-TestNode $_.text $_.class 'com.other.app' })
+        Assert-That (-not (Test-AuditDestination $route $foreign)) "Foreign package passed as linked $route."
+    }
+    # The S22's menu row repeats its label on a child that isn't clickable.
+    function New-TapNode([string]$Label, [string]$Bounds, [string]$Clickable, [string]$Owner = $Package) {
+        return [pscustomobject]@{ text = ''; 'content-desc' = $Label; package = $Owner; bounds = $Bounds; clickable = $Clickable }
+    }
+    $row = New-TapNode 'Settings and privacy' '[0,1966][1080,2091]' 'true'
+    $rowText = New-TapNode 'Settings and privacy' '[136,2001][956,2058]' 'false'
+    $gear = New-TapNode 'Settings' '[962,87][1063,188]' 'true'
+    Assert-That ([object]::ReferenceEquals((Select-AuditTapNode 'Settings and privacy' @($gear, $rowText, $row)), $row)) 'A row with its label repeated inside it was not tapped.'
+    Assert-That ([object]::ReferenceEquals((Select-AuditTapNode 'Settings' @($gear, $row)), $gear)) 'A lone matching node was not tapped.'
+    Assert-That ($null -eq (Select-AuditTapNode 'Settings and privacy' @($row, (New-TapNode 'Settings and privacy' '[0,100][1080,200]' 'true')))) 'Two clickable matches picked one.'
+    Assert-That ($null -eq (Select-AuditTapNode 'Settings and privacy' @($row, (New-TapNode 'Settings and privacy' '[0,1900][1080,2058]' 'false')))) 'A match outside the clickable row was ignored.'
+    Assert-That ($null -eq (Select-AuditTapNode 'Settings and privacy' @($rowText, (New-TapNode 'Settings and privacy' '[136,1001][956,1058]' 'false')))) 'Two unclickable matches picked one.'
+    Assert-That ($null -eq (Select-AuditTapNode 'Settings and privacy' @((New-TapNode 'Settings and privacy' '[0,1966][1080,2091]' 'true' 'com.other.app')))) 'A foreign node was tapped.'
     Write-TestLease -Owner 'replacement'
     Assert-Throws { Invoke-Adb shell input tap 10 10 } 'Ownership loss during the walk permitted input.'
 
@@ -237,6 +351,17 @@ try {
     $script:disconnected = $true
     Assert-That (-not (Restore-AuditState)) 'A disconnected restore passed.'
     $script:disconnected = $false
+    $script:refuseLocale = $true
+    $script:actualLocale = 'vi-VN'
+    $script:actualNight = 'yes'
+    $script:adbCalls.Clear()
+    $problems.Clear()
+    Assert-That (-not (Restore-AuditState)) 'A failed locale restore passed.'
+    Assert-That ($script:actualNight -eq 'auto') 'A locale restore failure prevented the theme restore.'
+    Assert-That (-not @($script:adbCalls | Where-Object { $_ -like '* rm -rf *' }).Count) 'A failed locale restore deleted device recovery data.'
+    Assert-That (Test-Path (Join-Path $OutDir 'before.json')) 'A failed locale restore lost its local backup.'
+    Assert-That (@($problems | Where-Object { $_ -like 'Could not restore locale*' }).Count -ge 1) 'A failed locale restore was not reported.'
+    $script:refuseLocale = $false
     $stateBefore.locales = ''
     $script:actualLocale = 'vi-VN'
     $KeepSettings = $true
@@ -341,6 +466,49 @@ try {
     $Entry = "$Package/.LoginActivity"
     $Extra = 'app.morphe.extension.facebook'
     $swipeX = 10; $swipeFrom = 20; $swipeTo = 5
+    # The launcher entry: default, alternate icon, none and several.
+    $realStart = ($auditAst.Find({ param($node) $node -is [System.Management.Automation.Language.FunctionDefinitionAst] -and $node.Name -eq 'Start-Facebook' }, $true)).Extent.Text.Replace('function Start-Facebook', 'function Start-FacebookReal')
+    . ([scriptblock]::Create($realStart))
+    $LauncherClass = 'com.facebook.katana.LoginActivity'
+    $alias = 'com.facebook.katana.LoginActivity.fab_ic'
+    $script:launcherQuery = @('1 activities found:', "  $Package/.LoginActivity")
+    Assert-That ((Get-AuditLauncher) -ceq $LauncherClass) 'The default launcher was not resolved.'
+    $script:launcherQuery = @('1 activities found:', "  $Package/$alias")
+    Assert-That ((Get-AuditLauncher) -ceq $alias) 'The enabled alternate launcher alias was not resolved.'
+    $script:launcherQuery = @('1 activities found:', "  $Package/.LoginActivity.fab_ic")
+    Assert-That ((Get-AuditLauncher) -ceq $alias) 'A short alias name was not expanded.'
+    $script:launcherQuery = @('1 activities found:', "  $Package/com.facebook.katana.OtherActivity", "  com.other.app/.Main")
+    Assert-Throws { Get-AuditLauncher } 'Only unrelated activities passed as a launcher.'
+    $script:launcherQuery = @('No activities found')
+    Assert-Throws { Get-AuditLauncher } 'A missing launcher passed.'
+    $script:launcherQuery = @('0 activities found:', '')
+    Assert-Throws { Get-AuditLauncher } 'An empty launcher query passed.'
+    $script:launcherQuery = @('2 activities found:', "  $Package/.LoginActivity", "  $Package/$alias")
+    Assert-Throws { Get-AuditLauncher } 'Two enabled launchers passed as one.'
+    $script:launcherQuery = @("  $Package/.LoginActivity", "  $Package/.LoginActivity")
+    Assert-That ((Get-AuditLauncher) -ceq $LauncherClass) 'One launcher listed twice was treated as ambiguous.'
+    foreach ($launcher in @($LauncherClass, $alias)) {
+        $Entry = "$Package/$launcher"
+        $script:adbCalls.Clear()
+        Start-FacebookReal
+        try { Get-Report (Join-Path $OutDir 'report-launcher.txt') | Out-Null } catch { }
+        $script:pageAck = '{"schema":2,"route":"News feed","title":"Newsfeed","locale":"de-DE"}'
+        $script:screenText = @('Newsfeed')
+        Save-SettingsPages 'dark' | Out-Null
+        $starts = @($script:adbCalls | Where-Object { $_ -like '*am start*' -and $_ -notlike '*android.intent.action.VIEW*' })
+        Assert-That ($starts.Count -ge 3) "Launch commands were not issued for $launcher."
+        Assert-That (@($starts | Where-Object { $_ -notlike "* -n $Package/$launcher*" }).Count -eq 0) "A launch or extra missed the active launcher $launcher."
+        Assert-That (@($starts | Where-Object { $_ -like '*OPEN_SETTINGS true*' -and $_ -like "* -n $Package/$launcher *" }).Count -ge 1) "OPEN_SETTINGS did not go to $launcher."
+        Assert-That (@($starts | Where-Object { $_ -like '*AUDIT_REPORT true*' -and $_ -like "* -n $Package/$launcher *" }).Count -ge 1) "AUDIT_REPORT did not go to $launcher."
+        Assert-That (-not @($script:adbCalls | Where-Object { $_ -match 'pm (enable|disable)|setEnabledSetting|cmd package (enable|disable)' }).Count) 'The audit changed a component state.'
+    }
+    $Entry = $null
+    $script:adbCalls.Clear()
+    Assert-Throws { Start-FacebookReal } 'An unresolved launcher still started Facebook.'
+    Assert-Throws { Get-Report (Join-Path $OutDir 'report-none.txt') } 'An unresolved launcher still requested a report.'
+    Assert-Throws { Save-SettingsPages 'dark' } 'An unresolved launcher still opened settings.'
+    Assert-That (-not @($script:adbCalls | Where-Object { $_ -like '*am *' }).Count) 'An unresolved launcher reached ADB.'
+    $Entry = "$Package/.LoginActivity"
     $script:foreground = "topResumedActivity=ActivityRecord{1 u0 $Package/.Main t1}"
     $script:screenText = @('Newsfeed')
     $script:pageAck = '{"schema":2,"route":"News feed","title":"Newsfeed","locale":"de-DE"}'

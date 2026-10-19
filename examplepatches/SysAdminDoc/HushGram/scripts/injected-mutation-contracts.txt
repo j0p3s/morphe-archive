@@ -240,71 +240,8 @@ once-call Lapp/hushgram/extension/instagram/ads/Ads;->hide()Z in static (*)Z hol
 # "lockout_active"; the lockout is the one taking the activity first.
 start-call Lapp/hushgram/extension/instagram/misc/BuildExpiry;->suppress()Z in (Landroidx/fragment/app/FragmentActivity;*)V holding lockout_active
 once-call Lapp/hushgram/extension/instagram/misc/BuildExpiry;->suppress()Z in (Landroidx/fragment/app/FragmentActivity;*)V holding lockout_active
-#
-# Disable analytics passes the address Instagram uploads its usage events to through the extension
-# before the builder returns it. The builder is the one static method taking a host and a flag that
-# holds all three pieces of the address, and it returns once on 449, so one call. The extension's
-# endpoint() is also called wherever Instagram loads Facebook's Graph logging address, so the
-# builder's rule is shared-call: the builder calls it once and no other method holding its strings
-# calls it, whoever else does.
-shared-call Lapp/hushgram/extension/instagram/misc/Analytics;->endpoint(Ljava/lang/String;)Ljava/lang/String; in static (Ljava/lang/String;Z)Ljava/lang/String; holding https:// /pigeon_nest /logging_client_events
-# The MQTT client's settings constructor, the one taking a JSONObject that holds both keys below,
-# hands the analytics_endpoint value it reads to endpoint() once.
-shared-call Lapp/hushgram/extension/instagram/misc/Analytics;->endpoint(Ljava/lang/String;)Ljava/lang/String; in instance (Lorg/json/JSONObject;)V holding php_sandbox_host_name
-# Lacrima, Instagram's error reporter, posts a startup ping and a debug ping to b-www.facebook.com,
-# the address a constant in each sender's run(). reportEndpoint() takes it once in each.
-shared-call Lapp/hushgram/extension/instagram/misc/Analytics;->reportEndpoint(Ljava/lang/String;)Ljava/lang/String; in instance ()V holding https://b-www.facebook.com/mobile/extra_data_collector/ user_id=0&report_type=appstartup&app_id=
-shared-call Lapp/hushgram/extension/instagram/misc/Analytics;->reportEndpoint(Ljava/lang/String;)Ljava/lang/String; in instance ()V holding https://b-www.facebook.com/mobile/extra_data_collector/ user_id=0&report_type=debug_ping&debug_ping_ver=
-# Its crash and reliability reports go to an address it builds at startup and keeps as text, and
-# reportEndpoint() takes it each time a sender reads it back. The direct report sender reads it once.
-# The report sender's factory (ReportSender, ReportAssembler) reads it on two branches, so it has no
-# rule: a rule here holds a method to one call.
-shared-call Lapp/hushgram/extension/instagram/misc/Analytics;->reportEndpoint(Ljava/lang/String;)Ljava/lang/String; in instance ()V holding DirectSend DirectReportSource
-# The logger's step for each event hands its switch for Falco's event stream to streamEvents()
-# between reading it and branching on it. The step is the one method holding both strings below, and
-# nothing else calls streamEvents(). Left out, events stream to the gateway host whatever the switch
-# says; twice or elsewhere, it isn't the hook the patch wrote.
-once-call Lapp/hushgram/extension/instagram/misc/Analytics;->streamEvents(I)I in instance (LX/*;I)V holding LX/*;->*:Ljava/util/concurrent/ScheduledExecutorService;
-# The Bloks screen opener asks setupScreen() first thing in each of its three ways of showing a
-# screen, with the app id it reads off itself, and returns on a yes. Full screen holds the fetch's
-# trace name, the bottom sheet its two bundle keys, and the third holds no string: it's the class's
-# one instance (Context, IgBloksScreenConfig)V handing a screen to the static that shows one, and
-# its class is picked by A0A's TTL check, a string none of the three loads. Left out, the contacts
-# and location setup screens come back on every start while their seen events are refused.
-start-call Lapp/hushgram/extension/instagram/misc/Analytics;->setupScreen(Ljava/lang/String;)I in instance (Landroid/content/Context;Lcom/instagram/bloks/hosting/IgBloksScreenConfig;)V holding BKDataFetcher.fetch
-shared-call Lapp/hushgram/extension/instagram/misc/Analytics;->setupScreen(Ljava/lang/String;)I in instance (Landroid/content/Context;Lcom/instagram/bloks/hosting/IgBloksScreenConfig;)V holding BKDataFetcher.fetch
-start-call Lapp/hushgram/extension/instagram/misc/Analytics;->setupScreen(Ljava/lang/String;)I in instance (Landroid/content/Context;Lcom/instagram/bloks/hosting/IgBloksScreenConfig;)V holding bloks_screen_config bottom_sheet_content_fragment
-shared-call Lapp/hushgram/extension/instagram/misc/Analytics;->setupScreen(Ljava/lang/String;)I in instance (Landroid/content/Context;Lcom/instagram/bloks/hosting/IgBloksScreenConfig;)V holding bloks_screen_config bottom_sheet_content_fragment
-start-call Lapp/hushgram/extension/instagram/misc/Analytics;->setupScreen(Ljava/lang/String;)I in instance (Landroid/content/Context;Lcom/instagram/bloks/hosting/IgBloksScreenConfig;)V calling static LX/*;->*(Landroid/content/Context;LX/*;Lcom/instagram/bloks/hosting/IgBloksScreenConfig;LX/*;LX/*;I)V class-holding CacheTTL\smust\sbe\spositive
-shared-call Lapp/hushgram/extension/instagram/misc/Analytics;->setupScreen(Ljava/lang/String;)I in instance (Landroid/content/Context;Lcom/instagram/bloks/hosting/IgBloksScreenConfig;)V calling static LX/*;->*(Landroid/content/Context;LX/*;Lcom/instagram/bloks/hosting/IgBloksScreenConfig;LX/*;LX/*;I)V class-holding CacheTTL\smust\sbe\spositive
-# The direct screen presenter needs a null-data bypass before reading its immutable app id.
-# The existing opener routes share this hook, so one call is required here without forbidding them.
-# 385611400, 439 and 440 ask a string pool for some of its strings, so pool asks count (pooled).
-shared-call Lapp/hushgram/extension/instagram/misc/Analytics;->setupScreen(Ljava/lang/String;)I in static (Landroid/content/Context;L*;Lcom/instagram/bloks/hosting/IgBloksScreenConfig;L*;L*;I)V pooled holding FragmentActivity\sis\srequired\sto\sopen\sCDS\sbottom\ssheet cds_bloks cds_bloks_bottomsheet
-# Open developer options asks open() first in Home's long press, the one onLongClick holding the
-# two values the server can set the press to. Nothing else calls open().
-start-call Lapp/hushgram/extension/instagram/misc/DeveloperOptions;->open()I in instance (Landroid/view/View;)Z holding click activity
-once-call Lapp/hushgram/extension/instagram/misc/DeveloperOptions;->open()I in instance (Landroid/view/View;)Z holding click activity
-# On a yes the same long press tells opening() the activity, once, right before the opener call, and
-# both answers of the callback the opener hands the module load ask loaded() first, so a load that
-# never answers loses its loading dialog after a while and a late answer is dropped (#158). The
-# success is the answer calling the Callable that makes the options screen, in the class whose
-# methods load the error key between them, and the failure the answer toasting the key without the
-# other callback's Function0. 385713117 asks a string pool for the key (pooled).
-once-call Lapp/hushgram/extension/instagram/misc/DeveloperOptions;->opening(Ljava/lang/Object;)V in instance (Landroid/view/View;)Z holding click activity
-start-call Lapp/hushgram/extension/instagram/misc/DeveloperOptions;->loaded()I in instance ()V calling instance Ljava/util/concurrent/Callable;->call()Ljava/lang/Object; pooled class-holding debug_options_error
-once-call Lapp/hushgram/extension/instagram/misc/DeveloperOptions;->loaded()I in instance ()V calling instance Ljava/util/concurrent/Callable;->call()Ljava/lang/Object; pooled class-holding debug_options_error
-start-call Lapp/hushgram/extension/instagram/misc/DeveloperOptions;->loaded()I in instance ()V calling static LX/*;->*(Landroid/content/Context;Ljava/lang/String;II)Landroid/widget/Toast; lacking instance Lkotlin/jvm/functions/Function0;->invoke()Ljava/lang/Object; pooled holding debug_options_error
-once-call Lapp/hushgram/extension/instagram/misc/DeveloperOptions;->loaded()I in instance ()V calling static LX/*;->*(Landroid/content/Context;Ljava/lang/String;II)Landroid/widget/Toast; lacking instance Lkotlin/jvm/functions/Function0;->invoke()Ljava/lang/Object; pooled holding debug_options_error
-# Import flag names hands both labels of every row MetaConfig's list builder makes to FlagNames, in
-# both of its kinds of row. The builder is the one static ()List making rows of the (J, String,
-# String) constructor, whichever way its build makes the labels (inline, through getters on the
-# schema entry or through a helper taking it), and nothing else calls either hook. No class or
-# member name here is a 450 build's own: Redex renames them between the builds.
-once-call Lapp/hushgram/extension/instagram/misc/FlagNames;->parameter(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/String; in static ()Ljava/util/List; sites 2 holding LX/*;->*(JLjava/lang/String;Ljava/lang/String;)V
-once-call Lapp/hushgram/extension/instagram/misc/FlagNames;->config(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/String; in static ()Ljava/util/List; sites 2 holding LX/*;->*(JLjava/lang/String;Ljava/lang/String;)V
-# Read-only override exchange mustn't introduce native writes or cache reloads. The holder's
-# own typed forwarding wrappers are allowed; extension callers aren't.
+# No patch writes Instagram's MetaConfig overrides or reloads them. The holder's own typed
+# forwarding wrappers are allowed; extension callers aren't.
 no-call Lcom/facebook/mobileconfig/troubleshooting/MobileConfigOverridesWriterHolder;->importOverridesFromUser(Ljava/lang/String;)Ljava/lang/String; outside Lcom/facebook/mobileconfig/
 no-call Lcom/facebook/mobileconfig/MobileConfigOverridesTableHolder;->reload()V outside Lcom/facebook/mobileconfig/
 no-call Lcom/facebook/mobileconfig/MobileConfigOverridesTableHolder;->removeAllOverrides()V outside Lcom/facebook/mobileconfig/
@@ -513,10 +450,6 @@ no-call Landroid/view/Window;->setColorMode(I)V outside Lapp/hushgram/extension/
 no-call Landroid/view/SurfaceControl$Transaction;->setExtendedRangeBrightness(Landroid/view/SurfaceControl;FF)Landroid/view/SurfaceControl$Transaction; outside Lapp/hushgram/extension/
 #
 # Not pinned:
-# Disable analytics also sends every load of Facebook's Graph logging address through endpoint().
-# Three methods load it on 449: a string table and two getters of the same shape holding nothing
-# else, so no rule can single one out, and shared-call on the table would count the getters' calls
-# against it.
 # Sanitize sharing links also sends ClipboardManager.setPrimaryClip and both Intent.createChooser
 # calls to stand-ins. The patcher rewrites only the root classes*.dex, and the in-app browser's dex
 # (split_heliumcore, three dex entries in the merge) still makes those calls itself, so a no-call
@@ -994,6 +927,9 @@ once-call Lapp/hushgram/extension/instagram/download/PostInfo;->show(Ljava/lang/
 once-call Lapp/hushgram/extension/instagram/download/VideoDownload;->offerCover(Ljava/lang/Object;Ljava/util/ArrayList;)V in (*)Ljava/lang/Object; holding cns_client_event
 once-call Lapp/hushgram/extension/instagram/download/VideoDownload;->coverOption()Ljava/lang/Object; in instance (Lcom/instagram/feed/media/mediaoption/MediaOption$Option;)V holding CAROUSEL_TO_REELS_ACTION_SHEET bloks_suggested_comments_network_error
 once-call Lapp/hushgram/extension/instagram/download/VideoDownload;->saveCover(Ljava/lang/Object;Ljava/lang/Object;Landroid/app/Activity;)V in instance (Lcom/instagram/feed/media/mediaoption/MediaOption$Option;)V holding CAROUSEL_TO_REELS_ACTION_SHEET bloks_suggested_comments_network_error
+# Choose pages: offered by offerAll() with Save all, and its tap handled by the same handler after the current page's Download.
+once-call Lapp/hushgram/extension/instagram/download/VideoDownload;->chooseOption()Ljava/lang/Object; in instance (Lcom/instagram/feed/media/mediaoption/MediaOption$Option;)V holding CAROUSEL_TO_REELS_ACTION_SHEET bloks_suggested_comments_network_error
+once-call Lapp/hushgram/extension/instagram/download/VideoDownload;->choosePages(Ljava/lang/Object;Landroid/app/Activity;)V in instance (Lcom/instagram/feed/media/mediaoption/MediaOption$Option;)V holding CAROUSEL_TO_REELS_ACTION_SHEET bloks_suggested_comments_network_error
 # Your own posts (#57): the same builder passes the answer of Instagram's check of whether your post
 # may be downloaded through ownPost() right after its move-result, and the flag it reads past a yes
 # through ownPostRow(), once each. Like offer(), these pick one method on 385611404, 431 and 438.
@@ -1127,6 +1063,12 @@ retry-call Lapp/hushgram/extension/instagram/stories/StorySeen;->toRetry(Ljava/l
 # story gets a Mark as seen button; twice or elsewhere, it isn't the hook the patch wrote.
 start-call Lapp/hushgram/extension/instagram/stories/StorySeenButton;->bind(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V in static (*)V holding ReelViewerItemBinder.bindToolbarViews
 once-call Lapp/hushgram/extension/instagram/stories/StorySeenButton;->bind(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)V in static (*)V holding ReelViewerItemBinder.bindToolbarViews
+# Hide Follow on stories (#237) hands the same view holder to StoryFollowButton in that toolbar bind,
+# right after View stories anonymously's hook when that's there and first when it isn't, through one
+# move into a borrowed local. No start-call: with both patches in, the other hook holds the start.
+# Left out, the Follow button is never kept off a story's header; twice or elsewhere, it isn't the
+# hook the patch wrote.
+once-call Lapp/hushgram/extension/instagram/stories/StoryFollowButton;->bind(Ljava/lang/Object;)V in static (*)V holding ReelViewerItemBinder.bindToolbarViews
 # It also hands StorySeenRings the story viewer's write of a reel's seen time into the store that greys
 # its ring (0202.A0A on 450, the viewer logger's per-story method, which takes the story and holds
 # nux_story), in the write's own place, with the story whose time it is. The extension skips it while
@@ -1656,6 +1598,14 @@ start-call Lapp/hushgram/extension/instagram/reels/ReelOrigin;->opening(Ljava/la
 once-call Lapp/hushgram/extension/instagram/reels/ReelOrigin;->opening(Ljava/lang/Object;)V in instance (L*;)Z holding android_purge_26_q3_AuthorInfoNavigator_navigateToNormalProfile
 start-call Lapp/hushgram/extension/instagram/reels/ReelOrigin;->reelsTabResumed(Ljava/lang/Object;)V in instance ()V holding android_purge_26_q2_ClipsProfileTabFragment_onResume
 once-call Lapp/hushgram/extension/instagram/reels/ReelOrigin;->reelsTabResumed(Ljava/lang/Object;)V in instance ()V holding android_purge_26_q2_ClipsProfileTabFragment_onResume
+# For a photo reel (#225) it also hands a profile's posts grid to ReelOrigin.postsGridResumed right
+# after the grid's super.onResume(). ProfileMediaTabFragment keeps its name but holds no marker, and its
+# onResume no string: it's the instance ()V of the class holding the grid's tab identifier key that
+# calls its superclass's onResume. Not first in the method: Profile posts as a list keeps that spot
+# (its start-call above), whichever patch goes in first. Left out, a photo reel is never looked for;
+# twice or elsewhere, it isn't the hook the patch wrote. NativeFindReelOriginTest checks on all eight
+# 451 builds where it lands.
+once-call Lapp/hushgram/extension/instagram/reels/ReelOrigin;->postsGridResumed(Ljava/lang/Object;)V in instance ()V calling instance LX/*;->onResume()V class-holding ProfileMediaTabFragment.profile_tab_identifier
 # Blur the bars around Reels hands ReelBlurBars.pager the Reels pager (AndroidX's ViewPager2, whose pages
 # each hold the reel's TextureView) right after the viewer's onViewCreated stores it, the same method
 # Stop Reels scrolling finds by the trace name of the pager's setup. Left out, the switch does nothing;
@@ -1934,3 +1884,11 @@ once-call Lapp/hushgram/extension/instagram/feed/FeedTapPause;->released(Ljava/l
 # 385713117 asks a string pool for the argument (pooled, 00R1.A00 there).
 start-call Lapp/hushgram/extension/instagram/feed/FeedTapPause;->opening(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z in instance (Landroid/view/View;L*;L*;L*;Lcom/instagram/feed/media/Media;L*;Ljava/util/List;ZZ)V pooled holding ContextualFeedFragment.ARGUMENT_HOST_PROFILE_USER_ID
 once-call Lapp/hushgram/extension/instagram/feed/FeedTapPause;->opening(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/Object;)Z in instance (Landroid/view/View;L*;L*;L*;Lcom/instagram/feed/media/Media;L*;Ljava/util/List;ZZ)V pooled holding ContextualFeedFragment.ARGUMENT_HOST_PROFILE_USER_ID
+# Hide the comment emoji row hands the comment sheet's emoji check (List.isEmpty on the strip's
+# emoji) to CommentEmojiRow.hidesRow right before the if-nez that skips the strip, in the one method
+# laying out the area above the box, the only one loading both keys below (0Fas.A0o on 451's
+# 385713073, building the strip 0Exx). Left out, the strip stays with the switch on, since 451's
+# sheet never inflates the ids the view hider looks for; twice or elsewhere, it isn't the call the
+# patch wrote. HideCommentEmojiRowPatchTest checks the call, its register and the branch on all
+# eight 451 builds.
+once-call Lapp/hushgram/extension/instagram/feed/CommentEmojiRow;->hidesRow(I)Z holding replying_to_bar group_mention_banner

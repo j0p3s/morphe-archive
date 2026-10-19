@@ -20,6 +20,13 @@ function Format-HushPinterestAdbFailure {
     "$Message (ADB exit $($Result.ExitCode)).$suffix"
 }
 
+function ConvertTo-HushLeaseTime($Value) {
+    # ConvertFrom-Json hands a Z time back as a Utc DateTime unless -DateKind String kept the text,
+    # and [DateTimeOffset]::Parse prints that DateTime without its zone, then reads it as local time.
+    if ($Value -is [DateTime]) { return [DateTimeOffset]$Value }
+    return [DateTimeOffset]::Parse([string]$Value, [Globalization.CultureInfo]::InvariantCulture)
+}
+
 function Read-HushLeaseRecord($Stream) {
     if ($Stream.Length -gt 32768) { throw 'Invalid device lease size.' }
     $bytes = [byte[]]::new([int]$Stream.Length)
@@ -33,7 +40,7 @@ function Read-HushLeaseRecord($Stream) {
     } else { $json | ConvertFrom-Json }
     if ($record.schemaVersion -ne 1 -or -not $record.project -or -not $record.chatIdentity -or
         -not $record.ownershipToken -or -not $record.serial) { throw 'Invalid device lease identity.' }
-    $expiry = [DateTimeOffset]::Parse($record.expiresUtc)
+    $expiry = ConvertTo-HushLeaseTime $record.expiresUtc
     if ($expiry.Offset -ne [TimeSpan]::Zero) { throw 'Device lease expiry must be UTC.' }
     return $record
 }
@@ -55,10 +62,11 @@ function Renew-HushDeviceLease {
             $record.chatIdentity -ne $Lease.ChatIdentity -or $record.ownershipToken -cne $Lease.Token) {
             throw 'Device lease ownership changed. Mutation refused.'
         }
-        if ([DateTimeOffset]::Parse($record.expiresUtc) -le [DateTimeOffset]::UtcNow) {
+        if ((ConvertTo-HushLeaseTime $record.expiresUtc) -le [DateTimeOffset]::UtcNow) {
             throw 'Device lease expired. Confirm the previous test stopped before reclaiming it.'
         }
-        $record.expiresUtc = [DateTimeOffset]::UtcNow.AddMinutes($Lease.Minutes).ToString('o')
+        # A Z time: other lease readers in the device pool take +00:00 as expired.
+        $record.expiresUtc = [DateTimeOffset]::UtcNow.AddMinutes($Lease.Minutes).UtcDateTime.ToString('o')
         Write-HushLeaseRecord $stream $record
     } finally { $stream.Dispose() }
 }
@@ -169,7 +177,7 @@ function Enter-HushDeviceLease {
         catch [IO.IOException] {
             if (-not (Test-Path -LiteralPath $path)) { throw }
             $held = Get-Content -LiteralPath $path -Raw | ConvertFrom-Json
-            if ([DateTimeOffset]::Parse($held.expiresUtc) -le [DateTimeOffset]::UtcNow) {
+            if ((ConvertTo-HushLeaseTime $held.expiresUtc) -le [DateTimeOffset]::UtcNow) {
                 throw "Device $Serial has an expired lease. Confirm the previous test stopped before removing it."
             }
             throw "Device $Serial is leased to another caller."
@@ -177,7 +185,7 @@ function Enter-HushDeviceLease {
         try {
             Write-HushLeaseRecord $stream ([pscustomobject]@{ schemaVersion = 1; serial = $Serial;
                 project = $Project; chatIdentity = $ChatIdentity; ownershipToken = $LeaseToken;
-                acquiredUtc = [DateTimeOffset]::UtcNow.ToString('o'); expiresUtc = [DateTimeOffset]::UtcNow.AddMinutes($Minutes).ToString('o');
+                acquiredUtc = [DateTimeOffset]::UtcNow.UtcDateTime.ToString('o'); expiresUtc = [DateTimeOffset]::UtcNow.AddMinutes($Minutes).UtcDateTime.ToString('o');
                 purpose = 'Guarded development install or device test'; processId = $PID })
             $owned = $true
         } finally { $stream.Dispose() }

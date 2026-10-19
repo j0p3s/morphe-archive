@@ -61,22 +61,18 @@ internal object ProtectedMessageFingerprint : Fingerprint(
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
     returnType = "Z",
     parameters = listOf("L"),
-    filters = listOf(
-        protectionFlagRead,
-        fieldAccess(name = "RECEIVED", opcode = Opcode.SGET_OBJECT),
-    ),
+    filters = listOf(protectionFlagRead),
 )
 
 internal val copyProtectionCheck = methodCall(returnType = "Z", parameters = listOf("L"))
 
-internal object CopyAvailabilityFingerprint : Fingerprint(
+internal fun copyAvailabilityFingerprint(copyDisabledConstant: FieldReference) = Fingerprint(
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
     returnType = "V",
     parameters = listOf("L", "Ljava/util/LinkedHashSet;"),
     filters = listOf(
         copyProtectionCheck,
         opcode(Opcode.MOVE_RESULT, MatchAfterImmediately()),
-        fieldAccess(name = "COPY", opcode = Opcode.SGET_OBJECT),
-        fieldAccess(name = "COPY_DISABLE_BY_PRIVACY", opcode = Opcode.SGET_OBJECT),
+        fieldAccess(copyDisabledConstant, Opcode.SGET_OBJECT),
     ),
 )

@@ -35,9 +35,7 @@ Patch bundle created by **Error404rt** using Morphe Patches.
 
 - **Current release:** v2.0.0
 - **App:** Anixart
-- **Package:** com.swiftsoft.anixartd
 - **Version:** 10.5
-- **APK type:** APK
 - **Patch:** Remove ads
 
 For Anixart 10.0, use the previous [v1.0.0 release](https://github.com/Error404rt/Anixart-patches/releases/tag/v1.0.0).

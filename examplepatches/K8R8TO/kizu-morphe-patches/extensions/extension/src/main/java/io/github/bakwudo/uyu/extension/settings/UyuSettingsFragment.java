@@ -216,10 +216,12 @@ public class UyuSettingsFragment extends PreferenceFragment {
                 "Show 7TV, BTTV and FFZ emotes in live chat.");
         addSwitch(screen, Settings.EMOTES_ANIMATED, "Animated emotes",
                 "Play animated third-party emotes. Turn this off to use static frames.");
-        addSwitch(screen, Settings.EMOTES_PICKER, "Third-party emote picker",
-                "Add third-party emotes to Twitch's native emote picker.");
-        addSwitch(screen, Settings.EMOTES_AUTOCOMPLETE, "Third-party autocomplete",
-                "Offer third-party emote names while typing in chat.");
+        addSwitch(screen, Settings.EMOTES_PICKER, "Third-party emotes in Twitch picker",
+                "Add 7TV, BTTV and FFZ emotes to Twitch's native emote list.");
+        addSwitch(screen, Settings.EMOTES_AUTOCOMPLETE, "Emote autocomplete",
+                "Offer 7TV, BTTV and FFZ emote suggestions while typing in chat.");
+        addSwitch(screen, Settings.EMOTES_TAP_PREVIEW, "Emote tap previews",
+                "Open Twitch's emote card when tapping a 7TV, BTTV or FFZ chat emote.");
         addSwitch(screen, Settings.EMOTES_ZERO_WIDTH, "Zero-width emotes",
                 "Allow third-party overlay emotes marked as zero-width.");
     }
@@ -233,7 +235,7 @@ public class UyuSettingsFragment extends PreferenceFragment {
         deletedMessageStyle.setOnPreferenceClickListener(clicked -> {
             Activity activity = getActivity();
             if (activity == null) return true;
-            String[] names = {"Mod", "Strikethrough", "Grey"};
+            String[] names = {"Mod", "Strikethrough", "Gray"};
             String[] values = {"mod", "strikethrough", "grey"};
             int selected = deletedMessageStyleIndex(Settings.CHAT_DELETED_MESSAGES_STYLE.get());
             new AlertDialog.Builder(activity)
@@ -272,7 +274,7 @@ public class UyuSettingsFragment extends PreferenceFragment {
 
     private static String deletedMessageStyleName(String value) {
         if ("strikethrough".equalsIgnoreCase(value)) return "Strikethrough";
-        if ("grey".equalsIgnoreCase(value)) return "Grey";
+        if ("grey".equalsIgnoreCase(value) || "gray".equalsIgnoreCase(value)) return "Gray";
         // "default" is a legacy value and is equivalent to Mod.
         return "Mod";
     }
@@ -404,3 +406,4 @@ public class UyuSettingsFragment extends PreferenceFragment {
         group.addPreference(preference);
     }
 }
+

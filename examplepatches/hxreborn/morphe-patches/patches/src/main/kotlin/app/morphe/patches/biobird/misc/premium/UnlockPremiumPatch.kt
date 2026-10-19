@@ -32,9 +32,21 @@ internal val PROVIDER_PROLOGUE_MASK =
         "ffffffffff03c0ff000000fcffffffffffffffffffffffffffffffffffffffffffffffff" +
         "ffffffffffffffffffffffff").hexToByteArray()
 
+internal val ENTITLEMENT_FETCH_SEQUENCE =
+    ("e10303aa6203409142a441f900000094a00358f801f041b821801c8ba28358f800000094" +
+        "e10300aaa18317f800000094").hexToByteArray()
+
+internal val ENTITLEMENT_FETCH_SEQUENCE_MASK =
+    ("ffffffffff03c0ffffffffff000000fcffffffffffffffffffffffffffffffff000000fc" +
+        "ffffffffffffffff000000fc").hexToByteArray()
+
+internal const val FETCH_USER_ENTITLEMENT_CALL_OFFSET = 28
+
 internal val RETURN_TRUE = "c0820091c0035fd6".hexToByteArray()
 
-internal val RETURN_PCB_ENTITLEMENT = "606b409100f444f9c0035fd6".hexToByteArray()
+internal val LOAD_PCB_ENTITLEMENT = "606b409100f444f9".hexToByteArray()
+
+internal val RETURN_PCB_ENTITLEMENT = LOAD_PCB_ENTITLEMENT + "c0035fd6".hexToByteArray()
 
 @Suppress("unused")
 val unlockPremiumPatch = resourcePatch(
@@ -58,6 +70,11 @@ val unlockPremiumPatch = resourcePatch(
             if (!library.replaceMasked(pattern, PROVIDER_PROLOGUE_MASK, mapOf(0 to replacement))) {
                 throw PatchException("Could not find the $provider in $DART_AOT_LIBRARY")
             }
+        }
+
+        val callReplacement = mapOf(FETCH_USER_ENTITLEMENT_CALL_OFFSET to LOAD_PCB_ENTITLEMENT)
+        if (!library.replaceMasked(ENTITLEMENT_FETCH_SEQUENCE, ENTITLEMENT_FETCH_SEQUENCE_MASK, callReplacement)) {
+            throw PatchException("Could not find the fetchUserEntitlement call in $DART_AOT_LIBRARY")
         }
     }
 }

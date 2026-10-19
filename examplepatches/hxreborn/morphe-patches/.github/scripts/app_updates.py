@@ -240,15 +240,23 @@ def discover_urls(apps, cache_path, discovery):
     resolvers = {"apkmirror": lambda package, s, t: (apkmirror_url(discovery, package, s, t),),
                  "uptodown": discovery.resolve_uptodown_url}
 
+    blocked = set()
+
     def refresh(package):
         entry = cache.setdefault(package, {})
         for source, resolve in resolvers.items():
-            if entry.get(source):
+            if entry.get(source) or source in blocked:
                 continue
             try:
                 entry[source] = resolve(package, session, 30)[0]
             except Exception as error:
-                print(f"[{package}] {source} discovery failed: {error}", file=sys.stderr)
+                response = getattr(error, "response", None)
+                if response is None or response.status_code not in {403, 429}:
+                    print(f"[{package}] {source} discovery failed: {error}", file=sys.stderr)
+                elif source not in blocked:
+                    blocked.add(source)
+                    print(f"{source} discovery blocked ({response.status_code}), skipping it for this run",
+                          file=sys.stderr)
 
     with ThreadPoolExecutor(max_workers=3) as pool:
         list(pool.map(refresh, apps))

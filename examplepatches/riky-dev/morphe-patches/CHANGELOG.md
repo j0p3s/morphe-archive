@@ -1,3 +1,27 @@
+## [2.3.2](https://github.com/riky-dev/morphe-patches/compare/v2.3.1...v2.3.2) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* **meteo3b:** prevent 401 error on historical data for logged-out users ([#2](https://github.com/riky-dev/morphe-patches/issues/2)) ([6504705](https://github.com/riky-dev/morphe-patches/commit/6504705f849be0000a11b1bb1dde576b2a4ab5fa))
+
+## [2.3.2-dev.1](https://github.com/riky-dev/morphe-patches/compare/v2.3.1...v2.3.2-dev.1) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* **meteo3b:** prevent 401 error on historical data for logged-out users ([#2](https://github.com/riky-dev/morphe-patches/issues/2)) ([6504705](https://github.com/riky-dev/morphe-patches/commit/6504705f849be0000a11b1bb1dde576b2a4ab5fa))
+
+## [2.3.1](https://github.com/riky-dev/morphe-patches/compare/v2.3.0...v2.3.1) (2026-10-18)
+
+### 🚀 Updated App Support
+
+* support VN 2.22.1 and 3BMeteo 4.9.17 ([9ac7002](https://github.com/riky-dev/morphe-patches/commit/9ac70026e30734889217cb9a68032e95ff975e4d))
+
+## [2.3.1-dev.1](https://github.com/riky-dev/morphe-patches/compare/v2.3.0...v2.3.1-dev.1) (2026-10-17)
+
+### 🚀 Updated App Support
+
+* support VN 2.22.1 and 3BMeteo 4.9.17 ([9ac7002](https://github.com/riky-dev/morphe-patches/commit/9ac70026e30734889217cb9a68032e95ff975e4d))
+
 ## [2.3.0](https://github.com/riky-dev/morphe-patches/compare/v2.2.1...v2.3.0) (2026-10-14)
 
 ### ✨ New Features

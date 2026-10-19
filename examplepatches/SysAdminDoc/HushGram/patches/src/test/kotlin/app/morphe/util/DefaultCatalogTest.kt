@@ -29,6 +29,8 @@ import app.morphe.patches.instagram.explore.hideExploreGridPatch
 import app.morphe.patches.instagram.explore.recent.dontSaveRecentSearchesPatch
 import app.morphe.patches.instagram.feed.back.backLeavesHomePatch
 import app.morphe.patches.instagram.feed.comments.hideCommentsPatch
+import app.morphe.patches.instagram.feed.emojirow.hideCommentEmojiRowPatch
+import app.morphe.patches.instagram.feed.feedfollow.hideFeedFollowPatch
 import app.morphe.patches.instagram.feed.following.startOnFollowingPatch
 import app.morphe.patches.instagram.feed.home.hideHomeFeedPatch
 import app.morphe.patches.instagram.feed.likes.showHiddenLikeCountsPatch
@@ -48,14 +50,12 @@ import app.morphe.patches.instagram.media.resume.resumeLongVideosPatch
 import app.morphe.patches.instagram.media.taptoplay.tapToPlayPatch
 import app.morphe.patches.instagram.metaai.hideMetaAiPatch
 import app.morphe.patches.instagram.misc.adid.removeAdIdPatch
-import app.morphe.patches.instagram.misc.analytics.disableAnalyticsPatch
 import app.morphe.patches.instagram.misc.bottomspace.removeBottomSpacePatch
 import app.morphe.patches.instagram.misc.buildexpiry.removeBuildExpiredPopupPatch
 import app.morphe.patches.instagram.misc.comment.copyCommentPatch
 import app.morphe.patches.instagram.misc.comment.saveCommentPhotoPatch
 import app.morphe.patches.instagram.download.profile.saveProfilePicturePatch
 import app.morphe.patches.instagram.download.voice.downloadVoiceMessagesPatch
-import app.morphe.patches.instagram.misc.developeroptions.openDeveloperOptionsPatch
 import app.morphe.patches.instagram.misc.emoji.emojiStylePatch
 import app.morphe.patches.instagram.misc.externalbrowser.openLinksExternallyPatch
 import app.morphe.patches.instagram.misc.font.fontPatch
@@ -94,6 +94,7 @@ import app.morphe.patches.instagram.share.hideShareButtonPatch
 import app.morphe.patches.instagram.feed.likes.changeLikeAnimationPatch
 import app.morphe.patches.instagram.share.hideShareSheetGroupPatch
 import app.morphe.patches.instagram.stories.autoadvance.stopStoryAutoAdvancePatch
+import app.morphe.patches.instagram.stories.follow.hideStoryFollowPatch
 import app.morphe.patches.instagram.stories.loop.loopStoryPatch
 import app.morphe.patches.instagram.stories.mentions.storyMentionsPatch
 import app.morphe.patches.instagram.stories.ring.storyRingSizePatch
@@ -151,6 +152,8 @@ class DefaultCatalogTest {
         groupNotificationsPatch,
         hideActiveStatusPatch,
         hideCommentsPatch,
+        hideCommentEmojiRowPatch,
+        hideFeedFollowPatch,
         hideExploreGridPatch,
         hideFeedReelsPatch,
         hideHighlightsPatch,
@@ -168,6 +171,7 @@ class DefaultCatalogTest {
         hideRepostButtonPatch,
         hideShareButtonPatch,
         hideShareSheetGroupPatch,
+        hideStoryFollowPatch,
         hideThreadsButtonPatch,
         hideTypingPatch,
         keepInChatPatch,
@@ -212,7 +216,6 @@ class DefaultCatalogTest {
 
     private val prior = listOf<Patch<*>>(
         defaultPlaybackQualityPatch,
-        disableAnalyticsPatch,
         downloadReelPatch,
         downloadStoryPatch,
         friendshipStatusPatch,
@@ -234,30 +237,29 @@ class DefaultCatalogTest {
     private val optIn = listOf<Patch<*>>(
         changeVersionCodePatch,
         installNextToInstagramPatch,
-        openDeveloperOptionsPatch,
         pureBlackPatch,
         viewDmMediaAnonymouslyPatch,
     )
 
     @Test fun existingDefaultsRetainTheirSelections() {
-        assertEquals(18, prior.size)
+        assertEquals(17, prior.size)
         prior.forEach { assertEquals(it.name, true, it.use) }
     }
 
     @Test fun initiallyNeutralControlsAreAvailableInSimpleMode() {
-        assertEquals(83, neutral.size)
+        assertEquals(86, neutral.size)
         neutral.forEach { assertEquals(it.name, true, it.use) }
     }
 
-    @Test fun patchTimeChangesDeveloperToolsAndUnacceptedDmReceiptsStayOptIn() {
-        assertEquals(5, optIn.size)
+    @Test fun patchTimeChangesAndUnacceptedDmReceiptsStayOptIn() {
+        assertEquals(4, optIn.size)
         optIn.forEach { assertEquals(it.name, false, it.use) }
     }
 
     @Test fun generatedCatalogMatchesAllReviewedDeclarations() {
         val all = prior + neutral + optIn
         val declarations = all.associate { it.name!! to it.use }
-        assertEquals("every named patch needs one reviewed decision", 106, all.size)
+        assertEquals("every named patch needs one reviewed decision", 107, all.size)
         assertEquals("the review must not name a patch twice", all.size, declarations.size)
         val file = File("patches-list.json").takeIf(File::isFile) ?: File("../patches-list.json")
         val rows = JsonParser.parseString(file.readText()).asJsonObject.getAsJsonArray("patches")

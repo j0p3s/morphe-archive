@@ -750,9 +750,15 @@ try {
     # browser retain their stock code. Every corruption below remains structurally valid.
     $browserDirectFaults = @('lead-missing', 'lead-url', 'lead-double-open', 'lead-parameter', 'ad-missing', 'ad-url', 'ad-context', 'ad-double-open', 'ad-return', 'ad-bypass', 'ad-live',
         'media-missing', 'media-url', 'media-context', 'media-double-open', 'media-false', 'media-uninitialized', 'media-live', 'media-bypass', 'factory-hook', 'immersive-hook', 'omitted-body')
-    # Each scratch fault reaches one part of the liveness check: the media one both edges, the ad one
-    # the hook site only, the lead one the locals bound only.
-    $browserScratchFaults = @('lead-parameter', 'ad-live', 'media-live')
+    # Each scratch fault reaches one part of the liveness check, and the check names the first edge it
+    # hits, in the order the locals bound, the hook site, then the completion: the lead one the locals
+    # bound only, the ad one the hook site only, the media one both of the read edges and so the hook
+    # site's, which comes first. The completion edge alone takes a stock shape of its own, checked after these.
+    $browserScratchFaults = @{
+        'lead-parameter' = "past the method's locals"
+        'ad-live' = 'read at the hook site'
+        'media-live' = 'read at the hook site'
+    }
     foreach ($fault in $browserDirectFaults) {
         $case = "features-bad-browser-direct-$fault"
         $apk = New-DexApk -Name $case -Entries ([ordered]@{ 'classes.dex' = (Get-Dex $case) })
@@ -761,13 +767,31 @@ try {
         $findings = Get-Findings $checked
         Assert-True ($checked.ExitCode -ne 0 -and $findings.Fails.Count -gt 0 -and
             @($findings.Categories | Where-Object { $_ -cne 'contract' }).Count -eq 0) "$fault was not rejected solely by a browser contract."
-        if ($fault -cin $browserScratchFaults) {
-            Assert-True (@($findings.Fails | Where-Object { $_.Contains('direct browser hook clobbers a live local') }).Count -gt 0) `
-                "$fault was not refused as a clobbered live local: $($findings.Fails -join '; ')"
+        if ($browserScratchFaults.ContainsKey($fault)) {
+            $edge = "[diff] FAIL: contract: openLinksExternally: direct browser hook clobbers a live local: $($browserScratchFaults[$fault])"
+            Assert-True (@($findings.Fails | Where-Object { $_ -ceq $edge }).Count -gt 0 -and
+                @($findings.Fails | Where-Object { $_.Contains('direct browser hook clobbers a live local') -and $_ -cne $edge }).Count -eq 0) `
+                "$fault was not refused as a live local $($browserScratchFaults[$fault]): $($findings.Fails -join '; ')"
         }
         $structural = Invoke-DexDiff -Clean $featureClean -Patched $apk -Allowlist $emptyAllowlist -Name "$case-structural"
         Assert-True ($structural.ExitCode -eq 0 -and (Get-Findings $structural).Fails.Count -eq 0) "$fault was not structurally valid."
     }
+    # A media caller whose stock completion logs and answers the Intent it opened, v2, which the
+    # factory's answer writes after the hook site: v2 is dead where the hook goes in and live where its
+    # success goes. The hook taking v2 for its link is otherwise the good build's, so only the
+    # completion edge of the liveness check can refuse it, and every FAIL has to be that check's.
+    $browserCompletionClean = New-DexApk -Name 'features-browser-completion-live-clean' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'features-browser-completion-live-clean') })
+    $browserCompletionApk = New-DexApk -Name 'features-bad-browser-direct-media-completion-live' -Entries ([ordered]@{
+        'classes.dex' = (Get-Dex 'features-bad-browser-direct-media-completion-live') })
+    $browserCompletion = Invoke-DexDiff -Clean $browserCompletionClean -Patched $browserCompletionApk -Allowlist $emptyAllowlist `
+        -Name 'features-bad-browser-direct-media-completion-live' -Contracts $contracts -Features 'openLinksExternally'
+    $browserCompletionFindings = Get-Findings $browserCompletion
+    Assert-True ($browserCompletion.ExitCode -ne 0 -and $browserCompletionFindings.Fails.Count -gt 0 -and
+        @($browserCompletionFindings.Fails | Where-Object { $_ -cne '[diff] FAIL: contract: openLinksExternally: direct browser hook clobbers a live local: read where it succeeds' }).Count -eq 0) `
+        ("media-completion-live was not rejected solely by the browser liveness check. " + ($browserCompletion.Output -join [Environment]::NewLine))
+    $browserCompletionStructural = Invoke-DexDiff -Clean $browserCompletionClean -Patched $browserCompletionApk -Allowlist $emptyAllowlist `
+        -Name 'features-bad-browser-direct-media-completion-live-structural'
+    Assert-True ($browserCompletionStructural.ExitCode -eq 0 -and (Get-Findings $browserCompletionStructural).Fails.Count -eq 0) 'media-completion-live was not structurally valid.'
     # Search's Follow suggestions carousel, with Hide suggested users selected and then left out. Each
     # fault breaks one part of the contract and is refused by that part: the hook's call and answer,
     # its fail-open test, one call in all of Threads, the empty side it leaves by, a dead local, and
@@ -1006,6 +1030,50 @@ try {
         ("autoplay-ad-live was not rejected solely by the video autoplay check of what its hook writes. " + ($autoplayLive.Output -join [Environment]::NewLine))
     $autoplayLiveStructural = Invoke-DexDiff -Clean $autoplayLiveClean -Patched $autoplayLiveApk -Allowlist $emptyAllowlist -Name 'features-bad-autoplay-ad-live-structural'
     Assert-True ($autoplayLiveStructural.ExitCode -eq 0 -and (Get-Findings $autoplayLiveStructural).Fails.Count -eq 0) 'autoplay-ad-live was not structurally valid.'
+    # The video prefetcher's skip test, selected alone: one build per way the hook can be wrong, each
+    # refused by its own check with its own message and nothing else. The call missing, the 0 in v1
+    # passed instead of the check's answer in v0, the answer dropped or moved into v1, the call put
+    # after the if-nez, a second call, the call in Instagram's legacy checker as well, and the skip
+    # test's branch back to the if-nez landing past the call; then one body changed with the hook
+    # right: the skip test's skip answer, the check's or its Olympus sibling's answer, the legacy
+    # checker's answer overwritten, or the dispatcher's call to the skip test dropped. Then the
+    # feature left out, with the call written anyway or one of those bodies changed. All are
+    # structurally valid.
+    $prefetchSkip = 'Lfixture/Prefetch;->skip(Ljava/lang/Object;)Z'
+    $prefetchBodies = [ordered]@{
+        'skip' = "$prefetchSkip changed original instruction 7"
+        'check' = 'Lfixture/Prefetch;->check(Ljava/lang/Object;)Z changed original instruction 2'
+        'sibling' = 'Lfixture/Prefetch;->sibling(Ljava/lang/Object;Ljava/lang/Object;)Z changed original instruction 1'
+        'legacy' = 'Lfixture/Prefetch;->legacy(Ljava/lang/Object;)Z changed original instruction 2'
+        'dispatch' = 'Lfixture/Prefetch;->dispatch(Ljava/lang/Object;)V changed original instruction 1'
+    }
+    $prefetchFaults = [ordered]@{
+        'prefetch-missing' = "the prefetch skip test $prefetchSkip never calls skipPrefetch"
+        'prefetch-register' = "skipPrefetch is passed [1], not the check's answer in v0"
+        'prefetch-dropped' = "skipPrefetch's answer doesn't go back into v0"
+        'prefetch-answer-moved' = "skipPrefetch's answer doesn't go back into v0"
+        'prefetch-after-test' = "skipPrefetch isn't right after the autoplay-off check's move-result in $prefetchSkip"
+        'prefetch-twice' = "the prefetch skip test $prefetchSkip calls skipPrefetch 2 times"
+        'prefetch-legacy' = "skipPrefetch is called from Lfixture/Prefetch;->legacy(Ljava/lang/Object;)Z, not only from the prefetch skip test $prefetchSkip"
+        'prefetch-branch-past' = "$prefetchSkip bypasses a hook or changes a branch target"
+        'prefetch-omitted-call' = "Lapp/morphe/extension/hushthreads/feed/VideoAutoplay;->skipPrefetch(Z)Z host calls differ: expected {}, found {$prefetchSkip=1}"
+    }
+    foreach ($body in $prefetchBodies.Keys) {
+        $prefetchFaults["prefetch-changed-$body"] = $prefetchBodies[$body]
+        $prefetchFaults["prefetch-omitted-$body"] = $prefetchBodies[$body]
+    }
+    foreach ($fault in $prefetchFaults.Keys) {
+        $case = "features-bad-$fault"
+        $apk = New-DexApk -Name $case -Entries ([ordered]@{ 'classes.dex' = (Get-Dex $case) })
+        $selected = if ($fault.StartsWith('prefetch-omitted-')) { 'none' } else { 'disableVideoAutoplay' }
+        $checked = Invoke-DexDiff -Clean $featureClean -Patched $apk -Allowlist $emptyAllowlist -Name $case -Contracts $contracts -Features $selected
+        $findings = Get-Findings $checked
+        $expected = "[diff] FAIL: contract: disableVideoAutoplay: $($prefetchFaults[$fault])"
+        Assert-True ($checked.ExitCode -ne 0 -and $findings.Fails.Count -eq 1 -and $findings.Fails[0] -ceq $expected) `
+            ("$fault was not refused solely by its own prefetch check, as '$expected'. " + ($checked.Output -join [Environment]::NewLine))
+        $structural = Invoke-DexDiff -Clean $featureClean -Patched $apk -Allowlist $emptyAllowlist -Name "$case-structural"
+        Assert-True ($structural.ExitCode -eq 0 -and (Get-Findings $structural).Fails.Count -eq 0) "$fault was not structurally valid."
+    }
     # One build per misplaced Pure black hook, selected alone: the helper's #101010 load not asked
     # about, the theme's hook on the gray loaded before its #101010, the dark scheme's second
     # background not asked about or the hook on its third color instead, and the background hooks
@@ -1137,11 +1205,15 @@ try {
     # of to the goto past the original, a second add in the menu or in another lambda, Share's goto
     # sent onto the copy, showRow left a stub or drawing the header, or passing another composer,
     # role, style, icon flag or label, media reading the activity or casting to the controller,
-    # activity reading the post, dismiss casting to the controller, reading the post or calling
-    # track, a click that isn't a Function0 or whose invoke() is static, a bridge calling another
-    # getter, calling an interface's getter as a virtual, casting
-    # to Media or dropping its answer, and a false status. Left out: the copy and goto without the
-    # hook, showRow, media, dismiss or a bridge written anyway, and a true status.
+    # activity reading the post or casting to the controller, dismiss casting to the controller,
+    # reading the post or calling track, a click that isn't a Function0 or whose invoke() is static,
+    # a bridge calling another getter, calling an interface's getter as a virtual, casting to Media,
+    # dropping its answer or left its stub, a bridge the patch doesn't know, a false status, and a
+    # branch in Copy link's case straight to its row call, which is Threads' own and so is read
+    # against a clean build that has it too. Left out: the copy and goto without the hook, an add
+    # in the other lambda, showRow, media, activity, dismiss, an object bridge or an int bridge
+    # written anyway, and a true status. omitted-menu names instruction 46, where the copy goes in:
+    # the copy and goto match the call and goto they're put in front of, so the bodies agree up to 48.
     $saveMediaGood = Invoke-DexDiff -Clean $featureClean -Patched (New-DexApk -Name 'features-save-good' -Entries ([ordered]@{
         'classes.dex' = (Get-Dex 'features-only-saveMedia') })) -Allowlist $emptyAllowlist -Name 'features-save-good' -Contracts $contracts -Features 'saveMedia'
     Assert-True ($saveMediaGood.ExitCode -eq 0 -and ($saveMediaGood.Output -join [Environment]::NewLine) -match [regex]::Escape(
@@ -1165,6 +1237,7 @@ try {
         'media-field' = "media(Ljava/lang/Object;)Ljava/lang/Object; reads Lfixture/PostMenu;->activity:Landroid/app/Activity;, not the menu's post"
         'media-cast' = 'media(Ljava/lang/Object;)Ljava/lang/Object; casts its argument to Lfixture/MenuController;, not the post menu'
         'activity-field' = "activity(Ljava/lang/Object;)Landroid/app/Activity; reads Lfixture/PostMenu;->post:Lcom/instagram/feed/media/Media;, not the menu's activity"
+        'activity-cast' = 'activity(Ljava/lang/Object;)Landroid/app/Activity; casts its argument to Lfixture/MenuController;, not the post menu'
         'dismiss-cast' = 'dismiss(Ljava/lang/Object;)V casts its argument to Lfixture/MenuController;, not the post menu'
         'dismiss-field' = "dismiss(Ljava/lang/Object;)V reads Lfixture/PostMenu;->post:Lcom/instagram/feed/media/Media;, not the menu's controller"
         'dismiss-call' = "dismiss(Ljava/lang/Object;)V calls Lfixture/MenuController;->track()V, not Copy link's close"
@@ -1174,26 +1247,42 @@ try {
         'bridge-call' = 'versionUrl(Ljava/lang/Object;)Ljava/lang/String; calls invoke-virtual Lcom/instagram/api/schemas/VideoVersionIntf;->A00()Ljava/lang/String;, not invoke-interface'
         'bridge-cast' = 'username(Ljava/lang/Object;)Ljava/lang/String; casts its argument to Lcom/instagram/feed/media/Media;, not Lcom/instagram/user/model/User;'
         'bridge-result' = "takenAt(Ljava/lang/Object;)Ljava/lang/Long; doesn't return what Lcom/instagram/feed/media/Media;->takenAt()Ljava/lang/Long; answers"
+        'bridge-stub' = 'carouselMedia(Ljava/lang/Object;)Ljava/util/List; is still the empty stub it ships as'
+        'bridge-extra' = "InstagramMedia;->likeCount(Ljava/lang/Object;)Ljava/lang/Integer; isn't one of the bridges the Save patch writes"
         'status-false' = 'saveMedia status disagrees with the selected patches'
-        'omitted-menu' = 'PostMenu;->invoke(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; changed original instruction 48'
+        'bypass' = "the post menu's Copy link case branches from instruction 46 straight to its row call at instruction 47, past where the Save row goes"
+        'switch-case' = "the post menu's Copy link case branches from instruction 46 straight to its row call at instruction 47, past where the Save row goes"
+        'handler-edge' = "the post menu's Copy link case branches from instruction 46 straight to its row call at instruction 47, past where the Save row goes"
+        'omitted-menu' = 'PostMenu;->invoke(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object; changed original instruction 46'
+        'omitted-add' = 'SaveMediaRow;->add(Ljava/lang/Object;Ljava/lang/Object;)V host calls differ: expected {}, found {Lfixture/PostMenuHeader;->invoke(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;=1}'
         'omitted-show' = 'omitted Save wrote Lapp/morphe/extension/hushthreads/download/SaveMediaRow;->showRow('
         'omitted-media' = 'omitted Save wrote Lapp/morphe/extension/hushthreads/download/SaveMediaRow;->media('
+        'omitted-activity' = 'omitted Save wrote Lapp/morphe/extension/hushthreads/download/SaveMediaRow;->activity('
         'omitted-dismiss' = 'omitted Save wrote Lapp/morphe/extension/hushthreads/download/SaveMediaRow;->dismiss('
         'omitted-bridge' = 'omitted Save wrote Lapp/morphe/extension/hushthreads/download/InstagramMedia;->videoVersions('
+        'omitted-bridge-int' = 'omitted Save wrote Lapp/morphe/extension/hushthreads/download/InstagramMedia;->candidateHeight(Ljava/lang/Object;)I'
         'omitted-status' = 'saveMedia status disagrees with the selected patches'
     }
+    $saveBypassClean = New-DexApk -Name 'features-save-bypass-clean' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'features-save-bypass-clean') })
+    $saveSwitchClean = New-DexApk -Name 'features-save-switch-case-clean' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'features-save-switch-case-clean') })
+    $saveHandlerClean = New-DexApk -Name 'features-save-handler-edge-clean' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'features-save-handler-edge-clean') })
     foreach ($fault in $saveMediaFaults.Keys) {
         $case = "features-bad-save-$fault"
         $apk = New-DexApk -Name $case -Entries ([ordered]@{ 'classes.dex' = (Get-Dex $case) })
+        $stock = switch ($fault) { 'bypass' { $saveBypassClean } 'switch-case' { $saveSwitchClean } 'handler-edge' { $saveHandlerClean } default { $featureClean } }
         $selection = if ($fault.StartsWith('omitted-')) { 'none' } else { 'saveMedia' }
-        $checked = Invoke-DexDiff -Clean $featureClean -Patched $apk -Allowlist $emptyAllowlist -Name $case -Contracts $contracts -Features $selection
+        $checked = Invoke-DexDiff -Clean $stock -Patched $apk -Allowlist $emptyAllowlist -Name $case -Contracts $contracts -Features $selection
         $findings = Get-Findings $checked
         Assert-True ($checked.ExitCode -ne 0 -and $findings.Fails.Count -gt 0 -and
             @($findings.Fails | Where-Object { -not $_.Contains('contract: saveMedia: ') }).Count -eq 0) `
             ("$fault was not rejected solely by the Save photos and videos contract. " + ($checked.Output -join [Environment]::NewLine))
         Assert-True (@($findings.Fails | Where-Object { $_.Contains($saveMediaFaults[$fault]) }).Count -gt 0) `
             "$fault was not refused as '$($saveMediaFaults[$fault])': $($findings.Fails -join '; ')"
-        $structural = Invoke-DexDiff -Clean $featureClean -Patched $apk -Allowlist $emptyAllowlist -Name "$case-structural"
+        if ($fault -cin 'bypass', 'switch-case', 'handler-edge') {
+            Assert-True (@($findings.Fails | Where-Object { $_ -ceq ('[diff] FAIL: contract: saveMedia: ' + $saveMediaFaults[$fault]) }).Count -eq $findings.Fails.Count) `
+                "$fault was not refused by exactly '$($saveMediaFaults[$fault])': $($findings.Fails -join '; ')"
+        }
+        $structural = Invoke-DexDiff -Clean $stock -Patched $apk -Allowlist $emptyAllowlist -Name "$case-structural"
         Assert-True ($structural.ExitCode -eq 0 -and (Get-Findings $structural).Fails.Count -eq 0) "$fault was not structurally valid."
     }
     # One build per share-link hook that writes a register its method still reads, selected alone:
@@ -1458,7 +1547,7 @@ try {
     $missing = Invoke-DexDiff -Clean $featureClean -Patched $featureGood -Allowlist $emptyAllowlist -Name 'missing-suggestion-rule' -Contracts $missingSuggestionRule -Features $featureCases['features-good']
     Assert-True ($missing.ExitCode -ne 0 -and ($missing.Output -join [Environment]::NewLine) -match 'selected feature has no contract: hideSuggestedUsers') `
         'Selected Suggested Users without its contract was silently skipped.'
-    Write-Host "[scripts] selected feature contracts passed ($($featureCases.Count + $sourceProofs.Count + 9) good selections, $($featureFaults.Count + $browserDirectFaults.Count + $searchCarouselFaults.Count + $profileFaults.Count + $returnFaults.Count + $autoplayFaults.Count + $pureBlackFaults.Count + $settingsRowFaults.Count + $copyTextFaults.Count + $saveMediaFaults.Count + $liveFaults.Count + 2 + $suggestionFaults.Count + $omittedFaults.Count + 12) structurally valid corruptions, duplicates and historical omissions checked)"
+    Write-Host "[scripts] selected feature contracts passed ($($featureCases.Count + $sourceProofs.Count + 9) good selections, $($featureFaults.Count + $browserDirectFaults.Count + $searchCarouselFaults.Count + $profileFaults.Count + $returnFaults.Count + $autoplayFaults.Count + $prefetchFaults.Count + $pureBlackFaults.Count + $settingsRowFaults.Count + $copyTextFaults.Count + $saveMediaFaults.Count + $liveFaults.Count + 3 + $suggestionFaults.Count + $omittedFaults.Count + 12) structurally valid corruptions, duplicates and historical omissions checked)"
 
     $bad = [ordered]@{
         'bad-branch' = 'branch'

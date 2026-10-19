@@ -645,6 +645,18 @@ internal object FriendsFeedSuccessFingerprint : Fingerprint(
     },
 )
 
+/**
+ * The Friends tab's Reposts list, a feed of its own since 47.4.3 dropped the V3 Friends feed.
+ * Gson fills `repostFeedData` after the constructor, and every reader outside the data class
+ * goes through this getter, so it sees the list populated.
+ */
+internal object RepostFeedDataFingerprint : Fingerprint(
+    definingClass = "Lcom/ss/android/ugc/aweme/repostfeed/model/RepostFeedResponse;",
+    name = "getRepostFeedData",
+    returnType = "Ljava/util/List;",
+    parameters = emptyList(),
+)
+
 internal object TakoAiFeedButtonSetVisibleFingerprint : Fingerprint(
     definingClass = "/feed/assem/tikbot/TakoAssem;",
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
@@ -1019,6 +1031,19 @@ internal object SearchContainerFragmentOnViewCreatedFingerprint : Fingerprint(
     name = "onViewCreated",
     returnType = "V",
     parameters = listOf("Landroid/view/View;", "Landroid/os/Bundle;"),
+)
+
+/**
+ * The "People also ask Tako" card in the search results on 47.4.3, a native card (not Lynx) with a
+ * Tako header over a list of questions, in a full-width row between the video rows. Its slot
+ * component finds the header and the question list in {@code onViewCreated}; real-named class and
+ * method, so the extension is handed the view at every return.
+ */
+internal object SearchTakoSugCardCreatedFingerprint : Fingerprint(
+    definingClass = "Lcom/ss/android/ugc/aweme/search/pages/result/topsearch/tako/SearchTakoSugCardAssem;",
+    name = "onViewCreated",
+    returnType = "V",
+    parameters = listOf("Landroid/view/View;"),
 )
 
 internal object FollowFeedPresenterPostProcessFingerprint : Fingerprint(

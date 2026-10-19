@@ -5,6 +5,7 @@
 package app.morphe.patches.imo.misc.premium
 
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patches.imo.shared.enumConstantField
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.util.matchSingle
 import app.morphe.util.returnEarly
@@ -17,6 +18,6 @@ val unlockPremiumPatch = bytecodePatch(
     compatibleWith(AppCompatibilities.IMO)
 
     execute {
-        IsPremiumFingerprint.matchSingle().method.returnEarly(true)
+        isPremiumFingerprint(enumConstantField("IS_PREMIUM")).matchSingle().method.returnEarly(true)
     }
 }

@@ -60,7 +60,8 @@ internal fun BytecodePatchContext.addSettingsEntry() {
         it.getReference<MethodReference>()?.let { ref -> ref.definingClass == screen.type && ref.name == "a" } == true
     } as FiveRegisterInstruction
     val composerRegister = call.registerD
-    list.addInstructions(heading,
+    // Both notification branches target the heading; insert after it to keep the entry on both paths.
+    list.addInstructions(heading + 1,
         "invoke-static/range {v$composerRegister .. v$composerRegister}, ${entry.smaliReference}")
     val unit = classDefBy("Lkotlin/Unit;").fields.single { it.type == "Lkotlin/Unit;" }
     mutableClassDefBy(SETTINGS).methods.single { it.name == "kotlinUnit" }.rewrite("""

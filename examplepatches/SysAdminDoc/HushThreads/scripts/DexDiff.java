@@ -1983,6 +1983,11 @@ public class DexDiff {
     private static final String RESET_TO_HOME_FEED = "reset_to_home_feed";
     private static final String BADGE_DECISION = "badge_decision";
     private static final String HOLD_VIDEO = "Lapp/morphe/extension/hushthreads/feed/VideoAutoplay;->play(Z)Z";
+    private static final String SKIP_PREFETCH = "Lapp/morphe/extension/hushthreads/feed/VideoAutoplay;->skipPrefetch(Z)Z";
+    /** The two flag names Instagram's autoplay-off check holds, and the string the video prefetch dispatcher queues under. */
+    private static final String AUTOPLAY_OFF = "ig_disable_video_autoplay";
+    private static final String AUTOPLAY_OFF_OLYMPUS = "ig_olympus_disable_video_autoplay";
+    private static final String PREFETCH_DISPATCHER = "VideoPrefetchDispatcher.queue";
     /** Compose's notes naming Threads' video in a post and the effect that starts its player. They name the source file, so they survive Redex. */
     private static final String POST_VIDEO_NOTE = "com.instagram.barcelona.feed.post.video.PostVideo (PostVideo.kt:";
     private static final String PLAYBACK_EFFECT_NOTE = "com.instagram.video.player.compose.VideoPlaybackEffect (VideoPlaybackEffect.kt:";
@@ -2037,10 +2042,8 @@ public class DexDiff {
     private static final String SAVE_ACTIVITY_OF = SAVE_ROW + "->activity(Ljava/lang/Object;)Landroid/app/Activity;";
     private static final String SAVE_DISMISS = SAVE_ROW + "->dismiss(Ljava/lang/Object;)V";
     private static final String SAVE_CLICK = "Lapp/morphe/extension/hushthreads/download/SaveMediaRow$Click;";
+    /** The bridges to Instagram's post model: every static method it has, shipped as an empty stub only the Save patch writes. */
     private static final String INSTAGRAM_MEDIA = "Lapp/morphe/extension/hushthreads/download/InstagramMedia;";
-    /** The bridges InstagramMedia ships as empty stubs, which only the Save patch writes. */
-    private static final List<String> SAVE_BRIDGES = List.of("videoVersions", "dashManifest", "mediaId", "owner", "takenAt", "carouselMedia",
-            "username", "versionUrl", "versionWidth", "versionHeight", "imageVersions", "imageCandidates", "candidateUrl", "candidateWidth", "candidateHeight");
     /** Compose's note in the lambda that draws the rows of a post's menu. It names the source file, so it survives Redex. */
     private static final String MENU_NOTE = "com.instagram.barcelona.feed.post.actionmenu.PostActionMenuSheet.<anonymous> (PostActionMenuSheet.kt:";
     /** What the menu's Copy link item says it is. A Kotlin data object's toString keeps its source name. */
@@ -2169,11 +2172,25 @@ public class DexDiff {
     }
 
     /**
-     * A hook put in front of an original instruction that branches to that instruction skip, as
-     * code inserted with labels is: a branch, case or handler aimed at it lands past the hook, on
-     * the original, and only the path that falls into it runs the hook.
+     * A hook put in front of an original instruction whose branches skip the hook. Code inserted
+     * with labels leaves a branch, case or handler aimed at that instruction landing on the
+     * original, past the hook, so only the path that falls into it runs the hook.
      */
     private interface FeatureInsert extends FeatureBlock {}
+
+    /**
+     * Where a body that should match its stock one, with nothing declared added, first changed, given
+     * that the two agree up to original instruction [k]. Code added in front of instructions it
+     * repeats matches them, so the change can start before [k]: as early as the first instruction
+     * of the tail the two bodies still share.
+     */
+    private static int featureChangedAt(Layout old, Layout now, int k) {
+        int shared = 0;
+        while (shared < old.instructions.size() && shared < now.instructions.size()
+                && featureInstruction(old.instructions.get(old.instructions.size() - 1 - shared))
+                        .equals(featureInstruction(now.instructions.get(now.instructions.size() - 1 - shared)))) shared++;
+        return Math.min(k, old.instructions.size() - shared);
+    }
 
     private static void featureBody(Method stock, Method patched, int prefix,
             Map<Integer, Integer> insertions, String callee, FieldReference recordedRaw, Map<Integer, FeatureBlock> blocks) {
@@ -2217,9 +2234,10 @@ public class DexDiff {
                         && reference(store).equals(recordedRaw.toString()), "raw wrapper has a different constructor recorder");
                 at += 3;
             }
-            requireFeature(at < now.instructions.size()
-                    && featureInstruction(old.instructions.get(k)).equals(featureInstruction(now.instructions.get(at))),
-                    featureSig(stock) + " changed original instruction " + k);
+            if (at >= now.instructions.size() || !featureInstruction(old.instructions.get(k)).equals(featureInstruction(now.instructions.get(at)))) {
+                boolean declared = prefix != 0 || !insertions.isEmpty() || !blocks.isEmpty() || recordedRaw != null;
+                requireFeature(false, featureSig(stock) + " changed original instruction " + (declared ? k : featureChangedAt(old, now, k)));
+            }
             operations[k] = at++;
         }
         relocated.put(old.size, now.size);
@@ -4180,8 +4198,12 @@ public class DexDiff {
                 && Arrays.equals(invokeRegisters(body.get(at + 2)), new int[]{context.getRegisterA(), url.getRegisterA()}), "direct browser arguments or answer are wrong");
         FeatureFlow old = new FeatureFlow(site.stock());
         int locals = browserParameter(site.stock(), 0) - (AccessFlags.STATIC.isSet(site.stock().getAccessFlags()) ? 0 : 1);
-        for (int scratch : new int[]{context.getRegisterA(), url.getRegisterA()}) requireFeature(scratch < locals && old.readsFrom(at, scratch).isEmpty()
-                && old.readsFrom(site.done(), scratch).isEmpty(), "direct browser hook clobbers a live local");
+        String clobbers = "direct browser hook clobbers a live local";
+        for (int scratch : new int[]{context.getRegisterA(), url.getRegisterA()}) {
+            requireFeature(scratch < locals, clobbers + ": past the method's locals");
+            requireFeature(old.readsFrom(at, scratch).isEmpty(), clobbers + ": read at the hook site");
+            requireFeature(old.readsFrom(site.done(), scratch).isEmpty(), clobbers + ": read where it succeeds");
+        }
         Layout layout = new Layout(changed.getImplementation());
         requireFeature(browserDestination(layout, at + 4) == at + 6, "declined browser handoff bypasses stock code");
         if (!site.entry()) requireFeature(browserDestination(layout, at + 5) == site.done() + 6, "successful browser handoff opens twice or uses the wrong completion");
@@ -4466,6 +4488,90 @@ public class DexDiff {
             calls.put(featureSig(caller), e.getValue().size());
         }
         featureHostCalls(patched, HOLD_VIDEO, calls);
+        featureVideoPrefetch(clean, patched);
+    }
+
+    /**
+     * Where the video prefetcher asks Instagram's autoplay-off check: the static one-object boolean
+     * [check] holding both flag names, the [dispatcher] holding "VideoPrefetchDispatcher.queue", the
+     * [skip] test it calls that calls the check, the check's call at [call] followed by its
+     * move-result and the if-nez at [test] reading it from [register], the [siblings] holding the
+     * Olympus name without the check's, and the check's [others] callers, Instagram's legacy checker.
+     */
+    private record PrefetchSites(Method check, Method dispatcher, Method skip, int call, int test, int register,
+            List<Method> siblings, List<Method> others) {}
+
+    private static PrefetchSites featurePrefetchSites(Map<String, List<Method>> clean) {
+        Method check = featureTarget(clean, m -> AccessFlags.STATIC.isSet(m.getAccessFlags()) && m.getReturnType().equals("Z")
+                && m.getParameterTypes().size() == 1 && m.getParameterTypes().get(0).toString().startsWith("L")
+                && holds(m, AUTOPLAY_OFF, AUTOPLAY_OFF_OLYMPUS), "Instagram's autoplay-off check");
+        String checkSig = featureSig(check);
+        Method dispatcher = featureTarget(clean, m -> holds(m, PREFETCH_DISPATCHER), "video prefetch dispatcher");
+        Set<String> callees = new TreeSet<>();
+        for (Instruction i : instructions(dispatcher)) {
+            if (!isStaticInvoke(i.getOpcode()) || !(((ReferenceInstruction) i).getReference() instanceof MethodReference)) continue;
+            MethodReference callee = (MethodReference) ((ReferenceInstruction) i).getReference();
+            List<Method> found = clean.get(featureSig(callee));
+            if (callee.getReturnType().equals("Z") && found != null && found.size() == 1
+                    && !callSites(instructions(found.get(0)), checkSig).isEmpty()) callees.add(featureSig(callee));
+        }
+        Method skip = featureMethod(clean, featureOne(new ArrayList<>(callees), "the prefetch skip test"));
+        List<Instruction> body = instructions(skip);
+        int call = featureOne(callSites(body, checkSig), "the skip test's call to the autoplay-off check");
+        requireFeature(call + 2 < body.size() && body.get(call + 1).getOpcode() == Opcode.MOVE_RESULT
+                && body.get(call + 2).getOpcode() == Opcode.IF_NEZ && registerA(body.get(call + 2)) == registerA(body.get(call + 1)),
+                featureSig(skip) + " doesn't test the autoplay-off check's answer straight away");
+        List<Method> siblings = new ArrayList<>(), others = new ArrayList<>();
+        for (List<Method> definitions : clean.values()) for (Method m : definitions) {
+            if (m == skip || m == check) continue;
+            if (holds(m, AUTOPLAY_OFF_OLYMPUS)) siblings.add(m);
+            if (!callSites(instructions(m), checkSig).isEmpty()) others.add(m);
+        }
+        requireFeature(!others.isEmpty(), "no method but the skip test calls the autoplay-off check");
+        return new PrefetchSites(check, dispatcher, skip, call, call + 2, registerA(body.get(call + 1)), siblings, others);
+    }
+
+    /**
+     * Disable video autoplay also holds the video prefetcher: the skip test, the one place the
+     * dispatcher's prefetch asks Instagram's autoplay-off check, hands the check's answer to the
+     * extension right before its if-nez, in the register that if-nez reads and the answer comes
+     * back in, with every branch to the if-nez landing on the call. The if-nez, its target, the
+     * check, its Olympus sibling, Instagram's legacy checker and the dispatcher stay as Threads
+     * wrote them, and nothing but the skip test calls skipPrefetch, once.
+     */
+    private static void featureVideoPrefetch(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        PrefetchSites sites = featurePrefetchSites(clean);
+        String skipSig = featureSig(sites.skip());
+        Map<String, Integer> found = new TreeMap<>();
+        for (List<Method> definitions : patched.values()) for (Method m : definitions) {
+            if (m.getDefiningClass().startsWith(OWN)) continue;
+            int count = callSites(instructions(m), SKIP_PREFETCH).size();
+            if (count > 0) found.merge(featureSig(m), count, Integer::sum);
+        }
+        for (String caller : found.keySet()) requireFeature(caller.equals(skipSig), "skipPrefetch is called from " + caller + ", not only from the prefetch skip test " + skipSig);
+        int calls = found.getOrDefault(skipSig, 0);
+        requireFeature(calls > 0, "the prefetch skip test " + skipSig + " never calls skipPrefetch");
+        requireFeature(calls == 1, "the prefetch skip test " + skipSig + " calls skipPrefetch " + calls + " times");
+        Method actual = featureMethod(patched, skipSig);
+        List<Instruction> now = instructions(actual);
+        int at = callSites(now, SKIP_PREFETCH).get(0), register = sites.register();
+        List<Integer> asks = callSites(now, featureSig(sites.check()));
+        requireFeature(asks.size() == 1 && at == asks.get(0) + 2 && now.get(asks.get(0) + 1).getOpcode() == Opcode.MOVE_RESULT,
+                "skipPrefetch isn't right after the autoplay-off check's move-result in " + skipSig);
+        requireFeature(isStaticInvoke(now.get(at).getOpcode()) && Arrays.equals(invokeRegisters(now.get(at)), new int[]{register}),
+                "skipPrefetch is passed " + Arrays.toString(invokeRegisters(now.get(at))) + ", not the check's answer in v" + register);
+        requireFeature(now.get(at + 1).getOpcode() == Opcode.MOVE_RESULT && registerA(now.get(at + 1)) == register,
+                "skipPrefetch's answer doesn't go back into v" + register);
+        featureBody(sites.skip(), actual, 0, Map.of(sites.test(), register), SKIP_PREFETCH);
+        featurePrefetchKept(clean, patched, sites);
+    }
+
+    /** The check, its Olympus siblings, Instagram's other callers of the check and the dispatcher, as Threads wrote them. */
+    private static void featurePrefetchKept(Map<String, List<Method>> clean, Map<String, List<Method>> patched, PrefetchSites sites) {
+        List<Method> kept = new ArrayList<>(List.of(sites.check(), sites.dispatcher()));
+        kept.addAll(sites.siblings());
+        kept.addAll(sites.others());
+        for (Method m : kept) featureBody(m, featureMethod(patched, featureSig(m)), 0, Map.of(), SKIP_PREFETCH);
     }
 
     /** A defaulted call's hook: [mask] in its mask's register, [value] in the flag's, then the question on the flag. */
@@ -5407,12 +5513,18 @@ public class DexDiff {
 
     /**
      * Left out, Disable video autoplay makes no call and leaves PostVideo, its effect, the viewer
-     * and the feed posts, Instagram posts, trend previews and ad cards that call it as Threads wrote them.
+     * and the feed posts, Instagram posts, trend previews and ad cards that call it, and the
+     * prefetch skip test with the check and the methods around it, as Threads wrote them.
      */
     private static void featureOmittedVideoAutoplay(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
         featureHostCalls(patched, HOLD_VIDEO, Map.of());
+        featureHostCalls(patched, SKIP_PREFETCH, Map.of());
         VideoSites sites = featureVideoSites(clean);
-        Set<String> hooked = new HashSet<>(List.of(featureSig(sites.postVideo()), featureSig(sites.effect())));
+        PrefetchSites prefetch = featurePrefetchSites(clean);
+        Set<String> hooked = new HashSet<>(List.of(featureSig(sites.postVideo()), featureSig(sites.effect()), featureSig(prefetch.skip())));
+        for (Method kept : List.of(prefetch.check(), prefetch.dispatcher())) hooked.add(featureSig(kept));
+        for (Method kept : prefetch.siblings()) hooked.add(featureSig(kept));
+        for (Method kept : prefetch.others()) hooked.add(featureSig(kept));
         for (Method forwarder : sites.forwarders()) hooked.add(featureSig(forwarder));
         for (Method caller : sites.calls().keySet()) hooked.add(featureSig(caller));
         for (Method viewer : sites.viewers()) hooked.add(featureSig(viewer));
@@ -5468,8 +5580,8 @@ public class DexDiff {
      * host method that calls add. showRow draws Threads' row the way Copy link's is drawn, each
      * argument read back to the calls and literals the patch found; media, activity and dismiss read
      * the menu's post, activity and controller fields and close it with Copy link's call; the click
-     * is a kotlin Function0; and each InstagramMedia bridge casts its argument to the model and
-     * returns what the getter the patch found answers.
+     * is a kotlin Function0; and every static method on InstagramMedia is a bridge the patch
+     * wrote, casting its argument to the model and returning what the getter the patch found answers.
      */
     private static void featureSaveMedia(Map<String, List<Method>> clean, Map<String, List<Method>> patched,
             File cleanApk, File patchedApk) throws Exception {
@@ -5506,7 +5618,10 @@ public class DexDiff {
         Method invoke = featureMethod(patched, SAVE_CLICK + "->invoke()Ljava/lang/Object;");
         requireFeature(AccessFlags.PUBLIC.isSet(invoke.getAccessFlags()) && !AccessFlags.STATIC.isSet(invoke.getAccessFlags()),
                 SAVE_CLICK + "'s invoke() isn't a public instance method");
-        for (SaveBridge bridge : bridges) featureSaveBridge(patched, bridge);
+        Set<String> written = new TreeSet<>();
+        for (SaveBridge bridge : bridges) written.add(featureSaveBridge(patched, bridge));
+        for (String stub : featureSaveBridgeSigs(patched)) requireFeature(written.contains(stub),
+                stub + " isn't one of the bridges the Save patch writes, so it would still answer as its stub does");
         System.out.println("[diff] threads-feature saveMedia: Copy link's row at " + sites.rowAt() + " of " + featureSig(sites.menu())
                 + ", closed by " + featureSig(sites.dismiss()));
     }
@@ -5565,7 +5680,8 @@ public class DexDiff {
      * Where the Save row goes, read the way the Save patch reads it and never by obfuscated name.
      * The menu is the one lambda holding the menu's note that checks for the Copy link item, which
      * it does once, skipping a case nothing outside branches into. That case makes one row call
-     * taking (composer, modifier, style, icon, String), which Copy link's own path falls into. Its
+     * taking (composer, modifier, style, icon, String), which Copy link's own path falls into and
+     * nothing else in the case branches to. Its
      * composer is the lambda's composer parameter, cast; its modifier a click call on a static base,
      * a role built from a literal, a new click and literals, perhaps under up to three more
      * modifiers; its style built from the composer alone; and its icon from the composer, one of
@@ -5609,14 +5725,32 @@ public class DexDiff {
 
         // The copy goes in just before the call, where only Copy link's own path runs: that path
         // falls into the call from the instruction before it, and nothing outside the case branches
-        // or throws into the case. Other items may still branch to the call itself.
-        boolean entered = rowAt - 1 < checkAt + 2 || rowAt + 1 >= body.size() || !flow.normal.get(rowAt - 1).contains(rowAt);
+        // or throws into the case. Other items may still branch to the call itself, but nothing in
+        // the case may: code inserted with labels leaves a branch, case or handler aimed at the call
+        // landing on the original, past the copy, so only falling into it runs the Save row.
+        requireFeature(rowAt - 1 >= checkAt + 2, "the post menu's Copy link case starts with its row call");
+        requireFeature(rowAt + 1 < body.size(), "the post menu ends on Copy link's row call");
+        requireFeature(flow.normal.get(rowAt - 1).contains(rowAt), "Copy link's own path doesn't fall into its row call");
+        boolean entered = false;
         for (int from = 0; from < body.size() && !entered; from++) {
             boolean outside = from < checkAt + 1 || from >= rowAt;
             for (int to : flow.normal.get(from)) if (outside && to >= checkAt + 2 && to < rowAt) entered = true;
             for (int to : flow.guarded.get(from)) if (to >= checkAt + 2 && to < rowAt) entered = true;
         }
         requireFeature(!entered, "the post menu branches into its Copy link case");
+        for (int from = checkAt + 1; from < rowAt; from++) {
+            List<Integer> aimed = new ArrayList<>(flow.guarded.get(from));
+            Instruction i = body.get(from);
+            if (i instanceof OffsetInstruction && i.getOpcode() != Opcode.FILL_ARRAY_DATA) {
+                int target = flow.layout.addresses.get(from) + ((OffsetInstruction) i).getCodeOffset();
+                if (i.getOpcode() == Opcode.PACKED_SWITCH || i.getOpcode() == Opcode.SPARSE_SWITCH) {
+                    for (SwitchElement e : ((SwitchPayload) flow.layout.byAddress.get(target)).getSwitchElements())
+                        aimed.add(featureSaveIndex(flow.layout, flow.layout.addresses.get(from) + e.getOffset()));
+                } else aimed.add(featureSaveIndex(flow.layout, target));
+            }
+            requireFeature(!aimed.contains(rowAt), "the post menu's Copy link case branches from instruction " + from
+                    + " straight to its row call at instruction " + rowAt + ", past where the Save row goes");
+        }
 
         // The hook passes the lambda and its composer parameter, so neither may change, and the row's
         // composer has to be that parameter, cast.
@@ -5785,7 +5919,7 @@ public class DexDiff {
         List<Method> invokes = new ArrayList<>();
         for (Method m : click.getMethods()) if (m.getName().equals("invoke") && m.getParameterTypes().isEmpty()
                 && m.getReturnType().equals(FEATURE_OBJECT) && m.getImplementation() != null) invokes.add(m);
-        requireFeature(invokes.size() == 1, "Copy link's click " + click.getType() + " has no invoke()");
+        requireFeature(invokes.size() == 1, "Copy link's click " + click.getType() + " has " + invokes.size() + " invoke() methods, not one");
         Layout layout = new Layout(invokes.get(0).getImplementation());
         List<Instruction> code = layout.instructions;
         int readAt = -1;
@@ -5941,14 +6075,23 @@ public class DexDiff {
         return patched.keySet().stream().filter(s -> s.startsWith(prefix)).sorted().toList();
     }
 
+    /** Every static method InstagramMedia has, each a bridge, whether written or still its stub. */
+    private static List<String> featureSaveBridgeSigs(Map<String, List<Method>> patched) {
+        return patched.entrySet().stream().filter(e -> e.getKey().startsWith(INSTAGRAM_MEDIA + "->")
+                && e.getValue().stream().anyMatch(m -> AccessFlags.STATIC.isSet(m.getAccessFlags()) && !m.getName().startsWith("<")))
+                .map(Map.Entry::getKey).sorted().toList();
+    }
+
     /**
      * One bridge as the Save patch writes it, in front of the stub's own return: the argument cast
-     * to the model, the getter called on it, and its answer returned, an int's as an int.
+     * to the model, the getter called on it, and its answer returned, an int's as an int. Answers
+     * the stub's signature.
      */
-    private static void featureSaveBridge(Map<String, List<Method>> patched, SaveBridge bridge) {
+    private static String featureSaveBridge(Map<String, List<Method>> patched, SaveBridge bridge) {
         String signature = featureOne(featureSaveBridgeStubs(patched, bridge.name()), INSTAGRAM_MEDIA + "->" + bridge.name() + "(Object)");
         Method stub = featureMethod(patched, signature);
         List<Instruction> body = instructions(stub);
+        requireFeature(!featureSaveIsShipped(stub), signature + " is still the empty stub it ships as, so the Save patch didn't write it");
         requireFeature(AccessFlags.STATIC.isSet(stub.getAccessFlags()) && stub.getImplementation() != null
                 && stub.getImplementation().getTryBlocks().isEmpty() && body.size() >= 4, signature + " isn't a static bridge with an unprotected body");
         int p = stub.getImplementation().getRegisterCount() - 1;
@@ -5961,6 +6104,7 @@ public class DexDiff {
         requireFeature(body.get(2).getOpcode() == (primitive ? Opcode.MOVE_RESULT : Opcode.MOVE_RESULT_OBJECT) && registerA(body.get(2)) == p
                 && body.get(3).getOpcode() == (primitive ? Opcode.RETURN : Opcode.RETURN_OBJECT) && registerA(body.get(3)) == p,
                 signature + " doesn't return what " + bridge.getter() + " answers");
+        return signature;
     }
 
     /**
@@ -6065,23 +6209,28 @@ public class DexDiff {
         requireFeature(body.get(3).getOpcode() == Opcode.RETURN_VOID, SAVE_DISMISS + " doesn't return right after closing the menu");
     }
 
-    /** [signature], when the extension has it, still the empty stub it ships as: return-void, or a zero returned. */
-    private static void featureSaveShipped(Map<String, List<Method>> patched, String signature) {
-        if (!patched.containsKey(signature)) return;
-        Method stub = featureMethod(patched, signature);
+    /** Whether [stub] is still the empty stub it ships as: return-void, or a zero returned. */
+    private static boolean featureSaveIsShipped(Method stub) {
+        if (stub.getImplementation() == null) return false;
         List<Instruction> body = instructions(stub);
-        boolean shipped = stub.getReturnType().equals("V")
+        return stub.getReturnType().equals("V")
                 ? body.size() == 1 && body.get(0).getOpcode() == Opcode.RETURN_VOID
                 : body.size() == 2 && java.util.Objects.equals(featureSaveConstant(body.get(0)), 0) && body.get(0).getOpcode() == Opcode.CONST_4
                         && body.get(1).getOpcode() == (kindOf(stub.getReturnType()) == 'L' ? Opcode.RETURN_OBJECT : Opcode.RETURN)
                         && registerA(body.get(0)) == registerA(body.get(1));
-        requireFeature(shipped, "omitted Save wrote " + signature);
+    }
+
+    /** [signature], when the extension has it, still the empty stub it ships as. */
+    private static void featureSaveShipped(Map<String, List<Method>> patched, String signature) {
+        if (!patched.containsKey(signature)) return;
+        requireFeature(featureSaveIsShipped(featureMethod(patched, signature)), "omitted Save wrote " + signature);
     }
 
     /**
      * Left out, Save photos and videos makes no call to add, leaves the post menu lambdas that check
      * for Copy link as Threads wrote them, and leaves showRow, media, activity, dismiss and every
-     * InstagramMedia bridge, when the extension has them, the empty stubs they ship as.
+     * static method on InstagramMedia, its bridges, when the extension has them, the empty stubs
+     * they ship as.
      */
     private static void featureOmittedSaveMedia(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
         featureHostCalls(patched, ADD_SAVE_ROW, Map.of());
@@ -6089,7 +6238,7 @@ public class DexDiff {
         featurePreserveTargets(clean, patched, m -> !m.getDefiningClass().startsWith(OWN) && m.getImplementation() != null
                 && holdsNote(m, MENU_NOTE) && !featureSaveChecks(m, copyLink).isEmpty());
         for (String stub : List.of(SAVE_SHOW_ROW, SAVE_MEDIA_OF, SAVE_ACTIVITY_OF, SAVE_DISMISS)) featureSaveShipped(patched, stub);
-        for (String name : SAVE_BRIDGES) for (String stub : featureSaveBridgeStubs(patched, name)) featureSaveShipped(patched, stub);
+        for (String stub : featureSaveBridgeSigs(patched)) featureSaveShipped(patched, stub);
     }
 
     private static void featureOmitted(String feature, Map<String, List<Method>> clean, Map<String, List<Method>> patched,

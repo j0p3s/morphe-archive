@@ -1,0 +1,45 @@
+/*
+ * Copyright (C) 2026 hxreborn
+ * SPDX-License-Identifier: GPL-3.0-only
+ */
+package app.hxreborn.extension.protonauthenticator;
+
+import java.util.Collections;
+import java.util.List;
+
+import app.hxreborn.extension.proton.PatchSettings;
+
+@SuppressWarnings("unused")
+public final class SettingsSections {
+
+    public static final String SPREAD_THE_WORD = "hide_spread_the_word";
+
+    public static final String DISCOVER_PROTON = "hide_discover_proton";
+
+    public static final String PASS_BANNER = "hide_pass_banner";
+
+    private SettingsSections() {
+
+    }
+
+    public static boolean isPatched() {
+        return false;
+    }
+
+    public static boolean isDiscoverProtonHidden() {
+        return isHidden(DISCOVER_PROTON);
+    }
+
+    public static boolean isPassBannerHidden() {
+        return isHidden(PASS_BANNER);
+    }
+
+    public static List<?> spreadTheWordRows(List<?> rows) {
+        return isHidden(SPREAD_THE_WORD) ? Collections.emptyList() : rows;
+    }
+
+    private static boolean isHidden(String key) {
+        return isPatched() && PatchSettings.isEnabled(key, false);
+    }
+
+}

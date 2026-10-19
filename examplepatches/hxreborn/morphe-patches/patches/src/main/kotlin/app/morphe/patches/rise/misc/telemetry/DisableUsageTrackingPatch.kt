@@ -7,7 +7,6 @@ package app.morphe.patches.rise.misc.telemetry
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.compat.AppCompatibilities
-import app.morphe.util.matchSingle
 
 @Suppress("unused")
 val disableUsageTrackingPatch = bytecodePatch(
@@ -18,7 +17,11 @@ val disableUsageTrackingPatch = bytecodePatch(
     compatibleWith(AppCompatibilities.RISE)
 
     execute {
-        UsageEventMapFingerprint.matchSingle().method
+        val inlinedMappers = UsageEventToStringFingerprint.matchAll(0..1).flatMap {
+            inlinedUsageEventMapFingerprint(it.originalClassDef.type).matchAll(0..1)
+        }
+
+        (UsageEventMapFingerprint.matchAll(0..1) + inlinedMappers).single().method
             .addInstructions(
                 0,
                 """

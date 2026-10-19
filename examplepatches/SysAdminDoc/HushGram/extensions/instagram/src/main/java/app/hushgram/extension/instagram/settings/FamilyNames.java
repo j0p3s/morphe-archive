@@ -19,7 +19,6 @@ public final class FamilyNames {
     public static final String HIDE_ADS = "Hide ads";
     public static final String SANITIZE_SHARING_LINKS = "Sanitize sharing links";
     public static final String EXTERNAL_BROWSER = "Open links in external browser";
-    public static final String DISABLE_ANALYTICS = "Disable analytics";
     public static final String BUILD_EXPIRED_POPUP = "Remove build expired popup";
     public static final String RESTORE_TRUST = "Restore trust on re-signed builds";
     public static final String REMOVE_AD_ID = "Remove the advertising ID";
@@ -27,6 +26,7 @@ public final class FamilyNames {
     public static final String STORY_AUTO_ADVANCE = "Stop Story auto-advance";
     public static final String STORY_TIME = "Show a story's exact time";
     public static final String STORY_MENTIONS = "See who a story mentions";
+    public static final String STORY_FOLLOW = "Hide Follow on stories";
     public static final String POST_TIME = "Show a post's exact time";
     public static final String HIDDEN_LIKE_COUNTS = "Show hidden like counts";
     public static final String BACK_LEAVES_HOME = "Back leaves Home";
@@ -86,6 +86,8 @@ public final class FamilyNames {
     public static final String PROFILE_PICTURE = "Save profile picture";
     public static final String VOICE_MESSAGE = "Download voice messages";
     public static final String HIDE_COMMENTS = "Hide comments";
+    public static final String COMMENT_EMOJI_ROW = "Hide the comment emoji row";
+    public static final String FEED_FOLLOW = "Hide Follow on feed posts";
     public static final String REEL_DECLUTTER = "Clean up Reels";
     public static final String REEL_DOWNLOAD = "Download any reel";
     public static final String DOUBLE_TAP_LIKE = "Turn off double tap to like";
@@ -110,7 +112,6 @@ public final class FamilyNames {
     public static final String PLAYBACK_QUALITY = "Default playback quality";
     public static final String DATA_SAVER = "Data saver";
     public static final String TRANSLATED_START = "Start on x86 devices";
-    public static final String DEVELOPER_OPTIONS = "Open developer options";
     public static final String PURE_BLACK = "Pure black dark mode";
     public static final String VERSION_CODE = "Change version code";
 

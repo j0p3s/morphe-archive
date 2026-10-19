@@ -126,12 +126,16 @@ final class VideoPages {
                             + "account yet.")));
             // The pill is built as each reel's footer is, so a change shows from the next reel.
             reels.addPreference(toggle(context, Settings.HIDE_REEL_SEARCH_PILL,
-                    L10n.t("Hides the search suggestion under a reel's caption, the magnifier with a question to look up. "
-                            + "Off by default, since it hasn't been tried on a real account yet.")));
+                    L10n.t("Hides the search suggestion under a reel's caption, the magnifier with a question to look up.")));
             // The sidebar buttons are built as each reel is, so a change shows from the next reel.
             reels.addPreference(toggle(context, Settings.HIDE_REEL_COUNTS,
                     L10n.t("Takes the numbers away from under a reel's Like, Comment and Share icons. "
                             + "The icons stay where they are. A change shows from the next reel.")));
+            // Asked as a feed video's player asks for more, so a change shows from the next feed video.
+            reels.addPreference(toggle(context, Settings.FEED_VIDEOS_ALONE,
+                    L10n.t("A video you tap in the feed opens full screen by itself, with no reels to swipe to after it. "
+                            + "The Reels tab keeps scrolling. Off by default, since it hasn't been tried on a real "
+                            + "account yet.")));
         }
         if (build.contains(PatchFamily.REEL_WATCH_HISTORY)) {
             reels.addPreference(toggle(context, Settings.DONT_SEND_REEL_WATCH_HISTORY,
@@ -198,6 +202,11 @@ final class VideoPages {
                 playback.addPreference(toggle(context, Settings.RESUME_LONG_VIDEOS,
                         L10n.t("Videos over two minutes pick up where you left off. Drag the bar to start elsewhere. Short reels, "
                                 + "live videos and ads start as usual.")));
+                // Asked at each start and each story card, so a change shows from the next one (#183).
+                playback.addPreference(toggle(context, Settings.RECENTLY_WATCHED,
+                        L10n.t("Keeps a list on this phone of the reels, videos and stories you watch, so you can find one "
+                                + "again after the feed refreshes. Nothing leaves your phone.")));
+                playback.addPreference(RecentlyWatchedScreen.row(page, context));
             }
             if (build.contains(PatchFamily.FRAME_STEP)) {
                 // Asked on each tap, so a change shows from the next one.
@@ -277,7 +286,7 @@ final class VideoPages {
             }
             if (build.contains(PatchFamily.VIDEO_DOWNLOAD) || build.contains(PatchFamily.PHOTO_DOWNLOAD)) {
                 downloads.addPreference(toggle(context, Settings.POST_MENU_DOWNLOAD_FIRST,
-                        L10n.t("Puts Download to phone and Save photo at the top of a post's three-dot menu instead of the bottom. A post with nothing to save gets neither.")));
+                        L10n.t("Moves Download to phone and Save photo from the end of a post's three-dot menu to the start of its options list. Facebook's own top rows stay above them (on photo posts the list is the More options page). A post with nothing to save gets neither.")));
             }
             if (build.contains(PatchFamily.PHOTO_DOWNLOAD)) {
                 downloads.addPreference(toggle(context, Settings.DOWNLOAD_PHOTOS,

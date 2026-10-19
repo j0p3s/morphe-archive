@@ -1516,6 +1516,11 @@ public class BadDexFixture {
         return units;
     }
 
+    /** The code-unit address of instruction [index] in [code]. */
+    private static int units(List<Instruction> code, int index) {
+        return codeUnits(code.subList(0, index));
+    }
+
     /**
      * Threads' four return checks, each hooked where Block background-return feed refresh hooks it
      * on 450 when [hooked]. The warm-start check sets its answer true past the threshold, logs a
@@ -1645,6 +1650,71 @@ public class BadDexFixture {
                 videoCaller("viewer", "com.instagram.barcelona.feed.mediaviewer.ui.MediaViewerVideo (MediaViewerVideo.kt:90)", PLAY_DEFAULT | 0x80,
                         callers && fault.equals("autoplay-viewer") ? List.of(new ImmutableInstruction31i(Opcode.CONST, 3, 0x80)) : List.of(), false, false, false)));
         return classes;
+    }
+
+    private static final String FEATURE_PREFETCH = "Lfixture/Prefetch;";
+    private static final ImmutableMethodReference PREFETCH_CHECK = method(FEATURE_PREFETCH, "check", "Z", OBJECT);
+    private static final ImmutableMethodReference PREFETCH_SKIP = method(FEATURE_PREFETCH, "skip", "Z", OBJECT);
+    private static final ImmutableMethodReference SKIP_PREFETCH = method(FEATURE_AUTOPLAY, "skipPrefetch", "Z", "Z");
+
+    /**
+     * The video prefetcher's side of Disable video autoplay: Instagram's autoplay-off check, which
+     * holds both flag names and answers false; a sibling holding only the Olympus name; the legacy
+     * checker, which calls the check and returns its answer; the skip test, which calls the check
+     * and skips the prefetch on a true answer, and the dispatcher that holds the queue's name and
+     * calls the skip test. The skip test keeps a 0 in v1 and the check's answer in v0, and its
+     * no-skip path holds an if-nez on v1, never taken, back to the if-nez on the answer; its hook,
+     * when [hooked], asks the extension about v0 between the answer and that if-nez, and the branch
+     * back lands on the hook. Faults: no call, the 0 in v1 passed instead of the answer, the answer
+     * dropped or moved into v1, the call after the if-nez, a second call, the call in the legacy
+     * checker as well, the branch back landing on the if-nez past the call, and, with the feature
+     * left out, the call written anyway. The changed-body faults rewrite one method, with the
+     * feature selected or left out: the skip test's answer for a skip, the check's or the sibling's
+     * answer, the legacy checker's answer overwritten before it returns, or the dispatcher's call
+     * to the skip test dropped.
+     */
+    private static List<ClassDef> prefetchClasses(boolean hooked, String fault) {
+        boolean written = hooked || fault.equals("prefetch-omitted-call");
+        String changed = fault.matches("prefetch-(changed|omitted)-(skip|check|sibling|legacy|dispatch)") ? fault.substring(fault.lastIndexOf('-') + 1) : "";
+        List<Instruction> hook = new ArrayList<>();
+        if (written && !fault.equals("prefetch-missing")) {
+            int in = fault.equals("prefetch-register") ? 1 : 0;
+            hook.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, in, 1, SKIP_PREFETCH));
+            if (!fault.equals("prefetch-dropped")) hook.add(op(Opcode.MOVE_RESULT, fault.equals("prefetch-answer-moved") ? 1 : 0));
+            if (fault.equals("prefetch-twice")) hook.addAll(List.copyOf(hook));
+        }
+        boolean after = fault.equals("prefetch-after-test");
+        List<Instruction> skip = new ArrayList<>(List.of(new ImmutableInstruction11n(Opcode.CONST_4, 1, 0), invoke(PREFETCH_CHECK, 2), op(Opcode.MOVE_RESULT, 0)));
+        if (!after) skip.addAll(hook);
+        int test = skip.size();
+        skip.add(new ImmutableInstruction21t(Opcode.IF_NEZ, 0, 0));
+        if (after) skip.addAll(hook);
+        int back = skip.size();
+        skip.addAll(List.of(new ImmutableInstruction21t(Opcode.IF_NEZ, 1, 0), new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN, 0)));
+        int yes = skip.size();
+        skip.addAll(List.of(new ImmutableInstruction11n(Opcode.CONST_4, 0, changed.equals("skip") ? 0 : 1), op(Opcode.RETURN, 0)));
+        // The branch back reaches the hook in front of the if-nez, or the if-nez itself with nothing in front of it.
+        int land = after || fault.equals("prefetch-branch-past") ? test : test - hook.size();
+        skip.set(test, new ImmutableInstruction21t(Opcode.IF_NEZ, 0, units(skip, yes) - units(skip, test)));
+        skip.set(back, new ImmutableInstruction21t(Opcode.IF_NEZ, 1, units(skip, land) - units(skip, back)));
+        List<Instruction> legacy = new ArrayList<>(List.of(invoke(PREFETCH_CHECK, 1), op(Opcode.MOVE_RESULT, 0)));
+        if (hooked && fault.equals("prefetch-legacy")) {
+            legacy.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 0, 1, SKIP_PREFETCH));
+            legacy.add(op(Opcode.MOVE_RESULT, 0));
+        }
+        if (changed.equals("legacy")) legacy.add(new ImmutableInstruction11n(Opcode.CONST_4, 0, 1));
+        legacy.add(op(Opcode.RETURN, 0));
+        List<Instruction> dispatch = new ArrayList<>(List.of(string(0, "VideoPrefetchDispatcher.queue")));
+        if (!changed.equals("dispatch")) dispatch.addAll(List.of(invoke(PREFETCH_SKIP, 2), op(Opcode.MOVE_RESULT, 1)));
+        dispatch.add(op(Opcode.RETURN_VOID));
+        return List.of(featureClass(FEATURE_PREFETCH, OBJECT, List.of(),
+                define(FEATURE_PREFETCH, "check", "Z", true, body(3, string(0, "ig_disable_video_autoplay"), string(1, "ig_olympus_disable_video_autoplay"),
+                        new ImmutableInstruction11n(Opcode.CONST_4, 0, changed.equals("check") ? 1 : 0), op(Opcode.RETURN, 0)), OBJECT),
+                define(FEATURE_PREFETCH, "sibling", "Z", true, body(4, string(0, "ig_olympus_disable_video_autoplay"),
+                        new ImmutableInstruction11n(Opcode.CONST_4, 0, changed.equals("sibling") ? 1 : 0), op(Opcode.RETURN, 0)), OBJECT, OBJECT),
+                define(FEATURE_PREFETCH, "legacy", "Z", true, body(2, legacy.toArray(new Instruction[0])), OBJECT),
+                define(FEATURE_PREFETCH, "skip", "Z", true, body(3, skip.toArray(new Instruction[0])), OBJECT),
+                define(FEATURE_PREFETCH, "dispatch", "V", true, body(3, dispatch.toArray(new Instruction[0])), OBJECT)));
     }
 
     /** A separate shortened overload shape. Its play and mask positions differ from PostVideo. */
@@ -2219,7 +2289,11 @@ public class BadDexFixture {
                 opened = code.size(); code.add(new ImmutableInstruction11n(Opcode.CONST_4, 0, 1));
                 code.add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, 1, 14));
                 code.add(invoke(method("Lfixture/State;", "set", "V", state, "Z"), 1, 0));
-                code.add(staticField(Opcode.SGET_OBJECT, 2, "Lfixture/Unit;", "INSTANCE", "Lfixture/Unit;")); code.add(op(Opcode.RETURN_OBJECT, 2));
+                // completion-live's stock completion logs the Intent it opened and answers it, so v2,
+                // which the factory's answer writes after the hook site, is live past the completion.
+                code.add(fault.equals("browser-direct-media-completion-live") ? invoke(method("Lfixture/BrowserView;", "opened", "V", intent), 2)
+                        : staticField(Opcode.SGET_OBJECT, 2, "Lfixture/Unit;", "INSTANCE", "Lfixture/Unit;"));
+                code.add(op(Opcode.RETURN_OBJECT, 2));
                 failed = code.size(); code.add(new ImmutableInstruction11n(Opcode.CONST_4, 0, 0));
                 int back = code.branch(new com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction20t(Opcode.GOTO_16, 1)); code.to(back, opened + 1);
                 done = opened;
@@ -2259,8 +2333,11 @@ public class BadDexFixture {
             // media-live reuses v14, read on both edges. ad-live reuses v5, which the factory's range
             // call reads and the ad's return-void completion doesn't, so only the hook-site check sees
             // it. lead-parameter takes v10, a parameter nothing reads, so only the locals bound does.
+            // media-completion-live takes v2, which the factory's answer writes before anything reads
+            // it, and which its own stock build's completion reads, so only the completion edge does.
             int start = size(), scratch = 0, link = fault.equals("browser-direct-media-live") && !entry ? 14
-                    : fault.equals("browser-direct-ad-live") && !entry ? 5 : fault.equals("browser-direct-lead-parameter") && entry ? 10 : entry ? 1 : 3;
+                    : fault.equals("browser-direct-ad-live") && !entry ? 5 : fault.equals("browser-direct-lead-parameter") && entry ? 10
+                    : fault.equals("browser-direct-media-completion-live") && !entry ? 2 : entry ? 1 : 3;
             add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, scratch, context));
             add(new ImmutableInstruction22x(Opcode.MOVE_OBJECT_FROM16, link, url)); add(invoke(LINK_OPENER, scratch, link)); add(op(Opcode.MOVE_RESULT, scratch));
             int declined = branch(ifEqz(scratch, 1));
@@ -2569,7 +2646,9 @@ public class BadDexFixture {
      * original. A second lambda holds the note without checking for Copy link, and the models the
      * bridges read come along. Faults: no hook, a copy of another call, the wrong registers passed,
      * a goto past the wrong place, a second add on the shared row call, a second host caller, Share's
-     * goto sent to the copy, and, left out, the copy and goto alone.
+     * goto sent to the copy, a branch, a packed switch's case or an exception handler in Copy link's
+     * case straight to its row call (stock as well as hooked, so each takes a clean build of its
+     * own), and, left out, the copy and goto alone or an add in the second lambda.
      */
     private static List<ClassDef> saveMediaClasses(boolean patched, boolean hooked, String fault) {
         Instruction none = new ImmutableInstruction11n(Opcode.CONST_4, 0, 0);
@@ -2595,8 +2674,19 @@ public class BadDexFixture {
         menu.addAll(List.of(new ImmutableInstruction11n(Opcode.CONST_4, 6, 1), invoke(MENU_CLICKABLE, 3, 4, 5, 6), op(Opcode.MOVE_RESULT_OBJECT, 3),
                 invoke(MENU_SEMANTICS, 3, 12), op(Opcode.MOVE_RESULT_OBJECT, 3), invoke(MENU_STYLE_OF, 12), op(Opcode.MOVE_RESULT_OBJECT, 4),
                 new ImmutableInstruction31i(Opcode.CONST, 6, 0x7f080123), new ImmutableInstruction11n(Opcode.CONST_4, 7, 2),
-                new ImmutableInstruction11n(Opcode.CONST_4, 8, 0), invoke(MENU_ICON_OF, 12, 6, 7, 8), op(Opcode.MOVE_RESULT_OBJECT, 5),
-                string(7, "Copy link")));
+                new ImmutableInstruction11n(Opcode.CONST_4, 8, 0), invoke(MENU_ICON_OF, 12, 6, 7, 8), op(Opcode.MOVE_RESULT_OBJECT, 5)));
+        menu.add(string(7, "Copy link"));
+        // bypass branches from the label, the last instruction before the row call, so v7 holds the
+        // label on both of the row call's ways in, and only the branch skips the Save row.
+        int bypass = fault.equals("save-bypass") ? menu.size() : -1;
+        if (bypass >= 0) menu.add(ifEqz(2, 0));
+        // switch-case sends one case of a packed switch there instead, its payload after the method's
+        // last return; handler-edge loads the label a second time under a try block whose handler is the row call,
+        // so v7 holds it on the handler's way in too.
+        int switchAt = fault.equals("save-switch-case") ? menu.size() : -1;
+        if (switchAt >= 0) menu.add(new ImmutableInstruction31t(Opcode.PACKED_SWITCH, 2, 0));
+        if (fault.equals("save-handler-edge")) menu.add(string(7, "Copy link"));
+        int handlerCover = fault.equals("save-handler-edge") ? menu.size() - 1 : -1;
         Instruction row = invoke(MENU_ROW, 12, 3, 4, 5, 7);
         int copyAt = menu.size();
         boolean copied = hooked && !fault.equals("save-missing") || patched && fault.equals("save-omitted-menu");
@@ -2618,13 +2708,24 @@ public class BadDexFixture {
         featureBranch(menu, remembered, clicked, Opcode.IF_NE, 5, 6);
         if (copied) featureBranch(menu, rowAt - 1, hooked && fault.equals("save-goto") ? after : rowAt + 1, Opcode.GOTO, 0, 0);
         featureBranch(menu, rowGoto, after, Opcode.GOTO, 0, 0);
+        if (bypass >= 0) featureBranch(menu, bypass, rowAt, Opcode.IF_EQZ, 2, 0);
+        List<ImmutableTryBlock> menuTries = null;
+        if (switchAt >= 0) {
+            if (units(menu, menu.size()) % 2 != 0) menu.add(op(Opcode.NOP));
+            int payloadAt = menu.size();
+            menu.add(new ImmutablePackedSwitchPayload(List.of(new ImmutableSwitchElement(0, units(menu, rowAt) - units(menu, switchAt)))));
+            menu.set(switchAt, new ImmutableInstruction31t(Opcode.PACKED_SWITCH, 2, units(menu, payloadAt) - units(menu, switchAt)));
+        }
+        if (handlerCover >= 0) menuTries = List.of(tryBlock(units(menu, handlerCover), menu.get(handlerCover).getCodeUnits(), units(menu, rowAt)));
 
         List<ClassDef> classes = new ArrayList<>();
         classes.add(featureClass(POST_MENU, OBJECT, List.of(featureField(POST_MENU, "post", FEATURE_MEDIA), featureField(POST_MENU, "activity", ACTIVITY),
                 featureField(POST_MENU, "controller", MENU_CONTROLLER), featureField(POST_MENU, "item", OBJECT)),
-                define(POST_MENU, "invoke", OBJECT, false, body(16, menu.toArray(new Instruction[0])), OBJECT, OBJECT)));
+                define(POST_MENU, "invoke", OBJECT, false, menuTries == null ? body(16, menu.toArray(new Instruction[0]))
+                        : body(16, menuTries, menu.toArray(new Instruction[0])), OBJECT, OBJECT)));
         List<Instruction> header = new ArrayList<>(List.of(string(0, MENU_NOTE + "88)")));
-        if (hooked && fault.equals("save-duplicate")) header.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 1, 2, ADD_SAVE_ROW));
+        if (hooked && fault.equals("save-duplicate") || patched && fault.equals("save-omitted-add"))
+            header.add(new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 1, 2, ADD_SAVE_ROW));
         header.addAll(List.of(none, op(Opcode.RETURN_OBJECT, 0)));
         classes.add(featureClass(POST_MENU_HEADER, OBJECT, List.of(), define(POST_MENU_HEADER, "invoke", OBJECT, false,
                 body(4, header.toArray(new Instruction[0])), OBJECT, OBJECT)));
@@ -2692,13 +2793,15 @@ public class BadDexFixture {
     /**
      * The extension's SaveMediaRow, its click and the InstagramMedia bridges, as a bundle carries
      * them: written the way the Save patch writes them when [hooked], and otherwise the empty stubs
-     * they ship as. Faults name the one piece written wrong or, left out, the one stub written anyway.
+     * they ship as. Faults name the one piece written wrong, a bridge left its stub, a bridge the
+     * patch doesn't know or, left out, the one stub written anyway.
      */
     private static List<ClassDef> saveMediaExtension(boolean hooked, String fault) {
         Instruction none = new ImmutableInstruction11n(Opcode.CONST_4, 0, 0);
         ImmutableMethodImplementation nothing = body(1, none, op(Opcode.RETURN_OBJECT, 0));
         boolean show = hooked && !fault.equals("save-show-stub") || fault.equals("save-omitted-show");
         boolean media = hooked || fault.equals("save-omitted-media");
+        boolean activity = hooked || fault.equals("save-omitted-activity");
         boolean dismiss = hooked || fault.equals("save-omitted-dismiss");
         String mediaField = fault.equals("save-media-field") ? "activity" : "post";
         String activityField = fault.equals("save-activity-field") ? "post" : "activity";
@@ -2710,7 +2813,8 @@ public class BadDexFixture {
                         type(Opcode.CHECK_CAST, 0, fault.equals("save-media-cast") ? MENU_CONTROLLER : POST_MENU),
                         objectField(Opcode.IGET_OBJECT, 0, 0, POST_MENU, mediaField, mediaField.equals("post") ? FEATURE_MEDIA : ACTIVITY),
                         op(Opcode.RETURN_OBJECT, 0)), OBJECT),
-                define(SAVE_ROW, "activity", ACTIVITY, true, !hooked ? nothing : body(1, type(Opcode.CHECK_CAST, 0, POST_MENU),
+                define(SAVE_ROW, "activity", ACTIVITY, true, !activity ? nothing : body(1,
+                        type(Opcode.CHECK_CAST, 0, fault.equals("save-activity-cast") ? MENU_CONTROLLER : POST_MENU),
                         objectField(Opcode.IGET_OBJECT, 0, 0, POST_MENU, activityField, activityField.equals("post") ? FEATURE_MEDIA : ACTIVITY),
                         op(Opcode.RETURN_OBJECT, 0)), OBJECT),
                 define(SAVE_ROW, "dismiss", "V", true, !dismiss ? body(1, op(Opcode.RETURN_VOID)) : body(1,
@@ -2723,13 +2827,17 @@ public class BadDexFixture {
         classes.add(new ImmutableClassDef(SAVE_CLICK, AccessFlags.PUBLIC.getValue() | AccessFlags.FINAL.getValue(), OBJECT, interfaces,
                 null, null, List.of(), List.of(define(SAVE_CLICK, "invoke", OBJECT, fault.equals("save-click-static"),
                         body(2, none, op(Opcode.RETURN_OBJECT, 0))))));
-        // Each bridge, written, casts its argument, calls the getter and returns its answer in front of the stub's own zero return.
+        // Each bridge, written, casts its argument, calls the getter and returns its answer in front of
+        // the stub's own zero return. bridge-extra adds one more stub, never written, standing for a
+        // bridge the patch doesn't know.
         List<Method> bridges = new ArrayList<>();
         for (SaveBridgeShape bridge : SAVE_BRIDGES) {
             boolean primitive = bridge.returns().equals("I");
             Instruction zero = op(primitive ? Opcode.RETURN : Opcode.RETURN_OBJECT, 0);
             List<Instruction> code = new ArrayList<>();
-            if (hooked || fault.equals("save-omitted-bridge") && bridge.name().equals("videoVersions")) {
+            if (hooked && !(fault.equals("save-bridge-stub") && bridge.name().equals("carouselMedia"))
+                    || fault.equals("save-omitted-bridge") && bridge.name().equals("videoVersions")
+                    || fault.equals("save-omitted-bridge-int") && bridge.name().equals("candidateHeight")) {
                 String receiver = fault.equals("save-bridge-cast") && bridge.name().equals("username") ? FEATURE_MEDIA : bridge.receiver();
                 Opcode call = fault.equals("save-bridge-call") && bridge.name().equals("versionUrl") ? Opcode.INVOKE_VIRTUAL : bridge.call();
                 ImmutableMethodReference getter = fault.equals("save-bridge-getter") && bridge.name().equals("videoVersions")
@@ -2743,6 +2851,7 @@ public class BadDexFixture {
             code.addAll(List.of(none, zero));
             bridges.add(define(INSTAGRAM_MEDIA, bridge.name(), bridge.returns(), true, body(1, code.toArray(new Instruction[0])), OBJECT));
         }
+        if (fault.equals("save-bridge-extra")) bridges.add(define(INSTAGRAM_MEDIA, "likeCount", INTEGER, true, nothing, OBJECT));
         classes.add(featureClass(INSTAGRAM_MEDIA, OBJECT, List.of(), bridges.toArray(new Method[0])));
         return classes;
     }
@@ -3016,6 +3125,7 @@ public class BadDexFixture {
                 body(4, direct(method(OBJECT, "<init>", "V"), 0), op(Opcode.RETURN_VOID)), SHORTCUT_LIST, "Z", "Z")));
         classes.addAll(returnRefreshClasses(patched && selected.contains("returnRefresh"), fault));
         classes.addAll(videoAutoplayClasses(patched && selected.contains("disableVideoAutoplay"), fault));
+        classes.addAll(prefetchClasses(patched && selected.contains("disableVideoAutoplay"), patched ? fault : ""));
         classes.addAll(fault.startsWith("pure-black-fields") ? pureBlackFieldClasses(patched && selected.contains("pureBlack"), fault)
                 : pureBlackClasses(patched && selected.contains("pureBlack"), fault));
         classes.addAll(saveMediaClasses(patched, patched && selected.contains("saveMedia"), fault));
@@ -3079,7 +3189,8 @@ public class BadDexFixture {
                 define(FEATURE_RETURN, "resetToFeed", "Z", true, body(1, op(Opcode.RETURN, 0)), "Z"),
                 define(FEATURE_RETURN, "warmStart", "Z", true, body(1, op(Opcode.RETURN, 0)), "Z"),
                 define(FEATURE_RETURN, "cachedPosts", "Z", true, body(1, op(Opcode.RETURN, 0)), "Z")));
-        classes.add(featureClass(FEATURE_AUTOPLAY, OBJECT, List.of(), define(FEATURE_AUTOPLAY, "play", "Z", true, body(1, op(Opcode.RETURN, 0)), "Z")));
+        classes.add(featureClass(FEATURE_AUTOPLAY, OBJECT, List.of(), define(FEATURE_AUTOPLAY, "play", "Z", true, body(1, op(Opcode.RETURN, 0)), "Z"),
+                define(FEATURE_AUTOPLAY, "skipPrefetch", "Z", true, body(1, op(Opcode.RETURN, 0)), "Z")));
         classes.add(featureClass(FEATURE_PURE_BLACK, OBJECT, List.of(),
                 define(FEATURE_PURE_BLACK, "argb", "J", true, body(2, op(Opcode.RETURN_WIDE, 0)), "J"),
                 define(FEATURE_PURE_BLACK, "color", "J", true, body(2, op(Opcode.RETURN_WIDE, 0)), "J")));
@@ -3279,6 +3390,9 @@ public class BadDexFixture {
             dexes.put("features-bad-browser-direct-" + fault, featureBuild(true, Set.of("openLinksExternally"), 0, "browser-direct-" + fault));
         }
         dexes.put("features-bad-browser-direct-omitted-body", featureBuild(true, Set.of(), 0, "browser-direct-omitted-body"));
+        // The media caller whose completion reads what the hook site doesn't is Threads' own shape, so it has a clean build of its own.
+        dexes.put("features-browser-completion-live-clean", featureBuild(false, Set.of(), 0, "browser-direct-media-completion-live"));
+        dexes.put("features-bad-browser-direct-media-completion-live", featureBuild(true, Set.of("openLinksExternally"), 0, "browser-direct-media-completion-live"));
         // Search's Follow suggestions carousel, Hide suggested users alone, and then left out.
         for (String fault : List.of("missing", "inverted", "ignored", "target", "double", "stray", "live-start", "live-away", "parameter", "body")) {
             dexes.put("features-bad-search-carousel-" + fault, featureBuild(true, Set.of("hideSuggestedUsers"), 0, "search-carousel-" + fault));
@@ -3313,6 +3427,17 @@ public class BadDexFixture {
                 "autoplay-inline-missing", "autoplay-default-ignored", "autoplay-ad-literal", "autoplay-viewer", "autoplay-ad-live")) {
             dexes.put("features-bad-" + fault, featureBuild(true, Set.of("disableVideoAutoplay"), 0, fault));
         }
+        // And the prefetch skip test's hook: one bad build for each thing its contract checks, then, with the
+        // feature left out, the call written anyway or one of the bodies the hook leaves alone changed.
+        for (String fault : List.of("prefetch-missing", "prefetch-register", "prefetch-dropped", "prefetch-answer-moved",
+                "prefetch-after-test", "prefetch-legacy", "prefetch-twice", "prefetch-branch-past", "prefetch-changed-skip",
+                "prefetch-changed-check", "prefetch-changed-sibling", "prefetch-changed-legacy", "prefetch-changed-dispatch")) {
+            dexes.put("features-bad-" + fault, featureBuild(true, Set.of("disableVideoAutoplay"), 0, fault));
+        }
+        for (String fault : List.of("prefetch-omitted-call", "prefetch-omitted-skip", "prefetch-omitted-check", "prefetch-omitted-sibling",
+                "prefetch-omitted-legacy", "prefetch-omitted-dispatch")) {
+            dexes.put("features-bad-" + fault, featureBuild(true, Set.of(), 0, fault));
+        }
         dexes.put("features-autoplay-forward-clean", videoAutoplayForwardBuild(false, Set.of(), ""));
         dexes.put("features-autoplay-forward-good", videoAutoplayForwardBuild(true, Set.of("disableVideoAutoplay"), ""));
         dexes.put("features-autoplay-forward-omitted", videoAutoplayForwardBuild(true, Set.of(), ""));
@@ -3342,14 +3467,22 @@ public class BadDexFixture {
         for (String fault : List.of("settings-row-missing", "settings-row-outside", "settings-row-register", "settings-row-stub", "settings-row-click")) {
             dexes.put("features-bad-" + fault, featureBuild(true, Set.of("settingsRow"), 0, fault));
         }
-        // And Save photos and videos: one bad build for each thing its contract checks, alone, then left out.
+        // And Save photos and videos: one bad build for each thing its contract checks, alone, then left
+        // out. The branch straight to Copy link's row call is Threads' own, so it has a clean build too.
         for (String fault : List.of("missing", "copy", "capture", "goto", "twice", "duplicate", "other-item", "show-stub", "show-row",
                 "show-composer", "show-role", "show-style", "show-icon", "show-label", "media-field", "media-cast", "activity-field",
-                "dismiss-cast", "dismiss-field", "dismiss-call", "click", "click-static", "bridge-getter", "bridge-call", "bridge-cast",
-                "bridge-result", "status-false")) {
+                "activity-cast", "dismiss-cast", "dismiss-field", "dismiss-call", "click", "click-static", "bridge-getter", "bridge-call",
+                "bridge-cast", "bridge-result", "bridge-stub", "bridge-extra", "status-false", "bypass")) {
             dexes.put("features-bad-save-" + fault, featureBuild(true, Set.of("saveMedia"), 0, "save-" + fault));
         }
-        for (String fault : List.of("omitted-menu", "omitted-show", "omitted-media", "omitted-dismiss", "omitted-bridge", "omitted-status")) {
+        dexes.put("features-save-bypass-clean", featureBuild(false, Set.of(), 0, "save-bypass"));
+        // A case of a switch and an exception handler aimed at the row call are Threads' own too.
+        for (String fault : List.of("switch-case", "handler-edge")) {
+            dexes.put("features-bad-save-" + fault, featureBuild(true, Set.of("saveMedia"), 0, "save-" + fault));
+            dexes.put("features-save-" + fault + "-clean", featureBuild(false, Set.of(), 0, "save-" + fault));
+        }
+        for (String fault : List.of("omitted-menu", "omitted-add", "omitted-show", "omitted-media", "omitted-activity", "omitted-dismiss",
+                "omitted-bridge", "omitted-bridge-int", "omitted-status")) {
             dexes.put("features-bad-save-" + fault, featureBuild(true, Set.of(), 0, "save-" + fault));
         }
         // And Copy text, which comes with the settings row: hook faults with it selected, then left out,

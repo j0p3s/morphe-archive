@@ -8,12 +8,19 @@ import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
 import java.lang.reflect.Proxy;
 
+import android.content.Context;
+import android.util.TypedValue;
+import app.morphe.extension.shared.Utils;
+
 import app.hxreborn.extension.proton.MaterialSwitches;
+import app.hxreborn.extension.proton.PatchesTheme;
 
 @SuppressWarnings("unused")
 public final class SwitchThumbIcon {
 
     private static final int TINT_FROM_CONTENT_COLOR = 0x8;
+
+    private static final String THUMB_COLOR_ATTRIBUTE = "proton_text_inverted";
 
     private static boolean checked;
 
@@ -41,6 +48,23 @@ public final class SwitchThumbIcon {
             uncheckedContent = newThumbContent(composableLambdaType, false);
         }
         return uncheckedContent;
+    }
+
+    public static long checkedThumbColor(long original) {
+        final Context context = Utils.getContext();
+        if (context == null || !MaterialSwitches.isEnabled()) {
+            return original;
+        }
+
+        final Context themed = PatchesTheme.withApplicationTheme(context);
+        final int attribute = themed.getResources()
+            .getIdentifier(THUMB_COLOR_ATTRIBUTE, "attr", themed.getPackageName());
+        final TypedValue value = new TypedValue();
+        if (attribute == 0 || !themed.getTheme().resolveAttribute(attribute, value, true)) {
+            return original;
+        }
+        final int argb = (value.resourceId != 0) ? themed.getColor(value.resourceId) : value.data;
+        return ((long) argb) << 32;
     }
 
     public static void remember(boolean isChecked, long checkedTrackColor, long uncheckedTrackColor) {

@@ -6,6 +6,7 @@ package app.hxreborn.extension.proton;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Matrix;
 import android.graphics.Paint;
@@ -34,6 +35,8 @@ final class WebToggleSwitchStyle {
 
     private static final int ICON_DP = 16;
 
+    private static final String CHECKED_THUMB_COLOR = "text_inverted";
+
     private static final int INTERACTION_NORM = 0xFF6D4AFF;
 
     private static final int DARK_OUTLINE = 0xFFA7A4B5;
@@ -54,7 +57,7 @@ final class WebToggleSwitchStyle {
 
     static void apply(Switch control) {
         final Context context = control.getContext();
-        final boolean night = PatchesTheme.isNightMode(context);
+        final boolean night = PatchesTheme.isAppNightMode(context);
         final int outline = night ? DARK_OUTLINE : LIGHT_OUTLINE;
         final int surface = night ? DARK_SURFACE : LIGHT_SURFACE;
         final int travel = dp(context, TRACK_WIDTH_DP - THUMB_DP - 2 * THUMB_INSET_DP);
@@ -69,7 +72,8 @@ final class WebToggleSwitchStyle {
         track.setPadding(trackPadding, 0, trackPadding, 0);
 
         final StateListDrawable thumb = new StateListDrawable();
-        thumb.addState(CHECKED, thumb(context, 0xFFFFFFFF, new MarkDrawable(INTERACTION_NORM, true), thumbOverhang));
+        thumb.addState(CHECKED,
+                thumb(context, checkedThumbColor(context), new MarkDrawable(INTERACTION_NORM, true), thumbOverhang));
         thumb.addState(StateSet.WILD_CARD, thumb(context, outline, new MarkDrawable(surface, false), thumbOverhang));
 
         control.setShowText(false);
@@ -78,6 +82,12 @@ final class WebToggleSwitchStyle {
         control.setThumbDrawable(thumb);
         control.setTrackDrawable(track);
         control.refreshDrawableState();
+    }
+
+    private static int checkedThumbColor(Context context) {
+        final Context themed = PatchesTheme.withNightMode(context);
+        final int id = themed.getResources().getIdentifier(CHECKED_THUMB_COLOR, "color", context.getPackageName());
+        return (id != 0) ? themed.getColor(id) : Color.WHITE;
     }
 
     private static Drawable track(Context context, int fill, int strokeWidth, int strokeColor) {

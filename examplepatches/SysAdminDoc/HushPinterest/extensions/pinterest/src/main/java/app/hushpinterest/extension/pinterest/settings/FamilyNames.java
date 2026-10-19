@@ -28,6 +28,8 @@ public final class FamilyNames {
     public static final String HIDE_ADS = "Hide ads";
     public static final String HIDE_AI_PINS = "Hide AI-labeled pins";
     public static final String HIDE_SHOPPING = "Hide shopping and product pins";
+    public static final String FILTER_FEED = "Filter feed";
+    public static final String KEEP_HOME_FEED = "Keep Home feed";
     public static final String DISABLE_ANALYTICS = "Disable analytics";
     public static final String STRIP_LINK_TRACKING = "Strip link tracking";
     public static final String HIDE_ADVERTISING_ID = "Hide advertising ID";
@@ -51,6 +53,7 @@ public final class FamilyNames {
     public static final String HIDE_SURVEY_PROMPTS = "Hide survey prompts";
     public static final String HIDE_SAVE_TOASTS = "Hide save toasts";
     public static final String ORIGINAL_IMAGES = "Original-quality images";
+    public static final String SHOW_POSTED_DATE = "Show posted date";
     public static final String DISABLE_UPDATE_NAG = "Disable update nag";
     public static final String FIX_PUSH_NOTIFICATIONS = "Fix push notifications";
 

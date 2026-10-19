@@ -88,7 +88,7 @@ public final class SwitchStyle {
             if (widgetStyle == 0 || colorsStyle == 0) {
                 return null;
             }
-            final Context themed = new ContextThemeWrapper(context, colorsStyle);
+            final Context themed = new ContextThemeWrapper(PatchesTheme.withAppNightTheme(context), colorsStyle);
             final TypedValue value = new TypedValue();
             themed.getTheme().resolveAttribute(identifier(context, "colorPrimary", "attr"), value, true);
             return new MaterialStyle(themed, widgetStyle, value.data, primaryColor);

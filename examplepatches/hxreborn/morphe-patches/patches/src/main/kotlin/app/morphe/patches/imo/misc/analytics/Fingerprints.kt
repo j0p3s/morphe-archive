@@ -5,10 +5,7 @@
 package app.morphe.patches.imo.misc.analytics
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.methodCall
-import com.android.tools.smali.dexlib2.AccessFlags
-import com.android.tools.smali.dexlib2.Opcode
 
 private const val APPSFLYER_CLASS = "Lcom/appsflyer/AppsFlyerLib;"
 
@@ -39,9 +36,12 @@ internal object StatEventFingerprint : Fingerprint(
     strings = listOf("send_media_im", "bundle_stat", "msg_type"),
 )
 
+internal object AdvertisingIdCallbackFingerprint : Fingerprint(
+    parameters = listOf("Lcom/google/android/gms/ads/identifier/AdvertisingIdClient\$Info;"),
+)
+
 internal object AdvertisingIdUploadFingerprint : Fingerprint(
-    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
+    classFingerprint = AdvertisingIdCallbackFingerprint,
     returnType = "V",
-    parameters = emptyList(),
-    filters = listOf(fieldAccess(name = "AD_ID_LAST_CHECK_TS", opcode = Opcode.SGET_OBJECT)),
+    filters = listOf(methodCall(definingClass = "Landroid/os/AsyncTask;", name = "executeOnExecutor")),
 )

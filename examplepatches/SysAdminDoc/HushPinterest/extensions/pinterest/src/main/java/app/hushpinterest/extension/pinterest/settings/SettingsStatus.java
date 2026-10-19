@@ -39,6 +39,12 @@ public final class SettingsStatus {
 
     public static boolean hideShopping() { return false; }
     public static boolean feedShopping() { return false; }
+
+    public static boolean filterFeed() { return false; }
+    public static boolean feedVideoPins() { return false; }
+    public static boolean feedMutedWords() { return false; }
+    public static boolean keepHomeFeed() { return false; }
+    public static boolean homeFeed() { return false; }
     public static boolean disableAnalytics() { return false; }
     public static boolean analyticsTasks() { return false; }
     public static boolean analyticsUploads() { return false; }
@@ -52,11 +58,14 @@ public final class SettingsStatus {
     public static boolean spoofSignature() { return false; }
     public static boolean downloadPins() { return false; }
     public static boolean pinDownloads() { return false; }
+    public static boolean copyImage() { return false; }
+    public static boolean shareImage() { return false; }
     public static boolean downloadBoard() { return false; }
     public static boolean boardMenu() { return false; }
     public static boolean boardPins() { return false; }
     public static boolean longPressDownload() { return false; }
     public static boolean longPressMenu() { return false; }
+    public static boolean longPressChoices() { return false; }
     public static boolean externalBrowser() { return false; }
     public static boolean visitLinks() { return false; }
     public static boolean systemShare() { return false; }
@@ -77,6 +86,7 @@ public final class SettingsStatus {
     public static boolean blackPinMenu() { return false; }
     public static boolean hideCloseupButtons() { return false; }
     public static boolean closeupButtons() { return false; }
+    public static boolean closeupSearchLabel() { return false; }
     public static boolean hidePinMenuItems() { return false; }
     public static boolean pinMenuItems() { return false; }
     public static boolean hideComments() { return false; }
@@ -93,6 +103,8 @@ public final class SettingsStatus {
     public static boolean originalImages() { return false; }
     public static boolean imageChooser() { return false; }
     public static boolean closeupImage() { return false; }
+    public static boolean showPostedDate() { return false; }
+    public static boolean postedDate() { return false; }
     public static boolean disableUpdateNag() { return false; }
     public static boolean updateNag() { return false; }
     public static boolean fixPushNotifications() { return false; }

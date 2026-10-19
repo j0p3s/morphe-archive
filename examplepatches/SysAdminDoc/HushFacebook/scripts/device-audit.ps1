@@ -12,8 +12,8 @@
        ones that stop a walk (AuditMode.ALL_ON_EXCLUDED), plus -On and less -Off. Facebook applies
        it at its next start and keeps the switches it had in before.json.
     3. Restarts Facebook twice, so every hook starts with the profile's values.
-    4. Walks the screens in -Visit with -Swipes swipes each. It only opens links and swipes, so
-       nothing is liked, followed or sent.
+    4. Walks the screens in -Visit with -Swipes swipes each. It opens links, swipes, taps a few
+       navigation rows and searches for one fixed word, so nothing is liked, followed or sent.
     5. Asks for the full diagnostic report over an intent and pulls it, then reads [HOOK STATUS]
        with phone-smoke's Read-SmokeReport and compares it to -Expectations: a family that ran in
        the baseline and didn't run now fails, as does anything missing, ambiguous or a crash.
@@ -45,10 +45,11 @@ param(
     # node whose text or description is exactly <label>, from a fresh dump, scrolling back up to
     # find it, and only labels that open or expand something belong here: never Like, Follow,
     # Add friend, Send or a person. "longpress" holds the middle of the screen, "back" goes back.
+    # "query" types $AuditQuery into the search field fb://search just opened and submits it.
     # No fb://groups or fb://friends: all-on hides those tabs, and their links then land nowhere
     # or on Android's app chooser.
     [string[]]$Visit = @('fb://feed', 'tap:Comment', 'back', 'fb://watch', 'fb://fb_shorts/viewer', 'longpress',
-        'fb://notifications', 'fb://marketplace', 'fb://profile', 'fb://search',
+        'fb://notifications', 'fb://marketplace', 'fb://profile', 'fb://search', 'query',
         'fb://bookmarks', 'tap:Settings and privacy', 'fb://bookmarks', 'tap:Feeds', 'fb://feed'),
     # Only these explicitly optional steps may be absent without failing the requested scope.
     [string[]]$OptionalVisit = @('tap:Comment', 'tap:Feeds'),
@@ -77,9 +78,19 @@ $smokeReader = $smokeAst.Find({ param($node)
 . (Join-Path $PSScriptRoot 'device-install.ps1')
 
 $Package = 'com.facebook.katana'
-$Entry = "$Package/.LoginActivity"
+# The launcher entry that's on, resolved from the phone by Get-AuditLauncher before any change.
+# Picking an alternate app icon turns .LoginActivity off, and Android starts nothing for it then.
+$LauncherClass = 'com.facebook.katana.LoginActivity'
+$Entry = $null
 $Extra = 'app.morphe.extension.facebook'
 $AuditDir = "/sdcard/Android/data/$Package/files/hushfacebook-audit"
+# These links open a playing reel, and uiautomator can't read a screen while a video plays
+# ("could not get idle state", about 11 seconds a try). Their destination and their input are
+# proved from the fragment tree instead (Get-AuditReelProof), and a reel never gets a tap.
+$ReelRoutes = @('fb://watch', 'fb://fb_shorts/viewer')
+# The only text the walk types. The search hooks run on a typeahead and a results page, which an
+# empty search field never shows, and a common word brings both.
+$AuditQuery = 'news'
 $translationTables = Join-Path $PSScriptRoot '..\extensions\shared\library\src\main\l10n'
 
 if (-not $Serial) { throw 'Pass -Serial or set HUSHFACEBOOK_DEVICE_SERIAL.' }
@@ -147,7 +158,7 @@ function Assert-AuditLease {
 function Assert-AuditSteps {
     $allowed = @('fb://feed', 'fb://watch', 'fb://fb_shorts/viewer', 'fb://notifications',
         'fb://marketplace', 'fb://profile', 'fb://search', 'fb://bookmarks',
-        'tap:Comment', 'tap:Settings and privacy', 'tap:Feeds', 'back', 'longpress')
+        'tap:Comment', 'tap:Settings and privacy', 'tap:Feeds', 'back', 'longpress', 'query')
     foreach ($step in $Visit) {
         if ($allowed -cnotcontains $step) { throw "Not a permitted audit navigation step: $step" }
     }
@@ -180,22 +191,43 @@ function Invoke-Adb {
     if ($arguments.Count -gt 2 -and $arguments[0] -eq 'shell' -and $arguments[1] -eq 'input') {
         if (-not $identityVerified) { throw 'Device identity has not been verified. No input was sent.' }
         if (-not ($arguments.Count -eq 4 -and $arguments[2] -eq 'keyevent' -and $arguments[3] -eq 'KEYCODE_WAKEUP')) {
+            if ($arguments[2] -cnotin @('tap', 'swipe', 'keyevent', 'text') -or
+                    ($arguments[2] -eq 'keyevent' -and ($arguments.Count -ne 4 -or $arguments[3] -cnotin @('KEYCODE_BACK', 'KEYCODE_ENTER')))) {
+                throw 'Not a permitted input. No input was sent.'
+            }
+            $typing = $arguments[2] -eq 'text' -or $arguments[3] -ceq 'KEYCODE_ENTER'
+            if ($typing -and (-not $inputQuery -or
+                    ($arguments[2] -eq 'text' -and ($arguments.Count -ne 4 -or $arguments[3] -cne $AuditQuery)))) {
+                throw 'Only the audit query is typed, and only at the query step. Nothing was typed.'
+            }
             Assert-AuditForeground
-            $fresh = @(Get-UiNodes)
-            if ($fresh.Count -eq 0) { throw 'No fresh Facebook UI nodes. No input was sent.' }
+            if ($inputReel) {
+                # A playing reel can't be dumped, so its fragments prove the screen. A tap soon after
+                # another one likes a reel, so it never gets one.
+                if ($arguments[2] -eq 'tap') { throw 'A reel never gets a tap. No tap was sent.' }
+                if (-not (Get-AuditReelProof)) { throw 'The reel viewer is not on screen. No input was sent.' }
+            } else {
+                $fresh = @(Get-UiNodes)
+                if ($fresh.Count -eq 0) { throw 'No fresh Facebook UI nodes. No input was sent.' }
+            }
             $nodeWindow = $script:auditWindowIdentity
             if ($arguments[2] -eq 'tap') {
                 if ($inputNodeLabel -cnotin @('Comment', 'Settings and privacy', 'Feeds')) {
                     throw 'No permitted navigation node was selected. No tap was sent.'
                 }
-                $hits = @($fresh | Where-Object {
-                    ($_.text -ceq $inputNodeLabel -or $_.'content-desc' -ceq $inputNodeLabel) -and
-                    $_.bounds -match '^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$' -and
-                    [int]$arguments[3] -ge [int]$Matches[1] -and [int]$arguments[3] -lt [int]$Matches[3] -and
-                    [int]$arguments[4] -ge [int]$Matches[2] -and [int]$arguments[4] -lt [int]$Matches[4]
-                })
-                if ($hits.Count -ne 1) { throw 'The navigation node moved or became ambiguous. No tap was sent.' }
+                # The label must still name one target on the fresh screen, and the tap must land in it.
+                $target = Select-AuditTapNode $inputNodeLabel $fresh
+                if ($null -eq $target -or $target.bounds -notmatch '^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$' -or
+                        [int]$arguments[3] -lt [int]$Matches[1] -or [int]$arguments[3] -ge [int]$Matches[3] -or
+                        [int]$arguments[4] -lt [int]$Matches[2] -or [int]$arguments[4] -ge [int]$Matches[4]) {
+                    throw 'The navigation node moved or became ambiguous. No tap was sent.'
+                }
             }
+            # A swipe or tap across an open keyboard types into the focused field (stray characters
+            # in Facebook search on the S22, 2026-10-18), and the query needs the field focused.
+            $keyboard = $arguments[2] -ne 'keyevent' -and (Test-AuditKeyboard)
+            if ($typing -and $arguments[2] -eq 'text' -and -not $keyboard) { throw 'No keyboard is open for the query. Nothing was typed.' }
+            if (-not $typing -and $keyboard) { throw 'The keyboard is open. No swipe or tap was sent.' }
             # A dump can take seconds. An overlay may have taken input while it was running.
             Assert-AuditForeground
             if ($nodeWindow -cne $script:auditWindowIdentity) {
@@ -222,6 +254,14 @@ function Write-Step([string]$Text) { Write-Host "[audit] $Text" }
 
 # One argument for the phone's shell, quoted so spaces and apostrophes survive it.
 function Format-Shell([string]$Text) { "'" + $Text.Replace("'", "'\''") + "'" }
+
+# Whether the keyboard is on screen. A dump that doesn't say is no answer either way.
+function Test-AuditKeyboard {
+    $state = (Invoke-Adb shell dumpsys input_method) -join "`n"
+    $shown = @([regex]::Matches($state, '\bmInputShown=(true|false)\b') | ForEach-Object { $_.Groups[1].Value })
+    if ($shown.Count -eq 0) { throw 'The input method dump does not say whether the keyboard is open. No input was sent.' }
+    return $shown -ccontains 'true'
+}
 
 function Get-UiNodes {
     Assert-AuditForeground
@@ -259,20 +299,105 @@ function Test-AuditDestination([string]$Route, [object[]]$Nodes) {
             return ($labels -ccontains "What's on your mind?" -and $labels -ccontains 'Go to profile') -or
                 @($own | Where-Object { $_.'content-desc' -ceq 'Facebook logo' }).Count -gt 0
         }
-        'fb://watch' { return $labels -ccontains 'Reels tab details' -or $labels -ccontains 'Reel details' }
-        'fb://fb_shorts/viewer' { return $labels -ccontains 'Reel details' }
         'fb://notifications' {
-            return @($own | Where-Object { $_.text -ceq 'Notifications' -and $_.'content-desc' -ceq 'Notifications' }).Count -gt 0
+            # The link opens a page whose title isn't a node and which a warm app restores scrolled
+            # down, so a row's own settings button counts too.
+            return @($own | Where-Object { $_.text -ceq 'Notifications' -and $_.'content-desc' -ceq 'Notifications' }).Count -gt 0 -or
+                $labels -ccontains "Manage the notification$([char]0x2019)s settings"
         }
         'fb://marketplace' { return $labels -ccontains 'Marketplace' -and $labels -ccontains 'Search Marketplace' }
-        'fb://profile' { return $labels -ccontains 'Edit profile' -and $labels -ccontains 'Edit profile picture' }
+        # An account with no profile picture offers to add one instead.
+        'fb://profile' {
+            return $labels -ccontains 'Edit profile' -and
+                ($labels -ccontains 'Edit profile picture' -or $labels -ccontains 'Add profile picture')
+        }
         'fb://search' {
             return @($own | Where-Object { $_.class -ceq 'android.widget.EditText' -and
                 ($_.text -cmatch '^Search(?:\s|$)' -or $_.'content-desc' -cmatch '^Search(?:\s|$)') }).Count -gt 0
         }
-        'fb://bookmarks' { return $labels -ccontains 'Menu' -and $labels -ccontains 'Settings and privacy' }
+        # The link opens the menu as a page with a Settings button and no Menu title.
+        'fb://bookmarks' {
+            return $labels -ccontains 'Settings and privacy' -and ($labels -ccontains 'Menu' -or $labels -ccontains 'Settings')
+        }
     }
     return $false
+}
+
+# Whether $Activity's section of "dumpsys activity top" is resumed and shows a reel viewer: a
+# WatchFeedOrWarionFragment that's shown and visible to the user, inside fragments that are too.
+# A fragment's fields are the lines indented under its header, up to its child fragments. Lines
+# naming a fragment after "#n:" or "mParent=" only list it. Anything ambiguous is no proof.
+function Test-AuditReelViewer([string[]]$Top, [string]$Activity) {
+    $lines = @(($Top -join "`n") -split "\r?\n")
+    $heads = @(for ($i = 0; $i -lt $lines.Count; $i++) { if ($lines[$i] -match '^(?:TASK |\s*ACTIVITY )') { $i } })
+    $mine = @($heads | Where-Object { $lines[$_] -match '^\s*ACTIVITY (\S+)\s' -and $Matches[1] -ceq $Activity })
+    if ($mine.Count -ne 1) { return $false }
+    $next = @(@($heads | Where-Object { $_ -gt $mine[0] }) + $lines.Count)[0]
+    if ($next -le $mine[0] + 1) { return $false }
+    $section = $lines[($mine[0] + 1)..($next - 1)]
+    if (-not @($section | Where-Object { $_ -cmatch '\bmResumed=true\b' }).Count) { return $false }
+    $fields = @{}
+    $name = $null
+    $indent = 0
+    foreach ($line in $section) {
+        $depth = $line.Length - $line.TrimStart().Length
+        if ($line -match '^\s+([\w$.]+\{[0-9a-f]+\}) \(') {
+            if ($fields.ContainsKey($Matches[1])) { return $false }
+            $name = $Matches[1]
+            $indent = $depth
+            $fields[$name] = [Collections.Generic.List[string]]::new()
+        } elseif ($null -ne $name -and ($depth -le $indent -or $line -match '^\s+Child FragmentManager')) {
+            $name = $null
+        } elseif ($null -ne $name) {
+            $fields[$name].Add($line)
+        }
+    }
+    foreach ($reel in @($fields.Keys | Where-Object { $_.StartsWith('WatchFeedOrWarionFragment{', [StringComparison]::Ordinal) })) {
+        $at = $reel
+        for ($level = 0; $null -ne $at -and $level -lt 12; $level++) {
+            if (-not $fields.ContainsKey($at)) { break }
+            $text = $fields[$at] -join "`n"
+            if ($text -cnotmatch '\bmHidden=false\b' -or $text -cnotmatch '\bmDetached=false\b' -or
+                    $text -cnotmatch '\bmMenuVisible=true\b' -or $text -cnotmatch '\bmUserVisibleHint=true\b') { break }
+            $parents = @([regex]::Matches($text, '(?m)^\s*mParentFragment=([\w$.]+\{[0-9a-f]+\})') | ForEach-Object { $_.Groups[1].Value })
+            if ($parents.Count -gt 1) { break }
+            $at = if ($parents.Count) { $parents[0] } else { $null }
+        }
+        if ($null -eq $at) { return $true }
+    }
+    return $false
+}
+
+# Proves the reel viewer is in front from the resumed Facebook screen's fragments, which can be
+# read while a video plays.
+function Get-AuditReelProof {
+    Assert-AuditForeground
+    $windowBefore = $script:auditWindowIdentity
+    $top = @(Invoke-Adb shell dumpsys activity top)
+    Assert-AuditForeground
+    if ($script:auditWindowIdentity -cne $windowBefore) { return $false }
+    return Test-AuditReelViewer $top $windowBefore.Substring(0, $windowBefore.IndexOf('|'))
+}
+
+# The one node a "tap:<label>" step may tap, or $null. A row can repeat its label on a child that
+# isn't clickable (the menu's Settings and privacy row on the S22), so several matches still
+# name one target when exactly one is clickable and every other match sits inside it.
+function Select-AuditTapNode([string]$Label, [object[]]$Nodes) {
+    $boundsPattern = '^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$'
+    $found = @($Nodes | Where-Object { $_.text -ceq $Label -or $_.'content-desc' -ceq $Label } |
+        Where-Object { $_.package -ceq $Package -and $_.bounds -match $boundsPattern })
+    if ($found.Count -eq 1) { return $found[0] }
+    $rows = @($found | Where-Object { $_.clickable -ceq 'true' })
+    if ($found.Count -lt 2 -or $rows.Count -ne 1) { return $null }
+    $null = $rows[0].bounds -match $boundsPattern
+    $outer = @([int]$Matches[1], [int]$Matches[2], [int]$Matches[3], [int]$Matches[4])
+    foreach ($other in $found) {
+        if ([object]::ReferenceEquals($other, $rows[0])) { continue }
+        $null = $other.bounds -match $boundsPattern
+        if ([int]$Matches[1] -lt $outer[0] -or [int]$Matches[2] -lt $outer[1] -or
+                [int]$Matches[3] -gt $outer[2] -or [int]$Matches[4] -gt $outer[3]) { return $null }
+    }
+    return $rows[0]
 }
 
 function Save-Screenshot([string]$Path) {
@@ -281,7 +406,16 @@ function Save-Screenshot([string]$Path) {
     Invoke-Adb shell rm -f /sdcard/hushfacebook-audit.png | Out-Null
 }
 
+# The one MAIN/LAUNCHER entry the phone lists for Facebook: the default LoginActivity, or the
+# alias an alternate icon turned on (Android lists only enabled components). Zero or several
+# fail the run before anything changes. Component states are read, never set.
+function Get-AuditLauncher {
+    $lines = @(Invoke-Adb shell cmd package query-activities --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER $Package)
+    return Select-AndroidLauncher -Lines $lines -PackageName $Package -LauncherClass $LauncherClass
+}
+
 function Start-Facebook {
+    if (-not $Entry) { throw 'The launcher entry was not resolved. No app start was sent.' }
     Invoke-Adb shell am force-stop $Package | Out-Null
     Invoke-Adb shell am start -W -n $Entry | Out-Null
     Start-Sleep -Seconds ($SettleSeconds * 2)
@@ -437,6 +571,7 @@ function Restore-AuditState {
 }
 
 function Get-Report([string]$Path) {
+    if (-not $Entry) { throw 'The launcher entry was not resolved. No report request was sent.' }
     Invoke-Adb shell rm -f "$AuditDir/report.txt" | Out-Null
     Invoke-Adb shell am start -W -n $Entry --ez "$Extra.AUDIT_REPORT" true | Out-Null
     for ($wait = 0; $wait -lt 20; $wait++) {
@@ -474,6 +609,7 @@ function Close-Settings {
 function Save-SettingsPages([string]$Pass, [string]$RequestedLocale = '') {
     $dir = Join-Path $OutDir "pages-$Pass"
     New-Item -ItemType Directory -Force $dir | Out-Null
+    if (-not $Entry) { throw 'The launcher entry was not resolved. No settings page was opened.' }
     $results = New-Object System.Collections.Generic.List[object]
     $translations = @{}
     if ($RequestedLocale) {
@@ -602,7 +738,8 @@ if ($basePath.Count -ne 1) { throw 'Could not identify one installed base APK.' 
 $apkHash = ((Invoke-Adb shell "sha256sum $(Format-Shell $basePath[0].Substring(8))") -join '').Trim()
 if ($apkHash -cnotmatch '\A([a-f0-9]{64})\s') { throw 'Could not hash the installed APK.' }
 $installedHash = $Matches[1]
-Write-Step "Facebook $version on $Serial, results in $OutDir"
+$Entry = "$Package/$(Get-AuditLauncher)"
+Write-Step "Facebook $version on $Serial, launching $Entry, results in $OutDir"
 
 $problems = New-Object System.Collections.Generic.List[string]
 $summary = New-Object System.Collections.Generic.List[string]
@@ -629,6 +766,8 @@ try {
     if (-not $SkipWalk) {
         $stepNumber = 0
         $routeVerified = $false
+        $routeReel = $false
+        $routeStep = $null
         $skipBack = $false
         foreach ($step in $Visit) {
             $stepNumber++
@@ -639,6 +778,12 @@ try {
                 continue
             }
             if ($step -like 'tap:*') {
+                if ($routeReel) {
+                    $skipBack = $true
+                    $summary.Add("Walk: step $stepNumber ($step) would tap a reel. No tap sent.")
+                    if ($OptionalVisit -cnotcontains $step) { $problems.Add("Required step $stepNumber would tap a reel: $step") }
+                    continue
+                }
                 $skipBack = $false
                 $label = $step.Substring(4)
                 $node = $null
@@ -647,9 +792,7 @@ try {
                         Invoke-Adb shell input swipe $swipeX $swipeTo $swipeX $swipeFrom 300 | Out-Null
                         Start-Sleep -Milliseconds 1200
                     }
-                    $node = Get-UiNodes | Where-Object { $_.text -eq $label -or $_.'content-desc' -eq $label } |
-                        Where-Object { $_.package -ceq $Package -and $_.bounds -match '^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$' }
-                    if (@($node).Count -ne 1) { $node = $null }
+                    $node = Select-AuditTapNode $label @(Get-UiNodes)
                 }
                 if ($node -and $node.bounds -match '^\[(\d+),(\d+)\]\[(\d+),(\d+)\]$') {
                     if ([int]$Matches[1] -lt 0 -or [int]$Matches[2] -lt 0 -or
@@ -661,6 +804,7 @@ try {
                     try {
                         Invoke-Adb shell input tap ([int](([int]$Matches[1] + [int]$Matches[3]) / 2)) ([int](([int]$Matches[2] + [int]$Matches[4]) / 2)) | Out-Null
                     } finally { $inputNodeLabel = $null }
+                    $routeStep = $null
                     Start-Sleep -Seconds $SettleSeconds
                 } else {
                     $skipBack = $true
@@ -668,29 +812,63 @@ try {
                     if ($OptionalVisit -cnotcontains $step) { $problems.Add("Required step $stepNumber was not reached: $step") }
                 }
             } elseif ($step -eq 'longpress') {
-                Invoke-Adb shell input swipe $swipeX ([int]($height / 2)) $swipeX ([int]($height / 2)) 2500 | Out-Null
+                $inputReel = $routeReel
+                $inputWindow = if ($routeReel) { $routeWindow }
+                try { Invoke-Adb shell input swipe $swipeX ([int]($height / 2)) $swipeX ([int]($height / 2)) 2500 | Out-Null }
+                finally { $inputReel = $false; $inputWindow = $null }
                 Start-Sleep -Seconds 1
             } elseif ($step -eq 'back') {
                 if ($skipBack) { $skipBack = $false; continue }
-                Invoke-Adb shell input keyevent KEYCODE_BACK | Out-Null
+                $inputReel = $routeReel
+                try { Invoke-Adb shell input keyevent KEYCODE_BACK | Out-Null }
+                finally { $inputReel = $false }
+                $routeReel = $false
+                $routeStep = $null
                 Start-Sleep -Seconds 1
+            } elseif ($step -eq 'query') {
+                if ($routeStep -cne 'fb://search' -or -not (Test-AuditKeyboard)) {
+                    $summary.Add("Walk: no open search field to type in at step $stepNumber. Nothing typed.")
+                    if ($OptionalVisit -cnotcontains $step) { $problems.Add("Required step $stepNumber had no open search field: $step") }
+                    continue
+                }
+                $inputWindow = $routeWindow
+                $inputQuery = $true
+                try {
+                    Invoke-Adb shell input text $AuditQuery | Out-Null
+                    Start-Sleep -Seconds 2
+                    Invoke-Adb shell input keyevent KEYCODE_ENTER | Out-Null
+                } finally { $inputWindow = $null; $inputQuery = $false }
+                $routeStep = $null
+                Start-Sleep -Seconds $SettleSeconds
             } else {
                 $routeVerified = $false
+                $routeReel = $false
+                $routeStep = $null
+                $reel = $ReelRoutes -ccontains $step
                 $launch = (Invoke-Adb shell am start -W -a android.intent.action.VIEW -d $step -p $Package) -join "`n"
                 Start-Sleep -Seconds $SettleSeconds
-                $routeVerified = $launch -cmatch '(?m)^Status: ok\r?$' -and (Test-AuditDestination $step @(Get-UiNodes))
+                $routeVerified = $launch -cmatch '(?m)^Status: ok\r?$' -and
+                    $(if ($reel) { Get-AuditReelProof } else { Test-AuditDestination $step @(Get-UiNodes) })
                 if (-not $routeVerified) {
                     $summary.Add("Walk: destination not proved at step $stepNumber ($step). No input sent.")
                     if ($OptionalVisit -cnotcontains $step) { $problems.Add("Required destination not reached at step ${stepNumber}: $step") }
                     continue
                 }
                 $routeWindow = $script:auditWindowIdentity
+                $routeReel = $reel
+                $routeStep = $step
                 # Before the swipes too, while a tab bar that slides away is still on screen.
                 Save-Screenshot (Join-Path $OutDir ('walk-{0:00}-{1}-top.png' -f $stepNumber, ($step -replace '[^A-Za-z0-9]+', '-').Trim('-')))
                 for ($i = 0; $i -lt $Swipes; $i++) {
+                    # Search opens with its field focused and the keyboard up.
+                    if (Test-AuditKeyboard) {
+                        $summary.Add("Walk: the keyboard is open at step $stepNumber ($step). No swipe sent.")
+                        break
+                    }
                     $inputWindow = $routeWindow
+                    $inputReel = $routeReel
                     try { Invoke-Adb shell input swipe $swipeX $swipeFrom $swipeX $swipeTo 300 | Out-Null }
-                    finally { $inputWindow = $null }
+                    finally { $inputWindow = $null; $inputReel = $false }
                     Start-Sleep -Milliseconds 1500
                 }
             }

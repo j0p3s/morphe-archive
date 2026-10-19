@@ -55,5 +55,7 @@ body:
       options:
         - label: I searched open and closed requests and this isn't a duplicate.
           required: true
+        - label: I haven't requested this app from another patch bundle.
+          required: true
         - label: I understand that features the server controls (AI, cloud sync, streaming quality) cannot be patched.
           required: true

@@ -5,12 +5,12 @@
 package app.morphe.patches.imo.misc.tabs
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.methodCall
-import com.android.tools.smali.dexlib2.AccessFlags
+
+internal object LegacyTabsConfigFingerprint : Fingerprint(
+    strings = listOf("legacyTabsConfig"),
+)
 
 internal object HomeTabIdsFingerprint : Fingerprint(
-    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
+    classFingerprint = LegacyTabsConfigFingerprint,
     returnType = "Ljava/util/List;",
-    parameters = emptyList(),
-    filters = listOf(methodCall(name = "toLegacyId", returnType = "I")),
 )

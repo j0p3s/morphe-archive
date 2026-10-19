@@ -151,6 +151,9 @@ Android sends pinterest.com and pin.it links to a patched Pinterest only after y
 Feed	Feed
 Hide AI-labeled pins	Ocultar pins com selo de IA
 Removes pins that Pinterest labels as made or changed with AI from your home feed, search, related pins and boards. AI images without the label still show.	Remove do seu feed inicial, da busca, dos pins relacionados e das pastas os pins que o Pinterest marca como criados ou alterados com IA. Imagens de IA sem essa marca continuam aparecendo.
+# context: a Feed switch right under Hide AI-labeled pins. It removes pins Pinterest doesn't label as AI when their own title or description says they're AI art, or when they come from a website that only hosts AI images. It has its own switch.
+Hide pins that say they're AI	Ocultar pins que dizem ser IA
+Removes pins without the label whose title or description calls them AI art, or that come from an AI image site. It goes by their words, so some still show.	Remove pins sem o selo cujo título ou descrição os chama de arte com IA, ou que vêm de um site de imagens de IA. Ele se guia pelas palavras deles, então alguns ainda aparecem.
 Promoted and AI-labeled pins	Pins promovidos e com selo de IA
 Promoted pins	Pins promovidos
 Removes promoted pins from your home feed, search, related pins and boards, and hides panels that only hold ads.	Remove os pins promovidos do seu feed inicial, da busca, dos pins relacionados e das pastas, e esconde os painéis que só têm anúncios.
@@ -162,6 +165,9 @@ Pin actions	Ações do Pin
 Interface	Interface
 Hide shopping and product pins	Ocultar compras e Pins de produtos
 Hides product pins, shopping stories, featured boards and Shop the look under pins. Visit and Paid link stay.	Oculta pins de produtos, stories de compras, pastas em destaque e Shop the look abaixo dos pins. O link para visitar o site e a indicação de link pago ficam.
+# context: a Feed switch under Hide shopping and product pins, from the Filter feed patch. It removes pins that play a video (video pins and idea pins with video) from the lists Pinterest shows. Photos and animated GIFs stay. The title is also the name of that part of the patch in the build report.
+Hide video pins	Ocultar pins de vídeo
+Removes pins that play a video from your home feed, search, related pins and boards. Photos and GIFs stay.	Remove os pins que reproduzem um vídeo do seu feed inicial, da busca, dos pins relacionados e das pastas. Fotos e GIFs ficam.
 Disable analytics	Desativar análises
 Stops usage reports and analytics tasks. Restart after turning off or pausing. Google's analytics stays off until you patch again without Disable analytics.	Para os relatórios de uso e as tarefas de análise. Reinicie após desligar ou pausar. As análises do Google ficam desligadas até você aplicar os patches de novo sem Desativar análises.
 Firebase and Google Analytics collection is turned off	A coleta do Firebase e do Google Analytics está desativada
@@ -297,8 +303,8 @@ Couldn't prepare this pin. Open it again, then retry.	Não foi possível prepara
 %1$s (%2$s to %3$s)	%1$s (de %2$s para %3$s)
 Your choice is saved, but this build doesn't include the patch for it.	Sua escolha está salva, mas esta versão não inclui o patch para ela.
 Undoing import	Desfazendo importação
-Import undone. Your earlier switches are back.	Importação desfeita. Suas opções anteriores foram restauradas.
-Undo ended because a saved switch changed.	Não é mais possível desfazer porque uma opção salva mudou.
+Import undone. Your earlier settings are back.	Importação desfeita. Suas configurações anteriores foram restauradas.
+Undo ended because a saved setting changed.	Não é mais possível desfazer porque uma configuração salva mudou.
 There's no import to undo.	Não há importação para desfazer.
 Couldn't undo the import. Your imported switches are unchanged.	Não foi possível desfazer a importação. Suas opções importadas não mudaram.
 Couldn't undo the import or restore it. Check the switches here.	Não foi possível desfazer nem restaurar a importação. Confira aqui.
@@ -392,6 +398,15 @@ loaded board pins	Pins carregados da pasta
 # context: Long-press download, a button added to the round menu a held pin opens, and its switch on the Pin actions page.
 Long-press download	Baixar com toque longo
 Adds Download to a grid pin's long-press menu. Slide onto it and release. Needs Download pins on.	Adiciona Baixar ao menu ao manter um pin da grade pressionado. Deslize até ele e solte. Baixar Pins precisa estar ativado.
+# context: three switches on the Pin actions page, under Long-press download. Each takes one of Pinterest's own buttons out of the round menu a held grid pin opens, named the way Pinterest labels them: Save (saving the pin), Send (sharing it) and Search image. The toast shows when the third goes on while Long-press download is off. The last line names this part of the patch in a coverage summary.
+Hide Save in the long-press menu	Ocultar Salvar no menu de toque longo
+Takes Pinterest's Save button out of a grid pin's long-press menu. Saving from the pin itself still works.	Tira o botão Salvar do Pinterest do menu ao manter um pin da grade pressionado. Salvar pelo próprio pin continua funcionando.
+Hide Send in the long-press menu	Ocultar Enviar no menu de toque longo
+Takes Pinterest's Send button out of a grid pin's long-press menu. Sharing from the pin itself still works.	Tira o botão Enviar do Pinterest do menu ao manter um pin da grade pressionado. Compartilhar pelo próprio pin continua funcionando.
+Hide Search image in the long-press menu	Ocultar Pesquisar imagem no menu de toque longo
+Takes Pinterest's Search image button out of a grid pin's long-press menu. The lens on a pin you open still searches.	Tira o botão Pesquisar imagem do Pinterest do menu ao manter um pin da grade pressionado. A lente de um pin que você abre continua pesquisando.
+With nothing left in it, the menu keeps Pinterest's buttons.	Sem outros botões, o menu mantém os do Pinterest.
+hiding Pinterest's long-press buttons	ocultar os botões de toque longo do Pinterest
 # context: Hide ads coverage in a partial build: each list holder or ad-only view the patch did or didn't hook, named in the Feed page summary. The last row adds how many of a target's hooks went in.
 promoted pins in feed pages	pins promovidos nas páginas do feed
 promoted pins in paged results	pins promovidos nos resultados paginados
@@ -496,6 +511,10 @@ Hides the back arrow that floats over a pin you open. Your phone's back gesture 
 Hide lens button on pins	Ocultar botão Lens nos pins
 Hide closeup buttons	Ocultar botões nos pins
 Hides the visual search button in the corner of a pin you open. Search image in the pin menu still works. The change shows on the next pin you open.	Oculta o botão de pesquisa visual no canto de um pin que você abre. Pesquisar imagem no menu do pin continua funcionando. A mudança aparece no próximo pin que você abrir.
+# context: a third Hide closeup buttons switch on the Interface page, right under Hide lens button. Pinterest puts a Search image label on the lens button for the first two pins someone opens each day. With this on the lens stays but never wears the label. The last line names this part of the patch in a build report.
+Hide Search image label on pins	Ocultar o rótulo Pesquisar imagem nos pins
+Keeps the lens button on a pin you open but leaves off the Search image label Pinterest adds to it on your first pins each day. Tapping the lens still searches. The change shows on the next pin you open.	Mantém o botão Lens em um pin que você abre, mas tira o rótulo Pesquisar imagem que o Pinterest coloca nele nos seus primeiros pins do dia. Tocar no Lens continua pesquisando. A mudança aparece no próximo pin que você abrir.
+Hide Search image label	Ocultar o rótulo Pesquisar imagem
 # context: Save list, after a list wasn't written, when the app holding the picked file won't say how big it is, so the file might be one the user picked to write over
 File left alone. If it's empty, delete it in your files app.	O arquivo ficou como estava. Se estiver vazio, apague-o no app de arquivos.
 # context: the toast at the end of a pin download selection when its progress dialog has closed. %1$s is the selection's title, Download visible pins or Download board
@@ -551,3 +570,70 @@ English	Inglês
 # context: the same toast when any other number of switches didn't change
 %1$d changed. %2$d settings didn't. Reopen settings and try again.	Alteradas: %1$d. Sem mudar: %2$d. Reabra as configurações e tente de novo.
 The app with the last pin list hasn't answered. Try later.	O app da última lista de Pins não respondeu. Tente depois.
+# context: a Feed row under Hide video pins, from the Filter feed patch. A tap opens a box where the person types words and phrases, and pins whose title or description holds one leave the feed. Also the name of that part of the patch in the build report and in the settings import preview
+Muted words	Palavras silenciadas
+# context: the Muted words row's line while the list is empty
+Hides pins whose title or description has a word or phrase you add here. None yet.	Oculta pins cujo título ou descrição tenha uma palavra ou frase que você adicionar aqui. Nenhuma ainda.
+# context: the Muted words row's line when the list holds exactly one entry; %1$d is how many
+Hiding pins that mention %1$d word or phrase. Tap to change the list.	Ocultando pins que mencionam %1$d palavra ou frase. Toque para mudar a lista.
+# context: the same line for any other number of entries
+Hiding pins that mention any of %1$d words or phrases. Tap to change the list.	Ocultando pins que mencionam alguma de %1$d palavras ou frases. Toque para mudar a lista.
+# context: example shown in the empty Muted words box: two everyday words or phrases in this language, separated by a comma
+cake, wedding dress	bolo, vestido de noiva
+# context: the message above the Muted words box; %1$d is how many entries the list holds at most, %2$d how many characters each can have
+Put each word or phrase on its own line or after a comma. Up to %1$d, each up to %2$d characters. Capitals don't matter, and only whole words count.	Coloque cada palavra ou frase em uma linha própria ou depois de uma vírgula. Até %1$d, cada uma com até %2$d caracteres. Maiúsculas não importam, e só palavras inteiras contam.
+# context: button in the Muted words box that saves the list
+Save	Salvar
+# context: button in the Muted words box that empties the list at once
+Clear	Limpar
+Couldn't open the muted words. Try again.	Não foi possível abrir as palavras silenciadas. Tente de novo.
+Couldn't save the muted words. Try again.	Não foi possível salvar as palavras silenciadas. Tente de novo.
+# context: the toast after the muted words list was saved empty
+No muted words. Every pin shows again.	Nenhuma palavra silenciada. Todos os pins voltam a aparecer.
+# context: the start of the toast after the muted words list was saved, when it holds exactly one entry; %1$d is how many
+%1$d muted word saved.	%1$d palavra silenciada salva.
+# context: the same for any other number
+%1$d muted words saved.	%1$d palavras silenciadas salvas.
+# context: added to that toast when exactly one entry was left out for being too long; %1$d is how many, %2$d the most characters an entry can have
+%1$d was longer than %2$d characters, so it was left out.	%1$d tinha mais de %2$d caracteres, então ficou de fora.
+# context: the same for any other number
+%1$d were longer than %2$d characters, so they were left out.	%1$d tinham mais de %2$d caracteres, então ficaram de fora.
+# context: added to that toast when exactly one entry was left out because the list was full; %1$d is how many, %2$d how many entries the list holds
+%1$d more word didn't fit, since the list holds %2$d.	%1$d palavra a mais não coube, porque a lista comporta %2$d.
+# context: the same for any other number
+%1$d more words didn't fit, since the list holds %2$d.	%1$d palavras a mais não couberam, porque a lista comporta %2$d.
+# context: heading of the settings import preview when the file changes no switch but changes the muted words list
+Your muted words will change.	Suas palavras silenciadas serão alteradas.
+# context: in the import preview line that reads like Muted words (none to 2 words): the list holds no words
+none	nenhuma
+# context: in that preview line, how many words the list holds when it is exactly one; %1$d is the number
+%1$d word	%1$d palavra
+# context: the same for any other number
+%1$d words	%1$d palavras
+Pinterest's own AI setting	A configuração de IA do Pinterest
+Pinterest can show you fewer AI pins among the ones it picks for you. It works alongside the switches above, and neither one catches every AI pin. Tap to open it.	O Pinterest pode mostrar menos pins de IA entre os que escolhe para você. Essa configuração funciona junto com as opções acima, e nenhuma das duas pega todos os pins de IA. Toque para abrir.
+Pinterest couldn't open that page.	O Pinterest não conseguiu abrir essa página.
+# context: Copy image, a row in the pin menu that puts the pin's full-size picture on the clipboard (#11)
+Copy image	Copiar imagem
+Adds Copy image to the pin menu. It puts the full-size picture on the clipboard, ready to paste into other apps. Needs Download pins on. Videos don't get the row.	Adiciona Copiar imagem ao menu do pin. Coloca a imagem em tamanho original na área de transferência, pronta para colar em outros apps. Baixar Pins precisa estar ativado. Vídeos não ganham a linha.
+Pin image	Imagem do pin
+Image copied.	Imagem copiada.
+That image is too big to copy.	Essa imagem é grande demais para copiar.
+Pinterest didn't send a usable image.	O Pinterest não enviou uma imagem utilizável.
+Copying the image took too long. Try again.	Copiar a imagem demorou demais. Tente de novo.
+Still copying the last image.	A última imagem ainda está sendo copiada.
+Couldn't copy the image. Check your connection and try again.	Imagem não copiada. Verifique a conexão e tente de novo.
+# context: Share image, a row in the pin menu that sends the pin's full-size picture through Android's share menu (#11)
+Share image	Compartilhar imagem
+Adds Share image to the pin menu. It sends the full-size picture itself, not a link, through Android's share menu. Needs Download pins on. Videos don't get the row.	Adiciona Compartilhar imagem ao menu do pin. Envia a própria imagem em tamanho original, não um link, pelo menu de compartilhamento do Android. Baixar Pins precisa estar ativado. Vídeos não ganham a linha.
+That image is too big to share.	Essa imagem é grande demais para compartilhar.
+Getting the image took too long. Try again.	Obter a imagem demorou demais. Tente de novo.
+Still getting the last image ready.	A última imagem ainda está sendo preparada.
+Couldn't share the image. Check your connection and try again.	Imagem não compartilhada. Verifique a conexão e tente de novo.
+# context: a Feed switch under Muted words, from the Keep Home feed patch. When it's on, the Home feed doesn't load new pins by itself when the person comes back to the app or to the Home tab, so the pins they were looking at stay put. Pulling down on Home still loads new ones. The title is also the patch's name in the build report and in the settings import preview
+Keep Home feed	Manter o feed inicial
+Home keeps the pins you were looking at when you come back to Pinterest or to the Home tab. Pull down on Home to load new pins.	O feed inicial mantém os pins que você estava vendo quando você volta ao Pinterest ou à aba Início. Puxe para baixo no Início para carregar pins novos.
+# context: an Interface switch under Original images, from the Show posted date patch. When it's on, the day a pin was posted shows in small text under the pin's title when the pin is opened. The title is also the patch's name in the build report and in the settings import preview. In Posted %1$s, %1$s is the date written the phone's way, such as Oct 12, 2026
+Show posted date	Mostrar data de publicação
+Shows the day a pin was posted under its title. It shows on the next pin you open.	Mostra abaixo do título de um pin o dia em que ele foi publicado. Aparece no próximo pin que você abrir.
+Posted %1$s	Publicado em %1$s

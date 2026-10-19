@@ -12,6 +12,7 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.util.TypedValue;
+import android.view.ContextThemeWrapper;
 import android.view.View;
 import android.widget.EditText;
 
@@ -168,6 +169,33 @@ public final class PatchesTheme {
     public static boolean isNightMode(Context context) {
         return (context.getResources().getConfiguration().uiMode
                 & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    public static boolean isAppNightMode(Context context) {
+        return isNightMode(withNightMode(context));
+    }
+
+    public static Context withApplicationTheme(Context context) {
+        return new ContextThemeWrapper(withNightMode(context), context.getApplicationInfo().theme);
+    }
+
+    static Context withAppNightTheme(Context context) {
+        final Context nightContext = withNightMode(context);
+        return (nightContext == context) ? context
+                : new ContextThemeWrapper(nightContext, context.getApplicationInfo().theme);
+    }
+
+    static Context withNightMode(Context base) {
+        final int nightMode = uiNightMode();
+        final Configuration configuration = base.getResources().getConfiguration();
+        final int currentNightMode = configuration.uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        if (nightMode == Configuration.UI_MODE_NIGHT_UNDEFINED || nightMode == currentNightMode) {
+            return base;
+        }
+
+        final Configuration override = new Configuration(configuration);
+        override.uiMode = (configuration.uiMode & ~Configuration.UI_MODE_NIGHT_MASK) | nightMode;
+        return base.createConfigurationContext(override);
     }
 
     public static int dpToPx(Context context, int value) {

@@ -42,7 +42,6 @@ public enum PatchFamily {
     SANITIZE_SHARING_LINKS(FamilyNames.SANITIZE_SHARING_LINKS, "sanitizeSharingLinks", null,
             Settings.SANITIZE_SHARING_LINKS),
     EXTERNAL_BROWSER(FamilyNames.EXTERNAL_BROWSER, "externalBrowser", null, Settings.OPEN_LINKS_EXTERNALLY),
-    DISABLE_ANALYTICS(FamilyNames.DISABLE_ANALYTICS, "disableAnalytics", null, Settings.DISABLE_ANALYTICS),
     BUILD_EXPIRED_POPUP(FamilyNames.BUILD_EXPIRED_POPUP, "buildExpiredPopup", null,
             Settings.REMOVE_BUILD_EXPIRED_POPUP),
     RESTORE_TRUST(FamilyNames.RESTORE_TRUST, "restoreTrust", "the re-signed build fix"),
@@ -53,6 +52,7 @@ public enum PatchFamily {
             Settings.BLOCK_STORY_AUTO_ADVANCE),
     STORY_TIME(FamilyNames.STORY_TIME, "storyTime", null, Settings.SHOW_STORY_TIME),
     STORY_MENTIONS(FamilyNames.STORY_MENTIONS, "storyMentions", null, Settings.SHOW_STORY_MENTIONS),
+    STORY_FOLLOW(FamilyNames.STORY_FOLLOW, "storyFollow", null, Settings.HIDE_STORY_FOLLOW),
     POST_TIME(FamilyNames.POST_TIME, "postTime", null, Settings.SHOW_POST_TIME),
     HIDDEN_LIKE_COUNTS(FamilyNames.HIDDEN_LIKE_COUNTS, "hiddenLikeCounts", null, Settings.SHOW_HIDDEN_LIKE_COUNTS),
     BACK_LEAVES_HOME(FamilyNames.BACK_LEAVES_HOME, "backLeavesHome", null, Settings.BACK_LEAVES_HOME),
@@ -141,9 +141,12 @@ public enum PatchFamily {
             Settings.VIEW_PROFILE_PICTURES, Settings.COPY_PROFILE_TEXT),
     VOICE_MESSAGE(FamilyNames.VOICE_MESSAGE, "voiceMessage", null, Settings.DOWNLOAD_VOICE_MESSAGES),
     HIDE_COMMENTS(FamilyNames.HIDE_COMMENTS, "hideComments", null, Settings.HIDE_COMMENTS),
+    COMMENT_EMOJI_ROW(FamilyNames.COMMENT_EMOJI_ROW, "commentEmojiRow", null, Settings.HIDE_COMMENT_EMOJI_ROW),
+    FEED_FOLLOW(FamilyNames.FEED_FOLLOW, "feedFollow", null, Settings.HIDE_FEED_FOLLOW),
     REEL_DECLUTTER(FamilyNames.REEL_DECLUTTER, "reelDeclutter", null, Settings.HIDE_REEL_FOLLOW_BUTTON,
             Settings.HIDE_REEL_CHIPS, Settings.HIDE_REEL_SOCIAL_FOOTER, Settings.HIDE_REEL_COMMENT_BAR,
             Settings.HIDE_REEL_COMMENT_BAR_EVERYWHERE, Settings.HIDE_REEL_REPLY_BAR, Settings.HIDE_REELS_TOP_BAR,
+            Settings.HIDE_REELS_CREATE_BUTTON, Settings.HIDE_REELS_YOUR_ALGORITHM,
             Settings.HIDE_REEL_SAVE_BUTTON, Settings.KEEP_REEL_CLEAR_MODE),
     REEL_DOWNLOAD(FamilyNames.REEL_DOWNLOAD, "reelDownload", null, Settings.DOWNLOAD_REELS),
     DOUBLE_TAP_LIKE(FamilyNames.DOUBLE_TAP_LIKE, "doubleTapLike", null, Settings.TURN_OFF_DOUBLE_TAP_LIKE,
@@ -182,7 +185,6 @@ public enum PatchFamily {
             Settings.DEFAULT_PLAYBACK_QUALITY),
     DATA_SAVER(FamilyNames.DATA_SAVER, "dataSaver", null, Settings.DATA_SAVER),
     TRANSLATED_START(FamilyNames.TRANSLATED_START, "translatedStart", "the start-up fix for x86 devices"),
-    DEVELOPER_OPTIONS(FamilyNames.DEVELOPER_OPTIONS, "developerOptions", null, Settings.OPEN_DEVELOPER_OPTIONS),
     PURE_BLACK(FamilyNames.PURE_BLACK, "pureBlack", "the pure black dark mode"),
     VERSION_CODE(FamilyNames.VERSION_CODE, "versionCode", "the raised version code");
 
@@ -291,46 +293,6 @@ public enum PatchFamily {
         return FEED_SUGGESTIONS.inBuild() && SettingsStatus.feedTypes();
     }
 
-    /** Whether a test says this build reads, or writes, MetaConfig overrides, instead of asking {@link SettingsStatus}. */
-    @Nullable
-    static volatile Boolean overrideExchangeForTests, overrideImportForTests;
-
-    /**
-     * Whether this build reads MetaConfig overrides, for Export and Validate. Open developer options
-     * goes in without it when Instagram's override reader has moved.
-     */
-    public static boolean overrideExchangeInBuild() {
-        Boolean forced = overrideExchangeForTests;
-        if (forced != null) return forced;
-        Set<PatchFamily> families = inBuildForTests;
-        if (families != null) return families.contains(DEVELOPER_OPTIONS);
-        return DEVELOPER_OPTIONS.inBuild() && SettingsStatus.overrideExchange();
-    }
-
-    /** Whether this build writes them too, for Import, Restore and Reset. The writer needs the reader. */
-    public static boolean overrideImportInBuild() {
-        if (!overrideExchangeInBuild()) return false;
-        Boolean forced = overrideImportForTests;
-        if (forced != null) return forced;
-        return inBuildForTests != null || SettingsStatus.overrideImport();
-    }
-
-    /** Whether a test says this build shows imported flag names in MetaConfig, instead of asking {@link SettingsStatus}. */
-    @Nullable
-    static volatile Boolean flagNamesForTests;
-
-    /**
-     * Whether this build shows imported flag names in Instagram's MetaConfig list, for Import flag
-     * names. Open developer options goes in without it when that list has moved.
-     */
-    public static boolean flagNamesInBuild() {
-        Boolean forced = flagNamesForTests;
-        if (forced != null) return forced;
-        Set<PatchFamily> families = inBuildForTests;
-        if (families != null) return families.contains(DEVELOPER_OPTIONS);
-        return DEVELOPER_OPTIONS.inBuild() && SettingsStatus.flagNames();
-    }
-
     /** The families this build carries, in declaration order. */
     public static Set<PatchFamily> inThisBuild() {
         Set<PatchFamily> found = EnumSet.noneOf(PatchFamily.class);
@@ -384,16 +346,8 @@ public enum PatchFamily {
                 } else if (family == FRIENDSHIP_STATUS && !unfollowersInBuild()) {
                     lines.add("  Recent unfollowers: not in this build (Instagram's follow list pager didn't match)");
                 }
-                if (family == DEVELOPER_OPTIONS && !overrideExchangeInBuild()) {
-                    lines.add("  Export, Validate and Import overrides: not in this build (Instagram's override reader didn't match)");
-                } else if (family == DEVELOPER_OPTIONS && !overrideImportInBuild()) {
-                    lines.add("  Import overrides: not in this build (Instagram's override writer didn't match)");
-                }
-                if (family == DEVELOPER_OPTIONS && !flagNamesInBuild()) {
-                    lines.add("  Import flag names: not in this build (Instagram's MetaConfig list didn't match)");
-                }
                 if (family == VERSION_CODE) lines.add("  " + VersionCode.reportLine());
-                if (family == DISABLE_ANALYTICS || family == SANITIZE_SHARING_LINKS || family == TRANSLATED_START) {
+                if (family == SANITIZE_SHARING_LINKS || family == TRANSLATED_START) {
                     try {
                         String encoded = (String) SettingsStatus.class.getMethod(family.statusMethod + "Coverage").invoke(null);
                         lines.add("  " + coverageLine(encoded));
@@ -476,10 +430,13 @@ public enum PatchFamily {
             return line.append("no switch, stays in while paused: ").append(staysWhilePaused).toString();
         }
         boolean anyOn = false;
-        // A switch with switches under it acts only through them, and one under a switch that's off
-        // does nothing, whatever it holds.
+        // One under a switch that's off does nothing, whatever it holds. Turn off double tap to like
+        // acts only through the places under it, while every other switch with switches under it
+        // acts on its own and those only change how.
         Set<Object> parents = new HashSet<>();
-        for (BooleanSetting setting : switches) parents.addAll(setting.getParentSettings());
+        if (this == DOUBLE_TAP_LIKE) {
+            for (BooleanSetting setting : switches) parents.addAll(setting.getParentSettings());
+        }
         for (BooleanSetting setting : switches) {
             anyOn |= setting.savedValue() && setting.isAvailable() && !parents.contains(setting);
         }

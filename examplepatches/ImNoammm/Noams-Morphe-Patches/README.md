@@ -28,9 +28,12 @@ Right now it has patches for these apps:
 
 - Chess.com 4.10.18: arrows and marked squares in every game, like on the website. Your own board colours and
   accent colour, pure black backgrounds and the website's Arcade animations. Pick what Home and the bottom bar
-  show, play time controls under a minute and send a game to Lichess for review. No ads, rating prompts or Premium
-  upsells. Nothing gets unlocked, though: when you hit a free limit you get a short toast instead of a Premium
-  screen. You turn it all on and off under More, Noam's Patches.
+  show and play time controls under a minute. Game Review asks who reviews each game: chess.com, Lichess with your
+  Lichess account, or Stockfish 19 right on your phone, offline and with no daily limit. The Stockfish and Lichess
+  reviews are still in beta. Stockfish also shows its best moves on finished games and the analysis boards, and
+  Lichess's puzzles play offline in chess.com's own puzzle screen. Every bot can be played, Play Coach has no daily limit and content the app itself keeps for
+  Premium opens up. No ads, rating prompts or Premium upsells, and a clone option installs it next to the real
+  app. You turn it all on and off under More, Noam's Patches.
 - Block Blast 10.8.1: Classic trays are dealt by the iOS version's own game code, which runs inside the app, and
   you get the iOS version's colour, block, menu and animation themes and its extra effects. No ads, no revive
   offer, no impossible trays, a quicker game over and an optional fake best score that keeps your real one
@@ -38,9 +41,11 @@ Right now it has patches for these apps:
 - Gboard 18.2.4 (arm64): cut off from Google. It has no internet permission and never talks to Play services or
   other Google apps. Voice typing runs on the phone with Whisper and the translate panel uses on-device models.
   GIFs come back from sources you pick (GIPHY and KLIPY with your own free key, nekos.best, Wikimedia Commons and
-  Openverse) through a small helper app, the only part that goes online. Right-to-left languages only change the
-  letters on the keys. It installs next to the normal Gboard and its switches are under No-Google in Gboard's
-  settings.
+  Openverse) through a small helper app, the only part that goes online. Only English's dictionary comes with
+  Gboard: turn on Download dictionaries from Google and the helper fetches the other languages' dictionaries, for
+  word suggestions and autocorrect, from Google's dictionary folder and nowhere else on Google. A switch keeps
+  Gboard in incognito mode everywhere. Right-to-left languages only change the letters on the keys. It installs
+  next to the normal Gboard and its switches are under No-Google in Gboard's settings.
 - Geocaching 10.21.0: Premium-only features work on a Basic account, each as its own switch: map filters,
   statistics from your own finds, log templates, lists, experimental features and sorting your finds and hides,
   and the upgrade badges are gone. Caches the app locks behind Premium open too: they load from geocaching.com the
@@ -62,9 +67,13 @@ patched doesn't work, so if Manager picks your installed patched app, choose the
 Manager signs what it patches with its own key, so if the app is already installed with a different signature,
 like the Play Store version, uninstall it first.
 
+Chess.com's Stockfish analysis patch downloads the official Stockfish 19 (80 MB) from Stockfish's GitHub while Manager
+patches, so patching chess.com with it needs internet.
+
 After you install Gboard, tap its app icon: it takes you to turn the keyboard on and then to choose it, one step at
-a time. Its voice and translation models download in No-Google settings. Downloads and GIFs go through the helper
-app, which the keyboard installs for you when it needs it (Android asks you to confirm).
+a time. Its voice and translation models download in No-Google settings, and so do other languages' dictionaries
+once you turn on Download dictionaries from Google. Downloads and GIFs go through the helper app, which the
+keyboard installs or updates for you when it needs it (Android asks you to confirm).
 
 ## Building it
 
@@ -98,6 +107,12 @@ jar at `~/gb/morphe-desktop.jar` and sign the helper with the keystore in `KEYST
 - Geocaching's map search and cache pages read geocaching.com the way [c:geo](https://github.com/cgeo/cgeo) does,
   and some of its page patterns come from c:geo (Apache-2.0). Its map layers come from OpenStreetMap, OpenTopoMap
   and Esri.
+- Parts of the chess.com Stockfish analysis, Game Review, Lichess puzzles, bot and Play Coach patches and the clone
+  option come from [PrathxmOp/Prathxm-Patches](https://github.com/PrathxmOp/Prathxm-Patches) (GPL-3.0).
+- chess.com's Stockfish analysis runs [Stockfish](https://github.com/official-stockfish/Stockfish) 19 (GPL-3.0),
+  the official arm64 build, which isn't in this repo or the bundle. Its Lichess puzzles come from the
+  [Lichess puzzle database](https://database.lichess.org/#puzzles) and its opening names from
+  [lichess-org/chess-openings](https://github.com/lichess-org/chess-openings), both CC0.
 - Block Blast is Hungry Studio's game. The iOS generation patch runs code from its iOS version.
 
 ## License

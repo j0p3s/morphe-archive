@@ -33,6 +33,8 @@ public final class MorpheSettingsStore {
     public static final String KEY_INFO_REPLACE = "image_info_replace_actions";
     public static final String KEY_IMAGE_INFO = "image_info";
     public static final String KEY_HIGH_QUALITY_IMAGES = "high_quality_images";
+    public static final String KEY_HIDE_VIDEO_PINS = "hide_video_pins";
+    public static final String KEY_KEEP_HOME_FEED = "keep_home_feed";
     public static final String KEY_HIDE_COMMENTS = "hide_comments";
 
     /**
@@ -44,11 +46,12 @@ public final class MorpheSettingsStore {
      */
     public static final String[] KEYS = {
         KEY_DISABLE_ADS,
+        KEY_KEEP_HOME_FEED,
         KEY_HIDE_SHOPPING_PINS,
+        KEY_HIDE_VIDEO_PINS,
         KEY_HIDE_SEARCH_BOARD_MODULES,
         KEY_HIDE_SEARCH_HISTORY,
         KEY_DISABLE_SCREENSHOT_SHARE,
-        KEY_HIDE_COMMENTS,
         KEY_SANITIZE_LINKS,
         KEY_SHARE_LINK_ONLY,
         KEY_SYSTEM_SHARE_SHEET,
@@ -58,6 +61,7 @@ public final class MorpheSettingsStore {
         KEY_LONG_PRESS_DOWNLOAD,
         KEY_IMAGE_INFO,
         KEY_HIDE_LIKE,
+        KEY_HIDE_COMMENTS,
         KEY_HIDE_COMMENT_BUTTON,
         KEY_INFO_REPLACE,
         KEY_HIGH_QUALITY_IMAGES,
@@ -66,6 +70,24 @@ public final class MorpheSettingsStore {
         KEY_HIDE_NOTIFICATIONS_BUTTON,
         KEY_VERBOSE_LOGGING,
     };
+
+    static final String KEY_STARTUP_TAB = "startup_tab";
+
+    static boolean validStartupTab(String tab) {
+        return "HOME".equals(tab) || "PROFILE".equals(tab) || "SEARCH".equals(tab);
+    }
+
+    static String startupTab() {
+        SharedPreferences sp = prefs();
+        String tab = sp == null ? "HOME" : sp.getString(KEY_STARTUP_TAB, "HOME");
+        return validStartupTab(tab) ? tab : "HOME";
+    }
+
+    static void setStartupTab(String tab) {
+        if (!validStartupTab(tab)) throw new IllegalArgumentException("Invalid startup tab");
+        SharedPreferences sp = prefs();
+        if (sp != null) sp.edit().putString(KEY_STARTUP_TAB, tab).apply();
+    }
 
     static final String KEY_MENU_FILTER = "hidden_pin_menu_actions";
 
@@ -123,7 +145,11 @@ public final class MorpheSettingsStore {
     public static void set(String key, boolean value) {
         SharedPreferences sp = prefs();
         if (sp != null) {
-            sp.edit().putBoolean(key, value).apply();
+            SharedPreferences.Editor edit = sp.edit().putBoolean(key, value);
+            if (KEY_IMAGE_INFO.equals(key) && !value) edit.putBoolean(KEY_INFO_REPLACE, false);
+            if (KEY_INFO_REPLACE.equals(key) && value && !effective(KEY_IMAGE_INFO))
+                edit.putBoolean(KEY_INFO_REPLACE, false);
+            edit.apply();
             Log.i(MorpheLog.TAG, "[settings] " + key + " = " + value);
         } else {
             Log.e(MorpheLog.TAG, "[settings] could not save " + key
@@ -140,7 +166,8 @@ public final class MorpheSettingsStore {
      * delle opzioni mai toccate.
      */
     static boolean defaultOf(String key) {
-        return !KEY_HIDE_SEARCH_BUTTON.equals(key) && !KEY_HIDE_SEARCH_HISTORY.equals(key)
+        return !KEY_KEEP_HOME_FEED.equals(key) && !KEY_HIDE_VIDEO_PINS.equals(key)
+                && !KEY_HIDE_SEARCH_BUTTON.equals(key) && !KEY_HIDE_SEARCH_HISTORY.equals(key)
                 && java.util.Arrays.asList(KEYS).contains(key);
     }
 
@@ -151,12 +178,23 @@ public final class MorpheSettingsStore {
         SharedPreferences.Editor edit = sp.edit();
         for (String key : KEYS) edit.putBoolean(key, defaultOf(key));
         edit.putString(KEY_MENU_FILTER, PinMenuFilter.encode(PinMenuFilter.recommended()));
+        edit.putString(KEY_STARTUP_TAB, "HOME");
         edit.commit();
     }
 
     /** @return il valore in vigore per questa chiave, salvato o predefinito che sia. */
     public static boolean effective(String key) {
-        return get(key, defaultOf(key));
+        boolean value = get(key, defaultOf(key));
+        // Also guard legacy/imported preferences that bypass individual toggle writes.
+        return value && (!KEY_INFO_REPLACE.equals(key) || effective(KEY_IMAGE_INFO));
+    }
+
+    static boolean isToggleEnabled(String key) {
+        if (KEY_INFO_REPLACE.equals(key)) return effective(KEY_IMAGE_INFO);
+        if (KEY_HIDE_COMMENT_BUTTON.equals(key) && isCommentsHidden()) return false;
+        if (KEY_HIDE_LIKE.equals(key) || KEY_HIDE_COMMENT_BUTTON.equals(key))
+            return !effective(KEY_INFO_REPLACE);
+        return true;
     }
 
     public static boolean isAdsDisabled() {

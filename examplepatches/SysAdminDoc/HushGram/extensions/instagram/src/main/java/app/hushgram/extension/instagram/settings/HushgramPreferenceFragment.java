@@ -9,7 +9,6 @@ package app.hushgram.extension.instagram.settings;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
@@ -55,8 +54,6 @@ import android.widget.FrameLayout;
 import android.widget.ListAdapter;
 import android.widget.ListView;
 import android.widget.LinearLayout;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
 import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
@@ -90,21 +87,18 @@ import app.hushgram.extension.instagram.download.DownloadQuality;
 import app.hushgram.extension.instagram.media.PlaybackQuality;
 import app.hushgram.extension.instagram.media.TapToPlayScope;
 import app.hushgram.extension.instagram.media.ResumePlayback;
-import app.hushgram.extension.instagram.misc.OverrideExchange;
 import app.hushgram.extension.instagram.feed.HiddenAccounts;
 import app.hushgram.extension.instagram.feed.CornerSize;
 import app.hushgram.extension.instagram.feed.LikeAnimation;
-import app.hushgram.extension.instagram.misc.FlagNames;
 import app.hushgram.extension.instagram.misc.MediaCache;
 import app.hushgram.extension.instagram.misc.NotificationGroups;
-import app.hushgram.extension.instagram.misc.OverrideImport;
-import app.hushgram.extension.instagram.misc.RecommendedFlags;
 import app.hushgram.extension.instagram.misc.SpoofLocation;
 import app.hushgram.extension.instagram.share.SharingDomain;
 import app.hushgram.extension.instagram.stories.StoryRingColor;
 import app.hushgram.extension.instagram.stories.StoryRingSize;
 import app.hushgram.extension.instagram.stories.StoryTimeMode;
 import app.hushgram.extension.instagram.profile.FollowLabelPlace;
+import app.hushgram.extension.instagram.misc.GlassCorners;
 import app.hushgram.extension.instagram.misc.GlassHeight;
 import app.hushgram.extension.instagram.misc.GlassLift;
 import app.hushgram.extension.instagram.misc.GlassReelsHide;
@@ -116,6 +110,7 @@ import app.hushgram.extension.instagram.misc.HapticStyle;
 import app.hushgram.extension.instagram.reels.BurnInMode;
 import app.hushgram.extension.instagram.reels.BurnInWait;
 import app.hushgram.extension.instagram.reels.CaptionWordReels;
+import app.hushgram.extension.instagram.reels.HiddenBars;
 import app.hushgram.extension.instagram.reels.ReelTapChoice;
 import app.hushgram.extension.instagram.reels.StartTab;
 import app.hushgram.extension.instagram.reels.TabOrder;
@@ -203,20 +198,13 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     };
     private static final int EXPORT_CONFIGURATION = 0x4847;
     private static final int IMPORT_CONFIGURATION = 0x4848;
-    private static final int EXPORT_OVERRIDES = 0x4849;
-    private static final int VALIDATE_OVERRIDES = 0x484a;
-    private static final int IMPORT_OVERRIDES = 0x484b;
-    private static final int IMPORT_FLAG_NAMES = 0x484c;
     private static final int PICK_FONT = 0x484d;
-    /** Restore, Discard, Reset and Remove flag names need no document, so they never become a document request. */
-    private static final int RESTORE_OVERRIDES = 0, DISCARD_OVERRIDES = -1, RESET_OVERRIDES = -2, REMOVE_FLAG_NAMES = -3;
     /** Framework fragment callbacks run on the main thread. Never reuse a code across pages. */
     private static int documentSequence = PICK_FONT;
     private int documentRequest;
     private int documentCode;
     @Nullable private String configurationExportToken;
     private boolean changingConfiguration;
-    private boolean changingOverrides;
     /** Last operation's receipt lasts for this process, including closing/reopening settings. */
     @Nullable static volatile String importFeedback;
     @Nullable private Row exportConfiguration;
@@ -224,19 +212,9 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     private final Runnable exportChanges = this::showConfiguration;
     @Nullable private Row importConfiguration;
     @Nullable private Row undoConfiguration;
-    @Nullable private Row exportOverrides;
-    @Nullable private Row validateOverrides;
-    @Nullable static volatile String overrideExportFeedback, overrideValidationFeedback;
-    /** Shown only while Allow importing overrides is on; absent rows can't be found or searched. */
-    @Nullable private Row importOverrides, restoreOverrides, discardOverrides, resetOverrides;
-    @Nullable private PreferenceCategory developerSection;
     /** Ghost mode's switch, and the switches it turns, both set once the page is built. */
     @Nullable private SwitchPreference ghostMode;
     private List<BooleanSetting> ghostSwitches = new ArrayList<>();
-    @Nullable static volatile String overrideImportFeedback, overrideRestoreFeedback, overrideDiscardFeedback, overrideResetFeedback;
-    /** Import and Remove flag names, which only change HushGram's own copy of the names. */
-    @Nullable private Row importFlagNames, removeFlagNames;
-    @Nullable static volatile String flagNamesFeedback;
 
     private String searchQuery = "";
     @Nullable private SearchRow search;
@@ -518,11 +496,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     L10n.t("Web links you tap open in your usual browser, without Instagram's click tracker. "
                             + "Instagram pages and ads still open in the app.")));
         }
-        if (build.contains(PatchFamily.DISABLE_ANALYTICS)) {
-            privacy.add(toggle(context, Settings.DISABLE_ANALYTICS, L10n.t("Disable analytics"),
-                    withCoverage(L10n.t("Stops Instagram from sending usage reports and crash reports to Instagram and Facebook. "
-                            + "Restart Instagram to see the change."), SettingsStatus.disableAnalyticsCoverage())));
-        }
         if (build.contains(PatchFamily.DM_MEDIA_SEEN)) {
             privacy.add(toggle(context, Settings.VIEW_DM_MEDIA_ANONYMOUSLY,
                     L10n.t("View DM photos and videos anonymously"),
@@ -557,9 +530,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         boolean longPressZoom = build.contains(PatchFamily.LONG_PRESS_ZOOM);
         boolean roundedCorners = build.contains(PatchFamily.ROUNDED_POST_CORNERS);
         boolean fullScreen = build.contains(PatchFamily.FULL_SCREEN_BARS);
+        boolean feedFollow = build.contains(PatchFamily.FEED_FOLLOW);
         PreferenceCategory feed = suggestions || following || swipe || fullResolution || homeFeed || tabSwipe
                 || askLike || askRefresh || postTime || hiddenLikes || backHome || feedSound || feedTapPause || longPressZoom || roundedCorners
-                || fullScreen
+                || fullScreen || feedFollow
                 ? category(screen, L10n.t("Feed"), SettingsIcons.FEED,
                         L10n.t("Choose what Home shows and how it behaves.")) : null;
         if (following) {
@@ -663,8 +637,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         }
         if (feedTapPause) {
             feed.addPreference(toggle(context, Settings.TAP_FEED_VIDEO_TO_PAUSE, L10n.t("Tap a feed video to pause it"),
-                    L10n.t("Tap the video playing in a feed to pause it in place instead of opening it in Reels. "
-                            + "Ads keep Instagram's own tap.")));
+                    L10n.t("Tap the video playing in a feed to pause it in place instead of opening it in Reels, and tap it "
+                            + "again to play it. Ads keep Instagram's own tap.")));
         }
         if (longPressZoom) {
             feed.addPreference(toggle(context, Settings.LONG_PRESS_TO_ZOOM, L10n.t("Long press a photo to zoom"),
@@ -686,6 +660,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             feed.addPreference(toggle(context, Settings.FULL_SCREEN_HOME, L10n.t("Full screen Home"),
                     L10n.t("Hides the status bar and the navigation bar while Home shows. Swipe in from the edge to "
                             + "bring them back for a moment.")));
+        }
+        if (feedFollow) {
+            feed.addPreference(toggle(context, Settings.HIDE_FEED_FOLLOW, L10n.t("Hide Follow on posts"),
+                    L10n.t("Takes the Follow and Subscribe buttons off the top of posts in your feed. The name, time and menu stay.")));
         }
 
         if (build.contains(PatchFamily.META_AI)) {
@@ -771,7 +749,9 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                                 + "tap Mark as read.")));
                 messages.addPreference(toggle(context, Settings.KEEP_CHATS_UNREAD, L10n.t("Keep chats unread here"),
                         L10n.t("A chat you open stays unread in your messages on this phone until you long press it "
-                                + "and tap Mark as read. A newer message in it stays unread too.")));
+                                + "and tap Mark as read. A newer message in it stays unread too. Turned off, a chat you "
+                                + "open stays read on this phone until a newer message comes in, even after your "
+                                + "messages refresh.")));
             }
             if (build.contains(PatchFamily.TYPING)) {
                 messages.addPreference(toggle(context, Settings.HIDE_TYPING, L10n.t("Hide that you're typing"),
@@ -877,6 +857,12 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     L10n.t("Takes away the row at the top of the Reels tab, with the Reels title, the camera button and "
                             + "anything else Instagram puts there. Reels you open from a profile, a post or a chat keep "
                             + "theirs. The camera still opens from Home.")));
+            reels.add(toggle(context, Settings.HIDE_REELS_CREATE_BUTTON, L10n.t("Hide the Create button on reels"),
+                    L10n.t("Takes the plus button that opens the camera off the top of reels, on the Reels tab and "
+                            + "everywhere else, and closes up the gap. The rest of the bar stays.")));
+            reels.add(toggle(context, Settings.HIDE_REELS_YOUR_ALGORITHM, L10n.t("Hide Your algorithm on reels"),
+                    L10n.t("Takes the Your algorithm button off the top of the Reels tab and closes up the gap. The "
+                            + "rest of the bar stays.")));
             reels.add(toggle(context, Settings.HIDE_REEL_SAVE_BUTTON, L10n.t("Hide the Save button on reels"),
                     L10n.t("Takes the Save button out of the column of buttons beside a reel, and the count under it. "
                             + "Posts in your feed keep theirs.")));
@@ -932,6 +918,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             reels.add(toggle(context, Settings.FULL_SCREEN_REELS, L10n.t("Full screen Reels"),
                     L10n.t("Hides the status bar and the navigation bar while Reels shows. Swipe in from the edge to "
                             + "bring them back for a moment. Back and the keyboard work as usual.")));
+            reels.add(hiddenBarsRow(context));
         }
         if (build.contains(PatchFamily.KEEP_REEL_SPEED)) {
             reels.add(toggle(context, Settings.KEEP_REEL_SPEED, L10n.t("Keep the reel speed"),
@@ -964,7 +951,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         if (build.contains(PatchFamily.REEL_BLUR_BARS)) {
             reels.add(toggle(context, Settings.BLUR_REEL_BARS, L10n.t("Blur the bars around a reel"),
                     L10n.t("A reel that doesn't fill the screen shows a blurred copy of itself above and below it "
-                            + "instead of black bars. Open Reels again after a change.")));
+                            + "instead of black bars, and the strip under the tab bar shows the reel blurred too. "
+                            + "Open Reels again after a change.")));
         }
         if (build.contains(PatchFamily.REEL_AUTO_SCROLL)) {
             reels.add(toggle(context, Settings.KEEP_REEL_AUTO_SCROLL, L10n.t("Keep auto scroll on"),
@@ -987,9 +975,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         if (build.contains(PatchFamily.REEL_ORIGIN)) {
             reels.add(toggle(context, Settings.FIND_REEL_ORIGIN, L10n.t("Find the reel you came from"),
                     L10n.t("Open a creator's profile from a reel, then their Reels tab, and it scrolls to that reel "
-                            + "and outlines it for a moment. Stop looking ends the search where it is.")));
+                            + "and outlines it for a moment. A photo reel is found in their posts. Stop looking ends "
+                            + "the search where it is.")));
             reels.add(toggle(context, Settings.FIND_REEL_ORIGIN_ON_TAP, L10n.t("Wait for a tap to find it"),
-                    L10n.t("When the reel isn't on the first screen, the Reels tab shows a Find the reel button "
+                    L10n.t("When the reel isn't on the first screen, the profile shows a Find the reel button "
                             + "instead of scrolling on its own.")));
         }
         if (!reels.isEmpty()) {
@@ -1055,6 +1044,11 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     L10n.t("A story's header says how many accounts it mentions, even when the mention is hidden. "
                             + "Tap that for the list, and tap someone to open their profile.")));
         }
+        if (build.contains(PatchFamily.STORY_FOLLOW)) {
+            stories.add(toggle(context, Settings.HIDE_STORY_FOLLOW, L10n.t("Hide Follow on stories"),
+                    L10n.t("Takes the Follow button off the top of stories from accounts you don't follow. "
+                            + "The name, time and menu stay.")));
+        }
         if (build.contains(PatchFamily.STORY_SEEN)) {
             stories.add(toggle(context, Settings.VIEW_STORIES_ANONYMOUSLY, L10n.t("View stories anonymously"),
                     L10n.t("Instagram isn't told which stories you watch, so you stay off their viewer lists. "
@@ -1096,6 +1090,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                         L10n.t("Videos wait for your tap where the choice below says. Feed videos show a play button, "
                                 + "as they do when you use less mobile data.")));
                 playback.addPreference(tapToPlayScopeRow(context));
+                playback.addPreference(toggle(context, Settings.TAP_TO_PLAY_AUTO_SCROLL_WAITS,
+                        L10n.t("Wait after auto scroll"),
+                        L10n.t("A reel Instagram's auto scroll moves to waits for your tap too. "
+                                + "Off, auto scroll plays reel after reel.")));
             }
             if (build.contains(PatchFamily.REEL_TAP_AND_VOLUME)) {
                 playback.addPreference(reelTapChoiceRow(context));
@@ -1156,7 +1154,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         }
 
         if (build.contains(PatchFamily.COMMENT_COPY) || build.contains(PatchFamily.COMMENT_PHOTO)
-                || build.contains(PatchFamily.HIDE_COMMENTS)) {
+                || build.contains(PatchFamily.HIDE_COMMENTS) || build.contains(PatchFamily.COMMENT_EMOJI_ROW)) {
             PreferenceCategory comments = category(screen, L10n.t("Comments"), SettingsIcons.COMMENTS,
                     L10n.t("Copy, save or hide comments."));
             if (build.contains(PatchFamily.COMMENT_COPY)) {
@@ -1174,6 +1172,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             if (build.contains(PatchFamily.HIDE_COMMENTS)) {
                 comments.addPreference(toggle(context, Settings.HIDE_COMMENTS, L10n.t("Hide comments"),
                         L10n.t("Takes the Comment button and the comment count off the posts in your feed.")));
+            }
+            if (build.contains(PatchFamily.COMMENT_EMOJI_ROW)) {
+                comments.addPreference(toggle(context, Settings.HIDE_COMMENT_EMOJI_ROW, L10n.t("Hide the emoji row"),
+                        L10n.t("Takes the row of quick emoji off above the comment box. The box itself stays.")));
             }
         }
 
@@ -1354,15 +1356,16 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 glass.addPreference(startTabRow(context));
             }
             if (build.contains(PatchFamily.GLASS_TAB_BAR)) {
+                // Before Glass tab bar, since it works on Instagram's own bar too (#201).
+                glass.addPreference(toggle(context, Settings.GLASS_TAB_BAR_SLIDE, L10n.t("Slide across the tabs"),
+                        L10n.t("Put a finger on the tab bar and slide it sideways. A highlight follows your finger, and "
+                                + "letting go opens the tab under it. Taps and long presses on a tab work as before. "
+                                + "It works with or without Glass tab bar. Restart Instagram after changing it.")));
                 glass.addPreference(toggle(context, Settings.GLASS_TAB_BAR, L10n.t("Glass tab bar"),
                         L10n.t("Draws Instagram's tab bar as a floating, rounded glass pill with a highlight on the tab "
                                 + "you're on. Restart Instagram after changing it.")));
                 glass.addPreference(toggle(context, Settings.GLASS_TAB_BAR_BLUR, L10n.t("Blur behind the tab bar"),
                         L10n.t("Blurs what's behind the pill on Android 12 and newer. Off, the pill is a frosted tint.")));
-                glass.addPreference(toggle(context, Settings.GLASS_TAB_BAR_SLIDE, L10n.t("Slide across the tabs"),
-                        L10n.t("Put a finger on the pill and slide it sideways. The highlight follows your finger, and "
-                                + "letting go opens the tab under it. Taps and long presses on a tab work as before. "
-                                + "Restart Instagram after changing it.")));
                 glass.addPreference(toggle(context, Settings.GLASS_TAB_BAR_LIQUID, L10n.t("Liquid glass look"),
                         L10n.t("Rounds the pill and its highlight and puts Search in a glass circle of its own. Scrolling "
                                 + "a list down shrinks the bar to the tab you're on and Search, unless Hide the tab bar as "
@@ -1373,6 +1376,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 glass.addPreference(hapticStyleRow(context));
                 glass.addPreference(glassOpacityRow(context));
                 glass.addPreference(glassHeightRow(context));
+                glass.addPreference(glassCornersRow(context));
                 glass.addPreference(toggle(context, Settings.GLASS_TAB_BAR_HIDE_ON_SCROLL, L10n.t("Hide the tab bar as you scroll"),
                         L10n.t("Scrolling a list down slides the pill out of the way. Scrolling up, reaching the top, "
                                 + "or changing tab brings it back. Restart Instagram after changing it.")));
@@ -1441,6 +1445,9 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                         L10n.t("Adds Details to a feed post's menu. It shows when the post went up, who posted it, "
                                 + "its media ID and the size Download saves, with buttons to copy the file link, "
                                 + "username and caption.")));
+                downloads.addPreference(toggle(context, Settings.DOWNLOAD_CHOOSE_PAGES, L10n.t("Choose carousel pages"),
+                        L10n.t("Adds Choose pages to a carousel's menu, after Save all, and to the download icon. "
+                                + "Tick the pages you want and only those save, in order.")));
                 downloads.addPreference(toggle(context, Settings.FEED_DOWNLOAD_BUTTON, L10n.t("Download button on feed posts"),
                         L10n.t("Puts a download icon in the row under a post, left of Save, so one tap saves it without "
                                 + "opening the menu. On a carousel it asks for this page or all of them.")));
@@ -1486,6 +1493,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             downloads.addPreference(toggle(context, Settings.DOWNLOAD_COMPATIBLE, L10n.t("Save videos other apps can open"),
                     L10n.t("For WhatsApp, video editors such as CapCut and InShot, or a gallery or player that plays saves "
                             + "without sound. May lower quality.")));
+            downloads.addPreference(toggle(context, Settings.DOWNLOAD_CONVERT, L10n.t("Convert to keep the full size"),
+                    L10n.t("With Save videos other apps can open on, a full size video Instagram only has as VP9 or AV1 "
+                            + "is converted to H.264 on your phone instead of saved smaller. Slower, and videos over "
+                            + "3 minutes stay smaller.")));
             downloads.addPreference(qualityRow(context));
             downloads.addPreference(folderRow(context));
             downloads.addPreference(fileNameRow(context));
@@ -1528,8 +1539,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                             + "unaffected.")));
             battery.addPreference(toggle(context, Settings.STOP_UPLOAD_ALARM, L10n.t("Stop the analytics upload alarm"),
                     L10n.t("Instagram sets an alarm to wake your phone and send its usage events five minutes later. "
-                            + "This stops that alarm. The events go the next time you use the app, or nowhere with "
-                            + "Disable analytics.")));
+                            + "This stops that alarm. The events go the next time you use the app.")));
         }
 
         if (build.contains(PatchFamily.BUILD_EXPIRED_POPUP)) {
@@ -1539,118 +1549,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     L10n.t("Remove build expired popup"),
                     L10n.t("Instagram stops showing the screen that says this version is too old. A patched build "
                             + "doesn't update on its own, so this keeps it usable.")));
-        }
-
-        if (build.contains(PatchFamily.DEVELOPER_OPTIONS)) {
-            PreferenceCategory developer = category(screen, L10n.t("Developer"), SettingsIcons.CODE,
-                    L10n.t("Instagram's own testing tools. Change them only if you know what they do."));
-            developer.addPreference(toggle(context, Settings.OPEN_DEVELOPER_OPTIONS,
-                    L10n.t("Developer options on a long press of Home"),
-                    L10n.t("Opens Instagram's own developer options, where you can look at and change its hidden "
-                            + "settings. A wrong change can break parts of Instagram until you reset it.")));
-            developer.addPreference(nativeScreenRow(context, "hushgram_open_overrides",
-                    L10n.t("Open MetaConfig overrides"),
-                    L10n.t("Opens Instagram's own editor for its hidden settings (MetaConfig). A wrong override, "
-                            + "which is a changed setting, can break parts of Instagram."),
-                    app.hushgram.extension.instagram.misc.DeveloperOptions::openOverrides,
-                    L10n.t("MetaConfig is unavailable on this screen. Open HushGram settings from Home while signed in.")));
-            // The names go through the patch's hook on MetaConfig's list, which a build goes without
-            // when Instagram moved it.
-            if (PatchFamily.flagNamesInBuild()) {
-                developer.addPreference(toggle(context, Settings.USE_FLAG_NAMES,
-                        L10n.t("Use HushGram's setting names"),
-                        L10n.t("MetaConfig shows names from HushGram's own list in place of numbers. The list comes from "
-                                + "Instagram 447, so a few newer settings still show as numbers. A list you import is used instead.")));
-                importFlagNames = new Row(context);
-                importFlagNames.setKey("hushgram_import_flag_names");
-                importFlagNames.setPersistent(false);
-                importFlagNames.setTitle(L10n.t("Import setting names"));
-                importFlagNames.setSummary(L10n.t("Pick a list of MetaConfig names, such as an id_name_mapping.json file, "
-                        + "and MetaConfig shows those names in place of numbers. Searching by number still works."));
-                importFlagNames.setOnPreferenceClickListener(row -> { pickOverrides(IMPORT_FLAG_NAMES); return true; });
-                developer.addPreference(importFlagNames);
-                removeFlagNames = new Row(context);
-                removeFlagNames.setKey("hushgram_remove_flag_names");
-                removeFlagNames.setPersistent(false);
-                removeFlagNames.setTitle(L10n.t("Remove setting names"));
-                removeFlagNames.setSummary(L10n.t("Forget the imported names. MetaConfig goes back to HushGram's names, "
-                        + "or to Instagram's own labels if that switch is off."));
-                removeFlagNames.setOnPreferenceClickListener(row -> { flagNames(null, REMOVE_FLAG_NAMES); return true; });
-                developer.addPreference(removeFlagNames);
-            }
-            developer.addPreference(nativeScreenRow(context, "hushgram_open_whitehat",
-                    L10n.t("Open Whitehat settings"),
-                    L10n.t("Opens Instagram's own Whitehat settings. Its switch lets Instagram trust the certificates "
-                            + "installed on this phone for 24 hours, so you can check the app's traffic. Restart "
-                            + "Instagram after you turn it on."),
-                    app.hushgram.extension.instagram.misc.DeveloperOptions::openWhitehat,
-                    L10n.t("Whitehat settings are unavailable on this screen. Open HushGram settings from Home while signed in.")));
-            // Export, Validate and Import go through the patch's override reader and writer, which a
-            // build goes without when Instagram moved them. The rest of Developer stays.
-            if (PatchFamily.overrideExchangeInBuild()) {
-                exportOverrides = new Row(context);
-                exportOverrides.setKey("hushgram_export_overrides");
-                exportOverrides.setPersistent(false);
-                exportOverrides.setTitle(L10n.t("Export overrides"));
-                exportOverrides.setSummary(L10n.t("Saves your overrides (changes to Instagram's hidden settings) for "
-                        + "this exact Instagram version."));
-                exportOverrides.setOnPreferenceClickListener(row -> { pickOverrides(EXPORT_OVERRIDES); return true; });
-                developer.addPreference(exportOverrides);
-                validateOverrides = new Row(context);
-                validateOverrides.setKey("hushgram_validate_overrides");
-                validateOverrides.setPersistent(false);
-                validateOverrides.setTitle(L10n.t("Validate an overrides file"));
-                validateOverrides.setSummary(L10n.t("Checks a saved file against this Instagram version. Nothing is "
-                        + "applied."));
-                validateOverrides.setOnPreferenceClickListener(row -> { pickOverrides(VALIDATE_OVERRIDES); return true; });
-                developer.addPreference(validateOverrides);
-            }
-            if (PatchFamily.overrideImportInBuild()) {
-                developer.addPreference(toggle(context, Settings.ALLOW_OVERRIDE_IMPORT,
-                        L10n.t("Allow importing overrides"),
-                        L10n.t("Shows the Import and Restore rows. An import changes Instagram's hidden settings for "
-                                + "this signed-in account.")));
-                developer.addPreference(recommendedFlagsRow(context));
-                developerSection = developer;
-                importOverrides = new Row(context);
-                importOverrides.setKey("hushgram_import_overrides");
-                importOverrides.setPersistent(false);
-                importOverrides.setTitle(L10n.t("Import overrides"));
-                importOverrides.setSummary(L10n.t("Applies a HushGram export, or Instagram's own overrides file. "
-                        + "Your current overrides are saved first so Restore can bring them back."));
-                importOverrides.setOnPreferenceClickListener(row -> { pickOverrides(IMPORT_OVERRIDES); return true; });
-                restoreOverrides = new Row(context);
-                restoreOverrides.setKey("hushgram_restore_overrides");
-                restoreOverrides.setPersistent(false);
-                restoreOverrides.setTitle(L10n.t("Restore previous overrides"));
-                restoreOverrides.setSummary(L10n.t("Puts back the overrides saved before your last import for this "
-                        + "account and Instagram version."));
-                restoreOverrides.setOnPreferenceClickListener(row -> { exchangeOverrides(null, RESTORE_OVERRIDES); return true; });
-                discardOverrides = new Row(context);
-                discardOverrides.setKey("hushgram_discard_overrides");
-                discardOverrides.setPersistent(false);
-                discardOverrides.setTitle(L10n.t("Discard saved overrides"));
-                discardOverrides.setSummary(L10n.t("Forgets the copy saved for Restore so imports can run again. "
-                        + "Instagram's own settings don't change."));
-                discardOverrides.setOnPreferenceClickListener(row -> { exchangeOverrides(null, DISCARD_OVERRIDES); return true; });
-                resetOverrides = new Row(context);
-                resetOverrides.setKey("hushgram_reset_overrides");
-                resetOverrides.setPersistent(false);
-                resetOverrides.setTitle(L10n.t("Reset all overrides"));
-                resetOverrides.setSummary(L10n.t("Removes every override from this signed-in account, so Instagram "
-                        + "goes back to its own settings. Your current overrides are saved first for Restore."));
-                resetOverrides.setOnPreferenceClickListener(row -> { exchangeOverrides(null, RESET_OVERRIDES); return true; });
-                // Off the page until their switch is on, so the icon pass over the sections misses them.
-                for (Row exchange : new Row[]{importOverrides, restoreOverrides, discardOverrides, resetOverrides}) {
-                    mark(exchange, SettingsIcons.CODE);
-                }
-                if (Settings.ALLOW_OVERRIDE_IMPORT.get()) {
-                    developer.addPreference(importOverrides);
-                    developer.addPreference(restoreOverrides);
-                    developer.addPreference(discardOverrides);
-                    developer.addPreference(resetOverrides);
-                }
-            }
         }
 
         if (build.contains(PatchFamily.RESTORE_TRUST) || build.contains(PatchFamily.REMOVE_AD_ID)
@@ -1843,18 +1741,21 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                             || Settings.BURN_IN_WAIT.key.equals(key));
                     belongs |= family == PatchFamily.PLAYBACK_QUALITY && Settings.PLAYBACK_QUALITY.key.equals(key);
                     belongs |= family == PatchFamily.PLAYBACK_QUALITY && Settings.QUALITY_TAB_TARGET.key.equals(key);
-                    belongs |= family == PatchFamily.TAP_TO_PLAY && Settings.TAP_TO_PLAY_SCOPE.key.equals(key);
+                    belongs |= family == PatchFamily.TAP_TO_PLAY && (Settings.TAP_TO_PLAY_SCOPE.key.equals(key)
+                            || Settings.TAP_TO_PLAY_AUTO_SCROLL_WAITS.key.equals(key));
                     belongs |= family == PatchFamily.STORY_TIME && Settings.STORY_TIME_MODE.key.equals(key);
                     belongs |= family == PatchFamily.REEL_POST_TIME && (Settings.REEL_POST_TIME_SECONDS.key.equals(key)
                             || Settings.REEL_POST_TIME_AGO.key.equals(key));
                     belongs |= family == PatchFamily.FRIENDSHIP_STATUS && Settings.FOLLOW_LABEL_PLACE.key.equals(key);
+                    belongs |= family == PatchFamily.FULL_SCREEN_BARS && Settings.FULL_SCREEN_HIDES.key.equals(key);
                     belongs |= family == PatchFamily.GLASS_TAB_BAR && Settings.GLASS_TAB_BAR_HAPTIC_STYLE.key.equals(key);
                     belongs |= family == PatchFamily.GLASS_TAB_BAR && (Settings.GLASS_TAB_BAR_OPACITY.key.equals(key)
                             || Settings.GLASS_TAB_BAR_HEIGHT.key.equals(key) || Settings.GLASS_TAB_BAR_LIFT.key.equals(key)
-                            || Settings.GLASS_TAB_BAR_REELS_HIDE.key.equals(key));
+                            || Settings.GLASS_TAB_BAR_CORNERS.key.equals(key) || Settings.GLASS_TAB_BAR_REELS_HIDE.key.equals(key));
                     belongs |= family == PatchFamily.VIDEO_DOWNLOAD && (Settings.HOLD_TO_DOWNLOAD.key.equals(key)
                             || Settings.HOLD_FINGERS.key.equals(key) || Settings.HOLD_TIME.key.equals(key)
-                            || Settings.FEED_DOWNLOAD_BUTTON.key.equals(key) || Settings.FEED_DOWNLOAD_ALL_PAGES.key.equals(key));
+                            || Settings.FEED_DOWNLOAD_BUTTON.key.equals(key) || Settings.FEED_DOWNLOAD_ALL_PAGES.key.equals(key)
+                            || Settings.DOWNLOAD_CHOOSE_PAGES.key.equals(key));
                     belongs |= family == PatchFamily.REEL_DOWNLOAD && Settings.REEL_DOWNLOAD_BUTTON.key.equals(key);
                     belongs |= family == PatchFamily.ACCENT_COLOR && Settings.ACCENT_HUE.key.equals(key);
                     belongs |= family == PatchFamily.FONT && Settings.FONT.key.equals(key);
@@ -1873,7 +1774,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                             || family == PatchFamily.VOICE_MESSAGE)
                             && (Settings.DOWNLOAD_QUALITY.key.equals(key)
                             || Settings.SAVE_FOLDER.key.equals(key) || Settings.FILENAME_TEMPLATE.key.equals(key)
-                            || Settings.DOWNLOAD_COMPATIBLE.key.equals(key));
+                            || Settings.DOWNLOAD_COMPATIBLE.key.equals(key) || Settings.DOWNLOAD_CONVERT.key.equals(key));
                     belongs |= (family == PatchFamily.REEL_DOWNLOAD || family == PatchFamily.STORY_DOWNLOAD)
                             && (Settings.DOWNLOAD_SKIP_SAVED.key.equals(key) || CLEAR_DOWNLOAD_HISTORY.equals(key));
                     belongs |= family == PatchFamily.VIDEO_DOWNLOAD && CLEAR_DOWNLOAD_HISTORY.equals(key);
@@ -1883,8 +1784,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     belongs |= family == PatchFamily.VERSION_CODE && L10n.t("No Play Store updates").equals(row.getTitle());
                     if (!belongs) continue;
                     aliases.append(' ').append(family.patchName);
-                    if (family == PatchFamily.DISABLE_ANALYTICS) aliases.append(" contacts contact location setup analytics ")
-                            .append(L10n.t("Contacts, location setup, analytics"));
                     if (family == PatchFamily.FOLLOWING_FEED) aliases.append(" following home feed");
                     if (Settings.REEL_AUTO_ADVANCE.key.equals(key)) aliases.append(" auto advance autoloop loop next reels");
                     if (family == PatchFamily.REEL_DECLUTTER || family == PatchFamily.REEL_DOWNLOAD
@@ -2066,12 +1965,12 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
 
     @Override protected void updateUIToSettingValues() {
         restoreSearchRows();
-        try { super.updateUIToSettingValues(); } finally { showOverrideImport(); showGhostMode(); filterSettings(); }
+        try { super.updateUIToSettingValues(); } finally { showGhostMode(); filterSettings(); }
     }
 
     @Override protected void updateUIAvailability() {
         restoreSearchRows();
-        try { super.updateUIAvailability(); } finally { showOverrideImport(); showGhostMode(); filterSettings(); }
+        try { super.updateUIAvailability(); } finally { showGhostMode(); filterSettings(); }
     }
 
     /** Ghost mode shows on only while every switch it turns is on, whichever way they got there. */
@@ -2106,24 +2005,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         row.setChecked(GhostMode.on(ghostSwitches));
         mark(row, SettingsIcons.HIDDEN);
         return row;
-    }
-
-    /** Import, Restore and Discard exist on the page, and in search, only while their switch is on. */
-    private void showOverrideImport() {
-        PreferenceCategory group = developerSection;
-        if (group == null || importOverrides == null || restoreOverrides == null || discardOverrides == null
-                || resetOverrides == null) return;
-        boolean allowed = Settings.ALLOW_OVERRIDE_IMPORT.get();
-        List<Preference> rows = searchableRows.get(group);
-        for (Row row : new Row[]{importOverrides, restoreOverrides, discardOverrides, resetOverrides}) {
-            if (allowed) {
-                if (rows != null && !rows.contains(row)) rows.add(row);
-                if (row.getParent() != group) group.addPreference(row);
-            } else {
-                if (rows != null) rows.remove(row);
-                if (row.getParent() == group) group.removePreference(row);
-            }
-        }
     }
 
     /**
@@ -2306,8 +2187,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
 
     /**
      * Puts back every order a search moved. It goes by what was moved, not by what a search can
-     * still find: the override rows leave the search when Allow importing overrides goes off, and
-     * used to keep their place at the end until settings was opened again.
+     * still find, so a row that left the search doesn't keep its moved place.
      */
     private void restoreOrders() {
         for (Map.Entry<Preference, Integer> moved : builtOrders.entrySet()) {
@@ -2449,7 +2329,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     }
 
     private void showConfiguration() {
-        boolean busy = changingConfiguration || changingOverrides || documentRequest != 0 || ExportStatus.CONFIGURATION.active();
+        boolean busy = changingConfiguration || documentRequest != 0 || ExportStatus.CONFIGURATION.active();
         if (exportConfiguration != null) {
             exportConfiguration.setEnabled(!busy);
             ExportStatus.State state = ExportStatus.CONFIGURATION.state();
@@ -2481,40 +2361,11 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             });
         }
         scheduleUndoExpiry();
-        if (exportOverrides != null) {
-            exportOverrides.setEnabled(!busy);
-            if (overrideExportFeedback != null) exportOverrides.setSummary(overrideExportFeedback);
-        }
-        if (validateOverrides != null) {
-            validateOverrides.setEnabled(!busy);
-            if (overrideValidationFeedback != null) validateOverrides.setSummary(overrideValidationFeedback);
-        }
-        if (importOverrides != null) {
-            importOverrides.setEnabled(!busy);
-            if (overrideImportFeedback != null) importOverrides.setSummary(overrideImportFeedback);
-        }
-        if (restoreOverrides != null) {
-            restoreOverrides.setEnabled(!busy);
-            if (overrideRestoreFeedback != null) restoreOverrides.setSummary(overrideRestoreFeedback);
-        }
-        if (discardOverrides != null) {
-            discardOverrides.setEnabled(!busy);
-            if (overrideDiscardFeedback != null) discardOverrides.setSummary(overrideDiscardFeedback);
-        }
-        if (resetOverrides != null) {
-            resetOverrides.setEnabled(!busy);
-            if (overrideResetFeedback != null) resetOverrides.setSummary(overrideResetFeedback);
-        }
-        if (importFlagNames != null) {
-            importFlagNames.setEnabled(!busy);
-            if (flagNamesFeedback != null) importFlagNames.setSummary(flagNamesFeedback);
-        }
-        if (removeFlagNames != null) removeFlagNames.setEnabled(!busy);
         filterSettings();
     }
 
     private void pickConfiguration(boolean importing) {
-        if (documentRequest != 0 || changingConfiguration || changingOverrides || ExportStatus.CONFIGURATION.active()) return;
+        if (documentRequest != 0 || changingConfiguration || ExportStatus.CONFIGURATION.active()) return;
         if (documentSequence == Integer.MAX_VALUE) {
             Utils.showToastLong(L10n.t("Couldn't start that. Try again."));
             return;
@@ -2541,31 +2392,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         }
     }
 
-    private void pickOverrides(int request) {
-        if (documentRequest != 0 || changingConfiguration || changingOverrides || ExportStatus.CONFIGURATION.active()) return;
-        if (documentSequence == Integer.MAX_VALUE) {
-            Utils.showToastLong(L10n.t("Couldn't start that. Try again."));
-            return;
-        }
-        documentRequest = request;
-        documentCode = ++documentSequence;
-        showConfiguration();
-        boolean exporting = request == EXPORT_OVERRIDES;
-        boolean names = request == IMPORT_FLAG_NAMES;
-        // A name list can be HushGram's plain text as well as JSON, and some providers don't type either.
-        Intent picker = new Intent(exporting ? Intent.ACTION_CREATE_DOCUMENT : Intent.ACTION_OPEN_DOCUMENT)
-                .addCategory(Intent.CATEGORY_OPENABLE).setType(names ? "*/*" : "application/json");
-        if (exporting) picker.putExtra(Intent.EXTRA_TITLE, "HushGram-overrides.json");
-        try { startActivityForResult(picker, documentCode); }
-        catch (ActivityNotFoundException | SecurityException failure) {
-            documentRequest = 0;
-            documentCode = 0;
-            overrideFeedback(request, names ? L10n.t("This phone has no file picker. Your settings haven't changed.")
-                    : L10n.t("This phone has no file picker. Overrides haven't changed."));
-            showConfiguration();
-        }
-    }
-
     @Override
     public void onActivityResult(int code, int result, Intent data) {
         super.onActivityResult(code, result, data);
@@ -2578,9 +2404,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             if (result == Activity.RESULT_OK) keepFont(data == null ? null : data.getData());
             return;
         }
-        boolean overrides = request == EXPORT_OVERRIDES || request == VALIDATE_OVERRIDES || request == IMPORT_OVERRIDES;
-        boolean names = request == IMPORT_FLAG_NAMES;
-        if (request != EXPORT_CONFIGURATION && request != IMPORT_CONFIGURATION && !overrides && !names) return;
+        if (request != EXPORT_CONFIGURATION && request != IMPORT_CONFIGURATION) return;
         documentRequest = 0;
         documentCode = 0;
         if (request == EXPORT_CONFIGURATION) {
@@ -2598,172 +2422,14 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         }
         Uri uri = data == null ? null : data.getData();
         if (uri == null || !"content".equals(uri.getScheme())) {
-            if (names) {
-                overrideFeedback(request, L10n.t("Couldn't read setting names from that file. Nothing changed."));
-            } else if (overrides) {
-                overrideFeedback(request, L10n.t("Couldn't use that file. Instagram's overrides haven't changed."));
-            } else {
-                if (request == EXPORT_CONFIGURATION) ExportStatus.CONFIGURATION.finish(configurationExportToken,
-                        L10n.t("Couldn't use that settings file. Your settings haven't changed."));
-                Utils.showToastLong(L10n.t("Couldn't use that settings file. Your settings haven't changed."));
-            }
+            if (request == EXPORT_CONFIGURATION) ExportStatus.CONFIGURATION.finish(configurationExportToken,
+                    L10n.t("Couldn't use that settings file. Your settings haven't changed."));
+            Utils.showToastLong(L10n.t("Couldn't use that settings file. Your settings haven't changed."));
             showConfiguration();
-            return;
-        }
-        if (overrides) {
-            exchangeOverrides(uri, request);
-            return;
-        }
-        if (names) {
-            flagNames(uri, request);
             return;
         }
         if (request == IMPORT_CONFIGURATION) changeConfiguration(uri, 0);
         else exportConfiguration(uri);
-    }
-
-    /** Restore and Discard read HushGram's saved copy instead of a document. */
-    private void exchangeOverrides(@Nullable Uri uri, int request) {
-        boolean saved = request == RESTORE_OVERRIDES || request == DISCARD_OVERRIDES || request == RESET_OVERRIDES;
-        if (saved && (documentRequest != 0 || changingConfiguration || changingOverrides || ExportStatus.CONFIGURATION.active())) return;
-        boolean importing = saved || request == IMPORT_OVERRIDES;
-        boolean validating = request == VALIDATE_OVERRIDES;
-        Context context = getContext();
-        Activity activity = getActivity();
-        if (context == null || activity == null) { showConfiguration(); return; }
-        changingOverrides = true;
-        showConfiguration();
-        if (!Utils.runOnBackgroundThread(() -> {
-            try {
-                // The rows hide while the switch is off or HushGram is paused, but either can change
-                // while a picker is open. Then neither the document nor the store is read.
-                if (importing && !Settings.ALLOW_OVERRIDE_IMPORT.get()) {
-                    Logger.printInfo(() -> "Override import refused while its switch is off");
-                    overrideFeedback(request, L10n.t("Allow importing overrides is off or HushGram is paused. Nothing changed."));
-                } else if (request == RESTORE_OVERRIDES) {
-                    overrideFeedback(request, overrideOutcome(OverrideImport.restore(activity), true));
-                } else if (request == RESET_OVERRIDES) {
-                    overrideFeedback(request, resetOutcome(OverrideImport.reset(activity)));
-                } else if (request == DISCARD_OVERRIDES) {
-                    overrideFeedback(request, OverrideImport.discard(activity)
-                            ? L10n.t("Discarded the saved copy. Imports can run again, and Instagram's overrides haven't changed.")
-                            : L10n.t("There's no saved copy to discard. Nothing changed."));
-                } else if (request == IMPORT_OVERRIDES) {
-                    byte[] bytes;
-                    try (java.io.InputStream input = context.getContentResolver().openInputStream(uri)) {
-                        bytes = OverrideExchange.read(input);
-                    }
-                    // The document is closed before the first native call, so a provider failure
-                    // can't follow a write.
-                    overrideFeedback(request, overrideOutcome(OverrideImport.apply(activity, bytes), false));
-                } else if (validating) {
-                    byte[] bytes;
-                    try (java.io.InputStream input = context.getContentResolver().openInputStream(uri)) {
-                        bytes = OverrideExchange.read(input);
-                    }
-                    OverrideExchange.Checked checked = OverrideExchange.validate(bytes, OverrideExchange.capture(activity));
-                    String validated = L10n.f("Checked %1$d overrides only. Nothing was applied.", checked.fits);
-                    overrideFeedback(request, checked.leftOut == 0 ? validated : validated + " " + L10n.f("%1$d more "
-                            + "come from a different Instagram version and don't fit this one, so the import leaves "
-                            + "them out.", checked.leftOut));
-                } else {
-                    OverrideExchange.Snapshot snapshot = OverrideExchange.capture(activity);
-                    byte[] bytes = OverrideExchange.export(snapshot);
-                    try (java.io.OutputStream output = context.getContentResolver().openOutputStream(uri, "wt")) {
-                        if (output == null) throw new java.io.IOException();
-                        output.write(bytes);
-                    }
-                    String exported = L10n.t("Overrides exported for this Instagram version.");
-                    overrideFeedback(request, snapshot.leftOut() == 0 ? exported : exported + " " + L10n.f("%1$d "
-                            + "overrides from a different Instagram version don't fit this one and were left out.", snapshot.leftOut()));
-                }
-            } catch (OverrideImport.RestoreFirst failure) {
-                Logger.printInfo(() -> "Override import refused until Restore runs");
-                overrideFeedback(request, L10n.t("An earlier import still needs Restore previous overrides, "
-                        + "or Discard saved overrides if Restore can't run. Nothing changed."));
-            } catch (OverrideImport.NotAllowed failure) {
-                Logger.printInfo(() -> "Override import refused while its switch is off");
-                overrideFeedback(request, L10n.t("Allow importing overrides is off or HushGram is paused. Nothing changed."));
-            } catch (OverrideImport.StoreChanging failure) {
-                Logger.printInfo(() -> "Override import refused while the native store was still changing");
-                overrideFeedback(request, L10n.t("Instagram is still saving an override change. Wait a moment and try again. Nothing changed."));
-            } catch (OverrideImport.NothingSaved failure) {
-                overrideFeedback(request, L10n.t("Couldn't restore overrides. There's no saved copy for this account "
-                        + "and Instagram version. Nothing changed."));
-            } catch (OverrideExchange.NothingFits failure) {
-                Logger.printInfo(() -> "Override file holds nothing this build has");
-                overrideFeedback(request, L10n.t("None of this file's overrides fit this Instagram version. Nothing "
-                        + "changed."));
-            } catch (OverrideImport.SavedCopyDoesntFit failure) {
-                Logger.printInfo(() -> "Override restore refused a saved copy from another build or schema");
-                overrideFeedback(request, L10n.t("Couldn't restore overrides. The saved copy doesn't fit this "
-                        + "account and Instagram version. Use Discard saved overrides if you don't need it. Nothing "
-                        + "changed."));
-            } catch (Exception failure) {
-                Logger.printInfo(() -> "Override document operation failed before native mutation");
-                overrideFeedback(request, request == RESTORE_OVERRIDES
-                        ? L10n.t("Couldn't restore overrides. Open settings from Home while signed in. Nothing changed.")
-                        : request == RESET_OVERRIDES
-                        ? L10n.t("Couldn't reset overrides. Open settings from Home while signed in. Nothing changed.")
-                        : request == DISCARD_OVERRIDES
-                        ? L10n.t("Couldn't finish discarding the saved copies. Try Discard saved overrides again. "
-                                + "Instagram's overrides haven't changed.")
-                        : request == IMPORT_OVERRIDES
-                        ? L10n.t("Couldn't import overrides. Check the file and open settings from Home while signed in. Nothing changed.")
-                        : validating
-                        ? L10n.t("Couldn't validate overrides. Check the file and open settings from Home while signed in. Nothing changed.")
-                        : L10n.t("Couldn't export overrides. The selected file may be incomplete. Instagram's "
-                                + "overrides haven't changed."));
-            } finally { configurationFinished(); }
-        })) {
-            changingOverrides = false;
-            overrideFeedback(request, L10n.t("Couldn't start that. Try again. Nothing changed."));
-            showConfiguration();
-        }
-    }
-
-    /**
-     * Import flag names reads the picked list into HushGram's own copy, and Remove forgets that copy.
-     * Neither touches Instagram's overrides, its schema or anything it sends. A file that isn't a
-     * name list, or names nothing, changes nothing and says so in one line.
-     */
-    private void flagNames(@Nullable Uri uri, int request) {
-        boolean removing = request == REMOVE_FLAG_NAMES;
-        if (removing && (documentRequest != 0 || changingConfiguration || changingOverrides || ExportStatus.CONFIGURATION.active())) return;
-        Context context = getContext();
-        if (context == null || (!removing && uri == null)) { showConfiguration(); return; }
-        changingOverrides = true;
-        showConfiguration();
-        if (!Utils.runOnBackgroundThread(() -> {
-            try {
-                if (removing) {
-                    overrideFeedback(request, FlagNames.clear(context)
-                            ? L10n.t("Setting names removed. Open MetaConfig again to see the change.")
-                            : L10n.t("There are no imported setting names to remove."));
-                } else {
-                    byte[] bytes;
-                    try (java.io.InputStream input = context.getContentResolver().openInputStream(uri)) {
-                        bytes = FlagNames.read(input);
-                    }
-                    FlagNames.Names names = FlagNames.importNames(context, bytes);
-                    String imported = L10n.f("Setting names imported: %1$d. Open MetaConfig again to see them.", names.size());
-                    overrideFeedback(request, names.leftOut == 0 ? imported : imported + " " + L10n.f(
-                            "Entries left out because they repeat or don't fit: %1$d.", names.leftOut));
-                }
-            } catch (FlagNames.Empty failure) {
-                overrideFeedback(request, L10n.t("That file has no setting names in it. Nothing changed."));
-            } catch (FlagNames.Unreadable failure) {
-                overrideFeedback(request, L10n.t("Couldn't read setting names from that file. Nothing changed."));
-            } catch (Exception failure) {
-                Logger.printInfo(() -> "Flag names operation failed", failure);
-                overrideFeedback(request, removing ? L10n.t("Couldn't remove the setting names. Try again.")
-                        : L10n.t("Couldn't save the setting names. Nothing changed."));
-            } finally { configurationFinished(); }
-        })) {
-            changingOverrides = false;
-            overrideFeedback(request, L10n.t("Couldn't start that. Try again."));
-            showConfiguration();
-        }
     }
 
     /**
@@ -2771,7 +2437,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
      * as a font.
      */
     private void pickFont() {
-        if (documentRequest != 0 || changingConfiguration || changingOverrides || ExportStatus.CONFIGURATION.active()) return;
+        if (documentRequest != 0 || changingConfiguration || ExportStatus.CONFIGURATION.active()) return;
         if (documentSequence == Integer.MAX_VALUE) {
             Utils.showToastLong(L10n.t("Couldn't start that. Try again."));
             return;
@@ -2837,226 +2503,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         Utils.showToastLong(L10n.t("Font saved. Restart Instagram to see it."));
     }
 
-    /** The row that opens the page of named switches for Instagram's hidden settings. */
-    private Row recommendedFlagsRow(Context context) {
-        Row row = new Row(context);
-        row.setKey("hushgram_recommended_flags");
-        row.setPersistent(false);
-        row.setTitle(L10n.t("Recommended flags"));
-        row.setSummary(L10n.t("Named switches for some of Instagram's hidden settings, such as the new story style. "
-                + "Each one is Instagram's own, On or Off. Your current overrides are saved first for Restore."));
-        row.setOnPreferenceClickListener(tapped -> {
-            if (!Settings.ALLOW_OVERRIDE_IMPORT.get()) {
-                Utils.showToastLong(L10n.t("Turn on Allow importing overrides first. These switches use the same path."));
-            } else {
-                openRecommendedFlags();
-            }
-            return true;
-        });
-        return row;
-    }
-
-    /** Reads the store off the main thread, then shows the page with each switch where it stands. */
-    private void openRecommendedFlags() {
-        if (documentRequest != 0 || changingConfiguration || changingOverrides || ExportStatus.CONFIGURATION.active()) return;
-        Activity activity = getActivity();
-        if (activity == null) return;
-        changingOverrides = true;
-        showConfiguration();
-        if (!Utils.runOnBackgroundThread(() -> {
-            RecommendedFlags.Page page = null;
-            try {
-                page = RecommendedFlags.load(activity);
-            } catch (Exception failure) {
-                Logger.printInfo(() -> "Recommended flags couldn't read the overrides");
-            } finally {
-                // An Error past the catch is a failed read too, so it says so and frees the override rows.
-                RecommendedFlags.Page loaded = page;
-                Utils.runOnMainThread(() -> {
-                    if (loaded == null) {
-                        Utils.showToastLong(L10n.t("Couldn't read Instagram's overrides. Open settings from Home while signed in."));
-                    } else {
-                        showRecommendedFlags(loaded);
-                    }
-                });
-                configurationFinished();
-            }
-        })) {
-            changingOverrides = false;
-            showConfiguration();
-            Utils.showToastLong(L10n.t("Couldn't start that. Try again."));
-        }
-    }
-
-    private void showRecommendedFlags(RecommendedFlags.Page page) {
-        Context context = getActivity();
-        if (context == null) return;
-        ScreenColors colors = ScreenColors.shown == null ? ScreenColors.DEFAULT : ScreenColors.shown;
-        int inset = Math.round(20 * context.getResources().getDisplayMetrics().density);
-        LinearLayout list = new LinearLayout(context);
-        list.setOrientation(LinearLayout.VERTICAL);
-        list.setPaddingRelative(inset, inset / 2, inset, inset / 2);
-        TextView intro = new TextView(context);
-        intro.setText(page.flags.isEmpty()
-                ? L10n.t("This Instagram version has none of these switches.")
-                : L10n.t("Pick Instagram's own setting, On or Off. Restart Instagram after a change."));
-        intro.setTextColor(colors.summary);
-        intro.setPadding(0, 0, 0, inset / 2);
-        list.addView(intro);
-        List<RadioGroup> groups = new ArrayList<>();
-        for (int i = 0; i < page.flags.size(); i++) {
-            RecommendedFlags.Flag flag = page.flags.get(i);
-            RecommendedFlags.Choice shown = page.choices.get(i);
-            TextView title = new TextView(context);
-            title.setText(flag.title);
-            title.setTextColor(colors.title);
-            title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
-            title.setPadding(0, inset / 2, 0, 0);
-            TextView about = new TextView(context);
-            about.setText(shown == RecommendedFlags.Choice.OTHER
-                    ? flag.description + " " + L10n.t("Set another way right now.") : flag.description);
-            about.setTextColor(colors.summary);
-            RadioGroup group = new RadioGroup(context);
-            group.setOrientation(RadioGroup.VERTICAL);
-            String[] labels = {L10n.t("Instagram's own"), L10n.t("On"), L10n.t("Off")};
-            RecommendedFlags.Choice[] choices = {RecommendedFlags.Choice.DEFAULT, RecommendedFlags.Choice.ON,
-                    RecommendedFlags.Choice.OFF};
-            for (int c = 0; c < labels.length; c++) {
-                RadioButton button = new RadioButton(context);
-                button.setId(View.generateViewId());
-                button.setText(labels[c]);
-                button.setTextColor(colors.title);
-                button.setTag(choices[c]);
-                group.addView(button);
-                if (choices[c] == shown) group.check(button.getId());
-            }
-            group.setTag(shown);
-            group.setOnCheckedChangeListener((radios, checkedId) -> {
-                RadioButton chosen = radios.findViewById(checkedId);
-                if (chosen == null || chosen.getTag() == radios.getTag()) return;
-                RecommendedFlags.Choice previous = (RecommendedFlags.Choice) radios.getTag();
-                setRecommendedFlag(flag, (RecommendedFlags.Choice) chosen.getTag(), radios, previous, groups);
-            });
-            groups.add(group);
-            list.addView(title);
-            list.addView(about);
-            list.addView(group);
-        }
-        ScrollView scroll = new ScrollView(context);
-        scroll.addView(list);
-        show(new AlertDialog.Builder(context).setTitle(L10n.t("Recommended flags")).setView(scroll)
-                .setPositiveButton(L10n.t("OK"), null));
-    }
-
-    /** Applies one switch the way Import overrides does, then puts the radio back if it didn't take. */
-    private void setRecommendedFlag(RecommendedFlags.Flag flag, RecommendedFlags.Choice wanted, RadioGroup group,
-                                    RecommendedFlags.Choice previous, List<RadioGroup> groups) {
-        Activity activity = getActivity();
-        if (activity == null || changingOverrides || changingConfiguration) {
-            revertRecommendedFlag(group, previous);
-            return;
-        }
-        changingOverrides = true;
-        showConfiguration();
-        for (RadioGroup each : groups) for (int i = 0; i < each.getChildCount(); i++) each.getChildAt(i).setEnabled(false);
-        if (!Utils.runOnBackgroundThread(() -> {
-            boolean held = false;
-            String message = L10n.t("Couldn't change that setting. Open settings from Home while signed in. Nothing changed.");
-            try {
-                OverrideImport.Result result = RecommendedFlags.set(activity, flag, wanted);
-                held = result.outcome == OverrideImport.Outcome.APPLIED || result.outcome == OverrideImport.Outcome.UNCHANGED;
-                message = result.outcome == OverrideImport.Outcome.UNCHANGED
-                        ? L10n.t("That's already how it is. Nothing changed.")
-                        : result.outcome == OverrideImport.Outcome.APPLIED
-                        ? L10n.t("Saved. Restart Instagram to apply it.") : overrideOutcome(result, false);
-            } catch (OverrideImport.RestoreFirst failure) {
-                message = L10n.t("An earlier import still needs Restore previous overrides, "
-                        + "or Discard saved overrides if Restore can't run. Nothing changed.");
-            } catch (OverrideImport.NotAllowed failure) {
-                message = L10n.t("Allow importing overrides is off or HushGram is paused. Nothing changed.");
-            } catch (OverrideImport.StoreChanging failure) {
-                message = L10n.t("Instagram is still saving an override change. Wait a moment and try again. Nothing changed.");
-            } catch (Exception failure) {
-                Logger.printInfo(() -> "Recommended flag change failed before native mutation");
-                message = L10n.t("Couldn't change that setting. Open settings from Home while signed in. Nothing changed.");
-            } finally {
-                // An Error past the catches keeps the failure message, puts the radio back and frees the rows.
-                boolean kept = held;
-                Utils.showToastLong(message);
-                Utils.runOnMainThread(() -> {
-                    if (kept) group.setTag(wanted);
-                    else revertRecommendedFlag(group, previous);
-                    for (RadioGroup each : groups) for (int i = 0; i < each.getChildCount(); i++) each.getChildAt(i).setEnabled(true);
-                });
-                configurationFinished();
-            }
-        })) {
-            changingOverrides = false;
-            showConfiguration();
-            revertRecommendedFlag(group, previous);
-            for (RadioGroup each : groups) for (int i = 0; i < each.getChildCount(); i++) each.getChildAt(i).setEnabled(true);
-            Utils.showToastLong(L10n.t("Couldn't start that. Try again. Nothing changed."));
-        }
-    }
-
-    /** Puts a switch's radios back on the choice it had, without applying anything. */
-    private static void revertRecommendedFlag(RadioGroup group, RecommendedFlags.Choice choice) {
-        // The tag is set first, so the listener sees no change in the choice and applies nothing.
-        group.setTag(choice);
-        boolean found = false;
-        for (int i = 0; i < group.getChildCount(); i++) {
-            View child = group.getChildAt(i);
-            if (child.getTag() == choice) { group.check(child.getId()); found = true; }
-        }
-        if (!found) group.clearCheck();
-    }
-
-    private static String resetOutcome(OverrideImport.Result result) {
-        if (result.outcome == OverrideImport.Outcome.UNCHANGED) {
-            return L10n.t("There are no overrides to reset. Nothing changed.");
-        }
-        if (result.outcome != OverrideImport.Outcome.APPLIED) return overrideOutcome(result, false);
-        String message = L10n.f("Removed %1$d overrides. Restart Instagram to go back to its own settings.", result.changes);
-        return result.blocked ? message + " " + L10n.t("Recovery cleanup didn't finish. Use Restore previous overrides or "
-                + "Discard saved overrides.") : message;
-    }
-
-    private static String overrideOutcome(OverrideImport.Result result, boolean restoring) {
-        String message;
-        switch (result.outcome) {
-            case UNCHANGED: message = restoring
-                    ? L10n.t("The current overrides already match the saved copy. Nothing changed.")
-                    : L10n.t("This file matches the current overrides. Nothing changed."); break;
-            case APPLIED: message = restoring
-                    ? L10n.t("Previous overrides restored. Restart Instagram to apply them.")
-                    : L10n.f("Imported %1$d override changes. Restart Instagram to apply them.", result.changes); break;
-            case ROLLED_BACK: message = L10n.t("Instagram didn't keep the change, so the overrides were put back as they were."); break;
-            case PARTIAL: return result.blocked
-                    ? L10n.f("Restore put back what it could, except %1$d overrides that were set to nothing, which "
-                    + "can't be put back this way. Imports stay blocked until you use Discard saved overrides. "
-                    + "Restart Instagram to apply the rest.", result.skipped)
-                    : L10n.f("Restore put back what it could, except %1$d overrides that were set to nothing, which "
-                    + "can't be put back this way. Restart Instagram to apply the rest.", result.skipped);
-            default: return L10n.t("Instagram didn't keep the change and the overrides couldn't be confirmed. "
-                    + "Use Restore previous overrides, then restart Instagram.");
-        }
-        if (result.leftOut > 0) message += " " + L10n.f("%1$d overrides from a different Instagram version don't fit "
-                + "this one and were left out.", result.leftOut);
-        return result.blocked ? message + " " + L10n.t("Recovery cleanup didn't finish. Use Restore previous overrides or Discard saved overrides.") : message;
-    }
-
-    private void overrideFeedback(int request, String message) {
-        if (request == VALIDATE_OVERRIDES) overrideValidationFeedback = message;
-        else if (request == IMPORT_OVERRIDES) overrideImportFeedback = message;
-        else if (request == RESTORE_OVERRIDES) overrideRestoreFeedback = message;
-        else if (request == DISCARD_OVERRIDES) overrideDiscardFeedback = message;
-        else if (request == RESET_OVERRIDES) overrideResetFeedback = message;
-        else if (request == IMPORT_FLAG_NAMES || request == REMOVE_FLAG_NAMES) flagNamesFeedback = message;
-        else overrideExportFeedback = message;
-        Utils.showToastLong(message);
-        Utils.runOnMainThread(this::showConfiguration);
-    }
-
     private void exportConfiguration(Uri uri) {
         String token = configurationExportToken;
         if (!ExportStatus.CONFIGURATION.start(token, L10n.t("Exporting HushGram settings..."))) return;
@@ -3112,7 +2558,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         changingConfiguration = true;
         showConfiguration();
         if (!Utils.runOnBackgroundThread(() -> {
-            byte[] document = null;
             try {
                 ConfigurationBackup.Result result;
                 if (undo) result = ConfigurationBackup.undo(token);
@@ -3121,7 +2566,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     try (java.io.InputStream input = context.getContentResolver().openInputStream(uri)) {
                         bytes = ConfigurationBackup.read(input);
                     }
-                    document = bytes;
                     // A provider can fail while closing. Finish all document I/O before values
                     // change, so the failure verdict can truthfully say nothing was applied.
                     result = ConfigurationBackup.restore(bytes);
@@ -3131,8 +2575,15 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     String message = undo ? result.skipped == 0 ? L10n.t("Settings restored.")
                             : L10n.f("Restored %1$d settings. Kept %2$d newer choices.", result.applied, result.skipped)
                             : L10n.f("Imported %1$d settings. Skipped %2$d that this version doesn't know.", result.applied, result.skipped);
-                    if (result.restart) message += " " + L10n.t("Restart Instagram to apply these choices.");
-                    showImportFeedback(message);
+                    // A file or an Undo owes the same restart as flipping each row by hand, so Restart now
+                    // shows for it too, and an Undo back to what's running takes it away again. The
+                    // receipt asks for a restart only while one is owed, not for every restart choice
+                    // the file touched.
+                    Utils.runOnMainThread(() -> {
+                        boolean owed = false;
+                        for (var changed : result.before.entrySet()) owed |= noteRestartPending(changed.getKey(), changed.getValue());
+                        showImportFeedback(owed ? message + " " + L10n.t("Restart Instagram to apply these choices.") : message);
+                    });
                 }
             } catch (Setting.BatchFailed failure) {
                 showImportFeedback(failure.restored
@@ -3142,11 +2593,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                         : L10n.t("Couldn't save or fully restore the settings. Check the shown values and try Undo."));
             } catch (Exception failure) {
                 Logger.printInfo(() -> "Configuration import failed before applying settings");
-                // An overrides file handed to the settings import is the likeliest mix-up, so name it.
-                showImportFeedback(OverrideExchange.isOverridesFile(document)
-                        ? L10n.t("That's an overrides file, not a settings file. Turn on Allow importing overrides "
-                                + "under Developer, then use Import overrides. Your settings haven't changed.")
-                        : L10n.t("Couldn't use that settings file. Your settings haven't changed."));
+                showImportFeedback(L10n.t("Couldn't use that settings file. Your settings haven't changed."));
             } finally { configurationFinished(); }
         })) configurationQueueFull();
     }
@@ -3169,7 +2616,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     private void configurationFinished() {
         Utils.runOnMainThread(() -> {
             changingConfiguration = false;
-            changingOverrides = false;
             if (isAdded() && getPreferenceScreen() != null) updateUIToSettingValues();
             showConfiguration();
         });
@@ -4687,6 +4133,26 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         return row;
     }
 
+    /** How round the glass tab bar's pill is (#144). Its summary is the step chosen. */
+    static GlassCornersRow glassCornersRow(Context context) {
+        GlassCornersRow row = new GlassCornersRow(context);
+        row.setKey(Settings.GLASS_TAB_BAR_CORNERS.key);
+        row.setTitle(L10n.t("Tab bar corners"));
+        row.setDialogTitle(L10n.t("Tab bar corners"));
+        row.setNegativeButtonText(L10n.t("Cancel"));
+        GlassCorners[] steps = GlassCorners.values();
+        CharSequence[] entries = new CharSequence[steps.length];
+        CharSequence[] values = new CharSequence[steps.length];
+        for (int i = 0; i < steps.length; i++) {
+            entries[i] = glassCornersLabel(steps[i]);
+            values[i] = steps[i].name();
+        }
+        row.setEntries(entries);
+        row.setEntryValues(values);
+        row.setValue(Settings.GLASS_TAB_BAR_CORNERS.savedValue().name());
+        return row;
+    }
+
     /** How much room a floating glass pill leaves under itself. Its summary is the step chosen. */
     static GlassLiftRow glassLiftRow(Context context) {
         GlassLiftRow row = new GlassLiftRow(context);
@@ -4996,6 +4462,18 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     }
 
     /** What the list calls [step]. */
+    static String glassCornersLabel(GlassCorners step) {
+        switch (step) {
+            case ROUNDER:
+                return L10n.t("Rounder");
+            case ROUND:
+                return L10n.t("Fully round");
+            default:
+                return L10n.t("Standard");
+        }
+    }
+
+    /** What the list calls [step]. */
     static String glassHeightLabel(GlassHeight step) {
         switch (step) {
             case COMPACT:
@@ -5117,6 +4595,44 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 : L10n.t("The chip sits under the posts, followers and following counts.");
     }
 
+    /** Which bars Full screen Reels and Home hide (#231). Its values are the setting's own names. */
+    static HiddenBarsRow hiddenBarsRow(Context context) {
+        HiddenBarsRow row = new HiddenBarsRow(context);
+        row.setKey(Settings.FULL_SCREEN_HIDES.key);
+        row.setTitle(L10n.t("Bars to hide"));
+        row.setDialogTitle(L10n.t("Bars to hide"));
+        row.setNegativeButtonText(L10n.t("Cancel"));
+        HiddenBars[] choices = HiddenBars.values();
+        CharSequence[] entries = new CharSequence[choices.length];
+        CharSequence[] values = new CharSequence[choices.length];
+        for (int i = 0; i < choices.length; i++) {
+            entries[i] = hiddenBarsLabel(choices[i]);
+            values[i] = choices[i].name();
+        }
+        row.setEntries(entries);
+        row.setEntryValues(values);
+        row.setValue(Settings.FULL_SCREEN_HIDES.savedValue().name());
+        return row;
+    }
+
+    /** What the list calls [bars]. */
+    static String hiddenBarsLabel(HiddenBars bars) {
+        if (bars == HiddenBars.STATUS_BAR) return L10n.t("The status bar only");
+        if (bars == HiddenBars.NAVIGATION_BAR) return L10n.t("The navigation bar only");
+        return L10n.t("Both bars");
+    }
+
+    /** What full screen hides with [bars], for the row's summary. */
+    static String hiddenBarsSummary(HiddenBars bars) {
+        if (bars == HiddenBars.STATUS_BAR) {
+            return L10n.t("Full screen Reels and Home hide only the status bar at the top. The navigation bar stays.");
+        }
+        if (bars == HiddenBars.NAVIGATION_BAR) {
+            return L10n.t("Full screen Reels and Home hide only the navigation bar at the bottom. The status bar stays.");
+        }
+        return L10n.t("Full screen Reels and Home hide the status bar and the navigation bar.");
+    }
+
     /**
      * The size the story rings are drawn at. Like the playback quality's row, its values are the
      * setting's own names and its summary says what the choice does.
@@ -5140,20 +4656,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         return row;
     }
 
-    /** What the list calls [size]. */
+    /** What the list calls [size]: its share in the phone's own percent format, or Instagram's size. */
     static String storyRingLabel(StoryRingSize size) {
-        switch (size) {
-            case SMALLEST:
-                return L10n.t("Much smaller");
-            case SMALLER:
-                return L10n.t("Smaller");
-            case LARGER:
-                return L10n.t("Larger");
-            case LARGEST:
-                return L10n.t("Much larger");
-            default:
-                return L10n.t("Instagram's size");
-        }
+        if (size == StoryRingSize.INSTAGRAM) return L10n.t("Instagram's size");
+        return NumberFormat.getPercentInstance().format(size.percent() / 100.0);
     }
 
     /** What the rings look like at [size], for the row's summary, with its share in the phone's own percent format. */
@@ -5234,6 +4740,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             ((StoryTimeModeRow) preference).showSummary();
         } else if (preference instanceof FollowLabelPlaceRow) {
             ((FollowLabelPlaceRow) preference).showSummary();
+        } else if (preference instanceof HiddenBarsRow) {
+            ((HiddenBarsRow) preference).showSummary();
         } else if (preference instanceof StartTabRow) {
             ((StartTabRow) preference).showSummary();
         } else if (preference instanceof FontRow) {
@@ -5270,6 +4778,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             ((StoryTimeModeRow) listPreference).showSummary();
         } else if (listPreference instanceof FollowLabelPlaceRow) {
             ((FollowLabelPlaceRow) listPreference).showSummary();
+        } else if (listPreference instanceof HiddenBarsRow) {
+            ((HiddenBarsRow) listPreference).showSummary();
         } else if (listPreference instanceof StartTabRow) {
             ((StartTabRow) listPreference).showSummary();
         } else if (listPreference instanceof FontRow) {
@@ -5503,33 +5013,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         preference.setSummary(summary);
         preference.setSelectable(false);
         preference.setPersistent(false);
-        return preference;
-    }
-
-    /**
-     * A row that opens one of Instagram's own screens over the current host. Settings close only
-     * once it opened; otherwise they stay, and the row keeps the whole reason, since Android cuts
-     * a toast to two lines.
-     */
-    private Preference nativeScreenRow(Context context, String key, String title, String summary,
-                                       java.util.function.Predicate<Activity> open, String unavailable) {
-        Preference preference = new Row(context);
-        preference.setKey(key);
-        preference.setPersistent(false);
-        preference.setTitle(title);
-        preference.setSummary(summary);
-        preference.setOnPreferenceClickListener(row -> {
-            if (open.test(getActivity())) {
-                SettingsEntry.onClosedByUser();
-                if (getParentFragment() instanceof DialogFragment) {
-                    ((DialogFragment) getParentFragment()).dismissAllowingStateLoss();
-                }
-            } else {
-                row.setSummary(unavailable);
-                Utils.showToastShort(unavailable);
-            }
-            return true;
-        });
         return preference;
     }
 
@@ -6633,6 +6116,38 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         }
     }
 
+    static final class GlassCornersRow extends ListPreference {
+        GlassCornersRow(Context context) {
+            super(context);
+        }
+
+        /** The summary is the step chosen. */
+        @Override
+        public void setValue(String value) {
+            super.setValue(value);
+            GlassCorners step = GlassCorners.STANDARD;
+            for (GlassCorners candidate : GlassCorners.values()) {
+                if (candidate.name().equals(value)) step = candidate;
+            }
+            setSummary(glassCornersLabel(step));
+        }
+
+        @Override
+        protected void onBindView(View view) {
+            super.onBindView(view);
+            showAllText(view);
+            ScreenColors.row(view, this);
+            view.setAccessibilityDelegate(new RowSemantics(this, Button.class));
+        }
+
+        /** Its list takes the screen's colours, as the other rows' dialogs do. */
+        @Override
+        protected void showDialog(Bundle state) {
+            super.showDialog(state);
+            if (getDialog() instanceof AlertDialog) ScreenColors.dialog((AlertDialog) getDialog());
+        }
+    }
+
     static final class GlassHeightRow extends ListPreference {
         GlassHeightRow(Context context) {
             super(context);
@@ -6884,6 +6399,43 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             setSummary(Settings.FOLLOW_LABEL_PLACE.isAvailable()
                     ? followLabelPlaceSummary(place)
                     : L10n.t("Turn on Show it as a chip to use this choice."));
+        }
+
+        @Override
+        protected void onBindView(View view) {
+            super.onBindView(view);
+            showAllText(view);
+            ScreenColors.row(view, this);
+            view.setAccessibilityDelegate(new RowSemantics(this, Button.class));
+        }
+
+        /** Its list takes the screen's colours, as the other rows' dialogs do. */
+        @Override
+        protected void showDialog(Bundle state) {
+            super.showDialog(state);
+            if (getDialog() instanceof AlertDialog) ScreenColors.dialog((AlertDialog) getDialog());
+        }
+    }
+
+    static final class HiddenBarsRow extends ListPreference {
+        HiddenBarsRow(Context context) {
+            super(context);
+        }
+
+        @Override
+        public void setValue(String value) {
+            super.setValue(value);
+            showSummary();
+        }
+
+        void showSummary() {
+            HiddenBars bars = HiddenBars.BOTH;
+            for (HiddenBars candidate : HiddenBars.values()) {
+                if (candidate.name().equals(getValue())) bars = candidate;
+            }
+            setSummary(Settings.FULL_SCREEN_HIDES.isAvailable()
+                    ? hiddenBarsSummary(bars)
+                    : L10n.t("Turn on Full screen Reels or Full screen Home to use this choice."));
         }
 
         @Override

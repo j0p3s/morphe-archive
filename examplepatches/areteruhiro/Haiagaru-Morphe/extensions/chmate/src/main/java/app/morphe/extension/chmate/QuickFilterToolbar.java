@@ -139,6 +139,10 @@ public final class QuickFilterToolbar {
         AlertDialog filterDialog = new AlertDialog.Builder(activity).setTitle("フィルタ")
                 .setMultiChoiceItems(new String[]{"人気レス", "リンク", "画像", "動画"}, displayed,
                         (dialog, which, enabled) -> {
+                            if(which==0 && PopularReplies.openModel(model)) {
+                                ((AlertDialog)dialog).getListView().setItemChecked(which,checked[which]);
+                                return;
+                            }
                             if (checked[which] == enabled) return;
                             try {
                                 toggle.toggle(which);
@@ -229,6 +233,10 @@ public final class QuickFilterToolbar {
             for (int index = 0; index < buttons.length; index++) checked[index] = buttons[index].isChecked();
             AlertDialog filterDialog = new AlertDialog.Builder(activity).setTitle("フィルタ")
                     .setMultiChoiceItems(labels, checked, (dialog, which, enabled) -> {
+                        if(which==0 && PopularReplies.enabledFor(buttons[which].getContext())) {
+                            ((AlertDialog)dialog).getListView().setItemChecked(which,buttons[which].isChecked());
+                            PopularReplies.show(fragment);return;
+                        }
                         if (buttons[which].isChecked() != enabled) buttons[which].performClick();
                     })
                     .setNegativeButton("閉じる", null).show();
@@ -271,6 +279,10 @@ public final class QuickFilterToolbar {
                 .setMultiChoiceItems(new String[]{"人気レス", "リンク", "画像", "動画"}, checked,
                         (dialog, which, enabled) -> {
                             try {
+                                if(which==0 && PopularReplies.enabledFor(activity)) {
+                                    ((AlertDialog)dialog).getListView().setItemChecked(which,checked[which]);
+                                    PopularReplies.show(fragment);return;
+                                }
                                 Object observable = observables[which];
                                 java.lang.reflect.Field value = observable.getClass().getDeclaredField("mValue");
                                 value.setAccessible(true);
@@ -387,6 +399,13 @@ public final class QuickFilterToolbar {
     }
 
     /** Called only for the dedicated filter container, after its content is bound. */
+    public static boolean shouldCollapseMeasuredFilterRow(android.view.View row) {
+        // ListView treats LayoutParams.height == 0 as UNSPECIFIED when measuring a row.
+        // Only registered filter containers may override the resulting measured height.
+        return row != null && legacyRowHeights.containsKey(row) && Haiagaru.compactQuickFilters();
+    }
+
+    /** Called only for the dedicated filter container, after its content is bound. */
     public static void prepareFilterRow(android.view.View row) {
         if (row == null) return;
         android.view.ViewGroup.LayoutParams params = row.getLayoutParams();
@@ -483,7 +502,18 @@ public final class QuickFilterToolbar {
                 && names.contains("IMAGE") && names.contains("MOVIE");
     }
 
-    private static Object findResponseViewModel(Object fragment) throws Exception {
+    static Object findResponseViewModel(Object fragment) throws Exception {
+        if (fragment.getClass().getName().equals("jp.syoboi.a2chMate.ui.reslist.ResListFragment")) {
+            try {
+                java.lang.reflect.Field provider = fragment.getClass().getDeclaredField("H");
+                provider.setAccessible(true);
+                Object lazy = provider.getType().getName().equals("o.trN") ? provider.get(fragment) : null;
+                if (lazy != null) {
+                    Object model = lazy.getClass().getMethod("e").invoke(lazy);
+                    if (model != null && model.getClass().getName().equals("o.getImgAcceptedHeight")) return model;
+                }
+            } catch (ReflectiveOperationException ignored) {}
+        }
         for (java.lang.reflect.Field field : fragment.getClass().getDeclaredFields()) {
             if (Modifier.isStatic(field.getModifiers())) continue;
             field.setAccessible(true);

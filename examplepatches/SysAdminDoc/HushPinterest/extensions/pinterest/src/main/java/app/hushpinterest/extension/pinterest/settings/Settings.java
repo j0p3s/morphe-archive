@@ -51,9 +51,30 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting HIDE_AI_PINS =
             new BooleanSetting("hushpinterest_hide_ai_pins", FALSE);
+    /**
+     * Pins Pinterest doesn't label that say they're AI in their own words or come from an AI image
+     * site leave the same lists, on Hide AI-labeled pins' hook but its own switch. Off to start.
+     */
+    public static final BooleanSetting HIDE_AI_SELF_DESCRIBED =
+            new BooleanSetting("hushpinterest_hide_ai_self_described", FALSE);
 
     public static final BooleanSetting HIDE_SHOPPING =
             new BooleanSetting("hushpinterest_hide_shopping", FALSE);
+    /**
+     * Video pins leave the same lists, on Filter feed's switch: a pin Pinterest marks as video, gives
+     * a video list or calls an idea pin with running time. GIFs and photos stay. Off to start.
+     */
+    public static final BooleanSetting HIDE_VIDEO_PINS =
+            new BooleanSetting("hushpinterest_hide_video_pins", FALSE);
+    /**
+     * Filter feed's second capability: pins whose title, grid title or description holds one of
+     * these words or phrases leave the same lists. Empty to start, and empty while paused.
+     */
+    public static final MutedWordsSetting MUTED_WORDS =
+            new MutedWordsSetting("hushpinterest_muted_words");
+    /** Home keeps its pins when you come back to it. Pull-to-refresh still loads new ones. Off to start. */
+    public static final BooleanSetting KEEP_HOME_FEED =
+            new BooleanSetting("hushpinterest_keep_home_feed", FALSE);
     /** Its row asks for a restart after turning it off, so a change brings up the restart row. */
     public static final BooleanSetting DISABLE_ANALYTICS =
             new BooleanSetting("hushpinterest_disable_analytics", TRUE, true);
@@ -80,10 +101,23 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushpinterest_download_unmetered_only", FALSE);
     public static final BooleanSetting DOWNLOAD_NO_ROAMING =
             new BooleanSetting("hushpinterest_download_no_roaming", FALSE);
+    /** Download pins' Copy image row in the pin menu. Starts off, and needs Download pins on. */
+    public static final BooleanSetting COPY_IMAGE =
+            new BooleanSetting("hushpinterest_copy_image", FALSE);
+    /** Download pins' Share image row in the pin menu. Starts off, and needs Download pins on. */
+    public static final BooleanSetting SHARE_IMAGE =
+            new BooleanSetting("hushpinterest_share_image", FALSE);
     public static final BooleanSetting DOWNLOAD_BOARD =
             new BooleanSetting("hushpinterest_download_board", FALSE);
     public static final BooleanSetting LONG_PRESS_DOWNLOAD =
             new BooleanSetting("hushpinterest_long_press_download", FALSE);
+    /** Pinterest's own long-press buttons, each taken out of the menu by its switch. All start off. */
+    public static final BooleanSetting LONG_PRESS_HIDE_SAVE =
+            new BooleanSetting("hushpinterest_long_press_hide_save", FALSE);
+    public static final BooleanSetting LONG_PRESS_HIDE_SEND =
+            new BooleanSetting("hushpinterest_long_press_hide_send", FALSE);
+    public static final BooleanSetting LONG_PRESS_HIDE_SEARCH =
+            new BooleanSetting("hushpinterest_long_press_hide_search", FALSE);
     public static final BooleanSetting EXTERNAL_BROWSER =
             new BooleanSetting("hushpinterest_external_browser", FALSE);
     public static final BooleanSetting SYSTEM_SHARE =
@@ -111,6 +145,8 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushpinterest_hide_closeup_back", FALSE);
     public static final BooleanSetting HIDE_CLOSEUP_LENS =
             new BooleanSetting("hushpinterest_hide_closeup_lens", FALSE);
+    public static final BooleanSetting HIDE_CLOSEUP_SEARCH_LABEL =
+            new BooleanSetting("hushpinterest_hide_closeup_search_label", FALSE);
     public static final BooleanSetting HIDE_PIN_MENU_COLLAGE =
             new BooleanSetting("hushpinterest_hide_pin_menu_collage", FALSE);
     public static final BooleanSetting HIDE_PIN_MENU_VISUAL_SEARCH =
@@ -131,6 +167,8 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushpinterest_hide_save_toasts", FALSE);
     public static final BooleanSetting ORIGINAL_IMAGES =
             new BooleanSetting("hushpinterest_original_images", FALSE);
+    public static final BooleanSetting SHOW_POSTED_DATE =
+            new BooleanSetting("hushpinterest_show_posted_date", FALSE);
     public static final BooleanSetting DISABLE_UPDATE_NAG =
             new BooleanSetting("hushpinterest_disable_update_nag", FALSE);
 

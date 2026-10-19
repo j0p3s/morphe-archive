@@ -6,6 +6,7 @@ package app.morphe.patches.catzy.misc.protection
 
 import app.morphe.patcher.patch.PatchAvailability
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patches.catzy.misc.pairip.restoreVirtualizedMethodsPatch
 import app.morphe.patches.catzy.misc.params.inlineNativeParametersPatch
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.shared.misc.arm64Availability
@@ -22,6 +23,7 @@ val removeAppProtectionPatch = bytecodePatch(
 
     dependsOn(
         removePairipVirtualizationPatch,
+        restoreVirtualizedMethodsPatch,
         removePairipProtectionPatch,
         inlineNativeParametersPatch,
     )

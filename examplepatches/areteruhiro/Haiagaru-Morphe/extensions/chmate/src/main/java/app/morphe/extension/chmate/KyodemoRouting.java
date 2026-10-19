@@ -57,6 +57,12 @@ public final class KyodemoRouting {
                 && prefixForHost(sourceHost.toLowerCase(Locale.ROOT)) != null;
     }
 
+    /** Kenmo is indexed by Kyodemo under the native poverty board ID. */
+    public static boolean prefersKyodemo(String sourceHost, String board) {
+        return "poverty".equals(board) && sourceHost != null
+                && "".equals(prefixForHost(sourceHost.toLowerCase(Locale.ROOT)));
+    }
+
     private static String prefixForHost(String host) {
         // Kyodemo uses the ordinary ChMate board name for 5ch/2ch boards.
         if (isHostOrSubdomain(host, "5ch.net") || isHostOrSubdomain(host, "5ch.io")
@@ -71,6 +77,7 @@ public final class KyodemoRouting {
         if ("jbbs.shitaraba.net".equals(host)) return "s_";
         if ("bbs.eddibb.cc".equals(host)) return "e_e_";
         if ("v1ch.cc".equals(host)) return "e_e_";
+        if ("d1ch.cc".equals(host)) return "e_e_";
         if ("yaruozatsudan.com".equals(host)) return "e_y_";
         if ("yaruoshelter.com".equals(host) || "yarumakai.com".equals(host)) return "e_y_";
         if ("pinkdarker.com".equals(host)) return "e_n_";
@@ -97,6 +104,11 @@ public final class KyodemoRouting {
 
     public static String wacchoiSearchUrl(String host, String board, String wacchoi) {
         if (wacchoi == null) return null;
+        // A suffix search intentionally has no carrier label or first half.
+        // Do not expand "-uDul" into "ﾜｯﾁｮｲ -uDul": that excludes other carriers.
+        if (wacchoi.matches("-[^\\s()（）<>]{4}")) {
+            return idSearchUrl(host, board, wacchoi, null, null);
+        }
         String edgeSlip = edgeWacchoiInText(wacchoi);
         if (edgeSlip != null) {
             String slug = boardSlug(host, board);

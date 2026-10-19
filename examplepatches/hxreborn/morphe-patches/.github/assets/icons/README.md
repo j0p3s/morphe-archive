@@ -23,10 +23,12 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `allvideoplayer.png` | All Video Player App (`com.allformatplayer.streamvideoplayer`) | Legend eSolution | APK 1.4, `res/drawable-xhdpi-v4/small_logo.png` |
 | `aloa.png` | Aloa (`com.getaloa.app`) | Aloa | APK 1.3.3, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `alpinequest.png` | AlpineQuest (`psyberia.alpinequest.free`) | Psyberia | APK 2.4.0e, `res/drawable-xxxhdpi-v4/core_icon_free_round.png` |
+| `botim.png` | botim (`im.thebot.messenger`) | ALGENTO DMCC | APK 4.19.1, adaptive icon `res/mipmap-anydpi-v26/botim_logo.xml` (square `res/mipmap-xxxhdpi-v4/botim_logo_square.png` cut to a circle) |
 | `depthpix.png` | DepthPix (`com.androholic.wallpapersdepthpix`) | Androholic | APK 1.0.12, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `devcheck.png` | DevCheck (`flar2.devcheck`) | flar2 | APK 6.57, adaptive icon `res/mipmap-xxxhdpi-v4/ic_launcher_background.webp` under `ic_launcher_foreground.webp` |
 | `psiphon.png` | Psiphon (`com.psiphon3.subscription`) | Psiphon Inc. | APK 2.5.11, `res/mipmap-xxhdpi-v4/ic_launcher.webp` (square icon cut to a circle) |
 | `projectivy.png` | Projectivy Launcher (`com.spocky.projengmenu`) | Spocky | APK 4.71, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml` |
+| `privacynotes.png` | Privacy Notes (`app.privacynotes`) | Lifetime Labs LLC | APK 0.654.2, adaptive icon `res/BW.xml` (`mipmap/ic_launcher_background` under `ic_launcher_foreground`, xxxhdpi) |
 | `focusnow.png` | FocusNow (`com.ferdinandobermeier.focusmate`) | Ferdinand Obermeier | APK 3.8.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `forus.png` | ForusApp (`com.myvitale.forus`) | MyVitale | APK 3.0.15, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `showly.png` | Showly (`com.michaldrabik.showly2`) | Michał Drabik / Trakt | APK 3.70.0, `mipmap/ic_launcher_round`, xxxhdpi |
@@ -37,8 +39,15 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `audible.png` | Audible (`com.audible.application`) | Audible, Inc. | APK 26.30.05, adaptive icon `adaptive_app_icon_orange_round` |
 | `symfonium.png` | Symfonium (`app.symfonik.music.player`) | Tolriq | APK 14.1.0, adaptive icon `res/mipmap-anydpi-v21/ic_default_launcher.xml` |
 | `perplexity.png` | Perplexity (`ai.perplexity.app.android`) | PerplexityAI | APK 2.95.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
+| `poe.png` | Poe (`com.poe.android`) | Quora, Inc. | APK a3.77.2, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `trainline.png` | Trainline (`com.thetrainline`) | trainline | APK 414.0.0.182041, adaptive icon `mipmap/ttl_ic_launcher` |
 | `readera.png` | ReadEra (`org.readera`) | READERA LLC | APK 26.05.20, `mipmap/d` (round icon), xxxhdpi |
+| `moonreader.png` | Moon+ Reader (`com.flyersoft.moonreader`) | Moon+ | APK 10.7, adaptive icon `res/drawable-anydpi-v26/icon.xml` |
+| `calcnote.png` | CalcNote (`com.burton999.notecal`) | burton999 | APK 2.25.111, `res/drawable-xxhdpi-v4/ic_launcher.png` (square icon cut to a circle) |
+| `castlefortv.png` | Castle for TV (`com.gxnet.castle.indiatv`) | Castle | APK 1.1.5, `res/S1.webp` (square icon cut to a circle) |
+| `acalendar.png` | aCalendar (`org.withouthat.acalendar`) | Tapir Apps GmbH | APK 2.9.5, `res/mipmap-xxxhdpi-v4/ic_launcher.png` (square icon cut to a circle) |
+| `quickcursor.png` | Quick Cursor (`com.quickcursor`) | Quick Cursor | APK 3.0.2, `res/mipmap-xxxhdpi-v4/launcher_icon_round.png` |
+| `opal.png` | Opal (`com.withopal.opal`) | Opal: The Focus Company | APK 4.14.0, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml` (`ic_launcher_background` under `ic_launcher_foreground`, xxxhdpi) |
 | `kick.png` | Kick (`com.kick.mobile`) | KICK - Live Streaming | APK 40.31.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `etsy.png` | Etsy (`com.etsy.android`) | Etsy, Inc | APK 7.96.0, adaptive icon `res/mipmap-anydpi-v21/ic_launcher.xml` |
 | `qrscanner.png` | QR & Barcode Scanner (`com.gamma.scan`) | Gamma Play | APK 2.2.224, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
@@ -74,6 +83,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `echogram.png` | Echogram (`com.liori.echogram`) | Illuzion Apps | APK 1.0.7.0, `res/mipmap-xxxhdpi-v4/ic_launcher.png` |
 | `echoequalizer.png` | Echo Equalizer (`com.hapibits.soundlift`) | HapiBits | APK 9.2, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `ledblinker.png` | LED Blinker (`com.ledblinker`) | Mario Ostwald | APK 26.01.08, `res/mipmap-xxxhdpi-v4/ic_launcher_new.webp` |
+| `lingodeer.png` | LingoDeer (`com.lingodeer`) | LingoDeer | APK 2.99.413, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `lumo.png` | Lumo (`me.proton.android.lumo`) | Proton AG | APK 2.1.4-nogms, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `fddb.png` | Fddb (`com.fddb`) | Fddb | APK v7.8.4, `res/mipmap-xxxhdpi-v4/ic_launcher.png` |
 | `faststlviewer.png` | Fast STL Viewer (`com.performance.meshview`) | Fast STL Viewer | APK 2.84, `res/Gd.png`, cut to a circle |
@@ -83,6 +93,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `yiiot.png` | Yi iot (`com.yunyi.smartcamera`) | Kami HK | APK 5.1.7, `res/drawable-xxhdpi-v4/ic_launcher.webp`, cut to a circle |
 | `blurwall.png` | BlurWall (`apps.automan.blurwallpaper`) | automan | APK 2.9.8, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `catzy.png` | Catzy (`com.nieruo.healthapp`) | Nieruo | APK 1.61.0, `res/mipmap-xxxhdpi-v4/ic_launcher_103.webp` |
+| `cubasisle3.png` | Cubasis LE 3 (`com.steinberg.cubasisle3`) | Steinberg Media Technologies | Play 3.8.6, adaptive icon `icon_le` (`res/drawable-xxhdpi-v4/icon_le_bg.png` under `icon_le_fg.png`, xxhdpi config split) |
 | `one4home.png` | One4Home Launcher (`com.one4studio.one4home`) | One4Studio | APK 0.4.72, adaptive icon `res/mipmap-anydpi-v26/ic_launcher_round.xml` |
 | `moviebox.png` | MovieBox (`com.community.oneroom`) | Not on Google Play | APK 4.0.03.0918.03, adaptive round icon |
 | `movieboxtv.png` | MovieBox TV (`com.community.mbox.tv`) | Not on Google Play | APK 1.2.0.0923, `res/d2.webp` (square icon cut to a circle) |
@@ -93,6 +104,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `biobird.png` | Biobird Flashcards (`com.biobird.exvee`) | Biobird | APK 2.0.2, `res/mipmap-xxxhdpi-v4/launcher_icon.png`, cut to a circle |
 | `keepa.png` | Keepa (`com.keepa.mobile`) | Keepa.com | APK 6.2.1, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `joyn.png` | Joyn (`de.prosiebensat1digital.seventv`) | SevenOne Entertainment Group GmbH | APK 6.9.0-AOS-609012264, `res/mipmap-xxxhdpi-v4/ic_launcher.png`, cut to a circle |
+| `joyn-austria.png` | Joyn Austria (`at.zappn`) | ProSiebenSat.1 PULS 4 GmbH | APK 6.9.0-AOS-JOYN_AT-2212264, `res/mipmap-xxxhdpi-v4/ic_launcher.webp`, cut to a circle |
 | `photone.png` | Photone (`io.lightray.photone`) | Lightray Innovation GmbH | APK 1.5.4, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `audiolab.png` | AudioLab (`com.hitrolab.audioeditor`) | HitroLab | APK 1.3.33, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `imo.png` | imo (`com.imo.android.imoim`) | imo.im | APK 2026.08.1041, adaptive icon `res/drawable-anydpi-v26/b63.xml`, cut to a circle |
@@ -104,8 +116,13 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `netanalyzer.png` | Network Analyzer (`net.techet.netanalyzerlite.an`) | Jiri Techet | APK 5.1, adaptive icon `res/mipmap-xxxhdpi-v4/lite_background.png` under `lite_foreground.png` |
 | `radiojavan.png` | Radio Javan (`com.radiojavan.androidradio`) | Radio Javan | APK 11.20.1, `res/mipmap-xxxhdpi-v4/ic_launcher_red_head.png` |
 | `sheytoon.png` | Sheytoon (`com.triovent.datingapp`) | Sheytoon Inc. | APK 6.7, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
+| `serializd.png` | Serializd (`com.serializdmobile`) | Serializd | Play 1.992, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
+| `musicolet.png` | Musicolet (`in.krosbits.musicolet`) | Krosbits | APK 6.14.1 build540, adaptive icon `res/mipmap-anydpi-v26/ic_launcher_ex4.xml`, cut to a circle |
 
 Showly's icon is also published under GPLv3 in [`trakt/showly`](https://github.com/trakt/showly),
+| `periodcalendar.png` | Period Tracker and Calendar (`com.lbrc.PeriodCalendar`) | SimpleInnovation | APK 13.3.2, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml`, cut to a circle |
+| `udictionary.png` | U Dictionary (`com.youdao.hindict`) | Youdao (Hong Kong) Limited | APK 6.7.5, `res/mipmap-xxhdpi/ic_launcher_round.png` |
+| `magicearth.png` | Magic Earth (`com.generalmagic.magicearth`) | Magic Lane International | APK 7.1.26, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 so its copyright terms are compatible with this one. The rest are used under nominative fair
 use only, with no licence claimed.
 

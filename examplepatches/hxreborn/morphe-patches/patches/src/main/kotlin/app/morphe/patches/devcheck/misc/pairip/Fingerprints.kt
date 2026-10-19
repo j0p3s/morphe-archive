@@ -332,7 +332,6 @@ internal object ShizukuBinderReceiverFingerprint : Fingerprint(
             name = "<init>",
             location = MatchAfterImmediately(),
         ),
-        string("moe.shizuku.api.action.BINDER_RECEIVED"),
     ),
 )
 
@@ -364,19 +363,6 @@ internal object RootManagerConnectFingerprint : Fingerprint(
     parameters = listOf("Landroid/os/IBinder;"),
     strings = listOf(ROOT_SERVICE_MANAGER_DESCRIPTOR),
     custom = { _, classDef -> classDef.fields.any { it.type == "Landroid/os/IBinder;" } },
-)
-
-internal object RootServiceBundleKeyFingerprint : Fingerprint(
-    filters = listOf(
-        string("extra.daemon"),
-        fieldAccess(opcode = Opcode.SGET_OBJECT, type = STRING),
-        methodCall(
-            definingClass = "Landroid/content/Intent;",
-            name = "putExtra",
-            parameters = listOf(STRING, "Landroid/os/Bundle;"),
-            location = MatchAfterImmediately(),
-        ),
-    ),
 )
 
 internal fun rootServiceReceiverConstructorFingerprint(managerClass: String) = Fingerprint(

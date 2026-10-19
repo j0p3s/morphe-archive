@@ -5,15 +5,13 @@
 package app.morphe.patches.imo.misc.invite
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
-import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patches.imo.shared.wideRegisterPairs
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.util.getFreeRegisterProvider
 import app.morphe.util.getReference
-import app.morphe.util.indexOfFirstInstructionOrThrow
 import app.morphe.util.matchSingle
 import app.morphe.util.returnEarly
-import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
@@ -28,12 +26,11 @@ val hideInvitePromptsPatch = bytecodePatch(
     compatibleWith(AppCompatibilities.IMO)
 
     execute {
-        InviteDialogCooldownFingerprint.matchSingle().method.apply {
-            val keyIndex = indexOfFirstInstructionOrThrow(lastInviteTimeKey)
-            val lastShownIndex = indexOfFirstInstructionOrThrow(keyIndex, Opcode.MOVE_RESULT_WIDE)
-            val register = getInstruction<OneRegisterInstruction>(lastShownIndex).registerA
-            addInstructions(
-                lastShownIndex + 1,
+        inviteDialogCooldownFingerprint().matchSingle().apply {
+            val lastShown = instructionMatches.last()
+            val register = lastShown.getInstruction<OneRegisterInstruction>().registerA
+            method.addInstructions(
+                lastShown.index + 1,
                 """
                     invoke-static {}, Ljava/lang/System;->currentTimeMillis()J
                     move-result-wide v$register
@@ -41,16 +38,15 @@ val hideInvitePromptsPatch = bytecodePatch(
             )
         }
 
-        InviteChatEntryFingerprint.matchSingle().method.apply {
-            val deleteRows = getInstruction(indexOfFirstInstructionOrThrow(chatRowsDelete))
-                .getReference<MethodReference>()!!
-            val keyIndex = indexOfFirstInstructionOrThrow(inviteEntryClosedKey)
-            val closedIndex = indexOfFirstInstructionOrThrow(keyIndex, Opcode.MOVE_RESULT)
-            val closed = getInstruction<OneRegisterInstruction>(closedIndex).registerA
+        inviteChatEntryFingerprint().matchSingle().apply {
+            val deleteRows = instructionMatches.first().instruction.getReference<MethodReference>()!!
+            val closedIndex = instructionMatches.last().index
+            val closed = instructionMatches.last().getInstruction<OneRegisterInstruction>().registerA
             val insertIndex = closedIndex + 1
-            val registers = getFreeRegisterProvider(insertIndex, 4, closed)
+            val wideRegisters = method.wideRegisterPairs().toIntArray()
+            val registers = method.getFreeRegisterProvider(insertIndex, 4, closed, *wideRegisters)
             val (table, selection, selectionArgs, notify) = List(4) { registers.getFreeRegister4Bit() }
-            addInstructions(
+            method.addInstructions(
                 insertIndex,
                 """
                     const-string v$table, "$CHATS_TABLE"

@@ -52,6 +52,7 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowAlertDialog;
 import org.robolectric.shadows.ShadowLooper;
+import org.robolectric.shadows.ShadowToast;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -89,6 +90,8 @@ public class HushPinterestPreferenceFragmentTest {
         ROW_TITLES.put(PatchFamily.HIDE_ADS, "Hide ads");
         ROW_TITLES.put(PatchFamily.HIDE_AI_PINS, "Hide AI-labeled pins");
         ROW_TITLES.put(PatchFamily.HIDE_SHOPPING, "Hide shopping and product pins");
+        ROW_TITLES.put(PatchFamily.FILTER_FEED, "Hide video pins");
+        ROW_TITLES.put(PatchFamily.KEEP_HOME_FEED, "Keep Home feed");
         ROW_TITLES.put(PatchFamily.DISABLE_ANALYTICS, "Disable analytics");
         ROW_TITLES.put(PatchFamily.STRIP_LINK_TRACKING, "Strip link tracking");
         ROW_TITLES.put(PatchFamily.HIDE_ADVERTISING_ID, "Hide advertising ID");
@@ -112,6 +115,7 @@ public class HushPinterestPreferenceFragmentTest {
         ROW_TITLES.put(PatchFamily.HIDE_SURVEY_PROMPTS, "Hide survey prompts");
         ROW_TITLES.put(PatchFamily.HIDE_SAVE_TOASTS, "Hide save toasts");
         ROW_TITLES.put(PatchFamily.ORIGINAL_IMAGES, "Original-quality images");
+        ROW_TITLES.put(PatchFamily.SHOW_POSTED_DATE, "Show posted date");
         ROW_TITLES.put(PatchFamily.DISABLE_UPDATE_NAG, "Disable update nag");
         ROW_TITLES.put(PatchFamily.FIX_PUSH_NOTIFICATIONS, "Fix push notifications");
     }
@@ -335,6 +339,35 @@ public class HushPinterestPreferenceFragmentTest {
     }
 
     /**
+     * Hide pins that say they're AI rides Hide AI-labeled pins' list hook, so its row shows only when
+     * that hook went in, right under Hide AI-labeled pins. It starts off.
+     */
+    @Test
+    public void aiWordsShowsOnlyWhereTheListHookWentIn() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        Set<PatchFamily.Capability> withoutIt = EnumSet.allOf(PatchFamily.Capability.class);
+        withoutIt.remove(PatchFamily.Capability.FEED_AI_PINS);
+        PatchFamily.capabilitiesForTests = withoutIt;
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            assertNull(page.findPreference(Settings.HIDE_AI_SELF_DESCRIBED.key));
+            assertNotNull(page.findPreference(Settings.HIDE_AI_PINS.key));
+        }
+        PatchFamily.capabilitiesForTests = EnumSet.allOf(PatchFamily.Capability.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            SwitchPreference row = (SwitchPreference) page.findPreference(Settings.HIDE_AI_SELF_DESCRIBED.key);
+            assertNotNull(row);
+            assertEquals("Hide pins that say they're AI", String.valueOf(row.getTitle()));
+            assertTrue(String.valueOf(row.getSummary()), String.valueOf(row.getSummary()).contains("some still show"));
+            assertFalse("Hide pins that say they're AI starts off", row.isChecked());
+            List<Preference> rows = new ArrayList<>();
+            collect(page.getPreferenceScreen(), rows);
+            assertEquals(indexOfKey(rows, Settings.HIDE_AI_PINS.key) + 1, indexOfKey(rows, Settings.HIDE_AI_SELF_DESCRIBED.key));
+        }
+    }
+
+    /**
      * Hide suggested replies has its own hook, so its row shows only when that hook went in, right
      * under Hide comments. Both start off.
      */
@@ -363,6 +396,158 @@ public class HushPinterestPreferenceFragmentTest {
             List<Preference> rows = new ArrayList<>();
             collect(page.getPreferenceScreen(), rows);
             assertEquals(indexOfKey(rows, Settings.HIDE_COMMENTS.key) + 1, indexOfKey(rows, Settings.HIDE_SUGGESTED_REPLIES.key));
+        }
+    }
+
+    /**
+     * Hide Search image label has its own hook, so its row shows only when that hook went in, right
+     * under Hide lens button. It starts off.
+     */
+    @Test
+    public void searchImageLabelShowsOnlyWhereItsHookWentIn() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        Set<PatchFamily.Capability> withoutIt = EnumSet.allOf(PatchFamily.Capability.class);
+        withoutIt.remove(PatchFamily.Capability.CLOSEUP_SEARCH_LABEL);
+        PatchFamily.capabilitiesForTests = withoutIt;
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            assertNull(page.findPreference(Settings.HIDE_CLOSEUP_SEARCH_LABEL.key));
+            assertNotNull(page.findPreference(Settings.HIDE_CLOSEUP_LENS.key));
+        }
+        PatchFamily.capabilitiesForTests = EnumSet.allOf(PatchFamily.Capability.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            SwitchPreference row = (SwitchPreference) page.findPreference(Settings.HIDE_CLOSEUP_SEARCH_LABEL.key);
+            assertNotNull(row);
+            assertEquals("Hide Search image label on pins", String.valueOf(row.getTitle()));
+            assertFalse("Hide Search image label starts off", row.isChecked());
+            List<Preference> rows = new ArrayList<>();
+            collect(page.getPreferenceScreen(), rows);
+            assertEquals(indexOfKey(rows, Settings.HIDE_CLOSEUP_LENS.key) + 1, indexOfKey(rows, Settings.HIDE_CLOSEUP_SEARCH_LABEL.key));
+        }
+    }
+
+    /**
+     * Copy image has its own switch under the download rows, starts off, and shows only where the
+     * pin menu row went in.
+     */
+    @Test
+    public void copyImageShowsAfterDownloadHistoryOnlyWhereItsHookWentIn() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        Set<PatchFamily.Capability> withoutIt = EnumSet.allOf(PatchFamily.Capability.class);
+        withoutIt.remove(PatchFamily.Capability.COPY_IMAGE);
+        PatchFamily.capabilitiesForTests = withoutIt;
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            assertNull(page.findPreference(Settings.COPY_IMAGE.key));
+            assertNotNull(page.findPreference(Settings.DOWNLOAD_PINS.key));
+        }
+        PatchFamily.capabilitiesForTests = EnumSet.allOf(PatchFamily.Capability.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            SwitchPreference row = (SwitchPreference) page.findPreference(Settings.COPY_IMAGE.key);
+            assertNotNull(row);
+            assertEquals("Copy image", String.valueOf(row.getTitle()));
+            assertFalse("Copy image starts off", row.isChecked());
+            List<Preference> rows = new ArrayList<>();
+            collect(page.getPreferenceScreen(), rows);
+            assertEquals(indexOfKey(rows, "action_download_history") + 1, indexOfKey(rows, Settings.COPY_IMAGE.key));
+        }
+    }
+
+    /** Share image has its own switch right after Copy image, starts off, and shows only where its row went in. */
+    @Test
+    public void shareImageShowsAfterCopyImageOnlyWhereItsHookWentIn() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        Set<PatchFamily.Capability> withoutIt = EnumSet.allOf(PatchFamily.Capability.class);
+        withoutIt.remove(PatchFamily.Capability.SHARE_IMAGE);
+        PatchFamily.capabilitiesForTests = withoutIt;
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            assertNull(page.findPreference(Settings.SHARE_IMAGE.key));
+            assertNotNull(page.findPreference(Settings.COPY_IMAGE.key));
+        }
+        PatchFamily.capabilitiesForTests = EnumSet.allOf(PatchFamily.Capability.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            SwitchPreference row = (SwitchPreference) page.findPreference(Settings.SHARE_IMAGE.key);
+            assertNotNull(row);
+            assertEquals("Share image", String.valueOf(row.getTitle()));
+            assertFalse("Share image starts off", row.isChecked());
+            List<Preference> rows = new ArrayList<>();
+            collect(page.getPreferenceScreen(), rows);
+            assertEquals(indexOfKey(rows, Settings.COPY_IMAGE.key) + 1, indexOfKey(rows, Settings.SHARE_IMAGE.key));
+        }
+    }
+
+    /** A method, not a field, so Settings loads after the rule has given it a context. */
+    private static BooleanSetting[] longPressHides() {
+        return new BooleanSetting[] {Settings.LONG_PRESS_HIDE_SAVE, Settings.LONG_PRESS_HIDE_SEND, Settings.LONG_PRESS_HIDE_SEARCH};
+    }
+
+    /** The long-press hide switches sit right under Long-press download, start off, and show only where their hook went in. */
+    @Test
+    public void longPressHideSwitchesShowUnderLongPressDownloadOnlyWhereTheirHookWentIn() {
+        String[] titles = {"Hide Save in the long-press menu", "Hide Send in the long-press menu", "Hide Search image in the long-press menu"};
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        Set<PatchFamily.Capability> withoutIt = EnumSet.allOf(PatchFamily.Capability.class);
+        withoutIt.remove(PatchFamily.Capability.LONG_PRESS_CHOICES);
+        PatchFamily.capabilitiesForTests = withoutIt;
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            for (BooleanSetting hide : longPressHides()) assertNull(page.findPreference(hide.key));
+            assertNotNull(page.findPreference(Settings.LONG_PRESS_DOWNLOAD.key));
+        }
+        PatchFamily.capabilitiesForTests = EnumSet.allOf(PatchFamily.Capability.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            List<Preference> rows = new ArrayList<>();
+            collect(page.getPreferenceScreen(), rows);
+            for (int n = 0; n < longPressHides().length; n++) {
+                SwitchPreference row = (SwitchPreference) page.findPreference(longPressHides()[n].key);
+                assertNotNull(row);
+                assertEquals(titles[n], String.valueOf(row.getTitle()));
+                assertFalse(titles[n] + " starts off", row.isChecked());
+                assertEquals(indexOfKey(rows, Settings.LONG_PRESS_DOWNLOAD.key) + 1 + n, indexOfKey(rows, longPressHides()[n].key));
+            }
+        }
+    }
+
+    /**
+     * Turning on the last hide switch while Long-press download is off would leave a menu with
+     * nothing in it, so a toast says Pinterest's menu stays. Any other time there's no toast.
+     */
+    @Test
+    public void hidingEveryLongPressButtonWithDownloadOffSaysTheMenuStays() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        PatchFamily.capabilitiesForTests = EnumSet.allOf(PatchFamily.Capability.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            SwitchPreference search = (SwitchPreference) pageOf(controller).findPreference(Settings.LONG_PRESS_HIDE_SEARCH.key);
+            Preference.OnPreferenceChangeListener flip = search.getOnPreferenceChangeListener();
+            Settings.LONG_PRESS_HIDE_SAVE.save(true);
+            Settings.LONG_PRESS_HIDE_SEND.save(true);
+            Settings.LONG_PRESS_DOWNLOAD.save(true);
+            assertTrue(flip.onPreferenceChange(search, true));
+            ShadowLooper.idleMainLooper();
+            assertNull("Download is still in the menu", ShadowToast.getTextOfLatestToast());
+
+            Settings.LONG_PRESS_DOWNLOAD.save(false);
+            Settings.LONG_PRESS_HIDE_SEND.save(false);
+            assertTrue(flip.onPreferenceChange(search, true));
+            ShadowLooper.idleMainLooper();
+            assertNull("Send is still in the menu", ShadowToast.getTextOfLatestToast());
+
+            Settings.LONG_PRESS_HIDE_SEND.save(true);
+            assertTrue(flip.onPreferenceChange(search, false));
+            ShadowLooper.idleMainLooper();
+            assertNull("turning one off leaves its button", ShadowToast.getTextOfLatestToast());
+
+            assertTrue(flip.onPreferenceChange(search, true));
+            ShadowLooper.idleMainLooper();
+            assertEquals("With nothing left in it, the menu keeps Pinterest's buttons.", ShadowToast.getTextOfLatestToast());
+        } finally {
+            for (BooleanSetting hide : longPressHides()) hide.resetToDefault();
+            Settings.LONG_PRESS_DOWNLOAD.resetToDefault();
         }
     }
 
@@ -579,6 +764,37 @@ public class HushPinterestPreferenceFragmentTest {
             assertFalse(roaming.isChecked());
             // Unmetered isn't the same as Wi-Fi, and the summary says so.
             assertTrue(String.valueOf(unmetered.getSummary()).contains("Metered Wi-Fi"));
+        }
+    }
+
+    /**
+     * The row to Pinterest's own Gen AI interests sits under the AI switches, comes only with Hide
+     * AI-labeled pins, and opens that page in this Pinterest, never a browser.
+     */
+    @Test
+    public void pinterestsOwnAiSettingFollowsTheAiSwitchesAndOpensInPinterest() {
+        PatchFamily.inBuildForTests = EnumSet.allOf(PatchFamily.class);
+        PatchFamily.capabilitiesForTests = EnumSet.allOf(PatchFamily.Capability.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            HushPinterestPreferenceFragment page = pageOf(controller);
+            List<Preference> rows = new ArrayList<>();
+            collect(page.getPreferenceScreen(), rows);
+            int row = indexOfKey(rows, "action_pinterest_ai_setting");
+            assertEquals(indexOfKey(rows, Settings.HIDE_AI_SELF_DESCRIBED.key) + 1, row);
+            Preference link = rows.get(row);
+            assertTrue(String.valueOf(link.getSummary()), String.valueOf(link.getSummary()).contains("neither one catches every AI pin"));
+
+            link.getOnPreferenceClickListener().onPreferenceClick(link);
+            android.content.Intent opened = Shadows.shadowOf(controller.get()).getNextStartedActivity();
+            assertNotNull("the row opened nothing", opened);
+            assertEquals(android.content.Intent.ACTION_VIEW, opened.getAction());
+            assertEquals("https://www.pinterest.com/homefeed/edit/gen_ai_topics", String.valueOf(opened.getData()));
+            assertEquals(controller.get().getPackageName(), opened.getPackage());
+        }
+
+        PatchFamily.inBuildForTests = EnumSet.complementOf(EnumSet.of(PatchFamily.HIDE_AI_PINS));
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            assertEquals(-1, indexOfKey(rowsOf(controller), "action_pinterest_ai_setting"));
         }
     }
 

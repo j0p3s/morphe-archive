@@ -7,15 +7,13 @@ package app.morphe.patches.vllo.misc.premium
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.methodCall
-import app.morphe.patcher.string
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 
 internal object EntitlementEnumFingerprint : Fingerprint(
     name = "<clinit>",
-    strings = listOf("ALL_FEATURES", "REMOVE_ADS", "WATERMARK"),
+    strings = listOf("REMOVE_ADS", "WATERMARK"),
     filters = listOf(
-        string("ALL_FEATURES"),
         fieldAccess(opcode = Opcode.SPUT_OBJECT),
     ),
 )

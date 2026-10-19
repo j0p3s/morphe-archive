@@ -8,10 +8,11 @@ import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.fieldAccess
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 
-internal object IsPremiumFingerprint : Fingerprint(
+internal fun isPremiumFingerprint(flag: FieldReference) = Fingerprint(
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
     returnType = "Z",
     parameters = emptyList(),
-    filters = listOf(fieldAccess(name = "IS_PREMIUM", opcode = Opcode.SGET_OBJECT)),
+    filters = listOf(fieldAccess(definingClass = flag.definingClass, name = flag.name, opcode = Opcode.SGET_OBJECT)),
 )

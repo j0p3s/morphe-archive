@@ -207,10 +207,9 @@ if failure.startswith(OPTIONS_RUNTIME_FAILURE) and not log_text:
     )
     labels.append("needs info")
 
-stock = "" if failure.startswith(OPTIONS_PATCH_INEFFECTIVE) else normalize(
-    field(fields, "Does the unpatched app do the same thing")
-)
-single_patch = normalize(field(fields, "Does it still happen with only one patch selected"))
+patch_ineffective = failure.startswith(OPTIONS_PATCH_INEFFECTIVE)
+stock = "" if patch_ineffective else normalize(field(fields, "Does the unpatched app do the same thing"))
+single_patch = "" if patch_ineffective else normalize(field(fields, "Does it still happen with only one patch selected"))
 
 if stock.startswith(OPTION_STOCK_FAILS_TOO):
     flags.append(

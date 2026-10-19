@@ -48,8 +48,10 @@ public enum PatchFamily {
     HIDE_ADS(FamilyNames.HIDE_ADS, "hideAds", null,
             Settings.HIDE_ADS),
     HIDE_AI_PINS(FamilyNames.HIDE_AI_PINS, "hideAiPins", null,
-            Settings.HIDE_AI_PINS),
+            Settings.HIDE_AI_PINS, Settings.HIDE_AI_SELF_DESCRIBED),
     HIDE_SHOPPING(FamilyNames.HIDE_SHOPPING, "hideShopping", null, Settings.HIDE_SHOPPING),
+    FILTER_FEED(FamilyNames.FILTER_FEED, "filterFeed", null, Settings.HIDE_VIDEO_PINS),
+    KEEP_HOME_FEED(FamilyNames.KEEP_HOME_FEED, "keepHomeFeed", null, Settings.KEEP_HOME_FEED),
     DISABLE_ANALYTICS(FamilyNames.DISABLE_ANALYTICS, "disableAnalytics",
             "Firebase and Google Analytics collection is turned off", Settings.DISABLE_ANALYTICS),
     STRIP_LINK_TRACKING(FamilyNames.STRIP_LINK_TRACKING, "stripLinkTracking", null, Settings.STRIP_LINK_TRACKING,
@@ -62,9 +64,10 @@ public enum PatchFamily {
     SPOOF_SIGNATURE(FamilyNames.SPOOF_SIGNATURE, "spoofSignature",
             "Pinterest's original signature is added to the app"),
     DOWNLOAD_PINS(FamilyNames.DOWNLOAD_PINS, "downloadPins", null, Settings.DOWNLOAD_PINS, Settings.SAVE_IN_PINTEREST_FOLDER,
-            Settings.DOWNLOAD_UNMETERED_ONLY, Settings.DOWNLOAD_NO_ROAMING),
+            Settings.DOWNLOAD_UNMETERED_ONLY, Settings.DOWNLOAD_NO_ROAMING, Settings.COPY_IMAGE, Settings.SHARE_IMAGE),
     DOWNLOAD_BOARD(FamilyNames.DOWNLOAD_BOARD, "downloadBoard", null, Settings.DOWNLOAD_BOARD),
-    LONG_PRESS_DOWNLOAD(FamilyNames.LONG_PRESS_DOWNLOAD, "longPressDownload", null, Settings.LONG_PRESS_DOWNLOAD),
+    LONG_PRESS_DOWNLOAD(FamilyNames.LONG_PRESS_DOWNLOAD, "longPressDownload", null, Settings.LONG_PRESS_DOWNLOAD,
+            Settings.LONG_PRESS_HIDE_SAVE, Settings.LONG_PRESS_HIDE_SEND, Settings.LONG_PRESS_HIDE_SEARCH),
     EXTERNAL_BROWSER(FamilyNames.EXTERNAL_BROWSER, "externalBrowser", null, Settings.EXTERNAL_BROWSER),
     SYSTEM_SHARE(FamilyNames.SYSTEM_SHARE, "systemShare", null, Settings.SYSTEM_SHARE),
     HIDE_SCREENSHOT_SHARE(FamilyNames.HIDE_SCREENSHOT_SHARE, "hideScreenshotShare", null, Settings.HIDE_SCREENSHOT_SHARE),
@@ -75,7 +78,7 @@ public enum PatchFamily {
     AMOLED_BLACK(FamilyNames.AMOLED_BLACK, "amoledBlack", null, Settings.BLACK_BOTTOM_BAR,
             Settings.BLACK_COMMENTS, Settings.BLACK_PIN_MENU),
     HIDE_CLOSEUP_BUTTONS(FamilyNames.HIDE_CLOSEUP_BUTTONS, "hideCloseupButtons", null,
-            Settings.HIDE_CLOSEUP_BACK, Settings.HIDE_CLOSEUP_LENS),
+            Settings.HIDE_CLOSEUP_BACK, Settings.HIDE_CLOSEUP_LENS, Settings.HIDE_CLOSEUP_SEARCH_LABEL),
     HIDE_PIN_MENU_ITEMS(FamilyNames.HIDE_PIN_MENU_ITEMS, "hidePinMenuItems", null,
             Settings.HIDE_PIN_MENU_COLLAGE, Settings.HIDE_PIN_MENU_VISUAL_SEARCH, Settings.HIDE_PIN_MENU_PIN_BOOST),
     HIDE_COMMENTS(FamilyNames.HIDE_COMMENTS, "hideComments", null, Settings.HIDE_COMMENTS, Settings.HIDE_SUGGESTED_REPLIES),
@@ -84,6 +87,7 @@ public enum PatchFamily {
     HIDE_SURVEY_PROMPTS(FamilyNames.HIDE_SURVEY_PROMPTS, "hideSurveyPrompts", null, Settings.HIDE_SURVEY_PROMPTS),
     HIDE_SAVE_TOASTS(FamilyNames.HIDE_SAVE_TOASTS, "hideSaveToasts", null, Settings.HIDE_SAVE_TOASTS),
     ORIGINAL_IMAGES(FamilyNames.ORIGINAL_IMAGES, "originalImages", null, Settings.ORIGINAL_IMAGES),
+    SHOW_POSTED_DATE(FamilyNames.SHOW_POSTED_DATE, "showPostedDate", null, Settings.SHOW_POSTED_DATE),
     DISABLE_UPDATE_NAG(FamilyNames.DISABLE_UPDATE_NAG, "disableUpdateNag", null, Settings.DISABLE_UPDATE_NAG),
     FIX_PUSH_NOTIFICATIONS(FamilyNames.FIX_PUSH_NOTIFICATIONS, "fixPushNotifications", null, Settings.FIX_PUSH_NOTIFICATIONS);
 
@@ -131,7 +135,8 @@ public enum PatchFamily {
     static volatile Set<Capability> capabilitiesForTests;
 
     /** The families whose switches the Feed page holds. The page and its home row both read this. */
-    static final Set<PatchFamily> FEED_PAGE = Collections.unmodifiableSet(EnumSet.of(HIDE_ADS, HIDE_AI_PINS, HIDE_SHOPPING));
+    static final Set<PatchFamily> FEED_PAGE = Collections.unmodifiableSet(EnumSet.of(HIDE_ADS, HIDE_AI_PINS, HIDE_SHOPPING,
+            FILTER_FEED, KEEP_HOME_FEED));
     static final Set<PatchFamily> PRIVACY_PAGE = Collections.unmodifiableSet(EnumSet.of(DISABLE_ANALYTICS, STRIP_LINK_TRACKING,
             HIDE_ADVERTISING_ID, REMOVE_AD_TRACKING_PERMISSIONS, SPOOF_SIGNATURE));
     static final Set<PatchFamily> ACTIONS_PAGE = Collections.unmodifiableSet(EnumSet.of(DOWNLOAD_PINS, DOWNLOAD_BOARD,
@@ -139,7 +144,7 @@ public enum PatchFamily {
     static final Set<PatchFamily> INTERFACE_PAGE = Collections.unmodifiableSet(EnumSet.of(HIDE_SCREENSHOT_SHARE,
             HIDE_SEARCH_HISTORY, HIDE_NAVIGATION_BUTTONS, HIDE_HEADER_BUTTONS, AMOLED_BLACK, HIDE_CLOSEUP_BUTTONS,
             HIDE_PIN_MENU_ITEMS, HIDE_COMMENTS, HIDE_TOPIC_SUGGESTIONS, QUIET_EMAIL_REMINDER, HIDE_SURVEY_PROMPTS,
-            HIDE_SAVE_TOASTS, ORIGINAL_IMAGES));
+            HIDE_SAVE_TOASTS, ORIGINAL_IMAGES, SHOW_POSTED_DATE));
 
     /** Each independent hook, its owning family and the flag set only after it was inserted. */
     public enum Capability {
@@ -148,6 +153,9 @@ public enum PatchFamily {
         GOOGLE_ADS(HIDE_ADS, "googleAds", "Google ad SDK start"),
         FEED_AI_PINS(HIDE_AI_PINS, "feedAiPins", "AI-labeled pins in lists"),
         FEED_SHOPPING(HIDE_SHOPPING, "feedShopping", "Hide shopping and product pins"),
+        FEED_VIDEO_PINS(FILTER_FEED, "feedVideoPins", "Hide video pins"),
+        FEED_MUTED_WORDS(FILTER_FEED, "feedMutedWords", "Muted words"),
+        HOME_FEED(KEEP_HOME_FEED, "homeFeed", "Keep Home feed"),
         ANALYTICS_TASKS(DISABLE_ANALYTICS, "analyticsTasks", "Analytics launch tasks"),
         ANALYTICS_UPLOADS(DISABLE_ANALYTICS, "analyticsUploads", "Analytics uploads"),
         LINK_TRACKING(STRIP_LINK_TRACKING, "linkTracking", "Strip link tracking"),
@@ -155,9 +163,12 @@ public enum PatchFamily {
         ADVERTISING_ID(HIDE_ADVERTISING_ID, "advertisingId", "Hide advertising ID"),
         BROWSER_ID(HIDE_ADVERTISING_ID, "browserId", "Block Store browser ID"),
         PIN_DOWNLOADS(DOWNLOAD_PINS, "pinDownloads", "Download pins"),
+        COPY_IMAGE(DOWNLOAD_PINS, "copyImage", "Copy image"),
+        SHARE_IMAGE(DOWNLOAD_PINS, "shareImage", "Share image"),
         BOARD_MENU(DOWNLOAD_BOARD, "boardMenu", "board menus"),
         BOARD_PINS(DOWNLOAD_BOARD, "boardPins", "loaded board pins"),
         LONG_PRESS_MENU(LONG_PRESS_DOWNLOAD, "longPressMenu", "Long-press download"),
+        LONG_PRESS_CHOICES(LONG_PRESS_DOWNLOAD, "longPressChoices", "hiding Pinterest's long-press buttons"),
         VISIT_LINKS(EXTERNAL_BROWSER, "visitLinks", "Open links in your browser"),
         PIN_SHARE(SYSTEM_SHARE, "pinShare", "System share sheet"),
         SCREENSHOT_SHARE(HIDE_SCREENSHOT_SHARE, "screenshotShare", "No screenshot share menu"),
@@ -170,6 +181,7 @@ public enum PatchFamily {
         BLACK_COMMENTS(AMOLED_BLACK, "blackComments", "Black comments"),
         BLACK_PIN_MENU(AMOLED_BLACK, "blackPinMenu", "Black pin menu"),
         CLOSEUP_BUTTONS(HIDE_CLOSEUP_BUTTONS, "closeupButtons", "Hide closeup buttons"),
+        CLOSEUP_SEARCH_LABEL(HIDE_CLOSEUP_BUTTONS, "closeupSearchLabel", "Hide Search image label"),
         PIN_MENU_ITEMS(HIDE_PIN_MENU_ITEMS, "pinMenuItems", "Filter pin menu"),
         COMMENTS(HIDE_COMMENTS, "comments", "Hide comments"),
         SUGGESTED_REPLIES(HIDE_COMMENTS, "suggestedReplies", "Hide suggested replies"),
@@ -179,6 +191,7 @@ public enum PatchFamily {
         SAVE_TOASTS(HIDE_SAVE_TOASTS, "saveToasts", "Hide save toasts"),
         IMAGE_CHOOSER(ORIGINAL_IMAGES, "imageChooser", "collage images"),
         CLOSEUP_IMAGE(ORIGINAL_IMAGES, "closeupImage", "pin closeups"),
+        POSTED_DATE(SHOW_POSTED_DATE, "postedDate", "Show posted date"),
         UPDATE_NAG(DISABLE_UPDATE_NAG, "updateNag", "Disable update nag"),
         FIREBASE_CERTIFICATE(FIX_PUSH_NOTIFICATIONS, "firebaseCertificate", "Fix push notifications");
 
@@ -383,12 +396,16 @@ public enum PatchFamily {
         }
         boolean anyOn = false;
         for (BooleanSetting setting : switches) anyOn |= setting.savedValue();
+        // Filter feed's list is on while it holds anything. How many, never the words themselves.
+        int muted = this == FILTER_FEED ? MutedWordsSetting.entries(Settings.MUTED_WORDS.savedValue()).size() : 0;
+        anyOn |= muted > 0;
         line.append(paused ? "disabled while paused (saved " : anyOn ? "on (" : "disabled by its switch (");
         for (int i = 0; i < switches.size(); i++) {
             if (i > 0) line.append(", ");
             BooleanSetting setting = switches.get(i);
             line.append(setting.key).append(setting.savedValue() ? "=on" : "=off");
         }
+        if (this == FILTER_FEED) line.append(", ").append(Settings.MUTED_WORDS.key).append('=').append(muted);
         line.append(')');
         String stays = effectiveStaysWhilePaused();
         if (stays != null) line.append("; stays in while paused: ").append(stays);

@@ -4,7 +4,24 @@ Every HushGram release, newest first.
 
 ## Unreleased
 
+### Removed
+
+* **Instagram - Disable analytics:** Removed. It sent Instagram's usage and crash reports to a dead address, which is something Instagram can notice, and no switch is worth an account. The contacts and location setup screens it skipped show again. A settings file that still has this switch imports fine and the switch is ignored.
+* **Instagram - Open developer options:** Removed. It let you change Instagram's server flags, and an account running flags Instagram never sent it stands out. The Developer category is gone with it: the MetaConfig flag names, the Recommended flags page and override import and export. Old settings files still import, and the developer switches in them are ignored.
+
+## 0.0.13 (2026-10-18)
+
+### Features
+
+* **Instagram - Hide Follow on feed posts:** New patch. Feed posts show a Follow or Subscribe button next to the author's name, and this takes it off. The name, time and menu stay. The switch is under Feed and starts off. Asked for in #248.
+* **Instagram - Hide the comment emoji row:** New patch. The comment box has a row of quick emoji above it, and this takes it off. The box stays. The switch is under Comments and starts off. Asked for in #248.
+* **Instagram - Hide Follow on stories:** New patch. Stories from accounts you don't follow show a Follow button at the top again, and this takes it off. The name, time and menu stay. The switch is under Stories and starts off. Asked for in #237.
+
 ### Bug Fixes
+
+* **Instagram - HushGram settings:** Importing a settings file, or undoing one, shows Restart now when a choice needs a restart, and the message asks for one only while it's owed. Before, nothing offered the restart.
+
+* **Instagram - Download any reel:** Download cover saved a small copy, 360 pixels wide, since Instagram stopped sending larger ones. When the cover is the reel's first frame, it's taken from the video now, at the video's full size. Reported in #214.
 
 * **Instagram - Hide suggested people on profiles:** A profile's buttons keep their spacing when Instagram redraws the row during a refresh. With the switch off or HushGram paused, Instagram's own button sizes stay. Reported in #220.
 
@@ -22,21 +39,57 @@ Every HushGram release, newest first.
 
 * **Instagram - Find the reel you came from:** The search goes much further down a profile's reels before giving up, so an older reel many pages down is still found. It also waits out a slow page while Instagram's spinner shows. Reported in #225.
 
+* **Instagram - Find the reel you came from:** A photo reel now works too. Instagram keeps those in a profile's posts instead of the Reels tab, so the search looks there for them. With Profile posts as a list on, the grid stays up for it. Reported in #225.
+
 * **Instagram - Hide suggested posts:** With `Hide videos` or another Home switch on, a page with a post or two, or none at all, left Home on an endless spinner or the Welcome card. Home asks for the next page by itself now. Reported in #28.
 
 * **Instagram - Hide suggested posts:** On Instagram 451 the "You've seen the latest posts" card draws the Suggested for you title itself, so it stayed with nothing under it. It goes away there too now, and Older posts stays. Reported in #104.
 
 * **Instagram - Glass tab bar:** With Hide the tab bar on Reels, a reel given the room back once the pill slid away ran under the gesture bar or the navigation buttons, where its seek bar couldn't be dragged. It stops just above them now. Reported in #221.
 
+* **Instagram - Glass tab bar:** On Android 17 the pill could stay over an open story and cover its reply box and reactions. It now steps aside whenever a story is open and comes back when you leave. Reported in #224.
+
+* **Instagram - Glass tab bar:** With Hide the tab bar on Reels, dragging a reel's seek bar while the pill is away moves through the reel instead of only bringing the pill back. A tap there still brings it back. Reported in #221.
+
 ### Improvements
+
+* **Instagram - Story ring size:** Ring size goes from 50% to 150% now, in steps of ten, and the list shows each size as a percent. A size you picked before stays the same. Asked for in #223.
+
+* **Instagram - Tap a feed video to pause it:** The switch's description now says that tapping the paused video again plays it, which it already did. Asked for in #137.
+
+* **Instagram - Read messages without the seen receipt:** With Keep chats unread here off, a chat you open now stays read on this phone until a newer message comes in. Before, it went back to unread once your messages refreshed. The sender still sees no Seen. Asked for in #186.
+
+* **Instagram - Blur the bars around Reels:** The strip under the tab bar on Reels now shows the reel blurred instead of black, under the floating glass pill and on Instagram's own tab bar. Home and the other tabs keep their usual bar. Asked for in #197.
+
+* **Instagram - Glass tab bar:** New `Tab bar corners` choice, right under Tab bar height. Rounder or Fully round gives the pill and its highlight rounder ends. Starts on Standard. The Liquid look is always round, so the choice rests while it's on. Asked for in #144.
+
+* **Instagram - Glass tab bar:** `Slide across the tabs` works on Instagram's own tab bar now, with the glass off. Slide a finger along the tabs and a light box follows it. Let go and that tab opens. Asked for in #201.
+
+* **Instagram - Full screen Reels and Home:** New `Bars to hide` choice, right under Full screen Reels. Full screen can hide both bars as before, or only the status bar at the top, or only the navigation bar at the bottom. Asked for in #231.
+
+* **Instagram - Download any video:** New `Convert to keep the full size` switch, under Save videos other apps can open. A full size reel or story Instagram only has as VP9 or AV1 is converted to H.264 on your phone instead of saved smaller. Reported in #236.
+
+* **Instagram - Download any video:** New `Choose carousel pages` switch. A carousel's menu and the download icon get Choose pages, right after Save all. Tick the pages you want and only those save, in order. Pages are numbered, with a small picture once it loads.
+
+* **Instagram - Tap to play:** New `Wait after auto scroll` switch, under Where videos wait. With Instagram's auto scroll on, the reel it moves to waits for your tap too. Off, it plays reel after reel as before. Asked for in #175.
+
+* **Instagram - Clean up Reels:** Two new switches under Reels, both off by default. One hides the Create (+) button at the top of every reel, the other hides Your algorithm on the Reels tab, and the bar closes up around them. Asked for in #177 and #217.
 
 * **Instagram:** The diagnostic report now lists every card type the stories viewer checks, ads included, and how often Instagram asked to show the Music for you card. From #111 and #154.
 
-* **Diagnostics:** What HushGram writes to Android's system log and its error toasts now leaves out tokens, signed links and files from your storage, the same way the exported report does. Error traces go in as text, so nothing reaches the log unchecked.
+* **Instagram:** What HushGram writes to Android's system log and its error toasts now leaves out tokens, signed links and files from your storage, the same way the exported report does. Error traces are checked too.
+
+* **Instagram:** The diagnostic report listed Long press to zoom, Read messages without the seen receipt, Start Home on Following and Glass tab bar as off when only the switches under them were off. They show as on now.
 
 * **Tooling:** An everyday push now builds once and runs only the tests its changes can reach, plus the checks that read every source. A change no test reaches stops the push. A release, or `HUSHGRAM_FULL_GATE=1`, still gets the full gate.
 
 * **Tooling:** The release preflight now builds the bundle and runs every patch on the declared Instagram build, so a patch that stopped applying shows up in a few minutes rather than an hour into the release.
+
+* **Tooling:** A push that changes where a patch hooks Instagram, but not `scripts/injected-mutation-contracts.txt`, now prints a one-line hint naming the patch. It never stops the push, and it shows on a skipped push too.
+
+* **Tooling:** The release receipt now audits the Morphe Desktop JAR it patches with, tied to that file's SHA-256. Desktop's own Bouncy Castle and Guava are checked, and an advisory whose classes minimization removed isn't counted as exposure.
+
+* **Tooling:** A Desktop advisory can only be accepted by a review that names the JAR's SHA-256, so a new Desktop gets read again. All five Bouncy Castle advisories the gate holds against Desktop 1.18.1 are reviewed as unreachable.
 
 ## 0.0.12 (2026-10-16)
 

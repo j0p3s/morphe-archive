@@ -167,6 +167,18 @@ enum class TargetApp(
         patchDirectoryPart = "xiaomi",
         referenceSha256 = Constants.XIAOMI_EARBUDS_INPUT_SHA256,
     ),
+    SUBE(
+        id = "sube",
+        appName = "SUBE",
+        packageName = Constants.SUBE_PACKAGE_NAME,
+        candidateFilenames = listOf(
+            "sube_${Constants.SUBE_TARGET_VERSION}.xapk",
+            "SUBE_${Constants.SUBE_TARGET_VERSION}_APKPure.xapk",
+        ),
+        filePattern = Regex("(?i).*(?:sube).*\\.(?:apk|apkm|xapk)$"),
+        patchDirectoryPart = "sube",
+        referenceSha256 = Constants.SUBE_INPUT_SHA256,
+    ),
     ;
 
     companion object {

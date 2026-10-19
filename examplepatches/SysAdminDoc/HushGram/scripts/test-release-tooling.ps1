@@ -792,13 +792,13 @@ try {
 
     # A family may apply yet miss a subtarget. Certification must reject a required absence,
     # preserve an explicitly optional absence, and never take a forged count as evidence.
-    $partial = [pscustomobject]@{ family = 'disableAnalytics'; matched = 2; expected = 3
+    $partial = [pscustomobject]@{ family = 'sanitizeSharingLinks'; matched = 2; expected = 3
         targets = @('alpha', 'beta', 'gamma'); missing = @('gamma') }
     $policy = [pscustomobject]@{ schemaVersion = 1; fixtures = @([pscustomobject]@{
         package = 'com.example.host'; versionName = '46.7.3'; versionCode = '2024607030'
-        families = @([pscustomobject]@{ family = 'disableAnalytics'; patch = 'Disable analytics'
+        families = @([pscustomobject]@{ family = 'sanitizeSharingLinks'; patch = 'Sanitize sharing links'
             targets = @('alpha', 'beta', 'gamma'); optional = @('gamma') }) }) }
-    $arguments = @{ Names = @('Disable analytics'); Package = 'com.example.host'; VersionName = '46.7.3'
+    $arguments = @{ Names = @('Sanitize sharing links'); Package = 'com.example.host'; VersionName = '46.7.3'
         VersionCode = '2024607030'; Policy = $policy }
     $optional = Test-TargetCoverage -Coverage @($partial) @arguments
     Assert-True ($optional.Valid -and $optional.Reviewed -and $partial.missing[0] -ceq 'gamma') `
@@ -835,18 +835,19 @@ try {
     $coverageTarget.source.package = 'com.instagram.android'
     $coverageTarget.source.versionName = $reviewedName
     $coverageTarget.source.versionCode = $reviewedCode
-    $coverageTarget.patches = @([pscustomobject]@{ name = 'Disable analytics'; applied = $true; reason = $null })
-    $coverageTarget.coverage = @([pscustomobject]@{ family = 'disableAnalytics'; matched = 7; expected = 7
-        targets = @('builder', 'graph', 'mqtt', 'reports', 'pings', 'stream', 'setup'); missing = @() })
-    $receiptArguments = @{ ExpectedVersion = '9.9.9'; ExpectedPatchNames = @('Disable analytics')
+    $coverageTarget.patches = @([pscustomobject]@{ name = 'Sanitize sharing links'; applied = $true; reason = $null })
+    $coverageTarget.coverage = @([pscustomobject]@{ family = 'sanitizeSharingLinks'; matched = 6; expected = 6
+        targets = @('permalink parser', 'story link parser', 'clipboard copies', 'share sheets', 'direct shares',
+            'in-app browser menu'); missing = @() })
+    $receiptArguments = @{ ExpectedVersion = '9.9.9'; ExpectedPatchNames = @('Sanitize sharing links')
         ExpectedPatcherVersion = '1.12.0'; ExpectedManagerFloor = '1.29.0'; ExpectedPackageName = 'com.instagram.android'
         ExpectedPackageVersions = @($reviewedName); ExpectedPackageVersionCodes = @{ $reviewedName = @($reviewedCode) }
         BundlePath = $bundle }
     $certified = Test-ReleaseReceipt -Receipt $coverageReceipt @receiptArguments
     Assert-True $certified.Valid "The reviewed coverage receipt failed: $($certified.Reason)"
-    $coverageTarget.coverage[0].matched = 6; $coverageTarget.coverage[0].missing = @('mqtt')
+    $coverageTarget.coverage[0].matched = 5; $coverageTarget.coverage[0].missing = @('share sheets')
     $lost = Test-ReleaseReceipt -Receipt $coverageReceipt @receiptArguments
-    Assert-True (-not $lost.Valid -and $lost.Reason -like '*Required*mqtt*') 'A receipt hid missing required coverage.'
+    Assert-True (-not $lost.Valid -and $lost.Reason -like '*Required*share sheets*') 'A receipt hid missing required coverage.'
     $coverageTarget.coverage[0].matched = 7
     Assert-True (-not (Test-ReleaseReceipt -Receipt $coverageReceipt @receiptArguments).Valid) 'Forged receipt counts passed.'
 } finally {
@@ -1847,6 +1848,50 @@ try {
         "The standalone audit didn't refuse changed inputs through its own imports: $standaloneOutput"
     Write-Host '[OK] Current advisory reports refuse stale inputs, edges, omitted scopes and artifact substitutions.'
 
+    # A gate that patches with a Desktop JAR holds the report to that JAR's bytes and its own
+    # scope. The fixture JAR embeds only the clean library's metadata, so OSV is asked nothing new.
+    $desktopJar = Join-Path $advisoryRoot 'morphe-desktop-fixture.jar'
+    $gsonMetadata = [ordered]@{
+        'META-INF/maven/com.google.code.gson/gson/pom.properties' = "groupId=com.google.code.gson`nartifactId=gson`nversion=2.14.0`n" }
+    New-TestBundleArchive -Path $desktopJar -Entries $gsonMetadata
+    $desktopSubject = Get-CurrentDependencyAuditSubject -Root $inputRoot -Graphs $boundGraphs -Sbom $boundSbom `
+        -BundlePath $boundBundle -DesktopJar $desktopJar
+    Assert-True ($desktopSubject.externalDesktop.sha256 -ceq (Get-Sha256Hex -Path $desktopJar) -and
+        $desktopSubject.graphReport.graphsSha256 -cne $subject.graphReport.graphsSha256) 'The audit subject did not bind the Desktop JAR.'
+    Assert-Throws { Read-CurrentDependencyAdvisoryReport -Path $boundReportPath -Subject $desktopSubject } '*externalDesktop*' `
+        'A report that never read the Desktop JAR certified a gate that patches with it.'
+    $desktopReportPath = Join-Path $advisoryRoot 'desktop-advisories.json'
+    & (Join-Path $PSScriptRoot 'audit-dependencies.ps1') -Root $inputRoot -GraphPath $boundGraphPath `
+        -SbomPath $boundSbomPath -OutputPath $desktopReportPath -DesktopJar $desktopJar 6>$null
+    $desktopReport = Read-CurrentDependencyAdvisoryReport -Path $desktopReportPath -Subject $desktopSubject
+    $desktopGraph = @($desktopReport.graphs | Where-Object scope -CEQ 'external-desktop')
+    Assert-True ($desktopGraph.Count -eq 1 -and $desktopGraph[0].sha256 -ceq $desktopSubject.externalDesktop.sha256 -and
+        $desktopGraph[0].libraries[0].evidence -ceq 'embedded-metadata' -and $desktopReport.scopeVerdicts.'external-desktop'.Valid) `
+        "The audit did not certify the Desktop JAR's own scope: $($desktopGraph | ConvertTo-Json -Depth 6 -Compress)"
+    $desktopJson = Get-Content -LiteralPath $desktopReportPath -Raw
+    foreach ($refusedScope in @($false, $true)) {
+        $variant = $desktopJson | ConvertFrom-Json
+        if ($refusedScope) { $variant.scopeVerdicts.'external-desktop'.Valid = $false }
+        else { $variant.scopeVerdicts.PSObject.Properties.Remove('external-desktop') }
+        $variant | ConvertTo-Json -Depth 16 | Set-Content -LiteralPath $desktopReportPath -Encoding UTF8
+        Assert-Throws { Read-CurrentDependencyAdvisoryReport -Path $desktopReportPath -Subject $desktopSubject } '*external-desktop scope*' `
+            "A report that $(if ($refusedScope) { 'refused' } else { 'omitted' }) the Desktop scope was certified."
+    }
+    Set-Content -LiteralPath $desktopReportPath -Encoding UTF8 -Value $desktopJson
+    $desktopBytes = [IO.File]::ReadAllBytes($desktopJar)
+    try {
+        Remove-Item -LiteralPath $desktopJar
+        $otherDesktop = [ordered]@{}
+        foreach ($name in $gsonMetadata.Keys) { $otherDesktop[$name] = $gsonMetadata[$name] }
+        $otherDesktop['app/morphe/desktop/Other.class'] = 'class'
+        New-TestBundleArchive -Path $desktopJar -Entries $otherDesktop
+        $otherSubject = Get-CurrentDependencyAuditSubject -Root $inputRoot -Graphs $boundGraphs -Sbom $boundSbom `
+            -BundlePath $boundBundle -DesktopJar $desktopJar
+        Assert-Throws { Read-CurrentDependencyAdvisoryReport -Path $desktopReportPath -Subject $otherSubject } '*different externalDesktop sha256*' `
+            'A report on one Desktop JAR certified another.'
+    } finally { [IO.File]::WriteAllBytes($desktopJar, $desktopBytes) }
+    Write-Host '[OK] The Desktop JAR is its own scope, bound to its SHA-256.'
+
     # The publisher's Guava advisory was absent from OSV on 2026-10-01. An empty database
     # result must not erase the known affected range, including both published editions.
     foreach ($version in @('4.0', '33.7.1-jre', '33.7.1-android')) {
@@ -1919,6 +1964,95 @@ try {
     Remove-Item -LiteralPath $wrapperProperties
     Assert-Throws { Get-GradleDistributionGraph -Root $oldWrapperRoot } '*wrapper properties are missing*' `
         'A checkout without wrapper properties skipped the distribution audit.'
+
+    # Desktop's inventory keeps embedded metadata and Bouncy Castle's provider version apart, and
+    # looks up the classes a reviewed advisory names in the JAR itself, as Desktop 1.18.1 packs them.
+    $desktopFixture = Join-Path $advisoryRoot 'desktop-inventory.jar'
+    $desktopEntries = [ordered]@{
+        'META-INF/maven/com.google.guava/guava/pom.properties' = "#Created by Maven`ngroupId=com.google.guava`nartifactId=guava`nversion=33.5.0-jre`n"
+        'com/google/common/collect/ImmutableList.class' = 'class'
+        'org/bouncycastle/jce/provider/BouncyCastleProvider.class' = 'constants BouncyCastle Security Provider v1.79 more'
+        'org/bouncycastle/cert/X509CertificateHolder.class' = 'class' }
+    New-TestBundleArchive -Path $desktopFixture -Entries $desktopEntries
+    $inventory = Get-ExternalDesktopGraph -JarPath $desktopFixture
+    Assert-True ($inventory.scope -ceq 'external-desktop' -and $inventory.sha256 -ceq (Get-Sha256Hex -Path $desktopFixture) -and
+        (@($inventory.libraries | ForEach-Object { "$($_.purl) $($_.evidence)" }) -join '; ') -ceq
+        ('pkg:maven/com.google.guava/guava@33.5.0-jre embedded-metadata; pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.79 provider-version; ' +
+            'pkg:maven/org.bouncycastle/bcprov-jdk18on@1.79 provider-version')) `
+        "The Desktop inventory mixed or lost its evidence: $($inventory | ConvertTo-Json -Depth 6 -Compress)"
+    $osvAnswers = @{
+        'pkg:maven/com.google.guava/guava@33.5.0-jre' = '{}'
+        'pkg:maven/org.bouncycastle/bcprov-jdk18on@1.79' = '{"vulns":[{"id":"GHSA-qp49-qgx5-5m26","aliases":["CVE-2026-13506"],"database_specific":{"severity":"HIGH"}}]}'
+        'pkg:maven/org.bouncycastle/bcpkix-jdk18on@1.79' = '{}'
+    }
+    $desktopFindings = @(Get-SbomAdvisories -Sbom ([pscustomobject]@{ Libraries = $inventory.libraries }))
+    foreach ($finding in $desktopFindings) {
+        Add-Member -InputObject $finding -NotePropertyName DesktopClassPresence -NotePropertyValue (
+            Get-DesktopClassPresence -Finding $finding -Graph $inventory)
+    }
+    $guavaFinding = @($desktopFindings | Where-Object Advisory -CEQ 'GHSA-xxph-c9ww-hj94')
+    $bcFinding = @($desktopFindings | Where-Object Advisory -CEQ 'GHSA-qp49-qgx5-5m26')
+    Assert-True ($guavaFinding.Count -eq 1 -and $guavaFinding[0].DesktopClassPresence -ceq 'absent' -and
+        $bcFinding.Count -eq 1 -and $bcFinding[0].DesktopClassPresence -ceq 'unreviewed') `
+        'The Desktop JAR read a reviewed advisory class as present, or an unreviewed advisory as absent.'
+    # A serious advisory whose classes minimization removed is listed rather than refused, and only here.
+    $seriousGuava = $guavaFinding[0].PSObject.Copy()
+    $seriousGuava.Severity = [pscustomobject]@{ Level = 'HIGH'; Serious = $true; Why = 'a stand-in high rating' }
+    $absentVerdict = Test-AdvisoryFindings -Findings @($seriousGuava) -Scope 'external-desktop'
+    Assert-True ($absentVerdict.Valid -and $absentVerdict.Minor.Count -eq 1 -and $absentVerdict.Minor[0] -like '*absent*not exposure*') `
+        'Packed metadata whose advisory classes are absent was refused as exposure.'
+    Assert-True (-not (Test-AdvisoryFindings -Findings @($seriousGuava) -Scope 'build').Valid) `
+        "The Desktop JAR's class evidence excused the same advisory in another scope."
+    # A named class in the JAR, or no reviewed class list, needs a reviewed-reachability exception.
+    $desktopEntries['com/google/common/collect/MapMaker.class'] = 'class'
+    Remove-Item -LiteralPath $desktopFixture
+    New-TestBundleArchive -Path $desktopFixture -Entries $desktopEntries
+    $seriousGuava.DesktopClassPresence = Get-DesktopClassPresence -Finding $seriousGuava -Graph (Get-ExternalDesktopGraph -JarPath $desktopFixture)
+    Assert-True ($seriousGuava.DesktopClassPresence -ceq 'present' -and
+        -not (Test-AdvisoryFindings -Findings @($seriousGuava) -Scope 'external-desktop').Valid) `
+        'A high advisory whose named class is in the Desktop JAR passed without review.'
+    Assert-True (-not (Test-AdvisoryFindings -Findings $bcFinding -Scope 'external-desktop').Valid) `
+        'An unreviewed high Desktop advisory passed.'
+    $desktopList = Join-Path $advisoryRoot 'desktop-exceptions.txt'
+    $desktopSha = Get-Sha256Hex -Path $desktopFixture
+    $reviewLine = "GHSA-qp49-qgx5-5m26 org.bouncycastle:bcprov-jdk18on 2026-10-15 jar-sha256=$($desktopSha.ToLowerInvariant()) Desktop parses only its own keystore"
+    Set-Content -LiteralPath $desktopList -Value "external-desktop $reviewLine"
+    $reviewed = Test-AdvisoryFindings -Findings $bcFinding -Scope 'external-desktop' -DesktopSha256 $desktopSha `
+        -Exceptions @(Read-AdvisoryExceptions -Path $desktopList -Scoped -Today $today)
+    Assert-True ($reviewed.Valid -and $reviewed.Excused.Count -eq 1 -and $reviewed.Excused[0] -like '*unreviewed*own keystore*') `
+        'A reviewed-reachability exception did not cover its Desktop finding, or lost the class evidence.'
+    # The review holds for the JAR it read: another JAR's finding stays refused, and the review
+    # isn't stale there either, since it says nothing about that JAR.
+    $otherJar = Test-AdvisoryFindings -Findings $bcFinding -Scope 'external-desktop' -DesktopSha256 ('0' * 64) `
+        -Exceptions @(Read-AdvisoryExceptions -Path $desktopList -Scoped -Today $today)
+    Assert-True (-not $otherJar.Valid -and $otherJar.Excused.Count -eq 0 -and $otherJar.Refused.Count -eq 1 -and
+        $otherJar.Stale.Count -eq 0) "A reachability review of one Desktop JAR excused another JAR's finding."
+    Assert-True (-not (Test-AdvisoryFindings -Findings $bcFinding -Scope 'external-desktop' `
+            -Exceptions @(Read-AdvisoryExceptions -Path $desktopList -Scoped -Today $today)).Valid) `
+        'A reachability review excused a Desktop finding with no audited JAR named.'
+    Set-Content -LiteralPath $desktopList -Value 'external-desktop GHSA-qp49-qgx5-5m26 org.bouncycastle:bcprov-jdk18on 2026-10-15 Desktop parses only its own keystore'
+    Assert-Throws { Read-AdvisoryExceptions -Path $desktopList -Scoped -Today $today } '*without naming the Desktop JAR*' `
+        'A Desktop reachability review that names no JAR was read.'
+    Set-Content -LiteralPath $desktopList -Value "build $reviewLine"
+    Assert-True (-not (Test-AdvisoryFindings -Findings $bcFinding -Scope 'external-desktop' -DesktopSha256 $desktopSha `
+            -Exceptions @(Read-AdvisoryExceptions -Path $desktopList -Scoped -Today $today)).Valid) `
+        'A build-scope review covered the Desktop JAR.'
+    # A JAR, metadata or provider that can't be read certifies nothing.
+    $brokenJar = Join-Path $advisoryRoot 'broken-desktop.jar'
+    Set-Content -LiteralPath $brokenJar -Value 'not a jar' -Encoding ASCII
+    Assert-Throws { Get-ExternalDesktopGraph -JarPath $brokenJar } "*can't be read*" 'An unreadable Desktop JAR was audited as empty.'
+    Assert-Throws { Get-ExternalDesktopGraph -JarPath (Join-Path $advisoryRoot 'absent.jar') } '*missing*' 'A missing Desktop JAR was audited.'
+    foreach ($bad in @(
+        [ordered]@{ 'org/bouncycastle/crypto/Digest.class' = 'class' },
+        [ordered]@{ 'org/bouncycastle/jce/provider/BouncyCastleProvider.class' = 'no release named' },
+        [ordered]@{ 'META-INF/maven/com.google.guava/guava/pom.properties' = "groupId=com.google.guava`nartifactId=failureaccess`nversion=1.0.3`n" },
+        [ordered]@{ 'META-INF/maven/com.google.guava/guava/pom.properties' = "groupId=com.google.guava`nartifactId=guava`n" })) {
+        Remove-Item -LiteralPath $brokenJar
+        New-TestBundleArchive -Path $brokenJar -Entries $bad
+        Assert-Throws { Get-ExternalDesktopGraph -JarPath $brokenJar } "*Desktop JAR*can't be read*" `
+            "Unreadable Desktop evidence was audited: $(@($bad.Keys) -join ', ')"
+    }
+    Write-Host '[OK] Desktop evidence keeps metadata, class presence and reviewed reachability apart.'
 
     # Actual OSV controls read on 2026-10-01, reduced to the fields this gate uses.
     $osvAnswers = @{
@@ -2604,6 +2738,49 @@ param([string]$Root, [switch]$SkipDescriptionTestCount, [switch]$SkipTestResults
         foreach ($name in @('gradle.properties', 'patches-list.json', 'README.md', 'CHANGELOG.md')) { Reset-FactsFile $name }
     }
 
+    # The same patches added with the version held at the published one, since nothing is bumped
+    # until a release is called: the sentence still counts the release's own, and only the release's
+    # tag can back that count.
+    Set-FactsFile 'README.md' { param($text) $text.Replace("with $countHere patches. Add", "with $releasedCount patches. Add") }
+    $heldFile = Join-Path ([System.IO.Path]::GetTempPath()) ('hushgram-held-' + [guid]::NewGuid().ToString('N') + '.json')
+    try {
+        Assert-Throws { Invoke-Facts } "*latest release has $releasedCount patches, but it has $countHere*" `
+            'The check took a count for the held release that no tag backs.'
+        $heldCatalog = Get-Content -LiteralPath (Join-Path $factsRoot 'patches-list.json') -Raw | ConvertFrom-Json
+        $heldCatalog.patches = @($heldCatalog.patches | Select-Object -Skip 1)
+        [System.IO.File]::WriteAllText($heldFile, ($heldCatalog | ConvertTo-Json -Depth 20), (New-Object System.Text.UTF8Encoding($false)))
+        & git -C $factsRoot init -q
+        $blob = [string](& git -C $factsRoot hash-object -w $heldFile)
+        & git -C $factsRoot update-index --add --cacheinfo "100644,$($blob.Trim()),patches-list.json"
+        $tree = [string](& git -C $factsRoot write-tree)
+        $commit = [string](& git -C $factsRoot -c user.name=HushGram -c user.email=release@example.invalid commit-tree $tree.Trim() -m 'the release')
+        & git -C $factsRoot tag "v$versionHere" $commit.Trim()
+        Assert-True ($LASTEXITCODE -eq 0) "Could not tag the stand-in release's catalog in $factsRoot."
+        $said = Invoke-Facts
+        Assert-True ($said -like "*v$versionHere's catalog at its tag lists $releasedCount patches; the source held at that version lists $countHere*") `
+            "The check didn't read the held release's count from its tag: $said"
+        # The GitHub description says the same of the held release, read through stand-ins for the
+        # network and gh, and a count neither side has is refused there too.
+        & {
+            function Invoke-WebRequest { [pscustomobject]@{ StatusCode = 200; Content = [byte[]]@() } }
+            $heldDescription = "HushGram v$versionHere`: $releasedCount patches for Instagram $buildHere."
+            function gh { $global:LASTEXITCODE = 0; $heldDescription }
+            $said = Invoke-Facts -WithUrls
+            Assert-True ($said -like "*the GitHub description of $slugHere names v$versionHere, $releasedCount patches and Instagram $buildHere*") `
+                "The check refused a GitHub description counting the held release's patches: $said"
+            $heldDescription = "HushGram v$versionHere`: 13 patches for Instagram $buildHere."
+            Assert-Throws { Invoke-Facts -WithUrls } "*The GitHub description of $slugHere does not say $countHere patches*" `
+                'The check took a GitHub description count that neither the source nor the tag has.'
+        }
+        Set-FactsFile 'README.md' { param($text) $text.Replace("with $releasedCount patches. Add", "with 13 patches. Add") }
+        Assert-Throws { Invoke-Facts } "*latest release has 13 patches, but it has $countHere or $releasedCount*" `
+            'The check took a held release count that neither the source nor the tag has.'
+    } finally {
+        Remove-Item -LiteralPath $heldFile -Force -ErrorAction SilentlyContinue
+        if (Test-Path -LiteralPath $factsGit) { Remove-Item -LiteralPath $factsGit -Recurse -Force }
+        Reset-FactsFile 'README.md'
+    }
+
     # A dead link: the address has every right shape and names a release nobody published. GitHub
     # answers 404 for it; a stand-in for the request does here, so the case needs no network.
     & {
@@ -2935,7 +3112,10 @@ try {
         ':run',
         'if exist "%APK%.xmltree" (type "%APK%.xmltree") else (type "%APK%")',
         'exit /b %errorlevel%') -join "`r`n") + "`r`n"), [System.Text.Encoding]::ASCII)
-    Set-Content -LiteralPath $stubJar -Value 'not a jar' -Encoding ASCII
+    # The receipt audits the Desktop JAR it patches with, so the stand-in is a JAR whose one
+    # embedded library is the clean one OSV is asked about anyway. The stub java never reads it.
+    New-TestBundleArchive -Path $stubJar -Entries ([ordered]@{
+        'META-INF/maven/com.google.code.gson/gson/pom.properties' = "groupId=com.google.code.gson`nartifactId=gson`nversion=2.14.0`n" })
     New-TestBundleArchive -Path (Join-Path $tools 'patched.apk') -Entries ([ordered]@{
         'AndroidManifest.xml' = 'binary manifest'; 'classes.dex' = "dex`n035" })
 
@@ -3133,9 +3313,10 @@ try {
         "The receipt builder did not put the SBOM's libraries to OSV: $builderSaid"
     $builderReport = Read-CurrentDependencyAdvisoryReport -Path (Join-Path $releaseRepo 'build/reports/dependencies/advisories.json') `
         -Subject (Get-CurrentDependencyAuditSubject -Root $releaseRepo -Graphs (Read-DependencyGraphs -Path $releaseGraph) `
-            -Sbom (Read-ReleaseSbom -Path $releaseSbom) -BundlePath $releaseBundle)
-    Assert-True ($builderReport.graphs.Count -eq 7 -and $builderReport.subject.sbom.sha256 -eq $built.sbom.sha256) `
-        'The receipt builder omitted a tooling scope or certified a different SBOM.'
+            -Sbom (Read-ReleaseSbom -Path $releaseSbom) -BundlePath $releaseBundle -DesktopJar $stubJar)
+    Assert-True ($builderReport.graphs.Count -eq 8 -and $builderReport.subject.sbom.sha256 -eq $built.sbom.sha256 -and
+        $builderReport.subject.externalDesktop.sha256 -ceq (Get-Sha256Hex -Path $stubJar)) `
+        'The receipt builder omitted a tooling scope, certified a different SBOM or skipped the Desktop JAR it patched with.'
     # SHA256SUMS.txt beside the bundle: the three files a release publishes with it, as sha256sum
     # writes them, and nothing else. The index push reads it back.
     $sumsBytes = [System.IO.File]::ReadAllBytes($releaseSums)
@@ -3267,6 +3448,19 @@ try {
                 'build-release-receipt.ps1 wrote a receipt naming an SBOM that was replaced while it patched.'
         } finally {
             Remove-Item -LiteralPath $duringPatch -Force -ErrorAction SilentlyContinue
+        }
+        # The Desktop JAR was audited by its SHA-256 before patching, so a JAR swapped during the
+        # patch runs isn't the one the receipt's audit vouched for.
+        [System.IO.File]::WriteAllBytes($releaseSbom, $cleanSbomBytes)
+        $cleanStubJarBytes = [System.IO.File]::ReadAllBytes($stubJar)
+        [System.IO.File]::WriteAllText($duringPatch, "@echo swapped>>`"$stubJar`"`r`n", [System.Text.Encoding]::ASCII)
+        try {
+            Assert-Throws { Invoke-ReceiptBuilder -Fixtures $allFixtures } `
+                '*canonical inputs or final artifacts changed while the fixtures*' `
+                'build-release-receipt.ps1 wrote a receipt after the Desktop JAR it audited was swapped while it patched.'
+        } finally {
+            Remove-Item -LiteralPath $duringPatch -Force -ErrorAction SilentlyContinue
+            [System.IO.File]::WriteAllBytes($stubJar, $cleanStubJarBytes)
         }
     } finally {
         [System.IO.File]::WriteAllBytes($releaseSbom, $cleanSbomBytes)

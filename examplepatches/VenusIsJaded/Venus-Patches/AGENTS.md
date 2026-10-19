@@ -5,8 +5,8 @@ Read this before writing a release, a changelog entry or a pull request.
 ## Release notes
 
 Morphe Manager shows "What's new" from `CHANGELOG.md` on `main` (it derives the URL from
-`patches-bundle.json`). It splits each release into cards — **New**, **Fixes**, **Improvements**,
-**Performance**, **App support** — with one row per bullet and the bold scope as the small label above
+`patches-bundle.json`). It splits each release into cards — **App support**, **New**, **Fixes**,
+**Improvements**, **Performance** — with one row per bullet and the bold scope as the small label above
 it, like Morphe Patches. That only works in the conventional-changelog format below. Anything else
 shows as one grey "Changes" block.
 
@@ -14,6 +14,10 @@ Every release, old or new, uses exactly this shape:
 
 ```markdown
 ## [1.6.1](https://github.com/VenusIsJaded/Venus-Patches/compare/v1.6.0...v1.6.1) (2026-10-11)
+
+### 🚀 Updated App Support
+
+* **Discord:** Add support for `348.10 - Stable`
 
 ### ✨ New Features
 
@@ -26,16 +30,12 @@ Every release, old or new, uses exactly this shape:
 
 ### 🔧 Improvements
 
-* **Discord - Venus settings:** Clearer setting descriptions
+* **Discord - Venus settings:** Tons of UI changes across every settings page, including a theme gallery and livelier previews
 * **Discord - Disable analytics:** Also block session heartbeats, search tracking and impression events
 
 ### ⚡ Performance Improvements
 
 * **Discord - Hidden Channels:** Do less work while turned off
-
-### 🚀 Updated App Support
-
-* **Discord:** Add support for `348.10 - Stable`
 ```
 
 Rules:
@@ -43,6 +43,14 @@ Rules:
 - **Heading:** `## [X.Y.Z](compare link) (YYYY-MM-DD)`, newest at the top. The date is in UTC. Nothing goes above
   the first heading. Morphe ignores a heading without the date.
 - **Sections:** only the five above, in that order, each at most once. Leave out empty ones.
+- **App support always comes first.** `### 🚀 Updated App Support` is the first section of any release that has it,
+  so the Discord version a release works with is the first thing you read. `scripts/release_notes.py --check` fails
+  on any other order.
+- **Summarize UI changes in one bullet.** Looks, layout, previews, animations, page redesigns, wording and other
+  settings polish go in **one** bullet under 🔧 Improvements, like `* **Discord - Venus settings:** Tons of UI changes
+  across every settings page, including …`, naming at most three or four highlights. Never write a bullet per page,
+  per preview or per row. Still give their own bullets to new things you can do (✨ New Features), options that were
+  removed or changed behavior (🔧 Improvements), and UI bugs users actually hit (🐛 Bug Fixes).
 - **Bullets:** `* **Discord:** …` for the whole app, or `* **Discord - <Morphe patch name>:** …` for one patch.
   Use the patch name as it shows in Morphe (`NoDelete`, `Pastelize`, `Message tap gestures`, `Venus settings`…).
   One line, sentence case, no full stop, concise and informative (around 5–22 words).
@@ -64,6 +72,14 @@ Rules:
 - Compare with the **previous release**, not with earlier commits. A bug in a brand-new feature added in the same
   release was never seen by users, so don't list it as a separate bug fix; however, privacy additions, fixes to
   existing patches, and app/startup performance improvements shipped in the release should always be listed.
+- **Never list bugs that only existed inside the pull request.** Before writing a `Fixed …` bullet, check the
+  previous release's code (`git show vX.Y.Z:patches/src/main/resources/venus/bootstrap.js`) and confirm users really
+  had the bug. Breakage caused by work in the same pull request (a new feature, a refactor, or a port to a new Discord
+  version) that was fixed before release isn't a fix. Ports are the usual trap: the previous release supported the
+  old Discord version, so anything that only broke on the new one never reached users. For example, 1.16.0 ported to
+  Discord 349.9, and Keep deleted messages (and every feature listening to Discord's events) hooking the wrong module,
+  and theme colors 349.9 renamed, were only broken inside that pull request, so neither is in the 1.16.0 notes. The
+  same goes for ReviewDB cards failing to render on 348.10 in 1.3.7.
 
 ## The GitHub release
 
@@ -78,6 +94,7 @@ gh release create v1.6.1 patches/build/libs/patches-1.6.1.mpp --title "1.6.1" --
 - The title is just the version: `1.6.1`.
 - Attach only `patches-X.Y.Z.mpp`.
 - If you edit an entry in `CHANGELOG.md`, update that release's body to match with `gh release edit vX.Y.Z --notes-file`.
+  When a rule changes, rewrite every past entry to follow it and update every published release body.
 
 ## Releasing a version
 
@@ -106,7 +123,7 @@ Instead, Venus uses **single-bundle HBC98 bytecode injection** (`HbcPrelude.kt`)
 ## Upgrading to a new Discord Android version
 
 Every Discord version upgrade touches four layers that are pinned to the exact APK and `assets/index.android.bundle`:
-1. **Supported version string** (`348.10 - Stable`) in `DiscordPatches.kt`.
+1. **Supported version string** (`349.9 - Stable`) in `DiscordPatches.kt`, `DISCORD_VERSION` in `bootstrap.js` (shown on the About page) and `README.md`. A test fails if they differ.
 2. **HBC98 bundle & global `#0` constants** in `HbcPrelude.kt` and `HbcPrivacy.kt`.
 3. **Metro module IDs** in `patches/src/main/resources/venus/bootstrap.js` (and `tests/runtime.test.cjs`).
 4. **Pinned HBC98 privacy targets (104 functions)** in `HbcPrivacy.kt` and **pinned native DEX methods (137 methods)** in `PrivacyPatches.kt`.
@@ -146,7 +163,7 @@ python3 scripts/hbc/port_check.py work/new/assets/index.android.bundle
    - Discord embeds source file paths (`fileFinishedImporting(moduleId, "path/to/File.tsx")`) in almost every module. If any module ID shifted in the new version, `port_check.py` prints `[MOVED/CHECK]` along with `candidate_in_new_bundle=<new_id>`.
    - For any shifted or newly added module ID:
      - Inspect the candidate with `B.show(new_id)` and `B.exports(new_id)` using `scripts/hbc/hbc.py`.
-     - **Always update both** `BOOTSTRAP_MODULES` in `scripts/hbc/port_check.py` **and** the module map file (`scripts/hbc/348.10-module-map.md`, or the new version's `<version>-module-map.md`), along with `patches/src/main/resources/venus/bootstrap.js` and `tests/runtime.test.cjs`.
+     - **Always update both** `BOOTSTRAP_MODULES` in `scripts/hbc/port_check.py` **and** the module map file (`scripts/hbc/349.9-module-map.md`, or the new version's `<version>-module-map.md`), along with `patches/src/main/resources/venus/bootstrap.js` and `tests/runtime.test.cjs`.
      - Also check the icon module IDs in `FEATURE_ICONS` inside `bootstrap.js`:
        ```bash
        python3 -c "
@@ -169,9 +186,9 @@ python3 scripts/hbc/port_check.py work/new/assets/index.android.bundle
      python3 scripts/hbc/privacy_targets.py work/new/assets/index.android.bundle --locate
      ```
    - For the 3 anonymous/unnamed targets (`#17776` `__timingFunction` in `metroRequire`, `#80849` `MetricReporter.send`, `#111344` `Rust Poller.send`), locate them if their function IDs shifted:
-     - `__timingFunction` (`#17776` in 348.10): disassemble global `#0` (`B.h.dis(B.h.func(0))[:150]`) and look for `PutByIdLoose ... '__timingFunction'` right after `CreateClosure`.
-     - `MetricReporter.send` (`#80849` in 348.10): check `B.tree(mid)` of `MetricReporter.tsx` and its dependencies for the `send` method.
-     - `Poller.send` (`#111344` in 348.10): search `B.fnmods('send')` for the module referencing `'NativePollerModule'` or crash reporting.
+     - `__timingFunction` (`#18142` in 349.9): disassemble global `#0` (`B.h.dis(B.h.func(0))[:150]`) and look for `PutByIdLoose ... '__timingFunction'` right after `CreateClosure`.
+     - `MetricReporter.send` (`#81910` in 349.9): check `B.tree(mid)` of `MetricReporter.tsx` and its dependencies for the `send` method.
+     - `Poller.send` (`#112524` in 349.9): search `B.fnmods('send')` for the module referencing `'NativePollerModule'` or crash reporting.
    - **Critical safety invariants for every `HbcPrivacy` target**:
      - Must have an expanded header (`flags & 0x20 != 0`) so its 32-bit `offset` and `size` live in the 40-byte large header.
      - Must NOT have exception handlers or generator/async flags (`flags & 0xc8 == 0`), because Hermes puts a `uint32 excCount` trailer immediately after `offset + size` when `hasExceptionHandler` (`0x40`) is set.
@@ -254,9 +271,12 @@ Venus and Morphe, translations, tests, the module map), keep following it.
 - **Titles say what it does, in plain words**, at most 40 characters: "Keep deleted messages", "Send long
   messages", "Hide the gift button". Use sentence case and no full stop. Never use a plugin or code name
   (FreeNitro, NoDelete, Pastelize).
-- **Descriptions are one short line**, at most about 130 characters. They cover what the user will see, then
-  anything important: a limit, what leaves the phone, what it needs. For example: "Stickers and emojis you'd need
-  Nitro for are sent as a link, which shows up in chat as the sticker or emoji image."
+- **Descriptions are one short line**: aim for about 65 characters in English (at most 130), so they fit in one or
+  two lines of the Features list in every language. Say what the user will see, then only what really matters (a
+  limit, what leaves the phone, what it needs). For example: "Sends Nitro emojis and stickers as links that show as
+  the image." Details belong on the feature's own page, and a restart is explained by the Reopen Discord dialog.
+- Rows with their own page show a switch and a small arrow (`SubpageTrailing`). Keep the trailing side that narrow:
+  anything wider takes width from the title and description, which then wrap.
 - Write for someone who has never heard of the feature. Use "you", say "your phone" (not "the device"), and
   don't use words like "spoof", "hook", "prelude" or "endpoint".
 - Credits ("Based on … by …") go in the Morphe description and README, not in the Venus row.
@@ -270,11 +290,14 @@ design") renders each page on and off and fails when a page breaks the rules bel
 
 **Page order, top to bottom**
 
-1. **Status card** (`statusCard(key, text, {title, IconComponent, leading})`): a bold title that says the state in
-   a few words ("Watching all 12 friends", "Signed in as Venus", "3 Quests done"), the details under it in muted
-   text, and the feature's own icon in a round badge on the left. Use `leading` for something more personal than an
-   icon when there is one: the watched people's `avatarPile`, your avatar, a theme's `themeSwatch`. When the feature
-   is off, use `offCard(key, Icon)` ("Turned off" / "Switch it on in Features to start.").
+1. **Status card** (`statusCard(key, text, {title, IconComponent, leading})`): shown at the top of a page only when the
+   feature is off (`offCard(key, Icon, feature)` — "Turned off" / "Turn it on here to start.", with Discord's own switch on the
+   card so you never have to go back to Features), when a sub-option state
+   needs calling out (e.g. every device indicator location turned off, or both emojis and stickers turned off), or when the
+   feature has genuine live runtime state to report (who you're watching in User activity notifications, which account is
+   signed in, Quest progress, ReviewDB account, active custom theme, translation engine status, or a non-zero count of kept
+   deleted/edited messages). Never show a redundant "Turned on" or "Nothing kept yet" filler card at the top of a page when
+   its preview or options below already speak for themselves.
 2. **A live preview**, when the feature changes how something looks or what a gesture does: a small chat surface built with
    `chatPreview` + `previewMessage` that follows the settings below it as you change them (bar width and colors,
    edit history, pastel names, device icons, translation notes, link style). Previews use plain sample people and
@@ -282,15 +305,16 @@ design") renders each page on and off and fails when a page breaks the rules bel
    Every preview is drawn as the part of Discord it changes: `previewScreen` with
    `previewHeader` (channel header with `ThreadIcon` / `MagnifyingGlassIcon` / `GroupIcon`), `previewInput` (message bar with `GiftIcon` and `ReactionIcon`) and `previewBar` (reply/edit bar with `@ ON` on replies), or that screen's
    own layout (member list, profile, channel list, message menu with 4 quick reactions + Add Reaction, dialog), using `usePreviewChrome()` tokens.
-   - Watch is `useStory(active, () => [[waitMs, step, caption?], …], deps)` with `storyStrip(k, s, story)` under the
-     preview. Each caption says in plain words what happens and stays up at least `readMs` (2.4–5 s); the strip shows
-     the step number, a progress bar, the time and pause / start over. Build the steps from the settings below
-     (no triple-tap, no delete scene), show the finger with `tapRipple` and type with `typeSteps`.
-   - Include **Watch and Try it** (`previewToggle(mode, setMode)` from `usePreviewMode()`, shown only while the feature
-     is on) only when the feature is something you learn by doing the actual interaction in Discord (double-tap / triple-tap
-     gestures, tapping a locked channel, sending from the emoji/sticker picker, holding a message to open its menu and tap
-     Translate, or switching screens in Device indicators). Passive visual features whose controls below already update the
-     preview live (Keep deleted messages, Pastel name colors, Message highlights) use Watch directly without a separate Try it toggle.
+   - Include **Watch** (`useStory(active, () => [[waitMs, step, caption?], …], deps)` with `storyStrip(k, s, story)` under the
+     preview) and **Try it** (`previewToggle(mode, setMode)` from `usePreviewMode()`, shown only while the feature is on)
+     only when the feature involves a sequence of steps or gesture interactions in Discord (double-tap / triple-tap gestures,
+     tapping a locked channel, opening the expression picker from the message bar to send a Nitro emoji or sticker, or holding
+     a message to open its menu and tap Translate). Each Watch caption says in plain words what happens and stays up at least
+     `readMs` (2.4–5 s); the strip shows the step number, a progress bar, the time and pause / start over.
+   - Static visual features whose appearance is clear from a single chat picture (Keep deleted messages, Pastel name colors,
+     Message highlights) show that static end-screen directly and update live as you flip the switches or pick colors below,
+     without a Watch loop or Watch/Try it toggle. Show device indicators is directly interactive with its DM / Members / Profile
+     switcher and Change Alex's devices button.
    - In Try it, a `previewTip` (Discord's brand tooltip) says what to do next, step by step, until everything your options allow has been tried.
    - Use sample art bundled in Discord (the Wumpus drawables) or plain sample people, never anything from your servers.
 3. **Choices**, each group with a short title:
@@ -326,6 +350,16 @@ design") renders each page on and off and fails when a page breaks the rules bel
 - Helpers called from a page render (`VenusStatusCard`, `venusSegmented`, `highlightPreview`…) are plain
   functions called directly, not components, so the page stays one render tree; components with their own hooks
   (`HighlightPreview`-style previews that use `useSettings`) are created with `el`.
+- The Features list is Discord's own `SettingsList` with `FeatureSearchBar` as its `ListHeaderComponent` (#68). Every
+  `toggle`/`withOptions` row is added to `featureSearch.rows` automatically; when a new feature page has options people would
+  search for by name, add their labels to `FEATURE_KEYWORDS`.
+- **Start with the essentials** (`STARTER_FEATURES`, `starterCard`) sits above the Features search on a fresh install, until any
+  feature has been on, Not now is tapped (`setupDone` in the settings file), or you search. Only add a feature there if it works
+  on its own: no sign-in, no outside service (ReviewDB, Google Translate), no restart, nothing that acts for you (Quests,
+  Skip delete confirmation) or changes what others see (Hide typing indicator). The runtime test lists the ones that must stay out.
+- **Backup and restore** saves `settings` (plus watched people and installed themes). A new setting needs nothing extra as long
+  as `acceptedSetting` can validate it: add a check there for any setting with a fixed list of values, so a hand-edited backup
+  can't put a page in a state it can't show. Never add sign-ins, tokens, saved accounts or kept messages to `backupText`.
 - Pages whose options are also native setting nodes (Nitro links, Pastel names, Device indicators) keep those
   nodes for Discord's settings search and pass `{page, sections}` to `withOptions`, so the designed page is shown.
 - Every new text goes through `tr()`/`pl()` and gets added to all 30 language files.
@@ -353,6 +387,43 @@ design") renders each page on and off and fails when a page breaks the rules bel
     perfectly translated (both as accurate and as natural as possible), commit and push that language to the open pull
     request, and only then move on to the next language.
 
+**Account switcher** (#63, #69)
+
+- MultiAccountStore (12056) is a PersistedStore (505). Its constructor adds a change listener that saves `getState()`
+  on every change, even before `initializeIfNeeded()` has read the saved list, when `users` is still `[]`. So never
+  call `emitChange()`, `initialize()`, `asyncPersist()` or `initializeIfNeeded()` on it until Discord has set
+  `_isInitialized` and Storage (510) `hasLoaded`. Doing so on a cold start wiped every saved account.
+- Only save the active token under the signed-in id when no other saved account already uses it: mid-switch, the token
+  belongs to the next account while UserStore still shows the last one.
+
+**Custom themes** (since 1.16.0)
+
+- The page leads with a gallery (`themeTile` + `themeMiniChat`), not a status card: Discord's colors first, then each installed
+  theme drawn in its own colors (`themePalette`), then a Browse tile. The tile in use has the brand ring and a check.
+- Tiles are radios (`accessibilityRole:"radio"`): tapping one uses it (`customThemesUse`), holding one asks to remove it.
+  Discord's colors is the way back, so tapping the theme in use does nothing.
+- Install problems show under the link field, never at the top of the page.
+- Colors are compiled into four 349.9 tables: RawColors (591), SemanticColors (589) and SemanticColorExperiments
+  (590), plus the theme slot keys from Themes (588: ASH=`dark`, LIGHT=`light`, DARK=`darker`, ONYX=`midnight`).
+  590 wins over 589 while an experiment is on, so every themed token's overrides follow it. Changes reach the screen
+  through ThemeStore (1193), the ThemeContext key (4593) and the memoized RootThemeContextProvider (9758).
+- Parts of the chat list are drawn by Discord's native Android code with built-in theme colors (`ThemeModule`
+  accepts only a theme name), so a JS theme can't recolor everything there.
+- Revenge rules Venus follows: arrays are `[dark, light, midnight, darker]`; a slot the array doesn't reach borrows
+  index 0, but a slot written as `false` keeps Discord's own color, even if a legacy alias reached it first. When two
+  legacy keys feed one token, the key that lists it earlier (then the shorter list) wins. Values tolerate
+  `#transparent`, whitespace inside hex and stray spaces around keys.
+- Compile journals every key it writes, and switching undoes only those (`restoreOriginalColorTables`). Every raw
+  write in `compileThemeIntoTables` goes through `raw.set`, and every token write through `writeSemanticTarget` or
+  `touchedSem.add`, or turning a theme off won't undo it. `parseThemeColor` is cached and returns frozen objects:
+  copy before changing one.
+- Test any theme change against the real 349.9 tables and the published themes:
+  `python3 scripts/hbc/color_tables.py` (decodes 589/590/591 to `work/discord_colors.json`), `python3
+  tests/themes_fetch.py` (downloads every theme to `work/themes/`), then `node tests/theme_compat.cjs`. It must show
+  no errors, `notRestored`, `chainLeaks` or `falseSlotsChanged`. Keep install and switch times where they are
+  (1.16.0: install ~4 ms, switch ~1.2 ms median). `WHO=KEY` lists the themes where KEY didn't land; `--each` shows
+  every theme.
+
 **Motion** (since 1.14.0)
 
 - `settingsBody` wraps each group in `VenusReveal`: groups rise in one after another when a page opens. Don't add a
@@ -365,6 +436,10 @@ design") renders each page on and off and fails when a page breaks the rules bel
 - Opacity, position and scale animate on the native driver only. Width (`VenusProgress`) is the one exception.
 - Every animation checks `motion()` and `reduceMotion`. Without `Animated`, or with Android's Remove animations on,
   everything shows at once. Never make anything depend on an animation finishing.
+- **Haptics** (since 1.16.0) go through `haptic(kind)`, Discord's own `triggerHapticFeedback`. Switches already buzz by
+  themselves (Discord's `FormSwitch`), so never add a second one there. `venusSegmented` ticks `IMPACT_MEDIUM` like Discord's
+  segmented control, and radio choices and color swatches (which Discord leaves silent) tick `SELECTION`. Only buzz when
+  something actually changed, never for re-picking the current choice, for toasts, or on a timer.
 - Motion confirms what you did. Never loop it on its own, except a preview's Watch story (`useStory`), whose timers
   stop when you switch to Try it or leave the page.
 
@@ -378,7 +453,7 @@ The page title is short ("Deleted messages", "Tap gestures").
 - Update `README.md` (features table) and the tests in `tests/runtime.test.cjs` whenever a
   title, group or option changes. The Features list test checks title and description length and that each icon
   is unique.
-- **Always keep both the module map file (`scripts/hbc/348.10-module-map.md`) and `scripts/hbc/port_check.py` (`BOOTSTRAP_MODULES`) updated** whenever any Metro module ID, export, or native hook is added, changed, or removed in `bootstrap.js`, and run `python3 scripts/hbc/port_check.py` to verify all entries pass.
+- **Always keep both the module map file (`scripts/hbc/349.9-module-map.md`) and `scripts/hbc/port_check.py` (`BOOTSTRAP_MODULES`) updated** whenever any Metro module ID, export, or native hook is added, changed, or removed in `bootstrap.js`, and run `python3 scripts/hbc/port_check.py` to verify all entries pass.
 
 ## Workflow for bug fixes, optimizations, and GitHub Actions `.mpp` artifacts
 

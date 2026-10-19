@@ -43,8 +43,4 @@ public final class LayoutComponents {
         return isPatched() && PatchSettings.isEnabled(key, false);
     }
 
-    public static void setHidden(String key, boolean hidden) {
-        PatchSettings.setEnabled(key, hidden);
-    }
-
 }

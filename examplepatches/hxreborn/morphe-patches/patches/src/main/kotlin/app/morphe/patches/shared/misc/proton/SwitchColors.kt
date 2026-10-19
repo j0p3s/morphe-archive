@@ -11,6 +11,7 @@ import org.w3c.dom.Element
 private const val SWITCH_COLORS_STYLE = "ThemeOverlay.Patches.MaterialSwitch"
 
 private val SWITCH_COLOR_ROLES = mapOf(
+    "colorOnPrimary" to "?attr/proton_text_inverted",
     "colorPrimaryContainer" to "?attr/colorOnPrimary",
     "colorOnPrimaryContainer" to "?attr/colorPrimary",
     "colorOutline" to "?attr/proton_icon_hint",

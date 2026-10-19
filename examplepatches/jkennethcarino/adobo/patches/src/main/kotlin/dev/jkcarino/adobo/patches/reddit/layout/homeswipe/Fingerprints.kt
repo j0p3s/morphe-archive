@@ -2,6 +2,7 @@ package dev.jkcarino.adobo.patches.reddit.layout.homeswipe
 
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.InstructionLocation.MatchAfterImmediately
+import app.morphe.patcher.InstructionLocation.MatchAfterWithin
 import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.literal
 import app.morphe.patcher.methodCall
@@ -17,7 +18,7 @@ internal object ComposePagerScrollFingerprint : Fingerprint(
             opcodes = listOf(Opcode.AND_INT_LIT16),
             location = MatchAfterImmediately()
         ),
-        opcode(Opcode.MOVE_FROM16, MatchAfterImmediately())
+        opcode(Opcode.MOVE_FROM16, MatchAfterWithin(1))
     )
 )
 

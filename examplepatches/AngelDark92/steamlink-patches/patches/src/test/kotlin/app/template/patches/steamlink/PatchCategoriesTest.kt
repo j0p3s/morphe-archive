@@ -31,7 +31,7 @@ class PatchCategoriesTest {
         ),
         "App & device identity" to listOf(
             changePackageNamePatch, deviceIdentityPatch, deviceIdentityNativeXrPatch,
-            galaxyXrVendorDriverPatch,
+            galaxyXrVendorDriverPatch, performanceBoostPatch, performanceBoostOptionalPatch,
         ),
         "Advanced XR compatibility" to listOf(
             xrCoreRuntimePatch, xrDeviceConfigBaselinePatch, xrManifestCapabilityPackPatch,
@@ -40,11 +40,13 @@ class PatchCategoriesTest {
         ),
         "Controller" to listOf(
             controllerPoseExtrapolationPatch, controllerVelocityFramePatch,
-            controllerGripHapticsPatch, controllerHalPosePatch, controllerAngularLocalPatch,
+            controllerAngularLocalPatch,
+        ),
+        "Controllers (Shizuku)" to listOf(
+            controllerGripHapticsPatch, controllerHalPosePatch,
         ),
         "Streaming & network" to listOf(
             xrCodecsSupportPatch,
-            xrCodecsSupportNativeXrPatch,
             networkOptimizationsPatch,
         ),
     )
@@ -52,8 +54,8 @@ class PatchCategoriesTest {
 
     @Test
     fun `every public patch carries its agreed category and default`() {
-        assertEquals(31, publicPatches.size)
-        assertEquals(listOf(4, 4, 4, 4, 7, 5, 3), groups.values.map { it.size })
+        assertEquals(32, publicPatches.size)
+        assertEquals(listOf(4, 4, 4, 6, 7, 3, 2, 2), groups.values.map { it.size })
         groups.forEach { (category, patches) ->
             patches.forEach { patch ->
                 assertEquals(category, patch.category, patch.name)
@@ -70,7 +72,7 @@ class PatchCategoriesTest {
                 xrInputRoutingConfigPatch, xrLauncherBootstrapPatch,
                 xrStartupPermissionsPatch, xrManifestCapabilityPackPatch,
                 deviceIdentityPatch,
-                xrCodecsSupportPatch,
+                xrCodecsSupportPatch, performanceBoostPatch,
                 networkOptimizationsPatch, blueNoisePatch,
             ),
             publicPatches.filter { it.default }.toSet(),
@@ -95,7 +97,7 @@ class PatchCategoriesTest {
             val name = channel.name
             assertEquals(channel.name.lowercase(), generated.get("channel").asString)
             val entries = generated.getAsJsonArray("patches").map { it.asJsonObject }
-            assertEquals(if (channel == ReleaseChannel.STABLE) 23 else 31, entries.size, name)
+            assertEquals(if (channel == ReleaseChannel.STABLE) 25 else 32, entries.size, name)
             val names = entries.map { it.get("name").asString }
             assertEquals(names.sorted(), names, name)
             assertEquals(names.size, names.toSet().size, name)
@@ -105,8 +107,10 @@ class PatchCategoriesTest {
                 assertEquals(patch.category, entry.get("category").asString, patch.name)
                 assertEquals(patch.default, entry.get("default").asBoolean, patch.name)
             }
-            assertEquals(if (channel == ReleaseChannel.STABLE) 0 else 5,
+            assertEquals(if (channel == ReleaseChannel.STABLE) 0 else 3,
                 entries.count { it.get("category").asString == "Controller" }, name)
+            assertEquals(if (channel == ReleaseChannel.STABLE) 0 else 2,
+                entries.count { it.get("category").asString == "Controllers (Shizuku)" }, name)
         }
     }
 }

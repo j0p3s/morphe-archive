@@ -13,7 +13,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
-import android.content.res.Configuration;
 import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
@@ -29,7 +28,9 @@ import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
 
+import app.hxreborn.extension.protonauthenticator.SettingsSections;
 import app.hxreborn.extension.protonmail.ScheduledDeletionEditor;
+import app.hxreborn.extension.protonmail.SidebarEntries;
 import app.hxreborn.extension.protonmail.accountswipe.AccountAvatarSwipe;
 import app.hxreborn.extension.protonmail.accountswipe.AvatarSwitchStyleDialog;
 import app.hxreborn.extension.protonpass.LayoutComponents;
@@ -102,19 +103,7 @@ public final class PatchesSettingsActivity extends Activity {
 
     @Override
     protected void attachBaseContext(Context base) {
-        super.attachBaseContext(withNightMode(base, PatchesTheme.uiNightMode()));
-    }
-
-    private static Context withNightMode(Context base, int nightMode) {
-        final Configuration configuration = base.getResources().getConfiguration();
-        final int currentNightMode = configuration.uiMode & Configuration.UI_MODE_NIGHT_MASK;
-        if (nightMode == Configuration.UI_MODE_NIGHT_UNDEFINED || nightMode == currentNightMode) {
-            return base;
-        }
-
-        final Configuration override = new Configuration(configuration);
-        override.uiMode = (configuration.uiMode & ~Configuration.UI_MODE_NIGHT_MASK) | nightMode;
-        return base.createConfigurationContext(override);
+        super.attachBaseContext(PatchesTheme.withNightMode(base));
     }
 
     @Override
@@ -204,6 +193,20 @@ public final class PatchesSettingsActivity extends Activity {
             layoutRows
                 .add(layoutSwitchRow("Hide About", "Privacy policy and Terms of service.", LayoutComponents.ABOUT));
         }
+        if (SidebarEntries.isPatched()) {
+            layoutRows.add(layoutSwitchRow("Hide Subscription", "Plan and billing entry in the sidebar.",
+                    SidebarEntries.SUBSCRIPTION));
+            layoutRows.add(layoutSwitchRow("Hide Report a problem", "Bug report entry in the sidebar.",
+                    SidebarEntries.REPORT_A_PROBLEM));
+        }
+        if (SettingsSections.isPatched()) {
+            layoutRows.add(layoutSwitchRow("Hide Spread the word", "Tell a friend and Rate app.",
+                    SettingsSections.SPREAD_THE_WORD));
+            layoutRows.add(layoutSwitchRow("Hide Discover Proton", "Proton Mail, Pass, VPN, Drive and Calendar cards.",
+                    SettingsSections.DISCOVER_PROTON));
+            layoutRows.add(layoutSwitchRow("Hide Proton Pass banner", "Promotion card at the top of Settings.",
+                    SettingsSections.PASS_BANNER));
+        }
         addSection(column, "Layout", layoutRows);
 
         final List<View> appearanceRows = new ArrayList<>();
@@ -276,10 +279,10 @@ public final class PatchesSettingsActivity extends Activity {
     }
 
     private View layoutSwitchRow(String title, String summary, final String key) {
-        return switchRow(title, summary, LayoutComponents.isHidden(key), new CheckedChangeListener() {
+        return switchRow(title, summary, PatchSettings.isEnabled(key, false), new CheckedChangeListener() {
             @Override
             public void onCheckedChanged(boolean hidden) {
-                LayoutComponents.setHidden(key, hidden);
+                PatchSettings.setEnabled(key, hidden);
                 confirmRestart();
             }
         });

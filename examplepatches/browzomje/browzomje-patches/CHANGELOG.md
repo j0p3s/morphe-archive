@@ -1,3 +1,47 @@
+## [1.14.0](https://github.com/browzomje/browzomje-patches/compare/v1.13.0...v1.14.0) (2026-10-18)
+
+### ✨ New Features
+
+* **Pinterest:** add startup screen selection, direct video downloader and improve video filtering ([9fd1db3](https://github.com/browzomje/browzomje-patches/commit/9fd1db3d3ce28f47880b499e358695528af04516))
+
+## [1.13.0](https://github.com/browzomje/browzomje-patches/compare/v1.12.0...v1.13.0) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* **Pinterest:** order pin settings and enforce image information dependencies ([44c965e](https://github.com/browzomje/browzomje-patches/commit/44c965ef82066bd03fd507b9eca077b2adde78b6))
+* require actionable information in issue forms ([12c4f2a](https://github.com/browzomje/browzomje-patches/commit/12c4f2af4e35211f82c4387ea819ffd73b5673ca))
+
+### ✨ New Features
+
+* **Pinterest:** preserve Home feed and clarify comment controls ([b09c8e8](https://github.com/browzomje/browzomje-patches/commit/b09c8e888c45ebf9e1733b5f7865a5777689d5d8))
+* **Pinterest:** refine settings, suppress Save tooltips and add opt-in video filtering ([49360da](https://github.com/browzomje/browzomje-patches/commit/49360da70a49b31ae34eb449245c56f03e892650))
+* **Pinterest:** search settings across languages and show restart snackbar ([ad66991](https://github.com/browzomje/browzomje-patches/commit/ad66991ea4e6cde4713ae3e1be5009e9770b13b4))
+* **Pinterest:** show cached download file size from existing metadata headers ([1da81c4](https://github.com/browzomje/browzomje-patches/commit/1da81c4adf3d0178feba8f1d3c3dc2193b301351))
+
+## [1.13.0-dev.4](https://github.com/browzomje/browzomje-patches/compare/v1.13.0-dev.3...v1.13.0-dev.4) (2026-10-14)
+
+### ✨ New Features
+
+* **Pinterest:** search settings across languages and show restart snackbar ([ad66991](https://github.com/browzomje/browzomje-patches/commit/ad66991ea4e6cde4713ae3e1be5009e9770b13b4))
+
+## [1.13.0-dev.3](https://github.com/browzomje/browzomje-patches/compare/v1.13.0-dev.2...v1.13.0-dev.3) (2026-10-14)
+
+### ✨ New Features
+
+* **Pinterest:** preserve Home feed and clarify comment controls ([b09c8e8](https://github.com/browzomje/browzomje-patches/commit/b09c8e888c45ebf9e1733b5f7865a5777689d5d8))
+
+## [1.13.0-dev.2](https://github.com/browzomje/browzomje-patches/compare/v1.13.0-dev.1...v1.13.0-dev.2) (2026-10-11)
+
+### 🐛 Bug Fixes
+
+* **Pinterest:** order pin settings and enforce image information dependencies ([44c965e](https://github.com/browzomje/browzomje-patches/commit/44c965ef82066bd03fd507b9eca077b2adde78b6))
+
+## [1.13.0-dev.1](https://github.com/browzomje/browzomje-patches/compare/v1.12.0...v1.13.0-dev.1) (2026-10-11)
+
+### ✨ New Features
+
+* **Pinterest:** show cached download file size from existing metadata headers ([1da81c4](https://github.com/browzomje/browzomje-patches/commit/1da81c4adf3d0178feba8f1d3c3dc2193b301351))
+
 ## [1.12.0](https://github.com/browzomje/browzomje-patches/compare/v1.11.0...v1.12.0) (2026-10-11)
 
 ### 🐛 Bug Fixes

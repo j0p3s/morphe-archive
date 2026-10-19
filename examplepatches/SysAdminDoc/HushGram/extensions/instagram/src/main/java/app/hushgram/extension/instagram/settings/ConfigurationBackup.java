@@ -13,6 +13,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -30,6 +31,7 @@ import app.hushgram.extension.shared.Utils;
 import app.hushgram.extension.shared.settings.BaseSettings;
 import app.hushgram.extension.shared.settings.Setting;
 import app.hushgram.extension.shared.settings.SettingsJson;
+import app.hushgram.extension.shared.settings.preference.AbstractPreferenceFragment;
 
 /** A portable, typed settings file. It never reads the host's preferences or private ledgers. */
 public final class ConfigurationBackup {
@@ -58,11 +60,17 @@ public final class ConfigurationBackup {
         public final int applied;
         public final int skipped;
         public final boolean restart;
+        /**
+         * Each setting this changed, with the value it held before, so the page can offer Restart
+         * now for the ones that wait on a restart, as it does when their own rows are flipped.
+         */
+        public final Map<Setting<?>, Object> before;
 
-        Result(int applied, int skipped, boolean restart) {
+        Result(int applied, int skipped, boolean restart, Map<Setting<?>, Object> before) {
             this.applied = applied;
             this.skipped = skipped;
             this.restart = restart;
+            this.before = Collections.unmodifiableMap(before);
         }
     }
 
@@ -91,7 +99,10 @@ public final class ConfigurationBackup {
         if (PatchFamily.DATA_SAVER.inBuild()) {
             settings.put(Settings.DATA_SAVER_MOBILE_DATA_ONLY.key, Settings.DATA_SAVER_MOBILE_DATA_ONLY);
         }
-        if (PatchFamily.TAP_TO_PLAY.inBuild()) settings.put(Settings.TAP_TO_PLAY_SCOPE.key, Settings.TAP_TO_PLAY_SCOPE);
+        if (PatchFamily.TAP_TO_PLAY.inBuild()) {
+            settings.put(Settings.TAP_TO_PLAY_SCOPE.key, Settings.TAP_TO_PLAY_SCOPE);
+            settings.put(Settings.TAP_TO_PLAY_AUTO_SCROLL_WAITS.key, Settings.TAP_TO_PLAY_AUTO_SCROLL_WAITS);
+        }
         if (PatchFamily.REEL_TAP_AND_VOLUME.inBuild()) settings.put(Settings.REEL_TAP_CHOICE.key, Settings.REEL_TAP_CHOICE);
         if (PatchFamily.REEL_DECLUTTER.inBuild()) {
             settings.put(Settings.BURN_IN_GUARD.key, Settings.BURN_IN_GUARD);
@@ -99,6 +110,7 @@ public final class ConfigurationBackup {
         }
         if (PatchFamily.STORY_TIME.inBuild()) settings.put(Settings.STORY_TIME_MODE.key, Settings.STORY_TIME_MODE);
         if (PatchFamily.FRIENDSHIP_STATUS.inBuild()) settings.put(Settings.FOLLOW_LABEL_PLACE.key, Settings.FOLLOW_LABEL_PLACE);
+        if (PatchFamily.FULL_SCREEN_BARS.inBuild()) settings.put(Settings.FULL_SCREEN_HIDES.key, Settings.FULL_SCREEN_HIDES);
         if (PatchFamily.REELS_TAB.inBuild()) {
             settings.put(Settings.START_TAB.key, Settings.START_TAB);
             settings.put(Settings.TAB_ORDER.key, Settings.TAB_ORDER);
@@ -107,6 +119,7 @@ public final class ConfigurationBackup {
             settings.put(Settings.GLASS_TAB_BAR_HAPTIC_STYLE.key, Settings.GLASS_TAB_BAR_HAPTIC_STYLE);
             settings.put(Settings.GLASS_TAB_BAR_OPACITY.key, Settings.GLASS_TAB_BAR_OPACITY);
             settings.put(Settings.GLASS_TAB_BAR_HEIGHT.key, Settings.GLASS_TAB_BAR_HEIGHT);
+            settings.put(Settings.GLASS_TAB_BAR_CORNERS.key, Settings.GLASS_TAB_BAR_CORNERS);
             settings.put(Settings.GLASS_TAB_BAR_LIFT.key, Settings.GLASS_TAB_BAR_LIFT);
             settings.put(Settings.GLASS_TAB_BAR_REELS_HIDE.key, Settings.GLASS_TAB_BAR_REELS_HIDE);
         }
@@ -122,6 +135,7 @@ public final class ConfigurationBackup {
             settings.put(Settings.REEL_POST_TIME_AGO.key, Settings.REEL_POST_TIME_AGO);
         }
         if (PatchFamily.VIDEO_DOWNLOAD.inBuild()) settings.put(Settings.DOWNLOAD_FEED_COVER.key, Settings.DOWNLOAD_FEED_COVER);
+        if (PatchFamily.VIDEO_DOWNLOAD.inBuild()) settings.put(Settings.DOWNLOAD_CHOOSE_PAGES.key, Settings.DOWNLOAD_CHOOSE_PAGES);
         if (PatchFamily.VIDEO_DOWNLOAD.inBuild()) {
             settings.put(Settings.FEED_DOWNLOAD_BUTTON.key, Settings.FEED_DOWNLOAD_BUTTON);
             settings.put(Settings.FEED_DOWNLOAD_ALL_PAGES.key, Settings.FEED_DOWNLOAD_ALL_PAGES);
@@ -135,6 +149,7 @@ public final class ConfigurationBackup {
         if (PatchFamily.REEL_DOWNLOAD.inBuild() || PatchFamily.STORY_DOWNLOAD.inBuild()
                 || PatchFamily.VIDEO_DOWNLOAD.inBuild()) {
             settings.put(Settings.DOWNLOAD_COMPATIBLE.key, Settings.DOWNLOAD_COMPATIBLE);
+            settings.put(Settings.DOWNLOAD_CONVERT.key, Settings.DOWNLOAD_CONVERT);
             // The switch only. What it remembered stays in DownloadHistory's own file, never exported.
             settings.put(Settings.DOWNLOAD_SKIP_SAVED.key, Settings.DOWNLOAD_SKIP_SAVED);
             settings.put(Settings.SEND_DOWNLOADS_TO_APP.key, Settings.SEND_DOWNLOADS_TO_APP);
@@ -232,6 +247,7 @@ public final class ConfigurationBackup {
             }
             if (!before.isEmpty()) {
                 forgetUndo();
+                for (var changed : before.entrySet()) AbstractPreferenceFragment.noteRunningValue(changed.getKey(), changed.getValue());
                 try {
                     Setting.saveAll(updates);
                     offerUndo(before);
@@ -240,7 +256,7 @@ public final class ConfigurationBackup {
                     throw failure;
                 }
             }
-            return new Result(updates.size(), skipped, restart);
+            return new Result(updates.size(), skipped, restart, before);
         }
     }
 
@@ -333,6 +349,7 @@ public final class ConfigurationBackup {
         Map<Setting<?>, Long> revisions = importedRevisions;
         forgetUndo();
         synchronized (Setting.class) {
+            Map<Setting<?>, Object> before = new LinkedHashMap<>();
             boolean restart = false;
             int skipped = 0;
             for (var entries = values.entrySet().iterator(); entries.hasNext();) {
@@ -342,10 +359,14 @@ public final class ConfigurationBackup {
                         || !expected.get(setting).equals(setting.savedValue())) {
                     entries.remove();
                     skipped++;
-                } else restart |= setting.rebootApp && !entry.getValue().equals(setting.savedValue());
+                } else if (!entry.getValue().equals(setting.savedValue())) {
+                    before.put(setting, setting.savedValue());
+                    restart |= setting.rebootApp;
+                }
             }
+            for (var changed : before.entrySet()) AbstractPreferenceFragment.noteRunningValue(changed.getKey(), changed.getValue());
             Setting.saveAll(values);
-            return new Result(values.size(), skipped, restart);
+            return new Result(values.size(), skipped, restart, before);
         }
     }
 

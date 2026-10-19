@@ -1,0 +1,40 @@
+package app.morphe.extension.chmate;
+public final class VerifyBoardAuthRules {
+    private static int checks;
+    private static void check(boolean ok,String label){if(!ok)throw new AssertionError(label);checks++;}
+    private static void invalid(String value){try{BoardAuthRules.validate(value);throw new AssertionError("accepted unsafe URL");}catch(IllegalArgumentException expected){checks++;}}
+    public static void main(String[] args){
+        check(BoardAuthRules.origin("https://BBS.EDDIBB.CC:443/liveedge/").equals("https://bbs.eddibb.cc"),"origin normalization");
+        check(BoardAuthRules.origin("https://board.example:8443/a/").equals("https://board.example:8443"),"port isolation");
+        check(BoardAuthRules.preset("https://bbs.eddibb.cc/liveedge").equals("https://bbs.eddibb.cc/auth-code"),"Edge preset");
+        check(BoardAuthRules.preset("https://bbs.eddibb.cc.evil.example/").isEmpty(),"no suffix confusion");
+        check(BoardAuthRules.preset("https://other.example/").isEmpty(),"no guessed path for unknown boards");
+        invalid("http://board.example/auth");invalid("javascript:alert(1)");invalid("file:///data/data/auth");
+        invalid("https://user:password@board.example/auth");invalid("https://board.example/auth#secret");invalid(null);
+        check(BoardAuthRules.required("認証が必要です"),"Japanese error");
+        check(BoardAuthRules.required("認証コードを入力してください"),"code error");
+        check(BoardAuthRules.required("Authentication Required"),"English error");
+        check(!BoardAuthRules.required("書き込みに成功しました"),"success ignored");
+        check(!BoardAuthRules.required(null),"null ignored");
+        check(!BoardAuthRules.required("x".repeat(65537)+"認証コード"),"bounded scan");
+        check(BoardAuthRules.suggested("https://bbs.eddibb.cc/liveedge/","認証が必要です").endsWith("/auth-code"),"known board fallback");
+        check(BoardAuthRules.suggested("https://other.example/a/","認証が必要です").isEmpty(),"unknown board requires configuration");
+        check(BoardAuthRules.suggested("https://board.example/a/","認証コード: https://board.example/check?x=1&amp;y=2").equals("https://board.example/check?x=1&y=2"),"same origin link");
+        check(BoardAuthRules.suggested("https://board.example/a/","認証コード: https://evil.example/check").isEmpty(),"cross site suggestion rejected");
+        check(BoardAuthRules.suggested("https://board.example/a/","認証コード: /auth-code").equals("https://board.example/auth-code"),"relative auth link");
+        check(BoardAuthRules.suggested("https://board.example/a/","https://board.example/check").isEmpty(),"ordinary link ignored");
+        check(BoardAuthRules.validate("https://board.example/auth?x=1").equals("https://board.example/auth?x=1"),"explicit configurable URL");
+        check(BoardAuthRules.code("認証コード: AbC12-34_xyz\n認証してください").equals("AbC12-34_xyz"),"exact code preserved");
+        check(BoardAuthRules.code("認証コード：「123456」").equals("123456"),"quoted Japanese code");
+        check(BoardAuthRules.code("Auth code = ABC123").equals("ABC123"),"English code");
+        check(BoardAuthRules.code("認証コード'123456'を用いて、以下のURLから認証を行ってください").equals("123456"),"board error quoted code without colon");
+        check(BoardAuthRules.code("認証コード「ABC123」を入力").equals("ABC123"),"Japanese quotes without colon");
+        check(BoardAuthRules.code("認証コード: https://board.example/auth-code").isEmpty(),"auth URL is not a code");
+        check(BoardAuthRules.code("認証コードを入力してください").isEmpty(),"instructions are not a code");
+        check(BoardAuthRules.code("認証コード: "+"a".repeat(256)).isEmpty(),"no truncated code");
+        check(BoardAuthRules.code("認証コード: "+"a".repeat(65536)).isEmpty(),"bounded code scan");
+        check(BoardAuthRules.code(null).isEmpty(),"null code");
+        check(BoardAuthRules.code("認証コード: ab").isEmpty(),"ambiguous short code uses full-error fallback");
+        System.out.println("PASS "+checks+" external-board auth policy checks");
+    }
+}

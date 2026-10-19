@@ -1,3 +1,19 @@
+## 1.9.5 (2026-10-19)
+
+### 🐛 Bug Fixes
+
+* **nicoid:** Fix a crash when changing playback quality.
+* **nicoid:** Fix popup player movement bounds.
+* **nicoid:** Fix playback controls being positioned outside the visible area in tablet mode. ([#75](https://github.com/chikuwadon/nicoid-re-patches/issues/75))
+* **nicoid:** Fix a crash when updating the displayed playback time.
+
+### 🔧 Improvements
+
+* **nicoid:** Improve playback quality switching in normal and popup players. Switch between available video tracks without reloading the stream when supported, while preserving playback position and paused state.
+* **nicoid:** Preserve the current playback position and playback state when a stream reload is required for a quality change.
+* **nicoid:** Keep user selections synchronized across Nico Report tabs.
+* **nicoid:** Improve Google Cast startup diagnostics, including playback request submission and results, to investigate playback remaining on “Preparing.” ([#70](https://github.com/chikuwadon/nicoid-re-patches/issues/70))
+
 ## 1.9.4 (2026-10-18)
 
 ### 🐛 Bug Fixes
@@ -31,7 +47,6 @@
 * **nicoid:** Allow idle thumbnail workers to shut down and restart when needed, reducing unnecessary background thread retention.
 * **nicoid:** Reduce temporary drawing-object creation and repeated view lookups when drawing the fullscreen playback-control background.
 * **nicoid:** Keep theme changes responsive while saving preference updates.
-
 * **nicoid:** Center Nico Reports content within a readable width on tablets and wide screens while preserving the existing phone layout. ([#73](https://github.com/chikuwadon/nicoid-re-patches/issues/73))
 * **nicoid:** Improve the consistency of checked, selected, active and disabled control colors across light, dark and AMOLED themes.
 * **nicoid:** Improve primary-button text contrast against the actual accent color in each theme.
@@ -41,7 +56,6 @@
 * **nicoid:** Adapt dialog action-button placement to the available width so longer translated labels remain visible on narrow screens, returning to a horizontal layout when space allows.
 * **nicoid:** Preserve button order and touch-target sizes when dialog actions switch between horizontal and vertical layouts.
 * **nicoid:** Refresh previously opened screens after theme or language changes so returning to them uses the current settings.
-
 * **nicoid:** Expand English and Traditional Chinese translations across settings, player controls, comment appearance options, cache actions, playlists, dialogs and error messages.
 * **nicoid:** Improve consistency in translated setting labels, action names and related interface terminology.
 * **nicoid:** Correct English singular and plural forms for comment-row counts and time values.

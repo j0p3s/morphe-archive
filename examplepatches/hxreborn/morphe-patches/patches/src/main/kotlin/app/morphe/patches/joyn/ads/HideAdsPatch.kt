@@ -13,9 +13,9 @@ import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 @Suppress("unused")
 val hideAdsPatch = bytecodePatch(
     name = "Hide ads",
-    description = "Removes ads before and during videos. Live TV requires a German IP address.",
+    description = "Removes ads before and during videos. Live TV is unavailable from outside Joyn's supported countries.",
 ) {
-    compatibleWith(AppCompatibilities.JOYN)
+    compatibleWith(AppCompatibilities.JOYN, AppCompatibilities.JOYN_AT)
 
     execute {
         val adsDisabledLogLambdaType = AdsDisabledLogMessageFingerprint.matchSingle().classDef.type

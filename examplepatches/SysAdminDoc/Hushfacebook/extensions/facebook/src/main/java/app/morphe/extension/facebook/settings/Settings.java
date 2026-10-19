@@ -459,6 +459,15 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_hide_reel_counts", FALSE);
 
     /**
+     * A video tapped in the feed opens in the full-screen player on its own, with no reels to swipe
+     * to after it ({@link app.morphe.extension.facebook.reels.FeedVideoAlone}, #161). The player's
+     * reels feed is told nothing more came. The Reels tab keeps scrolling. Off until it's turned on,
+     * since nobody has seen it on a phone yet.
+     */
+    public static final BooleanSetting FEED_VIDEOS_ALONE =
+            new BooleanSetting("hushfacebook_feed_videos_alone", FALSE);
+
+    /**
      * The batches of watched reels the Reels viewer sends as FbShortsSeenStateMutation: only their
      * ids, the record Facebook ranks the Reels feed with, which nobody else sees. Held back, reels
      * already watched may come back in the feed.
@@ -722,6 +731,24 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_hide_incoming_comment_typing", FALSE);
 
     /**
+     * The "3 new comments" pill that shows while a comment list is open never shows: its text is
+     * answered empty, and Facebook skips a pill with no text
+     * ({@link app.morphe.extension.facebook.comments.CommentSheetOptions}, #185). New comments still
+     * arrive in the list. Off by default.
+     */
+    public static final BooleanSetting HIDE_NEW_COMMENTS_PILL =
+            new BooleanSetting("hushfacebook_hide_new_comments_pill", FALSE);
+
+    /**
+     * The comment sheet opens at the full height of the screen instead of part way up, on posts,
+     * videos, reels and stories, and a reel's or a feed video's Comment button opens that sheet
+     * instead of the split screen with the video above
+     * ({@link app.morphe.extension.facebook.comments.FullHeightComments}, #179). Off by default.
+     */
+    public static final BooleanSetting OPEN_COMMENTS_FULL_HEIGHT =
+            new BooleanSetting("hushfacebook_open_comments_full_height", FALSE);
+
+    /**
      * Facebook's text boxes (posts, comments, captions, a story's text) look people up to tag only
      * for a word that starts with @. Off, they also look them up for a plain word Facebook takes for
      * a name, what its code calls an implicit mention
@@ -757,6 +784,14 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting RESUME_LONG_VIDEOS =
             new BooleanSetting("hushfacebook_resume_long_videos", FALSE);
+
+    /**
+     * Keeps a list on the phone of the reels, videos and stories you watch, newest first, so one a
+     * refresh took away can be opened again ({@link app.morphe.extension.facebook.media.RecentlyWatched},
+     * #183). Starts off. Off or paused, nothing is added; what's listed stays until it's cleared.
+     */
+    public static final BooleanSetting RECENTLY_WATCHED =
+            new BooleanSetting("hushfacebook_recently_watched", FALSE);
 
     /**
      * With a reel or video paused, a tap on its right third steps it one frame forward and a tap on
@@ -953,17 +988,20 @@ public class Settings extends BaseSettings {
 
     /**
      * The Upgrades section of Facebook's Menu, the group Facebook types UPSELL, with its offers.
-     * Only that group goes: Settings, Help and support and the rest of the Menu stay.
+     * Only that group goes: Settings, Help and support and the rest of the Menu stay. A Menu built
+     * before the switch changed keeps the group on screen even though its sections ask again (#184),
+     * so the change waits for a restart.
      */
     public static final BooleanSetting HIDE_MENU_UPGRADES =
-            new BooleanSetting("hushfacebook_hide_menu_upgrades", TRUE);
+            new BooleanSetting("hushfacebook_hide_menu_upgrades", TRUE, true);
 
     /**
      * The Also from Meta section of Facebook's Menu, the group Facebook types
      * PRODUCTS_FROM_FACEBOOK: its links to Meta's other apps and its cards for Meta's devices.
+     * Like Upgrades, it waits for a restart.
      */
     public static final BooleanSetting HIDE_MENU_ALSO_FROM_META =
-            new BooleanSetting("hushfacebook_hide_menu_also_from_meta", TRUE);
+            new BooleanSetting("hushfacebook_hide_menu_also_from_meta", TRUE, true);
 
     /**
      * The Muse card in Facebook's Menu, Meta's ad for its AI agent app, which reads as dismissed
@@ -1175,6 +1213,22 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_settings_shortcut", TRUE);
 
     /**
+     * A long press on the Facebook logo opens the settings ({@link SettingsEntry}). On by default,
+     * as it always was. Off, the press is Facebook's again. Kept while paused, like the shortcut.
+     * Whichever of the three ways in is the last one on can't be turned off (#146).
+     */
+    public static final BooleanSetting SETTINGS_LOGO_PRESS =
+            new BooleanSetting("hushfacebook_settings_logo_press", TRUE);
+
+    /**
+     * The Hushfacebook row at the end of Settings and privacy in Facebook's Menu
+     * ({@link app.morphe.extension.facebook.menu.MenuSettingsRow}). On by default. Off, the row
+     * leaves the list. Kept while paused, and never the last way in turned off (#146).
+     */
+    public static final BooleanSetting SETTINGS_MENU_ROW =
+            new BooleanSetting("hushfacebook_settings_menu_row", TRUE);
+
+    /**
      * A cold start, and a return after {@link #APP_LOCK_AFTER}, ask for the phone's screen lock
      * before Facebook shows ({@link app.morphe.extension.facebook.misc.AppLock}). The settings
      * entry's own switch, so every build has it ({@link PatchFamily#ENTRY_SWITCHES}). Off by default.
@@ -1247,9 +1301,10 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_post_menu_photo_save", FALSE);
 
     /**
-     * Puts Download to phone and Save photo at the top of a post's three-dot menu instead of the
-     * bottom (issue #151). The row under a post has no room for a button, so the menu is where a
-     * post's download lives. Off until you turn it on.
+     * Moves Download to phone and Save photo from the end of a post's three-dot menu to the start of
+     * its options list (issue #151). Facebook's sheet keeps the rows it tags itself above them, and
+     * on photo posts that list is the More options page. The row under a post has no room for a
+     * button, so the menu is where a post's download lives. Off until you turn it on.
      */
     public static final BooleanSetting POST_MENU_DOWNLOAD_FIRST =
             new BooleanSetting("hushfacebook_post_menu_download_first", FALSE);
@@ -1461,6 +1516,15 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting TRANSLUCENT_BARS =
             new BooleanSetting("hushfacebook_translucent_bars", FALSE);
+
+    /**
+     * Android's status bar goes from Facebook's main screen, a swipe down from the top edge showing
+     * it for a moment (#124, {@link app.morphe.extension.facebook.navigation.HiddenStatusBar}).
+     * Asked as the main screen resumes, gets its focus back or lays itself out, so a change shows
+     * when the settings close.
+     */
+    public static final BooleanSetting HIDE_STATUS_BAR =
+            new BooleanSetting("hushfacebook_hide_status_bar", FALSE);
 
     /**
      * The home top bar loses its Messenger button and the buttons beside it close up (#181,
@@ -1754,9 +1818,9 @@ public class Settings extends BaseSettings {
         // a few quick crashes can turn on. Its own switch, behind the lock, is the only way off.
         // Here, after both fields, since a static block runs in the order it's written.
         Setting.keepWhenPaused(APP_LOCK, APP_LOCK_AFTER);
-        // The launcher shortcut is a way back to the settings screen, where a pause is lifted, so a
-        // pause neither brings it back nor takes it away (#146).
-        Setting.keepWhenPaused(SETTINGS_SHORTCUT);
+        // The launcher shortcut, the logo's long press and the Menu row are ways back to the settings
+        // screen, where a pause is lifted, so a pause neither brings them back nor takes them away (#146).
+        Setting.keepWhenPaused(SETTINGS_SHORTCUT, SETTINGS_LOGO_PRESS, SETTINGS_MENU_ROW);
     }
 
     /**

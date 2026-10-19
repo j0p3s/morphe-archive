@@ -1,3 +1,65 @@
+## [1.31.1](https://github.com/AngelDark92/xr-porting-hub/compare/v1.31.0...v1.31.1) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* Add telemetry support and tests for Steam Link Android XR ([31b7092](https://github.com/AngelDark92/xr-porting-hub/commit/31b7092643c592185427437cbac765d1044204f5))
+* Refactor Steam Link build compatibility and experimental flags ([cdeba3a](https://github.com/AngelDark92/xr-porting-hub/commit/cdeba3af23a4c94906d56b511cb1bc860087926c))
+* Refactor Steam Link Experimental to Steam Link ([a23faf3](https://github.com/AngelDark92/xr-porting-hub/commit/a23faf3046f8b723320aaf10a7e4137dc8f56a91))
+* Update patch descriptions and remove experimental patches ([f45d3d9](https://github.com/AngelDark92/xr-porting-hub/commit/f45d3d9cdd73b73770c89dd0e987fd4133124934))
+* update patches for Galaxy XR high-resolution 3-projection and Controller angular world to local adapter ([d30c129](https://github.com/AngelDark92/xr-porting-hub/commit/d30c129071bc567ff10e73c2a0f18547236b841a))
+
+## [1.31.1-dev.5](https://github.com/AngelDark92/xr-porting-hub/compare/v1.31.1-dev.4...v1.31.1-dev.5) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* Add telemetry support and tests for Steam Link Android XR ([31b7092](https://github.com/AngelDark92/xr-porting-hub/commit/31b7092643c592185427437cbac765d1044204f5))
+
+## [1.31.1-dev.4](https://github.com/AngelDark92/xr-porting-hub/compare/v1.31.1-dev.3...v1.31.1-dev.4) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* Refactor Steam Link build compatibility and experimental flags ([cdeba3a](https://github.com/AngelDark92/xr-porting-hub/commit/cdeba3af23a4c94906d56b511cb1bc860087926c))
+
+## [1.31.1-dev.3](https://github.com/AngelDark92/xr-porting-hub/compare/v1.31.1-dev.2...v1.31.1-dev.3) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* Update patch descriptions and remove experimental patches ([f45d3d9](https://github.com/AngelDark92/xr-porting-hub/commit/f45d3d9cdd73b73770c89dd0e987fd4133124934))
+
+## [1.31.1-dev.2](https://github.com/AngelDark92/xr-porting-hub/compare/v1.31.1-dev.1...v1.31.1-dev.2) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* update patches for Galaxy XR high-resolution 3-projection and Controller angular world to local adapter ([d30c129](https://github.com/AngelDark92/xr-porting-hub/commit/d30c129071bc567ff10e73c2a0f18547236b841a))
+
+## [1.31.1-dev.1](https://github.com/AngelDark92/xr-porting-hub/compare/v1.31.0...v1.31.1-dev.1) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* Refactor Steam Link Experimental to Steam Link ([a23faf3](https://github.com/AngelDark92/xr-porting-hub/commit/a23faf3046f8b723320aaf10a7e4137dc8f56a91))
+
+## [1.31.0](https://github.com/AngelDark92/xr-porting-hub/compare/v1.30.0...v1.31.0) (2026-10-18)
+
+### ✨ New Features
+
+* upadted patch descriptions for clarity and consistency across multiple patches, including updates to category names and improved explanations. ([be8fe64](https://github.com/AngelDark92/xr-porting-hub/commit/be8fe6495f632e34b02a4ba9ba30eb912e9c6497))
+
+## [1.31.0-dev.1](https://github.com/AngelDark92/xr-porting-hub/compare/v1.30.0...v1.31.0-dev.1) (2026-10-18)
+
+### ✨ New Features
+
+* upadted patch descriptions for clarity and consistency across multiple patches, including updates to category names and improved explanations. ([be8fe64](https://github.com/AngelDark92/xr-porting-hub/commit/be8fe6495f632e34b02a4ba9ba30eb912e9c6497))
+
+## [1.30.0](https://github.com/AngelDark92/xr-porting-hub/compare/v1.29.0...v1.30.0) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* **ci:** authenticate optional unit test dependency resolution ([4e9dc0c](https://github.com/AngelDark92/xr-porting-hub/commit/4e9dc0c4a63f5a1aea87fdfdb092bf4b3e189ff2))
+
+### ✨ New Features
+
+* **steamlink:** add optional OpenXR CPU and GPU BOOST ([02b931c](https://github.com/AngelDark92/xr-porting-hub/commit/02b931c44d9be3141d2064bbaa7b45e1f4d42c13))
+
 ## [1.29.0](https://github.com/AngelDark92/xr-porting-hub/compare/v1.28.1...v1.29.0) (2026-10-17)
 
 ### ✨ New Features

@@ -2,8 +2,6 @@
 
 [READMEへ戻る](../README.md)
 
-[MorpheへHaiagaruを追加](https://morphe.software/add-source?github=areteruhiro/Haiagaru-Morphe&name=Haiagaru)
-
 ## パッチ適用時にエラーが発生して適用できない
 
 Morpheでパッチを適用しようとした際にエラーが発生する場合は、Morphe右下の設定から以下のように変更してください。
@@ -12,84 +10,9 @@ Morpheでパッチを適用しようとした際にエラーが発生する場�
 
 設定変更後、もう一度パッチ適用をお試しください。
 
-プレ版をパッチ
-https://github.com/user-attachments/assets/4a78bf3a-75ad-4821-ad68-d12c704a3704
-
-
-
 ---
 
-## `strings.xml: open failed: ENOENT` エラーが発生する
-
-パッチ適用時に、以下のようなエラーが表示される場合があります。
-
-```text
-app.morphe.patcher.patch.PatchException: /data/user/0/app.morphe.manager/app_ephemeral/patcher/apk/resources/package_1/res/values-en/strings.xml: open failed: ENOENT (No such file or directory)
-at app.morphe.patcher.Patcher$invoke$1.invokeSuspend$execute(SourceFile:102)
-```
-
-このエラーが発生する場合は、以下のページからChMateのAPKをダウンロードして、そのAPKへパッチを適用してください。
-
-https://2chmate.jp.uptodown.com/android
-
----
-
-
-### スレ内の検索長押しで「URLを開けるアプリがありません」と表示される場合
-
-Androidの「標準アプリとして設定」から、以下の項目をOFFにしてください。
-
-- `itest.5ch.io`
-- `*.5ch.io`
-
-この設定をOFFにすると、書き込みボタンを長押しした際に外部ブラウザで開けるようになります。
-
-設定例: https://i.imgur.com/lmYxXZD.jpeg
-
-なお、「標準アプリとして設定」内の項目をOFFにしても、Haiagaru内で `*.5ch.io` のURLを開いた場合は、Haiagaru内で正常に開かれます。
-
-情報提供: (ﾜｯﾁｮｲ 0de3-uUZJ)
-
-## インストールできない場合
-
-### パッチ適用時にエラーが発生して適用できない
-
-Morpheでパッチを適用しようとした際にエラーが発生する場合は、Morphe右下の設定から以下のように変更してください。
-
-`Morphe右下 → 別プロセスで実行 → 1024MB`
-
-設定変更後、もう一度パッチ適用をお試しください。
-
-以前のChMateをアプリデータを残してアンインストールした場合など、既存のパッケージとの競合が表示されることがあります。まずパッケージ名・署名の違いを確認してください。データを消す操作は最終手段です（過去の241での報告。現在241は対応対象外）。
-
-1. ChMateの設定や必要なデータをバックアップします。
-2. 以前のChMateを、アプリデータも含めて完全にアンインストールします。
-3. パッチ済みAPKをインストールします。
-4. 必要に応じて、手順1のバックアップからデータを復元します。
-
-アプリデータを削除すると、バックアップしていない設定や履歴は失われます。必ずアンインストール前にバックアップを確認してください。
-
-初期状態で有効なパッチ `Change ChMate package name` では、別アプリとしてインストールするための
-パッケージ名に加えて、アプリ名、PNG/WebPアイコン、versionCodeを設定できます。
-アイコン・versionCodeを未指定にした項目は元の値を保持します。
-
-標準設定ではShizukuを組み込みません。旧ChMateの共有データをShizukuでコピーする場合だけ、
-任意パッチ `Migrate ChMate data with Shizuku` を追加で有効にしてください。
-この任意パッチを有効にしたAPKはAndroid 7.0（API 24）以降が必要です。
-データ移行にはchmate本来のバックアップ/復元を推奨しています。
-
-備考: パッケージ名の変更により予期せぬエラーが発生する可能性がありますが、
-既存のChMateとは別アプリとして扱われるため、インストール時の競合エラーを抑えられます。
-
-任意パッチ `Save ChMate crash logs` を有効にすると、未処理例外でクラッシュした際に
-`Download/Haiagaru/` へログを保存します。投稿本文、Cookieなどのアプリデータは記録しません。
-
-情報提供: あかまつさん
-
----
-
-
-## 新しいパッチ済みChMateから古いバージョンへ上書きインストールしたい
+## 新しいChMateから古いバージョンへ上書きインストールしたい
 
 `Change ChMate package name` パッチのオプションにある **Version code（バージョンコード）** を、現在インストールしているパッチ済みAPKと同じ値、またはそれ以上に設定してパッチを適用してください。
 
@@ -102,7 +25,6 @@ Morpheでパッチを適用しようとした際にエラーが発生する場�
 > **事前にバックアップしてください。** バージョンコードを調整しても、異なるChMate間の設定・データ形式の互換性が保証されるわけではありません。また、パッケージ名が異なると別アプリになり、署名が異なると上書きできません。
 
 ---
-
 
 ## ChMate 0.8.10.191 dev / 0.8.10.226 dev で発生する可能性がある問題
 

@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 import app.hushgram.extension.instagram.reels.FullScreenBars;
+import app.hushgram.extension.instagram.reels.ReelBlurBars;
 import app.hushgram.extension.instagram.settings.FamilyNames;
 import app.hushgram.extension.instagram.settings.Settings;
 import app.hushgram.extension.instagram.settings.SettingsStatus;
@@ -126,6 +127,12 @@ public final class GlassTabBar {
     static final String SHEET_HOLDER = "layout_container_bottom_sheet";
     /** How often the sheet holder is looked for again while there isn't one. */
     static final long SHEET_LOOK_MS = 250L;
+    /**
+     * The story viewer's root, which Instagram puts in the screens' container. Instagram hides its bar
+     * while a story is open, but on Android 17 the pill stayed over the story's reply box, with the
+     * navigation bar answered 0 under it (#224). It's looked for as often as the sheet holder.
+     */
+    static final String STORY_ROOT = "reel_viewer_root";
 
     private static final java.util.HashMap<String, Integer> IDS = new java.util.HashMap<>();
 
@@ -336,6 +343,21 @@ public final class GlassTabBar {
     }
 
     /**
+     * Whether [story] is a story viewer that shows, laid out, with no screen showing after it in its
+     * container. A screen opened from the story, such as a profile, goes after it there and has the bar.
+     */
+    static boolean storyOnTop(@Nullable View story) {
+        if (story == null || !story.isShown() || story.getHeight() <= 0) return false;
+        if (!(story.getParent() instanceof ViewGroup)) return true;
+        ViewGroup container = (ViewGroup) story.getParent();
+        for (int i = container.indexOfChild(story) + 1, n = container.getChildCount(); i < n; i++) {
+            View later = container.getChildAt(i);
+            if (later.getVisibility() == View.VISIBLE && later.getHeight() > 0) return false;
+        }
+        return true;
+    }
+
+    /**
      * Proportions of the floating tab bar on the iPhone: the pill is about 90% of the screen's width
      * (5% left clear each side, so it floats without touching the edges), with its tabs 7dp in from its
      * ends. It's as tall as the bar Instagram laid out, less a gap above and under. A wide screen keeps
@@ -352,8 +374,6 @@ public final class GlassTabBar {
      */
     static final int FIT_GAP_DP = 1;
     static final int BLUR_DP = 18;
-    static final int CORNER_DP = 12;
-    static final int HIGHLIGHT_CORNER_DP = 8;
     /** The selected tab's capsule sits 4dp in from the pill's top and bottom and stands 4dp past its slot. */
     static final int HIGHLIGHT_INSET_DP = 4;
     static final int HIGHLIGHT_GROW_DP = 4;
@@ -399,6 +419,8 @@ public final class GlassTabBar {
     static final String COUNT_INSETS_AGAIN = "Insets asked again for the pill";
     /** Counted each time the navigation bar's height goes through as it came because a bottom sheet covers the pill (#209). */
     static final String COUNT_NAV_UNDER_SHEET = "Navigation bar's height given to a sheet over the pill";
+    /** Counted each time the bar, left showing by Instagram over a story, is hidden for it (#224). */
+    static final String COUNT_STORY_ASIDE = "Bar hidden over a story";
     /** Counted once for each bar whose Search tab the liquid look puts in a circle of its own (#65). */
     static final String COUNT_SEARCH_APART = "Search put in its own circle";
 
@@ -452,7 +474,12 @@ public final class GlassTabBar {
 
     static void apply(Activity activity) {
         try {
-            if (!Utils.settingsReady() || !Settings.GLASS_TAB_BAR.get()) return;
+            if (!Utils.settingsReady()) return;
+            if (!Settings.GLASS_TAB_BAR.get()) {
+                // Instagram's own bar can still slide across its tabs (#201).
+                PlainTabSlide.apply(activity);
+                return;
+            }
             View found = find(activity.getWindow().getDecorView(), TAB_BAR);
             if (!(found instanceof ViewGroup) || !(found.getParent() instanceof FrameLayout)) return;
             if (applied.containsKey(found)) {
@@ -536,6 +563,23 @@ public final class GlassTabBar {
             if (glass != null && glass.floatsIn(activity)) return true;
         }
         return false;
+    }
+
+    /**
+     * Whether [bar] wears the glass, whose pill is its background. Blur the bars around a reel then
+     * leaves the bar's background alone: a floating pill paints the strip under a reel itself
+     * ({@link ReelBlurBars#drawStrip}), and one that doesn't float fills the bar with its own colour (#197).
+     */
+    public static boolean wearsGlass(@Nullable View bar) {
+        WeakReference<Glass> held = bar == null ? null : applied.get(bar);
+        return held != null && held.get() != null;
+    }
+
+    /** Whether [bar] wears the glass and its pill floats. */
+    public static boolean floatsGlass(@Nullable View bar) {
+        WeakReference<Glass> held = bar == null ? null : applied.get(bar);
+        Glass glass = held == null ? null : held.get();
+        return glass != null && glass.floating;
     }
 
     /** The room a floating pill makes under itself for the navigation bar: the height Instagram was answered 0 for. */
@@ -651,6 +695,17 @@ public final class GlassTabBar {
      */
     static int liftPx(GlassLift lift, boolean floating, float density) {
         return floating && lift != null ? Math.round(lift.dp * density) : 0;
+    }
+
+    /**
+     * The corner radius of a shape [heightPx] tall with [corners] picked (#144): its dp, the highlight's when
+     * [highlight], never past half the height, so a fully round pill has half circle ends. Standard with no
+     * choice read.
+     */
+    static float cornerPx(GlassCorners corners, boolean highlight, float heightPx, float density) {
+        GlassCorners pick = corners == null ? GlassCorners.STANDARD : corners;
+        int dp = highlight ? pick.highlightDp : pick.dp;
+        return Math.min(Math.round(dp * density), Math.max(0f, heightPx / 2f));
     }
 
     /** The selected tab's capsule: a quarter of white on dark glass, a sixth of grey on light. */
@@ -822,6 +877,8 @@ public final class GlassTabBar {
         private final HapticStyle hapticStyle;
         private final GlassOpacity opacity;
         private final GlassHeight height;
+        /** How round the pill and its highlight are, outside the liquid look (#144). */
+        private final GlassCorners corners;
         /** How much higher the pill sits, in pixels, by the lift chosen. */
         private final int lift;
         /**
@@ -838,6 +895,11 @@ public final class GlassTabBar {
         /** Instagram's bottom sheet holder in the bar's window, as last found, and when it was last looked for. */
         private WeakReference<View> sheetHolder = new WeakReference<>(null);
         private long sheetLookedAt = -SHEET_LOOK_MS;
+        /** Instagram's story viewer in the bar's window, as last found, and when it was last looked for (#224). */
+        private WeakReference<View> storyRoot = new WeakReference<>(null);
+        private long storyLookedAt = -SHEET_LOOK_MS;
+        /** Whether this hid the bar over a story, so this shows it again, and only then (#224). */
+        private boolean hidOverAStory;
         /**
          * Hides the bar while a list scrolls down, with that switch on, and on Reels after the wait picked
          * for it (#170). Null with the switch off and the wait on Never.
@@ -908,6 +970,7 @@ public final class GlassTabBar {
             this.hapticStyle = Settings.GLASS_TAB_BAR_HAPTIC_STYLE.get();
             this.opacity = Settings.GLASS_TAB_BAR_OPACITY.get();
             this.height = Settings.GLASS_TAB_BAR_HEIGHT.get();
+            this.corners = Settings.GLASS_TAB_BAR_CORNERS.get();
             this.lift = liftPx(Settings.GLASS_TAB_BAR_LIFT.get(), floating, density);
             this.room = lift;
             this.liquid = Settings.GLASS_TAB_BAR_LIQUID.get();
@@ -1167,6 +1230,44 @@ public final class GlassTabBar {
             return false;
         }
 
+        /** Whether Instagram's story viewer shows on top in the bar's window ({@link #storyOnTop}, #224). */
+        boolean overAStory() {
+            View root = bar.getRootView();
+            View story = storyRoot.get();
+            if (story == null || story.getRootView() != root) {
+                long now = SystemClock.uptimeMillis();
+                if (story == null && now - storyLookedAt < SHEET_LOOK_MS) return false;
+                storyLookedAt = now;
+                story = find(root, STORY_ROOT);
+                storyRoot = new WeakReference<>(story);
+            }
+            return storyOnTop(story);
+        }
+
+        /**
+         * Hides the bar while a story shows on top in its window, when Instagram left the bar showing, so
+         * the pill is off the story's reply box and Instagram is told the navigation bar's real height
+         * again (#224). The bar shows again once the story goes, if it's still as this left it.
+         */
+        private void stepAsideForStories() {
+            if (!HushgramPause.isPaused() && overAStory()) {
+                if (bar.getVisibility() == View.VISIBLE) {
+                    bar.setVisibility(View.INVISIBLE);
+                    hidOverAStory = true;
+                    HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_STORY_ASIDE);
+                }
+            } else {
+                showAfterAStory();
+            }
+        }
+
+        /** Shows the bar again if this hid it over a story and nothing changed it since. */
+        private void showAfterAStory() {
+            if (!hidOverAStory) return;
+            hidOverAStory = false;
+            if (bar.getVisibility() == View.INVISIBLE) bar.setVisibility(View.VISIBLE);
+        }
+
         /**
          * Whether this is a floating pill set to show in [activity], whether or not its window shows yet:
          * a stopped activity's window is still hidden while it resumes.
@@ -1413,6 +1514,7 @@ public final class GlassTabBar {
         @Override public boolean onPreDraw() {
             Trace.beginSection("hushgram:preDraw");
             try {
+                stepAsideForStories();
                 keep();
                 askForInsetsWhenShownChanges();
                 followReels();
@@ -1460,6 +1562,7 @@ public final class GlassTabBar {
 
         @Override public void onViewDetachedFromWindow(@NonNull View view) {
             if (scrollHide != null) scrollHide.restoreNow();
+            showAfterAStory();
             bar.getViewTreeObserver().removeOnPreDrawListener(this);
             // A catch-up waiting in the queue would hold this bar after it's gone; the next frame
             // after it comes back arranges another.
@@ -1535,7 +1638,7 @@ public final class GlassTabBar {
                     drawLiquid(canvas);
                     return;
                 }
-                float radius = dp(CORNER_DP);
+                float radius = cornerPx(corners, false, rect.height(), density);
                 boolean dark = isDark(base);
                 underlay(canvas);
                 // Light glass has nothing under it to stand out against, so it gets a soft shadow.
@@ -1547,7 +1650,7 @@ public final class GlassTabBar {
                 keepSheen(dark);
                 canvas.drawRoundRect(rect, radius, radius, sheen);
 
-                drawCapsule(canvas, rect, dp(HIGHLIGHT_CORNER_DP), 1f);
+                drawCapsule(canvas, rect, cornerPx(corners, true, rect.height() - 2 * dp(HIGHLIGHT_INSET_DP), density), 1f);
 
                 stroke.setStrokeWidth(Math.max(1f, density));
                 stroke.setColor(edge(base));
@@ -1604,14 +1707,16 @@ public final class GlassTabBar {
                 }
             }
 
-            /** What shows round the pill: the bar's own colour over Instagram's bar, and black under a Reels viewer. */
+            /** What shows round the pill: the bar's own colour over Instagram's bar, and black or the blurred reel under a Reels viewer. */
             private void underlay(@NonNull Canvas canvas) {
                 // The content stops above the bar, so the bar's own colour fills round the pill.
                 if (!floating) {
                     fill.setColor(base);
                     canvas.drawRect(0, 0, bar.getWidth(), bar.getHeight(), fill);
-                } else if (reelsRight > reelsLeft) {
-                    // A Reels viewer stops above the bar, and Reels is black whatever the theme.
+                } else if (reelsRight > reelsLeft
+                        && !ReelBlurBars.drawStrip(canvas, reelsLeft, 0, reelsRight, bar.getHeight())) {
+                    // A Reels viewer stops above the bar, and Reels is black whatever the theme, unless Blur
+                    // the bars around a reel has the reel to run on into the strip (#197).
                     fill.setColor(Color.BLACK);
                     canvas.drawRect(reelsLeft, 0, reelsRight, bar.getHeight(), fill);
                 }
@@ -1809,7 +1914,7 @@ public final class GlassTabBar {
                 try {
                     float scale = 1f / DOWNSAMPLE;
                     float pad = dp(BLUR_DP);
-                    float radius = dp(CORNER_DP);
+                    float radius = cornerPx(corners, false, area.height(), density);
                     float wide = area.width() + 2 * pad;
                     float tall = area.height() + 2 * pad;
                     int width = Math.max(1, (int) Math.ceil(wide * scale));

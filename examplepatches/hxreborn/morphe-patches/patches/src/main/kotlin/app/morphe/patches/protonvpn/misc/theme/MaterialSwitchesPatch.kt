@@ -175,6 +175,22 @@ private fun BytecodePatchContext.injectCheckedIconColor() {
     )
 }
 
+private fun BytecodePatchContext.injectCheckedThumbColor() {
+    val colorsType = ProtonSwitchFingerprint.matchOrNull()?.method?.parameterTypes?.get(SWITCH_COLORS_PARAMETER)
+        ?: switchImplFingerprint().matchSingle().method.parameterTypes.first { type ->
+            classDefByOrNull(type.toString())?.methods?.any { it.isSwitchColorsConstructor() } == true
+        }
+    val constructor = mutableClassDefBy(colorsType.toString()).methods.single { it.isSwitchColorsConstructor() }
+
+    constructor.addInstructions(
+        0,
+        """
+            invoke-static/range { p1 .. p2 }, $SWITCH_THUMB_ICON_CLASS->checkedThumbColor(J)J
+            move-result-wide p1
+        """,
+    )
+}
+
 private fun BytecodePatchContext.injectThumbContent() {
     val protonSwitch = ProtonSwitchFingerprint.matchSingle().method
     val thumbContentType = protonSwitch.parameterTypes[THUMB_CONTENT_PARAMETER].toString()
@@ -321,6 +337,7 @@ val materialSwitchesPatch = bytecodePatch(
         markFeaturePatched(MATERIAL_SWITCHES_CLASS)
         addDrawIconMethod()
         styleSettingsSwitchViews()
+        injectCheckedThumbColor()
         if (ProtonSwitchFingerprint.matchOrNull() != null) {
             injectThumbContent()
             injectCheckedIconColor()

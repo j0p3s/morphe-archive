@@ -36,6 +36,7 @@ internal object LiveDataSetValueFingerprint : Fingerprint(
     returnType = "V",
     parameters = listOf("Ljava/lang/Object;"),
     strings = listOf("setValue"),
+    custom = { _, classDef -> AccessFlags.ABSTRACT.isSet(classDef.accessFlags) },
 )
 
 internal object SigningCertificateDigestFingerprint : Fingerprint(

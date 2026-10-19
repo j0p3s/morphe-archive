@@ -41,7 +41,17 @@ public final class EdgeReporterHistory {
     public static String historyTitle(long thread, Object board, String title) {
         return title(board, thread, title);
     }
+    /** Called only after the display bridge has verified the current board and thread. */
+    public static String displayTitle(long thread, String title) {
+        SharedPreferences prefs = cache;
+        if (prefs == null || thread <= 0 || EdgeReporterId.suffix(title) != null) return title;
+        return EdgeReporterId.restore(title, prefs.getString(Long.toString(thread), null));
+    }
     public static String title(Object board, long thread, String title) {
+        String resolved=metadataTitle(board,thread,title);
+        return EdgeReporterId.isBoard(board)&&!EdgeReporterOptions.menu()?EdgeReporterId.titleForNextThreadMatch(resolved):resolved;
+    }
+    private static String metadataTitle(Object board,long thread,String title){
         SharedPreferences prefs = cache;
         if (prefs == null || thread <= 0 || !EdgeReporterId.isBoard(board)) return title;
         String key = Long.toString(thread);
@@ -64,6 +74,7 @@ public final class EdgeReporterHistory {
 
     /** Restores reporter metadata for a menu title when the thread is already read. */
     public static String resolveTitle(Object board, String title) {
+        if(EdgeReporterId.isBoard(board)&&!EdgeReporterOptions.menu())return EdgeReporterId.titleForNextThreadMatch(title);
         if (title == null || EdgeReporterId.suffix(title) != null || !EdgeReporterId.isBoard(board)) {
             return title;
         }
@@ -131,7 +142,7 @@ public final class EdgeReporterHistory {
     }
     /** Intercepts the stock NGThread entry point; both choices continue into the stock editor. */
     public static boolean choose(Activity activity, String title, Object type, Object board) {
-        if (Boolean.TRUE.equals(OPENING.get()) || !(type instanceof Enum)
+        if (!EdgeReporterOptions.menu()||Boolean.TRUE.equals(OPENING.get()) || !(type instanceof Enum)
                 || !"THREAD".equals(((Enum<?>) type).name()) || !EdgeReporterId.isBoard(board)) return false;
         final String resolvedTitle = resolveTitle(board, title);
         String suffix = EdgeReporterId.suffix(resolvedTitle);
@@ -162,6 +173,7 @@ public final class EdgeReporterHistory {
     }
     /** The 191 editor uses Views; retain its matching-mode controls and normal save action. */
     public static void addLegacyButton(Object fragment) {
+        if(!EdgeReporterOptions.menu())return;
         try {
             Object root = fragment.getClass().getMethod("getView").invoke(fragment);
             if (root instanceof View) addLegacyButton(fragment, (View) root);

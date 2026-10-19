@@ -8,6 +8,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patches.imo.shared.enumConstantField
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.util.addInstructionsAtControlFlowLabel
 import app.morphe.util.getReference
@@ -38,7 +39,7 @@ val removeChatProtectionPatch = bytecodePatch(
         }
         protectedMessageMethod.returnEarly(false)
 
-        CopyAvailabilityFingerprint.matchSingle().method.apply {
+        copyAvailabilityFingerprint(enumConstantField("COPY_DISABLE_BY_PRIVACY")).matchSingle().method.apply {
             val checkIndex = indexOfFirstInstructionOrThrow(copyProtectionCheck)
             val resultIndex = indexOfFirstInstructionOrThrow(checkIndex, Opcode.MOVE_RESULT)
             val register = getInstruction<OneRegisterInstruction>(resultIndex).registerA

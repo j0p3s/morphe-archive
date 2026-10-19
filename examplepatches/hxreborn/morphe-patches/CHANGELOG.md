@@ -1,3 +1,50 @@
+## [1.55.0](https://github.com/hxreborn/morphe-patches/compare/v1.54.0...v1.55.0) (2026-10-18)
+
+### Bug Fixes
+
+* **Biobird Flashcards - Unlock premium:** show paid plan on Profile ([0791fac](https://github.com/hxreborn/morphe-patches/commit/0791fac7a72495c2c8111244f2091030e86e44f9)), closes [#258](https://github.com/hxreborn/morphe-patches/issues/258)
+* **DevCheck - Unlock premium:** match one LiveData setValue method ([ccd2c43](https://github.com/hxreborn/morphe-patches/commit/ccd2c430246c99223b018419953c2e8ed7ba98e9))
+* **RevenueCat unlock:** find the builder after R8 merges its class ([1aa00dd](https://github.com/hxreborn/morphe-patches/commit/1aa00dd6ac12fb46a77507ba332c140e8822fca4))
+* stop hiding AudioLab and 14 other apps on older Android versions ([3b9c40e](https://github.com/hxreborn/morphe-patches/commit/3b9c40e583148dfdfa3c32559f49cc08310dbc76)), closes [#236](https://github.com/hxreborn/morphe-patches/issues/236)
+* **VLLO - Unlock premium:** load native editing library ([08fbda5](https://github.com/hxreborn/morphe-patches/commit/08fbda53c0281777b60ce698700df065b1e64b21))
+
+### New Features
+
+* **aCalendar - Unlock aCalendar+:** unlock holidays and tasks ([a1abbac](https://github.com/hxreborn/morphe-patches/commit/a1abbac33b49c8a56aae652ed95e0dfc3c8efb97))
+* **botim - Unlock VIP:** remove ads and upgrade prompts ([9866bf0](https://github.com/hxreborn/morphe-patches/commit/9866bf0150ecbe35c921915e8a959a1af1ea1d38)), closes [#186](https://github.com/hxreborn/morphe-patches/issues/186)
+* **CalcNote - Unlock pro:** unlock pro features and remove ads ([2572894](https://github.com/hxreborn/morphe-patches/commit/25728941c811b91919a147aa2af7e48d0b357011))
+* **Castle for TV - Remove ads:** skip pre-roll and mid-roll ads ([e4b61db](https://github.com/hxreborn/morphe-patches/commit/e4b61dbe39be0a3a3250d61eb0d10e802d59a58e))
+* **Castle for TV - Unlock premium:** unlock member-only titles ([8c6f6b4](https://github.com/hxreborn/morphe-patches/commit/8c6f6b449c58be22b126fd8267b87bccd2391be5)), closes [#230](https://github.com/hxreborn/morphe-patches/issues/230)
+* **Cubasis LE 3 - Disable telemetry:** stop all Bugsnag traffic ([f92acff](https://github.com/hxreborn/morphe-patches/commit/f92acff8a13561b1f860484ccd37b1250abdddc8)), closes [#204](https://github.com/hxreborn/morphe-patches/issues/204)
+* **Cubasis LE 3 - Unlock premium:** unlock the full version and packs ([9962b2e](https://github.com/hxreborn/morphe-patches/commit/9962b2e9cc99b693a76285b4da9bd360f6d14836))
+* **LingoDeer - Skip sign-in prompt:** open later lessons signed out ([d849cf8](https://github.com/hxreborn/morphe-patches/commit/d849cf8c50edfca4d212a5a8f219577ba4cbbc40)), closes [#259](https://github.com/hxreborn/morphe-patches/issues/259)
+* **LingoDeer - Unlock premium:** unlock all courses and lessons ([abfe5b6](https://github.com/hxreborn/morphe-patches/commit/abfe5b61c01045717bbb09d6c8bb40af793a4acd))
+* **Magic Earth - Unlock premium:** unlock offline maps and traffic ([7d13fbb](https://github.com/hxreborn/morphe-patches/commit/7d13fbbdfdede1362a5e6375aeb8a00490e28e9f)), closes [#210](https://github.com/hxreborn/morphe-patches/issues/210)
+* **Moon+ Reader - Disable tracking:** stop usage analytics ([dab2d52](https://github.com/hxreborn/morphe-patches/commit/dab2d52845c3c6a27071c5d7c96f35fc2a3f3e22)), closes [#255](https://github.com/hxreborn/morphe-patches/issues/255)
+* **Moon+ Reader - Hide ads:** hide full-screen ads ([2f18dc5](https://github.com/hxreborn/morphe-patches/commit/2f18dc5e41d883697ec419020278bd837912485c))
+* **Moon+ Reader - Unlock pro:** unlock PDF form filling and WebDAV sync ([42157cd](https://github.com/hxreborn/morphe-patches/commit/42157cd756b73446a302fc722a57fa9b984d8435))
+* **Musicolet - Unlock premium:** unlock Pro features ([747effc](https://github.com/hxreborn/morphe-patches/commit/747effc7808270d6eb250b936d9fe65e5d42b594)), closes [#256](https://github.com/hxreborn/morphe-patches/issues/256)
+* **Period Tracker and Calendar - Unlock premium:** unlock all premium ([adc8b10](https://github.com/hxreborn/morphe-patches/commit/adc8b100c15c964e7e7cbf3400e19a1e9331e115)), closes [#257](https://github.com/hxreborn/morphe-patches/issues/257)
+* **Poe - Disable tracking:** stop Firebase usage and crash reporting ([92a4445](https://github.com/hxreborn/morphe-patches/commit/92a44450c864c5c0f2b115b9cc1269157e7b1358))
+* **Poe - Spoof signature:** keep Firebase working on the re-signed app ([dbc69f7](https://github.com/hxreborn/morphe-patches/commit/dbc69f7d14cf26813482675dd91ccb95364d2856))
+* **Privacy Notes - Unlock premium:** unlock Pro features and devices ([5571176](https://github.com/hxreborn/morphe-patches/commit/5571176eefefd6c8766aa0685d5afdb5834bbaa1)), closes [#241](https://github.com/hxreborn/morphe-patches/issues/241)
+* **Quick Cursor - Unlock pro:** unlock tracker and edge actions ([443209b](https://github.com/hxreborn/morphe-patches/commit/443209b76b18b30870c99c66f5bcb9cd61f6d34e))
+* **U Dictionary - Spoof signature:** stop Firebase rejecting the build ([7df8587](https://github.com/hxreborn/morphe-patches/commit/7df8587db7eaecc7a8f96045334faa5e2f09a3d6))
+* **U Dictionary - Unlock premium:** unlock Pro features and remove ads ([36b2c04](https://github.com/hxreborn/morphe-patches/commit/36b2c04537d8c8e970fe37726e808dceace2ee2a)), closes [#212](https://github.com/hxreborn/morphe-patches/issues/212)
+
+### Updated App Support
+
+* **Audible:** add support for `26.41.07` ([e3f2c9f](https://github.com/hxreborn/morphe-patches/commit/e3f2c9f964bc239014582ba69988b4ebce0b7abb))
+* **Catzy:** add support for `1.62.0` ([bd502fa](https://github.com/hxreborn/morphe-patches/commit/bd502faaf65167be9524053970ea670f89be69fc))
+* **DevCheck:** add support for `6.60` ([d9b5f2a](https://github.com/hxreborn/morphe-patches/commit/d9b5f2a97b37bcdbc1a915a4b220e8ba51e91bee))
+* **Echo Equalizer:** add support for `9.4` ([95c02fa](https://github.com/hxreborn/morphe-patches/commit/95c02fad42ee1c4f9f2f0a1d544cea43234faea2))
+* **One4Home Launcher:** add support for `0.5.68` ([bb3a6b6](https://github.com/hxreborn/morphe-patches/commit/bb3a6b6427352ea92140d8ec6ad633c394f24e33))
+* **Proton Pass:** add support for `1.41.4` ([6446cc2](https://github.com/hxreborn/morphe-patches/commit/6446cc242e53a1dca831eab4d496b888554d56b9))
+* **Radio Javan:** add support for `11.21.1` ([a5ef61d](https://github.com/hxreborn/morphe-patches/commit/a5ef61da025f89c3e288eb80aa2944003249812c))
+* **RISE:** add support for `Android V1.79.1` ([bf86115](https://github.com/hxreborn/morphe-patches/commit/bf86115a909b9d098484482902af988686804638))
+* **VLLO:** add support for `13.9.6` ([b0c3920](https://github.com/hxreborn/morphe-patches/commit/b0c3920e760ff582f6e704772c17c79621277d53))
+* **WalP:** add support for `10.2.3` ([7345330](https://github.com/hxreborn/morphe-patches/commit/73453308849e18fbcf1ffb5a7c3c23b416f1f59d))
+
 ## [1.54.0](https://github.com/hxreborn/morphe-patches/compare/v1.53.0...v1.54.0) (2026-10-17)
 
 ### Bug Fixes

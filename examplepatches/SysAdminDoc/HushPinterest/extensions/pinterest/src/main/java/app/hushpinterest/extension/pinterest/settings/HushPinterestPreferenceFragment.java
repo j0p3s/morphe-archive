@@ -94,6 +94,8 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
     /** Where Support HushPinterest goes: the maintainer's Ko-fi page. ExtensionHostsTest reads the link. */
     static final String SUPPORT_URL = "https://ko-fi.com/X8K126YVER";
     static final String SUPPORT_ADDRESS = SUPPORT_URL.substring(SUPPORT_URL.indexOf("://") + 3);
+    /** Pinterest's Gen AI interests page: `homefeed/edit/gen_ai_topics` opens the tuner on that tab (14.41.0). */
+    static final String GEN_AI_INTERESTS_URL = "https://www.pinterest.com/homefeed/edit/gen_ai_topics";
     /** The key of Support HushPinterest, the settings home page's last row. It stores nothing. */
     static final String SUPPORT = "action_support_hushpinterest";
     /** The English of the row listing what Pause can't reach, and its key in {@link L10n}. */
@@ -283,10 +285,29 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
                         PatchFamily.HIDE_AI_PINS.coverageSummary(L10n.t("Removes pins that Pinterest labels as made "
                             + "or changed with AI from your home feed, search, related pins and boards. "
                             + "AI images without the label still show."))), SettingsIcons.BLOCK));
+                // Its own switch on the same list hook, so a build where that hook didn't go in has no row for it.
+                if (PatchFamily.Capability.FEED_AI_PINS.installed()) {
+                    feed.addPreference(mark(toggle(context, Settings.HIDE_AI_SELF_DESCRIBED, L10n.t("Hide pins that say they're AI"),
+                            L10n.t("Removes pins without the label whose title or description calls them AI art, "
+                                + "or that come from an AI image site. It goes by their words, so some still show.")),
+                            SettingsIcons.BLOCK));
+                }
+                // Pinterest's Gen AI interests cut AI pins where they're picked, before any list reaches the hook.
+                feed.addPreference(mark(pinterestAiSetting(context), SettingsIcons.OPENING));
             }
             patchToggle(feed, context, build, PatchFamily.HIDE_SHOPPING, Settings.HIDE_SHOPPING,
                     L10n.t("Hide shopping and product pins"), L10n.t("Hides product pins, shopping stories, featured "
                         + "boards and Shop the look under pins. Visit and Paid link stay."), SettingsIcons.BLOCK);
+            patchToggle(feed, context, build, PatchFamily.FILTER_FEED, Settings.HIDE_VIDEO_PINS,
+                    L10n.t("Hide video pins"), L10n.t("Removes pins that play a video from your home feed, search, "
+                        + "related pins and boards. Photos and GIFs stay."), SettingsIcons.BLOCK);
+            // A list rather than a switch, on Filter feed's hook: no row where that capability didn't go in.
+            if (build.contains(PatchFamily.FILTER_FEED) && PatchFamily.Capability.FEED_MUTED_WORDS.installed()) {
+                feed.addPreference(mark(new MutedWordsPreference(context), SettingsIcons.BLOCK));
+            }
+            patchToggle(feed, context, build, PatchFamily.KEEP_HOME_FEED, Settings.KEEP_HOME_FEED,
+                    L10n.t("Keep Home feed"), L10n.t("Home keeps the pins you were looking at when you come back to "
+                        + "Pinterest or to the Home tab. Pull down on Home to load new pins."), SettingsIcons.BLOCK);
         }
 
         if (!Collections.disjoint(build, PatchFamily.PRIVACY_PAGE)) {
@@ -352,6 +373,19 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
                             + "Queued downloads keep their original rule.")),
                         SettingsIcons.DOWNLOADS));
                 actions.addPreference(mark(new DownloadHistoryPreference(context), SettingsIcons.DOWNLOADS));
+                // Its own hook is the pin menu row Download pins already adds, so it shows wherever that is installed.
+                if (PatchFamily.Capability.COPY_IMAGE.installed()) {
+                    actions.addPreference(mark(toggle(context, Settings.COPY_IMAGE, L10n.t("Copy image"),
+                            L10n.t("Adds Copy image to the pin menu. It puts the full-size picture on the clipboard, "
+                                + "ready to paste into other apps. Needs Download pins on. Videos don't get the row.")),
+                            SettingsIcons.DOWNLOADS));
+                }
+                if (PatchFamily.Capability.SHARE_IMAGE.installed()) {
+                    actions.addPreference(mark(toggle(context, Settings.SHARE_IMAGE, L10n.t("Share image"),
+                            L10n.t("Adds Share image to the pin menu. It sends the full-size picture itself, not a link, "
+                                + "through Android's share menu. Needs Download pins on. Videos don't get the row.")),
+                            SettingsIcons.DOWNLOADS));
+                }
             }
             patchToggle(actions, context, build, PatchFamily.DOWNLOAD_BOARD, Settings.DOWNLOAD_BOARD,
                     L10n.t("Download board"), L10n.t("Downloads up to 500 loaded pins, skipping those in Download history. "
@@ -360,6 +394,19 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
                     L10n.t("Long-press download"), L10n.t("Adds Download to a grid pin's long-press menu. Slide onto it "
                         + "and release. Needs Download pins on."),
                     SettingsIcons.DOWNLOADS);
+            // Their own hook: a build where the buttons' ids weren't found has no rows for them, and
+            // Long-press download still works.
+            if (build.contains(PatchFamily.LONG_PRESS_DOWNLOAD) && PatchFamily.Capability.LONG_PRESS_CHOICES.installed()) {
+                actions.addPreference(mark(longPressChoice(context, Settings.LONG_PRESS_HIDE_SAVE,
+                        L10n.t("Hide Save in the long-press menu"), L10n.t("Takes Pinterest's Save button out of a grid "
+                            + "pin's long-press menu. Saving from the pin itself still works.")), SettingsIcons.BLOCK));
+                actions.addPreference(mark(longPressChoice(context, Settings.LONG_PRESS_HIDE_SEND,
+                        L10n.t("Hide Send in the long-press menu"), L10n.t("Takes Pinterest's Send button out of a grid "
+                            + "pin's long-press menu. Sharing from the pin itself still works.")), SettingsIcons.BLOCK));
+                actions.addPreference(mark(longPressChoice(context, Settings.LONG_PRESS_HIDE_SEARCH,
+                        L10n.t("Hide Search image in the long-press menu"), L10n.t("Takes Pinterest's Search image button "
+                            + "out of a grid pin's long-press menu. The lens on a pin you open still searches.")), SettingsIcons.BLOCK));
+            }
             patchToggle(actions, context, build, PatchFamily.SYSTEM_SHARE, Settings.SYSTEM_SHARE,
                     L10n.t("System share sheet"), L10n.t("Sharing a pin link opens Android's own share menu."), SettingsIcons.EXPORT);
         }
@@ -413,6 +460,14 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
                     L10n.t("Hide lens button on pins"),
                     L10n.t("Hides the visual search button in the corner of a pin you open. Search image in the pin "
                         + "menu still works. The change shows on the next pin you open."), SettingsIcons.BLOCK);
+            // Its own hook: a build where the label's flag wasn't found has no row for it, and both
+            // buttons above still work.
+            if (build.contains(PatchFamily.HIDE_CLOSEUP_BUTTONS) && PatchFamily.Capability.CLOSEUP_SEARCH_LABEL.installed()) {
+                ui.addPreference(mark(toggle(context, Settings.HIDE_CLOSEUP_SEARCH_LABEL, L10n.t("Hide Search image label on pins"),
+                        L10n.t("Keeps the lens button on a pin you open but leaves off the Search image label Pinterest "
+                            + "adds to it on your first pins each day. Tapping the lens still searches. The change "
+                            + "shows on the next pin you open.")), SettingsIcons.BLOCK));
+            }
             patchToggle(ui, context, build, PatchFamily.HIDE_PIN_MENU_ITEMS, Settings.HIDE_PIN_MENU_COLLAGE,
                     L10n.t("Hide collage menu items"),
                     L10n.t("Hides Add to collage and Remix collage in pin menus you open from now on. A menu that's "
@@ -456,6 +511,9 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
                     L10n.t("Original-quality images"),
                     L10n.t("Shows the original image instead of the large size in pin closeups and collages, when "
                         + "Pinterest has one. Uses more data. Pins already loaded change the next time they load."), SettingsIcons.FEED);
+            patchToggle(ui, context, build, PatchFamily.SHOW_POSTED_DATE, Settings.SHOW_POSTED_DATE,
+                    L10n.t("Show posted date"),
+                    L10n.t("Shows the day a pin was posted under its title. It shows on the next pin you open."), SettingsIcons.ABOUT);
         }
 
         // In every build: a patched Pinterest isn't verified for its own links, so Android opens them
@@ -792,6 +850,39 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
      */
     private void sayCheckResult(@Nullable String result) {
         if (getParentFragment() instanceof SettingsDialog) ((SettingsDialog) getParentFragment()).showCheckResult(result);
+    }
+
+    /**
+     * Opens Pinterest's own Gen AI interests page, the tab of Refine your recommendations that 14.41.0's
+     * link handler opens for this address. The link goes to Pinterest itself, never a browser, and these
+     * settings close behind it, since the page opens under them.
+     */
+    private Preference pinterestAiSetting(Context context) {
+        Row row = new Row(context);
+        row.setKey("action_pinterest_ai_setting");
+        row.setTitle(L10n.t("Pinterest's own AI setting"));
+        row.setSummary(L10n.t("Pinterest can show you fewer AI pins among the ones it picks for you. It works "
+                + "alongside the switches above, and neither one catches every AI pin. Tap to open it."));
+        row.setPersistent(false);
+        row.setOnPreferenceClickListener(ignored -> {
+            Activity activity = getActivity();
+            try {
+                if (activity == null) throw new ActivityNotFoundException("no activity");
+                activity.startActivity(genAiInterests(context));
+            } catch (ActivityNotFoundException | SecurityException missing) {
+                Logger.printInfo(() -> "Pinterest didn't open its Gen AI interests page: " + missing.getClass().getSimpleName());
+                Utils.showToastLong(L10n.t("Pinterest couldn't open that page."));
+                return true;
+            }
+            if (getParentFragment() instanceof SettingsDialog) ((SettingsDialog) getParentFragment()).closeForPinterest();
+            return true;
+        });
+        return row;
+    }
+
+    /** The view of [GEN_AI_INTERESTS_URL] that only this Pinterest takes. */
+    static Intent genAiInterests(Context context) {
+        return new Intent(Intent.ACTION_VIEW, Uri.parse(GEN_AI_INTERESTS_URL)).setPackage(context.getPackageName());
     }
 
     /** Fixed project pages. Neither a release's body nor its html_url can choose the destination. */
@@ -1156,6 +1247,27 @@ public final class HushPinterestPreferenceFragment extends AbstractPreferenceFra
         preference.setTitle(title);
         preference.setSummary(summary);
         return preference;
+    }
+
+    /**
+     * A switch for one of Pinterest's long-press buttons. Turning on the last of the three while
+     * Long-press download is off would leave a menu with nothing in it, which keeps Pinterest's
+     * whole menu instead, so a toast says so then.
+     */
+    static SwitchPreference longPressChoice(Context context, BooleanSetting setting, String title, String summary) {
+        SwitchPreference row = toggle(context, setting, title, summary);
+        row.setOnPreferenceChangeListener((changed, value) -> {
+            if (Boolean.TRUE.equals(value) && !Settings.LONG_PRESS_DOWNLOAD.savedValue()) {
+                boolean rest = true;
+                for (BooleanSetting other : new BooleanSetting[]{Settings.LONG_PRESS_HIDE_SAVE, Settings.LONG_PRESS_HIDE_SEND,
+                        Settings.LONG_PRESS_HIDE_SEARCH}) {
+                    if (other != setting && !other.savedValue()) rest = false;
+                }
+                if (rest) Utils.showToastLong(L10n.t("With nothing left in it, the menu keeps Pinterest's buttons."));
+            }
+            return true;
+        });
+        return row;
     }
 
     private static Preference mark(Preference row, String icon) {

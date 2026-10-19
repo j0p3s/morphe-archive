@@ -728,7 +728,23 @@ Fddb v7.8.4-Build-1-gms-release
 
 ### What does not work
 
-The patch has no visible effect
+Something else the app used to do stopped working
+
+### Does it still happen with only one patch selected
+
+I have not tried it
+
+### Bug description
+
+{LONG}
+""", ONE_AND_TWO_PATCH_APPS)),
+    "two-patch app with a feature still locked passes without a one-patch test": ("pass", (f"""### App and version
+
+Fddb v7.8.4-Build-1-gms-release
+
+### What does not work
+
+The patched feature is still locked or still shows ads
 
 ### Does it still happen with only one patch selected
 
@@ -849,11 +865,90 @@ print(f"{'ok  ' if ok else 'FAIL'} a website domain is not read as a package nam
 
 registry_hit = app_verdict(9, [request(9, "Proton VPN", "ch.protonvpn.android")])
 ok = (registry_hit["matches"] == ["someone/patches"] and registry_hit["verdict"] == "flag"
-      and registry_hit["labels"] == ["needs info"]
+      and registry_hit["labels"] == ["needs info", "other bundle"]
       and "[Someone's patches](https://github.com/someone/patches) already patches `ch.protonvpn.android`. "
           "Which of the requested features does it not cover?" in registry_hit["comment"])
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} app another bundle already patches asks which features it lacks, not closed")
+
+
+def posted(repo, number, title, body=""):
+    return {"repo": repo, "number": number, "title": title, "body": body}
+
+
+def cross_posted(app, package, elsewhere, registry=REGISTRY, previous=""):
+    this = request(9, app, package)
+    return decide(9, this["body"], [this], SUPPORTED, registry, this["title"], NOW, elsewhere, previous)
+
+
+musicolet = cross_posted("Musicolet", "", [posted("someone/patches", 1099, "feat: new app [Musicolet]")])
+ok = (musicolet["verdict"], musicolet["labels"], musicolet["cross_posts"]) == ("flag", ["other bundle"], ["someone/patches#1099"]) \
+    and "This app was also requested at [someone/patches#1099](https://github.com/someone/patches/issues/1099)." in musicolet["comment"]
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} the requester's issue in a listed bundle naming the app is linked and labelled")
+
+by_package = cross_posted("Some Reader", "com.some.reader", [posted("someone/patches", 5, "Request", "Package: com.some.reader")])
+ok = by_package["cross_posts"] == ["someone/patches#5"]
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} a cross-post naming the package in its body is found")
+
+typos = [cross_posted("Fawesome", "", [posted("someone/patches", 6, "[Request] Fawesom TV")]),
+         cross_posted("Fawesom Free Movies and TV", "", [posted("someone/patches", 6, "[App Request] Fawesome Movies and TV")])]
+linked = request(9, "https://play.google.com/store/apps/details?id=com.future.fawesome", "")
+linked["title"] = "[App Request]: Fawesom Free Movies and TV"
+typos.append(decide(9, linked["body"], [linked], SUPPORTED, REGISTRY, linked["title"], NOW,
+                    [posted("someone/patches", 6, "[App Request] Fawesome Movies and TV")]))
+ok = [t["cross_posts"] for t in typos] == [["someone/patches#6"]] * 3
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} a brand one letter short on either side matches, read from the title when the App field is a link")
+
+misses = [
+    cross_posted("Period Tracker", "", [posted("someone/patches", 7, "[Request] Tasker: remove trial period")]),
+    cross_posted("Musicolet", "", [posted("someone/patches", 8, "Music player with lyrics")]),
+    cross_posted("Mbox Phone", "com.community.mbox", [posted("someone/patches", 9, "TV", "com.community.mbox.tv")]),
+    cross_posted("Musicolet", "", [posted("stranger/kodi-addon", 10, "Musicolet support")]),
+    cross_posted("Musicolet", "", [posted("someone/patches", 11, "[Musicolet]")], registry=None),
+]
+ok = [m["cross_posts"] for m in misses] == [[]] * len(misses) and [m["verdict"] for m in misses] == ["pass"] * len(misses)
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} a word deeper in the title, a generic word, a longer package, an unlisted repo "
+      f"and a missing registry match nothing")
+
+lookalikes = [
+    cross_posted("Proton Drive", "", [posted("someone/patches", 13, "[App Request] Proton VPN")]),
+    cross_posted("Google Pay", "", [posted("someone/patches", 14, "[App Request]: Google Maps")]),
+    cross_posted("Notion", "", [posted("someone/patches", 15, "Notions of movement")]),
+    cross_posted("Gallery Vault", "", [posted("someone/patches", 16, "Gallery crashes on open")]),
+    cross_posted("The Weather Channel", "", [posted("someone/patches", 17, "Disney Channel")]),
+]
+ok = [m["cross_posts"] for m in lookalikes] == [[]] * len(lookalikes)
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} apps sharing a vendor or a common first word, and a plural, are not cross-posts")
+
+reports = [
+    cross_posted("Musicolet", "", [posted("someone/patches", 18, "bug: Musicolet crashes after patching")]),
+    cross_posted("Musicolet", "in.krosbits.musicolet",
+                 [{**posted("someone/patches", 19, "Musicolet", "in.krosbits.musicolet"), "labels": ["Bug"]}]),
+]
+ok = [m["cross_posts"] for m in reports] == [[], []]
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} a bug report about the app in another bundle is not a request")
+
+earlier = "<!-- app-request-bot -->\nThis app was also requested at " \
+          "[someone/patches#1099](https://github.com/someone/patches/issues/1099), " \
+          "[stranger/kodi#3](https://github.com/stranger/kodi/issues/3)."
+kept = cross_posted("Musicolet", "", [], previous=earlier)
+ok = kept["cross_posts"] == ["someone/patches#1099"] and kept["comment"].endswith(
+    "[someone/patches#1099](https://github.com/someone/patches/issues/1099).")
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} a cross-post found earlier is kept after it leaves the event feed, unlisted repos dropped")
+
+app_request.REPO = "someone/morphe-patches"
+own = cross_posted("Musicolet", "", [posted("someone/patches", 12, "[Musicolet]")])
+app_request.REPO = ""
+ok = own["cross_posts"] == []
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} another repo of this bundle's owner is not a cross-post")
 
 for given, expected in {"privacy notes": "[App Request]: privacy notes",
                         "[App Request]: Gboard": "[App Request]: Gboard",
@@ -969,6 +1064,6 @@ for name, (expected, body) in CASES.items():
     failures += not ok
     print(f"{'ok  ' if ok else 'FAIL'} {name}: expected {expected}, got {actual}")
 
-total = len(CASES) + len(APP_CASES) + 18
+total = len(CASES) + len(APP_CASES) + 26
 print(f"\n{total - failures}/{total} passed")
 sys.exit(1 if failures else 0)

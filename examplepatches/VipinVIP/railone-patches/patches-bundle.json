@@ -1,7 +1,7 @@
 {
-  "created_at": "2026-10-11T12:33:33",
-  "description": "## [1.1.1](https://github.com/VipinVIP/railone-patches/compare/v1.1.0...v1.1.1) (2026-10-11)\n\n### \ud83d\udc1b Bug Fixes\n\n* **Source:** Re-release, no patch changes - the 1.1.0 download was missing classes.dex and could not load. Update the source if it showed as failed.",
-  "download_url": "https://github.com/VipinVIP/railone-patches/releases/download/v1.1.1/patches-1.1.1.mpp",
+  "created_at": "2026-10-18T12:59:00",
+  "description": "## [1.2.1](https://github.com/VipinVIP/railone-patches/compare/v1.2.0...v1.2.1) (2026-10-18)\n\n### \ud83d\udc1b Bug Fixes\n\n* **Icon:** The themed icon drew the logo smaller than the app's own icon. It now matches.",
+  "download_url": "https://github.com/VipinVIP/railone-patches/releases/download/v1.2.1/patches-1.2.1.mpp",
   "signature_download_url": "",
-  "version": "1.1.1"
+  "version": "1.2.1"
 }

@@ -88,6 +88,7 @@ import app.morphe.extension.facebook.feed.TypedFeedUnit;
 import app.morphe.extension.facebook.font.OwnFont;
 import app.morphe.extension.facebook.comments.DefaultCommentOrderForTests;
 import app.morphe.extension.facebook.comments.CommentSheetOptions;
+import app.morphe.extension.facebook.comments.FullHeightComments;
 import app.morphe.extension.facebook.comments.MetaAiSummaries;
 import app.morphe.extension.facebook.composer.TagSuggestionsForTests;
 import app.morphe.extension.facebook.media.HdrBrightnessForTests;
@@ -97,6 +98,7 @@ import app.morphe.extension.facebook.media.ProgressBar;
 import app.morphe.extension.facebook.media.QualityChoiceForTests;
 import app.morphe.extension.facebook.media.SkipSilence;
 import app.morphe.extension.facebook.media.ReelSpeedForTests;
+import app.morphe.extension.facebook.media.RecentlyWatchedForTests;
 import app.morphe.extension.facebook.media.ResumePlaybackForTests;
 import app.morphe.extension.facebook.media.TapToPlay;
 import app.morphe.extension.facebook.media.TapToPlayForTests;
@@ -131,6 +133,8 @@ import app.morphe.extension.facebook.reels.OriginalAudio;
 import app.morphe.extension.facebook.reels.ReelGesturesForTests;
 import app.morphe.extension.facebook.reels.ReelHold;
 import app.morphe.extension.facebook.reels.ReelHoldForTests;
+import app.morphe.extension.facebook.reels.FeedVideoAlone;
+import app.morphe.extension.facebook.reels.FeedVideoAloneForTests;
 import app.morphe.extension.facebook.reels.ReelCleanMode;
 import app.morphe.extension.facebook.reels.ReelDeclutter;
 import app.morphe.extension.facebook.reels.ReelLoopForTests;
@@ -264,6 +268,9 @@ public class PausedHooksTest {
         probes.put(Settings.WATCH_HISTORY_SHORTCUT, WatchHistoryShortcutTest::aStartPublishes);
         // A start puts the Hushfacebook settings shortcut in the launcher icon's menu.
         probes.put(Settings.SETTINGS_SHORTCUT, SettingsEntryTest::aStartPublishes);
+        // A finger on the logo is timed for a long press, and the Menu list gets the Hushfacebook row.
+        probes.put(Settings.SETTINGS_LOGO_PRESS, LogoPressTest::aPressIsTimed);
+        probes.put(Settings.SETTINGS_MENU_ROW, app.morphe.extension.facebook.menu.MenuSettingsRowTest::aListGetsTheRow);
         // A cold start on a phone with a screen lock covers Facebook and asks for it.
         probes.put(Settings.APP_LOCK, AppLockForTests::aStartLocks);
         // A crash that ends the app writes its file to Downloads.
@@ -288,11 +295,12 @@ public class PausedHooksTest {
      * The switches that keep working while paused. Lock Facebook guards the phone's owner rather
      * than changing Facebook, and every way to pause is in reach of someone holding the phone: the
      * Pause switch, a marker file left over USB, safe mode after a few quick crashes. The settings
-     * shortcut is a way back to the screen where a pause is lifted (#146). A method, not a field, so
+     * shortcut, the logo press and the Menu row are ways back to the screen where a pause is lifted (#146). A method, not a field, so
      * the class doesn't load Settings before the rule hands it a context.
      */
     private static Set<BooleanSetting> kept() {
-        return new HashSet<>(Arrays.asList(Settings.APP_LOCK, Settings.SETTINGS_SHORTCUT));
+        return new HashSet<>(Arrays.asList(Settings.APP_LOCK, Settings.SETTINGS_SHORTCUT, Settings.SETTINGS_LOGO_PRESS,
+                Settings.SETTINGS_MENU_ROW));
     }
 
     /** The probes whose switch is in [kept] when [keep], and the others otherwise. */
@@ -502,7 +510,19 @@ public class PausedHooksTest {
                 // The search pill is answered as empty only while the patch runs.
                 ReelDeclutter::hideSearchPill,
                 // A sidebar button's count loses its number only while the patch runs.
-                () -> !"12".equals(ReelDeclutter.countText("12"))));
+                () -> !"12".equals(ReelDeclutter.countText("12")),
+                // A feed video's player asking for more right after the tap gets none.
+                () -> {
+                    FeedVideoAlone.feedVideoTapped();
+                    return FeedVideoAlone.holdsBack(new Object());
+                },
+                // So does a reel's data source as the reels viewer opens from the feed.
+                () -> {
+                    FeedVideoAlone.reelsViewerOpening("newsfeed::feed_story");
+                    return FeedVideoAlone.seedOnly(new Object());
+                },
+                // And that viewer's list shows no loading page after the video.
+                FeedVideoAloneForTests::dropsTheLoadingPage));
         // A reel that would get the interest prompt is answered as one that doesn't.
         probes.put(PatchFamily.REEL_PROMPTS, Collections.singletonList(() -> !ReelPrompts.keep(true)));
         // The Reels batcher's send of the reels you watched never reaches its executor.
@@ -556,7 +576,10 @@ public class PausedHooksTest {
                 () -> TapToPlay.autoplaySetting(TapToPlayForTests.Autoplay.ON) != TapToPlayForTests.Autoplay.ON,
                 () -> TapToPlay.showReelPlayButton(false)));
         // A long video left at 5:00 is saved, and its next start seeks back there.
-        probes.put(PatchFamily.RESUME_LONG_VIDEOS, Collections.singletonList(ResumePlaybackForTests::resumesALongVideo));
+        // A long video picks up where it was left, and a reel played on and a story viewed go on the
+        // Recently watched list (#183).
+        probes.put(PatchFamily.RESUME_LONG_VIDEOS, Arrays.asList(ResumePlaybackForTests::resumesALongVideo,
+                RecentlyWatchedForTests::keepsAWatchedReel, StorySeenForTests::keepsAViewedStory));
         // A tap on the right third of a video you paused steps it a frame.
         probes.put(PatchFamily.FRAME_STEP, Collections.singletonList(FrameStepForTests::stepsAPausedVideo));
         // A new video's first choice plays the chosen quality rather than Facebook's.
@@ -684,7 +707,16 @@ public class PausedHooksTest {
                 () -> CommentSheetOptions.holdsBottomContent(CommentSheetOptions.RELATED_GROUPS),
                 () -> CommentSheetOptions.hidesComment(new GraphQLComment("https://s.shopee.vn/9zKs")),
                 () -> CommentSheetOptions.hidesComment(new GraphQLComment("Big SPOILER inside")),
-                () -> CommentSheetOptions.incomingTypers(3) == 0));
+                () -> CommentSheetOptions.incomingTypers(3) == 0,
+                () -> CommentSheetOptions.newCommentsPill("3 new comments").isEmpty()));
+        // A reel's comment sheet asking for two thirds of the screen gets all of it, a split-screen
+        // launcher answers that it didn't open, a full-height sheet fills the screen, and the reel
+        // drawn above the comments is hidden.
+        probes.put(PatchFamily.FULL_HEIGHT_COMMENTS, Arrays.asList(
+                () -> FullHeightComments.sheetHeight(0.66f) == 1f,
+                FullHeightComments::skipSplitScreen,
+                () -> FullHeightComments.fillsScreen(1f),
+                PausedHooksTest::hidesTheVideoAboveTheComments));
         // A word without @ in a post or comment box looks nobody up, and a list of people left open
         // by an earlier @ is closed.
         probes.put(PatchFamily.TAG_SUGGESTIONS, Arrays.asList(
@@ -865,6 +897,18 @@ public class PausedHooksTest {
     /** A scrubber still in Facebook's thin look, which an update would give the kept look. */
     private static boolean givesAThinBarTheKeptLook() {
         return ProgressBar.looksAgain(new android.widget.LinearLayout(RuntimeEnvironment.getApplication()));
+    }
+
+    /** A comment sheet whose header holds a video, the reel above its comments, set up by Facebook. */
+    private static boolean hidesTheVideoAboveTheComments() {
+        android.content.Context app = RuntimeEnvironment.getApplication();
+        FrameLayout header = new FrameLayout(app);
+        header.setId(0x7f0a0612);
+        header.addView(new android.view.TextureView(app));
+        FrameLayout sheet = new FrameLayout(app);
+        sheet.addView(header);
+        FullHeightComments.watchHeader(sheet, 0x7f0a0612, true);
+        return header.getVisibility() == View.GONE;
     }
 
     /** A press at the far end of a bar whose thumb sits at its start, then a cancel to end it. */

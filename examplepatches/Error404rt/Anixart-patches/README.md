@@ -2,8 +2,6 @@
 
 Смотрите аниме без рекламы и отвлекающих факторов. 🍿
 
-Релиз v2.0.0 теперь доступен для **Anixart 10.5**. Релиз v1.0.0 остаётся для **Anixart 10.0**.
-
 Патч-пакет создан **Error404rt** на базе Morphe Patches.
 
 [🇷🇺 Русский](README.md) | [🇬🇧 English](README.en.md)
@@ -34,10 +32,7 @@
 ## 📱 Совместимость
 
 - **Актуальный релиз:** v2.0.0
-- **Приложение:** Anixart
-- **Package:** com.swiftsoft.anixartd
 - **Версия:** 10.5
-- **Тип APK:** APK
 - **Патч:** Remove ads
 
 Для Anixart 10.0 используйте предыдущий релиз [v1.0.0](https://github.com/Error404rt/Anixart-patches/releases/tag/v1.0.0).

@@ -21,12 +21,12 @@ public final class ViewSwitchStyle {
 
     public static Drawable thumb(View view) {
         final Context context = view.getContext();
-        return SwitchStyle.thumb(context, AccentColor.getAccentColor(PatchesTheme.isNightMode(context)));
+        return SwitchStyle.thumb(context, AccentColor.getAccentColor(PatchesTheme.isAppNightMode(context)));
     }
 
     public static Drawable track(View view) {
         final Context context = view.getContext();
-        return SwitchStyle.track(context, AccentColor.getAccentColor(PatchesTheme.isNightMode(context)));
+        return SwitchStyle.track(context, AccentColor.getAccentColor(PatchesTheme.isAppNightMode(context)));
     }
 
 }

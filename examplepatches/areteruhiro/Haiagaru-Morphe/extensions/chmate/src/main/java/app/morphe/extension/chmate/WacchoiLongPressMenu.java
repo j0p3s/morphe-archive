@@ -18,23 +18,283 @@ import java.util.regex.Pattern;
 /** Adds a board-aware Wacchoi search action to ChMate's response long-press menu. */
 public final class WacchoiLongPressMenu {
     private static final int ITEM_ID = 75;
+    private static final int SUFFIX_SEARCH_ITEM_ID = 0x7e000077;
+    private static final int PREFIX_SEARCH_ITEM_ID = 0x7e000078;
+    private static Intent upperSearch(Context context,String query){
+        java.util.regex.Matcher m=WacchoiSearch.SLIP.matcher(query);
+        if(!m.find())return null;
+        return new Intent(context,HissiWacchoiSearchActivity.class)
+                .putExtra(HissiWacchoiSearchActivity.EXTRA_HALF,HissiWacchoiSearchActivity.HALF_UPPER)
+                .putExtra("haiagaru.wacchoi.query",m.group(1)+"-");
+    }
+    // These are toolbar-only choices. Some ChMate builds reuse the toolbar
+    // action catalog for the response long-press Menu as well, so explicitly
+    // strip them from that transient menu without removing toolbar choices.
+    private static final int EDGE_ARCHIVE_TOOLBAR_ID = 0x7e000001;
+    private static final int MARK_ALL_READ_TOOLBAR_ID = 0x7e000003;
     private static final ThreadLocal<Object> ACTIVE_DIALOG = new ThreadLocal<>();
+    private static final java.util.Set<Object> ORDERED_NAME_SHEETS =
+            Collections.newSetFromMap(Collections.synchronizedMap(new java.util.WeakHashMap<>()));
+
+    public static boolean preferredOrderEnabled() {
+        Context context = Haiagaru.applicationContextForExtension();
+        return context != null && context.getSharedPreferences(
+                "io.github.areteruhiro.chmate.haiagaru.ui-config", Context.MODE_PRIVATE)
+                .getBoolean("wacchoiNgFirstMenu", false);
+    }
+
+    /** Invoked after native sheet items are appended, only for a marked Wacchoi sheet. */
+    public static void reorderNameSheet(Object builder) {
+        if (!preferredOrderEnabled() || !ORDERED_NAME_SHEETS.contains(builder)) return;
+        try {
+            String field;
+            switch (builder.getClass().getName()) {
+                case "o.setDomStorageEnabled": field = "c"; break;
+                case "o.OnUserEarnedRewardListener": field = "b"; break;
+                case "o.isDataValid": field = "a"; break;
+                default: return;
+            }
+            Object items = fieldValue(builder, field);
+            if (!(items instanceof java.util.List)) return;
+            @SuppressWarnings("unchecked") java.util.List<Object> rows = (java.util.List<Object>) items;
+            WacchoiMenuOrder.reorder(rows, item -> {
+                String titleField;
+                switch (item.getClass().getName()) {
+                    case "o.setDisplayZoomControls": titleField = "h"; break;
+                    case "o.MuteThisAdListener": titleField = "g"; break;
+                    case "o.onDataRangeInserted": titleField = "j"; break;
+                    default: return "";
+                }
+                Object title = fieldValue(item, titleField);
+                return title instanceof String ? (String) title : "";
+            });
+        } catch (RuntimeException error) {
+            android.util.Log.w("Haiagaru", "Cannot order Wacchoi name sheet", error);
+        }
+    }
+
+    /** Only the legacy name/SLIP menu calls this; response-body and ID menus stay intact. */
+    public static void reorderLegacyNameMenu(Object menuObject) {
+        if (!preferredOrderEnabled() || !(menuObject instanceof Menu)
+                || !menuObject.getClass().getName().equals("o.m6fExternalSyntheticLambda0")) return;
+        Menu menu = (Menu) menuObject;
+        if (menu.findItem(76) == null && menu.findItem(ITEM_ID) == null) return;
+        MenuItem suffix = menu.findItem(76), search = menu.findItem(ITEM_ID);
+        if (suffix != null) suffix.setTitle("ﾜｯﾁｮｲ下4桁でNGName登録");
+        if (search != null) search.setTitle("必死チェッカーもどき(ﾜｯﾁｮｲ)");
+        Object items = fieldValue(menuObject, "c");
+        if (items instanceof java.util.List) {
+            @SuppressWarnings("unchecked") java.util.List<MenuItem> rows = (java.util.List<MenuItem>) items;
+            WacchoiMenuOrder.reorder(rows, item -> String.valueOf(item.getTitle()));
+        }
+    }
+    private static final java.util.Map<Object, Runnable> SUFFIX_LONG_PRESS =
+            Collections.synchronizedMap(new java.util.WeakHashMap<>());
+    private static String combinedClickableOwner;
+    public static void configureCombinedClickable(String owner) { combinedClickableOwner = owner; }
+
+    private static final class SuffixRowBinding {
+        final boolean clickable, longClickable, addedClick;
+        SuffixRowBinding(android.view.View row) {
+            clickable = row.isClickable();
+            longClickable = row.isLongClickable();
+            addedClick = !row.hasOnClickListeners();
+        }
+    }
+
+    /** Called by native adapter bind hooks; never changes unrelated rows. */
+    public static void bindSuffixRow(Object adapter, int position, android.view.View row) {
+        if (!(adapter instanceof android.widget.Adapter) || row == null) return;
+        try {
+            Object item = ((android.widget.Adapter) adapter).getItem(position);
+            bindCompactMenuLabel(item, row);
+            Runnable action = SUFFIX_LONG_PRESS.get(item);
+            if (action == null && item != null) {
+                for (Field field : item.getClass().getDeclaredFields()) {
+                    if (Modifier.isStatic(field.getModifiers())) continue;
+                    field.setAccessible(true);
+                    action = SUFFIX_LONG_PRESS.get(field.get(item));
+                    if (action != null) break;
+                }
+            }
+            final Runnable selected = action;
+            // Only clear a listener installed by us when a row is recycled.
+            if (selected != null) {
+                Object previous = row.getTag(0x7e000076);
+                SuffixRowBinding binding = previous instanceof SuffixRowBinding
+                        ? (SuffixRowBinding) previous : new SuffixRowBinding(row);
+                row.setTag(0x7e000076, binding);
+                if (binding.addedClick) {
+                    // A long-clickable child consumes ACTION_UP before ListView
+                    // can dispatch it. Forward via the current parent/position so
+                    // native popup dismissal and MenuItem dispatch still run.
+                    row.setOnClickListener(v -> {
+                        android.view.ViewParent parent = v.getParent();
+                        while (parent != null) {
+                            if (parent instanceof android.widget.AdapterView) {
+                                android.widget.AdapterView<?> list = (android.widget.AdapterView<?>) parent;
+                                int current = list.getPositionForView(v);
+                                if (current != android.widget.AdapterView.INVALID_POSITION
+                                        && list.getOnItemClickListener() != null) {
+                                    list.performItemClick(v, current, list.getItemIdAtPosition(current));
+                                    return;
+                                }
+                            }
+                            parent = parent.getParent();
+                        }
+                    });
+                }
+                row.setOnLongClickListener(v -> { selected.run(); return true; });
+            } else if (row.getTag(0x7e000076) instanceof SuffixRowBinding) {
+                SuffixRowBinding binding = (SuffixRowBinding) row.getTag(0x7e000076);
+                if (binding.addedClick) {
+                    row.setOnClickListener(null);
+                    row.setClickable(binding.clickable);
+                }
+                row.setOnLongClickListener(null);
+                row.setLongClickable(binding.longClickable);
+                row.setTag(0x7e000076, null);
+            }
+        } catch (ReflectiveOperationException | RuntimeException error) {
+            android.util.Log.w("Haiagaru", "NG suffix long press row", error);
+        }
+    }
+
+    /** Native icon grids allow two lines. Keep action titles intact, but fit their visible labels. */
+    private static void bindCompactMenuLabel(Object item, android.view.View row) {
+        if (!(item instanceof MenuItem)) return;
+        MenuItem menuItem = (MenuItem) item;
+        String label;
+        switch (menuItem.getItemId()) {
+            case 0x7e484a01: label = "レスを保存"; break;
+            case 0x7e484b01: label = "投稿者を強調"; break;
+            default: return;
+        }
+        replaceMenuLabel(row, String.valueOf(menuItem.getTitle()), label);
+    }
+
+    private static void replaceMenuLabel(android.view.View view, String full, String compact) {
+        if (view instanceof android.widget.TextView) {
+            android.widget.TextView text = (android.widget.TextView) view;
+            if (full.contentEquals(text.getText())) text.setText(compact);
+        }
+        if (view instanceof android.view.ViewGroup) {
+            android.view.ViewGroup group = (android.view.ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) replaceMenuLabel(group.getChildAt(i), full, compact);
+        }
+    }
+
+    /** Replace Compose clickable only for our callback, retaining native gesture arbitration. */
+    public static Object suffixCombinedClickable5(Object modifier, boolean enabled, String label, Object click, int mask) {
+        return suffixCombinedClickable(modifier, enabled, label, null, click, mask);
+    }
+
+    public static Object suffixCombinedClickable(Object modifier, boolean enabled, String label, Object role, Object click, int mask) {
+        Runnable action = suffixAction(click, 3, new java.util.IdentityHashMap<>());
+        if (action == null) return null;
+        try {
+            Class<?> callback = click.getClass().getInterfaces()[0];
+            Object longClick = java.lang.reflect.Proxy.newProxyInstance(callback.getClassLoader(), new Class<?>[]{callback},
+                    (proxy, method, args) -> {
+                        if (method.getDeclaringClass() == Object.class) {
+                            if (method.getName().equals("hashCode")) return System.identityHashCode(proxy);
+                            if (method.getName().equals("equals")) return proxy == args[0];
+                            return "HaiagaruSuffixLongPress";
+                        }
+                        action.run(); return null;
+                    });
+            Class<?> clickable = Class.forName(combinedClickableOwner, false, callback.getClassLoader());
+            for (Method method : clickable.getDeclaredMethods()) {
+                Class<?>[] p = method.getParameterTypes();
+                // 241's optimized overload: modifier, enabled, long click,
+                // haptic feedback, interaction source, click, default mask.
+                if (Modifier.isStatic(method.getModifiers()) && p.length == 7 && p[0].isInstance(modifier)
+                        && p[1] == boolean.class && p[2] == callback && p[3] == boolean.class
+                        && p[5] == callback && p[6] == int.class) {
+                    method.setAccessible(true);
+                    return method.invoke(null, modifier, (mask & 1) != 0 || enabled, longClick, true, null, click, 0);
+                }
+                if (!Modifier.isStatic(method.getModifiers()) || (p.length != 9 && p.length != 10)
+                        || !p[0].isInstance(modifier) || p[1] != boolean.class || p[2] != String.class
+                        || p[4] != String.class || p[5] != callback || p[6] != callback || p[p.length-1] != callback) continue;
+                Object[] args = new Object[p.length];
+                args[0] = modifier; args[1] = (mask & 1) != 0 || enabled;
+                args[2] = (mask & 2) != 0 ? null : label; args[3] = (mask & 4) != 0 ? null : role;
+                args[4] = "下4桁をコピーしてNG編集"; args[5] = longClick;
+                if (p.length == 10) args[7] = true;
+                args[p.length-1] = click;
+                method.setAccessible(true);
+                return method.invoke(null, args);
+            }
+        } catch (Exception error) { android.util.Log.w("Haiagaru", "NG suffix combined click", error); }
+        return null;
+    }
+
+    // Native sheets copy a menu item and wrap its callback to dismiss the sheet.
+    // Match only the captured callback graph, not merely the outer lambda.
+    private static Runnable suffixAction(Object value, int depth, java.util.IdentityHashMap<Object, Boolean> seen) {
+        if (value == null) return null;
+        Runnable direct = SUFFIX_LONG_PRESS.get(value);
+        if (direct != null) return direct;
+        if (depth == 0 || seen.size() >= 24 || seen.put(value, Boolean.TRUE) != null) return null;
+        Class<?> type = value.getClass();
+        if (type.getName().startsWith("java.") || type.getName().startsWith("android.")
+                || type.getName().startsWith("androidx.") || type.isArray()) return null;
+        for (Field field : type.getDeclaredFields()) {
+            if (Modifier.isStatic(field.getModifiers()) || field.getType().isPrimitive()) continue;
+            try {
+                field.setAccessible(true);
+                Runnable found = suffixAction(field.get(value), depth - 1, seen);
+                if (found != null) return found;
+            } catch (ReflectiveOperationException | RuntimeException ignored) { }
+        }
+        return null;
+    }
 
     private WacchoiLongPressMenu() {}
+
+    /** Custom popups bypass MenuItem's listener and call their own dispatcher. */
+    public static boolean dispatchSuffixNgItem(Object itemObject) {
+        if (ResponseArchive.handle(itemObject)) return true;
+        if (!(itemObject instanceof MenuItem)) return false;
+        MenuItem item = (MenuItem) itemObject;
+        if (item.getItemId() != 76) return false;
+        try {
+            for (Class<?> type = item.getClass(); type != null; type = type.getSuperclass()) {
+                for (java.lang.reflect.Field field : type.getDeclaredFields()) {
+                    if (Modifier.isStatic(field.getModifiers())
+                            || !MenuItem.OnMenuItemClickListener.class.isAssignableFrom(field.getType())) continue;
+                    field.setAccessible(true);
+                    Object listener = field.get(item);
+                    if (listener instanceof MenuItem.OnMenuItemClickListener) {
+                        return ((MenuItem.OnMenuItemClickListener) listener).onMenuItemClick(item);
+                    }
+                }
+            }
+        } catch (ReflectiveOperationException | RuntimeException error) {
+            android.util.Log.w("Haiagaru", "Cannot dispatch Wacchoi suffix NG menu", error);
+        }
+        return false;
+    }
 
     /** Name/SLIP bottom sheets use a list builder instead of android.view.Menu. */
     public static void appendNameSheet(Object model, Object builder, Object boardId, String selected) {
         String query = queryInText(selected);
-        if (query == null || builder == null || boardId == null) return;
+        if (query == null || builder == null) return;
+        if (preferredOrderEnabled()) ORDERED_NAME_SHEETS.add(builder);
         SearchContext found = new SearchContext();
         readBoard(boardId, found);
-        // The NG scope BoardID may omit its server. In 242 the selected
-        // thread URL lives in the view-model's af StateFlow.
+        // The NG scope BoardID may omit its server. Resolve only the current
+        // thread flow; never scan other loaded responses for a poster's token.
         if (found.host == null || found.board == null) {
             Object currentThread = invokeNoArg(fieldValue(model, "af"), "d");
+            if (currentThread == null) currentThread = invokeNoArg(fieldValue(model, "ab"), "b");
+            if (currentThread == null && model != null
+                    && "o.getImgAcceptedHeight".equals(model.getClass().getName())) {
+                currentThread = invokeNoArg(fieldValue(model, "d"), "c");
+            }
             if (currentThread != null) readBoard(currentThread, found);
         }
-        if (found.host == null || found.board == null) return;
         try {
             Context context = null;
             for (Field field : builder.getClass().getDeclaredFields()) {
@@ -53,29 +313,100 @@ public final class WacchoiLongPressMenu {
                     .putExtra("haiagaru.wacchoi.board", found.board);
             for (Method method : builder.getClass().getDeclaredMethods()) {
                 Class<?>[] types = method.getParameterTypes();
-                if (Modifier.isStatic(method.getModifiers()) || types.length != 6
+                boolean hasIcon = types.length == 6 && types[4] == Integer.class;
+                if (Modifier.isStatic(method.getModifiers()) || (!hasIcon && types.length != 5)
                         || types[0] != String.class || types[1] != String.class
                         || types[2] != boolean.class || types[3] != boolean.class
-                        || types[4] != Integer.class || !types[5].isInterface()) continue;
-                Object callback = java.lang.reflect.Proxy.newProxyInstance(
-                        types[5].getClassLoader(), new Class<?>[]{types[5]}, (proxy, invoked, args) -> {
-                            if (invoked.getDeclaringClass() == Object.class) {
-                                if ("hashCode".equals(invoked.getName())) return System.identityHashCode(proxy);
-                                if ("equals".equals(invoked.getName())) return proxy == args[0];
-                                return "HaiagaruWacchoiSearch";
-                            }
-                            if ("invoke".equals(invoked.getName()) && invoked.getParameterTypes().length == 0) {
-                                launchContext.startActivity(intent);
-                            }
-                            return null;
-                        });
+                        || !types[types.length - 1].isInterface()) continue;
+                Class<?> callbackType = types[types.length - 1];
+                Object callback = searchCallback(callbackType, launchContext, intent);
                 method.setAccessible(true);
-                method.invoke(builder, "ﾜｯﾁｮｲで検索", null, true, false,
-                        Integer.valueOf(android.R.drawable.ic_menu_search), callback);
+                if (found.host != null && found.board != null) {
+                    if (ResponseMenuSettings.visible(ITEM_ID)) {
+                        appendSheetItem(method, builder, hasIcon, preferredOrderEnabled() ? "必死チェッカーもどき(ﾜｯﾁｮｲ)" : "ﾜｯﾁｮｲで検索",
+                                ResponseMenuSettings.wacchoiSearchIcon(), callback);
+                        moveLastSheetItem(builder, ResponseMenuSettings.order(ITEM_ID, Integer.MAX_VALUE));
+                    }
+                    String suffix = WacchoiSuffixNg.suffix(query);
+                    Intent upper=upperSearch(launchContext,query);
+                    if(upper!=null && ResponseMenuSettings.visible(PREFIX_SEARCH_ITEM_ID)){
+                        appendSheetItem(method,builder,hasIcon,"ﾜｯﾁｮｲ上4桁で検索",android.R.drawable.ic_menu_search,
+                                searchCallback(callbackType,launchContext,upper));
+                        moveLastSheetItem(builder,ResponseMenuSettings.order(PREFIX_SEARCH_ITEM_ID,Integer.MAX_VALUE));
+                    }
+                    if (suffix != null && ResponseMenuSettings.visible(SUFFIX_SEARCH_ITEM_ID)) {
+                        Intent suffixIntent = new Intent(intent)
+                                .putExtra("haiagaru.wacchoi.query", "-" + suffix);
+                        appendSheetItem(method, builder, hasIcon, "ﾜｯﾁｮｲ下4桁で検索",
+                                android.R.drawable.ic_menu_search,
+                                searchCallback(callbackType, launchContext, suffixIntent));
+                        moveLastSheetItem(builder, ResponseMenuSettings.order(SUFFIX_SEARCH_ITEM_ID, Integer.MAX_VALUE));
+                    }
+                }
+                if (WacchoiSuffixNg.suffix(query) != null && ResponseMenuSettings.visible(76)) {
+                    Object ngCallback = java.lang.reflect.Proxy.newProxyInstance(
+                            callbackType.getClassLoader(), new Class<?>[]{callbackType}, (proxy, invoked, args) -> {
+                                if (invoked.getDeclaringClass() == Object.class) {
+                                    if ("hashCode".equals(invoked.getName())) return System.identityHashCode(proxy);
+                                    if ("equals".equals(invoked.getName())) return proxy == args[0];
+                                    return "HaiagaruWacchoiSuffixNg";
+                                }
+                                if ("invoke".equals(invoked.getName()) && invoked.getParameterTypes().length == 0)
+                                    WacchoiSuffixNg.confirm(launchContext, query, found.nativeBoard);
+                                return null;
+                            });
+                    SUFFIX_LONG_PRESS.put(ngCallback, () -> WacchoiSuffixNg.copyAndEdit(launchContext, query));
+                    appendSheetItem(method, builder, hasIcon, preferredOrderEnabled() ? "ﾜｯﾁｮｲ下4桁でNGName登録" : "ﾜｯﾁｮｲ下4桁をNG登録",
+                            android.R.drawable.ic_menu_delete, ngCallback);
+                    moveLastSheetItem(builder, ResponseMenuSettings.order(76, Integer.MAX_VALUE));
+                }
                 return;
             }
         } catch (ReflectiveOperationException | RuntimeException error) {
             android.util.Log.w("Haiagaru", "Cannot append Wacchoi name menu", error);
+        }
+    }
+
+    private static Object searchCallback(Class<?> callbackType, Context context, Intent intent) {
+        return java.lang.reflect.Proxy.newProxyInstance(
+                callbackType.getClassLoader(), new Class<?>[]{callbackType}, (proxy, invoked, args) -> {
+                    if (invoked.getDeclaringClass() == Object.class) {
+                        if ("hashCode".equals(invoked.getName())) return System.identityHashCode(proxy);
+                        if ("equals".equals(invoked.getName())) return proxy == args[0];
+                        return "HaiagaruWacchoiSearch";
+                    }
+                    if ("invoke".equals(invoked.getName()) && invoked.getParameterTypes().length == 0)
+                        context.startActivity(intent);
+                    return null;
+                });
+    }
+
+    private static void appendSheetItem(Method method, Object builder, boolean hasIcon,
+            String title, int icon, Object callback) throws ReflectiveOperationException {
+        if (hasIcon) method.invoke(builder, title, null, true, false, Integer.valueOf(icon), callback);
+        else method.invoke(builder, title, null, true, false, callback);
+    }
+
+    /** Reposition a just-added Compose sheet action using ChMate's saved toolbar order. */
+    private static void moveLastSheetItem(Object builder, int requestedIndex) {
+        if (builder == null || requestedIndex == Integer.MAX_VALUE) return;
+        try {
+            java.util.List<?> rows = null;
+            for (Class<?> type = builder.getClass(); type != null && rows == null; type = type.getSuperclass()) {
+                for (java.lang.reflect.Field field : type.getDeclaredFields()) {
+                    if (!java.util.List.class.isAssignableFrom(field.getType())) continue;
+                    field.setAccessible(true);
+                    Object value = field.get(builder);
+                    if (value instanceof java.util.List) { rows = (java.util.List<?>) value; break; }
+                }
+            }
+            if (rows == null || rows.size() < 2) return;
+            @SuppressWarnings("unchecked") java.util.List<Object> mutable = (java.util.List<Object>) rows;
+            Object item = mutable.remove(mutable.size() - 1);
+            mutable.add(Math.max(0, Math.min(requestedIndex, mutable.size())), item);
+        } catch (ReflectiveOperationException | RuntimeException error) {
+            // The underlying native sheet can be immutable in some releases;
+            // keep its native order rather than breaking menu construction.
         }
     }
 
@@ -84,12 +415,24 @@ public final class WacchoiLongPressMenu {
         ACTIVE_DIALOG.set(dialogFragment);
     }
 
+    public static void appendDialogActions(Object dialogFragment, Object menuObject) {
+        if (!(menuObject instanceof Menu)) return;
+        Object parent=invokeNoArg(dialogFragment,"getParentFragment");
+        append((Menu)menuObject,dialogFragment,parent,findContext(dialogFragment,parent));
+    }
+
     /** Called just before ChMate returns the menu for a long-pressed response. */
     public static void appendForCurrentDialog(Object menuObject) {
         Object dialogFragment = ACTIVE_DIALOG.get();
         ACTIVE_DIALOG.remove();
         if (!(menuObject instanceof Menu) || dialogFragment == null) return;
+        ResponseMenuSettings.prepare(menuObject);
+        ResponseArchive.appendDialog(dialogFragment, menuObject);
         Menu menu = (Menu) menuObject;
+        removeToolbarOnlyChoices(menu);
+        if (!ResponseMenuSettings.visible(ITEM_ID)) menu.removeItem(ITEM_ID);
+        if (!ResponseMenuSettings.visible(76)) menu.removeItem(76);
+        if (!ResponseMenuSettings.visible(SUFFIX_SEARCH_ITEM_ID)) menu.removeItem(SUFFIX_SEARCH_ITEM_ID);
         if (menu.findItem(ITEM_ID) != null) return;
         Object parent = invokeNoArg(dialogFragment, "getParentFragment");
         SearchContext context = findContext(dialogFragment, parent);
@@ -101,6 +444,7 @@ public final class WacchoiLongPressMenu {
             Object responseObject) {
         if (!(menuObject instanceof Menu) || fragmentObject == null || responseObject == null) return;
         Menu menu = (Menu) menuObject;
+        removeToolbarOnlyChoices(menu);
         if (menu.findItem(ITEM_ID) != null) return;
         SearchContext found = new SearchContext();
         // 191 stores the displayed name in n and the date/SLIP text in q.
@@ -112,24 +456,52 @@ public final class WacchoiLongPressMenu {
         append(menu, fragmentObject, fragmentObject, found);
     }
 
+    private static void removeToolbarOnlyChoices(Menu menu) {
+        menu.removeItem(EDGE_ARCHIVE_TOOLBAR_ID);
+        menu.removeItem(MARK_ALL_READ_TOOLBAR_ID);
+    }
+
     private static void append(Menu menu, Object dialogOrFragment, Object parent,
             SearchContext context) {
-        if (context == null || context.host == null || context.board == null
-                || context.query == null) return;
-        if (KyodemoRouting.boardSlug(context.host, context.board) == null) return;
+        if (context == null || context.query == null) return;
         Object activity = invokeNoArg(dialogOrFragment, "getActivity");
         if (!(activity instanceof Context)) activity = invokeNoArg(parent, "getActivity");
         if (!(activity instanceof Context)) activity = invokeNoArg(parent, "getContext");
         if (!(activity instanceof Context)) return;
+
+        final Context ngContext = (Context) activity;
+        if (ResponseMenuSettings.visible(76) && WacchoiSuffixNg.suffix(context.query) != null && menu.findItem(76) == null) {
+            MenuItem suffixItem = menu.add(Menu.NONE, 76, ResponseMenuSettings.order(76, menu.size()), "ﾜｯﾁｮｲ下4桁をNG登録")
+                    .setOnMenuItemClickListener(item -> {
+                        WacchoiSuffixNg.confirm(ngContext, context.query, context.nativeBoard);
+                        return true;
+                    });
+            SUFFIX_LONG_PRESS.put(suffixItem, () -> WacchoiSuffixNg.copyAndEdit(ngContext, context.query));
+        }
+        if (context.host == null || context.board == null
+                || KyodemoRouting.boardSlug(context.host, context.board) == null) return;
 
         Intent intent = new Intent((Context) activity, HissiMenuActivity.class);
         intent.putExtra("haiagaru.wacchoi.search", true);
         intent.putExtra("haiagaru.wacchoi.query", context.query);
         intent.putExtra("haiagaru.wacchoi.host", context.host);
         intent.putExtra("haiagaru.wacchoi.board", context.board);
-        menu.add(Menu.NONE, ITEM_ID, menu.size(), "ﾜｯﾁｮｲで検索")
+        menu.add(Menu.NONE, ITEM_ID, ResponseMenuSettings.order(ITEM_ID, menu.size()), "ﾜｯﾁｮｲで検索")
+                .setIcon(ResponseMenuSettings.wacchoiSearchIcon())
+                .setVisible(ResponseMenuSettings.visible(ITEM_ID))
                 .setIntent(intent)
                 .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        String suffix = WacchoiSuffixNg.suffix(context.query);
+        Intent upper=upperSearch((Context)activity,context.query);
+        if(upper!=null && ResponseMenuSettings.visible(PREFIX_SEARCH_ITEM_ID) && menu.findItem(PREFIX_SEARCH_ITEM_ID)==null){
+            menu.add(Menu.NONE,PREFIX_SEARCH_ITEM_ID,ResponseMenuSettings.order(PREFIX_SEARCH_ITEM_ID,menu.size()),"ﾜｯﾁｮｲ上4桁で検索")
+                    .setIntent(upper).setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        }
+        if (ResponseMenuSettings.visible(SUFFIX_SEARCH_ITEM_ID) && suffix != null && menu.findItem(SUFFIX_SEARCH_ITEM_ID) == null) {
+            menu.add(Menu.NONE, SUFFIX_SEARCH_ITEM_ID, ResponseMenuSettings.order(SUFFIX_SEARCH_ITEM_ID, menu.size()), "ﾜｯﾁｮｲ下4桁で検索")
+                    .setIntent(new Intent(intent).putExtra("haiagaru.wacchoi.query", "-" + suffix))
+                    .setShowAsAction(MenuItem.SHOW_AS_ACTION_NEVER);
+        }
     }
 
     private static SearchContext findContext(Object dialogFragment, Object parent) {
@@ -204,7 +576,7 @@ public final class WacchoiLongPressMenu {
             Object activity = invokeNoArg(dialogFragment, "getActivity");
             visit(activity, 0, seen, found, false);
         }
-        return found.query == null || found.host == null || found.board == null ? null : found;
+        return found.query == null ? null : found;
     }
 
     private static Object fieldValue(Object target, String name) {
@@ -270,6 +642,18 @@ public final class WacchoiLongPressMenu {
 
     private static void readBoard(Object value, SearchContext found) {
         if (value == null) return;
+        if (value.getClass().getName().endsWith("BoardID")) found.nativeBoard = value.toString();
+        else {
+            for (Method method : value.getClass().getMethods()) {
+                if (method.getParameterTypes().length != 0
+                        || !method.getReturnType().getName().endsWith("BoardID")) continue;
+                try {
+                    Object boardId = method.invoke(value);
+                    if (boardId != null) found.nativeBoard = boardId.toString();
+                } catch (ReflectiveOperationException ignored) { }
+                break;
+            }
+        }
         String[] hostFields = {"f", "e", "b", "c", "i", "j"};
         String[] boardFields = {"g", "f", "c", "b", "j", "i"};
         for (String field : hostFields) {
@@ -398,6 +782,7 @@ public final class WacchoiLongPressMenu {
     }
 
     private static final class SearchContext {
+        String nativeBoard;
         String host;
         String board;
         String query;

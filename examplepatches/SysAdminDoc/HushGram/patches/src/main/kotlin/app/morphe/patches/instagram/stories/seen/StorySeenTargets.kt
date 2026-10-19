@@ -8,16 +8,16 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLa
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
-import app.morphe.patches.instagram.misc.analytics.loadsString
-import app.morphe.patches.instagram.misc.analytics.stringLoadedAt
 import app.morphe.patches.instagram.misc.extension.EXTENSION_PACKAGE
 import app.morphe.patches.instagram.misc.extension.classesLoadingString
 import app.morphe.patches.instagram.misc.extension.jumpTargets
+import app.morphe.patches.instagram.misc.extension.loadsString
 import app.morphe.patches.instagram.misc.extension.localRegisterCount
 import app.morphe.patches.instagram.misc.extension.parameterRegister
 import app.morphe.patches.instagram.misc.extension.parameterRegisterNumber
 import app.morphe.patches.instagram.misc.extension.requireParameterIntact
 import app.morphe.patches.instagram.misc.extension.requireThisIntact
+import app.morphe.patches.instagram.misc.extension.stringLoadedAt
 import app.morphe.patches.instagram.misc.extension.uniqueMethod
 import app.morphe.patches.instagram.misc.settings.EXTENSION_ROOT
 import app.morphe.util.entryReads
@@ -738,8 +738,12 @@ private fun BytecodePatchContext.requireUserId() {
     } ?: refuse("$USER_SESSION has no public $USER_ID()")
 }
 
-/** The public View field of the view holder base that its constructor stores its one parameter in. */
-private fun BytecodePatchContext.itemViewField(constructor: Method): FieldReference {
+/**
+ * The public View field of the view holder base that its constructor stores its one parameter in.
+ * Hide Follow on stories reads the same field, so [patch] names whichever patch is asking.
+ */
+internal fun BytecodePatchContext.itemViewField(constructor: Method, patch: String = PATCH): FieldReference {
+    fun refuse(detail: String): Nothing = throw PatchException("$patch: $detail")
     val base = constructor.definingClass
     val code = constructor.code()
     val view = constructor.parameterRegisterNumber(0)
@@ -751,8 +755,8 @@ private fun BytecodePatchContext.itemViewField(constructor: Method): FieldRefere
     }
     val fields = stores.map { code[it].fieldReference()!! }.distinctBy { it.toString() }
     val field = fields.singleOrNull() ?: refuse("expected $base's constructor to keep its item view in one field, found ${fields.size}")
-    constructor.requireParameterIntact(PATCH, 0, stores)
-    constructor.requireThisIntact(PATCH, stores)
+    constructor.requireParameterIntact(patch, 0, stores)
+    constructor.requireThisIntact(patch, stores)
     val declared = classDefByOrNull(base)?.fields?.singleOrNull { it.name == field.name && it.type == VIEW }
     if (declared == null || !AccessFlags.PUBLIC.isSet(declared.accessFlags) || AccessFlags.STATIC.isSet(declared.accessFlags)) {
         refuse("$base->${field.name}, the item view, isn't a public field the extension can read")

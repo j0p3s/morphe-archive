@@ -7,6 +7,8 @@ package app.hxreborn.extension.proton;
 import java.util.ArrayList;
 import java.util.List;
 
+import app.hxreborn.extension.protonauthenticator.SettingsSections;
+import app.hxreborn.extension.protonmail.SidebarEntries;
 import app.hxreborn.extension.protonpass.LayoutComponents;
 
 @SuppressWarnings("unused")
@@ -110,7 +112,7 @@ public final class AppliedPatches {
         if (MaterialSwitches.isPatched()) {
             names.add(MATERIAL_SWITCHES);
         }
-        if (LayoutComponents.isPatched()) {
+        if (LayoutComponents.isPatched() || SidebarEntries.isPatched() || SettingsSections.isPatched()) {
             names.add("Hide layout components");
         }
         if (hidePromotionalMessages()) {

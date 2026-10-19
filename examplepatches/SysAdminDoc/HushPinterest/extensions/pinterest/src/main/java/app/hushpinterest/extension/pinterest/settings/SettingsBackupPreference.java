@@ -157,7 +157,8 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
 
     @Nullable private static SharedPreferences observedStore;
     private static final SharedPreferences.OnSharedPreferenceChangeListener undoListener = (store, key) -> {
-        if (key != null && SettingsBackup.ALLOWLIST.stream().noneMatch(setting -> setting.key.equals(key))) return;
+        if (key != null && SettingsBackup.ALLOWLIST.stream().noneMatch(setting -> setting.key.equals(key))
+                && SettingsBackup.TEXTS.stream().noneMatch(setting -> setting.key.equals(key))) return;
         Utils.runOnMainThread(() -> {
             // Review successful saved revisions after the write and any rollback finish.
             if (OWNER.get() == null) setRowsBusy(0, null);
@@ -388,11 +389,23 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
     static String previewMessage(SettingsBackup.Snapshot snapshot) {
         synchronized (Setting.class) {
             Map<Setting<?>, Object> changes = snapshot.changes();
-            int switches = changes.size();
-            StringBuilder message = new StringBuilder(switches == 0
+            int switches = SettingsBackup.switchesIn(changes);
+            StringBuilder message = new StringBuilder(switches > 0
+                    ? L10n.quantity(switches, "%1$d switch will change.", "%1$d switches will change.", switches)
+                    : changes.isEmpty()
                     ? L10n.t("Your switches already match that file, so nothing will change.")
-                    : L10n.quantity(switches, "%1$d switch will change.", "%1$d switches will change.", switches));
+                    : L10n.t("Your muted words will change."));
             for (Map.Entry<Setting<?>, Object> entry : changes.entrySet()) {
+                if (entry.getKey() instanceof MutedWordsSetting) {
+                    MutedWordsSetting list = (MutedWordsSetting) entry.getKey();
+                    message.append("\n\n").append(L10n.f("%1$s (%2$s to %3$s)", L10n.t("Muted words"),
+                            listSize(list.persistedValue()), listSize((String) entry.getValue())));
+                    if (!PatchFamily.Capability.FEED_MUTED_WORDS.installed()) {
+                        message.append('\n').append(L10n.t("Your choice is saved, but this build doesn't include the "
+                            + "patch for it."));
+                    }
+                    continue;
+                }
                 BooleanSetting setting = (BooleanSetting) entry.getKey();
                 message.append("\n\n").append(L10n.f("%1$s (%2$s to %3$s)", switchName(setting),
                         switchValue(setting.persistedValue()), switchValue((Boolean) entry.getValue())));
@@ -415,11 +428,20 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
         return value ? L10n.t("On") : L10n.t("Off");
     }
 
+    /** A saved list in the preview: how many words it holds. */
+    private static String listSize(String saved) {
+        int count = MutedWordsSetting.entries(saved).size();
+        return count == 0 ? L10n.t("none") : L10n.quantity(count, "%1$d word", "%1$d words", count);
+    }
+
     static String switchName(BooleanSetting setting) {
         switch (setting.key) {
             case "hushpinterest_hide_ads": return L10n.t("Hide ads");
             case "hushpinterest_hide_ai_pins": return L10n.t("Hide AI-labeled pins");
+            case "hushpinterest_hide_ai_self_described": return L10n.t("Hide pins that say they're AI");
             case "hushpinterest_hide_shopping": return L10n.t("Hide shopping and product pins");
+            case "hushpinterest_hide_video_pins": return L10n.t("Hide video pins");
+            case "hushpinterest_keep_home_feed": return L10n.t("Keep Home feed");
             case "hushpinterest_disable_analytics": return L10n.t("Disable analytics");
             case "hushpinterest_strip_link_tracking": return L10n.t("Strip link tracking");
             case "hushpinterest_plain_pin_links": return L10n.t("Plain pin links");
@@ -429,7 +451,12 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             case "hushpinterest_download_unmetered_only": return L10n.t("Download on unmetered networks only");
             case "hushpinterest_download_no_roaming": return L10n.t("No downloads while roaming");
             case "hushpinterest_download_board": return L10n.t("Download board");
+            case "hushpinterest_copy_image": return L10n.t("Copy image");
+            case "hushpinterest_share_image": return L10n.t("Share image");
             case "hushpinterest_long_press_download": return L10n.t("Long-press download");
+            case "hushpinterest_long_press_hide_save": return L10n.t("Hide Save in the long-press menu");
+            case "hushpinterest_long_press_hide_send": return L10n.t("Hide Send in the long-press menu");
+            case "hushpinterest_long_press_hide_search": return L10n.t("Hide Search image in the long-press menu");
             case "hushpinterest_external_browser": return L10n.t("Open links in your browser");
             case "hushpinterest_system_share": return L10n.t("System share sheet");
             case "hushpinterest_hide_screenshot_share": return L10n.t("No screenshot share menu");
@@ -443,6 +470,7 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             case "hushpinterest_black_pin_menu": return L10n.t("Black pin menu");
             case "hushpinterest_hide_closeup_back": return L10n.t("Hide back arrow on pins");
             case "hushpinterest_hide_closeup_lens": return L10n.t("Hide lens button on pins");
+            case "hushpinterest_hide_closeup_search_label": return L10n.t("Hide Search image label on pins");
             case "hushpinterest_hide_pin_menu_collage": return L10n.t("Hide collage menu items");
             case "hushpinterest_hide_pin_menu_visual_search": return L10n.t("Hide Search image menu item");
             case "hushpinterest_hide_pin_menu_pin_boost": return L10n.t("Hide Promote pin menu item");
@@ -453,6 +481,7 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             case "hushpinterest_hide_survey_prompts": return L10n.t("Hide survey prompts");
             case "hushpinterest_hide_save_toasts": return L10n.t("Hide save toasts");
             case "hushpinterest_original_images": return L10n.t("Original-quality images");
+            case "hushpinterest_show_posted_date": return L10n.t("Show posted date");
             case "hushpinterest_disable_update_nag": return L10n.t("Disable update nag");
             case "hushpinterest_fix_push_notifications": return L10n.t("Fix push notifications");
             default: throw new IllegalArgumentException("Unlisted backup switch");
@@ -477,12 +506,12 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             page.pendingImport = null;
             return;
         }
-        int switches = snapshot.switchChanges();
+        boolean unchanged = snapshot.changes().isEmpty();
         AlertDialog.Builder builder = new AlertDialog.Builder(HushPinterestPreferenceFragment.themed(activity))
                 .setTitle(L10n.t("Import settings"))
                 .setMessage(previewMessage(snapshot))
                 .setOnCancelListener(dialog -> answered(page));
-        if (switches == 0) {
+        if (unchanged) {
             builder.setPositiveButton(L10n.t("Close"), (dialog, which) -> answered(page));
         } else {
             builder.setPositiveButton(L10n.t("Import"), (dialog, which) -> {
@@ -605,8 +634,8 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             accepted = Utils.runOnBackgroundThread(() -> {
                 try {
                     switch (SettingsBackup.undo()) {
-                        case UNDONE: Utils.showToastLong(L10n.t("Import undone. Your earlier switches are back.")); break;
-                        case EXPIRED: Utils.showToastLong(L10n.t("Undo ended because a saved switch changed.")); break;
+                        case UNDONE: Utils.showToastLong(L10n.t("Import undone. Your earlier settings are back.")); break;
+                        case EXPIRED: Utils.showToastLong(L10n.t("Undo ended because a saved setting changed.")); break;
                         case NOTHING: Utils.showToastLong(L10n.t("There's no import to undo.")); break;
                     }
                 } catch (SettingsBackup.ApplyFailed failure) {
@@ -756,7 +785,7 @@ public class SettingsBackupPreference extends Preference implements ImmediateAct
             case AVAILABLE:
                 setSummary(L10n.t("Restore the switches from before the last import. Editing a switch or restarting Pinterest ends Undo."));
                 break;
-            case EXPIRED: setSummary(L10n.t("Undo ended because a saved switch changed.")); break;
+            case EXPIRED: setSummary(L10n.t("Undo ended because a saved setting changed.")); break;
             case NONE: setSummary(restingSummary); break;
         }
     }

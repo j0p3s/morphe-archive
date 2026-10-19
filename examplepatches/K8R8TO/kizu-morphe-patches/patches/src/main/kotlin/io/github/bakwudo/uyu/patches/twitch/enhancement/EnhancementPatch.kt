@@ -12,22 +12,26 @@ import io.github.bakwudo.uyu.patches.twitch.reload.nativeReloadPatch
 import io.github.bakwudo.uyu.patches.twitch.chat.showDeletedMessagesPatch
 import io.github.bakwudo.uyu.patches.twitch.emotes.thirdPartyEmotesPatch
 import io.github.bakwudo.uyu.patches.twitch.emotes.thirdPartyEmotePickerPatch
-import io.github.bakwudo.uyu.patches.twitch.emotes.thirdPartyEmotePickerUrlPatch
+import io.github.bakwudo.uyu.patches.twitch.emotes.thirdPartyEmoteAutocompletePatch
+import io.github.bakwudo.uyu.patches.twitch.emotes.thirdPartyEmotePreviewPatch
+import io.github.bakwudo.uyu.patches.twitch.danmaku.applyDanmakuComments
 import io.github.bakwudo.uyu.patches.twitch.login.fixLoginPatch
 import io.github.bakwudo.uyu.patches.twitch.navigation.defaultHomeTabPatch
 import io.github.bakwudo.uyu.patches.twitch.notifications.fixNotificationsPatch
 import io.github.bakwudo.uyu.patches.twitch.privacy.privacyPatch
 import io.github.bakwudo.uyu.patches.twitch.settings.settingsPatch
+import io.github.bakwudo.uyu.patches.twitch.theatre.nativeTheatrePatch
 import io.github.bakwudo.uyu.patches.twitch.shared.Constants.COMPATIBILITY_TWITCH
 
 @Suppress("unused")
 val twitchEnhancementPatch = bytecodePatch(
     name = "Twitch Enhancement",
-    description = "Kizu Twitch enhancements: third-party emotes, live ad blocking, appearance controls, deleted-message display, privacy controls, native Video Stats and single-tap Reload Stream, PurpleTV-style landscape brightness/volume gestures with swipe-to-portrait collapse prevention, Hide Stories, Go Ad-Free hiding, and patched-app compatibility.",
+    description = "Kizu Twitch enhancements: third-party emotes, danmaku chat, live ad blocking, appearance controls including a toggle to hide Stream Extensions, deleted-message display, privacy controls, native Video Stats and single-tap Reload Stream, PurpleTV-style landscape brightness/volume gestures with swipe-to-portrait collapse prevention, Hide Stories, Go Ad-Free hiding, and patched-app compatibility.",
 ) {
     compatibleWith(COMPATIBILITY_TWITCH)
     dependsOn(
         settingsPatch,
+        nativeTheatrePatch,
         defaultHomeTabPatch,
         fixLoginPatch,
         fixNotificationsPatch,
@@ -39,12 +43,14 @@ val twitchEnhancementPatch = bytecodePatch(
         showDeletedMessagesPatch,
         thirdPartyEmotesPatch,
         thirdPartyEmotePickerPatch,
-        thirdPartyEmotePickerUrlPatch,
+        thirdPartyEmoteAutocompletePatch,
+        thirdPartyEmotePreviewPatch,
         privacyPatch,
         playerGesturesResourcePatch,
         preventSwipeToPortraitPatch,
     )
     execute {
+        applyDanmakuComments()
         installReloadStream()
     }
 }

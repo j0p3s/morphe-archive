@@ -1,0 +1,402 @@
+package app.morphe.extension.chmate;
+
+import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.graphics.Color;
+import android.net.Uri;
+import android.os.Bundle;
+import android.view.Gravity;
+import android.view.View;
+import android.view.MotionEvent;
+import android.view.KeyEvent;
+import android.widget.*;
+
+/** User-visible streaming player. No WebView, login cookies or automatic retries. */
+public final class VideoViewerActivity extends Activity {
+    private VideoView video;
+    private MediaController controls;
+    private LinearLayout toolbar;
+    private TextView status;
+    private String url;
+    private int position;
+    private boolean prepared, foreground, playWhenReady = true;
+    private boolean rotated;
+    private boolean savePermissionPending;
+    private VideoViewerGestures gestures;
+    private VideoTouchControls touchControls;
+    private android.media.MediaPlayer mediaPlayer;
+    private Runnable unregisterBack;
+    private Button speedButton;
+    private float playbackSpeed = 1f;
+    private float speedBeforeHold = 1f;
+    private boolean holdSpeedActive;
+    private static final float[] PLAYBACK_SPEEDS = {0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f};
+
+    public static boolean installed(Context context) {
+        if (context == null) return false;
+        try (java.io.InputStream marker = context.getAssets().open("haiagaru/video-viewer/installed")) {
+            return marker.read() == '1';
+        } catch (java.io.IOException ignored) { return false; }
+    }
+
+    /** Called only at native external-launch boundaries, never at the external menu below. */
+    public static void prepareExternalIntent(Intent intent) {
+        if (intent == null || !Intent.ACTION_VIEW.equals(intent.getAction())) return;
+        Context context = Haiagaru.applicationContextForExtension();
+        if (context == null || !Haiagaru.videoViewerEnabled()) return;
+        Uri uri = intent.getData();
+        if (uri == null) return;
+        // Do not replace unrelated explicit destinations or pin to another installed app.
+        if (intent.getComponent() != null || intent.getPackage() != null) return;
+        if (YouTubeUrls.videoId(uri.toString()) != null && VideoViewerSettings.youtubeEnabled(context)) {
+            intent.setClass(context, YouTubeViewerActivity.class);
+        } else if (XMediaAttachments.isVideo(uri.toString())) intent.setClass(context, VideoViewerActivity.class);
+    }
+
+    @Override public void onCreate(Bundle state) {
+        super.onCreate(state);
+        unregisterBack = VideoViewerBack.register(this);
+        if (!Haiagaru.videoViewerEnabled()) { finish(); return; }
+        Uri uri = getIntent().getData();
+        if (uri == null || !XMediaAttachments.isVideo(uri.toString())) { finish(); return; }
+        url = uri.toString();
+        if (state != null) {
+            position = state.getInt("position", 0);
+            playWhenReady = state.getBoolean("playing", true);
+            rotated = state.getBoolean("rotated", false);
+            savePermissionPending = state.getBoolean("savePermissionPending", false);
+            playbackSpeed = state.getFloat("playbackSpeed", 1f);
+        }
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL); root.setBackgroundColor(Color.BLACK);
+        root.setOnApplyWindowInsetsListener((view, insets) -> {
+            view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(),
+                    insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
+            return insets;
+        });
+        toolbar = new LinearLayout(this); toolbar.setGravity(Gravity.CENTER_VERTICAL);
+        Button back = overlayButton("戻る"); back.setOnClickListener(v -> finish());
+        toolbar.addView(back, new LinearLayout.LayoutParams(-2, -2));
+        toolbar.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1));
+        Button more = overlayButton("︙"); more.setContentDescription("動画メニュー");
+        speedButton = overlayButton(speedLabel(playbackSpeed));
+        speedButton.setContentDescription("再生速度");
+        speedButton.setOnClickListener(v -> cyclePlaybackSpeed());
+        speedButton.setOnLongClickListener(v -> {
+            beginHoldSpeed();
+            return true;
+        });
+        speedButton.setOnTouchListener((view, event) -> {
+            if (event.getActionMasked() == MotionEvent.ACTION_UP
+                    || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                if (holdSpeedActive) {
+                    holdSpeedActive = false;
+                    applyPlaybackSpeed(speedBeforeHold);
+                }
+            }
+            return false;
+        });
+        toolbar.addView(speedButton);
+        more.setOnClickListener(this::showMenu); toolbar.addView(more);
+        FrameLayout frame = new FrameLayout(this);
+        video = new VideoView(this);
+        setVolumeControlStream(android.media.AudioManager.STREAM_MUSIC);
+        touchControls = new VideoTouchControls(this);
+        // Confirmed taps are handled by the detector, so a double tap cannot toggle controls twice.
+        video.setOnTouchListener((view, event) -> true);
+        frame.addView(video, new FrameLayout.LayoutParams(-1, -1, Gravity.CENTER));
+        // Overlay controls so hiding them does not resize or shift the video.
+        frame.addView(toolbar, new FrameLayout.LayoutParams(-1, -2, Gravity.TOP));
+        root.addView(frame, new LinearLayout.LayoutParams(-1, 0, 1));
+        status = new TextView(this); status.setTextColor(Color.WHITE); status.setPadding(16, 8, 16, 12);
+        root.addView(status);
+        setContentView(root); root.requestApplyInsets();
+        controls = new MediaController(this) {
+            private Runnable unregisterControllerBack;
+            @Override public void show(int timeout) {
+                // VideoView and MediaController also request timed shows after touch/seek/play.
+                // Ignore every timeout so none of these paths schedule automatic dismissal.
+                super.show(0);
+                if (unregisterControllerBack != null) unregisterControllerBack.run();
+                unregisterControllerBack = VideoViewerBack.register(this, VideoViewerActivity.this);
+                toolbar.setVisibility(View.VISIBLE);
+            }
+            @Override public boolean dispatchKeyEvent(KeyEvent event) {
+                if (event.getKeyCode() == KeyEvent.KEYCODE_BACK) {
+                    if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) finish();
+                    return true;
+                }
+                return super.dispatchKeyEvent(event);
+            }
+            @Override public void hide() {
+                if (unregisterControllerBack != null) {
+                    unregisterControllerBack.run(); unregisterControllerBack = null;
+                }
+                super.hide();
+                toolbar.setVisibility(View.INVISIBLE);
+            }
+        };
+        controls.setAnchorView(frame); video.setMediaController(controls);
+        // The save menu must work before preparation completes, or even after a playback error.
+        controls.setMediaPlayer(video);
+        video.setOnPreparedListener(player -> {
+            prepared = true;
+            mediaPlayer = player;
+            applyPlaybackSpeed(player, playbackSpeed);
+            if (position > 0) video.seekTo(position);
+            setStatus("");
+            if (foreground && playWhenReady) video.start();
+            controls.show(0);
+        });
+        video.setOnCompletionListener(player -> {
+            playWhenReady = false; position = 0;
+            setStatus("再生が終了しました。再生ボタンで最初から再生できます"); controls.show(0);
+        });
+        video.setOnErrorListener((player, what, extra) -> {
+            prepared = false; mediaPlayer = null; playWhenReady = false;
+            setStatus("動画を再生できません（エラー " + what + "/" + extra
+                    + "）。︙から再読み込み、または外部アプリで開いてください");
+            return true;
+        });
+        video.setOnInfoListener((player, what, extra) -> {
+            if (what == android.media.MediaPlayer.MEDIA_INFO_BUFFERING_START) setStatus("読み込み中…");
+            else if (what == android.media.MediaPlayer.MEDIA_INFO_BUFFERING_END)
+                setStatus("");
+            return false;
+        });
+        load();
+    }
+
+    private Button overlayButton(String label) {
+        Button button = new Button(this);
+        button.setText(label);
+        button.setBackgroundColor(Color.TRANSPARENT);
+        button.setTextColor(Color.WHITE);
+        // A dark text shadow keeps the label readable over bright video without a button background.
+        float density = getResources().getDisplayMetrics().density;
+        button.setShadowLayer(2 * density, 0, density, Color.BLACK);
+        return button;
+    }
+
+    private static String speedLabel(float speed) {
+        return (speed == (int) speed ? Integer.toString((int) speed) : Float.toString(speed)) + "×";
+    }
+
+    private void cyclePlaybackSpeed() {
+        if (!prepared) {
+            Toast.makeText(this, "動画の読み込み後に変更できます", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (android.os.Build.VERSION.SDK_INT < 23) {
+            Toast.makeText(this, "再生速度の変更にはAndroid 6.0以降が必要です", Toast.LENGTH_LONG).show();
+            return;
+        }
+        int next = 0;
+        for (int i = 0; i < PLAYBACK_SPEEDS.length; i++) {
+            if (Math.abs(PLAYBACK_SPEEDS[i] - playbackSpeed) < 0.001f) {
+                next = (i + 1) % PLAYBACK_SPEEDS.length;
+                break;
+            }
+        }
+        applyPlaybackSpeed(PLAYBACK_SPEEDS[next]);
+    }
+
+    private void applyPlaybackSpeed(float speed) {
+        if (!prepared || mediaPlayer == null || android.os.Build.VERSION.SDK_INT < 23) return;
+        applyPlaybackSpeed(mediaPlayer, speed);
+    }
+
+    private void applyPlaybackSpeed(android.media.MediaPlayer player, float speed) {
+        if (android.os.Build.VERSION.SDK_INT < 23) return;
+        try {
+            player.setPlaybackParams(player.getPlaybackParams().setSpeed(speed));
+            playbackSpeed = speed;
+            if (speedButton != null) {
+                speedButton.setText(speedLabel(speed));
+                speedButton.setContentDescription("再生速度 " + speedLabel(speed));
+            }
+        } catch (RuntimeException error) {
+            Toast.makeText(this, "この動画では再生速度を変更できません", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    void beginHoldSpeed() {
+        if (holdSpeedActive || !prepared || android.os.Build.VERSION.SDK_INT < 23) return;
+        speedBeforeHold = playbackSpeed;
+        holdSpeedActive = true;
+        applyPlaybackSpeed(2f);
+    }
+
+    void endHoldSpeed() {
+        if (!holdSpeedActive) return;
+        holdSpeedActive = false;
+        applyPlaybackSpeed(speedBeforeHold);
+    }
+
+    private void load() {
+        prepared = false;
+        mediaPlayer = null;
+        setStatus("動画を読み込み中…（通信が発生します）");
+        video.setVideoURI(Uri.parse(url));
+    }
+
+    @Override public boolean dispatchTouchEvent(MotionEvent event) {
+        if (touchControls != null && video != null && touchControls.dispatch(event, video)) return true;
+        if (gestures != null && gestures.dispatch(event, video)) {
+            if (touchControls != null) touchControls.cancel();
+            return true;
+        }
+        return super.dispatchTouchEvent(event);
+    }
+    void toggleControls() {
+        if (controls == null) return;
+        if (controls.isShowing()) controls.hide(); else controls.show(0);
+    }
+    float videoMidpoint() {
+        int[] p = new int[2]; video.getLocationOnScreen(p); return p[0] + video.getWidth() / 2f;
+    }
+    void cancelNativeVideoGesture() { if (gestures != null) gestures.cancel(); }
+    // MediaController is a separate focused window. The uncovered video still
+    // receives swipes, even though the Activity itself no longer owns focus.
+    boolean hasVideoGestureFocus() {
+        return foreground && !isFinishing() && !isDestroyed()
+                && (hasWindowFocus() || controls != null && controls.isShowing() && controls.hasWindowFocus());
+    }
+    private void setStatus(String message) {
+        status.setText(message);
+        status.setVisibility(message.isEmpty() ? View.GONE : View.VISIBLE);
+    }
+    void gestureStatus(String message) { setStatus(message); }
+    void seekRelative(int seconds) {
+        if (!prepared || video.getDuration() <= 0) return;
+        video.seekTo(VideoPlaybackMath.seekTarget(video.getCurrentPosition(), video.getDuration(), seconds));
+        setStatus(Math.abs(seconds) + (seconds < 0 ? "秒巻き戻し" : "秒早送り"));
+    }
+    boolean dispatchVideoTouch(MotionEvent event) { return super.dispatchTouchEvent(event); }
+    boolean isVideoToolbarTouch(float x, float y) {
+        if (toolbar == null || toolbar.getVisibility() != View.VISIBLE) return false;
+        int[] p = new int[2]; toolbar.getLocationOnScreen(p);
+        return x >= p[0] && x < p[0] + toolbar.getWidth() && y >= p[1] && y < p[1] + toolbar.getHeight();
+    }
+    void performVideoGesture(String key) {
+        switch (key) {
+            case "gestureBack": case "gestureCloseTab": finish(); break;
+            case "gestureTop": if (prepared) video.seekTo(0); break;
+            case "gestureBottom": if (prepared) video.seekTo(Math.max(0, video.getDuration() - 1)); break;
+            case "gestureRefresh":
+                if (prepared) position = video.getCurrentPosition();
+                video.stopPlayback(); playWhenReady = true; load(); break;
+            case "gestureFullScreen":
+                if (controls.isShowing()) controls.hide(); else controls.show(0); break;
+            case "gestureSetting":
+                try { startActivity(new Intent(this, Class.forName("jp.syoboi.a2chMate.activity.SettingActivity", false, getClassLoader()))); }
+                catch (ReflectiveOperationException | RuntimeException error) {
+                    Toast.makeText(this, "設定を開けませんでした", Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case NgEditGesture.KEY: NgEditGesture.handle(video, 0x48690042); break;
+            // No next-video/forward history exists in a single-video viewer.
+            case "gestureForward": Toast.makeText(this, "次の動画はありません", Toast.LENGTH_SHORT).show(); break;
+            default: break;
+        }
+    }
+    private void showMenu(View anchor) {
+        controls.show(0);
+        PopupMenu menu = new PopupMenu(this, anchor);
+        menu.setOnDismissListener(dismissed -> {
+            if (foreground) controls.show(0);
+        });
+        menu.getMenu().add(0, 1, 0, "外部アプリで開く");
+        menu.getMenu().add(0, 2, 1, "URLをコピー");
+        menu.getMenu().add(0, 3, 2, "再読み込み");
+        menu.getMenu().add(0, 4, 3, "画面を回転");
+        menu.getMenu().add(0, 5, 4, "操作設定");
+        menu.getMenu().add(0, 6, 5, "動画を保存");
+        menu.setOnMenuItemClickListener(item -> {
+            switch (item.getItemId()) {
+                case 1:
+                    pausePlayback();
+                    try {
+                        // Extension calls are excluded from the patch's launch interception.
+                        Intent external = new Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(url), "video/mp4");
+                        startActivity(Intent.createChooser(external, "動画を外部アプリで開く"));
+                    } catch (RuntimeException error) {
+                        Toast.makeText(this, "動画を開ける外部アプリがありません", Toast.LENGTH_LONG).show();
+                    }
+                    return true;
+                case 2:
+                    ClipboardManager clipboard = (ClipboardManager)getSystemService(CLIPBOARD_SERVICE);
+                    if (clipboard != null) clipboard.setPrimaryClip(ClipData.newPlainText("動画URL", url));
+                    Toast.makeText(this, "URLをコピーしました", Toast.LENGTH_SHORT).show(); return true;
+                case 3:
+                    if (prepared) position = video.getCurrentPosition();
+                    video.stopPlayback(); playWhenReady = true; load(); return true;
+                case 4:
+                    rotated = !rotated;
+                    setRequestedOrientation(rotated ? ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                            : ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED); return true;
+                case 5: VideoViewerSettings.show(this); return true;
+                case 6: VideoDownloads.confirm(this, url, this::saveVideo); return true;
+                default: return false;
+            }
+        });
+        menu.show();
+    }
+    private void saveVideo() {
+        if (savePermissionPending) return;
+        if (VideoDownloads.needsStoragePermission(this)) {
+            savePermissionPending = true;
+            requestPermissions(new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE}, VideoDownloads.REQUEST_STORAGE);
+        } else VideoDownloads.enqueue(this, url);
+    }
+    @Override public void onRequestPermissionsResult(int request, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(request, permissions, results);
+        if (request != VideoDownloads.REQUEST_STORAGE || !savePermissionPending) return;
+        savePermissionPending = false;
+        if (results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED)
+            VideoDownloads.enqueue(this, url);
+        else VideoDownloads.message(this, "動画を保存するには保存先へのアクセス許可が必要です");
+    }
+    private void pausePlayback() {
+        if (prepared) {
+            position = video.getCurrentPosition();
+            playWhenReady = video.isPlaying();
+            video.pause();
+        }
+    }
+    @Override protected void onResume() {
+        super.onResume(); foreground = true;
+        if (video != null) gestures = new VideoViewerGestures(this);
+        if (prepared && playWhenReady) video.start();
+    }
+    @Override protected void onPause() {
+        if (touchControls != null) touchControls.cancel();
+        foreground = false; pausePlayback();
+        // Returning from another app should resume only on the user's play action.
+        playWhenReady = false;
+        if (gestures != null) gestures.close();
+        if (controls != null) controls.hide();
+        super.onPause();
+    }
+    @Override protected void onSaveInstanceState(Bundle state) {
+        state.putInt("position", prepared ? video.getCurrentPosition() : position);
+        state.putBoolean("playing", prepared ? video.isPlaying() : playWhenReady);
+        state.putBoolean("savePermissionPending", savePermissionPending);
+        state.putFloat("playbackSpeed", playbackSpeed);
+        state.putBoolean("rotated", rotated); super.onSaveInstanceState(state);
+    }
+    @Override protected void onDestroy() {
+        if (unregisterBack != null) { unregisterBack.run(); unregisterBack = null; }
+        if (touchControls != null) touchControls.cancel();
+        if (gestures != null) gestures.close();
+        if (controls != null) controls.hide();
+        if (video != null) video.stopPlayback();
+        mediaPlayer = null;
+        super.onDestroy();
+    }
+    @Override public void onBackPressed() { finish(); }
+}

@@ -277,7 +277,8 @@ public class DexDiff {
             Map.entry("navigation", 2), Map.entry("menu", 2), Map.entry("downloads", 2), Map.entry("comments", 5),
             Map.entry("links", 6), Map.entry("analytics", 5), Map.entry("answers", 4), Map.entry("imageOrder", 1), Map.entry("closeupImage", 2), Map.entry("topicSuggestions", 2), Map.entry("recentSearchRows", 2), Map.entry("recentSearchHeading", 2), Map.entry("boardMenu", 1), Map.entry("settings", 4),
             Map.entry("longPress", 2), Map.entry("surveyPrompts", 2), Map.entry("pinInvites", 2), Map.entry("browserId", 2),
-            Map.entry("firebaseCertificate", 1), Map.entry("closeupButtons", 3));
+            Map.entry("firebaseCertificate", 1), Map.entry("closeupButtons", 3), Map.entry("closeupSearchLabel", 1), Map.entry("postedDate", 1),
+            Map.entry("longPressChoices", 1));
 
     /**
      * A start-call, next-call, sole-call or once-call line: its method reference, the next-call's
@@ -2344,6 +2345,8 @@ public class DexDiff {
         static final String PIN_MENU = "Lcom/pinterest/feature/gridactions/modal/view/PinOverflowMenuModalImpl;";
         static final String TOAST_CONTAINER = "Lcom/pinterest/gestalt/toast/PinterestToastContainer;";
         static final String TOAST_VIEW = "Lcom/pinterest/gestalt/toast/BaseGestaltToast;";
+        static final String HOME_FEED_FRAGMENT = "Lcom/pinterest/feature/home/mainfeed/HomeFeedFragment;";
+        static final long HOME_AWAY_MS = 300_000L;
         static final Set<String> SAVE_TOAST_STRINGS = Set.of("saved_to", "saved_onto_board_bold", "pinned", "pinned_multiple", "pinned_multiple_to_board",
                 "multi_board_save_saved_to_profile", "saved_onto_board", "saved_to_board_section", "saved_multiple_to_board_section", "pin_saved");
         static final String TOAST_MAKE = "Landroid/widget/Toast;->makeText";
@@ -2918,6 +2921,24 @@ public class DexDiff {
                             && descriptor((MethodReference) reference(i)).equals("(" + TOAST_CONTAINER + ")" + TOAST_VIEW))) targets.add(m);
                 }
                 if (targets.size() == 1) whole = saveToastStub(targets.get(0).getParameterTypes().get(0).toString());
+            } else if (selector.equals("homeResume") || selector.equals("homeRefresh")) {
+                // The Home return check: the (J)V that compares time away with five minutes and
+                // calls the static refresh with a map and a default-argument mask. Its refresh is
+                // the second guarded method.
+                List<Method> resumes = new ArrayList<>();
+                ClassDef home = clean.classes.get(HOME_FEED_FRAGMENT);
+                if (home != null) for (Method m : home.getMethods()) {
+                    if (AccessFlags.STATIC.isSet(m.getAccessFlags()) || !descriptor(m).equals("(J)V")) continue;
+                    if (instructions(m).stream().anyMatch(i -> i instanceof WideLiteralInstruction
+                            && ((WideLiteralInstruction) i).getWideLiteral() == HOME_AWAY_MS) && !homeRefreshCalls(m).isEmpty()) resumes.add(m);
+                }
+                if (selector.equals("homeResume")) targets.addAll(resumes);
+                else if (resumes.size() == 1) {
+                    Set<String> calls = homeRefreshCalls(resumes.get(0));
+                    Method refresh = calls.size() == 1 ? clean.methods.get(calls.iterator().next()) : null;
+                    if (refresh == null) fail("Home return check no longer calls one refresh in this build");
+                    else targets.add(refresh);
+                }
             } else { fail("unknown guard selector " + selector); return false; }
             Method original = unique(targets, c.callee);
             Method m = actual(original);
@@ -2926,6 +2947,8 @@ public class DexDiff {
                 int prep = 0;
                 if (selector.equals("visit")) args = List.of(parameter(m, 0), parameter(m, 1));
                 if (selector.equals("saveToast")) args = List.of(parameter(m, 0));
+                if (selector.equals("homeResume")) args = List.of(parameter(m, 0), parameter(m, 0) + 1);
+                if (selector.equals("homeRefresh")) args = List.of(parameter(m, 1), parameter(m, 2));
                 if (selector.equals("share")) {
                     args = List.of(0, 1); prep = 2;
                     List<Instruction> body = instructions(m);
@@ -2946,6 +2969,17 @@ public class DexDiff {
                 guard(m, hook, before, args, prep, selector.equals("email"), selector.equals("update"));
             }
             return original != null && whole;
+        }
+
+        /** The static Home refresh calls in [m]: the fragment's owner, a pin map and a default-argument mask. */
+        Set<String> homeRefreshCalls(Method m) {
+            Set<String> out = new TreeSet<>();
+            for (Instruction i : instructions(m)) if ((i.getOpcode() == Opcode.INVOKE_STATIC || i.getOpcode() == Opcode.INVOKE_STATIC_RANGE)
+                    && reference(i) instanceof MethodReference) {
+                MethodReference r = (MethodReference) reference(i);
+                if (descriptor(r).equals("(" + r.getDefiningClass() + "Ljava/util/HashMap;I)V")) out.add(r.toString());
+            }
+            return out;
         }
 
         /**
@@ -3838,6 +3872,96 @@ public class DexDiff {
         }
 
         /** An extension stub the patch filled: these opcodes, naming these references, its input cast first. */
+        static final String LONG_PRESS_MENU = "Lcom/pinterest/ui/menu/ContextMenuView;", LONG_PRESS_ITEM = "Lcom/pinterest/ui/menu/ContextMenuItemView;",
+                LONG_PRESS_SAVE = "context_save", LONG_PRESS_SEND = "context_share", LONG_PRESS_SEARCH = "context_visual_search",
+                LONG_PRESS_CLOSEUP_SEARCH = "context_closeup_visual_search";
+
+        /**
+         * The long-press hide switches (#11): buttonKind tells Save, Send and Search image apart by the
+         * id a button's builder writes into it, compared with the ids the menu's hover test reads. Found
+         * the way the patch finds them. A build without a public hover test keeps the stub's plain
+         * "other" answer and the switches stay out.
+         */
+        void longPressChoices(Contract c) {
+            String key = c.strings.get(0);
+            ClassDef menu = clean.classes.get(LONG_PRESS_MENU), item = clean.classes.get(LONG_PRESS_ITEM);
+            Set<String> idClasses = new TreeSet<>(), fields = new TreeSet<>();
+            if (menu != null) for (Method m : menu.getMethods()) {
+                List<Instruction> body = instructions(m);
+                if (body.stream().noneMatch(i -> readsSearchId(i))) continue;
+                for (Instruction i : body) if (reference(i) instanceof FieldReference f) {
+                    if (readsSearchId(i)) idClasses.add(f.getDefiningClass());
+                    if (i.getOpcode() == Opcode.IGET && f.getDefiningClass().equals(LONG_PRESS_ITEM) && f.getType().equals("I")) fields.add(f.getName());
+                }
+            }
+            String owner = idClasses.size() == 1 ? idClasses.iterator().next() : null, field = fields.size() == 1 ? fields.iterator().next() : null;
+            ClassDef ids = owner == null ? null : clean.classes.get(owner);
+            boolean resolved = field != null && ids != null && item != null && AccessFlags.PUBLIC.isSet(item.getAccessFlags())
+                    && AccessFlags.PUBLIC.isSet(ids.getAccessFlags()) && publicId(ids, LONG_PRESS_SAVE) && publicId(ids, LONG_PRESS_SEND)
+                    && publicId(ids, LONG_PRESS_SEARCH);
+            if (resolved) {
+                boolean held = false;
+                for (Field f : item.getFields()) held |= f.getName().equals(field) && f.getType().equals("I")
+                        && AccessFlags.PUBLIC.isSet(f.getAccessFlags()) && !AccessFlags.STATIC.isSet(f.getAccessFlags());
+                resolved = held;
+            }
+            if (!resolved) {
+                Method plain = stub(key, List.of(Opcode.CONST_4, Opcode.RETURN), Arrays.asList(null, null));
+                if (plain != null && ((NarrowLiteralInstruction) instructions(plain).get(0)).getNarrowLiteral() != 0)
+                    fail(key + " answers something other than \"other\" with no hover test to bind it to");
+                capability(c.callee, false);
+                return;
+            }
+
+            List<String> checked = new ArrayList<>(List.of(LONG_PRESS_SAVE, LONG_PRESS_SEND, LONG_PRESS_SEARCH));
+            if (publicId(ids, LONG_PRESS_CLOSEUP_SEARCH)) checked.add(LONG_PRESS_CLOSEUP_SEARCH);
+            List<Opcode> opcodes = new ArrayList<>(List.of(Opcode.INSTANCE_OF, Opcode.IF_EQZ, Opcode.CHECK_CAST, Opcode.IGET));
+            List<String> references = new ArrayList<>(Arrays.asList(LONG_PRESS_ITEM, null, LONG_PRESS_ITEM, LONG_PRESS_ITEM + "->" + field + ":I"));
+            for (String id : checked) {
+                opcodes.addAll(List.of(Opcode.SGET, Opcode.IF_EQ));
+                references.addAll(Arrays.asList(owner + "->" + id + ":I", null));
+            }
+            for (int kind = 0; kind < 4; kind++) {
+                opcodes.addAll(List.of(Opcode.CONST_4, Opcode.RETURN));
+                references.addAll(Arrays.asList(null, null));
+            }
+            Method m = stub(key, opcodes, references);
+            if (m != null) {
+                List<Instruction> body = instructions(m);
+                Layout code = new Layout(m.getImplementation());
+                int input = parameter(m, 0), kept = firstRegister(body.get(3)), other = 4 + 2 * checked.size();
+                // The button itself is tested, cast and read, and a non-button lands on "other".
+                boolean bound = AccessFlags.STATIC.isSet(m.getAccessFlags()) && ((TwoRegisterInstruction) body.get(0)).getRegisterB() == input
+                        && firstRegister(body.get(1)) == firstRegister(body.get(0)) && firstRegister(body.get(2)) == input
+                        && ((TwoRegisterInstruction) body.get(3)).getRegisterB() == input
+                        && code.addresses.get(1) + ((OffsetInstruction) body.get(1)).getCodeOffset() == code.addresses.get(other);
+                // Each id is compared with the button's own and jumps to its answer: Save, Send, then
+                // Search image for both search ids.
+                for (int n = 0; n < checked.size(); n++) {
+                    int at = 4 + 2 * n, answer = other + 2 * Math.min(n + 1, 3);
+                    TwoRegisterInstruction test = (TwoRegisterInstruction) body.get(at + 1);
+                    bound &= firstRegister(body.get(at)) != kept && test.getRegisterA() == kept && test.getRegisterB() == firstRegister(body.get(at))
+                            && code.addresses.get(at + 1) + ((OffsetInstruction) body.get(at + 1)).getCodeOffset() == code.addresses.get(answer);
+                }
+                for (int kind = 0; kind < 4; kind++) {
+                    int at = other + 2 * kind;
+                    bound &= ((NarrowLiteralInstruction) body.get(at)).getNarrowLiteral() == kind && firstRegister(body.get(at + 1)) == firstRegister(body.get(at));
+                }
+                if (!bound) { fail(key + " doesn't answer Save, Send and Search image from the button's own id"); resolved = false; }
+            } else resolved = false;
+            capability(c.callee, resolved);
+        }
+
+        static boolean readsSearchId(Instruction i) {
+            return i.getOpcode() == Opcode.SGET && reference(i) instanceof FieldReference f && f.getName().equals(LONG_PRESS_SEARCH) && f.getType().equals("I");
+        }
+
+        static boolean publicId(ClassDef ids, String name) {
+            for (Field f : ids.getFields()) if (f.getName().equals(name) && f.getType().equals("I") && AccessFlags.PUBLIC.isSet(f.getAccessFlags())
+                    && AccessFlags.STATIC.isSet(f.getAccessFlags())) return true;
+            return false;
+        }
+
         Method stub(String key, List<Opcode> opcodes, List<String> references) {
             Method m = actual(key);
             if (m == null) return null;
@@ -4939,6 +5063,136 @@ public class DexDiff {
             capability(c.callee, handed && held);
         }
 
+        static final String SEARCH_LABEL_FLAG = ", isVisualActionAnimated=", SEARCH_IMAGE_TEXT = "search_image";
+
+        /**
+         * The lens's Search image label. In the one clean class that reads the lens id, search_image and
+         * the closeup state's label flag (see searchLabelFlag), every read of the flag gains the hook on
+         * the read's register, answered back into it, reached only from the read and followed by the
+         * original next instruction. A build without that state or builder has no label switch, and its
+         * flag stays off.
+         */
+        void closeupSearchLabel(Contract c) {
+            String hook = c.strings.get(0), flag = searchLabelFlag();
+            List<ClassDef> builders = new ArrayList<>();
+            if (flag != null) for (ClassDef cd : clean.classes.values()) {
+                if (cd.getType().startsWith(OWN)) continue;
+                boolean lens = false, text = false, flagged = false;
+                for (Method m : cd.getMethods()) for (Instruction i : instructions(m)) {
+                    lens |= readsId(i, CLOSEUP_LENS_ID);
+                    text |= readsId(i, SEARCH_IMAGE_TEXT);
+                    flagged |= readsFlag(i, flag);
+                }
+                if (lens && text && flagged) builders.add(cd);
+            }
+            boolean labeled = builders.size() == 1;
+            if (labeled) for (Method old : builders.get(0).getMethods()) {
+                List<Instruction> was = instructions(old);
+                List<Integer> reads = new ArrayList<>();
+                for (int k = 0; k < was.size(); k++) if (readsFlag(was.get(k), flag)) reads.add(k);
+                if (reads.isEmpty()) continue;
+                Method m = actual(old);
+                calls(m, hook, reads.size());
+                if (m == null) { labeled = false; continue; }
+                List<Instruction> body = instructions(m);
+                // The n-th read in the built method, wherever another switch's hooks moved it.
+                List<Integer> built = new ArrayList<>();
+                for (int k = 0; k < body.size(); k++) if (readsFlag(body.get(k), flag)) built.add(k);
+                if (built.size() != reads.size()) { fail(m + " reads the label flag " + built.size() + " times, not " + reads.size()); labeled = false; continue; }
+                for (int n = 0; n < reads.size(); n++) {
+                    int read = reads.get(n), at = built.get(n), register = ((TwoRegisterInstruction) was.get(read)).getRegisterA();
+                    boolean placed = at + 3 < body.size() && read + 1 < was.size()
+                            && ((TwoRegisterInstruction) body.get(at)).getRegisterA() == register
+                            && hook.equals(String.valueOf(reference(body.get(at + 1)))) && arguments(body.get(at + 1)).equals(List.of(register))
+                            && isMoveResult(body.get(at + 2).getOpcode()) && firstRegister(body.get(at + 2)) == register
+                            && body.get(at + 3).getOpcode() == was.get(read + 1).getOpcode()
+                            && onlyFrom(m, at + 1, at) && onlyFrom(m, at + 2, at + 1);
+                    if (!placed) { fail(hook + " doesn't answer the label flag read at instruction " + read + " of " + m); labeled = false; }
+                    else remove(m, at + 1, at + 3);
+                }
+            }
+            capability(c.callee, labeled);
+        }
+
+        /**
+         * The boolean the closeup state's toString reads first after naming isVisualActionAnimated, as
+         * a field descriptor, or null when no single state names it or the read isn't the state's own.
+         */
+        String searchLabelFlag() {
+            List<Method> described = new ArrayList<>();
+            for (Method m : clean.holding(SEARCH_LABEL_FLAG)) if (m.getName().equals("toString") && m.getParameterTypes().isEmpty()) described.add(m);
+            if (described.size() != 1) return null;
+            Method state = described.get(0);
+            List<Instruction> body = instructions(state);
+            int named = -1;
+            for (int k = 0; k < body.size() && named < 0; k++)
+                if (reference(body.get(k)) instanceof StringReference s && s.getString().equals(SEARCH_LABEL_FLAG)) named = k;
+            for (int k = named + 1; k < body.size(); k++) if (body.get(k).getOpcode() == Opcode.IGET_BOOLEAN) {
+                FieldReference f = (FieldReference) reference(body.get(k));
+                return f.getDefiningClass().equals(state.getDefiningClass()) && f.getType().equals("Z") ? f.toString() : null;
+            }
+            return null;
+        }
+
+        static final String CLOSEUP_MODULE = "Lcom/pinterest/activity/pin/view/modules/PinCloseupBaseModule;",
+                TITLE_CHEVRON_ID = "closeup_metadata_expand_chevron", HOLISTIC_METADATA = "android_closeup_holistic_metadata";
+
+        /**
+         * The closeup title module taking its pin: the one clean instance updatePin(pin) of a closeup
+         * module that checks the holistic metadata experiment, in a class whose constructor builds the
+         * title row (a view whose own constructor reads the chevron's id) and adds a view. Its first
+         * instruction is the hook, a range call on the module and the pin, the frame's last two registers.
+         */
+        void postedDate(Contract c) {
+            String hook = c.strings.get(0);
+            List<Method> updates = new ArrayList<>();
+            for (Method m : clean.holding(HOLISTIC_METADATA)) {
+                if (!m.getName().equals("updatePin") || AccessFlags.STATIC.isSet(m.getAccessFlags()) || !m.getReturnType().equals("V")
+                        || m.getParameterTypes().size() != 1) continue;
+                ClassDef owner = clean.classes.get(m.getDefiningClass());
+                if (owner != null && CLOSEUP_MODULE.equals(owner.getSuperclass()) && buildsTitleRow(owner)) updates.add(m);
+            }
+            Method m = actual(unique(updates, "closeup title module"));
+            List<Integer> sites = calls(m, hook, 1);
+            boolean placed = false;
+            if (m != null && sites.size() == 1) {
+                Instruction first = instructions(m).get(0);
+                int registers = m.getImplementation().getRegisterCount();
+                placed = sites.get(0) == 0 && first.getOpcode() == Opcode.INVOKE_STATIC_RANGE
+                        && arguments(first).equals(List.of(registers - 2, registers - 1));
+                if (!placed) fail(hook + " isn't the first call, on the module and its pin, in " + m);
+                else remove(m, 0, 1);
+            }
+            capability(c.callee, placed);
+        }
+
+        boolean buildsTitleRow(ClassDef owner) {
+            for (Method init : owner.getMethods()) {
+                if (!init.getName().equals("<init>")) continue;
+                boolean adds = false, row = false;
+                for (Instruction i : instructions(init)) {
+                    if (reference(i) instanceof MethodReference r && r.getName().equals("addView")) adds = true;
+                    if (i.getOpcode() == Opcode.NEW_INSTANCE && reference(i) instanceof TypeReference t && readsChevronWhenBuilt(t.getType())) row = true;
+                }
+                if (adds && row) return true;
+            }
+            return false;
+        }
+
+        boolean readsChevronWhenBuilt(String type) {
+            ClassDef built = clean.classes.get(type);
+            if (built == null) return false;
+            for (Method init : built.getMethods()) {
+                if (!init.getName().equals("<init>")) continue;
+                for (Instruction i : instructions(init)) if (readsId(i, TITLE_CHEVRON_ID)) return true;
+            }
+            return false;
+        }
+
+        static boolean readsFlag(Instruction i, String flag) {
+            return i.getOpcode() == Opcode.IGET_BOOLEAN && String.valueOf(reference(i)).equals(flag);
+        }
+
         /** Adds each site where [id]'s button is found or built to [sites]. True when there's at least one. */
         boolean buttonSites(String id, String hook, List<ButtonSite> sites) {
             int before = sites.size();
@@ -5747,6 +6001,7 @@ public class DexDiff {
                     case "menu": menu(c); break;
                     case "downloads": downloads(c); break;
                     case "longPress": longPress(c); break;
+                    case "longPressChoices": longPressChoices(c); break;
                     case "comments": comments(c); break;
                     case "links": links(c); break;
                     case "analytics": analytics(c); break;
@@ -5759,6 +6014,8 @@ public class DexDiff {
                     case "recentSearchRows": recentSearchRows(c); break;
                     case "recentSearchHeading": recentSearchHeading(c); break;
                     case "closeupButtons": closeupButtons(c); break;
+                    case "closeupSearchLabel": closeupSearchLabel(c); break;
+                    case "postedDate": postedDate(c); break;
                     case "boardMenu": boardMenu(c); break;
                     case "surveyPrompts": surveyPrompts(c); break;
                     case "pinInvites": pinInvites(c); break;

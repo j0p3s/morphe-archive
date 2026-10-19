@@ -85,7 +85,7 @@ public class SettingsVisualCaptureTest {
     /** Deterministic development preview metadata. These fixtures never represent an installed build. */
     @Implements(value = Utils.class, isInAndroidSdk = false)
     public static class CaptureMetadata {
-        @Implementation public static String getPatchesReleaseVersion() { return "0.0.12"; }
+        @Implementation public static String getPatchesReleaseVersion() { return "0.0.13"; }
         @Implementation public static String getAppVersionName() { return "451.0.0.53.80"; }
         @Implementation public static long getAppVersionCode() { return 385713073L; }
         @Implementation public static String getSourceBuildIdentity() { return "Development preview"; }
@@ -122,7 +122,7 @@ public class SettingsVisualCaptureTest {
         open();
         capturePage("00-overview", true);
         List<Preference> categories = categories();
-        assertEquals("Every category except the always-open recovery section has its own page", 23, categories.size());
+        assertEquals("Every category except the always-open recovery section has its own page", 22, categories.size());
         int number = 1;
         for (Preference category : categories) {
             tap(category);

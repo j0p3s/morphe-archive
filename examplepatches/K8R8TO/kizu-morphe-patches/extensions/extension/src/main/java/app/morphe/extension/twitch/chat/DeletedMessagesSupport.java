@@ -1,202 +1,205 @@
 package app.morphe.extension.twitch.chat;
 
-import android.content.Context;
+import android.os.SystemClock;
 import android.graphics.Color;
-import android.os.Handler;
-import android.os.Looper;
+import android.graphics.ColorMatrix;
+import android.graphics.ColorMatrixColorFilter;
+import android.graphics.drawable.Drawable;
 import android.util.Log;
-import android.widget.Toast;
-import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.SpannableStringBuilder;
 import android.text.SpannedString;
 import android.text.style.ClickableSpan;
+import android.text.style.DynamicDrawableSpan;
 import android.text.style.ForegroundColorSpan;
 import android.text.style.StrikethroughSpan;
+import android.widget.TextView;
 
-import io.github.bakwudo.uyu.extension.Utils;
 import io.github.bakwudo.uyu.extension.settings.Settings;
 
-import java.util.Locale;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.lang.reflect.Field;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class DeletedMessagesSupport {
     private static final String DIAGNOSTIC_TAG = "KizuDeletedStyle";
     private static final AtomicBoolean ENTRY_TOAST_SHOWN = new AtomicBoolean(false);
     private static final AtomicBoolean OUTCOME_TOAST_SHOWN = new AtomicBoolean(false);
+    // Leave headroom for roughly 10,000 messages arriving in a ten-minute rapid-chat window.
+    private static final int ORIGINAL_CACHE_LIMIT = 12_000;
+    private static final long ORIGINAL_CACHE_TTL_MS = 15L * 60L * 1000L;
+    private static final Object ORIGINAL_CACHE_LOCK = new Object();
+    private static long lastOriginalCachePruneAt;
+    private static final Map<String, CachedOriginal> ORIGINAL_MESSAGES =
+            new LinkedHashMap<String, CachedOriginal>(512, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, CachedOriginal> eldest) {
+                    return size() > ORIGINAL_CACHE_LIMIT;
+                }
+            };
+
+    private static final Map<Class<?>, Field> MESSAGE_ID_FIELDS = new java.util.WeakHashMap<>();
+    private static final Map<Class<?>, Boolean> MISSING_MESSAGE_ID_FIELDS = new java.util.WeakHashMap<>();
+
+    private static final class CachedOriginal {
+        final SpannedString text;
+        final long capturedAt;
+
+        CachedOriginal(SpannedString text, long capturedAt) {
+            this.text = text;
+            this.capturedAt = capturedAt;
+        }
+    }
+
+    /** Marker retained through EmoteSupport's text rebuild so later emotes inherit Gray mode. */
+    public static final class DeletedStyleMarker {
+        private DeletedStyleMarker() { }
+    }
 
     private DeletedMessagesSupport() {
+    }
+
+    /**
+     * Called from the existing chat-row bind hook after Twitch sets the row text. Keep a bounded
+     * copy of recent message rows so a later rapid-chat deletion can still show the original even
+     * when Twitch replaces the deleted span's original-message field with its placeholder.
+     * This method is deliberately failure-contained because it runs on Twitch's RecyclerView path.
+     */
+    public static void onRowBound(Object messageModel, TextView textView) {
+        if (textView == null) return;
+        try {
+            if (!Settings.CHAT_DELETED_MESSAGES.get()) return;
+            String messageId = readMessageId(messageModel);
+            if (messageId == null || messageId.isEmpty()) return;
+
+            CharSequence current = textView.getText();
+            if (current == null || current.length() == 0) return;
+
+            if (containsDeletedPlaceholder(current)) {
+                Spanned recovered = current instanceof Spanned
+                        ? restoreDeletedMessageFromRow((Spanned) current)
+                        : null;
+                if (recovered != null && recovered.length() > 0) {
+                    textView.setText(recovered, TextView.BufferType.SPANNABLE);
+                    return;
+                }
+                SpannedString cached = findCachedOriginal(messageId, SystemClock.uptimeMillis());
+                if (cached != null && cached.length() > 0) {
+                    SpannableStringBuilder restored = new SpannableStringBuilder(cached);
+                    int bodyStart = findMessageBodyStart(restored);
+                    applyDeletedStyle(restored, bodyStart, restored.length());
+                    textView.setText(SpannedString.valueOf(restored), TextView.BufferType.SPANNABLE);
+                }
+                return;
+            }
+
+            SpannedString snapshot = new SpannedString(current);
+            long now = SystemClock.uptimeMillis();
+            synchronized (ORIGINAL_CACHE_LOCK) {
+                ORIGINAL_MESSAGES.put(messageId, new CachedOriginal(snapshot, now));
+                // Expired entries can otherwise occupy the LRU until enough new messages arrive.
+                if (ORIGINAL_MESSAGES.size() > 256
+                        && now - lastOriginalCachePruneAt >= 60_000L) {
+                    lastOriginalCachePruneAt = now;
+                    java.util.Iterator<Map.Entry<String, CachedOriginal>> iterator =
+                            ORIGINAL_MESSAGES.entrySet().iterator();
+                    while (iterator.hasNext()) {
+                        if (now - iterator.next().getValue().capturedAt > ORIGINAL_CACHE_TTL_MS) {
+                            iterator.remove();
+                        }
+                    }
+                }
+            }
+        } catch (Throwable failure) {
+            Log.w(DIAGNOSTIC_TAG, "could not cache or restore a chat row", failure);
+        }
+    }
+
+    private static SpannedString findCachedOriginal(String messageId, long now) {
+        synchronized (ORIGINAL_CACHE_LOCK) {
+            CachedOriginal cached = ORIGINAL_MESSAGES.get(messageId);
+            if (cached == null) return null;
+            if (now - cached.capturedAt > ORIGINAL_CACHE_TTL_MS) {
+                ORIGINAL_MESSAGES.remove(messageId);
+                return null;
+            }
+            return cached.text;
+        }
+    }
+
+    private static boolean containsDeletedPlaceholder(CharSequence text) {
+        final String marker = "<message deleted>";
+        String value = text.toString();
+        for (int start = 0; start + marker.length() <= value.length(); start++) {
+            if (value.regionMatches(true, start, marker, 0, marker.length())) return true;
+        }
+        return false;
+    }
+
+    private static String readMessageId(Object model) {
+        if (model == null) return null;
+        Field field = null;
+        try {
+            Class<?> type = model.getClass();
+            synchronized (MESSAGE_ID_FIELDS) {
+                field = MESSAGE_ID_FIELDS.get(type);
+                if (field == null && !MISSING_MESSAGE_ID_FIELDS.containsKey(type)) {
+                    for (Class<?> current = type; current != null && current != Object.class;
+                         current = current.getSuperclass()) {
+                        try {
+                            field = current.getDeclaredField("messageId");
+                            field.setAccessible(true);
+                            MESSAGE_ID_FIELDS.put(type, field);
+                            break;
+                        } catch (NoSuchFieldException ignored) {
+                        }
+                    }
+                    if (field == null) MISSING_MESSAGE_ID_FIELDS.put(type, Boolean.TRUE);
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+
+        if (field != null) {
+            try {
+                Object value = field.get(model);
+                if (value != null) {
+                    String id = String.valueOf(value);
+                    if (!id.isEmpty()) return id;
+                }
+            } catch (Throwable ignored) {
+                // R8 may rename the backing field or deny reflective access; the data-class
+                // toString still includes the stable messageId label used by our fingerprint.
+            }
+        }
+        return readMessageIdFromDataClassString(model);
+    }
+
+    private static String readMessageIdFromDataClassString(Object model) {
+        try {
+            String value = String.valueOf(model);
+            int marker = value.indexOf("MessageRecyclerItem(messageId=");
+            int start = marker >= 0
+                    ? marker + "MessageRecyclerItem(messageId=".length()
+                    : value.indexOf("messageId=");
+            if (start < 0) return null;
+
+            int end = value.indexOf(", sourceChannelId=", start);
+            if (end < 0) end = value.indexOf(',', start);
+            if (end < 0) return null;
+
+            String id = value.substring(start, end).trim();
+            return id.isEmpty() || "null".equals(id) ? null : id;
+        } catch (Throwable ignored) {
+            return null;
+        }
     }
 
     /**
      * Styles the original message at Twitch's deleted-message factory boundary.
      * Returning null leaves Twitch's native deleted-message handling untouched.
      */
-    public static android.text.Spanned styleDeletedMessage(SpannedString message) {
-        try {
-            if (!Settings.CHAT_DELETED_MESSAGES.get() || message == null) return null;
-
-            // Twitch can pass its literal deletion placeholder instead of the original text.
-            // Do not style that placeholder at the method entry; allow the existing span-based
-            // recovery path later in the formatter to restore and style the original message.
-            if (message.toString().toLowerCase(Locale.ROOT).contains("<message deleted>")) {
-                return null;
-            }
-
-            String style = normalizeStyle();
-            if ("mod".equals(style)) return null;
-            if (message.length() == 0) return message;
-
-            SpannableStringBuilder builder = new SpannableStringBuilder(message);
-            if ("grey".equals(style)) {
-                ForegroundColorSpan[] colors =
-                        builder.getSpans(0, builder.length(), ForegroundColorSpan.class);
-                for (ForegroundColorSpan color : colors) builder.removeSpan(color);
-                builder.setSpan(new ForegroundColorSpan(Color.GRAY), 0, builder.length(),
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            } else if ("strikethrough".equals(style)) {
-                int start = 0;
-                ClickableSpan[] spans = builder.getSpans(0, builder.length(), ClickableSpan.class);
-                for (ClickableSpan span : spans) {
-                    if (!"ClickableUsernameSpan".equals(span.getClass().getSimpleName())) continue;
-                    int end = builder.getSpanEnd(span);
-                    if (end <= 0 || end > builder.length()) continue;
-                    start = end;
-                    if (start + 2 <= builder.length()
-                            && ": ".contentEquals(builder.subSequence(start, start + 2))) {
-                        start += 2;
-                    }
-                    break;
-                }
-                if (start < builder.length()) {
-                    builder.setSpan(new StrikethroughSpan(), start, builder.length(),
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                }
-            }
-            return SpannedString.valueOf(builder);
-        } catch (Throwable failure) {
-            Log.e("KizuDeletedStyle", "could not style original deleted message", failure);
-            return null;
-        }
-    }
-
-    /**
-     * PurpleTV-style entry point at MessageRecyclerItem's deleted-message call site.
-     * A null result means keep Twitch's native deleted-message rendering (Mod style or
-     * the feature disabled); a non-null result replaces that call's output with the
-     * original message carrying the requested style.
-     */
-    public static Spanned styleDeletedMessageFromRow(Spanned message) {
-        try {
-            if (!Settings.CHAT_DELETED_MESSAGES.get() || message == null) return null;
-
-            String style = normalizeStyle();
-            if ("mod".equals(style)) return null;
-            if (message.length() == 0) return message;
-
-            SpannableStringBuilder builder = new SpannableStringBuilder(message);
-            if ("grey".equals(style)) {
-                ForegroundColorSpan[] colors =
-                        builder.getSpans(0, builder.length(), ForegroundColorSpan.class);
-                for (ForegroundColorSpan color : colors) builder.removeSpan(color);
-                builder.setSpan(new ForegroundColorSpan(Color.GRAY), 0, builder.length(),
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            } else if ("strikethrough".equals(style)) {
-                int start = 0;
-                ClickableSpan[] spans =
-                        builder.getSpans(0, builder.length(), ClickableSpan.class);
-                for (ClickableSpan span : spans) {
-                    if (!"ClickableUsernameSpan".equals(span.getClass().getSimpleName())) continue;
-                    int end = builder.getSpanEnd(span);
-                    if (end <= 0 || end > builder.length()) continue;
-                    start = end;
-                    if (start + 2 <= builder.length()
-                            && ": ".contentEquals(builder.subSequence(start, start + 2))) {
-                        start += 2;
-                    }
-                    break;
-                }
-                if (start < builder.length()) {
-                    builder.setSpan(new StrikethroughSpan(), start, builder.length(),
-                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                }
-            } else {
-                return null;
-            }
-            return SpannedString.valueOf(builder);
-        } catch (Throwable failure) {
-            Log.e("KizuDeletedStyle", "could not style deleted message at row call site", failure);
-            return null;
-        }
-    }
-
-    /**
-     * Styles Twitch's native formatter result when the early hook deferred a literal
-     * placeholder. At this stage the native result exists, so a no-op must return it,
-     * not null (null means "fall through" only for styleDeletedMessage).
-     */
-    public static Spanned styleNativeDeletedResult(Spanned message) {
-        if (message == null) return null;
-        try {
-            if (!Settings.CHAT_DELETED_MESSAGES.get()) return message;
-
-            String text = message.toString();
-            if (text.toLowerCase(Locale.ROOT).contains("<message deleted>")) return message;
-
-            String style = normalizeStyle();
-            if ("mod".equals(style) || message.length() == 0) return message;
-
-            SpannableStringBuilder builder = new SpannableStringBuilder(message);
-            if ("grey".equals(style)) {
-                ForegroundColorSpan[] colors =
-                        builder.getSpans(0, builder.length(), ForegroundColorSpan.class);
-                for (ForegroundColorSpan color : colors) {
-                    int start = builder.getSpanStart(color);
-                    int end = builder.getSpanEnd(color);
-                    if (color.getForegroundColor() == Color.GRAY && start <= 0
-                            && end >= builder.length()) {
-                        return message;
-                    }
-                }
-                for (ForegroundColorSpan color : colors) builder.removeSpan(color);
-                builder.setSpan(new ForegroundColorSpan(Color.GRAY), 0, builder.length(),
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            } else if ("strikethrough".equals(style)) {
-                int start = 0;
-                ClickableSpan[] spans =
-                        builder.getSpans(0, builder.length(), ClickableSpan.class);
-                for (ClickableSpan span : spans) {
-                    if (!"ClickableUsernameSpan".equals(span.getClass().getSimpleName())) continue;
-                    int end = builder.getSpanEnd(span);
-                    if (end <= 0 || end > builder.length()) continue;
-                    start = end;
-                    if (start + 2 <= builder.length()
-                            && ": ".contentEquals(builder.subSequence(start, start + 2))) {
-                        start += 2;
-                    }
-                    break;
-                }
-
-                if (start >= builder.length()) return message;
-                StrikethroughSpan[] existing =
-                        builder.getSpans(start, builder.length(), StrikethroughSpan.class);
-                for (StrikethroughSpan span : existing) {
-                    if (builder.getSpanStart(span) <= start
-                            && builder.getSpanEnd(span) >= builder.length()) {
-                        return message;
-                    }
-                }
-                builder.setSpan(new StrikethroughSpan(), start, builder.length(),
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            } else {
-                return message;
-            }
-            return SpannedString.valueOf(builder);
-        } catch (Throwable failure) {
-            Log.e("KizuDeletedStyle", "could not style native deleted-message result", failure);
-            return message;
-        }
-    }
-
     public static boolean resolveAccess(boolean original) {
         try {
             if (!Settings.CHAT_DELETED_MESSAGES.get()) return original;
@@ -206,210 +209,167 @@ public final class DeletedMessagesSupport {
         }
     }
 
-    public static SpannedString recoverDeletedMessage(
-            SpannedString message,
-            Object[] spans,
-            Class<?> deletedSpanClass
-    ) {
-        String rawStyle = readRawStyleForDiagnostics();
-        boolean enabled = readEnabledForDiagnostics();
-        reportEntryOnce(
-                "helper entered; enabled=" + enabled
-                        + "; styleSetting=" + rawStyle
-                        + "; spanCount=" + (spans == null ? -1 : spans.length)
-                        + "; expectedClass=" + className(deletedSpanClass)
-        );
-
-        if (message == null || spans == null || spans.length == 0 || deletedSpanClass == null) return null;
+    /**
+     * Mirrors PurpleTV's hook at ChatMessageSpanFactoryV2's deleted-message factory call:
+     * Mod falls through to Twitch's factory with moderator access, while the other modes
+     * style the original rich message and skip the factory's deleted placeholder.
+     */
+    public static Spanned styleDeletedMessageFromFactory(Spanned message) {
         try {
-            if (!Settings.CHAT_DELETED_MESSAGES.get()) {
-                reportOutcomeOnce("recovery disabled by CHAT_DELETED_MESSAGES setting");
+            if (!Settings.CHAT_DELETED_MESSAGES.get() || message == null || message.length() == 0) {
                 return null;
             }
+            if (containsDeletedPlaceholder(message)) return null;
 
-            String possibleMismatch = null;
-            for (Object candidate : spans) {
-                if (candidate == null) continue;
-                boolean exactClass = deletedSpanClass.isInstance(candidate);
-                if (!exactClass) {
-                    if (candidate instanceof ClickableSpan && hasSpannedStringField(candidate)) {
-                        possibleMismatch = "possible deleted span class mismatch; actual="
-                                + className(candidate.getClass())
-                                + "; expected=" + className(deletedSpanClass)
-                                + "; styleSetting=" + rawStyle;
-                    }
-                    continue;
+            String style = normalizeStyle();
+            if ("mod".equals(style)) return null;
+
+            SpannableStringBuilder builder = new SpannableStringBuilder(message);
+            int bodyStart = findMessageBodyStart(builder);
+            if ("strikethrough".equals(style)) {
+                if (builder.getSpans(0, builder.length(), StrikethroughSpan.class).length > 0) {
+                    return message;
                 }
-                if (!(candidate instanceof ClickableSpan)) {
-                    reportOutcomeOnce("target class matched but is not a ClickableSpan: "
-                            + className(candidate.getClass()));
-                    continue;
+                if (bodyStart < builder.length()) {
+                    builder.setSpan(new StrikethroughSpan(), bodyStart, builder.length(),
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                 }
-
-                ClickableSpan deletedSpan = (ClickableSpan) candidate;
-                int spanStart = message.getSpanStart(deletedSpan);
-                int spanEnd = message.getSpanEnd(deletedSpan);
-                if (spanStart < 0 || spanEnd <= spanStart || spanEnd > message.length()) {
-                    reportOutcomeOnce("target class matched but range is invalid; start=" + spanStart
-                            + "; end=" + spanEnd + "; messageLength=" + message.length());
-                    continue;
+            } else if ("grey".equals(style)) {
+                for (ForegroundColorSpan span : builder.getSpans(
+                        0, builder.length(), ForegroundColorSpan.class)) {
+                    builder.removeSpan(span);
                 }
-
-                SpannedString original = findOriginalMessage(deletedSpan);
-                if (original == null || original.length() == 0) {
-                    reportOutcomeOnce("target class matched but original SpannedString was not found");
-                    continue;
-                }
-
-                SpannableStringBuilder builder = new SpannableStringBuilder(message);
-                SpannedString recovered = stripDuplicateChatterHeader(
-                        message,
-                        deletedSpan,
-                        spanStart,
-                        original
-                );
-                if (recovered.length() == 0) {
-                    reportOutcomeOnce("target class matched; recovered text was empty");
-                    continue;
-                }
-
-                builder.replace(spanStart, spanEnd, recovered);
-                builder.removeSpan(deletedSpan);
-
-                int recoveredEnd = spanStart + recovered.length();
-                String normalizedStyle = normalizeStyle();
-
-                // Restore the original text first, then use beta.34's proven styling path
-                // on exactly the recovered range. Do not infer success from unrelated spans.
-                applyStyle(builder, spanStart, recoveredEnd);
-                SpannedString result = SpannedString.valueOf(builder);
-                int checkEnd = Math.min(result.length(), recoveredEnd);
-                int strikeCount = checkEnd > spanStart
-                        ? result.getSpans(spanStart, checkEnd, StrikethroughSpan.class).length : 0;
-                int greyCount = checkEnd > spanStart
-                        ? result.getSpans(spanStart, checkEnd, ForegroundColorSpan.class).length : 0;
-                reportOutcomeOnce(
-                        "recovered; style=" + normalizedStyle
-                                + "; range=" + spanStart + "-" + recoveredEnd
-                                + "; resultStrikethroughSpans=" + strikeCount
-                                + "; resultForegroundSpans=" + greyCount
-                );
-                return result;
+                grayInlineDrawables(builder);
+                builder.setSpan(new ForegroundColorSpan(Color.GRAY), 0, builder.length(),
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                builder.setSpan(new DeletedStyleMarker(), 0, builder.length(),
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            } else {
+                return null;
             }
+            return SpannedString.valueOf(builder);
+        } catch (Throwable failure) {
+            Log.e(DIAGNOSTIC_TAG, "could not style original deleted message", failure);
+            return null;
+        }
+    }
 
-            if (possibleMismatch != null) {
-                reportOutcomeOnce(possibleMismatch);
+    public static boolean isGreyDeletedMessage(CharSequence text) {
+        if (!(text instanceof Spanned)) return false;
+        Spanned spanned = (Spanned) text;
+        return spanned.getSpans(0, spanned.length(), DeletedStyleMarker.class).length > 0;
+    }
+
+    /** Apply a per-drawable grayscale filter; unlike mutating the shared bitmap, this is row-local. */
+    public static void applyGrayFilter(Drawable drawable) {
+        if (drawable == null) return;
+        try {
+            ColorMatrix matrix = new ColorMatrix();
+            matrix.setSaturation(0f);
+            drawable.setColorFilter(new ColorMatrixColorFilter(matrix));
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private static void grayInlineDrawables(Spanned text) {
+        try {
+            for (DynamicDrawableSpan span : text.getSpans(
+                    0, text.length(), DynamicDrawableSpan.class)) {
+                applyGrayFilter(span.getDrawable());
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    /** Restore the original rich-text body from Twitch's deleted-message span. */
+    public static Spanned restoreDeletedMessageFromRow(Spanned message) {
+        if (message == null || message.length() == 0) return null;
+        try {
+            if (!Settings.CHAT_DELETED_MESSAGES.get()) return null;
+            for (ClickableSpan deletedSpan : message.getSpans(0, message.length(), ClickableSpan.class)) {
+                if (!hasSpannedStringField(deletedSpan)) continue;
+                int start = message.getSpanStart(deletedSpan), end = message.getSpanEnd(deletedSpan);
+                if (start < 0 || end <= start || end > message.length()) continue;
+                SpannedString original = findOriginalMessage(deletedSpan);
+                if (original == null || original.length() == 0 || original.toString().toLowerCase(java.util.Locale.ROOT).contains("<message deleted>")) continue;
+                SpannedString body = stripDuplicateChatterHeader(SpannedString.valueOf(message), deletedSpan, start, original);
+                android.text.SpannableStringBuilder builder = new android.text.SpannableStringBuilder(message);
+                builder.replace(start, end, body);
+                builder.removeSpan(deletedSpan);
+                applyDeletedStyle(builder, start, start + body.length());
+                return SpannedString.valueOf(builder);
             }
         } catch (Throwable failure) {
-            Log.e(DIAGNOSTIC_TAG, "exception in recoverDeletedMessage", failure);
-            reportOutcomeOnce("recovery threw " + failure.getClass().getSimpleName()
-                    + ": " + String.valueOf(failure.getMessage()));
+            Log.w(DIAGNOSTIC_TAG, "could not restore original deleted chat message", failure);
         }
         return null;
     }
 
-    private static boolean hasSpannedStringField(Object candidate) {
+    private static int findMessageBodyStart(Spanned text) {
         try {
-            Class<?> type = candidate.getClass();
-            while (type != null) {
-                for (java.lang.reflect.Field field : type.getDeclaredFields()) {
-                    if (field.getType() == SpannedString.class) return true;
+            for (ClickableSpan span : text.getSpans(0, text.length(), ClickableSpan.class)) {
+                if (!"ClickableUsernameSpan".equals(span.getClass().getSimpleName())) continue;
+                int end = text.getSpanEnd(span);
+                if (end < 0 || end > text.length()) continue;
+                if (end + 2 <= text.length() && ": ".contentEquals(text.subSequence(end, end + 2))) {
+                    return end + 2;
                 }
-                type = type.getSuperclass();
+                return end;
             }
         } catch (Throwable ignored) {
         }
-        return false;
+        return 0;
     }
 
-    private static String className(Class<?> type) {
-        return type == null ? "null" : type.getName();
-    }
+    private static void applyDeletedStyle(SpannableStringBuilder text, int start, int end) {
+        if (start < 0 || end <= start || end > text.length()) return;
+        String style = normalizeStyle();
 
-    private static String readRawStyleForDiagnostics() {
-        try {
-            String value = Settings.CHAT_DELETED_MESSAGES_STYLE.get();
-            return value == null ? "null" : value;
-        } catch (Throwable failure) {
-            return "<error:" + failure.getClass().getSimpleName() + ">";
+        if ("strikethrough".equals(style)) {
+            start = findMessageBodyStart(text);
+            if (start >= end) return;
+            for (StrikethroughSpan span : text.getSpans(start, end, StrikethroughSpan.class)) {
+                int spanStart = text.getSpanStart(span);
+                int spanEnd = text.getSpanEnd(span);
+                if (spanStart >= start && spanEnd <= end) text.removeSpan(span);
+            }
+            text.setSpan(new StrikethroughSpan(), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        } else if ("grey".equals(style)) {
+            for (ForegroundColorSpan span : text.getSpans(0, text.length(), ForegroundColorSpan.class)) {
+                text.removeSpan(span);
+            }
+            grayInlineDrawables(text);
+            text.setSpan(new ForegroundColorSpan(Color.GRAY), 0, text.length(),
+                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            if (text.getSpans(0, text.length(), DeletedStyleMarker.class).length == 0) {
+                text.setSpan(new DeletedStyleMarker(), 0, text.length(),
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
         }
     }
 
-    private static boolean readEnabledForDiagnostics() {
+    private static String normalizeStyle() {
         try {
-            return Settings.CHAT_DELETED_MESSAGES.get();
+            String style = Settings.CHAT_DELETED_MESSAGES_STYLE.get();
+            if (style == null) return "mod";
+            style = style.trim().toLowerCase(java.util.Locale.ROOT);
+            if ("default".equals(style)) return "mod";
+            if ("gray".equals(style)) return "grey";
+            if ("strikethrough".equals(style) || "grey".equals(style) || "mod".equals(style)) {
+                return style;
+            }
         } catch (Throwable ignored) {
-            return false;
         }
+        return "mod";
     }
 
-    private static void reportEntryOnce(String message) {
-        if (!ENTRY_TOAST_SHOWN.compareAndSet(false, true)) return;
-        Log.i(DIAGNOSTIC_TAG, "ENTRY: " + message);
-    }
-
-    private static void reportOutcomeOnce(String message) {
-        if (!OUTCOME_TOAST_SHOWN.compareAndSet(false, true)) return;
-        Log.i(DIAGNOSTIC_TAG, "OUTCOME: " + message);
-    }
-
-    // Keep on-screen diagnostics brief enough to read. Full details remain in Logcat.
-    private static String summarizeEntry(String message) {
-        String enabled = valueAfter(message, "enabled=", ";");
-        String style = valueAfter(message, "styleSetting=", ";");
-        String count = valueAfter(message, "spanCount=", ";");
-        return "Kizu D1: on=" + ("true".equals(enabled) ? "1" : "false".equals(enabled) ? "0" : "?")
-                + " style=" + compactStyle(style)
-                + " spans=" + (count == null ? "?" : count);
-    }
-
-    private static String summarizeOutcome(String message) {
-        if (message.startsWith("recovered;")) {
-            String style = valueAfter(message, "style=", ";");
-            String strike = valueAfter(message, "resultStrikethroughSpans=", ";");
-            String grey = valueAfter(message, "resultForegroundSpans=", null);
-            return "Kizu D2: OK style=" + compactStyle(style)
-                    + " strike=" + (strike == null ? "?" : strike)
-                    + " grey=" + (grey == null ? "?" : grey);
-        }
-        if (message.startsWith("possible deleted span class mismatch")) return "Kizu D2: CLASS MISMATCH";
-        if (message.startsWith("target class matched but range is invalid")) return "Kizu D2: BAD RANGE";
-        if (message.startsWith("target class matched but original SpannedString was not found")) return "Kizu D2: NO ORIGINAL";
-        if (message.startsWith("target class matched; recovered text was empty")) return "Kizu D2: EMPTY TEXT";
-        if (message.startsWith("recovery disabled")) return "Kizu D2: FEATURE OFF";
-        if (message.startsWith("target class matched but is not a ClickableSpan")) return "Kizu D2: BAD SPAN";
-        if (message.startsWith("recovery threw")) return "Kizu D2: ERROR";
-        return "Kizu D2: NO MATCH";
-    }
-
-    private static String compactStyle(String style) {
-        if (style == null) return "?";
-        String value = style.trim().toLowerCase(Locale.ROOT);
-        if ("strikethrough".equals(value)) return "st";
-        if ("grey".equals(value)) return "gy";
-        if ("mod".equals(value) || "default".equals(value)) return "mod";
-        return "?";
-    }
-
-    private static String valueAfter(String source, String key, String terminator) {
-        int start = source.indexOf(key);
-        if (start < 0) return null;
-        start += key.length();
-        int end = terminator == null ? source.length() : source.indexOf(terminator, start);
-        if (end < 0) end = source.length();
-        return source.substring(start, end).trim();
-    }
-
-    private static void showDiagnosticToast(String message) {
+    private static boolean hasSpannedStringField(Object candidate) {
         try {
-            Context context = Utils.getContext();
-            if (context == null) return;
-            new Handler(Looper.getMainLooper()).post(
-                    () -> Toast.makeText(context, message, Toast.LENGTH_LONG).show()
-            );
-        } catch (Throwable failure) {
-            Log.w(DIAGNOSTIC_TAG, "could not show diagnostic toast", failure);
-        }
+            for (Class<?> type = candidate.getClass(); type != null; type = type.getSuperclass()) {
+                for (Field field : type.getDeclaredFields()) if (field.getType() == SpannedString.class) return true;
+            }
+        } catch (Throwable ignored) { }
+        return false;
     }
 
     private static SpannedString findOriginalMessage(ClickableSpan deletedSpan) {
@@ -431,36 +391,6 @@ public final class DeletedMessagesSupport {
         return null;
     }
 
-    private static void applyStyle(SpannableStringBuilder builder, int start, int end) {
-        if (start < 0 || end <= start || end > builder.length()) return;
-
-        String style = normalizeStyle();
-        if ("strikethrough".equals(style)) {
-            builder.setSpan(new StrikethroughSpan(), start, end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        } else if ("grey".equals(style)) {
-            ForegroundColorSpan[] colors =
-                    builder.getSpans(start, end, ForegroundColorSpan.class);
-            for (ForegroundColorSpan color : colors) builder.removeSpan(color);
-            builder.setSpan(new ForegroundColorSpan(Color.GRAY), start, end,
-                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
-    }
-
-    private static String normalizeStyle() {
-        try {
-            String style = Settings.CHAT_DELETED_MESSAGES_STYLE.get();
-            if (style == null) return "mod";
-            style = style.trim().toLowerCase(Locale.ROOT);
-            if ("default".equals(style)) return "mod";
-            if ("strikethrough".equals(style)
-                    || "grey".equals(style)
-                    || "mod".equals(style)) return style;
-        } catch (Throwable ignored) {
-        }
-        return "mod";
-    }
-
     private static SpannedString stripDuplicateChatterHeader(
             SpannedString message,
             ClickableSpan deletedSpan,
@@ -470,7 +400,7 @@ public final class DeletedMessagesSupport {
         try {
             int lineStart = 0;
             for (int i = spanStart - 1; i >= 0; i--) {
-                if (message.charAt(i) == '\n') {
+                if (message.charAt(i) == 10) {
                     lineStart = i + 1;
                     break;
                 }
@@ -544,3 +474,4 @@ public final class DeletedMessagesSupport {
         return SpannedString.valueOf(builder);
     }
 }
+

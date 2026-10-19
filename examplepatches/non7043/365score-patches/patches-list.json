@@ -1,6 +1,8 @@
 {
   "version": "v1.3.2",
-  "appNames": {},
+  "appNames": {
+    "com.scores365": "365Scores"
+  },
   "patches": [
     {
       "name": "Block update screen",
@@ -14,7 +16,7 @@
       },
       "compatibility": [
         {
-          "name": "",
+          "name": "365Scores",
           "packageName": "com.scores365",
           "description": null,
           "appIconColor": null,
@@ -40,7 +42,7 @@
       },
       "compatibility": [
         {
-          "name": "",
+          "name": "365Scores",
           "packageName": "com.scores365",
           "description": null,
           "appIconColor": null,
@@ -66,7 +68,7 @@
       },
       "compatibility": [
         {
-          "name": "",
+          "name": "365Scores",
           "packageName": "com.scores365",
           "description": null,
           "appIconColor": null,
@@ -92,7 +94,7 @@
       },
       "compatibility": [
         {
-          "name": "",
+          "name": "365Scores",
           "packageName": "com.scores365",
           "description": null,
           "appIconColor": null,
@@ -120,7 +122,7 @@
       },
       "compatibility": [
         {
-          "name": "",
+          "name": "365Scores",
           "packageName": "com.scores365",
           "description": null,
           "appIconColor": null,
@@ -146,7 +148,7 @@
       },
       "compatibility": [
         {
-          "name": "",
+          "name": "365Scores",
           "packageName": "com.scores365",
           "description": null,
           "appIconColor": null,

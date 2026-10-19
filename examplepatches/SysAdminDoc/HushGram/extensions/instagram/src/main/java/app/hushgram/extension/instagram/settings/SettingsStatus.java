@@ -20,10 +20,6 @@ public final class SettingsStatus {
     }
 
     /** Input-derived subtarget coverage, filled by the corresponding selected patch. */
-    public static String disableAnalyticsCoverage() {
-        return "";
-    }
-
     public static String sanitizeSharingLinksCoverage() {
         return "";
     }
@@ -41,10 +37,6 @@ public final class SettingsStatus {
     }
 
     public static boolean externalBrowser() {
-        return false;
-    }
-
-    public static boolean disableAnalytics() {
         return false;
     }
 
@@ -73,6 +65,10 @@ public final class SettingsStatus {
     }
 
     public static boolean storyMentions() {
+        return false;
+    }
+
+    public static boolean storyFollow() {
         return false;
     }
 
@@ -299,6 +295,14 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean commentEmojiRow() {
+        return false;
+    }
+
+    public static boolean feedFollow() {
+        return false;
+    }
+
     public static boolean followingFeed() {
         return false;
     }
@@ -403,25 +407,6 @@ public final class SettingsStatus {
     }
 
     public static boolean translatedStart() {
-        return false;
-    }
-
-    public static boolean developerOptions() {
-        return false;
-    }
-
-    /** Export and Validate overrides: Open developer options' reader, which a build can lack. */
-    public static boolean overrideExchange() {
-        return false;
-    }
-
-    /** Import, Restore and Reset overrides: Open developer options' writer, which a build can lack. */
-    public static boolean overrideImport() {
-        return false;
-    }
-
-    /** Import flag names: Open developer options' hook on Instagram's MetaConfig list, which a build can lack. */
-    public static boolean flagNames() {
         return false;
     }
 

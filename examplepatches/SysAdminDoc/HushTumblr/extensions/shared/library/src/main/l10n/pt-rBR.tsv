@@ -238,6 +238,13 @@ Hides the Blaze buttons, banners and the nudge to promote a post after you share
 # context: the Skip review prompts switch on the Interface page. It stops Tumblr's rate-this-app pop-up.
 # context: the Skip review prompts switch on the Interface page. It stops Tumblr's "What do you think of the Tumblr app?" pop-up.
 Skip review prompts	Pular pedidos de avaliação
+# context: optional prompts on the Interface page. Subscriptions and deliberate gift purchases keep Tumblr's controls.
+Hide blog notification reminders	Ocultar lembretes de notificações de blogs
+Hides the pop-up suggesting you turn on notifications for a blog. Your subscriptions and notification settings stay as they are.	Oculta o pop-up que sugere ativar as notificações de um blog. Suas assinaturas e configurações de notificações não mudam.
+Hide gift purchase popups	Ocultar pop-ups de compra de presentes
+Hides the pop-up suggesting you buy a gift for a blog. You can still open gifting yourself.	Oculta o pop-up que sugere comprar um presente para um blog. Você ainda pode abrir a opção de presentes por conta própria.
+Blog notification reminder	Lembrete de notificações de um blog
+Gift purchase popup	Pop-up de compra de presentes
 Stops the pop-up that asks what you think of the Tumblr app and then asks for a rating or feedback.	Impede o pop-up que pergunta o que você acha do app do Tumblr e depois pede uma avaliação ou feedback.
 # context: the Turn off screenshot sharing switch on the Interface page. Tumblr watches for screenshots and offers to save the post as an image.
 Turn off screenshot sharing	Desativar compartilhamento de capturas de tela
@@ -385,7 +392,6 @@ Mutual	Mútuos
 Done	Concluído
 No muted posts. Use a post's menu to mute it on this device.	Nenhum post silenciado. Use o menu de um post para silenciá-lo neste dispositivo.
 Updating muted posts	Atualizando posts silenciados
-Couldn't update muted posts. Your list is unchanged. Try again.	Não foi possível atualizar os posts silenciados. Sua lista não mudou. Tente de novo.
 Couldn't restore muted posts. Try again.	Não foi possível restaurar os posts silenciados. Tente de novo.
 Couldn't read this account's muted posts. Nothing was changed or deleted.	Não foi possível ler os posts silenciados desta conta. Nada foi alterado nem apagado.
 Reading muted posts	Lendo posts silenciados
@@ -429,3 +435,4 @@ Back to defaults	Voltar ao padrão
 Puts every feature switch back the way it started.	Volta cada opção de recurso ao estado inicial.
 Changed %1$d setting	%1$d configuração alterada
 Changed %1$d settings	%1$d configurações alteradas
+Couldn't update muted posts. Try again.	Não foi possível atualizar os posts silenciados. Tente novamente.

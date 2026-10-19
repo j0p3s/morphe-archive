@@ -4,13 +4,13 @@
  */
 package app.morphe.patches.imo.misc.forwarding
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
-import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patches.shared.compat.AppCompatibilities
+import app.morphe.util.addInstructionsAtControlFlowLabel
 import app.morphe.util.indexOfFirstInstructionOrThrow
+import app.morphe.util.indexOfFirstInstructionReversed
 import app.morphe.util.matchSingle
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
@@ -24,13 +24,16 @@ val removeForwardingRestrictionsPatch = bytecodePatch(
 
     execute {
         ShareAvailabilityFingerprint.matchSingle().method.apply {
-            val privacyIndex = indexOfFirstInstructionOrThrow(privacyShareDisable)
-            val shareableCheckIndex = indexOfFirstInstructionOrThrow(privacyIndex, Opcode.IF_EQZ)
-            val shareableBranch = getInstruction<OneRegisterInstruction>(shareableCheckIndex)
-            if (shareableBranch.registerA != implementation!!.registerCount - 1) {
-                throw PatchException("Share action check does not test the shareable parameter")
+            val shareableParameter = implementation!!.registerCount - 1
+            val shareableCheckIndex = indexOfFirstInstructionOrThrow {
+                opcode == Opcode.IF_EQZ && (this as OneRegisterInstruction).registerA == shareableParameter
             }
-            addInstructionsWithLabels(0, "goto :shareable", ExternalLabel("shareable", shareableBranch))
+            val afterEarlyReturnIndex = indexOfFirstInstructionReversed(shareableCheckIndex, Opcode.RETURN_VOID) + 1
+            addInstructionsAtControlFlowLabel(
+                afterEarlyReturnIndex,
+                "goto :shareable",
+                ExternalLabel("shareable", getInstruction(shareableCheckIndex)),
+            )
         }
     }
 }

@@ -1,3 +1,9 @@
+## [1.4.2](https://github.com/snowyegret23/morphe-patches/compare/v1.4.1...v1.4.2) (2026-10-19)
+
+### 🐛 Bug Fixes
+
+* keep Morphe settings visible when notifications are disabled ([e2535a2](https://github.com/snowyegret23/morphe-patches/commit/e2535a2407a308098eae6719fceab2756fa17249))
+
 ## [1.4.1](https://github.com/snowyegret23/morphe-patches/compare/v1.4.0...v1.4.1) (2026-10-15)
 
 ### ✨ New Features

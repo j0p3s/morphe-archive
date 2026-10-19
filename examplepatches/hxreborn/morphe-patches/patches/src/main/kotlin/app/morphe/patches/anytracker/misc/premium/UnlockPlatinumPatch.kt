@@ -13,6 +13,7 @@ import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.shared.misc.pairip.removePairipProtectionPatch
 import app.morphe.patches.shared.misc.revenuecat.BuildCustomerInfoFingerprint
+import app.morphe.patches.shared.misc.revenuecat.customerInfoJsonParameter
 import app.morphe.util.getFreeRegisterProvider
 import app.morphe.util.matchAllMethodIndicesForEach
 import app.morphe.util.matchSingle
@@ -42,7 +43,7 @@ val unlockPlatinumPatch = bytecodePatch(
             addInstructions(
                 0,
                 """
-                    move-object/from16 v$jsonRegister, p1
+                    move-object/from16 v$jsonRegister, ${customerInfoJsonParameter()}
                     const-string v$entitlementRegister, "$ENTITLEMENT"
                     const-string v$productRegister, "$PRODUCT"
                     invoke-static { v$jsonRegister, v$entitlementRegister, v$productRegister }, $EXTENSION_CLASS->grantEntitlement(Lorg/json/JSONObject;Ljava/lang/String;Ljava/lang/String;)V

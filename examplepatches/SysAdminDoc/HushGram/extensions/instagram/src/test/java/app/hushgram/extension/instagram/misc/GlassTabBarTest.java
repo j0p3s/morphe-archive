@@ -71,6 +71,7 @@ public class GlassTabBarTest {
         Settings.GLASS_TAB_BAR_BLUR.resetToDefault();
         Settings.GLASS_TAB_BAR_FLOAT.resetToDefault();
         Settings.GLASS_TAB_BAR_HEIGHT.resetToDefault();
+        Settings.GLASS_TAB_BAR_CORNERS.resetToDefault();
         Settings.GLASS_TAB_BAR_LIFT.resetToDefault();
         Settings.GLASS_TAB_BAR_OPACITY.resetToDefault();
         Settings.GLASS_TAB_BAR_HAPTICS.resetToDefault();
@@ -213,6 +214,47 @@ public class GlassTabBarTest {
                 }
             }
         }
+    }
+
+    /**
+     * #197: Blur the bars around a reel asks which bar wears the glass, so it leaves the pill's background
+     * alone, and whether the pill floats, since only then does the strip under a reel show round it.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void aBarSaysWhetherItWearsTheGlassAndWhetherTheGlassFloats() throws Exception {
+        for (boolean floating : new boolean[]{true, false}) {
+            try (GlassHost host = new GlassHost(Color.BLACK, floating, GlassHeight.STANDARD, false, false)) {
+                assertFalse("not restyled yet", GlassTabBar.wearsGlass(host.bar));
+                assertFalse(GlassTabBar.floatsGlass(host.bar));
+                GlassTabBar.apply(host.activity);
+                assertTrue(GlassTabBar.wearsGlass(host.bar));
+                assertEquals(floating, GlassTabBar.floatsGlass(host.bar));
+            }
+        }
+        assertFalse(GlassTabBar.wearsGlass(null));
+    }
+
+    /**
+     * Glass tab bar turned off without the restart it asks for (#201): the bar still wears the pill, so
+     * Instagram's-own-bar slide leaves it to the pill's slide rather than wrapping the window twice.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void aBarStillWearingTheGlassGetsNoSecondSlide() {
+        try (GlassHost host = new GlassHost(Color.BLACK, false, GlassHeight.STANDARD, false, false)) {
+            Settings.GLASS_TAB_BAR_SLIDE.save(true);
+            GlassTabBar.apply(host.activity);
+            assertTrue(GlassTabBar.wearsGlass(host.bar));
+            Window.Callback wrapped = host.activity.getWindow().getCallback();
+            Settings.GLASS_TAB_BAR.save(false);
+            GlassTabBar.apply(host.activity);
+            assertNull(PlainTabSlide.of(host.bar));
+            assertSame(wrapped, host.activity.getWindow().getCallback());
+        }
+        assertFalse(GlassTabBar.floatsGlass(null));
     }
 
     /**
@@ -395,6 +437,82 @@ public class GlassTabBarTest {
         }
     }
 
+    /**
+     * #224: on Android 17 the pill stayed over an open story's reply box, with the navigation bar answered
+     * 0 under it. While Instagram's story viewer shows on top in the bar's window the bar is hidden and
+     * the real height goes through, and the bar shows again once the story goes. A bar Instagram hides
+     * itself, or changes while it's hidden, is left as Instagram has it.
+     */
+    @Test
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void aStoryOnTopHidesThePillAndGetsTheNavigationBarsHeight() {
+        GlassTabBar.resetForTests();
+        HookStatus.clear();
+        int storyId = 0x7f0b0123;
+        Map<String, Integer> ids = ReflectionHelpers.getStaticField(GlassTabBar.class, "IDS");
+        Integer previous;
+        synchronized (ids) { previous = ids.put(GlassTabBar.STORY_ROOT, storyId); }
+        try (GlassHost host = new GlassHost(Color.BLACK, true, GlassHeight.STANDARD, false, false)) {
+            int nav = host.dp(24);
+            int full = ViewGroup.LayoutParams.MATCH_PARENT;
+            host.controller.pause().resume();
+            host.frame();
+            assertEquals("no story", 0, GlassTabBar.navBarHeight(nav));
+
+            // The screens' container under the bar, with a story opened in it.
+            FrameLayout content = new FrameLayout(host.activity);
+            host.root.addView(content, 0, new FrameLayout.LayoutParams(full, full));
+            FrameLayout story = new FrameLayout(host.activity);
+            story.setId(storyId);
+            content.addView(story, new FrameLayout.LayoutParams(full, full));
+            for (int i = 0; i < 4; i++) host.frame();
+            assertEquals("hidden over the story", View.INVISIBLE, host.bar.getVisibility());
+            assertEquals("the story's reply box stops above the navigation bar", nav, GlassTabBar.navBarHeight(nav));
+
+            // A profile opened from the story goes after it in the container, and has the bar.
+            View profile = new View(host.activity);
+            content.addView(profile, new FrameLayout.LayoutParams(full, full));
+            host.frame();
+            assertEquals("a screen over the story", View.VISIBLE, host.bar.getVisibility());
+            assertEquals(0, GlassTabBar.navBarHeight(nav));
+            content.removeView(profile);
+            host.frame();
+            assertEquals("back on the story", View.INVISIBLE, host.bar.getVisibility());
+
+            content.removeView(story);
+            host.frame();
+            assertEquals("the story went", View.VISIBLE, host.bar.getVisibility());
+            assertEquals(0, GlassTabBar.navBarHeight(nav));
+
+            // Instagram hiding its own bar for a story, as it does on Android 16, is left to it.
+            host.bar.setVisibility(View.GONE);
+            content.addView(story);
+            for (int i = 0; i < 4; i++) host.frame();
+            assertEquals("Instagram's own hide", View.GONE, host.bar.getVisibility());
+            content.removeView(story);
+            host.bar.setVisibility(View.VISIBLE);
+            for (int i = 0; i < 4; i++) host.frame();
+            assertEquals(View.VISIBLE, host.bar.getVisibility());
+
+            // A change Instagram makes while the bar is hidden over a story stands.
+            content.addView(story);
+            for (int i = 0; i < 4; i++) host.frame();
+            assertEquals(View.INVISIBLE, host.bar.getVisibility());
+            host.bar.setVisibility(View.GONE);
+            content.removeView(story);
+            for (int i = 0; i < 4; i++) host.frame();
+            assertEquals("Instagram's change since", View.GONE, host.bar.getVisibility());
+
+            String report = String.join("\n", HookStatus.report());
+            assertTrue(report, report.contains(GlassTabBar.COUNT_STORY_ASIDE));
+        } finally {
+            synchronized (ids) {
+                if (previous == null) ids.remove(GlassTabBar.STORY_ROOT);
+                else ids.put(GlassTabBar.STORY_ROOT, previous);
+            }
+        }
+    }
+
     /** A pill over Instagram's own place, not floating, leaves the navigation bar's height alone and never asks for insets. */
     @Test
     @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
@@ -426,6 +544,60 @@ public class GlassTabBarTest {
         for (GlassLift lift : GlassLift.values()) assertEquals(lift.name(), 0, GlassTabBar.liftPx(lift, false, density));
         assertEquals(0, GlassTabBar.liftPx(null, true, density));
         assertEquals(GlassLift.STANDARD, Settings.GLASS_TAB_BAR_LIFT.defaultValue);
+    }
+
+    /** Tab bar corners (#144): each step keeps its dp up to half the height, and no choice read is Standard. */
+    @Test
+    public void cornersKeepTheirDpUpToHalfTheHeight() {
+        float density = 2.625f;
+        float tall = 50 * density;
+        assertEquals(Math.round(12 * density), GlassTabBar.cornerPx(GlassCorners.STANDARD, false, tall, density), 0f);
+        assertEquals(Math.round(8 * density), GlassTabBar.cornerPx(GlassCorners.STANDARD, true, tall, density), 0f);
+        assertEquals(Math.round(20 * density), GlassTabBar.cornerPx(GlassCorners.ROUNDER, false, tall, density), 0f);
+        assertEquals(Math.round(14 * density), GlassTabBar.cornerPx(GlassCorners.ROUNDER, true, tall, density), 0f);
+        assertEquals(tall / 2f, GlassTabBar.cornerPx(GlassCorners.ROUND, false, tall, density), 0f);
+        assertEquals(tall / 2f, GlassTabBar.cornerPx(GlassCorners.ROUND, true, tall, density), 0f);
+        assertEquals("never past half the height", 10f, GlassTabBar.cornerPx(GlassCorners.ROUNDER, false, 20f, density), 0f);
+        assertEquals(0f, GlassTabBar.cornerPx(GlassCorners.ROUND, false, -4f, density), 0f);
+        assertEquals(Math.round(12 * density), GlassTabBar.cornerPx(null, false, tall, density), 0f);
+        assertEquals(GlassCorners.STANDARD, Settings.GLASS_TAB_BAR_CORNERS.defaultValue);
+    }
+
+    /**
+     * Fully round (#144) gives the pill half circle ends: the spot a 12dp corner fills stays clear and the
+     * middle of the end is glass. The selected tab's highlight is as round, so its corner spot stays unlit.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void fullyRoundCornersGiveThePillAndItsHighlightRoundEnds() throws Exception {
+        GlassTabBar.animationsOnForTests = false;
+        try (GlassHost host = new GlassHost(Color.BLACK, true, GlassHeight.STANDARD, false, false)) {
+            Settings.GLASS_TAB_BAR_CORNERS.save(GlassCorners.ROUND);
+            GlassTabBar.apply(host.activity);
+            host.layout();
+            int outer = GlassTabBar.outerPx(host.bar.getWidth(), host.density);
+            int top = host.dp(1);
+            try (Pixels plain = host.background()) {
+                assertEquals("where a 12dp corner fills, a round end is clear", 0,
+                        plain.bitmap.getPixel(outer + host.dp(3), top + host.dp(6)));
+                RectF drawn = ReflectionHelpers.getField(host.bar.getBackground(), "rect");
+                int middle = Math.round((drawn.top + drawn.bottom) / 2f);
+                assertTrue("the round end's middle is glass", Color.red(plain.bitmap.getPixel(outer + host.dp(3), middle)) > 5);
+                assertTrue(host.bar.getChildAt(0).performClick());
+                try (Pixels active = host.background()) {
+                    RectF slot = ReflectionHelpers.getField(host.bar.getBackground(), "capsule");
+                    int x = Math.round(slot.left) + host.dp(2);
+                    int y = Math.round(slot.top) + host.dp(4);
+                    assertEquals("an 8dp corner would light this spot; a round one leaves it",
+                            Color.red(plain.bitmap.getPixel(x, y)), Color.red(active.bitmap.getPixel(x, y)), 2);
+                    int inside = Math.round((slot.top + slot.bottom) / 2f);
+                    assertTrue("the highlight itself is lit", Color.red(active.bitmap.getPixel(x, inside))
+                            > Color.red(plain.bitmap.getPixel(x, inside)) + 10);
+                }
+            }
+            host.capture("dark-floating-round-selected-0");
+        }
     }
 
     /**

@@ -19,12 +19,15 @@ import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 
+import app.hushgram.extension.instagram.settings.FamilyNames;
 import app.hushgram.extension.instagram.settings.Settings;
 import app.hushgram.extension.shared.L10n;
 import app.hushgram.extension.shared.Logger;
 import app.hushgram.extension.shared.Utils;
 import app.hushgram.extension.shared.diagnostics.DiagnosticCategory;
+import app.hushgram.extension.shared.diagnostics.HookStatus;
 
 /**
  * Saves a photo or a video from the addresses the app already holds, without asking the app to do
@@ -271,6 +274,7 @@ public final class MediaSave {
         try {
             DownloadQuality quality = quality();
             boolean compatible = compatibleSaves();
+            boolean convert = convertSaves();
             BatchResult[] outcome = new BatchResult[1];
             List<String> passedOver = new ArrayList<>();
             // The pages the check let through, each held until the carousel ends.
@@ -314,7 +318,7 @@ public final class MediaSave {
                                 : page.manifest == null
                                 ? singleJob(application, page.renditions, page.video, !page.video, quality)
                                 : (into, progress) -> saveDash(application, "the carousel page", page.manifest,
-                                        page.renditions, into, progress, quality, compatible);
+                                        page.renditions, into, progress, quality, compatible, convert);
                         result = job == null ? Downloader.Result.fail(Downloader.Status.BUILD_ERROR, "nothing to save")
                                 : job.run(writer, save);
                     } catch (Throwable failure) {
@@ -495,6 +499,42 @@ public final class MediaSave {
             return startPicture(safe, details, fileJob(safe, chosen.url, Downloader.Kind.IMAGE)) != null;
         } catch (Throwable t) {
             failure(() -> "the picture save could not start", t);
+            return false;
+        }
+    }
+
+    /**
+     * Save a video's cover, the sizes [cover] lists of it, as {@link #savePictureBySize} does. When
+     * the cover is the video's first frame and [videos] or [manifest] has a larger picture, the
+     * frame is taken from that video instead ({@link CoverFrame}, #214), and the largest still is
+     * saved should that fail. [videos] and [manifest] may be null.
+     *
+     * @return whether a save started. Never throws.
+     */
+    static boolean saveCover(Context context, StoryDownload.Cover cover, List<Rendition> videos, String manifest,
+            PostDetails details) {
+        try {
+            Rendition still = null;
+            for (Rendition rendition : metaOnly(usable(cover.sizes))) {
+                if (still == null || biggerPicture(rendition, still)) still = rendition;
+            }
+            Rendition video = still == null || !cover.firstFrame() ? null : CoverFrame.source(videos, manifest, still);
+            if (video == null) return savePictureBySize(context, cover.sizes, details);
+            Context safe = ready(context);
+            if (safe == null) return false;
+            Rendition shown = still;
+            info(() -> "the cover is the first frame, taking it from the video at " + video.width + "x" + video.height
+                + " over the still at " + shown.width + "x" + shown.height);
+            Job stillJob = fileJob(safe, still.url, Downloader.Kind.IMAGE);
+            return startPicture(safe, details, (writer, progress) -> {
+                Downloader.Result result = CoverFrame.save(safe, video, writer, policyFor(safe), cap(), progress);
+                if (result.ok() || result.status == Downloader.Status.CANCELLED) return result;
+                HookStatus.counted(FamilyNames.REEL_DOWNLOAD, CoverFrame.FRAME_FAILED);
+                failure(() -> "the cover frame ended with " + result + ", saving the still as it is", null);
+                return stillJob.run(writer, progress);
+            }) != null;
+        } catch (Throwable t) {
+            failure(() -> "the cover save could not start", t);
             return false;
         }
     }
@@ -714,6 +754,25 @@ public final class MediaSave {
         }
     }
 
+    /**
+     * Whether the save starting now converts a full size VP9 or AV1 picture to H.264
+     * ({@link Settings#DOWNLOAD_CONVERT}), which acts only beside {@link #compatibleSaves}. Read
+     * when the save starts. Never throws: before the settings are ready, or when they can't be
+     * read, it's off.
+     */
+    static boolean convertSaves() {
+        try {
+            return compatibleSaves() && Settings.DOWNLOAD_CONVERT.get();
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
+    /** What the phone can convert for a save that converts, else null. */
+    private static Predicate<DashManifest.Track> convertible(boolean convert) {
+        return convert ? VideoConvert::canConvert : null;
+    }
+
     /** What the report adds to a DASH save line whose tracks were kept to what other apps can open. */
     private static String compatibleNote(boolean compatible) {
         return compatible ? ", kept to files other apps can open" : "";
@@ -905,18 +964,19 @@ public final class MediaSave {
         List<Rendition> candidates = new ArrayList<>(renditions);
         DownloadQuality quality = quality();
         boolean compatible = compatibleSaves();
+        boolean convert = convertSaves();
         return start(safe, true, details, (writer, progress) -> saveDash(safe, label, manifest, candidates, writer,
-                progress, quality, compatible)) != null;
+                progress, quality, compatible, convert)) != null;
     }
 
     /**
      * {@link #beginDash}'s save, on the worker: the manifest's tracks or the single file. The
-     * quality and compatibility choices were read on the tap and are passed to every helper,
-     * so a later setting change can't judge the fallback against a different quality.
+     * quality, compatibility and conversion choices were read on the tap and are passed to every
+     * helper, so a later setting change can't judge the fallback against a different quality.
      */
     private static Downloader.Result saveDash(Context application, String label, String manifest,
             List<Rendition> renditions, MediaStoreWriter writer, Downloader.Progress progress,
-            DownloadQuality quality, boolean compatible) {
+            DownloadQuality quality, boolean compatible, boolean convert) {
         if (!DashManifest.withinLimits(manifest)) {
             info(() -> "the manifest of " + label + " is over the limits a save reads (" + manifest.length()
                 + " characters), saving the single file");
@@ -939,7 +999,7 @@ public final class MediaSave {
         Logger.diagnosticDebug(DiagnosticCategory.DOWNLOADS, SOURCE,
             () -> "the manifest of " + label + " offers " + tracks.size() + " track(s): " + tracks);
 
-        DashChoice choice = DashChoice.of(tracks, renditions, quality, compatible, allowAv1);
+        DashChoice choice = DashChoice.of(tracks, renditions, quality, compatible, allowAv1, convertible(convert));
         Rendition fallback = choice.fallback;
         DashManifest.Pick kept = choice.kept;
         DashManifest.Pick usual = choice.usual;
@@ -966,7 +1026,7 @@ public final class MediaSave {
             return saveSingleVideo(application, renditions, offered, Dash.SINGLE_FILE, null, kept.video, quality,
                 writer, progress);
         }
-        if (choice.taken != kept) {
+        if (choice.taken != kept && !choice.converts) {
             info(() -> "nothing of " + label + " is in a format other apps can open, saving it as the switch "
                 + "off would: " + usual.video + (usual.audio == null ? "" : " + " + usual.audio));
         }
@@ -974,15 +1034,23 @@ public final class MediaSave {
         DashManifest.Track video = choice.taken.video;
         DashManifest.Track audio = choice.taken.audio;
         boolean keptCompatible = kept != null && compatible;
+        // What a conversion that fails saves in its place: the H.264 pair, or with neither that nor
+        // a single file, what the switch off would.
+        DashManifest.Pick instead = !choice.converts ? null : kept != null ? kept : fallback == null ? usual : null;
 
         // A track the muxer can't write can be a larger picture than the one saved.
         DashManifest.Track better = better(offered, picture(video, quality), quality);
         info(() -> "saving " + label + " from its DASH manifest: " + video
-            + (audio == null ? ", no sound track" : " + " + audio)
+            + (choice.soundFromFile ? " + the sound of " + describe(fallback)
+                : audio == null ? ", no sound track" : " + " + audio)
             + ", instead of " + (fallback == null ? "nothing" : describe(fallback))
-            + qualityNote(quality) + compatibleNote(keptCompatible) + soundNote(audio) + belowNote(better));
+            + qualityNote(quality)
+            + (choice.converts ? ", converted to H.264 for other apps" : compatibleNote(keptCompatible))
+            + (choice.soundFromFile ? ", the manifest's sound being only xHE-AAC" : soundNote(audio))
+            + belowNote(better));
 
-        Downloader.Result result = dashJob(application, video, audio, fallback, quality).run(writer, progress);
+        Downloader.Result result = dashJob(application, video, audio, fallback, quality, choice.converts, instead,
+            choice.soundFromFile).run(writer, progress);
         boolean lower = better != null && noticeablyLower(picture(video, quality), better.shortSide());
         return result.ok() && lower ? result.lower() : result;
     }
@@ -1030,13 +1098,23 @@ public final class MediaSave {
         final DashManifest.Pick usual;
         /** The tracks the save joins, or null when it saves [fallback]. */
         final DashManifest.Pick taken;
+        /** Whether [taken]'s picture is converted to H.264 before the join. */
+        final boolean converts;
+        /**
+         * Whether the converted picture takes its sound from [fallback]: the manifest's sound is all
+         * xHE-AAC, which apps that take AAC refuse, and the single file's is the sound a save of it keeps.
+         */
+        final boolean soundFromFile;
 
-        private DashChoice(Rendition fallback, DashManifest.Pick kept, DashManifest.Pick usual, DashManifest.Pick taken) {
+        private DashChoice(Rendition fallback, DashManifest.Pick kept, DashManifest.Pick usual, DashManifest.Pick taken,
+                boolean converts, boolean soundFromFile) {
             this.fallback = fallback;
             this.fallbackQuality = fallback == null ? 0 : RenditionPicker.qualityOf(fallback);
             this.kept = kept;
             this.usual = usual;
             this.taken = taken;
+            this.converts = converts;
+            this.soundFromFile = soundFromFile;
         }
 
         /**
@@ -1047,16 +1125,40 @@ public final class MediaSave {
          */
         static DashChoice of(List<DashManifest.Track> tracks, List<Rendition> renditions, DownloadQuality quality,
                 boolean compatible, boolean allowAv1) {
+            return of(tracks, renditions, quality, compatible, allowAv1, null);
+        }
+
+        /**
+         * As above. With saves other apps can open on and [convertible] given, a VP9 or AV1 picture
+         * it passes is converted to H.264 (#236) when it suits [quality] better than the H.264 pair,
+         * or with no such pair, better than the single file. With only xHE-AAC sound, a picture that
+         * beats the single file is converted and joined with that file's sound.
+         */
+        static DashChoice of(List<DashManifest.Track> tracks, List<Rendition> renditions, DownloadQuality quality,
+                boolean compatible, boolean allowAv1, Predicate<DashManifest.Track> convertible) {
             Rendition fallback = RenditionPicker.pickVideo(renditions, quality);
             DashManifest.Pick kept = DashManifest.pick(tracks, allowAv1, quality, compatible);
             DashManifest.Pick usual = compatible ? DashManifest.pick(tracks, allowAv1, quality, false) : kept;
-            DashManifest.Pick pick = kept != null || fallback != null ? kept : usual;
             int fallbackQuality = fallback == null ? 0 : RenditionPicker.qualityOf(fallback);
+            DashManifest.Pick convert = compatible && convertible != null
+                ? DashManifest.pickToConvert(tracks, allowAv1, quality, convertible, fallback != null) : null;
+            if (convert != null && (kept != null ? suitsBetter(convert.video, kept.video, quality)
+                    : beatsFile(convert.video, fallback, fallbackQuality, quality))) {
+                return new DashChoice(fallback, kept, usual, convert, true,
+                    convert.audio == null && DashManifest.hasSound(tracks));
+            }
+            DashManifest.Pick pick = kept != null || fallback != null ? kept : usual;
             boolean keptCompatible = kept != null && compatible;
             DashManifest.Pick taken = pick != null && (keptCompatible || beatsFile(pick.video, fallback, fallbackQuality, quality))
                 ? pick : null;
-            return new DashChoice(fallback, kept, usual, taken);
+            return new DashChoice(fallback, kept, usual, taken, false, false);
         }
+    }
+
+    /** Whether [video] suits [quality] better than [other]: at the best quality a larger picture, below it a nearer fit. */
+    private static boolean suitsBetter(DashManifest.Track video, DashManifest.Track other, DownloadQuality quality) {
+        if (quality == DownloadQuality.BEST) return video.shortSide() > other.shortSide();
+        return quality.compare(video.quality(), other.quality()) < 0;
     }
 
     /**
@@ -1075,7 +1177,8 @@ public final class MediaSave {
         for (DashManifest.Track track : DashManifest.parse(manifest)) {
             if (MediaUrlPolicy.shapeRefusal(track.url) == null) tracks.add(track);
         }
-        DashChoice choice = DashChoice.of(tracks, files, quality, compatibleSaves(), DashSave.canWriteAv1());
+        DashChoice choice = DashChoice.of(tracks, files, quality, compatibleSaves(), DashSave.canWriteAv1(),
+            convertible(convertSaves()));
         return new Planned(choice.fallback, choice.taken == null ? null : choice.taken.video);
     }
 
@@ -1128,10 +1231,36 @@ public final class MediaSave {
     /** As above, with [quality] already handed to {@link #saveDash} rather than read again here. */
     private static Job dashJob(Context application, DashManifest.Track video, DashManifest.Track audio,
             Rendition fallback, DownloadQuality quality) {
+        return dashJob(application, video, audio, fallback, quality, false, null, false);
+    }
+
+    /**
+     * As above. With [convert], [video] is converted to H.264 before the join, and when that fails
+     * the save takes [instead]'s tracks as they are, or with none, [fallback]. When [instead] has
+     * [video]'s own picture, that picture is joined as it was fetched, never fetched again.
+     */
+    static Job dashJob(Context application, DashManifest.Track video, DashManifest.Track audio,
+            Rendition fallback, DownloadQuality quality, boolean convert, DashManifest.Pick instead) {
+        return dashJob(application, video, audio, fallback, quality, convert, instead, false);
+    }
+
+    /** As above. With [soundFromFile], the sound joined is [fallback]'s, not [audio] (#236). */
+    static Job dashJob(Context application, DashManifest.Track video, DashManifest.Track audio,
+            Rendition fallback, DownloadQuality quality, boolean convert, DashManifest.Pick instead,
+            boolean soundFromFile) {
+        boolean asItIs = convert && instead != null && instead.video.url.equals(video.url);
+        DashManifest.Pick otherwise = asItIs ? null : instead;
+        String soundFrom = soundFromFile && fallback != null ? fallback.url : null;
         return (writer, progress) -> {
-            Downloader.Result result = DashSave.save(application, video, audio, writer, policyFor(application), cap(),
-                progress);
-            if (result.ok() || fallback == null || result.status == Downloader.Status.CANCELLED) return result;
+            Downloader.Result result = DashSave.save(application, video, audio, soundFrom, convert, asItIs, writer,
+                policyFor(application), cap(), progress);
+            if (result.ok() || result.status == Downloader.Status.CANCELLED) return result;
+            if (otherwise != null) {
+                failure(() -> "the DASH save ended with " + result + ", saving the tracks as they are: " + otherwise.video
+                    + (otherwise.audio == null ? "" : " + " + otherwise.audio), null);
+                return dashJob(application, otherwise.video, otherwise.audio, fallback, quality).run(writer, progress);
+            }
+            if (fallback == null) return result;
 
             DashManifest.Track better = better(Collections.singletonList(video),
                 RenditionPicker.qualityOf(fallback), quality);

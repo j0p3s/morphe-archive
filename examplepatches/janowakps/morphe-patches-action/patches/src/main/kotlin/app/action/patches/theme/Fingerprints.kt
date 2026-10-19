@@ -5,6 +5,8 @@ import app.morphe.patcher.literal
 import app.morphe.patcher.opcode
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.WideLiteralInstruction
 
 /**
  * Fingerprint matching the static initializer (<clinit>) of the Action app's color palette class.
@@ -37,6 +39,27 @@ object QrCodeBitmapFingerprint : Fingerprint(
         opcode(Opcode.MOVE),
         opcode(Opcode.APUT)
     )
+)
+
+/**
+ * Fingerprint matching the Jetpack Compose Material 3 DropdownMenu composable (g3.l.a).
+ * Matches the containerColor fallback calculation sequence (sget-object, invoke-static, move-result-wide)
+ * and verifies the unique DropdownMenu restart group key (1725609375 / 0x66dd6d3f).
+ */
+object DropdownMenuFingerprint : Fingerprint(
+    name = "a",
+    returnType = "V",
+    filters = listOf(
+        opcode(Opcode.SGET_OBJECT),
+        opcode(Opcode.INVOKE_STATIC),
+        opcode(Opcode.MOVE_RESULT_WIDE)
+    ),
+    custom = { method, _ ->
+        method.implementation?.instructions?.any { instruction ->
+            (instruction as? NarrowLiteralInstruction)?.narrowLiteral == 1725609375 ||
+            (instruction as? WideLiteralInstruction)?.wideLiteral == 1725609375L
+        } == true
+    }
 )
 
 

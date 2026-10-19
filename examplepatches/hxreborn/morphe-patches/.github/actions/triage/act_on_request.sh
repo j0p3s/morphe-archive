@@ -13,7 +13,11 @@ jq -e --argjson n "$n" 'any(.[]; .number == $n and .state == "OPEN")' requests.j
 jq -e --argjson n "$n" '.[] | select(.number == $n) | .labels | map(.name) | index("bot-wrong")' \
   requests.json >/dev/null && exit 0
 jq -r --argjson n "$n" '.[] | select(.number == $n) | .body // ""' requests.json > body.md
-python3 "$here/app_request.py" "$n" body.md requests.json "$list" bundles.json > verdict.json
+previous=$(gh api "repos/$REPO/issues/$n/comments" --paginate \
+  --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- app-request-bot -->"))) | .body | @json' |
+  tail -n 1 | jq -r '. // empty')
+printf '%s' "$previous" > previous.md
+python3 "$here/app_request.py" "$n" body.md requests.json "$list" bundles.json elsewhere previous.md > verdict.json
 verdict=$(jq -r .verdict verdict.json)
 if [ "$verdict" = hold ]; then
   echo "#$n: held while people discuss it"
@@ -22,9 +26,6 @@ fi
 title=$(jq -r .title verdict.json)
 current=$(jq -r --argjson n "$n" '.[] | select(.number == $n) | .title' requests.json)
 jq -j .comment verdict.json > comment.md
-previous=$(gh api "repos/$REPO/issues/$n/comments" --paginate \
-  --jq '.[] | select(.user.login == "github-actions[bot]" and (.body | contains("<!-- app-request-bot -->"))) | .body | @json' |
-  tail -n 1 | jq -r '. // empty')
 if [ -n "$previous" ] && [ ! -s bundles.json ]; then
   echo "#$n: skipped while the bundle registry is unavailable"
   exit 0

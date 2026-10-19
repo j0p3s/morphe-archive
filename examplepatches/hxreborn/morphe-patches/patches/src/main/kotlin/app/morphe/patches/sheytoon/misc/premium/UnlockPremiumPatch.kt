@@ -8,6 +8,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.shared.misc.revenuecat.BuildCustomerInfoFingerprint
+import app.morphe.patches.shared.misc.revenuecat.customerInfoJsonParameter
 import app.morphe.util.getFreeRegisterProvider
 import app.morphe.util.matchSingle
 
@@ -34,7 +35,7 @@ val unlockPremiumPatch = bytecodePatch(
             addInstructions(
                 0,
                 """
-                    move-object/from16 v$jsonRegister, p1
+                    move-object/from16 v$jsonRegister, ${customerInfoJsonParameter()}
                     const-string v$entitlementRegister, "$ENTITLEMENT"
                     const-string v$productRegister, "$PRODUCT"
                     invoke-static { v$jsonRegister, v$entitlementRegister, v$productRegister }, $EXTENSION_CLASS->grantEntitlement(Lorg/json/JSONObject;Ljava/lang/String;Ljava/lang/String;)V

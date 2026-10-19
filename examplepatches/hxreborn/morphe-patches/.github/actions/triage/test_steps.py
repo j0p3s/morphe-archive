@@ -52,7 +52,10 @@ def emit(value):
 issues = state["issues"]
 if args[:2] == ["issue", "list"]:
     emit([{"number": int(n), "title": i["title"], "body": i["body"], "state": i["state"],
-           "labels": [{"name": label} for label in i["labels"]], "comments": []} for n, i in issues.items()])
+           "labels": [{"name": label} for label in i["labels"]], "comments": [],
+           "author": {"login": i.get("author", "requester")}} for n, i in issues.items()])
+elif args[0] == "api" and args[1].startswith("users/"):
+    emit(state["events"].get(args[1].split("/")[1], []))
 elif args[0] == "api":
     _, _, _, _, number, kind = args[1].split("/")
     emit(issues[number][kind])
@@ -106,7 +109,12 @@ def event(kind, actor):
     return {"event": kind, "actor": {"login": actor}}
 
 
-def run(issues, steps, issue_number="", registry=True, fail_on="", event_issue=None, action="edited"):
+def opened(repo, number, title):
+    return {"type": "IssuesEvent", "repo": {"name": repo},
+            "payload": {"action": "opened", "issue": {"number": number, "title": title, "body": ""}}}
+
+
+def run(issues, steps, issue_number="", registry=True, fail_on="", event_issue=None, action="edited", events=None):
     with tempfile.TemporaryDirectory() as temp:
         temp = Path(temp)
         (temp / "bin").mkdir()
@@ -116,7 +124,7 @@ def run(issues, steps, issue_number="", registry=True, fail_on="", event_issue=N
             (temp / "bin" / name).chmod(0o755)
         (temp / "patches-list.json").write_text(json.dumps(PATCHES_LIST))
         (temp / "registry.json").write_text(json.dumps(REGISTRY))
-        (temp / "state.json").write_text(json.dumps({"issues": issues, "calls": []}))
+        (temp / "state.json").write_text(json.dumps({"issues": issues, "calls": [], "events": events or {}}))
         event_issue = event_issue or {}
         (temp / "event.json").write_text(json.dumps({"issue": {
             **event_issue, "labels": [{"name": label} for label in event_issue.get("labels", [])]}}))
@@ -235,6 +243,34 @@ status, issues, mutations = run(issues, SWEEP)
 # then
 check(status == 0 and mutations == [] and "needs info" not in issues["14"]["labels"],
       "a label a person removed is not added back while the comment is unchanged")
+
+# given
+posted = {"15": {**issue("[App Request]: Musicolet", request("Musicolet", "_No response_")), "author": "poster"}}
+elsewhere = {"poster": [opened("other/patches", 1099, "feat: new app [Musicolet]"),
+                        opened("stranger/kodi", 3, "Musicolet support")]}
+
+# when
+status, issues, mutations = run(posted, SWEEP, events=elsewhere)
+
+# then
+check(status == 0 and "other bundle" in issues["15"]["labels"] and len(issues["15"]["comments"]) == 1
+      and "[other/patches#1099](https://github.com/other/patches/issues/1099)" in issues["15"]["comments"][0]["body"]
+      and "stranger/kodi" not in issues["15"]["comments"][0]["body"],
+      "the sweep labels and links a request its author also filed in a listed bundle")
+
+# when
+status, issues, mutations = run(issues, SWEEP, events={})
+
+# then
+check(status == 0 and mutations == [] and "other bundle" in issues["15"]["labels"],
+      "a cross-post that leaves the author's event feed changes nothing")
+
+# when
+status, issues, mutations = run(issues, SWEEP, fail_on="users/poster/events")
+
+# then
+check(status == 0 and mutations == [] and "other bundle" in issues["15"]["labels"],
+      "a flagged request is left alone while its author's other requests cannot be read")
 
 unknown_update = "### App\n\nUnknown\n\n### New version\n\n2.0\n"
 update_payload = {"number": 30, "state": "open", "title": "[App Update]: Unknown 2.0", "body": unknown_update,

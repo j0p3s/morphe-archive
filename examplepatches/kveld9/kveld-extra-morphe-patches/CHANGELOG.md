@@ -1,3 +1,31 @@
+## [1.23.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.23.0...v1.23.1) (2026-10-18)
+
+### Bug Fixes
+
+* **harness:** include source_name and optional keys in update-detector template ([575f284](https://github.com/kveld9/kveld-extra-morphe-patches/commit/575f2843703205863af96794756ab7fa592f5161))
+
+## [1.23.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.22.2...v1.23.0) (2026-10-18)
+
+### Bug Fixes
+
+* **sube:** fail closed when no Firebase endpoint rewrites apply ([a045522](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a045522530294af94b17de7851fc541bc9cb4a35))
+* **sube:** fail closed when no telemetry dispatchers resolve ([06e1aec](https://github.com/kveld9/kveld-extra-morphe-patches/commit/06e1aecb602b213bbab0e1316b6ea0246d452fcf))
+* **sube:** force NFC_NXP_SUPPORTED in both branches of Nfc gate ([2b4c0cd](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2b4c0cdb87ad2b27de2f202ef61f406bc610f121))
+
+### New Features
+
+* **sube:** add NFC antenna check bypass patch ([95236e4](https://github.com/kveld9/kveld-extra-morphe-patches/commit/95236e44e4f4b7720a7180240482ab27e59f3df7))
+* **sube:** add opt-in kill switch that severs Firebase entirely ([3116a4e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/3116a4ee5de0b2857a0c3cdb17b4ca6f08368fe2))
+* **sube:** block tracking and analytics in SUBE ([cf2b46f](https://github.com/kveld9/kveld-extra-morphe-patches/commit/cf2b46f6a2d0e23ebab00854e92ba0e3b1e6a069))
+* **sube:** register SUBE in upstream update detector ([abf2bbb](https://github.com/kveld9/kveld-extra-morphe-patches/commit/abf2bbb84e8c51cf9bd38914c1b2baed688e4809))
+
+## [1.22.2](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.22.1...v1.22.2) (2026-10-18)
+
+### Bug Fixes
+
+* **hevy:** narrow battery-patch manifest edits ([f150d46](https://github.com/kveld9/kveld-extra-morphe-patches/commit/f150d46eb3260b76508a94c5ae0f185f0553bceb))
+* **hevy:** report why a bundle failed the Hermes HBC96 check ([2425a00](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2425a008284cc647a73a4d4ff859182364ab62a6))
+
 ## [1.22.2](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.22.1...v1.22.2) (2026-10-18)
 
 ### Bug Fixes

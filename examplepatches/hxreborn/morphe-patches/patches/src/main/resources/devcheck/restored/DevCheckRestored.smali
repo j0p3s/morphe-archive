@@ -2938,7 +2938,7 @@
 
     check-cast p1, Lstub/RootServiceManager;
 
-    sget-object v0, Lstub/RootServiceKeys;->intentBundle:Ljava/lang/String;
+    const-string v0, "extra.bundle"
 
     invoke-virtual {p2, v0}, Landroid/content/Intent;->getBundleExtra(Ljava/lang/String;)Landroid/os/Bundle;
 

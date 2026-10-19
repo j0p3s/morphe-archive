@@ -114,6 +114,11 @@ class ReleaseTextTest(unittest.TestCase):
         self.assertIn("The latest release is [v0.0.12]", readme)
         self.assertEqual(self.read(release_text.USER_AGENT_TEST).count("HushThreads/0.0.13"), 2)
 
+    def test_cut_moves_a_user_agent_an_earlier_release_left_behind(self):
+        self.write(release_text.USER_AGENT_TEST, USER_AGENT.replace("0.0.12", "0.0.11"))
+        self.run_command(release_text.cut, version="0.0.13", date="2026-10-09")
+        self.assertEqual(self.read(release_text.USER_AGENT_TEST).count("HushThreads/0.0.13"), 2)
+
     def test_cut_refuses_what_manager_would_misread_and_writes_nothing(self):
         for bad, needle in (("* **Threads:** Hide the Instagram", "- **Threads:** Hide the Instagram"),
                             ("* **Threads:** Hide the Instagram", "* **Feed:** Hide the Instagram"),
@@ -244,8 +249,17 @@ class ReleaseTextTest(unittest.TestCase):
         self.run_command(release_text.description, version="0.0.13", current=str(self.root / "current.txt"), out=str(out))
         self.assertEqual(out.read_text(encoding="utf-8"),
                          "HushThreads v0.0.13: ads out of Threads, 2 patches for Threads 450.0.0.51.78.\n")
-        self.write("current.txt", "A patch bundle for Threads.\n")
+        self.write("current.txt", "A patch bundle with 17 patches for Threads.\n")
         self.refused(release_text.description, "in this shape", version="0.0.13",
+                     current=str(self.root / "current.txt"), out=str(out))
+
+    def test_description_that_names_no_facts_stays_as_written(self):
+        out = self.root / "description.txt"
+        self.write("current.txt", "HushThreads patches that take the ads out of your Threads feed.\n")
+        self.run_command(release_text.description, version="0.0.13", current=str(self.root / "current.txt"), out=str(out))
+        self.assertEqual(out.read_text(encoding="utf-8"), "HushThreads patches that take the ads out of your Threads feed.\n")
+        self.write("current.txt", "HushThreads patches — no ads.\n")
+        self.refused(release_text.description, "dash", version="0.0.13",
                      current=str(self.root / "current.txt"), out=str(out))
 
 

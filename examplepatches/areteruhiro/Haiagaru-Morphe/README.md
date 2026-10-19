@@ -10,9 +10,9 @@ ChMate `0.8.10.191 dev` / `0.8.10.226 dev` / `0.8.10.242 dev` 対応のMorpheパ
 ChMateに追加設定・閲覧・メディア・バックアップ機能を組み込むパッチです。
 従来の機能紹介は [Haiagaru](https://github.com/areteruhiro/Haiagaru) も参照してください。
 
-最新正式版: [1.7.1](https://github.com/areteruhiro/Haiagaru-Morphe/releases/latest) ／ 最新プレ版: [1.8.15](https://github.com/areteruhiro/Haiagaru-Morphe/releases/tag/1.8.15)
+最新正式版: [1.9.3](https://github.com/areteruhiro/Haiagaru-Morphe/releases/latest) ／ プレ版の取得先も同じ [1.9.3](https://github.com/areteruhiro/Haiagaru-Morphe/releases/tag/1.9.3)
 
-以下の機能紹介にはプレ版で追加した機能も含みます。正式版1.7.1ですべての機能が使えるわけではありません。
+更新前にバックアップしてください。**[正式版1.7.1からの変更](docs/release-1.9.0-from-1.7.1.md)** ／ **[プレ版1.8.15からの差分・操作案内](docs/release-1.9.0.md)**。versionCode最大化が初期有効です。
 
 更新履歴: [CHANGELOG.md](CHANGELOG.md)  
 操作案内: [使い方.md](使い方.md)
@@ -26,12 +26,20 @@ Cookieエラー、ワッチョイ検索、画像一覧、高度なNGなどを案
 
 ## 最新版の案内
 
+**1.9.3:** [修正内容・操作案内・確認範囲](docs/release-1.9.3.md)。コピペ省略2の設定変更後の反映、追加ツールバーアイコンの表示チェック、ローカルバックアップの保存先表示・復元項目を修正。
+
+**1.9.2:** [DAT落ちスレを非表示の修正・操作案内](docs/release-1.9.2.md)。フラグ未更新時の公式過去ログ確認、HOME一覧への反映、オフ時の表示復元を改善。
+
+**1.9.1:** [エッヂの投稿ID・ワッチョイ上／下4桁検索](docs/release-1.9.1.md)。スレ名・レス本文との組み合わせ、バックグラウンド・履歴にも対応。通知から戻った際の検索キーワード消失も修正。
+
+**1.9.0:** [1.8.15からの差分・操作案内・確認範囲](docs/release-1.9.0.md)。KyodemoのエッヂID・レス本文検索、通信回数上限、表示設定・ジェスチャー、動画サムネイル等を統合しました。
+
 1.8.11: [アーカイブの元スレURL確認・コピー](docs/archive-original-url.md)。アーカイブ一覧またはHaiagaru設定の「過去ログ・エッヂ検索」から確認でき、元URL情報もスレアーカイブと一緒にMEGA／ローカルへバックアップできます。
 
 1.8.11: [コピー履歴・分類](docs/clipboard-history.md)。Haiagaru設定の「履歴・保存件数」または書き込み画面の︙から、ChMate内でコピーした本文を検索・再コピー・カテゴリ分けできます。記録は初期オフ、最新100件まで。他アプリのコピーは収集しません。
-正式版 `1.7.1` の概要: [1.7.1の更新内容](release-notes-1.7.1.md)
+正式版 `1.9.0` の概要: [1.7.1からの追加機能・注意事項](docs/release-1.9.0-from-1.7.1.md)
 
-プレ版 `1.8.15` の概要: [1.8.14からの更新内容・注意事項](docs/release-1.8.15.md)。[★スレタブ](docs/favorite-threads.md)、投稿者ごとの強調色、[ローカル自動バックアップ](docs/local-auto-backup.md)、コピー・アンカー操作、巡回ボタン・外部板検索・アイコンの改善を含みます。
+旧プレ版 `1.8.15` の概要: [1.8.14からの更新内容・注意事項](docs/release-1.8.15.md)。[★スレタブ](docs/favorite-threads.md)、投稿者ごとの強調色、[ローカル自動バックアップ](docs/local-auto-backup.md)、コピー・アンカー操作、巡回ボタン・外部板検索・アイコンの改善を含みます。
 
 ## 主な機能
 
@@ -58,7 +66,7 @@ Cookieエラー、ワッチョイ検索、画像一覧、高度なNGなどを案
 * エッヂ過去ログビューアーで開けない場合はエラーコードを表示し、`Download/Haiagaru` に診断ログを保存
 * ChMate `0.8.10.191 dev`／`0.8.10.226 dev` のChMate+互換設定
   * 単発ID表示を省略
-  * コピペ省略2　<191でコピペ省略が機能していないとの報告があります>
+  * [コピペ省略2](docs/chmate-plus-compat.md)（変更後に再起動して反映。標準の判定条件を使用）
   * 荒らし省略
 * エッヂ板でスレタイ末尾に記者IDを表示（初期値ON、Haiagaru設定から切り替え）
 * 端末内JavaScriptで複雑なNG条件を作れる「高度なNGルール」
@@ -182,25 +190,22 @@ https://github.com/areteruhiro/Haiagaru-Morphe/
 
 [MorpheへHaiagaruを追加](https://morphe.software/add-source?github=areteruhiro/Haiagaru-Morphe&name=Haiagaru)
 
-通常版URLは正式版 `1.7.1`、プレ版用URLは `1.8.9` を取得します。
-配布物はAndroid拡張を内包したMPPです。
+通常版は`master/patches-bundle.json`、プレリリースは`dev/patches-bundle.json`から取得します。
+配布物はAndroid拡張を内包したMPPです。リリースと生成メタデータはMorphe公式テンプレート準拠のSemantic Release CIで更新します。
 
-現在の正式版（1.7.1）を取得するパッチソースです。
+正式版を取得するパッチソースです。
 
 ```text
 https://raw.githubusercontent.com/areteruhiro/Haiagaru-Morphe/master/patches-bundle.json
 ```
 
-プレ版 `1.8.9` を取得するパッチソースです。
+プレリリースを有効にしたリポジトリソースは、`dev`ブランチのメタデータを取得します。
 
 ```text
-https://raw.githubusercontent.com/areteruhiro/Haiagaru-Morphe/master/patches-bundle-pre.json
+https://raw.githubusercontent.com/areteruhiro/Haiagaru-Morphe/dev/patches-bundle.json
 ```
 
-通常版とプレリリース版は別々に更新します。同じバージョン内で修正版を配布する場合は、
-URV Manager / Morphe Managerが更新を検出できるようにJSON上の配布リビジョンを更新します。
-更新が表示されない場合は、パッチソース画面から手動で更新を実行してください。
-Morpheで「プレリリース」を有効にしたリポジトリソースは、`dev/patches-bundle.json`を参照する場合もあります。この取得先も1.8.9に揃えています。GitHubの配信キャッシュにより反映に数分かかる場合があります。
+正式版は`master`、プレリリースは`dev`のSemantic Releaseが更新します。生成されるJSONやCHANGELOGを手作業で編集・公開しないでください。更新が表示されない場合はパッチソース画面から再読み込みしてください。GitHubの配信キャッシュにより反映に数分かかる場合があります。
 変更履歴で「このリリースは空です」と出る場合は、Morphe Managerも最新版へ更新してください。
 
 ## 更新履歴

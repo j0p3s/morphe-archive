@@ -14,20 +14,18 @@ import app.morphe.patcher.resource.ResourceType
 import app.morphe.patcher.resource.resourceId
 import app.morphe.patcher.util.proxy.mutableTypes.MutableClass
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
-import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
+import app.morphe.patches.shared.misc.generated.addDefaultConstructor
 import app.morphe.patches.shared.misc.generated.assembleDex
 import app.morphe.patches.shared.misc.generated.descriptor
 import app.morphe.patches.shared.misc.pairip.removePairipVirtualizationPatch
 import app.morphe.util.inputStreamFromBundledResource
 import app.morphe.util.matchSingle
 import com.android.tools.smali.dexlib2.AccessFlags
-import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation
 import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
-import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
 import java.io.ByteArrayInputStream
 import java.util.function.Supplier
 
@@ -338,8 +336,6 @@ private fun BytecodePatchContext.resolveStubs(): Pair<Map<String, String>, Map<M
         "connection" to "Landroid/content/ServiceConnection;",
     ).forEach { (name, type) -> field("BindTask", name, type, pendingBind) }
 
-    member("RootServiceKeys", "intentBundle:Ljava/lang/String;", descriptor(RootServiceBundleKeyFingerprint.matchSingle().field(1)))
-
     val rootServiceReceiver = rootServiceReceiverConstructorFingerprint(rootServiceManager.type).matchSingle()
     classes[stub("RootServiceReceiver")] = rootServiceReceiver.classDef.type
     field("RootServiceReceiver", "mode", "B", rootServiceReceiver.field(0))
@@ -366,24 +362,6 @@ private fun BytecodePatchContext.resolveStubs(): Pair<Map<String, String>, Map<M
         receiver(hardwareReceiver.classDef.type) to "hardwareReceive",
     )
     return (members + classes) to virtualizedMethods
-}
-
-private fun MutableClass.addDefaultConstructor() {
-    if (methods.any { it.name == "<init>" && it.parameterTypes.isEmpty() }) return
-    methods.add(
-        ImmutableMethod(
-            type,
-            "<init>",
-            emptyList(),
-            "V",
-            AccessFlags.PUBLIC.value or AccessFlags.CONSTRUCTOR.value,
-            null,
-            null,
-            MutableMethodImplementation(1),
-        ).toMutable().apply {
-            addInstructions(0, "invoke-direct {p0}, Ljava/lang/Object;-><init>()V\nreturn-void")
-        },
-    )
 }
 
 private val stringResourceRead = Regex("""sget ([vp]\d+), Lstub/StringRes;->(\w+):I""")

@@ -10,6 +10,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.intOption
+import app.morphe.patcher.patch.filePathOption
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
@@ -56,16 +57,18 @@ val changeChMatePackageNamePatch = resourcePatch(
         description = "Launcher name for the separately installed app. Leave empty to keep the original name.",
     )
 
-    val appIconOption = stringOption(
+    val appIconOption = filePathOption(
         key = "appIcon",
         title = "App icon",
-        description = "Path to a PNG or WebP launcher icon. Leave empty to keep the original icon.",
+        description = "PNG or WebP launcher icon file path (not a folder). Leave empty to keep the original icon.",
+        allowedExtensions = listOf("png", "webp"),
     )
 
     val versionCodeOption = intOption(
         key = "versionCode",
+        default = 2_100_000_000,
         title = "Version code",
-        description = "Positive integer from 1 to 2100000000. Leave unset to keep the original version code.",
+        description = "Defaults to the maximum Android distribution version code (2100000000). Allows switching between supported ChMate versions when package and signing key match. A lower-code APK cannot normally overwrite it. Clear to keep the original version code. Does not add support for unsupported versions.",
     ) { value ->
         value == null || value in 1..2_100_000_000
     }
@@ -163,6 +166,18 @@ val changeChMatePackageNamePatch = resourcePatch(
 
     finalize {
         val newPackageName = packageNameOption.value!!
+        // Haiagaru can append preference intents after this patch's execute phase.
+        // Include those late entries, not only shortcuts that existed in the input APK.
+        get("res").walkTopDown()
+            .filter { it.isFile && it.extension.equals("xml", ignoreCase = true) }
+            .forEach { resource ->
+                val original = resource.readText()
+                val rewritten = original.replace(
+                    "android:targetPackage=\"$ORIGINAL_PACKAGE_NAME\"",
+                    "android:targetPackage=\"$newPackageName\"",
+                )
+                if (rewritten != original) resource.writeText(rewritten)
+            }
         document("AndroidManifest.xml").use { document ->
             document.getElementsByTagName("*")
                 .asSequence()

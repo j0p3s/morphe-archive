@@ -54,10 +54,11 @@ public final class MaterialSwitchView {
 
     private static void applyStyleIfColorChanged(Switch control, int primaryColor) {
         final Context context = control.getContext();
-        final Integer color = (primaryColor != 0) ? primaryColor
-                : AccentColor.getAccentColor(PatchesTheme.isNightMode(context));
-        if (!color.equals(control.getTag())) {
-            control.setTag(color);
+        final boolean night = PatchesTheme.isAppNightMode(context);
+        final int color = (primaryColor != 0) ? primaryColor : AccentColor.getAccentColor(night);
+        final Long styleKey = ((long) color << 1) | (night ? 1 : 0);
+        if (!styleKey.equals(control.getTag())) {
+            control.setTag(styleKey);
             SwitchStyle.apply(control, color);
         }
     }

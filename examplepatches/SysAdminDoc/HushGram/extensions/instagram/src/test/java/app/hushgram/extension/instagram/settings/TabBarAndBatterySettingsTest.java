@@ -14,6 +14,7 @@ import android.preference.SwitchPreference;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 
@@ -29,6 +30,7 @@ import org.robolectric.android.controller.ActivityController;
 import org.robolectric.annotation.Config;
 import org.robolectric.shadows.ShadowLooper;
 
+import app.hushgram.extension.instagram.misc.GlassCorners;
 import app.hushgram.extension.instagram.misc.GlassHeight;
 import app.hushgram.extension.instagram.misc.GlassLift;
 import app.hushgram.extension.instagram.misc.GlassOpacity;
@@ -78,6 +80,7 @@ public class TabBarAndBatterySettingsTest {
         Settings.GLASS_TAB_BAR_HAPTIC_STYLE.resetToDefault();
         Settings.GLASS_TAB_BAR_OPACITY.resetToDefault();
         Settings.GLASS_TAB_BAR_HEIGHT.resetToDefault();
+        Settings.GLASS_TAB_BAR_CORNERS.resetToDefault();
         Settings.GLASS_TAB_BAR_LIFT.resetToDefault();
         Settings.GLASS_TAB_BAR_REELS_HIDE.resetToDefault();
         Settings.GLASS_TAB_BAR_FLOAT.resetToDefault();
@@ -103,7 +106,7 @@ public class TabBarAndBatterySettingsTest {
     @Test public void withoutThePatchesNoneOfTheirRowsShow() throws Exception {
         open();
         for (String key : List.of(Settings.GLASS_TAB_BAR.key, Settings.GLASS_TAB_BAR_HAPTIC_STYLE.key, Settings.GLASS_TAB_BAR_OPACITY.key, Settings.GLASS_TAB_BAR_HEIGHT.key,
-                Settings.GLASS_TAB_BAR_LIFT.key, Settings.GLASS_TAB_BAR_REELS_HIDE.key, Settings.SAVED_ON_PROFILE.key, Settings.STOP_HEARTBEAT.key,
+                Settings.GLASS_TAB_BAR_CORNERS.key, Settings.GLASS_TAB_BAR_LIFT.key, Settings.GLASS_TAB_BAR_REELS_HIDE.key, Settings.SAVED_ON_PROFILE.key, Settings.STOP_HEARTBEAT.key,
                 Settings.STOP_UPLOAD_ALARM.key)) {
             assertNull(key, row(key));
         }
@@ -169,6 +172,49 @@ public class TabBarAndBatterySettingsTest {
         assertEquals("Tall", String.valueOf(height.getSummary()));
         assertTrue(ConfigurationBackup.eligible().containsKey(Settings.GLASS_TAB_BAR_OPACITY.key));
         assertTrue(ConfigurationBackup.eligible().containsKey(Settings.GLASS_TAB_BAR_HEIGHT.key));
+    }
+
+    /**
+     * Tab bar corners (#144) is a list right after Tab bar height, starting on the corners the bar has always
+     * had, backed up, and a pick waits on a restart. It rests while the liquid look, always fully round, is on.
+     */
+    @Test public void tabBarCornersFollowTheHeightAndRestUnderTheLiquidLook() throws Exception {
+        open(PatchFamily.GLASS_TAB_BAR);
+        Preference found = row(Settings.GLASS_TAB_BAR_CORNERS.key);
+        assertTrue(found instanceof HushgramPreferenceFragment.GlassCornersRow);
+        HushgramPreferenceFragment.GlassCornersRow corners = (HushgramPreferenceFragment.GlassCornersRow) found;
+        assertEquals("Tab bar corners", String.valueOf(corners.getTitle()));
+        PreferenceGroup section = sectionOf(page.getPreferenceScreen(), corners);
+        assertEquals("Tab bar", String.valueOf(section.getTitle()));
+        int heightAt = -1;
+        int cornersAt = -1;
+        for (int i = 0; i < section.getPreferenceCount(); i++) {
+            String key = section.getPreference(i).getKey();
+            if (Settings.GLASS_TAB_BAR_HEIGHT.key.equals(key)) heightAt = i;
+            if (Settings.GLASS_TAB_BAR_CORNERS.key.equals(key)) cornersAt = i;
+        }
+        assertEquals("right after Tab bar height", heightAt + 1, cornersAt);
+        List<String> entries = new ArrayList<>();
+        for (CharSequence entry : corners.getEntries()) entries.add(String.valueOf(entry));
+        assertEquals(Arrays.asList("Standard", "Rounder", "Fully round"), entries);
+        assertEquals("STANDARD", corners.getValue());
+        assertEquals("Standard", String.valueOf(corners.getSummary()));
+        assertTrue(Settings.GLASS_TAB_BAR_CORNERS.rebootApp);
+        corners.setValue("ROUND");
+        ShadowLooper.idleMainLooper();
+        assertEquals(GlassCorners.ROUND, Settings.GLASS_TAB_BAR_CORNERS.savedValue());
+        assertEquals("Fully round", String.valueOf(corners.getSummary()));
+        assertTrue(AbstractPreferenceFragment.restartPending.contains(Settings.GLASS_TAB_BAR_CORNERS.key));
+        assertTrue(ConfigurationBackup.eligible().containsKey(Settings.GLASS_TAB_BAR_CORNERS.key));
+
+        Settings.GLASS_TAB_BAR.save(true);
+        assertTrue(Settings.GLASS_TAB_BAR_CORNERS.isAvailable());
+        Settings.GLASS_TAB_BAR_LIQUID.save(true);
+        assertFalse("the liquid look is always round", Settings.GLASS_TAB_BAR_CORNERS.isAvailable());
+        Settings.GLASS_TAB_BAR_LIQUID.save(false);
+        Settings.GLASS_TAB_BAR.save(false);
+        assertFalse("no glass, no corners to pick", Settings.GLASS_TAB_BAR_CORNERS.isAvailable());
+        assertEquals(Collections.singletonList(Settings.GLASS_TAB_BAR), Settings.GLASS_TAB_BAR_CORNERS.getParentSettings());
     }
 
     /**
@@ -273,35 +319,36 @@ public class TabBarAndBatterySettingsTest {
     }
 
     /**
-     * Slide across the tabs (#136) is a switch right after Blur behind the tab bar, off to start, offered with
-     * the glass bar, backed up, and read as the bar is built, so it asks for a restart. Pause turns it off.
+     * Slide across the tabs (#136) is a switch right before Glass tab bar, since Instagram's own bar slides too
+     * (#201), off to start, offered with or without the glass, backed up, and read as the bar is built, so it
+     * asks for a restart. Pause turns it off.
      */
-    @Test public void slideAcrossTheTabsStartsOffAfterTheBlurAndAsksForARestart() throws Exception {
+    @Test public void slideAcrossTheTabsStartsOffBeforeTheGlassAndAsksForARestart() throws Exception {
         open(PatchFamily.GLASS_TAB_BAR);
         SwitchPreference slide = (SwitchPreference) row(Settings.GLASS_TAB_BAR_SLIDE.key);
         assertNotNull(slide);
         assertEquals("Slide across the tabs", String.valueOf(slide.getTitle()));
-        assertEquals("Put a finger on the pill and slide it sideways. The highlight follows your finger, and letting go "
-                + "opens the tab under it. Taps and long presses on a tab work as before. Restart Instagram after "
-                + "changing it.", String.valueOf(slide.getSummary()));
+        assertEquals("Put a finger on the tab bar and slide it sideways. A highlight follows your finger, and letting "
+                + "go opens the tab under it. Taps and long presses on a tab work as before. It works with or without "
+                + "Glass tab bar. Restart Instagram after changing it.", String.valueOf(slide.getSummary()));
         assertFalse(slide.isChecked());
         assertFalse(Settings.GLASS_TAB_BAR_SLIDE.defaultValue);
         assertTrue(Settings.GLASS_TAB_BAR_SLIDE.rebootApp);
         PreferenceGroup section = sectionOf(page.getPreferenceScreen(), slide);
         assertEquals("Tab bar", String.valueOf(section.getTitle()));
-        int blurAt = -1;
         int slideAt = -1;
+        int glassAt = -1;
         for (int i = 0; i < section.getPreferenceCount(); i++) {
             String key = section.getPreference(i).getKey();
-            if (Settings.GLASS_TAB_BAR_BLUR.key.equals(key)) blurAt = i;
             if (Settings.GLASS_TAB_BAR_SLIDE.key.equals(key)) slideAt = i;
+            if (Settings.GLASS_TAB_BAR.key.equals(key)) glassAt = i;
         }
-        assertTrue(blurAt >= 0);
-        assertEquals("right after Blur behind the tab bar", blurAt + 1, slideAt);
+        assertTrue(glassAt >= 0);
+        assertEquals("right before Glass tab bar", glassAt - 1, slideAt);
         assertTrue(ConfigurationBackup.eligible().containsKey(Settings.GLASS_TAB_BAR_SLIDE.key));
 
         Settings.GLASS_TAB_BAR.save(false);
-        assertFalse("no glass bar, no highlight to slide", Settings.GLASS_TAB_BAR_SLIDE.isAvailable());
+        assertTrue("Instagram's own bar slides too", Settings.GLASS_TAB_BAR_SLIDE.isAvailable());
         Settings.GLASS_TAB_BAR.save(true);
         assertTrue(Settings.GLASS_TAB_BAR_SLIDE.isAvailable());
 
@@ -314,10 +361,10 @@ public class TabBarAndBatterySettingsTest {
     }
 
     /**
-     * The liquid glass look (#65) is a switch right after Slide across the tabs, off to start, offered with the
+     * The liquid glass look (#65) is a switch right after Blur behind the tab bar, off to start, offered with the
      * glass bar, backed up, and read as the bar is built, so it asks for a restart. Pause turns it off.
      */
-    @Test public void theLiquidLookStartsOffAfterTheSlideAndAsksForARestart() throws Exception {
+    @Test public void theLiquidLookStartsOffAfterTheBlurAndAsksForARestart() throws Exception {
         open(PatchFamily.GLASS_TAB_BAR);
         SwitchPreference liquid = (SwitchPreference) row(Settings.GLASS_TAB_BAR_LIQUID.key);
         assertNotNull(liquid);
@@ -330,15 +377,15 @@ public class TabBarAndBatterySettingsTest {
         assertTrue(Settings.GLASS_TAB_BAR_LIQUID.rebootApp);
         PreferenceGroup section = sectionOf(page.getPreferenceScreen(), liquid);
         assertEquals("Tab bar", String.valueOf(section.getTitle()));
-        int slideAt = -1;
+        int blurAt = -1;
         int liquidAt = -1;
         for (int i = 0; i < section.getPreferenceCount(); i++) {
             String key = section.getPreference(i).getKey();
-            if (Settings.GLASS_TAB_BAR_SLIDE.key.equals(key)) slideAt = i;
+            if (Settings.GLASS_TAB_BAR_BLUR.key.equals(key)) blurAt = i;
             if (Settings.GLASS_TAB_BAR_LIQUID.key.equals(key)) liquidAt = i;
         }
-        assertTrue(slideAt >= 0);
-        assertEquals("right after Slide across the tabs", slideAt + 1, liquidAt);
+        assertTrue(blurAt >= 0);
+        assertEquals("right after Blur behind the tab bar", blurAt + 1, liquidAt);
         assertTrue(ConfigurationBackup.eligible().containsKey(Settings.GLASS_TAB_BAR_LIQUID.key));
 
         Settings.GLASS_TAB_BAR.save(false);
@@ -381,7 +428,7 @@ public class TabBarAndBatterySettingsTest {
      */
     @Test public void theGlassChoicesAskForARestart() throws Exception {
         for (Setting<?> setting : List.<Setting<?>>of(Settings.GLASS_TAB_BAR_OPACITY, Settings.GLASS_TAB_BAR_HEIGHT,
-                Settings.GLASS_TAB_BAR_LIFT, Settings.GLASS_TAB_BAR_REELS_HIDE)) {
+                Settings.GLASS_TAB_BAR_CORNERS, Settings.GLASS_TAB_BAR_LIFT, Settings.GLASS_TAB_BAR_REELS_HIDE)) {
             assertTrue(setting.key, setting.rebootApp);
         }
         open(PatchFamily.GLASS_TAB_BAR);

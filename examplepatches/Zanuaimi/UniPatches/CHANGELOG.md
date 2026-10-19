@@ -1,3 +1,54 @@
+## [1.33.3](https://github.com/Zanuaimi/UniPatches/compare/v1.33.2...v1.33.3) (2026-10-19)
+
+### 🐛 Bug Fixes
+
+* **compatibility:** Fix XML patch error ([7be85e0](https://github.com/Zanuaimi/UniPatches/commit/7be85e03103bb249206a1d959c2bf2ea4b747ad9))
+
+## [1.33.2](https://github.com/Zanuaimi/UniPatches/compare/v1.33.1...v1.33.2) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* **compatibility:** Fix Embed Obb / Bypass Downloader patch error ([6fbcc5e](https://github.com/Zanuaimi/UniPatches/commit/6fbcc5e50d076fc3810e742d5ac0bc40a26dd228))
+
+## [1.33.1](https://github.com/Zanuaimi/UniPatches/compare/v1.33.0...v1.33.1) (2026-10-18)
+
+### 🐛 Bug Fixes
+
+* fix resourcePatch patch error in compatibility patch ([4e90567](https://github.com/Zanuaimi/UniPatches/commit/4e9056733d627ec0454a6dc5be1b8c07e4a282e8))
+
+## [1.33.0](https://github.com/Zanuaimi/UniPatches/compare/v1.32.0...v1.33.0) (2026-10-18)
+
+### ✨ New Features
+
+* **compatibility:** Add new patch options ([7c5a45d](https://github.com/Zanuaimi/UniPatches/commit/7c5a45ddb70fa7bc7bdccb19543a6b819a6195d4))
+
+### 🔧 Improvements
+
+* **compatibility:** Improve download manager bypass, and fix licensing intent ([249bd17](https://github.com/Zanuaimi/UniPatches/commit/249bd17c553785669c43fdb04171f9928938f029))
+* **compatibility:** Replace hardocded solutions ( was for gun bros 2 ) with generic solutions, and fix licensing crash, and update README ([f6afe01](https://github.com/Zanuaimi/UniPatches/commit/f6afe0118088d2558a65f8ed065f62e3ce8355fc))
+
+## [1.33.0-dev.2](https://github.com/Zanuaimi/UniPatches/compare/v1.33.0-dev.1...v1.33.0-dev.2) (2026-10-18)
+
+### 🔧 Improvements
+
+* **compatibility:** Replace hardocded solutions ( was for gun bros 2 ) with generic solutions, and fix licensing crash, and update README ([f6afe01](https://github.com/Zanuaimi/UniPatches/commit/f6afe0118088d2558a65f8ed065f62e3ce8355fc))
+
+## [1.33.0-dev.1](https://github.com/Zanuaimi/UniPatches/compare/v1.32.0...v1.33.0-dev.1) (2026-10-17)
+
+### ✨ New Features
+
+* **compatibility:** Add new patch options ([7c5a45d](https://github.com/Zanuaimi/UniPatches/commit/7c5a45ddb70fa7bc7bdccb19543a6b819a6195d4))
+
+### 🔧 Improvements
+
+* **compatibility:** Improve download manager bypass, and fix licensing intent ([249bd17](https://github.com/Zanuaimi/UniPatches/commit/249bd17c553785669c43fdb04171f9928938f029))
+
+## [1.32.1-dev.1](https://github.com/Zanuaimi/UniPatches/compare/v1.32.0...v1.32.1-dev.1) (2026-10-16)
+
+### 🔧 Improvements
+
+* **compatibility:** Improve download manager bypass, and fix licensing intent ([249bd17](https://github.com/Zanuaimi/UniPatches/commit/249bd17c553785669c43fdb04171f9928938f029))
+
 ## [1.32.0](https://github.com/Zanuaimi/UniPatches/compare/v1.31.2...v1.32.0) (2026-10-15)
 
 ### 🐛 Bug Fixes

@@ -27,6 +27,10 @@ public final class Settings {
     public static final BooleanSetting HIDE_SUBSCRIPTION_PROMOTIONS =
             new BooleanSetting("hide_subscription_promotions", false);
 
+    /** Hide Twitch channel extensions, their entry points, and their panel/overlay surfaces. */
+    public static final BooleanSetting HIDE_STREAM_EXTENSIONS =
+            new BooleanSetting("hide_stream_extensions", true);
+
     /** Hide Twitch's Go Ad-Free/Turbo control in the Following feed. */
     public static final BooleanSetting HIDE_TURBO_UPSELL =
             new BooleanSetting("hide_turbo_upsell", true);
@@ -91,6 +95,8 @@ public final class Settings {
             new BooleanSetting("emotes_picker", true);
     public static final BooleanSetting EMOTES_AUTOCOMPLETE =
             new BooleanSetting("emotes_autocomplete", true);
+    public static final BooleanSetting EMOTES_TAP_PREVIEW =
+            new BooleanSetting("emotes_tap_preview", true);
     public static final BooleanSetting EMOTES_ZERO_WIDTH =
             new BooleanSetting("emotes_zero_width", true);
 
@@ -176,3 +182,4 @@ public final class Settings {
     private Settings() {
     }
 }
+
