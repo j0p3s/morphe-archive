@@ -2491,14 +2491,6 @@
                 "updatedAt": 1791348287038
             },
             {
-                "name": "anghamiplus-patches",
-                "source": "https://raw.githubusercontent.com/Kero309x/anghamiplus-patches/main/patches-bundle.json",
-                "autoUpdate": true,
-                "sortOrder": 340,
-                "createdAt": 1791348288597,
-                "updatedAt": 1791348288597
-            },
-            {
                 "name": "walmart-morphe",
                 "source": "https://raw.githubusercontent.com/R2bEEaton/walmart-morphe/main/patches-bundle.json",
                 "autoUpdate": true,
@@ -3137,6 +3129,22 @@
                 "sortOrder": 425,
                 "createdAt": 1792217146128,
                 "updatedAt": 1792217146128
+            },
+            {
+                "name": "vibe-patches",
+                "source": "https://raw.githubusercontent.com/0xtalos/vibe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 426,
+                "createdAt": 1792384939246,
+                "updatedAt": 1792384939246
+            },
+            {
+                "name": "kveld-extra-morphe-patches",
+                "source": "https://raw.githubusercontent.com/kveld9/kveld-extra-morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 427,
+                "createdAt": 1792384948883,
+                "updatedAt": 1792384948883
             }
         ]
     }
