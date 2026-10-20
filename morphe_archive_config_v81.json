@@ -3145,6 +3145,102 @@
                 "sortOrder": 427,
                 "createdAt": 1792384948883,
                 "updatedAt": 1792384948883
+            },
+            {
+                "name": "morphe-patches",
+                "source": "https://raw.githubusercontent.com/Nezumi-2711/morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 428,
+                "createdAt": 1792469972321,
+                "updatedAt": 1792469972321
+            },
+            {
+                "name": "tracket-patches",
+                "source": "https://raw.githubusercontent.com/contactjayclatty/tracket-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 429,
+                "createdAt": 1792469978459,
+                "updatedAt": 1792469978459
+            },
+            {
+                "name": "cinemaniac-patches",
+                "source": "https://raw.githubusercontent.com/danieleavolio/cinemaniac-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 430,
+                "createdAt": 1792469979104,
+                "updatedAt": 1792469979104
+            },
+            {
+                "name": "column-patches",
+                "source": "https://raw.githubusercontent.com/danieleavolio/column-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 431,
+                "createdAt": 1792469979621,
+                "updatedAt": 1792469979621
+            },
+            {
+                "name": "morphe-patches",
+                "source": "https://raw.githubusercontent.com/dieroboter/morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 432,
+                "createdAt": 1792469980339,
+                "updatedAt": 1792469980339
+            },
+            {
+                "name": "morphe-patches",
+                "source": "https://raw.githubusercontent.com/fynnaly/morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 433,
+                "createdAt": 1792469982416,
+                "updatedAt": 1792469982416
+            },
+            {
+                "name": "universal-captions",
+                "source": "https://raw.githubusercontent.com/itolkien/universal-captions/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 434,
+                "createdAt": 1792469985107,
+                "updatedAt": 1792469985107
+            },
+            {
+                "name": "pdb_patch",
+                "source": "https://raw.githubusercontent.com/madushas/pdb_patch/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 435,
+                "createdAt": 1792469986393,
+                "updatedAt": 1792469986393
+            },
+            {
+                "name": "kodex-patches",
+                "source": "https://raw.githubusercontent.com/sabbirexist/kodex-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 436,
+                "createdAt": 1792469988653,
+                "updatedAt": 1792469988653
+            },
+            {
+                "name": "vanta-surf-morphe-patches",
+                "source": "https://raw.githubusercontent.com/vitorhubdev/vanta-surf-morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 437,
+                "createdAt": 1792469990698,
+                "updatedAt": 1792469990698
+            },
+            {
+                "name": "morphe-patches",
+                "source": "https://raw.githubusercontent.com/wonjoonSeol-WS/morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 438,
+                "createdAt": 1792469991806,
+                "updatedAt": 1792469991806
+            },
+            {
+                "name": "morphe-tver-patch",
+                "source": "https://raw.githubusercontent.com/yuubinnkyoku/morphe-tver-patch/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 439,
+                "createdAt": 1792469992856,
+                "updatedAt": 1792469992856
             }
         ]
     }
