@@ -7,9 +7,11 @@ package app.morphe.util
 import app.morphe.patches.instagram.ads.hideAdsPatch
 import app.morphe.patches.instagram.coexist.installNextToInstagramPatch
 import app.morphe.patches.instagram.direct.calls.askBeforeCallPatch
+import app.morphe.patches.instagram.direct.messagebox.messageBoxPatch
 import app.morphe.patches.instagram.feed.confirm.askBeforeLikePatch
 import app.morphe.patches.instagram.feed.confirm.askBeforeRefreshPatch
 import app.morphe.patches.instagram.direct.instants.hideInstantsPatch
+import app.morphe.patches.instagram.direct.peek.hidePlusPreviewPatch
 import app.morphe.patches.instagram.direct.presence.showLastActivePatch
 import app.morphe.patches.instagram.direct.lock.lockMessagesPatch
 import app.morphe.patches.instagram.stories.live.viewLiveAnonymouslyPatch
@@ -27,7 +29,9 @@ import app.morphe.patches.instagram.download.story.downloadStoryPatch
 import app.morphe.patches.instagram.download.video.downloadVideoPatch
 import app.morphe.patches.instagram.explore.hideExploreGridPatch
 import app.morphe.patches.instagram.explore.recent.dontSaveRecentSearchesPatch
+import app.morphe.patches.instagram.explore.recent.showAllRecentSearchesPatch
 import app.morphe.patches.instagram.feed.back.backLeavesHomePatch
+import app.morphe.patches.instagram.feed.commentkeyboard.commentKeyboardPatch
 import app.morphe.patches.instagram.feed.comments.hideCommentsPatch
 import app.morphe.patches.instagram.feed.emojirow.hideCommentEmojiRowPatch
 import app.morphe.patches.instagram.feed.feedfollow.hideFeedFollowPatch
@@ -70,6 +74,7 @@ import app.morphe.patches.instagram.misc.versioncode.changeVersionCodePatch
 import app.morphe.patches.instagram.profile.friendship.friendshipStatusPatch
 import app.morphe.patches.instagram.profile.highlights.hideHighlightsPatch
 import app.morphe.patches.instagram.profile.notes.hideProfileNotesPatch
+import app.morphe.patches.instagram.profile.tabs.hideProfileTabsPatch
 import app.morphe.patches.instagram.profile.postslist.profilePostsListPatch
 import app.morphe.patches.instagram.profile.suggested.hideProfileSuggestionsPatch
 import app.morphe.patches.instagram.profile.threads.hideThreadsButtonPatch
@@ -136,11 +141,13 @@ class DefaultCatalogTest {
         changeLikeAnimationPatch,
         cleanUpReelsPatch,
         clearMediaCachePatch,
+        commentKeyboardPatch,
         reelTapAndVolumePatch,
         copyCommentPatch,
         dataSaverPatch,
         dontReportScreenshotsPatch,
         dontSaveRecentSearchesPatch,
+        showAllRecentSearchesPatch,
         dontSendReelWatchHistoryPatch,
         downloadVideoPatch,
         downloadVoiceMessagesPatch,
@@ -160,8 +167,11 @@ class DefaultCatalogTest {
         hideHomeFeedPatch,
         hideInboxSuggestionsPatch,
         hideInstantsPatch,
+        hidePlusPreviewPatch,
         hideNotesRowPatch,
         hideProfileNotesPatch,
+        hideProfileTabsPatch,
+        messageBoxPatch,
         hideProfileSuggestionsPatch,
         hideReelsSuggestionsPatch,
         hidePaidPartnershipReelsPatch,
@@ -247,7 +257,7 @@ class DefaultCatalogTest {
     }
 
     @Test fun initiallyNeutralControlsAreAvailableInSimpleMode() {
-        assertEquals(86, neutral.size)
+        assertEquals(91, neutral.size)
         neutral.forEach { assertEquals(it.name, true, it.use) }
     }
 
@@ -259,7 +269,7 @@ class DefaultCatalogTest {
     @Test fun generatedCatalogMatchesAllReviewedDeclarations() {
         val all = prior + neutral + optIn
         val declarations = all.associate { it.name!! to it.use }
-        assertEquals("every named patch needs one reviewed decision", 107, all.size)
+        assertEquals("every named patch needs one reviewed decision", 112, all.size)
         assertEquals("the review must not name a patch twice", all.size, declarations.size)
         val file = File("patches-list.json").takeIf(File::isFile) ?: File("../patches-list.json")
         val rows = JsonParser.parseString(file.readText()).asJsonObject.getAsJsonArray("patches")

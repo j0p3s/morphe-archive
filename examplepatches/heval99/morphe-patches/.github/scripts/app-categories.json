@@ -18,7 +18,12 @@
         "one.cricket.app",
         "de.motain.iliga",
         "com.sofascore.results",
-        "com.yahoo.mobile.client.android.sportacular"
+        "com.yahoo.mobile.client.android.sportacular",
+        "com.football433",
+        "com.eurosport",
+        "lequipe.fr",
+        "de.transfermarkt.v2",
+        "com.bleacherreport.android.teamstream"
       ]
     },
     {
@@ -42,7 +47,8 @@
         "com.kakao.talk",
         "jp.naver.line.android",
         "com.textra",
-        "com.truecaller"
+        "com.truecaller",
+        "com.mail.mobile.android.mail"
       ]
     },
     {
@@ -112,7 +118,9 @@
       "emoji": "🌐",
       "packages": [
         "com.brave.browser",
-        "mark.via.gp"
+        "mark.via.gp",
+        "org.mozilla.focus",
+        "org.mozilla.firefox"
       ]
     },
     {

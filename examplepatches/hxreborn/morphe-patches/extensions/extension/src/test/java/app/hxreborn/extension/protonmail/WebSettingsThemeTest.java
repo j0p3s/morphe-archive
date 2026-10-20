@@ -149,8 +149,8 @@ public final class WebSettingsThemeTest {
     }
 
     @Test
-    @Config(shadows = { PatchedBuild.Amoled.class, PatchedBuild.Accent.class, PatchedBuild.Upselling.class,
-            PatchedBuild.Applied.class })
+    @Config(qualifiers = "night", shadows = { PatchedBuild.Amoled.class, PatchedBuild.Accent.class,
+            PatchedBuild.Upselling.class, PatchedBuild.Applied.class })
     public void viewIsHiddenFor2500MillisecondsWhenAmoledStylesIt() {
         // given
         final RecordingWebView view = webView(View.VISIBLE);
@@ -164,6 +164,22 @@ public final class WebSettingsThemeTest {
         assertEquals(View.INVISIBLE, view.getVisibility());
         idleMainLooper(1);
         assertEquals(View.VISIBLE, view.getVisibility());
+    }
+
+    @Test
+    @Config(shadows = { PatchedBuild.Amoled.class, PatchedBuild.Accent.class, PatchedBuild.Upselling.class,
+            PatchedBuild.Applied.class })
+    public void amoledStyleLeavesTheLightThemeAlone() {
+        // given
+        final RecordingWebView view = webView(View.VISIBLE);
+
+        // when
+        WebSettingsTheme.hideBeforeStyling(view);
+        WebSettingsTheme.injectEnabledStyles(view);
+
+        // then
+        assertEquals(View.VISIBLE, view.getVisibility());
+        assertTrue(view.scripts.isEmpty());
     }
 
     @Test
@@ -202,8 +218,8 @@ public final class WebSettingsThemeTest {
     }
 
     @Test
-    @Config(shadows = { PatchedBuild.Amoled.class, PatchedBuild.Accent.class, PatchedBuild.Upselling.class,
-            PatchedBuild.Applied.class })
+    @Config(qualifiers = "night", shadows = { PatchedBuild.Amoled.class, PatchedBuild.Accent.class,
+            PatchedBuild.Upselling.class, PatchedBuild.Applied.class })
     public void amoledStyleShowsTheViewAfterInjecting() {
         // given
         final RecordingWebView view = webView(View.INVISIBLE);
@@ -287,8 +303,8 @@ public final class WebSettingsThemeTest {
     }
 
     @Test
-    @Config(shadows = { PatchedBuild.Amoled.class, PatchedBuild.Accent.class, PatchedBuild.Upselling.class,
-            PatchedBuild.Applied.class })
+    @Config(qualifiers = "night", shadows = { PatchedBuild.Amoled.class, PatchedBuild.Accent.class,
+            PatchedBuild.Upselling.class, PatchedBuild.Applied.class })
     public void amoledStyleIsInjectedBeforeTheAccentStyle() {
         // given
         PatchedBuild.setAccentPreset(ORANGE);

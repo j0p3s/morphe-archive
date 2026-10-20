@@ -1,4 +1,6 @@
 import app.template.patches.shared.misc.gms.GOOGLE_SIGNATURE_INVALID_WARNING
+import app.template.patches.shared.misc.gms.SERVICE_CHECK_MESSAGE
+import app.template.patches.shared.misc.gms.isServiceCheckParameters
 import app.template.patches.shared.misc.gms.gmsContentUriReplacement
 import app.template.patches.shared.misc.gms.gmsStringReplacements
 import com.android.tools.smali.dexlib2.AccessFlags
@@ -46,6 +48,11 @@ internal fun assertGmsCoreSupport(
     signatureSha1: String,
     // True when the app's androidx.credentials picks the Identity Credentials API by version.
     expectCredentialRouting: Boolean = false,
+    // False for apps that bundle no Google ad SDK (Shazam), so there is nothing to keep intact.
+    expectAdsClasses: Boolean = true,
+    // False when R8 removed ensurePlayServicesAvailable and only the exception constructor keeps
+    // its message (Shazam); then no void method may hold the message outside a constructor.
+    expectServiceCheck: Boolean = true,
 ) {
     val byType = classes.associateBy { it.type }
     // The extension is merged, and the launch activity's onCreate calls it first with p0.
@@ -74,6 +81,23 @@ internal fun assertGmsCoreSupport(
     val (availabilityClass, availabilityMethod) = availability.single()
     assertReturnsInt(availabilityMethod, 0, "${availabilityClass.type}.${availabilityMethod.name} (isGooglePlayServicesAvailable)")
 
+    // ensurePlayServicesAvailable ((Context), (Context, int) or (int, Context)) returns at once.
+    val serviceChecks = classes.flatMap { cls -> cls.methods.map { cls to it } }.filter { (_, m) ->
+        m.returnType == "V" && isServiceCheckParameters(m.parameterTypes) &&
+            SERVICE_CHECK_MESSAGE in m.instructions().mapNotNull { it.stringOrNull() }
+    }
+    if (expectServiceCheck) {
+        check(serviceChecks.size == 1) { "expected one ensurePlayServicesAvailable, found ${serviceChecks.map { (c, m) -> "${c.type}.${m.name}" }}" }
+        val (serviceCheckClass, serviceCheckMethod) = serviceChecks.single()
+        assertReturnsEarlyVoid(serviceCheckMethod, "${serviceCheckClass.type}.${serviceCheckMethod.name} (ensurePlayServicesAvailable)")
+    } else {
+        val holders = classes.flatMap { cls -> cls.methods.map { cls to it } }.filter { (_, m) ->
+            m.returnType == "V" && m.name != "<init>" &&
+                SERVICE_CHECK_MESSAGE in m.instructions().mapNotNull { it.stringOrNull() }
+        }
+        check(holders.isEmpty()) { "ensurePlayServicesAvailable exists after all: ${holders.map { (c, m) -> "${c.type}.${m.name}" }}" }
+    }
+
     // No GMS package / action / authority constant is left, and the ad SDK is untouched.
     val replacements = gmsStringReplacements()
     val leftovers = classes.flatMap { cls ->
@@ -86,7 +110,9 @@ internal fun assertGmsCoreSupport(
     check(leftovers.isEmpty()) { "GMS strings were not rewritten:\n${leftovers.joinToString("\n")}" }
     val strings = classes.flatMap { cls -> cls.methods.flatMap { m -> m.instructions().mapNotNull { it.stringOrNull() } } }
     check("app.revanced.android.gms" in strings) { "no \"com.google.android.gms\" constant points at MicroG RE" }
-    check(byType.keys.any { it.startsWith("Lcom/google/android/gms/ads/") }) { "com.google.android.gms.ads classes disappeared" }
+    if (expectAdsClasses) {
+        check(byType.keys.any { it.startsWith("Lcom/google/android/gms/ads/") }) { "com.google.android.gms.ads classes disappeared" }
+    }
 
     // Manifest: MicroG RE spoofing meta-data, <queries>, c2dm renames and the unchanged package.
     val manifestFile = workDir.walkTopDown()

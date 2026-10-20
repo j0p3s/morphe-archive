@@ -27,7 +27,7 @@ val hideInvitePromptsPatch = bytecodePatch(
 
     execute {
         inviteDialogCooldownFingerprint().matchSingle().apply {
-            val lastShown = instructionMatches.last()
+            val (_, _, lastShown) = instructionMatches
             val register = lastShown.getInstruction<OneRegisterInstruction>().registerA
             method.addInstructions(
                 lastShown.index + 1,

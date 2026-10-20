@@ -57,9 +57,11 @@ public final class FamilyNames {
     public static final String META_AI = "Hide Meta AI";
     public static final String EXPLORE_GRID = "Hide the Explore grid";
     public static final String RECENT_SEARCHES = "Don't save recent searches";
+    public static final String ALL_RECENT_SEARCHES = "Show all recent searches";
     public static final String NOTES_ROW = "Hide the notes row";
     public static final String INBOX_SUGGESTIONS = "Hide suggested accounts in DMs";
     public static final String INSTANTS = "Hide Instants";
+    public static final String PLUS_PREVIEW = "Hide Plus preview in chat menus";
     public static final String SHARE_SHEET = "Hide group buttons on the share sheet";
     public static final String REPOST_BUTTON = "Hide the Repost button";
     public static final String HIDE_SHARE_BUTTON = "Hide the Share button";
@@ -78,6 +80,7 @@ public final class FamilyNames {
     public static final String FRIENDSHIP_STATUS = "Show if a profile follows you";
     public static final String PROFILE_SUGGESTIONS = "Hide suggested people on profiles";
     public static final String PROFILE_HIGHLIGHTS = "Hide highlights";
+    public static final String PROFILE_TABS = "Hide profile tabs";
     public static final String THREADS_BUTTON = "Hide the Threads button";
     public static final String PROFILE_NOTES = "Hide Notes on profile pictures";
     public static final String PROFILE_POSTS_LIST = "Profile posts as a list";
@@ -87,6 +90,7 @@ public final class FamilyNames {
     public static final String VOICE_MESSAGE = "Download voice messages";
     public static final String HIDE_COMMENTS = "Hide comments";
     public static final String COMMENT_EMOJI_ROW = "Hide the comment emoji row";
+    public static final String COMMENT_KEYBOARD = "Open comments without the keyboard";
     public static final String FEED_FOLLOW = "Hide Follow on feed posts";
     public static final String REEL_DECLUTTER = "Clean up Reels";
     public static final String REEL_DOWNLOAD = "Download any reel";
@@ -121,6 +125,7 @@ public final class FamilyNames {
     public static final String SCREENSHOT_BLOCK = "Allow screenshots";
     public static final String KEEP_IN_CHAT = "Keep in chat";
     public static final String ASK_BEFORE_CALL = "Ask before a call";
+    public static final String MESSAGE_BOX = "Message box buttons";
     public static final String ASK_BEFORE_LIKE = "Ask before a like";
     public static final String ASK_BEFORE_REFRESH = "Ask before a refresh";
     public static final String LIVE_SEEN = "View live anonymously";

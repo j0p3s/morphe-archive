@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 """python3 .github/scripts/test_issue_comment.py"""
 
+import json
+import os
+import subprocess
 import sys
+import tempfile
 import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from issue_comment import timestamp, CLOSED_MARKER, PING_MARKER, is_early_status_ping, is_request, is_status_ping, ping_reply, closed_issue_reply
+from issue_comment import (
+    answers_needs_info, timestamp, CLOSED_MARKER, PING_MARKER, UNRELEASED_MARKER, is_early_status_ping,
+    is_release_question, is_request, is_status_ping, ping_reply, closed_issue_reply, unreleased_reply,
+)
 
 REQUESTS = [
     "Update the latest support version bro",
@@ -160,12 +167,231 @@ ok = text.splitlines()[1] == "This issue is closed. For anything new, open a new
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} a title naming no app keeps the plain opening")
 
+RELEASE_QUESTIONS = [
+    "when is this getting released?",
+    "A new release hasn't been built yet with your commit.",
+    "When will the build be out?",
+    "is the release out yet",
+    "any update?",
+    "eta?",
+    "@hxreborn",
+    "When is the next release",
+]
+NOT_RELEASE_QUESTIONS = [
+    "Thanks, works now",
+    "> when is this getting released?\n\nthanks",
+    "`when is this released`",
+    "Great work, thank you",
+    "the release notes list this app",
+    "",
+]
+for text in RELEASE_QUESTIONS:
+    ok = is_release_question(text)
+    failures += not ok
+    print(f"{'ok  ' if ok else 'FAIL'} release question: {text[:70]!r}")
+for text in NOT_RELEASE_QUESTIONS:
+    ok = not is_release_question(text)
+    failures += not ok
+    print(f"{'ok  ' if ok else 'FAIL'} not a release question: {text[:70]!r}")
+
+ok = unreleased_reply() == UNRELEASED_MARKER + "\nThe commit that closed this issue is not in a release yet. A comment here names the release that includes it.\n"
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} the unreleased reply is the marker and one plain line")
+
 started = time.monotonic()
-flood = [is_status_ping("?" * 5000 + "x"), is_status_ping("\n" * 60000 + "x"), is_request("\n" * 60000 + "x")]
-ok = flood == [False, False, False] and time.monotonic() - started < 2
+flood = [is_status_ping("?" * 5000 + "x"), is_status_ping("\n" * 60000 + "x"), is_request("\n" * 60000 + "x"),
+         is_release_question("when " * 20000), is_release_question("release " * 20000 + "x")]
+ok = flood == [False] * 5 and time.monotonic() - started < 2
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} long runs of question marks and newlines are read in linear time")
 
-total = len(REQUESTS) + len(NOT_REQUESTS) + len(PINGS) + len(NOT_PINGS) + 8
+HERE = Path(__file__).resolve().parent
+WORKFLOW = HERE.parent / "workflows" / "issue_comments.yml"
+
+FAKE_GH = r'''#!/usr/bin/env python3
+import json, os, re, sys
+
+args = sys.argv[1:]
+state = json.load(open(os.environ["FAKE_STATE"]))
+state["calls"].append(args)
+json.dump(state, open(os.environ["FAKE_STATE"], "w"))
+flags = {"--repo", "--remove-label", "--add-label"}
+valid = (
+    args[:2] == ["issue", "edit"] and len(args) >= 3 and re.fullmatch(r"\d+", args[2])
+    and all(a in flags or args[i - 1] in flags for i, a in enumerate(args[3:], 3))
+    and "--repo" in args and re.fullmatch(r"[\w.-]+/[\w.-]+", args[args.index("--repo") + 1])
+    and "--remove-label" in args and args[args.index("--remove-label") + 1] != ""
+)
+sys.exit(0 if valid else 1)
+'''
+
+
+def needs_info_script():
+    lines = WORKFLOW.read_text().splitlines()
+    start = lines.index("  needs-info:")
+    begin = next(i for i in range(start, len(lines)) if lines[i].strip() == "run: |") + 1
+    end = next((i for i in range(begin, len(lines)) if lines[i] and not lines[i].startswith(" " * 10)), len(lines))
+    return "\n".join(line[10:] for line in lines[begin:end])
+
+
+def run_needs_info(state, author="reporter", commenter="reporter", commenter_type="User", association="NONE", labels=("bug", "needs info")):
+    event = {
+        "issue": {"number": 7, "state": state, "user": {"login": author},
+                  "labels": [{"name": label} for label in labels]},
+        "comment": {"user": {"login": commenter, "type": commenter_type}, "author_association": association, "body": "here is the log"},
+    }
+    with tempfile.TemporaryDirectory() as temp:
+        temp = Path(temp)
+        (temp / "bin").mkdir()
+        (temp / "bin" / "gh").write_text(FAKE_GH)
+        (temp / "bin" / "gh").chmod(0o755)
+        (temp / "state.json").write_text(json.dumps({"calls": []}))
+        (temp / "event.json").write_text(json.dumps(event))
+        env = {"PATH": f"{temp / 'bin'}:{os.environ['PATH']}", "FAKE_STATE": str(temp / "state.json"),
+               "GITHUB_EVENT_PATH": str(temp / "event.json"), "ISSUE": "7", "REPO": "hxreborn/morphe-patches"}
+        done = subprocess.run(["bash", "-eo", "pipefail", "-c", needs_info_script()], env=env, cwd=HERE.parent.parent, capture_output=True, text=True)
+        return done.returncode, json.loads((temp / "state.json").read_text())["calls"]
+
+
+REMOVE = [["issue", "edit", "7", "--repo", "hxreborn/morphe-patches", "--remove-label", "needs info"]]
+NEEDS_INFO_CASES = [
+    ("the author's reply removes the label", dict(state="open"), REMOVE),
+    ("a reply on a closed issue leaves it", dict(state="closed"), []),
+    ("a bot reply leaves it", dict(state="open", commenter="github-actions[bot]", commenter_type="Bot", association="CONTRIBUTOR"), []),
+    ("another user's comment leaves it", dict(state="open", commenter="someone-else"), []),
+    ("a collaborator's own issue leaves it", dict(state="open", author="hxreborn", commenter="hxreborn", association="OWNER"), []),
+    ("an issue without the label leaves it", dict(state="open", labels=("bug",)), []),
+]
+for name, kwargs, calls in NEEDS_INFO_CASES:
+    status, seen = run_needs_info(**kwargs)
+    ok = status == 0 and seen == calls
+    failures += not ok
+    print(f"{'ok  ' if ok else 'FAIL'} needs info: {name}")
+
+FAKE_REPLY_GH = r'''#!/usr/bin/env python3
+import json, os, re, sys
+
+args = sys.argv[1:]
+state = json.load(open(os.environ["FAKE_STATE"]))
+state["calls"].append(args)
+
+
+def finish(code, out=""):
+    json.dump(state, open(os.environ["FAKE_STATE"], "w"))
+    sys.stdout.write(out)
+    sys.exit(code)
+
+
+if args[:1] == ["api"]:
+    path, rest = args[1], args[2:]
+    flags = [a for a in rest if a.startswith("--")]
+    if "--slurp" in flags or not set(flags) <= {"--paginate", "--jq"}:
+        finish(1)
+    if "--jq" not in rest or rest.index("--jq") + 1 >= len(rest):
+        finish(1)
+    expression = rest[rest.index("--jq") + 1]
+    if re.fullmatch(r"repos/[\w.-]+/[\w.-]+/issues/\d+/timeline", path):
+        if state.get("timeline_fails"):
+            finish(1)
+        finish(0, "".join(f"{commit}\n" for commit in state["closing"]))
+    if re.fullmatch(r"repos/[\w.-]+/[\w.-]+/issues/\d+/comments", path):
+        marker = re.search(r'contains\("(<!--.*?-->)"\)', expression)
+        if not marker or "github-actions[bot]" not in expression:
+            finish(1)
+        finish(0, "".join(f"{i}\n" for i, body in enumerate(state["bot_comments"], 1) if marker.group(1) in body))
+    finish(1)
+if args[:2] == ["issue", "comment"] and re.fullmatch(r"\d+", args[2]) and "--repo" in args and "--body-file" in args:
+    state["posted"].append(open(args[args.index("--body-file") + 1]).read())
+    finish(0)
+finish(1)
+'''
+
+FAKE_GIT = r'''#!/usr/bin/env python3
+import json, os, re, sys
+
+args = sys.argv[1:]
+state = json.load(open(os.environ["FAKE_STATE"]))
+if len(args) == 3 and args[:2] == ["cat-file", "-e"] and re.fullmatch(r"[0-9a-f]{40}\^\{commit\}", args[2]):
+    sys.exit(0 if args[2][:40] in state["known"] else 128)
+if len(args) == 3 and args[:2] == ["tag", "--contains"] and re.fullmatch(r"[0-9a-f]{40}", args[2]):
+    if state.get("tag_fails"):
+        sys.exit(128)
+    print("".join(f"{tag}\n" for tag in state["tags"].get(args[2], [])), end="")
+    sys.exit(0)
+sys.exit(1)
+'''
+
+
+def reply_script():
+    lines = WORKFLOW.read_text().splitlines()
+    start = lines.index("  reply:")
+    begin = next(i for i in range(start, len(lines)) if lines[i].strip() == "run: |") + 1
+    end = next((i for i in range(begin, len(lines)) if lines[i] and not lines[i].startswith(" " * 10)), len(lines))
+    return "\n".join(line[10:] for line in lines[begin:end])
+
+
+UNRELEASED_SHA = "a" * 40
+RELEASED_SHA = "b" * 40
+MISSING_SHA = "c" * 40
+SHAS = {"known": [UNRELEASED_SHA, RELEASED_SHA], "tags": {RELEASED_SHA: ["v1.2.0"], UNRELEASED_SHA: []}}
+
+
+def run_reply(body, state="closed", closing=(), bot_comments=(), **extra):
+    event = {
+        "issue": {"number": 7, "state": state, "title": "[App Request]: Something", "created_at": "2026-10-01T00:00:00Z",
+                  "labels": [{"name": "app request"}]},
+        "comment": {"user": {"login": "asker", "type": "User"}, "author_association": "NONE", "body": body, "created_at": "2026-10-19T12:37:46Z"},
+    }
+    with tempfile.TemporaryDirectory() as temp:
+        temp = Path(temp)
+        (temp / "bin").mkdir()
+        for name, source in (("gh", FAKE_REPLY_GH), ("git", FAKE_GIT)):
+            (temp / "bin" / name).write_text(source)
+            (temp / "bin" / name).chmod(0o755)
+        (temp / "state.json").write_text(json.dumps({"calls": [], "posted": [], "closing": list(closing), "bot_comments": list(bot_comments), **SHAS, **extra}))
+        (temp / "event.json").write_text(json.dumps(event))
+        env = {"PATH": f"{temp / 'bin'}:{os.environ['PATH']}", "FAKE_STATE": str(temp / "state.json"), "GITHUB_EVENT_PATH": str(temp / "event.json"),
+               "RUNNER_TEMP": str(temp), "ISSUE": "7", "REPO": "hxreborn/morphe-patches", "STATE": state}
+        done = subprocess.run(["bash", "-eo", "pipefail", "-c", reply_script()], env=env, cwd=HERE.parent.parent, capture_output=True, text=True)
+        final = json.loads((temp / "state.json").read_text())
+        return done.returncode, final["posted"], final["calls"]
+
+
+ETA = "when is this getting released? A new release hasn't been built yet with your commit."
+UNRELEASED_SENT = UNRELEASED_MARKER + "\nx"
+REPLY_CASES = [
+    ("an ETA question on an unreleased closed issue gets the unreleased line", dict(body=ETA, closing=[UNRELEASED_SHA]), 0, UNRELEASED_MARKER),
+    ("an ETA question once the commit is tagged gets the redirect", dict(body=ETA, closing=[RELEASED_SHA]), 0, CLOSED_MARKER),
+    ("an issue closed without a commit keeps the redirect", dict(body=ETA, closing=["-"]), 0, CLOSED_MARKER),
+    ("a closing commit missing from the clone keeps the redirect", dict(body=ETA, closing=[MISSING_SHA]), 0, CLOSED_MARKER),
+    ("the latest close counts after a reopen", dict(body=ETA, closing=[RELEASED_SHA, UNRELEASED_SHA]), 0, UNRELEASED_MARKER),
+    ("a close without a commit after a commit close keeps the redirect", dict(body=ETA, closing=[UNRELEASED_SHA, "-"]), 0, CLOSED_MARKER),
+    ("a status ping on an unreleased closed issue gets the unreleased line", dict(body="any update?", closing=[UNRELEASED_SHA]), 0, UNRELEASED_MARKER),
+    ("a request on an unreleased closed issue gets the unreleased line", dict(body="Didn't work", closing=[UNRELEASED_SHA]), 0, UNRELEASED_MARKER),
+    ("thanks on an unreleased closed issue gets no reply", dict(body="Thanks, works great", closing=[UNRELEASED_SHA]), 0, None),
+    ("a second question after the unreleased line gets no reply", dict(body=ETA, closing=[UNRELEASED_SHA], bot_comments=[UNRELEASED_SENT]), 0, None),
+    ("the unreleased line does not block the redirect once released", dict(body=ETA, closing=[RELEASED_SHA], bot_comments=[UNRELEASED_SENT]), 0, CLOSED_MARKER),
+    ("a failing timeline lookup fails the job", dict(body=ETA, closing=[UNRELEASED_SHA], timeline_fails=True), 1, None),
+    ("a failing tag lookup fails the job", dict(body=ETA, closing=[UNRELEASED_SHA], tag_fails=True), 128, None),
+]
+for name, kwargs, code, marker in REPLY_CASES:
+    status, posted, _ = run_reply(**kwargs)
+    ok = status == code and (len(posted) == 1 and posted[0].startswith(marker + "\n") if marker else not posted)
+    failures += not ok
+    print(f"{'ok  ' if ok else 'FAIL'} reply job: {name}")
+
+status, posted, calls = run_reply("any update?", state="open")
+ok = status == 0 and len(posted) == 1 and posted[0].startswith(PING_MARKER) and not any("timeline" in " ".join(call) for call in calls)
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} reply job: an open issue never reads the timeline")
+
+ISSUE_EVENT = {"state": "open", "user": {"login": "reporter"}, "labels": [{"name": "needs info"}]}
+COMMENT_EVENT = {"user": {"login": "reporter", "type": "User"}, "author_association": "CONTRIBUTOR"}
+ok = answers_needs_info(ISSUE_EVENT, COMMENT_EVENT)
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} needs info: a contributor-association author counts as the reporter")
+
+total = (len(REQUESTS) + len(NOT_REQUESTS) + len(PINGS) + len(NOT_PINGS) + len(RELEASE_QUESTIONS) + len(NOT_RELEASE_QUESTIONS)
+         + 9 + len(NEEDS_INFO_CASES) + 1 + len(REPLY_CASES) + 1)
 print(f"\n{total - failures}/{total} passed")
 sys.exit(1 if failures else 0)

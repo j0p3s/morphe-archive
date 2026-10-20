@@ -24,6 +24,17 @@ internal object AppCompatibilities {
         targets = listOf(AppTarget(version = "2.9.5", versionCode = 2009500, minSdk = 21)),
     )
 
+    val ALBO = Compatibility(
+        name = "Albo",
+        packageName = "com.thesortdapp.sortd",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x1E1E1E,
+        signatures = setOf(
+            "ae23b6062bfe3fea5e0372c58ee809e0ee3eb3b356350cfaa2734dd6742c15b9",
+        ),
+        targets = listOf(AppTarget(version = "1.25.1", versionCode = 996, minSdk = 32)),
+    )
+
     val ALL_IN_ONE_CALCULATOR = Compatibility(
         name = "All-In-One Calculator",
         packageName = "all.in.one.calculator",
@@ -407,7 +418,7 @@ internal object AppCompatibilities {
             "44483f98c17bf49fbde08d3376af09c6fc1f9370c7a046c35a3dca45f5785150",
         ),
         targets = listOf(
-            AppTarget(version = "2026.08.1041", versionCode = 26081041, minSdk = 21),
+            AppTarget(version = "2026.08.1041", versionCode = 26081041, minSdk = 32),
             AppTarget(version = "2026.09.1051", versionCode = 26091051, minSdk = 32),
         ),
     )
@@ -654,6 +665,17 @@ internal object AppCompatibilities {
             "3961d83e6d20d3363e07c6fe330601ef6ece07d44cda2fe46a0048bc70eacdaf",
         ),
         targets = listOf(AppTarget(version = "5.1", versionCode = 19502, minSdk = 29)),
+    )
+
+    val NOTEIN = Compatibility(
+        name = "Notein",
+        packageName = "com.orion.notein.global",
+        apkFileType = ApkFileType.XAPK,
+        appIconColor = 0x0088FF,
+        signatures = setOf(
+            "740847519c431975924d4ea55d10ef2dad77d43c6565a9b6d3218c4c00c3279d",
+        ),
+        targets = listOf(AppTarget(version = "v2.1.27.0", versionCode = 406, minSdk = 26)),
     )
 
     val NOTESNOOK = Compatibility(
@@ -1094,6 +1116,17 @@ internal object AppCompatibilities {
             "a8434fb26c0ef24c8bffe4cca13ad81322adfb580854db3a7adf7ee783a60512",
         ),
         targets = listOf(AppTarget(version = "1.0.3", versionCode = 34, minSdk = 24)),
+    )
+
+    val SYGIC = Compatibility(
+        name = "Sygic",
+        packageName = "com.sygic.aura",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x1E90FF,
+        signatures = setOf(
+            "982d28261c4cbcc2ff8c9ce397d66af80150a0f4e684aed8eef328c0af169019",
+        ),
+        targets = listOf(AppTarget(version = "26.6.1-120585", versionCode = 272606010, minSdk = 32)),
     )
 
     val SYMFONIUM = Compatibility(

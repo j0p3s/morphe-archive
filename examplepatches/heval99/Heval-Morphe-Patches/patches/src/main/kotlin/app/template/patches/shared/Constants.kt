@@ -3,6 +3,7 @@ package app.template.patches.shared
 import app.morphe.patcher.patch.ApkFileType
 import app.morphe.patcher.patch.AppTarget
 import app.morphe.patcher.patch.Compatibility
+import app.morphe.patcher.patch.SupportedAbi
 
 object Constants {
     private const val FLASHSCORE_SOURCE_NOTE = "Download the .apks from apkcube.com"
@@ -75,9 +76,41 @@ object Constants {
             // need a real server token), update/review prompts (no Play Core, no custom update
             // screen), odds/betting, paywall and survey/popup surfaces (server-driven). The older
             // targets were dropped: the new patches were only verified on 26.09.28.
+            // 2026-10-17: updated to version 26.10.05 (versionCode 261005002; signer CN=Sofa Score,
+            // cert SHA-256 ecd3a2c9...9f841, SHA-1 unchanged). Every existing anchor stayed unique;
+            // only R8 names moved. 26.09.28 was dropped (latest verified version only). Changes:
+            //   - Shared GmsCore support: ensurePlayServicesAvailable is a(Context)V here (R8 dropped
+            //     the version parameter), so the old (Context, int) fingerprint never matched; it now
+            //     matches (Context), (Context, int) and (int, Context) and fails when missed.
+            //   - New "Hide betting content" (off by default, like Flashscore's), anchored on
+            //     preference keys plus shape: the static (Context, SharedPreferences)Z odds decision
+            //     ("PREF_PROVIDER_ODDS_ENABLE"; 11 methods hold the key, only this one has the
+            //     shape) -> false; EventHeadFlags getAdditionalOdds /
+            //     getAdditionalOddsComparison / getRecommendedPrematchOdds (kept model) -> false; the
+            //     static (Context)String Bet365 open-account link (URL prefix) -> null (both callers
+            //     null-check); the static (Context)Z "PREF_PROMOTIONS_ENABLE" -> false; the static
+            //     (Context)Z "ODDS_PROVIDERS_DISABLED" -> true (hides the dead odds settings row).
+            //     This supersedes the "odds/betting" rejection above for these client-side gates.
+            //   - Disable ads: getHasServerAds() false made the one-time "Active subscription"
+            //     upgrade sheet open for everyone. Its modal-queue predicate (found through the
+            //     "Active subscription" modal's <clinit> and the "PR_XAIST" key) now reads
+            //     hasServerAds as true, so the sheet is never queued.
+            //   - New "Disable rating prompts": the "Rating Info" modal predicate reads
+            //     "ask_review_v3" as false, so the rating dialog is never queued (the modal queue
+            //     never waits for a dismiss). This supersedes the "review prompts" rejection above:
+            //     the dialog is the app's own (Play's review API isn't bundled).
+            //   - The unused FacebookInitProviderFingerprint was removed.
+            // Decompile-checked 2026-10-17 (CLI, no -f, all 10 patches Applied; every hook above,
+            // the ServiceCheck return-void and the extension's "sign-in and notifications" text
+            // match). Emulator 2026-10-17 (morphe-play, MicroG RE installed, stock control with the
+            // same test key): patched cold-starts x2 with no crash; no upgrade sheet; the list and
+            // match-page test banners are gone; the bet365 1X2 "Ad" odds block and 18+ text are
+            // gone, there is no Odds tab, and Settings > Odds is hidden; no MicroG warning;
+            // the C2DM register reaches MicroG RE with no error (no token logged). The battery
+            // dialog didn't show (StartActivity finishes first; a known gap of the check).
             AppTarget(
-                version = "26.09.28",
-                versionCode = 260928002
+                version = "26.10.05",
+                versionCode = 261005002
             )
         )
     )
@@ -115,6 +148,23 @@ object Constants {
     // not re-checked for this step (no APK at hand). Emulator (238.17794): no paywall, the
     // membership screen shows the 12-icon picker, switching to Barcelona changed the launcher
     // alias and switching back restored it, no crashes. The staff check is not runtime-testable.
+    // 2026-10-18, 238.17794.20261012 (issue #64): "GmsCore support" (default off, no clone option:
+    // the widget providers com.fotmob.widget.logos/.images are outside the package name) hooks the
+    // manifest launch activity MainActivityWrapper.onCreate(Bundle) and rewrites the GMS/c2dm
+    // constants and manifest entries for MicroG RE, so Sign in with Google (androidx.credentials Play
+    // services provider -> Firebase Auth) can work on a re-signed build. "Spoof signature" routes
+    // every getPackageInfo call (incl. Firebase's cert-hash helper) through the extension with the
+    // original CN=Christer Nordvik certificate (SHA-1 5546e6c4b0c1f31b9e5a953a89a8bb6f25a2ad6f).
+    // FotMobSmokeTest and a CLI patch + apkanalyzer check pass; rule-12 string diff: only
+    // sw player_yellow_card loses its literal surrounding quotes. Facebook native-app login is not
+    // covered by the spoof (the Facebook app reads the real certificate).
+    // GmsCore support also skips the onboarding auto sign-in: in the OnboardingStartActivity
+    // coroutine (found by its "Did not find any existing Google accounts" / "User seemingly
+    // dismissed the automatic Google sign-in" log prefixes) it throws androidx's
+    // NoCredentialException (TYPE_NO_CREDENTIAL constructor) right after the
+    // google_server_client_id read, inside the try block whose NoCredentialException handler runs
+    // (the stock no-account path), because MicroG RE ignores filterByAuthorizedAccounts and showed
+    // its chooser uninvited at first start. The Sign in with Google button paths are unchanged.
     val COMPATIBILITY_FOTMOB = Compatibility(
         name = "FotMob",
         packageName = "com.mobilefootie.wc2010",
@@ -259,13 +309,24 @@ object Constants {
     // "Clone" option renames the package, which Spoof signature does not follow (it spoofs
     // com.scores365 only), so keep Clone off when notifications matter.
     // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
+    // 2026-10-17: updated to version 14.9.7 (versionCode 1497, APKMirror bundle arm64-v8a +
+    // armeabi-v7a 480-640dpi, merged; signer CN=Roe Aharoni, O=365 Scores, SHA-1 47f994bd...f1a1,
+    // the same key, with a Play source stamp). Every anchor is unchanged and unique; only R8 names
+    // moved (the GMS common holder is now common/a; the ServiceCheck (int, Context) shape still
+    // matches). 14.9.6 dropped (latest verified version only). CLI decompile-checked (every hook,
+    // nothing dropped). Emulator 2026-10-17 (morphe-play with MicroG RE, stock control on the same
+    // test key): no crash in 2 cold starts; the InMobi banners, in-list ad rows and sponsored
+    // match creative are gone with no gap; the stock re-signed build gets Firebase Installations
+    // 403 API_KEY_ANDROID_APP_BLOCKED (push broken) while the patched one initialises Firebase
+    // without it; following a match works. The battery-optimisation dialog leaks from the
+    // finishing Splash (known GmsCore-check gap; no crash).
     val COMPATIBILITY_365SCORES = Compatibility(
         name = "365Scores",
         packageName = "com.scores365",
         apkFileType = ApkFileType.APKM,
         appIconColor = 0xFFC107,
         targets = listOf(
-            AppTarget(version = "14.9.6", versionCode = 1496)
+            AppTarget(version = "14.9.7", versionCode = 1497)
         )
     )
 
@@ -282,12 +343,19 @@ object Constants {
     // the same six callers. Only the latest verified version is supported.
     // Emulator 2026-10-14 (10.3.1): no banner, interstitial or gap (stock shows a test banner and an
     // interstitial); no crash. The bookmaker "Match odds" sponsor card (AD tag) is an app widget and stays.
+    // 2026-10-17: updated to version 10.3.2 (versionCode 2230, APKMirror universal APK, same signer
+    // CN=Sebastian/O=Cloeme, cert SHA-256 82bf3a1c...2ebb). The manifest, SDKs and betting code are
+    // unchanged; AdsRemovalSettings.areAdsDisabled()Z is still unique with the same six callers.
+    // 10.3.1 dropped (latest verified version only). Smoke-tested and decompile-checked 2026-10-17
+    // (CLI, no -f: only areAdsDisabled changes, to return true). Emulator 2026-10-17 (stock control):
+    // stock shows a Disney+ test banner, a bet365 test banner and an interstitial; patched shows
+    // none and no gap; the bet365 "Match odds" widget stays; no crash in 2 cold starts.
     val COMPATIBILITY_LIVESCORE = Compatibility(
         name = "Livescore",
         packageName = "com.livescore",
         apkFileType = ApkFileType.APK,
         appIconColor = 0xC8102E,
-        targets = listOf(AppTarget(version = "10.3.1", versionCode = 2226))
+        targets = listOf(AppTarget(version = "10.3.2", versionCode = 2230))
     )
 
     // Verified 2026-08-20 against FishBuddy v11.0.84 (universal, Android 7.0+).
@@ -705,14 +773,21 @@ object Constants {
     // 2026-10-12 APK-finder audit: only distributed as a split bundle (APKMirror BUNDLE /
     // APKPure-Uptodown XAPK), so apkFileType is APKM; any "universal APK" note below is outdated.
     // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
+    // 2026-10-17: updated to version 15.146.0 (versionCode 1045009496, APKMirror bundle arm64-v8a +
+    // armeabi-v7a, merged). Signer CN=Appsolute, OU=SD, SHA-256 5099231f...56ab (the same cert as the
+    // 15.145.0 file), with a Play source stamp. Every GMA anchor is unchanged and unique.
+    // 15.142.0 and 15.145.0 dropped (latest verified version only). Smoke-tested and CLI
+    // decompile-checked (all 27 GMA hooks, nothing dropped). Emulator 2026-10-17: not usable.
+    // Stock and patched both crash at start in native code (JuceInvocationHandler, the same pc)
+    // under ARM translation, so ads and push were not checked at runtime. Airship registered a
+    // channel on both re-signed builds; whether Firebase push needs Spoof signature is still open.
     val COMPATIBILITY_ONEFOOTBALL = Compatibility(
         name = "OneFootball",
         packageName = "de.motain.iliga",
         apkFileType = ApkFileType.APKM,
         appIconColor = 0x00C853,
         targets = listOf(
-            AppTarget(version = "15.142.0", versionCode = 1044958885),
-            AppTarget(version = "15.145.0", versionCode = 1044999406)
+            AppTarget(version = "15.146.0", versionCode = 1045009496)
         )
     )
 
@@ -818,12 +893,18 @@ object Constants {
     // this emulator (pause timeout on stock too), so the screens with ads, the squad-builder panel
     // and interstitials were NOT checked at runtime. Only 27.06 is supported now (owner request).
     // 2026-10-14: Disable ads also neutralises the other MobileAds statics (rule 9).
+    // 2026-10-17: updated to version 27.08 (versionCode 7008, APKPure single universal APK; not on
+    // APKMirror). Signer O=FUTBIN, 1cf7ff75...e904 (genuine, no injected dex or new components).
+    // Every anchor is unchanged and unique (R8 renames only: nk4->bt4, tm7->rz7, jw8->tb9); the new
+    // Club Import screens add no ad paths. 27.06 dropped (latest verified version only).
+    // Smoke-tested and CLI decompile-checked on 27.08 (every hook, nothing dropped). Not runtime-
+    // tested, same as 27.06: on the emulator the app doesn't get past its first screen.
     val COMPATIBILITY_FUTBIN = Compatibility(
         name = "Futbin",
         packageName = "com.futbin",
         apkFileType = ApkFileType.APK,
         appIconColor = 0x26A69A,
-        targets = listOf(AppTarget(version = "27.06", versionCode = 7006))
+        targets = listOf(AppTarget(version = "27.08", versionCode = 7008))
     )
 
     // Verified 2026-09-27 against com.pocketcolorwheel.PCW 3.26 (versionCode 57,
@@ -1055,6 +1136,16 @@ object Constants {
     // test + CLI without -f, and on the emulator with Morphe YouTube 21.20.405 / YT Music
     // 9.18.50 + MicroG RE the rows open the Morphe apps (START pkg=app.morphe.android.*).
     // Shazam ships as a bundle only (requiredSplitTypes base__abi,base__density).
+    // 2026-10-18 (issue #62): "Spoof signature" (on by default; original cert CN=Tony Miller, O=Shazam
+    // Entertainment Ltd., SHA-1 b804e188301813b5d8d47d0bb2280607c16fd8b6, from the APKMirror
+    // 16.63.0-261008 bundle) fixes account sign-in on the patched app and also makes the bundled
+    // Spotify Auth SDK's SpotifyNativeAuthUtil.startAuthActivity() return false, so Spotify login
+    // uses the SDK's WebView page (the Spotify app rejects the re-signed caller). "GmsCore support"
+    // (off; launcher SplashActivity.onCreate) for Google sign-in/FCM; it also makes the sign-in use
+    // case (found by "prefkey_should_attempt_silent_sign_in" + (Context, String, Z, continuation))
+    // return false when silent, so MicroG RE shows no uninvited chooser on the Library tab or the
+    // login screen. Rule 12: 0 of 19,925 string values changed. Smoke + CLI (no -f) verified on
+    // 16.63.0 only.
     val COMPATIBILITY_SHAZAM = Compatibility(
         name = "Shazam",
         packageName = "com.shazam.android",
@@ -1400,6 +1491,41 @@ object Constants {
     // 2026-10-14: GmsCore support no longer offers the Clone package name (#50): the main provider
     // authority is exactly "com.truecaller", the dex hard-codes content://com.truecaller, and the
     // com.truecaller.account type clashes, so a clone cannot install next to stock.
+    // 2026-10-18: GmsCore support and Spoof signature are on by default (owner): Google sign-in,
+    // Drive backup and push need them on a re-signed build.
+    // 2026-10-18 (#52/#53, 26.40.5; smoke test + CLI disassembly with the default set + Hide business
+    //   media, no -f, all Applied):
+    //   - Disable ads overrides "featureAdsOnOfferHub" off in the resolver: no "Recommended Offers"
+    //     row (OfferHubActivity, ads-router offer feed) and no offer hub deep link.
+    //   - Hide business media (opt-in): the BusinessDetailsModel constructor (toString prefix
+    //     "BusinessDetailsModel(description=" + ", brandMedia=") gets a new empty ArrayList as
+    //     brandMedia; the static BusinessDetailsScreen (strings "BusinessDetailsScreen" +
+    //     "BusinessDesTitle") clears its Function2 video thumbnail slot. Verified campaign cards: 7
+    //     toggles off (featureBizVerifiedCampaigns, ...ForOutgoingCalls, ...InRevampedInCallUi,
+    //     ...sCarouselACS, ...sDetailsView, ...sCarouselDetailsView, ...sDV3), because each surface
+    //     ORs its own toggle with the master. featureBizPACSFeaturesRevamp can still enqueue a
+    //     campaign prefetch (no display). Message ID campaigns are left alone.
+    //   - Disable telemetry: every getBoolean("featureCleverTap") outside com.truecaller.qa reads
+    //     false (SDK init, second gate, CRM push handler, CleverTapRefreshWorkAction). Firebase in
+    //     bytecode, not the manifest: the measurement config's Boolean get(String) answers TRUE for
+    //     firebase_analytics_collection_deactivated and FALSE for
+    //     google_analytics_adid_collection_enabled; the Crashlytics arbiter (key + "Crashlytics
+    //     automatic data collection ") ()Z getters return false; the Sessions manifest override
+    //     returns FALSE.
+    //   - tagging5 (GET /v1/tags, the caller-ID tag catalogue) is not ads and stays.
+    //   - Backup (Google Drive via Google sign-in) has no client-side fix: it needs GmsCore support
+    //     and MicroG RE.
+    //   - Restore classic call log (experimental, opt-in) also keeps the classic list's swipe actions
+    //     (right = call, left = SMS): the classic lists' shared RecyclerView setup (the one ()V method
+    //     calling addOnItemTouchListener -> addItemDecoration -> setItemAnimator -> setHasFixedSize in
+    //     that order) attached the swipe helper (checked by its "ItemEvent.SWIPE_START" event) only
+    //     while "featureFavouriteContacts" was off; the read's result is forced to 0 before its
+    //     if-nez. The toggle itself is not overridden, so the Favourites UI is unchanged. The
+    //     redesigned (Compose) call log has no row swipe in stock 26.40.5 (its swipe-to-delete is
+    //     coded but switched off), which explains the Reddit report; not runtime-tested.
+    //   - Rule 12 (GmsCore support, default on): 5 strings lose their surrounding quotes and
+    //     string/Dismiss + string/dismiss come back as string_0x7f14030a / string_0x7f140dc9 (same
+    //     IDs, no by-name lookup found); no control characters lost.
     // 2026-10-14 (#53, 26.40.5, smoke test only, not runtime-tested):
     //   - Disable ads step 4: the call log's "Truecaller Premium / Upgrade for an ad-free
     //     experience" row is the Ads V2 call log list slot (AdPlacement CallLogScreen.ClList) drawing
@@ -1682,12 +1808,20 @@ object Constants {
     // interstitial over 12 tab switches. The pinned floating score starts the Premium service
     // with no ad; no crashes. The menu's "CREX PREMIUM" row opens a login sheet. Live/Upcoming
     // tabs and the quiz were not reached.
+    // 2026-10-17: updated to version 26.10.07 (versionCode 668, APKMirror universal bundle,
+    // merged). Signer CN=Purushotam Rawat, cert SHA-256 b9e623fa...ea07 (the same as 26.10.06).
+    // Every anchor is unchanged and the anchored method bodies are identical. 26.10.06 dropped
+    // (latest verified version only). CLI decompile-checked (30 hooks, nothing dropped). Emulator
+    // 2026-10-17 (stock control): stock shows GMA test banners, native cards on Series and a
+    // PubMatic ad in the Live list; patched shows none with no gaps, and ad network events drop from
+    // 277 to 3; no crash. A plain re-signed build gets no Firebase 403, so no notification fix is
+    // needed (no FCM token line was seen either way).
     val COMPATIBILITY_CREX = Compatibility(
         name = "CREX",
         packageName = "in.cricketexchange.app.cricketexchange",
         apkFileType = ApkFileType.APKM,
         appIconColor = 0x262626,
-        targets = listOf(AppTarget(version = "26.10.06", versionCode = 667))
+        targets = listOf(AppTarget(version = "26.10.07", versionCode = 668))
     )
 
     // Added 2026-10-14 from the Reddit request queue ("the ads mess with the UI"). Verified
@@ -2160,5 +2294,361 @@ object Constants {
         apkFileType = ApkFileType.APK,
         appIconColor = 0x1D56A8,
         targets = listOf(AppTarget(version = "1.1.15", versionCode = 75, isExperimental = true))
+    )
+
+    // Smoke-tested 2026-10-17 against com.football433 2.3.548 (versionCode 868, APKPure XAPK
+    // merged, arm64-v8a only; APKMirror has no listing). Signer: the Play app-signing key
+    // (CN=Android, O=Google Inc., SHA-256 87a49808...b2d0) with a Play source stamp
+    // (2026-09-30), so there is no developer certificate to compare. Launcher label
+    // "433 Football". A Flutter app: the UI is Dart (libapp.so); the Java plugins are R8-renamed,
+    // so every anchor is a method-channel string, a kept SDK class/method name or a method shape.
+    // Disable ads: AdMob / Ad Manager ads come only from the google_mobile_ads plugin (Dart in this
+    // build uses loadBannerAd, loadAdManagerBannerAd and loadRewardedInterstitialAd). The
+    // AdInstanceManager is found by its onAdFailedToLoad event method ("adId", "eventName",
+    // "onAdFailedToLoad", "loadAdError"; (int, FlutterLoadAdError)V) and trackAd ("Ad for
+    // following adId already exists: %d"), whose first parameter is FlutterAd. In
+    // GoogleMobileAdsPlugin.onMethodCall (the (MethodCall, Result)V with every load* string) each
+    // of the 9 load cases calls trackAd(ad, adId) and then the ad's no-arg load; those 9 calls
+    // resolve to 8 load methods (the fluid ad inherits the Ad Manager banner's) and cover all 9
+    // concrete FlutterAd classes. Each load now calls a new manager helper (morpheFailLoad(I)V)
+    // that builds FlutterLoadAdError(3 = NO_FILL, "com.google.android.gms.ads", "Ad blocked",
+    // null) and passes it to onAdFailedToLoad, and returns before any ad view or SDK call. The
+    // plugin codec writes the null ResponseInfo as null; the platform-view factory returns an
+    // empty View for an ad without a view; show and immersive-mode calls null-check the ad.
+    // MobileAds.initialize (and with it Liftoff/Vungle adapter init, which loads no ads) and
+    // the unused preloader (MobileAds#startPreloading is absent from libapp.so) are untouched.
+    // Rewarded interstitials fail to load like every other ad. Football433SmokeTest asserts the
+    // helper and every load prologue.
+    // Decompile-checked 2026-10-17 (CLI, no -f): the helper, all 8 load prologues (+5
+    // instructions each, nothing dropped) and the untouched onMethodCall/initialize match.
+    // Emulator 2026-10-17 (stock control, same test key, ARM translation): stock shows the Home
+    // carousel ad, the Matches "Sponsored" card and banner, and match-overview/line-ups banners;
+    // patched shows none of them and leaves no ad box (a little extra spacing on the match
+    // overview), no ad log lines in 60 s idle (so no retry loop), no crash in either build. The
+    // wallpaper "Download [AD]" button: stock plays a rewarded ad first; patched downloads at
+    // once. That is the app's own reaction to the failed load, not a patched reward path.
+    val COMPATIBILITY_FOOTBALL433 = Compatibility(
+        name = "433",
+        packageName = "com.football433",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0xF1FF00, // The adaptive icon's neon yellow background.
+        targets = listOf(AppTarget(version = "2.3.548", versionCode = 868))
+    )
+
+    // Same app, used only by "Disable telemetry", so Morphe Manager flags it as experimental
+    // (2026-10-17, 2.3.548 / versionCode 868; smoke- and decompile-checked, effect not visible on
+    // the emulator, see below). The manifest gains
+    // io.sentry.enabled=false: Dart starts Sentry Android through JNI, the SDK applies the manifest
+    // before Dart's options callback (which never calls setEnabled) and Sentry.init stops when
+    // disabled; Dart's envelopes go through the native SDK. UXCam: the flutter_uxcam
+    // startWithConfiguration handler ((Map, Result)V with "userAppKey" and
+    // "enableMultiSessionRecord") answers false at once, and every static void UXCam.start*
+    // returns at once. Airship: AirshipConfigOptions$Builder.getAnalyticsEnabled answers false
+    // (push and channel registration stay; event-triggered in-app automations stop). Branch: both
+    // flutter_branch_sdk readers of the "branchAttributionLevel" argument (init and
+    // setConsumerProtectionAttributionLevel) get "NONE" (tracking disabled, deterministic deep
+    // links only; share links may come out in long form). Not covered: Segment and the app's own
+    // analytics.prod.by433.com collector, both sent by Dart over HTTP with keys from
+    // flutter_assets/env/.env.prod (blanking them could make Dart throw). Firebase Analytics is
+    // not bundled: the GMA measurement client disables itself, so no Firebase flag is set.
+    // Decompile-checked 2026-10-17 (every hook and the one-line manifest change). On the emulator
+    // neither stock nor patched logged Sentry, UXCam or Branch lines, so the effect can't be told
+    // apart there; Airship push work still runs, as intended. Stays experimental.
+    val COMPATIBILITY_FOOTBALL433_EXPERIMENTAL = Compatibility(
+        name = "433",
+        packageName = "com.football433",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0xF1FF00,
+        targets = listOf(AppTarget(version = "2.3.548", versionCode = 868, isExperimental = true))
+    )
+
+    // Written 2026-10-17 against com.mail.mobile.android.mail 9.18.3 (versionCode
+    // 405213, APKMirror bundle merged). Signer CN=Raimund Rix, OU=Mobile & Media Services, O=1&1
+    // Mail & Media GmbH, SHA-256 07ada088...dfbe, the same as on APKMirror. The app classes are not
+    // R8-renamed, but the remote-config models are still found by their toString() output and
+    // the methods by name plus shape (concrete only).
+    //   - Disable ads: AdvertisingIdentityConfig ("AdvertisingIdentityConfig(isId5Enabled=")
+    //     answers false from isAdEnabled, isGoogleInboxAdEnabled, isGoogleBannerEnabled,
+    //     isHtmlBannerEnabled, isEndlessIbaEnabled, isMetaNativeIBAsEnabled,
+    //     isMetaNativeBannerEnabled, isAdsInCustomFoldersEnabled and isId5Enabled (the patch fails
+    //     if one is missing); isUnifiedInboxAdsEnabled is inverted and left alone.
+    //     InterstitialAdConfig.isEnabled ("InterstitialAdConfig(isEnabled=") answers false, and
+    //     AdTracker.send (the (String)V with the "AdTracker: url is null or invalid" and
+    //     "AdTracker failed" logs), which only sends ad pixels, returns at once. The paid ad-free
+    //     state (PayMailManager / BillingAdFreeStateProvider), the News userlevel field and the
+    //     MobileAds statics are not touched. The server's inbox promo cards go away too.
+    //   - Disable telemetry: Tracking2Config.isTracking2Enabled ("Tracking2Config(batchSize=")
+    //     and AppMonConfig.isAppMonEnabled ("AppMonConfig(isAppMonEnabled=") answer false;
+    //     TrackingPermissions(ZZZZZ) ("TrackingPermissions(isBrainTrackingAllowed=") sets Brain,
+    //     Reach (INFOnline) and Trop false at entry, the registers taken from their iput-boolean
+    //     stores (p1..p3 here); SentryAPI.start (the instance (1 arg)V calling SentryAndroid.init;
+    //     the manifest has io.sentry.auto-init=false) returns at once. FCM push is untouched.
+    //   - Disable rating prompts: InAppRatingManager.canRequestInAppReviewFlow()Z (reads the
+    //     clock) answers false; it gates the only Play review request, after a mail is sent.
+    //   - Hide upsells: Swipe2UpsellFeature.isEnabledByConfig (the ()Z returning
+    //     isSwipe2UpsellEnabled) answers false, so swiping ads away no longer opens the upgrade
+    //     sheet. IapUpsellingFeature is not touched: it also gates the Settings "Upgrade" row and
+    //     the drawer's Premium item.
+    // Decompile-checked 2026-10-17 (CLI, no -f: every hook, nothing dropped, ad-free entitlement
+    // and IapUpselling untouched, resources byte-identical). Emulator 2026-10-17, logged out
+    // (stock control): 2 cold starts each, no crash; the start screen and login load. The inbox
+    // ads, promo cards, rating prompt and upsell sheet sit behind a login, so those effects are
+    // verified in bytecode only.
+    val COMPATIBILITY_MAILCOM = Compatibility(
+        name = "mail.com",
+        packageName = "com.mail.mobile.android.mail",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x283167, // The adaptive icon's navy background.
+        targets = listOf(AppTarget(version = "9.18.3", versionCode = 405213))
+    )
+
+    // Written 2026-10-17 against com.eurosport 8.33.0 (versionCode 113758, APKMirror
+    // bundle merged). Signer CN=Unknown, OU=Eurosport, O=Eurosport, L=Issy, C=fr, SHA-256
+    // 03428013...9a17, plus a v3.1 Google (CN=Android) signer for SDK 33+, SHA-256 cabdcdfd...09a1.
+    // The app is R8-renamed almost everywhere, so its models are found by their toString()
+    // output and the methods by shape; the Storyteller, Teads, Comscore, New Relic, AppsFlyer and
+    // Apptentive SDKs keep their class names. EurosportSmokeTest asserts every hook. A CLI build
+    // (no -f) applies all three patches and changes the 13 hooked classes; a dexdump of the
+    // SdkConfig, PlayerModel, Settings, StorytellerEventTrackingOptions and setModules hooks
+    // matches, and the string values are unchanged after the manifest edit (aapt2 diff of every
+    // string, plurals and array entry, rule 12).
+    // Limitation: ads inserted into live and premium streams (AdSparx SSAI) and video
+    // entitlement / DRM are server-side and not touched.
+    //   - Disable ads: the SdkConfig model ("SdkConfig(sdk=") constructor stores enabled = false
+    //     for GOOGLE_AD and TEADS (matched by the Sdk enum's name()), so the ad view factory makes
+    //     a 0x0 view; the only static (1 arg) AdPlaceholderModel factory ("AdPlaceholderModel(
+    //     content=", in the class with "Unsupported provider: ") answers null; PlayerModel
+    //     ("PlayerModel(isLive=") stores showAds (the field toString prints after "showAds=")
+    //     as false; Storyteller Settings (both constructors) store AdSource.NoAds (the enum
+    //     with NoAds / IntegratingApp / Storyteller); StorytellerClipsAdConfiguration
+    //     getBottomBannerEnabled / getPreRollEnabled answer false; Storyteller.setModules gets an
+    //     empty list (the patch fails if a non-ads StorytellerModule exists; the app registers
+    //     only StorytellerGamModule); the app's TeadsAdPlacementMedia creator (load()V) returns
+    //     at once. MobileAds and MobileAdsInitProvider are not touched.
+    //   - Disable telemetry: SdkConfig stores enabled = false for ADOBE, APPSFLYER, CHARTBEAT,
+    //     PERMUTIVE, MUX and MEDIAMELON (STORYTELLER keeps the server value; both blocks can be
+    //     applied together); com.comscore.Analytics.start(Context) and its static notify*
+    //     methods, NewRelic.start(Context), the AppsFlyerLib subclass's start / logEvent /
+    //     logSession / logAdRevenue and Apptentive register / engage return at once;
+    //     StorytellerEventTrackingOptions(ZZZZZZList) stores false for enableStorytellerTracking,
+    //     enableUserActivityTracking, enableAdTracking and enableFullVideoAnalytics (registers
+    //     taken from the field stores); the manifest gains firebase_analytics_collection_
+    //     deactivated=true, google_analytics_adid_collection_enabled=false and
+    //     firebase_crashlytics_collection_enabled=false. Firebase Messaging, Remote Config and
+    //     Batch are untouched. AppsFlyer deep links may stop.
+    //   - Hide partner promotions (off by default): the only static (1 arg) WatchBannerUi
+    //     factory ("WatchBannerUi(label=") answers null, which also hides the HBO Max /
+    //     discovery+ links to the event.
+    // Decompile-checked 2026-10-17 (CLI, no -f; jadx confirms the SdkConfig blocks clear the
+    // ad/telemetry vendors and never STORYTELLER; the string table is unchanged). Emulator
+    // 2026-10-17 (stock control): 2 cold starts, no crash with Comscore/New Relic/Apptentive
+    // stubbed; the home-feed "ADVERTISEMENT" card is gone and the feed closes up; a free clip
+    // plays without pre-roll (stock showed none at that moment either); no
+    // Comscore/NewRelic/Teads/Permutive/Chartbeat/Mux log lines. Not seen on either build:
+    // Storyteller stories (the carousel didn't render) and the discovery+/HBO Max watch banner.
+    val COMPATIBILITY_EUROSPORT = Compatibility(
+        name = "Eurosport",
+        packageName = "com.eurosport",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x000000, // The adaptive icon's black background.
+        targets = listOf(AppTarget(version = "8.33.0", versionCode = 113758))
+    )
+
+    // Verified 2026-10-17 against lequipe.fr 10.69.1 (versionCode 1616) in bytecode only (smoke
+    // test + decompile check; no emulator run yet).
+    // Source: an apkcube .apks (base + split_config.arm64_v8a, so arm64-v8a only) merged with
+    // APKEditor. The apkcube splits are signed by the developer (CN=Xavier Debbasch, OU=Airweb,
+    // SHA-256 6d9f086b...6e59, plus a Google Play source stamp); the merge breaks that signature.
+    // No packer or PairIP.
+    // Disable ads: every native ad goes through Google Mobile Ads / Ad Manager. The banner slots
+    // call AdManagerAdView.loadAd(AdManagerAdRequest) and the bidding interstitial calls
+    // AdManagerInterstitialAd.load from R8-renamed coroutines, so the patch anchors on the GMA
+    // library classes only: every concrete void load / loadAd / loadAds on BaseAdView, AdLoader,
+    // AdManagerAdView, AdManagerInterstitialAd, InterstitialAd, RewardedAd,
+    // RewardedInterstitialAd and AppOpenAd returns at once (the app's two loads and the mediation
+    // adapter's BaseAdView / InterstitialAd loads are mandatory), and the patch fails if any GMA
+    // load call in the APK resolves to an unpatched method or the app stops calling the two Ad
+    // Manager loads. Rule 9: all MobileAds static voids return at once (registerWebView, which
+    // fr.lequipe.ads.a calls, is mandatory) and putPublisherFirstPartyIdEnabled answers false.
+    // Teads (TeadsAdapter) and Equativ (SASGMAMediation*Adapter) only fill through GMA mediation
+    // and Prebid / Amazon bid into the Ad Manager request, so they are covered. The ad listeners
+    // get no callback, so a slot that reserves space before loading may stay blank.
+    // Known limitations: Taboola Classic widgets (sponsored content, TBLClassicUnit) are not
+    // covered, nor are ads inside L'Équipe's web/PWA pages. The paywall (Piano/Purchasely) is
+    // server-side and untouched. LequipeSmokeTest asserts every hook.
+    // Decompile-checked 2026-10-17 (CLI, no -f): the 9 GMA classes above change, every load and
+    // MobileAds static void starts with return-void, putPublisherFirstPartyIdEnabled returns 0,
+    // and the app's banner and interstitial call sites still call the patched loads.
+    // Emulator 2026-10-17: not runnable here. The app is arm64-only React Native, and on the x86_64
+    // emulator SoLoader never finds its arm64 libs, so stock and patched both crash at start with the
+    // same AssertionError (environment, not the patch). The target is EXPERIMENTAL until it is
+    // checked on an arm64 device: ads gone, no empty boxes, no crash.
+    val COMPATIBILITY_LEQUIPE = Compatibility(
+        name = "L'Équipe",
+        packageName = "lequipe.fr",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x0A1E32,
+        targets = listOf(AppTarget(version = "10.69.1", versionCode = 1616, isExperimental = true))
+    )
+
+    // Written 2026-10-17 against de.transfermarkt.v2 4.3.2 (versionCode 2075, Play bundle merged).
+    // Signed with the Play App Signing key, cert SHA-256 69932f3c...4f08 (the merge breaks the
+    // signature). The app is a Cordova + Ionic Angular web app in assets/www; the native plugins
+    // keep their class names. A shared extension (extensions/transfermarkt) checks each WebView
+    // request's host against a suffix blocklist and answers an empty 200 script on a match, because
+    // the app's CMP / Adobe / SDG loaders only continue on script.onload. The hook goes at the start
+    // of every concrete shouldInterceptRequest(WebView, WebResourceRequest) on Cordova's
+    // SystemWebViewClient and its subclasses (4.3.2: the base class and the live client,
+    // IonicWebViewEngine$ServerClient); InAppBrowser's client is not touched. Transfermarkt's own
+    // hosts, Bitmovin, YouTube, Twitter and the Sourcepoint consent dialog are never blocked.
+    //   - Disable ads: the admob-plus webview-ad lambda that calls MobileAds.registerWebView and logs
+    //     "Integrated the WebView API for Ads in " returns at once; rule 9: every MobileAds static
+    //     void returns at once (initialize and registerWebView mandatory; the web app never calls
+    //     admob-plus start, and AdMob.execute is not touched); ad hosts (Ströer SDG, Yieldlove,
+    //     Adscale, DoubleClick/GPT/AdSense, Outbrain, oddsserve) are blocked. A raw-resource step
+    //     (no resource table re-encode, rule 12) hides <app-adtags>/<app-odd-banner> with a style
+    //     before index.html's </head>, makes the main.<hash>.js AdtagService refreshAds /
+    //     refreshSingleAds / appendAdtags / loadInterstitial (each the only definition with a
+    //     parameter list) return at once, and empties the Outbrain feature's allow list.
+    //     setGTM / adobeInit are not stubbed (dataLayer / tmAnalytics must exist).
+    //   - Disable telemetry: Google Tag Manager / Analytics, Adobe (adobedtm, omtrdc, demdex), m6r
+    //     and INFOnline hosts are blocked; cordova-plugin-idfa's getInfo (AdvertisingIdClient call +
+    //     "aaid"/"trackingLimited") answers {aaid:"", trackingLimited:true}. No Firebase Analytics.
+    // Consent (Sourcepoint), billing, login and push (OneSignal) are untouched.
+    // TransfermarktSmokeTest asserts every hook and asset edit. Decompile check passed. Emulator
+    // (morphe-play, arm64 under translation) 2026-10-17, stock re-signed vs both patches: no crash,
+    // consent dialog still shown, home / article / match / player pages render with no ad frames or
+    // gaps (stock showed banners), back button works. Push: neither run logged a token or a
+    // Firebase error, so re-signed push is undetermined (same in stock).
+    val COMPATIBILITY_TRANSFERMARKT = Compatibility(
+        name = "Transfermarkt",
+        packageName = "de.transfermarkt.v2",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x001AA3, // The adaptive icon's blue background.
+        targets = listOf(AppTarget(version = "4.3.2", versionCode = 2075))
+    )
+
+    // Written 2026-10-18 against org.mozilla.focus 158.0 (versionCode 402802337 for both the
+    // x86_64 and arm64-v8a builds, APKMirror bundles), signer CN=Release Engineering, O=Mozilla
+    // Corporation (cert SHA-256 6203a473...4ffc). Focus is built with -dontobfuscate and GeckoView
+    // keeps its whole API, so class and method names are stable anchors.
+    //   - Add-on support (extensions/firefoxfocus): WebExtensionController.setPromptDelegate wraps
+    //     the delegate (stock Focus never answers install prompts, so installs hung); installs the
+    //     manager starts are allowed with private browsing, anything else asks. FocusApplication
+    //     .onCreate tracks the foreground Activity. WebExtensionBrowserMenuBuilder's constructor
+    //     forces showAddonsInMenu and swaps onAddonsManagerTapped for the manager (install
+    //     uBlock Origin / Violentmonkey / Tampermonkey from AMO, settings, enable, update, remove).
+    //     WebExtension$Action.openPopup shows popups in a GeckoView dialog. Installed add-ons are
+    //     checked for updates on addons.mozilla.org at most once a day.
+    //   - Enable about:config: GeckoRuntime.create(Context, GeckoRuntimeSettings) sets it first.
+    //   - Disable telemetry: Glean is already off in Focus; the usage-reporting service and ping
+    //     never start or send, the Daily usage ping setting defaults to off, Nimbus.fetchExperiments
+    //     returns at once. Crash reports are untouched (Focus asks before each one).
+    //   - Disable rating prompts: the inlined review step in MainActivity.onCreate ("Pending" /
+    //     "ReviewNeeded" / "Reviewed") always reads "Pending".
+    //   - Hide promotional prompts: Onboarding isCfrEnabled / isPromoteSearchWidgetDialogEnabled
+    //     delegate reads are false (tips and the search-widget promo after erase).
+    // FirefoxFocusSmokeTest and FirefoxFocusAddonsSmokeTest pass; CLI applies all five without -f
+    // and the disassembly shows each change. Emulator (morphe-play, API 35, x86_64) 2026-10-18,
+    // re-signed stock vs patched: no crash; uBlock Origin 1.75.0 and Violentmonkey 2.49.0
+    // install from the manager, uBO blocks on canyoublockit.com and its popup renders, a Greasy
+    // Fork userscript installs through Violentmonkey's confirm tab and runs, add-ons and scripts
+    // survive Erase and two relaunches, about:config opens, Daily usage ping shows off. uBO's
+    // "More" pane is empty, the same as in Firefox itself. Rating/promo patches bytecode-only.
+    val COMPATIBILITY_FIREFOX_FOCUS = Compatibility(
+        name = "Firefox Focus",
+        packageName = "org.mozilla.focus",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x7542E5, // The icon's purple.
+        targets = listOf(AppTarget(version = "158.0", versionCode = 402802337))
+    )
+
+    // Written 2026-10-18 against org.mozilla.firefox 158.0 (versionCode 2016189054 for x86_64 and
+    // 2016189050 for arm64-v8a, APKMirror standalone APKs), signer CN=Release Engineering,
+    // O=Mozilla Corporation (cert SHA-256 a78b62a5...9b04). Fenix is built with -dontobfuscate and
+    // GeckoView keeps its API, but R8 inlines single-caller getters and narrows signatures, so
+    // anchors are class + name + parameters, never a fixed return type.
+    //   - Disable telemetry: every Glean PingUploader that builds HttpStatus answers HttpStatus(200)
+    //     at once (pings are dropped as sent); Settings telemetry / daily usage ping / marketing /
+    //     experimentation getters are false; Adjust initSdk/enable/trackEvent/trackThirdPartySharing
+    //     /gdprForgetMe return; SentryService.initIfNeeded returns and every CrashReporterService
+    //     report overload (Sentry, Socorro) sends nothing; Nimbus.fetchExperiments returns.
+    //   - Hide sponsored content: contile / Pocket sponsored stories / sponsored suggestions getters
+    //     and isPocketSponsoredStoriesFeatureEnabled are false; MacTopSitesProvider.getTopSites
+    //     answers EmptyList. Non-sponsored suggestions stay.
+    //   - Enable about:config: GeckoRuntimeSettings$Builder.aboutConfigEnabled(Z) gets true.
+    //   - Unlock secret settings: getShowSecretDebugMenuThisSession is true and FeatureFlags
+    //     customExtensionCollectionFeature is stored true after its <clinit> store.
+    //   - Hide promotional prompts: NimbusMessagingStorage.getNextMessage(String, List) is null,
+    //     microsurveys off, MessageNotificationWorker succeeds at once, HomeActivity.onCreate's
+    //     isDefaultBrowser result is true, the onboarding filter lambda drops the default-browser
+    //     card (proved at patch time through OnboardingCardType and the WhenMappings switch) and
+    //     the sync sign-in page, ContinuousOnboardingFeature.start returns, ShowReviewPromptBinding
+    //     .onState returns Unit. Sign-in in the menu and settings is untouched.
+    //   - Keep background tabs loaded (default off, experimental): ServiceAllocator$InstanceInfo
+    //     .setPriorityLevel raises IDLE to BACKGROUND for content processes; tab reload cover on.
+    // FirefoxSmokeTest passes; CLI applies all six without -f on both ABIs; the decompile check
+    // found exactly the 18 intended classes changed. Emulator (morphe-play, API 35, x86_64)
+    // 2026-10-18, re-signed stock vs patched: no crash; no default-browser card or system prompt
+    // (stock showed both), no sponsored shortcuts (stock: adidas, Trip.com), about:config opens,
+    // Secret Settings / Install extension from file / custom collection shown, Data collection
+    // toggles off, no Nimbus fetch in logcat, uBlock Origin installs from AMO and blocks. With
+    // the tabs patch, background tab processes sat at adj 0-100 in the foreground (stock not
+    // measured). Sponsored stories and sponsored suggestions did not appear on stock in that run,
+    // so those two steps are bytecode-only. Re-signing may break Send Tab and web push.
+    val COMPATIBILITY_FIREFOX = Compatibility(
+        name = "Firefox",
+        packageName = "org.mozilla.firefox",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0xFF7139, // The icon's orange.
+        targets = listOf(
+            AppTarget(
+                version = "158.0",
+                versionCodes = mapOf(SupportedAbi.X86_64 to 2016189054, SupportedAbi.ARM64_V8A to 2016189050),
+            )
+        )
+    )
+
+    // Written 2026-10-17 against com.bleacherreport.android.teamstream 11.12.0.33 (versionCode
+    // 54053, APKMirror bundle), developer signer CN=Sam Parnell, OU=Bleacher Report (cert SHA-256
+    // 60baa405...a4f0). The app (com.bleacherreport.phoenix) and its Kotlin runtime are R8-renamed
+    // but keep .source names and toString strings; Unit and Result.failure are copied from the
+    // patched methods' own code, never hard-coded. Launch tasks are found by the task id string in
+    // their config's <clinit>, the LaunchTask base by its "...launchtaskmanager.LaunchTask" cast
+    // message and ExecutionResult.Success by "Success(taskId=".
+    //   - Disable ads: AdConfigInteractorImpl ("getFeaturesAdConfig() " + "Returning hardcoded ad
+    //     config") answers Result.failure(AdConfigException) at entry; AdContentInserterImpl
+    //     (AdContentInserterImpl.kt, "content"/"ads"/"channelAdUnit") gets an empty ad list and no
+    //     alerted ad; AdsManagerImpl loadAd ("Ad Unit is missing in ") returns at once, loadSplashAd
+    //     ("loadSplashAd() ad=") answers its "Ad Unit is missing" failure and the Amazon DTB start
+    //     ("Amazon Services SDK could not be started") returns Unit; AdSetupLaunchTask and
+    //     SplashAdLaunchTask answer Success(taskId). Rule 9: every MobileAds static void returns at
+    //     once (initialize and registerWebView mandatory), putPublisherFirstPartyIdEnabled is false.
+    //     Video ads are server-stitched (SSAI) into the streams and are not patched.
+    //   - Disable telemetry: MParticleLaunchTask (mParticle and its Apptentive kit),
+    //     DatadogLaunchTask and ComScoreLaunchTask answer Success; every comScore Analytics static
+    //     void returns at once; Crashlytics DataCollectionArbiter ("firebase_crashlytics_collection_
+    //     enabled manifest flag") answers false; the 3 Branch reads of "bnc_tracking_state" are
+    //     forced to true (tracking disabled; the SDK still starts); Beam PersistentEventQueue.add
+    //     ("EnrichedEventQueue.add(): exception") and EventQueueMonitor ("onTaskExecution skipped,
+    //     mode is ") return Unit; CanonicalEventInteractorImpl ("br-braze-event-forwarding", 2 args)
+    //     returns Unit, so no Braze custom events. Braze init/push, OneTrust consent, IsdkLaunchTask
+    //     and Prism/PSM are not touched.
+    //   - Hide betting content: the ChannelItemsMapper.kt Stats mapper answers null for the
+    //     StatsItemType betting/odds/line/prop types (Stats found by "Stats(type="); the
+    //     OddsStateMapper.kt and TrendingBetsStateMapper.kt module mappers answer null; the Scores
+    //     model ("Scores(calendarNavigation=") stores no bettingLink / bettingDisclaimer.
+    // BleacherReportSmokeTest asserts every hook. Decompile check passed. Emulator (morphe-play)
+    // 2026-10-17, stock re-signed vs all three patches: no crash, consent still shown, home / Scores
+    // / gamecast / alerts / article / NFL channel render; stock showed native ads and empty ad gaps,
+    // patched none; no Datadog / comScore / Branch / DoubleClick traffic; Braze push token
+    // registered on the patched build. Betting removal not seen on screen: no game tested showed
+    // odds in stock either. ANRs on both builds came from the emulator's software video decode.
+    val COMPATIBILITY_BLEACHER_REPORT = Compatibility(
+        name = "Bleacher Report",
+        packageName = "com.bleacherreport.android.teamstream",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0x1A1A1A, // The adaptive icon's background colour.
+        targets = listOf(AppTarget(version = "11.12.0.33", versionCode = 54053))
     )
 }

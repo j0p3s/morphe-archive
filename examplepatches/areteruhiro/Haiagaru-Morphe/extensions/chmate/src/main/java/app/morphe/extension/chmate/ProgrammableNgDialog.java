@@ -1,7 +1,7 @@
 package app.morphe.extension.chmate;
 
 import android.app.Activity;
-import android.app.AlertDialog;
+
 import android.text.InputType;
 import android.view.ViewGroup;
 import android.widget.Button;
@@ -30,7 +30,7 @@ final class ProgrammableNgDialog {
             Activity activity, boolean enabled, ArrayList<ProgrammableNgRuleSet.Rule> rules
     ) {
         LinearLayout content = column(activity);
-        final AlertDialog[] host = new AlertDialog[1];
+        final HaiagaruDialog[] host = new HaiagaruDialog[1];
         CheckBox master = new CheckBox(activity);
         master.setText("高度なNGルールを有効にする");
         master.setChecked(enabled);
@@ -78,7 +78,7 @@ final class ProgrammableNgDialog {
         status.setText(ProgrammableNgController.status());
         content.addView(status, matchWrap());
 
-        host[0] = new AlertDialog.Builder(activity)
+        host[0] = new HaiagaruDialog.Builder(activity)
                 .setTitle("高度なNGルール")
                 .setView(scroller(activity, content))
                 .setPositiveButton("保存", (dialog, which) -> {
@@ -102,9 +102,10 @@ final class ProgrammableNgDialog {
                 "レス本文にキーワードを含む",
                 "正規表現で判定する",
                 "エッヂの記者IDで判定する",
+                "キーワードに一致した投稿者・返信を連鎖NG",
                 "JavaScriptを最初から書く"
         };
-        new AlertDialog.Builder(activity)
+        new HaiagaruDialog.Builder(activity)
                 .setTitle("どの条件を作りますか？")
                 .setItems(templates, (dialog, which) -> {
                     rules.add(ProgrammableNgController.templateRule(which));
@@ -138,9 +139,10 @@ final class ProgrammableNgDialog {
         boards.setEnabled(!original.allBoards);
         allBoards.setOnCheckedChangeListener((button, checked) -> boards.setEnabled(!checked));
         TextView scriptHelp = new TextView(activity);
-        scriptHelp.setText("判定式（該当するとき true）\n"
+        scriptHelp.setText("判定式（該当するとき true、または判定オブジェクト）\n"
                 + "text: スレタイまたは本文\n"
-                + "options: boardUrl, threadId, resCount, speed, posterId, responseNumber, responseId");
+                + "options: boardUrl, threadId, resCount, speed, posterId, responseNumber, responseId\n"
+                + "レス本文は {match: 条件, samePoster: true, chainReplies: true} で投稿者・返信もNGにできます。");
         content.addView(scriptHelp, matchWrap());
         EditText script = field(activity, content,
                 "function (text, options) { ... }", original.script, true);
@@ -148,7 +150,7 @@ final class ProgrammableNgDialog {
         script.setInputType(InputType.TYPE_CLASS_TEXT
                 | InputType.TYPE_TEXT_FLAG_MULTI_LINE | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
 
-        AlertDialog dialog = new AlertDialog.Builder(activity)
+        HaiagaruDialog dialog = new HaiagaruDialog.Builder(activity)
                 .setTitle(original.name)
                 .setView(scroller(activity, content))
                 .setPositiveButton("一覧に反映", null)
@@ -159,7 +161,7 @@ final class ProgrammableNgDialog {
                 })
                 .create();
         dialog.setOnShowListener(ignored -> {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
+            dialog.getButton(HaiagaruDialog.BUTTON_POSITIVE).setOnClickListener(view -> {
                 try {
                     rules.set(position, build(original.id, name, target, enabled, allBoards, boards, script));
                     dialog.dismiss();
@@ -168,7 +170,7 @@ final class ProgrammableNgDialog {
                     Toast.makeText(activity, error.getMessage(), Toast.LENGTH_LONG).show();
                 }
             });
-            dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(view -> {
+            dialog.getButton(HaiagaruDialog.BUTTON_NEUTRAL).setOnClickListener(view -> {
                 try {
                     Toast.makeText(activity, ProgrammableNgController.preview(
                             build(original.id, name, target, enabled, allBoards, boards, script)),

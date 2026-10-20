@@ -23,6 +23,19 @@ import org.junit.Assume.assumeTrue
 internal object Fixtures {
     const val VARIABLE = "HUSHGRAM_FIXTURE_DIR"
 
+    /**
+     * How many builds of the declared Instagram version the fixture folder holds: the declared
+     * build and the others. The one number a new variant drop changes; a test that checks every
+     * build asserts against it, so a missing fixture still fails it.
+     */
+    const val BUILDS = 3
+
+    /** The builds besides the declared one. */
+    val OTHER_BUILDS = BUILDS - AppCompatibilities.instagram().flatMap { it.targets }.sumOf { it.versionCodes.orEmpty().size }
+
+    /** The declared version, for assertion messages. */
+    val VERSION: String = AppCompatibilities.INSTAGRAM_TARGET_VERSION
+
     /** The files in the fixture folder that [accept] takes, sorted by name. */
     fun files(accept: (File) -> Boolean): List<File> {
         val directory = folder()
@@ -35,7 +48,7 @@ internal object Fixtures {
      * The base APKs of the other builds of each declared Instagram version, sorted by build. Each
      * is in a folder named `instagram-<version>-<version code>` in the fixture folder, and the
      * declared build's own folder is left out. Instagram ships one version as several builds
-     * (451.0.0.53.80 has five for arm64, one for x86 and two for x86_64), each compiled on its
+     * (452.0.0.48.64 has one for arm64 and two for armeabi-v7a), each compiled on its
      * own, and the patches find what they change by its shape, so these are read too (#77, #95).
      */
     fun otherBuilds(): List<File> {

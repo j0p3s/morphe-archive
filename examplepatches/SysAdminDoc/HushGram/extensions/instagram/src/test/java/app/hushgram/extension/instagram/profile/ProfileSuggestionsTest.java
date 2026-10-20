@@ -10,8 +10,10 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
 
+import android.app.Activity;
 import android.content.Context;
 import android.view.View;
+import android.view.ViewTreeObserver;
 import android.widget.LinearLayout;
 
 import org.junit.After;
@@ -19,6 +21,7 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
@@ -66,6 +69,7 @@ public class ProfileSuggestionsTest {
         Settings.HIDE_PROFILE_COMPLETION.resetToDefault();
         Settings.HIDE_FOLLOW_BACK_SUGGESTIONS.resetToDefault();
         Settings.HIDE_NOTIFICATION_SUGGESTIONS.resetToDefault();
+        Settings.HIDE_NOTIFICATION_FEATURED.resetToDefault();
         BaseSettings.PAUSED.save(false);
         PauseForTests.resume();
         HookStatus.clear();
@@ -254,6 +258,41 @@ public class ProfileSuggestionsTest {
         ProfileSuggestions.chainingButton(button);
         ProfileSuggestions.fitRow(button);
         assertEquals(List.of(400, 400, 150), measure(row, edit, share, button));
+    }
+
+    /**
+     * #220: a refresh rebinds the row and asks for a layout before the button is set up, and that
+     * layout drew a frame at Instagram's widths before a posted fit ran, so the buttons twitched.
+     * The fit runs before that frame draws now, nothing posted has to run first, and the frame after
+     * it draws as usual. dispatchOnPreDraw answers whether the frame is canceled.
+     */
+    @Test
+    public void aRefreshedRowIsSpreadBeforeItsNextFrameDraws() {
+        Activity activity = Robolectric.buildActivity(Activity.class).setup().get();
+        LinearLayout row = row();
+        View edit = add(row, "generic", 400);
+        View share = add(row, "generic", 400);
+        View button = add(row, "chaining_icon", 150);
+        activity.setContentView(row);
+        ViewTreeObserver frame = row.getViewTreeObserver();
+
+        ProfileSuggestions.chainingButton(button);
+        assertTrue("the frame that would show the gap is skipped", frame.dispatchOnPreDraw());
+        assertEquals(List.of(500, 500), measure(row, edit, share));
+        assertFalse("and the next one draws", frame.dispatchOnPreDraw());
+
+        share.setLayoutParams(new LinearLayout.LayoutParams(400, 100));
+        ProfileSuggestions.chainingButton(button);
+        ProfileSuggestions.chainingButton(button);
+        assertTrue(frame.dispatchOnPreDraw());
+        assertEquals("the refresh's new params are spread before they draw", List.of(500, 500), measure(row, edit, share));
+        assertFalse("two binds before a frame skip it once", frame.dispatchOnPreDraw());
+
+        Settings.HIDE_PROFILE_SUGGESTIONS.save(false);
+        ProfileSuggestions.chainingButton(button);
+        assertTrue(frame.dispatchOnPreDraw());
+        assertEquals("put back before the button draws again", List.of(400, 400, 150), measure(row, edit, share, button));
+        assertFalse(frame.dispatchOnPreDraw());
     }
 
     /** Replacement native weights belong to Instagram even if they equal the weight we used before. */
@@ -491,38 +530,81 @@ public class ProfileSuggestionsTest {
      */
     @Test
     public void theFollowBackSectionGoesOnlyWithItsOwnSwitch() {
-        assertFalse("the profile switch alone", ProfileSuggestions.hidesFollowBackSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
+        assertFalse("the profile switch alone", ProfileSuggestions.hidesSuggestionSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
         String ran = String.join("\n", HookStatus.report());
         assertTrue(ran, ran.contains(ProfileSuggestions.SECTIONS));
 
         Settings.HIDE_FOLLOW_BACK_SUGGESTIONS.save(true);
-        assertTrue(ProfileSuggestions.hidesFollowBackSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
-        assertFalse("another section", ProfileSuggestions.hidesFollowBackSection("SCHOOLMATES"));
-        assertFalse("follow requests", ProfileSuggestions.hidesFollowBackSection("FOLLOW_REQUEST"));
-        assertFalse("no type", ProfileSuggestions.hidesFollowBackSection(null));
+        assertTrue(ProfileSuggestions.hidesSuggestionSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
+        assertFalse("another section", ProfileSuggestions.hidesSuggestionSection("SCHOOLMATES"));
+        assertFalse("follow requests", ProfileSuggestions.hidesSuggestionSection(ProfileSuggestions.FOLLOW_REQUEST_TYPE));
+        assertFalse("no type", ProfileSuggestions.hidesSuggestionSection(null));
         String report = FeedFilterCounters.report().toString();
         assertTrue(report, report.contains(ProfileSuggestions.FOLLOW_BACKS));
         assertTrue("only the follow back section is counted: " + report, report.contains("1 removed"));
         Settings.HIDE_PROFILE_SUGGESTIONS.save(false);
-        assertTrue("with the profile switch off", ProfileSuggestions.hidesFollowBackSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
+        assertTrue("with the profile switch off", ProfileSuggestions.hidesSuggestionSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
 
         BaseSettings.PAUSED.save(true);
         PauseForTests.pause(HushgramPause.Reason.SWITCH);
-        assertFalse("paused", ProfileSuggestions.hidesFollowBackSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
+        assertFalse("paused", ProfileSuggestions.hidesSuggestionSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
         BaseSettings.PAUSED.save(false);
         PauseForTests.resume();
-        SettingsContextRule.withoutContext(() -> assertFalse("unready", ProfileSuggestions.hidesFollowBackSection(ProfileSuggestions.FOLLOW_BACK_TYPE)));
+        SettingsContextRule.withoutContext(() -> assertFalse("unready", ProfileSuggestions.hidesSuggestionSection(ProfileSuggestions.FOLLOW_BACK_TYPE)));
 
         Settings.HIDE_FOLLOW_BACK_SUGGESTIONS.save(false);
-        assertFalse("off", ProfileSuggestions.hidesFollowBackSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
+        assertFalse("off", ProfileSuggestions.hidesSuggestionSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
     }
 
-    /** A follow back switch that throws while the builder asks leaves the section to Instagram and says which hook threw. */
+    /**
+     * #112: with Hide suggestions in notifications on, the builder skips Suggested for you, typed
+     * SUGGESTED_USERS or untyped, SCHOOLMATES and a type it hasn't seen, and counts each. Follow
+     * requests always stay, and People you don't follow back keeps to its own switch. Off, paused or
+     * unready, Instagram draws them all. Each type shows in the report.
+     */
     @Test
-    public void aThrowingFollowBackSectionSwitchFailsOpenAndIsReported() {
-        assertFalse(ProfileSuggestions.hidesFollowBackSection(ProfileSuggestions.FOLLOW_BACK_TYPE, THROWS));
+    public void suggestionSectionsInNotificationsGoWithTheirSwitch() {
+        assertFalse("off", ProfileSuggestions.hidesSuggestionSection("SUGGESTED_USERS"));
+        assertFalse("off, no type", ProfileSuggestions.hidesSuggestionSection(null));
+
+        Settings.HIDE_NOTIFICATION_SUGGESTIONS.save(true);
+        assertTrue(ProfileSuggestions.hidesSuggestionSection("SUGGESTED_USERS"));
+        assertTrue("no type", ProfileSuggestions.hidesSuggestionSection(null));
+        assertTrue(ProfileSuggestions.hidesSuggestionSection("SCHOOLMATES"));
+        assertTrue("a new type", ProfileSuggestions.hidesSuggestionSection("SOMETHING_NEW"));
+        assertFalse("follow requests", ProfileSuggestions.hidesSuggestionSection(ProfileSuggestions.FOLLOW_REQUEST_TYPE));
+        assertFalse("people you don't follow back", ProfileSuggestions.hidesSuggestionSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
+        String report = FeedFilterCounters.report().toString();
+        assertTrue(report, report.contains(ProfileSuggestions.SECTION_TYPES));
+        assertTrue(report, report.contains("SUGGESTED_USERS"));
+        assertTrue(report, report.contains(ProfileSuggestions.NO_TYPE));
+        assertTrue(report, report.contains(ProfileSuggestions.FOLLOW_REQUEST_TYPE));
+        assertTrue(report, report.contains("Removed: " + ProfileSuggestions.SUGGESTED_SECTIONS + " 4"));
+        Settings.HIDE_PROFILE_SUGGESTIONS.save(false);
+        assertTrue("with the profile switch off", ProfileSuggestions.hidesSuggestionSection(null));
+
+        BaseSettings.PAUSED.save(true);
+        PauseForTests.pause(HushgramPause.Reason.SWITCH);
+        assertFalse("paused", ProfileSuggestions.hidesSuggestionSection("SUGGESTED_USERS"));
+        BaseSettings.PAUSED.save(false);
+        PauseForTests.resume();
+        SettingsContextRule.withoutContext(() -> assertFalse("unready", ProfileSuggestions.hidesSuggestionSection("SUGGESTED_USERS")));
+
+        Settings.HIDE_FOLLOW_BACK_SUGGESTIONS.save(true);
+        Settings.HIDE_NOTIFICATION_SUGGESTIONS.save(false);
+        assertFalse("off again", ProfileSuggestions.hidesSuggestionSection("SUGGESTED_USERS"));
+        assertTrue("the follow back switch alone", ProfileSuggestions.hidesSuggestionSection(ProfileSuggestions.FOLLOW_BACK_TYPE));
+    }
+
+    /** A section switch that throws while the builder asks leaves the section to Instagram and says which hook threw. */
+    @Test
+    public void aThrowingSectionSwitchFailsOpenAndIsReported() {
+        assertFalse(ProfileSuggestions.hidesSuggestionSection(ProfileSuggestions.FOLLOW_BACK_TYPE, THROWS, () -> true));
         String missing = HookStatus.missing(FamilyNames.PROFILE_SUGGESTIONS).toString();
         assertTrue(missing, missing.contains("'" + ProfileSuggestions.FOLLOW_BACKS + "'"));
+        assertFalse(ProfileSuggestions.hidesSuggestionSection("SUGGESTED_USERS", () -> true, THROWS));
+        missing = HookStatus.missing(FamilyNames.PROFILE_SUGGESTIONS).toString();
+        assertTrue(missing, missing.contains("'" + ProfileSuggestions.SUGGESTED_SECTIONS + "'"));
     }
 
     /**
@@ -533,6 +615,7 @@ public class ProfileSuggestionsTest {
     @Test
     public void onlyKindsThatSuggestSomethingAreSuggestions() {
         assertTrue(ProfileSuggestions.isSuggestion("connect_lowlness"));
+        assertTrue("#112's Follow suggestions row", ProfileSuggestions.isSuggestion("find_friend_activity"));
         assertTrue(ProfileSuggestions.isSuggestion("ig_text_app_non_onboarded_unconnected_daily_digest"));
         assertTrue(ProfileSuggestions.isSuggestion("ig_text_app_recommended_threads"));
         assertTrue(ProfileSuggestions.isSuggestion("ig_text_app_suggested_profiles"));
@@ -614,5 +697,57 @@ public class ProfileSuggestionsTest {
         assertSame(suggestion, ProfileSuggestions.keepNotification(suggestion, THROWS));
         String missing = HookStatus.missing(FamilyNames.PROFILE_SUGGESTIONS).toString();
         assertTrue(missing, missing.contains("'" + ProfileSuggestions.SUGGESTION_ROWS + "'"));
+    }
+
+    /**
+     * #259: with Hide Featured in notifications on, the Featured section's rows come back as an empty
+     * list, never the one Instagram filled, and its header as none. Off, paused or unready, both stay
+     * as Instagram kept them. A missing or empty list goes through as it came.
+     */
+    @Test
+    public void theFeaturedSectionGoesOnlyWithItsOwnSwitch() {
+        List<Object> rows = new ArrayList<>(Arrays.asList(new Object(), new Object()));
+        Object header = new Object();
+        Settings.HIDE_NOTIFICATION_SUGGESTIONS.save(true);
+        assertSame("the suggestions switch alone", rows, ProfileSuggestions.featuredRows(rows));
+        assertSame(header, ProfileSuggestions.featuredHeader(header));
+
+        Settings.HIDE_NOTIFICATION_FEATURED.save(true);
+        List<?> left = ProfileSuggestions.featuredRows(rows);
+        assertTrue(String.valueOf(left), left.isEmpty());
+        assertEquals("Instagram's list is left as it was", 2, rows.size());
+        assertNull(ProfileSuggestions.featuredHeader(header));
+        assertNull("no list", ProfileSuggestions.featuredRows(null));
+        List<Object> none = new ArrayList<>();
+        assertSame("an empty list", none, ProfileSuggestions.featuredRows(none));
+        assertNull("no header", ProfileSuggestions.featuredHeader(null));
+        String report = FeedFilterCounters.report().toString();
+        assertTrue(report, report.contains(ProfileSuggestions.FEATURED + " 1"));
+
+        BaseSettings.PAUSED.save(true);
+        PauseForTests.pause(HushgramPause.Reason.SWITCH);
+        assertSame("paused", rows, ProfileSuggestions.featuredRows(rows));
+        assertSame("paused", header, ProfileSuggestions.featuredHeader(header));
+        BaseSettings.PAUSED.save(false);
+        PauseForTests.resume();
+        SettingsContextRule.withoutContext(() -> {
+            assertSame("unready", rows, ProfileSuggestions.featuredRows(rows));
+            assertSame("unready", header, ProfileSuggestions.featuredHeader(header));
+        });
+
+        Settings.HIDE_NOTIFICATION_FEATURED.save(false);
+        assertSame("off", rows, ProfileSuggestions.featuredRows(rows));
+        assertSame("off", header, ProfileSuggestions.featuredHeader(header));
+    }
+
+    /** A Featured switch that throws leaves the rows and the header and says which hook threw. */
+    @Test
+    public void aThrowingFeaturedSwitchFailsOpenAndIsReported() {
+        List<Object> rows = new ArrayList<>(Collections.singletonList(new Object()));
+        Object header = new Object();
+        assertSame(rows, ProfileSuggestions.featuredRows(rows, THROWS));
+        assertSame(header, ProfileSuggestions.featuredHeader(header, THROWS));
+        String missing = HookStatus.missing(FamilyNames.PROFILE_SUGGESTIONS).toString();
+        assertTrue(missing, missing.contains("'" + ProfileSuggestions.FEATURED + "'"));
     }
 }

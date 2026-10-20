@@ -5,10 +5,12 @@ import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.string
+import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 
 internal const val BOTTOM_BAR_BUTTON_TYPE = "Lcom/truecaller/bottombar/BottomBarButtonType;"
 internal const val BOTTOM_BAR_VIEW = "Lcom/truecaller/bottombar/BottomBarView;"
+internal const val RECYCLER_VIEW = "Landroidx/recyclerview/widget/RecyclerView;"
 
 // Feature toggles are read as isEnabled("<key>", default state) in small R8-renamed getters. The
 // keys are exact-matched: both are prefixes of other toggles ("featureCallAssistantNumberSync",
@@ -84,4 +86,49 @@ internal object SelectTabFingerprint : Fingerprint(
     returnType = "V",
     parameters = listOf(BOTTOM_BAR_BUTTON_TYPE, "Z"),
     filters = listOf(methodCall(name = "setSelectedItemId", parameters = listOf("I"))),
+)
+
+// The classic call lists' shared RecyclerView setup (g68.I() in 26.40.5, called by the call history
+// tab and the dialer's list): adapter, layout manager, scroll listener, then, unless
+// "featureFavouriteContacts" is on, the swipe-to-call/SMS helper as touch listener and item
+// decoration, then setItemAnimator(null) and setHasFixedSize(true). Only the kept RecyclerView method names are
+// matched, not the obfuscated argument types; the patch checks the guard and the swipe helper.
+internal object CallLogSwipeSetupFingerprint : Fingerprint(
+    returnType = "V",
+    parameters = listOf(),
+    filters = listOf(
+        methodCall(definingClass = RECYCLER_VIEW, name = "addOnItemTouchListener"),
+        methodCall(definingClass = RECYCLER_VIEW, name = "addItemDecoration"),
+        methodCall(definingClass = RECYCLER_VIEW, name = "setItemAnimator"),
+        methodCall(definingClass = RECYCLER_VIEW, name = "setHasFixedSize"),
+    ),
+)
+
+// toString() of the business contact details model (q27 in 26.40.5), a Kotlin data class holding
+// the description, tcId, business number, contact type, display name and brandMedia (the
+// ArrayList of brand images the details screen shows in its media carousel). Only the stable
+// prefix and the brandMedia label are matched.
+internal object BusinessDetailsModelToStringFingerprint : Fingerprint(
+    name = "toString",
+    returnType = "Ljava/lang/String;",
+    parameters = listOf(),
+    filters = listOf(
+        string("BusinessDetailsModel(description=", StringComparisonType.STARTS_WITH),
+        string(", brandMedia="),
+    ),
+)
+
+// The Compose BusinessDetailsScreen (static n27.a in 26.40.5): (modifier, model, onMediaClick,
+// onVideoClick, videoThumbnail, composer, changed). It lays out the media carousel (brand images
+// plus, when the nullable Function2 slot is set, the "BusinessVideoThumbnail" promo video item)
+// only when brandMedia is not empty or the video slot is set, then the "BusinessDesTitle" /
+// "BusinessDescription" texts. The website and call/message/save/block buttons are not part of it.
+internal object BusinessDetailsScreenFingerprint : Fingerprint(
+    returnType = "V",
+    parameters = listOf(
+        "L", "L", "Lkotlin/jvm/functions/Function1;", "Lkotlin/jvm/functions/Function0;",
+        "Lkotlin/jvm/functions/Function2;", "L", "I",
+    ),
+    strings = listOf("BusinessDetailsScreen", "BusinessDesTitle"),
+    custom = { method, _ -> AccessFlags.STATIC.isSet(method.accessFlags) },
 )

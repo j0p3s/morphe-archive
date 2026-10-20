@@ -77,7 +77,7 @@ class NativeFindReelOriginTest {
             assertNinePlaceholdersFirst(name, classes, methods)
             checked += name
         }
-        for (code in BUILDS) assertTrue("no fixture of 451 build $code among $checked", checked.any { it.contains("-$code") })
+        for (code in BUILDS) assertTrue("no fixture of build $code among $checked", checked.any { it.contains("-$code") })
     }
 
     /** The media type bridge casts to Media and calls its one getter answering an Integer that loads `media_type`'s key. */
@@ -185,7 +185,7 @@ class NativeFindReelOriginTest {
     }
 
     private companion object {
-        val BUILDS = listOf(385713073, 385713078, 385713082, 385713109, 385713111, 385713116, 385713117, 385713118)
+        val BUILDS = listOf(385810270, 385810231, 385810269)
         /** The binder of a tile in a profile's Reels grid, and what builds the state it binds from a reel. */
         const val GRID_BIND = "ClipsGridItemDefinition_bind"
         const val GRID_ITEM = "ClipsGridExtensions_convertToClipsGridItem"

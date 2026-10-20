@@ -1,3 +1,9 @@
+## [1.11.1](https://github.com/mich111discord/MightyMichs-Patches/compare/v1.11.0...v1.11.1) (2026-10-19)
+
+### 🐛 Bug Fixes
+
+* Fixed Screentranslate fingerprint ([e2b7239](https://github.com/mich111discord/MightyMichs-Patches/commit/e2b7239711f6ebfcc1a99d7cfb4d95fac0ebb206))
+
 ## [1.11.0](https://github.com/mich111discord/MightyMichs-Patches/compare/v1.10.0...v1.11.0) (2026-10-13)
 
 ### 🐛 Bug Fixes

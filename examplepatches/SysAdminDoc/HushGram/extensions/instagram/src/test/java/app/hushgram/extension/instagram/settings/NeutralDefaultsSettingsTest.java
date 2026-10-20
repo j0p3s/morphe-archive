@@ -99,9 +99,9 @@ public class NeutralDefaultsSettingsTest {
 
     @Before public void prepare() {
         RuntimeEnvironment.getApplication().getApplicationInfo().targetSdkVersion = 36;
-        initiallyOff = new BooleanSetting[]{Settings.ASK_BEFORE_CALL, Settings.HIDE_REEL_COMMENT_BAR, Settings.HIDE_REEL_COMMENT_BAR_EVERYWHERE, Settings.HIDE_REEL_REPLY_BAR, Settings.HIDE_REELS_TOP_BAR, Settings.HIDE_REEL_SAVE_BUTTON, Settings.KEEP_REEL_CLEAR_MODE, Settings.HIDE_FEED_INTEREST, Settings.COPY_COMMENTS, Settings.COPY_COMMENT_AUTHORS, Settings.SAVE_COMMENT_PHOTOS, Settings.SAVE_PROFILE_PICTURES, Settings.VIEW_PROFILE_PICTURES, Settings.COPY_PROFILE_TEXT, Settings.HIDE_FEED_VIDEOS, Settings.HIDE_FEED_PHOTOS, Settings.HIDE_FEED_CAROUSELS, Settings.HIDE_FEED_LIKED, Settings.DOWNLOAD_VOICE_MESSAGES, Settings.HIDE_COMMENTS, Settings.HIDE_SHARE_BUTTON, Settings.CHANGE_LIKE_ANIMATION,
+        initiallyOff = new BooleanSetting[]{Settings.ASK_BEFORE_CALL, Settings.HIDE_CALL_BUTTONS, Settings.HIDE_REEL_COMMENT_BAR, Settings.HIDE_REEL_COMMENT_BAR_EVERYWHERE, Settings.HIDE_REEL_REPLY_BAR, Settings.HIDE_REELS_TOP_BAR, Settings.HIDE_REEL_SAVE_BUTTON, Settings.KEEP_REEL_CLEAR_MODE, Settings.HIDE_FEED_INTEREST, Settings.COPY_COMMENTS, Settings.COPY_COMMENT_AUTHORS, Settings.SAVE_COMMENT_PHOTOS, Settings.SAVE_PROFILE_PICTURES, Settings.VIEW_PROFILE_PICTURES, Settings.COPY_PROFILE_TEXT, Settings.HIDE_FEED_VIDEOS, Settings.HIDE_FEED_PHOTOS, Settings.HIDE_FEED_CAROUSELS, Settings.HIDE_FEED_LIKED, Settings.DOWNLOAD_VOICE_MESSAGES, Settings.HIDE_COMMENTS, Settings.HIDE_SHARE_BUTTON, Settings.CHANGE_LIKE_ANIMATION,
                 Settings.ASK_BEFORE_LIKE, Settings.ASK_BEFORE_REFRESH,
-                Settings.HIDE_HIGHLIGHTS, Settings.HIDE_THREADS_BUTTON, Settings.HIDE_PROFILE_NOTES, Settings.PROFILE_POSTS_LIST, Settings.HIDE_NOTES_ROW, Settings.HIDE_INBOX_SUGGESTIONS, Settings.HIDE_INSTANTS,
+                Settings.HIDE_HIGHLIGHTS, Settings.HIDE_THREADS_BUTTON, Settings.HIDE_CREATE_BUTTON, Settings.HIDE_SHARE_PROFILE_BUTTON, Settings.HIDE_PROFILE_NOTES, Settings.PROFILE_POSTS_LIST, Settings.HIDE_NOTES_ROW, Settings.HIDE_INBOX_SUGGESTIONS, Settings.HIDE_INSTANTS, Settings.HIDE_PLUS_PREVIEW,
                 Settings.STOP_SWIPE_TO_CREATE, Settings.STOP_REELS_SCROLLING, Settings.REEL_CAP, Settings.FIND_REEL_ORIGIN, Settings.FIND_REEL_ORIGIN_ON_TAP, Settings.FULL_RESOLUTION_PHOTOS, Settings.ASK_FOR_LARGER_PHOTOS,
                 Settings.HIDE_HOME_FEED, Settings.STOP_TAB_SWIPING, Settings.TURN_OFF_HDR_BOOSTS, Settings.DONT_SAVE_RECENT_SEARCHES, Settings.DATA_SAVER, Settings.CLEAR_MEDIA_CACHE, Settings.GROUP_NOTIFICATIONS,
                 Settings.LOCK_MESSAGES, Settings.LOCK_APP,
@@ -118,13 +118,13 @@ public class NeutralDefaultsSettingsTest {
                 Settings.HIDE_REEL_CHIPS, Settings.HIDE_REEL_SOCIAL_FOOTER, Settings.TURN_OFF_DOUBLE_TAP_LIKE,
                 Settings.HIDE_REELS_TAB, Settings.SHOW_REELS_TAB, Settings.SHOW_MESSAGES_TAB, Settings.SHOW_ACTIVITY_TAB, Settings.HIDE_HOME_TAB, Settings.HIDE_SEARCH_TAB, Settings.HIDE_CREATE_TAB, Settings.HIDE_PROFILE_TAB, Settings.HIDE_HOME_CREATE_BUTTON, Settings.HIDE_HOME_NOTIFICATIONS_BUTTON, Settings.SEARCH_BUTTON_ON_HOME, Settings.MESSAGES_BUTTON_ON_HOME, Settings.HIDE_HOME_MESSAGES_BUTTON, Settings.GHOST_BUTTON_ON_HOME, Settings.CENTER_HOME_LOGO, Settings.CENTER_PROFILE_NAME, Settings.CENTER_SCREEN_TITLES, Settings.REEL_SEEK_BAR, Settings.BLUR_REEL_BARS, Settings.KEEP_REEL_AUTO_SCROLL, Settings.REEL_AUTO_ADVANCE,
                 Settings.DOWNLOAD_VIDEOS, Settings.DOWNLOAD_SKIP_SAVED, Settings.HOLD_TO_DOWNLOAD, Settings.TAP_TO_PLAY, Settings.KEEP_REELS_MUTED,
-                Settings.GLASS_TAB_BAR, Settings.SAVED_ON_PROFILE, Settings.HIDE_COMMENT_EMOJI_ROW, Settings.HIDE_FEED_FOLLOW, Settings.STOP_HEARTBEAT, Settings.STOP_UPLOAD_ALARM};
+                Settings.GLASS_TAB_BAR, Settings.SAVED_ON_PROFILE, Settings.HIDE_COMMENT_EMOJI_ROW, Settings.COMMENT_KEYBOARD_DOWN, Settings.HIDE_FEED_FOLLOW, Settings.STOP_HEARTBEAT, Settings.STOP_UPLOAD_ALARM};
         restoreDefaults();
         BaseSettings.SAFE_MODE.save(false);
         Settings.SIGN_IN_NOTICE_HIDDEN.save(true);
         PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.ASK_BEFORE_CALL, PatchFamily.REEL_DECLUTTER, PatchFamily.COMMENT_COPY, PatchFamily.COMMENT_PHOTO, PatchFamily.PROFILE_PICTURE, PatchFamily.VOICE_MESSAGE, PatchFamily.HIDE_COMMENTS, PatchFamily.HIDE_SHARE_BUTTON, PatchFamily.LIKE_ANIMATION,
                 PatchFamily.ASK_BEFORE_LIKE, PatchFamily.ASK_BEFORE_REFRESH,
-                PatchFamily.PROFILE_HIGHLIGHTS, PatchFamily.THREADS_BUTTON, PatchFamily.PROFILE_NOTES, PatchFamily.PROFILE_POSTS_LIST, PatchFamily.NOTES_ROW, PatchFamily.INBOX_SUGGESTIONS, PatchFamily.INSTANTS, PatchFamily.SWIPE_TO_CREATE,
+                PatchFamily.PROFILE_HIGHLIGHTS, PatchFamily.THREADS_BUTTON, PatchFamily.PROFILE_NOTES, PatchFamily.PROFILE_POSTS_LIST, PatchFamily.NOTES_ROW, PatchFamily.INBOX_SUGGESTIONS, PatchFamily.INSTANTS, PatchFamily.PLUS_PREVIEW, PatchFamily.SWIPE_TO_CREATE,
                 PatchFamily.REEL_SCROLLING, PatchFamily.REEL_ORIGIN, PatchFamily.STORY_RING, PatchFamily.FULL_RESOLUTION, PatchFamily.HOME_FEED, PatchFamily.FEED_SUGGESTIONS,
                 PatchFamily.TAB_SWIPE, PatchFamily.HDR_BOOST, PatchFamily.RECENT_SEARCHES, PatchFamily.DATA_SAVER, PatchFamily.MEDIA_CACHE, PatchFamily.NOTIFICATION_GROUPS, PatchFamily.MESSAGES_LOCK, PatchFamily.SCREENSHOT_REPORTS, PatchFamily.SCREENSHOT_BLOCK, PatchFamily.KEEP_IN_CHAT, PatchFamily.LIVE_SEEN,
                 PatchFamily.EMOJI_STYLE, PatchFamily.ACCENT_COLOR, PatchFamily.LAUNCH_SCREEN, PatchFamily.FONT,
@@ -135,7 +135,7 @@ public class NeutralDefaultsSettingsTest {
                 PatchFamily.PROFILE_SUGGESTIONS, PatchFamily.REELS_SUGGESTIONS, PatchFamily.PAID_PARTNERSHIP_REELS, PatchFamily.AI_LABELED_REELS, PatchFamily.CAPTION_WORD_REELS, PatchFamily.REEL_POST_TIME, PatchFamily.DOUBLE_TAP_LIKE,
                 PatchFamily.REELS_TAB, PatchFamily.REEL_SEEK_BAR, PatchFamily.REEL_BLUR_BARS, PatchFamily.REEL_TAP_AND_VOLUME, PatchFamily.REEL_AUTO_SCROLL,
                 PatchFamily.VIDEO_DOWNLOAD, PatchFamily.TAP_TO_PLAY,
-                PatchFamily.GLASS_TAB_BAR, PatchFamily.SAVED_ON_PROFILE, PatchFamily.COMMENT_EMOJI_ROW, PatchFamily.FEED_FOLLOW, PatchFamily.STOP_HEARTBEAT);
+                PatchFamily.GLASS_TAB_BAR, PatchFamily.SAVED_ON_PROFILE, PatchFamily.COMMENT_EMOJI_ROW, PatchFamily.COMMENT_KEYBOARD, PatchFamily.FEED_FOLLOW, PatchFamily.STOP_HEARTBEAT);
     }
 
     @After public void restore() throws Exception {
@@ -262,6 +262,7 @@ public class NeutralDefaultsSettingsTest {
         assertSame("clear mode gets the reel the pager is on", pagerReel,
                 app.hushgram.extension.instagram.reels.ReelClearMode.current(pagerReel));
         assertFalse(Instants.hide());
+        assertTrue("a chat menu keeps its peek form", app.hushgram.extension.instagram.direct.PlusPreview.peek(1));
         assertTrue(app.hushgram.extension.instagram.feed.CommentsButton.feedState(1));
         assertTrue(app.hushgram.extension.instagram.share.ShareButton.feedState(1));
         assertFalse(app.hushgram.extension.instagram.direct.CallConfirm.hold(new Object(), null, null, null, 0));

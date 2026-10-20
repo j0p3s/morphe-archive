@@ -1,3 +1,38 @@
+## [1.56.0](https://github.com/hxreborn/morphe-patches/compare/v1.55.0...v1.56.0) (2026-10-20)
+
+### Bug Fixes
+
+* **imo:** require Android 12L for `2026.08.1041` ([4a7fd3f](https://github.com/hxreborn/morphe-patches/commit/4a7fd3fd3b6395e9f358e5c154698de8886f29ae))
+* keep signature-spoofing apps from crashing on Android 17 ([b991745](https://github.com/hxreborn/morphe-patches/commit/b9917454f042870c9020c2031293aa51db6dbb67)), closes [#276](https://github.com/hxreborn/morphe-patches/issues/276)
+* **MovieBox:** require Android 10 for the app targets ([c57ba48](https://github.com/hxreborn/morphe-patches/commit/c57ba482eadf00cfa22f70230907fbd542bc45d7))
+* **Opal - Skip sign-in:** open without the Play Store prompt ([7e7e2c7](https://github.com/hxreborn/morphe-patches/commit/7e7e2c7e3d6b567335d0f36557b1e1f0ab587211))
+* **Proton - Material 3 switches:** follow the in-app theme ([c8b2ab1](https://github.com/hxreborn/morphe-patches/commit/c8b2ab16ccd698d2a4cdf8d330c2d570142d5ab1))
+* **Proton - Material 3 switches:** use the dark thumb in dark theme ([388598d](https://github.com/hxreborn/morphe-patches/commit/388598d23d42046dc77d6fef49d0f7d1960b0203))
+* **Proton - Material 3 switches:** use the dark thumb on web toggles ([af816a8](https://github.com/hxreborn/morphe-patches/commit/af816a83e25ee69d377fb90c18da9715b12ee46d))
+* **Proton Mail - AMOLED dark theme:** keep light web settings light ([25b3a96](https://github.com/hxreborn/morphe-patches/commit/25b3a96b5540c097f44302a969b53d2aaa6381b8))
+* **Proton VPN - Material 3 switches:** use the dark thumb in dark theme ([27cb5f6](https://github.com/hxreborn/morphe-patches/commit/27cb5f6cd846a7db1740154c806e60921b2029d5)), closes [#266](https://github.com/hxreborn/morphe-patches/issues/266)
+
+### New Features
+
+* **Albo - Enable guest sign-in:** sign in without Google ([2d8176a](https://github.com/hxreborn/morphe-patches/commit/2d8176ac2c598b8f0395de3aed14f673d2011526))
+* **Albo - Unlock premium:** unlock Pro and Max features ([144e82b](https://github.com/hxreborn/morphe-patches/commit/144e82bb0021c532b7a0e71ab3846dcd821d334c)), closes [#270](https://github.com/hxreborn/morphe-patches/issues/270)
+* **Joyn - Hide ads:** remove ads in Joyn Austria ([6a91fbc](https://github.com/hxreborn/morphe-patches/commit/6a91fbc368fa60de16050c9511ad62218cbd5d60)), closes [#262](https://github.com/hxreborn/morphe-patches/issues/262)
+* **Notein - Unlock premium:** unlock Pro and remove the notebook limit ([e9d1f15](https://github.com/hxreborn/morphe-patches/commit/e9d1f157f66948ffa0cbb81cddd2da857a672383)), closes [#272](https://github.com/hxreborn/morphe-patches/issues/272)
+* **Opal - Skip sign-in:** run without an account ([4d54bff](https://github.com/hxreborn/morphe-patches/commit/4d54bff9e880e027533e771c9967bc1424933d0f)), closes [#268](https://github.com/hxreborn/morphe-patches/issues/268)
+* **Opal - Unlock premium:** unlock Pro rules, hard mode and history ([d711b4a](https://github.com/hxreborn/morphe-patches/commit/d711b4a0811b0640d79c943dad3ab4e1f606f498))
+* **Proton Authenticator - Hide layout components:** hide promo sections ([a15692e](https://github.com/hxreborn/morphe-patches/commit/a15692ea8699a4e14fe481afe0ba114c969c9157)), closes [#265](https://github.com/hxreborn/morphe-patches/issues/265)
+* **Proton Mail - Hide layout components:** hide sidebar entries ([9b32be7](https://github.com/hxreborn/morphe-patches/commit/9b32be7308ff5a4102a49bcfd405bcbb14372fbc))
+* **Serializd - Disable tracking:** stop Firebase and Playwire analytics ([102ee4e](https://github.com/hxreborn/morphe-patches/commit/102ee4ed384aa3297b49dc56263aac2ad7f3c706))
+* **Serializd - Remove ads:** hide ad slots and the ad consent prompt ([09f3f41](https://github.com/hxreborn/morphe-patches/commit/09f3f4118bcc3ac301fd78e258e740347703f672)), closes [#261](https://github.com/hxreborn/morphe-patches/issues/261)
+* **Serializd - Sharpen launcher icon:** redraw icon at full resolution ([0ab3efa](https://github.com/hxreborn/morphe-patches/commit/0ab3efabc77edb2467ed142339f59cf4d646553a))
+* **Sygic - GmsCore support:** sign in with Google and show map position ([30f7b69](https://github.com/hxreborn/morphe-patches/commit/30f7b6986730fb47fc96320c79c7b55a3c86fd97))
+* **Sygic - Unlock premium:** unlock traffic, speed cameras, Motorbike ([2ffcf98](https://github.com/hxreborn/morphe-patches/commit/2ffcf986fe9661d2973051971eadf6ce3f4a1624)), closes [#264](https://github.com/hxreborn/morphe-patches/issues/264)
+
+### Updated App Support
+
+* **imo:** add support for `2026.09.1051` ([8e3822f](https://github.com/hxreborn/morphe-patches/commit/8e3822fb0e702c89899da157dd9f79cfba1cca1f)), closes [#260](https://github.com/hxreborn/morphe-patches/issues/260)
+* **Magic Earth:** add support for `7.1.26.38.B4684D03.6207A61BA` ([a6ce799](https://github.com/hxreborn/morphe-patches/commit/a6ce799e6b0186d00be2738ab1db37858b9cdec7)), closes [#267](https://github.com/hxreborn/morphe-patches/issues/267)
+
 ## [1.55.0](https://github.com/hxreborn/morphe-patches/compare/v1.54.0...v1.55.0) (2026-10-18)
 
 ### Bug Fixes

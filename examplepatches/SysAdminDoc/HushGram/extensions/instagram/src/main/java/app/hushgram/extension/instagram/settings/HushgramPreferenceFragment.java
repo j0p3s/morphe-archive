@@ -80,6 +80,7 @@ import app.hushgram.extension.instagram.direct.ChatAccounts;
 import app.hushgram.extension.instagram.direct.ChatLocks;
 import app.hushgram.extension.instagram.direct.HiddenChats;
 import app.hushgram.extension.instagram.direct.LockDelay;
+import app.hushgram.extension.instagram.direct.MessageBox;
 import app.hushgram.extension.instagram.direct.MessagesLock;
 import app.hushgram.extension.instagram.direct.PinLock;
 import app.hushgram.extension.instagram.direct.UnlockWith;
@@ -93,11 +94,13 @@ import app.hushgram.extension.instagram.feed.LikeAnimation;
 import app.hushgram.extension.instagram.misc.MediaCache;
 import app.hushgram.extension.instagram.misc.NotificationGroups;
 import app.hushgram.extension.instagram.misc.SpoofLocation;
+import app.hushgram.extension.instagram.share.ShareSheetActions;
 import app.hushgram.extension.instagram.share.SharingDomain;
 import app.hushgram.extension.instagram.stories.StoryRingColor;
 import app.hushgram.extension.instagram.stories.StoryRingSize;
 import app.hushgram.extension.instagram.stories.StoryTimeMode;
 import app.hushgram.extension.instagram.profile.FollowLabelPlace;
+import app.hushgram.extension.instagram.profile.ProfileTabs;
 import app.hushgram.extension.instagram.misc.GlassCorners;
 import app.hushgram.extension.instagram.misc.GlassHeight;
 import app.hushgram.extension.instagram.misc.GlassLift;
@@ -178,6 +181,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     /** The row that sets or changes the HushGram PIN. */
     static final String CHANGE_PIN_ROW = "hushgram_change_pin_row";
     static final String HIDDEN_ACCOUNTS_ROW = "hushgram_hidden_accounts_row";
+    static final String GHOST_PICKS_ROW = "hushgram_ghost_picks_row";
     private static final String SCREEN_KEY = "hushgram_settings_root";
     /** The keys of category page rows, stable across translations and installed patch combinations. */
     static final String CATEGORY_ROW_KEY = "hushgram_category_page_";
@@ -215,6 +219,11 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     /** Ghost mode's switch, and the switches it turns, both set once the page is built. */
     @Nullable private SwitchPreference ghostMode;
     private List<BooleanSetting> ghostSwitches = new ArrayList<>();
+    /** The row under Ghost mode that picks which switches it turns (#251), and each switch's title by key. */
+    @Nullable private Row ghostPicks;
+    private final Map<String, CharSequence> ghostNames = new HashMap<>();
+    /** The row choosing the tab whose long press turns Ghost mode (#255). */
+    @Nullable private NavigationRow ghostTab;
 
     private String searchQuery = "";
     @Nullable private SearchRow search;
@@ -465,10 +474,19 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 L10n.t("How you open HushGram, and how this screen is laid out."));
         entry.addPreference(navigationRow(context));
         entry.addPreference(profileMenuRow(context));
+        // Each way in has a switch, and the last one still on stays on (HushFacebook#146).
+        SwitchPreference shortcut = toggle(context, Settings.SETTINGS_SHORTCUT,
+                L10n.t("Settings shortcut on the app icon"), wayInSummary(Settings.SETTINGS_SHORTCUT));
+        shortcut.setOnPreferenceChangeListener((preference, value) -> {
+            // Posted, so the shortcut follows the value this change saves.
+            Utils.runOnMainThread(() -> SettingsEntry.shortcutSwitchChanged(context));
+            return true;
+        });
+        entry.addPreference(shortcut);
+        entry.addPreference(toggle(context, Settings.SETTINGS_LOGO_PRESS, L10n.t("Open settings from the logo"),
+                wayInSummary(Settings.SETTINGS_LOGO_PRESS)));
         entry.addPreference(toggle(context, Settings.HIDE_MENU_ROW, L10n.t("Hide the HushGram row in Instagram's menu"),
-                L10n.t("While a tab long press or the long press on your profile's menu opens HushGram, Instagram's "
-                        + "Settings and activity screen leaves out the HushGram row. Turn those long presses off and "
-                        + "the row comes back.")));
+                wayInSummary(Settings.HIDE_MENU_ROW)));
         entry.addPreference(toggle(context, Settings.CATEGORY_PAGES, L10n.t("Open categories as pages"),
                 L10n.t("Settings shows a list of its categories, and a tap opens one on its own page. "
                         + "Search still looks through all of them.")));
@@ -478,6 +496,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         if (GhostMode.offered(ghostSwitches)) {
             ghostMode = ghostModeRow(context);
             privacy.add(ghostMode);
+            ghostPicks = ghostPicksRow(context);
+            privacy.add(ghostPicks);
+            ghostTab = ghostTabRow(context);
+            privacy.add(ghostTab);
         }
         if (build.contains(PatchFamily.HIDE_ADS)) {
             privacy.add(toggle(context, Settings.HIDE_ADS, L10n.t("Hide ads"),
@@ -693,7 +715,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     L10n.t("Removes the Blend invite button from reels. Everything else on a reel stays.")));
         }
 
-        if (build.contains(PatchFamily.EXPLORE_GRID) || build.contains(PatchFamily.RECENT_SEARCHES)) {
+        if (build.contains(PatchFamily.EXPLORE_GRID) || build.contains(PatchFamily.RECENT_SEARCHES)
+                || build.contains(PatchFamily.ALL_RECENT_SEARCHES)) {
             PreferenceCategory explore = category(screen, L10n.t("Explore"), SettingsIcons.EXPLORE,
                     L10n.t("Tidy up the Search tab and what it remembers."));
             if (build.contains(PatchFamily.EXPLORE_GRID)) {
@@ -711,10 +734,16 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                         L10n.t("What you open from search stays out of Recent, in the app and on Instagram's side. "
                                 + "Searches already there stay until you clear them.")));
             }
+            if (build.contains(PatchFamily.ALL_RECENT_SEARCHES)) {
+                explore.addPreference(toggle(context, Settings.SHOW_ALL_RECENT_SEARCHES,
+                        L10n.t("Show all recent searches"),
+                        L10n.t("Lists every recent search under the search bar, not just the first few. See all and "
+                                + "the x on each row work as before.")));
+            }
         }
 
         if (build.contains(PatchFamily.NOTES_ROW) || build.contains(PatchFamily.INBOX_SUGGESTIONS)
-                || build.contains(PatchFamily.INSTANTS)
+                || build.contains(PatchFamily.INSTANTS) || build.contains(PatchFamily.PLUS_PREVIEW)
                 || build.contains(PatchFamily.THREAD_SEEN) || build.contains(PatchFamily.TYPING)
                 || build.contains(PatchFamily.ACTIVE_STATUS)
                 || build.contains(PatchFamily.LAST_ACTIVE)
@@ -722,7 +751,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 || build.contains(PatchFamily.SCREENSHOT_REPORTS)
                 || build.contains(PatchFamily.SCREENSHOT_BLOCK)
                 || build.contains(PatchFamily.KEEP_IN_CHAT)
-                || build.contains(PatchFamily.ASK_BEFORE_CALL)) {
+                || build.contains(PatchFamily.ASK_BEFORE_CALL)
+                || build.contains(PatchFamily.MESSAGE_BOX)) {
             PreferenceCategory messages = category(screen, L10n.t("Messages"), SettingsIcons.CHATS,
                     L10n.t("Keep your chats private and your inbox clear of extras."));
             if (build.contains(PatchFamily.NOTES_ROW)) {
@@ -740,6 +770,12 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 messages.addPreference(toggle(context, Settings.HIDE_INSTANTS, L10n.t("Hide Instants"),
                         L10n.t("Removes the stack of Instants (quick photos from friends) from your messages. "
                                 + "Restart Instagram to see the change.")));
+            }
+            if (build.contains(PatchFamily.PLUS_PREVIEW)) {
+                messages.addPreference(toggle(context, Settings.HIDE_PLUS_PREVIEW,
+                        L10n.t("Hide See preview and Plus in chat menus"),
+                        L10n.t("Takes the See preview and Instagram Plus rows out of the menu you get from long "
+                                + "pressing a chat. Your chat options stay.")));
             }
             if (build.contains(PatchFamily.THREAD_SEEN)) {
                 messages.addPreference(toggle(context, Settings.READ_WITHOUT_SEEN_RECEIPT,
@@ -786,6 +822,12 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 messages.addPreference(toggle(context, Settings.ASK_BEFORE_CALL, L10n.t("Ask before a call"),
                         L10n.t("Tapping a call button in a chat asks first, so a stray tap doesn't ring anyone. "
                                 + "Call starts it, Cancel doesn't.")));
+                messages.addPreference(toggle(context, Settings.HIDE_CALL_BUTTONS, L10n.t("Hide the call buttons in chats"),
+                        L10n.t("Takes the voice and video call buttons off the top of a chat. The name keeps its room. "
+                                + "Turn it off and they're back the next time a chat opens.")));
+            }
+            if (build.contains(PatchFamily.MESSAGE_BOX)) {
+                messages.addPreference(messageBoxRow(context));
             }
             if (build.contains(PatchFamily.MESSAGES_LOCK)) {
                 messages.addPreference(lockToggle(context, Settings.LOCK_MESSAGES, L10n.t("Lock your messages"),
@@ -868,6 +910,9 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                             + "Posts in your feed keep theirs.")));
             reels.add(burnInGuardRow(context));
             reels.add(burnInWaitRow(context));
+            reels.add(toggle(context, Settings.BURN_IN_STAY_DIM, L10n.t("Stay dim when I tap"),
+                    L10n.t("Once Burn-in guard fades the buttons, they stay faded on Reels whatever you tap or swipe, "
+                            + "the next reel too. They still work. Leaving Reels brings them back.")));
             reels.add(toggle(context, Settings.KEEP_REEL_CLEAR_MODE, L10n.t("Keep clear mode on"),
                     L10n.t("Turn on Instagram's clear mode on a reel and the next reels open in it too. Leave clear "
                             + "mode yourself and the next reels show their buttons again.")));
@@ -1010,6 +1055,9 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             stories.add(toggle(context, Settings.HIDE_STORY_SUGGESTIONS, L10n.t("Hide Suggested for you between stories"),
                     L10n.t("Leaves out the Suggested for you cards of accounts to follow that Instagram puts between "
                             + "the stories you tap through. The stories themselves stay.")));
+            stories.add(toggle(context, Settings.HIDE_ADD_YOURS_CARDS, L10n.t("Hide Add Yours cards between stories"),
+                    L10n.t("Leaves out the Add Yours cards, like Popular Add Yours and Join a trending Add Yours, "
+                            + "that Instagram puts between the stories you tap through. The stories themselves stay.")));
         }
         if (build.contains(PatchFamily.STORY_RING)) {
             stories.add(toggle(context, Settings.STORY_RING, L10n.t("Story ring size"),
@@ -1141,6 +1189,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 sharing.addPreference(toggle(context, Settings.HIDE_SHARE_SHEET_GROUP, L10n.t("Hide group buttons"),
                         L10n.t("Leaves New group out of the share sheet, and the button that sends to the people you "
                                 + "picked as a group. Send separately stays, and you can still start a group from your messages.")));
+                sharing.addPreference(shareSheetButtonsRow(context));
             }
             if (build.contains(PatchFamily.REPOST_BUTTON)) {
                 sharing.addPreference(toggle(context, Settings.HIDE_REPOST_BUTTON, L10n.t("Hide the Repost button"),
@@ -1154,7 +1203,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         }
 
         if (build.contains(PatchFamily.COMMENT_COPY) || build.contains(PatchFamily.COMMENT_PHOTO)
-                || build.contains(PatchFamily.HIDE_COMMENTS) || build.contains(PatchFamily.COMMENT_EMOJI_ROW)) {
+                || build.contains(PatchFamily.HIDE_COMMENTS) || build.contains(PatchFamily.COMMENT_EMOJI_ROW)
+                || build.contains(PatchFamily.COMMENT_KEYBOARD)) {
             PreferenceCategory comments = category(screen, L10n.t("Comments"), SettingsIcons.COMMENTS,
                     L10n.t("Copy, save or hide comments."));
             if (build.contains(PatchFamily.COMMENT_COPY)) {
@@ -1177,11 +1227,16 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 comments.addPreference(toggle(context, Settings.HIDE_COMMENT_EMOJI_ROW, L10n.t("Hide the emoji row"),
                         L10n.t("Takes the row of quick emoji off above the comment box. The box itself stays.")));
             }
+            if (build.contains(PatchFamily.COMMENT_KEYBOARD)) {
+                comments.addPreference(toggle(context, Settings.COMMENT_KEYBOARD_DOWN, L10n.t("Open comments without the keyboard"),
+                        L10n.t("Comments open with the keyboard down. A tap in the comment box, or on Reply, still brings it up.")));
+            }
         }
 
         if (build.contains(PatchFamily.FRIENDSHIP_STATUS) || build.contains(PatchFamily.PROFILE_SUGGESTIONS)
                 || build.contains(PatchFamily.PROFILE_HIGHLIGHTS) || build.contains(PatchFamily.THREADS_BUTTON)
                 || build.contains(PatchFamily.PROFILE_NOTES)
+                || build.contains(PatchFamily.PROFILE_TABS)
                 || build.contains(PatchFamily.SAVED_ON_PROFILE) || build.contains(PatchFamily.PROFILE_POSTS_LIST)) {
             PreferenceCategory profiles = category(screen, L10n.t("Profiles"), SettingsIcons.PERSON,
                     L10n.t("See who follows you back, and clear extras off profiles."));
@@ -1242,11 +1297,18 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                         L10n.t("Takes rows that only suggest something off your notifications, like a thread from an "
                                 + "account you don't follow or someone you might know. Likes, comments, mentions and "
                                 + "new followers stay.")));
+                profiles.addPreference(toggle(context, Settings.HIDE_NOTIFICATION_FEATURED,
+                        L10n.t("Hide Featured in notifications"),
+                        L10n.t("Takes the Featured section off the top of your notifications, the posts and threads "
+                                + "Instagram picks to show you there. Everything under it stays.")));
             }
             if (build.contains(PatchFamily.PROFILE_HIGHLIGHTS)) {
                 profiles.addPreference(toggle(context, Settings.HIDE_HIGHLIGHTS, L10n.t("Hide highlights"),
                         L10n.t("Takes the row of story highlights off profiles, yours included. Bios, counts and "
                                 + "posts stay, and so does Add to highlight on your stories.")));
+            }
+            if (build.contains(PatchFamily.PROFILE_TABS)) {
+                profiles.addPreference(profileTabsRow(context));
             }
             if (build.contains(PatchFamily.SAVED_ON_PROFILE)) {
                 profiles.addPreference(toggle(context, Settings.SAVED_ON_PROFILE, L10n.t("Saved tab on your profile"),
@@ -1257,6 +1319,12 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 profiles.addPreference(toggle(context, Settings.HIDE_THREADS_BUTTON, L10n.t("Hide the Threads button"),
                         L10n.t("Takes the Threads button off the top of profiles, yours included. The menu and "
                                 + "the other buttons stay where they were.")));
+                profiles.addPreference(toggle(context, Settings.HIDE_CREATE_BUTTON, L10n.t("Hide the Create button"),
+                        L10n.t("Takes the plus for new posts off the top of your own profile. The other buttons "
+                                + "stay where they were.")));
+                profiles.addPreference(toggle(context, Settings.HIDE_SHARE_PROFILE_BUTTON, L10n.t("Hide Share profile"),
+                        L10n.t("Takes the Share profile button off your profile, and Edit profile stretches to fill "
+                                + "the space.")));
             }
             if (build.contains(PatchFamily.PROFILE_NOTES)) {
                 profiles.addPreference(toggle(context, Settings.HIDE_PROFILE_NOTES, L10n.t("Hide Notes on profile pictures"),
@@ -1370,6 +1438,9 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                         L10n.t("Rounds the pill and its highlight and puts Search in a glass circle of its own. Scrolling "
                                 + "a list down shrinks the bar to the tab you're on and Search, unless Hide the tab bar as "
                                 + "you scroll is on. Restart Instagram after changing it.")));
+                glass.addPreference(toggle(context, Settings.GLASS_TAB_BAR_KEEP_SIZE, L10n.t("Keep the pill full size"),
+                        L10n.t("Scrolling a list down leaves the liquid pill as it is, every tab in place. Restart "
+                                + "Instagram after changing it.")));
                 glass.addPreference(toggle(context, Settings.GLASS_TAB_BAR_HAPTICS, L10n.t("Haptics on the tab bar"),
                         L10n.t("A light tick each time the highlight slides past a tab, so it follows the bar as you tap "
                                 + "or swipe between screens.")));
@@ -1382,8 +1453,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                                 + "or changing tab brings it back. Restart Instagram after changing it.")));
                 glass.addPreference(glassReelsHideRow(context));
                 glass.addPreference(toggle(context, Settings.GLASS_TAB_BAR_FLOAT, L10n.t("Show content behind the tab bar"),
-                        L10n.t("Home and the other tabs run down behind the pill, so the glass has real content to blur. "
-                                + "Reels still stops above it.")));
+                        L10n.t("Home, Reels and the other tabs run down behind the pill, so the glass has real content "
+                                + "to blur.")));
                 glass.addPreference(glassLiftRow(context));
             }
         }
@@ -1494,7 +1565,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     L10n.t("For WhatsApp, video editors such as CapCut and InShot, or a gallery or player that plays saves "
                             + "without sound. May lower quality.")));
             downloads.addPreference(toggle(context, Settings.DOWNLOAD_CONVERT, L10n.t("Convert to keep the full size"),
-                    L10n.t("With Save videos other apps can open on, a full size video Instagram only has as VP9 or AV1 "
+                    L10n.t("Saves videos other apps can open, at full size. A video Instagram only has as VP9 or AV1 "
                             + "is converted to H.264 on your phone instead of saved smaller. Slower, and videos over "
                             + "3 minutes stay smaller.")));
             downloads.addPreference(qualityRow(context));
@@ -1727,7 +1798,11 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 Preference row = group.getPreference(j);
                 rows.add(row);
                 String key = row.getKey();
-                StringBuilder aliases = new StringBuilder(row == ghostMode ? "ghost mode " : "");
+                StringBuilder aliases = new StringBuilder(
+                        row == ghostMode || row == ghostPicks || row == ghostTab ? "ghost mode " : "");
+                for (BooleanSetting setting : ghostSwitches) {
+                    if (setting.key.equals(key) && row.getTitle() != null) ghostNames.put(key, row.getTitle());
+                }
                 aliases.append(row == clearPositions
                         ? L10n.t("Clear remembered positions")
                         : row.getTitle() == null ? "" : row.getTitle().toString());
@@ -1738,7 +1813,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     belongs |= family == PatchFamily.ROUNDED_POST_CORNERS && Settings.ROUNDED_CORNER_SIZE.key.equals(key);
                     belongs |= family == PatchFamily.REEL_TAP_AND_VOLUME && Settings.REEL_TAP_CHOICE.key.equals(key);
                     belongs |= family == PatchFamily.REEL_DECLUTTER && (Settings.BURN_IN_GUARD.key.equals(key)
-                            || Settings.BURN_IN_WAIT.key.equals(key));
+                            || Settings.BURN_IN_WAIT.key.equals(key) || Settings.BURN_IN_STAY_DIM.key.equals(key));
                     belongs |= family == PatchFamily.PLAYBACK_QUALITY && Settings.PLAYBACK_QUALITY.key.equals(key);
                     belongs |= family == PatchFamily.PLAYBACK_QUALITY && Settings.QUALITY_TAB_TARGET.key.equals(key);
                     belongs |= family == PatchFamily.TAP_TO_PLAY && (Settings.TAP_TO_PLAY_SCOPE.key.equals(key)
@@ -1759,6 +1834,9 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     belongs |= family == PatchFamily.REEL_DOWNLOAD && Settings.REEL_DOWNLOAD_BUTTON.key.equals(key);
                     belongs |= family == PatchFamily.ACCENT_COLOR && Settings.ACCENT_HUE.key.equals(key);
                     belongs |= family == PatchFamily.FONT && Settings.FONT.key.equals(key);
+                    belongs |= family == PatchFamily.SHARE_SHEET && Settings.HIDDEN_SHARE_SHEET_BUTTONS.key.equals(key);
+                    belongs |= family == PatchFamily.PROFILE_TABS && Settings.HIDDEN_PROFILE_TABS.key.equals(key);
+                    belongs |= family == PatchFamily.MESSAGE_BOX && Settings.HIDDEN_MESSAGE_BOX_BUTTONS.key.equals(key);
                     belongs |= family == PatchFamily.REELS_TAB
                             && (Settings.START_TAB.key.equals(key) || Settings.TAB_ORDER.key.equals(key));
                     belongs |= family == PatchFamily.LIKE_ANIMATION && Settings.LIKE_ANIMATION.key.equals(key);
@@ -1973,10 +2051,220 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         try { super.updateUIAvailability(); } finally { showGhostMode(); filterSettings(); }
     }
 
-    /** Ghost mode shows on only while every switch it turns is on, whichever way they got there. */
+    /**
+     * Ghost mode shows on only while every switch it turns is on, whichever way they got there, and
+     * the row under it names the ones it turns.
+     */
     private void showGhostMode() {
+        List<BooleanSetting> picked = GhostMode.picked(ghostSwitches);
         SwitchPreference row = ghostMode;
-        if (row != null) row.setChecked(GhostMode.on(ghostSwitches));
+        if (row != null) row.setChecked(GhostMode.on(picked));
+        Row picks = ghostPicks;
+        if (picks == null) return;
+        if (picked.size() == ghostSwitches.size()) {
+            picks.setSummary(L10n.t("All of them. Tap to leave some out, and Ghost mode leaves those as you set them."));
+            return;
+        }
+        StringBuilder names = new StringBuilder();
+        for (BooleanSetting setting : picked) {
+            if (names.length() > 0) names.append(", ");
+            names.append(ghostName(setting));
+        }
+        picks.setSummary(L10n.f("%1$s. The others stay as you set them.", names.toString()));
+    }
+
+    /** [setting]'s title as its own row shows it. */
+    private CharSequence ghostName(BooleanSetting setting) {
+        CharSequence name = ghostNames.get(setting.key);
+        if (name != null) return name;
+        Preference own = findPreference(setting.key);
+        return own == null || own.getTitle() == null ? setting.key : own.getTitle();
+    }
+
+    /** The row under Messages that opens the list of message box buttons to show (#217). */
+    private Row messageBoxRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(Settings.HIDDEN_MESSAGE_BOX_BUTTONS.key);
+        row.setPersistent(false);
+        row.setTitle(L10n.t("Buttons in the message box"));
+        row.setSummary(messageBoxSummary(Settings.HIDDEN_MESSAGE_BOX_BUTTONS.savedValue()));
+        row.setOnPreferenceClickListener(tapped -> {
+            pickMessageBoxButtons(row);
+            return true;
+        });
+        return row;
+    }
+
+    /** What the buttons left off in [saved] do, for the row's summary. */
+    static String messageBoxSummary(String saved) {
+        Set<String> hidden = MessageBox.parse(saved);
+        if (hidden.isEmpty()) {
+            return L10n.t("Every button in the message box shows. Untick the ones you don't use. The text box and Send always stay.");
+        }
+        List<String> labels = new ArrayList<>();
+        for (String name : MessageBox.OFFERED) {
+            if (hidden.contains(name)) labels.add(L10n.isolate(messageBoxLabel(name)));
+        }
+        String left = String.join(", ", labels);
+        return L10n.f("Left off the message box: %1$s. The text box and Send stay.", left);
+    }
+
+    /** What the message box list calls the button Instagram names [name]. */
+    static String messageBoxLabel(String name) {
+        switch (name) {
+            case "GALLERY":
+                return L10n.t("Gallery");
+            case "STICKER":
+                return L10n.t("Stickers");
+            default:
+                return L10n.t("Voice message");
+        }
+    }
+
+    /**
+     * Each button Instagram can show in a chat's message box, ticked while it shows. A change saves
+     * at once and shows the next time a chat opens. The text box and Send aren't listed.
+     */
+    void pickMessageBoxButtons(Row row) {
+        Context context = getActivity();
+        if (context == null) return;
+        Set<String> hidden = new LinkedHashSet<>(MessageBox.parse(Settings.HIDDEN_MESSAGE_BOX_BUTTONS.savedValue()));
+        List<String> names = MessageBox.OFFERED;
+        CharSequence[] labels = new CharSequence[names.size()];
+        boolean[] shown = new boolean[names.size()];
+        for (int i = 0; i < labels.length; i++) {
+            labels[i] = messageBoxLabel(names.get(i));
+            shown[i] = !hidden.contains(names.get(i));
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(context).setTitle(L10n.t("Buttons in the message box"));
+        builder.setMultiChoiceItems(labels, shown, (dialog, which, on) -> {
+            if (on) hidden.remove(names.get(which));
+            else hidden.add(names.get(which));
+            Settings.HIDDEN_MESSAGE_BOX_BUTTONS.save(MessageBox.join(hidden));
+            row.setSummary(messageBoxSummary(Settings.HIDDEN_MESSAGE_BOX_BUTTONS.savedValue()));
+        });
+        AlertDialog dialog = show(builder.setNeutralButton(L10n.t("Show all"), null)
+                .setPositiveButton(L10n.t("OK"), null));
+        if (dialog == null) return;
+        // A click listener of its own, so Show all ticks every button without closing the list.
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(tapped -> {
+            hidden.clear();
+            Settings.HIDDEN_MESSAGE_BOX_BUTTONS.save("");
+            row.setSummary(messageBoxSummary(""));
+            for (int i = 0; i < names.size(); i++) dialog.getListView().setItemChecked(i, true);
+        });
+    }
+
+    /** The row under Profiles that opens the list of profile tabs to show (#254). */
+    private Row profileTabsRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(Settings.HIDDEN_PROFILE_TABS.key);
+        row.setPersistent(false);
+        row.setTitle(L10n.t("Tabs on profiles"));
+        row.setSummary(profileTabsSummary(Settings.HIDDEN_PROFILE_TABS.savedValue()));
+        row.setOnPreferenceClickListener(tapped -> {
+            pickProfileTabs(row);
+            return true;
+        });
+        return row;
+    }
+
+    /** What the tabs left off in [saved] do, for the row's summary. */
+    static String profileTabsSummary(String saved) {
+        Set<String> hidden = ProfileTabs.parse(saved);
+        if (hidden.isEmpty()) {
+            return L10n.t("Every tab shows on profiles. Untick the ones you don't want. The grid of posts always stays.");
+        }
+        List<String> labels = new ArrayList<>();
+        for (String key : ProfileTabs.OFFERED) {
+            if (hidden.contains(key)) labels.add(L10n.isolate(profileTabLabel(key)));
+        }
+        String left = String.join(", ", labels);
+        return L10n.f("Left off profiles: %1$s. The grid of posts stays.", left);
+    }
+
+    /** What the profile tabs list calls the tab Instagram keys [key]. */
+    static String profileTabLabel(String key) {
+        switch (key) {
+            case "profile_clips":
+                return L10n.t("Reels");
+            case "profile_reposts":
+                return L10n.t("Reposts");
+            default:
+                return L10n.t("Tagged");
+        }
+    }
+
+    /**
+     * Each tab Instagram can show on a profile, ticked while it shows. A change saves at once and
+     * shows the next time a profile opens. The grid of posts isn't listed, since it's what stays.
+     */
+    void pickProfileTabs(Row row) {
+        Context context = getActivity();
+        if (context == null) return;
+        Set<String> hidden = new LinkedHashSet<>(ProfileTabs.parse(Settings.HIDDEN_PROFILE_TABS.savedValue()));
+        List<String> keys = ProfileTabs.OFFERED;
+        CharSequence[] names = new CharSequence[keys.size()];
+        boolean[] checked = new boolean[keys.size()];
+        for (int i = 0; i < names.length; i++) {
+            names[i] = profileTabLabel(keys.get(i));
+            checked[i] = !hidden.contains(keys.get(i));
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(context).setTitle(L10n.t("Tabs on profiles"));
+        builder.setMultiChoiceItems(names, checked, (dialog, which, on) -> {
+            if (on) hidden.remove(keys.get(which));
+            else hidden.add(keys.get(which));
+            Settings.HIDDEN_PROFILE_TABS.save(ProfileTabs.join(hidden));
+            row.setSummary(profileTabsSummary(Settings.HIDDEN_PROFILE_TABS.savedValue()));
+        });
+        show(builder.setPositiveButton(L10n.t("OK"), null));
+    }
+
+    /** The row under Ghost mode that opens the list of switches it turns (#251). */
+    private Row ghostPicksRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(GHOST_PICKS_ROW);
+        row.setPersistent(false);
+        row.setTitle(L10n.t("Switches Ghost mode turns"));
+        row.setOnPreferenceClickListener(tapped -> {
+            pickGhostMode();
+            return true;
+        });
+        return row;
+    }
+
+    /**
+     * Each ghost switch with a check on the ones Ghost mode turns. A change saves at once, and the
+     * Ghost mode row, the Home button and the inbox long press all follow it. The last check can't
+     * come off, since Ghost mode would have nothing to turn.
+     */
+    void pickGhostMode() {
+        Context context = getActivity();
+        List<BooleanSetting> switches = ghostSwitches;
+        if (context == null || switches.isEmpty()) return;
+        Set<String> picked = new LinkedHashSet<>();
+        for (BooleanSetting setting : GhostMode.picked(switches)) picked.add(setting.key);
+        CharSequence[] names = new CharSequence[switches.size()];
+        boolean[] checked = new boolean[switches.size()];
+        for (int i = 0; i < names.length; i++) {
+            names[i] = ghostName(switches.get(i));
+            checked[i] = picked.contains(switches.get(i).key);
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(context).setTitle(L10n.t("Switches Ghost mode turns"));
+        builder.setMultiChoiceItems(names, checked, (dialog, which, on) -> {
+            String key = switches.get(which).key;
+            if (!on && picked.size() == 1 && picked.contains(key)) {
+                checked[which] = true;
+                setChecked((AlertDialog) dialog, which, true);
+                Utils.showToastShort(L10n.t("Ghost mode needs at least one switch to turn."));
+                return;
+            }
+            if (on) picked.add(key);
+            else picked.remove(key);
+            GhostMode.pick(switches, picked);
+            showGhostMode();
+        });
+        show(builder.setPositiveButton(L10n.t("OK"), null));
     }
 
     /**
@@ -1992,17 +2280,18 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 + "stories anonymously and Hide that you're typing. Each one keeps its own switch."));
         row.setOnPreferenceChangeListener((preference, value) -> {
             boolean on = Boolean.TRUE.equals(value);
-            for (BooleanSetting setting : ghostSwitches) {
+            List<BooleanSetting> picked = GhostMode.picked(ghostSwitches);
+            for (BooleanSetting setting : picked) {
                 Preference own = findPreference(setting.key);
                 if (own instanceof TwoStatePreference && own.isPersistent()) ((TwoStatePreference) own).setChecked(on);
                 else setting.save(on);
             }
             showGhostMode();
-            Utils.showToastShort(GhostMode.message(ghostSwitches, on,
+            Utils.showToastShort(GhostMode.message(picked, on,
                     L10n.t("Couldn't change every Ghost mode switch. Check them below.")));
             return false;
         });
-        row.setChecked(GhostMode.on(ghostSwitches));
+        row.setChecked(GhostMode.on(GhostMode.picked(ghostSwitches)));
         mark(row, SettingsIcons.HIDDEN);
         return row;
     }
@@ -3557,7 +3846,26 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
      * what the shared page syncs a list by, and the summary says what the choice does.
      */
     static NavigationRow navigationRow(Context context) {
-        return tabRow(context, false);
+        return tabRow(context, NavigationRow.Use.SETTINGS);
+    }
+
+    /**
+     * What a way-in switch does, for the shortcut, the logo press and the menu row's hide switch.
+     * The hide switch says when it can't hide the row because nothing else opens HushGram.
+     */
+    static String wayInSummary(Setting<?> setting) {
+        if (setting == Settings.SETTINGS_SHORTCUT) {
+            return L10n.t("Puts HushGram settings in the menu you get by holding Instagram's icon. Off, it leaves that menu.");
+        }
+        if (setting == Settings.SETTINGS_LOGO_PRESS) {
+            return L10n.t("A long press on the Instagram logo at the top of Home opens these settings. Off, the long "
+                    + "press goes back to Instagram.");
+        }
+        if (Settings.HIDE_MENU_ROW.savedValue() && SettingsEntry.waysInOn() == 0) {
+            return L10n.t("No other way into HushGram is on, so the row stays in Instagram's menu.");
+        }
+        return L10n.t("Instagram's Settings and activity screen leaves out the HushGram row while another way here "
+                + "opens HushGram. With every other way off, the row comes back.");
     }
 
     /**
@@ -3579,14 +3887,21 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
 
     /** The row choosing the tab whose long press opens the playback quality list (#93). */
     static NavigationRow qualityTabRow(Context context) {
-        return tabRow(context, true);
+        return tabRow(context, NavigationRow.Use.QUALITY);
     }
 
-    private static NavigationRow tabRow(Context context, boolean forQuality) {
-        EnumSetting<NavigationTarget> setting = forQuality ? Settings.QUALITY_TAB_TARGET : Settings.NAVIGATION_SETTINGS_TARGET;
-        NavigationRow row = new NavigationRow(context, forQuality);
+    /** The row choosing the tab whose long press turns Ghost mode on or off (#255). */
+    static NavigationRow ghostTabRow(Context context) {
+        return tabRow(context, NavigationRow.Use.GHOST);
+    }
+
+    private static NavigationRow tabRow(Context context, NavigationRow.Use use) {
+        EnumSetting<NavigationTarget> setting = use == NavigationRow.Use.QUALITY ? Settings.QUALITY_TAB_TARGET
+                : use == NavigationRow.Use.GHOST ? Settings.GHOST_TAB_TARGET : Settings.NAVIGATION_SETTINGS_TARGET;
+        NavigationRow row = new NavigationRow(context, use);
         row.setKey(setting.key);
-        row.setTitle(forQuality ? L10n.t("Pick the playback quality with a tab long press")
+        row.setTitle(use == NavigationRow.Use.QUALITY ? L10n.t("Pick the playback quality with a tab long press")
+                : use == NavigationRow.Use.GHOST ? L10n.t("Turn Ghost mode on or off with a tab long press")
                 : L10n.t("Open settings with a tab long press"));
         row.setDialogTitle(L10n.t("Choose a tab"));
         row.setNegativeButtonText(L10n.t("Cancel"));
@@ -4281,6 +4596,117 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         return row;
     }
 
+    /** The row that opens the list of the share sheet's round buttons. Its summary names the ones left off. */
+    private Row shareSheetButtonsRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(Settings.HIDDEN_SHARE_SHEET_BUTTONS.key);
+        row.setPersistent(false);
+        row.setTitle(L10n.t("Buttons on the share sheet"));
+        row.setSummary(shareSheetButtonsSummary(Settings.HIDDEN_SHARE_SHEET_BUTTONS.get()));
+        row.setOnPreferenceClickListener(tapped -> {
+            showShareSheetButtons(row);
+            return true;
+        });
+        return row;
+    }
+
+    /** What the buttons left off in [saved] mean, for the row's summary. */
+    static String shareSheetButtonsSummary(String saved) {
+        Set<String> hidden = ShareSheetActions.hidden(saved);
+        if (hidden.isEmpty()) return L10n.t("Every button under the people on the share sheet shows. Untick the ones you don't use.");
+        List<String> labels = new ArrayList<>();
+        for (String action : ShareSheetActions.ACTIONS) {
+            if (hidden.contains(action)) labels.add(L10n.isolate(shareSheetButtonLabel(action)));
+        }
+        String left = String.join(", ", labels);
+        return L10n.f("Left off the share sheet: %1$s.", left);
+    }
+
+    /** What the list calls the share sheet button Instagram names [action]. */
+    static String shareSheetButtonLabel(String action) {
+        switch (action) {
+            case "add_to_your_story":
+                return L10n.t("Add to story");
+            case "system_share_sheet":
+                return L10n.t("Share to");
+            case "whatsapp":
+                return L10n.t("WhatsApp");
+            case "copy_link":
+                return L10n.t("Copy link");
+            case "download_media":
+                return L10n.t("Download");
+            case "user_sms":
+                return L10n.t("SMS");
+            case "messenger":
+                return L10n.t("Messenger");
+            case "facebook":
+                return L10n.t("Facebook");
+            case "snapchat":
+                return L10n.t("Snapchat");
+            case "twitter":
+                return L10n.t("X");
+            case "barcelona":
+                return L10n.t("Threads");
+            case "add_to_channel":
+                return L10n.t("Add to channel");
+            case "save":
+                return L10n.t("Save");
+            case "qr_code":
+                return L10n.t("QR code");
+            case "whatsapp_status":
+                return L10n.t("WhatsApp status");
+            case "reply_to_author":
+                return L10n.t("Reply to author");
+            case "watch_on_tv":
+                return L10n.t("Watch on TV");
+            case "profile_card_download":
+                return L10n.t("Download profile card");
+            case "line":
+                return L10n.t("LINE");
+            case "kakaotalk":
+                return L10n.t("KakaoTalk");
+            case "discord":
+                return L10n.t("Discord");
+            default:
+                return L10n.t("Band");
+        }
+    }
+
+    /**
+     * Every share sheet button with a check, ticked while it shows. A change saves at once, so the
+     * next share sheet Instagram opens has the row without the buttons left unticked. A button an
+     * Instagram update adds to the row isn't listed, and shows.
+     */
+    void showShareSheetButtons(Row row) {
+        Context context = getActivity();
+        if (context == null) return;
+        Set<String> hidden = new LinkedHashSet<>(ShareSheetActions.hidden(Settings.HIDDEN_SHARE_SHEET_BUTTONS.get()));
+        List<String> actions = ShareSheetActions.ACTIONS;
+        CharSequence[] names = new CharSequence[actions.size()];
+        boolean[] shown = new boolean[actions.size()];
+        for (int i = 0; i < names.length; i++) {
+            names[i] = shareSheetButtonLabel(actions.get(i));
+            shown[i] = !hidden.contains(actions.get(i));
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(context).setTitle(L10n.t("Buttons on the share sheet"));
+        builder.setMultiChoiceItems(names, shown, (dialog, which, on) -> {
+            if (on) hidden.remove(actions.get(which));
+            else hidden.add(actions.get(which));
+            Settings.HIDDEN_SHARE_SHEET_BUTTONS.save(ShareSheetActions.join(hidden));
+            row.setSummary(shareSheetButtonsSummary(Settings.HIDDEN_SHARE_SHEET_BUTTONS.get()));
+        });
+        AlertDialog dialog = show(builder.setNeutralButton(L10n.t("Show all"), null)
+                .setPositiveButton(L10n.t("OK"), null));
+        if (dialog == null) return;
+        // A click listener of its own, so Show all ticks every button without closing the list.
+        dialog.getButton(AlertDialog.BUTTON_NEUTRAL).setOnClickListener(tapped -> {
+            hidden.clear();
+            Settings.HIDDEN_SHARE_SHEET_BUTTONS.save("");
+            row.setSummary(shareSheetButtonsSummary(""));
+            for (int i = 0; i < actions.size(); i++) dialog.getListView().setItemChecked(i, true);
+        });
+    }
+
     /** The row that opens the tab order list. Its summary names the order chosen. */
     private Row tabOrderRow(Context context) {
         Row row = new Row(context);
@@ -4716,7 +5142,13 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     protected void updatePreferenceAvailability(Preference preference, Setting<?> setting) {
         super.updatePreferenceAvailability(preference, setting);
         if (resumingFromOverview && setting == BaseSettings.PAUSED) preference.setEnabled(false);
-        if (setting == Settings.ONLY_FOLLOWING) {
+        if (setting == Settings.SETTINGS_SHORTCUT || setting == Settings.SETTINGS_LOGO_PRESS
+                || setting == Settings.HIDE_MENU_ROW) {
+            // The last way into HushGram still on stays on, greyed out under a line saying why.
+            boolean last = SettingsEntry.isLastWayIn(setting);
+            if (last) preference.setEnabled(false);
+            preference.setSummary(last ? L10n.t("The last way into these settings stays on.") : wayInSummary(setting));
+        } else if (setting == Settings.ONLY_FOLLOWING) {
             preference.setSummary(setting.isAvailable()
                     ? L10n.t("Removes For you from the choices at the top of Home, so it stays on Following or "
                             + "Favorites. Needs Start Home on Following. Restart Instagram to see the change.")
@@ -5630,13 +6062,14 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
      * shared page syncing it from the setting, or an import.
      */
     static final class NavigationRow extends ListPreference {
+        /** What the chosen tab's long press does: open HushGram, the quality picker (#93) or Ghost mode (#255). */
+        enum Use { SETTINGS, QUALITY, GHOST }
         private String summary;
-        /** The row for the quality picker's tab (#93) rather than the one that opens HushGram. */
-        private final boolean forQuality;
-        NavigationRow(Context context) { this(context, false); }
-        NavigationRow(Context context, boolean forQuality) {
+        private final Use use;
+        NavigationRow(Context context) { this(context, Use.SETTINGS); }
+        NavigationRow(Context context, Use use) {
             super(context);
-            this.forQuality = forQuality;
+            this.use = use;
         }
         /** The tabs take the choice once the setting has it, after this change's own sync (#82). */
         @Override public void setValue(String value) {
@@ -5649,7 +6082,16 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             for (NavigationTarget candidate : NavigationTarget.values()) {
                 if (candidate.name().equals(getValue())) target = candidate;
             }
-            if (forQuality) {
+            if (use == Use.GHOST) {
+                summary = target == NavigationTarget.OFF
+                        ? L10n.t("Tab long presses keep Instagram's own action. Choose one to turn Ghost mode on or off instead.")
+                        : L10n.f("Long press %1$s to turn Ghost mode on or off instead of that tab's usual action, and a "
+                                + "toast says which way it went. Normal taps and other tabs stay the same. If the same tab "
+                                + "opens HushGram or picks the playback quality, that comes first.", navigationLabel(target));
+                setSummary(summary);
+                return;
+            }
+            if (use == Use.QUALITY) {
                 summary = target == NavigationTarget.OFF
                         ? L10n.t("Tab long presses keep Instagram's own action. Choose one to pick the playback quality instead.")
                         : L10n.f("Long press %1$s to pick the playback quality instead of that tab's usual action. "

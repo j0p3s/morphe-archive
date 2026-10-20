@@ -4,16 +4,8 @@
  */
 package app.morphe.patches.imo.misc.story
 
-import app.morphe.patcher.Fingerprint
+import app.morphe.patches.imo.shared.RemoteSettingFingerprint
 
-private const val SETTINGS_DELEGATE_SUFFIX = "SettingsDelegate;"
+internal object StoryGalleryDurationFingerprint : RemoteSettingFingerprint("getStoryGalleryDurationLimit")
 
-internal object StoryGalleryDurationFingerprint : Fingerprint(
-    definingClass = SETTINGS_DELEGATE_SUFFIX,
-    name = "getStoryGalleryDurationLimit",
-)
-
-internal object StoryRecordDurationFingerprint : Fingerprint(
-    definingClass = SETTINGS_DELEGATE_SUFFIX,
-    name = "storyRecordDuration",
-)
+internal object StoryRecordDurationFingerprint : RemoteSettingFingerprint("storyRecordDuration")

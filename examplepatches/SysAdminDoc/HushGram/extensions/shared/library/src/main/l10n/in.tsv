@@ -129,7 +129,7 @@ Downloads	Unduhan
 Save videos other apps can open	Simpan video yang bisa dibuka aplikasi lain
 For WhatsApp, video editors such as CapCut and InShot, or a gallery or player that plays saves without sound. May lower quality.	Untuk WhatsApp, editor video seperti CapCut dan InShot, atau galeri atau pemutar yang memutar video tersimpan tanpa suara. Kualitas bisa lebih rendah.
 Convert to keep the full size	Konversi agar tetap ukuran penuh
-With Save videos other apps can open on, a full size video Instagram only has as VP9 or AV1 is converted to H.264 on your phone instead of saved smaller. Slower, and videos over 3 minutes stay smaller.	Saat Simpan video yang bisa dibuka aplikasi lain aktif, video ukuran penuh yang di Instagram hanya ada sebagai VP9 atau AV1 dikonversi ke H.264 di ponselmu, bukan disimpan lebih kecil. Lebih lambat, dan video lebih dari 3 menit tetap lebih kecil.
+Saves videos other apps can open, at full size. A video Instagram only has as VP9 or AV1 is converted to H.264 on your phone instead of saved smaller. Slower, and videos over 3 minutes stay smaller.	Menyimpan video yang bisa dibuka aplikasi lain, dalam ukuran penuh. Video yang di Instagram hanya ada sebagai VP9 atau AV1 dikonversi ke H.264 di ponselmu, bukan disimpan lebih kecil. Lebih lambat, dan video lebih dari 3 menit tetap lebih kecil.
 Converting to H.264	Mengonversi ke H.264
 Download quality	Kualitas unduhan
 Best	Terbaik
@@ -256,6 +256,8 @@ Hide the notes row	Sembunyikan baris catatan
 Takes the row of notes off the top of your messages, the Map bubble in it too. Your chats, search and requests stay.	Menghapus baris catatan dari bagian atas pesan, termasuk gelembung Peta di dalamnya. Chat, pencarian, dan permintaan pesan tetap ada.
 Hide Instants	Sembunyikan Instants
 Removes the stack of Instants (quick photos from friends) from your messages. Restart Instagram to see the change.	Menghapus tumpukan Instants (foto cepat dari teman) dari pesan kamu. Mulai ulang Instagram untuk melihat perubahannya.
+Hide See preview and Plus in chat menus	Sembunyikan Lihat pratinjau dan Plus di menu chat
+Takes the See preview and Instagram Plus rows out of the menu you get from long pressing a chat. Your chat options stay.	Menghapus baris Lihat pratinjau dan Instagram Plus dari menu yang muncul saat kamu menekan lama sebuah chat. Opsi chat kamu tetap ada.
 Read messages without the seen receipt	Baca pesan tanpa tanda dilihat
 Opening a chat doesn't tell people you've seen their messages, and you still see when they've seen yours. To let one chat know, long press it in your messages and tap Mark as read.	Membuka chat tidak memberi tahu orang lain bahwa Anda sudah melihat pesan mereka, dan Anda tetap melihat kapan mereka melihat pesan Anda. Agar satu chat tahu, tekan lama chat itu di pesan Anda lalu ketuk Tandai sudah dibaca.
 Keep chats unread here	Biarkan chat belum dibaca di sini
@@ -277,6 +279,8 @@ Hide the Music for you card	Sembunyikan kartu Musik untuk Anda
 Keeps Instagram's Music for you card from turning up between the stories you watch. The stories themselves stay.	Mencegah kartu Musik untuk Anda dari Instagram muncul di antara cerita yang Anda tonton. Ceritanya sendiri tetap ada.
 Hide Suggested for you between stories	Sembunyikan Disarankan untuk kamu di antara cerita
 Leaves out the Suggested for you cards of accounts to follow that Instagram puts between the stories you tap through. The stories themselves stay.	Menghapus kartu Disarankan untuk kamu berisi akun untuk diikuti yang diselipkan Instagram di antara cerita yang kamu ketuk. Ceritanya sendiri tetap ada.
+Hide Add Yours cards between stories	Sembunyikan kartu Add Yours di antara cerita
+Leaves out the Add Yours cards, like Popular Add Yours and Join a trending Add Yours, that Instagram puts between the stories you tap through. The stories themselves stay.	Menghapus kartu Add Yours, seperti Add Yours populer dan ajakan ikut Add Yours yang sedang tren, yang diselipkan Instagram di antara cerita yang kamu ketuk. Ceritanya sendiri tetap ada.
 Download feed photos	Unduh foto feed
 The same Download on a photo post, and on a carousel showing a photo. Saves the largest size Instagram has.	Opsi Unduh yang sama di postingan foto, dan di carousel yang sedang menampilkan foto. Menyimpan ukuran terbesar yang dimiliki Instagram.
 the start-up fix for x86 devices	perbaikan saat mulai untuk perangkat x86
@@ -330,6 +334,8 @@ Hide People you don't follow back	Sembunyikan Orang yang tidak Anda ikuti balik
 Takes the People you don't follow back section off the bottom of your notifications. Notifications about new followers stay.	Menghapus bagian Orang yang tidak Anda ikuti balik dari bawah notifikasi Anda. Notifikasi tentang pengikut baru tetap ada.
 Hide suggestions in notifications	Sembunyikan saran di notifikasi
 Takes rows that only suggest something off your notifications, like a thread from an account you don't follow or someone you might know. Likes, comments, mentions and new followers stay.	Menghapus baris yang hanya menyarankan sesuatu dari notifikasi Anda, seperti utas dari akun yang tidak Anda ikuti atau orang yang mungkin Anda kenal. Suka, komentar, sebutan, dan pengikut baru tetap ada.
+Hide Featured in notifications	Sembunyikan Unggulan di notifikasi
+Takes the Featured section off the top of your notifications, the posts and threads Instagram picks to show you there. Everything under it stays.	Menghapus bagian Unggulan dari atas notifikasi Anda, yaitu postingan dan utas yang dipilih Instagram untuk ditampilkan di sana. Semua yang ada di bawahnya tetap ada.
 Hide highlights	Sembunyikan sorotan
 Takes the row of story highlights off profiles, yours included. Bios, counts and posts stay, and so does Add to highlight on your stories.	Menghapus baris sorotan cerita dari profil, termasuk profilmu. Bio, jumlah, dan postingan tetap ada, begitu juga Tambahkan ke sorotan di ceritamu.
 Hide the Threads button	Sembunyikan tombol Threads
@@ -534,12 +540,20 @@ Nothing in the row of stories at the top of Home loads, your own story included,
 Open categories as pages	Buka kategori sebagai halaman
 Settings shows a list of its categories, and a tap opens one on its own page. Search still looks through all of them.	Pengaturan menampilkan daftar kategorinya, dan satu ketukan membuka satu kategori di halamannya sendiri. Pencarian tetap mencari di semuanya.
 Hide the HushGram row in Instagram's menu	Sembunyikan baris HushGram di menu Instagram
-While a tab long press or the long press on your profile's menu opens HushGram, Instagram's Settings and activity screen leaves out the HushGram row. Turn those long presses off and the row comes back.	Selama menekan lama tab atau menu profilmu membuka HushGram, layar Pengaturan dan aktivitas Instagram tidak menampilkan baris HushGram. Matikan tekan lama itu dan barisnya kembali.
+Settings shortcut on the app icon	Pintasan pengaturan di ikon aplikasi
+Open settings from the logo	Buka pengaturan dari logo
+Puts HushGram settings in the menu you get by holding Instagram's icon. Off, it leaves that menu.	Menaruh Pengaturan HushGram di menu yang muncul saat ikon Instagram ditekan lama. Jika dimatikan, pintasan itu hilang dari menu tersebut.
+A long press on the Instagram logo at the top of Home opens these settings. Off, the long press goes back to Instagram.	Menekan lama logo Instagram di bagian atas Beranda membuka pengaturan ini. Jika dimatikan, tekan lama itu kembali menjadi milik Instagram.
+The last way into these settings stays on.	Cara terakhir untuk membuka pengaturan ini tetap menyala.
+No other way into HushGram is on, so the row stays in Instagram's menu.	Tidak ada cara lain untuk membuka HushGram yang menyala, jadi barisnya tetap ada di menu Instagram.
+Instagram's Settings and activity screen leaves out the HushGram row while another way here opens HushGram. With every other way off, the row comes back.	Selama cara lain ke sini membuka HushGram, layar Pengaturan dan aktivitas Instagram tidak menampilkan baris HushGram. Jika semua cara lain dimatikan, barisnya kembali.
 Stop loading stories	Berhenti memuat cerita
 Takes the Comment button and the comment count off the posts in your feed.	Menghapus tombol Komentar dan jumlah komentar dari postingan di feed Anda.
 # context: Comments: the switch that hides the row of quick emoji above the comment box (#248). Comment box is the field where you type a comment.
 Hide the emoji row	Sembunyikan baris emoji
 Takes the row of quick emoji off above the comment box. The box itself stays.	Menghapus baris emoji cepat di atas kotak komentar. Kotaknya tetap ada.
+Open comments without the keyboard	Buka komentar tanpa keyboard
+Comments open with the keyboard down. A tap in the comment box, or on Reply, still brings it up.	Komentar terbuka dengan keyboard tersembunyi. Mengetuk kotak komentar, atau Balas, tetap memunculkannya.
 # context: Feed: the switch that hides the Follow and Subscribe buttons beside the author's name on a post (#248). Follow and Subscribe are the labels Instagram uses on those buttons.
 Hide Follow on posts	Sembunyikan Ikuti di postingan
 Takes the Follow and Subscribe buttons off the top of posts in your feed. The name, time and menu stay.	Menghapus tombol Ikuti dan Berlangganan di bagian atas postingan di feed Anda. Nama, waktu, dan menu tetap ada.
@@ -725,7 +739,7 @@ Rounds the pill and its highlight and puts Search in a glass circle of its own. 
 Draws Instagram's tab bar as a floating, rounded glass pill with a highlight on the tab you're on. Restart Instagram after changing it.	Menggambar bilah tab Instagram sebagai pil kaca bulat yang melayang dengan sorotan pada tab yang sedang dibuka. Mulai ulang Instagram setelah mengubahnya.
 Glass tab bar	Bilah tab kaca
 Haptics on the tab bar	Getaran pada bilah tab
-Home and the other tabs run down behind the pill, so the glass has real content to blur. Reels still stops above it.	Beranda dan tab lainnya berlanjut di belakang pil, sehingga kaca punya konten nyata untuk diburamkan. Reels tetap berhenti di atasnya.
+Home, Reels and the other tabs run down behind the pill, so the glass has real content to blur.	Beranda, Reels, dan tab lainnya berlanjut di belakang pil, sehingga kaca punya konten nyata untuk diburamkan.
 Show content behind the tab bar	Tampilkan konten di belakang bilah tab
 Tab bar	Bilah tab
 Saved	Tersimpan
@@ -1063,3 +1077,64 @@ A reel Instagram's auto scroll moves to waits for your tap too. Off, auto scroll
 # context: Stories: the switch that hides the Follow button in a story's header (#237). Follow is Instagram's own button label, as in Hide the Follow button.
 Hide Follow on stories	Sembunyikan Ikuti di cerita
 Takes the Follow button off the top of stories from accounts you don't follow. The name, time and menu stay.	Menghapus tombol Ikuti dari bagian atas cerita akun yang tidak kamu ikuti. Nama, waktu, dan menu tetap ada.
+# context: Reels: Burn-in guard's switch that keeps the faded buttons faded while you tap (#162)
+Stay dim when I tap	Tetap redup saat saya ketuk
+Once Burn-in guard fades the buttons, they stay faded on Reels whatever you tap or swipe, the next reel too. They still work. Leaving Reels brings them back.	Setelah Pelindung burn-in meredupkan tombol, tombol tetap redup di Reels apa pun yang kamu ketuk atau geser, termasuk di reel berikutnya. Tombol tetap berfungsi. Keluar dari Reels mengembalikannya.
+# context: Profiles: switches next to Hide the Threads button. Create is the plus at the top of your own profile (#254); Share profile and Edit profile are Instagram's own button names (#253)
+Hide the Create button	Sembunyikan tombol Buat
+Takes the plus for new posts off the top of your own profile. The other buttons stay where they were.	Menghapus tanda plus untuk postingan baru dari bagian atas profilmu sendiri. Tombol lainnya tetap di tempatnya.
+Hide Share profile	Sembunyikan Bagikan profil
+Takes the Share profile button off your profile, and Edit profile stretches to fill the space.	Menghapus tombol Bagikan profil dari profilmu, dan Edit profil melebar mengisi ruangnya.
+# context: Layout: Glass tab bar's switch that stops the liquid pill shrinking as you scroll (#256)
+Keep the pill full size	Pertahankan pil dalam ukuran penuh
+Scrolling a list down leaves the liquid pill as it is, every tab in place. Restart Instagram after changing it.	Menggulir daftar ke bawah membiarkan pil kaca cair apa adanya, setiap tab tetap di tempatnya. Mulai ulang Instagram setelah mengubahnya.
+# context: Ghost mode: the row and dialog picking which switches Ghost mode turns (#251). %1$s is a list of switch names
+All of them. Tap to leave some out, and Ghost mode leaves those as you set them.	Semuanya. Ketuk untuk mengecualikan beberapa, dan Mode hantu membiarkannya seperti yang kamu atur.
+%1$s. The others stay as you set them.	%1$s. Yang lain tetap seperti yang kamu atur.
+Switches Ghost mode turns	Sakelar yang diubah Mode hantu
+Ghost mode needs at least one switch to turn.	Mode hantu perlu setidaknya satu sakelar untuk diubah.
+# context: Ghost mode: turning it on or off with a long press on a tab (#255). %1$s is a tab's name
+Turn Ghost mode on or off with a tab long press	Nyalakan atau matikan Mode hantu dengan menekan lama tab
+Tab long presses keep Instagram's own action. Choose one to turn Ghost mode on or off instead.	Menekan lama tab tetap menjalankan tindakan Instagram. Pilih satu tab untuk menyalakan atau mematikan Mode hantu sebagai gantinya.
+Long press %1$s to turn Ghost mode on or off instead of that tab's usual action, and a toast says which way it went. Normal taps and other tabs stay the same. If the same tab opens HushGram or picks the playback quality, that comes first.	Tekan lama %1$s untuk menyalakan atau mematikan Mode hantu menggantikan tindakan biasa tab itu, dan pesan singkat memberi tahu hasilnya. Ketukan biasa dan tab lain tetap sama. Jika tab yang sama membuka HushGram atau memilih kualitas pemutaran, itu yang didahulukan.
+Buttons on the share sheet	Tombol di lembar bagikan
+Every button under the people on the share sheet shows. Untick the ones you don't use.	Semua tombol di bawah daftar orang pada lembar bagikan ditampilkan. Hapus centang yang tidak kamu pakai.
+Left off the share sheet: %1$s.	Disembunyikan dari lembar bagikan: %1$s.
+Show all	Tampilkan semua
+Add to story	Tambahkan ke cerita
+Share to	Bagikan ke
+Copy link	Salin tautan
+QR code	Kode QR
+WhatsApp status	Status WhatsApp
+Reply to author	Balas ke penulis
+Watch on TV	Tonton di TV
+Download profile card	Unduh kartu profil
+Add to channel	Tambahkan ke saluran
+WhatsApp	WhatsApp
+SMS	SMS
+Messenger	Messenger
+Facebook	Facebook
+Snapchat	Snapchat
+X	X
+Threads	Threads
+LINE	LINE
+KakaoTalk	KakaoTalk
+Discord	Discord
+Band	Band
+# context: Tabs on profiles row under Profiles; Reposts and Tagged are the names of Instagram's own profile tabs
+Tabs on profiles	Tab di profil
+Every tab shows on profiles. Untick the ones you don't want. The grid of posts always stays.	Semua tab tampil di profil. Hapus centang pada tab yang tidak Anda inginkan. Kisi postingan selalu tetap ada.
+Left off profiles: %1$s. The grid of posts stays.	Disembunyikan dari profil: %1$s. Kisi postingan tetap ada.
+Reposts	Postingan ulang
+Tagged	Ditandai
+# context: Show all recent searches switch under Explore; See all is Instagram's own row under the recent searches
+Show all recent searches	Tampilkan semua pencarian terbaru
+Lists every recent search under the search bar, not just the first few. See all and the x on each row work as before.	Menampilkan semua pencarian terbaru di bawah kolom pencarian, bukan hanya beberapa yang pertama. Lihat semua dan tanda x di tiap baris tetap berfungsi seperti biasa.
+Hide the call buttons in chats	Sembunyikan tombol panggilan di chat
+Takes the voice and video call buttons off the top of a chat. The name keeps its room. Turn it off and they're back the next time a chat opens.	Menghapus tombol panggilan suara dan video dari bagian atas chat. Nama tetap punya ruangnya. Matikan, dan tombolnya kembali saat chat dibuka lagi.
+Buttons in the message box	Tombol di kotak pesan
+Every button in the message box shows. Untick the ones you don't use. The text box and Send always stay.	Semua tombol di kotak pesan ditampilkan. Hapus centang pada yang tidak kamu pakai. Kotak teks dan Kirim selalu tetap ada.
+Left off the message box: %1$s. The text box and Send stay.	Dihilangkan dari kotak pesan: %1$s. Kotak teks dan Kirim tetap ada.
+Gallery	Galeri
+Stickers	Stiker
+Voice message	Pesan suara

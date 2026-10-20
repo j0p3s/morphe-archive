@@ -95,6 +95,8 @@ private val SIGNATURE_SHA1_REGEX = Regex("^[0-9a-f]{40}$")
  * @param allowClone Whether to offer the "Package name" option (original or `<package>.morphe`
  *        clone). When false the option is not registered and the original package is always kept,
  *        for apps whose clone cannot install next to the stock app.
+ * @param extraDescription An app-specific sentence appended to the patch description, for example
+ *        which of the app's features need it.
  * @param executeBlock Additional app-specific bytecode changes.
  */
 fun gmsCoreSupportPatch(
@@ -106,6 +108,7 @@ fun gmsCoreSupportPatch(
     default: Boolean = true,
     dependencies: Set<Patch<*>> = emptySet(),
     allowClone: Boolean = true,
+    extraDescription: String? = null,
     executeBlock: BytecodePatchContext.() -> Unit = {},
 ): BytecodePatch {
     require(PACKAGE_NAME_REGEX.matches(fromPackageName)) { "Invalid package name: $fromPackageName" }
@@ -141,7 +144,8 @@ fun gmsCoreSupportPatch(
     return bytecodePatch(
         name = "GmsCore support",
         description = "Makes Google sign-in and Google APIs work in the patched app by using " +
-            "MicroG RE instead of Google Play services. Requires MicroG RE to be installed.",
+            "MicroG RE instead of Google Play services. Requires MicroG RE to be installed." +
+            (extraDescription?.let { " $it" } ?: ""),
         default = default,
     ) {
         compatibleWith(compatibility)
@@ -185,7 +189,26 @@ fun gmsCoreSupportPatch(
                 )
             }
             googlePlayUtility?.returnEarly(0)
-            ServiceCheckFingerprint.methodOrNull?.returnEarly()
+            // Same rule for the ensurePlayServicesAvailable helper: optional, but a void method
+            // holding its message means the library has it, so a miss fails instead of no-opping
+            // (the old shape missed it in Sofascore and 365Scores without a sound). Constructors
+            // do not count: when R8 drops the helper, the message can survive in the
+            // GooglePlayServicesNotAvailableException(int) constructor (Shazam 16.63.0, thrown
+            // only by ProviderInstaller), and there is nothing to return early from.
+            val serviceCheck = ServiceCheckFingerprint.methodOrNull
+            if (serviceCheck == null && classDefByStrings(SERVICE_CHECK_MESSAGE).any { classDef ->
+                    classDef.methods.any { method ->
+                        method.returnType == "V" && method.name != "<init>" && method.implementation?.instructions?.any {
+                            ((it as? ReferenceInstruction)?.reference as? StringReference)?.string == SERVICE_CHECK_MESSAGE
+                        } == true
+                    }
+                }
+            ) {
+                throw PatchException(
+                    "play-services-basement is present but ensurePlayServicesAvailable(Context[, int]) was not found",
+                )
+            }
+            serviceCheck?.returnEarly()
 
             disableFrameworkCredentialProvider()
             routeGoogleIdRequestsToBeginSignIn()

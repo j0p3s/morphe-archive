@@ -1,3 +1,27 @@
+## [1.3.0](https://github.com/rahaaatul/morphe-patches/compare/v1.2.1...v1.3.0) (2026-10-19)
+
+### 🐛 Bug Fixes
+
+* **privacykit:** Update native spoof unlock patch for v3.7.1 ([cf68748](https://github.com/rahaaatul/morphe-patches/commit/cf687489540dc2afbdde704735e0d9592b095746))
+* Unlock Pro features in Privacy Kit ([cf74814](https://github.com/rahaaatul/morphe-patches/commit/cf74814bdce2fef3127aa02c3923511d5a17aea2))
+* Unlock Pro features in Privacy Kit ([3b0ba42](https://github.com/rahaaatul/morphe-patches/commit/3b0ba427616ed755bb1b3dde4d4e42e21698a8c0))
+
+### ✨ New Features
+
+* unlock Native Spoofing (Zygisk) only ([758cd41](https://github.com/rahaaatul/morphe-patches/commit/758cd41c5d435cd12d51dce64ca2085832fa5432))
+
+## [1.3.0-dev.2](https://github.com/rahaaatul/morphe-patches/compare/v1.3.0-dev.1...v1.3.0-dev.2) (2026-10-19)
+
+### 🐛 Bug Fixes
+
+* **privacykit:** Update native spoof unlock patch for v3.7.1 ([cf68748](https://github.com/rahaaatul/morphe-patches/commit/cf687489540dc2afbdde704735e0d9592b095746))
+
+## [1.3.0-dev.1](https://github.com/rahaaatul/morphe-patches/compare/v1.2.1...v1.3.0-dev.1) (2026-10-15)
+
+### ✨ New Features
+
+* unlock Native Spoofing (Zygisk) only ([758cd41](https://github.com/rahaaatul/morphe-patches/commit/758cd41c5d435cd12d51dce64ca2085832fa5432))
+
 ## [1.2.1](https://github.com/rahaaatul/morphe-patches/compare/v1.2.0...v1.2.1) (2026-10-13)
 
 ### 🐛 Bug Fixes

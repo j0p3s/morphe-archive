@@ -1,3 +1,19 @@
+## [1.24.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.23.1...v1.24.0) (2026-10-19)
+
+### Bug Fixes
+
+* **capcut:** resolve slimmer targets through the patcher resource paths ([2067afd](https://github.com/kveld9/kveld-extra-morphe-patches/commit/2067afd328c8793bc0df95a3e4135b7028b3e0a5))
+* **hevy:** correct the IDAT CRC of the stub PNG ([132cf67](https://github.com/kveld9/kveld-extra-morphe-patches/commit/132cf67dbe75e64a7fda23c23877e7b35d939b5a))
+* **hevy:** keep classpath resources when cleaning build junk ([292f82e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/292f82e179b99cb096d73b8dfb0c23636bf99614))
+* **hevy:** keep Firebase component discovery for push notifications ([aeaaedb](https://github.com/kveld9/kveld-extra-morphe-patches/commit/aeaaedb623ddafc437725b8f463651fd78150f8a))
+* **hevy:** keep WorkManager so local notifications can be scheduled ([bc14b09](https://github.com/kveld9/kveld-extra-morphe-patches/commit/bc14b090b2cf4eaba73473d9de1e02357d628184))
+* **hevy:** walk the real APK root when pruning build junk ([d35355e](https://github.com/kveld9/kveld-extra-morphe-patches/commit/d35355e61ffeec7acbf5298e2de7b11347604a99))
+* **nokoprint:** decode resources for the asset debloat patch ([917a2ff](https://github.com/kveld9/kveld-extra-morphe-patches/commit/917a2ff5b7680cb3135590d89769dde71a3b6fc5))
+
+### New Features
+
+* **runner:** warn when a passing patch reports skipped steps ([6d21b97](https://github.com/kveld9/kveld-extra-morphe-patches/commit/6d21b97f98638aa929ff26bf37f0d3d5c5118a35))
+
 ## [1.23.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.23.0...v1.23.1) (2026-10-18)
 
 ### Bug Fixes

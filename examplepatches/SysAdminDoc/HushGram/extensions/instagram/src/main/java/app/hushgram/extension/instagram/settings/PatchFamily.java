@@ -22,6 +22,7 @@ import app.hushgram.extension.shared.Logger;
 import app.hushgram.extension.shared.diagnostics.HookStatus;
 import app.hushgram.extension.shared.settings.BooleanSetting;
 import app.hushgram.extension.shared.settings.HushgramPause;
+import app.hushgram.extension.shared.settings.Setting;
 import app.hushgram.extension.shared.settings.preference.LogBufferManager;
 
 /**
@@ -78,12 +79,15 @@ public enum PatchFamily {
     SCREENSHOT_REPORTS(FamilyNames.SCREENSHOT_REPORTS, "screenshotReports", null, Settings.HIDE_SCREENSHOTS),
     SCREENSHOT_BLOCK(FamilyNames.SCREENSHOT_BLOCK, "screenshotBlock", null, Settings.ALLOW_SCREENSHOTS),
     KEEP_IN_CHAT(FamilyNames.KEEP_IN_CHAT, "keepInChat", null, Settings.KEEP_IN_CHAT),
-    ASK_BEFORE_CALL(FamilyNames.ASK_BEFORE_CALL, "askBeforeCall", null, Settings.ASK_BEFORE_CALL),
+    ASK_BEFORE_CALL(FamilyNames.ASK_BEFORE_CALL, "askBeforeCall", null, Settings.ASK_BEFORE_CALL,
+            Settings.HIDE_CALL_BUTTONS),
+    MESSAGE_BOX(FamilyNames.MESSAGE_BOX, "messageBox", null),
     ASK_BEFORE_LIKE(FamilyNames.ASK_BEFORE_LIKE, "askBeforeLike", null, Settings.ASK_BEFORE_LIKE),
     ASK_BEFORE_REFRESH(FamilyNames.ASK_BEFORE_REFRESH, "askBeforeRefresh", null, Settings.ASK_BEFORE_REFRESH),
     STORIES_TRAY(FamilyNames.STORIES_TRAY, "storiesTray", null, Settings.HIDE_SUGGESTED_STORIES,
             Settings.HIDE_STORY_REWINDS, Settings.HIDE_STORY_RECAPS, Settings.STOP_LOADING_STORIES,
-            Settings.HIDE_STORIES_TRAY, Settings.HIDE_MUSIC_CARD, Settings.HIDE_STORY_SUGGESTIONS),
+            Settings.HIDE_STORIES_TRAY, Settings.HIDE_MUSIC_CARD, Settings.HIDE_STORY_SUGGESTIONS,
+            Settings.HIDE_ADD_YOURS_CARDS),
     STORY_RING(FamilyNames.STORY_RING, "storyRingSize", null, Settings.STORY_RING),
     FEED_REELS(FamilyNames.FEED_REELS, "feedReels", null, Settings.HIDE_FEED_REELS),
     FEED_SUGGESTIONS(FamilyNames.FEED_SUGGESTIONS, "feedSuggestions", null, Settings.HIDE_SUGGESTED_ACCOUNTS,
@@ -103,16 +107,19 @@ public enum PatchFamily {
     EXPLORE_GRID(FamilyNames.EXPLORE_GRID, "exploreGrid", null, Settings.HIDE_EXPLORE_GRID,
             Settings.HIDE_SEARCH_SUGGESTIONS),
     RECENT_SEARCHES(FamilyNames.RECENT_SEARCHES, "recentSearches", null, Settings.DONT_SAVE_RECENT_SEARCHES),
+    ALL_RECENT_SEARCHES(FamilyNames.ALL_RECENT_SEARCHES, "allRecentSearches", null, Settings.SHOW_ALL_RECENT_SEARCHES),
     NOTES_ROW(FamilyNames.NOTES_ROW, "notesRow", null, Settings.HIDE_NOTES_ROW),
     INBOX_SUGGESTIONS(FamilyNames.INBOX_SUGGESTIONS, "inboxSuggestions", null, Settings.HIDE_INBOX_SUGGESTIONS),
     INSTANTS(FamilyNames.INSTANTS, "instants", null, Settings.HIDE_INSTANTS),
+    PLUS_PREVIEW(FamilyNames.PLUS_PREVIEW, "plusPreview", null, Settings.HIDE_PLUS_PREVIEW),
     SHARE_SHEET(FamilyNames.SHARE_SHEET, "shareSheet", null, Settings.HIDE_SHARE_SHEET_GROUP),
     REPOST_BUTTON(FamilyNames.REPOST_BUTTON, "repostButton", null, Settings.HIDE_REPOST_BUTTON),
     HIDE_SHARE_BUTTON(FamilyNames.HIDE_SHARE_BUTTON, "hideShareButton", null, Settings.HIDE_SHARE_BUTTON),
     BOTTOM_SPACE(FamilyNames.BOTTOM_SPACE, "bottomSpace", null, Settings.REMOVE_BOTTOM_SPACE),
     GLASS_TAB_BAR(FamilyNames.GLASS_TAB_BAR, "glassTabBar", null, Settings.GLASS_TAB_BAR,
             Settings.GLASS_TAB_BAR_BLUR, Settings.GLASS_TAB_BAR_FLOAT, Settings.GLASS_TAB_BAR_HAPTICS,
-            Settings.GLASS_TAB_BAR_HIDE_ON_SCROLL, Settings.GLASS_TAB_BAR_SLIDE, Settings.GLASS_TAB_BAR_LIQUID),
+            Settings.GLASS_TAB_BAR_HIDE_ON_SCROLL, Settings.GLASS_TAB_BAR_SLIDE, Settings.GLASS_TAB_BAR_LIQUID,
+            Settings.GLASS_TAB_BAR_KEEP_SIZE),
     FULL_SCREEN_BARS(FamilyNames.FULL_SCREEN_BARS, "fullScreenBars", null, Settings.FULL_SCREEN_REELS,
             Settings.FULL_SCREEN_HOME),
     SAVED_ON_PROFILE(FamilyNames.SAVED_ON_PROFILE, "savedOnProfile", null, Settings.SAVED_ON_PROFILE),
@@ -130,9 +137,11 @@ public enum PatchFamily {
             Settings.TRACK_UNFOLLOWERS),
     PROFILE_SUGGESTIONS(FamilyNames.PROFILE_SUGGESTIONS, "profileSuggestions", null, Settings.HIDE_PROFILE_SUGGESTIONS,
             Settings.HIDE_FOLLOW_LIST_SUGGESTIONS, Settings.HIDE_PROFILE_COMPLETION, Settings.HIDE_FOLLOW_BACK_SUGGESTIONS,
-            Settings.HIDE_NOTIFICATION_SUGGESTIONS),
+            Settings.HIDE_NOTIFICATION_SUGGESTIONS, Settings.HIDE_NOTIFICATION_FEATURED),
     PROFILE_HIGHLIGHTS(FamilyNames.PROFILE_HIGHLIGHTS, "profileHighlights", null, Settings.HIDE_HIGHLIGHTS),
-    THREADS_BUTTON(FamilyNames.THREADS_BUTTON, "threadsButton", null, Settings.HIDE_THREADS_BUTTON),
+    PROFILE_TABS(FamilyNames.PROFILE_TABS, "profileTabs", null),
+    THREADS_BUTTON(FamilyNames.THREADS_BUTTON, "threadsButton", null, Settings.HIDE_THREADS_BUTTON,
+            Settings.HIDE_CREATE_BUTTON, Settings.HIDE_SHARE_PROFILE_BUTTON),
     PROFILE_NOTES(FamilyNames.PROFILE_NOTES, "profileNotes", null, Settings.HIDE_PROFILE_NOTES),
     PROFILE_POSTS_LIST(FamilyNames.PROFILE_POSTS_LIST, "profilePostsList", null, Settings.PROFILE_POSTS_LIST),
     COMMENT_COPY(FamilyNames.COMMENT_COPY, "commentCopy", null, Settings.COPY_COMMENTS, Settings.COPY_COMMENT_AUTHORS),
@@ -142,6 +151,7 @@ public enum PatchFamily {
     VOICE_MESSAGE(FamilyNames.VOICE_MESSAGE, "voiceMessage", null, Settings.DOWNLOAD_VOICE_MESSAGES),
     HIDE_COMMENTS(FamilyNames.HIDE_COMMENTS, "hideComments", null, Settings.HIDE_COMMENTS),
     COMMENT_EMOJI_ROW(FamilyNames.COMMENT_EMOJI_ROW, "commentEmojiRow", null, Settings.HIDE_COMMENT_EMOJI_ROW),
+    COMMENT_KEYBOARD(FamilyNames.COMMENT_KEYBOARD, "commentKeyboard", null, Settings.COMMENT_KEYBOARD_DOWN),
     FEED_FOLLOW(FamilyNames.FEED_FOLLOW, "feedFollow", null, Settings.HIDE_FEED_FOLLOW),
     REEL_DECLUTTER(FamilyNames.REEL_DECLUTTER, "reelDeclutter", null, Settings.HIDE_REEL_FOLLOW_BUTTON,
             Settings.HIDE_REEL_CHIPS, Settings.HIDE_REEL_SOCIAL_FOOTER, Settings.HIDE_REEL_COMMENT_BAR,
@@ -424,7 +434,10 @@ public enum PatchFamily {
         StringBuilder line = new StringBuilder(patchName).append(": ");
         if (switches.isEmpty() && staysWhilePaused == null) {
             // A choice, not a switch: paused, it answers Instagram's own.
-            return line.append(paused ? "disabled while paused" : "a choice, not a switch").toString();
+            line.append(paused ? "disabled while paused" : "a choice, not a switch");
+            String chosen = choiceText();
+            if (!chosen.isEmpty()) line.append(" (").append(chosen).append(')');
+            return line.toString();
         }
         if (switches.isEmpty()) {
             return line.append("no switch, stays in while paused: ").append(staysWhilePaused).toString();
@@ -438,20 +451,72 @@ public enum PatchFamily {
             for (BooleanSetting setting : switches) parents.addAll(setting.getParentSettings());
         }
         for (BooleanSetting setting : switches) {
-            anyOn |= setting.savedValue() && setting.isAvailable() && !parents.contains(setting);
+            anyOn |= setting.savedValue() && reachable(setting) && !parents.contains(setting);
         }
         // What a tap on a reel does is a choice beside the switch, and a saved Pause or Mute counts as on.
         anyOn |= this == REEL_TAP_AND_VOLUME
                 && Settings.REEL_TAP_CHOICE.savedValue() != app.hushgram.extension.instagram.reels.ReelTapChoice.DEFAULT;
+        // Share sheet buttons picked to hide act with the group switch off (#252).
+        anyOn |= this == SHARE_SHEET && !Settings.HIDDEN_SHARE_SHEET_BUTTONS.savedValue().trim().isEmpty();
         line.append(paused ? "disabled while paused (saved " : anyOn ? "on (" : "disabled by its switch (");
         for (int i = 0; i < switches.size(); i++) {
             if (i > 0) line.append(", ");
             BooleanSetting setting = switches.get(i);
             line.append(setting.key).append(setting.savedValue() ? "=on" : "=off");
         }
+        String chosen = choiceText();
+        if (!chosen.isEmpty()) line.append(", ").append(chosen);
         line.append(')');
         if (staysWhilePaused != null) line.append("; stays in while paused: ").append(staysWhilePaused);
         return line.toString();
+    }
+
+    /**
+     * Whether a switch is reachable all the way up. {@code parent()} walks the chain itself now, but
+     * a hand-written availability (Tab bar corners) may name a parent without asking whether that
+     * parent is reachable, so the report still climbs the listed parents.
+     */
+    private static boolean reachable(Setting<?> setting) {
+        if (!setting.isAvailable()) return false;
+        List<Setting<?>> above = setting.getParentSettings();
+        if (above.isEmpty()) return true;
+        for (Setting<?> parent : above) {
+            boolean on = !(parent instanceof BooleanSetting) || ((BooleanSetting) parent).savedValue();
+            if (on && reachable(parent)) return true;
+        }
+        return false;
+    }
+
+    /**
+     * The choices a report prints beside the switches, so it shows what a switch that's on picked
+     * (#85 needed the playback quality and the report left it out).
+     */
+    List<Setting<?>> choices() {
+        switch (this) {
+            case FONT:
+                return Collections.singletonList(Settings.FONT);
+            case MESSAGE_BOX:
+                return Collections.singletonList(Settings.HIDDEN_MESSAGE_BOX_BUTTONS);
+            case PROFILE_TABS:
+                return Collections.singletonList(Settings.HIDDEN_PROFILE_TABS);
+            case PLAYBACK_QUALITY:
+                return Collections.singletonList(Settings.PLAYBACK_QUALITY);
+            case SHARE_SHEET:
+                return Collections.singletonList(Settings.HIDDEN_SHARE_SHEET_BUTTONS);
+            case REEL_TAP_AND_VOLUME:
+                return Collections.singletonList(Settings.REEL_TAP_CHOICE);
+            default:
+                return Collections.emptyList();
+        }
+    }
+
+    private String choiceText() {
+        StringBuilder text = new StringBuilder();
+        for (Setting<?> choice : choices()) {
+            if (text.length() > 0) text.append(", ");
+            text.append(choice.key).append('=').append(choice.savedValue());
+        }
+        return text.toString();
     }
 
     /**

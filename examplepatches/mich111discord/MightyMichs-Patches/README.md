@@ -26,7 +26,7 @@ Or
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.11.0](https://github.com/mich111discord/MightyMichs-Patches/releases/tag/v1.11.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;40 patches total
+> **[v1.11.1](https://github.com/mich111discord/MightyMichs-Patches/releases/tag/v1.11.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;39 patches total
 <details open>
 <summary>📦 SofaScore&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
 <br>
@@ -278,8 +278,8 @@ Or
 
 **🎯 Supported versions:**
 
-| 7.5.00112 | v7.5.00112 |
-| :---: | :---: |
+| 7.5.00112 | v7.5.00112 | 7.3.10123 | v7.3.10123 |
+| :---: | :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
@@ -374,21 +374,6 @@ Or
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
 | [Unlock Premium Features](#unlock-premium-features) | Forces the purchase verification method to always return true, unlocking premium features in Ringtone Maker. |  |
-
-</details>
-
-<details open>
-<summary>📦 ZArchiver&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
-<br>
-
-**🎯 Supported versions:**
-
-| 1.0.10 |
-| :---: |
-
-| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
-|----------|----------------|-----------|
-| [Unlock Premium Features](#unlock-premium-features) | Unlocks ZArchiver premium and bypasses login. |  |
 
 </details>
 

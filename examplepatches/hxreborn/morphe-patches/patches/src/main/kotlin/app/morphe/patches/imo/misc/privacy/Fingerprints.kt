@@ -54,24 +54,20 @@ internal object VoiceRoomFullAvatarFingerprint : Fingerprint(
 
 private const val CHAT_PROTECTION_PACKAGE = "Lcom/imo/android/imoim/im/business/protection/"
 
-internal val protectionFlagRead = fieldAccess(type = "Z", opcode = Opcode.SGET_BOOLEAN)
-
 internal object ProtectedMessageFingerprint : Fingerprint(
     definingClass = CHAT_PROTECTION_PACKAGE,
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
     returnType = "Z",
     parameters = listOf("L"),
-    filters = listOf(protectionFlagRead),
+    filters = listOf(fieldAccess(type = "Z", opcode = Opcode.SGET_BOOLEAN)),
 )
-
-internal val copyProtectionCheck = methodCall(returnType = "Z", parameters = listOf("L"))
 
 internal fun copyAvailabilityFingerprint(copyDisabledConstant: FieldReference) = Fingerprint(
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
     returnType = "V",
     parameters = listOf("L", "Ljava/util/LinkedHashSet;"),
     filters = listOf(
-        copyProtectionCheck,
+        methodCall(returnType = "Z", parameters = listOf("L")),
         opcode(Opcode.MOVE_RESULT, MatchAfterImmediately()),
         fieldAccess(copyDisabledConstant, Opcode.SGET_OBJECT),
     ),

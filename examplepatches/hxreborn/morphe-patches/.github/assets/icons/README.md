@@ -19,6 +19,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 
 | File | App | Developer | Source |
 |---|---|---|---|
+| `albo.png` | Albo (`com.thesortdapp.sortd`) | The Feel Good Project Ltd | APK 1.25.1, square icon `res/mipmap-xxxhdpi-v4/ic_launcher.png` cut to a circle |
 | `allinonecalculator.png` | All-In-One Calculator (`all.in.one.calculator`) | allinonecalculator.com | APK 3.4.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `allvideoplayer.png` | All Video Player App (`com.allformatplayer.streamvideoplayer`) | Legend eSolution | APK 1.4, `res/drawable-xhdpi-v4/small_logo.png` |
 | `aloa.png` | Aloa (`com.getaloa.app`) | Aloa | APK 1.3.3, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
@@ -53,6 +54,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `qrscanner.png` | QR & Barcode Scanner (`com.gamma.scan`) | Gamma Play | APK 2.2.224, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `cx.png` | Cx File Explorer (`com.cxinventor.file.explorer`) | Cx File Explorer | APK 2.7.8, adaptive icon `res/mipmap-anydpi-v26/app_icon.xml` |
 | `notesnook.png` | Notesnook (`com.streetwriters.notesnook`) | Streetwriters (Private) Limited | APK 3.4.13, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml` |
+| `notein.png` | Notein (`com.orion.notein.global`) | Orion | APK 2.1.27.0, package `icon.png` of the APKPure XAPK cut to a circle |
 | `raindrop.png` | Raindrop.io (`io.raindrop.raindropio`) | Rustem Mussabekov | APK 4.7.44, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml` |
 | `rubberbands.png` | Rubber Bands (`app.rubberbands.fit`) | Rubber Bands LLC | APK 3.9, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 | `photoeditorpro.png` | Photo Editor Pro (`photo.editor.photoeditor.photoeditorpro`) | InShot Inc. | APK 1.791.265, adaptive round icon |
@@ -118,6 +120,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `sheytoon.png` | Sheytoon (`com.triovent.datingapp`) | Sheytoon Inc. | APK 6.7, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `serializd.png` | Serializd (`com.serializdmobile`) | Serializd | Play 1.992, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `musicolet.png` | Musicolet (`in.krosbits.musicolet`) | Krosbits | APK 6.14.1 build540, adaptive icon `res/mipmap-anydpi-v26/ic_launcher_ex4.xml`, cut to a circle |
+| `sygic.png` | Sygic GPS Navigation (`com.sygic.aura`) | Sygic a.s. | APK 26.6.1, adaptive icon `res/mipmap-anydpi/ic_launcher.xml` (`ic_launcher_background` under `ic_launcher_foreground`, xxxhdpi, centre 72dp cut to a circle) |
 
 Showly's icon is also published under GPLv3 in [`trakt/showly`](https://github.com/trakt/showly),
 | `periodcalendar.png` | Period Tracker and Calendar (`com.lbrc.PeriodCalendar`) | SimpleInnovation | APK 13.3.2, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml`, cut to a circle |

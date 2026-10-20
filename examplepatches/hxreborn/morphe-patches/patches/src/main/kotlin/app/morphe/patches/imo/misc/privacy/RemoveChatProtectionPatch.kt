@@ -12,7 +12,6 @@ import app.morphe.patches.imo.shared.enumConstantField
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.util.addInstructionsAtControlFlowLabel
 import app.morphe.util.getReference
-import app.morphe.util.indexOfFirstInstructionOrThrow
 import app.morphe.util.matchAllMethodIndicesForEach
 import app.morphe.util.matchSingle
 import app.morphe.util.returnEarly
@@ -28,22 +27,19 @@ val removeChatProtectionPatch = bytecodePatch(
     compatibleWith(AppCompatibilities.IMO)
 
     execute {
-        val protectedMessageMethod = ProtectedMessageFingerprint.matchSingle().method
-        val protectionFlag = protectedMessageMethod
-            .getInstruction(protectedMessageMethod.indexOfFirstInstructionOrThrow(protectionFlagRead))
-            .getReference<FieldReference>()!!
+        val protectedMessage = ProtectedMessageFingerprint.matchSingle()
+        val protectionFlag = protectedMessage.instructionMatches.first().instruction.getReference<FieldReference>()!!
 
         fieldAccess(protectionFlag, Opcode.SPUT_BOOLEAN).matchAllMethodIndicesForEach { index ->
             val register = getInstruction<OneRegisterInstruction>(index).registerA
             addInstructionsAtControlFlowLabel(index, "const/4 v$register, 0x0")
         }
-        protectedMessageMethod.returnEarly(false)
+        protectedMessage.method.returnEarly(false)
 
-        copyAvailabilityFingerprint(enumConstantField("COPY_DISABLE_BY_PRIVACY")).matchSingle().method.apply {
-            val checkIndex = indexOfFirstInstructionOrThrow(copyProtectionCheck)
-            val resultIndex = indexOfFirstInstructionOrThrow(checkIndex, Opcode.MOVE_RESULT)
-            val register = getInstruction<OneRegisterInstruction>(resultIndex).registerA
-            addInstruction(resultIndex + 1, "const/4 v$register, 0x0")
+        copyAvailabilityFingerprint(enumConstantField("COPY_DISABLE_BY_PRIVACY")).matchSingle().apply {
+            val (_, copyCheckResult) = instructionMatches
+            val register = copyCheckResult.getInstruction<OneRegisterInstruction>().registerA
+            method.addInstruction(copyCheckResult.index + 1, "const/4 v$register, 0x0")
         }
     }
 }

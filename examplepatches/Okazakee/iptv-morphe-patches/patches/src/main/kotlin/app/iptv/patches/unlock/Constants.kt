@@ -12,7 +12,18 @@ object Constants {
         appIconColor = 0x3DB8FF,
         targets = listOf(
             AppTarget(version = "1.2.7", versionCodes = mapOf()),
-            AppTarget(version = "2.7.17", versionCodes = mapOf())
+            AppTarget(version = "2.7.17", versionCodes = mapOf()),
+            AppTarget(version = "2.7.21", versionCodes = mapOf())
+        )
+    )
+
+    val COMPATIBILITY_IPTV_FR = Compatibility(
+        name = "IPTV Pro Stream Player",
+        packageName = "com.iptvprostreamplayer.v1.fr",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x3DB8FF,
+        targets = listOf(
+            AppTarget(version = "2.7.21", versionCodes = mapOf())
         )
     )
 }

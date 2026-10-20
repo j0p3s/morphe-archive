@@ -20,7 +20,8 @@ val disableAdsPatch = bytecodePatch(
     description = "Hides banner and native ads and the ad slots in the call log and inbox, and " +
         "turns off interstitial and app-open ads, so actions such as Click to WhatsApp run at once. " +
         "Also turns off the remaining ad checks (including rewarded ads), the ad campaign and ad " +
-        "config syncs, and the \"Explore Truecaller Premium\" row in the contacts list.",
+        "config syncs, the \"Explore Truecaller Premium\" row in the contacts list and the " +
+        "\"Recommended Offers\" (Offer Hub) entry.",
 ) {
     compatibleWith(COMPATIBILITY_TRUECALLER)
 
@@ -128,10 +129,14 @@ val disableAdsPatch = bytecodePatch(
         // - "featureConfigManagementSystem" off: the ads-config-engine config sync never runs and
         //   the ads config falls back to its defaults.
         // - "featureEnableOfflineAds" off: no offline ads sync with ads-router.
+        // - "featureAdsOnOfferHub" off: the "Recommended Offers" row, which opens OfferHubActivity
+        //   (ads-router offer feed), and the offer hub deep link are not offered; the deep link
+        //   router then takes its fallback.
         // The tagging service is left alone: it serves the caller ID tag catalogue.
         overrideFeatureToggle("featureAdsOptimisationOnListView", true)
         overrideFeatureToggle("featureAdsRestrictCampaignProcessing", true)
         overrideFeatureToggle("featureConfigManagementSystem", false)
         overrideFeatureToggle("featureEnableOfflineAds", false)
+        overrideFeatureToggle("featureAdsOnOfferHub", false)
     }
 }

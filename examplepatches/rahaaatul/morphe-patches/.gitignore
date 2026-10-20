@@ -148,3 +148,8 @@ morphe.keystore
 AGENTS.md
 docs/
 docs/superpowers/
+FREE_TO_PRO_PATCH_SUMMARY.md
+PATCH_SUMMARY.md
+/notes/
+.gitignore
+/outputs/

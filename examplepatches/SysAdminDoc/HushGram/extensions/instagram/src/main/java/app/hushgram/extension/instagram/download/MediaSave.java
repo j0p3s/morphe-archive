@@ -439,7 +439,8 @@ public final class MediaSave {
 
     /**
      * Save a photo: the largest of [renditions], the candidates the app lists for one picture. A
-     * thumbnail's address loses outright ({@link RenditionPicker#imageTier}). [details] names and
+     * thumbnail's address loses outright ({@link RenditionPicker#imageTier}), unless every address
+     * names its size, when the largest of those saves ({@link #pictureOf}). [details] names and
      * files it as a video's do, or null: without Name saves by account and post time, a photo's
      * name is {@link FileNameTemplate#PHOTO_PREFIX} and the time.
      *
@@ -476,7 +477,7 @@ public final class MediaSave {
     /**
      * Save a picture by the sizes the app states for it: the largest of [renditions] on Meta's
      * media servers. For a picture whose address names its size, such as a profile picture, which
-     * {@link #savePhoto}'s ranking takes for a thumbnail's and turns down. A rendition with no
+     * {@link #savePhoto}'s ranking takes for a thumbnail's and ranks below any that doesn't. A rendition with no
      * stated size loses to any with one, and between two with none the size the address names
      * decides, so a list that starts with its smallest doesn't save that (#155).
      *
@@ -574,7 +575,24 @@ public final class MediaSave {
      */
     static Rendition picked(List<Rendition> renditions, boolean video) {
         List<Rendition> found = metaOnly(usable(renditions));
-        return video ? RenditionPicker.pickVideo(found, quality()) : RenditionPicker.pickImage(found);
+        return video ? RenditionPicker.pickVideo(found, quality()) : pictureOf(found);
+    }
+
+    /**
+     * The picture a photo save fetches of [renditions], all on Meta's media servers: the largest
+     * that isn't a thumbnail ({@link RenditionPicker#pickImage}), or when every picture's address
+     * names its size, as on a phone whose screen is 720 pixels wide, the largest of those by
+     * {@link #biggerPicture}. They're the sizes of the one picture on screen, and before that
+     * the save failed with nothing to save (#261). Null when there's no picture.
+     */
+    static Rendition pictureOf(List<Rendition> renditions) {
+        Rendition image = RenditionPicker.pickImage(renditions);
+        if (image != null) return image;
+        for (Rendition rendition : renditions) {
+            if (rendition == null || !RenditionPicker.namesASize(rendition.url)) continue;
+            if (image == null || biggerPicture(rendition, image)) image = rendition;
+        }
+        return image;
     }
 
     private static long pixels(Rendition rendition) {
@@ -638,7 +656,7 @@ public final class MediaSave {
         }
 
         Rendition video = videos ? RenditionPicker.pickVideo(renditions, quality) : null;
-        Rendition image = images && video == null ? RenditionPicker.pickImage(renditions) : null;
+        Rendition image = images && video == null ? pictureOf(renditions) : null;
 
         boolean isVideo = video != null;
         Rendition chosen = isVideo ? video : image;
@@ -743,12 +761,13 @@ public final class MediaSave {
 
     /**
      * Whether the save starting now keeps to files other apps can open
-     * ({@link Settings#DOWNLOAD_COMPATIBLE}). Read when the save starts, like the quality. Never
-     * throws: before the settings are ready, or when they can't be read, it's off.
+     * ({@link Settings#DOWNLOAD_COMPATIBLE}, or {@link Settings#DOWNLOAD_CONVERT}, which saves them
+     * at full size). Read when the save starts, like the quality. Never throws: before the settings
+     * are ready, or when they can't be read, it's off.
      */
     static boolean compatibleSaves() {
         try {
-            return Utils.settingsReady() && Settings.DOWNLOAD_COMPATIBLE.get();
+            return Utils.settingsReady() && (Settings.DOWNLOAD_COMPATIBLE.get() || Settings.DOWNLOAD_CONVERT.get());
         } catch (Throwable t) {
             return false;
         }
@@ -756,9 +775,9 @@ public final class MediaSave {
 
     /**
      * Whether the save starting now converts a full size VP9 or AV1 picture to H.264
-     * ({@link Settings#DOWNLOAD_CONVERT}), which acts only beside {@link #compatibleSaves}. Read
-     * when the save starts. Never throws: before the settings are ready, or when they can't be
-     * read, it's off.
+     * ({@link Settings#DOWNLOAD_CONVERT}), which turns on {@link #compatibleSaves} by itself too
+     * (#236). Read when the save starts. Never throws: before the settings are ready, or when they
+     * can't be read, it's off.
      */
     static boolean convertSaves() {
         try {
@@ -1007,6 +1026,7 @@ public final class MediaSave {
         // why the single file is saved.
         Dash leftToFile = compatible && usual != null && beatsFile(usual.video, fallback, choice.fallbackQuality, quality)
             ? Dash.SINGLE_FILE_FOR_OTHER_APPS : Dash.SINGLE_FILE;
+        if (convert && !choice.converts) noConversion(label, tracks, allowAv1);
 
         if (choice.taken == null && kept == null && usual != null) {
             info(() -> "the manifest of " + label + " has no H.264 video with AAC-LC or HE-AAC sound, "
@@ -1053,6 +1073,25 @@ public final class MediaSave {
             choice.soundFromFile).run(writer, progress);
         boolean lower = better != null && noticeablyLower(picture(video, quality), better.shortSide());
         return result.ok() && lower ? result.lower() : result;
+    }
+
+    /**
+     * Tells the report why a save that converts didn't convert [tracks]' largest VP9 or AV1 picture
+     * (#236), so a report shows whether the phone or the pick passed it over.
+     */
+    private static void noConversion(String label, List<DashManifest.Track> tracks, boolean allowAv1) {
+        DashManifest.Track largest = null;
+        for (DashManifest.Track track : tracks) {
+            if (track.isVideo() && VideoConvert.needsConversion(track.codecs)
+                    && (largest == null || track.shortSide() > largest.shortSide())) {
+                largest = track;
+            }
+        }
+        if (largest == null) return;
+        DashManifest.Track picture = largest;
+        String why = VideoConvert.whyNot(picture, allowAv1);
+        info(() -> "not converting " + label + "'s " + picture + ": "
+            + (why != null ? why : "what's saved suits the quality as well"));
     }
 
     /**

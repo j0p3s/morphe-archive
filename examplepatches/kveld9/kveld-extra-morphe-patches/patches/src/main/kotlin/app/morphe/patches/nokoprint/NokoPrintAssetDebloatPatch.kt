@@ -1,6 +1,6 @@
 package app.morphe.patches.nokoprint
 
-import app.morphe.patcher.patch.rawResourcePatch
+import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patches.shared.Constants
 
 import java.io.File
@@ -9,7 +9,7 @@ import java.util.Locale
 private val EMPTY_BYTES = byteArrayOf()
 
 @Suppress("unused")
-val nokoPrintAssetDebloatPatch = rawResourcePatch(
+val nokoPrintAssetDebloatPatch = resourcePatch(
     name = "Remove Extra Files",
     description = "Deletes hidden ad files and trackers to shrink the app.",
     default = true,
@@ -159,6 +159,6 @@ val nokoPrintAssetDebloatPatch = rawResourcePatch(
         }
 
         val savedMb = String.format(Locale.US, "%.2f", savedBytes.toDouble() / (1024 * 1024))
-        println("[Remove Extra Files] Cleaned $count files, saved $savedMb MB in assets.")
+        println("[Remove Extra Files] Cleaned $count files, saved $savedMb MB.")
     }
 }

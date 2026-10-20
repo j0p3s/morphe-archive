@@ -72,15 +72,16 @@ private const val INTEGER = "Ljava/lang/Integer;"
  * Takes the accounts Instagram suggests off profiles. In the default selection with its switch off:
  * suggestions are one of Instagram's features, so leaving them out is the user's pick. Asked for in
  * #15 and #20, its follow list switch in #139, its Complete your profile switch in #159 and its
- * People you don't follow back switch in #161 and its suggestions in notifications switch in #181.
+ * People you don't follow back switch in #161, its suggestions in notifications switch in #181 and its
+ * Featured in notifications switch in #259.
  */
 @Suppress("unused")
 val hideProfileSuggestionsPatch = bytecodePatch(
     name = "Hide suggested people on profiles",
     description = "Takes Suggested for you and the Discover people button off profiles. Bios, counts and posts stay. " +
         "More switches take Suggested for you off the followers and following lists, the Complete your profile " +
-        "cards off your own profile, and People you don't follow back and suggested threads and people off your " +
-        "notifications. Starts off. Turn it on in HushGram settings > Profiles.",
+        "cards off your own profile, and People you don't follow back, suggested threads and people, and the " +
+        "Featured section off your notifications. Starts off. Turn it on in HushGram settings > Profiles.",
 ) {
     category("Profiles")
     dependsOn(settingsPatch, instagramExtensionPatch)
@@ -94,6 +95,7 @@ val hideProfileSuggestionsPatch = bytecodePatch(
         val followBacks = findFollowBacks()
         val followBackSection = findFollowBackSectionOrWarn()
         val notificationSuggestions = findNotificationSuggestionsOrWarn()
+        val featured = notificationSuggestions?.let { (_, lists) -> findFeaturedSectionOrWarn(lists) }
         hideProfileSuggestions(sites)
         hideFollowListSuggestions(followList)
         hideCompletionCards(completion)
@@ -102,6 +104,7 @@ val hideProfileSuggestionsPatch = bytecodePatch(
         notificationSuggestions?.let { (rows, lists) ->
             noteNotificationRows(rows)
             keepNotificationRows(lists)
+            if (featured != null) hideFeaturedSection(lists)
         }
         enableStatus("profileSuggestions")
     }
@@ -212,7 +215,9 @@ internal fun BytecodePatchContext.findProfileSuggestions(): ProfileSuggestionSit
     val setup = uniqueMethod(PATCH, "row type setup naming $STANDALONE_CHAINING", HeaderRowTypesFingerprint)
     val standaloneField = standaloneField(setup)
 
-    val readers = header.methods.filter { it.name == BUILD_ROWS }.flatMap { method ->
+    // 451 built the rows in buildRowViewTypes itself. 452 leaves that a bridge and builds them in a method it names A04,
+    // so any method of the binder reading the type does, and only one may.
+    val readers = header.methods.flatMap { method ->
         method.instructions().indices.filter { method.instructions()[it].readsStatic(standaloneField) }.map { method to it }
     }
     val (rows, standalone) = readers.singleOrNull()

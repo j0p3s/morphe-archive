@@ -184,6 +184,7 @@ def versions_table(targets):
 # Package name -> icon file in .github/assets/icons/. Apps with no entry render
 # without an icon, so adding a new app does not require touching this map.
 ICONS = {
+    "com.thesortdapp.sortd": "albo.png",
     "all.in.one.calculator": "allinonecalculator.png",
     "com.allformatplayer.streamvideoplayer": "allvideoplayer.png",
     "com.getaloa.app": "aloa.png",
@@ -229,6 +230,7 @@ ICONS = {
     "com.cxinventor.file.explorer": "cx.png",
     "com.gxnet.castle.indiatv": "castlefortv.png",
     "com.streetwriters.notesnook": "notesnook.png",
+    "com.orion.notein.global": "notein.png",
     "io.raindrop.raindropio": "raindrop.png",
     "app.rubberbands.fit": "rubberbands.png",
     "io.lightray.photone": "photone.png",
@@ -286,6 +288,7 @@ ICONS = {
     "com.youdao.hindict": "udictionary.png",
     "com.generalmagic.magicearth": "magicearth.png",
     "com.lbrc.PeriodCalendar": "periodcalendar.png",
+    "com.sygic.aura": "sygic.png",
 }
 
 ICON_DIR = Path(".github/assets/icons")

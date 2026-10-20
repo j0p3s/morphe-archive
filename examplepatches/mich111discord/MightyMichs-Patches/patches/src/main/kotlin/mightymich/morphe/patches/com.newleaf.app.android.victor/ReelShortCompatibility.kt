@@ -9,12 +9,10 @@ object ReelShortCompatibility {
         name = "ReelShort",
         packageName = "com.newleaf.app.android.victor",
         apkFileType = ApkFileType.APK,
-        appIconColor = 0xFF5722,
+        appIconColor = 0xE50914,
         targets = listOf(
-            AppTarget(
-                version = "4.2.00",
-                isExperimental = true // Experimental – patch may cause crashes.
-            )
+            AppTarget(version = "4.2.20"),
+            AppTarget(version = "4.2.00", isExperimental = true)
         )
     )
 }

@@ -5,12 +5,13 @@
 package app.morphe.patches.shared.misc.playwire
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.string
 
 private object PlaywireModuleFingerprint : Fingerprint(
     name = "getName",
     returnType = "Ljava/lang/String;",
-    parameters = listOf(),
-    strings = listOf("PlaywireSDKProvider"),
+    parameters = emptyList(),
+    filters = listOf(string("PlaywireSDKProvider")),
 )
 
 internal object StartPlaywireSdkFingerprint : Fingerprint(

@@ -129,7 +129,7 @@ Downloads	Download
 Save videos other apps can open	Salva video apribili da altre app
 For WhatsApp, video editors such as CapCut and InShot, or a gallery or player that plays saves without sound. May lower quality.	Per WhatsApp, editor video come CapCut e InShot, o una galleria o un lettore che riproduce i salvataggi senza audio. Può ridurre la qualità.
 Convert to keep the full size	Converti per mantenere la dimensione piena
-With Save videos other apps can open on, a full size video Instagram only has as VP9 or AV1 is converted to H.264 on your phone instead of saved smaller. Slower, and videos over 3 minutes stay smaller.	Con Salva video apribili da altre app attivo, un video a dimensione piena che Instagram ha solo in VP9 o AV1 viene convertito in H.264 sul telefono invece di essere salvato più piccolo. È più lento, e i video oltre 3 minuti restano più piccoli.
+Saves videos other apps can open, at full size. A video Instagram only has as VP9 or AV1 is converted to H.264 on your phone instead of saved smaller. Slower, and videos over 3 minutes stay smaller.	Salva video apribili da altre app, a dimensione piena. Un video che Instagram ha solo in VP9 o AV1 viene convertito in H.264 sul telefono invece di essere salvato più piccolo. È più lento, e i video oltre 3 minuti restano più piccoli.
 Converting to H.264	Conversione in H.264
 Download quality	Qualità del download
 Best	Massima
@@ -256,6 +256,8 @@ Hide the notes row	Nascondi la riga delle note
 Takes the row of notes off the top of your messages, the Map bubble in it too. Your chats, search and requests stay.	Toglie la riga delle note dalla parte alta dei tuoi messaggi, compresa la bolla della mappa. Le tue chat, la ricerca e le richieste restano.
 Hide Instants	Nascondi Instants
 Removes the stack of Instants (quick photos from friends) from your messages. Restart Instagram to see the change.	Rimuove la pila di Instants (foto rapide degli amici) dai tuoi messaggi. Riavvia Instagram per vedere la modifica.
+Hide See preview and Plus in chat menus	Nascondi Anteprima e Plus nei menu delle chat
+Takes the See preview and Instagram Plus rows out of the menu you get from long pressing a chat. Your chat options stay.	Toglie le righe Vedi anteprima e Instagram Plus dal menu che si apre tenendo premuta una chat. Le opzioni della chat restano.
 Read messages without the seen receipt	Leggi i messaggi senza conferma di lettura
 Opening a chat doesn't tell people you've seen their messages, and you still see when they've seen yours. To let one chat know, long press it in your messages and tap Mark as read.	Aprire una chat non dice alle persone che hai visto i loro messaggi, e tu vedi comunque quando hanno visto i tuoi. Per farlo sapere a una chat, tienila premuta nei messaggi e tocca Segna come letto.
 Keep chats unread here	Tieni le chat non lette qui
@@ -277,6 +279,8 @@ Hide the Music for you card	Nascondi la scheda Musica per te
 Keeps Instagram's Music for you card from turning up between the stories you watch. The stories themselves stay.	Impedisce alla scheda Musica per te di Instagram di comparire tra le storie che guardi. Le storie restano.
 Hide Suggested for you between stories	Nascondi Suggeriti per te tra le storie
 Leaves out the Suggested for you cards of accounts to follow that Instagram puts between the stories you tap through. The stories themselves stay.	Esclude le schede Suggeriti per te di account da seguire che Instagram mette tra le storie che scorri. Le storie restano.
+Hide Add Yours cards between stories	Nascondi le schede Tocca a te tra le storie
+Leaves out the Add Yours cards, like Popular Add Yours and Join a trending Add Yours, that Instagram puts between the stories you tap through. The stories themselves stay.	Esclude le schede Tocca a te, come quelle popolari o di tendenza a cui unirsi, che Instagram mette tra le storie che scorri. Le storie restano.
 Download feed photos	Scarica le foto del feed
 The same Download on a photo post, and on a carousel showing a photo. Saves the largest size Instagram has.	Lo stesso Scarica su un post con foto, e su un carosello che mostra una foto. Salva la dimensione più grande che ha Instagram.
 the start-up fix for x86 devices	la correzione di avvio per i dispositivi x86
@@ -330,6 +334,8 @@ Hide People you don't follow back	Nascondi Persone che non segui a tua volta
 Takes the People you don't follow back section off the bottom of your notifications. Notifications about new followers stay.	Toglie la sezione Persone che non segui a tua volta dal fondo delle tue notifiche. Le notifiche sui nuovi follower restano.
 Hide suggestions in notifications	Nascondi i suggerimenti nelle notifiche
 Takes rows that only suggest something off your notifications, like a thread from an account you don't follow or someone you might know. Likes, comments, mentions and new followers stay.	Toglie dalle tue notifiche le righe che suggeriscono soltanto qualcosa, come un thread di un account che non segui o qualcuno che potresti conoscere. Mi piace, commenti, menzioni e nuovi follower restano.
+Hide Featured in notifications	Nascondi In evidenza nelle notifiche
+Takes the Featured section off the top of your notifications, the posts and threads Instagram picks to show you there. Everything under it stays.	Toglie la sezione In evidenza dalla parte alta delle tue notifiche, i post e i thread che Instagram sceglie di mostrarti lì. Tutto quello che c'è sotto resta.
 Hide highlights	Nascondi In evidenza
 Takes the row of story highlights off profiles, yours included. Bios, counts and posts stay, and so does Add to highlight on your stories.	Toglie la riga delle storie in evidenza dai profili, compreso il tuo. Bio, conteggi e post restano, e così Aggiungi a In evidenza sulle tue storie.
 Hide the Threads button	Nascondi il pulsante Threads
@@ -534,12 +540,20 @@ Nothing in the row of stories at the top of Home loads, your own story included,
 Open categories as pages	Apri le categorie come pagine
 Settings shows a list of its categories, and a tap opens one on its own page. Search still looks through all of them.	Le impostazioni mostrano un elenco delle categorie e un tocco ne apre una nella sua pagina. La ricerca guarda comunque in tutte.
 Hide the HushGram row in Instagram's menu	Nascondi la riga HushGram nel menu di Instagram
-While a tab long press or the long press on your profile's menu opens HushGram, Instagram's Settings and activity screen leaves out the HushGram row. Turn those long presses off and the row comes back.	Finché una pressione lunga su una scheda o sul menu del tuo profilo apre HushGram, la schermata Impostazioni e attività di Instagram esclude la riga HushGram. Disattiva quelle pressioni lunghe e la riga torna.
+Settings shortcut on the app icon	Scorciatoia alle impostazioni sull'icona dell'app
+Open settings from the logo	Apri le impostazioni dal logo
+Puts HushGram settings in the menu you get by holding Instagram's icon. Off, it leaves that menu.	Mette le impostazioni di HushGram nel menu che compare tenendo premuta l'icona di Instagram. Disattivata, esce da quel menu.
+A long press on the Instagram logo at the top of Home opens these settings. Off, the long press goes back to Instagram.	Una pressione lunga sul logo di Instagram in cima alla Home apre queste impostazioni. Disattivata, la pressione lunga torna a Instagram.
+The last way into these settings stays on.	L'ultimo modo per aprire queste impostazioni resta attivo.
+No other way into HushGram is on, so the row stays in Instagram's menu.	Nessun altro modo per aprire HushGram è attivo, quindi la riga resta nel menu di Instagram.
+Instagram's Settings and activity screen leaves out the HushGram row while another way here opens HushGram. With every other way off, the row comes back.	Finché un altro modo per arrivare qui apre HushGram, la schermata Impostazioni e attività di Instagram esclude la riga HushGram. Con tutti gli altri modi disattivati, la riga torna.
 Stop loading stories	Blocca il caricamento delle storie
 Takes the Comment button and the comment count off the posts in your feed.	Toglie il pulsante Commenta e il conteggio dei commenti dai post nel tuo feed.
 # context: Comments: the switch that hides the row of quick emoji above the comment box (#248). Comment box is the field where you type a comment.
 Hide the emoji row	Nascondi la riga di emoji
 Takes the row of quick emoji off above the comment box. The box itself stays.	Toglie la riga di emoji rapide sopra la casella dei commenti. La casella resta.
+Open comments without the keyboard	Apri i commenti senza tastiera
+Comments open with the keyboard down. A tap in the comment box, or on Reply, still brings it up.	I commenti si aprono con la tastiera abbassata. Un tocco nella casella del commento, o su Rispondi, la fa comparire comunque.
 # context: Feed: the switch that hides the Follow and Subscribe buttons beside the author's name on a post (#248). Follow and Subscribe are the labels Instagram uses on those buttons.
 Hide Follow on posts	Nascondi Segui sui post
 Takes the Follow and Subscribe buttons off the top of posts in your feed. The name, time and menu stay.	Toglie i pulsanti Segui e Iscriviti dalla parte alta dei post nel tuo feed. Nome, ora e menu restano.
@@ -725,7 +739,7 @@ Rounds the pill and its highlight and puts Search in a glass circle of its own. 
 Draws Instagram's tab bar as a floating, rounded glass pill with a highlight on the tab you're on. Restart Instagram after changing it.	Disegna la barra delle schede di Instagram come una pillola di vetro fluttuante e arrotondata con un'evidenziazione sulla scheda in cui sei. Riavvia Instagram dopo averlo cambiato.
 Glass tab bar	Barra delle schede di vetro
 Haptics on the tab bar	Feedback aptico sulla barra delle schede
-Home and the other tabs run down behind the pill, so the glass has real content to blur. Reels still stops above it.	La Home e le altre schede scorrono dietro la pillola, così il vetro ha contenuti veri da sfocare. I reel si fermano comunque sopra.
+Home, Reels and the other tabs run down behind the pill, so the glass has real content to blur.	La Home, i reel e le altre schede scorrono dietro la pillola, così il vetro ha contenuti veri da sfocare.
 Show content behind the tab bar	Mostra i contenuti dietro la barra delle schede
 Tab bar	Barra delle schede
 Saved	Salvati
@@ -1063,3 +1077,64 @@ A reel Instagram's auto scroll moves to waits for your tap too. Off, auto scroll
 # context: Stories: the switch that hides the Follow button in a story's header (#237). Follow is Instagram's own button label, as in Hide the Follow button.
 Hide Follow on stories	Nascondi Segui nelle storie
 Takes the Follow button off the top of stories from accounts you don't follow. The name, time and menu stay.	Toglie il pulsante Segui dalla parte alta delle storie degli account che non segui. Nome, ora e menu restano.
+# context: Reels: Burn-in guard's switch that keeps the faded buttons faded while you tap (#162)
+Stay dim when I tap	Resta attenuato quando tocco
+Once Burn-in guard fades the buttons, they stay faded on Reels whatever you tap or swipe, the next reel too. They still work. Leaving Reels brings them back.	Una volta che la Protezione burn-in attenua i pulsanti, restano attenuati su Reels qualunque cosa tocchi o scorri, anche nel reel successivo. Continuano a funzionare. Uscendo da Reels tornano.
+# context: Profiles: switches next to Hide the Threads button. Create is the plus at the top of your own profile (#254); Share profile and Edit profile are Instagram's own button names (#253)
+Hide the Create button	Nascondi il pulsante Crea
+Takes the plus for new posts off the top of your own profile. The other buttons stay where they were.	Toglie il più per i nuovi post dalla parte alta del tuo profilo. Gli altri pulsanti restano dove erano.
+Hide Share profile	Nascondi Condividi profilo
+Takes the Share profile button off your profile, and Edit profile stretches to fill the space.	Toglie il pulsante Condividi profilo dal tuo profilo, e Modifica profilo si allarga per riempire lo spazio.
+# context: Layout: Glass tab bar's switch that stops the liquid pill shrinking as you scroll (#256)
+Keep the pill full size	Mantieni la pillola a grandezza piena
+Scrolling a list down leaves the liquid pill as it is, every tab in place. Restart Instagram after changing it.	Scorrendo un elenco verso il basso la pillola liquid glass resta com'è, con ogni scheda al suo posto. Riavvia Instagram dopo averlo cambiato.
+# context: Ghost mode: the row and dialog picking which switches Ghost mode turns (#251). %1$s is a list of switch names
+All of them. Tap to leave some out, and Ghost mode leaves those as you set them.	Tutti. Tocca per escluderne alcuni, e la modalità Ghost li lascia come li hai impostati.
+%1$s. The others stay as you set them.	%1$s. Gli altri restano come li hai impostati.
+Switches Ghost mode turns	Interruttori che la modalità Ghost cambia
+Ghost mode needs at least one switch to turn.	La modalità Ghost ha bisogno di almeno un interruttore da cambiare.
+# context: Ghost mode: turning it on or off with a long press on a tab (#255). %1$s is a tab's name
+Turn Ghost mode on or off with a tab long press	Attiva o disattiva la modalità Ghost con una pressione lunga su una scheda
+Tab long presses keep Instagram's own action. Choose one to turn Ghost mode on or off instead.	Le pressioni lunghe sulle schede mantengono l'azione di Instagram. Scegline una per attivare o disattivare invece la modalità Ghost.
+Long press %1$s to turn Ghost mode on or off instead of that tab's usual action, and a toast says which way it went. Normal taps and other tabs stay the same. If the same tab opens HushGram or picks the playback quality, that comes first.	Tieni premuto %1$s per attivare o disattivare la modalità Ghost al posto dell'azione abituale di quella scheda, e un avviso ti dice com'è andata. I tocchi normali e le altre schede restano uguali. Se la stessa scheda apre HushGram o sceglie la qualità di riproduzione, quello ha la precedenza.
+Buttons on the share sheet	Pulsanti nel foglio di condivisione
+Every button under the people on the share sheet shows. Untick the ones you don't use.	Tutti i pulsanti sotto le persone nel foglio di condivisione sono visibili. Togli la spunta a quelli che non usi.
+Left off the share sheet: %1$s.	Tolti dal foglio di condivisione: %1$s.
+Show all	Mostra tutti
+Add to story	Aggiungi alla storia
+Share to	Condividi con
+Copy link	Copia link
+QR code	Codice QR
+WhatsApp status	Stato di WhatsApp
+Reply to author	Rispondi all'autore
+Watch on TV	Guarda sulla TV
+Download profile card	Scarica la scheda del profilo
+Add to channel	Aggiungi al canale
+WhatsApp	WhatsApp
+SMS	SMS
+Messenger	Messenger
+Facebook	Facebook
+Snapchat	Snapchat
+X	X
+Threads	Threads
+LINE	LINE
+KakaoTalk	KakaoTalk
+Discord	Discord
+Band	Band
+# context: Tabs on profiles row under Profiles; Reposts and Tagged are the names of Instagram's own profile tabs
+Tabs on profiles	Schede nei profili
+Every tab shows on profiles. Untick the ones you don't want. The grid of posts always stays.	Nei profili si vedono tutte le schede. Togli la spunta a quelle che non vuoi. La griglia dei post resta sempre.
+Left off profiles: %1$s. The grid of posts stays.	Tolte dai profili: %1$s. La griglia dei post resta.
+Reposts	Repost
+Tagged	Taggati
+# context: Show all recent searches switch under Explore; See all is Instagram's own row under the recent searches
+Show all recent searches	Mostra tutte le ricerche recenti
+Lists every recent search under the search bar, not just the first few. See all and the x on each row work as before.	Mostra tutte le ricerche recenti sotto la barra di ricerca, non solo le prime. Mostra tutto e la x su ogni riga funzionano come prima.
+Hide the call buttons in chats	Nascondi i pulsanti di chiamata nelle chat
+Takes the voice and video call buttons off the top of a chat. The name keeps its room. Turn it off and they're back the next time a chat opens.	Toglie i pulsanti di chiamata vocale e video dalla parte alta di una chat. Il nome mantiene il suo spazio. Se lo disattivi, tornano la prossima volta che apri una chat.
+Buttons in the message box	Pulsanti nella casella del messaggio
+Every button in the message box shows. Untick the ones you don't use. The text box and Send always stay.	Tutti i pulsanti nella casella del messaggio sono visibili. Togli la spunta a quelli che non usi. La casella di testo e Invia restano sempre.
+Left off the message box: %1$s. The text box and Send stay.	Tolti dalla casella del messaggio: %1$s. La casella di testo e Invia restano.
+Gallery	Galleria
+Stickers	Sticker
+Voice message	Messaggio vocale

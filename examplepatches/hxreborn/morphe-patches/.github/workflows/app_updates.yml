@@ -7,11 +7,9 @@ on:
         description: Comma-separated package names, empty for every app
         required: false
   schedule:
-    - cron: "17 6 1 * *"
+    - cron: "17 4 * * 1"
 
-permissions:
-  contents: read
-  issues: write
+permissions: {}
 
 concurrency:
   group: app-updates
@@ -22,6 +20,9 @@ jobs:
     name: Check upstream versions
     runs-on: ubuntu-latest
     timeout-minutes: 90
+    permissions:
+      contents: read
+      issues: write
     services:
       flaresolverr:
         image: ghcr.io/flaresolverr/flaresolverr:latest
@@ -82,3 +83,27 @@ jobs:
         with:
           name: app-updates
           path: app-updates
+
+  bump-prs:
+    name: Open draft bump PRs
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      issues: read
+      pull-requests: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Download report
+        uses: actions/download-artifact@v8
+        with:
+          name: app-updates
+          path: app-updates
+
+      - name: Open draft bump PRs
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 .github/scripts/bump_prs.py app-updates/app-updates.json

@@ -14,6 +14,7 @@ import app.morphe.extension.shared.Logger;
 import app.hxreborn.extension.WebAssets;
 import app.hxreborn.extension.proton.AccentColor;
 import app.hxreborn.extension.proton.AmoledTheme;
+import app.hxreborn.extension.proton.PatchesTheme;
 
 @SuppressWarnings("unused")
 public final class WebSettingsTheme {
@@ -28,7 +29,7 @@ public final class WebSettingsTheme {
 
     public static void hideBeforeStyling(WebView view) {
         try {
-            if (view == null || !hasEnabledStyle()) {
+            if (view == null || !hasEnabledStyle(view)) {
                 return;
             }
 
@@ -57,12 +58,16 @@ public final class WebSettingsTheme {
         }
     }
 
-    private static boolean hasEnabledStyle() {
-        return AmoledTheme.isEnabled() || AccentColor.hasCustomAccent();
+    private static boolean hasEnabledStyle(WebView view) {
+        return isAmoledActive(view) || AccentColor.hasCustomAccent();
+    }
+
+    private static boolean isAmoledActive(WebView view) {
+        return AmoledTheme.isEnabled() && PatchesTheme.isAppNightMode(view.getContext());
     }
 
     private static void injectAmoledStyle(WebView view) {
-        if (!AmoledTheme.isEnabled()) {
+        if (!isAmoledActive(view)) {
             return;
         }
         view.evaluateJavascript(WebAssets.AMOLED_WEBVIEW, null);

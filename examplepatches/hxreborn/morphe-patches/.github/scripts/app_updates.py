@@ -317,6 +317,7 @@ def read_apk(path, package, workdir):
     if not head:
         raise ValueError("aapt2 could not read the manifest")
     abis = re.search(r"native-code: (.+)", badging)
+    min_sdk = re.search(r"^(?:min)?[sS]dkVersion:'(\d+)'", badging, re.M)
     certs = []
     signer = sdk_tool_path("apksigner")
     if signer:
@@ -324,6 +325,7 @@ def read_apk(path, package, workdir):
                              capture_output=True, text=True, timeout=120).stdout
         certs = re.findall(r"^(?!Source Stamp).*certificate SHA-256 digest: ([0-9a-f]{64})", out, re.M)
     return {"package": head.group(1), "version_code": int(head.group(2)), "version": head.group(3),
+            "min_sdk": int(min_sdk.group(1)) if min_sdk else None,
             "format": kind, "abis": re.findall(r"'([^']+)'", abis.group(1)) if abis else [],
             "certs": sorted(set(certs)), "size": path.stat().st_size, "path": str(path)}
 

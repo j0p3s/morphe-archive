@@ -51,7 +51,7 @@ class FollowBacksHookTest {
         val declared = ExtensionDex.classDef(FOLLOW_BACKS.substringBefore("->")).methods
             .filter { AccessFlags.PUBLIC.isSet(it.accessFlags) && AccessFlags.STATIC.isSet(it.accessFlags) }
             .map { "${it.name}(${it.parameterTypes.joinToString("")})${it.returnType}" }
-        for (hook in listOf(FOLLOW_BACKS, FOLLOW_BACK_SECTION)) {
+        for (hook in listOf(FOLLOW_BACKS, SUGGESTION_SECTION)) {
             assertTrue("$hook is not in the extension: $declared", hook.substringAfter("->") in declared)
         }
     }
@@ -67,7 +67,7 @@ class FollowBacksHookTest {
     fun eachDeclaredBuildSkipsTheFollowBackSection() {
         val versions = AppCompatibilities.instagram().single().targets.mapNotNull { it.version }.toSet()
         val bundles = versions.flatMap { version -> Fixtures.files { it.extension == "apks" && it.name.contains("-$version-") } } + Fixtures.otherBuilds()
-        assertEquals("the eight 451 builds: ${bundles.map { it.name }}", 8, bundles.size)
+        assertEquals("the three 452 builds: ${bundles.map { it.name }}", 3, bundles.size)
         for (bundle in bundles) {
             val holders = mutableListOf<ClassDef>()
             FixtureDex.forEach(bundle) { dex ->
@@ -84,8 +84,8 @@ class FollowBacksHookTest {
                 it.name == site.name && it.returnType == site.returnType && it.parameterTypes.map(CharSequence::toString) == site.parameters
             }
             val code = patched.code()
-            assertEquals("${bundle.name}: hooks", 1, code.count { it.referenceText() == FOLLOW_BACK_SECTION })
-            val call = code.indexOfFirst { it.referenceText() == FOLLOW_BACK_SECTION }
+            assertEquals("${bundle.name}: hooks", 1, code.count { it.referenceText() == SUGGESTION_SECTION })
+            val call = code.indexOfFirst { it.referenceText() == SUGGESTION_SECTION }
             assertEquals("${bundle.name}: the call", Opcode.INVOKE_STATIC_RANGE, code[call].opcode)
             assertEquals("${bundle.name}: what it's handed", site.section, (code[call] as RegisterRangeInstruction).startRegister)
             assertEquals("${bundle.name}: one register", 1, (code[call] as RegisterRangeInstruction).registerCount)
@@ -161,7 +161,7 @@ class FollowBacksHookTest {
         val versions = AppCompatibilities.instagram().single().targets.mapNotNull { it.version }.toSet()
         // The declared build and the other builds of the version, each compiled on its own.
         val bundles = versions.flatMap { version -> Fixtures.files { it.extension == "apks" && it.name.contains("-$version-") } } + Fixtures.otherBuilds()
-        assertEquals("the eight 451 builds: ${bundles.map { it.name }}", 8, bundles.size)
+        assertEquals("the three 452 builds: ${bundles.map { it.name }}", 3, bundles.size)
         for (bundle in bundles) {
             val holders = mutableListOf<ClassDef>()
             FixtureDex.forEach(bundle) { dex ->
@@ -203,13 +203,13 @@ class FollowBacksHookTest {
         val site = good.findFollowBackSection()
         good.hideFollowBackSection(site)
         assertEquals("the type's register", 15, site.section)
-        assertEquals("hooked", 1, good.mutableClassDefBy(builder).methods.single().code().count { it.referenceText() == FOLLOW_BACK_SECTION })
+        assertEquals("hooked", 1, good.mutableClassDefBy(builder).methods.single().code().count { it.referenceText() == SUGGESTION_SECTION })
 
         val bad = PatchContexts.of(builderClasses(retyped = true))
         val failure = assertThrows(PatchException::class.java) { bad.findFollowBackSection() }
         assertTrue(failure.message, failure.message!!.contains("v15 doesn't hold a String on every path"))
         assertNull("the patch goes on without the hook", bad.findFollowBackSectionOrWarn())
-        assertTrue("nothing written", bad.mutableClassDefBy(builder).methods.single().code().none { it.referenceText() == FOLLOW_BACK_SECTION })
+        assertTrue("nothing written", bad.mutableClassDefBy(builder).methods.single().code().none { it.referenceText() == SUGGESTION_SECTION })
     }
 
     /** The range call with the list's register, its answer back in that register, then the parser's own write of it. */

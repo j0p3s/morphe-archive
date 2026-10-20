@@ -13,15 +13,30 @@ In Morphe Manager, add source `Okazakee/iptv-morphe-patches`, select **Unlock Pr
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.0.2](https://github.com/Okazakee/iptv-morphe-patches/releases/tag/v1.0.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;1 patches total
+> **[v1.2.0](https://github.com/Okazakee/iptv-morphe-patches/releases/tag/v1.2.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;2 patches total
 <details open>
 <summary>📦 IPTV Pro Stream Player&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 1.2.7 | 2.7.17 |
-| :---: | :---: |
+| 1.2.7 | 2.7.17 | 2.7.21 |
+| :---: | :---: | :---: |
+
+| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
+|----------|----------------|-----------|
+| [Unlock Pro (IPTV)](#unlock-pro-iptv) | Deactivates subscription_needed, forces the pro entitlement active, and spoofs Google Play for app-internal installer-source checks. |  |
+
+</details>
+
+<details open>
+<summary>📦 IPTV Pro Stream Player&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<br>
+
+**🎯 Supported versions:**
+
+| 2.7.21 |
+| :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|

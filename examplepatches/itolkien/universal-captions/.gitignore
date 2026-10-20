@@ -1,0 +1,17 @@
+/.gradle/
+/build/
+/.idea/
+*.iml
+*.apk
+*.mpp
+*.mpe
+local.properties
+*.log
+
+/tests/fingerprints/.gradle/
+/tests/fingerprints/.kotlin/
+/tests/fingerprints/build/
+
+# Generated Python caches
+__pycache__/
+*.py[cod]

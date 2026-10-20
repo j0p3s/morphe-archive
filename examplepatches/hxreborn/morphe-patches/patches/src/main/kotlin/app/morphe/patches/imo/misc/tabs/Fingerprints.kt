@@ -5,9 +5,10 @@
 package app.morphe.patches.imo.misc.tabs
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.string
 
 internal object LegacyTabsConfigFingerprint : Fingerprint(
-    strings = listOf("legacyTabsConfig"),
+    filters = listOf(string("legacyTabsConfig")),
 )
 
 internal object HomeTabIdsFingerprint : Fingerprint(

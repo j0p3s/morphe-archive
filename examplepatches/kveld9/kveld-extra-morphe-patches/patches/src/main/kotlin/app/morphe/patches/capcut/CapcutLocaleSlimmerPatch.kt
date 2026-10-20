@@ -4,7 +4,6 @@ import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.morphe.patches.shared.Constants
 import app.morphe.patches.shared.LocaleUtils
-import java.io.File
 
 @Suppress("unused")
 val capcutLocaleSlimmerPatch = resourcePatch(
@@ -23,15 +22,13 @@ val capcutLocaleSlimmerPatch = resourcePatch(
     )
 
     execute {
-        val apkRoot = try {
-            get("AndroidManifest.xml").parentFile ?: get(".")
+        val assetsLocalesDir = try {
+            get("assets/locales")
         } catch (_: Throwable) {
-            get(".")
+            null
         }
 
-        val assetsLocalesDir = File(apkRoot, "assets/locales")
-
-        if (!assetsLocalesDir.exists() || !assetsLocalesDir.isDirectory) {
+        if (assetsLocalesDir == null || !assetsLocalesDir.exists() || !assetsLocalesDir.isDirectory) {
             println("[CapCut Locale Assets Slimmer] Skipped: assets/locales directory not found.")
             return@execute
         }

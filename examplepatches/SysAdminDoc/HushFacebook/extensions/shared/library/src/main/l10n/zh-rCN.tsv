@@ -119,6 +119,10 @@ The top bar and the tab bar turn see-through, so the feed shows through them as 
 Force dark mode	强制深色模式
 # context: description of that switch; on some tablets Facebook's own Settings page has no Dark mode row
 Keeps Facebook dark no matter its own setting. Meant for tablets where Facebook has no Dark mode switch. Restart Facebook to see the change.	无论 Facebook 自己的设置如何，都保持 Facebook 为深色。适用于 Facebook 没有深色模式开关的平板。重启 Facebook 后可看到更改。
+# context: switch title under Appearance, shown with the AMOLED black theme; it makes cards, comments and menus pure black like the page
+Black cards	黑色卡片
+# context: description of that switch; a card is a raised panel such as a post or the Menu's profile box, near black is the dark gray the theme gives it
+Cards and menus take the page's own color instead of the near black that sets them apart. Buttons and search fields keep a dark gray fill, so you can still see them. Restart Facebook to see the change.	卡片和菜单改用页面本身的颜色，而不是用来区分它们的近黑色。按钮和搜索框保留深灰色填充，让你仍能看清。重启 Facebook 后可看到更改。
 Draws Facebook's text in your phone's font, or in a font file you choose below. Restart Facebook to see the change.	用手机的字体显示 Facebook 的文字，或使用你在下方选择的字体文件。重启 Facebook 后可看到更改。
 Font file	字体文件
 Use your phone's font	使用手机的字体
@@ -208,6 +212,10 @@ Saved to %1$s	已保存到 %1$s
 Saved to the gallery	已保存到相册
 Saved to %1$s in lower quality than on Facebook	已保存到 %1$s，画质低于 Facebook 上的画质
 Saved to the gallery in lower quality than on Facebook	已保存到相册，画质低于 Facebook 上的画质
+# context: a video save's end message when the best file was over 512 MB and a smaller one was saved instead; %1$s is the folder, %2$s the smaller file's quality, such as 480p
+Saved to %1$s at %2$s, since the bigger file is over 512 MB	已以 %2$s 保存到 %1$s，因为更大的文件超过 512 MB
+# context: a video save's end message when the best file was over 512 MB and a smaller one was saved instead; %1$s is the smaller file's quality, such as 480p
+Saved to the gallery at %1$s, since the bigger file is over 512 MB	已以 %1$s 保存到相册，因为更大的文件超过 512 MB
 Saved. Restart Facebook to see the change.	已保存。重启 Facebook 后可看到更改。
 Saves your switches and download choices to a file, to back up or copy to another phone. Pause, Debug logging and the update check aren't included.	把你的开关和下载选项保存到文件中，用于备份或复制到另一部手机。不包括暂停、调试日志和更新检查。
 # The release check: its switch and Check now row under Updates, the status card's line about a newer release, and what a failed try says.
@@ -378,6 +386,10 @@ Go straight to one group of settings. Back returns to where you were.	直接前�
 Save videos other apps can open	保存其他应用能打开的视频
 # context: summary of that switch; WhatsApp is a name and stays as it is, and saves are the videos the user saved to the phone
 Fixes saved videos that play without sound in WhatsApp, video editors such as CapCut and InShot, or some galleries and players. May lower quality.	修复已保存的视频在 WhatsApp、CapCut 和 InShot 等视频编辑器，或某些相册和播放器中播放时没有声音的问题。可能会降低画质。
+# context: title of a switch under Downloads; convert means re-encoding the video on the phone
+Convert to keep the full size	转换以保留原始尺寸
+# context: summary of that switch; Save videos other apps can open is the switch above it, VP9, AV1 and H.264 are video formats and stay as they are
+With Save videos other apps can open on, a full size video Facebook only has as VP9 or AV1 is converted to H.264 on your phone instead of saved smaller. Slower, and videos over 10 minutes stay smaller.	开启“保存其他应用能打开的视频”后，Facebook 只提供 VP9 或 AV1 格式的原尺寸视频会在手机上转换为 H.264，而不是保存成更小的尺寸。速度较慢，超过 10 分钟的视频仍会保存为较小尺寸。
 # context: switch title under Downloads; on, a save shows no message when it starts, finishes or is canceled
 Quiet saves	静默保存
 # context: summary of that switch; a toast is Android's short message at the bottom of the screen
@@ -514,6 +526,8 @@ Hides friend requests shown between posts. Your requests stay under Friends.	隐
 Hides the card between posts that shows where your friends are.	隐藏帖子之间显示好友所在位置的卡片。
 # context: summary of that switch; "More from your friends" is the heading Facebook shows over that list
 A post you open from a notification ends without the "More from your friends" list Facebook adds under it, which can carry ads.	从通知打开的帖子末尾不再出现 Facebook 添加的“来自好友的更多内容”列表，它可能带有广告。
+Hide the Find friends card	隐藏“查找好友”卡片
+Hides the "Want to see more posts from friends?" card with its Find friends button where your friends' posts run out.	隐藏好友帖子结束处带有“查找好友”按钮的“想看更多好友的帖子吗？”卡片。
 # context: summary of that switch; the Stories tray is the row of Stories at the top of the feed
 Hides the row of Stories from people you aren't connected to, between posts. Your friends' Stories and the Stories tray stay.	隐藏帖子之间来自与你没有关联的人的快拍行。你好友的快拍和快拍栏保留。
 # context: switch title under Notifications; trending videos Facebook sends as push notifications
@@ -990,7 +1004,7 @@ Tap Resume, then restart Facebook.	点按“恢复”，然后重启 Facebook。
 Turn off haptics	关闭触感反馈
 Stops the small vibrations Facebook makes when you tap or swipe. Your keyboard and phone vibrations aren't affected.	停止 Facebook 在你点按或滑动时产生的轻微震动。你的键盘和手机震动不受影响。
 Turn off screen transitions	关闭屏幕转场
-Tabs, the Menu and screens that open over Facebook appear at once instead of sliding in. Swiping between tabs still works.	标签页、菜单和在 Facebook 上方打开的页面会立即出现，而不是滑入。在标签页之间滑动仍然有效。
+Tabs, the Menu, photos and screens that open over Facebook appear at once instead of sliding or zooming in. Swiping between tabs still works.	标签页、菜单、照片和在 Facebook 上方打开的页面会立即出现，而不是滑入或放大。在标签页之间滑动仍然有效。
 Unlock app icons	解锁应用图标
 Lets you pick the app icons Facebook keeps for Facebook Plus, on Facebook's App icon page. The Pick an app icon row opens that page. Your pick stays if you turn this off, so pick the blue one first to go back.	让你在 Facebook 的“应用图标”页面中选择 Facebook 为 Facebook Plus 保留的应用图标。“选择应用图标”这一行会打开该页面。即使你关闭此项，你的选择也会保留，所以要换回蓝色图标，请先选择蓝色的那个。
 # context: settings row under Appearance, right below the Unlock app icons switch; opens Facebook's own App icon page, so use Facebook's name for that page in this language
@@ -1605,6 +1619,14 @@ Takes the numbers off the Like, Comment and Share buttons under posts, so each s
 Hide counts on reels	隐藏 Reels 上的数字
 # context: summary of that switch; Like, Comment and Share are Facebook's own button labels, so use Facebook's wording in your language
 Takes the numbers away from under a reel's Like, Comment and Share icons. The icons stay where they are. A change shows from the next reel.	去掉 Reels 的“赞”、“评论”和“分享”图标下方的数字。图标位置不变。更改会从下一个 Reels 开始显示。
+# context: switch title under Reels and Watch; Save is Facebook's own label for the bookmark button down a reel's right side, so use Facebook's wording in your language
+Hide Save on reels	隐藏 Reels 上的“收藏”
+# context: summary of that switch; the buttons under it are Download and More
+Takes the Save button off the side of reels. The buttons above it move down. A change shows from the next reel.	去掉 Reels 侧边的“收藏”按钮。上方的按钮会下移。更改会从下一个 Reels 开始显示。
+# context: switch title under Reels and Watch; the speaker is the sound on and off button at the bottom of the row of buttons down a reel's right side
+Hide the speaker button on reels	隐藏 Reels 上的扬声器按钮
+# context: summary of that switch
+Takes the speaker button off the bottom of the side of reels. A change shows from the next reel.	去掉 Reels 侧边底部的扬声器按钮。更改会从下一个 Reels 开始显示。
 # context: switch title under News feed; the reaction preview is the stack of reaction icons and the line with the number of reactions under a post
 Hide the reaction preview on posts	隐藏帖子上的回应预览
 # context: summary of that switch; "reactions" are Facebook's Like, Love, Haha and other reactions
@@ -1621,6 +1643,10 @@ Moves Download to phone and Save photo from the end of a post's three-dot menu t
 Menu tiles to hide	要隐藏的菜单图块
 # context: title of the list of Menu tiles to hide
 Hide from the Menu	从菜单中隐藏
+# context: a row's name in the list of Menu tiles to hide; "Help and support" is Facebook's own Menu heading, use Facebook's wording; %s is the row's name, such as Report a problem
+Help and support: %s	帮助与支持：%s
+# context: a row's name in the list of Menu tiles to hide; "Settings and privacy" is Facebook's own Menu heading, use Facebook's wording; %s is the row's name, such as Orders and payments
+Settings and privacy: %s	设置和隐私：%s
 # context: a Menu tile's name in the list of tiles to hide; Facebook's own name for it; Facebook's short videos
 Reels	Reels
 # context: a Menu tile's name in the list of tiles to hide; Facebook's own name for it; the games section
@@ -1700,3 +1726,9 @@ A video you tap in the feed opens full screen by itself, with no reels to swipe 
 Hide the new comments pop-up	隐藏新评论弹窗
 # context: the bubble Facebook shows over an open comment list when new comments arrive, like "3 new comments"
 The "new comments" bubble no longer pops up while you read comments. New comments still show in the list.	阅读评论时不再弹出“新评论”气泡。新评论仍会显示在列表中。
+# context: the name of a launcher shortcut and a Menu row that open Marketplace's free listings (Facebook's website calls that category Free Stuff)
+Free stuff	免费物品
+Free stuff shortcut	“免费物品”快捷方式
+Free stuff isn't available in this build.	此版本中没有“免费物品”。
+Adds Free stuff, Marketplace's free listings, to the menu you get by holding Facebook's icon, if there's room, and a Free stuff row in Settings and privacy. Existing shortcuts stay.	如果有空位，把“免费物品”（Marketplace 上的免费商品）添加到长按 Facebook 图标时出现的菜单中，并在“设置和隐私”中添加一行“免费物品”。现有的快捷方式保留。
+Adds Free stuff, Marketplace's free listings, to the menu you get by holding Facebook's icon, if there's room. Existing shortcuts stay.	如果有空位，把“免费物品”（Marketplace 上的免费商品）添加到长按 Facebook 图标时出现的菜单中。现有的快捷方式保留。

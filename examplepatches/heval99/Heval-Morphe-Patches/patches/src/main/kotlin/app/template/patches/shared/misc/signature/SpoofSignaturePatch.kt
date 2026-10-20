@@ -10,12 +10,14 @@
 // a per-app builder with the original certificate hard-coded (merged split APKs often carry no
 // usable signing block, so packageMetadata cannot be trusted), the values are injected by
 // rewriting the extension's getters, and invoke-virtual/range call sites are handled too.
+// 2026-10-18: optional app-specific dependencies (none by default, so other apps are unchanged).
 
 package app.template.patches.shared.misc.signature
 
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.BytecodePatch
 import app.morphe.patcher.patch.Compatibility
+import app.morphe.patcher.patch.Patch
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
@@ -47,6 +49,8 @@ private const val EXTENSION_PACKAGE_PREFIX = "Lapp/template/extension/"
  * @param compatibility The app this patch applies to.
  * @param default Whether the patch is enabled by default.
  * @param description The patch description, for apps where a specific symptom is worth naming.
+ * @param dependencies App-specific patches applied together with this one, for compatibility fixes
+ *        that belong with the re-signed build (for example Shazam's Spotify login fallback).
  */
 fun spoofSignaturePatch(
     fromPackageName: String,
@@ -55,6 +59,7 @@ fun spoofSignaturePatch(
     default: Boolean = false,
     description: String = "Makes the app report its original signing certificate to itself, so " +
         "Firebase and Google APIs restricted to the original app keep working.",
+    dependencies: Set<Patch<*>> = emptySet(),
 ): BytecodePatch {
     // Fail at bundle load, not on the user's device, when the certificate is not a certificate.
     runCatching {
@@ -68,6 +73,8 @@ fun spoofSignaturePatch(
         default = default,
     ) {
         compatibleWith(compatibility)
+
+        if (dependencies.isNotEmpty()) dependsOn(*dependencies.toTypedArray())
 
         extendWith("extensions/signature.mpe")
 

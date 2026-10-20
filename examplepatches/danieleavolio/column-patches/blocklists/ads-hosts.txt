@@ -1,0 +1,64 @@
+# Host list per blocco DNS (formato "dominio singolo per riga" / hosts file)
+# Generata per Column (com.columnapp.column) - vedi docs/ADBLOCK-DNS.md
+#
+# --- Google ad serving: AdSense, Ad Manager / DoubleClick, GPT ---
+doubleclick.net
+2mdn.net
+googlesyndication.com
+googleadservices.com
+googletagservices.com
+adservice.google.com
+adservice.google.it
+adsensecustomsearchads.com
+imasdk.googleapis.com
+
+# --- Reti programmatiche / ad network ---
+adnxs.com
+adsrvr.org
+amazon-adsystem.com
+casalemedia.com
+criteo.com
+criteo.net
+flashtalking.com
+gumgum.com
+improvedigital.com
+indexww.com
+inmobi.com
+loopme.me
+openx.net
+outbrain.com
+pubmatic.com
+rubiconproject.com
+sharethrough.com
+smartadserver.com
+smaato.net
+spotxchange.com
+taboola.com
+teads.tv
+thetradedesk.com
+tremorhub.com
+triplelift.com
+yieldmo.com
+zedo.com
+an.facebook.com
+
+# --- Verifica ads / misurazione audience ---
+adscore.com
+doubleverify.com
+integralads.com
+moatads.com
+adsafeprotected.com
+scorecardresearch.com
+quantserve.com
+
+# --- Analytics del web layer ---
+app.posthog.com
+us.i.posthog.com
+us.posthog.com
+
+# --- NON bloccare (rompono l'app) ---
+# www.googletagmanager.com   -> tag manager di Column
+# api.column.news            -> API dell'app
+# api.revenuecat.com         -> abbonamenti
+# js.stripe.com, cdn.paddle.com -> pagamenti
+# graph.facebook.com         -> login Facebook

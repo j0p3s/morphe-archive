@@ -14,5 +14,5 @@ internal fun isPremiumFingerprint(flag: FieldReference) = Fingerprint(
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC),
     returnType = "Z",
     parameters = emptyList(),
-    filters = listOf(fieldAccess(definingClass = flag.definingClass, name = flag.name, opcode = Opcode.SGET_OBJECT)),
+    filters = listOf(fieldAccess(flag, Opcode.SGET_OBJECT)),
 )

@@ -3,7 +3,6 @@ package app.morphe.patches.capcut
 import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patches.shared.Constants
-import java.io.File
 import java.util.Locale
 
 private val CRASH_REPORTER_LIBS = setOf(
@@ -35,14 +34,13 @@ val capcutNativeSlimmerPatch = rawResourcePatch(
     )
 
     execute {
-        val apkRoot = try {
-            get("AndroidManifest.xml").parentFile ?: get(".")
+        val libDir = try {
+            get("lib")
         } catch (_: Throwable) {
-            get(".")
+            null
         }
 
-        val libDir = File(apkRoot, "lib")
-        if (!libDir.exists() || !libDir.isDirectory) {
+        if (libDir == null || !libDir.exists() || !libDir.isDirectory) {
             println("[CapCut Native Slimmer] Skipped: lib directory not found.")
             return@execute
         }
@@ -71,7 +69,7 @@ val capcutNativeSlimmerPatch = rawResourcePatch(
             if (originalSize > 0) {
                 file.writeBytes(EMPTY_STUB_BYTES)
                 savedBytes += originalSize
-                strippedLibs.add(file.relativeTo(apkRoot).path.replace('\\', '/'))
+                strippedLibs.add("lib/${file.relativeTo(libDir).path.replace('\\', '/')}")
             }
         }
 

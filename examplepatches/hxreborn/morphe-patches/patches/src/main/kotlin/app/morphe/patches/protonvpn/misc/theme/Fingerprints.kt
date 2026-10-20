@@ -76,15 +76,14 @@ internal object IconCallerFingerprint : Fingerprint(
 internal fun Method.isSwitchColorsConstructor() = name == "<init>" &&
     parameterTypes.size == SWITCH_COLORS_ARGUMENT_COUNT && parameterTypes.all { it == "J" }
 
+internal fun BytecodePatchContext.isSwitchColorsType(type: CharSequence) =
+    classDefByOrNull(type.toString())?.methods?.any { it.isSwitchColorsConstructor() } == true
+
 internal fun BytecodePatchContext.switchImplFingerprint() = Fingerprint(
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC, AccessFlags.FINAL),
     returnType = "V",
     parameters = listOf("L", "Z", "Z", "L", "L", "L", "L", "I"),
-    custom = { method, _ ->
-        method.parameterTypes.any { type ->
-            classDefByOrNull(type.toString())?.methods?.any { it.isSwitchColorsConstructor() } == true
-        }
-    },
+    custom = { method, _ -> method.parameterTypes.any { isSwitchColorsType(it) } },
 )
 
 internal fun defaultIconSizeModifierFingerprint(iconClass: String) = Fingerprint(

@@ -10,7 +10,7 @@ from pathlib import Path
 from urllib.parse import parse_qs, urlparse
 
 sys.path.insert(0, str(Path(__file__).parent))
-from fields import field, normalize, parse_fields
+from fields import code_span, field, normalize, parse_fields
 
 MARKER = "<!-- app-request-bot -->"
 REPO = os.environ.get("GITHUB_REPOSITORY", "")
@@ -36,6 +36,8 @@ POSTED_LINK = re.compile(r"\[([\w.-]+/[\w.-]+)#(\d+)\]\(https://github\.com/")
 STORE_QUERY = {"play.google.com": "id", "h5-api.aoneroom.com": "p"}
 MAX_LISTED = 5
 QUIET_DAYS = 14
+OPEN_LIMIT = 3
+EXEMPT_ASSOCIATIONS = {"OWNER", "MEMBER", "COLLABORATOR"}
 
 
 def is_package(text):
@@ -162,7 +164,18 @@ def bundle_name(bundle):
     return re.sub(r"[^A-Za-z0-9 .'+&-]", "", str(bundle.get("name") or ""))[:60].strip() or bundle["repo"]
 
 
-def decide(number, body, requests, patches_list, registry=None, title="", now=None, elsewhere=(), previous=""):
+def author(issue):
+    return (issue.get("author") or {}).get("login") or ""
+
+
+def open_requests_at_limit(this, requests):
+    login = author(this)
+    others = [r for r in requests if login and r is not this and r["state"] == "OPEN" and author(r) == login]
+    return sorted(others, key=lambda r: r["number"]) if len(others) >= OPEN_LIMIT else []
+
+
+def decide(number, body, requests, patches_list, registry=None, title="", now=None, elsewhere=(), previous="",
+           enforce_limit=False):
     package = find_package(body)
     name = app_name(body, title)
     supported = supported_apps(patches_list)
@@ -192,6 +205,15 @@ def decide(number, body, requests, patches_list, registry=None, title="", now=No
     this = next((r for r in requests if r["number"] == number), {})
     if verdict == "close" and discussed_recently(this, now or datetime.now(timezone.utc)):
         verdict, reason, duplicate_of, labels, lines = "hold", "", 0, [], []
+
+    open_by_author = open_requests_at_limit(this, requests) if enforce_limit and verdict != "close" else []
+    if open_by_author:
+        verdict, reason, duplicate_of, labels = "close", "not planned", 0, []
+        rows = [f"- [#{r['number']}](https://redirect.github.com/{REPO}/issues/{r['number']}) "
+                f"{code_span(r.get('title') or '')}" for r in open_by_author]
+        lines = [f"Each person can have {OPEN_LIMIT} app requests open at a time, and these are already open:\n\n"
+                 + "\n".join(rows)
+                 + "\n\nWait for one of them to finish, or close one, before opening a new request."]
 
     if verdict == "pass" and name:
         lookalikes = [r for r in earlier if r["state"] == "OPEN" and r not in same_package
@@ -269,11 +291,12 @@ if __name__ == "__main__":
     if not (isinstance(registry, dict) and isinstance(registry.get("bundles"), list)):
         registry = None
     this = next((r for r in requests if r["number"] == number), {})
-    login = (this.get("author") or {}).get("login") or ""
+    login = author(this)
     posted = Path(sys.argv[6]) / f"{login}.jsonl" if len(sys.argv) > 6 and LOGIN.fullmatch(login) else None
     elsewhere = []
     if posted and posted.is_file():
         elsewhere = [json.loads(line) for line in posted.read_text(encoding="utf-8").splitlines() if line.strip()]
     previous = Path(sys.argv[7]).read_text(encoding="utf-8") if len(sys.argv) > 7 else ""
+    enforce_limit = os.environ.get("ACTION") == "opened" and os.environ.get("ASSOCIATION") not in EXEMPT_ASSOCIATIONS
     print(json.dumps(decide(number, body, requests, patches_list, registry, this.get("title", ""),
-                            elsewhere=elsewhere, previous=previous)))
+                            elsewhere=elsewhere, previous=previous, enforce_limit=enforce_limit)))

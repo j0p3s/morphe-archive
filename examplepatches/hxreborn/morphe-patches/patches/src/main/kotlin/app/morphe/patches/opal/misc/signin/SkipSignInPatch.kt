@@ -8,6 +8,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.compat.AppCompatibilities
+import app.morphe.patches.shared.misc.pairip.removePairipProtectionPatch
 import app.morphe.util.getFreeRegisterProvider
 import app.morphe.util.getReference
 import app.morphe.util.indexOfFirstInstructionOrThrow
@@ -39,6 +40,7 @@ val skipSignInPatch = bytecodePatch(
     description = "Skips sign-in and runs Opal without an account. Features that need the Opal server are unavailable.",
 ) {
     compatibleWith(AppCompatibilities.OPAL)
+    dependsOn(removePairipProtectionPatch)
     extendWith("extensions/extension.mpe")
 
     execute {

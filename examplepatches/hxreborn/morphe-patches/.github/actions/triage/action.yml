@@ -28,6 +28,8 @@ runs:
       env:
         GH_TOKEN: ${{ inputs.token }}
         ISSUE: ${{ github.event.issue.number }}
+        ACTION: ${{ github.event.action }}
+        ASSOCIATION: ${{ github.event.issue.author_association }}
         REPO: ${{ github.repository }}
         REGISTRY: ${{ inputs.registry }}
         PATCHES_LIST: ${{ inputs.patches-list }}

@@ -53,6 +53,7 @@ public final class GmsCoreSupport {
 
     private static final String PREFERENCES_NAME = "morphe_gmscore";
     private static final String PREFERENCE_SKIP_BATTERY_DIALOG = "skip_battery_optimization_dialog";
+    private static final String PREFERENCE_DOWNLOAD_PAGE_OPENED = "download_page_opened";
 
     /** Lets the activity finish initialising (window, theme) before a dialog or page opens. */
     private static final long UI_DELAY_MILLIS = 100;
@@ -77,11 +78,17 @@ public final class GmsCoreSupport {
                 Log.i(TAG, "MicroG RE is not installed or disabled");
 
                 String message = isInstalledAndEnabled(packageManager, VANCED_MICROG_PACKAGE)
-                        ? "This patched app needs MicroG RE for Google sign-in. Vanced MicroG does not work with it."
-                        : "MicroG RE is not installed. This patched app needs it for Google sign-in.";
+                        ? "This patched app needs MicroG RE for Google sign-in and notifications. Vanced MicroG does not work with it."
+                        : "MicroG RE is not installed. This patched app needs it for Google sign-in and notifications.";
                 // A toast, not a dialog: it still shows if the app fails to finish starting.
                 Toast.makeText(activity.getApplicationContext(), message, Toast.LENGTH_LONG).show();
-                runDelayed(() -> openDownloadPage(activity));
+                // The download page opens once; after that only the toast reminds the user, so a
+                // patched app without MicroG RE does not open the browser on every start.
+                SharedPreferences preferences = getPreferences(activity);
+                if (!preferences.getBoolean(PREFERENCE_DOWNLOAD_PAGE_OPENED, false)) {
+                    preferences.edit().putBoolean(PREFERENCE_DOWNLOAD_PAGE_OPENED, true).apply();
+                    runDelayed(() -> openDownloadPage(activity));
+                }
                 return;
             }
 
@@ -122,8 +129,8 @@ public final class GmsCoreSupport {
 
             new AlertDialog.Builder(activity)
                     .setTitle("MicroG RE")
-                    .setMessage("MicroG RE is restricted by battery optimisation, so Google sign-in "
-                            + "and sync can fail in the background. Allow MicroG RE to run "
+                    .setMessage("MicroG RE is restricted by battery optimisation, so Google sign-in, "
+                            + "sync and notifications can fail in the background. Allow MicroG RE to run "
                             + "without restrictions?")
                     .setPositiveButton("Continue", (dialog, which) -> openBatteryOptimizationSettings(activity))
                     .setNegativeButton("Not now", null)

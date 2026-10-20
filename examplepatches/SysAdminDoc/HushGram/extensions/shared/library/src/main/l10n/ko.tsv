@@ -130,7 +130,7 @@ Downloads	다운로드
 Save videos other apps can open	다른 앱에서 열 수 있도록 동영상 저장
 For WhatsApp, video editors such as CapCut and InShot, or a gallery or player that plays saves without sound. May lower quality.	WhatsApp, CapCut이나 InShot 같은 동영상 편집 앱, 또는 소리없이 저장된 동영상을 재생할 수 있는 갤러리나 플레이어 앱에서 열 수 있도록 동영상을 저장합니다. 화질이 낮아질 수 있습니다
 Convert to keep the full size	원본 크기를 유지하도록 변환
-With Save videos other apps can open on, a full size video Instagram only has as VP9 or AV1 is converted to H.264 on your phone instead of saved smaller. Slower, and videos over 3 minutes stay smaller.	다른 앱에서 열 수 있도록 동영상 저장이 켜져 있으면, Instagram에 VP9 또는 AV1로만 있는 원본 크기 동영상을 작게 저장하는 대신 휴대폰에서 H.264로 변환합니다. 더 느리며, 3분이 넘는 동영상은 작게 저장됩니다.
+Saves videos other apps can open, at full size. A video Instagram only has as VP9 or AV1 is converted to H.264 on your phone instead of saved smaller. Slower, and videos over 3 minutes stay smaller.	다른 앱에서 열 수 있는 동영상을 원본 크기로 저장합니다. Instagram에 VP9 또는 AV1로만 있는 동영상은 작게 저장하는 대신 휴대폰에서 H.264로 변환합니다. 더 느리며, 3분이 넘는 동영상은 작게 저장됩니다.
 Converting to H.264	H.264로 변환하는 중
 Download quality	다운로드 화질
 Best	최상
@@ -257,6 +257,8 @@ Hide the notes row	메모 목록 숨기기
 Takes the row of notes off the top of your messages, the Map bubble in it too. Your chats, search and requests stay.	메시지 상단에서 메모 목록을 숨깁니다. 목록 안의 지도 버블도 함께 숨겨집니다. 채팅, 검색 및 메시지 요청은 그대로 유지됩니다
 Hide Instants	Instants 숨기기
 Removes the stack of Instants (quick photos from friends) from your messages. Restart Instagram to see the change.	메시지에서 Instants(친구가 보내는 빠른 사진) 묶음을 없앱니다. 변경 사항을 보려면 Instagram을 다시 시작하세요.
+Hide See preview and Plus in chat menus	채팅 메뉴에서 미리보기와 Plus 숨기기
+Takes the See preview and Instagram Plus rows out of the menu you get from long pressing a chat. Your chat options stay.	채팅을 길게 누르면 나오는 메뉴에서 미리보기와 Instagram Plus 줄을 없앱니다. 채팅 옵션은 그대로 남습니다.
 Read messages without the seen receipt	읽음 표시 없이 메시지 읽기
 Opening a chat doesn't tell people you've seen their messages, and you still see when they've seen yours. To let one chat know, long press it in your messages and tap Mark as read.	채팅을 열어도 상대방에게 메시지를 봤다는 사실이 전달되지 않으며, 상대방이 내 메시지를 봤는지는 계속 확인할 수 있습니다. 한 채팅에만 알리려면 메시지에서 그 채팅을 길게 누르고 읽음으로 표시를 누르세요
 Keep chats unread here	이 휴대폰에서 채팅을 읽지 않음으로 유지
@@ -278,6 +280,8 @@ Hide the Music for you card	‘회원님을 위한 음악’ 카드 숨기기
 Keeps Instagram's Music for you card from turning up between the stories you watch. The stories themselves stay.	시청하는 스토리 사이에 인스타그램의 ‘회원님을 위한 음악’ 카드가 끼어들지 않게 합니다. 스토리는 그대로 남습니다.
 Hide Suggested for you between stories	스토리 사이의 '추천 계정' 숨기기
 Leaves out the Suggested for you cards of accounts to follow that Instagram puts between the stories you tap through. The stories themselves stay.	넘겨 보는 스토리 사이에 인스타그램이 넣는 팔로우할 '추천 계정' 카드를 숨깁니다. 스토리는 그대로 남습니다.
+Hide Add Yours cards between stories	스토리 사이의 'Add Yours' 카드 숨기기
+Leaves out the Add Yours cards, like Popular Add Yours and Join a trending Add Yours, that Instagram puts between the stories you tap through. The stories themselves stay.	넘겨 보는 스토리 사이에 인스타그램이 넣는 인기 'Add Yours'나 트렌드 'Add Yours' 참여 같은 'Add Yours' 카드를 숨깁니다. 스토리는 그대로 남습니다.
 Download feed photos	피드 사진 다운로드
 The same Download on a photo post, and on a carousel showing a photo. Saves the largest size Instagram has.	사진 게시물과 사진이 포함된 캐러셀에도 동일한 다운로드 기능을 추가합니다. Instagram에서 제공하는 가장 큰 사이즈로 저장할 수 있습니다
 the start-up fix for x86 devices	x86 기기에 대한 시작 문제 수정
@@ -331,6 +335,8 @@ Hide People you don't follow back	맞팔로우하지 않은 사람 숨기기
 Takes the People you don't follow back section off the bottom of your notifications. Notifications about new followers stay.	알림 맨 아래의 맞팔로우하지 않은 사람 섹션을 없앱니다. 새 팔로워 알림은 그대로 남습니다.
 Hide suggestions in notifications	알림의 추천 숨기기
 Takes rows that only suggest something off your notifications, like a thread from an account you don't follow or someone you might know. Likes, comments, mentions and new followers stay.	팔로우하지 않는 계정의 스레드나 알 수도 있는 사람처럼 추천만 하는 행을 알림에서 없앱니다. 좋아요, 댓글, 언급, 새 팔로워는 그대로 남습니다.
+Hide Featured in notifications	알림에서 주요 항목 숨기기
+Takes the Featured section off the top of your notifications, the posts and threads Instagram picks to show you there. Everything under it stays.	알림 맨 위의 주요 항목 섹션, 즉 Instagram이 골라서 보여 주는 게시물과 스레드를 없앱니다. 그 아래 항목은 그대로 남습니다.
 Hide highlights	하이라이트 숨기기
 Takes the row of story highlights off profiles, yours included. Bios, counts and posts stay, and so does Add to highlight on your stories.	모든 프로필에서 스토리 하이라이트 목록을 숨깁니다. 내 프로필에도 적용됩니다. 프로필 소개, 팔로워 & 팔로잉 수 및 게시물은 그대로 유지되며, 내 스토리의 ‘하이라이트에 추가’ 기능도 그대로 사용할 수 있습니다
 Hide the Threads button	Threads 버튼 숨기기
@@ -533,12 +539,20 @@ Nothing in the row of stories at the top of Home loads, your own story included,
 Open categories as pages	카테고리를 페이지로 열기
 Settings shows a list of its categories, and a tap opens one on its own page. Search still looks through all of them.	설정에 카테고리 목록이 표시되고, 탭하면 해당 카테고리가 별도 페이지로 열립니다. 검색은 여전히 모든 카테고리를 찾습니다.
 Hide the HushGram row in Instagram's menu	Instagram 메뉴에서 HushGram 항목 숨기기
-While a tab long press or the long press on your profile's menu opens HushGram, Instagram's Settings and activity screen leaves out the HushGram row. Turn those long presses off and the row comes back.	탭이나 프로필 메뉴를 길게 탭해 HushGram을 여는 동안에는 Instagram의 설정 및 활동 화면에 HushGram 항목이 표시되지 않습니다. 길게 탭하기를 끄면 항목이 다시 나타납니다.
+Settings shortcut on the app icon	앱 아이콘의 설정 바로가기
+Open settings from the logo	로고에서 설정 열기
+Puts HushGram settings in the menu you get by holding Instagram's icon. Off, it leaves that menu.	Instagram 아이콘을 길게 탭하면 나오는 메뉴에 HushGram 설정을 넣습니다. 끄면 그 메뉴에서 빠집니다.
+A long press on the Instagram logo at the top of Home opens these settings. Off, the long press goes back to Instagram.	홈 상단의 Instagram 로고를 길게 탭하면 이 설정이 열립니다. 끄면 길게 탭하기가 다시 Instagram으로 돌아갑니다.
+The last way into these settings stays on.	이 설정으로 들어오는 마지막 방법은 켜진 상태로 유지됩니다.
+No other way into HushGram is on, so the row stays in Instagram's menu.	HushGram을 여는 다른 방법이 켜져 있지 않으므로 항목이 Instagram 메뉴에 남습니다.
+Instagram's Settings and activity screen leaves out the HushGram row while another way here opens HushGram. With every other way off, the row comes back.	다른 방법으로 HushGram을 여는 동안에는 Instagram의 설정 및 활동 화면에 HushGram 항목이 표시되지 않습니다. 다른 방법을 모두 끄면 항목이 다시 나타납니다.
 Stop loading stories	스토리 불러오기 중지
 Takes the Comment button and the comment count off the posts in your feed.	피드 게시물에서 댓글 버튼과 댓글 수를 없앱니다.
 # context: Comments: the switch that hides the row of quick emoji above the comment box (#248). Comment box is the field where you type a comment.
 Hide the emoji row	이모지 줄 숨기기
 Takes the row of quick emoji off above the comment box. The box itself stays.	댓글 입력창 위에 있는 빠른 이모지 줄을 없앱니다. 입력창은 그대로 표시됩니다
+Open comments without the keyboard	키보드 없이 댓글 열기
+Comments open with the keyboard down. A tap in the comment box, or on Reply, still brings it up.	댓글이 키보드가 내려간 상태로 열립니다. 댓글 입력란이나 답글 달기를 탭하면 키보드가 그대로 나타납니다.
 # context: Feed: the switch that hides the Follow and Subscribe buttons beside the author's name on a post (#248). Follow and Subscribe are the labels Instagram uses on those buttons.
 Hide Follow on posts	게시물의 팔로우 숨기기
 Takes the Follow and Subscribe buttons off the top of posts in your feed. The name, time and menu stay.	피드 게시물 상단의 팔로우 버튼과 구독 버튼을 없앱니다. 이름, 시간, 메뉴는 그대로 표시됩니다
@@ -724,7 +738,7 @@ Rounds the pill and its highlight and puts Search in a glass circle of its own. 
 Draws Instagram's tab bar as a floating, rounded glass pill with a highlight on the tab you're on. Restart Instagram after changing it.	Instagram의 탭 바를 현재 탭이 강조된 둥근 유리 알약 모양으로 띄워 그립니다. 변경한 뒤에는 Instagram을 다시 시작하세요.
 Glass tab bar	유리 탭 바
 Haptics on the tab bar	탭 바 햅틱
-Home and the other tabs run down behind the pill, so the glass has real content to blur. Reels still stops above it.	홈과 다른 탭이 알약 뒤로 이어져 유리가 흐리게 만들 실제 콘텐츠를 갖게 됩니다. 릴스는 계속 그 위에서 끝납니다.
+Home, Reels and the other tabs run down behind the pill, so the glass has real content to blur.	홈, 릴스와 다른 탭이 알약 뒤로 이어져 유리가 흐리게 만들 실제 콘텐츠를 갖게 됩니다.
 Show content behind the tab bar	탭 바 뒤에 콘텐츠 표시
 Tab bar	탭 바
 Saved	저장됨
@@ -1062,3 +1076,64 @@ A reel Instagram's auto scroll moves to waits for your tap too. Off, auto scroll
 # context: Stories: the switch that hides the Follow button in a story's header (#237). Follow is Instagram's own button label, as in Hide the Follow button.
 Hide Follow on stories	스토리에서 팔로우 숨기기
 Takes the Follow button off the top of stories from accounts you don't follow. The name, time and menu stay.	팔로우하지 않는 계정의 스토리 상단에서 팔로우 버튼을 없앱니다. 이름, 시간, 메뉴는 그대로 표시됩니다
+# context: Reels: Burn-in guard's switch that keeps the faded buttons faded while you tap (#162)
+Stay dim when I tap	탭해도 어둡게 유지
+Once Burn-in guard fades the buttons, they stay faded on Reels whatever you tap or swipe, the next reel too. They still work. Leaving Reels brings them back.	번인 방지가 버튼을 흐리게 하면, 무엇을 탭하거나 스와이프해도 릴스에서 계속 흐린 상태로 유지되며 다음 릴스에서도 마찬가지입니다. 버튼은 계속 작동합니다. 릴스를 나가면 원래대로 돌아옵니다.
+# context: Profiles: switches next to Hide the Threads button. Create is the plus at the top of your own profile (#254); Share profile and Edit profile are Instagram's own button names (#253)
+Hide the Create button	만들기 버튼 숨기기
+Takes the plus for new posts off the top of your own profile. The other buttons stay where they were.	내 프로필 상단에서 새 게시물용 더하기 버튼을 숨깁니다. 다른 버튼은 원래 자리에 그대로 있습니다.
+Hide Share profile	프로필 공유 숨기기
+Takes the Share profile button off your profile, and Edit profile stretches to fill the space.	내 프로필에서 프로필 공유 버튼을 숨기고, 프로필 편집 버튼이 늘어나 빈 공간을 채웁니다.
+# context: Layout: Glass tab bar's switch that stops the liquid pill shrinking as you scroll (#256)
+Keep the pill full size	알약 크기 그대로 유지
+Scrolling a list down leaves the liquid pill as it is, every tab in place. Restart Instagram after changing it.	목록을 아래로 스크롤해도 리퀴드 글래스 알약이 그대로 유지되고 모든 탭이 제자리에 있습니다. 변경한 뒤에는 Instagram을 다시 시작하세요.
+# context: Ghost mode: the row and dialog picking which switches Ghost mode turns (#251). %1$s is a list of switch names
+All of them. Tap to leave some out, and Ghost mode leaves those as you set them.	모두. 탭하여 일부를 제외하면 고스트 모드는 그 스위치를 설정한 그대로 둡니다.
+%1$s. The others stay as you set them.	%1$s. 나머지는 설정한 그대로 유지됩니다.
+Switches Ghost mode turns	고스트 모드가 바꾸는 스위치
+Ghost mode needs at least one switch to turn.	고스트 모드에는 바꿀 스위치가 하나 이상 필요합니다.
+# context: Ghost mode: turning it on or off with a long press on a tab (#255). %1$s is a tab's name
+Turn Ghost mode on or off with a tab long press	탭을 길게 탭하여 고스트 모드 켜고 끄기
+Tab long presses keep Instagram's own action. Choose one to turn Ghost mode on or off instead.	탭을 길게 탭하면 Instagram의 기본 동작이 실행됩니다. 고스트 모드를 대신 켜고 끌 탭을 하나 고르세요.
+Long press %1$s to turn Ghost mode on or off instead of that tab's usual action, and a toast says which way it went. Normal taps and other tabs stay the same. If the same tab opens HushGram or picks the playback quality, that comes first.	%1$s 탭을 길게 탭하면 해당 탭의 기본 동작 대신 고스트 모드를 켜거나 끄고, 짧은 메시지로 어느 쪽으로 바뀌었는지 알려 줍니다. 일반 탭과 다른 탭은 그대로입니다. 같은 탭이 HushGram을 열거나 재생 화질을 선택하는 경우 그쪽이 우선합니다.
+Buttons on the share sheet	공유 시트의 버튼
+Every button under the people on the share sheet shows. Untick the ones you don't use.	공유 시트에서 사람 목록 아래의 버튼이 모두 표시됩니다. 쓰지 않는 버튼은 체크를 해제하세요.
+Left off the share sheet: %1$s.	공유 시트에서 숨김: %1$s.
+Show all	모두 표시
+Add to story	스토리에 추가
+Share to	공유 대상
+Copy link	링크 복사
+QR code	QR 코드
+WhatsApp status	WhatsApp 상태
+Reply to author	작성자에게 답장
+Watch on TV	TV로 보기
+Download profile card	프로필 카드 다운로드
+Add to channel	채널에 추가
+WhatsApp	WhatsApp
+SMS	SMS
+Messenger	Messenger
+Facebook	Facebook
+Snapchat	Snapchat
+X	X
+Threads	Threads
+LINE	LINE
+KakaoTalk	KakaoTalk
+Discord	Discord
+Band	Band
+# context: Tabs on profiles row under Profiles; Reposts and Tagged are the names of Instagram's own profile tabs
+Tabs on profiles	프로필의 탭
+Every tab shows on profiles. Untick the ones you don't want. The grid of posts always stays.	프로필에 모든 탭이 표시됩니다. 원하지 않는 탭은 체크를 해제하세요. 게시물 그리드는 항상 남아 있습니다.
+Left off profiles: %1$s. The grid of posts stays.	프로필에서 숨긴 탭: %1$s. 게시물 그리드는 그대로 남습니다.
+Reposts	리포스트
+Tagged	태그됨
+# context: Show all recent searches switch under Explore; See all is Instagram's own row under the recent searches
+Show all recent searches	최근 검색 모두 표시
+Lists every recent search under the search bar, not just the first few. See all and the x on each row work as before.	검색창 아래에 처음 몇 개만이 아니라 최근 검색을 전부 보여 줍니다. 모두 보기와 각 줄의 x는 전과 똑같이 작동합니다.
+Hide the call buttons in chats	채팅에서 통화 버튼 숨기기
+Takes the voice and video call buttons off the top of a chat. The name keeps its room. Turn it off and they're back the next time a chat opens.	채팅 상단의 음성 통화 및 영상 통화 버튼을 없앱니다. 이름은 자리를 그대로 유지합니다. 끄면 다음에 채팅을 열 때 버튼이 다시 나타납니다.
+Buttons in the message box	메시지 입력창의 버튼
+Every button in the message box shows. Untick the ones you don't use. The text box and Send always stay.	메시지 입력창의 모든 버튼이 표시됩니다. 쓰지 않는 버튼은 선택을 해제하세요. 텍스트 입력란과 보내기는 항상 남습니다.
+Left off the message box: %1$s. The text box and Send stay.	메시지 입력창에서 뺀 버튼: %1$s. 텍스트 입력란과 보내기는 남습니다.
+Gallery	갤러리
+Stickers	스티커
+Voice message	음성 메시지

@@ -13,6 +13,7 @@ import static org.junit.Assert.assertTrue;
 import android.app.Activity;
 import android.content.Context;
 import android.os.SystemClock;
+import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -55,6 +56,10 @@ public class TimerLifecycleTest {
 
     private static final int BAR_ID = 0x7f0b0101;
     private static final int REELS_ID = 0x7f0b0170;
+    private static final int INFO_ID = 0x7f0b0171;
+    private static final int SCRUBBER_ID = 0x7f0b0172;
+    private static final int MEDIA_ID = 0x7f0b0173;
+    private static final int FOOTERS_ID = 0x7f0b0174;
 
     /** A list whose position the test sets. A group, like every list a scroll moves: a lone view is never taken for one. */
     static final class FakeList extends FrameLayout {
@@ -106,6 +111,10 @@ public class TimerLifecycleTest {
         synchronized (ids) {
             ids.remove(GlassTabBar.TAB_BAR);
             ids.remove(GlassTabBar.REELS_ROOT);
+            ids.remove(GlassTabBar.REEL_INFO);
+            ids.remove(GlassTabBar.SCRUBBER);
+            ids.remove(GlassTabBar.REEL_MEDIA);
+            ids.remove(GlassTabBar.REEL_FOOTERS);
         }
         Settings.GLASS_TAB_BAR.resetToDefault();
         Settings.GLASS_TAB_BAR_REELS_HIDE.resetToDefault();
@@ -265,33 +274,117 @@ public class TimerLifecycleTest {
         return ((ViewGroup.MarginLayoutParams) view.getLayoutParams()).bottomMargin;
     }
 
+    /** A reel in a Reels viewer, shaped as Instagram 451 builds one. */
+    private static final class Reel {
+        FrameLayout viewer;
+        LinearLayout column;
+        FrameLayout gesture;
+        View media;
+        FrameLayout layer;
+        FrameLayout infoBand;
+        FrameLayout scrubBand;
+        LinearLayout footers;
+    }
+
     /**
-     * #170: a floating pill keeps the Reels viewer above it, and once the wait on Reels has slid it all the
-     * way off, the viewer runs down to the bottom again. Before, the viewer kept the pill's height as its
-     * margin and a black band sat where the pill had been. It stops above the pill again as soon as a
-     * touch brings it back.
+     * Puts a Reels viewer over the list: a column of the reel, which takes what the footer under it
+     * leaves, and the footer, empty. In the reel, the video and over it a layer of controls, with the
+     * caption and the seek bar each in a band of its own.
      */
-    @Test public void aPillTheWaitOnReelsSlidAwayGivesTheReelTheRoomBack() {
-        LinearLayout tabs = namedTabBar();
-        FrameLayout viewer = showReels();
-        Settings.GLASS_TAB_BAR.save(true);
-        assertTrue(Settings.GLASS_TAB_BAR_FLOAT.get());
-        Settings.GLASS_TAB_BAR_REELS_HIDE.save(GlassReelsHide.TWO_SECONDS);
-        GlassTabBar.apply(activity);
-        idle(500);
-        int pill = tabs.getLayoutParams().height;
-        assertTrue(pill > 0);
-        assertEquals("above the pill while it shows", pill, bottomMargin(viewer));
+    private Reel showReel() {
+        Map<String, Integer> ids = ReflectionHelpers.getStaticField(GlassTabBar.class, "IDS");
+        synchronized (ids) {
+            ids.put(GlassTabBar.REELS_ROOT, REELS_ID);
+            ids.put(GlassTabBar.REEL_INFO, INFO_ID);
+            ids.put(GlassTabBar.SCRUBBER, SCRUBBER_ID);
+            ids.put(GlassTabBar.REEL_MEDIA, MEDIA_ID);
+            ids.put(GlassTabBar.REEL_FOOTERS, FOOTERS_ID);
+        }
+        int match = ViewGroup.LayoutParams.MATCH_PARENT;
+        Reel reel = new Reel();
+        reel.viewer = new FrameLayout(activity);
+        reel.viewer.setId(REELS_ID);
+        reel.column = new LinearLayout(activity);
+        reel.column.setOrientation(LinearLayout.VERTICAL);
+        reel.viewer.addView(reel.column, new FrameLayout.LayoutParams(match, match));
+        reel.gesture = new FrameLayout(activity);
+        reel.column.addView(reel.gesture, new LinearLayout.LayoutParams(match, 0, 1f));
+        FrameLayout page = new FrameLayout(activity);
+        reel.gesture.addView(page, new FrameLayout.LayoutParams(match, match));
+        reel.media = new View(activity);
+        reel.media.setId(MEDIA_ID);
+        page.addView(reel.media, new FrameLayout.LayoutParams(match, match));
+        reel.layer = new FrameLayout(activity);
+        page.addView(reel.layer, new FrameLayout.LayoutParams(match, match));
+        reel.infoBand = new FrameLayout(activity);
+        reel.layer.addView(reel.infoBand, new FrameLayout.LayoutParams(match, match));
+        View info = new View(activity);
+        info.setId(INFO_ID);
+        FrameLayout.LayoutParams infoParams = new FrameLayout.LayoutParams(900, 300, Gravity.BOTTOM);
+        infoParams.bottomMargin = 100;
+        reel.infoBand.addView(info, infoParams);
+        reel.scrubBand = new FrameLayout(activity);
+        reel.layer.addView(reel.scrubBand, new FrameLayout.LayoutParams(match, match));
+        View scrubber = new View(activity);
+        scrubber.setId(SCRUBBER_ID);
+        reel.scrubBand.addView(scrubber, new FrameLayout.LayoutParams(match, 30, Gravity.BOTTOM));
+        reel.footers = new LinearLayout(activity);
+        reel.footers.setOrientation(LinearLayout.VERTICAL);
+        reel.footers.setId(FOOTERS_ID);
+        reel.column.addView(reel.footers, new LinearLayout.LayoutParams(match, ViewGroup.LayoutParams.WRAP_CONTENT));
+        root.addView(reel.viewer, 1, new FrameLayout.LayoutParams(1080, match));
+        layout();
+        return reel;
+    }
+
+    /** That the reel's caption and seek bar are raised [by] over the pill, and the video and the layer over it stay put. */
+    private static void assertRaised(Reel reel, int by) {
+        assertEquals("the caption clears the pill", by, raisedBy(reel.infoBand));
+        assertEquals("and so does the seek bar", by, raisedBy(reel.scrubBand));
+        assertEquals("the video stays put", 0f, reel.media.getTranslationY(), 0f);
+        assertEquals(0, reel.media.getScrollY());
+        assertEquals("and so does the layer of controls", 0f, reel.layer.getTranslationY(), 0f);
+        assertEquals(0, reel.layer.getScrollY());
+    }
+
+    /** How far up [band] shows what it holds: its content's scroll, less its own translation. */
+    private static int raisedBy(View band) {
+        return Math.round(band.getScrollY() - band.getTranslationY());
+    }
+
+    /**
+     * Litho ending an animation of [view], a view it mounted in [lithoView]: it puts the view at [y]
+     * inside [lithoView], adding up where the views on the way sit, translations and all, but not their scrolls.
+     */
+    private static void lithoPlaces(View view, View lithoView, float y) {
+        float parentY = 0f;
+        for (View at = (View) view.getParent(); at != lithoView; at = (View) at.getParent()) parentY += at.getY();
+        view.setY(y - parentY);
+    }
+
+    /** Where [view]'s layout puts it inside [lithoView]. */
+    private static float laidOutIn(View view, View lithoView) {
+        float y = 0f;
+        for (View at = view; at != lithoView; at = (View) at.getParent()) y += at.getTop();
+        return y;
+    }
+
+    private static int topOnScreen(View view) {
         int[] at = new int[2];
-        tabs.getLocationOnScreen(at);
-        float x = at[0] + tabs.getWidth() / 2f, y = at[1] + tabs.getHeight() / 2f;
+        view.getLocationOnScreen(at);
+        return at[1];
+    }
 
-        idle(2500);
-        assertTrue("the pill slid away", tabs.getTranslationY() > 50f);
-        idle(500);
-        assertEquals("the reel runs to the bottom", 0, bottomMargin(viewer));
+    /** The middle of [view] on the screen, where it sits now. */
+    private static float[] middleOf(View view) {
+        int[] at = new int[2];
+        view.getLocationOnScreen(at);
+        return new float[]{at[0] + view.getWidth() / 2f, at[1] + view.getHeight() / 2f};
+    }
 
-        // A tap where the pill sits brings it back.
+    /** A tap at [spot], through the window, as the wait on Reels reads it. */
+    private void tapAt(float[] spot) {
+        float x = spot[0], y = spot[1];
         long now = SystemClock.uptimeMillis();
         MotionEvent down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x, y, 0);
         MotionEvent up = MotionEvent.obtain(now, now + 40, MotionEvent.ACTION_UP, x, y, 0);
@@ -302,20 +395,58 @@ public class TimerLifecycleTest {
             down.recycle();
             up.recycle();
         }
+    }
+
+    /**
+     * #221: under a floating pill the Reels viewer runs on behind it at one size, with the reel's caption
+     * and seek bar raised clear of it, and nothing moves while the wait on Reels slides the pill away and
+     * a tap brings it back. Before, the viewer stopped above the pill and grew when it slid off, so the
+     * video rescaled and the caption dropped (and before #170, a black band sat where the pill had been).
+     */
+    @Test public void aReelKeepsItsSizeAndItsCaptionWhileThePillSlidesAwayAndBack() {
+        LinearLayout tabs = namedTabBar();
+        Reel reel = showReel();
+        Settings.GLASS_TAB_BAR.save(true);
+        assertTrue(Settings.GLASS_TAB_BAR_FLOAT.get());
+        Settings.GLASS_TAB_BAR_REELS_HIDE.save(GlassReelsHide.TWO_SECONDS);
+        GlassTabBar.apply(activity);
         idle(500);
+        int pill = tabs.getLayoutParams().height;
+        assertTrue(pill > 0);
+        assertEquals("the reel runs on behind the pill", 0, bottomMargin(reel.viewer));
+        layout();
+        int height = reel.media.getHeight();
+        assertEquals(reel.viewer.getHeight(), height);
+        assertRaised(reel, pill);
+        float[] spot = middleOf(tabs);
+
+        idle(2500);
+        assertTrue("the pill slid away", tabs.getTranslationY() > 50f);
+        idle(500);
+        layout();
+        assertEquals("the reel keeps its margin", 0, bottomMargin(reel.viewer));
+        assertEquals("and its size", height, reel.media.getHeight());
+        assertRaised(reel, pill);
+
+        tapAt(spot);
+        idle(500);
+        layout();
         assertEquals("the pill is back", 0f, tabs.getTranslationY(), 0f);
-        assertEquals("and the reel stops above it again", pill, bottomMargin(viewer));
+        assertEquals(0, bottomMargin(reel.viewer));
+        assertEquals(height, reel.media.getHeight());
+        assertRaised(reel, pill);
         GlassTabBar.restoreAll();
     }
 
     /**
-     * #221: with the screens run behind the gesture handle, a pill slid away gives the reel its room back
-     * only down to the navigation bar's height Instagram was answered 0 for. Run to the bottom edge, the
-     * reel's seek bar sat in the handle's reach and took no touches.
+     * #221: with the screens run behind the gesture handle, the reel stops at the navigation bar's height
+     * Instagram was answered 0 for, whether the pill shows or not, and its caption and seek bar rise by the
+     * rest of the pill. Run to the bottom edge, the reel's seek bar sat in the handle's reach and took no
+     * touches.
      */
-    @Test public void aReelGivenTheRoomBackStillStopsAboveTheGestureHandle() {
+    @Test public void aReelStopsAboveTheGestureHandleWhetherThePillShowsOrNot() {
         LinearLayout tabs = namedTabBar();
-        FrameLayout viewer = showReels();
+        Reel reel = showReel();
         Settings.GLASS_TAB_BAR.save(true);
         Settings.GLASS_TAB_BAR_REELS_HIDE.save(GlassReelsHide.TWO_SECONDS);
         GlassTabBar.apply(activity);
@@ -328,29 +459,139 @@ public class TimerLifecycleTest {
         idle(500);
         int pill = tabs.getLayoutParams().height;
         assertEquals("the pill made room for the handle", 150 + 63, pill);
-        assertEquals("above the pill while it shows", pill, bottomMargin(viewer));
-        int[] at = new int[2];
-        tabs.getLocationOnScreen(at);
-        float x = at[0] + tabs.getWidth() / 2f, y = at[1] + tabs.getHeight() / 2f;
+        assertEquals("the reel stops above the handle", 63, bottomMargin(reel.viewer));
+        assertRaised(reel, 150);
+        float[] spot = middleOf(tabs);
 
         idle(2500);
         assertTrue("the pill slid away", tabs.getTranslationY() > 50f);
         idle(500);
-        assertEquals("the reel stops above the handle", 63, bottomMargin(viewer));
+        assertEquals("the reel stays above the handle", 63, bottomMargin(reel.viewer));
+        assertRaised(reel, 150);
 
-        long now = SystemClock.uptimeMillis();
-        MotionEvent down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x, y, 0);
-        MotionEvent up = MotionEvent.obtain(now, now + 40, MotionEvent.ACTION_UP, x, y, 0);
-        try {
-            activity.getWindow().getCallback().dispatchTouchEvent(down);
-            activity.getWindow().getCallback().dispatchTouchEvent(up);
-        } finally {
-            down.recycle();
-            up.recycle();
-        }
+        tapAt(spot);
         idle(500);
         assertEquals("the pill is back", 0f, tabs.getTranslationY(), 0f);
-        assertEquals("and the reel stops above it again", tabs.getLayoutParams().height, bottomMargin(viewer));
+        assertEquals(63, bottomMargin(reel.viewer));
+        assertRaised(reel, 150);
+        GlassTabBar.restoreAll();
+    }
+
+    /**
+     * #260: Instagram hides its bar for a paused reel and shows the reel's controls in a footer under it,
+     * shrinking the reel to make room. Under a floating pill the footer lies over the reel's bottom
+     * instead, the frame Instagram laid out shrunk is held back, and the caption and seek bar go up by the
+     * footer's height in place of the pill's. Before, the reel shrank and the viewer then grew back over
+     * the pill's room a frame later, so the video jumped twice.
+     */
+    @Test public void aPausedReelsFooterLiesOverTheReelInsteadOfShrinkingIt() {
+        LinearLayout tabs = namedTabBar();
+        Reel reel = showReel();
+        Settings.GLASS_TAB_BAR.save(true);
+        GlassTabBar.apply(activity);
+        idle(500);
+        int pill = tabs.getLayoutParams().height;
+        layout();
+        int height = reel.media.getHeight();
+        assertRaised(reel, pill);
+
+        tabs.setVisibility(View.GONE);
+        View controls = new View(activity);
+        reel.footers.addView(controls, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 120));
+        layout();
+        assertEquals("Instagram shrinks the reel over the footer", height - 120, reel.media.getHeight());
+        assertTrue("that frame is held back", tabs.getViewTreeObserver().dispatchOnPreDraw());
+        layout();
+        assertEquals("the footer lies over the reel", -120, ((ViewGroup.MarginLayoutParams) reel.footers.getLayoutParams()).topMargin);
+        assertEquals("which keeps its size", height, reel.media.getHeight());
+        assertEquals("the footer sits on the reel's bottom", reel.column.getHeight() - 120, reel.footers.getTop());
+        assertEquals("the viewer's margin stays", 0, bottomMargin(reel.viewer));
+        assertRaised(reel, 120);
+        assertEquals("with no pill, the footer stays down", 0f, reel.footers.getTranslationY(), 0f);
+        assertFalse("a frame that changes nothing goes ahead", tabs.getViewTreeObserver().dispatchOnPreDraw());
+
+        // Played again: the footer empties and the bar comes back.
+        reel.footers.removeView(controls);
+        tabs.setVisibility(View.VISIBLE);
+        layout();
+        tabs.getViewTreeObserver().dispatchOnPreDraw();
+        layout();
+        assertEquals(0, ((ViewGroup.MarginLayoutParams) reel.footers.getLayoutParams()).topMargin);
+        assertEquals(height, reel.media.getHeight());
+        assertRaised(reel, pill);
+        GlassTabBar.restoreAll();
+    }
+
+    /**
+     * Instagram hands a reel's views on to other reels once they come off the window. One raised over the
+     * pill is put back as it comes off, so it never carries the lift to where it's mounted next, and it's
+     * raised again once back on a reel. A translation Instagram gives one is left to Instagram.
+     */
+    @Test public void aRaisedViewIsPutBackAsItComesOffAndInstagramsOwnMoveStays() {
+        LinearLayout tabs = namedTabBar();
+        Reel reel = showReel();
+        Settings.GLASS_TAB_BAR.save(true);
+        GlassTabBar.apply(activity);
+        idle(500);
+        int pill = tabs.getLayoutParams().height;
+        assertRaised(reel, pill);
+
+        reel.layer.removeView(reel.infoBand);
+        assertEquals("put back as it came off", 0, raisedBy(reel.infoBand));
+        assertEquals(0, reel.infoBand.getScrollY());
+        reel.layer.addView(reel.infoBand, 0);
+        tabs.getViewTreeObserver().dispatchOnPreDraw();
+        assertRaised(reel, pill);
+
+        reel.scrubBand.setTranslationY(-40f);
+        tabs.getViewTreeObserver().dispatchOnPreDraw();
+        assertEquals("Instagram's move stays", -40f, reel.scrubBand.getTranslationY(), 0f);
+        assertEquals("and the seek bar stays up", pill + 40, raisedBy(reel.scrubBand));
+        reel.scrubBand.setTranslationY(0f);
+        tabs.getViewTreeObserver().dispatchOnPreDraw();
+        assertRaised(reel, pill);
+
+        reel.scrubBand.scrollTo(0, 25);
+        tabs.getViewTreeObserver().dispatchOnPreDraw();
+        assertEquals("Instagram's scroll stays", 25, reel.scrubBand.getScrollY());
+        assertEquals("and the seek bar is raised by moving it", pill + 25, raisedBy(reel.scrubBand));
+        reel.scrubBand.scrollTo(0, 0);
+        tabs.getViewTreeObserver().dispatchOnPreDraw();
+        assertRaised(reel, pill);
+        assertEquals(0f, reel.scrubBand.getTranslationY(), 0f);
+        GlassTabBar.restoreAll();
+    }
+
+    /**
+     * #221: a reel's caption and seek bar stay clear of the pill after Instagram animates them, as it does
+     * when a sheet over the reel closes. Instagram's Litho puts an animated view back where its layout says
+     * by adding up the translations of the views it sits in, so a band raised by translation had its
+     * caption pushed back down by the pill's height. A band is raised by scrolling its content instead, and
+     * one too short for that is translated only for the rest.
+     */
+    @Test public void aReelsCaptionStaysClearOfThePillAfterInstagramAnimatesIt() {
+        LinearLayout tabs = namedTabBar();
+        Reel reel = showReel();
+        // A seek bar's band only a little taller than the seek bar, as Instagram's is.
+        reel.scrubBand.setLayoutParams(new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 80, Gravity.BOTTOM));
+        layout();
+        Settings.GLASS_TAB_BAR.save(true);
+        GlassTabBar.apply(activity);
+        idle(500);
+        int pill = tabs.getLayoutParams().height;
+        assertTrue(pill > 50);
+        assertRaised(reel, pill);
+        View info = reel.infoBand.findViewById(INFO_ID);
+        View page = (View) reel.layer.getParent();
+        int raisedTo = topOnScreen(info);
+        assertEquals(topOnScreen(reel.media) + Math.round(laidOutIn(info, page)) - pill, raisedTo);
+
+        lithoPlaces(info, page, laidOutIn(info, page));
+        tabs.getViewTreeObserver().dispatchOnPreDraw();
+        assertEquals("the caption stays clear of the pill", raisedTo, topOnScreen(info));
+        assertEquals("the caption's band scrolls", 0f, reel.infoBand.getTranslationY(), 0f);
+        assertEquals("the seek bar's band scrolls as far as it has room", 50, reel.scrubBand.getScrollY());
+        assertEquals("and moves for the rest", -(pill - 50), reel.scrubBand.getTranslationY(), 0f);
         GlassTabBar.restoreAll();
     }
 

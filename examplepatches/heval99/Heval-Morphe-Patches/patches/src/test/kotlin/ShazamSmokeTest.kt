@@ -1,9 +1,11 @@
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
+import com.android.tools.smali.dexlib2.iface.instruction.OffsetInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.RegisterRangeInstruction
+import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import org.junit.jupiter.api.Assumptions.assumeTrue
@@ -17,6 +19,11 @@ private const val CRASHLYTICS = "Lcom/google/firebase/crashlytics/FirebaseCrashl
 private const val OPEN_IN_EXTENSION = "Lapp/template/extension/shazam/OpenInMorpheAppsPatch;"
 private const val STREAMING_PROVIDER_TO_STRING = "StreamingProvider(streamingProviderId="
 private const val STRING = "Ljava/lang/String;"
+private const val SPOTIFY_NATIVE_AUTH_UTIL = "Lcom/spotify/sdk/android/auth/app/SpotifyNativeAuthUtil;"
+private const val SPOTIFY_AUTHORIZATION_CLIENT = "Lcom/spotify/sdk/android/auth/AuthorizationClient;"
+private const val SPOTIFY_WEBVIEW_AUTH_HANDLER = "Lcom/spotify/sdk/android/auth/webview/WebViewAuthHandler;"
+private const val SPLASH_ACTIVITY = "Lcom/shazam/android/activities/SplashActivity;"
+private const val SIGNATURE_SHA1 = "b804e188301813b5d8d47d0bb2280607c16fd8b6"
 
 class ShazamSmokeTest {
 
@@ -36,13 +43,13 @@ class ShazamSmokeTest {
             workDir = workDir,
             pkg = PKG,
             version = "16.63.0-261008",
-            patchNames = setOf("Disable telemetry", "Open in Morphe YouTube apps"),
+            patchNames = setOf("Disable telemetry", "Open in Morphe YouTube apps", "Spoof signature", "GmsCore support"),
             allPatches = loadAllPatches(newestPatchBundle(root)),
         )
     }
 
     @Test
-    fun `Shazam patches neuter telemetry and remap Open in YouTube providers`() {
+    fun `Shazam patches neuter telemetry, remap Open in YouTube providers, spoof the signature and add GmsCore support`() {
         val classes = loadClasses()
         val byType = classes.associateBy { it.type }
 
@@ -166,5 +173,75 @@ class ShazamSmokeTest {
         check(manifest.contains("<package android:name=\"com.google.android.apps.youtube.music\"")) {
             "<queries> lost the original stock YouTube Music entry"
         }
+
+        // --- GmsCore support ---
+
+        // No Google ad SDK in Shazam, and R8 removed ensurePlayServicesAvailable (its message is
+        // left only in the exception constructor). androidx.credentials picks the Identity
+        // Credentials API by version, so those tests must read false.
+        assertGmsCoreSupport(
+            classes, workDir, PKG, SPLASH_ACTIVITY, SIGNATURE_SHA1,
+            expectCredentialRouting = true, expectAdsClasses = false, expectServiceCheck = false,
+        )
+
+        // Its silent Google sign-in entry (R8-renamed; found like the patch: the pref string and the
+        // (Context, String, Z, continuation) shape) returns Boolean.FALSE first when silent (p3) is set.
+        val silentSignIn = classes.flatMap { cls -> cls.methods.map { cls to it } }.filter { (_, m) ->
+            m.returnType == "Ljava/lang/Object;" &&
+                m.parameterTypes.map(CharSequence::toString).let { p ->
+                    p.size == 4 && p[0] == "Landroid/content/Context;" && p[1] == STRING && p[2] == "Z" && p[3].startsWith("L")
+                } &&
+                m.instructions().any { it.stringOrNull() == "prefkey_should_attempt_silent_sign_in" }
+        }
+        check(silentSignIn.size == 1) { "expected one silent sign-in entry, found ${silentSignIn.map { (c, m) -> "${c.type}.${m.name}" }}" }
+        val (silentClass, silentMethod) = silentSignIn.single()
+        val silentLabel = "${silentClass.type}.${silentMethod.name} (silent sign-in)"
+        val silentInsns = silentMethod.instructions()
+        val silentRegister = silentMethod.implementation!!.registerCount - 5 + 3 // this + 4 params; p3
+        val branch = silentInsns.getOrNull(0)
+        check(branch?.opcode == Opcode.IF_EQZ && (branch as OneRegisterInstruction).registerA == silentRegister) {
+            "$silentLabel does not start with if-eqz p3; got ${branch?.opcode}"
+        }
+        val falseRef = (silentInsns.getOrNull(1) as? ReferenceInstruction)?.reference as? FieldReference
+        check(
+            silentInsns.getOrNull(1)?.opcode == Opcode.SGET_OBJECT &&
+                falseRef?.definingClass == "Ljava/lang/Boolean;" && falseRef.name == "FALSE"
+        ) { "$silentLabel does not load Boolean.FALSE; got ${silentInsns.getOrNull(1)?.opcode} $falseRef" }
+        val ret = silentInsns.getOrNull(2)
+        check(
+            ret?.opcode == Opcode.RETURN_OBJECT &&
+                (ret as OneRegisterInstruction).registerA == (silentInsns[1] as OneRegisterInstruction).registerA
+        ) { "$silentLabel does not return Boolean.FALSE at once; got ${ret?.opcode}" }
+        // The branch skips exactly the early return: the stock code continues right after it.
+        val target = (branch as OffsetInstruction).codeOffset
+        val earlyReturnUnits = silentInsns.take(3).sumOf { it.codeUnits }
+        check(target == earlyReturnUnits) { "$silentLabel: if-eqz p3 jumps $target code units, expected $earlyReturnUnits" }
+
+        // --- Spoof signature ---
+
+        assertSpoofSignature(classes, PKG, SIGNATURE_SHA1)
+
+        // Its Spotify login fallback: the Spotify-app SSO hand-off reports "not available" at once...
+        val nativeAuthUtil = byType[SPOTIFY_NATIVE_AUTH_UTIL]
+            ?: error("$SPOTIFY_NATIVE_AUTH_UTIL not found in emitted dexes")
+        val startAuthActivity = nativeAuthUtil.method("startAuthActivity", emptyList())
+        assertForcedBoolean(startAuthActivity, expected = false, label = "SpotifyNativeAuthUtil.startAuthActivity()")
+        check(startAuthActivity.returnType == "Z") { "startAuthActivity() no longer returns boolean" }
+
+        // ...so AuthorizationClient must still register WebViewAuthHandler as the next handler,
+        // otherwise the patch would leave Shazam with no way to log in at all.
+        val authorizationClient = byType[SPOTIFY_AUTHORIZATION_CLIENT]
+            ?: error("$SPOTIFY_AUTHORIZATION_CLIENT not found in emitted dexes")
+        val registersWebView = authorizationClient.methods
+            .filter { it.name == "<init>" }
+            .any { constructor ->
+                constructor.instructions().any { insn ->
+                    insn.opcode == Opcode.INVOKE_DIRECT &&
+                        ((insn as ReferenceInstruction).reference as? MethodReference)?.let {
+                            it.definingClass == SPOTIFY_WEBVIEW_AUTH_HANDLER && it.name == "<init>"
+                        } == true
+                }
+            }
+        check(registersWebView) { "$SPOTIFY_AUTHORIZATION_CLIENT no longer builds $SPOTIFY_WEBVIEW_AUTH_HANDLER" }
     }
 }

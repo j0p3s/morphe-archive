@@ -16,6 +16,7 @@ import com.android.tools.smali.dexlib2.Opcode
 
 private const val NETSHIELD_AVAILABILITY_READ_DISTANCE = 3
 private const val NETSHIELD_RESET_READ_DISTANCE = 8
+private const val NETSHIELD_PROPERTY = "NetShield"
 private const val LOCAL_USER_SETTINGS = "Lcom/protonvpn/android/settings/data/LocalUserSettings;"
 
 internal object NetShieldAvailabilityEnumFingerprint : Fingerprint(
@@ -38,15 +39,15 @@ internal fun BytecodePatchContext.netShieldAvailabilityFingerprint(): Fingerprin
 }
 
 internal fun BytecodePatchContext.netShieldResetFingerprint(): Fingerprint {
-    val netShieldGetter = classDefBy(LOCAL_USER_SETTINGS).methods.single { it.name == "getNetShield" }
+    val netShieldGetters = classDefBy(LOCAL_USER_SETTINGS).methods.filter {
+        NETSHIELD_PROPERTY in it.name && it.parameterTypes.isEmpty() && it.returnType != "V"
+    }
+    val netShieldReads = netShieldGetters.map { methodCall(it) } +
+        netShieldGetters.filter { it.returnType.startsWith("L") }.map { checkCast(it.returnType) }
     return freeUserCheckFingerprint(
         strings = listOf("reset default profile: "),
         followingFilters = arrayOf(
-            anyInstruction(
-                checkCast(netShieldGetter.returnType),
-                methodCall(netShieldGetter),
-                location = MatchAfterWithin(NETSHIELD_RESET_READ_DISTANCE),
-            ),
+            anyInstruction(*netShieldReads.toTypedArray(), location = MatchAfterWithin(NETSHIELD_RESET_READ_DISTANCE)),
         ),
     )
 }

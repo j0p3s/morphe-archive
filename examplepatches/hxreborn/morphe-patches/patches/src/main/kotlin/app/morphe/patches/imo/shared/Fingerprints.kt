@@ -6,7 +6,7 @@ package app.morphe.patches.imo.shared
 
 import app.morphe.patcher.Fingerprint
 
-private const val REMOTE_SETTINGS_CLASS = "Lcom/imo/android/imoim/setting/IMOSettingsDelegate;"
+private const val SETTINGS_DELEGATE_SUFFIX = "SettingsDelegate;"
 
 internal abstract class RemoteSettingFingerprint(getterName: String) :
-    Fingerprint(definingClass = REMOTE_SETTINGS_CLASS, name = getterName)
+    Fingerprint(definingClass = SETTINGS_DELEGATE_SUFFIX, name = getterName)

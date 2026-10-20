@@ -9,7 +9,7 @@ private val EMPTY_TRANSPARENT_PNG by lazy {
         0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06,
         0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4.toByte(), 0x89.toByte(), 0x00, 0x00, 0x00, 0x0B,
         0x49, 0x44, 0x41, 0x54, 0x78, 0x9C.toByte(), 0x63, 0x60, 0x00, 0x02, 0x00, 0x00, 0x05, 0x00,
-        0x01, 0xE9.toByte(), 0xFA.toByte(), 0xDC.toByte(), 0xD8.toByte(), 0x00, 0x00, 0x00,
+        0x01, 0x7A, 0x5E, 0xAB.toByte(), 0x3F, 0x00, 0x00, 0x00,
         0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE.toByte(), 0x42, 0x60, 0x82.toByte()
     )
 }
@@ -35,7 +35,7 @@ val hevyResourceSlimmerPatch = resourcePatch(
         var stubbedMediaCount = 0
         var junkFilesCount = 0
 
-        val apkRoot = get("AndroidManifest.xml").parentFile ?: get(".")
+        val apkRoot = get(".").absoluteFile.normalize()
         val protectedPrefixes = listOf("assets", "res", "smali", "lib")
 
         // 1. Clean up build properties, compiler junk, and obsolete licenses in APK root
@@ -46,6 +46,7 @@ val hevyResourceSlimmerPatch = resourcePatch(
 
             if (topDir in protectedPrefixes) return@forEach
             if (relativePath == "AndroidManifest.xml" || relativePath.startsWith("META-INF/services/")) return@forEach
+            if ('/' in relativePath && topDir != "META-INF") return@forEach
 
             val name = file.name
             val isJunk = name.endsWith(".properties") ||

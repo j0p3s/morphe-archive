@@ -1,4 +1,5 @@
 import com.android.tools.smali.dexlib2.AccessFlags
+import com.android.tools.smali.dexlib2.Format
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.Method
@@ -34,10 +35,14 @@ private const val ADS_SWITCH_VIEW = "Lcom/truecaller/ads/ui/AdsSwitchView;"
 private const val AD_LAYOUT_TYPE = "Lcom/truecaller/ads/AdLayoutTypeX;"
 private const val BOTTOM_BAR_BUTTON_TYPE = "Lcom/truecaller/bottombar/BottomBarButtonType;"
 private const val BOTTOM_BAR_VIEW = "Lcom/truecaller/bottombar/BottomBarView;"
+private const val RECYCLER_VIEW = "Landroidx/recyclerview/widget/RecyclerView;"
 private const val AD_PLACEMENT = "Lcom/truecaller/ads/api/model/ad/AdPlacement;"
 private const val FEATURE_STATE = "Lcom/truecaller/featuretoggles/FeatureState;"
 private const val T9_REBUILD_ALL_KEY = "RefreshT9MappingWorker.RebuildAll"
 private const val T9_INCREMENTAL_HELPER = "morpheRefreshT9Incremental"
+private const val CLEVERTAP_FEATURE_KEY = "featureCleverTap"
+private const val CRASHLYTICS_COLLECTION_KEY = "firebase_crashlytics_collection_enabled"
+private const val CONTACT_TYPE = "Lcom/truecaller/enterpriseinfo/api/model/ContactType;"
 
 class TruecallerSmokeTest {
 
@@ -113,6 +118,7 @@ class TruecallerSmokeTest {
                 "Use SMS for verification codes",
                 "Fix T9 contact search",
                 "Hide Wear OS settings",
+                "Hide business media",
                 "GmsCore support",
                 "Spoof signature",
             ),
@@ -129,8 +135,10 @@ class TruecallerSmokeTest {
         assertHideMessagesTab(classes)
         assertHiddenSettingsRows(classes)
         assertToggleOverrides(classes)
+        assertClassicCallLogSwipe(classes, byType)
         assertUseSmsVerification(classes)
         assertFixT9ContactSearch(classes, byType)
+        assertHideBusinessMedia(classes)
         // onGetCredential tests isAvailableOnDevice(int) in this build, so the routing applies.
         assertGmsCoreSupport(classes, workDir, PKG, TRUECALLER_INIT, SIGNATURE_SHA1, expectCredentialRouting = true)
         assertSpoofSignature(classes, PKG, SIGNATURE_SHA1)
@@ -358,6 +366,100 @@ class TruecallerSmokeTest {
             check(starts.any { it.params().size == 1 }) { "${cls.type} has no start(Context)" }
             starts.forEach { assertReturnsEarlyVoid(it, label = "${cls.type}.start(${it.params().joinToString()})") }
         }
+
+        // Every getBoolean("featureCleverTap", ...) read outside the QA menu is zeroed right after
+        // its move-result (SDK init + second gate, CRM push handler, refresh work action).
+        val cleverTapReads = forcedReads(classes, CLEVERTAP_FEATURE_KEY, skipPrefix = "Lcom/truecaller/qa/", isRead = {
+            it.definingClass == "Landroid/content/SharedPreferences;" && it.name == "getBoolean"
+        }) { forced, result ->
+            (forced.opcode == Opcode.CONST_4 || forced.opcode == Opcode.CONST_16) &&
+                (forced as OneRegisterInstruction).registerA == result && (forced as NarrowLiteralInstruction).narrowLiteral == 0
+        }
+        check(cleverTapReads >= 4) { "only $cleverTapReads featureCleverTap reads forced to false, expected at least 4" }
+
+        // Firebase Analytics: the measurement config's Boolean get(key) reads deactivated = TRUE and
+        // advertising ID collection = FALSE right after its move-result-object.
+        val isConfigRead: (MethodReference) -> Boolean = {
+            it.returnType == "Ljava/lang/Boolean;" && it.parameterTypes.map(CharSequence::toString) == listOf("Ljava/lang/String;")
+        }
+        fun loadsBoolean(name: String): (Instruction, Int) -> Boolean = { forced, result ->
+            forced.opcode == Opcode.SGET_OBJECT && (forced as OneRegisterInstruction).registerA == result &&
+                forced.field()?.definingClass == "Ljava/lang/Boolean;" && forced.field()?.name == name
+        }
+        val deactivated = forcedReads(classes, "firebase_analytics_collection_deactivated", isRead = isConfigRead, isForced = loadsBoolean("TRUE"))
+        check(deactivated >= 1) { "firebase_analytics_collection_deactivated is not forced to TRUE" }
+        val adid = forcedReads(classes, "google_analytics_adid_collection_enabled", isRead = isConfigRead, isForced = loadsBoolean("FALSE"))
+        check(adid >= 2) { "only $adid google_analytics_adid_collection_enabled reads forced to FALSE, expected 2" }
+
+        // Crashlytics: every ()Z getter of the data collection arbiter returns false.
+        val arbiters = classes.filter { cls ->
+            cls.methods.any { CRASHLYTICS_COLLECTION_KEY in it.strings() } &&
+                cls.methods.any { "Crashlytics automatic data collection " in it.strings() }
+        }
+        check(arbiters.size == 1) { "expected one Crashlytics data collection arbiter, found ${arbiters.map { it.type }}" }
+        val getters = arbiters.single().methods.filter { it.returnType == "Z" && it.parameterTypes.isEmpty() && it.implementation != null }
+        check(getters.isNotEmpty()) { "${arbiters.single().type} has no ()Z getter" }
+        getters.forEach { assertForcedBoolean(it, expected = false, label = "${arbiters.single().type}.${it.name}() (Crashlytics collection)") }
+
+        // Firebase Sessions: the manifest override getter returns Boolean.FALSE at once.
+        val (sessionsClass, sessions) = classes.singleMethod("Firebase Sessions enabled override") { _, m ->
+            m.returnType == "Ljava/lang/Boolean;" && m.parameterTypes.isEmpty() && "firebase_sessions_enabled" in m.strings() &&
+                m.instructions().any { it.call()?.definingClass == "Landroid/os/BaseBundle;" && it.call()?.name == "getBoolean" }
+        }
+        val sessionsInsns = sessions.instructions()
+        check(sessionsInsns.getOrNull(0)?.let { loadsBoolean("FALSE")(it, (it as? OneRegisterInstruction)?.registerA ?: -1) } == true &&
+            sessionsInsns.getOrNull(1)?.opcode == Opcode.RETURN_OBJECT &&
+            (sessionsInsns[1] as OneRegisterInstruction).registerA == (sessionsInsns[0] as OneRegisterInstruction).registerA
+        ) { "${sessionsClass.type}.${sessions.name}() does not return Boolean.FALSE at once" }
+
+        // The switches are bytecode-only: the manifest keeps its stock Crashlytics flag and gains none.
+        val manifest = workDir.walkTopDown()
+            .filter { it.name == "AndroidManifest.xml" }
+            .map { it.readText() }
+            .firstOrNull { it.contains("package=\"$PKG\"") && it.contains("<application") }
+            ?: error("no decoded $PKG AndroidManifest.xml under $workDir")
+        check(Regex("""android:name="firebase_crashlytics_collection_enabled"\s+android:value="true"""").containsMatchIn(manifest) &&
+            "firebase_analytics_collection_deactivated" !in manifest && "firebase_sessions_enabled" !in manifest
+        ) { "Disable telemetry changed the Firebase manifest meta-data" }
+    }
+
+    /**
+     * Counts the reads of [key] (a const-string whose register is next passed as the key, at
+     * argument 1, to a call [isRead] accepts) whose result is overwritten right after its
+     * move-result by an instruction [isForced] accepts; fails on any read that is not forced.
+     */
+    private fun forcedReads(
+        classes: List<ClassDef>,
+        key: String,
+        skipPrefix: String? = null,
+        isRead: (MethodReference) -> Boolean,
+        isForced: (Instruction, Int) -> Boolean,
+    ): Int {
+        var forced = 0
+        for ((cls, method) in classes.methodsWhere { cls, m -> (skipPrefix == null || !cls.type.startsWith(skipPrefix)) && key in m.strings() }) {
+            val insns = method.instructions()
+            for (index in insns.indices.filter { insns[it].stringOrNull() == key }) {
+                val register = (insns[index] as OneRegisterInstruction).registerA
+                val use = (index + 1 until insns.size).firstOrNull { insns[it].arguments()?.contains(register) == true } ?: continue
+                val call = insns[use].call()
+                if (call == null || !isRead(call) || insns[use].arguments()?.getOrNull(1) != register) continue
+                val label = "${cls.type}.${method.name} ($key read)"
+                val result = insns.getOrNull(use + 1)
+                check(result?.opcode == Opcode.MOVE_RESULT || result?.opcode == Opcode.MOVE_RESULT_OBJECT) { "$label has no move-result" }
+                val next = insns.getOrNull(use + 2)
+                check(next != null && isForced(next, (result as OneRegisterInstruction).registerA)) {
+                    "$label is not forced after its move-result; got ${next?.opcode}"
+                }
+                forced++
+            }
+        }
+        return forced
+    }
+
+    private fun Instruction.arguments(): List<Int>? = when (this) {
+        is RegisterRangeInstruction -> (startRegister until startRegister + registerCount).toList()
+        is FiveRegisterInstruction -> listOf(registerC, registerD, registerE, registerF, registerG).take(registerCount)
+        else -> null
     }
 
     private fun assertDisableUpdatePrompts(classes: List<ClassDef>) {
@@ -552,7 +654,8 @@ class TruecallerSmokeTest {
     private fun assertToggleOverrides(classes: List<ClassDef>) {
         // The SharedPreferences toggle resolver starts with one "key.equals(p1) -> return value"
         // block per override, each falling through to the next and finally to the stock code.
-        // Hide family button and Restore classic call log add one each, Disable ads four.
+        // Hide family button and Restore classic call log add one each, Disable ads five (incl. the
+        // Offer Hub), Hide business media the seven verified business campaign toggles.
         val (cls, resolver) = classes.singleMethod("feature toggle resolver") { _, m ->
             m.returnType == "Z" && m.params() == listOf("Ljava/lang/String;", FEATURE_STATE) &&
                 m.instructions().any { it.call()?.definingClass == "Landroid/content/SharedPreferences;" && it.call()?.name == "getBoolean" }
@@ -567,6 +670,14 @@ class TruecallerSmokeTest {
             "featureAdsRestrictCampaignProcessing" to 1,
             "featureConfigManagementSystem" to 0,
             "featureEnableOfflineAds" to 0,
+            "featureAdsOnOfferHub" to 0,
+            "featureBizVerifiedCampaigns" to 0,
+            "featureBizVerifiedCampaignForOutgoingCalls" to 0,
+            "featureBizVerifiedCampaignInRevampedInCallUi" to 0,
+            "featureBizVerifiedCampaignsCarouselACS" to 0,
+            "featureBizVerifiedCampaignsDetailsView" to 0,
+            "featureBizVerifiedCampaignsCarouselDetailsView" to 0,
+            "featureBizVerifiedCampaignsDV3" to 0,
         )
         val overrides = mutableMapOf<String, Int>()
         for (block in expected.keys.indices) {
@@ -588,6 +699,47 @@ class TruecallerSmokeTest {
         check(next?.opcode != Opcode.CONST_STRING || insns.getOrNull(expected.size * 6 + 1)?.call()?.name != "equals") {
             "$label has more than ${expected.size} override blocks"
         }
+    }
+
+    private fun assertClassicCallLogSwipe(classes: List<ClassDef>, byType: Map<String, ClassDef>) {
+        // "featureCallLogRevamp" is checked in assertToggleOverrides. The classic lists' RecyclerView
+        // setup reads "featureFavouriteContacts" and, with it on, skipped the swipe helper; the
+        // result is now replaced with false right before that branch.
+        val calls = listOf("addOnItemTouchListener", "addItemDecoration", "setItemAnimator", "setHasFixedSize")
+        fun List<Instruction>.recyclerCall(name: String) =
+            indexOfFirst { it.call()?.definingClass == RECYCLER_VIEW && it.call()?.name == name }
+        val (cls, setup) = classes.singleMethod("call log RecyclerView setup") { _, m ->
+            m.returnType == "V" && m.parameterTypes.isEmpty() && m.implementation != null &&
+                m.instructions().let { insns -> calls.map { insns.recyclerCall(it) } }.let { it.all { index -> index >= 0 } && it == it.sorted() }
+        }
+        val label = "${cls.type}.${setup.name}()"
+        val insns = setup.instructions()
+        val touch = insns.recyclerCall("addOnItemTouchListener")
+        val decoration = insns.recyclerCall("addItemDecoration")
+
+        // The touch listener is the swipe helper (it fires ItemEvent.SWIPE_START).
+        val listener = (insns[touch] as FiveRegisterInstruction).registerD
+        val cast = insns.take(touch).last { it.opcode == Opcode.CHECK_CAST && (it as OneRegisterInstruction).registerA == listener }
+        val helperType = ((cast as ReferenceInstruction).reference as TypeReference).type
+        val helper = byType[helperType] ?: error("$label: swipe helper $helperType not found")
+        check(helper.methods.any { "ItemEvent.SWIPE_START" in it.strings() }) { "$label: $helperType does not fire ItemEvent.SWIPE_START" }
+
+        // invoke ...()Z, move-result vX, const vX 0, if-nez vX past the item decoration. 21t/22t are
+        // the if-* formats.
+        val branches = (0 until touch).filter { insns[it].opcode.format in setOf(Format.Format21t, Format.Format22t) }
+        check(branches.size == 1) { "$label has ${branches.size} branches before its touch listener" }
+        val guard = branches.single()
+        val register = (insns[guard] as OneRegisterInstruction).registerA
+        val forced = insns[guard - 1]
+        check(insns[guard].opcode == Opcode.IF_NEZ && (forced.opcode == Opcode.CONST_4 || forced.opcode == Opcode.CONST_16) &&
+            (forced as OneRegisterInstruction).registerA == register && (forced as NarrowLiteralInstruction).narrowLiteral == 0
+        ) { "$label does not force v$register to 0 before its if-nez; got ${forced.opcode}" }
+        val moveResult = insns[guard - 2]
+        val toggle = insns[guard - 3].call()
+        check(moveResult.opcode == Opcode.MOVE_RESULT && (moveResult as OneRegisterInstruction).registerA == register &&
+            toggle?.returnType == "Z" && toggle.parameterTypes.isEmpty()
+        ) { "$label: the forced register is not the result of a ()Z toggle read; got ${moveResult.opcode} $toggle" }
+        check(insns.branchTarget(guard) > decoration) { "$label: the swipe guard no longer skips the item decoration" }
     }
 
     private fun assertUseSmsVerification(classes: List<ClassDef>) {
@@ -652,5 +804,48 @@ class TruecallerSmokeTest {
         check(call?.opcode == Opcode.INVOKE_STATIC_RANGE && call.call()?.definingClass == helperClass.type &&
             call.call()?.name == T9_INCREMENTAL_HELPER && (call as RegisterRangeInstruction).startRegister == p0 && call.registerCount == 1
         ) { "TruecallerInit.onCreate does not call $label with p0 after super.onCreate; got ${call?.opcode} ${call?.call()}" }
+    }
+
+    private fun assertHideBusinessMedia(classes: List<ClassDef>) {
+        // 1. The BusinessDetailsModel constructor replaces brandMedia (p6) with a new empty ArrayList.
+        val (modelClass, _) = classes.singleMethod("BusinessDetailsModel.toString") { _, m ->
+            m.name == "toString" && m.strings().any { it.startsWith("BusinessDetailsModel(description=") } &&
+                ", brandMedia=" in m.strings()
+        }
+        val constructor = modelClass.method(
+            "<init>",
+            listOf("Ljava/lang/String;", "Ljava/lang/String;", "Ljava/lang/String;", CONTACT_TYPE, "Ljava/lang/String;", "Ljava/util/ArrayList;"),
+        )
+        val label = "${modelClass.type}.<init>"
+        val p6 = constructor.implementation!!.registerCount - 1 // this + 6 single-register parameters, p6 last
+        val insns = constructor.instructions()
+        val list = insns.getOrNull(0)
+        check(list?.opcode == Opcode.NEW_INSTANCE && (list as OneRegisterInstruction).registerA == p6 &&
+            ((list as ReferenceInstruction).reference as TypeReference).type == "Ljava/util/ArrayList;"
+        ) { "$label does not start with new-instance p6, ArrayList; got ${list?.opcode}" }
+        val init = insns.getOrNull(1)
+        check(init?.opcode == Opcode.INVOKE_DIRECT_RANGE && init.call()?.definingClass == "Ljava/util/ArrayList;" &&
+            init.call()?.name == "<init>" && init.call()?.parameterTypes?.isEmpty() == true &&
+            (init as RegisterRangeInstruction).startRegister == p6 && init.registerCount == 1
+        ) { "$label does not construct the empty ArrayList in p6; got ${init?.opcode} ${init?.call()}" }
+        val stored = insns.drop(2).single { it.opcode == Opcode.IPUT_OBJECT && it.field()?.type == "Ljava/util/ArrayList;" }
+        check((stored as TwoRegisterInstruction).registerA == p6) { "$label does not store p6 as brandMedia" }
+
+        // 2. BusinessDetailsScreen clears its video thumbnail slot (Function2, p4) first.
+        val (screenClass, screen) = classes.singleMethod("BusinessDetailsScreen") { _, m ->
+            AccessFlags.STATIC.isSet(m.accessFlags) && m.returnType == "V" && m.params().size == 7 &&
+                m.params()[1] == modelClass.type && m.params()[4] == "Lkotlin/jvm/functions/Function2;" &&
+                m.strings().containsAll(listOf("BusinessDetailsScreen", "BusinessDesTitle"))
+        }
+        val p4 = screen.implementation!!.registerCount - 7 + 4 // static, 7 single-register parameters
+        val clear = screen.instructions().getOrNull(0)
+        check(clear?.opcode == Opcode.CONST_16 && (clear as OneRegisterInstruction).registerA == p4 &&
+            (clear as NarrowLiteralInstruction).narrowLiteral == 0
+        ) { "${screenClass.type}.${screen.name} does not start with const/16 p4, 0x0; got ${clear?.opcode}" }
+        check(screen.instructions().drop(1).any { it.opcode == Opcode.MOVE_OBJECT_FROM16 && (it as TwoRegisterInstruction).registerB == p4 }) {
+            "${screenClass.type}.${screen.name} no longer reads p4"
+        }
+
+        // 3. The verified business campaign toggles are checked in assertToggleOverrides.
     }
 }

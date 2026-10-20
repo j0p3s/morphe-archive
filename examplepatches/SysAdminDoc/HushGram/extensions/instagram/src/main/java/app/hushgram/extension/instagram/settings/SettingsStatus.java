@@ -137,6 +137,10 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean allRecentSearches() {
+        return false;
+    }
+
     public static boolean notesRow() {
         return false;
     }
@@ -146,6 +150,10 @@ public final class SettingsStatus {
     }
 
     public static boolean instants() {
+        return false;
+    }
+
+    public static boolean plusPreview() {
         return false;
     }
 
@@ -224,6 +232,14 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean messageBox() {
+        return false;
+    }
+
+    public static boolean profileTabs() {
+        return false;
+    }
+
     public static boolean threadsButton() {
         return false;
     }
@@ -296,6 +312,10 @@ public final class SettingsStatus {
     }
 
     public static boolean commentEmojiRow() {
+        return false;
+    }
+
+    public static boolean commentKeyboard() {
         return false;
     }
 

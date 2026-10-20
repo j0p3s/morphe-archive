@@ -15,7 +15,9 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.view.View;
 
 import app.hxreborn.extension.proton.PatchedBuild;
@@ -23,6 +25,7 @@ import app.hxreborn.extension.proton.PatchedBuild;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.annotation.Config;
 
@@ -43,6 +46,12 @@ public final class PromotionsTest {
 
     }
 
+    enum UpgradeSource {
+
+        ONBOARDING, COUNTRIES
+
+    }
+
     private Context context;
 
     @Before
@@ -56,6 +65,11 @@ public final class PromotionsTest {
             notifications.add(new Notification(type));
         }
         return notifications;
+    }
+
+    private static Activity upgradeDialogFrom(UpgradeSource source) {
+        final Intent intent = new Intent().putExtra("Upgrade Type", source);
+        return Robolectric.buildActivity(Activity.class, intent).get();
     }
 
     private static List<Integer> typesOf(List<?> notifications) {
@@ -250,6 +264,46 @@ public final class PromotionsTest {
 
         // then
         assertEquals(View.VISIBLE, view.getVisibility());
+    }
+
+    @Test
+    public void onboardingUpgradeDialogStaysWhenUpsellsAreNotHidden() {
+        assertFalse(Promotions.hidesOnboardingUpgrade(upgradeDialogFrom(UpgradeSource.ONBOARDING)));
+    }
+
+    @Test
+    @Config(shadows = { PatchedBuild.Amoled.class, PatchedBuild.Accent.class, PatchedBuild.Upselling.class,
+            PatchedBuild.Applied.class })
+    public void hidesTheOnboardingUpgradeDialog() {
+        assertTrue(Promotions.hidesOnboardingUpgrade(upgradeDialogFrom(UpgradeSource.ONBOARDING)));
+    }
+
+    @Test
+    @Config(shadows = { PatchedBuild.Amoled.class, PatchedBuild.Accent.class, PatchedBuild.Upselling.class,
+            PatchedBuild.Applied.class })
+    public void keepsAnUpgradeDialogFromAnotherSource() {
+        assertFalse(Promotions.hidesOnboardingUpgrade(upgradeDialogFrom(UpgradeSource.COUNTRIES)));
+    }
+
+    @Test
+    @Config(shadows = { PatchedBuild.Amoled.class, PatchedBuild.Accent.class, PatchedBuild.Upselling.class,
+            PatchedBuild.Applied.class })
+    public void keepsAnActivityWithoutAnUpgradeSource() {
+        assertFalse(Promotions.hidesOnboardingUpgrade(Robolectric.buildActivity(Activity.class).get()));
+    }
+
+    @Test
+    @Config(shadows = { PatchedBuild.Amoled.class, PatchedBuild.Accent.class, PatchedBuild.Upselling.class,
+            PatchedBuild.Applied.class })
+    public void onboardingUpgradeDialogStaysOnceUpsellsAreShownAgain() {
+        // given
+        PatchedBuild.setUpgradePromotionsHidden(false);
+
+        // when
+        final boolean hidden = Promotions.hidesOnboardingUpgrade(upgradeDialogFrom(UpgradeSource.ONBOARDING));
+
+        // then
+        assertFalse(hidden);
     }
 
 }

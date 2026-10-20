@@ -11,6 +11,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  needs-info:
+    if: >-
+      !github.event.issue.pull_request &&
+      github.event.issue.state == 'open' &&
+      contains(github.event.issue.labels.*.name, 'needs info')
+    permissions:
+      issues: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/scripts/issue_comment.py
+          sparse-checkout-cone-mode: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE: ${{ github.event.issue.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          status=0
+          python3 .github/scripts/issue_comment.py --needs-info "$GITHUB_EVENT_PATH" || status=$?
+          [ "$status" -ne 3 ] || exit 0
+          [ "$status" -eq 0 ] || exit "$status"
+          gh issue edit "$ISSUE" --repo "$REPO" --remove-label "needs info"
+
   reply:
     if: >-
       !github.event.issue.pull_request &&
@@ -30,6 +56,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
+          fetch-depth: 0
           persist-credentials: false
           sparse-checkout: |
             .github/scripts/issue_comment.py
@@ -39,9 +66,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           ISSUE: ${{ github.event.issue.number }}
           REPO: ${{ github.repository }}
+          STATE: ${{ github.event.issue.state }}
         run: |
+          unreleased=
+          if [ "$STATE" = closed ]; then
+            closing=$(gh api "repos/$REPO/issues/$ISSUE/timeline" --paginate \
+              --jq '.[] | select(.event == "closed") | (.commit_id // "-")')
+            commit=$(printf '%s\n' "$closing" | tail -n 1)
+            if [ -n "$commit" ] && [ "$commit" != - ] && git cat-file -e "$commit^{commit}" 2>/dev/null; then
+              tags=$(git tag --contains "$commit")
+              [ -n "$tags" ] || unreleased=--unreleased
+            fi
+          fi
           status=0
-          python3 .github/scripts/issue_comment.py "$GITHUB_EVENT_PATH" patches-list.json > "$RUNNER_TEMP/comment.md" || status=$?
+          python3 .github/scripts/issue_comment.py $unreleased "$GITHUB_EVENT_PATH" patches-list.json > "$RUNNER_TEMP/comment.md" || status=$?
           [ "$status" -ne 3 ] || exit 0
           [ "$status" -eq 0 ] || exit "$status"
           marker=$(head -n 1 "$RUNNER_TEMP/comment.md")

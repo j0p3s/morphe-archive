@@ -24,8 +24,11 @@ import androidx.annotation.Nullable;
 
 import app.hushgram.extension.instagram.download.FileNameTemplate;
 import app.hushgram.extension.instagram.download.SaveFolder;
+import app.hushgram.extension.instagram.direct.MessageBox;
+import app.hushgram.extension.instagram.profile.ProfileTabs;
 import app.hushgram.extension.instagram.misc.SpoofLocation;
 import app.hushgram.extension.instagram.reels.TabOrder;
+import app.hushgram.extension.instagram.share.ShareSheetActions;
 import app.hushgram.extension.instagram.share.SharingDomain;
 import app.hushgram.extension.shared.Utils;
 import app.hushgram.extension.shared.settings.BaseSettings;
@@ -107,7 +110,14 @@ public final class ConfigurationBackup {
         if (PatchFamily.REEL_DECLUTTER.inBuild()) {
             settings.put(Settings.BURN_IN_GUARD.key, Settings.BURN_IN_GUARD);
             settings.put(Settings.BURN_IN_WAIT.key, Settings.BURN_IN_WAIT);
+            settings.put(Settings.BURN_IN_STAY_DIM.key, Settings.BURN_IN_STAY_DIM);
         }
+        if (GhostMode.offered(GhostMode.switches(PatchFamily.inThisBuild()))) {
+            settings.put(Settings.GHOST_MODE_PICKS.key, Settings.GHOST_MODE_PICKS);
+            settings.put(Settings.GHOST_TAB_TARGET.key, Settings.GHOST_TAB_TARGET);
+        }
+        if (PatchFamily.MESSAGE_BOX.inBuild()) settings.put(Settings.HIDDEN_MESSAGE_BOX_BUTTONS.key, Settings.HIDDEN_MESSAGE_BOX_BUTTONS);
+        if (PatchFamily.PROFILE_TABS.inBuild()) settings.put(Settings.HIDDEN_PROFILE_TABS.key, Settings.HIDDEN_PROFILE_TABS);
         if (PatchFamily.STORY_TIME.inBuild()) settings.put(Settings.STORY_TIME_MODE.key, Settings.STORY_TIME_MODE);
         if (PatchFamily.FRIENDSHIP_STATUS.inBuild()) settings.put(Settings.FOLLOW_LABEL_PLACE.key, Settings.FOLLOW_LABEL_PLACE);
         if (PatchFamily.FULL_SCREEN_BARS.inBuild()) settings.put(Settings.FULL_SCREEN_HIDES.key, Settings.FULL_SCREEN_HIDES);
@@ -122,6 +132,9 @@ public final class ConfigurationBackup {
             settings.put(Settings.GLASS_TAB_BAR_CORNERS.key, Settings.GLASS_TAB_BAR_CORNERS);
             settings.put(Settings.GLASS_TAB_BAR_LIFT.key, Settings.GLASS_TAB_BAR_LIFT);
             settings.put(Settings.GLASS_TAB_BAR_REELS_HIDE.key, Settings.GLASS_TAB_BAR_REELS_HIDE);
+        }
+        if (PatchFamily.SHARE_SHEET.inBuild()) {
+            settings.put(Settings.HIDDEN_SHARE_SHEET_BUTTONS.key, Settings.HIDDEN_SHARE_SHEET_BUTTONS);
         }
         if (PatchFamily.ACCENT_COLOR.inBuild()) settings.put(Settings.ACCENT_HUE.key, Settings.ACCENT_HUE);
         if (PatchFamily.FONT.inBuild()) settings.put(Settings.FONT.key, Settings.FONT);
@@ -163,6 +176,9 @@ public final class ConfigurationBackup {
         settings.put(Settings.NAVIGATION_SETTINGS_TARGET.key, Settings.NAVIGATION_SETTINGS_TARGET);
         settings.put(Settings.HIDE_MENU_ROW.key, Settings.HIDE_MENU_ROW);
         settings.put(Settings.PROFILE_MENU_LONG_PRESS.key, Settings.PROFILE_MENU_LONG_PRESS);
+        // A backup with every way in off still leaves the menu row ({@link SettingsEntry#menuRowLeftOut}).
+        settings.put(Settings.SETTINGS_SHORTCUT.key, Settings.SETTINGS_SHORTCUT);
+        settings.put(Settings.SETTINGS_LOGO_PRESS.key, Settings.SETTINGS_LOGO_PRESS);
         settings.put(Settings.CATEGORY_PAGES.key, Settings.CATEGORY_PAGES);
         return settings;
     }
@@ -303,10 +319,20 @@ public final class ConfigurationBackup {
         // The Place row keeps what was typed, spaces too, and takes blank as no place.
         if (setting == Settings.SPOOF_LOCATION_PLACE) return text.trim().isEmpty() || SpoofLocation.parse(text) != null;
         if (setting == Settings.TAB_ORDER) return text.equals(TabOrder.join(TabOrder.parse(text)));
+        // The share sheet buttons to leave out, as Instagram's names for them with commas between.
+        if (setting == Settings.HIDDEN_SHARE_SHEET_BUTTONS) {
+            return text.equals(ShareSheetActions.join(ShareSheetActions.hidden(text)));
+        }
+        // The message box buttons left off, as the names of Instagram's enum with commas between, in the order the dialog lists them.
+        if (setting == Settings.HIDDEN_MESSAGE_BOX_BUTTONS) return text.equals(MessageBox.join(MessageBox.parse(text)));
+        // The profile tabs left off, as Instagram's keys with commas between, in the order the dialog lists them.
+        if (setting == Settings.HIDDEN_PROFILE_TABS) return text.equals(ProfileTabs.join(ProfileTabs.parse(text)));
         // The words Hide reels by caption words looks for: any text without control characters but line breaks.
         if (setting == Settings.REELS_BLOCKED_WORDS) return blockedWordsAllowed(text);
         // An enum constant name of Instagram's; a name this Instagram lacks keeps its heart.
         if (setting == Settings.LIKE_ANIMATION) return text.matches("[A-Za-z0-9_$]{0,64}");
+        // The ghost switches Ghost mode turns, as their keys with commas between; blank means all of them.
+        if (setting == Settings.GHOST_MODE_PICKS) return text.matches("[a-z0-9_,]{0,2048}");
         return false;
     }
 

@@ -114,7 +114,8 @@ def opened(repo, number, title):
             "payload": {"action": "opened", "issue": {"number": number, "title": title, "body": ""}}}
 
 
-def run(issues, steps, issue_number="", registry=True, fail_on="", event_issue=None, action="edited", events=None):
+def run(issues, steps, issue_number="", registry=True, fail_on="", event_issue=None, action="edited", events=None,
+        association="NONE"):
     with tempfile.TemporaryDirectory() as temp:
         temp = Path(temp)
         (temp / "bin").mkdir()
@@ -134,7 +135,7 @@ def run(issues, steps, issue_number="", registry=True, fail_on="", event_issue=N
             "GH_TOKEN": "fake", "REPO": "hxreborn/morphe-patches", "GITHUB_REPOSITORY": "hxreborn/morphe-patches",
             "ISSUE": str(issue_number), "REGISTRY": "https://registry.invalid", "PATCHES_LIST": "patches-list.json",
             "DRY_RUN": "false", "RUNNER_TEMP": str(temp / "runner"), "GITHUB_EVENT_PATH": str(temp / "event.json"),
-            "ACTION": action, "CLOSED": str(event_issue.get("state") == "closed").lower(),
+            "ACTION": action, "ASSOCIATION": association, "CLOSED": str(event_issue.get("state") == "closed").lower(),
         }
         status = 0
         for name in steps:
@@ -271,6 +272,44 @@ status, issues, mutations = run(issues, SWEEP, fail_on="users/poster/events")
 # then
 check(status == 0 and mutations == [] and "other bundle" in issues["15"]["labels"],
       "a flagged request is left alone while its author's other requests cannot be read")
+
+
+
+def requests_by(author, count):
+    return {str(40 + i): {**issue(f"[App Request]: App {i}", request(f"App {i}", f"com.app{i}.reader")), "author": author}
+            for i in range(count)}
+
+
+# given
+crowded = requests_by("busy", 4)
+crowded["41"]["labels"].append("needs info")
+
+# when
+status, issues, mutations = run(crowded, SWEEP, issue_number=43, action="opened")
+
+# then
+check(status == 0 and issues["43"]["state"] == "CLOSED" and len(issues["43"]["comments"]) == 1
+      and "[#41](https://redirect.github.com/hxreborn/morphe-patches/issues/41)" in issues["43"]["comments"][0]["body"]
+      and all(issues[n]["state"] == "OPEN" for n in ("40", "41", "42")),
+      "a fourth open request from one person is closed with one reply listing the other three")
+
+# when
+status, issues, mutations = run(issues, SWEEP, issue_number=43, action="opened")
+
+# then
+check(status == 0 and mutations == [], "a request closed for the limit gets no second reply")
+
+# when
+status, issues, mutations = run(requests_by("busy", 4), SWEEP)
+
+# then
+check(status == 0 and mutations == [], "the sweep does not close requests already over the limit")
+
+# when
+status, issues, mutations = run(requests_by(PERSON, 4), SWEEP, issue_number=43, action="opened", association="OWNER")
+
+# then
+check(status == 0 and issues["43"]["state"] == "OPEN" and mutations == [], "the owner is not limited")
 
 unknown_update = "### App\n\nUnknown\n\n### New version\n\n2.0\n"
 update_payload = {"number": 30, "state": "open", "title": "[App Update]: Unknown 2.0", "body": unknown_update,

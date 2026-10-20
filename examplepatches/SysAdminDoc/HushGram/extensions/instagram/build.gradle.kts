@@ -235,7 +235,15 @@ tasks.register("verifyAndroidBoundaries") {
                 "aButtonHiddenEarlierComesBackWhenTheSwitchGoesOff[28]", "aButtonHiddenEarlierComesBackWhenTheSwitchGoesOff[37]",
                 "aButtonThatThrowsIsLeftAndReported[28]", "aButtonThatThrowsIsLeftAndReported[37]",
                 "theFollowListSectionGoesOnlyWithItsOwnSwitch[28]", "theFollowListSectionGoesOnlyWithItsOwnSwitch[37]",
-                "aThrowingFollowListSwitchFailsOpenAndIsReported[28]", "aThrowingFollowListSwitchFailsOpenAndIsReported[37]"),
+                "aThrowingFollowListSwitchFailsOpenAndIsReported[28]", "aThrowingFollowListSwitchFailsOpenAndIsReported[37]",
+                "theFeaturedSectionGoesOnlyWithItsOwnSwitch[28]", "theFeaturedSectionGoesOnlyWithItsOwnSwitch[37]",
+                "aThrowingFeaturedSwitchFailsOpenAndIsReported[28]", "aThrowingFeaturedSwitchFailsOpenAndIsReported[37]"),
+            "app.hushgram.extension.instagram.settings.WaysIntoSettingsTest" to listOf(
+                "theShortcutAndTheLogoPressStartOnWithTheirOwnRows[28]", "theShortcutAndTheLogoPressStartOnWithTheirOwnRows[37]",
+                "theLastWayInStillOnIsGreyedOutAndComesBackWithASecond[28]", "theLastWayInStillOnIsGreyedOutAndComesBackWithASecond[37]",
+                "theHideSwitchSaysWhenNothingElseOpensHushGram[28]", "theHideSwitchSaysWhenNothingElseOpensHushGram[37]",
+                "offTheShortcutLeavesTheLauncherAndInstagramsCallsDontBringItBack[28]", "offTheShortcutLeavesTheLauncherAndInstagramsCallsDontBringItBack[37]",
+                "offTheLogosLongPressIsInstagramsAndAPauseLeavesItThatWay[28]", "offTheLogosLongPressIsInstagramsAndAPauseLeavesItThatWay[37]"),
             "app.hushgram.extension.instagram.profile.ProfileHighlightsTest" to listOf(
                 "withTheSwitchOnTheRowIsLeftOut[28]", "withTheSwitchOnTheRowIsLeftOut[37]",
                 "offToStartAndOffKeepsTheRow[28]", "offToStartAndOffKeepsTheRow[37]",
@@ -265,6 +273,11 @@ tasks.register("verifyAndroidBoundaries") {
                 "missingPatchHasNoInboxSuggestionsSwitch[28]", "missingPatchHasNoInboxSuggestionsSwitch[37]",
                 "inboxSuggestionsSwitchStartsOffUnderMessagesPersistsAndHonorsPause[28]",
                 "inboxSuggestionsSwitchStartsOffUnderMessagesPersistsAndHonorsPause[37]"),
+            "app.hushgram.extension.instagram.direct.CallButtonsTest" to listOf(
+                "withTheSwitchOnEveryCallKindGoesGone", "otherKindsAndOngoingCallsStay", "offToStartLeavesTheButtonsAlone",
+                "turningItOffOrPausingGivesTheButtonBackOnTheNextBind", "aViewInstagramHidSelfIsNotShownByTheSwitchOff",
+                "nothingThrowsIntoInstagram"
+            ).flatMap { listOf("$it[28]", "$it[37]") },
             "app.hushgram.extension.instagram.direct.InstantsTest" to listOf(
                 "withTheSwitchOnTheCheckAnswersNo[28]", "withTheSwitchOnTheCheckAnswersNo[37]",
                 "offToStartAndOffLeaveItToInstagram[28]", "offToStartAndOffLeaveItToInstagram[37]",
@@ -275,6 +288,14 @@ tasks.register("verifyAndroidBoundaries") {
                 "instantsAloneStillGetsMessages[28]", "instantsAloneStillGetsMessages[37]",
                 "instantsSwitchStartsOffUnderMessagesPersistsAndHonorsPause[28]",
                 "instantsSwitchStartsOffUnderMessagesPersistsAndHonorsPause[37]"),
+            "app.hushgram.extension.instagram.direct.PlusPreviewTest" to listOf(
+                "withTheSwitchOnThePeekFormIsOff", "aMenuInstagramGivesNoPeekFormStaysPlain",
+                "offToStartAndOffLeaveTheFlagToInstagram", "pausedAndUnreadyLeaveTheFlagToInstagram",
+                "aThrowingSwitchLeavesTheFlagToInstagramAndIsReported"
+            ).flatMap { listOf("$it[28]", "$it[37]") },
+            "app.hushgram.extension.instagram.settings.PlusPreviewSettingsTest" to listOf(
+                "missingPatchHasNoSwitch", "aloneItStillGetsMessages", "switchStartsOffUnderMessagesAndHonorsPause"
+            ).flatMap { listOf("$it[28]", "$it[37]") },
             "app.hushgram.extension.instagram.direct.ThreadSeenTest" to listOf(
                 "withTheSwitchOnTheReceiptIsHeld[28]", "withTheSwitchOnTheReceiptIsHeld[37]",
                 "offToStartAndOffSendTheReceipt[28]", "offToStartAndOffSendTheReceipt[37]",
@@ -488,6 +509,10 @@ tasks.register("verifyAndroidBoundaries") {
                 "missingPatchHasNoSwitch[28]", "missingPatchHasNoSwitch[37]"),
             "app.hushgram.extension.instagram.settings.StorySuggestionsSettingsTest" to listOf(
                 "theSwitchIsUnderStoriesAfterTheMusicCardAndStartsOff[28]", "theSwitchIsUnderStoriesAfterTheMusicCardAndStartsOff[37]",
+                "aSavedSwitchAnswersOffWhilePaused[28]", "aSavedSwitchAnswersOffWhilePaused[37]",
+                "missingPatchHasNoSwitch[28]", "missingPatchHasNoSwitch[37]"),
+            "app.hushgram.extension.instagram.settings.AddYoursCardsSettingsTest" to listOf(
+                "theSwitchIsUnderStoriesAfterTheSuggestionsAndStartsOff[28]", "theSwitchIsUnderStoriesAfterTheSuggestionsAndStartsOff[37]",
                 "aSavedSwitchAnswersOffWhilePaused[28]", "aSavedSwitchAnswersOffWhilePaused[37]",
                 "missingPatchHasNoSwitch[28]", "missingPatchHasNoSwitch[37]"),
             "app.hushgram.extension.instagram.settings.MusicCardSettingsTest" to listOf(
@@ -882,6 +907,39 @@ tasks.register("verifyAndroidBoundaries") {
             ).flatMap { listOf("$it[28]", "$it[37]") },
             "app.hushgram.extension.instagram.settings.CommentEmojiRowSettingsTest" to listOf(
                 "missingPatchHasNoSwitch", "aloneItStillGetsComments", "switchStartsOffUnderCommentsAndHonorsPause"
+            ).flatMap { listOf("$it[28]", "$it[37]") },
+            "app.hushgram.extension.instagram.feed.CommentKeyboardTest" to listOf(
+                "offToStartBringsTheKeyboardUp", "onKeepsItDownEachTime", "pausedAndUnreadyBringItUp",
+                "aThrowingSwitchBringsItUpAndIsReported"
+            ).flatMap { listOf("$it[28]", "$it[37]") },
+            "app.hushgram.extension.instagram.settings.CommentKeyboardSettingsTest" to listOf(
+                "missingPatchHasNoSwitch", "aloneItStillGetsComments", "switchStartsOffUnderCommentsAndHonorsPause"
+            ).flatMap { listOf("$it[28]", "$it[37]") },
+            "app.hushgram.extension.instagram.profile.ProfileTabsTest" to listOf(
+                "nothingPickedLeavesInstagramsListAlone", "eachPickedTabGoesByItsKey", "allThreePickedLeavesTheGrid",
+                "aProfileWithFewerTabsWorksToo", "otherTabsAndOrderDontMatter", "theGridIsNeverDropped",
+                "pausedReadsAsNothingPicked", "nothingThrowsIntoInstagram", "aDroppedTabIsCounted", "savedTextIsTidied"
+            ).flatMap { listOf("$it[28]", "$it[37]") },
+            "app.hushgram.extension.instagram.settings.ProfileTabsSettingsTest" to listOf(
+                "missingPatchHasNoTabsRow", "everyTabStartsTickedAndTheGridIsNotOffered", "aChangeSavesAtOnceByKey",
+                "aSavedChoiceShowsAndPauseKeepsIt"
+            ).flatMap { listOf("$it[28]", "$it[37]") },
+            "app.hushgram.extension.instagram.direct.MessageBoxTest" to listOf(
+                "nothingPickedShowsEveryButton", "aPickedButtonIsHiddenAndTheRestShow", "aHideStaysAHide",
+                "buttonsNotOfferedAlwaysShow", "pausedShowsEveryButton", "anythingElseShows",
+                "aNewMessageBoxHidesThePickedViews", "nothingPickedOrPausedLeavesTheViewsAlone",
+                "aButtonLeftOffIsCounted", "savedTextIsTidied"
+            ).flatMap { listOf("$it[28]", "$it[37]") },
+            "app.hushgram.extension.instagram.settings.MessageBoxSettingsTest" to listOf(
+                "missingPatchHasNoMessageBoxRow", "everyButtonStartsTicked", "aChangeSavesAtOnceByKey",
+                "showAllPutsEveryButtonBack", "aSavedChoiceShowsAndPauseKeepsIt"
+            ).flatMap { listOf("$it[28]", "$it[37]") },
+            "app.hushgram.extension.instagram.explore.ShowAllRecentSearchesTest" to listOf(
+                "offToStartKeepsInstagramsLimit", "onListsEverything", "pausedAnswersInstagramsOwnLimit",
+                "dontSaveStillStopsNewSearchesWhileEverythingShows", "nothingThrowsIntoInstagram"
+            ).flatMap { listOf("$it[28]", "$it[37]") },
+            "app.hushgram.extension.instagram.settings.ShowAllRecentSearchesSettingsTest" to listOf(
+                "missingPatchHasNoShowAllSwitch", "theSwitchSitsUnderExploreAndStartsOff", "theSwitchPersistsAndHonorsPause"
             ).flatMap { listOf("$it[28]", "$it[37]") },
             "app.hushgram.extension.instagram.feed.FeedFollowButtonTest" to listOf(
                 "offToStartLeavesTheButtonsAlone", "onTakesTheButtonsOffAndLeavesTheNameTimeAndMenu",

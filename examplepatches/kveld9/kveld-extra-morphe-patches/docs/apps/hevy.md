@@ -36,7 +36,7 @@ Technical documentation and patch catalog for Hevy Gym Log Workout Tracker on An
 ### A. Background Sync & Battery Optimization
 - **Stop Background Sync**:
   - *Objective*: Prevent background alarms and billing connections from draining the battery.
-  - *How*: Disables background worker services, alarm receivers, and billing components in the manifest, and neutralizes background billing connection startup routines.
+  - *How*: Disables Firebase DataTransport schedulers and alarm receivers plus billing components in the manifest, and neutralizes background billing connection startup routines; WorkManager and Firebase component discovery are kept so local and push notifications keep working.
 
 ### B. Telemetry & Tracking Elimination
 - **Block Trackers**:

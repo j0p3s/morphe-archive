@@ -32,6 +32,7 @@ final class SwitchLabels {
         if (setting == Settings.HIDE_FEED_FRIEND_REQUESTS) return L10n.t("Hide friend requests in the feed");
         if (setting == Settings.HIDE_FRIENDS_LOCATIONS) return L10n.t("Hide friends' locations");
         if (setting == Settings.HIDE_NOTIFICATION_POST_FOOTER) return L10n.t("Hide more posts under notification posts");
+        if (setting == Settings.HIDE_FIND_FRIENDS_CARD) return L10n.t("Hide the Find friends card");
         if (setting == Settings.HIDE_TOP_STORIES_TRAY) return L10n.t("Hide the Stories tray");
         if (setting == Settings.HIDE_STORIES_BETWEEN_POSTS) return L10n.t("Hide Stories between posts");
         if (setting == Settings.HIDE_HOME_COMPOSER) return L10n.t("Hide the composer row");
@@ -119,6 +120,8 @@ final class SwitchLabels {
         if (setting == Settings.ORIGINAL_AUDIO) return L10n.t("Keep the original audio");
         if (setting == Settings.HIDE_REEL_SEARCH_PILL) return L10n.t("Hide the search pill on reels");
         if (setting == Settings.HIDE_REEL_COUNTS) return L10n.t("Hide counts on reels");
+        if (setting == Settings.HIDE_REEL_SAVE_BUTTON) return L10n.t("Hide Save on reels");
+        if (setting == Settings.HIDE_REEL_SOUND_BUTTON) return L10n.t("Hide the speaker button on reels");
         if (setting == Settings.FEED_VIDEOS_ALONE) return L10n.t("Open feed videos on their own");
         if (setting == Settings.DONT_SEND_REEL_WATCH_HISTORY) return L10n.t("Don't send reel watch history");
         if (setting == Settings.HOLD_ANALYTICS_UPLOADS) return L10n.t("Hold back analytics uploads");
@@ -166,6 +169,7 @@ final class SwitchLabels {
         if (setting == Settings.OPEN_IN_ANOTHER_APP) return L10n.t("Open videos in another app");
         if (setting == Settings.POST_MENU_DOWNLOAD_FIRST) return L10n.t("Download first in post menus");
         if (setting == Settings.DOWNLOAD_COMPATIBLE) return L10n.t("Save videos other apps can open");
+        if (setting == Settings.DOWNLOAD_CONVERT) return L10n.t("Convert to keep the full size");
         if (setting == Settings.DOWNLOAD_QUIET) return L10n.t("Quiet saves");
         if (setting == Settings.HIDE_GET_MESSENGER_CARD) return L10n.t("Hide the Get Messenger card");
         if (setting == Settings.HIDE_CHAT_NOTES_TRAY) return L10n.t("Hide the notes and active now row");
@@ -175,6 +179,7 @@ final class SwitchLabels {
         if (setting == Settings.LEAVE_CALLS_AND_CHATS_TO_MESSENGER) return L10n.t("Leave calls and chats to Messenger");
         if (setting == Settings.SAVED_SHORTCUT) return L10n.t("Saved shortcut");
         if (setting == Settings.WATCH_HISTORY_SHORTCUT) return L10n.t("Watch history shortcut");
+        if (setting == Settings.FREE_STUFF_SHORTCUT) return L10n.t("Free stuff shortcut");
         if (setting == Settings.SETTINGS_SHORTCUT) return L10n.t("Settings shortcut on the app icon");
         if (setting == Settings.SETTINGS_LOGO_PRESS) return L10n.t("Open settings from the logo");
         if (setting == Settings.SETTINGS_MENU_ROW) return L10n.t("Settings row in Menu");
@@ -232,6 +237,7 @@ final class SwitchLabels {
         if (setting == Settings.HIDE_MESSENGER_COUNT) return L10n.t("Hide the Messenger count");
         if (setting == Settings.HIDE_FACEBOOK_LOGO) return L10n.t("Hide the Facebook logo");
         if (setting == Settings.FORCE_DARK_MODE) return L10n.t("Force dark mode");
+        if (setting == Settings.AMOLED_FLAT_CARDS) return L10n.t("Black cards");
         throw new IllegalArgumentException("No individual switch label: " + setting.key);
     }
 }

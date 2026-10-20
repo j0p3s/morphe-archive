@@ -1058,12 +1058,41 @@ ok = fullwidth["verdict"] == "flag" and fullwidth["labels"] == ["duplicate"]
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} a fullwidth name still matches the supported app it imitates")
 
+
+
+def by(login, number, app, state="OPEN", labels=()):
+    return {**request(number, app, ""), "state": state, "author": {"login": login},
+            "labels": [{"name": label} for label in labels]}
+
+
+def limited_verdict(number, requests, enforce_limit=True):
+    this = next(r for r in requests if r["number"] == number)
+    return decide(number, this["body"], requests, SUPPORTED, None, this["title"], NOW, enforce_limit=enforce_limit)
+
+
+busy = [by("busy", 1, "Foo Player"), by("busy", 2, "Bar `Notes`", labels=("needs info",)), by("busy", 3, "Baz Reader"),
+        by("busy", 4, "Old App", state="CLOSED"), by("other", 5, "Qux Maps"), by("busy", 6, "Zed Radio")]
+
+limit_closed = limited_verdict(6, busy)
+ok = ((limit_closed["verdict"], limit_closed["reason"], limit_closed["labels"]) == ("close", "not planned", [])
+      and "[#2](https://redirect.github.com//issues/2) `[App Request]: Bar 'Notes'`" in limit_closed["comment"]
+      and "#4" not in limit_closed["comment"] and "#5" not in limit_closed["comment"]
+      and limit_closed["comment"].count("\n- ") == 3)
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} a fourth open request closes as not planned and lists the three open ones, needs info included")
+
+under = [limited_verdict(6, [r for r in busy if r["number"] != 3]), limited_verdict(6, busy, enforce_limit=False),
+         limited_verdict(5, busy)]
+ok = [u["verdict"] for u in under] == ["pass"] * 3
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} two other open requests, an exempt author and another person's request are not limited")
+
 for name, (expected, body) in CASES.items():
     actual = verdict_for(*body) if isinstance(body, tuple) else verdict_for(body)
     ok = actual == expected
     failures += not ok
     print(f"{'ok  ' if ok else 'FAIL'} {name}: expected {expected}, got {actual}")
 
-total = len(CASES) + len(APP_CASES) + 26
+total = len(CASES) + len(APP_CASES) + 28
 print(f"\n{total - failures}/{total} passed")
 sys.exit(1 if failures else 0)

@@ -58,7 +58,7 @@ private fun generatePatchList(version: String, patches: Set<Patch<*>>) {
                     // Format as #RRGGBB string for readability; null if not set
                     appIconColor = compat.appIconColor?.let { "#%06X".format(it) },
                     signatures = compat.signatures,
-                    targets = compat.targets.map { target ->
+                    targets = compat.targets.sorted().map { target ->
                         JsonCompatibility.Target(
                             version = target.version,
                             versionCodes = target.versionCodes?.mapKeys { it.key.name },

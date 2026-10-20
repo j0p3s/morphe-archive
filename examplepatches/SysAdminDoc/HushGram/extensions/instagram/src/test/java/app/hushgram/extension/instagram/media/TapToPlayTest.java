@@ -225,6 +225,36 @@ public class TapToPlayTest {
         assertTrue("the play at the drag's end", TapToPlay.allowStart(player, "autoplay", 0));
     }
 
+    /**
+     * The music picker's clip slider, in Notes and stories, pauses the song with
+     * "user_paused_video" a moment into a drag and plays it again right after the finger comes up,
+     * with no tap, since a drag isn't one (#263). The song plays on. The same pause from the
+     * picker's pause button, with no drag under way, still ends the start.
+     */
+    @Test
+    public void aDragOfTheMusicSliderKeepsTheSongPlaying() {
+        Object song = new Object();
+        Object pressed = new Object();
+        TapToPlayForTests.tapEnded(10);
+        assertTrue(TapToPlay.allowDirectStart(song, "start"));
+        assertTrue(TapToPlay.allowDirectStart(pressed, "start"));
+        TapClock.forget();
+
+        long drag = SystemClock.uptimeMillis();
+        TapClock.record(MotionEvent.ACTION_DOWN, 760, 2195, drag, 8);
+        TapToPlay.paused(pressed, TapToPlay.DRAG_PAUSE);
+        assertFalse("a finger that hasn't moved yet isn't a drag", TapToPlay.armed(pressed));
+        TapClock.record(MotionEvent.ACTION_MOVE, 735, 2195, drag + 200, 8);
+        TapToPlay.paused(song, TapToPlay.DRAG_PAUSE);
+        assertTrue("the slider's pause mid-drag", TapToPlay.armed(song));
+        TapClock.record(MotionEvent.ACTION_UP, 380, 2195, drag + 3_000, 8);
+        assertTrue("the play right after the release", TapToPlay.allowDirectStart(song, "start"));
+
+        TapToPlay.paused(song, TapToPlay.DRAG_PAUSE);
+        assertFalse("the pause button's pause", TapToPlay.armed(song));
+        assertFalse(TapToPlay.allowDirectStart(song, "start"));
+    }
+
     /** Debug logging says what ended a start, and a pause Instagram plays on from ends none. */
     @Test
     public void debugLoggingSaysWhatEndedAStart() {
@@ -940,6 +970,39 @@ public class TapToPlayTest {
         String report = LogBufferManager.buildExportText();
         assertFalse(report, report.contains("Tap to play: held"));
         assertFalse(report, report.contains("Tap to play: Instagram's autoplay check"));
+    }
+
+    /**
+     * #229: page 1 of a carousel is tapped and plays, the person swipes to page 2 and taps it. Our
+     * gate only answers yes or no to a start Instagram makes; it never starts or resumes a player,
+     * so page 1 can only run on if Instagram leaves it running or starts it itself. The gate must
+     * not let page 1 back in on page 2's tap once Instagram has paused it, and must keep page 2's
+     * start armed.
+     */
+    @Test
+    public void aLaterCarouselPagesTapDoesNotStartThePageBefore() {
+        long now = 700_000;
+        Object page1 = new Object();
+        Object page2 = new Object();
+        tapAt(now - 20_000);
+        assertTrue("page 1's tap starts it", TapToPlay.decide(page1, "autoplay", now - 19_900, ""));
+        assertTrue(TapToPlay.armed(page1));
+
+        // The swipe: a drag, then page 2 binds and its autoplay start is held with no tap.
+        TapClock.record(MotionEvent.ACTION_DOWN, 900, 500, now - 10_000, 8);
+        TapClock.record(MotionEvent.ACTION_MOVE, 300, 500, now - 9_950, 8);
+        TapClock.record(MotionEvent.ACTION_UP, 100, 500, now - 9_900, 8);
+        assertFalse("page 2 waits for its tap", TapToPlay.decide(page2, "autoplay", now - 9_800, ""));
+        // Instagram pauses page 1 when the page changes.
+        TapToPlay.paused(page1, "carousel_page_changed");
+        assertFalse("page 1 is no longer armed once Instagram paused it", TapToPlay.armed(page1));
+
+        tapAt(now);
+        assertTrue("page 2's tap starts page 2", TapToPlay.decide(page2, "autoplay", now + 50, ""));
+        assertTrue(TapToPlay.armed(page2));
+        assertFalse("page 1 stays stopped: nothing of ours started it", TapToPlay.armed(page1));
+        assertFalse("a held start of page 1 from before the swipe isn't released by page 2's tap later on",
+                TapToPlay.decide(page1, "autoplay", now + TapToPlay.TAP_WINDOW_MS + 500, ""));
     }
 
     private static int occurrences(String text, String part) {

@@ -51,6 +51,30 @@ public final class AdFlagsTest {
     }
 
     @Test
+    public void leavesOtherShouldFlagsEnabled() {
+        // given
+        String body = "{\"shouldShowAds\": true, \"shouldShowDiscussionsFirst\": true}";
+
+        // when
+        String sanitized = AdFlags.disable(body);
+
+        // then
+        assertEquals("{\"shouldShowAds\": false, \"shouldShowDiscussionsFirst\": true}", sanitized);
+    }
+
+    @Test
+    public void keepsAFlagHeldAsAString() {
+        // given
+        String body = "{\"shouldShowAds\": \"true\"}";
+
+        // when
+        String sanitized = AdFlags.disable(body);
+
+        // then
+        assertEquals(body, sanitized);
+    }
+
+    @Test
     public void passesNullThrough() {
         // when
         String sanitized = AdFlags.disable(null);

@@ -73,6 +73,7 @@ import app.morphe.extension.facebook.download.VideoMenuItemForTests;
 import app.morphe.extension.facebook.emoji.SystemEmoji;
 import app.morphe.extension.facebook.feed.AutoTranslationForTests;
 import app.morphe.extension.facebook.feed.FeedFilter;
+import app.morphe.extension.facebook.feed.FindFriendsCard;
 import app.morphe.extension.facebook.feed.SeenPostsForTests;
 import app.morphe.extension.facebook.feed.FeedsHeader;
 import app.morphe.extension.facebook.feed.FollowingHome;
@@ -146,6 +147,8 @@ import app.morphe.extension.facebook.stories.StoryAdvance;
 import app.morphe.extension.facebook.stories.StorySeenForTests;
 import app.morphe.extension.facebook.stories.StoryUpload;
 import app.morphe.extension.facebook.stories.SuggestedStoriesForTests;
+import app.morphe.extension.facebook.theme.AmoledTheme;
+import app.morphe.extension.facebook.theme.DarkMode;
 import app.morphe.extension.facebook.theme.ForceDarkModeForTests;
 import app.morphe.extension.facebook.updates.UpdatePrompts;
 import app.morphe.extension.shared.SettingsContextRule;
@@ -243,6 +246,12 @@ public class PausedHooksTest {
     /** Stands in for Facebook's enum of share sheet items, named the same way. */
     private enum ShareItem { SHARE_NOW, SHARE_TO_HATCH, SHARE_TO_THREADS }
 
+    /** Stands in for Facebook's icon enum, whose constants the reel sidebar walks one button each. */
+    private enum SidebarIcon { LIKE, BOOKMARK }
+
+    /** Stands in for FDS's colour token enum: the theme goes by the constant's name. */
+    private enum Surface { CARD_BACKGROUND }
+
     @After
     public void restore() {
         PauseForTests.resume();
@@ -266,6 +275,7 @@ public class PausedHooksTest {
         probes.put(Settings.CHECK_FOR_RELEASES, ReleaseCheckForTests::aStartAsksGitHub);
         probes.put(Settings.SAVED_SHORTCUT, SavedShortcutTest::aStartPublishes);
         probes.put(Settings.WATCH_HISTORY_SHORTCUT, WatchHistoryShortcutTest::aStartPublishes);
+        probes.put(Settings.FREE_STUFF_SHORTCUT, FreeStuffShortcutTest::aStartPublishes);
         // A start puts the Hushfacebook settings shortcut in the launcher icon's menu.
         probes.put(Settings.SETTINGS_SHORTCUT, SettingsEntryTest::aStartPublishes);
         // A finger on the logo is timed for a long press, and the Menu list gets the Hushfacebook row.
@@ -286,6 +296,8 @@ public class PausedHooksTest {
         Map<BooleanSetting, Probe> probes = new LinkedHashMap<>();
         // A save takes the H.264 picture over the sharper AV1 one.
         probes.put(Settings.DOWNLOAD_COMPATIBLE, SaveRulesForTests::picksAFileOtherAppsOpen);
+        // With it, the sharper AV1 picture is converted rather than the H.264 one kept.
+        probes.put(Settings.DOWNLOAD_CONVERT, SaveRulesForTests::convertsTheFullSize);
         // A finished save goes without its Saved to toast.
         probes.put(Settings.DOWNLOAD_QUIET, SaveRulesForTests::finishesQuietly);
         return probes;
@@ -344,7 +356,9 @@ public class PausedHooksTest {
                 // Your own profile's People you may know carousel builds nothing.
                 ProfileSuggestionsForTests::hidesTheCarousel,
                 // A post opened from a notification is asked for without its list of more posts.
-                () -> !NotificationFooter.show(true)));
+                () -> !NotificationFooter.show(true),
+                // The end of the feed is built without its Find friends card.
+                () -> FindFriendsCard.unit("card") == null));
         // Each of the feed's two Stories tray adapters, and the composer row's, new to the hook,
         // counts no rows.
         probes.put(PatchFamily.STORIES_TRAY, Arrays.asList(
@@ -511,6 +525,12 @@ public class PausedHooksTest {
                 ReelDeclutter::hideSearchPill,
                 // A sidebar button's count loses its number only while the patch runs.
                 () -> !"12".equals(ReelDeclutter.countText("12")),
+                // The sidebar's Save button is skipped only while the patch runs.
+                () -> ReelDeclutter.hideSidebarButton(SidebarIcon.BOOKMARK),
+                // So is the speaker button under it.
+                () -> !ReelDeclutter.showsSoundButton(true),
+                // And the footer's speaker, when the footer builds it.
+                () -> ReelDeclutter.soundButton(new Object()) == null,
                 // A feed video's player asking for more right after the tap gets none.
                 () -> {
                     FeedVideoAlone.feedVideoTapped();
@@ -684,6 +704,11 @@ public class PausedHooksTest {
                 }));
         // Facebook's dark mode controller answers dark where it answered light.
         probes.put(PatchFamily.FORCE_DARK_MODE, Collections.singletonList(ForceDarkModeForTests::forcesDark));
+        // Black cards: a card's dark grey takes the page's black, where the theme alone keeps it near black.
+        probes.put(PatchFamily.AMOLED_THEME, Collections.singletonList(() -> {
+            DarkMode.answer(true);
+            return AmoledTheme.apply(0xFF333334, Surface.CARD_BACKGROUND) == 0xFF000000;
+        }));
         // A request for a post's comments that names no order asks for the chosen one, and with
         // All comments chosen, the menu its answer draws is picked in.
         probes.put(PatchFamily.DEFAULT_COMMENT_ORDER, Arrays.asList(

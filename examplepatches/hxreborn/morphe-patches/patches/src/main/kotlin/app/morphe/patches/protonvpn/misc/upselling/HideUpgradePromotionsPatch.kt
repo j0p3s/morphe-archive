@@ -23,6 +23,7 @@ import app.morphe.patches.protonvpn.misc.settings.patchesSettingsPatch
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.shared.misc.proton.UPSELLING_VISIBILITY_CLASS
 import app.morphe.patches.shared.misc.proton.markFeaturePatched
+import app.morphe.util.getFreeRegisterProvider
 import app.morphe.util.matchSingle
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
@@ -146,6 +147,24 @@ val hideUpgradePromotionsPatch = bytecodePatch(
             "upgradeToPlusBanner",
             "$PROMOTIONS_CLASS->showsUpsell(Z)Z",
         )
+
+        UpgradeDialogCreateFingerprint.matchSingle().run {
+            val superOnCreate = instructionMatches.first().index
+            val register = method.getFreeRegisterProvider(superOnCreate + 1, 1).getFreeRegister()
+            method.addInstructionsWithLabels(
+                superOnCreate + 1,
+                """
+                    invoke-static/range { p0 .. p0 }, $PROMOTIONS_CLASS->hidesOnboardingUpgrade(Landroid/app/Activity;)Z
+                    move-result v$register
+                    if-eqz v$register, :shown
+                    invoke-virtual/range { p0 .. p0 }, Landroid/app/Activity;->finish()V
+                    return-void
+                """,
+                ExternalLabel("shown", method.getInstruction(superOnCreate + 1)),
+            )
+        }
+
+        if (classDefByOrNull(UPGRADE_ONBOARDING_ACTIVITY) == null) return@execute
 
         val onboardingLauncher = launchOnboardingFingerprint().matchOrNull()
         if (onboardingLauncher != null) {

@@ -2,6 +2,39 @@
 
 Changes in each Hushfacebook version, newest first.
 
+## Unreleased
+
+### Added
+
+* **Facebook:** New switch under News feed, `Hide the Find friends card`. The "Want to see more posts from friends?" card with its Find friends button stops showing where your friends' posts run out, and the "You're all caught up with friends" line above it goes too, since Facebook builds them as one block. It starts off (issue #187).
+* **Facebook:** New switch under Downloads, `Convert to keep the full size`. With `Save videos other apps can open` on, a full size video Facebook only has as VP9 or AV1 gets converted to H.264 on your phone, so it isn't saved at a smaller size any more. It's slower, videos over 10 minutes still save smaller, and it starts off (issue #189).
+* **Facebook:** New switch under Reels and Watch, `Hide Save on reels`. It takes the Save button off the side of reels, and the buttons above it move down. It's part of `Clean up Reels` and starts off (issue #190).
+* **Facebook:** New switch under Reels and Watch, `Hide the speaker button on reels`. It takes the speaker button off the bottom of the side of reels, and your phone's volume buttons still turn the sound on. It's part of `Clean up Reels` and starts off (issue #190).
+* **Facebook:** New switch under Appearance, `Black cards`, for the AMOLED black theme. Cards, comments, menus, the Create story tile and the strip behind the Menu's Log out button go fully black like the page instead of the near black that sets them apart, and buttons like See more and Log out keep a dark gray fill so they still show. It starts off and needs a restart (issue #191).
+* **Facebook:** `Menu tiles to hide` lists the rows under Help and support and Settings and privacy too, so Orders and payments or Report a problem can leave the Menu (issue #153). They show up in the list once you've opened those groups in the Menu, and the rows Hushfacebook adds there always stay.
+* **Facebook:** New switch under Marketplace, `Free stuff shortcut`. Facebook's app has no Free category in Marketplace, so this adds Free stuff to the menu you get by holding Facebook's icon (if there's room) and a Free stuff row to the Menu's Settings and privacy. Both open Marketplace's free listings, the same ones the website's Free Stuff category shows. It starts off (Discussion #52).
+
+### Changed
+
+* **Facebook:** `Turn off screen transitions` also skips the zoom a photo opens and closes with. Tap a photo in the feed and it's full screen right away, and Back puts it away without shrinking it into the post. Dragging a photo away still follows your finger. On phones Facebook rates older than 2015, and for a photo that opens without its preview, it still moves as before.
+* **Tooling:** The device audit no longer fails a run just because Facebook didn't serve a sponsored post on the profile or a new-reels badge that day. Families that wait on what Facebook serves are named by `-MayIdle` and recorded in the baseline under `mayIdle`. A walk notes whether each one ran, and a new baseline never lists them among the families that must run.
+* **Diagnostics:** With Debug logging on, a report says more when a game's download screen closes right away. Next to the module and the error, its line lists the steps Facebook's downloader took for that module in the last 30 seconds and what the download task ended with, so one report can show where a game that won't open stopped (issue #168).
+
+### Fixed
+
+* **Facebook:** With `Keep the progress bar` on, a reel Facebook doesn't hand a bar to no longer shows the last reel's frozen spot and time (issues #90 and #120). They stay hidden until you're back on that reel or the next one takes the bar.
+* **Facebook:** `Default comment order` applies on a post's own page too, the one a link, a notification or a post's date opens (issue #192). That page asks Facebook for its comments another way than the comment sheet does, so Most relevant or Newest only took hold in the sheet and the page kept Facebook's order.
+* **Facebook:** `Hide the new comments pill` takes away the newer pill as well, the one with the commenters' pictures on it (issue #185). Facebook has two of them now and the switch only knew the older one.
+* **Facebook:** With `View stories anonymously` on, a story you watched to the end stays grey through the feed's refreshes (issue #165). Facebook rebuilds the story tray a dozen times a second when it opens and again with each refresh, and only the first eight copies in a minute got marked, so a ring could turn back blue moments after it went grey.
+* **Facebook:** `Leave calls and chats to Messenger` works with a Messenger installed under another name beside Meta's apps, the way HushMessenger's "install beside" option makes one (issue #193). Facebook only counted Meta's own Messenger package, so with a renamed copy it kept ringing and posting the same chat notification Messenger posted. The Messenger icon at the top and the Get Messenger card already counted such a copy.
+* **Facebook:** `Hide the notes and active now row` takes the whole row away now. Your own "Your note" tile used to stay behind and keep the row at full height.
+* **Facebook:** With `Save videos other apps can open` on, a long video Facebook only has as VP9 or AV1 keeps its full size when it's made H.264. A thin four minute 1080p reel used to run out of the room set aside for the conversion and save at 720p instead (issue #189).
+* **Facebook:** With `Save videos other apps can open` on, a video over 10 minutes that Facebook only has as VP9 or AV1 goes straight to its smaller H.264 file. Before, it downloaded the full size first, gave up on converting it and showed two error messages on the way.
+* **Facebook:** `See-through bars` keeps its blur on Home after you've been to Reels. Before, a trip to Reels could leave the bars plain see-through until Facebook restarted (issue #188).
+* **Facebook:** `Menu tiles to hide` now hides Feeds, Reels, Memories, Birthdays, Dating and Pages, which it missed on 583, and tiles you ticked before carry over. The list shows the tiles your own Menu has, by the names Facebook gives them, so Crisis response, Community Notes, Pokes and the rest can go too (issue #153).
+* **Facebook:** A video whose best file is over 512 MB saves the next smaller one instead of nothing, and the message at the end says which quality you got. A two hour reel's 720p file was 645 MB and the save just failed, though Facebook also had it at 480p.
+* **Facebook:** A long press on the Facebook logo opens the Hushfacebook settings with Facebook in Arabic too. In some languages Facebook gives the logo nothing to do when it's tapped, and the long press never got set up there (issue #12).
+
 ## 0.15.0 (2026-10-18)
 
 * **Facebook:** Most of this release comes from your requests. A video you tap in the feed can open on its own now, so a swipe up doesn't drop you into an endless reels feed, and the comment sheet can open at full height or from a double tap on a reel. There are new switches to hide the status bar, the Messenger button, the counts under posts and reels, reaction previews and the people row in the share sheet. Settings come in Simplified Chinese, new ones carry a small dot, and Remember what you watch keeps a list so a reel that vanished on refresh is easy to find again. On the fix side, Tap the bar to seek works on 583 again and stories you finish stay watched with View stories anonymously on.

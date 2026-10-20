@@ -1,4 +1,3 @@
-package mightymich.morphe.patches.com.spaceship.screen.textcopy
 
 import app.morphe.patcher.patch.ApkFileType
 import app.morphe.patcher.patch.AppTarget
@@ -12,7 +11,9 @@ object ScreenTranslateCompatibility {
         appIconColor = 0xFF5722,
         targets = listOf(
             AppTarget(version = "7.5.00112"),
-            AppTarget(version = "v7.5.00112")
+            AppTarget(version = "v7.5.00112"),
+            AppTarget(version = "7.3.10123"),
+            AppTarget(version = "v7.3.10123")
         )
     )
 }

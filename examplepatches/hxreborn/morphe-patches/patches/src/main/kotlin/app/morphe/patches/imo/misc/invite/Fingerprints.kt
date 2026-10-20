@@ -10,11 +10,12 @@ import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.opcode
 import app.morphe.patcher.patch.BytecodePatchContext
+import app.morphe.patcher.string
 import app.morphe.patches.imo.shared.RemoteSettingFingerprint
 import app.morphe.patches.imo.shared.enumConstantField
 import com.android.tools.smali.dexlib2.Opcode
 
-internal val chatRowsDelete = methodCall(
+private val chatRowsDelete = methodCall(
     returnType = "I",
     parameters = listOf("Ljava/lang/String;", "Ljava/lang/String;", "[Ljava/lang/String;", "Z"),
 )
@@ -25,8 +26,8 @@ internal fun inviteDialogCooldownFingerprint() = Fingerprint(
         fieldAccess(enumConstantField("LAST_INVITE_SUGGEST_TIME"), Opcode.SGET_OBJECT),
         methodCall(returnType = "J", parameters = listOf("Ljava/lang/Enum;", "J")),
         opcode(Opcode.MOVE_RESULT_WIDE, MatchAfterImmediately()),
+        string("android.intent.action.SEND"),
     ),
-    strings = listOf("android.intent.action.SEND"),
 )
 
 context(_: BytecodePatchContext)

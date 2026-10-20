@@ -55,7 +55,7 @@ class NativeProfilePostsListTest {
             assertTrue("$name: a method taking a post and its grid cell hands the cell a tap listener", binders.isNotEmpty())
             checked += name
         }
-        for (code in BUILDS) assertTrue("no fixture of 451 build $code among $checked", checked.any { it.contains("-$code") })
+        for (code in BUILDS) assertTrue("no fixture of build $code among $checked", checked.any { it.contains("-$code") })
     }
 
     @Test fun dexBackedInstructionReReadsResolveTheSameOnResume() {
@@ -74,7 +74,7 @@ class NativeProfilePostsListTest {
     }
 
     private companion object {
-        val BUILDS = listOf(385713073, 385713078, 385713082, 385713109, 385713111, 385713116, 385713117, 385713118)
+        val BUILDS = listOf(385810270, 385810231, 385810269)
         const val MEDIA = "Lcom/instagram/feed/media/Media;"
 
         /** The bundles of the builds the patches declare, as the other native tests read them. */

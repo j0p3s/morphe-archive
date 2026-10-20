@@ -16,4 +16,6 @@ val spoofSignaturePatch = spoofSignaturePatch(
     fromPackageName = "com.truecaller",
     certificateBase64 = TRUECALLER_CERTIFICATE,
     compatibility = COMPATIBILITY_TRUECALLER,
+    // On by default, like GmsCore support (owner, 2026-10-18).
+    default = true,
 )

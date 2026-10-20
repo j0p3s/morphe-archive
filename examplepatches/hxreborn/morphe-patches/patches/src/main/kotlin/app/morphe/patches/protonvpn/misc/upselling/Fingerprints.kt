@@ -27,7 +27,7 @@ import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.instruction.SwitchPayload
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
 
-private const val UPGRADE_ONBOARDING_ACTIVITY = "Lcom/protonvpn/android/ui/planupgrade/UpgradeOnboardingDialogActivity;"
+internal const val UPGRADE_ONBOARDING_ACTIVITY = "Lcom/protonvpn/android/ui/planupgrade/UpgradeOnboardingDialogActivity;"
 
 internal fun BytecodePatchContext.settingRowWithIconFingerprint(): Fingerprint {
     val settingRow = WidgetSettingsRowFingerprint.matchSingle().instructionMatches.last()
@@ -125,6 +125,14 @@ internal fun BytecodePatchContext.onboardingLaunchCoroutineFingerprint() = Finge
         newInstance(UpgradeOnboardingLauncherFingerprint.originalClassDef.type),
         literal(legacyLaunchDefaultIndex, location = MatchAfterWithin(2)),
     ),
+)
+
+internal object UpgradeDialogCreateFingerprint : Fingerprint(
+    definingClass = "/UpgradeDialogActivityV2;",
+    name = "onCreate",
+    returnType = "V",
+    parameters = listOf("Landroid/os/Bundle;"),
+    filters = listOf(methodCall(name = "onCreate", parameters = listOf("Landroid/os/Bundle;"))),
 )
 
 internal object AccountSettingsViewStateToStringFingerprint : ToStringFingerprint("AccountSettingsViewState(userId=")

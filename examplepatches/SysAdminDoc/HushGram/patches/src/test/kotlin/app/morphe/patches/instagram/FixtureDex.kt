@@ -73,6 +73,15 @@ internal object FixtureDex {
         return found
     }
 
+    /** The classes whose direct superclass is one of [supers] in the bundle. */
+    fun subclasses(bundle: File, supers: Set<String>): List<ClassDef> {
+        val found = mutableListOf<ClassDef>()
+        forEachDex(bundle) { dex ->
+            for (classDef in dex.classes) if (classDef.superclass in supers) found += ImmutableClassDef.of(classDef)
+        }
+        return found
+    }
+
     /**
      * [classes] plus the string pools they call. From 450 Redex moves many strings into static
      * (int)String switch methods, and a patch reading a pooled string needs the pool's class to
@@ -129,6 +138,29 @@ internal object FixtureDex {
             if (dex.stringSection.none { it == string }) return@forEachDex
             for (classDef in dex.classes) {
                 if (classDef.methods.any { holdsString(it, string) }) found += ImmutableClassDef.of(classDef)
+            }
+        }
+        return found
+    }
+
+    /**
+     * Every class with a method that makes a new instance of one of [types]. 452's Redex inlined the
+     * Feed action-row state's constructor into the method that builds it, so a test of the state's
+     * flags carries that class too.
+     */
+    fun classesCreating(bundle: File, types: Set<String>): List<ClassDef> {
+        val found = mutableListOf<ClassDef>()
+        forEachDex(bundle) { dex ->
+            if (dex.typeSection.none { it in types }) return@forEachDex
+            for (classDef in dex.classes) {
+                if (classDef.type in types) continue
+                val creates = classDef.methods.any { method ->
+                    method.implementation?.instructions?.any {
+                        it.opcode == com.android.tools.smali.dexlib2.Opcode.NEW_INSTANCE &&
+                            ((it as com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction).reference as com.android.tools.smali.dexlib2.iface.reference.TypeReference).type in types
+                    } == true
+                }
+                if (creates) found += ImmutableClassDef.of(classDef)
             }
         }
         return found

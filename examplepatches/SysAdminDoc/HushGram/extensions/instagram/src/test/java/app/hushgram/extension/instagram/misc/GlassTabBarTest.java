@@ -4,8 +4,10 @@
  */
 package app.hushgram.extension.instagram.misc;
 
+import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertSame;
 import static org.junit.Assert.assertTrue;
@@ -16,6 +18,8 @@ import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
+import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.ColorDrawable;
@@ -78,6 +82,7 @@ public class GlassTabBarTest {
         Settings.GLASS_TAB_BAR_HIDE_ON_SCROLL.resetToDefault();
         Settings.GLASS_TAB_BAR_SLIDE.resetToDefault();
         Settings.GLASS_TAB_BAR_LIQUID.resetToDefault();
+        Settings.GLASS_TAB_BAR_KEEP_SIZE.resetToDefault();
         BaseSettings.PAUSED.save(false);
         PauseForTests.resume();
         GlassTabBar.resetForTests();
@@ -217,23 +222,62 @@ public class GlassTabBarTest {
     }
 
     /**
-     * #197: Blur the bars around a reel asks which bar wears the glass, so it leaves the pill's background
-     * alone, and whether the pill floats, since only then does the strip under a reel show round it.
+     * #197: Blur the bars around a reel asks which bar wears the glass, so it leaves the pill alone,
+     * floating or not (#221).
      */
     @Test
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
-    public void aBarSaysWhetherItWearsTheGlassAndWhetherTheGlassFloats() throws Exception {
+    public void aBarSaysWhetherItWearsTheGlass() throws Exception {
         for (boolean floating : new boolean[]{true, false}) {
             try (GlassHost host = new GlassHost(Color.BLACK, floating, GlassHeight.STANDARD, false, false)) {
                 assertFalse("not restyled yet", GlassTabBar.wearsGlass(host.bar));
-                assertFalse(GlassTabBar.floatsGlass(host.bar));
+                assertFalse(GlassTabBar.wearsFloatingGlass(host.bar));
                 GlassTabBar.apply(host.activity);
                 assertTrue(GlassTabBar.wearsGlass(host.bar));
-                assertEquals(floating, GlassTabBar.floatsGlass(host.bar));
+                assertEquals(floating, GlassTabBar.wearsFloatingGlass(host.bar));
             }
         }
         assertFalse(GlassTabBar.wearsGlass(null));
+        assertFalse(GlassTabBar.wearsFloatingGlass(null));
+    }
+
+    /**
+     * #258: with Show content behind the tab bar off, Reels stops above the pill, and the bar round it
+     * stayed black with Blur the bars around a reel on. A docked pill shows the reel strip there now, and
+     * its own colour when there's none. A floating pill has the reel itself behind it.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void aDockedPillShowsTheReelStripRoundItself() throws Exception {
+        try {
+            for (boolean floating : new boolean[]{false, true}) {
+                try (GlassHost host = new GlassHost(Color.BLACK, floating, GlassHeight.STANDARD, false, false)) {
+                    GlassTabBar.apply(host.activity);
+                    host.layout();
+                    GlassTabBar.strip = (canvas, left, top, right, bottom) -> {
+                        Paint red = new Paint();
+                        red.setColor(Color.RED);
+                        canvas.drawRect(left, top, right, bottom, red);
+                        return true;
+                    };
+                    try (Pixels pixels = host.background()) {
+                        int corner = pixels.bitmap.getPixel(1, 1);
+                        if (floating) assertEquals("nothing round a floating pill", 0, Color.alpha(corner));
+                        else assertEquals("the strip round a docked pill", Color.RED, corner);
+                    }
+                    GlassTabBar.strip = (canvas, left, top, right, bottom) -> false;
+                    try (Pixels pixels = host.background()) {
+                        int corner = pixels.bitmap.getPixel(1, 1);
+                        if (floating) assertEquals(0, Color.alpha(corner));
+                        else assertEquals("no strip leaves the bar's own colour", Color.BLACK, corner);
+                    }
+                }
+            }
+        } finally {
+            GlassTabBar.strip = app.hushgram.extension.instagram.reels.ReelBlurBars::drawStrip;
+        }
     }
 
     /**
@@ -254,7 +298,6 @@ public class GlassTabBarTest {
             assertNull(PlainTabSlide.of(host.bar));
             assertSame(wrapped, host.activity.getWindow().getCallback());
         }
-        assertFalse(GlassTabBar.floatsGlass(null));
     }
 
     /**
@@ -988,6 +1031,32 @@ public class GlassTabBarTest {
         }
     }
 
+    /**
+     * Keep the pill full size (#256): with the liquid look on, a scroll down still shrinks the bar unless the
+     * switch is on, and then nothing watches the scroll at all while the slide-away and Reels wait are off.
+     */
+    @Test
+    @Config(sdk = 29, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void keepThePillFullSizeLeavesTheScrollAlone() {
+        GlassTabBar.animationsOnForTests = false;
+        for (boolean keep : new boolean[]{false, true}) {
+            try (GlassHost host = new GlassHost(Color.BLACK, true, GlassHeight.STANDARD, false, false)) {
+                host.nameSearch(1);
+                Settings.GLASS_TAB_BAR_LIQUID.save(true);
+                Settings.GLASS_TAB_BAR_KEEP_SIZE.save(keep);
+                GlassTabBar.apply(host.activity);
+                host.frame();
+                GlassScrollHide hide = ReflectionHelpers.getField(host.glass(), "scrollHide");
+                if (keep) {
+                    assertNull("kept full size, no scroll watcher", hide);
+                } else {
+                    assertNotNull("liquid, the scroll shrinks the bar", hide);
+                    assertSame(host.glass(), ReflectionHelpers.getField(hide, "shrinker"));
+                }
+            }
+        }
+    }
+
     private static void send(Window.Callback callback, long down, long time, int action, float x, float y) {
         MotionEvent event = MotionEvent.obtain(down, time, action, x, y, 0);
         try {
@@ -1037,6 +1106,7 @@ public class GlassTabBarTest {
             Settings.GLASS_TAB_BAR_HIDE_ON_SCROLL.save(false);
             Settings.GLASS_TAB_BAR_SLIDE.save(false);
             Settings.GLASS_TAB_BAR_LIQUID.save(false);
+            Settings.GLASS_TAB_BAR_KEEP_SIZE.save(false);
             controller = Robolectric.buildActivity(Activity.class).setup();
             activity = controller.get();
             activity.getApplicationInfo().flags |= android.content.pm.ApplicationInfo.FLAG_SUPPORTS_RTL;
@@ -1572,14 +1642,12 @@ public class GlassTabBarTest {
     }
 
     /**
-     * A floating pill keeps each Reels viewer above it, so its seek bar, caption and the touch strip
-     * Instagram lays over the bar's top don't sit under the pill and take its taps: the Reels tab's in the
-     * swipe pager and one opened over another tab get the bar's height as their margin. A margin Instagram
-     * set stays, the bar's own branch is never touched, a taller pill moves them with it, and a hidden bar
-     * gives the room back.
+     * Each Reels viewer under a floating pill gets the margin asked for (the navigation bar's room, #221):
+     * the Reels tab's in the swipe pager and one opened over another tab. A margin Instagram set stays,
+     * the bar's own branch is never touched, a new margin moves them with it, and 0 gives the room back.
      */
     @Test
-    public void reelsViewersStopAtAFloatingBarsTopAndGetTheRoomBackWhenItHides() {
+    public void reelsViewersUnderAFloatingBarGetTheMarginAskedForAndInstagramsStays() {
         Context context = RuntimeEnvironment.getApplication();
         int reels = 0x7f0b0010;
         FrameLayout holder = new FrameLayout(context);
@@ -1617,6 +1685,88 @@ public class GlassTabBarTest {
         assertEquals(40, margin(instagrams));
         assertTrue(given.isEmpty());
         assertEquals("no id, nothing found", 0, GlassTabBar.reelsAboveTheBar(holder, bar, 0, 126, given));
+    }
+
+    /**
+     * #221: what's raised clear of a floating pill is the child of a reel's layer of controls that holds
+     * the caption or the seek bar, as in Instagram 451's Reels, never the layer or the reel, so the video,
+     * stickers and play button stay where they are. The footer under the viewer (#260) is found apart
+     * from them, and nothing inside a hidden view is.
+     */
+    @Test
+    public void aReelsCaptionAndSeekBarRiseByTheirOwnBandOfTheControls() {
+        Context context = RuntimeEnvironment.getApplication();
+        int media = 0x7f0b0020, info = 0x7f0b0021, scrubber = 0x7f0b0022, footers = 0x7f0b0023;
+        FrameLayout viewer = new FrameLayout(context);
+        LinearLayout column = new LinearLayout(context);
+        viewer.addView(column);
+        FrameLayout page = new FrameLayout(context);
+        column.addView(page);
+        View video = new View(context);
+        video.setId(media);
+        page.addView(video);
+        FrameLayout layer = new FrameLayout(context);
+        page.addView(layer);
+        FrameLayout infoBand = new FrameLayout(context);
+        layer.addView(infoBand);
+        FrameLayout infoHost = new FrameLayout(context);
+        infoBand.addView(infoHost);
+        View caption = new View(context);
+        caption.setId(info);
+        infoHost.addView(caption);
+        FrameLayout scrubBand = new FrameLayout(context);
+        layer.addView(scrubBand);
+        View seekBar = new View(context);
+        seekBar.setId(scrubber);
+        scrubBand.addView(seekBar);
+        View sticker = new View(context);
+        layer.addView(sticker);
+        LinearLayout footer = new LinearLayout(context);
+        footer.setId(footers);
+        column.addView(footer);
+        View insideFooter = new View(context);
+        insideFooter.setId(scrubber);
+        footer.addView(insideFooter);
+
+        java.util.List<View> anchors = new java.util.ArrayList<>(), found = new java.util.ArrayList<>();
+        GlassTabBar.reelAnchors(viewer, info, scrubber, footers, anchors, found, 0);
+        assertEquals(java.util.Arrays.asList(caption, seekBar), anchors);
+        assertEquals("not looked inside", java.util.Collections.singletonList(footer), found);
+        assertSame("the caption's band", infoBand, GlassTabBar.reelBand(caption, media, viewer));
+        assertSame("the seek bar's", scrubBand, GlassTabBar.reelBand(seekBar, media, viewer));
+        assertSame("a band right in the layer is itself", sticker, GlassTabBar.reelBand(sticker, media, viewer));
+        assertNull("no video id", GlassTabBar.reelBand(caption, 0, viewer));
+        assertNull("no video short of where it stops", GlassTabBar.reelBand(caption, media, layer));
+
+        infoBand.setVisibility(View.GONE);
+        anchors.clear();
+        found.clear();
+        GlassTabBar.reelAnchors(viewer, info, scrubber, footers, anchors, found, 0);
+        assertEquals("a hidden caption isn't raised", java.util.Collections.singletonList(seekBar), anchors);
+    }
+
+    /**
+     * #221: a reel's band is raised by scrolling its content, as far as the highest child it shows has room
+     * above it. A hidden or empty child doesn't count, and a band showing nothing has no room.
+     */
+    @Test
+    public void aBandScrollsAsFarAsItsHighestShownChildHasRoom() {
+        Context context = RuntimeEnvironment.getApplication();
+        FrameLayout band = new FrameLayout(context);
+        assertEquals("nothing in it", 0, GlassTabBar.roomAbove(band));
+        View buttons = new View(context), caption = new View(context), hidden = new View(context), empty = new View(context);
+        band.addView(buttons);
+        band.addView(caption);
+        band.addView(hidden);
+        band.addView(empty);
+        buttons.layout(900, 954, 1080, 1700);
+        caption.layout(0, 1807, 900, 2000);
+        hidden.layout(0, 100, 1080, 200);
+        hidden.setVisibility(View.GONE);
+        empty.layout(0, 50, 1080, 50);
+        assertEquals("the buttons are highest", 954, GlassTabBar.roomAbove(band));
+        buttons.setVisibility(View.INVISIBLE);
+        assertEquals(1807, GlassTabBar.roomAbove(band));
     }
 
     /**
@@ -1720,6 +1870,27 @@ public class GlassTabBarTest {
         params.bottomMargin = bottom;
         view.setLayoutParams(params);
         return view;
+    }
+
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(sdk = 29)
+    public void aFloatingPillBlursWhatsBehindItAndADockedBarReflectsTheStripAboveIt() {
+        // A bar at y 2000 whose pill starts 30 px down, 20 px of blur room round it, a 140 px strip, a quarter size.
+        Matrix source = new Matrix();
+        float top = GlassTabBar.backdropSource(source, true, 0.25f, 100f, 2000f, 2030f, 20f, 140f);
+        assertEquals("a floating pill's strip starts behind its own top, less the blur room", 2010f, top, 0f);
+        float[] behind = {100f, 2010f, 100f, 2150f};
+        source.mapPoints(behind);
+        assertArrayEquals("what's behind the pill lands in the node the right way up (#262)",
+                new float[]{0f, 0f, 0f, 35f}, behind, 0.001f);
+
+        top = GlassTabBar.backdropSource(source, false, 0.25f, 100f, 2000f, 2030f, 20f, 140f);
+        assertEquals("a docked bar's strip ends at the bar's top", 1860f, top, 0f);
+        float[] above = {100f, 2000f, 100f, 1860f};
+        source.mapPoints(above);
+        assertArrayEquals("the strip above a docked bar lands upside down",
+                new float[]{0f, 0f, 0f, 35f}, above, 0.001f);
     }
 
     private static int margin(View view) {

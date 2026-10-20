@@ -759,6 +759,14 @@ foreach ($name in $consumerScripts) {
         "$name does not pass declared dependency names into result validation."
 }
 
+# The release receipt runs over the builds the gate applied. Collecting every package's targets
+# took PineDrama's 47.1.4 for a TikTok build at 0.76.0 and stopped the build stage.
+$releaseText = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'release/release.ps1') -Raw
+Assert-True ($releaseText -match '\$target = Get-PatchTarget' -and $releaseText -match 'foreach \(\$v in @\(\$target\.PackageVersions\)\)') `
+    'release.ps1 does not pick its receipt fixtures from the bundle''s target through Get-PatchTarget.'
+Assert-True ($releaseText -notmatch 'compatibility\.targets') `
+    'release.ps1 reads every package''s compatibility targets, so a second app''s version reads as a TikTok build.'
+
 # --- patch timing ----------------------------------------------------------------------------
 #
 # time-patches.ps1 splits one CLI run into patches by the "Applied:" and "FAILED:" lines and gives
@@ -1580,6 +1588,21 @@ try {
         # failing here until the next release.
         if ($synced -notmatch '\b\d+ patch tests passed\b') {
             $synced = $synced -replace '\b(\d+ runtime tests passed)\b', '$1 and 421 patch tests passed'
+        }
+        # The Manager changelog groups quote the index's own CHANGELOG section, so a copy moved up
+        # to the source version quotes that version's groups. 0.75.0 was the first index to carry
+        # groups, and preparing 0.76.0 over it failed every scripts push here (2026-10-18). They come
+        # from this checkout's CHANGELOG, since a case resets the index before its edited copy.
+        if ($indexVersion -ne $fixtureVersion) {
+            $document = $synced | ConvertFrom-Json
+            $description = [string]$document.description
+            $groupMatch = [regex]::Match($description, '(?m)^### ')
+            if ($groupMatch.Success) {
+                $changelog = Get-Content -LiteralPath (Join-Path $Root 'CHANGELOG.md') -Raw
+                $document.description = $description.Substring(0, $groupMatch.Index) +
+                    (Get-ManagerChangelogGroups -Text $changelog -Version $fixtureVersion)
+                $synced = $document | ConvertTo-Json -Depth 100
+            }
         }
         if ($synced -ceq $indexText) { return }
         Set-FactsFile 'patches-bundle.json' { param($text) $synced }
@@ -2809,6 +2832,18 @@ exit 0
                     'A multi-ref runtime push did not apply both commits to every declared host.'
             } finally {
                 $env:HUSHFEED_BUILD_WRAPPER = $wrapperStub
+                # The hook keeps a warm gate worktree per checkout in the temp folder. This checkout
+                # goes away here, so its gate worktree goes too, or every run leaves one behind.
+                if (Test-Path -LiteralPath (Join-Path $firstPatchRoot '.git')) {
+                    foreach ($line in @(& git -C $firstPatchRoot worktree list --porcelain)) {
+                        if ($line -like 'worktree *') {
+                            $listed = $line.Substring('worktree '.Length)
+                            if ([IO.Path]::GetFullPath($listed).TrimEnd('\', '/') -ine [IO.Path]::GetFullPath($firstPatchRoot).TrimEnd('\', '/')) {
+                                & git -C $firstPatchRoot worktree remove --force $listed
+                            }
+                        }
+                    }
+                }
                 Remove-Item -LiteralPath $firstPatchRoot, $firstPatchWrapper -Recurse -Force -ErrorAction SilentlyContinue
             }
 

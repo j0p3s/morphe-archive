@@ -6,6 +6,7 @@ package app.morphe.patches.imo.misc.analytics
 
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.methodCall
+import app.morphe.patches.imo.shared.RemoteSettingFingerprint
 
 private const val APPSFLYER_CLASS = "Lcom/appsflyer/AppsFlyerLib;"
 
@@ -19,10 +20,7 @@ internal object AppsFlyerEventFingerprint : Fingerprint(
     filters = listOf(methodCall(definingClass = APPSFLYER_CLASS, name = "logEvent")),
 )
 
-internal object FirebaseCollectionSettingFingerprint : Fingerprint(
-    definingClass = "Lcom/imo/android/imoim/setting/BootAlwaysSettingsDelegate;",
-    name = "getAnalyticsCollectionenabled",
-)
+internal object FirebaseCollectionSettingFingerprint : RemoteSettingFingerprint("getAnalyticsCollectionenabled")
 
 internal object MonitorEventFingerprint : Fingerprint(
     returnType = "V",

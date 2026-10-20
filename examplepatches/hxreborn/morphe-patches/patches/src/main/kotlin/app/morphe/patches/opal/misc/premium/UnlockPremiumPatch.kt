@@ -5,6 +5,7 @@
 package app.morphe.patches.opal.misc.premium
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
+import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.shared.misc.pairip.removePairipProtectionPatch
@@ -45,7 +46,9 @@ val unlockPremiumPatch = bytecodePatch(
         }
 
         BlockScreenCategoryConstructorFingerprint.matchSingle().method.apply {
-            val isProRegister = parameterTypes.indexOfFirst { it == "Z" } + 1
+            val isProParameterIndex = parameterTypes.indexOfFirst { it == "Z" }
+            if (isProParameterIndex < 0) throw PatchException("BlockScreenCategoryUiModel has no boolean parameter")
+            val isProRegister = isProParameterIndex + 1
             addInstructions(0, "const/4 p$isProRegister, 0x0")
         }
     }
