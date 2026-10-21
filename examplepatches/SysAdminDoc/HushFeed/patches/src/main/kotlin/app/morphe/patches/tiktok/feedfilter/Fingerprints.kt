@@ -876,6 +876,21 @@ internal object TakoCommentTopBarBridgeFingerprint : Fingerprint(
     parameters = emptyList(),
 )
 
+internal const val SHORT_VIDEO_CONTEXT = "Lcom/ss/android/ugc/aweme/shortvideo/ShortVideoContext;"
+
+/**
+ * The camera's AI Cast gate (AI Self; AI Theater in TikTok's code), X.0twO.LIZ on 47.4.3. The
+ * recorder registers the AI Theater toolbar component, the AI Cast button, only when this says
+ * yes. It already says no for minors, stories, duets, the DM camera, templates and the
+ * add_yours, trend_button and anchor_combine_tts shoot ways, and logs its own name before a yes.
+ */
+internal object AiTheaterRecordEntranceFingerprint : Fingerprint(
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.STATIC, AccessFlags.FINAL),
+    returnType = "Z",
+    parameters = listOf(SHORT_VIDEO_CONTEXT),
+    strings = listOf("enableAITheaterRecordEntrance", "add_yours", "trend_button", "anchor_combine_tts"),
+)
+
 internal const val VISUAL_SEARCH_SERVICE =
     "Lcom/ss/android/ugc/aweme/search/df/api/visualsearch/ISearchVisualSearchService;"
 internal const val SMART_SEARCH_INFO = "Lcom/ss/android/ugc/aweme/feed/model/search/SmartSearchInfoStruct;"
@@ -1044,6 +1059,31 @@ internal object SearchTakoSugCardCreatedFingerprint : Fingerprint(
     name = "onViewCreated",
     returnType = "V",
     parameters = listOf("Landroid/view/View;"),
+)
+
+/** The search result card protocol every native search card is built from. */
+internal const val SEARCH_CARD_PROTOCOL_CLASS_DESCRIPTOR =
+    "Lcom/ss/android/ugc/aweme/search/arch/v2/protocol/card/ISearchCardProtocol;"
+
+/**
+ * The view holder every native search result card sits in, built once per card protocol with the
+ * holder's view (p1) and that protocol (p4). The AI answer card at the top of the Top tab comes
+ * from a plugin TikTok downloads (df_search_top1), so its own classes aren't in the APK, but its
+ * holder is built here like every other card's. Real-named class; the third parameter is
+ * R8-named, so it's matched by kind.
+ */
+internal object SearchCardViewHolderConstructorFingerprint : Fingerprint(
+    definingClass = "Lcom/ss/android/ugc/aweme/search/arch/v2/protocol/card/parser/SearchCardViewHolder;",
+    name = "<init>",
+    returnType = "V",
+    parameters = listOf(
+        "Landroid/view/View;",
+        "Landroidx/lifecycle/LifecycleOwner;",
+        "L",
+        SEARCH_CARD_PROTOCOL_CLASS_DESCRIPTOR,
+        "Lkotlin/jvm/functions/Function0;",
+        "Lcom/ss/android/ugc/aweme/search/arch/v2/services/signal/impl/SearchContextAbilityImpl;",
+    ),
 )
 
 internal object FollowFeedPresenterPostProcessFingerprint : Fingerprint(

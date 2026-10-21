@@ -240,8 +240,8 @@ Hide Ask Meta AI in About this reel	Bu reel hakkında bölümünde Meta AI'a sor
 About this reel keeps its summary and Sources, and only the Ask Meta AI box under them goes.	Bu reels hakkında bölümü özetini ve Kaynakları korur, yalnızca altındaki Meta AI'a Sor kutusu kalkar.
 Hide Meta AI in the share sheet	Paylaşım sayfasında Meta AI'ı gizle
 Removes Meta AI from the row at the bottom of the share sheet. Some accounts see it as Muse.	Paylaşım sayfasının altındaki satırdan Meta AI'ı kaldırır. Bazı hesaplar bunu Muse olarak görür.
-Hide the Muse card on profiles	Profillerde Muse kartını gizle
-Removes the Meet Muse card, with its Try Muse button, from profiles. Your other profile cards stay.	Meet Muse kartını ve Try Muse düğmesini profillerden kaldırır. Diğer profil kartların kalır.
+Hide the Muse card	Muse kartını gizle
+Removes the Meet Muse card, with its Try Muse button, from Home and your profile. Your other cards stay.	Meet Muse kartını ve Try Muse düğmesini Ana Sayfa'dan ve profilinden kaldırır. Diğer kartların kalır.
 Hide the Muse button on your profile	Profilinde Muse düğmesini gizle
 Removes the Muse button from the top bar of your profile. Your username and the menu stay.	Muse düğmesini profilinin üst çubuğundan kaldırır. Kullanıcı adın ve menü kalır.
 Hide Blend on reels	Reels'te Blend'i gizle
@@ -254,10 +254,10 @@ Leaves the Suggested for you accounts out of what shows when you tap the search 
 Messages	Mesajlar
 Hide the notes row	Notlar satırını gizle
 Takes the row of notes off the top of your messages, the Map bubble in it too. Your chats, search and requests stay.	Mesajlarının üst kısmındaki notlar satırını, içindeki Harita balonuyla birlikte kaldırır. Sohbetlerin, arama ve istekler kalır.
+Hide the search bar in Messages	Mesajlar'da arama çubuğunu gizle
+Takes the search bar and its Filter button off the top of your messages, the Meta AI bar too. Your chats, notes and requests stay.	Mesajlarının üst kısmındaki arama çubuğunu ve Filtre düğmesini kaldırır, Meta AI çubuğunu da. Sohbetlerin, notların ve isteklerin kalır.
 Hide Instants	Instants'ı gizle
 Removes the stack of Instants (quick photos from friends) from your messages. Restart Instagram to see the change.	Mesajlarındaki Instants yığınını (arkadaşlardan hızlı fotoğraflar) kaldırır. Değişikliği görmek için Instagram'ı yeniden başlat.
-Hide See preview and Plus in chat menus	Sohbet menülerinde Önizleme ve Plus'ı gizle
-Takes the See preview and Instagram Plus rows out of the menu you get from long pressing a chat. Your chat options stay.	Bir sohbete uzun basınca açılan menüden Önizlemeyi gör ve Instagram Plus satırlarını kaldırır. Sohbet seçeneklerin kalır.
 Read messages without the seen receipt	Mesajları görüldü bilgisi olmadan oku
 Opening a chat doesn't tell people you've seen their messages, and you still see when they've seen yours. To let one chat know, long press it in your messages and tap Mark as read.	Bir sohbeti açtığında karşı taraf mesajlarını gördüğünü öğrenmez ve onların seninkileri ne zaman gördüğünü görmeye devam edersin. Bir sohbetin bilmesini istersen mesajlarında ona uzun bas ve Okundu olarak işaretle'ye dokun.
 Keep chats unread here	Sohbetleri burada okunmamış tut
@@ -396,6 +396,8 @@ Last carousel save	Son çoklu gönderi kaydı
 Comments	Yorumlar
 Copy comment	Yorumu kopyala
 Adds Copy to a selected comment's menu. Copies the original text, including line breaks.	Seçilen yorumun menüsüne Kopyala seçeneğini ekler. Satır sonları dahil özgün metni kopyalar.
+Copy without the @names at the start	Baştaki @adlar olmadan kopyala
+When a comment starts with @names, like most replies do, Copy leaves them out. The comment in Instagram stays the same.	Bir yorum çoğu yanıt gibi @adlarla başlıyorsa Kopyala bunları dışarıda bırakır. Instagram'daki yorum aynı kalır.
 Copy the commenter's username	Yorum yapanın kullanıcı adını kopyala
 Adds Copy username to a selected comment's menu, for the account that wrote it.	Seçilen bir yorumun menüsüne, yorumu yazan hesap için Kullanıcı adını kopyala seçeneğini ekler.
 Comment copied	Yorum kopyalandı
@@ -505,6 +507,7 @@ When the reel isn't on the first screen, the profile shows a Find the reel butto
 Find the reel	Reel'i bul
 Stop looking	Aramayı durdur
 Couldn't find the reel you came from	Geldiğin reel bulunamadı
+That's a trial reel, so it isn't on their profile	Bu bir deneme reel'i, bu yüzden profilde yok
 Clear saved copies now	Kayıtlı kopyaları şimdi temizle
 Clear the media cache	Medya önbelleğini temizle
 Couldn't clear the saved copies. Try again.	Kayıtlı kopyalar temizlenemedi. Tekrar dene.
@@ -536,7 +539,7 @@ Wi-Fi stays as it is. Turn this off to save data on every network.	Wi-Fi olduğu
 Hide comments	Yorumları gizle
 Hide memories and recaps	Anıları ve özetleri gizle
 Hide story rewinds	Hikaye geri sarmalarını gizle
-Nothing in the row of stories at the top of Home loads, your own story included, which saves data. A story ring on a profile or in a chat still opens its stories.	Ana Sayfa'nın üstündeki hikaye satırında, kendi hikayen dahil hiçbir şey yüklenmez, bu da veri tasarrufu sağlar. Bir profildeki veya sohbetteki hikaye halkası yine hikayelerini açar.
+Nothing in the row of stories at the top of Home loads, your own story included, and highlights on profiles stay empty too. Saves data. A story ring on a profile or in a chat still opens its stories.	Ana Sayfa'nın üstündeki hikaye satırında, kendi hikayen dahil hiçbir şey yüklenmez ve profillerdeki öne çıkanlar da boş kalır. Veri tasarrufu sağlar. Bir profildeki veya sohbetteki hikaye halkası yine hikayelerini açar.
 Open categories as pages	Kategorileri sayfa olarak aç
 Settings shows a list of its categories, and a tap opens one on its own page. Search still looks through all of them.	Ayarlar kategorilerinin bir listesini gösterir ve bir dokunuş birini kendi sayfasında açar. Arama yine hepsinde arar.
 Hide the HushGram row in Instagram's menu	Instagram menüsündeki HushGram satırını gizle
@@ -547,7 +550,7 @@ A long press on the Instagram logo at the top of Home opens these settings. Off,
 The last way into these settings stays on.	Bu ayarlara giden son yol açık kalır.
 No other way into HushGram is on, so the row stays in Instagram's menu.	HushGram'ı açan başka bir yol açık değil, bu yüzden satır Instagram'ın menüsünde kalır.
 Instagram's Settings and activity screen leaves out the HushGram row while another way here opens HushGram. With every other way off, the row comes back.	Buraya gelen başka bir yol HushGram'ı açtığı sürece Instagram'ın Ayarlar ve hareketler ekranında HushGram satırı gösterilmez. Diğer bütün yollar kapalıyken satır geri gelir.
-Stop loading stories	Hikayeleri yükleme
+Stop loading stories and highlights	Hikayeleri ve öne çıkanları yükleme
 Takes the Comment button and the comment count off the posts in your feed.	Akışındaki gönderilerden Yorum yap düğmesini ve yorum sayısını kaldırır.
 # context: Comments: the switch that hides the row of quick emoji above the comment box (#248). Comment box is the field where you type a comment.
 Hide the emoji row	Emoji satırını gizle
@@ -830,6 +833,8 @@ Keep reels muted on the volume keys	Ses tuşlarında reel'leri sessiz tut
 Volume up still raises the phone's volume, but a muted reel stays muted until you unmute it.	Sesi artırmak telefonun sesini yine yükseltir, ancak sessize alınmış bir reel siz açana kadar sessiz kalır.
 Start stories with sound	Hikayeleri sesli başlat
 Stories open with their sound on, the same as tapping Instagram's speaker. Your phone's ringer and volume still count, so on silent or with the volume down, stories stay quiet.	Hikayeler, Instagram'ın hoparlörüne dokunmuş gibi sesi açık olarak açılır. Telefonunuzun zil modu ve ses düzeyi yine geçerlidir, bu yüzden sessizde veya ses kapalıyken hikayeler sessiz kalır.
+Stop swipe up to reply	Yanıtlamak için yukarı kaydırmayı durdur
+A swipe up on someone's story no longer opens the reply box and its reactions. Tap Send message to reply.	Birinin hikayesinde yukarı kaydırmak artık yanıt kutusunu ve tepkilerini açmaz. Yanıtlamak için Mesaj gönder'e dokunun.
 # context: toast when Download all is tapped while another post is still saving; it waits its turn
 Queued. It starts once the post before it is saved.	Sırada. Önceki gönderi kaydedilince başlayacak.
 # context: toast when Download all is tapped but the waiting line is already full; %1$d is the number waiting
@@ -1138,3 +1143,21 @@ Left off the message box: %1$s. The text box and Send stay.	Mesaj kutusundan ç�
 Gallery	Galeri
 Stickers	Çıkartmalar
 Voice message	Sesli mesaj
+Not interested button on reels	Reels'te İlgilenmiyorum düğmesi
+Puts a Not interested icon beside a reel, so one tap does what Not interested in its menu does.	Bir reel'in yanına İlgilenmiyorum simgesi koyar, böylece tek dokunuş menüsündeki İlgilenmiyorum ile aynı işi yapar.
+Not interested	İlgilenmiyorum
+Block button on reels	Reels'te Engelle düğmesi
+Puts a Block icon beside someone else's reel. A tap opens Instagram's own block screen for that account, so you still confirm it there.	Başka birinin reel'inin yanına bir Engelle simgesi koyar. Dokunuş o hesap için Instagram'ın kendi engelleme ekranını açar, yani yine orada onaylarsın.
+Block	Engelle
+Swipe left to open the profile	Profili açmak için sola kaydır
+A left swipe on a reel opens the creator's profile, like Instagram used to. Tap Friends at the top to reach your friends' reels.	Bir reel üzerinde sola kaydırmak, Instagram'ın eskiden yaptığı gibi içeriği oluşturanın profilini açar. Arkadaşlarının reel'lerine ulaşmak için üstteki Arkadaşlar'a dokun.
+Hide this sound	Bu sesi gizle
+Showing reels with %1$s again	%1$s kullanan reel'ler yeniden gösteriliyor
+Hiding reels with %1$s	%1$s kullanan reel'ler gizleniyor
+%1$s by %2$s	%1$s (%2$s)
+this sound	bu ses
+Hide reels by sound	Reels'i sese göre gizle
+Puts a music icon beside a reel. Tap it and the Reels tab skips other reels using that sound. Tap it again to bring them back.	Bir reel'in yanına müzik simgesi koyar. Dokunduğunda Reels sekmesi o sesi kullanan diğer reel'leri atlar. Geri getirmek için yeniden dokun.
+Hidden sounds	Gizli sesler
+The sounds you hid with the music icon. Uncheck one to see its reels again.	Müzik simgesiyle gizlediğin sesler. Reel'lerini yeniden görmek için birinin işaretini kaldır.
+No sounds are hidden yet. Turn on Hide reels by sound, then tap the music icon beside a reel.	Henüz gizli ses yok. Reels'i sese göre gizle'yi aç, sonra bir reel'in yanındaki müzik simgesine dokun.

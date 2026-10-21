@@ -1,6 +1,6 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.18.0",
+  "version": "1.22.2",
   "patches": [
     {
       "name": "Auto check-in & claim daily reward",
@@ -16,6 +16,13 @@
           "appIconColor": "#FF6B35",
           "signatures": [],
           "targets": [
+            {
+              "version": "3.3.5",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 23,
+              "description": null
+            },
             {
               "version": "3.3.4.2",
               "versionCodes": null,
@@ -125,6 +132,46 @@
               "versionCodes": null,
               "isExperimental": false,
               "minSdk": 24,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Bypass Play license check (NetMonster)",
+      "description": "Removes Google Play's PairIP license check so a re-signed NetMonster 5.0.x build runs instead of being blocked by the \"Get this app from Play\" screen. Without it, patched 5.0.0 / 5.0.1 open the Play Store on launch and close. No effect on 4.0.4, which has no such check.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "cz.mroczis.netmonster",
+          "name": "NetMonster",
+          "description": null,
+          "apkFileType": "APK_REQUIRED",
+          "appIconColor": "#00BCD4",
+          "signatures": [],
+          "targets": [
+            {
+              "version": "4.0.4",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 27,
+              "description": null
+            },
+            {
+              "version": "5.0.0",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 32,
+              "description": null
+            },
+            {
+              "version": "5.0.1",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 32,
               "description": null
             }
           ]
@@ -250,6 +297,46 @@
           "appIconColor": "#FF6B35",
           "signatures": [],
           "targets": [
+            {
+              "version": "3.3.5",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 23,
+              "description": null
+            },
+            {
+              "version": "3.3.4.2",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 23,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
+      "name": "Dark theme (black background)",
+      "description": "Makes Simosa a dark app: screens, sheets, dialogs and menus use the dark palette (near-black background, light text) instead of the light one, including on Android 12+ where the app would otherwise take a light colour scheme from the wallpaper. The app's own red/orange branding and its white cards are left alone so text on them stays readable.",
+      "default": false,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.jazz.jazzworld",
+          "name": "Simosa",
+          "description": null,
+          "apkFileType": "APK_REQUIRED",
+          "appIconColor": "#FF6B35",
+          "signatures": [],
+          "targets": [
+            {
+              "version": "3.3.5",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 23,
+              "description": null
+            },
             {
               "version": "3.3.4.2",
               "versionCodes": null,
@@ -503,7 +590,7 @@
     },
     {
       "name": "Remove ads",
-      "description": "Removes native feed ads (Google GMA), the full-height ad slot, and the \"Buy with Delivery\" promo section (bar, cards and View all) from OLX. Pinned to the 18.8.0 build (matches that build's obfuscated feed classes).",
+      "description": "Removes native feed ads (Google GMA), the full-height ad slot, the \"Buy with Delivery\" promo section (bar, cards and View all), and the three item-page banner slots from OLX. Pinned to the 18.8.0 build (matches that build's obfuscated feed and item-page classes).",
       "default": true,
       "dependencies": [],
       "compatiblePackages": [
@@ -624,6 +711,13 @@
           "signatures": [],
           "targets": [
             {
+              "version": "3.3.5",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 23,
+              "description": null
+            },
+            {
               "version": "3.3.4.2",
               "versionCodes": null,
               "isExperimental": false,
@@ -649,6 +743,13 @@
           "appIconColor": "#FF6B35",
           "signatures": [],
           "targets": [
+            {
+              "version": "3.3.5",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 23,
+              "description": null
+            },
             {
               "version": "3.3.4.2",
               "versionCodes": null,

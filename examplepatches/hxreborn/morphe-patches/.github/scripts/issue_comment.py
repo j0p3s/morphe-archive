@@ -124,7 +124,7 @@ def answers_needs_info(issue, comment):
 def ping_reply():
     return (
         f"{PING_MARKER}\n"
-        "There's no ETA for this request yet. Any updates will be posted on this issue.\n"
+        "There's no ETA for this request yet. Any updates will be posted here.\n"
     )
 
 

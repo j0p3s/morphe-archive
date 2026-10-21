@@ -15,6 +15,8 @@ import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.OutputStream
 import java.io.PrintStream
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
 import java.security.MessageDigest
 
 enum class TargetApp(
@@ -178,6 +180,30 @@ enum class TargetApp(
         filePattern = Regex("(?i).*(?:sube).*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "sube",
         referenceSha256 = Constants.SUBE_INPUT_SHA256,
+    ),
+    SDMSE(
+        id = "sdmse",
+        appName = "SD Maid SE",
+        packageName = Constants.SDMSE_PACKAGE_NAME,
+        candidateFilenames = listOf(
+            "eu.darken.sdmse_2.2.2.apk",
+            "sdmse_${Constants.SDMSE_TARGET_VERSION}.apk",
+        ),
+        filePattern = Regex("(?i).*(?:sdmse|sdmaid).*\\.(?:apk|apkm|xapk)$"),
+        patchDirectoryPart = "sdmse",
+        referenceSha256 = Constants.SDMSE_INPUT_SHA256,
+    ),
+    MULTIACCOUNTS(
+        id = "multiaccounts",
+        appName = "Multiple Accounts",
+        packageName = Constants.MULTIACCOUNTS_PACKAGE_NAME,
+        candidateFilenames = listOf(
+            "multiaccounts_${Constants.MULTIACCOUNTS_TARGET_VERSION}.apk",
+            "com.excelliance.multiaccounts_${Constants.MULTIACCOUNTS_TARGET_VERSION}-672_minAPI23(arm64-v8a)(nodpi)_apkmirror.com.apk",
+        ),
+        filePattern = Regex("(?i).*(?:multiaccounts|multiple.?accounts).*\\.(?:apk|apkm|xapk)$"),
+        patchDirectoryPart = "multiaccounts",
+        referenceSha256 = Constants.MULTIACCOUNTS_INPUT_SHA256,
     ),
     ;
 
@@ -728,6 +754,7 @@ fun main(args: Array<String>) {
     val pendingSmaliErrors = java.util.concurrent.CopyOnWriteArrayList<String>()
     val pendingSkipLines = java.util.concurrent.CopyOnWriteArrayList<String>()
     val smaliCompileErrors = mutableListOf<String>()
+    val malformedDexHeaders = mutableListOf<String>()
     val skipWarnings = mutableListOf<String>()
 
     class InterceptingOutputStream(val delegate: OutputStream) : OutputStream() {
@@ -850,6 +877,7 @@ fun main(args: Array<String>) {
             File(tempDir, "patched/originalDex").mkdirs()
             val patcherResult = patcher.get()
             println("[BUILD] Compiled ${patcherResult.dexFiles.size} DEX files successfully.")
+            verifyDexHeaders(File(tempDir, "patched"), malformedDexHeaders)
 
             val outPath = System.getProperty("outputApk")
             val dexDigestOption = resolveDexDigestOption()
@@ -1088,6 +1116,12 @@ fun main(args: Array<String>) {
         error("Patcher execution failed: ${smaliCompileErrors.size} inline smali compile error(s) detected! Non-range invokes cannot address registers above v15; use the /range form or move values into low registers.")
     }
 
+    if (malformedDexHeaders.isNotEmpty()) {
+        println("\n[ERROR] Malformed DEX headers detected (${malformedDexHeaders.size}):")
+        malformedDexHeaders.forEach { println("  - $it") }
+        error("Patcher execution failed: ${malformedDexHeaders.size} malformed DEX header(s). ART rejects a DEX with zero class_defs and a non-zero class_defs_off; a patch probably mutated every class of an original DEX (call mutableClassDefBy only on classes that need edits).")
+    }
+
     if (failedPatches > 0) {
         println("\nFailure details:")
         failures.forEach { println("  - $it") }
@@ -1190,5 +1224,64 @@ private fun printDexDigest(apk: File, option: String) {
 
     if (!option.equals("true", ignoreCase = true)) {
         writeDexDigestFile(resolveOutputPath(option), linesText)
+    }
+}
+
+// DEX header layout constants defined by the Dalvik Executable (DEX) format specification.
+private const val DEX_HEADER_MIN_SIZE = 0x70
+private const val DEX_HEADER_CLASS_DEFS_SIZE_OFFSET = 0x60
+private const val DEX_HEADER_CLASS_DEFS_OFF_OFFSET = 0x64
+
+private fun isMalformedDexHeader(classDefsSize: Long, classDefsOff: Long): Boolean {
+    return classDefsSize == 0L && classDefsOff != 0L
+}
+
+private fun readDexHeader(file: File): ByteArray? {
+    if (file.length() < DEX_HEADER_MIN_SIZE) return null
+    val header = ByteArray(DEX_HEADER_MIN_SIZE)
+    val readCount = file.inputStream().use { it.readNBytes(header, 0, DEX_HEADER_MIN_SIZE) }
+    if (readCount < DEX_HEADER_MIN_SIZE) return null
+    return header
+}
+
+private fun checkDexHeader(file: File, root: File): String? {
+    val relPath = file.relativeTo(root).invariantSeparatorsPath
+    val header = readDexHeader(file)
+        ?: return "$relPath (file size ${file.length()} < 0x70 bytes)"
+    val buffer = ByteBuffer.wrap(header).order(ByteOrder.LITTLE_ENDIAN)
+    val classDefsSize = buffer.getInt(DEX_HEADER_CLASS_DEFS_SIZE_OFFSET).toLong() and 0xFFFF_FFFFL
+    val classDefsOff = buffer.getInt(DEX_HEADER_CLASS_DEFS_OFF_OFFSET).toLong() and 0xFFFF_FFFFL
+    if (isMalformedDexHeader(classDefsSize, classDefsOff)) {
+        return "$relPath (class_defs_size=$classDefsSize, class_defs_off=$classDefsOff)"
+    }
+    return null
+}
+
+// Raw assets under other/ are excluded because ART never loads them as app DEX.
+private fun findDexFiles(root: File): List<File> {
+    if (!root.isDirectory) return emptyList()
+    val pattern = Regex("""^classes\d*\.dex$""", RegexOption.IGNORE_CASE)
+    return listOf(File(root, "dex"), File(root, "originalDex"))
+        .mapNotNull { it.listFiles() }
+        .flatMap { it.toList() }
+        .filter { it.isFile && pattern.matches(it.name) }
+        .sortedBy { it.path }
+}
+
+private fun findMalformedDexHeaders(root: File, dexFiles: List<File> = findDexFiles(root)): List<String> {
+    return dexFiles.mapNotNull { checkDexHeader(it, root) }
+}
+
+private fun verifyDexHeaders(patchedDir: File, malformedDexHeaders: MutableList<String>) {
+    val dexFiles = findDexFiles(patchedDir)
+    if (dexFiles.isEmpty()) {
+        println("[WARN] DEX header check skipped: no DEX files found under patched/.")
+        return
+    }
+    val malformed = findMalformedDexHeaders(patchedDir, dexFiles)
+    println("[BUILD] DEX header check: ${dexFiles.size} file(s) inspected, ${malformed.size} malformed.")
+    if (malformed.isNotEmpty()) {
+        malformed.forEach { println("  - $it") }
+        malformedDexHeaders.addAll(malformed)
     }
 }

@@ -22,10 +22,9 @@ Technical documentation and patch catalog for Microsoft Copilot (OfficeHub) on A
 
 | Patch Name | Typology | Default State | Dependencies | Description |
 | :--- | :--- | :--- | :--- | :--- |
-| **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Copilot Telemetry Manifest Purge` | Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, stubs Singular attribution SDK initializers and dispatchers, nullifies ad measurement identifiers (AIFA, AppSetId), sinkholes AppCenter, events, and default telemetry endpoints to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising and preinstall attribution permissions. |
+| **Block Telemetry & Trackers** | `bytecodePatch` | `true` (Enabled) | `Copilot Telemetry Manifest Purge` | Neutralizes Microsoft OneDS/Aria aggregated-metric and failure-logging dispatch methods, stubs Singular attribution SDK initializers and dispatchers, nullifies ad measurement identifiers (AIFA, AppSetId), sinkholes AppCenter, events, and default telemetry endpoints to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising and preinstall attribution permissions. |
 | **Copilot Telemetry Manifest Purge** | `resourcePatch` | `false` (Opt-in) | None | Strips advertising and tracking permissions, disables DataTransport, cross-sell, and HockeyApp components, and injects opt-out metadata in AndroidManifest.xml. |
 | **Bypass Code Transparency** | `bytecodePatch` | `true` (Enabled) | None | Skips the code-transparency failure dialog and reports local verification success, unblocking sideloaded installs. |
-| **Disable Login Requirement** | `bytecodePatch` | `true` (Enabled) | None | Removes login requirement and FTUX paywall screens. Cloud-backed features still require sign-in server-side. |
 | **Copilot Companion Native Slimmer** | `rawResourcePatch` | `false` (Opt-in) | None | Strips optional companion native binaries (React Native, Hermes, SlimCV) via in-situ zeroing. |
 
 ---
@@ -47,10 +46,6 @@ Technical documentation and patch catalog for Microsoft Copilot (OfficeHub) on A
 1. **Bypass Code Transparency**:
    - **Objective**: Enable sideloaded installations without code transparency validation failures.
    - **How**: Intercepts verification checks and notifies the application that transparency checks passed successfully.
-
-2. **Disable Login Requirement**:
-   - **Objective**: Allow using local application functions without compulsory Microsoft account sign-in.
-   - **How**: Bypasses initial first-run onboarding task gates and short-circuits single sign-on checks.
 
 ### C. Resource and Native Slimming Axes
 

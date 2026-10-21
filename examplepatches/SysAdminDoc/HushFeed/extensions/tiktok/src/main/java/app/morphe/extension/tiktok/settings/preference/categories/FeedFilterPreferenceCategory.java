@@ -106,6 +106,12 @@ public class FeedFilterPreferenceCategory extends ConditionalPreferenceCategory 
         ));
         addPreference(new TogglePreference(
                 context,
+                "Latest first on Following",
+                "Play each batch the Following feed loads newest post first. TikTok still picks what each batch brings, and ads and LIVEs keep their place.",
+                Settings.FOLLOWING_LATEST_FIRST
+        ));
+        addPreference(new TogglePreference(
+                context,
                 "Hide stories", "Hide stories from the feed.",
                 Settings.HIDE_STORY
         ));
@@ -144,6 +150,12 @@ public class FeedFilterPreferenceCategory extends ConditionalPreferenceCategory 
                 "Hide playlist videos",
                 "Hide videos posted as part of a playlist.",
                 Settings.HIDE_PLAYLIST_VIDEOS
+        ));
+        addPreference(new TogglePreference(
+                context,
+                "Hide subscriber-only videos",
+                "Hide posts only a creator's subscribers can watch, the ones with a lock, on the feed and on profiles.",
+                Settings.HIDE_SUBSCRIBER_ONLY
         ));
         // A kind of post, not an ad: its summary says it goes even when the badge isn't paid.
         addPreference(new TogglePreference(context, "Filter location-tagged videos",

@@ -9,25 +9,12 @@ Morphe patches for the **Column** news app (`com.columnapp.column`).
 | **Block ads and trackers** | ✅ | Refuses ad/tracker requests made by Column's WebView |
 | **Disable AppsFlyer attribution** | ⬜ | Stops the bundled AppsFlyer SDK from initialising (optional, may break referral deep links) |
 
-## Why only ads + privacy?
+## Scope
 
-Column is a Capacitor (WebView) application. Its premium state is issued by the backend
-(`api.column.news` + RevenueCat entitlement) and is not decided by any code inside the APK.
-
-The app's own perk table (`assets/public/chunk-7JNNW44E.js`) is explicit:
-
-```js
-this.PERKS = {
-  premium:  ["Riassunti AI illimitati", "Podcast quotidiani personalizzati", "Zero pubblicità"],
-  freemium: ["Riassunti AI illimitati", "Podcast quotidiani personalizzati"]
-}
-```
-
-The **only** premium-exclusive benefit is the removal of ads. AI summaries and podcasts are part of
-the free tier; full articles / audio / Column AI are delivered and authorised server-side.
-
-So the set of features that can be modified client-side is exactly: *the ads*. That is what this
-repository patches. Subscription state is never read, written or spoofed.
+Column is a Capacitor (WebView) application. These patches only block the ad/tracker
+requests made by the WebView and, optionally, the AppsFlyer attribution SDK.
+They do not unlock any feature, they do not touch any subscription state, and they
+do not read, write or spoof anything related to it.
 
 ## Build
 

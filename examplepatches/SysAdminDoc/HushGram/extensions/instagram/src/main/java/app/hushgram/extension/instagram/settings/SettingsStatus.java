@@ -80,6 +80,10 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean storySwipeReply() {
+        return false;
+    }
+
     public static boolean storyUploadQuality() {
         return false;
     }
@@ -145,15 +149,15 @@ public final class SettingsStatus {
         return false;
     }
 
+    public static boolean inboxSearch() {
+        return false;
+    }
+
     public static boolean inboxSuggestions() {
         return false;
     }
 
     public static boolean instants() {
-        return false;
-    }
-
-    public static boolean plusPreview() {
         return false;
     }
 
@@ -395,6 +399,10 @@ public final class SettingsStatus {
     }
 
     public static boolean reelScrolling() {
+        return false;
+    }
+
+    public static boolean swipeToProfile() {
         return false;
     }
 

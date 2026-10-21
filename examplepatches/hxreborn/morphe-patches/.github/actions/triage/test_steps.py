@@ -50,7 +50,57 @@ def emit(value):
 
 
 issues = state["issues"]
-if args[:2] == ["issue", "list"]:
+
+
+def discussion(n, i):
+    return {"number": int(n), "title": i["title"], "body": i["body"], "url": f"https://github.com/x/y/discussions/{n}",
+            "createdAt": "2026-01-01T00:00:00Z", "updatedAt": i.get("updatedAt", "2026-01-01T00:00:00Z"),
+            "state": i.get("live_state", i["state"]), "author": {"login": i.get("author", "requester")},
+            "labels": [{"name": label} for label in i["labels"]],
+            "comments": [{"author": {"login": "github-actions" if c["user"]["login"] == "github-actions[bot]" else c["user"]["login"]},
+                          "body": c["body"], "createdAt": "2026-01-01T00:00:00Z", "url": ""} for c in i["comments"]]}
+
+
+if args[:2] == ["api", "graphql"]:
+    fields = {}
+    for flag, value in zip(args, args[1:]):
+        if flag in ("-f", "-F") and "=" in value:
+            key, _, raw = value.partition("=")
+            fields.setdefault(key, []).append(open(raw[1:]).read() if raw.startswith("@") else raw)
+    operation = fields["query"][0].split("(")[0].split()[-1]
+    number = fields.get("number", fields.get("id", ["D0"]))[0].lstrip("D")
+    if operation == "CategoryId":
+        emit({"data": {"repository": {"discussionCategory": {"id": "C1"}}}})
+    elif operation == "RequestList":
+        emit({"data": {"repository": {"discussions": {"pageInfo": {"hasNextPage": False, "endCursor": None},
+              "nodes": [{**discussion(n, i), "closed": i["state"] == "CLOSED",
+                         "labels": {"nodes": [{"name": label} for label in i["labels"]]},
+                         "comments": {"nodes": discussion(n, i)["comments"]}} for n, i in issues.items()]}}}})
+    elif operation == "DiscussionId":
+        emit({"data": {"repository": {"discussion": {"id": f"D{number}"}}}})
+    elif operation == "Discussion":
+        i = issues[number]
+        emit({"data": {"repository": {"discussion": {**discussion(number, i), "closed": i.get("live_state", i["state"]) == "CLOSED",
+              "labels": {"nodes": [{"name": label} for label in i["labels"]]}, "comments": {"nodes": discussion(number, i)["comments"]}}}}})
+    elif operation == "LabelId":
+        emit({"data": {"repository": {"label": {"id": "L:" + fields["label"][0]}}}})
+    else:
+        issue = issues[number]
+        if operation == "AddComment":
+            issue["comments"].append({"user": {"login": "github-actions[bot]"}, "body": fields["body"][0]})
+        elif operation == "Retitle":
+            issue["title"] = fields["title"][0]
+        elif operation == "AddLabels":
+            issue["labels"] += [label[2:] for label in fields["labels[]"] if label[2:] not in issue["labels"]]
+        elif operation == "RemoveLabels":
+            issue["labels"] = [label for label in issue["labels"] if "L:" + label not in fields["labels[]"]]
+        elif operation == "Close":
+            issue["state"] = "CLOSED"
+            issue["closed_as"] = fields["reason"][0]
+        state["mutations"].append(f"{operation} {number}")
+        json.dump(state, open(path, "w"))
+        emit({"data": {}})
+elif args[:2] == ["issue", "list"]:
     emit([{"number": int(n), "title": i["title"], "body": i["body"], "state": i["state"],
            "labels": [{"name": label} for label in i["labels"]], "comments": [],
            "author": {"login": i.get("author", "requester")}} for n, i in issues.items()])
@@ -125,7 +175,7 @@ def run(issues, steps, issue_number="", registry=True, fail_on="", event_issue=N
             (temp / "bin" / name).chmod(0o755)
         (temp / "patches-list.json").write_text(json.dumps(PATCHES_LIST))
         (temp / "registry.json").write_text(json.dumps(REGISTRY))
-        (temp / "state.json").write_text(json.dumps({"issues": issues, "calls": [], "events": events or {}}))
+        (temp / "state.json").write_text(json.dumps({"issues": issues, "calls": [], "mutations": [], "events": events or {}}))
         event_issue = event_issue or {}
         (temp / "event.json").write_text(json.dumps({"issue": {
             **event_issue, "labels": [{"name": label} for label in event_issue.get("labels", [])]}}))
@@ -133,7 +183,8 @@ def run(issues, steps, issue_number="", registry=True, fail_on="", event_issue=N
             "PATH": f"{temp / 'bin'}:{os.environ['PATH']}", "HOME": str(temp), "FAKE_STATE": str(temp / "state.json"),
             "FAKE_REGISTRY": str(temp / "registry.json") if registry else "", "FAIL_ON": fail_on,
             "GH_TOKEN": "fake", "REPO": "hxreborn/morphe-patches", "GITHUB_REPOSITORY": "hxreborn/morphe-patches",
-            "ISSUE": str(issue_number), "REGISTRY": "https://registry.invalid", "PATCHES_LIST": "patches-list.json",
+            "ISSUE": str(issue_number), "NUMBER": str(issue_number), "CATEGORY": "app-requests",
+            "REGISTRY": "https://registry.invalid", "PATCHES_LIST": "patches-list.json",
             "DRY_RUN": "false", "RUNNER_TEMP": str(temp / "runner"), "GITHUB_EVENT_PATH": str(temp / "event.json"),
             "ACTION": action, "ASSOCIATION": association, "CLOSED": str(event_issue.get("state") == "closed").lower(),
         }
@@ -145,7 +196,7 @@ def run(issues, steps, issue_number="", registry=True, fail_on="", event_issue=N
                 break
         state = json.loads((temp / "state.json").read_text())
         mutations = [" ".join(c[:3]) for c in state["calls"] if c[0] == "issue" and c[1] in ("comment", "close", "reopen", "edit")]
-        return status, state["issues"], mutations
+        return status, state["issues"], mutations + state["mutations"]
 
 
 SWEEP = ["Triage app requests"]
@@ -171,8 +222,8 @@ def pair(**second):
 status, issues, mutations = run({**pair(), "14": issue("[App Request]: Other", request("Other", "com.other.app"))}, SWEEP)
 
 # then
-check(status == 0 and issues["11"]["state"] == "CLOSED" and issues["10"]["state"] == "OPEN"
-      and "needs info" in issues["14"]["labels"] and len(issues["14"]["comments"]) == 1,
+check(status == 0 and issues["11"]["state"] == "CLOSED" and issues["11"]["closed_as"] == "DUPLICATE"
+      and issues["10"]["state"] == "OPEN" and "needs info" in issues["14"]["labels"] and len(issues["14"]["comments"]) == 1,
       "the sweep closes a later duplicate and flags a request another bundle covers")
 
 # when
@@ -181,18 +232,16 @@ status, _, mutations = run(issues, SWEEP)
 # then
 check(status == 0 and mutations == [], "a second sweep changes nothing")
 
-# when
-status, issues, mutations = run(pair(timeline=[event("reopened", PERSON)]), SWEEP)
-
-# then
-check(status == 0 and issues["11"]["state"] == "OPEN" and mutations == [], "a request a person reopened is not closed again")
+# given
+_, reopened, _ = run(pair(), SWEEP)
+reopened["11"]["state"] = "OPEN"
 
 # when
-status, issues, mutations = run(pair(timeline=[event("reopened", PERSON)]), SWEEP, fail_on="issues/11/timeline")
+status, issues, mutations = run(reopened, SWEEP)
 
 # then
-check(status != 0 and issues["11"]["state"] == "OPEN" and mutations == [],
-      "a failed timeline read fails the issue instead of closing it")
+check(status == 0 and issues["11"]["state"] == "OPEN" and mutations == [],
+      "a request reopened after the bot closed it for the same reason is not closed again")
 
 # given
 gone = pair()
@@ -206,21 +255,30 @@ check(status == 0 and issues["11"]["state"] == "OPEN" and mutations == [],
       "an original closed during the sweep is not used as the duplicate target")
 
 # given
-titles = {"12": issue("my app", request("Mine", "_No response_"), timeline=[event("renamed", PERSON)]),
-          "13": issue("other app", request("Other", "_No response_"))}
+titles = {"12": issue("[App Request]: my app", request("Mine", "_No response_")),
+          "13": issue("", request("Other", "_No response_"))}
 
 # when
 status, issues, _ = run(titles, SWEEP)
 
 # then
-check(status == 0 and issues["12"]["title"] == "my app" and issues["13"]["title"] == "[App Request]: other app",
-      "a title a person renamed is kept and an unprefixed one is prefixed")
+check(status == 0 and issues["12"]["title"] == "[App Request]: my app" and issues["13"]["title"] == "",
+      "the sweep leaves titles alone")
 
 # when
-status, issues, _ = run({**pair(), **titles}, SWEEP, fail_on="comment 11")
+status, issues, _ = run(titles, SWEEP, issue_number=12, action="created")
+status_empty, issues_empty, _ = run(titles, SWEEP, issue_number=13, action="created")
 
 # then
-check(status != 0 and issues["13"]["title"] == "[App Request]: other app",
+check(status == 0 and issues["12"]["title"] == "my app" and status_empty == 0 and issues_empty["13"]["title"] == "Other",
+      "a new request loses the form prefix and an empty title takes the app name")
+
+# when
+status, issues, _ = run({**pair(), "14": issue("[App Request]: Other", request("Other", "com.other.app"))}, SWEEP,
+                        fail_on="id=D11")
+
+# then
+check(status != 0 and issues["11"]["state"] == "OPEN" and "needs info" in issues["14"]["labels"],
       "a failure on one request does not stop the requests after it")
 
 # given
@@ -276,7 +334,7 @@ check(status == 0 and mutations == [] and "other bundle" in issues["15"]["labels
 
 
 def requests_by(author, count):
-    return {str(40 + i): {**issue(f"[App Request]: App {i}", request(f"App {i}", f"com.app{i}.reader")), "author": author}
+    return {str(40 + i): {**issue(f"App {i}", request(f"App {i}", f"com.app{i}.reader")), "author": author}
             for i in range(count)}
 
 
@@ -285,16 +343,17 @@ crowded = requests_by("busy", 4)
 crowded["41"]["labels"].append("needs info")
 
 # when
-status, issues, mutations = run(crowded, SWEEP, issue_number=43, action="opened")
+status, issues, mutations = run(crowded, SWEEP, issue_number=43, action="created")
 
 # then
-check(status == 0 and issues["43"]["state"] == "CLOSED" and len(issues["43"]["comments"]) == 1
-      and "[#41](https://redirect.github.com/hxreborn/morphe-patches/issues/41)" in issues["43"]["comments"][0]["body"]
+check(status == 0 and issues["43"]["state"] == "CLOSED" and issues["43"]["closed_as"] == "OUTDATED"
+      and len(issues["43"]["comments"]) == 1
+      and "[#41](https://redirect.github.com/hxreborn/morphe-patches/discussions/41)" in issues["43"]["comments"][0]["body"]
       and all(issues[n]["state"] == "OPEN" for n in ("40", "41", "42")),
       "a fourth open request from one person is closed with one reply listing the other three")
 
 # when
-status, issues, mutations = run(issues, SWEEP, issue_number=43, action="opened")
+status, issues, mutations = run(issues, SWEEP, issue_number=43, action="created")
 
 # then
 check(status == 0 and mutations == [], "a request closed for the limit gets no second reply")
@@ -306,7 +365,7 @@ status, issues, mutations = run(requests_by("busy", 4), SWEEP)
 check(status == 0 and mutations == [], "the sweep does not close requests already over the limit")
 
 # when
-status, issues, mutations = run(requests_by(PERSON, 4), SWEEP, issue_number=43, action="opened", association="OWNER")
+status, issues, mutations = run(requests_by(PERSON, 4), SWEEP, issue_number=43, action="created", association="OWNER")
 
 # then
 check(status == 0 and issues["43"]["state"] == "OPEN" and mutations == [], "the owner is not limited")

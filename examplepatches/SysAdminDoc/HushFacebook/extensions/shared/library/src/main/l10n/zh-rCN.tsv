@@ -777,7 +777,7 @@ Turn off double tap to like	关闭双击点赞
 A double tap on a reel or video no longer likes it or shows a heart. A single tap and the Like button work as before.	双击 Reels 或视频不再点赞，也不会显示爱心。单击和“赞”按钮照常使用。
 Keep the reel speed	保持 Reels 播放速度
 # context: summary of that switch
-A playback speed you pick in a reel's menu stays for the next reels until you pick another or Facebook restarts. Off, every reel starts at normal speed.	你在 Reels 菜单中选择的播放速度会保留给后面的 Reels，直到你选择其他速度或 Facebook 重启。关闭后，每个 Reels 都以正常速度开始。
+A playback speed you pick in a reel's menu stays for the next reels, after a restart too, until you pick another. Off, every reel starts at normal speed.	你在 Reels 菜单中选择的播放速度会保留给后面的 Reels，重启后也一样，直到你选择其他速度。关闭后，每个 Reels 都以正常速度开始。
 Hold a reel for 2x	按住 Reels 以 2 倍速播放
 # context: summary of that switch; more button is the reel's own button with three dots
 Holding a reel plays it at double speed until you let go, in place of Facebook's long-press menu. The reel's more button still opens that menu.	按住 Reels 会以两倍速播放，直到你松手，取代 Facebook 的长按菜单。Reels 的“更多”按钮仍可打开那个菜单。
@@ -974,8 +974,8 @@ The Feeds tab will open on %1$s.	“动态”标签页将显示“%1$s”。
 # context: title of the list under Following feed on Home that picks which Feeds tab filter Home shows
 Home shows	主页显示
 Home shows the same posts as All in the Feeds tab.	主页显示与“动态”标签页中“全部”相同的帖子。
-# context: %1$s is a Feeds tab filter's name, like Friends or Groups
-Home shows the same posts as %1$s in the Feeds tab. If Facebook doesn't have that feed, Home shows All.	主页显示与“动态”标签页中“%1$s”相同的帖子。如果 Facebook 没有该动态，主页会显示“全部”。
+# context: %1$s is a Feeds tab filter's name, like Friends or Groups; %2$s is the Hide "Suggested for you" posts switch and %3$s the Hide Reels in the feed switch
+Home asks Facebook for the posts %1$s shows in the Feeds tab. When there's nothing new there, Facebook can fill Home with suggested posts and reels, which %2$s and %3$s take out. If Facebook doesn't have that feed, Home shows All.	主页会向 Facebook 请求“动态”标签页中“%1$s”显示的帖子。那里没有新内容时，Facebook 可能会用推荐的帖子和 Reels 填满主页，%2$s 和 %3$s 可以把它们去掉。如果 Facebook 没有该动态，主页会显示“全部”。
 # context: settings import preview; %1$s is the Following feed on Home switch, %2$s a Feeds tab filter
 With %1$s on, Home will show the same posts as %2$s in the Feeds tab.	开启“%1$s”后，主页将显示与“动态”标签页中“%2$s”相同的帖子。
 Saved	收藏
@@ -1598,7 +1598,7 @@ Takes the row of profile pictures off the share sheet, the people Facebook sugge
 Hide who is typing in comments	隐藏评论中谁在输入
 Takes away the line that says someone is typing a comment. Your own typing is a separate switch under Privacy.	移除提示有人正在输入评论的那一行。你自己的输入状态由“隐私”下的另一个开关控制。
 Hide the search pill on reels	隐藏 Reels 上的搜索胶囊
-Hides the search suggestion under a reel's caption, the magnifier with a question to look up.	隐藏 Reels 说明文字下方的搜索建议，即带问题的放大镜，用于查找相关内容。
+Hides the search suggestion under a reel's caption, the magnifier with a question to look up, the one at the top of its comments and the search bar over reels you open from a profile.	隐藏 Reels 说明文字下方的搜索建议（即带问题的放大镜，用于查找相关内容）、评论顶部的那一个，以及从个人主页打开的 Reels 顶部的搜索栏。
 # context: switch title under Appearance; the button is Facebook's Messenger icon in the top bar of Home
 Hide the Messenger button	隐藏 Messenger 按钮
 # context: summary of that switch; the other top bar buttons move over to fill the space; Hushfacebook is the app's name
@@ -1674,7 +1674,7 @@ Long press opens comments	长按打开评论
 # context: summary of the double tap switch
 A double tap on a reel opens its comments instead of liking it. Turn off double tap to like still wins when it's on. Off by default, since it hasn't been tried on a real account yet.	双击 Reels 会打开它的评论，而不是点赞。开启“关闭双击点赞”时，以它为准。默认关闭，因为尚未在真实账号上试过。
 # context: summary of the long press switch
-Holding a reel opens its comments instead of Facebook's long-press menu or the 2x hold. The reel's more button still opens that menu. Off by default, since it hasn't been tried on a real account yet.	按住 Reels 会打开它的评论，取代 Facebook 的长按菜单或 2 倍速按住。Reels 的“更多”按钮仍可打开那个菜单。默认关闭，因为尚未在真实账号上试过。
+Holding a reel opens its comments instead of Facebook's long-press menu or the 2x hold. The reel's more button still opens that menu. Holding a feed post's photo or the line with its name opens that post's comments, and holding its text or a profile picture works as before. Off by default, since it hasn't been tried on a real account yet.	按住 Reels 会打开它的评论，取代 Facebook 的长按菜单或 2 倍速按住。Reels 的“更多”按钮仍可打开那个菜单。按住动态中帖子的照片或带名字的那一行会打开该帖子的评论，按住文字或头像则和以前一样。默认关闭，因为尚未在真实账号上试过。
 # context: switch title under Downloads; the switch adds the post menu row "Open in another app" to feed and Watch videos
 Open videos in another app	用其他应用打开视频
 # context: summary of that switch; "Open in another app" is the menu row; VLC and Web Video Caster are app names, keep them
@@ -1732,3 +1732,27 @@ Free stuff shortcut	“免费物品”快捷方式
 Free stuff isn't available in this build.	此版本中没有“免费物品”。
 Adds Free stuff, Marketplace's free listings, to the menu you get by holding Facebook's icon, if there's room, and a Free stuff row in Settings and privacy. Existing shortcuts stay.	如果有空位，把“免费物品”（Marketplace 上的免费商品）添加到长按 Facebook 图标时出现的菜单中，并在“设置和隐私”中添加一行“免费物品”。现有的快捷方式保留。
 Adds Free stuff, Marketplace's free listings, to the menu you get by holding Facebook's icon, if there's room. Existing shortcuts stay.	如果有空位，把“免费物品”（Marketplace 上的免费商品）添加到长按 Facebook 图标时出现的菜单中。现有的快捷方式保留。
+# context: row in a video's menu while Skip silent parts is on; the video's silent parts are skipped
+Skip silent parts: on	跳过无声片段：开
+# context: the same row after a tap; this one video keeps its silent parts
+Skip silent parts: off for this video	跳过无声片段：此视频关闭
+# context: short message after tapping the row; this video now plays its silent parts
+Silent parts play in this video	此视频会播放无声片段
+# context: short message after tapping the row again; silent parts are skipped again
+Skipping silent parts again	已重新跳过无声片段
+# context: switch title under News feed; posts Facebook shows from groups the user hasn't joined, which come with a Join button next to the group's name
+Hide posts from groups you're not in	隐藏你未加入的小组的帖子
+# context: summary of that switch; a friend's share of a group post is a post on the friend's own profile that shares a group post, and it stays
+Hides posts from groups you haven't joined, like a friend's post in a public group. Posts from your groups and a friend's share of a group post stay.	隐藏你未加入的小组中的帖子，比如朋友在公开小组里发的帖子。你所在小组的帖子以及朋友分享的小组帖子会保留。
+# context: switch title under Search; For you is the section of searches Facebook suggests on the search screen before anything is typed, under a header that reads For you
+Hide For you in search	在搜索中隐藏“为你推荐”
+# context: summary of that switch; recent searches are the user's own past searches, and the suggestions as you type are the ones under the search box while typing
+Hides the For you searches Facebook suggests when you open search. Your recent searches and the suggestions as you type stay.	打开搜索时不再显示 Facebook 推荐的“为你推荐”搜索。你的最近搜索和输入时的建议会保留。
+# context: switch title under Search; on, what the user searches for isn't added to their Facebook search history
+Don't save search history	不保存搜索记录
+# context: summary of that switch; searches already in the history are the user's own past searches, which stay until the user deletes them
+What you search for isn't added to your Facebook search history. Searches already there stay until you delete them.	你搜索的内容不会加入你的 Facebook 搜索记录。已有的搜索会保留，直到你删除。
+# context: switch title under Reels and Watch; the audio line is the scrolling line at the bottom of a reel naming its sound, like "Name · Original audio" or a song title
+Hide the audio line on reels	隐藏 Reels 上的音频行
+# context: summary of that switch; "Original audio" is Facebook's own label, so use the wording Facebook shows in this language
+Takes the line with the reel's sound, "Original audio" or a song, off the bottom of reels. Other info stays. A change shows from the next reel.	去掉 Reels 底部显示声音的那一行（“原创音频”或歌曲）。其他信息保留。更改会从下一个 Reels 开始显示。

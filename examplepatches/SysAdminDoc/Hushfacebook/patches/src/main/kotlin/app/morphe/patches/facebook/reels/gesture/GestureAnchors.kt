@@ -30,9 +30,26 @@ import app.morphe.patches.facebook.misc.extension.EXTENSION_PACKAGE
  *   the View, arm64 LX/D6k;, armv7 LX/DAG;) and returns Kotlin's Unit, which Redex renames, so the
  *   Unit is read from the static field the method's own early return reads.
  *
- * What isn't covered: feed posts (no post-level gesture is hooked in either build), a reel whose
- * Comment button object hasn't been made (the sidebar draws it with the reel), and the full-height
- * sheet (no switch for the comment sheet's height was found that doesn't move every flyout).
+ * - A feed post has no double-tap or long-press handler in either build (every double-tap site is a
+ *   reel, story, tab bar or Meta AI one), so its long press is timed by the extension from the first
+ *   instruction of FbFragmentActivity.dispatchTouchEvent, the hook Tap to play, Hold a reel for 2x
+ *   and the Messenger icon share. It gets the activity too and may set the rest of a gesture it took
+ *   to a cancel. The extension finds the post's Comment button by the footer's order, not a label.
+ * - The Comment button opens the comment sheet to write: its parameters (FeedbackParams, a kept
+ *   name) carry showKeyboardOnFirstLoad, the boolean toString labels ", showKeyboardOnFirstLoad="
+ *   (arm64 and armv7 A0u), which the sheet reads in FeedbackFragment.maybeShowKeyboardOnFirstLoad to
+ *   focus the comment box with the keyboard up. Every reader reads the instance the builder made, and
+ *   the Parcel constructor copies what writeToParcel wrote, so the one hook is the other constructor
+ *   (it takes the builder, 5 registers in both builds): just before its one store of the flag the
+ *   extension may turn the value to false, for the sheet a feed hold opened. Not at its returns: by
+ *   then it has reused the object's register (v3) for a long, and reading the flag from there failed
+ *   verification on the S22, so every comment sheet crashed. The store's value register (v0) is
+ *   written again by the next instruction in both builds.
+ *
+ * What isn't covered: a feed post's double tap (every part of a post already reacts to a single tap,
+ * so a second tap can't be waited for without delaying it), a reel whose Comment button object
+ * hasn't been made (the sidebar draws it with the reel), and the full-height sheet (no switch for the
+ * comment sheet's height was found that doesn't move every flyout).
  */
 
 internal const val GESTURE_PATCH = "Open comments with a gesture"
@@ -52,3 +69,10 @@ internal const val REMEMBER = "$REEL_GESTURES->remember(Ljava/lang/Object;Ljava/
 internal const val NOTE_VIEW = "$REEL_GESTURES->noteView(Ljava/lang/Object;)V"
 internal const val DOUBLE_TAP = "$REEL_GESTURES->doubleTap(Ljava/lang/Object;)Z"
 internal const val LONG_PRESS = "$REEL_GESTURES->longPress(Ljava/lang/Object;Ljava/lang/Object;)Z"
+internal const val FEED_PRESS = "$EXTENSION_PACKAGE/reels/PostLongPress;->touch(Landroid/app/Activity;Landroid/view/MotionEvent;)V"
+
+/** The comment sheet's parameters, the label its toString gives the keyboard flag, and the parcel its other constructor reads. */
+internal const val FEEDBACK_PARAMS = "Lcom/facebook/ufiservices/flyout/params/FeedbackParams;"
+internal const val KEYBOARD_LABEL = ", showKeyboardOnFirstLoad="
+internal const val PARCEL = "Landroid/os/Parcel;"
+internal const val KEYBOARD = "$EXTENSION_PACKAGE/reels/PostLongPress;->keyboardOnFirstLoad(Z)Z"

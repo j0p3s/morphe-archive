@@ -45,7 +45,7 @@ Dalle chiavi di localizzazione presenti nel bundle:
 
 Stringhe collegate: `Unlock PRO account unlocked. Enjoy!`, `pro_unlocked-openAppStoreIfInAppFails`.
 
-## Il PRO è validato lato server
+## Entitlement PRO
 
 Stringhe rilevanti nel bundle:
 
@@ -61,8 +61,8 @@ Network Error checking active subscriptions
 - `PRO_LAST_VALIDATED` è solo una cache locale con scadenza (grace period offline):
   **la fonte di verità è il server**.
 
-Di conseguenza un flag client-side non sbloccherebbe nulla: le funzioni PRO vengono abilitate
-in base alla risposta del backend.
+Le funzioni PRO vengono abilitate a runtime: i dati di entitlement sono forniti dal backend
+e mantenuti anche in una cache locale con scadenza.
 
 ## Pubblicità
 
@@ -110,20 +110,8 @@ AdvertisingIdClient$Info.<init>(String, boolean)                          PUBLIC
 Il metodo viene sostituito con una `Info` sintetica: UUID fisso (uguale su ogni
 installazione, quindi non identifica nessuno) e `isLimitAdTrackingEnabled() = true`.
 
-## Perché non viene creata una patch di sblocco PRO
-
-1. **Tecnicamente inutile**: lo stato PRO è deciso da `api.cinemaniac.app`, non dal client.
-   Un flag locale o un `isPro = true` non cambierebbe le risposte del server.
-2. **Elusione di misura di protezione**: forzare l'entitlement equivale a bypassare un
-   paywall (Direttiva UE 2019/790 art. 6, L. 248/2016, DMCA §1201), anche per uso personale.
-3. **Superficie sbagliata**: il codice da modificare è bytecode Hermes, non smali; non è
-   un target sensato per Morphe.
-
 ## Conclusione
 
-Per Cinemaniac non esiste un insieme di "funzioni a pagamento" sbloccabili client-side:
-l'app è un guscio React Native con logica in bytecode Hermes e stato PRO sul server.
-Non è stato prodotto alcun bypass. L'unica patch prodotta rimuove gli annunci e l'identificatore
-pubblicitario. Per ottenere PRO in modo legittimo: usare il flusso di acquisto in-app, il
-ripristino dell'acquisto (`restore`) già presente nell'app, o chiedere un codice promo a chi
-sviluppa l'app.
+L'app è un guscio React Native con la logica applicativa in bytecode Hermes e i dati di
+entitlement gestiti tra backend e cache locale. Le patch prodotte in questo repository
+lavorano solo a livello nativo, sugli annunci e sull'identificatore pubblicitario.

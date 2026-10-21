@@ -114,6 +114,7 @@ import app.hushgram.extension.instagram.reels.BurnInMode;
 import app.hushgram.extension.instagram.reels.BurnInWait;
 import app.hushgram.extension.instagram.reels.CaptionWordReels;
 import app.hushgram.extension.instagram.reels.HiddenBars;
+import app.hushgram.extension.instagram.reels.HiddenSounds;
 import app.hushgram.extension.instagram.reels.ReelTapChoice;
 import app.hushgram.extension.instagram.reels.StartTab;
 import app.hushgram.extension.instagram.reels.TabOrder;
@@ -122,6 +123,7 @@ import app.hushgram.extension.instagram.profile.Unfollowers;
 import app.hushgram.extension.instagram.download.FileNameTemplate;
 import app.hushgram.extension.instagram.download.HoldFingers;
 import app.hushgram.extension.instagram.download.HoldTime;
+import app.hushgram.extension.instagram.download.ReelSoundButton;
 import app.hushgram.extension.instagram.download.SaveControl;
 import app.hushgram.extension.instagram.download.SaveLeftovers;
 import app.hushgram.extension.instagram.download.SaveFolder;
@@ -181,6 +183,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     /** The row that sets or changes the HushGram PIN. */
     static final String CHANGE_PIN_ROW = "hushgram_change_pin_row";
     static final String HIDDEN_ACCOUNTS_ROW = "hushgram_hidden_accounts_row";
+    static final String HIDDEN_SOUNDS_ROW = "hushgram_hidden_sounds_row";
     static final String GHOST_PICKS_ROW = "hushgram_ghost_picks_row";
     private static final String SCREEN_KEY = "hushgram_settings_root";
     /** The keys of category page rows, stable across translations and installed patch combinations. */
@@ -705,9 +708,9 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             metaAi.addPreference(toggle(context, Settings.HIDE_META_AI_SHARE_TARGET, L10n.t("Hide Meta AI in the share sheet"),
                     L10n.t("Removes Meta AI from the row at the bottom of the share sheet. Some accounts see it as "
                             + "Muse.")));
-            metaAi.addPreference(toggle(context, Settings.HIDE_META_AI_PROFILE_BANNER, L10n.t("Hide the Muse card on profiles"),
-                    L10n.t("Removes the Meet Muse card, with its Try Muse button, from profiles. Your other profile "
-                            + "cards stay.")));
+            metaAi.addPreference(toggle(context, Settings.HIDE_META_AI_PROFILE_BANNER, L10n.t("Hide the Muse card"),
+                    L10n.t("Removes the Meet Muse card, with its Try Muse button, from Home and your profile. "
+                            + "Your other cards stay.")));
             metaAi.addPreference(toggle(context, Settings.HIDE_META_AI_PROFILE_BUTTON, L10n.t("Hide the Muse button on your profile"),
                     L10n.t("Removes the Muse button from the top bar of your profile. Your username and the menu "
                             + "stay.")));
@@ -742,8 +745,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             }
         }
 
-        if (build.contains(PatchFamily.NOTES_ROW) || build.contains(PatchFamily.INBOX_SUGGESTIONS)
-                || build.contains(PatchFamily.INSTANTS) || build.contains(PatchFamily.PLUS_PREVIEW)
+        if (build.contains(PatchFamily.NOTES_ROW) || build.contains(PatchFamily.INBOX_SEARCH)
+                || build.contains(PatchFamily.INBOX_SUGGESTIONS) || build.contains(PatchFamily.INSTANTS)
                 || build.contains(PatchFamily.THREAD_SEEN) || build.contains(PatchFamily.TYPING)
                 || build.contains(PatchFamily.ACTIVE_STATUS)
                 || build.contains(PatchFamily.LAST_ACTIVE)
@@ -760,6 +763,12 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                         L10n.t("Takes the row of notes off the top of your messages, the Map bubble in it too. "
                                 + "Your chats, search and requests stay.")));
             }
+            if (build.contains(PatchFamily.INBOX_SEARCH)) {
+                messages.addPreference(toggle(context, Settings.HIDE_INBOX_SEARCH,
+                        L10n.t("Hide the search bar in Messages"),
+                        L10n.t("Takes the search bar and its Filter button off the top of your messages, the "
+                                + "Meta AI bar too. Your chats, notes and requests stay.")));
+            }
             if (build.contains(PatchFamily.INBOX_SUGGESTIONS)) {
                 messages.addPreference(toggle(context, Settings.HIDE_INBOX_SUGGESTIONS,
                         L10n.t("Hide suggested accounts in Messages"),
@@ -770,12 +779,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 messages.addPreference(toggle(context, Settings.HIDE_INSTANTS, L10n.t("Hide Instants"),
                         L10n.t("Removes the stack of Instants (quick photos from friends) from your messages. "
                                 + "Restart Instagram to see the change.")));
-            }
-            if (build.contains(PatchFamily.PLUS_PREVIEW)) {
-                messages.addPreference(toggle(context, Settings.HIDE_PLUS_PREVIEW,
-                        L10n.t("Hide See preview and Plus in chat menus"),
-                        L10n.t("Takes the See preview and Instagram Plus rows out of the menu you get from long "
-                                + "pressing a chat. Your chat options stay.")));
             }
             if (build.contains(PatchFamily.THREAD_SEEN)) {
                 messages.addPreference(toggle(context, Settings.READ_WITHOUT_SEEN_RECEIPT,
@@ -1017,6 +1020,11 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                     L10n.t("After 20 reels, swiping in Reels stops until Instagram has been in the background for "
                             + "15 minutes. A reel you open from a message or a post still plays.")));
         }
+        if (build.contains(PatchFamily.SWIPE_TO_PROFILE)) {
+            reels.add(toggle(context, Settings.REEL_SWIPE_TO_PROFILE, L10n.t("Swipe left to open the profile"),
+                    L10n.t("A left swipe on a reel opens the creator's profile, like Instagram used to. Tap "
+                            + "Friends at the top to reach your friends' reels.")));
+        }
         if (build.contains(PatchFamily.REEL_ORIGIN)) {
             reels.add(toggle(context, Settings.FIND_REEL_ORIGIN, L10n.t("Find the reel you came from"),
                     L10n.t("Open a creator's profile from a reel, then their Reels tab, and it scrolls to that reel "
@@ -1025,6 +1033,18 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             reels.add(toggle(context, Settings.FIND_REEL_ORIGIN_ON_TAP, L10n.t("Wait for a tap to find it"),
                     L10n.t("When the reel isn't on the first screen, the profile shows a Find the reel button "
                             + "instead of scrolling on its own.")));
+        }
+        if (build.contains(PatchFamily.REEL_DOWNLOAD)) {
+            reels.add(toggle(context, Settings.REEL_NOT_INTERESTED_BUTTON, L10n.t("Not interested button on reels"),
+                    L10n.t("Puts a Not interested icon beside a reel, so one tap does what Not interested in its "
+                            + "menu does.")));
+            reels.add(toggle(context, Settings.REEL_BLOCK_BUTTON, L10n.t("Block button on reels"),
+                    L10n.t("Puts a Block icon beside someone else's reel. A tap opens Instagram's own block "
+                            + "screen for that account, so you still confirm it there.")));
+            reels.add(toggle(context, Settings.HIDE_SOUND_REELS, L10n.t("Hide reels by sound"),
+                    L10n.t("Puts a music icon beside a reel. Tap it and the Reels tab skips other reels using that "
+                            + "sound. Tap it again to bring them back.")));
+            reels.add(hiddenSoundsRow(context));
         }
         if (!reels.isEmpty()) {
             PreferenceCategory section = category(screen, L10n.t("Reels"), SettingsIcons.REELS,
@@ -1043,9 +1063,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             stories.add(toggle(context, Settings.HIDE_STORY_RECAPS, L10n.t("Hide memories and recaps"),
                     L10n.t("Takes the memories, recaps, follow anniversaries and birthday cards Instagram makes out "
                             + "of the row of stories at the top of Home. Stories people post stay.")));
-            stories.add(toggle(context, Settings.STOP_LOADING_STORIES, L10n.t("Stop loading stories"),
-                    L10n.t("Nothing in the row of stories at the top of Home loads, your own story included, which "
-                            + "saves data. A story ring on a profile or in a chat still opens its stories.")));
+            stories.add(toggle(context, Settings.STOP_LOADING_STORIES, L10n.t("Stop loading stories and highlights"),
+                    L10n.t("Nothing in the row of stories at the top of Home loads, your own story included, and "
+                            + "highlights on profiles stay empty too. Saves data. A story ring on a profile or in a chat "
+                            + "still opens its stories.")));
             stories.add(toggle(context, Settings.HIDE_STORIES_TRAY, L10n.t("Hide the Stories tray"),
                     L10n.t("Takes the whole row of stories off the top of Home, Your story included. Stories still "
                             + "open from a profile or a message.")));
@@ -1080,6 +1101,11 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             stories.add(toggle(context, Settings.START_STORIES_WITH_SOUND, L10n.t("Start stories with sound"),
                     L10n.t("Stories open with their sound on, the same as tapping Instagram's speaker. Your phone's "
                             + "ringer and volume still count, so on silent or with the volume down, stories stay quiet.")));
+        }
+        if (build.contains(PatchFamily.STORY_SWIPE_REPLY)) {
+            stories.add(toggle(context, Settings.STOP_STORY_SWIPE_REPLY, L10n.t("Stop swipe up to reply"),
+                    L10n.t("A swipe up on someone's story no longer opens the reply box and its reactions. "
+                            + "Tap Send message to reply.")));
         }
         if (build.contains(PatchFamily.STORY_TIME)) {
             stories.add(toggle(context, Settings.SHOW_STORY_TIME, L10n.t("Show a story's exact time"),
@@ -1210,6 +1236,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             if (build.contains(PatchFamily.COMMENT_COPY)) {
                 comments.addPreference(toggle(context, Settings.COPY_COMMENTS, L10n.t("Copy comment"),
                         L10n.t("Adds Copy to a selected comment's menu. Copies the original text, including line breaks.")));
+                comments.addPreference(toggle(context, Settings.COPY_COMMENTS_WITHOUT_MENTIONS, L10n.t("Copy without the @names at the start"),
+                        L10n.t("When a comment starts with @names, like most replies do, Copy leaves them out. The comment in Instagram stays the same.")));
                 if (PatchFamily.commentAuthorInBuild()) {
                     comments.addPreference(toggle(context, Settings.COPY_COMMENT_AUTHORS, L10n.t("Copy the commenter's username"),
                             L10n.t("Adds Copy username to a selected comment's menu, for the account that wrote it.")));
@@ -1832,6 +1860,10 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                             || Settings.FEED_DOWNLOAD_BUTTON.key.equals(key) || Settings.FEED_DOWNLOAD_ALL_PAGES.key.equals(key)
                             || Settings.DOWNLOAD_CHOOSE_PAGES.key.equals(key));
                     belongs |= family == PatchFamily.REEL_DOWNLOAD && Settings.REEL_DOWNLOAD_BUTTON.key.equals(key);
+                    belongs |= family == PatchFamily.REEL_DOWNLOAD && Settings.REEL_NOT_INTERESTED_BUTTON.key.equals(key);
+                    belongs |= family == PatchFamily.REEL_DOWNLOAD && Settings.REEL_BLOCK_BUTTON.key.equals(key);
+                    belongs |= family == PatchFamily.REEL_DOWNLOAD && (Settings.HIDE_SOUND_REELS.key.equals(key)
+                            || HIDDEN_SOUNDS_ROW.equals(key));
                     belongs |= family == PatchFamily.ACCENT_COLOR && Settings.ACCENT_HUE.key.equals(key);
                     belongs |= family == PatchFamily.FONT && Settings.FONT.key.equals(key);
                     belongs |= family == PatchFamily.SHARE_SHEET && Settings.HIDDEN_SHARE_SHEET_BUTTONS.key.equals(key);
@@ -3770,6 +3802,55 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 .setPositiveButton(L10n.t("OK"), null));
     }
 
+    /** The row that opens the list of sounds whose reels the Reels tab leaves out. */
+    private Row hiddenSoundsRow(Context context) {
+        Row row = new Row(context);
+        row.setKey(HIDDEN_SOUNDS_ROW);
+        row.setPersistent(false);
+        row.setTitle(L10n.t("Hidden sounds"));
+        row.setSummary(L10n.t("The sounds you hid with the music icon. Uncheck one to see its reels again."));
+        row.setOnPreferenceClickListener(tapped -> {
+            showHiddenSounds();
+            return true;
+        });
+        return row;
+    }
+
+    /**
+     * The hidden sounds, each with a check. Unchecking one brings its reels back to the Reels tab at
+     * once, and checking it again hides them. Paused, the list still shows what you chose, though the
+     * tab shows every reel.
+     */
+    void showHiddenSounds() {
+        Context context = getActivity();
+        if (context == null) return;
+        List<HiddenSounds.Sound> sounds = HiddenSounds.saved();
+        AlertDialog.Builder builder = new AlertDialog.Builder(context).setTitle(L10n.t("Hidden sounds"));
+        if (sounds.isEmpty()) {
+            builder.setMessage(L10n.t("No sounds are hidden yet. Turn on Hide reels by sound, then tap the music "
+                    + "icon beside a reel."));
+        } else {
+            CharSequence[] shown = new CharSequence[sounds.size()];
+            boolean[] hidden = new boolean[sounds.size()];
+            for (int i = 0; i < shown.length; i++) {
+                shown[i] = L10n.isolate(ReelSoundButton.label(context, sounds.get(i)));
+                hidden[i] = true;
+            }
+            builder.setMultiChoiceItems(shown, hidden, (dialog, which, checked) -> {
+                HiddenSounds.Sound sound = sounds.get(which);
+                String name = L10n.isolate(ReelSoundButton.label(context, sound));
+                if (checked) {
+                    HiddenSounds.add(sound);
+                    Utils.showToastShort(L10n.f("Hiding reels with %1$s", name));
+                } else {
+                    HiddenSounds.remove(sound.id);
+                    Utils.showToastShort(L10n.f("Showing reels with %1$s again", name));
+                }
+            });
+        }
+        show(builder.setPositiveButton(L10n.t("OK"), null));
+    }
+
     /**
      * A box to type a username in. Hide their posts adds it for the signed-in account and goes back
      * to the list; a name that can't be a username is turned down with a toast saying what one is.
@@ -4602,7 +4683,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         row.setKey(Settings.HIDDEN_SHARE_SHEET_BUTTONS.key);
         row.setPersistent(false);
         row.setTitle(L10n.t("Buttons on the share sheet"));
-        row.setSummary(shareSheetButtonsSummary(Settings.HIDDEN_SHARE_SHEET_BUTTONS.get()));
+        row.setSummary(shareSheetButtonsSummary(Settings.HIDDEN_SHARE_SHEET_BUTTONS.savedValue()));
         row.setOnPreferenceClickListener(tapped -> {
             showShareSheetButtons(row);
             return true;
@@ -4680,7 +4761,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     void showShareSheetButtons(Row row) {
         Context context = getActivity();
         if (context == null) return;
-        Set<String> hidden = new LinkedHashSet<>(ShareSheetActions.hidden(Settings.HIDDEN_SHARE_SHEET_BUTTONS.get()));
+        Set<String> hidden = new LinkedHashSet<>(ShareSheetActions.hidden(Settings.HIDDEN_SHARE_SHEET_BUTTONS.savedValue()));
         List<String> actions = ShareSheetActions.ACTIONS;
         CharSequence[] names = new CharSequence[actions.size()];
         boolean[] shown = new boolean[actions.size()];
@@ -4693,7 +4774,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
             if (on) hidden.remove(actions.get(which));
             else hidden.add(actions.get(which));
             Settings.HIDDEN_SHARE_SHEET_BUTTONS.save(ShareSheetActions.join(hidden));
-            row.setSummary(shareSheetButtonsSummary(Settings.HIDDEN_SHARE_SHEET_BUTTONS.get()));
+            row.setSummary(shareSheetButtonsSummary(Settings.HIDDEN_SHARE_SHEET_BUTTONS.savedValue()));
         });
         AlertDialog dialog = show(builder.setNeutralButton(L10n.t("Show all"), null)
                 .setPositiveButton(L10n.t("OK"), null));
@@ -4713,7 +4794,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         row.setKey(Settings.TAB_ORDER.key);
         row.setPersistent(false);
         row.setTitle(L10n.t("Tab order"));
-        row.setSummary(tabOrderSummary(Settings.TAB_ORDER.get()));
+        row.setSummary(tabOrderSummary(Settings.TAB_ORDER.savedValue()));
         row.setOnPreferenceClickListener(tapped -> {
             showTabOrder(row);
             return true;
@@ -4759,7 +4840,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
     void showTabOrder(Row row) {
         Context context = getActivity();
         if (context == null) return;
-        List<String> order = TabPicker.rows(Settings.TAB_ORDER.get());
+        List<String> order = TabPicker.rows(Settings.TAB_ORDER.savedValue());
         Set<String> ticked = new LinkedHashSet<>();
         for (String tab : order) {
             if (TabPicker.shown(tab)) ticked.add(tab);
@@ -4767,6 +4848,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         LinearLayout list = TabPicker.list(context, order, ticked);
         ScrollView scroll = new ScrollView(context);
         scroll.addView(list);
+        boolean[] reset = {false};
         AlertDialog dialog = show(new AlertDialog.Builder(context)
                 .setTitle(L10n.t("Show and reorder tabs"))
                 .setView(scroll)
@@ -4774,8 +4856,8 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 .setNegativeButton(L10n.t("Cancel"), null)
                 .setPositiveButton(L10n.t("OK"), (shown, which) -> {
                     AbstractPreferenceFragment.restartNoteOnce(context,
-                            () -> TabPicker.save(TabPicker.orderOf(list), TabPicker.tickedOf(list)));
-                    row.setSummary(tabOrderSummary(Settings.TAB_ORDER.get()));
+                            () -> TabPicker.save(TabPicker.orderOf(list), TabPicker.tickedOf(list), reset[0]));
+                    row.setSummary(tabOrderSummary(Settings.TAB_ORDER.savedValue()));
                 }));
         if (dialog == null) return;
         // A click listener of its own, so Reset changes the list without closing it.
@@ -4786,6 +4868,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                 if (TabPicker.shownByDefault(tab)) defaults.add(tab);
             }
             TabPicker.fill(list, instagrams, defaults);
+            reset[0] = true;
         });
     }
 

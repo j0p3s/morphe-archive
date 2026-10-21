@@ -85,6 +85,14 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_hide_suggested_groups", TRUE);
 
     /**
+     * Posts from groups you aren't in, such as a friend's post in a public group, found by the join
+     * state Facebook's own Join button reads off the group the story was posted to (#195). Posts from
+     * groups you're in and a friend's share of a group post stay. Off until picked.
+     */
+    public static final BooleanSetting HIDE_GROUP_POSTS_NOT_JOINED =
+            new BooleanSetting("hushfacebook_hide_group_posts_not_joined", FALSE);
+
+    /**
      * The row of Stories from people you aren't connected to that Facebook puts between posts,
      * "Stories you might like", found by the flag Facebook's own Discover unit reads for it. A row
      * of your friends' Stories and the Stories tray stay.
@@ -452,7 +460,11 @@ public class Settings extends BaseSettings {
     /**
      * The search pill under a reel's caption, Facebook's "search this" prompt with a suggested
      * query ({@link app.morphe.extension.facebook.reels.ReelDeclutter#hideSearchPill}, #173). The
-     * component that draws it isn't built. Off until it's turned on, since the pill depends on a
+     * component that draws it isn't built, and the comment sheet gets no prompt for the one over a
+     * reel's comments ({@link app.morphe.extension.facebook.reels.ReelDeclutter#commentSearchPrompt},
+     * #197). The search bar and send button over a reel opened from a profile stay out of its header
+     * too ({@link app.morphe.extension.facebook.reels.ReelDeclutter#searchBarPart}, #201). Off until
+     * it's turned on, since the pill depends on a
      * server setting and nobody has seen it go on a signed-in Reels feed yet.
      */
     public static final BooleanSetting HIDE_REEL_SEARCH_PILL =
@@ -481,6 +493,14 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting HIDE_REEL_SOUND_BUTTON =
             new BooleanSetting("hushfacebook_hide_reel_sound_button", FALSE);
+
+    /**
+     * The line under a reel naming its sound, "Original audio" or a song, isn't drawn, and the other
+     * chips stay ({@link app.morphe.extension.facebook.reels.ReelDeclutter#filterChips}, #200). Off
+     * by default. A change shows from the next reel.
+     */
+    public static final BooleanSetting HIDE_REEL_AUDIO_LINE =
+            new BooleanSetting("hushfacebook_hide_reel_audio_line", FALSE);
 
     /**
      * A video tapped in the feed opens in the full-screen player on its own, with no reels to swipe
@@ -1142,6 +1162,23 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting HIDE_META_AI_IN_SEARCH =
             new BooleanSetting("hushfacebook_hide_meta_ai_in_search", TRUE);
+
+    /**
+     * What you search for, from the main search bar, Reels or Watch, stops being added to your
+     * Facebook search history: the recent searches store takes Facebook's own "don't add this one"
+     * branch ({@link app.morphe.extension.facebook.search.SearchHistory}, #196). Searches already
+     * in the history stay. Off by default.
+     */
+    public static final BooleanSetting DONT_SAVE_SEARCH_HISTORY =
+            new BooleanSetting("hushfacebook_dont_save_search_history", FALSE);
+
+    /**
+     * The For you section of searches Facebook suggests, on the search screen before anything is
+     * typed (#80), found by the module name Facebook gives its entry. Recent searches, the search box
+     * and the suggestions while typing stay. Part of Hide suggested and promoted posts, off until picked.
+     */
+    public static final BooleanSetting HIDE_SEARCH_FOR_YOU =
+            new BooleanSetting("hushfacebook_hide_search_for_you", FALSE);
 
     /**
      * Push notifications Facebook types TOP_TRENDING_VIDEO or PERSONALIZED_REELS: trending videos

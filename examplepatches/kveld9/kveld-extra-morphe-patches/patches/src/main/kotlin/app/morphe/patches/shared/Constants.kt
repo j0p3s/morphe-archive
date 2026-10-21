@@ -43,7 +43,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = INSTAGRAM_TARGET_VERSION,
-                description = "Download com.instagram.android v\$INSTAGRAM_TARGET_VERSION (APKM) arm64-v8a 120-480dpi versionCode 385311891 (BUNDLE3 S) from APKMirror",
+                description = "Download com.instagram.android v$INSTAGRAM_TARGET_VERSION (APKM) arm64-v8a 120-480dpi versionCode 385311891 (BUNDLE3 S) from APKMirror",
             )
         )
     )
@@ -60,7 +60,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = TWITTER_TARGET_VERSION,
-                description = "Download com.twitter.android v\$TWITTER_TARGET_VERSION (APKM) arm64-v8a 120-640dpi versionCode 312350001 (BUNDLE 35 S) from APKMirror",
+                description = "Download com.twitter.android v$TWITTER_TARGET_VERSION (APKM) arm64-v8a 120-640dpi versionCode 312350001 (BUNDLE 35 S) from APKMirror",
             )
         )
     )
@@ -77,7 +77,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = MOOVIT_TARGET_VERSION,
-                description = "Download com.tranzmate v\$MOOVIT_TARGET_VERSION (APKM) arm64-v8a 160-640dpi versionCode 1809 (BUNDLE 31 S) from APKMirror",
+                description = "Download com.tranzmate v$MOOVIT_TARGET_VERSION (APKM) arm64-v8a 160-640dpi versionCode 1809 (BUNDLE 31 S) from APKMirror",
             )
         )
     )
@@ -94,7 +94,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = POWERPOINT_TARGET_VERSION,
-                description = "Download com.microsoft.office.powerpoint v\$POWERPOINT_TARGET_VERSION (APKM) arm64-v8a 120-480dpi versionCode 2005437911 (BUNDLE 5 S) from APKMirror",
+                description = "Download com.microsoft.office.powerpoint v$POWERPOINT_TARGET_VERSION (APKM) arm64-v8a 120-480dpi versionCode 2005437911 (BUNDLE 5 S) from APKMirror",
             )
         )
     )
@@ -111,7 +111,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = LRMOBILE_TARGET_VERSION,
-                description = "Download com.adobe.lrmobile v\$LRMOBILE_TARGET_VERSION (APK) arm64-v8a nodpi from Uptodown",
+                description = "Download com.adobe.lrmobile v$LRMOBILE_TARGET_VERSION (APK) arm64-v8a nodpi from Uptodown",
             )
         )
     )
@@ -128,7 +128,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = CAPCUT_TARGET_VERSION,
-                description = "Download com.lemon.lvoverseas v\$CAPCUT_TARGET_VERSION (APK) arm64-v8a nodpi versionCode 19800002 from APKMirror",
+                description = "Download com.lemon.lvoverseas v$CAPCUT_TARGET_VERSION (APK) arm64-v8a nodpi versionCode 19800002 from APKMirror",
             )
         )
     )
@@ -162,7 +162,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = HEVY_TARGET_VERSION,
-                description = "Download com.hevy v\$HEVY_TARGET_VERSION (APKM) arm64-v8a 120-640dpi versionCode 3308730 (BUNDLE) from APKMirror",
+                description = "Download com.hevy v$HEVY_TARGET_VERSION (APKM) arm64-v8a 120-640dpi versionCode 3308730 (BUNDLE) from APKMirror",
             )
         )
     )
@@ -179,7 +179,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = NOKOPRINT_TARGET_VERSION,
-                description = "Download com.nokoprint v\$NOKOPRINT_TARGET_VERSION (XAPK bundle) from APKPure",
+                description = "Download com.nokoprint v$NOKOPRINT_TARGET_VERSION (XAPK bundle) from APKPure",
             )
         )
     )
@@ -196,7 +196,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = XIAOMI_EARBUDS_TARGET_VERSION,
-                description = "Download com.mi.earphone v\$XIAOMI_EARBUDS_TARGET_VERSION (XAPK bundle) from APKPure",
+                description = "Download com.mi.earphone v$XIAOMI_EARBUDS_TARGET_VERSION (XAPK bundle) from APKPure",
             )
         )
     )
@@ -213,7 +213,41 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = SUBE_TARGET_VERSION,
-                description = "Download com.sube.app v\$SUBE_TARGET_VERSION (XAPK bundle) from APKPure",
+                description = "Download com.sube.app v$SUBE_TARGET_VERSION (XAPK bundle) from APKPure",
+            )
+        )
+    )
+
+    const val SDMSE_PACKAGE_NAME = "eu.darken.sdmse"
+    const val SDMSE_TARGET_VERSION = "2.2.2-rc0"
+    const val SDMSE_INPUT_SHA256 = ""
+
+    val COMPATIBILITY_SDMSE = Compatibility(
+        name = "SD Maid SE",
+        packageName = SDMSE_PACKAGE_NAME,
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x4CAF50,
+        targets = listOf(
+            AppTarget(
+                version = SDMSE_TARGET_VERSION,
+                description = "Download eu.darken.sdmse v$SDMSE_TARGET_VERSION (APK) FOSS-RELEASE versionCode 20202000",
+            )
+        )
+    )
+
+    const val MULTIACCOUNTS_PACKAGE_NAME = "com.excelliance.multiaccounts"
+    const val MULTIACCOUNTS_TARGET_VERSION = "5.8.2"
+    const val MULTIACCOUNTS_INPUT_SHA256 = "48a10a394b619fe5aa76e171f62e3b1d61590c651e0f3161ae031c9df3d23c66"
+
+    val COMPATIBILITY_MULTIACCOUNTS = Compatibility(
+        name = "Multiple Accounts",
+        packageName = MULTIACCOUNTS_PACKAGE_NAME,
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x3F51B5,
+        targets = listOf(
+            AppTarget(
+                version = MULTIACCOUNTS_TARGET_VERSION,
+                description = "Download com.excelliance.multiaccounts v$MULTIACCOUNTS_TARGET_VERSION (APK) arm64-v8a versionCode 672 from APKMirror",
             )
         )
     )

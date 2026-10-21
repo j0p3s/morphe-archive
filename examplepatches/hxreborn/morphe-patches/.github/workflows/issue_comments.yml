@@ -3,16 +3,19 @@ name: Reply to issue comments
 on:
   issue_comment:
     types: [created]
+  discussion_comment:
+    types: [created]
 
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number }}
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.discussion.number }}
   cancel-in-progress: false
 
 jobs:
   needs-info:
     if: >-
+      github.event_name == 'issue_comment' &&
       !github.event.issue.pull_request &&
       github.event.issue.state == 'open' &&
       contains(github.event.issue.labels.*.name, 'needs info')
@@ -39,6 +42,7 @@ jobs:
 
   reply:
     if: >-
+      github.event_name == 'issue_comment' &&
       !github.event.issue.pull_request &&
       !github.event.issue.locked &&
       github.event.comment.user.type != 'Bot' &&
@@ -46,7 +50,6 @@ jobs:
       !contains(github.event.issue.labels.*.name, 'incomplete') &&
       !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association) &&
       (github.event.issue.state == 'closed' ||
-      contains(github.event.issue.labels.*.name, 'app request') ||
       contains(github.event.issue.labels.*.name, 'app-update') ||
       contains(github.event.issue.labels.*.name, 'enhancement'))
     permissions:
@@ -87,3 +90,49 @@ jobs:
             --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"$marker\"))) | .id")
           [ -z "$replied" ] || exit 0
           gh issue comment "$ISSUE" --repo "$REPO" --body-file "$RUNNER_TEMP/comment.md"
+
+  request:
+    if: >-
+      github.event_name == 'discussion_comment' &&
+      github.event.discussion.category.slug == 'app-requests' &&
+      github.event.discussion.state == 'open' &&
+      !github.event.discussion.locked &&
+      github.event.comment.user.type != 'Bot' &&
+      !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.comment.author_association)
+    permissions:
+      discussions: write
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            .github/scripts/issue_comment.py
+            .github/actions/triage/discussion.sh
+          sparse-checkout-cone-mode: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          NUMBER: ${{ github.event.discussion.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          discussion=.github/actions/triage/discussion.sh
+          bash -eo pipefail "$discussion" view "$NUMBER" > "$RUNNER_TEMP/discussion.json"
+          jq --slurpfile live "$RUNNER_TEMP/discussion.json" \
+            '.issue = (.discussion + {labels: $live[0].labels})' "$GITHUB_EVENT_PATH" > "$RUNNER_TEMP/request-event.json"
+          labels=$(jq -r '.issue.labels[].name' "$RUNNER_TEMP/request-event.json")
+          ! grep -qx bot-wrong <<< "$labels" || exit 0
+          status=0
+          python3 .github/scripts/issue_comment.py --needs-info "$RUNNER_TEMP/request-event.json" || status=$?
+          [ "$status" -eq 0 ] || [ "$status" -eq 3 ] || exit "$status"
+          [ "$status" -ne 0 ] || bash -eo pipefail "$discussion" remove-labels "$NUMBER" "needs info"
+          status=0
+          python3 .github/scripts/issue_comment.py "$RUNNER_TEMP/request-event.json" > "$RUNNER_TEMP/comment.md" || status=$?
+          [ "$status" -ne 3 ] || exit 0
+          [ "$status" -eq 0 ] || exit "$status"
+          marker=$(head -n 1 "$RUNNER_TEMP/comment.md")
+          replied=$(jq -r --arg marker "$marker" \
+            '.comments[] | select(.author.login == "github-actions" and (.body | contains($marker))) | .url' \
+            "$RUNNER_TEMP/discussion.json")
+          [ -z "$replied" ] || exit 0
+          bash -eo pipefail "$discussion" comment "$NUMBER" "$RUNNER_TEMP/comment.md"

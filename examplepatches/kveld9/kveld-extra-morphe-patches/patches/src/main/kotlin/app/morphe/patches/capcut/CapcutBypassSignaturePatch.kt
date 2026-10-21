@@ -46,6 +46,24 @@ private object GodzillaGateFingerprint : Fingerprint(
     parameters = listOf(),
 )
 
+private object CrackingVerdictPersistFingerprint : Fingerprint(
+    definingClass = "Lcom/vega/launcher/network/interceptors/CrackingInterceptor;",
+    name = "c",
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    returnType = "V",
+    parameters = listOf("I"),
+    strings = listOf("isCracking", "crackCode"),
+)
+
+private object CrackingDialogRenderFingerprint : Fingerprint(
+    definingClass = "Lcom/vega/launcher/network/interceptors/CrackingInterceptor\$showGlobalSecurityDialog\$1;",
+    name = "invoke",
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    returnType = "Ljava/lang/Object;",
+    parameters = listOf(),
+    strings = listOf("lynx_overlay_id"),
+)
+
 @Suppress("unused")
 val capcutBypassSignaturePatch = bytecodePatch(
     name = "Bypass Signature Check",
@@ -99,6 +117,21 @@ val capcutBypassSignaturePatch = bytecodePatch(
         )
         patched++
 
-        println("[Bypass Signature Check] Applied $patched hooks -> APK signature spoofed to official, tamper gates disabled.")
+        CrackingVerdictPersistFingerprint.method.addInstructions(
+            0,
+            "return-void",
+        )
+        patched++
+
+        CrackingDialogRenderFingerprint.method.addInstructions(
+            0,
+            """
+                sget-object v0, Lkotlin/Unit;->INSTANCE:Lkotlin/Unit;
+                return-object v0
+            """,
+        )
+        patched++
+
+        println("[Bypass Signature Check] Applied $patched hooks -> APK signature spoofed to official, tamper gates disabled, cracking verdict persistence and security dialog render stubbed.")
     }
 }

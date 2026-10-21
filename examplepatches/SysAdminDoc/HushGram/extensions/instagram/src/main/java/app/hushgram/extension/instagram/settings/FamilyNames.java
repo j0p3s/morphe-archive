@@ -32,6 +32,7 @@ public final class FamilyNames {
     public static final String BACK_LEAVES_HOME = "Back leaves Home";
     public static final String STORY_LOOP = "Loop a story";
     public static final String STORY_SOUND = "Start stories with sound";
+    public static final String STORY_SWIPE_REPLY = "Stop swipe up to reply";
     public static final String STORY_UPLOAD_QUALITY = "Upload stories at full quality";
     public static final String FEED_SOUND = "Start feed videos with sound";
     public static final String FEED_TAP_PAUSE = "Tap a feed video to pause it";
@@ -59,9 +60,9 @@ public final class FamilyNames {
     public static final String RECENT_SEARCHES = "Don't save recent searches";
     public static final String ALL_RECENT_SEARCHES = "Show all recent searches";
     public static final String NOTES_ROW = "Hide the notes row";
+    public static final String INBOX_SEARCH = "Hide the search bar in Messages";
     public static final String INBOX_SUGGESTIONS = "Hide suggested accounts in DMs";
     public static final String INSTANTS = "Hide Instants";
-    public static final String PLUS_PREVIEW = "Hide Plus preview in chat menus";
     public static final String SHARE_SHEET = "Hide group buttons on the share sheet";
     public static final String REPOST_BUTTON = "Hide the Repost button";
     public static final String HIDE_SHARE_BUTTON = "Hide the Share button";
@@ -108,6 +109,7 @@ public final class FamilyNames {
     public static final String REEL_TAP_AND_VOLUME = "Control taps and volume on Reels";
     public static final String REEL_AUTO_SCROLL = "Keep Reels auto scroll on";
     public static final String REEL_SCROLLING = "Stop Reels scrolling";
+    public static final String SWIPE_TO_PROFILE = "Swipe left to open the profile";
     public static final String REEL_ORIGIN = "Find the reel you came from";
     public static final String STORY_DOWNLOAD = "Download any story";
     public static final String VIDEO_DOWNLOAD = "Download any video";

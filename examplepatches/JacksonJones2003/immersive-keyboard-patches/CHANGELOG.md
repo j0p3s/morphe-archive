@@ -1,3 +1,94 @@
+## [1.10.0](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.5...v1.10.0) (2026-10-21)
+
+### ✨ New Features
+
+* Add a Light & dark pair menu to the Themes screen ([2623805](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/262380556d6d0bbd24c795cd78dc7f6d81c7cabc))
+* Remember a light theme and a dark theme picked by the user and switch between them ([6d5ee03](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/6d5ee03584e56c39bd72bc063c7775398fb55bb6))
+
+## [1.10.0-dev.2](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.10.0-dev.1...v1.10.0-dev.2) (2026-10-21)
+
+### ✨ New Features
+
+* Add a Light & dark pair menu to the Themes screen ([2623805](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/262380556d6d0bbd24c795cd78dc7f6d81c7cabc))
+
+## [1.10.0-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.5...v1.10.0-dev.1) (2026-10-21)
+
+### ✨ New Features
+
+* Remember a light theme and a dark theme picked by the user and switch between them ([6d5ee03](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/6d5ee03584e56c39bd72bc063c7775398fb55bb6))
+
+## [1.9.5](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.4...v1.9.5) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Draw the keyboard's own backgrounds into the bottom bar so it is one piece with the keyboard ([0a15f78](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/0a15f788481fead8a7152f5d923fdc134bad27de))
+
+## [1.9.5-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.4...v1.9.5-dev.1) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Draw the keyboard's own backgrounds into the bottom bar so it is one piece with the keyboard ([0a15f78](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/0a15f788481fead8a7152f5d923fdc134bad27de))
+
+## [1.9.4](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.3...v1.9.4) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Scale only the key rows so panel backgrounds stay put and edges stop flickering ([16c20b9](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/16c20b9c575092af5a0bd2395589fca5b3d8632a))
+
+## [1.9.4-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.3...v1.9.4-dev.1) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Scale only the key rows so panel backgrounds stay put and edges stop flickering ([16c20b9](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/16c20b9c575092af5a0bd2395589fca5b3d8632a))
+
+## [1.9.3](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.2...v1.9.3) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Bounce only the keys so the glass sheet's corners stay put while typing ([21345df](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/21345df0c07af62131d12d3e53a608ebfb82d513))
+
+## [1.9.3-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.2...v1.9.3-dev.1) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Bounce only the keys so the glass sheet's corners stay put while typing ([21345df](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/21345df0c07af62131d12d3e53a608ebfb82d513))
+
+## [1.9.2](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.1...v1.9.2) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Keep the press glow inside the glass sheet and make the bounce subtler ([a359060](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/a359060d4c0fc7c8d354e08ec98abf7fa353e41a))
+
+## [1.9.2-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.1...v1.9.2-dev.1) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Keep the press glow inside the glass sheet and make the bounce subtler ([a359060](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/a359060d4c0fc7c8d354e08ec98abf7fa353e41a))
+
+## [1.9.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.0...v1.9.1) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Draw the press glow over the keyboard so the glass blur does not erase it ([4b856f4](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/4b856f4766f5e489c99fab4cd44d7a4bfa4ff532))
+
+## [1.9.1-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.0...v1.9.1-dev.1) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Draw the press glow over the keyboard so the glass blur does not erase it ([4b856f4](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/4b856f4766f5e489c99fab4cd44d7a4bfa4ff532))
+
+## [1.9.0](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.8.1...v1.9.0) (2026-10-21)
+
+### ✨ New Features
+
+* Add Glass Press Effect patch ([7cf3c10](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/7cf3c100a8800dd9c5feabdfc815cf2496807718))
+
+## [1.9.0-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.8.1...v1.9.0-dev.1) (2026-10-21)
+
+### ✨ New Features
+
+* Add Glass Press Effect patch ([7cf3c10](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/7cf3c100a8800dd9c5feabdfc815cf2496807718))
+
 ## [1.8.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.8.0...v1.8.1) (2026-10-14)
 
 ### 🐛 Bug Fixes

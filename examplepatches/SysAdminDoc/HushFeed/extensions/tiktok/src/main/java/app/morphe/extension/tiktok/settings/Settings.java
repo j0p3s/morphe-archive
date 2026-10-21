@@ -101,9 +101,24 @@ public class Settings extends BaseSettings {
             "subtitle_language", "original", false, Setting.parent(DOWNLOAD_SUBTITLES));
     public static final IntegerSetting CAPTION_TEXT_SIZE =
             new IntegerSetting("caption_text_size", 0).withRange(0, 48);
+    // How far a spoken caption is lifted above TikTok's spot, in dp, with the phone upright and
+    // turned sideways (#206, from OmerKurdi79's branch, whose keys these are).
+    public static final IntegerSetting CAPTION_BOTTOM_OFFSET =
+            new IntegerSetting("caption_bottom_offset", 0).withRange(0, 300);
+    public static final IntegerSetting CAPTION_LANDSCAPE_OFFSET =
+            new IntegerSetting("caption_landscape_offset", 0).withRange(0, 300);
+    /** "default" for TikTok's own weight, or a font weight from 300 to 800. */
+    public static final StringSetting CAPTION_FONT_WEIGHT = new StringSetting("caption_font_weight", "default");
+    /**
+     * The Normal-weight captions switch, which Caption boldness replaced. No row reads it now: it
+     * stays so a backup from before the picker still restores, and the static block below and
+     * SettingsBackup turn it into the picker's 400.
+     */
     public static final BooleanSetting CAPTION_REGULAR_WEIGHT = new BooleanSetting("caption_regular_weight", FALSE);
     public static final StringSetting CAPTION_BACKGROUND = new StringSetting("caption_background", "default");
     public static final BooleanSetting KEEP_CAPTIONS_CLEAR_DISPLAY = new BooleanSetting("keep_captions_clear_display", FALSE);
+    public static final IntegerSetting CAPTION_CLEAR_DISPLAY_OFFSET = new IntegerSetting(
+            "caption_clear_display_offset", 0, Setting.parent(KEEP_CAPTIONS_CLEAR_DISPLAY)).withRange(0, 300);
     public static final BooleanSetting ALLOW_SCREEN_CAPTURE = new BooleanSetting("allow_screen_capture", FALSE, true);
     public static final BooleanSetting SYSTEM_FONT = new BooleanSetting("system_font", FALSE, true);
     public static final BooleanSetting SYSTEM_EMOJI = new BooleanSetting("system_emoji", FALSE, true);
@@ -371,6 +386,8 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting HIDE_UNPERSONALIZED_FOR_YOU = new BooleanSetting("hide_unpersonalized_for_you", FALSE);
     /** Read on every Friends tab response, so it applies from the next page on. */
     public static final BooleanSetting FRIENDS_MUTUALS_ONLY = new BooleanSetting("friends_mutuals_only", FALSE);
+    /** Each batch the Following feed loads plays newest first (#226). Read once per run of the app. */
+    public static final BooleanSetting FOLLOWING_LATEST_FIRST = new BooleanSetting("following_latest_first", FALSE, true);
     public static final BooleanSetting HIDE_SHARE_CHANNELS = new BooleanSetting("hide_share_channels", FALSE);
     public static final BooleanSetting HIDE_SHARE_ACTIONS = new BooleanSetting("hide_share_actions", FALSE);
     public static final BooleanSetting SHARE_BLOCK_AUTHOR = new BooleanSetting("share_block_author", FALSE);
@@ -832,6 +849,13 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting FLOATING_BOTTOM_BAR = new BooleanSetting(
             "floating_bottom_bar", FALSE, false, Setting.parent(SEE_THROUGH_BOTTOM_BAR));
     /**
+     * With Floating bottom bar, draws the pill as glass: a lighter tint, a frost and a sheen that
+     * brighten toward the top, and a rim that catches the light along the top edge (#218). Same
+     * place and size as the plain pill. Read on each layout.
+     */
+    public static final BooleanSetting LIQUID_GLASS_BOTTOM_BAR = new BooleanSetting(
+            "liquid_glass_bottom_bar", FALSE, false, Setting.parent(FLOATING_BOTTOM_BAR));
+    /**
      * Lets the main feed's video draw up under the status bar, with the clock over it (#145).
      * VideoOverlayHider collapses the spacer TikTok keeps above each video for the bar and
      * SeeThroughStatusBar clears the bar's color while the feed is in front; both go back when
@@ -958,6 +982,8 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting HIDE_EVENT_BADGE = new BooleanSetting("hide_event_badge", FALSE, true);
     public static final BooleanSetting HIDE_INSERTED_CARDS = new BooleanSetting("hide_inserted_cards", FALSE, true);
     public static final BooleanSetting HIDE_PLAYLIST_VIDEOS = new BooleanSetting("hide_playlist_videos", FALSE, true);
+    // TikTok Subs posts only subscribers can watch (#219), on the feed and on profile grids.
+    public static final BooleanSetting HIDE_SUBSCRIBER_ONLY = new BooleanSetting("hide_subscriber_only", FALSE, true);
     // The LIVE feed you swipe through (issue #57). Read on every page TikTok sends, so a change
     // reaches the next page without a restart.
     public static final BooleanSetting LIVE_FEED_FILTER = new BooleanSetting("live_feed_filter", FALSE);
@@ -1078,6 +1104,12 @@ public class Settings extends BaseSettings {
      * post is prepared, so no restart.
      */
     public static final BooleanSetting ALWAYS_UPLOAD_HD = new BooleanSetting("always_upload_hd", FALSE);
+    /**
+     * Takes the AI Cast button (AI Self, AI Theater inside TikTok) off the camera's side toolbar;
+     * the Feed filter patch. TikTok asks as the camera builds its toolbar, so the next camera
+     * opened follows the switch.
+     */
+    public static final BooleanSetting HIDE_AI_CAST = new BooleanSetting("hide_ai_cast", FALSE);
     public static final StringSetting CUSTOM_SHARE_DOMAIN = new StringSetting("custom_share_domain", "");
     // Opens a short vt/vm.tiktok.com share link once to swap the full link onto the clipboard.
     public static final BooleanSetting EXPAND_SHORT_SHARE_LINKS = new BooleanSetting("expand_short_share_links", FALSE);
@@ -1183,6 +1215,9 @@ public class Settings extends BaseSettings {
     public static final StringSetting SIM_SPOOF_ISO = new StringSetting("simspoof_iso", "us");
     public static final StringSetting SIMSPOOF_MCCMNC = new StringSetting("simspoof_mccmnc", "310260");
     public static final StringSetting SIMSPOOF_OP_NAME = new StringSetting("simspoof_op_name", "T-Mobile");
+    // Read by the region patch's request hooks as each For You request is built, so no restart.
+    public static final BooleanSetting SIM_SPOOF_FEED_REAL =
+            new BooleanSetting("simspoof_feed_real", FALSE, false, Setting.parent(SIM_SPOOF));
     // Network proxy. Off by default, and every value is read once as TikTok starts, before its
     // network stack is built, so each one takes a restart. The user name and password stay out
     // of backups: a backup file is easy to pass around.
@@ -1243,6 +1278,14 @@ public class Settings extends BaseSettings {
             DOWNLOAD_STICKER_PATH.save(legacyPath);
             DOWNLOAD_PATHS_MIGRATED.save(TRUE);
         }
+        migrateCaptionWeight();
+    }
+
+    /** A Normal-weight captions switch left on becomes Caption boldness's Normal, once. */
+    static void migrateCaptionWeight() {
+        if (!CAPTION_REGULAR_WEIGHT.savedValue()) return;
+        if ("default".equals(CAPTION_FONT_WEIGHT.savedValue())) CAPTION_FONT_WEIGHT.save("400");
+        CAPTION_REGULAR_WEIGHT.save(FALSE);
     }
 
     /**

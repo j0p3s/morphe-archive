@@ -130,6 +130,36 @@ internal val dailyRewardListListenerFingerprint = Fingerprint(
     custom = { m, c -> c.type == SIMOSA_REWARD_LIST_LISTENER && m.name == "onDailyRewardListSuccess" },
 )
 
+/**
+ * `Le4/J$c;->n(...)` — the screen-shown lambda of the Daily Rewards screen. It runs once when the
+ * screen is shown and is handed the ViewModel, the ladder state and the raw response, so the claim
+ * can be started from there whichever route filled the ladder.
+ *
+ * Part 3 above is anchored on the *full list* response, which the app only requests for one account
+ * shape (`!isNonJazzLogin && isPrepaid && isCurrentUserParrent`). For an account that takes another
+ * route (the eligibility / claim-status refresh) that callback never runs, so nothing is attempted:
+ * no claim, no message, no error — exactly the report on issue #29.
+ *
+ * The lambda's numbering inside `Le4/J` is compiler-generated and drifts between releases (3.3.4.2:
+ * `J$c`, 3.3.5: `J$d`), so the anchor pins the enclosing class and the exact 7-parameter signature
+ * plus the screen-name literal, never the numbered subclass itself.
+ */
+internal val dailyRewardScreenShownFingerprint = Fingerprint(
+    returnType = "Lkotlin/Unit;",
+    accessFlags = listOf(AccessFlags.PRIVATE, AccessFlags.STATIC, AccessFlags.FINAL),
+    parameters = listOf(
+        "Le4/T;",
+        "Landroid/content/Context;",
+        "Ljava/lang/String;",
+        SIMOSA_REWARD_LADDER_VIEW_MODEL,
+        SIMOSA_REWARD_LADDER_STATE,
+        SIMOSA_REWARD_RESPONSE,
+        "Le4/a;",
+    ),
+    filters = listOf(string("Daily Reward Screen")),
+    custom = { m, c -> c.type.startsWith("Le4/J\$") && m.name == "n" },
+)
+
 @Suppress("unused")
 val autoCheckInPatch = bytecodePatch(
     name = "Auto check-in & claim daily reward",
@@ -188,11 +218,19 @@ val autoCheckInPatch = bytecodePatch(
         // the three registers injected code uses (v0-v2) are its dead locals.
         check(renderRegisters >= 4) { "unexpected register layout in the daily-reward renderer" }
 
+        // Detect the obfuscated package name for kotlinx.coroutines.flow.StateFlow (`Lqb/B;` on 3.3.4.2, `Lxb/B;` on 3.3.5)
+        // dynamically from the method's own `reference.type` so the descriptor is always identical to the host class.
+        val stateFlowRef = (renderInstructions.first { insn ->
+            val ref = (insn as? ReferenceInstruction)?.reference as? FieldReference
+            ref != null && ref.definingClass == SIMOSA_REWARD_VIEW_MODEL && ref.name == SIMOSA_REWARD_STATE_FLOW
+        } as ReferenceInstruction).reference as FieldReference
+        val stateFlowType = stateFlowRef.type
+
         render.addInstructionsWithLabels(
             0,
             """
-                iget-object v0, p0, $SIMOSA_REWARD_VIEW_MODEL->${SIMOSA_REWARD_STATE_FLOW}:Lqb/B;
-                invoke-interface {v0}, Lqb/B;->getValue()Ljava/lang/Object;
+                iget-object v0, p0, $SIMOSA_REWARD_VIEW_MODEL->${SIMOSA_REWARD_STATE_FLOW}:$stateFlowType
+                invoke-interface {v0}, ${stateFlowType}->getValue()Ljava/lang/Object;
                 move-result-object v0
                 if-eqz v0, :proxma_auto_claim_done
                 check-cast v0, $SIMOSA_REWARD_STATE
@@ -249,15 +287,23 @@ val autoCheckInPatch = bytecodePatch(
             "unexpected register layout in the daily-rewards listener"
         }
 
+        // Detect the return type of `Le4/N;->F1()` directly from the listener class's own instructions
+        // (`Lqb/B;` on 3.3.4.2, `Lxb/B;` on 3.3.5) so it matches whichever package the app was built with.
+        val f1Call = listenerInstructions.first { insn ->
+            val ref = (insn as? ReferenceInstruction)?.reference as? MethodReference
+            ref != null && ref.definingClass == SIMOSA_REWARD_LADDER_VIEW_MODEL && ref.name == "F1"
+        }
+        val ladderStateFlowType = ((f1Call as ReferenceInstruction).reference as MethodReference).returnType
+
         listener.addInstructionsWithLabels(
             listenerInstructions.size - 1,
             """
                 move-object/from16 v2, p0
                 move-object/from16 v4, p1
                 iget-object v2, v2, $SIMOSA_REWARD_LIST_LISTENER->a:$SIMOSA_REWARD_LADDER_VIEW_MODEL
-                invoke-static {v2}, ${SIMOSA_REWARD_LADDER_VIEW_MODEL}->F1(${SIMOSA_REWARD_LADDER_VIEW_MODEL})Lqb/B;
+                invoke-static {v2}, ${SIMOSA_REWARD_LADDER_VIEW_MODEL}->F1(${SIMOSA_REWARD_LADDER_VIEW_MODEL})$ladderStateFlowType
                 move-result-object v3
-                invoke-interface {v3}, Lqb/B;->getValue()Ljava/lang/Object;
+                invoke-interface {v3}, ${ladderStateFlowType}->getValue()Ljava/lang/Object;
                 move-result-object v3
                 if-eqz v3, :proxma_auto_claim_ladder
                 check-cast v3, $SIMOSA_REWARD_LADDER_STATE
@@ -285,8 +331,75 @@ val autoCheckInPatch = bytecodePatch(
                 const/4 v8, 0x0
                 invoke-virtual {v2, v8}, ${SIMOSA_REWARD_LADDER_VIEW_MODEL}->n2(Z)V
                 invoke-virtual {v2, v5, v7}, ${SIMOSA_REWARD_LADDER_VIEW_MODEL}->L1(${SIMOSA_REWARD_DAY_ITEM}Ljava/lang/String;)V
+                const/4 v8, 0x1
+                invoke-virtual {v2, v8}, ${SIMOSA_REWARD_LADDER_VIEW_MODEL}->n2(Z)V
             """.trimIndent(),
             ExternalLabel("proxma_auto_claim_ladder", listenerEnd),
+        )
+
+        // ---- Part 4: claim when the screen is shown, whichever route filled the ladder ----
+        // Only one of the routes that fill the Daily Rewards tab runs the listener hooked in part 3.
+        // This lambda runs on every route, and it is handed the ViewModel (p3), the ladder state (p4)
+        // and the response (p5), so the same claim can be started from here.
+        //
+        // Guards: `a0` is the ViewModel's own "today already claimed" flag — it blocks the attempt,
+        // and the attempt latches it so neither part 3 nor a later screen show can claim again;
+        // `claimed == "true"` is the app's own already-claimed marker and blocks it too. Today's rung
+        // is `f()`; `i()` (the selected rung) is the fallback when only that slot is filled in.
+        //
+        // Note: p3/p4/p5 live above v15, and `invoke-virtual` only reaches v0-v15 — so they are
+        // copied into low registers first. The internal label must differ from the ExternalLabel
+        // name: a duplicate label makes the inline assembler return no class at all.
+        val shown = dailyRewardScreenShownFingerprint.method
+        val shownRegisters = shown.implementation?.registerCount ?: 0
+        check(shownRegisters >= 10) { "unexpected register layout in the daily-rewards screen lambda" }
+
+        shown.addInstructionsWithLabels(
+            0,
+            """
+                move-object/from16 v3, p3
+                move-object/from16 v4, p4
+                move-object/from16 v5, p5
+                if-eqz v4, :proxma_shown_skip
+                if-eqz v3, :proxma_shown_skip
+                invoke-virtual {v4}, $SIMOSA_REWARD_LADDER_STATE->f()$SIMOSA_REWARD_DAY_ITEM
+                move-result-object v0
+                if-eqz v0, :proxma_shown_have_day
+                invoke-virtual {v4}, $SIMOSA_REWARD_LADDER_STATE->i()$SIMOSA_REWARD_DAY_ITEM
+                move-result-object v0
+                :proxma_shown_have_day
+                if-eqz v0, :proxma_shown_skip
+                invoke-virtual {v0}, $SIMOSA_REWARD_DAY_ITEM->getDay()Ljava/lang/String;
+                move-result-object v1
+                if-eqz v1, :proxma_shown_skip
+                iget-boolean v1, v3, $SIMOSA_REWARD_LADDER_VIEW_MODEL->a0:Z
+                if-eqz v1, :proxma_shown_skip
+                const-string v1, ""
+                if-eqz v5, :proxma_shown_claim
+                invoke-virtual {v5}, $SIMOSA_REWARD_RESPONSE->getData()$SIMOSA_REWARD_DATA
+                move-result-object v2
+                if-eqz v2, :proxma_shown_claim
+                invoke-virtual {v2}, $SIMOSA_REWARD_DATA->getClaimed()Ljava/lang/String;
+                move-result-object v1
+                const-string v2, "true"
+                invoke-static {v1, v2}, Lkotlin/jvm/internal/Intrinsics;->areEqual(Ljava/lang/Object;Ljava/lang/Object;)Z
+                move-result v2
+                if-eqz v2, :proxma_shown_skip
+                const-string v1, ""
+                invoke-virtual {v5}, $SIMOSA_REWARD_RESPONSE->getData()$SIMOSA_REWARD_DATA
+                move-result-object v2
+                if-eqz v2, :proxma_shown_claim
+                invoke-virtual {v2}, $SIMOSA_REWARD_DATA->getCurrentStatus()Ljava/lang/String;
+                move-result-object v2
+                if-eqz v2, :proxma_shown_claim
+                move-object v1, v2
+                :proxma_shown_claim
+                invoke-virtual {v3, v0, v1}, $SIMOSA_REWARD_LADDER_VIEW_MODEL->L1(${SIMOSA_REWARD_DAY_ITEM}Ljava/lang/String;)V
+                const/4 v1, 0x1
+                invoke-virtual {v3, v1}, $SIMOSA_REWARD_LADDER_VIEW_MODEL->n2(Z)V
+                :proxma_shown_skip
+            """.trimIndent(),
+            ExternalLabel("proxma_shown_entry", shown.instructions.first()),
         )
     }
 }

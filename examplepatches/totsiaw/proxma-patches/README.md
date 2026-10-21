@@ -16,12 +16,13 @@ Morphe patch bundle for **My Telenor**, **Investify**, **Simosa** (Jazz), **OLX*
 
 ### Simosa (`com.jazz.jazzworld`)
 
-_Supported version(s): 3.3.4.2_
+_Supported version(s): 3.3.5, 3.3.4.2_
 
 | Patch | Description |
 |-------|-------------|
 | **Auto check-in & claim daily reward** | Claims the daily check-in reward on its own: opening the daily-rewards screen no longer waits for the check-in ad, the reward is granted right away. The missed-days restore and the day-10/20/30 milestone claim are untouched. |
 | **Bypass signature verification** | Disables Simosa's anti-tamper signature check so a re-signed APK launches normally instead of stalling on the splash / "version is not correct" dialog. |
+| **Dark theme (black background)** | Makes Simosa a dark app: screens, sheets, dialogs and menus use the dark palette (near-black background, light text) instead of the light one, including on Android 12+ where the app would otherwise take a light colour scheme from the wallpaper. The app's own red/orange branding and its white cards are left alone so text on them stays readable. |
 | **Remove ads & tracking** | Removes every ad (interstitial, banner, daily-reward) and every tracker (Mixpanel, Firebase, Facebook, AppsFlyer) — app events, network sends, ad-SDK requests (Google Ads / AppLovin / AnyMind / Prebid), SDK auto-collection, and the ipify IP leak. The app then phones home only to its own Jazz API. |
 | **Remove daily check-in ads** | Removes the SocialPlus daily check-in / in-feed ads (FeedAdsManager banner + native loaders) and the day-10/20/30 milestone-claim RewardedAd (the award is still granted, just with no ad). Separate from "Remove ads & tracking" to keep that patch Morphe-Manager-safe; enable this one when patching with the desktop CLI. |
 
@@ -55,6 +56,16 @@ _Supported version(s): 5.6.0_
 | **Bypass PairIP license check** | Disables Google PairIP's license/installer check (com.pairip.licensecheck) so a re-signed build runs on a real device instead of being redirected to the Play Store and killed. No-ops the LicenseContentProvider entry point and LicenseClient.initializeLicenseCheck(). |
 | **Unlock premium (remove ads)** | Unlocks Investify premium — forces the backend `no_ads` entitlement getter to report true in both the model and its Realm proxy, so the app treats the account as ad-free without any purchase. Ad SDK loads are gated on this flag app-wide. |
 
+### NetMonster (`cz.mroczis.netmonster`)
+
+_Supported version(s): 4.0.4, 5.0.0, 5.0.1_
+
+| Patch | Description |
+|-------|-------------|
+| **Bypass Play license check (NetMonster)** | Removes Google Play's PairIP license check so a re-signed NetMonster 5.0.x build runs instead of being blocked by the "Get this app from Play" screen. Without it, patched 5.0.0 / 5.0.1 open the Play Store on launch and close. No effect on 4.0.4, which has no such check. |
+| **Google Maps API key (NetMonster)** | Optional: write YOUR OWN Google Maps API key so the map renders after re-signing (NetMonster's built-in key is cert-locked). Leave the key empty to leave the map as-is. |
+| **Unlock premium (NetMonster)** | Unlocks NetMonster Premium — forces the Adapty entitlement collector to always report premium active, so real-time LTE/NR-NSA location calculation is unlocked, ads are removed, and the status shows Active without a subscription. |
+
 ### foodpanda (`com.global.foodpanda.android`)
 
 _Supported version(s): 26.38.1_
@@ -82,16 +93,7 @@ _Supported version(s): 18.8.0_
 | Patch | Description |
 |-------|-------------|
 | **Force dark mode** | Forces OLX into dark (night) mode regardless of the system theme, using the app's built-in -night resources via UiModeManager.setApplicationNightMode at startup. |
-| **Remove ads** | Removes native feed ads (Google GMA), the full-height ad slot, and the "Buy with Delivery" promo section (bar, cards and View all) from OLX. Pinned to the 18.8.0 build (matches that build's obfuscated feed classes). |
-
-### NetMonster (`cz.mroczis.netmonster`)
-
-_Supported version(s): 4.0.4, 5.0.0, 5.0.1_
-
-| Patch | Description |
-|-------|-------------|
-| **Google Maps API key (NetMonster)** | Optional: write YOUR OWN Google Maps API key so the map renders after re-signing (NetMonster's built-in key is cert-locked). Leave the key empty to leave the map as-is. |
-| **Unlock premium (NetMonster)** | Unlocks NetMonster Premium — forces the Adapty entitlement collector to always report premium active, so real-time LTE/NR-NSA location calculation is unlocked, ads are removed, and the status shows Active without a subscription. |
+| **Remove ads** | Removes native feed ads (Google GMA), the full-height ad slot, the "Buy with Delivery" promo section (bar, cards and View all), and the three item-page banner slots from OLX. Pinned to the 18.8.0 build (matches that build's obfuscated feed and item-page classes). |
 
 ### OLX India (`com.olx.southasia`)
 

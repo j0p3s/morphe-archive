@@ -3,6 +3,8 @@ name: Triage issues
 on:
   issues:
     types: [opened, edited]
+  discussion:
+    types: [created, edited]
   schedule:
     - cron: "30 6 * * *"
   workflow_dispatch:
@@ -15,14 +17,21 @@ on:
 permissions: {}
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.issue.number || 'sweep' }}
+  group: ${{ github.workflow }}-${{ github.event.issue.number || github.event.discussion.number || 'sweep' }}
   cancel-in-progress: false
 
 jobs:
   triage:
     if: >-
       github.event_name == 'schedule' || github.event_name == 'workflow_dispatch' ||
-      (contains(github.event.issue.labels.*.name, 'app-update') &&
+      (github.event_name == 'discussion' &&
+       github.event.discussion.category.slug == 'app-requests' &&
+       github.event.discussion.state == 'open' &&
+       github.event.discussion.user.type != 'Bot' &&
+       (github.event.action == 'created' ||
+        (github.event.action == 'edited' && toJSON(github.event.changes.body) != 'null'))) ||
+      (github.event_name == 'issues' &&
+       contains(github.event.issue.labels.*.name, 'app-update') &&
        !contains(github.event.issue.labels.*.name, 'bot-wrong') &&
        github.event.issue.user.type != 'Bot' &&
        !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) &&
@@ -30,13 +39,8 @@ jobs:
         (github.event.action == 'edited' && github.event.issue.state == 'open' &&
          toJSON(github.event.changes.body) != 'null' &&
          contains(github.event.issue.labels.*.name, 'needs info')))) ||
-      (contains(github.event.issue.labels.*.name, 'app request') &&
-       !contains(github.event.issue.labels.*.name, 'bot-wrong') &&
-       (github.event.action == 'opened' ||
-        (github.event.action == 'edited' && github.event.issue.state == 'open' &&
-         toJSON(github.event.changes.body) != 'null' &&
-         contains(github.event.issue.labels.*.name, 'needs info')))) ||
-      (contains(github.event.issue.labels.*.name, 'bug') &&
+      (github.event_name == 'issues' &&
+       contains(github.event.issue.labels.*.name, 'bug') &&
        !contains(github.event.issue.labels.*.name, 'bot-wrong') &&
        !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'), github.event.issue.author_association) &&
        (github.event.action != 'edited' || toJSON(github.event.changes.body) != 'null') &&
@@ -48,6 +52,7 @@ jobs:
     permissions:
       contents: read
       issues: write
+      discussions: write
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

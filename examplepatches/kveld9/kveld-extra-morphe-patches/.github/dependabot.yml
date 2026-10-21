@@ -6,6 +6,13 @@ updates:
     target-branch: main
     schedule:
       interval: monthly
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: npm
     labels: []
@@ -17,6 +24,13 @@ updates:
       # version 10.x and later may not generate release notes correctly
       # https://github.com/conventional-changelog/conventional-changelog/issues/1495
       - dependency-name: "conventional-changelog-conventionalcommits"
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
 
   - package-ecosystem: gradle
     labels: []
@@ -24,3 +38,10 @@ updates:
     target-branch: main
     schedule:
       interval: monthly
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"

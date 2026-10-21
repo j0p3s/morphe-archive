@@ -91,3 +91,27 @@ object InputViewDispatchDrawFingerprint : Fingerprint(
         methodCall(name = "dispatchDraw")
     )
 )
+
+/**
+ * InputView.dispatchTouchEvent, which receives every touch on the keyboard.
+ */
+object InputViewDispatchTouchFingerprint : Fingerprint(
+    definingClass = "Lcom/google/android/libraries/inputmethod/inputview/InputView;",
+    name = "dispatchTouchEvent",
+    returnType = "Z",
+    parameters = listOf("Landroid/view/MotionEvent;")
+)
+
+/**
+ * ThemeListingFragment.onCreateView, which inflates the Themes screen: a FrameLayout with the
+ * theme list as its first child.
+ */
+object ThemeListingCreateViewFingerprint : Fingerprint(
+    definingClass = "Lcom/google/android/apps/inputmethod/libs/theme/listing/ThemeListingFragment;",
+    returnType = "Landroid/view/View;",
+    parameters = listOf(
+        "Landroid/view/LayoutInflater;",
+        "Landroid/view/ViewGroup;",
+        "Landroid/os/Bundle;"
+    )
+)

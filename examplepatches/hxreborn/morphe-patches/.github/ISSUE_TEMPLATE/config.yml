@@ -1,5 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: 📱 App request
+    url: https://github.com/hxreborn/morphe-patches/discussions/new?category=app-requests
+    about: "Request patches for an app not supported here yet. Requests live in Discussions, where you can upvote them."
+  - name: ❓ Question
+    url: https://github.com/hxreborn/morphe-patches/discussions/new?category=q-a
+    about: "How do I patch, install or use something? Ask in Q&A."
   - name: Another bundle's patches
     url: https://morphe-patches.software/#apps
     about: "Patches from a different bundle aren't maintained here. Find the bundle that ships them."

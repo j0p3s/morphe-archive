@@ -70,18 +70,49 @@ push_apk() {
     fi
 }
 
-extract_pid() {
+parse_pid() {
     local output="$1"
     local pid
     pid=$(echo "$output" | tr -d '\r' | sed -n 's/^PID=//p' | head -n1)
 
-    if [[ -z "$pid" || ! "$pid" =~ ^[0-9]+$ ]]; then
+    if [[ -n "$pid" && "$pid" =~ ^[0-9]+$ ]]; then
+        echo "$pid"
+        return 0
+    fi
+
+    return 1
+}
+
+extract_pid() {
+    local output="$1"
+    local pid
+    if ! pid=$(parse_pid "$output"); then
         echo "$TAG ERROR: Failed to extract dex2oat process PID." >&2
         echo "$output" >&2
         exit 1
     fi
 
     echo "$pid"
+}
+
+print_dex2oat_reasons() {
+    local pid="$1"
+    if [[ -z "$pid" ]]; then
+        return 1
+    fi
+
+    local pattern='Failed to verify|Failure to verify dex file|Failed to open dex|Verification error in|Rejecting class'
+    local reasons
+    reasons=$(adb logcat -d --pid="$pid" 2>/dev/null | tr -d '\r' | grep -E "$pattern" || true)
+
+    if [[ -z "$reasons" ]]; then
+        return 1
+    fi
+
+    while IFS= read -r line; do
+        echo "$TAG $line" >&2
+    done <<< "$reasons"
+    return 0
 }
 
 run_verifier() {
@@ -97,8 +128,14 @@ run_verifier() {
     set -e
 
     if [[ "$rc" -ne 0 ]]; then
-        echo "$TAG ERROR: dex2oat execution failed with exit code $rc." >&2
-        echo "$output" >&2
+        local pid
+        pid=$(parse_pid "$output" || true)
+        if print_dex2oat_reasons "$pid"; then
+            echo "$TAG FAIL: ART refused to open the APK DEX files (dex2oat exit $rc)" >&2
+        else
+            echo "$TAG ERROR: dex2oat execution failed with exit code $rc." >&2
+            echo "$output" >&2
+        fi
         exit 1
     fi
 
@@ -114,7 +151,7 @@ get_device_info() {
 
 report_results() {
     local pid="$1"
-    local pattern='Verification error in|failed to verify|Rejecting class'
+    local pattern='Verification error in|Failed to verify|failed to verify|Rejecting class'
     local raw_log
     raw_log=$(adb logcat -d --pid="$pid" 2>/dev/null | tr -d '\r' | grep -E "$pattern" || true)
 

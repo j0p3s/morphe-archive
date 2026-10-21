@@ -710,7 +710,10 @@ public final class Probe extends Instrumentation {
                                 + " authorDuet=" + optional(creator, "getDuetSetting")
                                 + " authorStitch=" + optional(creator, "getStitchSetting")
                                 + " permDuet=" + optional(optional(aweme, "getInteractPermission"), "getDuet")
-                                + " permStitch=" + optional(optional(aweme, "getInteractPermission"), "getStitch"));
+                                + " permStitch=" + optional(optional(aweme, "getInteractPermission"), "getStitch")
+                                // How long ago it was posted, in seconds, for checking an order
+                                // by date (Latest first on Following).
+                                + " postedAgo=" + postedAgo(optional(aweme, "getCreateTime")));
                         break;
                     }
                     case "labreport": {
@@ -1855,7 +1858,8 @@ public final class Probe extends Instrumentation {
                         if (activity == null) throw new IllegalStateException("no current activity");
                         android.content.res.Resources resources = activity.getResources();
                         java.util.Map<Integer, String> wanted = new java.util.HashMap<>();
-                        for (String name : new String[]{"llj", "desc", "bqv", "ll8", "videomusiccoverblock", "g85"}) {
+                        // llj is the rail column up to 47.1.x, ljn on 47.4.3.
+                        for (String name : new String[]{"llj", "ljn", "desc", "bqv", "ll8", "videomusiccoverblock", "g85"}) {
                             int id = resources.getIdentifier(name, "id", activity.getPackageName());
                             if (id != 0) wanted.put(id, name);
                         }
@@ -3275,7 +3279,9 @@ public final class Probe extends Instrumentation {
                 out.append(" child ").append(depth).append('.').append(i).append(' ')
                         .append(child.getClass().getSimpleName()).append(" id=")
                         .append(idName(child, resources)).append(" size=")
-                        .append(child.getWidth()).append('x').append(child.getHeight());
+                        .append(child.getWidth()).append('x').append(child.getHeight())
+                        // A video surface carries no id, and See-through status bar grows it.
+                        .append(" top=").append(child.getTop()).append(" scale=").append(child.getScaleY());
                 appendLayoutInfo(child, out);
                 out.append('\n');
                 if (depth < 2 && child instanceof android.view.ViewGroup) {
@@ -4226,6 +4232,12 @@ public final class Probe extends Instrumentation {
             if (!(count instanceof Number)) return "unknown";
             long value = ((Number) count).longValue();
             return value <= 100 ? "100orFewer" : value <= 1000 ? "1000orFewer" : value < 10000 ? "over1000" : "over10000";
+        }
+
+        /** Seconds since {@code createTime} (TikTok's post time in seconds), or "unknown". */
+        private static String postedAgo(Object createTime) {
+            if (!(createTime instanceof Number) || ((Number) createTime).longValue() <= 0) return "unknown";
+            return String.valueOf(System.currentTimeMillis() / 1000 - ((Number) createTime).longValue());
         }
 
         /** TikTok's caption strip shown, with the view that draws its cue visible at a height. */

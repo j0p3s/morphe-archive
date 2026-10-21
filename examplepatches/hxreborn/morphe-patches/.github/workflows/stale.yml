@@ -12,8 +12,36 @@ on:
 
 permissions:
   issues: write
+  discussions: write
 
 jobs:
+  requests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          sparse-checkout: .github/actions/triage/discussion.sh
+          sparse-checkout-cone-mode: false
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          DRY_RUN: ${{ inputs.dry-run || false }}
+        shell: bash
+        run: |
+          discussion=.github/actions/triage/discussion.sh
+          cutoff=$(date -u -d '7 days ago' +%FT%TZ)
+          printf '%s\n' 'This request is labelled `needs info` and has had no activity for 7 days. It is being closed automatically.' > "$RUNNER_TEMP/comment.md"
+          bash -eo pipefail "$discussion" list app-requests |
+          jq -r --arg cutoff "$cutoff" '.[] | select(.state == "OPEN" and .updatedAt < $cutoff)
+            | select((.labels | map(.name)) as $l | ($l | index("needs info")) and ($l | index("bot-wrong") | not) and ($l | index("in progress") | not)) | .number' |
+          while read -r n; do
+            if [ "$DRY_RUN" = true ]; then echo "would close #$n"; continue; fi
+            bash -eo pipefail "$discussion" comment "$n" "$RUNNER_TEMP/comment.md" >/dev/null
+            bash -eo pipefail "$discussion" close "$n" OUTDATED
+            echo "closed #$n"
+          done
+
   stale:
     runs-on: ubuntu-latest
     steps:
@@ -31,7 +59,7 @@ jobs:
           days-before-pr-close: -1
           exempt-all-assignees: true
           exempt-all-milestones: true
-          exempt-issue-labels: "app request,needs info,app-update"
+          exempt-issue-labels: "needs info,app-update"
           operations-per-run: 30
       - uses: actions/stale@v11
         with:
@@ -46,7 +74,7 @@ jobs:
           days-before-pr-stale: -1
           days-before-pr-close: -1
           exempt-all-assignees: true
-          exempt-issue-labels: "bot-wrong,app request,app-update"
+          exempt-issue-labels: "bot-wrong,app-update"
           operations-per-run: 30
 
   lock:

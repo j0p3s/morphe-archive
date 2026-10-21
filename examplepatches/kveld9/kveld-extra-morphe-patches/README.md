@@ -211,7 +211,29 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 </details>
 
 <details>
-<summary>Copilot&nbsp;&nbsp;•&nbsp;&nbsp;<b>4 patches</b></summary>
+<summary>Multiple Accounts&nbsp;&nbsp;•&nbsp;&nbsp;<b>8 patches</b></summary>
+<br>
+
+**Supported versions:**
+
+| 5.8.2 |
+| :---: |
+
+| Patch | Description | Options |
+|----------|----------------|-----------|
+| **Block Telemetry & Trackers** | Neutralizes in-house statistics, ByteDance AppLog, AppLovin MAX, Google Measurement, AppMetrica, Tenjin, IronSource, and Pangle ad/telemetry dispatchers, redirects isolated tracking host literals to 0.0.0.0, disables ad and tracking manifest components, and injects opt-out metadata flags. |  |
+| **Multiaccounts Debloat (Setup)** | Disables non-functional ad-network WorkManager services and receivers, removes WorkManagerInitializer startup metadata, and strips RECEIVE_BOOT_COMPLETED in AndroidManifest.xml while strictly preserving clone container services. |  |
+| **Multiaccounts Privacy Setup** | Configures network_security_config.xml to trust user CA certificates for TLS inspection while preserving cleartext traffic. |  |
+| **Multiaccounts Telemetry Manifest Purge** | Strips advertising permissions, disables ad network providers, activities, services, and receivers, prunes telemetry registrars, and injects opt-out metadata flags in AndroidManifest.xml. |  |
+| **Privacy Controls** | Neutralizes clipboard snooping in ByteDance AppLog attribution and disables OkHttp certificate pinning for network traffic auditing. |  |
+| **Sideload Compatibility** | Ensures compatibility for sideloaded installations by spoofing the official APK signature certificate for self-verification and neutralizing launch-blocking Google Play in-app update checks. |  |
+| **Stop Background Wakeups** | Stops ad-SDK WorkManager background tasks to eliminate background wakeups and battery drain. Container virtualization processes, push notifications, and clone keep-alive services are strictly preserved. |  |
+| **UX Declutter** | Removes splash delays, short-circuits cloned-app launch ad gates, hides main screen promo banners, and suppresses rating prompts. | • Skip Splash Delay and Ad Stalls<br>• Suppress Rating Prompts<br>• Hide Main Screen Native Promo Banner<br>• Skip First-Run Privacy Wizard |
+
+</details>
+
+<details>
+<summary>Copilot&nbsp;&nbsp;•&nbsp;&nbsp;<b>3 patches</b></summary>
 <br>
 
 **Supported versions:**
@@ -221,10 +243,9 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
-| **Block Telemetry & Trackers** | Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, stubs Singular attribution SDK initializers and dispatchers, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites default telemetry endpoints inside telemetry packages and custom blocked hosts unscoped to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising and preinstall attribution permissions. | • Custom Blocked Hosts |
+| **Block Telemetry & Trackers** | Neutralizes Microsoft OneDS/Aria aggregated-metric and failure-logging dispatch methods, stubs Singular attribution SDK initializers and dispatchers, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites default telemetry endpoints inside telemetry packages and custom blocked hosts unscoped to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising and preinstall attribution permissions. | • Custom Blocked Hosts |
 | **Bypass Code Transparency** | Skips the code-transparency failure dialog and reports local verification success, unblocking sideloaded installs. |  |
 | **Copilot Companion Native Slimmer** | Strips optional companion native binaries (React Native, Hermes, SlimCV) via in-situ zeroing. WARNING: Hermes and React Native are load-bearing for React Native initialization - enabling this WILL crash Copilot React Native surfaces (Copilot chat host) with UnsatisfiedLinkError. The HockeyApp native exception handler (proven UnsatisfiedLinkError in OfficeApplication.onMAMCreate) and voice/dictation SDKs (libofficevoicesdk, libofficevoicetranscriptionsdk; proven dlopen FATAL on boot path) are load-bearing at startup and are therefore never stripped. |  |
-| **Disable Login Requirement** | Removes login requirement and FTUX paywall screens. Cloud-backed features still require sign-in server-side. |  |
 
 </details>
 
@@ -310,6 +331,21 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 </details>
 
+<details>
+<summary>SD Maid SE&nbsp;&nbsp;•&nbsp;&nbsp;<b>1 patch</b></summary>
+<br>
+
+**Supported versions:**
+
+| 2.2.2-rc0 |
+| :---: |
+
+| Patch | Description | Options |
+|----------|----------------|-----------|
+| **Unlock Pro** | Unlocks SD Maid SE Pro features. |  |
+
+</details>
+
 <!-- PATCHES_END -->
 
 <p align="center"><a href="#top"><b>&uarr; Back to top</b></a></p>
@@ -343,6 +379,8 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 | NokoPrint | [Guide](docs/apps/nokoprint.md) |
 | Xiaomi Earbuds | [Guide](docs/apps/xiaomi_earbuds.md) |
 | SUBE | [Guide](docs/apps/sube.md) |
+| SD Maid SE | [Guide](docs/apps/sdmse.md) |
+| Multiple Accounts | [Guide](docs/apps/multiaccounts.md) |
 
 <p align="center"><a href="#top"><b>&uarr; Back to top</b></a></p>
 

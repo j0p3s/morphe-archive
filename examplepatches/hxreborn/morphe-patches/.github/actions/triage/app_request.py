@@ -127,7 +127,7 @@ def shown_name(body):
 
 def canonical_title(title, body):
     rest = TITLE_PREFIX.sub("", title).strip() or shown_name(body) or find_package(body)
-    return f"[App Request]: {rest}"[:MAX_TITLE] if rest else title
+    return rest[:MAX_TITLE] if rest else title
 
 
 def supported_apps(patches_list):
@@ -193,13 +193,13 @@ def decide(number, body, requests, patches_list, registry=None, title="", now=No
         canonical = open_same[0]
         verdict, reason, duplicate_of = "close", "duplicate", canonical["number"]
         lines.append(
-            f"This duplicates issue {link(canonical)}, which already requests `{package}`."
+            f"This duplicates {link(canonical)}, which already requests `{package}`."
         )
     elif same_package:
         prior = same_package[-1]
         verdict, labels = "flag", ["duplicate"]
         lines.append(
-            f"Closed issue {link(prior)} already requested `{package}`."
+            f"The closed request {link(prior)} already asked for `{package}`."
         )
 
     this = next((r for r in requests if r["number"] == number), {})
@@ -209,7 +209,7 @@ def decide(number, body, requests, patches_list, registry=None, title="", now=No
     open_by_author = open_requests_at_limit(this, requests) if enforce_limit and verdict != "close" else []
     if open_by_author:
         verdict, reason, duplicate_of, labels = "close", "not planned", 0, []
-        rows = [f"- [#{r['number']}](https://redirect.github.com/{REPO}/issues/{r['number']}) "
+        rows = [f"- [#{r['number']}](https://redirect.github.com/{REPO}/discussions/{r['number']}) "
                 f"{code_span(r.get('title') or '')}" for r in open_by_author]
         lines = [f"Each person can have {OPEN_LIMIT} app requests open at a time, and these are already open:\n\n"
                  + "\n".join(rows)
@@ -297,6 +297,6 @@ if __name__ == "__main__":
     if posted and posted.is_file():
         elsewhere = [json.loads(line) for line in posted.read_text(encoding="utf-8").splitlines() if line.strip()]
     previous = Path(sys.argv[7]).read_text(encoding="utf-8") if len(sys.argv) > 7 else ""
-    enforce_limit = os.environ.get("ACTION") == "opened" and os.environ.get("ASSOCIATION") not in EXEMPT_ASSOCIATIONS
+    enforce_limit = os.environ.get("ACTION") == "created" and os.environ.get("ASSOCIATION") not in EXEMPT_ASSOCIATIONS
     print(json.dumps(decide(number, body, requests, patches_list, registry, this.get("title", ""),
                             elsewhere=elsewhere, previous=previous, enforce_limit=enforce_limit)))

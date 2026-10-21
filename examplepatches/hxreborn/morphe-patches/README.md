@@ -2121,7 +2121,7 @@
 
 <img src="https://raw.githubusercontent.com/hxreborn/morphe-patches/assets/request.png" width="96" align="left" alt="">
 
-**Want to request an app?**<br>Check the [existing requests](https://github.com/hxreborn/morphe-patches/issues?q=is%3Aissue+label%3A%22app+request%22) first. If it isn't there, open an [app request](https://github.com/hxreborn/morphe-patches/issues/new?template=app_request.yml) with its Play Store link and package name, and pick the features you want.
+**Want to request an app?**<br>Check the [open requests](https://github.com/hxreborn/morphe-patches/discussions/categories/app-requests?discussions_q=is%3Aopen+category%3A%22App+Requests%22+sort%3Atop) first and upvote yours if it is there. If it isn't, open an [app request](https://github.com/hxreborn/morphe-patches/discussions/new?category=app-requests) with its Play Store link and package name, and pick the features you want.<br>Requests with many upvotes get looked at first, but what ships is whatever I can verify on a device, in no fixed order. Skipped: features the server enforces, region locks, and apps another bundle already patches.
 
 <br clear="left">
 

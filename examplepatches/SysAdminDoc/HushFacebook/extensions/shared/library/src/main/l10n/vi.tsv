@@ -780,7 +780,7 @@ Turn off double tap to like	Tắt nhấn đúp để thích
 A double tap on a reel or video no longer likes it or shows a heart. A single tap and the Like button work as before.	Nhấn đúp vào reel hoặc video không còn thích hay hiện trái tim. Nhấn một lần và nút Thích vẫn hoạt động như trước.
 Keep the reel speed	Giữ tốc độ reel
 # context: summary of that switch
-A playback speed you pick in a reel's menu stays for the next reels until you pick another or Facebook restarts. Off, every reel starts at normal speed.	Tốc độ phát bạn chọn trong menu của reel được giữ cho các reel tiếp theo, đến khi bạn chọn tốc độ khác hoặc Facebook khởi động lại. Khi tắt, mọi reel bắt đầu ở tốc độ bình thường.
+A playback speed you pick in a reel's menu stays for the next reels, after a restart too, until you pick another. Off, every reel starts at normal speed.	Tốc độ phát bạn chọn trong menu của reel được giữ cho các reel tiếp theo, kể cả sau khi khởi động lại, đến khi bạn chọn tốc độ khác. Khi tắt, mọi reel bắt đầu ở tốc độ bình thường.
 Hold a reel for 2x	Nhấn giữ reel để phát 2x
 # context: summary of that switch; more button is the reel's own button with three dots
 Holding a reel plays it at double speed until you let go, in place of Facebook's long-press menu. The reel's more button still opens that menu.	Nhấn giữ reel sẽ phát với tốc độ gấp đôi cho đến khi bạn thả tay, thay cho menu nhấn giữ của Facebook. Nút ba chấm của reel vẫn mở menu đó.
@@ -977,8 +977,8 @@ The Feeds tab will open on %1$s.	Tab Bảng feed sẽ mở ở %1$s.
 # context: title of the list under Following feed on Home that picks which Feeds tab filter Home shows
 Home shows	Trang chủ hiện
 Home shows the same posts as All in the Feeds tab.	Trang chủ hiện cùng bài viết như Tất cả trong tab Bảng feed.
-# context: %1$s is a Feeds tab filter's name, like Friends or Groups
-Home shows the same posts as %1$s in the Feeds tab. If Facebook doesn't have that feed, Home shows All.	Trang chủ hiện cùng bài viết như %1$s trong tab Bảng feed. Nếu Facebook không có bảng feed đó, Trang chủ hiện Tất cả.
+# context: %1$s is a Feeds tab filter's name, like Friends or Groups; %2$s is the Hide "Suggested for you" posts switch and %3$s the Hide Reels in the feed switch
+Home asks Facebook for the posts %1$s shows in the Feeds tab. When there's nothing new there, Facebook can fill Home with suggested posts and reels, which %2$s and %3$s take out. If Facebook doesn't have that feed, Home shows All.	Trang chủ yêu cầu Facebook gửi các bài viết mà %1$s hiện trong tab Bảng feed. Khi ở đó không có gì mới, Facebook có thể lấp Trang chủ bằng bài viết và thước phim được gợi ý, mà %2$s và %3$s sẽ ẩn đi. Nếu Facebook không có bảng feed đó, Trang chủ hiện Tất cả.
 # context: settings import preview; %1$s is the Following feed on Home switch, %2$s a Feeds tab filter
 With %1$s on, Home will show the same posts as %2$s in the Feeds tab.	Khi %1$s bật, Trang chủ sẽ hiện cùng bài viết như %2$s trong tab Bảng feed.
 Saved	Đã lưu
@@ -1603,7 +1603,7 @@ Takes the row of profile pictures off the share sheet, the people Facebook sugge
 Hide who is typing in comments	Ẩn ai đang nhập trong bình luận
 Takes away the line that says someone is typing a comment. Your own typing is a separate switch under Privacy.	Gỡ dòng cho biết ai đó đang nhập bình luận. Việc bạn đang nhập có công tắc riêng trong Quyền riêng tư.
 Hide the search pill on reels	Ẩn gợi ý tìm kiếm trên reel
-Hides the search suggestion under a reel's caption, the magnifier with a question to look up.	Ẩn gợi ý tìm kiếm bên dưới chú thích của reel, biểu tượng kính lúp kèm câu hỏi để tra cứu.
+Hides the search suggestion under a reel's caption, the magnifier with a question to look up, the one at the top of its comments and the search bar over reels you open from a profile.	Ẩn gợi ý tìm kiếm bên dưới chú thích của reel, biểu tượng kính lúp kèm câu hỏi để tra cứu, gợi ý ở đầu phần bình luận và thanh tìm kiếm phía trên các reel bạn mở từ một trang cá nhân.
 # context: switch title under Appearance; the button is Facebook's Messenger icon in the top bar of Home
 Hide the Messenger button	Ẩn nút Messenger
 # context: summary of that switch; the other top bar buttons move over to fill the space; Hushfacebook is the app's name
@@ -1679,7 +1679,7 @@ Long press opens comments	Nhấn giữ mở bình luận
 # context: summary of the double tap switch
 A double tap on a reel opens its comments instead of liking it. Turn off double tap to like still wins when it's on. Off by default, since it hasn't been tried on a real account yet.	Nhấn đúp vào reel sẽ mở bình luận của reel thay vì thích. Nếu "Tắt nhấn đúp để thích" đang bật thì cài đặt đó được ưu tiên. Mặc định tắt, vì chưa được thử trên tài khoản thật.
 # context: summary of the long press switch
-Holding a reel opens its comments instead of Facebook's long-press menu or the 2x hold. The reel's more button still opens that menu. Off by default, since it hasn't been tried on a real account yet.	Nhấn giữ reel sẽ mở bình luận của reel thay vì menu nhấn giữ của Facebook hoặc tốc độ 2x khi giữ. Nút thêm của reel vẫn mở menu đó. Mặc định tắt, vì chưa được thử trên tài khoản thật.
+Holding a reel opens its comments instead of Facebook's long-press menu or the 2x hold. The reel's more button still opens that menu. Holding a feed post's photo or the line with its name opens that post's comments, and holding its text or a profile picture works as before. Off by default, since it hasn't been tried on a real account yet.	Nhấn giữ reel sẽ mở bình luận của reel thay vì menu nhấn giữ của Facebook hoặc tốc độ 2x khi giữ. Nút thêm của reel vẫn mở menu đó. Nhấn giữ ảnh của một bài viết trong bảng tin hoặc dòng có tên người đăng sẽ mở bình luận của bài đó, còn nhấn giữ chữ hoặc ảnh đại diện vẫn hoạt động như trước. Mặc định tắt, vì chưa được thử trên tài khoản thật.
 # context: switch title under Downloads; the switch adds the post menu row "Open in another app" to feed and Watch videos
 Open videos in another app	Mở video trong ứng dụng khác
 # context: summary of that switch; "Open in another app" is the menu row; VLC and Web Video Caster are app names, keep them
@@ -1737,3 +1737,27 @@ Free stuff shortcut	Lối tắt Đồ miễn phí
 Free stuff isn't available in this build.	Đồ miễn phí không có trong bản dựng này.
 Adds Free stuff, Marketplace's free listings, to the menu you get by holding Facebook's icon, if there's room, and a Free stuff row in Settings and privacy. Existing shortcuts stay.	Thêm Đồ miễn phí (các tin đăng miễn phí trên Marketplace) vào menu hiện ra khi nhấn giữ biểu tượng Facebook, nếu còn chỗ, và thêm dòng Đồ miễn phí trong Cài đặt & quyền riêng tư. Các lối tắt hiện có vẫn giữ nguyên.
 Adds Free stuff, Marketplace's free listings, to the menu you get by holding Facebook's icon, if there's room. Existing shortcuts stay.	Thêm Đồ miễn phí (các tin đăng miễn phí trên Marketplace) vào menu hiện ra khi nhấn giữ biểu tượng Facebook, nếu còn chỗ. Các lối tắt hiện có vẫn giữ nguyên.
+# context: row in a video's menu while Skip silent parts is on; the video's silent parts are skipped
+Skip silent parts: on	Bỏ qua đoạn im lặng: bật
+# context: the same row after a tap; this one video keeps its silent parts
+Skip silent parts: off for this video	Bỏ qua đoạn im lặng: tắt cho video này
+# context: short message after tapping the row; this video now plays its silent parts
+Silent parts play in this video	Đoạn im lặng được phát trong video này
+# context: short message after tapping the row again; silent parts are skipped again
+Skipping silent parts again	Lại bỏ qua đoạn im lặng
+# context: switch title under News feed; posts Facebook shows from groups the user hasn't joined, which come with a Join button next to the group's name
+Hide posts from groups you're not in	Ẩn bài viết từ nhóm bạn chưa tham gia
+# context: summary of that switch; a friend's share of a group post is a post on the friend's own profile that shares a group post, and it stays
+Hides posts from groups you haven't joined, like a friend's post in a public group. Posts from your groups and a friend's share of a group post stay.	Ẩn bài viết từ các nhóm bạn chưa tham gia, như bài viết của bạn bè trong một nhóm công khai. Bài viết từ nhóm của bạn và bài viết nhóm do bạn bè chia sẻ vẫn giữ nguyên.
+# context: switch title under Search; For you is the section of searches Facebook suggests on the search screen before anything is typed, under a header that reads For you
+Hide For you in search	Ẩn Dành cho bạn trong tìm kiếm
+# context: summary of that switch; recent searches are the user's own past searches, and the suggestions as you type are the ones under the search box while typing
+Hides the For you searches Facebook suggests when you open search. Your recent searches and the suggestions as you type stay.	Ẩn các tìm kiếm Dành cho bạn mà Facebook gợi ý khi bạn mở tìm kiếm. Các tìm kiếm gần đây và gợi ý khi bạn gõ vẫn giữ nguyên.
+# context: switch title under Search; on, what the user searches for isn't added to their Facebook search history
+Don't save search history	Không lưu lịch sử tìm kiếm
+# context: summary of that switch; searches already in the history are the user's own past searches, which stay until the user deletes them
+What you search for isn't added to your Facebook search history. Searches already there stay until you delete them.	Những gì bạn tìm kiếm sẽ không được thêm vào lịch sử tìm kiếm Facebook của bạn. Các tìm kiếm đã có sẵn vẫn giữ lại cho đến khi bạn xóa.
+# context: switch title under Reels and Watch; the audio line is the scrolling line at the bottom of a reel naming its sound, like "Name · Original audio" or a song title
+Hide the audio line on reels	Ẩn dòng âm thanh trên reel
+# context: summary of that switch; "Original audio" is Facebook's own label, so use the wording Facebook shows in this language
+Takes the line with the reel's sound, "Original audio" or a song, off the bottom of reels. Other info stays. A change shows from the next reel.	Bỏ dòng ghi âm thanh của reel, "Âm thanh gốc" hoặc một bài hát, ở dưới cùng reel. Thông tin khác vẫn giữ. Thay đổi hiện từ reel tiếp theo.

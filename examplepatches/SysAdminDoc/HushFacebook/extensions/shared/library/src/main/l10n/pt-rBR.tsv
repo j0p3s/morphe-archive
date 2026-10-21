@@ -672,7 +672,7 @@ Turn off double tap to like	Desativar toque duplo para curtir
 A double tap on a reel or video no longer likes it or shows a heart. A single tap and the Like button work as before.	Tocar duas vezes em um reel ou vídeo não curte mais nem mostra um coração. Um toque e o botão Curtir funcionam como antes.
 Keep the reel speed	Manter a velocidade dos reels
 # context: summary of that switch
-A playback speed you pick in a reel's menu stays for the next reels until you pick another or Facebook restarts. Off, every reel starts at normal speed.	A velocidade de reprodução que você escolhe no menu de um reel continua nos próximos reels até você escolher outra ou o Facebook reiniciar. Desativado, cada reel começa na velocidade normal.
+A playback speed you pick in a reel's menu stays for the next reels, after a restart too, until you pick another. Off, every reel starts at normal speed.	A velocidade de reprodução que você escolhe no menu de um reel continua nos próximos reels, mesmo depois de reiniciar, até você escolher outra. Desativado, cada reel começa na velocidade normal.
 Hold a reel for 2x	Segurar um reel para 2x
 # context: summary of that switch; more button is the reel's own button with three dots
 Holding a reel plays it at double speed until you let go, in place of Facebook's long-press menu. The reel's more button still opens that menu.	Segurar um reel faz ele tocar no dobro da velocidade até você soltar, no lugar do menu de toque longo do Facebook. O botão Mais do reel ainda abre esse menu.
@@ -869,8 +869,8 @@ The Feeds tab will open on %1$s.	A aba Feeds vai abrir em %1$s.
 # context: title of the list under Following feed on Home that picks which Feeds tab filter Home shows
 Home shows	O Início mostra
 Home shows the same posts as All in the Feeds tab.	O Início mostra as mesmas publicações que Tudo na aba Feeds.
-# context: %1$s is a Feeds tab filter's name, like Friends or Groups
-Home shows the same posts as %1$s in the Feeds tab. If Facebook doesn't have that feed, Home shows All.	O Início mostra as mesmas publicações que %1$s na aba Feeds. Se o Facebook não tiver esse feed, o Início mostra Tudo.
+# context: %1$s is a Feeds tab filter's name, like Friends or Groups; %2$s is the Hide "Suggested for you" posts switch and %3$s the Hide Reels in the feed switch
+Home asks Facebook for the posts %1$s shows in the Feeds tab. When there's nothing new there, Facebook can fill Home with suggested posts and reels, which %2$s and %3$s take out. If Facebook doesn't have that feed, Home shows All.	O Início pede ao Facebook as publicações que %1$s mostra na aba Feeds. Quando não há nada novo ali, o Facebook pode preencher o Início com publicações e reels sugeridos, que %2$s e %3$s tiram. Se o Facebook não tiver esse feed, o Início mostra Tudo.
 # context: settings import preview; %1$s is the Following feed on Home switch, %2$s a Feeds tab filter
 With %1$s on, Home will show the same posts as %2$s in the Feeds tab.	Com %1$s ligado, o Início vai mostrar as mesmas publicações que %2$s na aba Feeds.
 Saved	Salvos
@@ -1495,7 +1495,7 @@ Takes the row of profile pictures off the share sheet, the people Facebook sugge
 Hide who is typing in comments	Ocultar quem está digitando nos comentários
 Takes away the line that says someone is typing a comment. Your own typing is a separate switch under Privacy.	Remove a linha que mostra que alguém está digitando um comentário. A sua própria digitação tem uma chave separada em Privacidade.
 Hide the search pill on reels	Ocultar a sugestão de pesquisa nos reels
-Hides the search suggestion under a reel's caption, the magnifier with a question to look up.	Oculta a sugestão de pesquisa abaixo da legenda de um reel, a lupa com uma pergunta para consultar.
+Hides the search suggestion under a reel's caption, the magnifier with a question to look up, the one at the top of its comments and the search bar over reels you open from a profile.	Oculta a sugestão de pesquisa abaixo da legenda de um reel, a lupa com uma pergunta para consultar, a que fica no topo dos comentários e a barra de pesquisa sobre os reels que você abre a partir de um perfil.
 # context: switch title under Appearance; the button is Facebook's Messenger icon in the top bar of Home
 Hide the Messenger button	Ocultar o botão do Messenger
 # context: summary of that switch; the other top bar buttons move over to fill the space; Hushfacebook is the app's name
@@ -1571,7 +1571,7 @@ Long press opens comments	Pressionar e segurar abre os comentários
 # context: summary of the double tap switch
 A double tap on a reel opens its comments instead of liking it. Turn off double tap to like still wins when it's on. Off by default, since it hasn't been tried on a real account yet.	Tocar duas vezes em um reel abre os comentários dele em vez de curtir. Se "Desativar toque duplo para curtir" estiver ligado, ele tem prioridade. Desligado por padrão, porque ainda não foi testado em uma conta real.
 # context: summary of the long press switch
-Holding a reel opens its comments instead of Facebook's long-press menu or the 2x hold. The reel's more button still opens that menu. Off by default, since it hasn't been tried on a real account yet.	Pressionar e segurar um reel abre os comentários dele em vez do menu de toque longo do Facebook ou do 2x ao segurar. O botão de mais opções do reel continua abrindo esse menu. Desligado por padrão, porque ainda não foi testado em uma conta real.
+Holding a reel opens its comments instead of Facebook's long-press menu or the 2x hold. The reel's more button still opens that menu. Holding a feed post's photo or the line with its name opens that post's comments, and holding its text or a profile picture works as before. Off by default, since it hasn't been tried on a real account yet.	Pressionar e segurar um reel abre os comentários dele em vez do menu de toque longo do Facebook ou do 2x ao segurar. O botão de mais opções do reel continua abrindo esse menu. Segurar a foto de uma publicação do feed ou a linha com o nome abre os comentários dessa publicação, e segurar o texto ou uma foto de perfil funciona como antes. Desligado por padrão, porque ainda não foi testado em uma conta real.
 # context: switch title under Downloads; the switch adds the post menu row "Open in another app" to feed and Watch videos
 Open videos in another app	Abrir vídeos em outro app
 # context: summary of that switch; "Open in another app" is the menu row; VLC and Web Video Caster are app names, keep them
@@ -1629,3 +1629,27 @@ Free stuff shortcut	Atalho para Itens grátis
 Free stuff isn't available in this build.	Itens grátis não estão disponíveis nesta versão.
 Adds Free stuff, Marketplace's free listings, to the menu you get by holding Facebook's icon, if there's room, and a Free stuff row in Settings and privacy. Existing shortcuts stay.	Adiciona Itens grátis, os anúncios gratuitos do Marketplace, ao menu que aparece ao segurar o ícone do Facebook, se houver espaço, e uma linha Itens grátis em Configurações e privacidade. Os atalhos existentes ficam.
 Adds Free stuff, Marketplace's free listings, to the menu you get by holding Facebook's icon, if there's room. Existing shortcuts stay.	Adiciona Itens grátis, os anúncios gratuitos do Marketplace, ao menu que aparece ao segurar o ícone do Facebook, se houver espaço. Os atalhos existentes ficam.
+# context: row in a video's menu while Skip silent parts is on; the video's silent parts are skipped
+Skip silent parts: on	Pular partes em silêncio: ativado
+# context: the same row after a tap; this one video keeps its silent parts
+Skip silent parts: off for this video	Pular partes em silêncio: desativado neste vídeo
+# context: short message after tapping the row; this video now plays its silent parts
+Silent parts play in this video	As partes em silêncio tocam neste vídeo
+# context: short message after tapping the row again; silent parts are skipped again
+Skipping silent parts again	Pulando as partes em silêncio de novo
+# context: switch title under News feed; posts Facebook shows from groups the user hasn't joined, which come with a Join button next to the group's name
+Hide posts from groups you're not in	Ocultar publicações de grupos dos quais você não participa
+# context: summary of that switch; a friend's share of a group post is a post on the friend's own profile that shares a group post, and it stays
+Hides posts from groups you haven't joined, like a friend's post in a public group. Posts from your groups and a friend's share of a group post stay.	Oculta publicações de grupos dos quais você não participa, como a publicação de um amigo em um grupo público. As publicações dos seus grupos e o compartilhamento de uma publicação de grupo por um amigo continuam.
+# context: switch title under Search; For you is the section of searches Facebook suggests on the search screen before anything is typed, under a header that reads For you
+Hide For you in search	Ocultar Para você na pesquisa
+# context: summary of that switch; recent searches are the user's own past searches, and the suggestions as you type are the ones under the search box while typing
+Hides the For you searches Facebook suggests when you open search. Your recent searches and the suggestions as you type stay.	Oculta as pesquisas de Para você que o Facebook sugere quando você abre a pesquisa. Suas pesquisas recentes e as sugestões enquanto você digita continuam.
+# context: switch title under Search; on, what the user searches for isn't added to their Facebook search history
+Don't save search history	Não salvar o histórico de pesquisa
+# context: summary of that switch; searches already in the history are the user's own past searches, which stay until the user deletes them
+What you search for isn't added to your Facebook search history. Searches already there stay until you delete them.	O que você pesquisa não é adicionado ao seu histórico de pesquisa do Facebook. As pesquisas que já estão lá continuam até você apagá-las.
+# context: switch title under Reels and Watch; the audio line is the scrolling line at the bottom of a reel naming its sound, like "Name · Original audio" or a song title
+Hide the audio line on reels	Ocultar a linha de áudio nos reels
+# context: summary of that switch; "Original audio" is Facebook's own label, so use the wording Facebook shows in this language
+Takes the line with the reel's sound, "Original audio" or a song, off the bottom of reels. Other info stays. A change shows from the next reel.	Tira da parte de baixo dos reels a linha com o som do reel, "Áudio original" ou uma música. As outras informações ficam. A mudança aparece a partir do próximo reel.

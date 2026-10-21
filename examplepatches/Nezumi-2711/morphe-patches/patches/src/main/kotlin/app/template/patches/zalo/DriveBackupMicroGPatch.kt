@@ -1,3 +1,7 @@
+// Portions derived from zeldrisho/morphe-patches (GPL-3.0):
+// patches/src/main/kotlin/com/zeldrisho/patches/zalo/{backup,microg}/
+// Modified by Nezumi-2711 on <2026-10-20>: merged into a single patch, ...
+
 package app.template.patches.zalo
 
 import app.morphe.patcher.Fingerprint
@@ -162,7 +166,7 @@ private fun enableDriveMediaBackup(method: MutableMethod) {
 
 @Suppress("unused")
 val driveBackupMicroGPatch = bytecodePatch(
-    name = "Zalo Drive backup via microG",
+    name = "Drive backup via microG",
     description = "Enable Google Drive photo backup and use microG for Drive accounts and authentication.",
     default = false,
 ) {

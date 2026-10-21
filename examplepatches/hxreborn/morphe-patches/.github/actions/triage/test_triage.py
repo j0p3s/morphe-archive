@@ -950,10 +950,10 @@ ok = own["cross_posts"] == []
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} another repo of this bundle's owner is not a cross-post")
 
-for given, expected in {"privacy notes": "[App Request]: privacy notes",
-                        "[App Request]: Gboard": "[App Request]: Gboard",
-                        "[app request]:Gboard": "[App Request]: Gboard",
-                        "[App Request]: ": "[App Request]: Gboard"}.items():
+for given, expected in {"privacy notes": "privacy notes",
+                        "[App Request]: Gboard": "Gboard",
+                        "[app request]:Gboard": "Gboard",
+                        "[App Request]: ": "Gboard"}.items():
     actual = app_verdict(9, [{**request(9, "Gboard", ""), "title": given}])["title"]
     ok = actual == expected
     failures += not ok
@@ -1005,10 +1005,10 @@ ok = [app_verdict(101, eg_requests)["verdict"], app_verdict(5, [prose_package])[
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} only a store link in the App field is read as its package")
 
-for app, expected in {"Duolingo, https://play.google.com/store/apps/details?id=com.duolingo": "[App Request]: Duolingo",
-                      "https://play.google.com/store/apps/details?id=com.example.reader": "[App Request]: com.example.reader",
+for app, expected in {"Duolingo, https://play.google.com/store/apps/details?id=com.duolingo": "Duolingo",
+                      "https://play.google.com/store/apps/details?id=com.example.reader": "com.example.reader",
                       "[Magic Earth](https://play.google.com/store/apps/details?id=com.generalmagic.magicearth)":
-                          "[App Request]: Magic Earth"}.items():
+                          "Magic Earth"}.items():
     actual = app_verdict(9, [{**request(9, app, ""), "title": "[App Request]:"}])["title"]
     ok = actual == expected
     failures += not ok
@@ -1016,7 +1016,7 @@ for app, expected in {"Duolingo, https://play.google.com/store/apps/details?id=c
 
 actual = [app_verdict(9, [{**request(9, "Rubber Bands", ""), "title": title}])["title"]
           for title in ("App Request: Rubber Bands", "[Feature]: Rubber Bands", "[App Request]\uff1aRubber Bands")]
-ok = actual == ["[App Request]: Rubber Bands"] * 3
+ok = actual == ["Rubber Bands"] * 3
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} other prefix spellings and another form's tag are replaced, got {actual!r}")
 
@@ -1075,7 +1075,7 @@ busy = [by("busy", 1, "Foo Player"), by("busy", 2, "Bar `Notes`", labels=("needs
 
 limit_closed = limited_verdict(6, busy)
 ok = ((limit_closed["verdict"], limit_closed["reason"], limit_closed["labels"]) == ("close", "not planned", [])
-      and "[#2](https://redirect.github.com//issues/2) `[App Request]: Bar 'Notes'`" in limit_closed["comment"]
+      and "[#2](https://redirect.github.com//discussions/2) `[App Request]: Bar 'Notes'`" in limit_closed["comment"]
       and "#4" not in limit_closed["comment"] and "#5" not in limit_closed["comment"]
       and limit_closed["comment"].count("\n- ") == 3)
 failures += not ok

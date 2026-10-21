@@ -20,6 +20,9 @@ import app.morphe.patches.shared.replaceWithReturnVoid
 import app.morphe.patches.shared.setApplicationMetaData
 import app.morphe.patches.shared.stripPermissionsWhere
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.ClassDef
+import com.android.tools.smali.dexlib2.iface.Method
+import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
@@ -127,21 +130,6 @@ private fun hookVoidMethod(
         addInstructions(0, "return-void")
         hookedMethods.add(label)
     }
-}
-
-context(_: BytecodePatchContext)
-private fun hookLifecycleCallbacks(hookedMethods: MutableList<String>) {
-    val lifecycleClass = "Lcom/microsoft/applications/telemetry/core/LifecycleHandler;"
-    val activityParam = listOf("Landroid/app/Activity;")
-    val activityBundleParams = listOf("Landroid/app/Activity;", "Landroid/os/Bundle;")
-
-    hookVoidMethod(lifecycleClass, "onActivityCreated", activityBundleParams, hookedMethods, "LifecycleHandler.onActivityCreated")
-    hookVoidMethod(lifecycleClass, "onActivityStarted", activityParam, hookedMethods, "LifecycleHandler.onActivityStarted")
-    hookVoidMethod(lifecycleClass, "onActivityResumed", activityParam, hookedMethods, "LifecycleHandler.onActivityResumed")
-    hookVoidMethod(lifecycleClass, "onActivityPaused", activityParam, hookedMethods, "LifecycleHandler.onActivityPaused")
-    hookVoidMethod(lifecycleClass, "onActivityStopped", activityParam, hookedMethods, "LifecycleHandler.onActivityStopped")
-    hookVoidMethod(lifecycleClass, "onActivitySaveInstanceState", activityBundleParams, hookedMethods, "LifecycleHandler.onActivitySaveInstanceState")
-    hookVoidMethod(lifecycleClass, "onActivityDestroyed", activityParam, hookedMethods, "LifecycleHandler.onActivityDestroyed")
 }
 
 context(_: BytecodePatchContext)
@@ -380,6 +368,19 @@ private fun applyHostsRewrites(method: MutableMethod, rewrites: List<PendingHost
     }
 }
 
+private fun hasBlockedHostLiteral(instruction: Instruction, blockedHosts: Set<String>): Boolean {
+    val opcode = instruction.opcode
+    if (opcode != Opcode.CONST_STRING && opcode != Opcode.CONST_STRING_JUMBO) return false
+    val ref = (instruction as? ReferenceInstruction)?.reference as? StringReference ?: return false
+    return buildRewriteLiteral(ref.string, blockedHosts) != null
+}
+
+private fun hasBlockedHostLiteral(method: Method, blockedHosts: Set<String>): Boolean =
+    method.implementation?.instructions?.any { hasBlockedHostLiteral(it, blockedHosts) } == true
+
+private fun hasBlockedHostLiteral(classDef: ClassDef, blockedHosts: Set<String>): Boolean =
+    classDef.methods.any { hasBlockedHostLiteral(it, blockedHosts) }
+
 private data class HostRewriteStats(
     val rewrittenStrings: Int,
     val ruleCounts: Map<String, Int>,
@@ -395,6 +396,7 @@ private fun BytecodePatchContext.blockHostsInDex(
 
     classDefForEach { classDef ->
         if (predicate != null && !predicate(classDef.type)) return@classDefForEach
+        if (!hasBlockedHostLiteral(classDef, blockedHosts)) return@classDefForEach
 
         val mutableClass = mutableClassDefBy(classDef)
         var classModified = false
@@ -424,7 +426,7 @@ private fun BytecodePatchContext.blockHostsInDex(
 @Suppress("unused")
 val officeHubBlockTelemetryPatch = bytecodePatch(
     name = "Block Telemetry & Trackers",
-    description = "Neutralizes Microsoft OneDS/Aria lifecycle, aggregated-metric and failure-logging dispatch methods, stubs Singular attribution SDK initializers and dispatchers, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites default telemetry endpoints inside telemetry packages and custom blocked hosts unscoped to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising and preinstall attribution permissions.",
+    description = "Neutralizes Microsoft OneDS/Aria aggregated-metric and failure-logging dispatch methods, stubs Singular attribution SDK initializers and dispatchers, nullifies ad measurement platform identifiers (AIFA, AppSetId), rewrites default telemetry endpoints inside telemetry packages and custom blocked hosts unscoped to 0.0.0.0, disables cross-sell, Floodgate, HockeyApp and DataTransport components, and strips advertising and preinstall attribution permissions.",
     default = true,
 ) {
     compatibleWith(Constants.COMPATIBILITY_OFFICEHUB)
@@ -440,7 +442,6 @@ val officeHubBlockTelemetryPatch = bytecodePatch(
     execute {
         val hookedMethods = mutableListOf<String>()
 
-        hookLifecycleCallbacks(hookedMethods)
         hookTelemetryDispatchers(hookedMethods)
         hookAdMeasurementPlatformData(hookedMethods)
         hookSingularSDK(hookedMethods)
@@ -502,7 +503,7 @@ val officeHubBlockTelemetryPatch = bytecodePatch(
         // Pass 1: Scoped pass for default telemetry endpoints within telemetry package prefixes
         val defaultStats = blockHostsInDex(DEFAULT_BLOCKED_HOSTS, touchedClassTypes) { isTelemetryCandidateClass(it) }
 
-        // Pass 2: Unscoped pass for user-supplied custom blocked hosts across all classes
+        // Pass 2: Unscoped pass for user-supplied custom blocked hosts (scans all classes; only matching classes are mutated)
         val customStats = if (distinctUserHosts.isNotEmpty()) {
             blockHostsInDex(distinctUserHosts.toSet(), touchedClassTypes, predicate = null)
         } else {

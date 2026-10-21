@@ -1,11 +1,12 @@
-group = "app.cinemaniacpatches"
+group = "app.daniele"
 
 patches {
     about {
         name = "Cinemaniac Patches"
-        description = "Ad blocking and privacy patches for the Cinemaniac movie tracker app."
+        description = "Unlock Pro for the Cinemaniac movie tracker app. " +
+            "Patched by Morphe — support the original developer!"
         source = "https://github.com/danieleavolio/cinemaniac-patches"
-        author = "danieleavolio"
+        author = "Daniele Avolio"
         contact = "https://github.com/danieleavolio"
         website = "https://github.com/danieleavolio/cinemaniac-patches"
         license = "GPLv3"

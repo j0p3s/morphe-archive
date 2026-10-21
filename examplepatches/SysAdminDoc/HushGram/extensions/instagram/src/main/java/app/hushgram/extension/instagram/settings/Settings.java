@@ -236,6 +236,14 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushgram_start_stories_with_sound", FALSE);
 
     /**
+     * A swipe up on someone's story leaves the reply box closed
+     * ({@link app.hushgram.extension.instagram.stories.StorySwipeReply}). Read at each swipe, so a
+     * change applies at once. Off to start.
+     */
+    public static final BooleanSetting STOP_STORY_SWIPE_REPLY =
+            new BooleanSetting("hushgram_stop_story_swipe_reply", FALSE);
+
+    /**
      * A video story is prepared the way Instagram prepares it with its own "Upload at highest quality"
      * setting on, up to 1080 wide instead of 720 ({@link app.hushgram.extension.instagram.stories.StoryUploadQuality}).
      * Read as each upload is prepared, so a change applies to the next story posted. Off to start.
@@ -716,7 +724,8 @@ public class Settings extends BaseSettings {
 
     /**
      * The Meet Muse card (Try Muse button) among a profile's banners, built from the profile's data
-     * each time the profile or Edit featured opens. Off to start, like every part added to Hide
+     * each time the profile or Edit featured opens, and the same card as a quick promotion at the
+     * top of Home's feed or your profile. Off to start, like every part added to Hide
      * Meta AI after its first two, so an update never takes the card away unasked.
      */
     public static final BooleanSetting HIDE_META_AI_PROFILE_BANNER =
@@ -773,6 +782,14 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushgram_hide_notes_row", FALSE);
 
     /**
+     * The search bar at the top of your messages, the Meta AI one included
+     * ({@link app.hushgram.extension.instagram.direct.InboxSearchBar}). Read each time Instagram
+     * works out your messages again, so a change shows the next time they update. Off to start.
+     */
+    public static final BooleanSetting HIDE_INBOX_SEARCH =
+            new BooleanSetting("hushgram_hide_inbox_search", FALSE);
+
+    /**
      * The Accounts to follow section under your chats
      * ({@link app.hushgram.extension.instagram.direct.InboxSuggestions}). Read each time your
      * messages build that section. Its row tells you to restart Instagram to see the change, so
@@ -788,14 +805,6 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting HIDE_INSTANTS =
             new BooleanSetting("hushgram_hide_instants", FALSE, true);
-
-    /**
-     * The See preview and Instagram Plus rows (and the preview overlay) in the menu a long press on
-     * a chat opens ({@link app.hushgram.extension.instagram.direct.PlusPreview}). Read each time the
-     * menu opens, so a change needs no restart. Off to start.
-     */
-    public static final BooleanSetting HIDE_PLUS_PREVIEW =
-            new BooleanSetting("hushgram_hide_plus_preview", FALSE);
 
     /**
      * The New group button beside the share sheet's search bar, whichever form Instagram gives it,
@@ -1303,6 +1312,13 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushgram_copy_comments", FALSE);
 
     /**
+     * Copy comment leaves out the @names a comment starts with, the way a reply begins (#270).
+     * The comment in Instagram is untouched. Off until enabled.
+     */
+    public static final BooleanSetting COPY_COMMENTS_WITHOUT_MENTIONS =
+            new BooleanSetting("hushgram_copy_comments_without_mentions", FALSE, parent(COPY_COMMENTS));
+
+    /**
      * A selected comment's menu gets Copy username, for the account that wrote it
      * ({@link app.hushgram.extension.instagram.comment.CommentAuthor}). Off until enabled.
      */
@@ -1794,6 +1810,13 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushgram_stop_reels_scrolling", FALSE, true);
 
     /**
+     * A left swipe on a reel opens its creator's profile ({@link app.hushgram.extension.instagram.reels.SwipeToProfile}),
+     * as older Instagram builds did. Read at each swipe, so a change needs no restart. Off to start.
+     */
+    public static final BooleanSetting REEL_SWIPE_TO_PROFILE =
+            new BooleanSetting("hushgram_reel_swipe_to_profile", FALSE);
+
+    /**
      * After 20 reels in a session, swiping in Reels stops until Instagram has been in the
      * background for 15 minutes ({@link app.hushgram.extension.instagram.reels.ReelScrolling}). Read
      * at each new reel. Off to start.
@@ -1892,6 +1915,35 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting REEL_DOWNLOAD_BUTTON =
             new BooleanSetting("hushgram_reel_download_button", FALSE, parent(DOWNLOAD_REELS));
+
+    /**
+     * A Not interested icon in the column beside a reel (#191), so one tap runs Instagram's own Not
+     * interested for that reel without opening its menu. Starts off, so the column stays Instagram's own.
+     */
+    public static final BooleanSetting REEL_NOT_INTERESTED_BUTTON =
+            new BooleanSetting("hushgram_reel_not_interested_button", FALSE);
+
+    /**
+     * A Block icon in the column beside a reel (#191). A tap opens Instagram's own block sheet for
+     * the reel's owner, confirm included, so nothing is blocked by the tap alone. Starts off, so the
+     * column stays Instagram's own.
+     */
+    public static final BooleanSetting REEL_BLOCK_BUTTON = new BooleanSetting("hushgram_reel_block_button", FALSE);
+
+    /**
+     * Hide reels by sound (#191): a sound icon in the column beside a reel, whose tap hides that
+     * reel's sound, and the Reels tab leaving out the reels using a hidden sound
+     * ({@link app.hushgram.extension.instagram.reels.HiddenSounds}). Starts off, so the column and
+     * the tab stay Instagram's own.
+     */
+    public static final BooleanSetting HIDE_SOUND_REELS = new BooleanSetting("hushgram_hide_sound_reels", FALSE);
+
+    /**
+     * The sounds Hide reels by sound hides, a line for each: the sound's id, a tab, its title, a tab
+     * and who made it. Empty to start. It reads empty while HushGram is paused, and a backup leaves it
+     * out, like Hidden accounts.
+     */
+    public static final StringSetting HIDDEN_SOUNDS = new StringSetting("hushgram_hidden_sounds", "", false, false);
 
     /**
      * Hold to download: two fingers (or three) held still on a feed post's picture or video, or on a reel,

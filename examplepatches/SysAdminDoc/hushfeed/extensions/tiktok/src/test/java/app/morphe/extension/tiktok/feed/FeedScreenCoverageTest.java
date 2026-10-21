@@ -101,7 +101,8 @@ public class FeedScreenCoverageTest {
     static final Set<String> WAITING_FOR_A_DEVICE = Set.of(
             "show_exact_counts", "hide_story_rings", "hide_live_ring", "hide_feed_search_button",
             "hide_playlist_bar", "hide_event_badge", "hide_inserted_cards", "hide_share_guide",
-            "caption_text_size", "caption_background", "keep_captions_clear_display", "caption_regular_weight",
+            "caption_text_size", "caption_background", "keep_captions_clear_display", "caption_font_weight",
+            "caption_bottom_offset", "caption_landscape_offset", "caption_clear_display_offset",
             "double_tap_action", "confirm_quick_repost");
 
     static final Map<String, Coverage> TABLE = new LinkedHashMap<>();
@@ -206,8 +207,12 @@ public class FeedScreenCoverageTest {
         put("caption_text_size", YES, UNCHECKED, NONE);
         put("caption_background", YES, UNCHECKED, NONE);
         put("keep_captions_clear_display", YES, UNCHECKED, NONE);
-        // The same caption layout the size reaches (#158).
-        put("caption_regular_weight", YES, UNCHECKED, NONE);
+        // The same caption layout the size reaches (#158), and its container (#206).
+        put("caption_font_weight", YES, UNCHECKED, NONE);
+        put("caption_bottom_offset", YES, UNCHECKED, NONE);
+        put("caption_landscape_offset", YES, UNCHECKED, NONE);
+        // The kept line Hushfeed draws itself, beside keep_captions_clear_display.
+        put("caption_clear_display_offset", YES, UNCHECKED, NONE);
 
         // Clear display follows TikTok's own mode in either window (#84).
         put("automatic_clear_display", YES, YES, NONE);
@@ -219,6 +224,8 @@ public class FeedScreenCoverageTest {
         put("see_through_bottom_bar", YES, NONE, NONE);
         // Only the look of that same bar (#124).
         put("floating_bottom_bar", YES, NONE, NONE);
+        // And of that pill (#218).
+        put("liquid_glass_bottom_bar", YES, NONE, NONE);
         // The main feed only: an opened video keeps the strip under its own top bar (#145).
         put("see_through_status_bar", YES, NONE, NONE);
         // The guard runs with the overlay pass, which walks both windows and no LIVE room.
@@ -398,12 +405,12 @@ public class FeedScreenCoverageTest {
         Map<String, Integer> ids = new LinkedHashMap<>();
         ids.put("desc", 0x7f0a1c02);
         ids.put("47.4.3:o7a", 0x7f0a1c03);
-        ids.put("47.4.3:mud", 0x7f0a1c04);
+        ids.put("47.4.3:ljn", 0x7f0a1c04);
         ids.put("47.4.3:f92", 0x7f0a1c05);
         Map<BooleanSetting, String> switches = new LinkedHashMap<>();
         switches.put(Settings.HIDE_FEED_CAPTION, "desc");
         switches.put(Settings.HIDE_FEED_MUSIC, "47.4.3:o7a");
-        switches.put(Settings.HIDE_FEED_ACTION_BAR, "47.4.3:mud");
+        switches.put(Settings.HIDE_FEED_ACTION_BAR, "47.4.3:ljn");
         switches.put(Settings.HIDE_FEED_SURVEYS, "47.4.3:f92");
         for (BooleanSetting setting : switches.keySet()) {
             Coverage coverage = TABLE.get(setting.key);

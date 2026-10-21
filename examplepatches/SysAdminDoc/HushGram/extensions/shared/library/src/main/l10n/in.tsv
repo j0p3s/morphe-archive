@@ -240,8 +240,8 @@ Hide Ask Meta AI in About this reel	Sembunyikan Tanya Meta AI di Tentang reel in
 About this reel keeps its summary and Sources, and only the Ask Meta AI box under them goes.	Tentang reel ini tetap menampilkan ringkasan dan Sumber, hanya kotak Tanya Meta AI di bawahnya yang hilang.
 Hide Meta AI in the share sheet	Sembunyikan Meta AI di lembar berbagi
 Removes Meta AI from the row at the bottom of the share sheet. Some accounts see it as Muse.	Menghapus Meta AI dari baris di bagian bawah lembar bagikan. Beberapa akun melihatnya sebagai Muse.
-Hide the Muse card on profiles	Sembunyikan kartu Muse di profil
-Removes the Meet Muse card, with its Try Muse button, from profiles. Your other profile cards stay.	Menghapus kartu Meet Muse, beserta tombol Try Muse, dari profil. Kartu profil lainnya tetap ada.
+Hide the Muse card	Sembunyikan kartu Muse
+Removes the Meet Muse card, with its Try Muse button, from Home and your profile. Your other cards stay.	Menghapus kartu Meet Muse, beserta tombol Try Muse, dari Beranda dan profilmu. Kartu lainnya tetap ada.
 Hide the Muse button on your profile	Sembunyikan tombol Muse di profilmu
 Removes the Muse button from the top bar of your profile. Your username and the menu stay.	Menghapus tombol Muse dari bilah atas profilmu. Nama pengguna dan menu tetap ada.
 Hide Blend on reels	Sembunyikan Blend di reel
@@ -254,10 +254,10 @@ Leaves the Suggested for you accounts out of what shows when you tap the search 
 Messages	Pesan
 Hide the notes row	Sembunyikan baris catatan
 Takes the row of notes off the top of your messages, the Map bubble in it too. Your chats, search and requests stay.	Menghapus baris catatan dari bagian atas pesan, termasuk gelembung Peta di dalamnya. Chat, pencarian, dan permintaan pesan tetap ada.
+Hide the search bar in Messages	Sembunyikan bilah pencarian di Pesan
+Takes the search bar and its Filter button off the top of your messages, the Meta AI bar too. Your chats, notes and requests stay.	Menghapus bilah pencarian dan tombol Filter dari bagian atas pesan, termasuk bilah Meta AI. Chat, catatan, dan permintaan pesan tetap ada.
 Hide Instants	Sembunyikan Instants
 Removes the stack of Instants (quick photos from friends) from your messages. Restart Instagram to see the change.	Menghapus tumpukan Instants (foto cepat dari teman) dari pesan kamu. Mulai ulang Instagram untuk melihat perubahannya.
-Hide See preview and Plus in chat menus	Sembunyikan Lihat pratinjau dan Plus di menu chat
-Takes the See preview and Instagram Plus rows out of the menu you get from long pressing a chat. Your chat options stay.	Menghapus baris Lihat pratinjau dan Instagram Plus dari menu yang muncul saat kamu menekan lama sebuah chat. Opsi chat kamu tetap ada.
 Read messages without the seen receipt	Baca pesan tanpa tanda dilihat
 Opening a chat doesn't tell people you've seen their messages, and you still see when they've seen yours. To let one chat know, long press it in your messages and tap Mark as read.	Membuka chat tidak memberi tahu orang lain bahwa Anda sudah melihat pesan mereka, dan Anda tetap melihat kapan mereka melihat pesan Anda. Agar satu chat tahu, tekan lama chat itu di pesan Anda lalu ketuk Tandai sudah dibaca.
 Keep chats unread here	Biarkan chat belum dibaca di sini
@@ -396,6 +396,8 @@ Last carousel save	Penyimpanan carousel terakhir
 Comments	Komentar
 Copy comment	Salin komentar
 Adds Copy to a selected comment's menu. Copies the original text, including line breaks.	Menambahkan Salin ke menu komentar yang dipilih. Menyalin teks asli, termasuk pergantian baris.
+Copy without the @names at the start	Salin tanpa @nama di awal
+When a comment starts with @names, like most replies do, Copy leaves them out. The comment in Instagram stays the same.	Jika komentar diawali @nama, seperti kebanyakan balasan, Salin tidak menyertakannya. Komentar di Instagram tetap sama.
 Copy the commenter's username	Salin nama pengguna pemberi komentar
 Adds Copy username to a selected comment's menu, for the account that wrote it.	Menambahkan Salin nama pengguna ke menu komentar yang dipilih, untuk akun yang menulisnya.
 Comment copied	Komentar disalin
@@ -505,6 +507,7 @@ When the reel isn't on the first screen, the profile shows a Find the reel butto
 Find the reel	Cari reel
 Stop looking	Berhenti mencari
 Couldn't find the reel you came from	Reel asal Anda tidak ditemukan
+That's a trial reel, so it isn't on their profile	Ini reel uji coba, jadi tidak ada di profilnya
 Clear saved copies now	Hapus salinan tersimpan sekarang
 Clear the media cache	Bersihkan cache media
 Couldn't clear the saved copies. Try again.	Tidak bisa menghapus salinan tersimpan. Coba lagi.
@@ -536,7 +539,7 @@ Wi-Fi stays as it is. Turn this off to save data on every network.	Wi-Fi tetap s
 Hide comments	Sembunyikan komentar
 Hide memories and recaps	Sembunyikan kenangan dan rangkuman
 Hide story rewinds	Sembunyikan rewind cerita
-Nothing in the row of stories at the top of Home loads, your own story included, which saves data. A story ring on a profile or in a chat still opens its stories.	Tidak ada yang dimuat di baris cerita di bagian atas Beranda, termasuk cerita Anda sendiri, sehingga menghemat data. Cincin cerita di profil atau di chat tetap membuka ceritanya.
+Nothing in the row of stories at the top of Home loads, your own story included, and highlights on profiles stay empty too. Saves data. A story ring on a profile or in a chat still opens its stories.	Tidak ada yang dimuat di baris cerita di bagian atas Beranda, termasuk cerita Anda sendiri, dan sorotan di profil juga tetap kosong. Menghemat data. Cincin cerita di profil atau di chat tetap membuka ceritanya.
 Open categories as pages	Buka kategori sebagai halaman
 Settings shows a list of its categories, and a tap opens one on its own page. Search still looks through all of them.	Pengaturan menampilkan daftar kategorinya, dan satu ketukan membuka satu kategori di halamannya sendiri. Pencarian tetap mencari di semuanya.
 Hide the HushGram row in Instagram's menu	Sembunyikan baris HushGram di menu Instagram
@@ -547,7 +550,7 @@ A long press on the Instagram logo at the top of Home opens these settings. Off,
 The last way into these settings stays on.	Cara terakhir untuk membuka pengaturan ini tetap menyala.
 No other way into HushGram is on, so the row stays in Instagram's menu.	Tidak ada cara lain untuk membuka HushGram yang menyala, jadi barisnya tetap ada di menu Instagram.
 Instagram's Settings and activity screen leaves out the HushGram row while another way here opens HushGram. With every other way off, the row comes back.	Selama cara lain ke sini membuka HushGram, layar Pengaturan dan aktivitas Instagram tidak menampilkan baris HushGram. Jika semua cara lain dimatikan, barisnya kembali.
-Stop loading stories	Berhenti memuat cerita
+Stop loading stories and highlights	Berhenti memuat cerita dan sorotan
 Takes the Comment button and the comment count off the posts in your feed.	Menghapus tombol Komentar dan jumlah komentar dari postingan di feed Anda.
 # context: Comments: the switch that hides the row of quick emoji above the comment box (#248). Comment box is the field where you type a comment.
 Hide the emoji row	Sembunyikan baris emoji
@@ -830,6 +833,8 @@ Keep reels muted on the volume keys	Tetap bisukan reel dengan tombol volume
 Volume up still raises the phone's volume, but a muted reel stays muted until you unmute it.	Tombol volume naik tetap menaikkan volume ponsel, tetapi reel yang dibisukan tetap bisu sampai kamu menyalakannya.
 Start stories with sound	Mulai cerita dengan suara
 Stories open with their sound on, the same as tapping Instagram's speaker. Your phone's ringer and volume still count, so on silent or with the volume down, stories stay quiet.	Cerita terbuka dengan suara menyala, sama seperti mengetuk speaker Instagram. Mode dering dan volume ponsel tetap berlaku, jadi saat senyap atau volume dimatikan, cerita tetap tanpa suara.
+Stop swipe up to reply	Hentikan geser ke atas untuk membalas
+A swipe up on someone's story no longer opens the reply box and its reactions. Tap Send message to reply.	Menggeser ke atas pada cerita orang lain tidak lagi membuka kotak balasan dan reaksinya. Ketuk Kirim pesan untuk membalas.
 # context: toast when Download all is tapped while another post is still saving; it waits its turn
 Queued. It starts once the post before it is saved.	Dalam antrean. Dimulai setelah postingan sebelumnya tersimpan.
 # context: toast when Download all is tapped but the waiting line is already full; %1$d is the number waiting
@@ -1138,3 +1143,21 @@ Left off the message box: %1$s. The text box and Send stay.	Dihilangkan dari kot
 Gallery	Galeri
 Stickers	Stiker
 Voice message	Pesan suara
+Not interested button on reels	Tombol Tidak tertarik di reel
+Puts a Not interested icon beside a reel, so one tap does what Not interested in its menu does.	Menaruh ikon Tidak tertarik di samping reel, jadi satu ketukan melakukan hal yang sama dengan Tidak tertarik di menunya.
+Not interested	Tidak tertarik
+Block button on reels	Tombol Blokir di reel
+Puts a Block icon beside someone else's reel. A tap opens Instagram's own block screen for that account, so you still confirm it there.	Menaruh ikon Blokir di samping reel orang lain. Satu ketukan membuka layar blokir milik Instagram untuk akun itu, jadi kamu tetap mengonfirmasinya di sana.
+Block	Blokir
+Swipe left to open the profile	Geser ke kiri untuk membuka profil
+A left swipe on a reel opens the creator's profile, like Instagram used to. Tap Friends at the top to reach your friends' reels.	Geser ke kiri pada reel membuka profil pembuatnya, seperti dulu di Instagram. Ketuk Teman di bagian atas untuk melihat reel teman-temanmu.
+Hide this sound	Sembunyikan suara ini
+Showing reels with %1$s again	Menampilkan lagi reel dengan %1$s
+Hiding reels with %1$s	Menyembunyikan reel dengan %1$s
+%1$s by %2$s	%1$s oleh %2$s
+this sound	suara ini
+Hide reels by sound	Sembunyikan reel menurut suara
+Puts a music icon beside a reel. Tap it and the Reels tab skips other reels using that sound. Tap it again to bring them back.	Menaruh ikon musik di samping reel. Ketuk dan tab Reels melewati reel lain yang memakai suara itu. Ketuk lagi untuk memunculkannya kembali.
+Hidden sounds	Suara tersembunyi
+The sounds you hid with the music icon. Uncheck one to see its reels again.	Suara yang kamu sembunyikan dengan ikon musik. Hapus centang salah satunya untuk melihat reel-nya lagi.
+No sounds are hidden yet. Turn on Hide reels by sound, then tap the music icon beside a reel.	Belum ada suara yang disembunyikan. Aktifkan Sembunyikan reel menurut suara, lalu ketuk ikon musik di samping reel.

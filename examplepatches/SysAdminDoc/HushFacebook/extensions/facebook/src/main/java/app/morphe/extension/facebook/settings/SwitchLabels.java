@@ -27,12 +27,14 @@ final class SwitchLabels {
         if (setting == Settings.HIDE_SUGGESTED_FOR_YOU) return L10n.t("Hide \"Suggested for you\" posts");
         if (setting == Settings.HIDE_PEOPLE_YOU_MAY_KNOW) return L10n.t("Hide \"People you may know\"");
         if (setting == Settings.HIDE_SUGGESTED_GROUPS) return L10n.t("Hide suggested groups");
+        if (setting == Settings.HIDE_GROUP_POSTS_NOT_JOINED) return L10n.t("Hide posts from groups you're not in");
         if (setting == Settings.HIDE_STORIES_YOU_MIGHT_LIKE) return L10n.t("Hide \"Stories you might like\"");
         if (setting == Settings.HIDE_FEED_MEMORIES) return L10n.t("Hide Memories in the feed");
         if (setting == Settings.HIDE_FEED_FRIEND_REQUESTS) return L10n.t("Hide friend requests in the feed");
         if (setting == Settings.HIDE_FRIENDS_LOCATIONS) return L10n.t("Hide friends' locations");
         if (setting == Settings.HIDE_NOTIFICATION_POST_FOOTER) return L10n.t("Hide more posts under notification posts");
         if (setting == Settings.HIDE_FIND_FRIENDS_CARD) return L10n.t("Hide the Find friends card");
+        if (setting == Settings.HIDE_SEARCH_FOR_YOU) return L10n.t("Hide For you in search");
         if (setting == Settings.HIDE_TOP_STORIES_TRAY) return L10n.t("Hide the Stories tray");
         if (setting == Settings.HIDE_STORIES_BETWEEN_POSTS) return L10n.t("Hide Stories between posts");
         if (setting == Settings.HIDE_HOME_COMPOSER) return L10n.t("Hide the composer row");
@@ -122,6 +124,7 @@ final class SwitchLabels {
         if (setting == Settings.HIDE_REEL_COUNTS) return L10n.t("Hide counts on reels");
         if (setting == Settings.HIDE_REEL_SAVE_BUTTON) return L10n.t("Hide Save on reels");
         if (setting == Settings.HIDE_REEL_SOUND_BUTTON) return L10n.t("Hide the speaker button on reels");
+        if (setting == Settings.HIDE_REEL_AUDIO_LINE) return L10n.t("Hide the audio line on reels");
         if (setting == Settings.FEED_VIDEOS_ALONE) return L10n.t("Open feed videos on their own");
         if (setting == Settings.DONT_SEND_REEL_WATCH_HISTORY) return L10n.t("Don't send reel watch history");
         if (setting == Settings.HOLD_ANALYTICS_UPLOADS) return L10n.t("Hold back analytics uploads");
@@ -198,6 +201,7 @@ final class SwitchLabels {
         if (setting == Settings.HIDE_META_AI_IMAGINE) return L10n.t("Hide Meta AI's Imagine");
         if (setting == Settings.HIDE_META_AI_POST_BUTTONS) return L10n.t("Hide other Meta AI buttons under posts");
         if (setting == Settings.HIDE_META_AI_IN_SEARCH) return L10n.t("Hide Meta AI in search");
+        if (setting == Settings.DONT_SAVE_SEARCH_HISTORY) return L10n.t("Don't save search history");
         if (setting == Settings.HIDE_SPONSORED_SEARCH_RESULTS) return L10n.t("Hide sponsored search results");
         if (setting == Settings.HIDE_SPONSORED_MARKETPLACE_LISTINGS) return L10n.t("Hide sponsored Marketplace listings");
         if (setting == Settings.SHOW_SELLER_VIEW_PROFILE) return L10n.t("Show View profile on Marketplace sellers");

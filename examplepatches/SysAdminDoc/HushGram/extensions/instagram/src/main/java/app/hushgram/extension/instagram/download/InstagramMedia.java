@@ -111,6 +111,14 @@ public final class InstagramMedia {
         return null;
     }
 
+    /**
+     * A Media's {@code is_active_trial}: true for a trial reel, shown to people who don't follow its
+     * poster and kept off the poster's profile. Written by the Find the reel you came from patch alone.
+     */
+    public static Boolean activeTrial(Object media) {
+        return null;
+    }
+
     /** A Media's {@code image_versions2}: the sizes Instagram lists for its picture. */
     public static Object imageVersions(Object media) {
         return null;
@@ -243,6 +251,36 @@ public final class InstagramMedia {
 
     /** A consumption info's {@code overlap_duration_in_ms}: how long the post's music plays. */
     public static Integer musicLengthMs(Object consumption) {
+        return null;
+    }
+
+    /** A track's {@code audio_asset_id}: the sound every reel using the track shares. */
+    public static String trackAudioId(Object track) {
+        return null;
+    }
+
+    /** A track's {@code title}. */
+    public static String trackTitle(Object track) {
+        return null;
+    }
+
+    /** A track's {@code display_artist}: who made it, as Instagram shows it. */
+    public static String trackArtist(Object track) {
+        return null;
+    }
+
+    /** The {@code original_sound_info} of a Media's {@code clips_metadata}: a reel's own sound, or null for a track. */
+    public static Object originalSound(Object metadata) {
+        return null;
+    }
+
+    /** An original sound's {@code audio_asset_id}, shared by every reel reusing it. */
+    public static String originalSoundAudioId(Object sound) {
+        return null;
+    }
+
+    /** An original sound's {@code original_audio_title}. */
+    public static String originalSoundTitle(Object sound) {
         return null;
     }
 

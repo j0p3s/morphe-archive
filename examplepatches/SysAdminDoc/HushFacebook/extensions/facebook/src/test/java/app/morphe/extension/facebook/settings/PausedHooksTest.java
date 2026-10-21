@@ -77,6 +77,7 @@ import app.morphe.extension.facebook.feed.FindFriendsCard;
 import app.morphe.extension.facebook.feed.SeenPostsForTests;
 import app.morphe.extension.facebook.feed.FeedsHeader;
 import app.morphe.extension.facebook.feed.FollowingHome;
+import app.morphe.extension.facebook.feed.GroupPosts;
 import app.morphe.extension.facebook.feed.ReturnRefresh;
 import app.morphe.extension.facebook.feed.FeedGuardForTests;
 import app.morphe.extension.facebook.feed.MetaAiQuestions;
@@ -104,6 +105,7 @@ import app.morphe.extension.facebook.media.ResumePlaybackForTests;
 import app.morphe.extension.facebook.media.TapToPlay;
 import app.morphe.extension.facebook.media.TapToPlayForTests;
 import app.morphe.extension.facebook.media.TapToSeek;
+import app.morphe.extension.facebook.menu.MenuPanel;
 import app.morphe.extension.facebook.menu.MenuSectionsForTests;
 import app.morphe.extension.facebook.misc.MetaUpsells;
 import app.morphe.extension.facebook.misc.AnalyticsUploads;
@@ -143,6 +145,8 @@ import app.morphe.extension.facebook.reels.ReelMidCardsForTests;
 import app.morphe.extension.facebook.reels.ReelPrompts;
 import app.morphe.extension.facebook.reels.SeenStateSendForTests;
 import app.morphe.extension.facebook.search.MetaAiSearchForTests;
+import app.morphe.extension.facebook.search.PreSearchSectionsForTests;
+import app.morphe.extension.facebook.search.SearchHistory;
 import app.morphe.extension.facebook.stories.StoryAdvance;
 import app.morphe.extension.facebook.stories.StorySeenForTests;
 import app.morphe.extension.facebook.stories.StoryUpload;
@@ -351,6 +355,11 @@ public class PausedHooksTest {
                         FeedGuardForTests.recommendationContext(true)),
                 () -> FeedGuardForTests.hides(Category.ORGANIC, TypedFeedUnit.peopleYouMayKnow()),
                 () -> FeedGuardForTests.hides(Category.ORGANIC, TypedFeedUnit.suggestedGroups()),
+                // A friend's post in a public group you're not in.
+                () -> FeedGuardForTests.hidesGroupPost(Category.ORGANIC, FeedGuardForTests.group(),
+                        FeedGuardForTests.JoinState.CAN_JOIN),
+                // Home is asked for each group's join state where Facebook wouldn't ask.
+                () -> GroupPosts.askForJoinState(false),
                 // A row of Stories from people you aren't connected to.
                 () -> FeedGuardForTests.hides(Category.ORGANIC, FeedGuardForTests.storiesRow(true)),
                 // Your own profile's People you may know carousel builds nothing.
@@ -358,7 +367,9 @@ public class PausedHooksTest {
                 // A post opened from a notification is asked for without its list of more posts.
                 () -> !NotificationFooter.show(true),
                 // The end of the feed is built without its Find friends card.
-                () -> FindFriendsCard.unit("card") == null));
+                () -> FindFriendsCard.unit("card") == null,
+                // The search screen draws its For you section as an empty row.
+                PreSearchSectionsForTests::drawsForYouEmpty));
         // Each of the feed's two Stories tray adapters, and the composer row's, new to the hook,
         // counts no rows.
         probes.put(PatchFamily.STORIES_TRAY, Arrays.asList(
@@ -512,6 +523,10 @@ public class PausedHooksTest {
         // footer queries, a Threads card between reels, and a reel starting outside Clean mode.
         probes.put(PatchFamily.REEL_DECLUTTER, Arrays.asList(
                 () -> ReelDeclutter.filterChips(Arrays.asList(new TypedFeedUnit("XFBFBShortsRemixAttribution"))) != null,
+                // The audio line goes under its own switch.
+                () -> ReelDeclutter.filterChips(Arrays.asList(new TypedFeedUnit("XFBFBShortsSoundtrackTitle"))) != null,
+                // So does the Reels tab's own audio line row.
+                ReelDeclutter::hideAudioLine,
                 ReelDeclutter::hideFollowButton,
                 ReelDeclutter::hideFollowingButton,
                 ReelDeclutter::skipHotComment,
@@ -523,6 +538,10 @@ public class PausedHooksTest {
                 () -> !"es".equals(OriginalAudio.language("es")),
                 // The search pill is answered as empty only while the patch runs.
                 ReelDeclutter::hideSearchPill,
+                // So is the prompt over a reel's comments.
+                () -> ReelDeclutter.commentSearchPrompt(new Object()) == null,
+                // And the search bar over a reel opened from a profile.
+                () -> ReelDeclutter.searchBarPart(new Object()) == null,
                 // A sidebar button's count loses its number only while the patch runs.
                 () -> !"12".equals(ReelDeclutter.countText("12")),
                 // The sidebar's Save button is skipped only while the patch runs.
@@ -764,12 +783,14 @@ public class PausedHooksTest {
                 MessengerHandoffForTests::dropsARing,
                 MessengerHandoffForTests::dropsAMessage));
         // The Menu's Upgrades and Also from Meta groups build nothing, in the section Facebook
-        // draws and in the one carrying what the server sends.
+        // draws and in the one carrying what the server sends, and the side panel gets Facebook's own
+        // Menu instead of the Bloks one.
         probes.put(PatchFamily.MENU_PROMOTIONS, Arrays.asList(
                 MenuSectionsForTests::hidesUpgrades,
                 MenuSectionsForTests::hidesAlsoFromMeta,
                 MenuSectionsForTests::hidesServerUpgrades,
-                MenuSectionsForTests::hidesServerAlsoFromMeta));
+                MenuSectionsForTests::hidesServerAlsoFromMeta,
+                () -> !MenuPanel.bloksPanel(true)));
         // Edits' header flag and both shapes of its pill request, the Threads cross-posting
         // onboarding and the share sheet's Threads and Muse items, the Meta Verified sheet and label, an avatar
         // sticker upsell, Imagine's post button, composer capability and Create story tile, and the
@@ -799,6 +820,8 @@ public class PausedHooksTest {
                 MetaAiSearchForTests::hidesAnswer,
                 MetaAiSearchForTests::dropsPrompts,
                 MetaAiSearchForTests::stopsSuggestionRoute));
+        // A search Facebook would add to your history is kept out.
+        probes.put(PatchFamily.SEARCH_HISTORY, Collections.singletonList(() -> SearchHistory.skipSave(false)));
         // XAnalytics' upload and uploader resume are skipped, and the Papaya job finishes unrun.
         probes.put(PatchFamily.ANALYTICS_UPLOADS, Arrays.asList(
                 AnalyticsUploads::holdXAnalyticsUpload,

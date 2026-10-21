@@ -2,15 +2,17 @@
 """Scheduled upstream app update checker for Morphe Patches (Extra Apps).
 
 Parses target versions from Constants.kt, queries upstream public sources
-(APKMirror, Uptodown, and APKPure), and reports whether updates are available.
+(APKMirror, Uptodown, APKPure, and GitHub), and reports whether updates are available.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import tempfile
 import unittest
 import urllib.error
 import urllib.request
@@ -34,7 +36,7 @@ APP_SPECS: List[Dict[str, Any]] = [
     #     "name": "My App",                         # 2. Display name shown in logs, issue titles, and alerts
     #     "package_name": "com.example.app",        # 3. Android application package name
     #     "constant_key": "MY_APP_TARGET_VERSION",  # 4. Target version constant defined in Constants.kt
-    #     "source_type": "apkpure",                 # 5. Upstream host type: "apkpure", "uptodown", or "apkmirror"
+    #     "source_type": "apkpure",                 # 5. Upstream host type: "apkpure", "uptodown", "apkmirror", or "github"
     #     "source_name": "APKPure",                 # 6. Display name of upstream host, must match the entry's source
     #     "source_url": "https://apkpure.com/slug/com.example.app",  # 7. Canonical listing URL (HTTP 200 verified live)
     #     "allow_beta": False,                      # Pre-release filter (typically False for stable patch releases)
@@ -168,14 +170,62 @@ APP_SPECS: List[Dict[str, Any]] = [
         "source_url": "https://apkpure.com/sube/com.sube.app",
         "allow_beta": False,
     },
+    # --------------------------------------------------------------------------
+    # SD Maid SE (GitHub) - copy-paste-filled from "ADD NEW APP HERE" template
+    # --------------------------------------------------------------------------
+    {
+        "id": "sdmse",
+        "name": "SD Maid SE",
+        "package_name": "eu.darken.sdmse",
+        "constant_key": "SDMSE_TARGET_VERSION",
+        "source_type": "github",
+        "source_name": "GitHub",
+        "source_url": "https://github.com/d4rken-org/sdmaid-se/releases",
+        "allow_beta": True,
+    },
+    {
+        "id": "multiaccounts",
+        "name": "Multiple Accounts",
+        "package_name": "com.excelliance.multiaccounts",
+        "constant_key": "MULTIACCOUNTS_TARGET_VERSION",
+        "source_type": "apkmirror",
+        "source_name": "APKMirror",
+        "source_url": "https://www.apkmirror.com/apk/excelliance-technology/multiple-accounts-dual-accounts/",
+        "path_prefix": "/apk/excelliance-technology/multiple-accounts-dual-accounts/multiple-accounts-dual-accounts-",
+        "allow_beta": False,
+    },
 ]
+
+# Build dependencies (toolchain components, not apps)
+TOOLCHAIN_SPECS: List[Dict[str, Any]] = [
+    {
+        "id": "morphe-patcher",
+        "name": "Morphe Patcher",
+        "local_file": "gradle/libs.versions.toml",
+        "local_pattern": r'^morphe-patcher\s*=\s*"([^"]+)"',
+        "api_url": "https://api.github.com/repos/MorpheApp/morphe-patcher/releases/latest",
+        "source_url": "https://github.com/MorpheApp/morphe-patcher/releases",
+    },
+    {
+        "id": "morphe-gradle-plugin",
+        "name": "Morphe Gradle Plugin",
+        "local_file": "settings.gradle.kts",
+        "local_pattern": r'id\("app\.morphe\.patches"\)\s+version\s+"([^"]+)"',
+        "api_url": "https://api.github.com/repos/MorpheApp/morphe-patches-gradle-plugin/tags?per_page=100",
+        "source_url": "https://github.com/MorpheApp/morphe-patches-gradle-plugin/tags",
+    },
+]
+
+
+def resolve_repo_root() -> Path:
+    """Resolve repository root directory from this script's location."""
+    return Path(__file__).resolve().parent.parent
 
 
 def resolve_default_constants_path() -> Path:
     """Resolve default path to Constants.kt relative to repository root."""
-    repo_root = Path(__file__).resolve().parent.parent
     return (
-        repo_root
+        resolve_repo_root()
         / "patches"
         / "src"
         / "main"
@@ -270,14 +320,18 @@ def compare_versions(local_ver: str, remote_ver: str) -> str:
 
 def fetch_html(url: str) -> Optional[str]:
     """Fetch HTML content from a public URL using standard urllib."""
-    req = urllib.request.Request(
-        url,
-        headers={
-            "User-Agent": USER_AGENT,
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            "Accept-Language": "en-US,en;q=0.9",
-        },
-    )
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    if url.startswith("https://api.github.com/"):
+        token = os.environ.get("GITHUB_TOKEN")
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
+            headers["Accept"] = "application/vnd.github+json"
+
+    req = urllib.request.Request(url, headers=headers)
     try:
         with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT_SECONDS) as resp:
             return resp.read().decode("utf-8", errors="ignore")
@@ -486,6 +540,38 @@ def extract_apkpure_version(html: str) -> Optional[str]:
     return None
 
 
+def _normalize_github_tag(tag: str, allow_beta: bool) -> Optional[str]:
+    """Normalize GitHub release tag to version string if valid and allowed."""
+    if not allow_beta and re.search(r"\b(beta|alpha|preview|rc)\d*\b", tag, re.I):
+        return None
+    clean = tag.strip().lstrip("vV")
+    core, _ = parse_version(clean)
+    return clean if core else None
+
+
+def extract_github_version(
+    html: str,
+    allow_beta: bool = True,
+) -> Optional[str]:
+    """Extract latest remote version from GitHub releases page HTML or JSON payload.
+
+    Host: GitHub (https://github.com/<owner>/<repo>/releases)
+    Precedence: First valid release tag in listing order, stripping leading 'v'/'V'.
+    Filters out prereleases unless allow_beta=True.
+    Fixture test: test_github_extraction_sdmse
+    """
+    if not html:
+        return None
+
+    pattern = r'(?:/releases/tag/|"tag_name":\s*")([^"\'/?#]+)'
+    for raw_tag in re.findall(pattern, html):
+        ver = _normalize_github_tag(raw_tag, allow_beta)
+        if ver:
+            return ver
+
+    return None
+
+
 def run_update_checks(
     constants_path: Path,
     fetch_fn: Optional[Callable[[str], Optional[str]]] = None,
@@ -506,6 +592,7 @@ def run_update_checks(
             "apkmirror": "APKMirror",
             "uptodown": "Uptodown",
             "apkpure": "APKPure",
+            "github": "GitHub",
         }.get(source_type, source_type.title())
         source_url = spec["source_url"]
         allow_beta = spec.get("allow_beta", False)
@@ -531,6 +618,8 @@ def run_update_checks(
                 remote_version = extract_uptodown_version(html)
             elif source_type == "apkpure":
                 remote_version = extract_apkpure_version(html)
+            elif source_type == "github":
+                remote_version = extract_github_version(html, allow_beta=allow_beta)
 
         if not remote_version:
             status = "unknown"
@@ -557,6 +646,79 @@ def run_update_checks(
         )
 
     return results
+
+
+def extract_latest_stable_github_tag(payload: str) -> Optional[str]:
+    """Extract highest stable tag version from GitHub release or tags JSON payload."""
+    if not payload:
+        return None
+
+    matches = re.findall(r'"(?:tag_name|name)"\s*:\s*"[vV]?(\d+(?:\.\d+)*)"', payload)
+    if not matches:
+        return None
+
+    return max(matches, key=lambda v: parse_version(v)[0])
+
+
+def read_local_toolchain_version(
+    repo_root: Path,
+    spec: Dict[str, Any],
+) -> Optional[str]:
+    """Read local version for a toolchain dependency from file using regex."""
+    file_path = repo_root / spec["local_file"]
+    if not file_path.is_file():
+        print(f"[WARN] Toolchain file not found: {file_path}", file=sys.stderr)
+        return None
+
+    content = file_path.read_text(encoding="utf-8")
+    match = re.search(spec["local_pattern"], content, re.MULTILINE)
+    if not match:
+        print(f"[WARN] Pattern not found in {file_path}", file=sys.stderr)
+        return None
+
+    return match.group(1).strip()
+
+
+def _check_toolchain_spec(
+    repo_root: Path,
+    spec: Dict[str, Any],
+    fetcher: Callable[[str], Optional[str]],
+) -> Dict[str, Any]:
+    """Check a single toolchain specification for updates."""
+    local_ver = read_local_toolchain_version(repo_root, spec)
+    payload = fetcher(spec["api_url"])
+    remote_ver = extract_latest_stable_github_tag(payload) if payload else None
+
+    local_display = local_ver or "unknown"
+    remote_display = remote_ver or "unknown"
+    status = compare_versions(local_display, remote_display)
+
+    print(
+        f"[UPDATE-CHECK] {spec['name']}: local={local_display} remote={remote_display} status={status}"
+    )
+    return {
+        "id": spec["id"],
+        "name": spec["name"],
+        "package_name": "",
+        "local_version": local_display,
+        "remote_version": remote_display,
+        "status": status,
+        "source_name": "GitHub",
+        "source_url": spec["source_url"],
+        "run_patch_test_id": "",
+    }
+
+
+def run_toolchain_checks(
+    repo_root: Path,
+    fetch_fn: Optional[Callable[[str], Optional[str]]] = None,
+) -> List[Dict[str, Any]]:
+    """Run update checks for all configured toolchain dependencies."""
+    fetcher = fetch_fn if fetch_fn is not None else fetch_html
+    return [
+        _check_toolchain_spec(repo_root, spec, fetcher)
+        for spec in TOOLCHAIN_SPECS
+    ]
 
 
 # Built-in fixture test suite
@@ -648,6 +810,24 @@ class TestUpdateChecker(unittest.TestCase):
         ver = extract_apkpure_version(fixture_html)
         self.assertEqual(ver, "2.8.0")
 
+    def test_apkpure_extraction_sdmse(self) -> None:
+        """Verify APKPure extracts SD Maid SE downloadable version from download button."""
+        fixture_html = """
+        <html>
+          <body>
+            <a class="btn normal-download-btn da dt-main-download-btn"
+               data-dt-package_name="eu.darken.sdmse"
+               data-dt-version="2.2.1-rc0"
+               href="https://apkpure.com/sd-maid-2-se-system-cleaner/eu.darken.sdmse/download"
+               title="Download SD Maid 2/SE latest version apk">
+              <strong class="text one-line">Download APK (22.5 MB)</strong>
+            </a>
+          </body>
+        </html>
+        """
+        ver = extract_apkpure_version(fixture_html)
+        self.assertEqual(ver, "2.2.1-rc0")
+
     def test_apkpure_download_link_beats_metadata(self) -> None:
         """Download-link version must take precedence over contradictory metadata."""
         fixture_html = """
@@ -687,6 +867,101 @@ class TestUpdateChecker(unittest.TestCase):
         </html>
         """
         self.assertIsNone(extract_apkpure_version(metadata_only_html))
+
+    def test_github_extraction_sdmse(self) -> None:
+        """Verify GitHub extracts SD Maid SE release tag including rc prereleases."""
+        fixture_html = """
+        <div class="repository-content">
+          <section id="release-v2.2.2-rc0" data-release-anchor="release-v2.2.2-rc0">
+            <span class="f1 text-bold d-inline">
+              <a href="/d4rken-org/sdmaid-se/releases/tag/v2.2.2-rc0" class="Link--primary Link">v2.2.2-rc0</a>
+            </span>
+          </section>
+          <section id="release-v2.2.1-rc0" data-release-anchor="release-v2.2.1-rc0">
+            <span class="f1 text-bold d-inline">
+              <a href="/d4rken-org/sdmaid-se/releases/tag/v2.2.1-rc0" class="Link--primary Link">v2.2.1-rc0</a>
+            </span>
+          </section>
+        </div>
+        """
+        ver = extract_github_version(fixture_html, allow_beta=True)
+        self.assertEqual(ver, "2.2.2-rc0")
+
+    def test_extract_latest_stable_github_tag(self) -> None:
+        """Verify extraction of latest stable tag excluding prereleases and asset names."""
+        tags_fixture = json.dumps([
+            {"name": "v1.3.4-dev.1"},
+            {"name": "v1.3.3"},
+            {"name": "v1.3.4"},
+            {"name": "v1.2.10"},
+        ])
+        self.assertEqual(extract_latest_stable_github_tag(tags_fixture), "1.3.4")
+
+        release_fixture = json.dumps({
+            "tag_name": "v1.15.1",
+            "name": "v1.15.1",
+            "assets": [
+                {"name": "morphe-patcher-1.15.1.jar"},
+            ],
+        })
+        self.assertEqual(extract_latest_stable_github_tag(release_fixture), "1.15.1")
+
+        self.assertIsNone(extract_latest_stable_github_tag(""))
+
+    def test_run_toolchain_checks(self) -> None:
+        """Verify toolchain update check statuses against local version files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_root = Path(tmpdir)
+            gradle_dir = temp_root / "gradle"
+            gradle_dir.mkdir(parents=True, exist_ok=True)
+
+            versions_toml = gradle_dir / "libs.versions.toml"
+            versions_toml.write_text(
+                '[versions]\nmorphe-patcher = "1.8.0"\n',
+                encoding="utf-8",
+            )
+
+            settings_gradle = temp_root / "settings.gradle.kts"
+            settings_gradle.write_text(
+                'plugins {\n    id("app.morphe.patches") version "1.3.4"\n}\n',
+                encoding="utf-8",
+            )
+
+            def fake_fetch_success(url: str) -> Optional[str]:
+                if "morphe-patcher" in url:
+                    return json.dumps({
+                        "tag_name": "v1.15.1",
+                        "name": "v1.15.1",
+                        "assets": [{"name": "morphe-patcher-1.15.1.jar"}],
+                    })
+                if "morphe-patches-gradle-plugin" in url:
+                    return json.dumps([
+                        {"name": "v1.3.4"},
+                        {"name": "v1.3.3"},
+                    ])
+                return None
+
+            results = run_toolchain_checks(temp_root, fetch_fn=fake_fetch_success)
+            self.assertEqual(len(results), 2)
+
+            patcher_entry = next(r for r in results if r["id"] == "morphe-patcher")
+            self.assertEqual(patcher_entry["status"], "update-available")
+            self.assertEqual(patcher_entry["local_version"], "1.8.0")
+            self.assertEqual(patcher_entry["remote_version"], "1.15.1")
+            self.assertEqual(patcher_entry["package_name"], "")
+            self.assertEqual(patcher_entry["source_name"], "GitHub")
+            self.assertEqual(patcher_entry["run_patch_test_id"], "")
+
+            plugin_entry = next(r for r in results if r["id"] == "morphe-gradle-plugin")
+            self.assertEqual(plugin_entry["status"], "current")
+            self.assertEqual(plugin_entry["local_version"], "1.3.4")
+            self.assertEqual(plugin_entry["remote_version"], "1.3.4")
+
+            # Fetch returning None -> "unknown"
+            unknown_results = run_toolchain_checks(temp_root, fetch_fn=lambda _: None)
+            for entry in unknown_results:
+                self.assertEqual(entry["status"], "unknown")
+                self.assertEqual(entry["remote_version"], "unknown")
 
 
 def main() -> int:
@@ -729,13 +1004,14 @@ def main() -> int:
         result = runner.run(suite)
         return 0 if result.wasSuccessful() else 1
 
+    repo_root = resolve_repo_root()
     constants_path = (
         Path(args.constants_path)
         if args.constants_path
         else resolve_default_constants_path()
     )
 
-    results = run_update_checks(constants_path)
+    results = run_update_checks(constants_path) + run_toolchain_checks(repo_root)
 
     if args.json_path:
         out_path = Path(args.json_path)

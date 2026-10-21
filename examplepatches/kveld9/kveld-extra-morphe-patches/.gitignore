@@ -191,9 +191,8 @@ Thumbs.db
 # Local agent instructions
 CLAUDE.local.md
 
-# Physical & Runtime ADB Test Harness
-validation/physical_harness/results/
-validation/runtime/
+# Physical & Runtime ADB Test Harness (validation outputs now live in kveld-morphe-harness-private)
+validation/
 
 # RE harness: mounted via git-ignored symlink to kveld-morphe-harness-private/harness.
 # `harness/` ignores the directory form; `/harness` also covers the symlink itself.
@@ -209,3 +208,8 @@ CLAUDE.md
 CLAUDE.local.md
 scripts/sync_shared_skills.sh
 scripts/hooks/
+
+# Androguard RE cache (audit tooling artifacts, regenerable)
+androguard.db
+androguard.db-shm
+androguard.db-wal

@@ -138,7 +138,7 @@ failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} a ping after 30 days gets no reply")
 
 text = ping_reply()
-ok = text == PING_MARKER + "\nThere's no ETA for this request yet. Any updates will be posted on this issue.\n"
+ok = text == PING_MARKER + "\nThere's no ETA for this request yet. Any updates will be posted here.\n"
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} the ping reply is the marker and the no-ETA sentence")
 
@@ -391,7 +391,88 @@ ok = answers_needs_info(ISSUE_EVENT, COMMENT_EVENT)
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} needs info: a contributor-association author counts as the reporter")
 
+FAKE_DISCUSSION_GH = r'''#!/usr/bin/env python3
+import json, os, subprocess, sys
+
+args = sys.argv[1:]
+state = json.load(open(os.environ["FAKE_STATE"]))
+state["calls"].append(args)
+fields = {}
+for flag, value in zip(args, args[1:]):
+    if flag in ("-f", "-F") and "=" in value:
+        key, _, raw = value.partition("=")
+        fields.setdefault(key, []).append(open(raw[1:]).read() if raw.startswith("@") else raw)
+operation = fields["query"][0].split("(")[0].split()[-1] if args[:2] == ["api", "graphql"] else ""
+if operation == "Discussion":
+    response = {"data": {"repository": {"discussion": {
+        "number": 7, "title": "Something", "closed": False, "url": "", "createdAt": "2026-10-01T00:00:00Z",
+        "author": {"login": "asker"}, "labels": {"nodes": [{"name": label} for label in state["labels"]]},
+        "comments": {"nodes": [{"author": {"login": "github-actions"}, "body": body, "createdAt": "", "url": "c"} for body in state["bot_comments"]]}}}}}
+elif operation == "DiscussionId":
+    response = {"data": {"repository": {"discussion": {"id": "D7"}}}}
+elif operation == "LabelId":
+    response = {"data": {"repository": {"label": {"id": "L:" + fields["label"][0]}}}}
+elif operation == "RemoveLabels":
+    state["labels"] = [label for label in state["labels"] if "L:" + label not in fields["labels[]"]]
+    response = {"data": {}}
+elif operation == "AddComment":
+    state["posted"].append(fields["body"][0])
+    response = {"data": {"addDiscussionComment": {"comment": {"url": "c"}}}}
+else:
+    sys.exit(1)
+json.dump(state, open(os.environ["FAKE_STATE"], "w"))
+if "--jq" in args:
+    done = subprocess.run(["jq", "-r", args[args.index("--jq") + 1]], input=json.dumps(response), capture_output=True, text=True)
+    sys.stdout.write(done.stdout)
+    sys.exit(done.returncode)
+if "--silent" not in args:
+    print(json.dumps(response))
+'''
+
+
+def request_script():
+    lines = WORKFLOW.read_text().splitlines()
+    start = lines.index("  request:")
+    begin = next(i for i in range(start, len(lines)) if lines[i].strip() == "run: |") + 1
+    end = next((i for i in range(begin, len(lines)) if lines[i] and not lines[i].startswith(" " * 10)), len(lines))
+    return "\n".join(line[10:] for line in lines[begin:end])
+
+
+def run_request(body, labels=("app request",), commenter="asker", bot_comments=()):
+    event = {
+        "discussion": {"number": 7, "state": "open", "title": "Something", "created_at": "2026-10-01T00:00:00Z",
+                       "user": {"login": "asker"}, "category": {"slug": "app-requests"}},
+        "comment": {"user": {"login": commenter, "type": "User"}, "author_association": "NONE", "body": body, "created_at": "2026-10-19T12:37:46Z"},
+    }
+    with tempfile.TemporaryDirectory() as temp:
+        temp = Path(temp)
+        (temp / "bin").mkdir()
+        (temp / "bin" / "gh").write_text(FAKE_DISCUSSION_GH)
+        (temp / "bin" / "gh").chmod(0o755)
+        (temp / "state.json").write_text(json.dumps({"calls": [], "posted": [], "labels": list(labels), "bot_comments": list(bot_comments)}))
+        (temp / "event.json").write_text(json.dumps(event))
+        env = {"PATH": f"{temp / 'bin'}:{os.environ['PATH']}", "FAKE_STATE": str(temp / "state.json"), "GITHUB_EVENT_PATH": str(temp / "event.json"),
+               "RUNNER_TEMP": str(temp), "NUMBER": "7", "REPO": "hxreborn/morphe-patches"}
+        done = subprocess.run(["bash", "-eo", "pipefail", "-c", request_script()], env=env, cwd=HERE.parent.parent, capture_output=True, text=True)
+        final = json.loads((temp / "state.json").read_text())
+        return done.returncode, final["posted"], final["labels"]
+
+
+REQUEST_CASES = [
+    ("a status ping on an open request gets the ping reply", dict(body="any update?"), 0, True, ["app request"]),
+    ("a second ping gets no reply", dict(body="any update?", bot_comments=[PING_MARKER + "\nx"]), 0, False, ["app request"]),
+    ("thanks gets no reply", dict(body="Thanks for looking into it"), 0, False, ["app request"]),
+    ("the requester's answer removes needs info", dict(body="here is the package", labels=("app request", "needs info")), 0, False, ["app request"]),
+    ("someone else's comment keeps needs info", dict(body="here is the package", labels=("app request", "needs info"), commenter="other"), 0, False, ["app request", "needs info"]),
+    ("a request marked bot-wrong is left alone", dict(body="any update?", labels=("app request", "bot-wrong")), 0, False, ["app request", "bot-wrong"]),
+]
+for name, kwargs, code, pinged, labels in REQUEST_CASES:
+    status, posted, left = run_request(**kwargs)
+    ok = status == code and (len(posted) == 1 and posted[0].startswith(PING_MARKER + "\n") if pinged else not posted) and left == labels
+    failures += not ok
+    print(f"{'ok  ' if ok else 'FAIL'} request job: {name}")
+
 total = (len(REQUESTS) + len(NOT_REQUESTS) + len(PINGS) + len(NOT_PINGS) + len(RELEASE_QUESTIONS) + len(NOT_RELEASE_QUESTIONS)
-         + 9 + len(NEEDS_INFO_CASES) + 1 + len(REPLY_CASES) + 1)
+         + 9 + len(NEEDS_INFO_CASES) + 1 + len(REPLY_CASES) + 1 + len(REQUEST_CASES))
 print(f"\n{total - failures}/{total} passed")
 sys.exit(1 if failures else 0)

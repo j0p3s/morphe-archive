@@ -4,32 +4,52 @@ Every HushGram release, newest first.
 
 ## Unreleased
 
+### Bug Fixes
+
+* **Instagram - Turn off HDR brightness boosts:** On Instagram's armeabi-v7a builds (for 32-bit phones) the switch now turns off SDR super white and Ultra HDR always on too. Before, only the arm64 build had those two options turned off. (#85)
+
+### Improvements
+
+* **Instagram - Find the reel you came from:** Trial reels, the ones Instagram shows to people who don't follow the creator, aren't on the creator's profile, so the search could only give up. Tapping the creator of a trial reel now shows a short note saying so and skips the search. Reported in #225.
+* **Instagram - Download any video:** Skip what's already saved reads its history file in small, fixed amounts now. A damaged file can't slow a save down, and it gets written out fresh at the next save, so newer saves aren't lost behind the damage. (#150)
+
+## 0.0.14 (2026-10-20)
+
 ### Features
 
-* **Instagram - Hide See preview and Plus in chat menus:** new patch. A switch under Messages, off to start, takes the See preview and Instagram Plus rows out of the menu you get from long pressing a chat. Your other chat options stay. (#249)
+* **Instagram - Stop swipe up to reply:** New patch. A switch under Stories, off to start, stops a swipe up on someone's story from opening the reply box and its reactions. Tap Send message when you do want to reply.
+* **Instagram - Hide the search bar in Messages:** New patch. A switch under Messages, off to start, takes the search bar, its Filter button and the Meta AI bar off the top of your messages. Notes, requests and chats stay. Reopen Messages to see it.
 * **Instagram - Message box buttons:** new patch. `Buttons in the message box` under Messages lets you untick Gallery, Stickers or Voice message to take them off the box you type in. Every button shows to start, and the text box and Send always stay. (#217)
-* **Instagram - Hide the call buttons in chats:** a new switch in `Ask before a call` takes the voice and video call buttons off the top of a chat, so the name keeps the room. Off to start, under Messages. (#217)
+* **Instagram - Ask before a call:** a new switch, `Hide the call buttons in chats`, takes the voice and video call buttons off the top of a chat, so the name keeps the room. Off to start, under Messages. (#217)
 * **Instagram - Show all recent searches:** new patch. A switch under Explore lists every recent search under the search bar, not just the first few. See all, the x on each row and `Don't save recent searches` work as before. Starts off. Asked for in #257.
 * **Instagram - Hide profile tabs:** new patch. `Tabs on profiles` under Profiles lets you take the Reels, Reposts and Tagged tabs off profiles, yours and other people's. The grid always stays, and every tab shows until you untick it. Asked for in #254.
-* **Instagram - Hide suggested people on profiles:** `Hide Featured in notifications` under Profiles takes the Featured section off the top of your notifications, the posts and threads Instagram picks for you there. Likes, comments and everything else under it stay. It starts off and works apart from `Hide suggestions in notifications`. Asked for in #259.
-* **Instagram - Hide group buttons on the share sheet:** `Buttons on the share sheet` under Sharing lists the round buttons under the people (Add to story, Share to, WhatsApp, Copy link, Download and the rest). Untick the ones you never use and they're gone from the row, with no gap left behind. Every button starts ticked, and a button Instagram adds later still shows. Asked for in #252.
+* **Instagram - Hide suggested people on profiles:** `Hide Featured in notifications` under Profiles takes the Featured section, the posts and threads Instagram picks for you, off the top of your notifications. Everything else there stays. It starts off and works apart from `Hide suggestions in notifications`. Asked for in #259.
+* **Instagram - Hide group buttons on the share sheet:** `Buttons on the share sheet` under Sharing lets you untick round buttons like Add to story, WhatsApp, Copy link or Download. Unticked ones leave the row with no gap. Every button starts ticked, and ones Instagram adds still show. Asked for in #252.
 * **Instagram - Open comments without the keyboard:** New patch. Comments open with the keyboard down instead of popping it up on its own. A tap in the comment box, or on Reply, still brings it up. The switch is under Comments and starts off. Asked for in #248.
-* **Instagram - HushGram settings:** Each way into HushGram has its own switch under Settings entry. `Settings shortcut on the app icon` takes HushGram out of the menu you get by holding Instagram's icon, and `Open settings from the logo` gives the logo's long press back to Instagram. Both start on. `Hide the HushGram row in Instagram's menu` now steps aside for any of them, and whichever way is the last one still on stays on, greyed out. Asked for in SysAdminDoc/HushFacebook#146.
+* **Instagram - HushGram settings:** Each way into HushGram has its own switch under Settings entry. `Settings shortcut on the app icon` and `Open settings from the logo` both start on, and the last way still on stays on, greyed out. Asked for in SysAdminDoc/HushFacebook#146.
+* **Instagram - HushGram settings:** `Hide the HushGram row in Instagram's menu` steps aside while another way into HushGram is on. A shortcut on a home screen app that can't show app shortcuts doesn't count.
 * **Instagram - Clean up Reels:** `Stay dim when I tap` sits under Burn-in guard. Once the buttons fade, they stay faded on Reels whatever you tap or swipe, the next reel too, and come back when you leave Reels. It starts off. Asked for in #162.
 * **Instagram - Glass tab bar:** `Keep the pill full size` stops the liquid pill from shrinking to two tabs as you scroll down, so every tab stays where it was. It starts off. Asked for in #256.
 * **Instagram - Hide the Threads button:** `Hide the Create button` under Profiles takes the plus off the top of your own profile. The menu stays. It starts off. Asked for in #254.
 * **Instagram - Hide the Threads button:** `Hide Share profile` under Profiles takes that button off your profile, and Edit profile stretches to fill the row. It starts off. Asked for in #253.
 * **Instagram - HushGram settings:** `Switches Ghost mode turns` sits under Ghost mode and picks which switches it flips. The settings row, the button on Home and the long presses all follow it, and the rest stay as you set them. Asked for in #251.
 * **Instagram - HushGram settings:** A tab's long press can turn Ghost mode on or off now, with a toast saying which way it went. Choose the tab under Ghost mode. It's off to start. Asked for in #255.
+* **Instagram - Download any reel:** `Not interested button on reels` under Reels puts a Not interested icon in the column beside a reel. One tap does what Not interested in the reel's menu does. It starts off. Asked for in #191.
+* **Instagram - Download any reel:** `Block button on reels` under Reels puts a Block icon beside someone else's reel. A tap opens Instagram's own block screen for that account, so you still confirm there. It starts off. Asked for in #191.
+* **Instagram - Download any reel:** `Hide reels by sound` under Reels puts a music icon beside a reel. Tap it and the Reels tab skips other reels with that sound. `Hidden sounds` lists them so you can bring one back. It starts off. Asked for in #191.
 * **Instagram - Hide suggested stories:** `Hide Add Yours cards between stories` sits under Stories and leaves out the Popular Add Yours and Join a trending Add Yours cards between stories. The Music for you card keeps its own switch. It starts off. Asked for in #111.
+* **Instagram - Copy comment:** `Copy without the @names at the start` sits under Copy comment. When a reply opens with someone's @name, Copy skips it and copies just what they wrote. Names further in stay. It starts off. Asked for in #270.
 
 ### Bug Fixes
 
-* **Instagram - HushGram settings:** A setting two levels under a switch that's off now greys out like the rest. `Keep the pill full size` and the haptic style stayed tappable with the glass tab bar off, as long as the switch right above them was on.
+* **Instagram - View stories anonymously:** With `Gray out stories you've watched` on too, a story you've watched now moves to the back of Home's story tray instead of staying up front gray. Turn either switch off and the tray keeps Instagram's order. (#241)
+* **Instagram - Hide the Reels tab:** While HushGram was paused, `Tab order` showed Instagram's own order and tabs instead of yours, and changing anything there saved over your order. It shows what you picked now.
+* **Instagram - HushGram settings:** A setting two levels under a switch that's off greys out now. `Keep the pill full size` and the haptic style stayed tappable with the glass tab bar off whenever the switch right above them was on.
 * **Instagram - Hide suggested stories:** With `Hide Suggested for you between stories` on, a full-screen Suggested for you page still came up between stories and after the last one. Instagram builds that page a different way, and it's left out now too. Reported in #154.
 * **Instagram - Install next to Instagram:** The copy now also gives its own package name to the report Instagram sends the system about which app loaded its code, on phones that make that report. It was still naming Instagram. Seen while chasing #205.
 * **Instagram - Glass tab bar:** Reels kept changing size as the pill slid away and back, and a paused reel's footer squeezed the video too. Reels stay one size behind the pill now, with the caption and seek bar just above it. Reported in #221 and #260.
 * **Instagram - Glass tab bar:** A reel's buttons and caption fell back behind the pill once a sheet over the reel closed, like the More menu. They stay above it now. Reported in #221 and #260.
+* **Instagram - Glass tab bar:** With `Show content behind the tab bar` on, a reel's comments, Share or More resized Reels twice, and reels could get stuck on their cover. Sheets sit above the navigation bar now, so the reel keeps its size. Reported in #222.
 * **Instagram - Hide suggested people on profiles:** A profile's Follow and Message buttons, or Edit profile and Share profile on your own, still twitched for a split second whenever the profile refreshed. They hold still now. Reported in #220.
 * **Instagram - Download any video:** `Convert to keep the full size` did nothing unless `Save videos other apps can open` was on too, so a reel still saved as AV1. It works by itself now. Reported in #236.
 * **Instagram - Download any video:** Photos from the feed and from profiles failed with `Download failed` on phones with smaller screens, because every size Instagram sent looked like a thumbnail. The largest one saves now. Reported in #261.
@@ -41,6 +61,8 @@ Every HushGram release, newest first.
 * **Instagram - Tap to play:** Dragging the slider in the Notes or story music picker stopped the song for good, since Tap to play took the slider's pause for yours. The song keeps playing from the new spot now. Reported in #263.
 * **Instagram - Tap to play:** Tapping a feed video itself, not its play button, started it with the play icon still drawn over it on some posts. The icon goes away while it plays and comes back when it stops. Reported in #229.
 * **Instagram - Blur the bars around Reels:** With `Show content behind the tab bar` off, the glass pill sat on a black strip on Reels. The reel shows blurred round it now, like on Instagram's own tab bar. Reported in #258.
+* **Instagram - Hide suggested posts:** Home could flash the Welcome to Instagram card for a few seconds after a while away or an account switch. It keeps its loading row while the posts from people you follow load now, up to six seconds. Reported in #126.
+* **Instagram - Turn off HDR brightness boosts:** The switch also turns off two of Instagram's own options, SDR super white on HDR content and Ultra HDR always on, which can make some reels brighter than everything else. The diagnostic report counts each time. Reported in #85.
 
 ### Improvements
 
@@ -48,6 +70,8 @@ Every HushGram release, newest first.
 * **Instagram:** Open developer options is gone, along with the Developer category and its flag tools. An account running server flags Instagram never sent it stands out. Settings files that still hold the developer switches import fine.
 * **Instagram - HushGram settings:** The diagnostic report shows the playback quality, font and reel tap choice you picked, not just whether their switches are on. Asked for in #85.
 * **Instagram - Download any video:** When `Convert to keep the full size` leaves a VP9 or AV1 video unconverted, the diagnostic report now says why. Asked about in #236.
+* **Instagram - Hide Meta AI:** `Hide the Muse card on profiles` is now `Hide the Muse card`, and it takes the Meet Muse card, with its Try Muse button, off Home too. Your other cards stay.
+* **Instagram - Hide suggested stories:** `Stop loading stories` is now `Stop loading stories and highlights`, and its description says highlights on profiles stay empty while it's on. Searching settings for highlights finds it. From #244.
 * **Instagram:** HushGram now patches Instagram 452.0.0.48.64 instead of 451.0.0.53.80. Get APKMirror's (arm64-v8a) (640dpi) (Android 9.0+) variant, build 385810270. The two armeabi-v7a builds, 385810231 and 385810269, patch too.
 
 ## 0.0.13 (2026-10-18)

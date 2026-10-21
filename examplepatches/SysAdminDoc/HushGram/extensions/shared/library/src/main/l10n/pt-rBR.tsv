@@ -240,8 +240,8 @@ Hide Ask Meta AI in About this reel	Ocultar Pergunte à Meta AI em Sobre este re
 About this reel keeps its summary and Sources, and only the Ask Meta AI box under them goes.	Sobre este reel mantém o resumo e as Fontes, e só a caixa Perguntar ao Meta AI abaixo deles some.
 Hide Meta AI in the share sheet	Ocultar a Meta AI no menu de compartilhamento
 Removes Meta AI from the row at the bottom of the share sheet. Some accounts see it as Muse.	Tira o Meta AI da fileira na parte de baixo da tela de compartilhar. Algumas contas veem como Muse.
-Hide the Muse card on profiles	Ocultar o cartão do Muse nos perfis
-Removes the Meet Muse card, with its Try Muse button, from profiles. Your other profile cards stay.	Tira dos perfis o cartão Meet Muse, com o botão Try Muse. Seus outros cartões do perfil continuam.
+Hide the Muse card	Ocultar o cartão do Muse
+Removes the Meet Muse card, with its Try Muse button, from Home and your profile. Your other cards stay.	Tira do Início e do seu perfil o cartão Meet Muse, com o botão Try Muse. Seus outros cartões continuam.
 Hide the Muse button on your profile	Ocultar o botão do Muse no seu perfil
 Removes the Muse button from the top bar of your profile. Your username and the menu stay.	Tira o botão do Muse da barra de cima do seu perfil. Seu nome de usuário e o menu continuam.
 Hide Blend on reels	Ocultar o Blend nos reels
@@ -254,10 +254,10 @@ Leaves the Suggested for you accounts out of what shows when you tap the search 
 Messages	Mensagens
 Hide the notes row	Ocultar a fileira de notas
 Takes the row of notes off the top of your messages, the Map bubble in it too. Your chats, search and requests stay.	Tira a fileira de notas da parte superior das suas mensagens, incluindo a bolha do Mapa. Suas conversas, a pesquisa e as solicitações continuam lá.
+Hide the search bar in Messages	Ocultar a barra de pesquisa em Mensagens
+Takes the search bar and its Filter button off the top of your messages, the Meta AI bar too. Your chats, notes and requests stay.	Tira a barra de pesquisa, incluindo a da Meta AI, e o botão Filtrar da parte superior das suas mensagens. Suas conversas, notas e solicitações continuam lá.
 Hide Instants	Ocultar Instants
 Removes the stack of Instants (quick photos from friends) from your messages. Restart Instagram to see the change.	Tira das suas mensagens a pilha de Instants (fotos rápidas de amigos). Reinicie o Instagram para ver a mudança.
-Hide See preview and Plus in chat menus	Ocultar Ver prévia e Plus nos menus de chat
-Takes the See preview and Instagram Plus rows out of the menu you get from long pressing a chat. Your chat options stay.	Tira as linhas Ver prévia e Instagram Plus do menu que abre ao manter um chat pressionado. As opções do chat continuam.
 Read messages without the seen receipt	Ler mensagens sem a confirmação de visto
 Opening a chat doesn't tell people you've seen their messages, and you still see when they've seen yours. To let one chat know, long press it in your messages and tap Mark as read.	Abrir uma conversa não avisa às pessoas que você viu as mensagens delas, e você continua vendo quando elas viram as suas. Para avisar uma conversa, mantenha-a pressionada nas suas mensagens e toque em Marcar como lida.
 Keep chats unread here	Manter conversas não lidas aqui
@@ -396,6 +396,8 @@ Last carousel save	Último carrossel salvo
 Comments	Comentários
 Copy comment	Copiar comentário
 Adds Copy to a selected comment's menu. Copies the original text, including line breaks.	Adiciona Copiar ao menu de um comentário selecionado. Copia o texto original, incluindo quebras de linha.
+Copy without the @names at the start	Copiar sem os @nomes do início
+When a comment starts with @names, like most replies do, Copy leaves them out. The comment in Instagram stays the same.	Quando um comentário começa com @nomes, como a maioria das respostas, Copiar deixa eles de fora. O comentário no Instagram continua igual.
 Copy the commenter's username	Copiar o nome de usuário de quem comentou
 Adds Copy username to a selected comment's menu, for the account that wrote it.	Adiciona Copiar nome de usuário ao menu de um comentário selecionado, para a conta que o escreveu.
 Comment copied	Comentário copiado
@@ -505,6 +507,7 @@ When the reel isn't on the first screen, the profile shows a Find the reel butto
 Find the reel	Encontrar o reel
 Stop looking	Parar de procurar
 Couldn't find the reel you came from	Não foi possível encontrar o reel de onde você veio
+That's a trial reel, so it isn't on their profile	É um reel de teste, então não está no perfil
 Clear saved copies now	Limpar as cópias salvas agora
 Clear the media cache	Limpar o cache de mídia
 Couldn't clear the saved copies. Try again.	Não foi possível limpar as cópias salvas. Tente de novo.
@@ -536,7 +539,7 @@ Wi-Fi stays as it is. Turn this off to save data on every network.	O Wi-Fi fica 
 Hide comments	Ocultar comentários
 Hide memories and recaps	Ocultar lembranças e retrospectivas
 Hide story rewinds	Ocultar rewinds de stories
-Nothing in the row of stories at the top of Home loads, your own story included, which saves data. A story ring on a profile or in a chat still opens its stories.	Nada na fileira de stories no topo do Início carrega, nem o seu próprio story, o que economiza dados. Um anel de story em um perfil ou em uma conversa ainda abre os stories.
+Nothing in the row of stories at the top of Home loads, your own story included, and highlights on profiles stay empty too. Saves data. A story ring on a profile or in a chat still opens its stories.	Nada na fileira de stories no topo do Início carrega, nem o seu próprio story, e os destaques nos perfis também ficam vazios. Economiza dados. Um anel de story em um perfil ou em uma conversa ainda abre os stories.
 Open categories as pages	Abrir categorias como páginas
 Settings shows a list of its categories, and a tap opens one on its own page. Search still looks through all of them.	As configurações mostram uma lista das categorias, e um toque abre uma em sua própria página. A pesquisa ainda procura em todas.
 Hide the HushGram row in Instagram's menu	Ocultar a linha do HushGram no menu do Instagram
@@ -547,7 +550,7 @@ A long press on the Instagram logo at the top of Home opens these settings. Off,
 The last way into these settings stays on.	A última forma de chegar a estas configurações continua ligada.
 No other way into HushGram is on, so the row stays in Instagram's menu.	Nenhuma outra forma de abrir o HushGram está ligada, então a linha fica no menu do Instagram.
 Instagram's Settings and activity screen leaves out the HushGram row while another way here opens HushGram. With every other way off, the row comes back.	Enquanto outra forma de chegar aqui abrir o HushGram, a tela Configurações e atividade do Instagram não mostra a linha do HushGram. Com todas as outras formas desligadas, a linha volta.
-Stop loading stories	Não carregar stories
+Stop loading stories and highlights	Não carregar stories e destaques
 Takes the Comment button and the comment count off the posts in your feed.	Tira o botão Comentar e a contagem de comentários dos posts do seu feed.
 # context: Comments: the switch that hides the row of quick emoji above the comment box (#248). Comment box is the field where you type a comment.
 Hide the emoji row	Ocultar a linha de emojis
@@ -830,6 +833,8 @@ Keep reels muted on the volume keys	Manter reels silenciados com as teclas de vo
 Volume up still raises the phone's volume, but a muted reel stays muted until you unmute it.	Aumentar o volume ainda sobe o volume do celular, mas um reel silenciado continua silenciado até você ativar o som.
 Start stories with sound	Iniciar stories com som
 Stories open with their sound on, the same as tapping Instagram's speaker. Your phone's ringer and volume still count, so on silent or with the volume down, stories stay quiet.	Os stories abrem com o som ligado, igual a tocar no alto-falante do Instagram. O toque e o volume do celular continuam valendo, então no silencioso ou com o volume zerado, os stories ficam mudos.
+Stop swipe up to reply	Desativar deslizar para cima para responder
+A swipe up on someone's story no longer opens the reply box and its reactions. Tap Send message to reply.	Deslizar para cima no story de alguém não abre mais a caixa de resposta nem as reações. Toque em Enviar mensagem para responder.
 # context: toast when Download all is tapped while another post is still saving; it waits its turn
 Queued. It starts once the post before it is saved.	Na fila. Começa assim que o post anterior for salvo.
 # context: toast when Download all is tapped but the waiting line is already full; %1$d is the number waiting
@@ -1138,3 +1143,21 @@ Left off the message box: %1$s. The text box and Send stay.	Fora da caixa de men
 Gallery	Galeria
 Stickers	Figurinhas
 Voice message	Mensagem de voz
+Not interested button on reels	Botão Não tenho interesse nos reels
+Puts a Not interested icon beside a reel, so one tap does what Not interested in its menu does.	Coloca um ícone de Não tenho interesse ao lado de um reel, para um toque fazer o mesmo que Não tenho interesse no menu dele.
+Not interested	Não tenho interesse
+Block button on reels	Botão Bloquear nos reels
+Puts a Block icon beside someone else's reel. A tap opens Instagram's own block screen for that account, so you still confirm it there.	Coloca um ícone de Bloquear ao lado do reel de outra pessoa. Um toque abre a tela de bloqueio do próprio Instagram para essa conta, então você ainda confirma lá.
+Block	Bloquear
+Swipe left to open the profile	Deslizar para a esquerda para abrir o perfil
+A left swipe on a reel opens the creator's profile, like Instagram used to. Tap Friends at the top to reach your friends' reels.	Deslizar para a esquerda em um reel abre o perfil de quem o criou, como o Instagram fazia antes. Toque em Amigos, no topo, para ver os reels dos seus amigos.
+Hide this sound	Ocultar este som
+Showing reels with %1$s again	Mostrando de novo reels com %1$s
+Hiding reels with %1$s	Ocultando reels com %1$s
+%1$s by %2$s	%1$s de %2$s
+this sound	este som
+Hide reels by sound	Ocultar reels por som
+Puts a music icon beside a reel. Tap it and the Reels tab skips other reels using that sound. Tap it again to bring them back.	Coloca um ícone de música ao lado de um reel. Toque nele e a aba Reels pula outros reels com esse som. Toque de novo para trazê-los de volta.
+Hidden sounds	Sons ocultos
+The sounds you hid with the music icon. Uncheck one to see its reels again.	Os sons que você ocultou com o ícone de música. Desmarque um para ver os reels dele de novo.
+No sounds are hidden yet. Turn on Hide reels by sound, then tap the music icon beside a reel.	Nenhum som oculto ainda. Ative Ocultar reels por som e toque no ícone de música ao lado de um reel.

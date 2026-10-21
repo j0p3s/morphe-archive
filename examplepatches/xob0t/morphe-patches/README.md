@@ -10,15 +10,15 @@ Personal Morphe patches for Android apps.
 ## Patches
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.14.0-dev.1](https://github.com/xob0t/morphe-patches/releases/tag/v1.14.0-dev.1)**&nbsp;&nbsp;•&nbsp;&nbsp;`dev`&nbsp;&nbsp;•&nbsp;&nbsp;25 patches total
+> **[v1.13.16](https://github.com/xob0t/morphe-patches/releases/tag/v1.13.16)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;25 patches total
 <details open>
 <summary>📦 Avito&nbsp;&nbsp;•&nbsp;&nbsp;8 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 235.1 | 234.5 | 234.0 | 233.5 | 233.1 | 232.0 | 231.5 | 231.0 | 230.5 | 230.0 | 229.1 |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 235.5 | 235.1 | 234.5 | 234.0 | 233.5 | 233.1 | 232.0 | 231.5 | 231.0 | 230.5 | 230.0 | 229.1 |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
@@ -55,8 +55,8 @@ Personal Morphe patches for Android apps.
 
 **🎯 Supported versions:**
 
-| 19.39.0 | 19.38.2 | 19.38.0 | 19.37.0 | 19.36.1 | 19.36.0 | 19.35.0 | 19.34.0 | 19.33.1 | 19.32.0 | 19.31.0 | 19.30.0 | 19.29.0 | 19.28.0 | 19.27.0 |
-| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| 19.40.0 | 19.39.0 | 19.38.2 | 19.38.0 | 19.37.0 | 19.36.1 | 19.36.0 | 19.35.0 | 19.34.0 | 19.33.1 | 19.32.0 | 19.31.0 | 19.30.0 | 19.29.0 | 19.28.0 | 19.27.0 |
+| :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
