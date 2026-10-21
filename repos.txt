@@ -282,6 +282,7 @@ eZ4RK0/morphe-patches
 ekazrahul100-web/redgifs-audio-patch
 electiveDev/tiaruebar-patches-vip-fix
 enccmp/mn-patches
+ethan-manny/spotify-tv-crossfade
 ethanm6/letterboxd-stremio-morphe-patch
 eweddwg/belkart-pay-patches
 eyalm2000/tidal-debug-menu

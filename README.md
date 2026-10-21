@@ -2,7 +2,7 @@
 
 An auto-generated, continuously updated index of every GitHub or GitLab repository that publishes a [Morphe](https://morphe.software) (`.mpp`) patch bundle.
 
-![Repos tracked](https://img.shields.io/badge/repos%20tracked-400-6366f1) ![Last updated](https://img.shields.io/badge/last%20updated-2026-10-20%2004:16%20UTC-555)
+![Repos tracked](https://img.shields.io/badge/repos%20tracked-400-6366f1) ![Last updated](https://img.shields.io/badge/last%20updated-2026-10-21%2006:29%20UTC-555)
 
 ---
 
@@ -171,9 +171,9 @@ Use this archive at your own risk. I do not verify every repository listed here,
 | 117 | `durgesh0505/chiggi_morphe_patches` | [Open](https://github.com/durgesh0505/chiggi_morphe_patches) | [Add Source](https://morphe.software/add-source?github=durgesh0505/chiggi_morphe_patches) |
 | 118 | `Educal72/educal-patches` | [Open](https://github.com/Educal72/educal-patches) | [Add Source](https://morphe.software/add-source?github=Educal72/educal-patches) |
 | 119 | `ekazrahul100-web/redgifs-audio-patch` | [Open](https://github.com/ekazrahul100-web/redgifs-audio-patch) | [Add Source](https://morphe.software/add-source?github=ekazrahul100-web/redgifs-audio-patch) |
-| 120 | `Entree3k/Morning-Entree-Patches` | [Open](https://github.com/Entree3k/Morning-Entree-Patches) | [Add Source](https://morphe.software/add-source?github=Entree3k/Morning-Entree-Patches) |
-| 121 | `Epxec/android-patches` | [Open](https://github.com/Epxec/android-patches) | [Add Source](https://morphe.software/add-source?github=Epxec/android-patches) |
-| 122 | `Error404rt/Anixart-patches` | [Open](https://github.com/Error404rt/Anixart-patches) | [Add Source](https://morphe.software/add-source?github=Error404rt/Anixart-patches) |
+| 120 | `Epxec/android-patches` | [Open](https://github.com/Epxec/android-patches) | [Add Source](https://morphe.software/add-source?github=Epxec/android-patches) |
+| 121 | `Error404rt/Anixart-patches` | [Open](https://github.com/Error404rt/Anixart-patches) | [Add Source](https://morphe.software/add-source?github=Error404rt/Anixart-patches) |
+| 122 | `ethan-manny/spotify-tv-crossfade` | [Open](https://github.com/ethan-manny/spotify-tv-crossfade) | [Add Source](https://morphe.software/add-source?github=ethan-manny/spotify-tv-crossfade) |
 | 123 | `ethanm6/letterboxd-stremio-morphe-patch` | [Open](https://github.com/ethanm6/letterboxd-stremio-morphe-patch) | [Add Source](https://morphe.software/add-source?github=ethanm6/letterboxd-stremio-morphe-patch) |
 | 124 | `eZ4RK0/morphe-patches` | [Open](https://github.com/eZ4RK0/morphe-patches) | [Add Source](https://morphe.software/add-source?github=eZ4RK0/morphe-patches) |
 | 125 | `fangkampanat/gmaps-patches` | [Open](https://github.com/fangkampanat/gmaps-patches) | [Add Source](https://morphe.software/add-source?github=fangkampanat/gmaps-patches) |
@@ -461,6 +461,6 @@ This README is regenerated automatically by GitHub Actions whenever `repos.txt` 
 To add a repo manually, append it to `custom_repos.txt`. To remove one permanently, add it to `ignore_repos.txt`.
 Use `owner/repo` for GitHub, or `gitlab.com/group/project` for GitLab.
 
-68 approved repo entries were hidden because their bundle URL is currently invalid.
+69 approved repo entries were hidden because their bundle URL is currently invalid.
 
-*Last generated: 2026-10-20 04:16 UTC*
+*Last generated: 2026-10-21 06:29 UTC*

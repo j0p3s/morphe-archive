@@ -3241,6 +3241,14 @@
                 "sortOrder": 439,
                 "createdAt": 1792469992856,
                 "updatedAt": 1792469992856
+            },
+            {
+                "name": "spotify-tv-crossfade",
+                "source": "https://raw.githubusercontent.com/ethan-manny/spotify-tv-crossfade/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 440,
+                "createdAt": 1792564296649,
+                "updatedAt": 1792564296649
             }
         ]
     }
