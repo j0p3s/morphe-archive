@@ -1,3 +1,28 @@
+## [1.26.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.25.2...v1.26.0) (2026-10-22)
+
+### Bug Fixes
+
+* **capcut:** stop the security notice returning through the template feed ([0d7ab27](https://github.com/kveld9/kveld-extra-morphe-patches/commit/0d7ab2787e3b5e5575b6d540c0e0839080d06736))
+* **harness:** ignore abandoned Xiaomi 9.x branch in update checker ([6d644bd](https://github.com/kveld9/kveld-extra-morphe-patches/commit/6d644bd09d43a960b1c3d6b4299c2fc0db957475))
+* **lrmobile:** drop Lightroom support because no compatible download remains ([d92d5e0](https://github.com/kveld9/kveld-extra-morphe-patches/commit/d92d5e0855d9563defdb2e3b85d525ae0361025e))
+* **multiaccounts:** drop Multiple Accounts support, protectors kill any patched build ([08c821c](https://github.com/kveld9/kveld-extra-morphe-patches/commit/08c821c06b8d224c194e425505aaec0b78cf92ff))
+* **multiaccounts:** keep the app alive on launch by completing first-run setup silently ([114b3aa](https://github.com/kveld9/kveld-extra-morphe-patches/commit/114b3aa2d49707e412d8c41cd44ef6940830221c))
+* **multiaccounts:** remove sideload-compat hooks that killed the app at startup ([c720c17](https://github.com/kveld9/kveld-extra-morphe-patches/commit/c720c174d97c640b0c2f59c161be2298df408cbe))
+
+### New Features
+
+* **harness:** include exact variant download link in update issues ([0d26135](https://github.com/kveld9/kveld-extra-morphe-patches/commit/0d261357bb51dee15cdd37305e88ec14a885f44e))
+
+### Code Refactoring
+
+* **harness:** remove unused Uptodown support from the update checker ([8945d72](https://github.com/kveld9/kveld-extra-morphe-patches/commit/8945d72b3ca12329bab715193be1209deb9b4e98))
+
+## [1.25.2](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.25.1...v1.25.2) (2026-10-21)
+
+### Bug Fixes
+
+* **twitter:** document the manifest purge as the telemetry setup patch ([#20](https://github.com/kveld9/kveld-extra-morphe-patches/issues/20)) ([5e05106](https://github.com/kveld9/kveld-extra-morphe-patches/commit/5e05106b91c37ca19e8269eaa7f322d92b509c12))
+
 ## [1.25.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.25.0...v1.25.1) (2026-10-21)
 
 ### Bug Fixes

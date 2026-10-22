@@ -186,6 +186,12 @@
     "row": "Download original photos"
    },
    {
+    "key": "keep_photos_as_sent",
+    "default": false,
+    "type": "bool",
+    "row": "Keep photos as TikTok sent them"
+   },
+   {
     "key": "download_audio_track",
     "default": false,
     "type": "bool",
@@ -713,6 +719,12 @@
     "default": false,
     "type": "bool",
     "row": "Show video length on profile grids"
+   },
+   {
+    "key": "profile_grid_sort",
+    "default": "off",
+    "type": "string",
+    "row": "Sort loaded videos on profile grids"
    }
   ],
   "surface": "feed",
@@ -2096,6 +2108,114 @@
   "notes": "Known 47.1.4 limit (learned.md, 2026-09-23): the S22 test account is already served the full sort sheet with the switch off, so forcing style 2 changes nothing visible there. The log line proves the hook ran; the cut-down-to-full conversion needs an account TikTok serves the cut-down row to (Roadmap_Blocked.md 'Comment sort full-sheet proof'). The style is read through a Kotlin lazy, so every phase restarts before it opens comments. Hushfeed's own compact_comment_header hides the sort glyph, which is why the review check turns it off."
  },
  {
+  "name": "Open the comments at full height",
+  "category": "Comments",
+  "default": true,
+  "kind": "runtime",
+  "source": [
+   "patches/src/main/kotlin/app/morphe/patches/tiktok/misc/comment/CommentSheetHeightPatch.kt",
+   "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/comment/CommentSheetHeight.java"
+  ],
+  "settings": [
+   {
+    "key": "comments_full_height",
+    "default": false,
+    "type": "bool",
+    "row": "Open the comments at full height"
+   }
+  ],
+  "surface": "comments",
+  "checks": [
+   {
+    "id": "patch-applied",
+    "what": "SettingsStatus.commentsFullHeightEnabled is true, so the patch is in this APK and the extension loaded it.",
+    "steps": [
+     {
+      "probe": "fields",
+      "extras": {
+       "class": "app.morphe.extension.tiktok.settings.SettingsStatus",
+       "names": "commentsFullHeightEnabled"
+      },
+      "expect": "\\bcommentsFullHeightEnabled=true\\b",
+      "waitMs": 1500
+     }
+    ],
+    "auto": true
+   },
+   {
+    "id": "height-asked",
+    "what": "With the switch on, opening the comments sizes the sheet to the screen (debug line 'Open the comments at full height: sheet sized to the screen'); with it off, no such line.",
+    "steps": [
+     {
+      "set": {
+       "comments_full_height": "false"
+      }
+     },
+     {
+      "restart": true
+     },
+     {
+      "open": "feed"
+     },
+     {
+      "probe": "videoinfo",
+      "expect": "likes=over1000",
+      "retrySwipe": 8,
+      "precondition": true
+     },
+     {
+      "probe": "comments",
+      "expect": "openComments\\([^)]*\\)=true",
+      "waitMs": 2500
+     },
+     {
+      "logNot": "Open the comments at full height: sheet sized",
+      "within": 6000
+     },
+     {
+      "back": true
+     },
+     {
+      "set": {
+       "comments_full_height": "true"
+      }
+     },
+     {
+      "restart": true
+     },
+     {
+      "open": "feed"
+     },
+     {
+      "probe": "videoinfo",
+      "expect": "likes=over1000",
+      "retrySwipe": 8,
+      "precondition": true
+     },
+     {
+      "probe": "comments",
+      "expect": "openComments\\([^)]*\\)=true",
+      "waitMs": 2500
+     },
+     {
+      "log": "Open the comments at full height: sheet sized",
+      "within": 8000
+     },
+     {
+      "back": true
+     },
+     {
+      "set": {
+       "comments_full_height": "false"
+      }
+     }
+    ],
+    "auto": true
+   }
+  ],
+  "notes": "Issue #191. TikTok sizes the sheet from a server mode: 68 or 73 percent of the content view, a config ratio, or a fixed dimen when the mode is 0. The patch answers the height method with the content view's full height and lifts a mode of 0 to 1 so the panel asks for it. The height is cached in a static field, which the switch bypasses rather than clears, so flipping it needs no restart. Whether the sheet reaches the top and still drags down to close is a look on the phone, which the log line stands in for."
+ },
+ {
   "name": "Comment tools",
   "category": "Comments",
   "default": true,
@@ -3438,6 +3558,36 @@
     "default": "default",
     "type": "string",
     "row": "Double tap"
+   },
+   {
+    "key": "double_tap_split_zones",
+    "default": false,
+    "type": "bool",
+    "row": "Double tap by corner"
+   },
+   {
+    "key": "double_tap_top_left_action",
+    "default": "default",
+    "type": "string",
+    "row": "Top left double tap"
+   },
+   {
+    "key": "double_tap_top_right_action",
+    "default": "default",
+    "type": "string",
+    "row": "Top right double tap"
+   },
+   {
+    "key": "double_tap_bottom_left_action",
+    "default": "default",
+    "type": "string",
+    "row": "Bottom left double tap"
+   },
+   {
+    "key": "double_tap_bottom_right_action",
+    "default": "default",
+    "type": "string",
+    "row": "Bottom right double tap"
    }
   ],
   "surface": "feed",
@@ -5323,7 +5473,9 @@
   "kind": "runtime",
   "source": [
    "patches/src/main/kotlin/app/morphe/patches/tiktok/interaction/videofit/VideoFitPatch.kt",
-   "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/interaction/VideoFit.java"
+   "patches/src/main/kotlin/app/morphe/patches/tiktok/interaction/videofit/PhotoSlideFit.kt",
+   "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/interaction/VideoFit.java",
+   "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/interaction/PhotoSlideFit.java"
   ],
   "settings": [
    {
@@ -6211,7 +6363,8 @@
   "source": [
    "patches/src/main/kotlin/app/morphe/patches/tiktok/interaction/feedtoolbar/HideFeedLiveButtonPatch.kt",
    "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/featurecontrols/FeatureControls.java",
-   "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/featurecontrols/LiveButtonReport.java"
+   "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/featurecontrols/LiveButtonReport.java",
+   "patches/src/main/kotlin/app/morphe/patches/tiktok/interaction/feedtoolbar/SidebarSwipe.kt"
   ],
   "settings": [
    {
@@ -6226,6 +6379,12 @@
     "type": "bool",
     "row": "Hide the side menu button",
     "restart": true
+   },
+   {
+    "key": "disable_feed_sidebar_swipe",
+    "default": false,
+    "type": "bool",
+    "row": "Turn off the swipe to the side menu"
    }
   ],
   "surface": "feed",
@@ -7446,6 +7605,18 @@
     "type": "bool",
     "row": "Hide Thoughts on profiles",
     "restart": true
+   },
+   {
+    "key": "hide_profile_menu_balance",
+    "default": false,
+    "type": "bool",
+    "row": "Hide Balance in the profile menu"
+   },
+   {
+    "key": "hide_profile_menu_minis_icons",
+    "default": false,
+    "type": "bool",
+    "row": "Hide the TikTok Minis icons in the profile menu"
    }
   ],
   "surface": "profile",
@@ -7523,6 +7694,10 @@
      {
       "probe": "report",
       "expect": "registered_switches:[^\\n]*\\bprofileThoughts\\b"
+     },
+     {
+      "probe": "report",
+      "expect": "registered_switches:[^\\n]*\\bprofileMenuCells\\b"
      }
     ],
     "auto": true
@@ -9573,6 +9748,44 @@
   "notes": "highest stays 0.0 until TikTok asks the window for a rate above zero with the switch on, so a feed where TikTok never caps reads inconclusive after ten swipes. On the S22 at 2026-10-16 no TikTok window asked for one: `dumpsys window windows` prints preferredRefreshRate only when it's set, and it was nowhere, so TikTok 47.1.4 may only cap some videos or none. The fingerprint check at patch time is what shows the hook is in place."
  },
  {
+  "name": "Keep the screen's brightness in the camera",
+  "category": "Interface",
+  "default": true,
+  "kind": "runtime",
+  "source": [
+   "patches/src/main/kotlin/app/morphe/patches/tiktok/misc/camerabrightness/CameraBrightnessPatch.kt",
+   "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/misc/CameraBrightness.java"
+  ],
+  "settings": [
+   {
+    "key": "keep_camera_brightness",
+    "default": false,
+    "type": "bool",
+    "row": "Keep the screen's brightness in the camera"
+   }
+  ],
+  "surface": "other",
+  "checks": [
+   {
+    "id": "patch-applied",
+    "what": "SettingsStatus.cameraBrightnessEnabled is true, so the patch is in this APK and the extension loaded it.",
+    "steps": [
+     {
+      "probe": "fields",
+      "extras": {
+       "class": "app.morphe.extension.tiktok.settings.SettingsStatus",
+       "names": "cameraBrightnessEnabled"
+      },
+      "expect": "\\bcameraBrightnessEnabled=true\\b",
+      "waitMs": 1500
+     }
+    ],
+    "auto": true
+   }
+  ],
+  "notes": "Issue #200. The camera is a page inside SplashActivity, opened from the + tab, and Back doesn't close it (its X does). With the switch off, `dumpsys window windows` shows sbrt= on TikTok's window while the camera is open (0.39 on the S22 at system brightness 50: the phone's level plus TikTok's step, over 255); with it on there's no sbrt. Opening the camera needs a tap the audit doesn't script, so the device check is by hand."
+ },
+ {
   "name": "LIVE controls",
   "category": "Playback",
   "default": true,
@@ -11436,6 +11649,49 @@
     "auto": true
    },
    {
+    "id": "app-zone",
+    "what": "With Match locale and timezone on and the SIM preset Serbia, the whole app's default time zone is Belgrade's from start-up (debug line 'App time zone set to Europe/Belgrade').",
+    "steps": [
+     {
+      "set": {
+       "simspoof": "true",
+       "simspoof_iso": "rs",
+       "simspoof_mccmnc": "22003",
+       "simspoof_op_name": "mt:s",
+       "region_spoof": "true",
+       "region_request_spoof": "false",
+       "region_store_spoof": "false"
+      }
+     },
+     {
+      "restart": true
+     },
+     {
+      "open": "feed"
+     },
+     {
+      "wait": 2500
+     },
+     {
+      "probe": "report",
+      "expect": "App time zone set to Europe/Belgrade"
+     },
+     {
+      "set": {
+       "simspoof": "false",
+       "region_spoof": "false"
+      }
+     },
+     {
+      "restart": true
+     },
+     {
+      "open": "feed"
+     }
+    ],
+    "auto": true
+   },
+   {
     "id": "registered",
     "what": "The patch registered its switch.",
     "steps": [
@@ -11474,6 +11730,12 @@
     "default": 1000,
     "type": "int",
     "row": "Clear display delay"
+   },
+   {
+    "key": "remember_clear_display_on_scroll",
+    "default": true,
+    "type": "bool",
+    "row": "Keep Clear display across videos"
    },
    {
     "key": "keep_captions_clear_display",
@@ -13963,7 +14225,8 @@
    {
     "key": "seekbar_time_placement",
     "default": "beside",
-    "type": "string"
+    "type": "string",
+    "row": "Where the time goes"
    },
    {
     "key": "seekbar_big_handle",
@@ -13982,6 +14245,12 @@
     "default": false,
     "type": "bool",
     "row": "Seek bar on video stories"
+   },
+   {
+    "key": "sound_seekbar",
+    "default": false,
+    "type": "bool",
+    "row": "Seek bar on sound previews"
    }
   ],
   "surface": "feed",
@@ -14062,7 +14331,7 @@
     "auto": true
    }
   ],
-  "notes": "TikTok only asks for show types 3 or 4 on videos it hides the bar for (short ones), so the first check can stay silent on a feed of long videos: inconclusive, not a failure, and the export shows it with Log diagnostics on (the runner turns it on for the run). The bar and its time are not found by id here because the repo records no stable id for the bar view; a screenshot review is the next step if the log lines do not settle it. The bigger handle, the full-width bar and the video story seek bar (story_seekbar, which needs a story and the audit never opens one) are not exercised."
+  "notes": "TikTok only asks for show types 3 or 4 on videos it hides the bar for (short ones), so the first check can stay silent on a feed of long videos: inconclusive, not a failure, and the export shows it with Log diagnostics on (the runner turns it on for the run). The bar and its time are not found by id here because the repo records no stable id for the bar view; a screenshot review is the next step if the log lines do not settle it. The bigger handle, the full-width bar, the video story seek bar (story_seekbar, which needs a story and the audit never opens one) and the sound preview seek bar (sound_seekbar, which needs a sound page) are not exercised."
  },
  {
   "name": "Show the progress bar thumbnail",
@@ -15300,8 +15569,10 @@
   "kind": "runtime",
   "source": [
    "patches/src/main/kotlin/app/morphe/patches/tiktok/interaction/captions/SubtitleToolsPatch.kt",
+   "patches/src/main/kotlin/app/morphe/patches/tiktok/interaction/captions/CaptionsAvailable.kt",
    "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/captions/CaptionStyle.java",
-   "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/captions/CaptionTools.java"
+   "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/captions/CaptionTools.java",
+   "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/captions/CaptionsAvailable.java"
   ],
   "settings": [
    {
@@ -15347,6 +15618,13 @@
     "row": "Caption height in Clear display"
    },
    {
+    "key": "keep_captions_available",
+    "default": false,
+    "type": "bool",
+    "row": "Keep captions available",
+    "restart": true
+   },
+   {
     "key": "download_subtitles",
     "default": false,
     "type": "bool",
@@ -15363,9 +15641,9 @@
       "probe": "fields",
       "extras": {
        "class": "app.morphe.extension.tiktok.settings.SettingsStatus",
-       "names": "subtitleToolsEnabled"
+       "names": "subtitleToolsEnabled,captionsAvailableEnabled"
       },
-      "expect": "\\bsubtitleToolsEnabled=true\\b",
+      "expect": "\\bsubtitleToolsEnabled=true\\b[^\\n]*\\bcaptionsAvailableEnabled=true\\b",
       "waitMs": 1500
      }
     ],
@@ -15528,6 +15806,7 @@
    "patches/src/main/kotlin/app/morphe/patches/tiktok/misc/translation/CommentTranslationPatch.kt",
    "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/translation/CommentBatchTranslator.java",
    "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/translation/DoNotAutoTranslate.java",
+   "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/translation/VideoAutoTranslate.java",
    "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/translation/TranslateInto.java",
    "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/translation/CommentTranslateButton.java",
    "extensions/tiktok/src/main/java/app/morphe/extension/tiktok/translation/LanguagePageTranslations.java"
@@ -15544,6 +15823,12 @@
     "default": "",
     "type": "string",
     "row": "Don't auto translate these languages"
+   },
+   {
+    "key": "no_video_auto_translate",
+    "default": false,
+    "type": "bool",
+    "row": "Don't auto translate videos"
    },
    {
     "key": "translate_into",

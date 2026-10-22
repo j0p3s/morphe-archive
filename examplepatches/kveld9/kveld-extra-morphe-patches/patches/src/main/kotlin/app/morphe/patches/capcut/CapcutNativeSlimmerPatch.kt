@@ -34,29 +34,18 @@ val capcutNativeSlimmerPatch = rawResourcePatch(
     )
 
     execute {
-        val libDir = try {
-            get("lib")
-        } catch (_: Throwable) {
-            null
-        }
-
-        if (libDir == null || !libDir.exists() || !libDir.isDirectory) {
-            println("[CapCut Native Slimmer] Skipped: lib directory not found.")
-            return@execute
-        }
-
         val targetLibs = mutableSetOf<String>()
         targetLibs.addAll(CRASH_REPORTER_LIBS)
         if (trimSpeechEngines ?: false) {
             targetLibs.addAll(SPEECH_ENGINE_LIBS)
         }
 
-        val candidateFiles = libDir.walkTopDown()
-            .filter { it.isFile && it.extension.equals("so", ignoreCase = true) }
-            .filter { it.name.lowercase() in targetLibs }
-            .toList()
+        val candidateEntryNames = listApkEntries("lib/")
+            .filter { !it.endsWith('/') }
+            .filter { it.endsWith(".so", ignoreCase = true) }
+            .filter { it.substringAfterLast('/').lowercase() in targetLibs }
 
-        if (candidateFiles.isEmpty()) {
+        if (candidateEntryNames.isEmpty()) {
             println("[CapCut Native Slimmer] No candidate native libraries found in lib/ - skipping.")
             return@execute
         }
@@ -64,12 +53,13 @@ val capcutNativeSlimmerPatch = rawResourcePatch(
         var savedBytes = 0L
         val strippedLibs = mutableListOf<String>()
 
-        for (file in candidateFiles) {
+        for (entryName in candidateEntryNames) {
+            val file = get(entryName)
             val originalSize = file.length()
             if (originalSize > 0) {
                 file.writeBytes(EMPTY_STUB_BYTES)
                 savedBytes += originalSize
-                strippedLibs.add("lib/${file.relativeTo(libDir).path.replace('\\', '/')}")
+                strippedLibs.add(entryName)
             }
         }
 

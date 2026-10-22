@@ -27,6 +27,7 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Switch;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.lang.reflect.Constructor;
 
@@ -36,6 +37,7 @@ public final class NezumiSettings {
     private static final String HIDE_TYPING = "hide_text_typing";
     private static final String HIDE_READ_RECEIPTS = "hide_read_receipts";
     private static final String HIDE_DELIVERY_RECEIPTS = "hide_delivery_receipts";
+    private static final String HIDE_MEDIA_BOX = "hide_media_box";
     private static final String ENTRY_TAG = "nezumi-settings-entry";
     private static final int BLUE = 0xFF0068FF;
     private static final int HEADER_BLUE = 0xFF008DFA;
@@ -64,6 +66,11 @@ public final class NezumiSettings {
     public static boolean isDeliveryReceiptsHidden(Context context) {
         return context != null && context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
                 .getBoolean(HIDE_DELIVERY_RECEIPTS, false);
+    }
+
+    public static boolean isMediaBoxHidden(Context context) {
+        return context != null && context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+                .getBoolean(HIDE_MEDIA_BOX, false);
     }
 
     public static void attach(View root, View anchor) {
@@ -163,6 +170,8 @@ public final class NezumiSettings {
         text.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
         text.setTextColor(textColor(context, darkMode));
         text.setGravity(Gravity.CENTER_VERTICAL);
+        android.graphics.Typeface font = CustomFont.forMessageModule(context, text.getTypeface());
+        if (font != text.getTypeface()) text.setTypeface(font);
         return text;
     }
 
@@ -238,11 +247,11 @@ public final class NezumiSettings {
         }
     }
 
-    private static void addGroup(LinearLayout list, Context context, boolean vietnamese, boolean darkMode) {
+    private static void addGroup(LinearLayout list, Context context, String title, boolean darkMode) {
         View spacer = new View(context);
         spacer.setBackgroundColor(sectionColor(context, darkMode));
         list.addView(spacer, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 8)));
-        TextView heading = label(context, vietnamese ? "Trò chuyện" : "Chat", darkMode);
+        TextView heading = label(context, title, darkMode);
         heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
         heading.setTextColor(0xFF1255B8);
         heading.setPadding(dp(context, 16), 0, 0, 0);
@@ -256,10 +265,11 @@ public final class NezumiSettings {
         String typingLabel = vietnamese ? "Ẩn trạng thái đang nhập" : "Hide typing status";
         String readLabel = vietnamese ? "Ẩn trạng thái đã xem" : "Hide read receipts";
         String deliveryLabel = vietnamese ? "Ẩn trạng thái đã nhận" : "Hide delivery receipts";
+        String mediaBoxLabel = vietnamese ? "Ẩn Media Box" : "Hide Media Box";
         SharedPreferences prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         Dialog page = page(context, "Nezumi's Settings", darkMode);
         LinearLayout list = page.findViewById(android.R.id.content).findViewWithTag("nezumi-list");
-        addGroup(list, context, vietnamese, darkMode);
+        addGroup(list, context, vietnamese ? "Trò chuyện" : "Chat", darkMode);
         LinearLayout item = new LinearLayout(context);
         item.setGravity(Gravity.CENTER_VERTICAL);
         item.setBackgroundColor(surfaceColor(context, darkMode));
@@ -328,6 +338,47 @@ public final class NezumiSettings {
         deliveryItem.addView(deliveryToggle);
         deliveryItem.setOnClickListener(view -> deliveryToggle.setChecked(!deliveryToggle.isChecked()));
         list.addView(deliveryItem, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 56)));
+        addGroup(list, context, vietnamese ? "Hội thoại" : "Conversation", darkMode);
+        LinearLayout mediaBoxItem = new LinearLayout(context);
+        mediaBoxItem.setGravity(Gravity.CENTER_VERTICAL);
+        mediaBoxItem.setBackgroundColor(surfaceColor(context, darkMode));
+        mediaBoxItem.setPadding(dp(context, 16), 0, dp(context, 16), 0);
+        mediaBoxItem.addView(label(context, mediaBoxLabel, darkMode),
+            new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.MATCH_PARENT, 1));
+        Switch mediaBoxToggle = new Switch(context);
+        mediaBoxToggle.setContentDescription(mediaBoxLabel);
+        mediaBoxToggle.setThumbTintList(ColorStateList.valueOf(0xFFFFFFFF));
+        mediaBoxToggle.setTrackTintList(new ColorStateList(
+            new int[][] { new int[] { android.R.attr.state_checked }, new int[] {} },
+            new int[] { BLUE, 0xFFBDBDBD }));
+        mediaBoxToggle.setChecked(prefs.getBoolean(HIDE_MEDIA_BOX, false));
+        mediaBoxToggle.setOnCheckedChangeListener((button, checked) -> prefs.edit().putBoolean(HIDE_MEDIA_BOX, checked).apply());
+        mediaBoxItem.addView(mediaBoxToggle);
+        mediaBoxItem.setOnClickListener(view -> mediaBoxToggle.setChecked(!mediaBoxToggle.isChecked()));
+        list.addView(mediaBoxItem, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(context, 56)));
+        addGroup(list, context, vietnamese ? "Giao diện" : "Appearance", darkMode);
+        String fontTitle = vietnamese ? "Phông chữ tùy chọn" : "Custom font";
+        View fontItem = row(context, fontTitle, false, true, darkMode);
+        TextView fontLabel = findTextView(fontItem);
+        Runnable updateFontLabel = () -> fontLabel.setText(fontTitle + (CustomFont.isSelected(context)
+            ? (vietnamese ? " (đã chọn)" : " (selected)") : ""));
+        updateFontLabel.run();
+        fontItem.setOnClickListener(view -> {
+            if (!CustomFont.pick(context, updateFontLabel)) {
+            Toast.makeText(context, vietnamese ? "Không thể mở trình chọn phông chữ" : "Cannot open font picker",
+                Toast.LENGTH_SHORT).show();
+            }
+        });
+        list.addView(fontItem);
+        View resetFont = row(context, vietnamese ? "Dùng phông chữ mặc định" : "Restore default font",
+            false, false, darkMode);
+        resetFont.setOnClickListener(view -> {
+            CustomFont.reset(context);
+            updateFontLabel.run();
+            Toast.makeText(context, vietnamese ? "Mở lại Zalo để cập nhật phông chữ"
+                : "Restart Zalo to refresh text", Toast.LENGTH_LONG).show();
+        });
+        list.addView(resetFont);
         page.show();
         page.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
     }

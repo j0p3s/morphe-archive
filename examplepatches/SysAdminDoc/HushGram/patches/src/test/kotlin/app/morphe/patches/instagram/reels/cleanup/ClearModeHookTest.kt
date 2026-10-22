@@ -57,9 +57,22 @@ class ClearModeHookTest {
     private val function2 = "Lfixture/Function2;"
     private val unit = "Lfixture/Unit;->INSTANCE:Lfixture/Unit;"
     private val purge = "Lfixture/Purge;->mark(Ljava/lang/String;)V"
+    private val row = "Lfixture/ScrubberRow;"
+    private val rowState = "Lfixture/RowState;"
+    private val reelState = "Lfixture/ReelState;"
+    private val scrubberChild = "Lfixture/Scrubber;"
+    private val stateHook = "Lfixture/StateHook;"
+    private val holder = "Lfixture/ReelHolder;"
+    private val cell = "Lfixture/Cell;"
+    private val function0 = "Lkotlin/jvm/functions/Function0;"
+    private val builder = "Ljava/lang/StringBuilder;"
+    private val boxed = "Ljava/lang/Boolean;"
     private val anyType = "Ljava/lang/Object;"
     private val stringType = "Ljava/lang/String;"
-    private val hooks = listOf(CLEAR_MODE_ENTERED, CLEAR_MODE_LEFT, CLEAR_MODE_CURRENT, CLEAR_MODE_PAGED, CLEAR_MODE_BUILT)
+    private val floatValue = "Ljava/lang/Number;->floatValue()F"
+    private val hooks = listOf(
+        CLEAR_MODE_ENTERED, CLEAR_MODE_LEFT, CLEAR_MODE_CURRENT, CLEAR_MODE_PAGED, CLEAR_MODE_BUILT, CLEAR_MODE_SCRUBBER, CLEAR_MODE_CHROME_ALPHA,
+    )
 
     private fun marker(name: String, quarter: String = "q3") = "android_purge_26_${quarter}_$name"
 
@@ -79,8 +92,9 @@ class ClearModeHookTest {
      * The handler's turn-on and turn-off each tell the extension after their action's call, where the
      * branch around a missing action still lands past the hook. The viewer's turn-on passes the reel
      * it read off the pager through the extension in front of its own test. The pager's listener and
-     * the exit button's render each ask first thing. The stubs call the handler's turn-on and the
-     * reel's getId.
+     * the exit button's render each ask first thing. The reel holder's chrome setter passes the
+     * alpha it was asked for through the extension right after reading the one it holds. The stubs
+     * call the handler's turn-on and the reel's getId.
      */
     @Test
     fun everyHookGoesInAndBothStubsAreFilled() {
@@ -126,6 +140,54 @@ class ClearModeHookTest {
         assertEquals("the button itself isn't what the reel is read from", 2, (render[0] as TwoRegisterInstruction).registerB)
         assertEquals("$button->reel:$item", render[1].referenceText())
         assertCall("the exit button's hook", render[2], CLEAR_MODE_BUILT, listOf(0))
+
+        // The seek bar row: the reel state's flag, read off this through the row's state into v0,
+        // the one local nothing reads past the test, goes to the extension with Instagram's answer,
+        // and the answer it gives back is what the row tests. A missing state counts as no clear mode.
+        val scrubberRow = context.method(row, "render")
+        val asks = scrubberRow.indexOfFirst { it.referenceText() == CLEAR_MODE_SCRUBBER }
+        assertEquals("Instagram's answer isn't unboxed just before", "$boxed->booleanValue()Z", scrubberRow[asks - 10].referenceText())
+        assertEquals(Opcode.MOVE_RESULT, scrubberRow[asks - 9].opcode)
+        assertEquals(Opcode.MOVE_OBJECT_FROM16, scrubberRow[asks - 8].opcode)
+        assertEquals("the flag isn't read into the free local", 0, (scrubberRow[asks - 8] as TwoRegisterInstruction).registerA)
+        // Five locals, then this and the scope.
+        assertEquals("the row itself isn't what the flag is read from", 5, (scrubberRow[asks - 8] as TwoRegisterInstruction).registerB)
+        assertEquals("$row->state:$rowState", scrubberRow[asks - 7].referenceText())
+        assertEquals("no row state isn't caught", asks - 1, scrubberRow.target(asks - 6))
+        assertEquals("$rowState->reel:$reelState", scrubberRow[asks - 5].referenceText())
+        assertEquals("no reel state isn't caught", asks - 1, scrubberRow.target(asks - 4))
+        assertEquals("the flag isn't the one the toString names", "$reelState->fullscreen:Z", scrubberRow[asks - 3].referenceText())
+        assertEquals(Opcode.IGET_BOOLEAN, scrubberRow[asks - 3].opcode)
+        for (at in listOf(asks - 7, asks - 5, asks - 3)) {
+            val read = scrubberRow[at] as TwoRegisterInstruction
+            assertEquals("the read ${at - asks} isn't from and into the free local", listOf(0, 0), listOf(read.registerA, read.registerB))
+        }
+        for (at in listOf(asks - 6, asks - 4)) {
+            assertEquals("the null test ${at - asks} isn't of the free local", 0, (scrubberRow[at] as OneRegisterInstruction).registerA)
+        }
+        assertEquals("a read flag skips the no", asks, scrubberRow.target(asks - 2))
+        assertEquals(Opcode.CONST_4, scrubberRow[asks - 1].opcode)
+        assertEquals(0, (scrubberRow[asks - 1] as OneRegisterInstruction).registerA)
+        assertCall("the seek bar's hook", scrubberRow[asks], CLEAR_MODE_SCRUBBER, listOf(1, 0))
+        assertEquals(Opcode.MOVE_RESULT, scrubberRow[asks + 1].opcode)
+        assertEquals("the answer goes where Instagram's was", 1, (scrubberRow[asks + 1] as OneRegisterInstruction).registerA)
+        assertEquals("Instagram's own test doesn't follow", Opcode.IF_EQZ, scrubberRow[asks + 2].opcode)
+        assertEquals(1, (scrubberRow[asks + 2] as OneRegisterInstruction).registerA)
+        assertEquals("the scrubber isn't what a yes builds", scrubberChild, scrubberRow[asks + 3].type())
+        assertEquals("the thumb's test was hooked", 1, scrubberRow.count { it.referenceText() == CLEAR_MODE_SCRUBBER })
+
+        // The chrome setter: the alpha asked for and the one it holds, right after reading that one,
+        // and the answer goes where the asked one was, ahead of Instagram's own compare and store.
+        val chrome = context.method(holder, "updateChrome")
+        val holds = chrome.indexOfFirst { it.referenceText() == CLEAR_MODE_CHROME_ALPHA }
+        assertEquals("the held alpha isn't read just before", floatValue, chrome[holds - 2].referenceText())
+        assertEquals(Opcode.MOVE_RESULT, chrome[holds - 1].opcode)
+        // Three locals, then this and the alpha asked for.
+        assertCall("the chrome setter's hook", chrome[holds], CLEAR_MODE_CHROME_ALPHA, listOf(4, 1))
+        assertEquals(Opcode.MOVE_RESULT, chrome[holds + 1].opcode)
+        assertEquals("the answer goes where the asked alpha was", 4, (chrome[holds + 1] as OneRegisterInstruction).registerA)
+        assertEquals("the lock isn't read next", "$holder->locked:$function0", chrome[holds + 2].referenceText())
+        assertEquals("the chrome setter asks once", 1, chrome.count { it.referenceText() == CLEAR_MODE_CHROME_ALPHA })
 
         val enter = context.method(CLEAR_MODE, CLEAR_MODE_ENTER_STUB)
         assertEquals(
@@ -196,6 +258,41 @@ class ClearModeHookTest {
             Shape(buttonReels = 0) to "holds the reel in 0 fields, expected one",
             Shape(buttonReels = 2) to "holds the reel in 2 fields, expected one",
             Shape(buttonLocals = false) to "has no local register for the hook",
+            Shape(rows = 0) to "expected one method marked $CLEAR_MODE_SCRUBBER_ROW, found 0",
+            Shape(rowTakesScope = false) to "isn't a render taking one scope and answering a component",
+            Shape(flagNames = 0) to "holds a reel state naming its clear mode flag through 0 fields, expected one",
+            Shape(flagNames = 2) to "names the clear mode flag 2 times, expected once",
+            Shape(flagFromCall = true) to "move-result, not a field it read",
+            Shape(flagJump = true) to "jumps between reading the clear mode flag and appending it",
+            Shape(flagPrivate = true) to "can't read $reelState->fullscreen:Z",
+            Shape(rowReelStates = 2) to "holds a reel state naming its clear mode flag through 2 fields, expected one",
+            Shape(reelStatePrivate = true) to "can't read $rowState->reel:$reelState",
+            Shape(farState = true) to "can't read Lfixture/far/ReelState;->fullscreen:Z",
+            Shape(flagOtherClass = true) to "appends Lfixture/OtherState;'s flag, not its own",
+            Shape(nameThenOther = true) to "names something else before appending the clear mode flag",
+            Shape(flagAppended = false) to "appends no yes or no after naming the clear mode flag",
+            Shape(flagUnfilled = true) to "appends the clear mode flag from a register nothing filled",
+            Shape(flagFieldMissing = true) to "$reelState has no boolean field fullscreen",
+            Shape(childTakesState = false) to "builds nothing from the reel and its state",
+            Shape(scrubberUnboxed = false) to "tests whether to draw the scrubber 0 times, expected once",
+            Shape(scrubberTests = 2) to "tests whether to draw the scrubber 2 times, expected once",
+            Shape(jumpToScrubber = true) to "jumps to its test of the scrubber",
+            Shape(scrubberHigh = true) to "tests the scrubber in v16, which the hook's call can't name",
+            Shape(rowThisOverwritten = true) to "writes over this",
+            Shape(rowLocalsFree = false) to "has 0 local register(s) up to v15 that nothing reads",
+            Shape(chromes = 0) to "expected one method marked $CLEAR_MODE_CHROME, found 0",
+            Shape(chromes = 2) to "expected one method marked $CLEAR_MODE_CHROME, found 2",
+            Shape(chromeTakesAlpha = false) to "isn't an instance method taking the alpha",
+            Shape(chromeStatic = true) to "isn't an instance method taking the alpha",
+            Shape(chromeReturns = "Z") to "isn't an instance method taking the alpha",
+            Shape(chromeEndsAtRead = true) to "ends at reading the alpha it holds",
+            Shape(alphaReads = 0) to "reads the alpha it holds 0 times, expected once",
+            Shape(alphaReads = 2) to "reads the alpha it holds 2 times, expected once",
+            Shape(alphaKept = false) to "doesn't keep the alpha it holds",
+            Shape(jumpToHold = true) to "jumps past its read of the alpha it holds",
+            Shape(alphaHigh = true) to "keeps the alphas in v18 and v1, which the hook's call can't name",
+            Shape(askedOverwritten = true) to "ReelHolder;->updateChrome writes over parameter 0",
+            Shape(alphaStored = false) to "doesn't store the alpha it was asked for",
             Shape(stubs = false) to "has no static $stringType $CLEAR_MODE_ID_STUB(",
         )
         for ((shape, expected) in cases) {
@@ -217,7 +314,7 @@ class ClearModeHookTest {
      */
     @Test
     fun aMethodChangedAfterItsPlaceWasFoundStopsThePatch() {
-        for (changed in listOf(handler to "enable", handler to "dismiss", actions to "enabled")) {
+        for (changed in listOf(handler to "enable", handler to "dismiss", actions to "enabled", row to "render", holder to "updateChrome")) {
             val classes = classes()
             val context = PatchContexts.of(classes)
             val found = context.findClearMode()
@@ -233,8 +330,10 @@ class ClearModeHookTest {
 
     /**
      * In each declared build every hook goes where the stand-ins put it: after the action's call in
-     * the handler's turn-on and turn-off, in front of the viewer's own test of the pager's reel, and
-     * first thing in the pager listener's page report and the exit button's render.
+     * the handler's turn-on and turn-off, in front of the viewer's own test of the pager's reel,
+     * first thing in the pager listener's page report and the exit button's render, in front of
+     * the seek bar row's test of whether to draw the scrubber, and right after the reel holder's
+     * chrome setter reads the alpha it holds.
      */
     @Test
     fun eachDeclaredBuildGetsEveryHook() {
@@ -272,10 +371,17 @@ class ClearModeHookTest {
         val enabled = methods.single { CLEAR_MODE_ENABLED in it.markers() }
         val paged = methods.single { REEL_PAGE_SELECTED in it.markers() }
         val render = methods.single { CLEAR_MODE_BUTTON in it.markers() }
+        val scrubberRow = methods.single { CLEAR_MODE_SCRUBBER_ROW in it.markers() }
+        val chrome = methods.single { CLEAR_MODE_CHROME in it.markers() }
         val handlerType = enable.definingClass
         val reasonType = enable.parameterTypes.single().toString()
         val itemType = dismiss.parameterTypes.first().toString()
-        val extra = FixtureDex.classes(bundle, setOf(reasonType, itemType)).values
+        // The row's state and what it holds, what the row builds, and the reel state whose toString names the flag.
+        val rowFields = holders.single { it.type == scrubberRow.definingClass }.instanceFields.map { it.type }.filter { it.startsWith("L") }.toSet()
+        val heldFields = FixtureDex.classes(bundle, rowFields).values.flatMap { held -> held.instanceFields.map { it.type } }.filter { it.startsWith("L") }
+        val built = scrubberRow.code().filter { it.opcode == Opcode.NEW_INSTANCE }.mapNotNull { it.type() }
+        val extra = FixtureDex.classes(bundle, setOf(reasonType, itemType) + rowFields + heldFields + built).values +
+            FixtureDex.classesHolding(bundle, CLEAR_MODE_FLAG_NAME)
         val context = PatchContexts.of((holders + extra + ExtensionDex.classDef(CLEAR_MODE)).distinctBy { it.type })
 
         context.keepClearMode()
@@ -346,6 +452,54 @@ class ClearModeHookTest {
         assertEquals("$name: the exit button's hook", CLEAR_MODE_BUILT, newRender[2].referenceText())
         assertEquals("$name: the reel handed over is the one read", listOf(0), newRender[2].registers())
 
+        // The seek bar row: the reel state's flag, read off this through the row's state, goes in with
+        // Instagram's unboxed answer right before the row tests it, and the row tests what comes back.
+        val newRow = after(scrubberRow)
+        assertEquals("$name: the seek bar row grew", scrubberRow.code().size + 10, newRow.size)
+        val asks = newRow.indexOfFirst { it.referenceText() == CLEAR_MODE_SCRUBBER }
+        assertEquals("$name: the seek bar row asks once", 1, newRow.count { it.referenceText() == CLEAR_MODE_SCRUBBER })
+        assertEquals("$name: Instagram's answer is unboxed just before", "Ljava/lang/Boolean;->booleanValue()Z", newRow[asks - 10].referenceText())
+        val shown = (newRow[asks - 9] as OneRegisterInstruction).registerA
+        val flag = (newRow[asks - 8] as TwoRegisterInstruction).registerA
+        assertEquals("$name: the row itself is what the flag is read from", scrubberRow.implementation!!.registerCount - 2, (newRow[asks - 8] as TwoRegisterInstruction).registerB)
+        val rowStateField = (newRow[asks - 7] as ReferenceInstruction).reference as FieldReference
+        assertEquals("$name: the row's state is the row's own", scrubberRow.definingClass, rowStateField.definingClass)
+        val reelStateField = (newRow[asks - 5] as ReferenceInstruction).reference as FieldReference
+        assertEquals("$name: the reel's state is the row state's", rowStateField.type, reelStateField.definingClass)
+        val flagField = (newRow[asks - 3] as ReferenceInstruction).reference as FieldReference
+        assertEquals("$name: the flag is the reel state's", reelStateField.type, flagField.definingClass)
+        assertEquals("$name: the flag is a yes or no", "Z", flagField.type)
+        assertTrue("$name: the flag goes in the answer's register", flag != shown)
+        assertEquals("$name: the flag's read", Opcode.IGET_BOOLEAN, newRow[asks - 3].opcode)
+        for (at in listOf(asks - 7, asks - 5, asks - 3)) {
+            val read = newRow[at] as TwoRegisterInstruction
+            assertEquals("$name: the read ${at - asks} isn't from and into v$flag", listOf(flag, flag), listOf(read.registerA, read.registerB))
+        }
+        for (at in listOf(asks - 6, asks - 4)) {
+            assertEquals("$name: the null test ${at - asks} isn't of v$flag", flag, (newRow[at] as OneRegisterInstruction).registerA)
+            assertEquals("$name: a missing state at ${at - asks} isn't a no", asks - 1, newRow.target(at))
+        }
+        assertEquals("$name: a read flag skips the no", asks, newRow.target(asks - 2))
+        assertEquals("$name: the no goes in v$flag", flag, (newRow[asks - 1] as OneRegisterInstruction).registerA)
+        assertEquals("$name: the hook hands over the answer and the flag", listOf(shown, flag), newRow[asks].registers())
+        assertEquals("$name: the answer goes back where it was", shown, (newRow[asks + 1] as OneRegisterInstruction).registerA)
+        assertEquals("$name: Instagram's own test follows", Opcode.IF_EQZ, newRow[asks + 2].opcode)
+        assertEquals("$name: the test is of the answer", shown, (newRow[asks + 2] as OneRegisterInstruction).registerA)
+
+        // The chrome setter: the alpha asked for and the one held, right after reading the held one,
+        // and the answer goes back where the asked one was.
+        val newChrome = after(chrome)
+        assertEquals("$name: the chrome setter grew", chrome.code().size + 2, newChrome.size)
+        val holds = newChrome.indexOfFirst { it.referenceText() == CLEAR_MODE_CHROME_ALPHA }
+        assertEquals("$name: the chrome setter asks once", 1, newChrome.count { it.referenceText() == CLEAR_MODE_CHROME_ALPHA })
+        assertEquals("$name: the held alpha is read just before", floatValue, newChrome[holds - 2].referenceText())
+        assertEquals("$name: the held alpha is kept", Opcode.MOVE_RESULT, newChrome[holds - 1].opcode)
+        val heldAlpha = (newChrome[holds - 1] as OneRegisterInstruction).registerA
+        val askedAlpha = chrome.implementation!!.registerCount - 1
+        assertEquals("$name: the hook hands over the asked alpha and the held one", listOf(askedAlpha, heldAlpha), newChrome[holds].registers())
+        assertEquals("$name: the answer is kept", Opcode.MOVE_RESULT, newChrome[holds + 1].opcode)
+        assertEquals("$name: the answer goes where the asked alpha was", askedAlpha, (newChrome[holds + 1] as OneRegisterInstruction).registerA)
+
         val enter = context.method(CLEAR_MODE, CLEAR_MODE_ENTER_STUB)
         assertEquals("$name: the stub calls the handler's turn-on", "$handlerType->${enable.name}($reasonType)V", enter[2].referenceText())
         val reelId = context.method(CLEAR_MODE, CLEAR_MODE_ID_STUB)
@@ -383,16 +537,55 @@ class ClearModeHookTest {
         val buttonTakesScope: Boolean = true,
         val buttonReels: Int = 1,
         val buttonLocals: Boolean = true,
+        val rows: Int = 1,
+        val rowTakesScope: Boolean = true,
+        val flagNames: Int = 1,
+        val flagFromCall: Boolean = false,
+        val flagJump: Boolean = false,
+        val flagPrivate: Boolean = false,
+        val rowReelStates: Int = 1,
+        val reelStatePrivate: Boolean = false,
+        val farState: Boolean = false,
+        val flagOtherClass: Boolean = false,
+        val nameThenOther: Boolean = false,
+        val flagAppended: Boolean = true,
+        val flagUnfilled: Boolean = false,
+        val flagFieldMissing: Boolean = false,
+        val childTakesState: Boolean = true,
+        val scrubberUnboxed: Boolean = true,
+        val scrubberTests: Int = 1,
+        val jumpToScrubber: Boolean = false,
+        val scrubberHigh: Boolean = false,
+        val rowThisOverwritten: Boolean = false,
+        val rowLocalsFree: Boolean = true,
+        val chromes: Int = 1,
+        val chromeTakesAlpha: Boolean = true,
+        val chromeStatic: Boolean = false,
+        val chromeReturns: String = "V",
+        val chromeEndsAtRead: Boolean = false,
+        val alphaReads: Int = 1,
+        val alphaKept: Boolean = true,
+        val jumpToHold: Boolean = false,
+        val alphaHigh: Boolean = false,
+        val askedOverwritten: Boolean = false,
+        val alphaStored: Boolean = true,
         val stubs: Boolean = true,
     )
 
     /**
      * The fullscreen view's action handler, whose turn-on and turn-off each run the action the viewer
      * set; the reason enum and the reel with its getId; the viewer's turn-on action, which reads the
-     * reel the pager is on and does nothing without one; the pager's listener; and the exit button a
-     * reel in clear mode draws, which holds its reel.
+     * reel the pager is on and does nothing without one; the pager's listener; the exit button a
+     * reel in clear mode draws, which holds its reel; and the seek bar row, which holds its state,
+     * whose reel state names its clear mode flag in its toString, and which builds the scrubber from
+     * the reel and that state past a test of an unboxed yes or no; and the reel holder, whose chrome
+     * setter reads the alpha its cell holds, keeps the asked one from rising past it while locked,
+     * and stores the asked one.
      */
     private fun classes(shape: Shape = Shape()): List<ClassDef> {
+        // The far shape moves the reel state to another package, where the row can't see a class that isn't public.
+        val reelState = if (shape.farState) "Lfixture/far/ReelState;" else this.reelState
+        val otherState = "Lfixture/OtherState;"
         val handed = if (shape.enableHandsReason) "p1" else "p0"
         val enableCalls = "invoke-interface { v0, $handed }, $function1->invoke($anyType)$anyType\n".repeat(shape.enableActions)
         val enableBody = if (shape.enableEndsAtCall) {
@@ -526,6 +719,176 @@ class ClearModeHookTest {
         val buttonFields = (0 until shape.buttonReels).map { field(button, if (it == 0) "reel" else "other", item) } +
             listOf(field(button, "state", "Lfixture/State;"), field(button, "exited", "Z"))
 
+        // 452's row keeps Instagram's answer and the scrubber's makings in low locals; the high shape
+        // keeps the answer past v15 and reads through a copy of this, since p0 is past v15 too.
+        val self = if (shape.scrubberHigh) "v5" else "p0"
+        val shown = if (shape.scrubberHigh) "v16" else "v1"
+        val unbox = if (shape.scrubberHigh) "invoke-virtual/range { v16 .. v16 }, $boxed->booleanValue()Z" else "invoke-virtual { v1 }, $boxed->booleanValue()Z"
+        val visibleTest = """
+            iget-object v0, $self, $row->visible:$stateHook
+            ${if (shape.rowThisOverwritten) "const/4 p0, 0x0" else ""}
+            invoke-virtual { v0 }, $stateHook->getValue()$anyType
+            move-result-object $shown
+            check-cast $shown, $boxed
+            $unbox
+            move-result $shown
+            ${if (shape.jumpToScrubber) ":test" else ""}
+            if-eqz $shown, :done
+        """
+        val rowMarker = if (shape.rows == 0) "ClipsScrubberRowComponent_measure" else CLEAR_MODE_SCRUBBER_ROW
+        val rowParameters = if (shape.rowTakesScope) listOf(scope) else listOf(scope, "I")
+        val rowRender = method(row, "render", rowParameters, component, (if (shape.scrubberHigh) 19 else 7) + rowParameters.size - 1, """
+            ${if (shape.scrubberHigh) "move-object/from16 v5, p0" else ""}
+            const-string v0, "${marker(rowMarker)}"
+            invoke-static { v0 }, $purge
+            iget-object v4, $self, $row->state:$rowState
+            iget-object v2, v4, $rowState->item:$item
+            iget-object v3, v4, $rowState->reel:$reelState
+            iget-object v0, $self, $row->thumb:$stateHook
+            invoke-virtual { v0 }, $stateHook->getValue()$anyType
+            move-result-object v1
+            check-cast v1, $boxed
+            invoke-virtual { v1 }, $boxed->booleanValue()Z
+            move-result v1
+            if-eqz v1, :thumbless
+            invoke-static { }, Lfixture/Log;->thumb()V
+            ${if (shape.jumpToScrubber) "if-nez v1, :test" else ""}
+            :thumbless
+            ${if (shape.scrubberUnboxed) visibleTest else "iget-boolean v1, $self, $row->shown:Z\nif-eqz v1, :done"}
+            ${if (shape.scrubberTests == 2) visibleTest.replace(":test", "") else ""}
+            new-instance v0, $scrubberChild
+            invoke-direct { v0, v2, v3 }, $scrubberChild-><init>($item${if (shape.childTakesState) reelState else "I"})V
+            invoke-static { v0 }, Lfixture/Children;->add($anyType)V
+            :done
+            ${if (shape.rowLocalsFree) "" else "invoke-static { v0, v4 }, Lfixture/Log;->both($anyType$anyType)V"}
+            const/4 v0, 0x0
+            return-object v0
+        """)
+        val rowClass = classDef(
+            row, listOf(rowRender),
+            fields = listOf(
+                field(row, "state", rowState), field(row, "visible", stateHook), field(row, "thumb", stateHook), field(row, "shown", "Z"),
+            ),
+        )
+        val reelField = if (shape.reelStatePrivate) {
+            ImmutableField(rowState, "reel", reelState, AccessFlags.PRIVATE.value or AccessFlags.FINAL.value, null, null, null)
+        } else {
+            field(rowState, "reel", reelState)
+        }
+        val rowStateClass = classDef(
+            rowState, emptyList(),
+            fields = listOf(field(rowState, "item", item), reelField, field(rowState, "count", "I")) +
+                (if (shape.rowReelStates == 2) listOf(field(rowState, "previous", reelState)) else emptyList()),
+        )
+        val flagName = if (shape.flagNames == 0) ", isOtherViewActive=" else CLEAR_MODE_FLAG_NAME
+        val flagRead = when {
+            shape.flagFromCall -> "invoke-virtual { p0 }, $reelState->isFullscreen()Z\nmove-result v0"
+            shape.flagOtherClass -> "iget-object v1, p0, $reelState->other:$otherState\niget-boolean v0, v1, $otherState->fullscreen:Z"
+            else -> "iget-boolean v0, p0, $reelState->fullscreen:Z"
+        }
+        // v3 is p0: a parameter, so no instruction fills it.
+        val flagAppend = when {
+            !shape.flagAppended -> ""
+            shape.flagUnfilled -> "invoke-virtual { v1, v3 }, $builder->append(Z)$builder"
+            else -> "move v0, v2\ninvoke-virtual { v1, v0 }, $builder->append(Z)$builder"
+        }
+        val toString = method(reelState, "toString", emptyList(), stringType, 4, """
+            $flagRead
+            move v2, v0
+            new-instance v1, $builder
+            invoke-direct { v1 }, $builder-><init>()V
+            const-string v0, "ReelState(isPlaying="
+            invoke-virtual { v1, v0 }, $builder->append($stringType)$builder
+            iget-boolean v0, p0, $reelState->playing:Z
+            ${if (shape.flagJump) "if-eqz v0, :flag" else ""}
+            invoke-virtual { v1, v0 }, $builder->append(Z)$builder
+            const-string v0, "$flagName"
+            invoke-virtual { v1, v0 }, $builder->append($stringType)$builder
+            ${if (shape.nameThenOther) "const-string v0, \", isMuted=\"\ninvoke-virtual { v1, v0 }, $builder->append($stringType)$builder" else ""}
+            ${if (shape.flagJump) ":flag" else ""}
+            $flagAppend
+            ${if (shape.flagNames == 2) "const-string v0, \"$flagName\"\ninvoke-virtual { v1, v0 }, $builder->append($stringType)$builder" else ""}
+            invoke-virtual { v1 }, $builder->toString()$stringType
+            move-result-object v0
+            return-object v0
+        """)
+        val reelStateFields = listOf(
+            field(reelState, "playing", "Z"),
+            when {
+                shape.flagPrivate -> ImmutableField(reelState, "fullscreen", "Z", AccessFlags.PRIVATE.value or AccessFlags.FINAL.value, null, null, null)
+                shape.flagFieldMissing -> field(reelState, "fullscreen", "I")
+                else -> field(reelState, "fullscreen", "Z")
+            },
+        )
+        val reelStateClass = if (shape.farState) {
+            ImmutableClassDef(reelState, AccessFlags.FINAL.value, anyType, null, null, null, reelStateFields, listOf(toString))
+        } else {
+            classDef(reelState, listOf(toString), fields = reelStateFields)
+        }
+        val childClass = classDef(
+            scrubberChild,
+            listOf(
+                method(
+                    scrubberChild, "<init>", listOf(item, if (shape.childTakesState) reelState else "I"), "V", 3, "return-void",
+                    AccessFlags.PUBLIC.value or AccessFlags.CONSTRUCTOR.value,
+                ),
+            ),
+        )
+
+        // 452's holder (07RN.A0M) reads the alpha its cell holds into v1 and is asked for one in p1;
+        // the high shape keeps the asked one past v15 and reads through a copy of this.
+        val high = shape.alphaHigh
+        val holderSelf = if (high) "v3" else "p0"
+        val alphaRead = "iget-object v0, v2, $cell->value:$anyType\ncheck-cast v0, Ljava/lang/Number;\n" +
+            "invoke-virtual { v0 }, $floatValue\n" + (if (shape.alphaKept) "move-result v1\n" else "const/4 v1, 0x0\n")
+        val chromeMarker = if (shape.chromes == 0) "LithoClipsItemDefinition_Holder_bind" else CLEAR_MODE_CHROME
+        val chromeMarked = "const-string v0, \"${marker(chromeMarker, "q2")}\"\ninvoke-static { v0 }, $purge\n"
+        val fullChrome = """
+            ${if (high) "move-object/from16 v3, p0" else ""}
+            const-string v0, "${marker(chromeMarker, "q2")}"
+            invoke-static { v0 }, $purge
+            ${if (shape.askedOverwritten) "const/4 p1, 0x0" else ""}
+            iget-object v2, $holderSelf, $holder->alpha:$cell
+            ${if (shape.jumpToHold) "if-eqz v2, :hold" else ""}
+            ${alphaRead.repeat(shape.alphaReads)}
+            ${if (shape.alphaReads == 0) "iget v1, v2, $cell->raw:F" else ""}
+            ${if (shape.jumpToHold) ":hold" else ""}
+            iget-object v0, $holderSelf, $holder->locked:$function0
+            invoke-interface { v0 }, $function0->invoke()$anyType
+            move-result-object v0
+            check-cast v0, $boxed
+            invoke-virtual { v0 }, $boxed->booleanValue()Z
+            move-result v0
+            if-eqz v0, :store
+            cmpl-float v0, p1, v1
+            if-lez v0, :store
+            ${if (high) "move/from16 p1, v1" else "move p1, v1"}
+            :store
+            ${when {
+                !shape.alphaStored -> "invoke-static { v1 }, Ljava/lang/Float;->valueOf(F)Ljava/lang/Float;"
+                high -> "invoke-static/range { p1 .. p1 }, Ljava/lang/Float;->valueOf(F)Ljava/lang/Float;"
+                else -> "invoke-static { p1 }, Ljava/lang/Float;->valueOf(F)Ljava/lang/Float;"
+            }}
+            move-result-object v0
+            invoke-virtual { v2, v0 }, $cell->set($anyType)V
+            ${if (shape.chromeReturns == "V") "return-void" else "const/4 v0, 0x0\nreturn v0"}
+        """
+        val chromeBody = when {
+            // A static setter can't name p1, so it holds the marker alone.
+            shape.chromeStatic -> chromeMarked + "return-void"
+            shape.chromeEndsAtRead -> chromeMarked + "iget-object v2, p0, $holder->alpha:$cell\n" + alphaRead
+            else -> fullChrome
+        }
+        val chromeFlags = AccessFlags.PUBLIC.value or (if (shape.chromeStatic) AccessFlags.STATIC.value else AccessFlags.FINAL.value)
+        val chromes = (0 until maxOf(shape.chromes, 1)).map { copy ->
+            method(
+                holder, if (copy == 0) "updateChrome" else "updateChromeAgain",
+                if (shape.chromeTakesAlpha) listOf("F") else listOf("I"), shape.chromeReturns, if (high) 19 else 5, chromeBody,
+                chromeFlags,
+            )
+        }
+        val holderClass = classDef(holder, chromes, fields = listOf(field(holder, "alpha", cell), field(holder, "locked", function0)))
+
         val extension = if (shape.stubs) {
             ExtensionDex.classDef(CLEAR_MODE)
         } else {
@@ -543,6 +906,11 @@ class ClearModeHookTest {
             classDef(actions, listOf(enabled)),
             classDef(listener, listOf(paged)),
             classDef(button, listOf(render), fields = buttonFields),
+            rowClass,
+            rowStateClass,
+            reelStateClass,
+            childClass,
+            holderClass,
             extension,
         )
     }

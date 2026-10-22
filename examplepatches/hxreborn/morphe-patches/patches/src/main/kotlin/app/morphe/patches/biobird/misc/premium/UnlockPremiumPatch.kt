@@ -15,38 +15,61 @@ private const val DART_AOT_LIBRARY = "libapp.so"
 private const val ARM64 = "arm64-v8a"
 
 internal val ACTIVE_SUBSCRIPTION_PROVIDER_PROLOGUE =
-    ("fd79bfa9fd030faaef6100d1500340f9ff0110eb09000054400340f900cc4cf9700340f9" +
-        "1f00106b0100005462034091427041f90000009470034091107641f9be0b40f9fec100a9" +
-        "e00100f9640340f90000009401f05ff8217c4cd3f00300aae00301aae10310aa1edc3fd1" +
-        "be7a7ef8c0033fd61f00166b").hexToByteArray()
+    (
+        "fd79bfa9fd030faaef6100d1501f40f9ff0110eb09040054403740f900cc4cf970" +
+        "2340f91f00106b81000054625f4091427041f936160c94705f4091107641f9be0b" +
+        "40f9fec100a9e00100f9642f40f96fd2fe9701f05ff8217c4cd3f00300aae00301" +
+        "aae10310aa1edc3fd1be7a7ef8c0033fd61f00166b"
+    ).hexToByteArray()
+
+internal val ACTIVE_SUBSCRIPTION_PROVIDER_PROLOGUE_MASK =
+    (
+        "ffffffffffffffffffffffffff03c0ffffffffff1f0000ffff03c0ffff03c0ff1f" +
+        "00c0ffffffffffffffffffff03c0ffff03c0ff000000fcff03c0ffff03c0ffffff" +
+        "ffffffffffffffffffffff03c0ff000000fcffffffffffffffffffffffffffffff" +
+        "ffffffffffff03c0ffffffffffffffffffffffffff"
+    ).hexToByteArray()
 
 internal val CURRENT_ENTITLEMENT_PROVIDER_PROLOGUE =
-    ("fd79bfa9fd030faaef6100d1500340f9ff0110eb09000054400340f900cc4cf9700340f9" +
-        "1f00106b0100005462034091427041f90000009470034091107641f9be0b40f9fec100a9" +
-        "e00100f9640340f90000009401f05ff8217c4cd3f00300aae00301aae10310aa1edc3fd1" +
-        "be7a7ef8c0033fd6ef031daa").hexToByteArray()
+    (
+        "fd79bfa9fd030faaef6100d1501f40f9ff0110eb69030054403740f900cc4cf970" +
+        "2340f91f00106b81000054625f4091427041f9f9ad0c94705f4091107641f9be0b" +
+        "40f9fec100a9e00100f9642f40f9326aff9701f05ff8217c4cd3f00300aae00301" +
+        "aae10310aa1edc3fd1be7a7ef8c0033fd6ef031daa"
+    ).hexToByteArray()
 
-internal val PROVIDER_PROLOGUE_MASK =
-    ("ffffffffffffffffffffffffff03c0ffffffffff1f0000ffff03c0ffffffffffff03c0ff" +
-        "ffffffff1f0000ffff03c0ffffffffff000000fcff03c0ffffffffffffffffffffffffff" +
-        "ffffffffff03c0ff000000fcffffffffffffffffffffffffffffffffffffffffffffffff" +
-        "ffffffffffffffffffffffff").hexToByteArray()
+internal val CURRENT_ENTITLEMENT_PROVIDER_PROLOGUE_MASK =
+    (
+        "ffffffffffffffffffffffffffffffffffffffff1f0000ffff03c0ffff03c0ff1f" +
+        "00c0ffffffffffffffffffff03c0ffff03c0ff000000fcff03c0ffff03c0ffffff" +
+        "ffffffffffffffffffffff03c0ff000000fcffffffffffffffffffffffffffffff" +
+        "ffffffffffff03c0ffffffffffffffffffffffffff"
+    ).hexToByteArray()
+
+internal const val STACK_LIMIT_LOAD_OFFSET = 12
+
+internal class DartBuild(stackLimitLoad: String, pcbEntitlementLoad: String) {
+    val stackLimitLoad = stackLimitLoad.hexToByteArray()
+    val pcbEntitlementLoad = pcbEntitlementLoad.hexToByteArray()
+    val returnPcbEntitlement = this.pcbEntitlementLoad + "c0035fd6".hexToByteArray()
+}
+
+internal val DART_BUILDS = listOf(
+    DartBuild(stackLimitLoad = "501f40f9", pcbEntitlementLoad = "606b409100f444f9"),
+    DartBuild(stackLimitLoad = "502740f9", pcbEntitlementLoad = "606f409100fc41f9"),
+)
 
 internal val ENTITLEMENT_FETCH_SEQUENCE =
     ("e10303aa6203409142a441f900000094a00358f801f041b821801c8ba28358f800000094" +
         "e10300aaa18317f800000094").hexToByteArray()
 
 internal val ENTITLEMENT_FETCH_SEQUENCE_MASK =
-    ("ffffffffff03c0ffffffffff000000fcffffffffffffffffffffffffffffffff000000fc" +
+    ("ffffffffff03c0ffff03c0ff000000fcffffffffffffffffffffffffffffffff000000fc" +
         "ffffffffffffffff000000fc").hexToByteArray()
 
 internal const val FETCH_USER_ENTITLEMENT_CALL_OFFSET = 28
 
 internal val RETURN_TRUE = "c0820091c0035fd6".hexToByteArray()
-
-internal val LOAD_PCB_ENTITLEMENT = "606b409100f444f9".hexToByteArray()
-
-internal val RETURN_PCB_ENTITLEMENT = LOAD_PCB_ENTITLEMENT + "c0035fd6".hexToByteArray()
 
 @Suppress("unused")
 val unlockPremiumPatch = resourcePatch(
@@ -62,17 +85,26 @@ val unlockPremiumPatch = resourcePatch(
         val library = get("lib/$ARM64/$DART_AOT_LIBRARY")
         if (!library.exists()) throw PatchException("Could not find $DART_AOT_LIBRARY for $ARM64")
 
-        mapOf(
-            "active subscription provider" to (ACTIVE_SUBSCRIPTION_PROVIDER_PROLOGUE to RETURN_TRUE),
-            "current entitlement provider" to (CURRENT_ENTITLEMENT_PROVIDER_PROLOGUE to RETURN_PCB_ENTITLEMENT),
-        ).forEach { (provider, edit) ->
-            val (pattern, replacement) = edit
-            if (!library.replaceMasked(pattern, PROVIDER_PROLOGUE_MASK, mapOf(0 to replacement))) {
-                throw PatchException("Could not find the $provider in $DART_AOT_LIBRARY")
-            }
+        if (!library.replaceMasked(
+                ACTIVE_SUBSCRIPTION_PROVIDER_PROLOGUE,
+                ACTIVE_SUBSCRIPTION_PROVIDER_PROLOGUE_MASK,
+                mapOf(0 to RETURN_TRUE),
+            )
+        ) {
+            throw PatchException("Could not find the active subscription provider in $DART_AOT_LIBRARY")
         }
 
-        val callReplacement = mapOf(FETCH_USER_ENTITLEMENT_CALL_OFFSET to LOAD_PCB_ENTITLEMENT)
+        val build = DART_BUILDS.firstOrNull { build ->
+            val prologue = CURRENT_ENTITLEMENT_PROVIDER_PROLOGUE.copyOf()
+            build.stackLimitLoad.copyInto(prologue, STACK_LIMIT_LOAD_OFFSET)
+            library.replaceMasked(
+                prologue,
+                CURRENT_ENTITLEMENT_PROVIDER_PROLOGUE_MASK,
+                mapOf(0 to build.returnPcbEntitlement),
+            )
+        } ?: throw PatchException("Could not find the current entitlement provider in $DART_AOT_LIBRARY")
+
+        val callReplacement = mapOf(FETCH_USER_ENTITLEMENT_CALL_OFFSET to build.pcbEntitlementLoad)
         if (!library.replaceMasked(ENTITLEMENT_FETCH_SEQUENCE, ENTITLEMENT_FETCH_SEQUENCE_MASK, callReplacement)) {
             throw PatchException("Could not find the fetchUserEntitlement call in $DART_AOT_LIBRARY")
         }

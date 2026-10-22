@@ -2,6 +2,48 @@
 
 Changes in each Hushfacebook version, newest first.
 
+## Unreleased
+
+### Added
+
+* **Facebook:** New switch under Privacy, `Close Facebook when you leave it`. Three seconds after you leave Facebook it closes all the way and drops out of your recent apps, so nothing of it keeps running in the background (issue #202, requested by @M7amma). It holds off while an upload, a call or a Hushfacebook save is still going, or while a file picker or camera Facebook opened is on screen, and turning the screen off with Facebook in front doesn't count as leaving. Notifications can come late, or not until you open Facebook again. It starts off. Checked on a phone.
+* **Facebook:** New switch under Comments, `Hide the video comment box`. The Add a comment box under a full-screen video goes away, outline and all, while comment boxes on posts stay (issue #213, from a patch by @dijitalcozum). The Comment button beside the video still opens the comments, with their own box. It starts off. Checked on a phone.
+* **Facebook:** New switch under Appearance with the AMOLED black theme, `Lines between posts`. Facebook leaves a thin gap between posts that shows the page behind them, and on a black page that gap went black too, so a post without a photo ran straight into the next one (issue #206). With the switch on, that gap shows as a thin dark gray line in Facebook's dark mode, while the page and the cards stay black. It starts off. Checked on a phone, with the switch on and off.
+* **Facebook:** New patch, `Keep feed videos muted`, under Playback. Videos in the feed start with the sound off every time you open Facebook, even after you've been away a while, and Facebook doesn't turn it back on by itself. A video you open from the feed starts muted too. A tap on a video's speaker or the volume up key still turns it on. It starts off, and takes effect after the restart its switch offers. Checked on a phone.
+
+### Fixed
+
+* **Facebook:** With `Black cards` on, buttons like Log out in the side panel and Edit profile keep their dark gray fill again. In 0.16.0 and 0.16.1 the AMOLED theme's sweep for leftover dark colors also caught Hushfacebook's own colors, so those buttons went black on a black page and only their text showed (issue #191). Checked on a phone.
+* **Facebook:** `Open comments with a gesture` works with `Always use clean mode` on. Clean mode hides a reel's sidebar, Comment button and all, and the gestures pressed that button, so a long press fell back to Facebook's menu and a double tap did nothing (issue #179). A reel without the button now gets its comments from what its long-press handler keeps, on the same sheet the button opens. Checked on a phone, long press and double tap both.
+* **Facebook:** With `Leave calls and chats to Messenger` on, a message sent to you in Facebook's own Chats no longer shows up twice, once from Messenger and once from Facebook. Those messages reach your phone as Facebook's regular notifications rather than through its chat notifier, so they slipped past the switch. Facebook now leaves them to Messenger as well, while every other notification posts as before (issue #193). Checked in tests, not yet on a phone.
+* **Facebook:** `Hide Menu promotions` now holds in the side panel Menu for accounts Facebook gives its server-drawn Menu. 0.16.0 put Facebook's own Menu in that panel, but the Menu page inside it asks Facebook's server the same question again, and those accounts got the server's Menu right back with Upgrades and Also from Meta still in it (issue #184). Hushfacebook answers that second question too now. While any Menu switch is on, the panel and the Menu tab both show Facebook's own Menu with your hidden sections and shortcuts gone. Checked on a phone with Facebook's answer forced to the server-drawn Menu.
+* **Facebook:** `Block Instant Games ads` now covers games that open inside Facebook's main screen too. Those games talk to Facebook through a bridge of their own, so their ad requests went around the patch and some showed ads between levels anyway (issue #168). They get the same no-ad answer now, and with `Answer rewarded game ads as watched` on, a rewarded video still counts as watched. Checked on a phone with a game played to its map.
+* **Facebook:** `Disable Audience Network` stays off now. Facebook switched those parts back on after an install or update, and one of its startup tasks lets the server turn three of them on again (issue #168). Both are held off, and any an earlier install left on go back off when Facebook starts. Checked on a phone.
+
+### Changed
+
+* **Facebook:** The description of `Hide the reaction preview on posts` now says where the number on the Like button goes. That count belongs to `Hide counts on posts`, so the preview switch alone leaves it showing (issue #158).
+* **Settings:** A settings file can now be up to 96 KB, up from 88 KB, so a file with every list full still fits now that there are more switches.
+* **Tooling:** No release goes out now until the whole app has been walked, on a phone or an emulator, with the exact bundle being published. `scripts/device-audit.ps1` leaves a `walk-receipt.json` saying how the walk ended, where it ran and which patch build the app reported, and the release script's publish step takes it as `-Walk`. Anything short of a full pass with no crash on that same bundle stops it before the tag.
+
+## 0.16.1 (2026-10-21)
+
+* **Facebook:** A quick fix for 0.16.0, which closed Facebook whenever comments opened on a lot of phones, posts opened from a notification included. Comments open normally again with `Comment sheet options` patched in, so there's no need to leave it out anymore. Instant games also download through Facebook itself now, since Google Play can't deliver them to a patched Facebook.
+
+### Fixed
+
+* **Facebook:** Opening comments doesn't close Facebook any more. In 0.16.0, tapping a post's comment button, or the comments on a reel, crashed Facebook when `Comment sheet options` was patched in, even with every switch off or Hushfacebook paused. Phones and accounts that get Facebook's newer comment list hit it, opening a post from a notification included (issues #203, #204, #208, #209 and #210). Android's own check of the patched app passes on a phone now, where 0.16.0 failed it. The phone I check on gets Facebook's older comment list, so it never crashed either way.
+* **Facebook:** Instant games download with Facebook's own downloader now. When Google Play had installed Facebook, Facebook could hand the game download to Play, which can't serve a patched build, so the game's loading screen closed right away. With Debug logging on, the report's module download line says when Play was skipped (issue #168). Checked in tests, not yet on a phone, since mine already had its games downloaded.
+
+### Changed
+
+* **Tooling:** The patch check that runs before a release now catches the mistake behind 0.16.0's comment crash without a phone. A hook that hands back the extension's answer without casting it to the type Facebook's method returns gets refused, naming the method. Run against the published 0.16.0 build, it flags exactly the comment method that crashed.
+
+### Reported issues
+
+* **Facebook:** #203, #204, #208, #209 and #210 Facebook closing when comments open, a post from a notification included: fixed, with nothing to turn on or leave out.
+* **Facebook:** #168 Instant games closing on their loading screen: games download through Facebook itself now. Please say on the issue whether yours opens.
+
 ## 0.16.0 (2026-10-21)
 
 * **Facebook:** This release is mostly your requests again. You can keep your searches out of Facebook's history, hide posts from groups you haven't joined, take the For you list off search and hide the Find friends card where your friends' posts run out. Reels get switches for the audio line, Save and the speaker button, and a long press on a feed post can open its comments. Kept reel speeds now last through a restart, Black cards make the AMOLED theme fully black, and a Free stuff shortcut opens Marketplace's free listings. On the fix side, Hide Menu promotions reaches the side Menu, Default comment order works on a post's own page and the logo long press works in Arabic.

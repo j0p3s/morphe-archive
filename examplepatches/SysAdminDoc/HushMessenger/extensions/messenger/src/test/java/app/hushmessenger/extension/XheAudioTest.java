@@ -3,6 +3,7 @@ package app.hushmessenger.extension;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.database.Cursor;
+import android.media.MediaCodec;
 import android.media.MediaFormat;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
@@ -30,6 +31,9 @@ import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.RuntimeEnvironment;
 import org.robolectric.annotation.Config;
+import org.robolectric.annotation.Implementation;
+import org.robolectric.annotation.Implements;
+import org.robolectric.shadows.ShadowMediaCodec;
 import org.robolectric.shadows.ShadowMediaExtractor;
 import org.robolectric.shadows.ShadowSystemClock;
 import org.robolectric.shadows.util.DataSource;
@@ -39,6 +43,7 @@ import static org.junit.Assert.*;
 @Config(sdk = {28, 36})
 public class XheAudioTest {
     @Rule public TemporaryFolder folder = new TemporaryFolder();
+    private java.util.concurrent.Executor pruneWork;
 
     @Before public void reset() {
         Settings.initialize(RuntimeEnvironment.getApplication());
@@ -46,9 +51,15 @@ public class XheAudioTest {
         Settings.activeAt.clear();
         Settings.hookErrors.clear();
         CrashGuard.resetForTests();
+        // The clear that follows a handed-out copy runs in place, so it can't touch a later test's cache.
+        pruneWork = XheAudio.pruneWork;
+        XheAudio.pruneWork = Runnable::run;
+        XheAudio.pruneAt = 0;
     }
 
     @After public void restoreLimits() {
+        XheAudio.pruneWork = pruneWork;
+        XheAudio.pruneAt = 0;
         XheAudio.limits = new XheAudio.Limits();
         assertEquals("every conversion slot is given back", XheAudio.SLOTS, XheAudio.WORKERS.availablePermits());
         assertEquals("every claim on the disk and the cache is given back", 0, XheAudio.claimed());
@@ -319,6 +330,118 @@ public class XheAudioTest {
         assertEquals("the same bytes again reuse their copy", second, fromTranscoder(uri));
         assertArrayEquals(after, Files.readAllBytes(Videos.served.toPath()));
         onlyFinishedCopies(2);
+    }
+
+    static final String LAPSED = "app.hushmessenger.test.lapsed";
+
+    /** Refuses every read, the way a gallery's Uri does once its grant has lapsed before the send starts. */
+    public static final class Lapsed extends ContentProvider {
+        @Override public boolean onCreate() { return true; }
+        @Override public ParcelFileDescriptor openFile(Uri uri, String mode) {
+            throw new SecurityException("Permission Denial: reading " + uri + " requires a grant");
+        }
+        @Override public String getType(Uri uri) { return "video/mp4"; }
+        @Override public Cursor query(Uri uri, String[] projection, String selection, String[] args, String order) { return null; }
+        @Override public Uri insert(Uri uri, ContentValues values) { return null; }
+        @Override public int delete(Uri uri, String selection, String[] args) { return 0; }
+        @Override public int update(Uri uri, ContentValues values, String selection, String[] args) { return 0; }
+    }
+
+    @Test public void aPickedVideoWhoseGrantLapsedIsSentAsItIsWithoutAHookFailure() throws Exception {
+        Robolectric.setupContentProvider(Lapsed.class, LAPSED);
+        Settings.preferences.edit().putBoolean(XheAudio.KEY, true).commit();
+        String uri = "content://" + LAPSED + "/video/9";
+        assertFalse(XheAudio.hasSamsungBox(RuntimeEnvironment.getApplication(), Uri.parse(uri)));
+        assertEquals(uri, fromTranscoder(uri));
+        assertEquals("a Uri we can't read is Messenger's to send, not a broken hook", 0, Settings.hookErrorAt(XheAudio.KEY));
+    }
+
+    static final String LAPSES = "app.hushmessenger.test.lapses";
+
+    /** Serves a Samsung recording to the first look, then refuses the copy, the way a grant runs out partway through. */
+    public static final class LapsesAtTheCopy extends ContentProvider {
+        static volatile File served;
+        static volatile int refused;
+
+        @Override public boolean onCreate() { return true; }
+        @Override public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
+            // The copy's scratch file is made right before the copy opens the Uri, so it being there marks the copy.
+            String[] scratch = pickedCache().list((dir, name) -> name.startsWith(XheAudio.SCRATCH) && name.endsWith(".source"));
+            if (scratch != null && scratch.length > 0) {
+                refused++;
+                throw new SecurityException("Permission Denial: the grant for " + uri + " ran out");
+            }
+            return ParcelFileDescriptor.open(served, ParcelFileDescriptor.MODE_READ_ONLY);
+        }
+        @Override public String getType(Uri uri) { return "video/mp4"; }
+        @Override public Cursor query(Uri uri, String[] projection, String selection, String[] args, String order) { return null; }
+        @Override public Uri insert(Uri uri, ContentValues values) { return null; }
+        @Override public int delete(Uri uri, String selection, String[] args) { return 0; }
+        @Override public int update(Uri uri, ContentValues values, String selection, String[] args) { return 0; }
+    }
+
+    @Test public void aPickedVideoWhoseGrantLapsesBeforeTheCopyIsSentAsItIsWithoutAHookFailure() throws Exception {
+        LapsesAtTheCopy.served = folder.newFile("gallery.mp4");
+        LapsesAtTheCopy.refused = 0;
+        Files.write(LapsesAtTheCopy.served.toPath(), samsungRecording(9));
+        Robolectric.setupContentProvider(LapsesAtTheCopy.class, LAPSES);
+        Settings.preferences.edit().putBoolean(XheAudio.KEY, true).commit();
+        String uri = "content://" + LAPSES + "/video/10";
+        assertEquals(uri, fromTranscoder(uri));
+        assertEquals("the first look found the Samsung box, so the copy was tried", 1, LapsesAtTheCopy.refused);
+        assertEquals("a grant that ran out partway is Messenger's to send, not a broken hook", 0, Settings.hookErrorAt(XheAudio.KEY));
+        onlyFinishedCopies(0);
+    }
+
+    /**
+     * Stock Android turns a refused grant into an IOException inside the extractor, but nothing promises every phone's
+     * does. A refusal that comes through as itself still reads as a video the platform can't open, not a broken hook.
+     */
+    @Test public void anExtractorThatPassesOnARefusedGrantReadsAsUnreadable() {
+        assertNull(XheAudio.Tracks.of(source -> { throw new SecurityException("Permission Denial"); }));
+        assertNull(XheAudio.Tracks.of(source -> { throw new IllegalArgumentException("no such file"); }));
+        assertNull(XheAudio.Tracks.of(source -> { throw new IOException("unreadable"); }));
+    }
+
+    /** An encoder that won't start, the way one does when it can't take the format, counting the releases it gets. */
+    @Implements(MediaCodec.class)
+    public static final class RefusingCodec extends ShadowMediaCodec {
+        static volatile int released;
+
+        @Implementation @Override protected void native_start() {
+            throw new IllegalStateException("start refused the format");
+        }
+
+        @Implementation protected void native_release() {
+            released++;
+        }
+    }
+
+    @Test @Config(shadows = RefusingCodec.class)
+    public void anEncoderThatWontStartIsReleasedBeforeTheConversionFails() throws Exception {
+        RefusingCodec.released = 0;
+        try {
+            XheAudio.startEncoder(44_100, 2);
+            fail("the encoder's failure has to reach the conversion");
+        } catch (IllegalStateException refused) {
+            assertEquals("start refused the format", refused.getMessage());
+        }
+        assertEquals("nothing else holds the encoder yet, so it's released here, once", 1, RefusingCodec.released);
+    }
+
+    @Test public void theStartHelperReleasesOnlyACodecThatFailedToStart() {
+        boolean[] released = new boolean[1];
+        IllegalStateException refused = new IllegalStateException("configure refused the format");
+        try {
+            XheAudio.startedOrReleased("encoder", () -> { throw refused; }, () -> released[0] = true);
+            fail("the failure has to reach the conversion");
+        } catch (IllegalStateException thrown) {
+            assertSame(refused, thrown);
+        }
+        assertTrue("nothing else holds the encoder yet, so it's released here", released[0]);
+        boolean[] untouched = new boolean[1];
+        assertEquals("encoder", XheAudio.startedOrReleased("encoder", () -> { }, () -> untouched[0] = true));
+        assertFalse("a started encoder stays open for the conversion", untouched[0]);
     }
 
     @Test public void conversionsRunningAtOnceEachKeepTheirOwnFiles() throws Exception {
@@ -683,6 +806,52 @@ public class XheAudioTest {
         assertEquals(Arrays.asList(copy.getName(), working.getName()), Arrays.asList(names));
     }
 
+    /** A day's copies go without another pick: once as Messenger starts, then when the next one left falls due. */
+    @Test public void oldCopiesAreClearedAtStartAndWhenTheNextOneFallsDue() throws Exception {
+        boolean started = HostScreens.started, failed = HostScreens.failed;
+        java.util.Set<String> installed = Settings.installed;
+        try {
+            File cache = pickedCache();
+            assertTrue(cache.isDirectory() || cache.mkdirs());
+            long now = System.currentTimeMillis();
+            File stale = new File(cache, finishedName('a'));
+            File later = new File(cache, finishedName('b'));
+            for (File file : new File[] {stale, later}) Files.write(file.toPath(), new byte[] {1});
+            assertTrue(stale.setLastModified(now - XheAudio.KEEP_MS - 60_000));
+            assertTrue("due in ten minutes", later.setLastModified(now - XheAudio.KEEP_MS + 600_000));
+            HostScreens.started = false;
+            HostScreens.failed = false;
+            Settings.installed = java.util.Set.of(XheAudio.KEY);
+            HostScreens.start(RuntimeEnvironment.getApplication());
+            assertEquals(Arrays.asList(later.getName()), Arrays.asList(cache.list()));
+            // Its day runs out with Messenger still open, so only the clear that waits for it can take it.
+            assertTrue(later.setLastModified(now - XheAudio.KEEP_MS - 1));
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(600_000));
+            assertTrue("not before it's due", later.exists());
+            org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idleFor(Duration.ofMillis(2 * XheAudio.PRUNE_SLACK_MS));
+            assertFalse(later.exists());
+            assertEquals("nothing left to wait for", 0, XheAudio.pruneAt);
+        } finally {
+            HostScreens.started = started;
+            HostScreens.failed = failed;
+            Settings.installed = installed;
+            CrashGuard.resetForTests();
+        }
+    }
+
+    @Test public void aCopyUsedTodayStaysAndTheClearWaitsADayForIt() throws Exception {
+        File cache = pickedCache();
+        assertTrue(cache.isDirectory() || cache.mkdirs());
+        File fresh = new File(cache, finishedName('c'));
+        Files.write(fresh.toPath(), new byte[] {1});
+        assertTrue(fresh.setLastModified(System.currentTimeMillis()));
+        long before = android.os.SystemClock.uptimeMillis();
+        XheAudio.pruneLater(RuntimeEnvironment.getApplication());
+        assertTrue(fresh.exists());
+        long wait = XheAudio.pruneAt - before;
+        assertTrue("waits " + wait, wait > XheAudio.KEEP_MS - 60_000 && wait <= XheAudio.KEEP_MS + XheAudio.PRUNE_SLACK_MS);
+    }
+
     @Test public void filesAConversionLeftBesideASharedCopyAreCleared() throws Exception {
         byte[] plain = "plain".getBytes(StandardCharsets.US_ASCII);
         File shared = folder.newFile("orca_share_media46.mp4");
@@ -967,11 +1136,11 @@ public class XheAudioTest {
         assertEquals("a second of sound when the track doesn't say", 1000 + 2 * secondOfSound, XheAudio.converting(untimed));
     }
 
-    @Test public void theSwitchSitsUnderConversationsAndStartsOff() {
+    @Test public void theSwitchSitsUnderPhotosAndVideosAndStartsOff() {
         assertTrue(Settings.installed.contains(XheAudio.KEY));
         String[] row = Arrays.stream(SettingsActivity.CONTROLS).filter(c -> c[0].equals(XheAudio.KEY)).findFirst().orElseThrow();
         assertEquals("Fix videos that won't send", row[1]);
-        assertEquals("conversations", row[3]);
+        assertEquals("photos_videos", row[3]);
         assertFalse(Settings.preferences.contains(XheAudio.KEY));
         assertFalse(Settings.wouldUse(XheAudio.KEY));
     }

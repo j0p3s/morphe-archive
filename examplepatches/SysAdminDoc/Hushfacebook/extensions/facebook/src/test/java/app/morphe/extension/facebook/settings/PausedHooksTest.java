@@ -95,6 +95,7 @@ import app.morphe.extension.facebook.comments.MetaAiSummaries;
 import app.morphe.extension.facebook.composer.TagSuggestionsForTests;
 import app.morphe.extension.facebook.media.HdrBrightnessForTests;
 import app.morphe.extension.facebook.media.PictureInPictureForTests;
+import app.morphe.extension.facebook.media.FeedSound;
 import app.morphe.extension.facebook.media.FrameStepForTests;
 import app.morphe.extension.facebook.media.ProgressBar;
 import app.morphe.extension.facebook.media.QualityChoiceForTests;
@@ -153,6 +154,7 @@ import app.morphe.extension.facebook.stories.StoryUpload;
 import app.morphe.extension.facebook.stories.SuggestedStoriesForTests;
 import app.morphe.extension.facebook.theme.AmoledTheme;
 import app.morphe.extension.facebook.theme.DarkMode;
+import app.morphe.extension.facebook.theme.FeedGapsForTests;
 import app.morphe.extension.facebook.theme.ForceDarkModeForTests;
 import app.morphe.extension.facebook.updates.UpdatePrompts;
 import app.morphe.extension.shared.SettingsContextRule;
@@ -289,6 +291,8 @@ public class PausedHooksTest {
         probes.put(Settings.APP_LOCK, AppLockForTests::aStartLocks);
         // A crash that ends the app writes its file to Downloads.
         probes.put(Settings.SAVE_CRASH_FILE, app.morphe.extension.shared.settings.preference.CrashFileForTests::aCrashWritesAFile);
+        // Leaving Facebook ends its processes a few seconds later.
+        probes.put(Settings.CLOSE_WHEN_LEFT, app.morphe.extension.facebook.misc.CloseWhenLeftForTests::aLeaveCloses);
         return probes;
     }
 
@@ -724,10 +728,16 @@ public class PausedHooksTest {
         // Facebook's dark mode controller answers dark where it answered light.
         probes.put(PatchFamily.FORCE_DARK_MODE, Collections.singletonList(ForceDarkModeForTests::forcesDark));
         // Black cards: a card's dark grey takes the page's black, where the theme alone keeps it near black.
-        probes.put(PatchFamily.AMOLED_THEME, Collections.singletonList(() -> {
-            DarkMode.answer(true);
-            return AmoledTheme.apply(0xFF333334, Surface.CARD_BACKGROUND) == 0xFF000000;
-        }));
+        // Lines between posts: a feed row paints the gap under its content.
+        probes.put(PatchFamily.AMOLED_THEME, Arrays.asList(
+                () -> {
+                    DarkMode.answer(true);
+                    return AmoledTheme.apply(0xFF333334, Surface.CARD_BACKGROUND) == 0xFF000000;
+                },
+                () -> {
+                    DarkMode.answer(true);
+                    return FeedGapsForTests.drawsTheGap();
+                }));
         // A request for a post's comments that names no order asks for the chosen one, and with
         // All comments chosen, the menu its answer draws is picked in.
         probes.put(PatchFamily.DEFAULT_COMMENT_ORDER, Arrays.asList(
@@ -776,21 +786,24 @@ public class PausedHooksTest {
                 () -> ChatList.metaAiButton(new Object()) == null,
                 () -> !ChatList.showsSearchMetaAiButton(true)));
         // With Messenger installed, a tap on the top bar's Messenger icon opens Messenger instead of
-        // Chats, and an incoming call's push, its ring and a new message are left to Messenger.
+        // Chats, and an incoming call's push, its ring and a new message, handed to the notifiers or
+        // posted as a push, are left to Messenger.
         probes.put(PatchFamily.MESSENGER_ICON, Arrays.asList(
                 MessengerIconForTests::opensMessenger,
                 MessengerHandoffForTests::dropsACallPush,
                 MessengerHandoffForTests::dropsARing,
-                MessengerHandoffForTests::dropsAMessage));
+                MessengerHandoffForTests::dropsAMessage,
+                MessengerHandoffForTests::dropsAChatPush));
         // The Menu's Upgrades and Also from Meta groups build nothing, in the section Facebook
-        // draws and in the one carrying what the server sends, and the side panel gets Facebook's own
-        // Menu instead of the Bloks one.
+        // draws and in the one carrying what the server sends, and the side panel and the Menu page
+        // get Facebook's own Menu instead of the Bloks one.
         probes.put(PatchFamily.MENU_PROMOTIONS, Arrays.asList(
                 MenuSectionsForTests::hidesUpgrades,
                 MenuSectionsForTests::hidesAlsoFromMeta,
                 MenuSectionsForTests::hidesServerUpgrades,
                 MenuSectionsForTests::hidesServerAlsoFromMeta,
-                () -> !MenuPanel.bloksPanel(true)));
+                () -> !MenuPanel.bloksPanel(true),
+                () -> !MenuPanel.bloksMenu(true)));
         // Edits' header flag and both shapes of its pill request, the Threads cross-posting
         // onboarding and the share sheet's Threads and Muse items, the Meta Verified sheet and label, an avatar
         // sticker upsell, Imagine's post button, composer capability and Create story tile, and the
@@ -852,6 +865,9 @@ public class PausedHooksTest {
                 HdrBrightnessForTests::answersTheScreenAsShowingNoHdr, HdrBrightnessForTests::dropsTheHdrRendition));
         // A sink's sound starts with its silent parts skipped.
         probes.put(PatchFamily.SKIP_SILENCE, Collections.singletonList(() -> SkipSilence.skipSilence(false)));
+        // A new session starts muted, and a sound-on that isn't the user's keeps the feed muted.
+        probes.put(PatchFamily.KEEP_FEED_VIDEOS_MUTED, Arrays.asList(() -> !FeedSound.sessionSound(true),
+                () -> !FeedSound.soundChange(null, true, false)));
         // A reel's bar is kept full size, a full-screen video sets no fade timer, a press off the
         // bar's thumb is held as a tap to seek, the next reel's bar starts over, and a bar still in
         // Facebook's thin look takes the kept look.

@@ -223,6 +223,7 @@ public final class XheAudio {
             Context context = Settings.appContext;
             File copy = context == null ? null : convertPicked(context, source);
             if (copy == null) return source;
+            pruneLater(context);
             return source.startsWith("/") ? copy.getPath() : Uri.fromFile(copy).toString();
         } catch (OverBudget | InterruptedIOException | ClosedByInterruptException skipped) {
             android.util.Log.w("HushMessenger", "Sent the picked video as it is: " + skipped.getMessage());
@@ -275,7 +276,14 @@ public final class XheAudio {
         long claimed = 0;
         try {
             String name;
-            try (InputStream in = input != null ? new FileInputStream(input) : context.getContentResolver().openInputStream(uri)) {
+            InputStream opened;
+            try {
+                opened = input != null ? new FileInputStream(input) : context.getContentResolver().openInputStream(uri);
+            } catch (SecurityException lapsed) {
+                // The grant can run out between the first look and this copy, and then Messenger can't read it either.
+                return null;
+            }
+            try (InputStream in = opened) {
                 if (in == null) throw new IOException("the picked video could not be opened");
                 name = copyAndName(in, copied, limits, work);
             }
@@ -384,6 +392,66 @@ public final class XheAudio {
                 if (age > KEEP_MS || (file.getName().startsWith(SCRATCH) && age > scratch)) file.delete();
             }
         }
+    }
+
+    /** Where {@link #pruneLater} clears the cache, off the thread that asked. Tests run it in place. */
+    static java.util.concurrent.Executor pruneWork = work -> {
+        Thread thread = new Thread(work, "HushXhePrune");
+        thread.setDaemon(true);
+        thread.start();
+    };
+
+    /** How long after a file is due a later clear runs, so one clear takes the files that fall due close together. */
+    static final long PRUNE_SLACK_MS = 60_000;
+
+    /** When the later clear that's waiting is due, in uptime, 0 when none is. Guarded by {@link #ROOM}; tests reset it. */
+    static long pruneAt;
+
+    /**
+     * Clears what {@link #prune} would in the picked-video cache now, off this thread, and again once the next file left
+     * there is due, so a day's copies don't wait for another pick. Messenger's start and every handed-out copy call it.
+     */
+    static void pruneLater(Context context) {
+        pruneWork.execute(() -> pruneNow(new File(context.getCacheDir(), PICKED)));
+    }
+
+    private static void pruneNow(File folder) {
+        try {
+            long now = System.currentTimeMillis();
+            prune(folder, now);
+            long due = nextPrune(folder, now);
+            if (due == 0) return;
+            // Handler time stops while the phone sleeps, so this can run later than due, never sooner.
+            long at = SystemClock.uptimeMillis() + due - now + PRUNE_SLACK_MS;
+            synchronized (ROOM) {
+                if (pruneAt != 0 && pruneAt <= at) return;
+                pruneAt = at;
+            }
+            new android.os.Handler(Looper.getMainLooper()).postAtTime(() -> {
+                synchronized (ROOM) {
+                    if (pruneAt == at) pruneAt = 0;
+                }
+                pruneWork.execute(() -> pruneNow(folder));
+            }, at);
+        } catch (Throwable error) {
+            android.util.Log.w("HushMessenger", "Can't clear old converted videos", error);
+        }
+    }
+
+    /**
+     * When {@link #prune} next has a file in [folder] to delete, in wall time, or 0 when it has none. A file already
+     * due at [now] is one a clear just failed to delete, which the next start tries again.
+     */
+    static long nextPrune(File folder, long now) {
+        File[] files = folder.listFiles();
+        if (files == null) return 0;
+        long next = Long.MAX_VALUE;
+        long scratch = 2 * limits.workMs;
+        for (File file : files) {
+            long due = file.lastModified() + (file.getName().startsWith(SCRATCH) ? scratch : KEEP_MS);
+            if (due >= now) next = Math.min(next, due);
+        }
+        return next == Long.MAX_VALUE ? 0 : next;
     }
 
     /** Whether [name] is a finished converted copy's, as {@link #copyAndName} names them. */
@@ -525,7 +593,7 @@ public final class XheAudio {
         return needsFix(source -> source.setDataSource(context, uri, null));
     }
 
-    private interface Opener {
+    interface Opener {
         void open(MediaExtractor source) throws IOException;
     }
 
@@ -569,7 +637,7 @@ public final class XheAudio {
             try {
                 try {
                     opener.open(source);
-                } catch (IOException | IllegalArgumentException unreadable) {
+                } catch (IOException | IllegalArgumentException | SecurityException unreadable) {
                     return null;
                 }
                 Tracks tracks = new Tracks();
@@ -605,7 +673,10 @@ public final class XheAudio {
         }
     }
 
-    /** [hasSamsungBox] for a content Uri. A provider that only streams can't be read that way, so it has none. */
+    /**
+     * [hasSamsungBox] for a content Uri. A provider that only streams can't be read that way, so it has none, and
+     * neither has one whose read grant has lapsed.
+     */
     static boolean hasSamsungBox(Context context, Uri uri) {
         try {
             ParcelFileDescriptor descriptor = context.getContentResolver().openFileDescriptor(uri, "r");
@@ -614,7 +685,7 @@ public final class XheAudio {
             try (FileInputStream in = new ParcelFileDescriptor.AutoCloseInputStream(descriptor)) {
                 return !samsungBoxes(in.getChannel()).isEmpty();
             }
-        } catch (IOException unreadable) {
+        } catch (IOException | SecurityException unreadable) {
             return false;
         }
     }
@@ -1016,7 +1087,7 @@ public final class XheAudio {
         if (rate != sampleRate || 2 * channels != frameBytes) throw new IOException("the decoder changed its sound format");
     }
 
-    private static MediaCodec startEncoder(int sampleRate, int channels) throws IOException {
+    static MediaCodec startEncoder(int sampleRate, int channels) throws IOException {
         MediaFormat format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, sampleRate, channels);
         format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
         format.setInteger(MediaFormat.KEY_BIT_RATE, BIT_RATE);
@@ -1024,9 +1095,28 @@ public final class XheAudio {
         MediaCodec encoder = name != null
             ? MediaCodec.createByCodecName(name)
             : MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
-        encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
-        encoder.start();
-        return encoder;
+        return startedOrReleased(encoder, () -> {
+            encoder.configure(format, null, null, MediaCodec.CONFIGURE_FLAG_ENCODE);
+            encoder.start();
+        }, encoder::release);
+    }
+
+    /**
+     * Hands back [codec] once [setUp] ran, else runs [release] and rethrows. The caller only gets the codec on a normal
+     * return, so a configure or start that throws would leave it held with nothing left to release it.
+     */
+    static <T> T startedOrReleased(T codec, Runnable setUp, Runnable release) {
+        try {
+            setUp.run();
+            return codec;
+        } catch (RuntimeException failed) {
+            try {
+                release.run();
+            } catch (RuntimeException alsoFailed) {
+                failed.addSuppressed(alsoFailed);
+            }
+            throw failed;
+        }
     }
 
     private static void stalled(long lastWork, int idle, String what) throws IOException {

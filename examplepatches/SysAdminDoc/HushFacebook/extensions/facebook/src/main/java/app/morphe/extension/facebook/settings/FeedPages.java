@@ -201,7 +201,8 @@ final class FeedPages {
                                 + "just its word. The buttons stay where they are. A change shows on the posts drawn after it.")));
                 feed.addPreference(toggle(context, Settings.HIDE_POST_REACTIONS,
                         L10n.t("Hides the stacked reaction icons and the reactions count under posts. The space stays, "
-                                + "so a tap where they were still opens the list of reactions.")));
+                                + "so a tap where they were still opens the list of reactions. To take the number off the Like "
+                                + "button too, turn on Hide counts on posts.")));
             }
             if (build.contains(PatchFamily.SEEN_POSTS)) {
                 seenPosts(feed, context);
@@ -404,6 +405,8 @@ final class FeedPages {
                     L10n.t("A long press on Like doesn't open the reactions. A tap still likes.")));
             comments.addPreference(toggle(context, Settings.HIDE_COMMENT_GIF_STICKER_BUTTONS,
                     L10n.t("The comment box loses its GIF and sticker buttons. Typing, photos and posting work as before.")));
+            comments.addPreference(toggle(context, Settings.HIDE_VIDEO_COMMENT_COMPOSER,
+                    L10n.t("The Add a comment box under a full-screen video goes away. Comment boxes on posts stay.")));
             comments.addPreference(toggle(context, Settings.OPEN_REPLY_THREADS,
                     L10n.t("Comments show their replies right away, so there's no View replies to tap.")));
             comments.addPreference(toggle(context, Settings.LOAD_WHOLE_REPLY_THREADS,

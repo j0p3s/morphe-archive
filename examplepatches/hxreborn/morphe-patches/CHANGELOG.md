@@ -1,3 +1,55 @@
+## [1.57.0](https://github.com/hxreborn/morphe-patches/compare/v1.56.0...v1.57.0) (2026-10-22)
+
+### Bug Fixes
+
+* **Albo - GmsCore support:** restore Google sign-in ([0757949](https://github.com/hxreborn/morphe-patches/commit/0757949fec50715a71a7ad6d915b69c20985e6c9)), closes [#305](https://github.com/hxreborn/morphe-patches/issues/305)
+
+### New Features
+
+* **Castle - Unlock premium:** unlock member-only titles and downloads ([d1a7a8f](https://github.com/hxreborn/morphe-patches/commit/d1a7a8f134b726daf02cd8de02be45adb384dac9))
+* **Glass Widgets - Unlock premium:** unlock premium widgets ([b799e79](https://github.com/hxreborn/morphe-patches/commit/b799e795f67c457b4664c1663cd71f55a895d1da))
+* **Graph Messenger - Disable tracking:** stop Firebase and AppMetrica ([fe4152c](https://github.com/hxreborn/morphe-patches/commit/fe4152c2823d681e7e0b947da4fe24f0f4f44546))
+* **Graph Messenger - Remove ads:** remove ads and sponsored messages ([1913579](https://github.com/hxreborn/morphe-patches/commit/1913579ee6c236fdb06422690de00697a571091b))
+* **Graph Messenger - Remove forced update:** remove update block dialog ([d15a546](https://github.com/hxreborn/morphe-patches/commit/d15a54673612da95bb24781596f94ac6ea213808))
+* **Graph Messenger - Unlock premium:** unlock Graph + Telegram Premium ([9122860](https://github.com/hxreborn/morphe-patches/commit/91228609f80b0a1d9564e5adbd8e298cf59bd75a))
+* **MiniShare - AMOLED dark theme:** replace light theme with pure black ([0b50bd4](https://github.com/hxreborn/morphe-patches/commit/0b50bd45636350da63b8cb15958f3a8ba01196e1))
+* **MyScript Math - Disable tracking:** stop Firebase and Survicate ([411811c](https://github.com/hxreborn/morphe-patches/commit/411811cbc8a147b816c223a6ef4ec71547b4026b))
+* **MyScript Math - Unlock premium:** remove paywall after trial ends ([0a9bffb](https://github.com/hxreborn/morphe-patches/commit/0a9bffb8e0a1430fa800424f775820b0344a3446))
+* **MyScript Notes - Disable tracking:** stop Firebase and Survicate ([7a68e68](https://github.com/hxreborn/morphe-patches/commit/7a68e68a96f767b1b9a4f15c80cf3a15b8a24545))
+* **MyScript Notes - Unlock premium:** unlock conversion, PDFs and AI ([642b561](https://github.com/hxreborn/morphe-patches/commit/642b56144fb7e4613df790e94267b6acf7386c0d))
+* **Nara Baby - Disable tracking:** stop analytics and marketing SDKs ([9c3504f](https://github.com/hxreborn/morphe-patches/commit/9c3504f95e2c28001217c7122af39915780307b8))
+* **Nara Baby - Remove forced update:** skip update-required screen ([dc01350](https://github.com/hxreborn/morphe-patches/commit/dc0135075d1f6f40470fd6ce29495b621fc007ff))
+* **Nara Baby - Unlock premium:** keep tracking open after trial ends ([5a060ad](https://github.com/hxreborn/morphe-patches/commit/5a060ad22f1f7e21170476a55e46cdf4486924a7))
+* **Raindrop.io - Accent color:** use wallpaper or chosen accent color ([728c2d8](https://github.com/hxreborn/morphe-patches/commit/728c2d822c49ef3f394171551ad6c6783f8a4946)), closes [#279](https://github.com/hxreborn/morphe-patches/issues/279)
+* **Raindrop.io - Hide AI assistant:** hide AI buttons ([cb165e7](https://github.com/hxreborn/morphe-patches/commit/cb165e70113d0079945973fd6e8e23c183132d16))
+* **Raindrop.io - Hide Settings links:** hide web app, blog and help ([5556ffe](https://github.com/hxreborn/morphe-patches/commit/5556ffea399d603d08ec002ada955c53ac4bda10))
+* **Wattpad - GmsCore support:** sign in with Google through GmsCore ([32d6cab](https://github.com/hxreborn/morphe-patches/commit/32d6cab7aa1ed67193d7f1b091d47654527d5a97))
+* **Wattpad - Hide ads:** hide story, reader and library ads ([733413a](https://github.com/hxreborn/morphe-patches/commit/733413a8d95454996d5ef4833d3c85ef2ec4c459))
+* **Wattpad - Unlock premium:** unlock Premium+ offline reads and themes ([3448977](https://github.com/hxreborn/morphe-patches/commit/3448977b719386f5053c9682af8a72970eafdfdc))
+
+### Updated App Support
+
+* **aCalendar:** add support for `2.9.6` ([46ed853](https://github.com/hxreborn/morphe-patches/commit/46ed853f1f15b5c8420b9431ef508c800a4e75c2))
+* **Aloa:** add support for `1.3.4` ([f0359e3](https://github.com/hxreborn/morphe-patches/commit/f0359e3be5a69cf592aade129486339fdc5f2c9b))
+* **Biobird Flashcards:** add support for `3.0.0` ([861b329](https://github.com/hxreborn/morphe-patches/commit/861b329c9cc9ab6483866e5c464486162d093029))
+* **Etsy:** add support for `8.0.0` ([67287b0](https://github.com/hxreborn/morphe-patches/commit/67287b0e10dd62ca99e16e39524783f281d45ae3))
+* **MemoNeet:** add support for `62.9` ([93e7ca5](https://github.com/hxreborn/morphe-patches/commit/93e7ca5b24350e37cab685754b9ef0deeb93938f))
+* **Moon+ Reader:** add support for `10.8` ([3b965db](https://github.com/hxreborn/morphe-patches/commit/3b965db12d5a625e97b8401379c4404f036b1e9b))
+* **MyMoveset:** add support for `1.5.0` ([12e01a8](https://github.com/hxreborn/morphe-patches/commit/12e01a829f5cd9509d6088217004726387fdb761))
+* **Notesnook:** add support for `3.4.15` ([5861290](https://github.com/hxreborn/morphe-patches/commit/58612903a218709dc67d6616f8ba3cce4f122ebb))
+* **One4Home Launcher:** add support for `0.5.84` ([6b575a9](https://github.com/hxreborn/morphe-patches/commit/6b575a9e6a0249e615da25fa8f6eca60e197ca0e))
+* **Opal:** add support for `4.15.0` ([0648d60](https://github.com/hxreborn/morphe-patches/commit/0648d60f372f460813d4707bbc061f9ed5f3d234))
+* **Proton Pass:** add support for `1.41.5` ([15ec075](https://github.com/hxreborn/morphe-patches/commit/15ec0752a5ca4a649097771e07fc0b6a7cd515d8))
+* **Proton VPN:** add support for `5.20.98.0` ([ca8b2ca](https://github.com/hxreborn/morphe-patches/commit/ca8b2ca2dcd0d19f3d645414decfd4610a3b51b7))
+* **QR & Barcode Scanner:** add support for `2.2.227` ([13cec07](https://github.com/hxreborn/morphe-patches/commit/13cec074323b7aa28511f047e0dd2f20a07e2ba0))
+* **Raindrop.io:** add support for `4.8.0` ([cb7b9c5](https://github.com/hxreborn/morphe-patches/commit/cb7b9c542adfdeecb987aecc7f309bc0c4f15a37))
+* **RateGlance:** add support for `1.18.6` ([572297d](https://github.com/hxreborn/morphe-patches/commit/572297d19b66637d641d3ee9910434adc39d8dfd))
+* **ReadEra:** add support for `26.10.18+2330` ([8d0b0ec](https://github.com/hxreborn/morphe-patches/commit/8d0b0ecb945677ba1889f2a61c89f7372c5b0553))
+* **Ringtone Maker:** add support for `1.02.01.1020` ([f0795da](https://github.com/hxreborn/morphe-patches/commit/f0795da05e8e416454d8fbf85ea1842bd9d68635))
+* **RISE:** add support for `Android V1.79.2` ([2599cb5](https://github.com/hxreborn/morphe-patches/commit/2599cb508dc2e37d335af788e46c08c0272b9e4f))
+* **Sygic:** add support for `26.6.2-121046` ([713cdd7](https://github.com/hxreborn/morphe-patches/commit/713cdd79cfb94c1aad3ace24ce328496b7fbc58d))
+* **Trainline:** add support for `438.0.0.183733` ([72faafb](https://github.com/hxreborn/morphe-patches/commit/72faafbcfc7eb6faa4e87c7a56aa4367f818d5f8))
+
 ## [1.56.0](https://github.com/hxreborn/morphe-patches/compare/v1.55.0...v1.56.0) (2026-10-20)
 
 ### Bug Fixes

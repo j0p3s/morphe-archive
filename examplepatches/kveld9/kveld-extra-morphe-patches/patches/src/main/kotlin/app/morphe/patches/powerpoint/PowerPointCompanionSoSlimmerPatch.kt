@@ -1,5 +1,6 @@
 package app.morphe.patches.powerpoint
 
+import app.morphe.patcher.patch.ResourcePatchContext
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patches.shared.Constants
 import app.morphe.patches.shared.LocaleUtils
@@ -19,8 +20,7 @@ val powerPointCompanionSoSlimmerPatch = rawResourcePatch(
         val strippedLibs = mutableListOf<String>()
 
         for (abi in TARGET_ABIS) {
-            val abiDir = get(abi)
-            val (stripped, freed) = stripCompanionLibsInAbi(abiDir, abi)
+            val (stripped, freed) = stripCompanionLibsInAbi(this, abi)
             strippedLibs.addAll(stripped)
             savedBytes += freed
         }
@@ -37,7 +37,7 @@ val powerPointCompanionSoSlimmerPatch = rawResourcePatch(
 
 private val TARGET_ABIS = listOf("lib/arm64-v8a", "lib/armeabi-v7a")
 
-private val COMPANION_SO_NAMES = listOf(
+private val COMPANION_SO_NAMES = setOf(
     "libhermes.so",
     "libreactnative.so",
 )
@@ -45,18 +45,20 @@ private val COMPANION_SO_NAMES = listOf(
 // Standard 4-byte ELF magic header: 0x7F, 'E', 'L', 'F'
 private val ELF_MAGIC = byteArrayOf(0x7F.toByte(), 0x45.toByte(), 0x4C.toByte(), 0x46.toByte())
 
-private fun stripCompanionLibsInAbi(abiDir: File, abiPath: String): Pair<List<String>, Long> {
-    if (!abiDir.isDirectory) return Pair(emptyList(), 0L)
-
+private fun stripCompanionLibsInAbi(context: ResourcePatchContext, abiPath: String): Pair<List<String>, Long> {
     val stripped = mutableListOf<String>()
     var saved = 0L
 
-    for (libName in COMPANION_SO_NAMES) {
-        val libFile = File(abiDir, libName)
+    val candidateEntries = context.listApkEntries("$abiPath/")
+        .filter { !it.endsWith('/') }
+        .filter { it.substringAfterLast('/') in COMPANION_SO_NAMES }
+
+    for (entryName in candidateEntries) {
+        val libFile = context.get(entryName)
         val freed = zeroElfBinaryIfFingerprintMatches(libFile)
         if (freed > 0L) {
             saved += freed
-            stripped.add("$abiPath/$libName")
+            stripped.add(entryName)
         }
     }
     return Pair(stripped, saved)

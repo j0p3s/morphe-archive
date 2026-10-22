@@ -1,5 +1,48 @@
 # Changelog
 
+## Unreleased
+
+### Reported issues
+
+- [#85](https://github.com/SysAdminDoc/HushMessenger/issues/85) New **Hide the recent photo card** switch under Photos and videos. Take a screenshot or a photo and Messenger puts a card above the message box offering to send it. With this on, the card doesn't show up. Anything you took is still in the gallery button when you want to send it. It starts off.
+- [#64](https://github.com/SysAdminDoc/HushMessenger/issues/64) With two gallery apps on the phone and neither set as the default, **Open your gallery app** sent you to a Samsung Gallery that listed photos only. Videos show up there now too, and Android's list of apps to pick from still holds just your galleries.
+
+### Changed and fixed
+
+- HushMessenger now patches Messenger 584.0.0.49.98 (version code 346814894) and no longer takes 583.0.0.29.95. That's the one arm64 build of 584 on [APKMirror](https://www.apkmirror.com/apk/facebook-2/messenger/facebook-messenger-584-0-0-49-98-release/) so far. Every switch was checked against it again, so update Messenger to 584 before you repatch.
+- **Hide inbox ads** is gone. Meta stopped selling Messenger inbox ads in November 2025, and Messenger 584 took out the ad cards the switch used to filter, so there's nothing left for it to hide. If you pick patches by hand in Morphe, it just won't be in the list anymore.
+- The six photo and video switches now have their own **Photos and videos** group, in Morphe's patch list and on the settings Controls tab alike: original quality photos and videos, **Fix videos that won't send**, the camera and gallery app switches, and **Hide the recent photo card**. Conversations had grown too long to scan. The Chats filter still shows them.
+- Hiding Quick setups with a long press now names the button that brings it back, **Quick setups section** under Your choices. The old message sent you to the App tab you were already on, and the button talked about a home page that doesn't exist.
+- A video picked in a chat whose access ran out before or during the send no longer gets **Fix videos that won't send** marked as failing in settings. It goes out the way Messenger would send it anyway.
+- If the phone's sound encoder won't start while a video's sound is being fixed, it's let go right away instead of staying held until Messenger closes.
+- The copies **Fix videos that won't send** makes of videos you pick now go a day after their last use, even if you never pick another video or you've turned the switch off. Messenger clears them when it starts and again while it's open as each one's day runs out. They used to sit in Messenger's cache until the next pick.
+- Android 12 and newer show only two lines of a pop-up message and cut the rest with "...", which hid the useful part of 27 of HushMessenger's. They're shorter now and fit, from the font file and backup messages to the camera, gallery and restart ones.
+- Restoring your choices pops up how many came back, plus "Changes paused" when the backup paused them. Skipped choices and Auto reply staying off used to run past the end of that message. Now the whole result stays written under the backup buttons.
+- When reading a choices file takes too long, the message says your choices didn't change. It used to warn that a saved file may be cut off, which is only true when saving one.
+- If settings can't open from the side menu or the Messenger logo, two short messages now say so and then name the other way in. One message was too long and lost its second half.
+- Picking a font file while **Use your own font** is off now says to turn the switch on, instead of telling you to restart Messenger. The file's name stays on the line under the button, where a long one can't push the rest off the message.
+- **Use system emoji** loads the phone's emoji font once, even when Messenger asks for it from several threads at the same moment. Each thread could load its own copy before.
+- When the message log can't save new messages (the phone's key store is busy, say), it tries again by itself 30 seconds later, then less often while it keeps failing. Those messages used to wait for the next notification and were lost if Messenger closed first.
+- **Back to defaults**, the other Quick setups and **Clear log** each show an Undo button at the top of settings for about 10 seconds, and the emptied log shows one too. Clear log still deletes the saved messages and their key right away. Undo writes them back from a copy kept in memory until the button goes, and leaving settings makes the change final. A switch you flipped again in the meantime stays the way you set it.
+- The **Patch controls** and **Restart Messenger** long-press shortcuts now tell your launcher when you use them, so it can rank them by use the way it does Messenger's own chat shortcuts.
+- On a Root Mount install, **Patch controls** and **Restart Messenger** never actually showed up on Messenger's icon. Android turned down the icons they used. They show up now.
+- Each way back into settings now has its own switch on the App tab, as asked in [HushFacebook#146](https://github.com/SysAdminDoc/HushFacebook/issues/146). Next to **Hide the Menu row** there's **Hide the icon shortcuts**, which takes **Patch controls** and **Restart Messenger** off the menu you get by long-pressing Messenger's home screen icon, and **Turn off the logo long press**. The last way in that's still on can't be switched off: its switch goes gray and says why, and if a saved choice leaves nothing else, the icon shortcuts come back by themselves. Pause and safe mode leave these switches alone, since they're how you get back in to undo either. If the logo long press is what lets the Menu row stay hidden, the row comes back after an update or a repatch until one long press on the logo opens settings again.
+- The two icon shortcuts now come from HushMessenger each time Messenger starts, on every install, which is what lets the new switch take them away. After updating, they show up again a moment after you first open Messenger. Messenger's own chat shortcuts can push them down that menu while it's open, so they move back to the top each time you leave Messenger. On a normal install, a copy you pinned to the home screen before this update stops working, so remove it and pin a new one. Copies pinned from now on turn gray while the shortcuts are hidden and work again once they're back.
+- When Messenger's chat shortcuts already fill everything Android lets one icon hold, the lowest of them now make room, so **Patch controls** and **Restart Messenger** still get on. Android refused to add them to a full icon before. Those are the same chat shortcuts Android drops when Messenger adds one to a full icon itself.
+- In the settings cards, the line between switches now sits below a switch's own buttons (Keep the Profile button, the bubble choices, the font file, message log and auto reply buttons) instead of between the switch and them. The last switch in a card no longer draws a second line just above the card's edge.
+
+### Docs
+
+- The README's troubleshooting list now covers a cloned Messenger showing the settings icon again, chats and calls notifying twice because of the Facebook app, and restoring chats with a PIN when the Google Drive restore errors out.
+
+### Checks
+
+- A release can't go public until the whole app has been walked with that exact bundle on a release phone or an emulator. The publish stage now takes the walk's receipt as `-Walk` and stops before the tag or GitHub if the walk wasn't a full pass, saw a Messenger crash, ran on some other device, or patched with a different bundle.
+- `scripts/walk-app.ps1` does that walk. It patches Messenger from the bundle, installs it in place on a leased phone or an emulator, opens both settings pages, a chat and the patched screens, then reads the crash buffer and writes the receipt publish asks for. Any Messenger crash fails the walk. Leaving out a page or a screen makes it partial, and neither one backs a release. The receipt also names the APK patched from the bundle and the one the phone actually ran, and publish wants them to match, so walking whatever was already installed (`-SkipPatch`) only counts when it's that same APK. A crash buffer the walk can't read fails it, and the script exits 0 only for a pass (2 for partial, 1 for a fail). A walk that finds the device busy keeps the APK it patched, so the next try goes straight to the device instead of patching again.
+- The development release check, the one a held build goes through, fails when the source has no bundle timestamp. Before, a bundle and a source both missing one counted as a match there. The full release check already refused it, and now it says why.
+- A Gradle run through this PC's build wrapper fails when the wrapper itself errors out before Gradle starts. It used to exit 0 and read as a pass.
+- Recording a Messenger build with `CompatReport.java --save` refuses an APK that isn't signed by Facebook or Meta, or whose signer apksigner can't read. A record pins the APK's checksum, so a re-signed copy could have been written down as the stock build. The release build stage also checks each stock APK against the checksum in its record before patching it, and CompatReport looks for Python as `py`, `python3` or `python` (never the Windows Store stub) instead of assuming `python`.
+
 ## 0.25.0 (2026-10-18)
 
 ### Reported issues

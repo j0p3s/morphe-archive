@@ -434,7 +434,7 @@ public class PatchFamilyTest {
                         + "reel watch history, Turn off double tap to like, Open comments with a gesture, Keep the reel speed, Hold a reel for 2x, "
                         + "Default comment order, Hide Meta AI comment summaries, Comment sheet options, Open comments "
                         + "at full height, Tag suggestions only after @, Tap to play, Resume long videos, Frame step, Default playback quality, "
-                        + "Picture-in-picture, Turn off HDR brightness, Skip silent parts, Keep the progress bar, Use the system font, "
+                        + "Picture-in-picture, Turn off HDR brightness, Skip silent parts, Keep feed videos muted, Keep the progress bar, Use the system font, "
                         + "Use the phone's emoji, Turn off haptics, Hide carrier data banners, Turn off screen transitions, Unlock app icons, Open links in "
                         + "external browser, Sanitize sharing links, Stop update prompts, Download any story, "
                         + "Download any reel, Download any video, Download any photo, Open on a chosen tab, Following "
@@ -457,7 +457,7 @@ public class PatchFamilyTest {
                         + "prompts, Don't send reel watch history, Turn off double tap to like, Open comments with a gesture, Keep the reel speed, "
                         + "Hold a reel for 2x, Default comment order, Hide Meta AI comment summaries, Comment sheet "
                         + "options, Open comments at full height, Tag suggestions only after @, Tap to play, Resume long videos, Frame step, Default playback "
-                        + "quality, Picture-in-picture, Turn off HDR brightness, Skip silent parts, Keep the progress bar, Use the "
+                        + "quality, Picture-in-picture, Turn off HDR brightness, Skip silent parts, Keep feed videos muted, Keep the progress bar, Use the "
                         + "system font, Use the phone's emoji, Turn off haptics, Hide carrier data banners, Turn off screen transitions, Unlock app icons, Open "
                         + "links in external browser, Sanitize sharing links, Stop update prompts, Download any "
                         + "story, Download any reel, Download any video, Download any photo, Open on a chosen tab, "
@@ -490,12 +490,13 @@ public class PatchFamilyTest {
                         + "hushfacebook_hide_share_group_buttons=on, hushfacebook_hide_share_people_row=off)",
                 PatchFamily.reportLines(EnumSet.of(PatchFamily.SHARE_SHEET_ITEMS), true).get(0));
         Settings.HIDE_SHARE_GROUP_BUTTONS.resetToDefault();
-        // The theme runs with Black cards off, and paused: only Black cards steps back.
-        assertEquals("AMOLED black theme: on (hushfacebook_amoled_flat_cards=off); stays in while paused: AMOLED black theme",
+        // The theme runs with its switches off, and paused: only Black cards and the lines step back.
+        assertEquals("AMOLED black theme: on (hushfacebook_amoled_flat_cards=off, hushfacebook_amoled_feed_gaps=off); "
+                        + "stays in while paused: AMOLED black theme",
                 PatchFamily.reportLines(EnumSet.of(PatchFamily.AMOLED_THEME), false).get(0));
         Settings.AMOLED_FLAT_CARDS.save(true);
-        assertEquals("AMOLED black theme: on, its switch off while paused (saved hushfacebook_amoled_flat_cards=on); "
-                        + "stays in while paused: AMOLED black theme",
+        assertEquals("AMOLED black theme: on, its switches off while paused (saved hushfacebook_amoled_flat_cards=on, "
+                        + "hushfacebook_amoled_feed_gaps=off); stays in while paused: AMOLED black theme",
                 PatchFamily.reportLines(EnumSet.of(PatchFamily.AMOLED_THEME), true).get(0));
         Settings.AMOLED_FLAT_CARDS.resetToDefault();
         // The reel button has a switch now, so the report says what it's set to.

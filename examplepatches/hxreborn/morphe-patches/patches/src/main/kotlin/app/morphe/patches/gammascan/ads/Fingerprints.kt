@@ -6,6 +6,7 @@ package app.morphe.patches.gammascan.ads
 
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.methodCall
+import app.morphe.patcher.string
 
 internal object BannerAdLoadFingerprint : Fingerprint(
     returnType = "V",
@@ -28,8 +29,5 @@ internal object InterstitialAdLoadFingerprint : Fingerprint(
 
 internal object NativeAdLoadFingerprint : Fingerprint(
     returnType = "V",
-    parameters = listOf("Landroid/content/Context;"),
-    filters = listOf(
-        methodCall(definingClass = "Lcom/google/android/gms/ads/AdLoader;", name = "loadAd"),
-    ),
+    filters = listOf(string("load_native_ads")),
 )

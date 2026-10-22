@@ -17,8 +17,8 @@ val hideAdsPatch = bytecodePatch(
     compatibleWith(AppCompatibilities.GAMMA_SCAN)
 
     execute {
-        BannerAdLoadFingerprint.matchSingle().method.returnEarly()
-        InterstitialAdLoadFingerprint.matchSingle().method.returnEarly()
+        BannerAdLoadFingerprint.matchOrNull()?.method?.returnEarly()
+        InterstitialAdLoadFingerprint.matchOrNull()?.method?.returnEarly()
         NativeAdLoadFingerprint.matchSingle().method.returnEarly()
     }
 }

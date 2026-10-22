@@ -20,9 +20,10 @@ _Supported version(s): 3.3.5, 3.3.4.2_
 
 | Patch | Description |
 |-------|-------------|
-| **Auto check-in & claim daily reward** | Claims the daily check-in reward on its own: opening the daily-rewards screen no longer waits for the check-in ad, the reward is granted right away. The missed-days restore and the day-10/20/30 milestone claim are untouched. |
+| **Auto check-in & claim daily reward** | Claims today's daily check-in and today's Daily Rewards rung on their own, once a day, a few seconds after the app has loaded them — no ad and nothing to tap. The missed-days restore and the day-10/20/30 milestone claim are untouched. |
 | **Bypass signature verification** | Disables Simosa's anti-tamper signature check so a re-signed APK launches normally instead of stalling on the splash / "version is not correct" dialog. |
 | **Dark theme (black background)** | Makes Simosa a dark app: screens, sheets, dialogs and menus use the dark palette (near-black background, light text) instead of the light one, including on Android 12+ where the app would otherwise take a light colour scheme from the wallpaper. The app's own red/orange branding and its white cards are left alone so text on them stays readable. |
+| **Remove Shop, Social+ and Lifestyle tabs** | Removes the Shop, Social+ and Lifestyle tabs from the bottom bar, leaving Home and Account. Nothing is deleted: those screens still exist and still open if the app routes to them (a deep link, a tile, a notification) — they just no longer take a tab. |
 | **Remove ads & tracking** | Removes every ad (interstitial, banner, daily-reward) and every tracker (Mixpanel, Firebase, Facebook, AppsFlyer) — app events, network sends, ad-SDK requests (Google Ads / AppLovin / AnyMind / Prebid), SDK auto-collection, and the ipify IP leak. The app then phones home only to its own Jazz API. |
 | **Remove daily check-in ads** | Removes the SocialPlus daily check-in / in-feed ads (FeedAdsManager banner + native loaders) and the day-10/20/30 milestone-claim RewardedAd (the award is still granted, just with no ad). Separate from "Remove ads & tracking" to keep that patch Morphe-Manager-safe; enable this one when patching with the desktop CLI. |
 
@@ -93,7 +94,7 @@ _Supported version(s): 18.8.0_
 | Patch | Description |
 |-------|-------------|
 | **Force dark mode** | Forces OLX into dark (night) mode regardless of the system theme, using the app's built-in -night resources via UiModeManager.setApplicationNightMode at startup. |
-| **Remove ads** | Removes native feed ads (Google GMA), the full-height ad slot, the "Buy with Delivery" promo section (bar, cards and View all), and the three item-page banner slots from OLX. Pinned to the 18.8.0 build (matches that build's obfuscated feed and item-page classes). |
+| **Remove ads** | Removes native feed ads (Google GMA), the full-height ad slot, the "Buy with Delivery" promo section (bar, cards and View all), the three item-page banner slots, and the home-screen banner slots from OLX. Pinned to the 18.8.0 build (matches that build's obfuscated feed, item-page and home classes). |
 
 ### OLX India (`com.olx.southasia`)
 

@@ -81,6 +81,15 @@ public final class SettingsActivity extends Activity {
     /** Shown above both pages while a change waits for Messenger to restart. */
     private LinearLayout restartRow;
     private TextView restartWaiting;
+    /** Shown above both pages for a few seconds after a Quick setup or Clear log, which act at once with no dialog. */
+    private Button undoButton;
+    /** What Undo does and when its time runs out. Main thread only, null when nothing can be taken back. */
+    private Runnable undoAction, undoExpiry;
+    /** While Undo can still put back the log a Clear took, the log's empty page shows an Undo too. */
+    private boolean messageLogUndo;
+    /** Between onStart and onStop. A Clear that finishes while settings are out of sight is final at once. */
+    private boolean started;
+    static final int UNDO_MILLIS = 10_000;
     static final int SAVE_CHOICES = 7101, READ_CHOICES = 7102, PICK_FONT = 7103;
     /** The names providers give fonts, and plain bytes for one that doesn't know a font. The copy checks what it really is. */
     static final String[] FONT_TYPES = {"font/ttf", "font/otf", "font/collection", "font/sfnt", "application/x-font-ttf",
@@ -107,9 +116,12 @@ public final class SettingsActivity extends Activity {
     private TextView fontStatus, fontSize, fontShift;
     private Button fontChoose, fontStop, fontPhone, fontSmaller, fontLarger, fontUp, fontDown;
     private LinearLayout fontAdjust;
-    /** #22's control and whether it could be turned on when it was built. */
-    private LinearLayout menuRowControl;
-    private boolean menuRowAvailable;
+    /**
+     * The switch for each way back in (#22, HushFacebook#146), and the help and reason each was built with. Turning one
+     * way off can change what the others say or whether they can turn off, so they're rebuilt when that changes.
+     */
+    private final Map<String, LinearLayout> wayControls = new java.util.LinkedHashMap<>();
+    private final Map<String, String> wayBuilt = new java.util.HashMap<>();
     /** The Quick setups heading and panel, hidden by a long press on either, and the line that says which way the choice is. */
     private TextView quickHeading, quickHomeStatus;
     private LinearLayout quickPanel;
@@ -123,6 +135,8 @@ public final class SettingsActivity extends Activity {
     private Button saveChoicesFile, readChoicesFile;
     private Button cancelChoicesFile;
     private TextView documentStatus;
+    /** The whole restore result. The toast holds only its first part, since Android 12+ cuts a toast after two lines. */
+    private TextView restoreStatus;
     private DocumentJob documentJob;
     static int documentTimeoutMillis = 30_000;
     private static final java.util.concurrent.Semaphore documentSlots = new java.util.concurrent.Semaphore(2);
@@ -130,9 +144,10 @@ public final class SettingsActivity extends Activity {
     private static Toast toast;
     static final String SUPPORT_PAGE = "https://ko-fi.com/X8K126YVER";
     /** Switches whose effect hasn't been confirmed on a phone. Each shows the Experimental badge. */
-    static final Set<String> EXPERIMENTAL = Set.of("ads", "pinned_chats", "nearby_scans", "phone_id_sync", "mark_read_button", "story_hold");
+    /** The switches that take a way into these settings away, each with a reason when it can't turn on. */
+    static final Set<String> WAYS_IN = Set.of("hide_menu_row", Settings.HIDE_ICON_SHORTCUTS, Settings.HIDE_LOGO_PRESS);
+    static final Set<String> EXPERIMENTAL = Set.of("pinned_chats", "nearby_scans", "phone_id_sync", "mark_read_button", "story_hold");
     static final String[][] CONTROLS = {
-        {"ads", "Hide inbox ads", "Hides ad cards in your chat list. Meta stopped selling these ads in November 2025, so this only matters if they come back.", "inbox"},
         {"people", "Hide People You May Know", "Hides suggested people in chats, search and stories, and on the People and Notifications tabs. Good if you only want people you know.", "inbox"},
         {"friend_requests", "Hide friend request cards", "Hides friend request cards in your chat list. It doesn't accept or decline anyone.", "inbox"},
         {"community_inbox", "Hide joined community chats", "Hides joined community chats from your main chat list. Search and community folders still show them. The list updates the next time it refreshes.", "inbox"},
@@ -161,14 +176,15 @@ public final class SettingsActivity extends Activity {
         {"event_prompts", "Hide event prompts", "Hides event promotion prompts inside chats.", "conversations"},
         {"typing", "Hide typing indicator", "Stops Messenger from showing others when you're typing, even in end-to-end encrypted chats.", "conversations"},
         {"use_system_emoji", "Use system emoji", "Shows emoji in your phone's own style instead of Messenger's built-in set.", "conversations"},
-        {"original_photo", "Send photos at original quality", "With HD on, sends JPEG photos at their full size, not a smaller copy. Location is still removed. Photos over 20 MB are still made smaller.", "conversations"},
-        {"original_video", "Send videos without re-encoding", "Sends a video as the original file when Messenger allows it, instead of a recompressed copy. Videos over 25 MB and edited videos are still compressed.", "conversations"},
-        {"xhe_audio", "Fix videos that won't send", "Videos whose only sound is xHE-AAC and some Samsung screen recordings fail with \"Unable to send\", even in stock Messenger. Whether you share one into Messenger or pick it in a chat, the sound is converted to regular AAC, or the tag Samsung's recorder adds is dropped, before it's sent. The picture isn't touched.", "conversations"},
         {"disappearing_swipe", "Turn off the swipe up for disappearing messages", "Swiping up at the bottom of a chat no longer turns on disappearing messages. Scrolling works as usual, and you can still set them in the chat's settings.", "conversations"},
         {"auto_reply", "Auto reply", "Answers a message with a reply you write below when it has words you pick, or any message if you leave the words empty. Replies go out through Messenger's own notification reply, encrypted chats too, at most once every five minutes per chat. One-to-one chats only unless you allow groups. A chat with disappearing messages on gets no notification reply from Messenger, so it isn't answered.", "conversations"},
-        {"system_camera", "Use the phone's camera app", "The camera button in a chat opens your phone's camera app. The photo opens in Messenger's editor, ready to send. Photos only.", "conversations"},
-        {"external_gallery", "Open your gallery app", "The gallery button in a chat opens your phone's own gallery app. What you pick opens in Messenger's editor for that chat, ready to send.", "conversations"},
         {"text_style", "Bold and italic text", "Select words you typed and pick Bold or Italic in the menu that pops up (it can be behind the three dots). Pick it again to undo. Bold changes the letters A to Z (accents are fine) and digits. Italic changes only the letters, and other alphabets stay as they are. They're special Unicode letters, so they show on any phone, but screen readers may read them oddly.", "conversations"},
+        {"original_photo", "Send photos at original quality", "With HD on, sends JPEG photos at their full size, not a smaller copy. Location is still removed. Photos over 20 MB are still made smaller.", "photos_videos"},
+        {"original_video", "Send videos without re-encoding", "Sends a video as the original file when Messenger allows it, instead of a recompressed copy. Videos over 25 MB and edited videos are still compressed.", "photos_videos"},
+        {"xhe_audio", "Fix videos that won't send", "Videos whose only sound is xHE-AAC and some Samsung screen recordings fail with \"Unable to send\", even in stock Messenger. Whether you share one into Messenger or pick it in a chat, the sound is converted to regular AAC, or the tag Samsung's recorder adds is dropped, before it's sent. The picture isn't touched.", "photos_videos"},
+        {"recent_media", "Hide the recent photo card", "Opening a chat right after you take a screenshot, photo or video no longer shows a card above the message box offering to send it. You can still pick it from the gallery.", "photos_videos"},
+        {"system_camera", "Use the phone's camera app", "The camera button in a chat opens your phone's camera app. The photo opens in Messenger's editor, ready to send. Photos only.", "photos_videos"},
+        {"external_gallery", "Open your gallery app", "The gallery button in a chat opens your phone's own gallery app. What you pick opens in Messenger's editor for that chat, ready to send.", "photos_videos"},
         {"external_browser", "Open web links externally", "Opens web links (http and https) in your default browser. Other link types work as before.", "links_bubbles"},
         {"bubbles", "Allow chat bubbles", "Choose Stock, Chat heads or Native Bubbles below. Native Bubbles needs Android 11 or newer, a supported account and notification permission. Restart Messenger after changing.", "links_bubbles"},
         {"analytics_uploads", "Stop analytics uploads", "Stops Messenger's background services from uploading usage statistics. It still records them on your phone, and they can upload after you turn this off.", "privacy"},
@@ -342,6 +358,7 @@ public final class SettingsActivity extends Activity {
 
     @Override protected void onStart() {
         super.onStart();
+        started = true;
         Settings.preferences.registerOnSharedPreferenceChangeListener(preferenceListener);
     }
 
@@ -352,6 +369,10 @@ public final class SettingsActivity extends Activity {
     }
 
     @Override protected void onStop() {
+        // Leaving settings makes a Quick setup or a Clear final, one still running included.
+        started = false;
+        if (messageLogClearJob != null) messageLogClearJob.undoable = false;
+        endUndo();
         Settings.preferences.unregisterOnSharedPreferenceChangeListener(preferenceListener);
         super.onStop();
     }
@@ -389,35 +410,64 @@ public final class SettingsActivity extends Activity {
         view.setOnLongClickListener(held -> {
             Settings.preferences.edit().putBoolean(HIDE_QUICK_SETUPS, true).apply();
             showQuickSetups();
-            feedback(text.get("quick_setups_hidden", text.format("app")), Toast.LENGTH_LONG);
+            // The section is hidden from the App tab, so the toast names the button on this tab that brings it back.
+            feedback(text.get("quick_setups_hidden", text.format("quick_setups_home"), text.format("choices")), Toast.LENGTH_LONG);
             return true;
         });
     }
 
-    private LinearLayout menuRowControl() {
-        return controlRow("hide_menu_row", text.format("hide_menu_row"),
-            text.format(Settings.logoOpensSettings() ? "hide_menu_row_help" : "hide_menu_row_help_without_logo"), false);
+    /** The help a way's switch shows, which names only the ways back that are still on. */
+    private String wayHelp(String key) {
+        if (!"hide_menu_row".equals(key)) return key + "_help";
+        if (!Settings.iconShortcutsShown(this)) return Settings.logoPressOn() ? "hide_menu_row_help_without_shortcut" : "hide_menu_row_help_plain";
+        return Settings.logoPressOn() ? "hide_menu_row_help" : "hide_menu_row_help_without_logo";
     }
 
-    /** Swaps the Hide the Menu row control for one built with its current availability and reason. */
-    private void rebuildMenuRowControl() {
-        LinearLayout parent = (LinearLayout) menuRowControl.getParent();
-        if (parent == null) return;
-        switches.remove(menuRowControl.findViewWithTag("hide_menu_row"));
-        int at = parent.indexOfChild(menuRowControl);
-        ViewGroup.LayoutParams params = menuRowControl.getLayoutParams();
-        menuRowAvailable = Settings.available("hide_menu_row");
-        menuRowControl = menuRowControl();
-        parent.removeViewAt(at);
-        parent.addView(menuRowControl, at, params);
+    /** Why a way's switch can't turn on, or null when it can. */
+    private String wayReason(String key) {
+        if (Settings.available(key)) return null;
+        if (!"hide_menu_row".equals(key)) return "last_way_in";
+        if (Settings.iconShortcutsShown(this)) return "menu_row_needs_shortcut";
+        return Settings.logoPressOn() ? "menu_row_needs_logo" : "menu_row_needs_way";
+    }
+
+    private LinearLayout wayControl(String key) {
+        String help = wayHelp(key);
+        wayBuilt.put(key, help + "|" + wayReason(key));
+        LinearLayout row = controlRow(key, text.format(key), text.format(help), false);
+        wayControls.put(key, row);
+        return row;
+    }
+
+    /** Swaps each way's switch whose help or reason has changed for one built with the current ones. */
+    private void rebuildWayControls() {
+        for (String key : new ArrayList<>(wayControls.keySet())) {
+            LinearLayout old = wayControls.get(key);
+            LinearLayout parent = (LinearLayout) old.getParent();
+            if (parent == null || (wayHelp(key) + "|" + wayReason(key)).equals(wayBuilt.get(key))) continue;
+            switches.remove(old.findViewWithTag(key));
+            int at = parent.indexOfChild(old);
+            ViewGroup.LayoutParams params = old.getLayoutParams();
+            LinearLayout row = wayControl(key);
+            parent.removeViewAt(at);
+            parent.addView(row, at, params);
+        }
     }
 
     private String accessHelpText() {
         // The Menu row patch also makes the Messenger logo open settings where it finds the logo's handler, and that keeps
-        // working while the row is hidden.
-        boolean logo = Settings.logoOpensSettings();
+        // working while the row is hidden, unless its own switch turns it off.
+        boolean logo = Settings.logoPressOn();
+        boolean menuRow = accessHelpMenuRow && !Settings.menuRowHidden();
+        if (!Settings.iconShortcutsShown(this)) {
+            StringBuilder ways = new StringBuilder();
+            if (menuRow) ways.append(text.get("way_menu")).append(' ');
+            if (logo) ways.append(text.get("way_logo")).append(' ');
+            if (Settings.drawerIconShown(this)) ways.append(text.get("way_drawer")).append(' ');
+            return ways.append(text.get("way_shortcuts_hidden")).toString();
+        }
         if (!accessHelpMenuRow) return text.get(accessHelpId);
-        if (Settings.menuRowHidden()) return text.get(accessHelpId + (logo ? "_logo" : ""));
+        if (!menuRow) return text.get(accessHelpId + (logo ? "_logo" : ""));
         return text.get(accessHelpId + (logo ? "_menu" : "_menu_without_logo"));
     }
 
@@ -429,8 +479,9 @@ public final class SettingsActivity extends Activity {
             }
             return;
         }
-        // Opening settings from the long-press shortcut can bring this screen back rather than a new one.
-        if (menuRowControl != null && Settings.available("hide_menu_row") != menuRowAvailable) rebuildMenuRowControl();
+        // Opening settings from the long-press shortcut can bring this screen back rather than a new one, and turning one
+        // way in off changes what the others can do.
+        rebuildWayControls();
         if (accessHelp != null) {
             String help = accessHelpText();
             if (!help.contentEquals(accessHelp.getText())) accessHelp.setText(help);
@@ -544,6 +595,49 @@ public final class SettingsActivity extends Activity {
         restartRow.addView(restartNow, restartParams);
         restartRow.setVisibility(View.GONE);
         ui.add(header, restartRow, 12);
+        undoButton = ui.button("");
+        undoButton.setTag("undo");
+        undoButton.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        undoButton.setOnClickListener(view -> undo());
+        undoButton.setVisibility(View.GONE);
+        ui.add(header, undoButton, 12);
+    }
+
+    /** Shows Undo for [what] until it's tapped, its time runs out, something else takes its place or settings close. */
+    private void offerUndo(String what, Runnable action) {
+        endUndo();
+        undoAction = action;
+        undoButton.setText(text.get("undo_action", what));
+        undoButton.setVisibility(View.VISIBLE);
+        long millis = UNDO_MILLIS;
+        // TalkBack and Switch Access users can ask for longer, and this timeout takes a button away.
+        android.view.accessibility.AccessibilityManager access = getSystemService(android.view.accessibility.AccessibilityManager.class);
+        if (Build.VERSION.SDK_INT >= 29 && access != null) millis = access.getRecommendedTimeoutMillis(UNDO_MILLIS,
+            android.view.accessibility.AccessibilityManager.FLAG_CONTENT_TEXT | android.view.accessibility.AccessibilityManager.FLAG_CONTENT_CONTROLS);
+        undoExpiry = this::endUndo;
+        undoButton.postDelayed(undoExpiry, millis);
+    }
+
+    private void undo() {
+        Runnable action = undoAction;
+        // The log's page shows what the undo brings back once it's written, not an empty page in between.
+        messageLogUndo = false;
+        View sheetUndo = messageLogList == null ? null : messageLogList.findViewWithTag("message_log_undo");
+        if (sheetUndo != null) sheetUndo.setEnabled(false);
+        endUndo();
+        if (action != null) action.run();
+    }
+
+    /** Lets go of what Undo held, so the change stands, and hides the button. */
+    private void endUndo() {
+        if (undoExpiry != null) undoButton.removeCallbacks(undoExpiry);
+        undoExpiry = null;
+        undoAction = null;
+        if (undoButton != null) undoButton.setVisibility(View.GONE);
+        if (messageLogUndo) {
+            messageLogUndo = false;
+            if (messageLogList != null) loadMessageLog();
+        }
     }
 
     /**
@@ -685,6 +779,11 @@ public final class SettingsActivity extends Activity {
                 groupBody = ui.column();
                 groupBody.setPadding(ui.dp(16), ui.dp(4), ui.dp(16), ui.dp(4));
                 groupBody.setBackground(ui.shape(ui.surface, ui.line, 12));
+                // Lines only between shown controls: none above the first, none over the card's own border under the last.
+                android.graphics.drawable.GradientDrawable divider = ui.shape(ui.line, 0, 0);
+                divider.setSize(1, ui.dp(1));
+                groupBody.setDividerDrawable(divider);
+                groupBody.setShowDividers(LinearLayout.SHOW_DIVIDER_MIDDLE);
                 ui.add(group, groupBody, 10);
                 ui.add(content, group, 24);
                 groups.add(group);
@@ -1118,7 +1217,9 @@ public final class SettingsActivity extends Activity {
                     if (wrote) OwnFont.restore(prefs, OwnFont.NAME_KEY, before);
                 }
             });
-            return words.get("font_file_set", name);
+            // With the switch off a restart changes nothing, so the toast names the switch instead. The status line
+            // under it names the file, which can be too long for a toast.
+            return words.get(prefs.getBoolean(OwnFont.KEY, false) ? "font_file_set" : "font_file_set_off");
         } catch (FontFile.Refused refused) {
             android.util.Log.i("HushMessenger", "Font file refused: " + refused.reason);
             switch (refused.reason) {
@@ -1238,7 +1339,7 @@ public final class SettingsActivity extends Activity {
         if (!available) description += " " + text.format(CameraActivity.KEY.equals(key) ? "camera_unsupported"
             : GalleryPicker.KEY.equals(key) ? "gallery_unsupported"
             : TextStyleActivity.KEY.equals(key) ? "text_style_unsupported"
-            : "hide_menu_row".equals(key) ? "menu_row_needs_shortcut"
+            : WAYS_IN.contains(key) ? wayReason(key)
             : "bubbles".equals(key) && Build.VERSION.SDK_INT >= 30 ? "bubble_unsupported" : "unavailable");
         LinearLayout row = ui.row();
         LinearLayout labels = ui.column();
@@ -1298,6 +1399,12 @@ public final class SettingsActivity extends Activity {
                 : text.get(checked ? "choice_on" : "choice_off", title), Toast.LENGTH_SHORT);
             if ("light".equals(key)) refreshChoices();
             if ("hide_drawer_icon".equals(key)) applyDrawerIcon(this, checked);
+            // The icon shortcuts follow their switch now, and stand in when another way in goes while they're hidden.
+            if (Settings.HIDE_ICON_SHORTCUTS.equals(key) || (Settings.HIDE_LOGO_PRESS.equals(key) || "hide_drawer_icon".equals(key))
+                    && Settings.preferences.getBoolean(Settings.HIDE_ICON_SHORTCUTS, false)) HostScreens.refreshShortcuts(this, () -> runOnUiThread(() -> {
+                // Hide the Menu row asks whether Patch controls is published, which is known only now.
+                if (!isFinishing() && !isDestroyed()) refreshChoices();
+            }));
         });
         row.setOnClickListener(view -> { if (control.isEnabled()) control.toggle(); });
         row.setEnabled(available);
@@ -1330,12 +1437,8 @@ public final class SettingsActivity extends Activity {
                 return super.performAccessibilityAction(host, action, arguments);
             }
         });
+        // A group draws the lines between its controls, so a control's own buttons sit above the line, not below it.
         row.setBackground(ui.interactive(ui.surface, 0, 0));
-        if (divided) {
-            row.setBackground(new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[] {
-                ui.shape(ui.line, 0, 0), new android.graphics.drawable.InsetDrawable(ui.interactive(ui.surface, 0, 0), 0, 0, 0, ui.dp(1))
-            }));
-        } else row.setBackground(ui.interactive(ui.surface, 0, 0));
         row.setPadding(0, ui.dp(divided ? 16 : 0), 0, ui.dp(divided ? 16 : 0));
         return row;
     }
@@ -1395,12 +1498,19 @@ public final class SettingsActivity extends Activity {
             drawerHelp.setTag("drawer_help");
             ui.add(access, drawerHelp, 14);
         }
-        // #22: only the long-press shortcut left, once it has proved it works here.
+        wayControls.clear();
+        wayBuilt.clear();
+        // #22: the Menu row can go once another way back has proved it works here.
         if (menuRow) {
             ui.rule(access, 12);
-            menuRowAvailable = Settings.available("hide_menu_row");
-            menuRowControl = menuRowControl();
-            ui.add(access, menuRowControl, 10);
+            ui.add(access, wayControl("hide_menu_row"), 10);
+        }
+        // HushFacebook#146: every install has the icon shortcuts, and the logo's long press comes with the Menu row.
+        ui.rule(access, 12);
+        ui.add(access, wayControl(Settings.HIDE_ICON_SHORTCUTS), 10);
+        if (Settings.logoOpensSettings()) {
+            ui.rule(access, 12);
+            ui.add(access, wayControl(Settings.HIDE_LOGO_PRESS), 10);
         }
         if (drawerAlias && !hosted) {
             TextView sharedInstall = ui.text(text.get("shared_install_help"), 13, ui.muted, false);
@@ -1505,6 +1615,11 @@ public final class SettingsActivity extends Activity {
         documentStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
         documentStatus.setVisibility(View.GONE);
         ui.add(choices, documentStatus, 8);
+        restoreStatus = ui.text("", 13, ui.muted, false);
+        restoreStatus.setTag("choices_restore_status");
+        restoreStatus.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
+        restoreStatus.setVisibility(View.GONE);
+        ui.add(choices, restoreStatus, 8);
         cancelChoicesFile = ui.button(text.get("cancel_choices_file"));
         cancelChoicesFile.setTag("cancel_choices_file");
         cancelChoicesFile.setVisibility(View.GONE);
@@ -1612,6 +1727,9 @@ public final class SettingsActivity extends Activity {
         java.util.function.Predicate<String> settable = "defaults".equals(name) ? Settings.installed::contains
             : key -> Settings.installed.contains(key) && Settings.available(key);
         java.util.Map<String, Boolean> changes = QuickSetups.changes(values, Settings.preferences, settable);
+        // What each changed key held, null for one never saved, so Undo puts back exactly that.
+        java.util.Map<String, Boolean> before = new java.util.HashMap<>();
+        for (String key : changes.keySet()) before.put(key, Settings.preferences.contains(key) ? Settings.preferences.getBoolean(key, false) : null);
         if (!changes.isEmpty()) {
             SharedPreferences.Editor edit = Settings.preferences.edit();
             for (java.util.Map.Entry<String, Boolean> change : changes.entrySet()) edit.putBoolean(change.getKey(), change.getValue());
@@ -1620,6 +1738,25 @@ public final class SettingsActivity extends Activity {
         refreshChoices();
         feedback(!changes.isEmpty() ? text.count("quick_changed", changes.size())
             : text.get(QuickSetups.anySettable(values, settable) ? "quick_unchanged" : "quick_missing"), Toast.LENGTH_SHORT);
+        if (!changes.isEmpty()) offerUndo(text.format("quick_" + name), () -> undoQuickSetup(changes, before));
+    }
+
+    /** Puts back what a Quick setup changed, except a switch flipped again since, which stays as it is now. */
+    private void undoQuickSetup(java.util.Map<String, Boolean> changes, java.util.Map<String, Boolean> before) {
+        SharedPreferences.Editor edit = Settings.preferences.edit();
+        int restored = 0;
+        for (java.util.Map.Entry<String, Boolean> change : changes.entrySet()) {
+            String key = change.getKey();
+            boolean set = change.getValue();
+            if (Settings.preferences.getBoolean(key, !set) != set) continue;
+            Boolean old = before.get(key);
+            if (old == null) edit.remove(key);
+            else edit.putBoolean(key, old);
+            restored++;
+        }
+        edit.apply();
+        refreshChoices();
+        feedback(text.count("quick_undone", restored), Toast.LENGTH_SHORT);
     }
 
     private void copySetup() {
@@ -2018,6 +2155,13 @@ public final class SettingsActivity extends Activity {
                         empty.addView(accent, new LinearLayout.LayoutParams(ui.dp(36), ui.dp(4)));
                         ui.add(empty, ui.text(text.get("message_log_empty"), 18, ui.text, true), 16);
                         ui.add(empty, ui.text(text.get(Settings.wouldUse(MessageLog.KEY) ? "message_log_empty_on" : "message_log_empty_off"), 14, ui.muted, false), 8);
+                        // The settings page's Undo sits behind this sheet.
+                        if (messageLogUndo) {
+                            Button undo = ui.button(text.get("undo"));
+                            undo.setTag("message_log_undo");
+                            undo.setOnClickListener(view -> undo());
+                            ui.add(empty, undo, 16);
+                        }
                         ui.add(list, empty, result.setAside ? 12 : 0);
                     }
                 }
@@ -2332,27 +2476,58 @@ public final class SettingsActivity extends Activity {
         if (!job.notified) {
             job.notified = true;
             feedback(text.get(job.cleared ? "message_log_cleared" : "message_log_clear_failed"), Toast.LENGTH_LONG);
+            // Undo gets the only copy of what went, and nothing is offered after a failed or empty clear.
+            List<MessageLog.Entry> removed = job.removed;
+            job.removed = null;
+            if (started && job.undoable && job.cleared && removed != null && !removed.isEmpty()) {
+                offerUndo(text.format("message_log_clear"), () -> restoreMessageLog(removed));
+                messageLogUndo = true;
+            }
         }
         if (messageLogList != null) loadMessageLog();
     }
+
+    /** Undo for Clear log: writes back the copy the clear kept, off the main thread, ahead of anything logged since. */
+    private void restoreMessageLog(List<MessageLog.Entry> removed) {
+        MESSAGE_LOG_WORK.execute(() -> {
+            boolean restored = MessageLog.restore(removed);
+            runOnUiThread(() -> {
+                if (isFinishing() || isDestroyed()) return;
+                feedback(text.get(restored ? "message_log_restored" : "message_log_restore_failed"), Toast.LENGTH_LONG);
+                if (messageLogList != null) loadMessageLog();
+            });
+        });
+    }
+
+    /** Clears and their Undos run one at a time in the order they were tapped, so a Clear right after Undo stays cleared. */
+    private static final java.util.concurrent.ExecutorService MESSAGE_LOG_WORK = java.util.concurrent.Executors.newSingleThreadExecutor(work -> {
+        Thread thread = new Thread(work, "HushMessageLogWork");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     /** Only the work and its outcome survive rotation. The worker never owns a screen or chat text. */
     private static final class MessageLogClearJob {
         java.lang.ref.WeakReference<SettingsActivity> owner;
         boolean finished, cleared, notified;
+        /** Cleared when settings stop while this runs, so coming back before it ends doesn't bring Undo back. */
+        boolean undoable = true;
+        /** What the clear took, until the page hands it to Undo. */
+        List<MessageLog.Entry> removed;
 
         MessageLogClearJob(SettingsActivity activity) { owner = new java.lang.ref.WeakReference<>(activity); }
 
         void start() {
-            new Thread(() -> {
-                boolean result = MessageLog.clear();
+            MESSAGE_LOG_WORK.execute(() -> {
+                MessageLog.Cleared result = MessageLog.clearForUndo();
                 new android.os.Handler(android.os.Looper.getMainLooper()).post(() -> {
-                    cleared = result;
+                    cleared = result.cleared;
+                    removed = result.removed;
                     finished = true;
                     SettingsActivity activity = owner.get();
                     if (activity != null) activity.messageLogCleared(this);
                 });
-            }, "HushMessageLogClear").start();
+            });
         }
     }
 
@@ -2385,6 +2560,7 @@ public final class SettingsActivity extends Activity {
 
     private void importChoices() {
         documentGeneration++;
+        restoreStatus.setVisibility(View.GONE);
         try {
             ClipboardManager clipboard = getSystemService(ClipboardManager.class);
             if (clipboard == null || !clipboard.hasPrimaryClip()) {
@@ -2427,16 +2603,27 @@ public final class SettingsActivity extends Activity {
         if (autoReplyLeftOff) supported.remove(AutoReply.KEY);
         String autoReply = autoReplyLeftOff ? " " + text.get("import_auto_reply_off") : "";
         if (supported.isEmpty()) {
-            feedback((autoReplyLeftOff ? text.get("import_auto_reply_off") : text.get("import_no_choices")) + skipped, Toast.LENGTH_LONG);
+            restoreResult(autoReplyLeftOff ? text.get("import_auto_reply_off") : text.get("import_no_choices"), skipped);
             return;
         }
         SharedPreferences.Editor editor = Settings.preferences.edit();
         for (Map.Entry<String, Boolean> choice : supported.entrySet()) editor.putBoolean(choice.getKey(), choice.getValue());
         editor.apply();
         refreshChoices();
-        // A backup can carry the pause, and a restored pause is easy to miss.
+        // A backup can carry the pause, and a restored pause is easy to miss, so it stays in the toast.
         String paused = Boolean.TRUE.equals(supported.get("paused")) ? " " + text.get("changes_paused") + "." : "";
-        feedback(text.count("imported", supported.size()) + paused + autoReply + skipped, Toast.LENGTH_LONG);
+        restoreResult(text.count("imported", supported.size()) + paused, autoReply + skipped);
+    }
+
+    /**
+     * The headline goes in the toast. With notes after it, the whole result also stays on the card under the buttons.
+     * Both parts are whole SettingsText sentences, already translated, so joining them adds no untranslated text.
+     */
+    @android.annotation.SuppressLint("SetTextI18n")
+    private void restoreResult(String headline, String notes) {
+        feedback(headline, Toast.LENGTH_LONG);
+        restoreStatus.setText(headline + notes);
+        restoreStatus.setVisibility(notes.isEmpty() ? View.GONE : View.VISIBLE);
     }
 
     @Override protected void onActivityResult(int request, int result, Intent data) {
@@ -2470,6 +2657,7 @@ public final class SettingsActivity extends Activity {
         DocumentJob job = new DocumentJob(this, uri, request, export);
         documentJob = job;
         documentBusy = true;
+        restoreStatus.setVisibility(View.GONE);
         saveChoicesFile.setEnabled(false);
         readChoicesFile.setEnabled(false);
         cancelChoicesFile.setVisibility(View.VISIBLE);
@@ -2542,12 +2730,14 @@ public final class SettingsActivity extends Activity {
             this.export = export;
             savedMessage = screen.text.get("choices_file_saved");
             failedMessage = screen.text.get("export_failed");
-            timeoutMessage = screen.text.get("choices_file_timeout");
+            // A read that runs out of time changes nothing. Only a save can leave a cut-off file behind.
+            String timeout = request == READ_CHOICES ? "choices_file_timeout_read" : "choices_file_timeout";
+            timeoutMessage = screen.text.get(timeout);
             generation = screen.documentGeneration;
             before = ChoiceCodec.encode(Settings.preferences, Settings.installed);
             deadline = () -> {
                 SettingsActivity current = owner.get();
-                if (current != null && current.documentJob == this) current.cancelDocumentJob("choices_file_timeout");
+                if (current != null && current.documentJob == this) current.cancelDocumentJob(timeout);
                 else if (!canceled) {
                     cancel();
                     Toast.makeText(context, timeoutMessage, Toast.LENGTH_LONG).show();
@@ -2868,14 +3058,15 @@ public final class SettingsActivity extends Activity {
         // Every word typed, in any order, with accents and case ignored (SettingsSearch).
         List<String> terms = SettingsSearch.terms(query);
         clearQuery.setVisibility(query.isEmpty() ? View.GONE : View.VISIBLE);
-        String drawerWords = "hide app drawer icon launcher settings menu row " + text.get("hide_drawer_icon") + " " + text.get("hide_menu_row");
+        String drawerWords = "hide app drawer icon launcher settings menu row shortcuts " + text.get("hide_drawer_icon") + " "
+            + text.get("hide_menu_row") + " " + text.get("hide_icon_shortcuts") + " " + text.get("hide_logo_press");
         // One letter matches almost anything, so the link waits for a second one.
         drawerSearchLink.setVisibility(controlRows.isEmpty() || (query.trim().length() >= 2 && SettingsSearch.matches(terms, drawerWords)) ? View.VISIBLE : View.GONE);
         int visible = 0;
         for (int i = 0; i < controlRows.size(); i++) {
             String[] spec = installedControls.get(i);
             String bucket = "inbox".equals(spec[3]) ? "inbox" :
-                ("conversations".equals(spec[3]) || "stickers".equals(spec[3])) ? "chats" : "more";
+                ("conversations".equals(spec[3]) || "photos_videos".equals(spec[3]) || "stickers".equals(spec[3])) ? "chats" : "more";
             // A switch inside a control's block is found by its own words too.
             String inside = "facebook".equals(spec[0]) ? text.get("facebook_keep_profile") + " " + text.get("facebook_keep_profile_help") : "";
             boolean match = ("all".equals(category) || category.equals(bucket)) && SettingsSearch.matches(terms, spec[1], spec[2],

@@ -407,6 +407,8 @@ public final class Settings {
     }
     /** Asked each time a chat's swipe up for disappearing messages could start; true keeps the gesture from starting. */
     public static boolean blockDisappearingSwipe() { return enabled("disappearing_swipe"); }
+    /** Asked each time a chat looks for a photo or video taken just before it opened; true shows no card for it. */
+    public static boolean hideRecentMedia() { return enabled("recent_media"); }
     /** Messenger's own original-upload check allows 25 MB, so a bigger video keeps its re-encode. */
     static final long ORIGINAL_VIDEO_MAX_BYTES = 25L * 1024 * 1024;
     /**
@@ -583,6 +585,7 @@ public final class Settings {
             return context == null || TextStyleActivity.present(context);
         }
         if ("hide_menu_row".equals(key)) return menuRowCanHide();
+        if (HIDE_ICON_SHORTCUTS.equals(key) || HIDE_LOGO_PRESS.equals(key)) return anotherWayIn(key);
         if (!"bubbles".equals(key)) return true;
         if (Build.VERSION.SDK_INT < 30) return false;
         if (!HostScreens.started) HostScreens.initializeLate();
@@ -810,12 +813,53 @@ public final class Settings {
     }
 
     /**
-     * The Menu row can stay out only once the long-press shortcut has opened settings here and is still published. If
-     * the shortcut goes missing, as after a Root Mount start that couldn't publish it, the row comes back.
+     * The patched build a long press on the logo last opened settings on, the same proof for that way in. It holds for
+     * that build only: after an update or a repatch the patch can still find the logo's handler while Messenger never
+     * calls it, so one press has to work again.
+     */
+    static final String LOGO_USED = "logo_used_build";
+
+    static boolean logoPressProven(Context context) {
+        SharedPreferences prefs = preferences;
+        String build = patchedBuild(context);
+        return prefs != null && build != null && build.equals(prefs.getString(LOGO_USED, null));
+    }
+
+    /**
+     * This Messenger install and the HushMessenger version patched into it. A Root Mount repatch keeps Messenger's
+     * install time, so the version is what tells a new patch apart. Null when the install time is unknown.
+     */
+    static String patchedBuild(Context context) {
+        Long install = installedAt(context);
+        return install == null ? null : install + "/" + BuildConfig.VERSION_NAME;
+    }
+
+    private static volatile Long installedAt;
+
+    /** When this Messenger install went in, read once: an update or a repatch ends the process. Null when unknown. */
+    static Long installedAt(Context context) {
+        Long known = installedAt;
+        if (known != null || context == null) return known;
+        try {
+            known = context.getPackageManager().getPackageInfo(context.getPackageName(), 0).lastUpdateTime;
+        } catch (android.content.pm.PackageManager.NameNotFoundException | RuntimeException error) {
+            return null;
+        }
+        installedAt = known;
+        return known;
+    }
+
+    /**
+     * The Menu row can stay out only once another way in has opened settings here and is still on: the logo long press,
+     * or the long-press shortcut while it's published. If neither is left, as after a Root Mount start that couldn't
+     * publish the shortcut, the row comes back.
      */
     static boolean menuRowCanHide() {
         SharedPreferences prefs = preferences;
-        return prefs != null && prefs.getBoolean(SHORTCUT_USED, false) && HostScreens.controlsShortcutPresent(appContext);
+        if (prefs == null) return false;
+        if (logoPressOn() && logoPressProven(appContext)) return true;
+        return !prefs.getBoolean(HIDE_ICON_SHORTCUTS, false) && prefs.getBoolean(SHORTCUT_USED, false)
+            && HostScreens.controlsShortcutPresent(appContext);
     }
 
     static boolean menuRowHidden() {
@@ -828,6 +872,57 @@ public final class Settings {
 
     static boolean logoOpensSettings() {
         return installed.contains(LOGO_LONG_PRESS);
+    }
+
+    /**
+     * The ways back into settings each have a switch (HushFacebook#146): these two, Hide the Menu row and Hide app
+     * drawer icon. They aren't controls, so Pause and safe mode leave them as they are, since each is a way back in to
+     * undo either.
+     */
+    static final String HIDE_ICON_SHORTCUTS = "hide_icon_shortcuts";
+    static final String HIDE_LOGO_PRESS = "hide_logo_press";
+
+    /** Whether a long press on the Messenger logo opens settings: patched in and not switched off. */
+    static boolean logoPressOn() {
+        SharedPreferences prefs = preferences;
+        return logoOpensSettings() && (prefs == null || !prefs.getBoolean(HIDE_LOGO_PRESS, false));
+    }
+
+    /** Whether the settings icon in the app drawer is there to tap, which a Root Mount install never has. */
+    static boolean drawerIconShown(Context context) {
+        if (context == null || drawerIconHidden()) return false;
+        try {
+            android.content.pm.PackageManager packages = context.getPackageManager();
+            android.content.ComponentName alias = new android.content.ComponentName(context, SettingsActivity.DRAWER_ALIAS);
+            packages.getActivityInfo(alias, android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS);
+            return !HostScreens.hosted(context);
+        } catch (android.content.pm.PackageManager.NameNotFoundException | RuntimeException missing) {
+            return false;
+        }
+    }
+
+    /**
+     * Whether Patch controls and Restart Messenger belong on the app icon's long-press menu: their switch, or on anyway
+     * when no other way back in is left. The Menu row counts whenever it's patched in, since it comes back by itself
+     * once the shortcut and the logo press are both gone.
+     */
+    static boolean iconShortcutsShown(Context context) {
+        SharedPreferences prefs = preferences;
+        if (prefs == null || !prefs.getBoolean(HIDE_ICON_SHORTCUTS, false)) return true;
+        return !(logoPressOn() || installed.contains("menu_row") || drawerIconShown(context));
+    }
+
+    /**
+     * Whether [key], one of the hide switches for a way back in, can be turned on: only while another way stays. One
+     * already on can always be turned off.
+     */
+    private static boolean anotherWayIn(String key) {
+        SharedPreferences prefs = preferences;
+        if (prefs == null || prefs.getBoolean(key, false)) return true;
+        Context context = appContext;
+        boolean menuRow = installed.contains("menu_row") && !menuRowHidden();
+        if (HIDE_ICON_SHORTCUTS.equals(key)) return logoPressOn() || menuRow || drawerIconShown(context);
+        return iconShortcutsShown(context) || menuRow || drawerIconShown(context);
     }
 
     private static final String KEPT_UNSENT_KEY = "kept_unsent_ids";
@@ -875,31 +970,40 @@ public final class Settings {
     /** Android's standard color emoji font, used when the phone can't say which font it draws emoji with. */
     static final String NOTO_EMOJI_FONT = "/system/fonts/NotoColorEmoji.ttf";
     /** Null asks Android which font it draws emoji with. Tests point this at a missing file. */
-    static String systemEmojiFont;
-    static android.graphics.Typeface systemEmoji;
-    static boolean systemEmojiMissing;
+    static volatile String systemEmojiFont;
+    /** Read without a lock by every hook thread that draws emoji, and loaded once under Settings.class. */
+    static volatile android.graphics.Typeface systemEmoji;
+    static volatile boolean systemEmojiMissing;
     /** Which font the emoji typeface came from, for diagnostics and tests. */
-    static String systemEmojiSource;
+    static volatile String systemEmojiSource;
     public static android.graphics.Typeface systemEmojiTypeface() {
         // Checked before enabled(), so a font that failed to load doesn't count as a use.
         if (systemEmojiMissing || !enabled("use_system_emoji")) return null;
-        if (systemEmoji != null) return systemEmoji;
-        try {
-            // Samsung, many other phones and emoji modules draw emoji with a font other than NotoColorEmoji.ttf (#25).
-            android.graphics.Typeface shaped = systemEmojiFont == null ? shapedEmojiTypeface() : null;
-            if (shaped != null) {
-                systemEmoji = shaped;
-            } else {
-                String path = systemEmojiFont != null ? systemEmojiFont : NOTO_EMOJI_FONT;
-                systemEmoji = android.graphics.Typeface.createFromFile(path);
-                systemEmojiSource = path;
+        android.graphics.Typeface loaded = systemEmoji;
+        if (loaded != null) return loaded;
+        synchronized (Settings.class) {
+            // Another thread may have loaded it, or failed to, while this one waited.
+            if (systemEmojiMissing) return null;
+            if (systemEmoji != null) return systemEmoji;
+            try {
+                // Samsung, many other phones and emoji modules draw emoji with a font other than NotoColorEmoji.ttf (#25).
+                String font = systemEmojiFont;
+                android.graphics.Typeface shaped = font == null ? shapedEmojiTypeface() : null;
+                if (shaped != null) {
+                    systemEmoji = shaped;
+                } else {
+                    String path = font != null ? font : NOTO_EMOJI_FONT;
+                    android.graphics.Typeface typeface = android.graphics.Typeface.createFromFile(path);
+                    systemEmojiSource = path;
+                    systemEmoji = typeface;
+                }
+            } catch (Exception error) {
+                // The font file won't appear later, so Messenger's own emoji stay without retrying on every draw.
+                systemEmojiMissing = true;
+                hookFailed("use_system_emoji", "Can't load the system emoji font", error);
             }
-        } catch (Exception error) {
-            // The font file won't appear later, so Messenger's own emoji stay without retrying on every draw.
-            systemEmojiMissing = true;
-            hookFailed("use_system_emoji", "Can't load the system emoji font", error);
+            return systemEmoji;
         }
-        return systemEmoji;
     }
 
     /** Default emoji presentation, so Android picks its emoji font rather than a text symbol font. */
@@ -936,7 +1040,7 @@ public final class Settings {
     }
 
     /** The android.graphics.fonts.Font Android shaped the emoji probe with; Object so Android 9 never resolves the type. */
-    static Object systemEmojiShaped;
+    static volatile Object systemEmojiShaped;
     /** Messenger's downloaded FacebookEmoji.ttf, recorded as Messenger loads it. */
     static volatile java.io.File messengerEmojiFile;
     static java.io.File mergedEmojiFile;
@@ -1157,22 +1261,6 @@ public final class Settings {
             hookFailed(OwnFont.KEY, "Can't change a text input's font", error);
         }
         view.setTypeface(chosen, style);
-    }
-
-    /** Null means return the exact original list. Only typed ad rows are removed. */
-    public static List<?> filterInboxAds(List<?> items) {
-        if (!enabled("ads") || items == null || items.isEmpty()) return null;
-        List<Object> filtered = null;
-        for (int index = 0; index < items.size(); index++) {
-            Object item = items.get(index);
-            boolean ad = false;
-            for (Class<?> type = item == null ? null : item.getClass(); type != null; type = type.getSuperclass()) {
-                if ("com.facebook.messaging.business.inboxads.common.InboxAdsItem".equals(type.getName())) { ad = true; break; }
-            }
-            if (ad && filtered == null) filtered = new ArrayList<>(items.subList(0, index));
-            if (!ad && filtered != null) filtered.add(item);
-        }
-        return filtered;
     }
 
     /** Only the section renderer receives a copy. The captured native snapshot is never changed. */
@@ -1420,8 +1508,7 @@ public final class Settings {
         } catch (ReflectiveOperationException | RuntimeException | LinkageError error) {
             hookFailedPrivately("menu_row", "Opening the drawer entry failed", error);
             if (recognized) try {
-                android.widget.Toast.makeText(context, new SettingsText(context).get("settings_open_failed"),
-                        android.widget.Toast.LENGTH_LONG).show();
+                showOpenFailed(context);
             } catch (RuntimeException | LinkageError feedbackError) {
                 hookFailedPrivately("menu_row", "Drawer entry feedback unavailable", feedbackError);
             }
@@ -1525,21 +1612,36 @@ public final class Settings {
      * handling of that press. The patch calls this just before each title's long press handler returns, with the
      * toolbar's context. Messenger hands the press to a title shortcut plugin that only its internal builds have, so for
      * everyone else it did nothing but vibrate. Like the Menu rows, this doesn't ask Pause or safe mode first: it's a way back into settings to undo
-     * either. A launch Android refuses gets the same toast as the side menu row, pointing at the launcher shortcut.
+     * either. A launch Android refuses gets the same toasts as the side menu row, pointing at the launcher shortcut.
+     * Turn off the logo long press leaves the press to Messenger.
      */
     public static void logoLongPressed(Context context) {
-        if (context == null) return;
+        // Only the switch counts here: a press can come before settings have read what the patch put in.
+        SharedPreferences prefs = preferences;
+        if (context == null || prefs != null && prefs.getBoolean(HIDE_LOGO_PRESS, false)) return;
         try {
             HostScreens.open(context, HostScreens.SETTINGS);
+            String build = patchedBuild(context);
+            if (prefs != null && build != null && !logoPressProven(context)) prefs.edit().putString(LOGO_USED, build).apply();
         } catch (RuntimeException | LinkageError error) {
             hookFailed("menu_row", "Opening settings from a tab title failed", error);
             try {
-                android.widget.Toast.makeText(context, new SettingsText(context).get("settings_open_failed"),
-                        android.widget.Toast.LENGTH_LONG).show();
+                showOpenFailed(context);
             } catch (RuntimeException | LinkageError feedbackError) {
                 hookFailedPrivately("menu_row", "Tab title feedback unavailable", feedbackError);
             }
         }
+    }
+
+    /**
+     * Android 12 and later show two lines of a toast, so one says settings didn't open and the next names the way in,
+     * unless Hide the icon shortcuts took that way away.
+     */
+    private static void showOpenFailed(Context context) {
+        SettingsText words = new SettingsText(context);
+        android.widget.Toast.makeText(context, words.get("settings_open_failed"), android.widget.Toast.LENGTH_SHORT).show();
+        if (iconShortcutsShown(context))
+            android.widget.Toast.makeText(context, words.get("settings_open_instead"), android.widget.Toast.LENGTH_LONG).show();
     }
 
     private static final java.util.concurrent.atomic.AtomicBoolean MENU_LISTENER_LOGGED = new java.util.concurrent.atomic.AtomicBoolean();

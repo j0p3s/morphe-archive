@@ -175,23 +175,6 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 </details>
 
 <details>
-<summary>Lightroom&nbsp;&nbsp;•&nbsp;&nbsp;<b>3 patches</b></summary>
-<br>
-
-**Supported versions:**
-
-| 11.6.01 |
-| :---: |
-
-| Patch | Description | Options |
-|----------|----------------|-----------|
-| **Block Telemetry & Trackers** | Neutralizes Google AppMeasurement, Firebase Crashlytics, Branch attribution, and Adobe Creative SDK analytics dispatchers, redirects Adobe Edge and DTM endpoints to 0.0.0.0, strips advertising permissions, and injects analytics opt-out flags. |  |
-| **Sideload Install Support** | Ensures compatibility for sideloaded lab installs by allowing local installer source checks to report success and completing Play Integrity token requests. Required for sideloaded lab installs: without it the app routes to the Play Store. |  |
-| **Unlock Premium Features** | Enables app features locked behind subscription paywalls by activating the internal Limited-Time Premium Unlock (LTPU) gate. Requires Sideload Install Support (applied automatically as dependency). |  |
-
-</details>
-
-<details>
 <summary>Moovit&nbsp;&nbsp;•&nbsp;&nbsp;<b>5 patches</b></summary>
 <br>
 
@@ -207,28 +190,6 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 | **Remove Ads** | Hides banner and inline ads and neutralizes ad unit ID lookups. |  |
 | **Suppress Paywalls** | Suppresses subscription paywalls, onboarding upgrade dialogs, and promotional cards. |  |
 | **Unlock Moovit+** | Unlocks Moovit+ premium subscription features locally, including Safe Ride and address search in favorites. |  |
-
-</details>
-
-<details>
-<summary>Multiple Accounts&nbsp;&nbsp;•&nbsp;&nbsp;<b>8 patches</b></summary>
-<br>
-
-**Supported versions:**
-
-| 5.8.2 |
-| :---: |
-
-| Patch | Description | Options |
-|----------|----------------|-----------|
-| **Block Telemetry & Trackers** | Neutralizes in-house statistics, ByteDance AppLog, AppLovin MAX, Google Measurement, AppMetrica, Tenjin, IronSource, and Pangle ad/telemetry dispatchers, redirects isolated tracking host literals to 0.0.0.0, disables ad and tracking manifest components, and injects opt-out metadata flags. |  |
-| **Multiaccounts Debloat (Setup)** | Disables non-functional ad-network WorkManager services and receivers, removes WorkManagerInitializer startup metadata, and strips RECEIVE_BOOT_COMPLETED in AndroidManifest.xml while strictly preserving clone container services. |  |
-| **Multiaccounts Privacy Setup** | Configures network_security_config.xml to trust user CA certificates for TLS inspection while preserving cleartext traffic. |  |
-| **Multiaccounts Telemetry Manifest Purge** | Strips advertising permissions, disables ad network providers, activities, services, and receivers, prunes telemetry registrars, and injects opt-out metadata flags in AndroidManifest.xml. |  |
-| **Privacy Controls** | Neutralizes clipboard snooping in ByteDance AppLog attribution and disables OkHttp certificate pinning for network traffic auditing. |  |
-| **Sideload Compatibility** | Ensures compatibility for sideloaded installations by spoofing the official APK signature certificate for self-verification and neutralizing launch-blocking Google Play in-app update checks. |  |
-| **Stop Background Wakeups** | Stops ad-SDK WorkManager background tasks to eliminate background wakeups and battery drain. Container virtualization processes, push notifications, and clone keep-alive services are strictly preserved. |  |
-| **UX Declutter** | Removes splash delays, short-circuits cloned-app launch ad gates, hides main screen promo banners, and suppresses rating prompts. | • Skip Splash Delay and Ad Stalls<br>• Suppress Rating Prompts<br>• Hide Main Screen Native Promo Banner<br>• Skip First-Run Privacy Wizard |
 
 </details>
 
@@ -372,7 +333,6 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 | X | [Guide](docs/apps/twitter.md) |
 | Moovit | [Guide](docs/apps/moovit.md) |
 | PowerPoint | [Guide](docs/apps/powerpoint.md) |
-| Lightroom | [Guide](docs/apps/lrmobile.md) |
 | CapCut | [Guide](docs/apps/capcut.md) |
 | Copilot | [Guide](docs/apps/officehub.md) |
 | Hevy | [Guide](docs/apps/hevy.md) |
@@ -380,7 +340,6 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 | Xiaomi Earbuds | [Guide](docs/apps/xiaomi_earbuds.md) |
 | SUBE | [Guide](docs/apps/sube.md) |
 | SD Maid SE | [Guide](docs/apps/sdmse.md) |
-| Multiple Accounts | [Guide](docs/apps/multiaccounts.md) |
 
 <p align="center"><a href="#top"><b>&uarr; Back to top</b></a></p>
 

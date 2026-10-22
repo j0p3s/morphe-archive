@@ -153,6 +153,31 @@ retain the target contracts within its context window.
 
 ## NuvioTV launcher channels
 
+For source request priority and opt-in autoplay from a preferred installed add-on,
+see `docs/NuvioPreferredAddon.md`. The independent **NuvioTV - Preferred source
+add-on** patch shares the Streams settings group. Both settings are per profile;
+the native manual/resolved-session guards and playable-stream predicate remain
+authoritative. Verify original DEX roundtrip, runtime settings and profile behavior,
+shared-menu selections, and standalone/combined packaged bundles.
+
+For a visible current-session source label, see `docs/NuvioCurrentStream.md`.
+The independent **NuvioTV - Indicate current stream** patch prefixes the native
+current source title with `[Playing]`, following the existing session flag.
+The `nuvio-current-stream` extension adds a default-enabled switch under
+Santodan-Patches > Streams. Verify DEX mutation/roundtrip, runtime persistence
+and toggling, shared-menu selections, and standalone/combined packaged bundles.
+
+For optional IntroDB episode submissions, see `docs/NuvioIntroDb.md`. Settings has
+the enable switch and native API-key editor. A dedicated main-row button captures
+start/end positions on two presses and opens a native NuvioDialog. Validate beta.7
+player layout, native engine position helper and controls timer, then run the focused,
+native runtime, shared-menu, and standalone/combined bundle verifiers.
+
+For playback button visibility, order and placement between the main row and More
+actions, see `docs/NuvioPlaybackButtons.md`. The independently selectable patch is
+opt-in, uses native controls and availability, and shares the Layout settings menu.
+Verify its original-APK hooks and host runtime, then standalone and combined bundles.
+
 For merged tracking progress, see `docs/NuvioMergedProgress.md`. Its automatic
 sync gate follows the root navigation flow and activity lifecycle, not stream-search
 pause signals. Main-service playback writes and service inclusion are configured

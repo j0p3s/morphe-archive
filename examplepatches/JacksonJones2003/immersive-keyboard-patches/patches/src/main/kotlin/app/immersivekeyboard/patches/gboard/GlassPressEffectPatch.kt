@@ -10,8 +10,9 @@ private const val EXTENSION_CLASS = "Lapp/immersivekeyboard/extension/PressEffec
 val glassPressEffectPatch = bytecodePatch(
     name = "Glass Press Effect",
     description = "Adds vivo-style liquid glass touch feedback: a soft light blooms out from " +
-        "your finger across the keyboard background, and the keys dip slightly and " +
-        "springs back with a small wobble.",
+        "your finger across the keyboard background, and the keys around your finger dip " +
+        "and spring back with a small wobble while the rest of the keyboard stays still. " +
+        "When glide typing, the dip follows your finger.",
     default = true
 ) {
     compatibleWith(COMPATIBILITY_GBOARD)

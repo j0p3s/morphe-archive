@@ -103,7 +103,9 @@ public class FeedScreenCoverageTest {
             "hide_playlist_bar", "hide_event_badge", "hide_inserted_cards", "hide_share_guide",
             "caption_text_size", "caption_background", "keep_captions_clear_display", "caption_font_weight",
             "caption_bottom_offset", "caption_landscape_offset", "caption_clear_display_offset",
-            "double_tap_action", "confirm_quick_repost");
+            "double_tap_action", "double_tap_split_zones", "double_tap_top_left_action",
+            "double_tap_top_right_action", "double_tap_bottom_left_action", "double_tap_bottom_right_action",
+            "confirm_quick_repost");
 
     static final Map<String, Coverage> TABLE = new LinkedHashMap<>();
 
@@ -157,6 +159,8 @@ public class FeedScreenCoverageTest {
         // Profile grids only.
         put("publish_date_on_grid", NONE, NONE, NONE);
         put("video_length_on_grid", NONE, NONE, NONE);
+        // The order of the profile and Liked grids, which neither window draws (#180).
+        put("profile_grid_sort", NONE, NONE, NONE);
         put("show_author_region", YES, YES, NONE);
         // Only how the region label shows its code, so it reaches where the label does (#157).
         put("region_as_flag", YES, YES, NONE);
@@ -169,6 +173,8 @@ public class FeedScreenCoverageTest {
         // which an opened video doesn't have.
         put("hide_live_entrance", YES, NONE, NONE);
         put("hide_feed_sidebar_button", YES, NONE, NONE);
+        // The swipe to that same side menu, which an opened video doesn't have (#213).
+        put("disable_feed_sidebar_swipe", YES, NONE, NONE);
         // Whether an opened video shows a search button of its own is the open part.
         put("hide_feed_search_button", YES, UNCHECKED, NONE);
         put("hide_fullscreen_button", YES, YES, NONE);
@@ -213,10 +219,13 @@ public class FeedScreenCoverageTest {
         put("caption_landscape_offset", YES, UNCHECKED, NONE);
         // The kept line Hushfeed draws itself, beside keep_captions_clear_display.
         put("caption_clear_display_offset", YES, UNCHECKED, NONE);
+        // One answer every caption control asks, wherever the video plays (#217).
+        put("keep_captions_available", YES, YES, NONE);
 
         // Clear display follows TikTok's own mode in either window (#84).
         put("automatic_clear_display", YES, YES, NONE);
         put("automatic_clear_display_delay", YES, YES, NONE);
+        put("remember_clear_display_on_scroll", YES, YES, NONE);
         put("hide_clear_display_controls", YES, YES, NONE);
         put("fade_controls_opacity", YES, YES, NONE);
         put("fade_in_clear_display", YES, YES, NONE);
@@ -226,6 +235,8 @@ public class FeedScreenCoverageTest {
         put("floating_bottom_bar", YES, NONE, NONE);
         // And of that pill (#218).
         put("liquid_glass_bottom_bar", YES, NONE, NONE);
+        // And of the lens inside it (#231).
+        put("glass_tab_lens", YES, NONE, NONE);
         // The main feed only: an opened video keeps the strip under its own top bar (#145).
         put("see_through_status_bar", YES, NONE, NONE);
         // The guard runs with the overlay pass, which walks both windows and no LIVE room.
@@ -237,6 +248,11 @@ public class FeedScreenCoverageTest {
         put("swipe_levels_right", YES, YES, NONE);
         put("swipe_levels_strip_percent", YES, YES, NONE);
         put("double_tap_action", YES, UNCHECKED, NONE);
+        // The same tap hook, read by where the tap landed (#232).
+        for (String corner : new String[]{"double_tap_split_zones", "double_tap_top_left_action",
+                "double_tap_top_right_action", "double_tap_bottom_left_action", "double_tap_bottom_right_action"}) {
+            put(corner, YES, UNCHECKED, NONE);
+        }
         put("swipe_left_action", YES, YES, NONE);
         put("long_press_action", YES, YES, NONE);
         // The same press hook as the choice it narrows, so it reaches the same windows (#136).

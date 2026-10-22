@@ -10,8 +10,8 @@ import app.morphe.patcher.patch.booleanOption
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.stringOption
 import app.morphe.patcher.util.smali.ExternalLabel
-import app.morphe.patches.all.misc.hermes.hermesPatch
 import app.morphe.patches.shared.compat.AppCompatibilities
+import app.morphe.patches.shared.misc.hermes.hermesVariantsPatch
 import app.morphe.util.getFreeRegisterProvider
 import app.morphe.util.matchSingle
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
@@ -19,10 +19,14 @@ import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 
 private const val EXTENSION_CLASS = "Lapp/hxreborn/extension/raindrop/AccentColor;"
 
-private const val LIGHT_ACCENT_ENTRY = "52 54 07 0C 07"
-private const val LIGHT_ACCENT_ENTRY_TO_SILVER = "52 64 08 0C 07"
-private const val DARK_ACCENT_ENTRY = "52 85 08 15 09"
-private const val DARK_ACCENT_ENTRY_TO_MAROON = "52 EA 07 15 09"
+private const val LIGHT_ACCENT_ENTRY_4_7 = "52 54 07 0C 07"
+private const val LIGHT_ACCENT_ENTRY_TO_SILVER_4_7 = "52 64 08 0C 07"
+private const val DARK_ACCENT_ENTRY_4_7 = "52 85 08 15 09"
+private const val DARK_ACCENT_ENTRY_TO_MAROON_4_7 = "52 EA 07 15 09"
+private const val LIGHT_ACCENT_ENTRY_4_8 = "52 86 07 3E 07"
+private const val LIGHT_ACCENT_ENTRY_TO_SILVER_4_8 = "52 8D 08 3E 07"
+private const val DARK_ACCENT_ENTRY_4_8 = "52 A4 08 3B 09"
+private const val DARK_ACCENT_ENTRY_TO_MAROON_4_8 = "52 0F 08 3B 09"
 private const val SILVER_KEYWORD_HEX = "23 63 30 63 30 63 30"
 private const val LIGHT_PLACEHOLDER = "23 31 39 38 38 65 30"
 private const val MAROON_KEYWORD_HEX = "23 38 30 30 30 30 30"
@@ -40,14 +44,20 @@ val accentColorPatch = bytecodePatch(
     extendWith("extensions/extension.mpe")
 
     dependsOn(
-        hermesPatch {
+        hermesVariantsPatch(
             setOf(
-                LIGHT_ACCENT_ENTRY to LIGHT_ACCENT_ENTRY_TO_SILVER,
-                DARK_ACCENT_ENTRY to DARK_ACCENT_ENTRY_TO_MAROON,
+                LIGHT_ACCENT_ENTRY_4_7 to LIGHT_ACCENT_ENTRY_TO_SILVER_4_7,
+                DARK_ACCENT_ENTRY_4_7 to DARK_ACCENT_ENTRY_TO_MAROON_4_7,
                 SILVER_KEYWORD_HEX to LIGHT_PLACEHOLDER,
                 MAROON_KEYWORD_HEX to DARK_PLACEHOLDER,
-            )
-        },
+            ),
+            setOf(
+                LIGHT_ACCENT_ENTRY_4_8 to LIGHT_ACCENT_ENTRY_TO_SILVER_4_8,
+                DARK_ACCENT_ENTRY_4_8 to DARK_ACCENT_ENTRY_TO_MAROON_4_8,
+                SILVER_KEYWORD_HEX to LIGHT_PLACEHOLDER,
+                MAROON_KEYWORD_HEX to DARK_PLACEHOLDER,
+            ),
+        ),
     )
 
     val materialYou by booleanOption(

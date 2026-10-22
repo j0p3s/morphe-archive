@@ -14,18 +14,39 @@ private const val DART_AOT_LIBRARY = "libapp.so"
 private const val ARM64 = "arm64-v8a"
 
 internal val PRODUCT_ACCESS_CHECK_PROLOGUE =
-    "fd79bfa9fd030faaefc100d1e00301aaa1031ff8502740f9ff0110eb290e005403b042b8".hexToByteArray()
+    (
+        "fd79bfa9fd030faaefc100d1e00301aaa1031ff8502740f9ff0110eb290e005403" +
+            "b042b863801c8be10303aaa3831ff8457f2994e10300aaa0835ff802f040b84280" +
+            "1c8b5f00016b61000054e00316aa02000014e00301aaa0831ff81f00166b"
+        ).hexToByteArray()
 
 internal val PRODUCT_ACCESS_CHECK_PROLOGUE_MASK =
-    "ffffffffffffffffffffffffffffffffffffffffff03c0ffffffffff1f0000ffffffffff".hexToByteArray()
+    (
+        "ffffffffffffffffffffffffffffffffffffffffffffffffffffffff1f0000ffff" +
+            "0fe0ffffffffffffffffffffffffff000000fcffffffffffffffffffffffffffff" +
+            "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+        ).hexToByteArray()
 
-internal val COMBO_PURCHASE_CHECK_PROLOGUE =
+internal val SHOPPING_SERVICE_COMBO_CHECK_PROLOGUE =
     ("fd79bfa9fd030faaef2101d1a2031ff8502740f9ff0110eba90e0054" +
         "40f043b800801c8b7093409110fa45f91f00106b").hexToByteArray()
 
-internal val COMBO_PURCHASE_CHECK_PROLOGUE_MASK =
+internal val SHOPPING_SERVICE_COMBO_CHECK_PROLOGUE_MASK =
     ("ffffffffffffffffffffffffffffffffffffffffffffffff1f0000ff" +
         "ffffffffffffffffff03c0ffff03c0ffffffffff").hexToByteArray()
+
+internal val ACCESS_MANAGER_COMBO_CHECK_PROLOGUE =
+    ("fd79bfa9fd030faaefe100d1e00301aaa1831ef8502740f9ff0110ebc90d005441f043b8" +
+        "21801c8b70a74091102646f93f00106b").hexToByteArray()
+
+internal val ACCESS_MANAGER_COMBO_CHECK_PROLOGUE_MASK =
+    ("ffffffffffffffffff03c0ffffffffffff0fe0ffffffffffffffffff1f0000ffffffffff" +
+        "ffffffffff03c0ffff03c0ffffffffff").hexToByteArray()
+
+internal val COMBO_PURCHASE_CHECK_PROLOGUES = listOf(
+    SHOPPING_SERVICE_COMBO_CHECK_PROLOGUE to SHOPPING_SERVICE_COMBO_CHECK_PROLOGUE_MASK,
+    ACCESS_MANAGER_COMBO_CHECK_PROLOGUE to ACCESS_MANAGER_COMBO_CHECK_PROLOGUE_MASK,
+)
 
 internal val RETURN_TRUE = "c0820091c0035fd6".hexToByteArray()
 
@@ -42,14 +63,15 @@ val unlockPremiumPatch = resourcePatch(
         val library = get("lib/$ARM64/$DART_AOT_LIBRARY")
         if (!library.exists()) throw PatchException("Could not find $DART_AOT_LIBRARY for $ARM64")
 
-        mapOf(
-            "product access check" to (PRODUCT_ACCESS_CHECK_PROLOGUE to PRODUCT_ACCESS_CHECK_PROLOGUE_MASK),
-            "combo purchase check" to (COMBO_PURCHASE_CHECK_PROLOGUE to COMBO_PURCHASE_CHECK_PROLOGUE_MASK),
-        ).forEach { (check, prologue) ->
-            val (pattern, mask) = prologue
-            if (!library.replaceMasked(pattern, mask, mapOf(0 to RETURN_TRUE))) {
-                throw PatchException("Could not find the $check in $DART_AOT_LIBRARY")
-            }
+        val returnTrueAtEntry = mapOf(0 to RETURN_TRUE)
+        if (!library.replaceMasked(PRODUCT_ACCESS_CHECK_PROLOGUE, PRODUCT_ACCESS_CHECK_PROLOGUE_MASK, returnTrueAtEntry)) {
+            throw PatchException("Could not find the product access check in $DART_AOT_LIBRARY")
+        }
+        val comboChecksReplaced = COMBO_PURCHASE_CHECK_PROLOGUES.count { (pattern, mask) ->
+            library.replaceMasked(pattern, mask, returnTrueAtEntry)
+        }
+        if (comboChecksReplaced == 0) {
+            throw PatchException("Could not find the combo purchase check in $DART_AOT_LIBRARY")
         }
     }
 }

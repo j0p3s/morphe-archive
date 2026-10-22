@@ -1,71 +1,53 @@
 # Universal Captions
 
-YouTube on Android sometimes shows only a short Auto-translate language list, even when the same video has many more choices on YouTube Web. Some videos have subtitles but no Auto-translate menu at all.
+Caption translation research, regression tests and upstream contributions for [Morphe](https://github.com/MorpheApp/morphe-patches). **This is a subtitle-focused project, not a fork of Morphe.**
 
-Universal Captions fixes those cases inside the YouTube app. It uses YouTube's own caption tracks and translation endpoint. No external translator, overlay or separate player.
+**Universal Captions is now integrated into official Morphe.** [PR #3891](https://github.com/MorpheApp/morphe-patches/pull/3891) was merged into [Morphe `dev`](https://github.com/MorpheApp/morphe-patches/tree/dev) on 21 October 2026. For the current caption features, **use the official Morphe patch source**; do not add this repository as a second Morphe Manager source.
 
-This repository contains Universal Captions source code, tests and standalone patch releases for Morphe Manager.
+The upstream integration provides additional auto-translate choices from a reviewed 156-code YouTube Web snapshot, signed caption URL and source-validation safeguards, missing Auto-translate menu recovery and a readability fix for styled translated captions. YouTube's servers still determine which translations work for each video.
 
-[Add to Morphe Manager](https://morphe.software/add-source?github=itolkien%2Funiversal-captions&name=Universal%20Captions) · [Download 3.0.1](https://github.com/itolkien/universal-captions/releases/tag/v3.0.1) · [Issues](https://github.com/itolkien/universal-captions/issues)
+## Purpose of this repository
 
-## What changed in 3.0
+- **Caption regressions:** [additional upstream-compatible tests](tests/upstream/MorpheCaptionUpstreamRegressionTest.java) alongside Morphe's own Java/Kotlin test suite.
+- **Research and contributions:** source selection, audio-track routing, regional language codes, signed timedtext URLs and caption styling.
+- **Experimental development:** our own 3.1.0 Java/Kotlin prototype and its tests are available under [`experiments/3.1.0/`](experiments/3.1.0/README.md). They are research implementations, **not the active Morphe runtime or CI source**.
+- **Previous standalone releases:** [v3.0.1](https://github.com/itolkien/universal-captions/releases/tag/v3.0.1) is preserved with all its original source at the immutable [`v3.0.1` tag](https://github.com/itolkien/universal-captions/tree/v3.0.1). It is historical, not the recommended installation path.
 
-The earlier versions worked for many videos, but some still stopped at YouTube's usual 16–18 languages. The problem wasn't the language list: YouTube was picking different source captions for different target languages, and the patch couldn't safely decide which one to use for the others.
+## Browse the code
 
-I went through the original YouTube 21.20.405 DEX to understand its caption manager instead of adding another language-specific workaround. The useful part turned out to be YouTube's own metadata: which captions belong to the current audio track, which source indices are eligible for translation, and how those indices are used to build a translated track.
+Our Java/Kotlin work is accessible directly, without copying the whole Morphe repository:
 
-The patch now follows that native source-selection path. It keeps YouTube's existing translated tracks and their signed URLs, then fills in missing languages using a source tied to the current audio. The bytecode patch finds those relationships structurally rather than relying on obfuscated class names.
-
-I also reworked translated subtitle styling. Some creators use custom caption pens that can make translated text invisible. The old workaround kept one global flag for the latest timedtext request, which wasn't safe when requests overlapped. In 3.0, styling is tied to the caption being parsed, including the network and cache paths. Original subtitles keep their original styling.
-
-The result is a much cleaner separation between YouTube's native caption decisions and the extra language choices we add. It also means we can stop guessing a source just because two tracks happen to have the same language.
-
-## 3.0.1 maintenance
-
-This update tightens caption parser cleanup when a native exception handler runs
-outside the matching decoder call. It also removes unused Android test wrappers
-and fixes the version and download metadata used by Morphe Manager.
-Source selection, translation language choices and caption visibility are unchanged.
-
-## Features
-
-- Broad Auto-translate language selection (roughly 155–156 choices when the source allows it).
-- Restores missing Auto-translate menus for eligible caption tracks.
-- Supports auto-generated, uploaded and named subtitles.
-- Preserves YouTube's native translations, signed URLs and current-audio source selection.
-- Keeps original subtitle styles while avoiding invisible translated text on affected videos.
-- Sorts languages by their displayed names, with distinct regional options where available.
-
-Showing a language in the menu doesn't guarantee YouTube will return translated text for every video. The server can still restrict individual languages or tracks.
-
-## Installation
-
-1. Install [Morphe Manager](https://morphe.software/) and add this repository as a custom patch source, or download `universal-captions-3.0.1.mpp` from the [3.0.1 release](https://github.com/itolkien/universal-captions/releases/tag/v3.0.1).
-2. Start with a clean YouTube **21.20.405** or **21.41.525** APK.
-3. Select **Universal Captions - additional translation languages** and patch the APK.
-4. Open a video with captions, then go to **Captions → Auto-translate**.
-
-**Upgrading from 2.1.0:** Version 3.0 includes its own auto-translate and translated-caption styling hooks. Do not stack it with an older Morphe **Captions** patch that contains the same hooks; that integration has not been deduplicated upstream. For the standalone 3.0 setup, use Universal Captions on its own. You will need to patch and reinstall YouTube to apply the new version.
-
-The patch does not force captions on, change your selected language or provide an external translation service.
-
-## Compatibility
-
-| | |
+| Area | Code |
 | --- | --- |
-| Release | **3.0.1** |
-| YouTube targets | **21.20.405**, **21.41.525** |
-| Package | `com.google.android.youtube` |
-| Format | Morphe Manager `.mpp` |
+| Native translation source selection and missing language targets | [AutoTranslateCaptionsPatch.java](experiments/3.1.0/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/AutoTranslateCaptionsPatch.java) |
+| Caption styling, nested decoder scopes | [TranslatedCaptionPensPatch.java](experiments/3.1.0/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/TranslatedCaptionPensPatch.java) |
+| Bytecode integration | [Translation Kotlin hooks](experiments/3.1.0/patches/src/main/kotlin/app/morphe/patches/youtube/layout/captions/AutoTranslateCaptionsPatch.kt) · [Styling Kotlin hooks](experiments/3.1.0/patches/src/main/kotlin/app/morphe/patches/youtube/layout/captions/TranslatedCaptionPensPatch.kt) |
+| Experimental tests | [3.1.0 test suite](experiments/3.1.0/README.md#experimental-tests) |
+| Current Morphe regression tests | [MorpheCaptionUpstreamRegressionTest.java](tests/upstream/MorpheCaptionUpstreamRegressionTest.java) |
 
-Both declared APK versions were patched and tested manually with the 3.0 development builds, including expanded language lists and translated text. The 21.20.405 Waydroid tests also confirmed that a menu previously stuck at 17 languages now returned 156. The final release uses the same source-selection approach. These tests don't imply that every target language works on every video or that all other YouTube versions are compatible.
+See [Experiments](experiments/README.md) for status and upstream differences. The shipped implementation remains in [official Morphe](https://github.com/MorpheApp/morphe-patches/tree/dev).
 
-The patch intentionally leaves caption visibility and preferred-language policy to YouTube/Morphe. Matching every manually selected source track, automatic regional preference matching and backend language availability still have limitations.
+## CI: test official Morphe or a development branch
 
-For the technical details, see the [native caption metadata notes](docs/NATIVE_METADATA_21_20_405.md), [caption style handling](docs/CAPTION_PEN_STYLES.md) and [3.0.1 release notes](docs/RELEASE_3.0.1.md).
+[GitHub Actions](.github/workflows/ci.yml) checks out official `MorpheApp/morphe-patches` `dev` on every `main` push or pull request, then runs Morphe's tests plus our **8 additional caption regressions**. Only one supplemental Java **test file** is added; no Morphe production code is overwritten.
 
-## Feedback and license
+To validate a new caption fix before opening a PR, open [Validate upstream Morphe captions](https://github.com/itolkien/universal-captions/actions/workflows/ci.yml) → **Run workflow** on `main`:
 
-Please [open an issue](https://github.com/itolkien/universal-captions/issues) with the YouTube version, patch version and steps to reproduce. Remove personal details and signed caption URLs from logs before posting them.
+1. Set **Morphe source** to `itolkien/morphe-patches`.
+2. Enter your **branch name or commit SHA** (e.g. `fix/caption-fallback`).
+3. Leave **Build MPP** off for a quick test, or turn it on for Android testing.
 
-Licensed under [GPL-3.0-or-later](LICENSE). Upstream copyright and license notices are preserved in [NOTICE](NOTICE). This repository doesn't distribute patched YouTube APKs.
+Manual runs record the selected repository and exact resolved commit. The optional MPP is a complete bundle of the **chosen Morphe revision**, not an additional Universal Captions patch. No MPP is built or released on normal pushes; upstream-only changes do not trigger an automatic run here.
+
+See [Upstream validation](docs/UPSTREAM_VALIDATION.md) for inputs, safeguards and device test guidance. Passing unit tests does not prove APK or backend translation compatibility.
+
+## Documentation
+
+- [Upstream CI and test procedure](docs/UPSTREAM_VALIDATION.md)
+- [Architecture, historical versions and experiments](docs/ARCHITECTURE.md)
+- [APK compatibility guidance](docs/COMPATIBILITY.md)
+- [Historical experimental 3.1.0 parity report](docs/PARITY_VALIDATION.md)
+
+## License and attribution
+
+See [LICENSE](LICENSE) and [NOTICE](NOTICE). Prior release source, authorship and commit history remain available via tags and Git history. No patched YouTube APK is distributed.

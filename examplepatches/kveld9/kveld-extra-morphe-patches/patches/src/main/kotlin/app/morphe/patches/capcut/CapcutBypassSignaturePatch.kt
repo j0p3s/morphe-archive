@@ -64,6 +64,14 @@ private object CrackingDialogRenderFingerprint : Fingerprint(
     strings = listOf("lynx_overlay_id"),
 )
 
+private object TemplateFeedCrackingInterceptFingerprint : Fingerprint(
+    definingClass = "Lcom/xt/retouch/applauncher/core/interceptor/CrackingInterceptor;",
+    name = "intercept",
+    accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
+    returnType = "Lcom/bytedance/retrofit2/SsResponse;",
+    parameters = listOf("Lcom/bytedance/retrofit2/intercept/Interceptor${'$'}Chain;"),
+)
+
 @Suppress("unused")
 val capcutBypassSignaturePatch = bytecodePatch(
     name = "Bypass Signature Check",
@@ -132,6 +140,18 @@ val capcutBypassSignaturePatch = bytecodePatch(
         )
         patched++
 
-        println("[Bypass Signature Check] Applied $patched hooks -> APK signature spoofed to official, tamper gates disabled, cracking verdict persistence and security dialog render stubbed.")
+        TemplateFeedCrackingInterceptFingerprint.method.addInstructions(
+            0,
+            """
+                invoke-interface {p1}, Lcom/bytedance/retrofit2/intercept/Interceptor${'$'}Chain;->request()Lcom/bytedance/retrofit2/client/Request;
+                move-result-object v0
+                invoke-interface {p1, v0}, Lcom/bytedance/retrofit2/intercept/Interceptor${'$'}Chain;->proceed(Lcom/bytedance/retrofit2/client/Request;)Lcom/bytedance/retrofit2/SsResponse;
+                move-result-object v0
+                return-object v0
+            """,
+        )
+        patched++
+
+        println("[Bypass Signature Check] Applied $patched hooks -> APK signature spoofed to official, tamper gates disabled, cracking verdict persistence and security dialog render stubbed, template-feed cracking interceptor neutralized.")
     }
 }

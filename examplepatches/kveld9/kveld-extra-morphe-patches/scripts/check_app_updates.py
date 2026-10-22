@@ -2,7 +2,7 @@
 """Scheduled upstream app update checker for Morphe Patches (Extra Apps).
 
 Parses target versions from Constants.kt, queries upstream public sources
-(APKMirror, Uptodown, APKPure, and GitHub), and reports whether updates are available.
+(APKMirror, APKPure, and GitHub), and reports whether updates are available.
 """
 
 from __future__ import annotations
@@ -36,11 +36,11 @@ APP_SPECS: List[Dict[str, Any]] = [
     #     "name": "My App",                         # 2. Display name shown in logs, issue titles, and alerts
     #     "package_name": "com.example.app",        # 3. Android application package name
     #     "constant_key": "MY_APP_TARGET_VERSION",  # 4. Target version constant defined in Constants.kt
-    #     "source_type": "apkpure",                 # 5. Upstream host type: "apkpure", "uptodown", "apkmirror", or "github"
+    #     "source_type": "apkpure",                 # 5. Upstream host type: "apkpure", "apkmirror", or "github"
     #     "source_name": "APKPure",                 # 6. Display name of upstream host, must match the entry's source
     #     "source_url": "https://apkpure.com/slug/com.example.app",  # 7. Canonical listing URL (HTTP 200 verified live)
     #     "allow_beta": False,                      # Pre-release filter (typically False for stable patch releases)
-    #     # Optional keys: "path_prefix" (required for apkmirror; release- vs directory-level prefix both work), "run_patch_test_id" (defaults to id); no entry uses require_variant_marker (mechanism absent in this copy)
+    #     # Optional keys: "path_prefix" (required for apkmirror; release- vs directory-level prefix both work), "run_patch_test_id" (defaults to id), "version_ignore_patterns" (regex list to skip abandoned lines), "variant_match" (dict with arch, dpi, type for exact variant download URL resolution); no entry uses require_variant_marker (mechanism absent in this copy)
     # },
     # ==============================================================================
     {
@@ -54,6 +54,11 @@ APP_SPECS: List[Dict[str, Any]] = [
         "source_url": "https://www.apkmirror.com/apk/instagram/instagram-instagram/",
         "path_prefix": "/apk/instagram/instagram-instagram/instagram-",
         "allow_beta": False,
+        "variant_match": {
+            "arch": "arm64-v8a",
+            "dpi": "120-480dpi",
+            "type": "BUNDLE",
+        },
     },
     {
         "id": "twitter",
@@ -66,6 +71,11 @@ APP_SPECS: List[Dict[str, Any]] = [
         "source_url": "https://www.apkmirror.com/apk/x-corp/twitter/",
         "path_prefix": "/apk/x-corp/twitter/x-",
         "allow_beta": False,
+        "variant_match": {
+            "arch": "arm64-v8a",
+            "dpi": "120-640dpi",
+            "type": "BUNDLE",
+        },
     },
     {
         "id": "moovit",
@@ -78,6 +88,11 @@ APP_SPECS: List[Dict[str, Any]] = [
         "source_url": "https://www.apkmirror.com/apk/moovit/moovit-bus-train-live-info/",
         "path_prefix": "/apk/moovit/moovit-bus-train-live-info/moovit-",
         "allow_beta": False,
+        "variant_match": {
+            "arch": "arm64-v8a",
+            "dpi": "160-640dpi",
+            "type": "BUNDLE",
+        },
     },
     {
         "id": "powerpoint",
@@ -90,17 +105,11 @@ APP_SPECS: List[Dict[str, Any]] = [
         "source_url": "https://www.apkmirror.com/apk/microsoft-corporation/powerpoint/",
         "path_prefix": "/apk/microsoft-corporation/powerpoint/microsoft-powerpoint-",
         "allow_beta": False,
-    },
-    {
-        "id": "lrmobile",
-        "name": "Lightroom",
-        "package_name": "com.adobe.lrmobile",
-        "constant_key": "LRMOBILE_TARGET_VERSION",
-        "run_patch_test_id": "lrmobile",
-        "source_type": "uptodown",
-        "source_name": "Uptodown",
-        "source_url": "https://adobe-lightroom-mobile.en.uptodown.com/android",
-        "allow_beta": False,
+        "variant_match": {
+            "arch": "arm64-v8a",
+            "dpi": "120-480dpi",
+            "type": "BUNDLE",
+        },
     },
     {
         "id": "capcut",
@@ -113,6 +122,11 @@ APP_SPECS: List[Dict[str, Any]] = [
         "source_url": "https://www.apkmirror.com/apk/bytedance-pte-ltd/capcut/",
         "path_prefix": "/apk/bytedance-pte-ltd/capcut/capcut-",
         "allow_beta": False,
+        "variant_match": {
+            "arch": "arm64-v8a",
+            "dpi": "nodpi",
+            "type": "APK",
+        },
     },
     {
         "id": "officehub",
@@ -125,6 +139,11 @@ APP_SPECS: List[Dict[str, Any]] = [
         "source_url": "https://www.apkmirror.com/apk/microsoft-corporation/office-mobile-2/",
         "path_prefix": "/apk/microsoft-corporation/office-mobile-2/",
         "allow_beta": False,
+        "variant_match": {
+            "arch": "arm64-v8a",
+            "dpi": "120-480dpi",
+            "type": "BUNDLE",
+        },
     },
     {
         "id": "hevy",
@@ -136,6 +155,11 @@ APP_SPECS: List[Dict[str, Any]] = [
         "source_url": "https://www.apkmirror.com/apk/hevy-gym-workout-tracker/hevy-gym-log-workout-tracker/",
         "path_prefix": "/apk/hevy-gym-workout-tracker/hevy-gym-log-workout-tracker/hevy-gym-log-workout-tracker-",
         "allow_beta": False,
+        "variant_match": {
+            "arch": "arm64-v8a",
+            "dpi": "120-640dpi",
+            "type": "BUNDLE",
+        },
     },
     {
         "id": "nokoprint",
@@ -156,6 +180,7 @@ APP_SPECS: List[Dict[str, Any]] = [
         "source_name": "APKPure",
         "source_url": "https://apkpure.com/xiaomi-earbuds/com.mi.earphone",
         "allow_beta": False,
+        "version_ignore_patterns": [r"^9\."],
     },
     # --------------------------------------------------------------------------
     # SUBE (APKPure) - copy-paste-filled from "ADD NEW APP HERE" template
@@ -183,17 +208,6 @@ APP_SPECS: List[Dict[str, Any]] = [
         "source_url": "https://github.com/d4rken-org/sdmaid-se/releases",
         "allow_beta": True,
     },
-    {
-        "id": "multiaccounts",
-        "name": "Multiple Accounts",
-        "package_name": "com.excelliance.multiaccounts",
-        "constant_key": "MULTIACCOUNTS_TARGET_VERSION",
-        "source_type": "apkmirror",
-        "source_name": "APKMirror",
-        "source_url": "https://www.apkmirror.com/apk/excelliance-technology/multiple-accounts-dual-accounts/",
-        "path_prefix": "/apk/excelliance-technology/multiple-accounts-dual-accounts/multiple-accounts-dual-accounts-",
-        "allow_beta": False,
-    },
 ]
 
 # Build dependencies (toolchain components, not apps)
@@ -213,6 +227,14 @@ TOOLCHAIN_SPECS: List[Dict[str, Any]] = [
         "local_pattern": r'id\("app\.morphe\.patches"\)\s+version\s+"([^"]+)"',
         "api_url": "https://api.github.com/repos/MorpheApp/morphe-patches-gradle-plugin/tags?per_page=100",
         "source_url": "https://github.com/MorpheApp/morphe-patches-gradle-plugin/tags",
+    },
+    {
+        "id": "gradle-wrapper",
+        "name": "Gradle Wrapper",
+        "local_file": "gradle/wrapper/gradle-wrapper.properties",
+        "local_pattern": r'^distributionUrl=.*/gradle-(\d+(?:\.\d+)*)-(?:bin|all)\.zip\s*$',
+        "api_url": "https://api.github.com/repos/gradle/gradle/releases/latest",
+        "source_url": "https://github.com/gradle/gradle/releases",
     },
 ]
 
@@ -318,6 +340,13 @@ def compare_versions(local_ver: str, remote_ver: str) -> str:
     return "current"
 
 
+def is_version_ignored(version: str, patterns: Optional[List[str]]) -> bool:
+    """Check if version matches any ignore regex pattern."""
+    if not version or not patterns:
+        return False
+    return any(re.search(pat, version) for pat in patterns)
+
+
 def fetch_html(url: str) -> Optional[str]:
     """Fetch HTML content from a public URL using standard urllib."""
     headers = {
@@ -343,17 +372,16 @@ def fetch_html(url: str) -> Optional[str]:
         return None
 
 
-def extract_apkmirror_version(
+def extract_apkmirror_latest_release(
     html: str,
     path_prefix: str,
     allow_beta: bool = False,
-) -> Optional[str]:
-    """Extract latest remote version from APKMirror listing HTML.
+) -> Optional[Tuple[str, str]]:
+    """Extract latest remote version and release URL from APKMirror listing HTML.
 
     Host: APKMirror (https://www.apkmirror.com/apk/...)
     Precedence: Release links matching path_prefix sorted descending by numeric
     core and suffix, filtering out beta/alpha/preview/rc when allow_beta=False.
-    Fixture test: test_apkmirror_extraction_and_beta_filter
     """
     candidates: List[Tuple[Tuple[int, ...], str, str, str]] = []
 
@@ -388,86 +416,166 @@ def extract_apkmirror_version(
 
     # Sort descending by numeric core then suffix
     candidates.sort(key=lambda c: (c[0], c[1]), reverse=True)
-    return candidates[0][2]
+    best_ver = candidates[0][2]
+    best_href = candidates[0][3]
+    release_url = best_href if best_href.startswith("http") else f"https://www.apkmirror.com{best_href}"
+    return best_ver, release_url
 
 
-def extract_uptodown_version(html: str) -> Optional[str]:
-    """Extract latest remote version from Uptodown page HTML.
+def extract_apkmirror_version(
+    html: str,
+    path_prefix: str,
+    allow_beta: bool = False,
+) -> Optional[str]:
+    """Extract latest remote version from APKMirror listing HTML.
 
-    Host: Uptodown (https://<slug>.en.uptodown.com/android)
-    Precedence: Download-link version (/download button) beats metadata
-    (div.version) and JSON-LD schema (softwareVersion/version). If no downloadable
-    version can be confirmed, returns None (reported as unknown).
-    Fixture tests: test_uptodown_download_link_beats_metadata,
-                   test_uptodown_unknown_when_empty_or_corrupt
+    Host: APKMirror (https://www.apkmirror.com/apk/...)
+    Precedence: Release links matching path_prefix sorted descending by numeric
+    core and suffix, filtering out beta/alpha/preview/rc when allow_beta=False.
+    Fixture test: test_apkmirror_extraction_and_beta_filter
     """
-    if not html:
+    rel = extract_apkmirror_latest_release(html, path_prefix, allow_beta=allow_beta)
+    return rel[0] if rel else None
+
+
+def _extract_variant_cell_values(clean_cells: List[str]) -> Tuple[str, str, str]:
+    """Extract arch, min_version, and dpi from variant row cells."""
+    if len(clean_cells) >= 4:
+        return clean_cells[1], clean_cells[2], clean_cells[3]
+
+    arch, min_version, dpi = "", "", ""
+    for c in clean_cells[1:]:
+        if re.search(r"(\d+-\d+dpi|\bnodpi\b|\d+dpi)", c, re.I):
+            dpi = c
+        elif re.search(r"(arm|x86|universal|mips)", c, re.I):
+            arch = c
+        elif re.search(r"android", c, re.I):
+            min_version = c
+    return arch, min_version, dpi
+
+
+def _parse_variant_row(row_html: str) -> Optional[Dict[str, str]]:
+    """Parse a single variant row from APKMirror variants table."""
+    link_match = re.search(r'<a[^>]*class="[^"]*accent_color[^"]*"[^>]*href="([^"]+)"', row_html)
+    if not link_match:
+        link_match = re.search(r'<a[^>]*href="([^"]*-android-apk-download/)"', row_html)
+    if not link_match:
         return None
 
-    # 1. Download-link version on page (e.g. <a href=".../download"...><p class="version">X.Y.Z</p>)
-    dl_version: Optional[str] = None
-    dl_match = re.search(
-        r'<a[^>]*href="[^"]*/download"[^>]*>.*?<(?:p|span)[^>]*class="[^"]*version[^"]*"[^>]*>([^<]+)</(?:p|span)>',
-        html,
-        re.DOTALL | re.I,
-    )
-    if dl_match:
-        dl_version = dl_match.group(1).strip()
-    else:
-        dl_btn = re.search(
-            r'id="button-download-page-link"[^>]*>.*?(?:v(?:ersion)?\s*)?(\d+(?:\.\d+)+(?:[a-zA-Z0-9._-]+)?)',
-            html,
-            re.DOTALL | re.I,
-        )
-        if dl_btn:
-            dl_version = dl_btn.group(1).strip()
+    href = link_match.group(1).strip()
+    badges = [
+        b.strip().upper()
+        for b in re.findall(r'<span[^>]*class="[^"]*apkm-badge[^"]*"[^>]*>([^<]+)</span>', row_html)
+    ]
+    bundle_type = "BUNDLE" if "BUNDLE" in badges else "APK"
 
-    # 2. Page metadata version (e.g. <div class="version">X.Y.Z</div>)
-    meta_version: Optional[str] = None
-    meta_match = re.search(
-        r'<div[^>]*class="[^"]*version[^"]*"[^>]*>([^<]+)</div>',
-        html,
-        re.I,
-    )
-    if meta_match:
-        meta_version = meta_match.group(1).strip()
+    cells = re.findall(r'<div[^>]*class="[^"]*table-cell[^"]*"[^>]*>(.*?)</div>', row_html, re.DOTALL)
+    clean_cells = [re.sub(r'<[^>]+>', ' ', c).strip() for c in cells]
+    arch, min_version, dpi = _extract_variant_cell_values(clean_cells)
 
-    # 3. schema.org JSON-LD
-    json_ld_version: Optional[str] = None
-    for m in re.finditer(
-        r'<script[^>]*type="application/ld\+json"[^>]*>(.*?)</script>',
-        html,
-        re.DOTALL,
-    ):
-        try:
-            data = json.loads(m.group(1))
-            items = data if isinstance(data, list) else [data]
-            for item in items:
-                v = item.get("softwareVersion") or item.get("version")
-                if v and isinstance(v, str):
-                    json_ld_version = v.strip()
-                    break
-            if json_ld_version:
-                break
-        except Exception:
-            pass
+    return {
+        "href": href,
+        "type": bundle_type,
+        "arch": arch,
+        "dpi": dpi,
+        "min_version": min_version,
+    }
 
-    # Resolution: download-link version takes precedence over metadata
-    if dl_version:
-        core_dl, _ = parse_version(dl_version)
-        if core_dl:
-            return dl_version
 
-    if meta_version:
-        core_meta, _ = parse_version(meta_version)
-        if core_meta:
-            return meta_version
+def parse_apkmirror_variants(html: str) -> List[Dict[str, str]]:
+    """Parse list of variants from APKMirror release page HTML."""
+    if not html:
+        return []
 
-    if json_ld_version:
-        core_ld, _ = parse_version(json_ld_version)
-        if core_ld:
-            return json_ld_version
+    table_idx = html.find("variants-table")
+    scope_html = html[table_idx:] if table_idx != -1 else html
 
+    rows = re.split(r'<div[^>]*class="[^"]*table-row[^"]*"', scope_html)
+    variants: List[Dict[str, str]] = []
+    for r in rows:
+        parsed = _parse_variant_row(r)
+        if parsed:
+            variants.append(parsed)
+    return variants
+
+
+def _match_arch(var_arch: str, req_arch: str) -> Tuple[bool, int]:
+    """Check if variant arch satisfies requested arch and compute specificity score."""
+    if not req_arch:
+        return True, 0
+    tokens = [a.strip().lower() for a in re.split(r"[\s+,]+", var_arch)]
+    clean_var = var_arch.strip().lower()
+    clean_req = req_arch.strip().lower()
+    if clean_req not in tokens and clean_req != clean_var:
+        return False, 0
+    return True, 2 if clean_var == clean_req else 1
+
+
+def _match_dpi(var_dpi: str, req_dpi: str) -> Tuple[bool, int]:
+    """Check if variant dpi satisfies requested dpi and compute specificity score."""
+    if not req_dpi:
+        return True, 0
+    if var_dpi.strip().lower() != req_dpi.strip().lower():
+        return False, 0
+    return True, 2
+
+
+def _match_type(var_type: str, req_type: str) -> Tuple[bool, int]:
+    """Check if variant bundle type satisfies requested type and compute specificity score."""
+    if not req_type:
+        return True, 0
+    normalized = "BUNDLE" if req_type.upper() in ("BUNDLE", "APKM") else req_type.upper()
+    if var_type.strip().upper() != normalized:
+        return False, 0
+    return True, 2
+
+
+def match_variant_criteria(
+    variant: Dict[str, str],
+    criteria: Dict[str, Any],
+) -> Tuple[bool, int]:
+    """Match variant against target criteria and return (matches, score)."""
+    ok_arch, score_arch = _match_arch(variant.get("arch", ""), str(criteria.get("arch", "")))
+    if not ok_arch:
+        return False, 0
+    ok_dpi, score_dpi = _match_dpi(variant.get("dpi", ""), str(criteria.get("dpi", "")))
+    if not ok_dpi:
+        return False, 0
+    ok_type, score_type = _match_type(variant.get("type", ""), str(criteria.get("type", "")))
+    if not ok_type:
+        return False, 0
+    return True, score_arch + score_dpi + score_type
+
+
+def resolve_apkmirror_variant_download_url(
+    release_html: str,
+    criteria: Dict[str, Any],
+) -> Optional[str]:
+    """Resolve direct variant download page URL from APKMirror release page HTML."""
+    if not release_html or not criteria:
+        return None
+
+    variants = parse_apkmirror_variants(release_html)
+    matches: List[Tuple[int, Dict[str, str]]] = []
+    for var in variants:
+        matched, score = match_variant_criteria(var, criteria)
+        if matched:
+            matches.append((score, var))
+
+    if not matches:
+        return None
+
+    if len(matches) == 1:
+        href = matches[0][1]["href"]
+        return href if href.startswith("http") else f"https://www.apkmirror.com{href}"
+
+    # Multiple matches: sort descending by score
+    matches.sort(key=lambda m: m[0], reverse=True)
+    if matches[0][0] > matches[1][0]:
+        href = matches[0][1]["href"]
+        return href if href.startswith("http") else f"https://www.apkmirror.com{href}"
+
+    # Ambiguous match (tie between top candidates)
     return None
 
 
@@ -590,7 +698,6 @@ def run_update_checks(
         source_type = spec["source_type"]
         source_name = spec.get("source_name") or {
             "apkmirror": "APKMirror",
-            "uptodown": "Uptodown",
             "apkpure": "APKPure",
             "github": "GitHub",
         }.get(source_type, source_type.title())
@@ -606,25 +713,49 @@ def run_update_checks(
             local_version = "unknown"
 
         remote_version: Optional[str] = None
+        release_url: Optional[str] = None
         html = fetcher(source_url)
         if html:
             if source_type == "apkmirror":
-                remote_version = extract_apkmirror_version(
+                rel = extract_apkmirror_latest_release(
                     html,
                     spec["path_prefix"],
                     allow_beta=allow_beta,
                 )
-            elif source_type == "uptodown":
-                remote_version = extract_uptodown_version(html)
+                if rel:
+                    remote_version, release_url = rel
             elif source_type == "apkpure":
+                # APKPure variant resolution is omitted: APKPure download endpoints serve
+                # dynamic tokens / redirects without stable per-variant release tables.
                 remote_version = extract_apkpure_version(html)
             elif source_type == "github":
                 remote_version = extract_github_version(html, allow_beta=allow_beta)
+
+        ignore_patterns = spec.get("version_ignore_patterns")
+        if remote_version and is_version_ignored(remote_version, ignore_patterns):
+            remote_version = None
 
         if not remote_version:
             status = "unknown"
         else:
             status = compare_versions(local_version, remote_version)
+
+        download_url = ""
+        variant_match = spec.get("variant_match")
+        if (
+            status == "update-available"
+            and source_type == "apkmirror"
+            and variant_match
+            and release_url
+        ):
+            rel_html = fetcher(release_url)
+            if rel_html:
+                matched_dl = resolve_apkmirror_variant_download_url(
+                    rel_html,
+                    variant_match,
+                )
+                if matched_dl:
+                    download_url = matched_dl
 
         display_remote = remote_version if remote_version else "unknown"
         print(
@@ -642,6 +773,7 @@ def run_update_checks(
                 "source_name": source_name,
                 "source_url": source_url,
                 "run_patch_test_id": run_patch_test_id,
+                "download_url": download_url,
             }
         )
 
@@ -706,6 +838,7 @@ def _check_toolchain_spec(
         "source_name": "GitHub",
         "source_url": spec["source_url"],
         "run_patch_test_id": "",
+        "download_url": "",
     }
 
 
@@ -726,7 +859,7 @@ class TestUpdateChecker(unittest.TestCase):
     """Fixture tests covering version comparison, conflicting metadata, and extraction."""
 
     def test_version_schemes(self) -> None:
-        """Verify non-plain version schemes (twitter prod suffix, microsoft 4-part, lightroom)."""
+        """Verify non-plain version schemes (twitter prod suffix, microsoft 4-part, zero-padded minor)."""
         # Twitter prod suffix
         self.assertEqual(compare_versions("12.34.0-prod.01", "12.34.0-prod.01"), "current")
         self.assertEqual(compare_versions("12.34.0-prod.01", "12.35.0-prod.01"), "update-available")
@@ -742,33 +875,9 @@ class TestUpdateChecker(unittest.TestCase):
         self.assertEqual(compare_versions("447.0.0.55.81", "447.0.0.55.81"), "current")
         self.assertEqual(compare_versions("447.0.0.55.81", "448.0.0.1.1"), "update-available")
 
-        # Lightroom 11.6.01
+        # Zero-padded minor segment (e.g. 11.6.01)
         self.assertEqual(compare_versions("11.6.01", "11.6.01"), "current")
         self.assertEqual(compare_versions("11.6.01", "11.6.10"), "update-available")
-
-    def test_uptodown_download_link_beats_metadata(self) -> None:
-        """Download-link version must take precedence over contradictory metadata."""
-        fixture_html = """
-        <html>
-          <head>
-            <script type="application/ld+json">{"softwareVersion": "12.0.0"}</script>
-          </head>
-          <body>
-            <div class="version">11.9.0</div>
-            <a id="button-download-page-link" href="https://example.uptodown.com/android/download" class="button latest">
-              <span class="download-text">Download</span>
-              <p class="version">11.6.01</p>
-            </a>
-          </body>
-        </html>
-        """
-        ver = extract_uptodown_version(fixture_html)
-        self.assertEqual(ver, "11.6.01")
-
-    def test_uptodown_unknown_when_empty_or_corrupt(self) -> None:
-        """Report None (unknown) when no valid version can be parsed."""
-        self.assertIsNone(extract_uptodown_version(""))
-        self.assertIsNone(extract_uptodown_version("<html><body>No version here</body></html>"))
 
     def test_apkmirror_extraction_and_beta_filter(self) -> None:
         """Verify APKMirror listing extraction filters out betas when allow_beta=False."""
@@ -927,6 +1036,14 @@ class TestUpdateChecker(unittest.TestCase):
                 encoding="utf-8",
             )
 
+            wrapper_dir = gradle_dir / "wrapper"
+            wrapper_dir.mkdir(parents=True, exist_ok=True)
+            wrapper_props = wrapper_dir / "gradle-wrapper.properties"
+            wrapper_props.write_text(
+                "distributionUrl=https\\://services.gradle.org/distributions/gradle-9.6.1-bin.zip\n",
+                encoding="utf-8",
+            )
+
             def fake_fetch_success(url: str) -> Optional[str]:
                 if "morphe-patcher" in url:
                     return json.dumps({
@@ -939,10 +1056,15 @@ class TestUpdateChecker(unittest.TestCase):
                         {"name": "v1.3.4"},
                         {"name": "v1.3.3"},
                     ])
+                if "gradle/gradle" in url:
+                    return json.dumps({
+                        "tag_name": "v9.8.2",
+                        "name": "9.8.2",
+                    })
                 return None
 
             results = run_toolchain_checks(temp_root, fetch_fn=fake_fetch_success)
-            self.assertEqual(len(results), 2)
+            self.assertEqual(len(results), 3)
 
             patcher_entry = next(r for r in results if r["id"] == "morphe-patcher")
             self.assertEqual(patcher_entry["status"], "update-available")
@@ -957,11 +1079,301 @@ class TestUpdateChecker(unittest.TestCase):
             self.assertEqual(plugin_entry["local_version"], "1.3.4")
             self.assertEqual(plugin_entry["remote_version"], "1.3.4")
 
+            gradle_entry = next(r for r in results if r["id"] == "gradle-wrapper")
+            self.assertEqual(gradle_entry["status"], "update-available")
+            self.assertEqual(gradle_entry["local_version"], "9.6.1")
+            self.assertEqual(gradle_entry["remote_version"], "9.8.2")
+
             # Fetch returning None -> "unknown"
             unknown_results = run_toolchain_checks(temp_root, fetch_fn=lambda _: None)
             for entry in unknown_results:
                 self.assertEqual(entry["status"], "unknown")
                 self.assertEqual(entry["remote_version"], "unknown")
+
+    def test_xiaomi_earbuds_phantom_update_ignored(self) -> None:
+        """Verify abandoned 9.x branch is ignored and does not report update-available for Xiaomi Earbuds."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_constants = Path(tmpdir) / "Constants.kt"
+            constants_content = resolve_default_constants_path().read_text(encoding="utf-8")
+            temp_constants.write_text(constants_content, encoding="utf-8")
+
+            phantom_html = """
+            <html>
+              <body>
+                <a class="btn normal-download-btn da dt-main-download-btn"
+                   data-dt-package_name="com.mi.earphone"
+                   data-dt-version="9.0.278"
+                   href="https://apkpure.com/xiaomi-earbuds/com.mi.earphone/download"
+                   title="Download Xiaomi Earbuds latest version apk">
+                  <strong class="text one-line">Download APK (20 MB)</strong>
+                </a>
+              </body>
+            </html>
+            """
+
+            def fake_fetch(url: str) -> Optional[str]:
+                if "com.mi.earphone" in url:
+                    return phantom_html
+                return None
+
+            results = run_update_checks(temp_constants, fetch_fn=fake_fetch)
+            xiaomi_entry = next(r for r in results if r["id"] == "xiaomi-earbuds")
+            self.assertEqual(xiaomi_entry["local_version"], "1.38.0i")
+            self.assertNotEqual(
+                xiaomi_entry["status"],
+                "update-available",
+                "Phantom update 9.0.278 must NOT report update-available",
+            )
+            self.assertEqual(xiaomi_entry["status"], "unknown")
+            self.assertEqual(xiaomi_entry["remote_version"], "unknown")
+
+            # Live 1.x update must still report update-available
+            live_html = """
+            <html>
+              <body>
+                <a class="btn normal-download-btn da dt-main-download-btn"
+                   data-dt-package_name="com.mi.earphone"
+                   data-dt-version="1.39.0"
+                   href="https://apkpure.com/xiaomi-earbuds/com.mi.earphone/download"
+                   title="Download Xiaomi Earbuds latest version apk">
+                  <strong class="text one-line">Download APK (20 MB)</strong>
+                </a>
+              </body>
+            </html>
+            """
+
+            def fake_fetch_live(url: str) -> Optional[str]:
+                if "com.mi.earphone" in url:
+                    return live_html
+                return None
+
+            live_results = run_update_checks(temp_constants, fetch_fn=fake_fetch_live)
+            xiaomi_live = next(r for r in live_results if r["id"] == "xiaomi-earbuds")
+            self.assertEqual(xiaomi_live["status"], "update-available")
+            self.assertEqual(xiaomi_live["remote_version"], "1.39.0")
+
+    def test_is_version_ignored(self) -> None:
+        """Verify version ignore pattern matching."""
+        self.assertTrue(is_version_ignored("9.0.278", [r"^9\."]))
+        self.assertTrue(is_version_ignored("9.1.0", [r"^9\."]))
+        self.assertFalse(is_version_ignored("1.38.0i", [r"^9\."]))
+        self.assertFalse(is_version_ignored("1.39.0", [r"^9\."]))
+        self.assertFalse(is_version_ignored("9.0.278", []))
+        self.assertFalse(is_version_ignored("9.0.278", None))
+        self.assertFalse(is_version_ignored("", [r"^9\."]))
+
+    def test_apkmirror_variant_extraction_multi_variant_pick(self) -> None:
+        """Verify APKMirror release page variant matching picks the exact matching variant."""
+        fixture_html = """
+        <div class="table topmargin variants-table">
+            <div class="table-row headerFont">
+                <div class="table-cell">Variant</div>
+                <div class="table-cell">Arch</div>
+                <div class="table-cell">Version</div>
+                <div class="table-cell">DPI</div>
+            </div>
+            <div class="table-row headerFont">
+                <div class="table-cell dowrap-break-all">
+                    <a class="accent_color" href="/apk/x-corp/twitter/x-12-36-1-prod-01-release/x-12-36-1-prod-01-2-android-apk-download/">
+                        12.36.1-prod.01
+                    </a>
+                    <span class="apkm-badge success">BUNDLE</span>
+                    <span class="apkm-badge success">34 S</span>
+                </div>
+                <div class="table-cell dowrap">arm64-v8a + armeabi-v7a</div>
+                <div class="table-cell dowrap">Android 12L+</div>
+                <div class="table-cell dowrap">120-640dpi</div>
+            </div>
+            <div class="table-row headerFont">
+                <div class="table-cell dowrap-break-all">
+                    <a class="accent_color" href="/apk/x-corp/twitter/x-12-36-1-prod-01-release/x-12-36-1-prod-01-3-android-apk-download/">
+                        12.36.1-prod.01
+                    </a>
+                    <span class="apkm-badge success">BUNDLE</span>
+                    <span class="apkm-badge success">28 S</span>
+                </div>
+                <div class="table-cell dowrap">arm64-v8a + armeabi-v7a</div>
+                <div class="table-cell dowrap">Android 9.0+</div>
+                <div class="table-cell dowrap">480-640dpi</div>
+            </div>
+            <div class="table-row headerFont">
+                <div class="table-cell dowrap-break-all">
+                    <a class="accent_color" href="/apk/x-corp/twitter/x-12-36-1-prod-01-release/x-12-36-1-prod-01-android-apk-download/">
+                        12.36.1-prod.01
+                    </a>
+                    <span class="apkm-badge success">BUNDLE</span>
+                    <span class="apkm-badge success">27 S</span>
+                </div>
+                <div class="table-cell dowrap">arm64-v8a</div>
+                <div class="table-cell dowrap">Android 10+</div>
+                <div class="table-cell dowrap">480-640dpi</div>
+            </div>
+        </div>
+        """
+        criteria = {
+            "arch": "arm64-v8a",
+            "dpi": "120-640dpi",
+            "type": "BUNDLE",
+        }
+        url = resolve_apkmirror_variant_download_url(fixture_html, criteria)
+        expected = "https://www.apkmirror.com/apk/x-corp/twitter/x-12-36-1-prod-01-release/x-12-36-1-prod-01-2-android-apk-download/"
+        self.assertEqual(url, expected)
+
+    def test_apkmirror_variant_extraction_no_match_fallback(self) -> None:
+        """Verify fallback to None when variant criteria do not match or are ambiguous."""
+        fixture_html = """
+        <div class="table topmargin variants-table">
+            <div class="table-row headerFont">
+                <div class="table-cell dowrap-break-all">
+                    <a class="accent_color" href="/apk/test/test-app/test-1-android-apk-download/">1.0</a>
+                    <span class="apkm-badge success">BUNDLE</span>
+                </div>
+                <div class="table-cell dowrap">arm64-v8a</div>
+                <div class="table-cell dowrap">Android 10+</div>
+                <div class="table-cell dowrap">480-640dpi</div>
+            </div>
+        </div>
+        """
+        # Mismatched DPI -> None
+        res_dpi = resolve_apkmirror_variant_download_url(
+            fixture_html,
+            {"arch": "arm64-v8a", "dpi": "120-640dpi", "type": "BUNDLE"},
+        )
+        self.assertIsNone(res_dpi)
+
+        # Mismatched Arch -> None
+        res_arch = resolve_apkmirror_variant_download_url(
+            fixture_html,
+            {"arch": "x86", "dpi": "480-640dpi", "type": "BUNDLE"},
+        )
+        self.assertIsNone(res_arch)
+
+        # Mismatched Type (APK vs BUNDLE) -> None
+        res_type = resolve_apkmirror_variant_download_url(
+            fixture_html,
+            {"arch": "arm64-v8a", "dpi": "480-640dpi", "type": "APK"},
+        )
+        self.assertIsNone(res_type)
+
+        # Ambiguous match (two variants matching equally) -> None
+        ambiguous_html = """
+        <div class="table topmargin variants-table">
+            <div class="table-row headerFont">
+                <div class="table-cell dowrap-break-all">
+                    <a class="accent_color" href="/apk/test/test-app/v1-android-apk-download/">1.0</a>
+                    <span class="apkm-badge success">BUNDLE</span>
+                </div>
+                <div class="table-cell dowrap">arm64-v8a</div>
+                <div class="table-cell dowrap">Android 10+</div>
+                <div class="table-cell dowrap">120-640dpi</div>
+            </div>
+            <div class="table-row headerFont">
+                <div class="table-cell dowrap-break-all">
+                    <a class="accent_color" href="/apk/test/test-app/v2-android-apk-download/">1.0</a>
+                    <span class="apkm-badge success">BUNDLE</span>
+                </div>
+                <div class="table-cell dowrap">arm64-v8a</div>
+                <div class="table-cell dowrap">Android 10+</div>
+                <div class="table-cell dowrap">120-640dpi</div>
+            </div>
+        </div>
+        """
+        res_ambig = resolve_apkmirror_variant_download_url(
+            ambiguous_html,
+            {"arch": "arm64-v8a", "dpi": "120-640dpi", "type": "BUNDLE"},
+        )
+        self.assertIsNone(res_ambig)
+
+    def test_run_update_checks_plumbs_download_url(self) -> None:
+        """Verify run_update_checks resolves download_url for matched variants and keeps empty for unaffected apps."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            temp_constants = Path(tmpdir) / "Constants.kt"
+            # Set Twitter to an older version to trigger update-available
+            temp_constants.write_text(
+                'const val TWITTER_TARGET_VERSION = "12.35.0-prod.01"\n'
+                'const val SUBE_TARGET_VERSION = "2.7.25"\n',
+                encoding="utf-8",
+            )
+
+            twitter_listing_html = """
+            <div>
+              <a class="fontBlack" href="/apk/x-corp/twitter/x-12-36-1-prod-01-release/">
+                X 12.36.1-prod.01
+              </a>
+            </div>
+            """
+            twitter_release_html = """
+            <div class="table topmargin variants-table">
+                <div class="table-row headerFont">
+                    <div class="table-cell dowrap-break-all">
+                        <a class="accent_color" href="/apk/x-corp/twitter/x-12-36-1-prod-01-release/x-12-36-1-prod-01-2-android-apk-download/">12.36.1</a>
+                        <span class="apkm-badge success">BUNDLE</span>
+                    </div>
+                    <div class="table-cell dowrap">arm64-v8a + armeabi-v7a</div>
+                    <div class="table-cell dowrap">Android 12L+</div>
+                    <div class="table-cell dowrap">120-640dpi</div>
+                </div>
+            </div>
+            """
+            sube_listing_html = """
+            <a class="btn normal-download-btn da dt-main-download-btn"
+               data-dt-package_name="com.sube.app"
+               data-dt-version="2.8.0"
+               href="https://apkpure.com/sube/com.sube.app/download">
+              Download APK
+            </a>
+            """
+
+            def fake_fetch(url: str) -> Optional[str]:
+                if url == "https://www.apkmirror.com/apk/x-corp/twitter/":
+                    return twitter_listing_html
+                if url == "https://www.apkmirror.com/apk/x-corp/twitter/x-12-36-1-prod-01-release/":
+                    return twitter_release_html
+                if "com.sube.app" in url:
+                    return sube_listing_html
+                return None
+
+            results = run_update_checks(temp_constants, fetch_fn=fake_fetch)
+            twitter_res = next(r for r in results if r["id"] == "twitter")
+            self.assertEqual(twitter_res["status"], "update-available")
+            self.assertEqual(
+                twitter_res["download_url"],
+                "https://www.apkmirror.com/apk/x-corp/twitter/x-12-36-1-prod-01-release/x-12-36-1-prod-01-2-android-apk-download/",
+            )
+
+            # APKPure app without variant_match has empty download_url
+            sube_res = next(r for r in results if r["id"] == "sube")
+            self.assertEqual(sube_res["status"], "update-available")
+            self.assertEqual(sube_res["download_url"], "")
+
+    def test_issue_body_formatting(self) -> None:
+        """Verify issue body includes Direct download only when download_url is present and non-empty."""
+        def format_body(local_ver: str, remote_ver: str, source_url: str, download_url: str) -> str:
+            body_lines = [
+                f"Current supported version: {local_ver}",
+                f"Latest upstream version: {remote_ver}",
+                f"Source link: {source_url}",
+            ]
+            if download_url:
+                body_lines.append(f"Direct download: {download_url}")
+            return "\n".join(body_lines) + "\n"
+
+        body_with_dl = format_body(
+            "12.35.0-prod.01",
+            "12.36.1-prod.01",
+            "https://www.apkmirror.com/apk/x-corp/twitter/",
+            "https://www.apkmirror.com/apk/x-corp/twitter/x-12-36-1-prod-01-release/variant-download/",
+        )
+        self.assertIn("Direct download: https://www.apkmirror.com/apk/x-corp/twitter/x-12-36-1-prod-01-release/variant-download/", body_with_dl)
+
+        body_without_dl = format_body(
+            "2.7.25",
+            "2.8.0",
+            "https://apkpure.com/sube/com.sube.app",
+            "",
+        )
+        self.assertNotIn("Direct download:", body_without_dl)
+
 
 
 def main() -> int:

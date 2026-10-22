@@ -123,6 +123,10 @@ Keeps Facebook dark no matter its own setting. Meant for tablets where Facebook 
 Black cards	Cartões pretos
 # context: description of that switch; a card is a raised panel such as a post or the Menu's profile box, near black is the dark gray the theme gives it
 Cards and menus take the page's own color instead of the near black that sets them apart. Buttons and search fields keep a dark gray fill, so you can still see them. Restart Facebook to see the change.	Cartões e menus ficam com a cor da própria página em vez do quase preto que os destaca. Botões e campos de pesquisa mantêm um preenchimento cinza-escuro, para você continuar vendo. Reinicie o Facebook para ver a mudança.
+# context: switch title under Appearance, shown with the AMOLED black theme; it draws a thin gray line in the gap between posts in the feed
+Lines between posts	Linhas entre publicações
+# context: description of that switch; the black page is the AMOLED theme's pure black background
+A thin gray line between posts in the feed, so posts without photos don't run together on the black page.	Uma linha cinza fina entre as publicações do feed, para que publicações sem fotos não se misturem na página preta.
 Draws Facebook's text in your phone's font, or in a font file you choose below. Restart Facebook to see the change.	Mostra o texto do Facebook com a fonte do celular ou com um arquivo de fonte que você escolher abaixo. Reinicie o Facebook para ver a mudança.
 Font file	Arquivo de fonte
 Use your phone's font	Usar a fonte do celular
@@ -430,6 +434,9 @@ A long press on Like doesn't open the reactions. A tap still likes.	Tocar e segu
 Hide GIF and sticker buttons	Ocultar os botões de GIF e figurinhas
 # context: summary of that switch; the comment box is where you type a comment
 The comment box loses its GIF and sticker buttons. Typing, photos and posting work as before.	A caixa de comentário perde os botões de GIF e figurinhas. Digitar, enviar fotos e publicar continuam como antes.
+# context: switch title under Comments: hides the Add a comment field at the bottom of the full-screen video viewer
+Hide the video comment box	Ocultar a caixa de comentário dos vídeos
+The Add a comment box under a full-screen video goes away. Comment boxes on posts stay.	A caixa para comentar embaixo de um vídeo em tela cheia some. As caixas de comentário nas publicações continuam.
 # context: switch title under Comments; a reply thread is the replies under a comment, which Facebook folds behind View replies
 Open every reply thread	Abrir todas as respostas
 # context: summary of that switch; View replies is the link Facebook shows under a comment that has replies
@@ -926,6 +933,10 @@ When Facebook also sends an HDR video in SDR at the same size, play that version
 Skip silent parts	Pular partes em silêncio
 # context: summary of that switch; how-tos are tutorial videos
 Videos, reels and stories jump past the quiet stretches in their sound, so talks and how-tos get to the point sooner.	Vídeos, Reels e Stories pulam os trechos em silêncio do áudio, então palestras e tutoriais chegam mais rápido ao ponto.
+# context: switch title under Playback; feed videos stay silent until the user turns their sound on
+Keep feed videos muted	Manter vídeos do feed sem som
+# context: summary of that switch; the speaker is the sound button on a video, volume up is the phone's key
+Videos in your feed start with the sound off every time you open Facebook, and only you turn it on. Tap a video's speaker or press volume up to hear it.	Os vídeos do seu feed começam sem som toda vez que você abre o Facebook, e só você liga o som. Toque no alto-falante de um vídeo ou aperte o botão de aumentar o volume para ouvir.
 # context: switch title under Playback; keeps a video's progress bar (the line showing how far it has played) on screen
 Keep the progress bar	Manter a barra de progresso
 # context: summary of that switch; a reel is a short vertical video
@@ -1125,6 +1136,9 @@ Hides posts that share another post, with or without a caption. Original posts s
 Lock Facebook	Bloquear o Facebook
 Save crashes to Downloads	Salvar falhas em Downloads
 When Facebook crashes, the error goes in a text file in Download/Hushfacebook, so you can send it with a bug report even if Facebook won't open. Links and IDs are left out. The newest five are kept.	Quando o Facebook falha, o erro vai para um arquivo de texto em Download/Hushfacebook, para você enviar com um relatório de bug mesmo se o Facebook não abrir. Links e IDs ficam de fora. Os cinco mais recentes são mantidos.
+# context: switch title in Privacy: Facebook quits fully a few seconds after you switch away from it
+Close Facebook when you leave it	Fechar o Facebook ao sair
+A few seconds after you leave Facebook, it closes all the way and leaves your recent apps, so it isn't running in the background. It waits for uploads and saves to finish first. Notifications may come late, or not until you open Facebook again.	Alguns segundos depois que você sai do Facebook, ele fecha por completo e sai dos apps recentes, para não ficar rodando em segundo plano. Antes, ele espera os envios e downloads terminarem. As notificações podem chegar atrasadas ou só quando você abrir o Facebook de novo.
 # context: summary of the Lock Facebook switch; the time below is the Lock after row under it
 Facebook asks for your fingerprint, face or screen lock at startup and when you return after the time below. Your phone needs a screen lock.	O Facebook pede sua digital, rosto ou bloqueio de tela ao abrir e quando você volta depois do tempo abaixo. O celular precisa de um bloqueio de tela.
 # context: toast when Lock Facebook is turned on and the phone has no screen lock to ask for
@@ -1527,7 +1541,7 @@ Takes the speaker button off the bottom of the side of reels. A change shows fro
 # context: switch title under News feed; the reaction preview is the stack of reaction icons and the line with the number of reactions under a post
 Hide the reaction preview on posts	Ocultar a prévia de reações nas publicações
 # context: summary of that switch; "reactions" are Facebook's Like, Love, Haha and other reactions
-Hides the stacked reaction icons and the reactions count under posts. The space stays, so a tap where they were still opens the list of reactions.	Oculta os ícones de reação empilhados e a contagem de reações abaixo das publicações. O espaço continua lá, então tocar onde eles estavam ainda abre a lista de reações.
+Hides the stacked reaction icons and the reactions count under posts. The space stays, so a tap where they were still opens the list of reactions. To take the number off the Like button too, turn on Hide counts on posts.	Oculta os ícones de reação empilhados e a contagem de reações abaixo das publicações. O espaço continua lá, então tocar onde eles estavam ainda abre a lista de reações. Para tirar também o número do botão Curtir, ative Ocultar os números nas publicações.
 # context: switch title under Comments; the reaction preview is the stack of reaction icons in the corner of a comment
 Hide the reaction preview on comments	Ocultar a prévia de reações nos comentários
 # context: summary of that switch; "reactions" are Facebook's Like, Love, Haha and other reactions

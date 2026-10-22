@@ -1,10 +1,10 @@
 {
   "NOTE": "Do NOT manually edit this file. This file is automatically updated when semantic release (release.yml) runs. Manually editing this file can break your releases and break third party tools that use this file.",
-  "version": "1.22.2",
+  "version": "1.24.0",
   "patches": [
     {
       "name": "Auto check-in & claim daily reward",
-      "description": "Claims the daily check-in reward on its own: opening the daily-rewards screen no longer waits for the check-in ad, the reward is granted right away. The missed-days restore and the day-10/20/30 milestone claim are untouched.",
+      "description": "Claims today's daily check-in and today's Daily Rewards rung on their own, once a day, a few seconds after the app has loaded them — no ad and nothing to tap. The missed-days restore and the day-10/20/30 milestone claim are untouched.",
       "default": true,
       "dependencies": [],
       "compatiblePackages": [
@@ -478,6 +478,39 @@
       "options": []
     },
     {
+      "name": "Remove Shop, Social+ and Lifestyle tabs",
+      "description": "Removes the Shop, Social+ and Lifestyle tabs from the bottom bar, leaving Home and Account. Nothing is deleted: those screens still exist and still open if the app routes to them (a deep link, a tile, a notification) — they just no longer take a tab.",
+      "default": true,
+      "dependencies": [],
+      "compatiblePackages": [
+        {
+          "packageName": "com.jazz.jazzworld",
+          "name": "Simosa",
+          "description": null,
+          "apkFileType": "APK_REQUIRED",
+          "appIconColor": "#FF6B35",
+          "signatures": [],
+          "targets": [
+            {
+              "version": "3.3.5",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 23,
+              "description": null
+            },
+            {
+              "version": "3.3.4.2",
+              "versionCodes": null,
+              "isExperimental": false,
+              "minSdk": 23,
+              "description": null
+            }
+          ]
+        }
+      ],
+      "options": []
+    },
+    {
       "name": "Remove ads",
       "description": "Removes foodpanda's adtech banner ads (all placements: order-tracking, home, discovery, reels) and the forced PandaMart \"CrossSell\" popup, and suppresses the forced in-app review prompt (DeliveryHero InAppRatingActivity).",
       "default": true,
@@ -590,7 +623,7 @@
     },
     {
       "name": "Remove ads",
-      "description": "Removes native feed ads (Google GMA), the full-height ad slot, the \"Buy with Delivery\" promo section (bar, cards and View all), and the three item-page banner slots from OLX. Pinned to the 18.8.0 build (matches that build's obfuscated feed and item-page classes).",
+      "description": "Removes native feed ads (Google GMA), the full-height ad slot, the \"Buy with Delivery\" promo section (bar, cards and View all), the three item-page banner slots, and the home-screen banner slots from OLX. Pinned to the 18.8.0 build (matches that build's obfuscated feed, item-page and home classes).",
       "default": true,
       "dependencies": [],
       "compatiblePackages": [

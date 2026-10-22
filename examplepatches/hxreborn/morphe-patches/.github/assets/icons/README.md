@@ -46,6 +46,7 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `moonreader.png` | Moon+ Reader (`com.flyersoft.moonreader`) | Moon+ | APK 10.7, adaptive icon `res/drawable-anydpi-v26/icon.xml` |
 | `calcnote.png` | CalcNote (`com.burton999.notecal`) | burton999 | APK 2.25.111, `res/drawable-xxhdpi-v4/ic_launcher.png` (square icon cut to a circle) |
 | `castlefortv.png` | Castle for TV (`com.gxnet.castle.indiatv`) | Castle | APK 1.1.5, `res/S1.webp` (square icon cut to a circle) |
+| `castle.png` | Castle (`com.external.castle`) | Castle | APK 2.1.3, `res/mipmap-xxxhdpi/ic_launcher_round.png` |
 | `acalendar.png` | aCalendar (`org.withouthat.acalendar`) | Tapir Apps GmbH | APK 2.9.5, `res/mipmap-xxxhdpi-v4/ic_launcher.png` (square icon cut to a circle) |
 | `quickcursor.png` | Quick Cursor (`com.quickcursor`) | Quick Cursor | APK 3.0.2, `res/mipmap-xxxhdpi-v4/launcher_icon_round.png` |
 | `opal.png` | Opal (`com.withopal.opal`) | Opal: The Focus Company | APK 4.14.0, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml` (`ic_launcher_background` under `ic_launcher_foreground`, xxxhdpi) |
@@ -100,6 +101,8 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `moviebox.png` | MovieBox (`com.community.oneroom`) | Not on Google Play | APK 4.0.03.0918.03, adaptive round icon |
 | `movieboxtv.png` | MovieBox TV (`com.community.mbox.tv`) | Not on Google Play | APK 1.2.0.0923, `res/d2.webp` (square icon cut to a circle) |
 | `musixmatch.png` | Musixmatch (`com.musixmatch.android.lyrify`) | Musixmatch | APK 8.4.2, `mipmap/mxm_icon_manifest_round` xxxhdpi (`res/raw/MZ`) |
+| `myscriptmath.png` | MyScript Math (`com.myscript.math`) | MyScript | APK 1.11.0, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml` (white background under vector `res/drawable/ic_launcher_foreground.xml`) rasterized and cut to a circle |
+| `myscriptnotes.png` | MyScript Notes (`com.myscript.nebo`) | MyScript | APK 7.4.5, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `pocketwhip.png` | Pocket Whip (`com.greenstone.pocketwhip`) | Original Pocket Whip | APK 2.3, `res/mipmap-hdpi-v4/pocket_whip_icon_round.png` |
 | `memoneet.png` | MemoNeet (`com.adithya.memoneet`) | MemoNeet | APK 62.6, `res/mipmap-xxxhdpi-v4/ic_launcher.png`, cut to a circle |
 | `medicneet.png` | MedicNEET (`com.halalfire.medicneet`) | SkorA Labs | APK 1.5.137, `res/mipmap-xxxhdpi-v4/launcher_icon.png`, cut to a circle |
@@ -121,6 +124,11 @@ Every icon comes from the app's own APK, at the version and resource listed belo
 | `serializd.png` | Serializd (`com.serializdmobile`) | Serializd | Play 1.992, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
 | `musicolet.png` | Musicolet (`in.krosbits.musicolet`) | Krosbits | APK 6.14.1 build540, adaptive icon `res/mipmap-anydpi-v26/ic_launcher_ex4.xml`, cut to a circle |
 | `sygic.png` | Sygic GPS Navigation (`com.sygic.aura`) | Sygic a.s. | APK 26.6.1, adaptive icon `res/mipmap-anydpi/ic_launcher.xml` (`ic_launcher_background` under `ic_launcher_foreground`, xxxhdpi, centre 72dp cut to a circle) |
+| `minishare.png` | MiniShare (`com.omniashare.minishare`) | Not on Google Play | APK 1.6.6, `res/mipmap-xxxhdpi-v4/ic_launcher.png`, cut to a circle |
+| `narababy.png` | Nara Baby (`com.naraorganics.nara`) | Nara Organics | APK 2.8.2, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
+| `wattpad.png` | Wattpad (`wp.wattpad`) | Wattpad.com | APK 11.41.1, `res/mipmap-xxxhdpi-v4/ic_launcher.webp` (round icon cropped to the circle) |
+| `graphmessenger.png` | Graph Messenger (`ir.ilmili.telegraph`) | Databite | APK 13.0.2.0, `res/mipmap-xxxhdpi-v4/ic_launcher_round.png` |
+| `glasswidgets.png` | Glass Widgets (`com.jndapp.glass.widgets`) | JustNewDesigns | APK 1.0.10, `res/mipmap-xxxhdpi-v4/ic_launcher_round.webp` |
 
 Showly's icon is also published under GPLv3 in [`trakt/showly`](https://github.com/trakt/showly),
 | `periodcalendar.png` | Period Tracker and Calendar (`com.lbrc.PeriodCalendar`) | SimpleInnovation | APK 13.3.2, adaptive icon `res/mipmap-anydpi-v26/ic_launcher.xml`, cut to a circle |

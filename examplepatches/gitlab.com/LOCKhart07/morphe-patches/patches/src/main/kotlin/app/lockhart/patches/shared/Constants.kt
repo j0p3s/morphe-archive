@@ -17,6 +17,11 @@ object Constants {
                 version = "4.15.11",
                 minSdk = 26,
             ),
+            // Native ownership patch verified against the arm64-v8a split.
+            AppTarget(
+                version = "4.15.13",
+                minSdk = 26,
+            ),
         ),
     )
 }

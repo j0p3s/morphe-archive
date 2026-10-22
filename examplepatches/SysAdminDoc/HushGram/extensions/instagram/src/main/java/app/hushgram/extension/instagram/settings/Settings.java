@@ -1538,6 +1538,14 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushgram_turn_off_double_tap_like_on_messages", FALSE, parent(TURN_OFF_DOUBLE_TAP_LIKE));
 
     /**
+     * Routes Instagram's outside-gallery entry to Android's system photo picker when you add a photo
+     * or video to a post ({@link app.hushgram.extension.instagram.media.SystemPhotoPicker}). Starts
+     * off, so the gallery sheet stays as it was.
+     */
+    public static final BooleanSetting SYSTEM_PHOTO_PICKER =
+            new BooleanSetting("hushgram_system_photo_picker", FALSE);
+
+    /**
      * The heart that pops up when you double tap a post plays {@link #LIKE_ANIMATION}
      * ({@link app.hushgram.extension.instagram.feed.LikeAnimation}). Read as each post's heart is set
      * up, so one already on screen changes the next time it's set up. Off to start.
@@ -2108,6 +2116,15 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting SAVE_NAME_BY_POST =
             new BooleanSetting("hushgram_save_name_by_post", FALSE);
+
+    /**
+     * A saved photo carries where it came from in its EXIF: the account that posted it, when the
+     * post went up and a link to the post. Written only into a JPEG, after the file is saved, and
+     * only what the save knows, so a profile picture carries just the account. The picture's pixels
+     * are untouched. Starts off, so a save adds nothing to the file.
+     */
+    public static final BooleanSetting SAVE_PHOTO_METADATA =
+            new BooleanSetting("hushgram_save_photo_metadata", FALSE);
 
     /**
      * The quality a video save asks for: the best the player streams, a ceiling, or the smallest

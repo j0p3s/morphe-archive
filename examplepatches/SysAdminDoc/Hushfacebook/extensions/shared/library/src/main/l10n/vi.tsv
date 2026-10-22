@@ -123,6 +123,10 @@ Keeps Facebook dark no matter its own setting. Meant for tablets where Facebook 
 Black cards	Thẻ màu đen
 # context: description of that switch; a card is a raised panel such as a post or the Menu's profile box, near black is the dark gray the theme gives it
 Cards and menus take the page's own color instead of the near black that sets them apart. Buttons and search fields keep a dark gray fill, so you can still see them. Restart Facebook to see the change.	Thẻ và menu dùng màu của chính trang thay cho màu gần đen giúp tách chúng ra. Nút và ô tìm kiếm vẫn giữ nền xám đậm để bạn còn nhìn thấy. Khởi động lại Facebook để thấy thay đổi.
+# context: switch title under Appearance, shown with the AMOLED black theme; it draws a thin gray line in the gap between posts in the feed
+Lines between posts	Đường kẻ giữa các bài viết
+# context: description of that switch; the black page is the AMOLED theme's pure black background
+A thin gray line between posts in the feed, so posts without photos don't run together on the black page.	Một đường kẻ xám mỏng giữa các bài viết trong bảng tin, để các bài không có ảnh không bị lẫn vào nhau trên nền đen.
 Draws Facebook's text in your phone's font, or in a font file you choose below. Restart Facebook to see the change.	Hiển thị chữ của Facebook bằng phông chữ của điện thoại, hoặc bằng tệp phông chữ bạn chọn bên dưới. Khởi động lại Facebook để thấy thay đổi.
 Font file	Tệp phông chữ
 Use your phone's font	Dùng phông chữ của điện thoại
@@ -465,6 +469,9 @@ A long press on Like doesn't open the reactions. A tap still likes.	Nhấn giữ
 Hide GIF and sticker buttons	Ẩn nút GIF và nhãn dán
 # context: summary of that switch; the comment box is where you type a comment
 The comment box loses its GIF and sticker buttons. Typing, photos and posting work as before.	Ô bình luận không còn nút GIF và nhãn dán. Nhập chữ, thêm ảnh và đăng vẫn hoạt động như trước.
+# context: switch title under Comments: hides the Add a comment field at the bottom of the full-screen video viewer
+Hide the video comment box	Ẩn ô bình luận của video
+The Add a comment box under a full-screen video goes away. Comment boxes on posts stay.	Ô bình luận bên dưới video toàn màn hình biến mất. Ô bình luận trên bài viết vẫn giữ nguyên.
 # context: switch title under Comments; a reply thread is the replies under a comment, which Facebook folds behind View replies
 Open every reply thread	Mở mọi chuỗi phản hồi
 # context: summary of that switch; View replies is the link Facebook shows under a comment that has replies
@@ -1034,6 +1041,10 @@ When Facebook also sends an HDR video in SDR at the same size, play that version
 Skip silent parts	Bỏ qua đoạn im lặng
 # context: summary of that switch; how-tos are tutorial videos
 Videos, reels and stories jump past the quiet stretches in their sound, so talks and how-tos get to the point sooner.	Video, reel và tin tự bỏ qua các đoạn im lặng trong âm thanh, giúp bài nói và video hướng dẫn vào vấn đề nhanh hơn.
+# context: switch title under Playback; feed videos stay silent until the user turns their sound on
+Keep feed videos muted	Luôn tắt tiếng video trên bảng tin
+# context: summary of that switch; the speaker is the sound button on a video, volume up is the phone's key
+Videos in your feed start with the sound off every time you open Facebook, and only you turn it on. Tap a video's speaker or press volume up to hear it.	Video trên bảng tin luôn bắt đầu ở chế độ tắt tiếng mỗi khi bạn mở Facebook, và chỉ bạn mới bật tiếng. Chạm vào biểu tượng loa của video hoặc nhấn nút tăng âm lượng để nghe.
 # context: switch title under Playback; keeps a video's progress bar (the line showing how far it has played) on screen
 Keep the progress bar	Giữ thanh tiến trình
 # context: summary of that switch; a reel is a short vertical video
@@ -1233,6 +1244,9 @@ Hides posts that share another post, with or without a caption. Original posts s
 Lock Facebook	Khóa Facebook
 Save crashes to Downloads	Lưu sự cố vào thư mục Download
 When Facebook crashes, the error goes in a text file in Download/Hushfacebook, so you can send it with a bug report even if Facebook won't open. Links and IDs are left out. The newest five are kept.	Khi Facebook gặp sự cố, lỗi được ghi vào tệp văn bản trong Download/Hushfacebook, để bạn gửi kèm báo lỗi kể cả khi Facebook không mở được. Liên kết và ID được loại bỏ. Chỉ giữ năm tệp mới nhất.
+# context: switch title in Privacy: Facebook quits fully a few seconds after you switch away from it
+Close Facebook when you leave it	Đóng Facebook khi bạn thoát
+A few seconds after you leave Facebook, it closes all the way and leaves your recent apps, so it isn't running in the background. It waits for uploads and saves to finish first. Notifications may come late, or not until you open Facebook again.	Vài giây sau khi bạn rời Facebook, ứng dụng sẽ đóng hẳn và biến khỏi danh sách ứng dụng gần đây, nên không chạy ngầm. Nó chờ các lượt tải lên và lưu xong trước. Thông báo có thể đến trễ hoặc chỉ đến khi bạn mở lại Facebook.
 # context: summary of the Lock Facebook switch; the time below is the Lock after row under it
 Facebook asks for your fingerprint, face or screen lock at startup and when you return after the time below. Your phone needs a screen lock.	Facebook yêu cầu vân tay, khuôn mặt hoặc khóa màn hình khi khởi động và khi bạn quay lại sau khoảng thời gian bên dưới. Điện thoại của bạn cần có khóa màn hình.
 # context: toast when Lock Facebook is turned on and the phone has no screen lock to ask for
@@ -1635,7 +1649,7 @@ Takes the speaker button off the bottom of the side of reels. A change shows fro
 # context: switch title under News feed; the reaction preview is the stack of reaction icons and the line with the number of reactions under a post
 Hide the reaction preview on posts	Ẩn bản xem trước biểu cảm trên bài viết
 # context: summary of that switch; "reactions" are Facebook's Like, Love, Haha and other reactions
-Hides the stacked reaction icons and the reactions count under posts. The space stays, so a tap where they were still opens the list of reactions.	Ẩn các biểu tượng cảm xúc xếp chồng và số lượt cảm xúc bên dưới bài viết. Khoảng trống vẫn còn, nên chạm vào chỗ đó vẫn mở danh sách cảm xúc.
+Hides the stacked reaction icons and the reactions count under posts. The space stays, so a tap where they were still opens the list of reactions. To take the number off the Like button too, turn on Hide counts on posts.	Ẩn các biểu tượng cảm xúc xếp chồng và số lượt cảm xúc bên dưới bài viết. Khoảng trống vẫn còn, nên chạm vào chỗ đó vẫn mở danh sách cảm xúc. Để bỏ luôn con số trên nút Thích, hãy bật Ẩn số đếm trên bài viết.
 # context: switch title under Comments; the reaction preview is the stack of reaction icons in the corner of a comment
 Hide the reaction preview on comments	Ẩn bản xem trước biểu cảm trên bình luận
 # context: summary of that switch; "reactions" are Facebook's Like, Love, Haha and other reactions

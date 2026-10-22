@@ -14,20 +14,22 @@ Click here to add these patches to Morphe: https://morphe.software/add-source?gi
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.1.0](https://gitlab.com/LOCKhart07/morphe-patches/-/releases/v1.1.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;2 patches total
+> **[v1.2.0](https://gitlab.com/LOCKhart07/morphe-patches/-/releases/v1.2.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;4 patches total
 <details open>
-<summary>📦 Heads Up!&nbsp;&nbsp;•&nbsp;&nbsp;2 patches</summary>
+<summary>📦 Heads Up!&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 4.15.11 |
-| :---: |
+| 4.15.11 | 4.15.13 |
+| :---: | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
+| [Hide empty custom decks](#hide-empty-custom-decks) | Shows one empty custom deck in My Decks instead of all of them. A new one appears after you restart the app. |  |
 | [Round length](#round-length) | Adds an option to change the round length from the deck page. |  |
-| [Unlock all decks](#unlock-all-decks) | Unlocks every deck without a purchase by forcing the native ownership checks in libil2cpp.so to report each deck as bought. |  |
+| [Sort decks alphabetically](#sort-decks-alphabetically) | Sorts My Decks alphabetically instead of by recent purchases and plays. |  |
+| [Unlock all decks](#unlock-all-decks) | Unlocks every deck without a purchase. |  |
 
 </details>
 

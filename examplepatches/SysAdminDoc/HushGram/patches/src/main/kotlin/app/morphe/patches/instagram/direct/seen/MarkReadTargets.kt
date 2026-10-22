@@ -10,11 +10,14 @@ import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLa
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.string
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patches.instagram.misc.extension.EXTENSION_PACKAGE
 import app.morphe.patches.instagram.misc.extension.freeLocalsAt
 import app.morphe.patches.instagram.misc.extension.jumpTargets
+import app.morphe.patches.instagram.misc.extension.loadsConstString
+import app.morphe.patches.instagram.misc.extension.loadsConstStringContaining
 import app.morphe.patches.instagram.misc.extension.localRegisterCount
 import app.morphe.patches.instagram.misc.extension.parameterRegister
 import app.morphe.patches.instagram.misc.extension.parameterRegisterNumber
@@ -85,25 +88,28 @@ private const val STRING_BUILDER_TYPE = "Ljava/lang/StringBuilder;"
 /** The enum behind a chat's long press menu: its initializer names both read actions. */
 internal object ChatMenuActionsFingerprint : Fingerprint(
     returnType = "V",
-    strings = listOf(MARK_AS_READ, MARK_AS_UNREAD),
-    custom = { method, classDef -> method.name == "<clinit>" && classDef.superclass == ENUM },
+    filters = listOf(string(MARK_AS_UNREAD)),
+    custom = { method, classDef ->
+        method.name == "<clinit>" && classDef.superclass == ENUM && method.loadsConstStringContaining(MARK_AS_READ)
+    },
 )
 
 /** Instagram's own handler for marking one chat read. */
 internal object MarkReadRouteFingerprint : Fingerprint(
-    strings = listOf(MARK_READ_HANDLER, MARK_READ_DONE),
+    filters = listOf(string(MARK_READ_HANDLER)),
+    custom = { method, _ -> method.loadsConstString(MARK_READ_DONE) },
 )
 
 /** Instagram's check whether it blocks an action on a chat: the static boolean method logging its dialog. */
 internal object ThreadActionBlockedFingerprint : Fingerprint(
     returnType = "Z",
-    strings = listOf(THREAD_ACTION_BLOCKED),
+    filters = listOf(string(THREAD_ACTION_BLOCKED)),
     custom = { method, _ -> AccessFlags.STATIC.isSet(method.accessFlags) },
 )
 
 /** Instagram's Mark as read for several chats picked together. */
 internal object MarkReadTogetherFingerprint : Fingerprint(
-    strings = listOf(MARK_READ_TOGETHER_ACTION),
+    filters = listOf(string(MARK_READ_TOGETHER_ACTION)),
 )
 
 /** One bridge: the stub in [INSTAGRAM_CHATS] and the body the patch writes into it. */

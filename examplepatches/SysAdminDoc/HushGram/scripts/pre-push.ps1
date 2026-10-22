@@ -489,6 +489,7 @@ $injectedRegisterDevicePaths = @(
     'scripts/device-install.ps1',
     'scripts/injected-register-device.ps1',
     'scripts/patch-for-device.ps1',
+    'scripts/patch-record.ps1',
     'scripts/pre-push.ps1',
     'scripts/script-wiring.ps1',
     'scripts/test-injected-register-device.ps1',
@@ -592,10 +593,25 @@ if (@($changed | Where-Object {
 }
 if (@($changed | Where-Object {
     $_ -like 'scripts/release/*' -or $_ -in @('scripts/test-release-helpers.ps1', 'scripts/test-release-notes.py', 'scripts/common.ps1', 'scripts/patch-target.ps1',
+        'scripts/walk-receipt.ps1',
         'scripts/patch-report.ps1', 'scripts/apk-facts.ps1', 'scripts/build-jobs.ps1', 'scripts/gate-evidence.ps1',
         'scripts/Resolve-Java.ps1', 'scripts/pre-push.ps1', 'scripts/script-wiring.ps1')
 }).Count -gt 0) {
     $suites += , @('scripts/test-release-helpers.ps1', 'a release helper changed, running its stand-ins')
+}
+if (@($changed | Where-Object {
+    $_ -like 'scripts/native-runner*' -or $_ -in @('scripts/test-native-runner.ps1', 'scripts/device-install.ps1',
+        'scripts/injected-register-device.ps1', 'scripts/apk-facts.ps1', 'scripts/patch-report.ps1', 'scripts/patch-record.ps1',
+        'scripts/Resolve-Java.ps1', 'scripts/pre-push.ps1', 'scripts/script-wiring.ps1')
+}).Count -gt 0) {
+    $suites += , @('scripts/test-native-runner.ps1', 'the native feature runner changed, running its stand-ins')
+}
+if (@($changed | Where-Object {
+    $_ -in @('scripts/walk-app.ps1', 'scripts/test-walk-app.ps1', 'scripts/walk-receipt.ps1', 'scripts/patch-for-device.ps1',
+        'scripts/device-install.ps1', 'scripts/injected-register-device.ps1', 'scripts/native-runner-device.ps1', 'scripts/common.ps1',
+        'scripts/pre-push.ps1', 'scripts/script-wiring.ps1')
+}).Count -gt 0) {
+    $suites += , @('scripts/test-walk-app.ps1', 'the whole-app walk tool changed, running its contract tests')
 }
 if (@($changed | Where-Object {
     $_ -in @('scripts/pre-push.ps1', 'scripts/test-push-gate.ps1', 'scripts/build-jobs.ps1', 'scripts/gate-evidence.ps1',

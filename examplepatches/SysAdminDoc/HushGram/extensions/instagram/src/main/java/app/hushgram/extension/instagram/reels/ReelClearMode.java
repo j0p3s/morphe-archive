@@ -34,7 +34,20 @@ import app.hushgram.extension.shared.diagnostics.HookStatus;
  * page the Reels pager lands on ({@link #paged}) and each reel whose exit button Instagram built
  * ({@link #built}). When a reel you put in clear mode leaves it because it left the screen, this
  * class asks the handler to turn clear mode on again, with the reason your own turn-on gave, so
- * Instagram does to the next reel exactly what your tap would have done. It hides nothing itself.
+ * Instagram does to the next reel exactly what your tap would have done.
+ *
+ * <p>Instagram's clear mode fades a reel's buttons, author row and top bar out but leaves the seek
+ * bar of a long reel on screen (#277). The patch asks {@link #scrubber} where the seek bar row
+ * decides whether to draw it, with the reel's own clear mode flag, and while the switch is on a reel
+ * in clear mode draws no seek bar. That is the only thing this class hides.
+ *
+ * <p>Every reel page shares one alpha for its buttons, author row and top bar. Clear mode's fade
+ * animates it to hidden, and Instagram resets it to shown when it binds a page at rest, behind the
+ * fade's back, which brought every button back on a reel still in clear mode several swipes in
+ * (#233). The patch asks {@link #chrome} each time a page writes that alpha, and while a reel you
+ * put in clear mode is in it, asking for fully shown keeps the alpha as it is. The fade out never
+ * asks for fully shown, and leaving clear mode yourself forgets it before Instagram's fade back in
+ * starts, so both go through.
  *
  * <p>Instagram's turn-on acts on whatever reel the pager is on, so {@link #current} looks at that
  * reel first and holds the turn-on back when it would be the wrong one: the reel that just left
@@ -332,6 +345,42 @@ public final class ReelClearMode {
             wakeIfWaiting();
         } catch (Throwable failure) {
             HookStatus.threw(FAMILY, "clear mode exit button", failure);
+        }
+    }
+
+    /**
+     * The hook, where the seek bar row tests whether to draw the seek bar, with Instagram's answer
+     * and the reel's clear mode flag, each non-zero for yes. A reel in clear mode draws none while
+     * the switch is on. Anything else, or a failure here, keeps Instagram's answer.
+     */
+    public static boolean scrubber(int shown, int fullscreen) {
+        if (shown == 0) return false;
+        if (fullscreen == 0) return true;
+        try {
+            HookStatus.invoked(FAMILY);
+            return !on();
+        } catch (Throwable failure) {
+            HookStatus.threw(FAMILY, "clear mode seek bar", failure);
+            return true;
+        }
+    }
+
+    /**
+     * The hook, where a reel page writes the alpha its buttons, author row and top bar share, with
+     * the alpha asked for and the one held now. While a reel you put in clear mode is in it, asking
+     * for fully shown from anything less keeps the alpha held (#233). Anything else, or a failure
+     * here, keeps what was asked for.
+     */
+    public static float chrome(float asked, float now) {
+        if (asked < 1f || now >= 1f || shown == null || !wanted) return asked;
+        try {
+            HookStatus.invoked(FAMILY);
+            if (!on()) return asked;
+            Logger.printDebug(() -> "Clear mode: kept the buttons hidden when Instagram reset them");
+            return now;
+        } catch (Throwable failure) {
+            HookStatus.threw(FAMILY, "clear mode buttons", failure);
+            return asked;
         }
     }
 

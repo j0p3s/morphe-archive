@@ -36,6 +36,9 @@ internal object FeatureIsValidFingerprint : Fingerprint(
     classFingerprint = FeatureToStringFingerprint,
     returnType = "Z",
     parameters = emptyList(),
+    filters = listOf(
+        methodCall(definingClass = "Lorg/joda/time/base/BaseDateTime;", name = "<init>", parameters = emptyList()),
+    ),
 )
 
 internal object PremiumLicenseConstructorFingerprint : Fingerprint(

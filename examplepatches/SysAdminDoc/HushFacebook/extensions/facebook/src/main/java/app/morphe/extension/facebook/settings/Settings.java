@@ -725,6 +725,14 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushfacebook_hide_comment_gif_sticker_buttons", FALSE);
 
     /**
+     * The comment composer at the bottom of Facebook's full-screen video viewer is omitted from
+     * the viewer's render method ({@link app.morphe.extension.facebook.comments.CommentSheetOptions}).
+     * Comment boxes on ordinary posts are unchanged. Off by default.
+     */
+    public static final BooleanSetting HIDE_VIDEO_COMMENT_COMPOSER =
+            new BooleanSetting("hushfacebook_hide_video_comment_composer", FALSE);
+
+    /**
      * Every comment starts with its reply thread open, as if View replies had been tapped
      * ({@link app.morphe.extension.facebook.comments.CommentSheetOptions}). Off by default. A
      * change shows on the next comments drawn.
@@ -906,6 +914,14 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting SKIP_SILENT_PARTS =
             new BooleanSetting("hushfacebook_skip_silent_parts", FALSE);
+
+    /**
+     * Feed videos start muted in every new session, and only a tap or the volume up key turns their
+     * sound on ({@link app.morphe.extension.facebook.media.FeedSound}). Starts off. Off or paused,
+     * Facebook sets the feed's sound as before. A restart starts the new session that mutes it.
+     */
+    public static final BooleanSetting KEEP_FEED_VIDEOS_MUTED =
+            new BooleanSetting("hushfacebook_keep_feed_videos_muted", FALSE, true);
 
     /**
      * A reel's progress bar stays full size, thumb and all, and a full-screen video's controls stay
@@ -1324,6 +1340,15 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting SAVE_CRASH_FILE =
             new BooleanSetting("hushfacebook_save_crash_file", TRUE);
 
+    /**
+     * A few seconds after you leave Facebook, its tasks leave the recent apps and its processes end
+     * ({@link app.morphe.extension.facebook.misc.CloseWhenLeft}, #202). The settings entry's own
+     * switch, so every build has it ({@link PatchFamily#ENTRY_SWITCHES}). Off by default: the next
+     * start is a cold one, and notifications that need Facebook running can wait for it.
+     */
+    public static final BooleanSetting CLOSE_WHEN_LEFT =
+            new BooleanSetting("hushfacebook_close_when_left", FALSE);
+
     static {
         // The crash handler is the shared library's, which can't name this class.
         CrashFile.useSwitch(SAVE_CRASH_FILE);
@@ -1639,6 +1664,15 @@ public class Settings extends BaseSettings {
      */
     public static final BooleanSetting AMOLED_FLAT_CARDS =
             new BooleanSetting("hushfacebook_amoled_flat_cards", FALSE, true);
+
+    /**
+     * With the AMOLED black theme, the gap Facebook leaves between a list's rows, posts in the feed
+     * among them, shows as a thin gray line instead of the page's black
+     * ({@link app.morphe.extension.facebook.theme.FeedGaps}, issue #206). Rows read it as they
+     * draw, so a change shows on the rows drawn after it.
+     */
+    public static final BooleanSetting AMOLED_FEED_GAPS =
+            new BooleanSetting("hushfacebook_amoled_feed_gaps", FALSE, false);
 
     /**
      * The strip some posts carry ("Are you interested in this post?", "Show less", who recently

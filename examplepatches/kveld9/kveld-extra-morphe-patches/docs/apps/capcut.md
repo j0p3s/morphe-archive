@@ -27,7 +27,7 @@ Technical documentation and patch catalog for CapCut on Android.
 | **Locale Assets Slimmer** | `resourcePatch` | `false` (Opt-in) | None | Strips unselected assets/locales/*.json bundles via locales option (default en). English always preserved. res/values-* tables are covered by the canonical universal Remove Extra Languages patch. |
 | **Bypass Effects Region Restriction** | `bytecodePatch` | `true` (Enabled) | None | Spoofs device_platform to "windows" and resets deviceId in EffectConfiguration to bypass ByteDance Shark WAF effect loading blocks. |
 | **Bypass GeoBlock Region Restriction** | `bytecodePatch` | `true` (Enabled) | None | Forces CapCut GeoBlock config lists (cert, dock, entrance, page, scheme) to empty so region-blocked surfaces stay enabled. Server-refused content may still fail to load. |
-| **Bypass Signature Check** | `bytecodePatch` | `true` (Enabled) | None | Spoofs official APK SHA-256 signature, suppresses signature blacklist and abnormal-source toasts, disables Godzilla inject detection, and stubs the cracking verdict persistence plus the security dialog render so re-signed builds are not blocked. |
+| **Bypass Signature Check** | `bytecodePatch` | `true` (Enabled) | None | Spoofs official APK SHA-256 signature, suppresses signature blacklist and abnormal-source toasts, disables Godzilla inject detection, stubs the cracking verdict persistence plus the security dialog render, and neutralizes the template-feed cracking interceptor so re-signed builds are not blocked. |
 | **Bypass Unsafe Package Modal** | `bytecodePatch` | `true` (Enabled) | None | Rewrites Lynx schema default fallback URL from unsafe-package modal to template portal to bypass security notice dialogs. |
 | **Unlock Premium** | `bytecodePatch` | `true` (Enabled) | None | Forces VIP and subscription gates to return true (SubscribeImpl, PayVipImpl, UserVipInfo, UserDetailInfo, VipUserServiceImpl, SubscribeCloudImpl), plus central account-status flags. |
 | **Native Bloat Slimmer** | `rawResourcePatch` | `false` (Opt-in) | None | Zeroes AppLovin crash-reporter .so in-situ across arm64-v8a/armeabi-v7a; optional trimSpeechEngines toggle zeroes speech .so libs (breaks voice features). |
@@ -61,7 +61,7 @@ Technical documentation and patch catalog for CapCut on Android.
 
 4. **Bypass Signature Check**:
    - **Objective**: Allow re-signed application packages to run without integrity errors or tamper alerts.
-   - **How**: Returns the official APK signature hash during telemetry checks, clears the signature blacklist, silences tamper toasts, disables injection detection gates, and stubs the cracking verdict persistence plus the security dialog render so the blocking notice can never display.
+   - **How**: Returns the official APK signature hash during telemetry checks, clears the signature blacklist, silences tamper toasts, disables injection detection gates, stubs the cracking verdict persistence plus the security dialog render, and neutralizes a second cracking interceptor on the template feed (it would otherwise relaunch the notice on specific server verdicts) so the blocking notice can never display.
 
 5. **Bypass Unsafe Package Modal**:
    - **Objective**: Prevent blocking security warning dialogs on startup.

@@ -22,9 +22,11 @@
                  Messenger build family (CompatReport --save into a scratch folder, which must
                  match scripts/profiles). A family that already passed with this bundle keeps its
                  receipt and isn't patched again.
-      publish    The annotated tag, pushed on its own, and the GitHub release with the bundle,
-                 SHA256SUMS.txt and the signature. Notes are the whole CHANGELOG section. Each
-                 asset is downloaded back and compared.
+      publish    Refuses unless -Walk names the walk-receipt.json of a full, passing whole-app
+                 walk of this exact bundle on a release phone or an emulator. Then the annotated
+                 tag, pushed on its own, and the GitHub release with the bundle, SHA256SUMS.txt
+                 and the signature. Notes are the whole CHANGELOG section. Each asset is
+                 downloaded back and compared.
       index      Pushes main, which carries the new source index, then checks that GitHub serves
                  it and that its download URL returns the released bundle.
 
@@ -34,6 +36,7 @@
 .EXAMPLE
     scripts/release/release.ps1 -Stage prepare -Version 0.23.0
     scripts/release/release.ps1 -Stage build -Version 0.23.0 -DesktopJar C:\tools\morphe-desktop-1.18.1-all.jar -CompatClasspath "<dexlib2>;<guava>;<failureaccess>"
+    scripts/release/release.ps1 -Stage publish -Version 0.23.0 -Walk <walk folder>/walk-receipt.json
 #>
 #Requires -Version 7
 [CmdletBinding()]
@@ -49,6 +52,8 @@ param(
     [string]$Bundle,
     [string]$BundleSha256,
     [string]$HeldIndexSha256,
+    # publish: the walk-receipt.json a whole-app walk of this exact bundle left.
+    [string]$Walk,
     [string]$Repository = 'SysAdminDoc/HushMessenger'
 )
 
@@ -101,6 +106,7 @@ if (-not $Java) { $Java = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin/ja
 $env:BUILD_QUEUE_PRIORITY = 'release'
 
 function Write-Step([string]$Text) { Write-Host "[release $Version] $Text" -ForegroundColor Cyan }
+. (Join-Path $root 'scripts/walk-receipt.ps1')
 
 function Invoke-Checked([string]$What, [scriptblock]$Block) {
     $global:LASTEXITCODE = 0
@@ -385,6 +391,11 @@ switch ($Stage) {
             $recorded = Join-Path $root "scripts/profiles/$code.txt"
             # CompatReport writes LF; a checkout can hold the record with CRLF.
             $profileText = (Get-Content -LiteralPath $recorded -Raw) -replace "`r`n", "`n"
+            # Only the stock APK the profile was recorded from proves this bundle patches that build.
+            $recordedStock = [regex]::Match($profileText, '(?m)^sha256 ([0-9a-f]{64})$').Groups[1].Value
+            if ($stock -ne $recordedStock) {
+                throw "$apk is $stock, but scripts/profiles/$code.txt was recorded from $recordedStock. Put the unmodified APK from APKMirror in HUSH_NATIVE_FIXTURES."
+            }
             $profileHash = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData([Text.Encoding]::UTF8.GetBytes($profileText))).ToLowerInvariant()
             if (Test-Path -LiteralPath $receipt) {
                 $kept = Get-Content -LiteralPath $receipt -Raw | ConvertFrom-Json
@@ -426,6 +437,17 @@ switch ($Stage) {
         if ($build.sums_sha256 -and ((Get-FileSha256 $files[1]) -ne $build.sums_sha256 -or (Get-FileSha256 $files[2]) -ne $build.sig_sha256)) {
             throw 'SHA256SUMS.txt or its signature changed after the build stage. Run -Stage build again.'
         }
+        # Nothing goes public until the whole app has been walked with this exact bundle.
+        if (-not $Walk) {
+            throw ('-Walk names the walk-receipt.json a whole-app walk of this bundle left on a release phone or an emulator. ' +
+                "scripts/walk-app.ps1 -Bundle $($files[0]) writes one.")
+        }
+        $walked = Test-WalkReceipt -Path $Walk -BundlePath $files[0]
+        if (-not $walked.Valid) {
+            throw ("The whole-app walk doesn't back $bundleName, so nothing was published: $($walked.Reason). " +
+                "Walk the whole app with scripts/walk-app.ps1 -Bundle $($files[0]) on a release phone or an emulator, and pass its walk-receipt.json as -Walk.")
+        }
+        Write-Step "walked on $($walked.Receipt.device): $($walked.Receipt.screens) screens, no crash"
         $notes = Join-Path $work 'notes.md'
         Write-Text $notes ((Get-ChangelogSection) + "`n")
 

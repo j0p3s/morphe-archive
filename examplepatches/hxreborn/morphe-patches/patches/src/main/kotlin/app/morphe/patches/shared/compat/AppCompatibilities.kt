@@ -21,7 +21,10 @@ internal object AppCompatibilities {
         signatures = setOf(
             "6e3434746912534281a97d9db0c05d02b7c87b9c4486aa534658bd42fda43a1d",
         ),
-        targets = listOf(AppTarget(version = "2.9.5", versionCode = 2009500, minSdk = 21)),
+        targets = listOf(
+            AppTarget(version = "2.9.5", versionCode = 2009500, minSdk = 21),
+            AppTarget(version = "2.9.6", versionCode = 2009600, minSdk = 21),
+        ),
     )
 
     val ALBO = Compatibility(
@@ -65,7 +68,10 @@ internal object AppCompatibilities {
         signatures = setOf(
             "48e539b414808f7a13343b5e10310d268f63030ba3cd479db290048ca0a77e8f",
         ),
-        targets = listOf(AppTarget(version = "1.3.3", versionCode = 29, minSdk = 32)),
+        targets = listOf(
+            AppTarget(version = "1.3.3", versionCode = 29, minSdk = 32),
+            AppTarget(version = "1.3.4", versionCode = 30, minSdk = 32),
+        ),
     )
 
     val ALPINEQUEST = Compatibility(
@@ -164,7 +170,10 @@ internal object AppCompatibilities {
         signatures = setOf(
             "908874fc41478d0780790e5c8a178727f83b2182c147f20689a3d5404fd4ded0",
         ),
-        targets = listOf(AppTarget(version = "2.0.2", versionCode = 38, minSdk = 23)),
+        targets = listOf(
+            AppTarget(version = "2.0.2", versionCode = 38, minSdk = 23),
+            AppTarget(version = "3.0.0", versionCode = 41, minSdk = 24),
+        ),
     )
 
     val BLURWALL = Compatibility(
@@ -201,6 +210,20 @@ internal object AppCompatibilities {
             "81a63b3b52728ce385b0897c6f6537dfe994ae950a605dcea41feebb8150d569",
         ),
         targets = listOf(AppTarget(version = "2.25.111", versionCode = 1523, minSdk = 29)),
+    )
+
+    val CASTLE = Compatibility(
+        name = "Castle",
+        packageName = "com.external.castle",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0xE53935,
+        signatures = setOf(
+            "917ee66c56caf0a5201a17ac8eddff1575aeac1c6a1091a6e0d29b4c08176130",
+        ),
+        targets = listOf(
+            AppTarget(version = "2.1.1", versionCode = 148, minSdk = 23),
+            AppTarget(version = "2.1.3", versionCode = 157, minSdk = 23),
+        ),
     )
 
     val CASTLE_FOR_TV = Compatibility(
@@ -334,7 +357,10 @@ internal object AppCompatibilities {
         packageName = "com.etsy.android",
         apkFileType = ApkFileType.APKS,
         appIconColor = 0xF1641E,
-        targets = listOf(AppTarget(version = "7.97.0", versionCode = 79700150, minSdk = 29)),
+        targets = listOf(
+            AppTarget(version = "7.97.0", versionCode = 79700150, minSdk = 29),
+            AppTarget(version = "8.0.0", versionCode = 80000162, minSdk = 32),
+        ),
     )
 
     val FAST_STL_VIEWER = Compatibility(
@@ -395,7 +421,19 @@ internal object AppCompatibilities {
         targets = listOf(
             AppTarget(version = "2.2.221", versionCode = 221, minSdk = 24),
             AppTarget(version = "2.2.224", versionCode = 224, minSdk = 24),
+            AppTarget(version = "2.2.227", versionCode = 227, minSdk = 24),
         ),
+    )
+
+    val GLASS_WIDGETS = Compatibility(
+        name = "Glass Widgets",
+        packageName = "com.jndapp.glass.widgets",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x000000,
+        signatures = setOf(
+            "6566216a168c676d7290543751611e836d79c88a0c9e616c9ba3db9688c9737b",
+        ),
+        targets = listOf(AppTarget(version = "1.0.10", versionCode = 11, minSdk = 32)),
     )
 
     val HINDU_CALENDAR = Compatibility(
@@ -575,7 +613,21 @@ internal object AppCompatibilities {
             "0b35fb5df963d4382ba19bf70923a66a056334335721a4fe395bf9365721a151",
             "c3f2c1d09fe211d59fe243da4a639bd610a4cee4ee54ad5380c03f83310378cb",
         ),
-        targets = listOf(AppTarget(version = "62.6", versionCode = 626, minSdk = 24)),
+        targets = listOf(
+            AppTarget(version = "62.6", versionCode = 626, minSdk = 24),
+            AppTarget(version = "62.9", versionCode = 629, minSdk = 24),
+        ),
+    )
+
+    val MINISHARE = Compatibility(
+        name = "MiniShare",
+        packageName = "com.omniashare.minishare",
+        apkFileType = ApkFileType.APK,
+        appIconColor = 0x2CADC7,
+        signatures = setOf(
+            "cf0684e9abe941d8ad027981fc82d853746c4b0604b31962dcf4d3eea9d55fb0",
+        ),
+        targets = listOf(AppTarget(version = "1.6.6", versionCode = 18, minSdk = 21)),
     )
 
     val MOON_READER = Compatibility(
@@ -586,7 +638,10 @@ internal object AppCompatibilities {
         signatures = setOf(
             "5ac646ebc68017e4cc582b11b1c2ae5d29b15d9b0ac3a54fc60972417b41c9ad",
         ),
-        targets = listOf(AppTarget(version = "10.7", versionCode = 1007000, minSdk = 21)),
+        targets = listOf(
+            AppTarget(version = "10.7", versionCode = 1007000, minSdk = 21),
+            AppTarget(version = "10.8", versionCode = 1008000, minSdk = 21),
+        ),
     )
 
     val MOVIEBOX = Compatibility(
@@ -642,7 +697,33 @@ internal object AppCompatibilities {
         packageName = "com.soulbreakers.mymoveset",
         apkFileType = ApkFileType.XAPK,
         appIconColor = 0x9F1C3B,
-        targets = listOf(AppTarget(version = "1.4.0", versionCode = 16, minSdk = 24)),
+        targets = listOf(
+            AppTarget(version = "1.4.0", versionCode = 16, minSdk = 24),
+            AppTarget(version = "1.5.0", versionCode = 17, minSdk = 24),
+        ),
+    )
+
+    val MYSCRIPT_MATH = Compatibility(
+        name = "MyScript Math",
+        packageName = "com.myscript.math",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0xFF1A1A,
+        signatures = setOf(
+            "405515fc77f1c69d3631d7fb0e63a848819b0bcfcd72c8cc14c91378b24b6fb4",
+            "5f87e50754e55d725b5343bffbbb12fca88f5992118b2feb407e738178227cb1",
+        ),
+        targets = listOf(AppTarget(version = "1.11.0", versionCode = 2001812, minSdk = 26)),
+    )
+
+    val MYSCRIPT_NOTES = Compatibility(
+        name = "MyScript Notes",
+        packageName = "com.myscript.nebo",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0x007FFD,
+        signatures = setOf(
+            "12645b76721993f0f3faf82dddecd6c96355260bf44d06ce6246caf2fcf3ada8",
+        ),
+        targets = listOf(AppTarget(version = "7.4.5", versionCode = 181541, minSdk = 26)),
     )
 
     val MY_APK = Compatibility(
@@ -654,6 +735,17 @@ internal object AppCompatibilities {
             "3fa505df0e471b20b0bf0511cd05c0ecfa2fa53a9bbed6bf51886e1b7c0db90b",
         ),
         targets = listOf(AppTarget(version = "4.1.1", versionCode = 3231, minSdk = 26)),
+    )
+
+    val NARA_BABY = Compatibility(
+        name = "Nara Baby",
+        packageName = "com.naraorganics.nara",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0xFF5D01,
+        signatures = setOf(
+            "de6c7a92a739929e4a32b5a1e10b79c6e1b5bac0162e20453c1a6eb1c1b365c6",
+        ),
+        targets = listOf(AppTarget(version = "2.8.2", versionCode = 405, minSdk = 24)),
     )
 
     val NETWORK_ANALYZER = Compatibility(
@@ -687,6 +779,7 @@ internal object AppCompatibilities {
             AppTarget(version = "3.4.12", versionCode = 4197422, minSdk = 24),
             AppTarget(version = "3.4.13", versionCode = 4197423, minSdk = 24),
             AppTarget(version = "3.4.14", versionCode = 4197424, minSdk = 24),
+            AppTarget(version = "3.4.15", versionCode = 4197425, minSdk = 24),
         ),
     )
 
@@ -705,6 +798,7 @@ internal object AppCompatibilities {
             AppTarget(version = "0.4.98", versionCode = 310, minSdk = 29),
             AppTarget(version = "0.5.38", versionCode = 350, minSdk = 29),
             AppTarget(version = "0.5.68", versionCode = 380, minSdk = 32),
+            AppTarget(version = "0.5.84", versionCode = 396, minSdk = 32),
         ),
     )
 
@@ -727,7 +821,10 @@ internal object AppCompatibilities {
         signatures = setOf(
             "e9b037f4be157ee608de6aa922cda5cdbe614633171cc94544c40f08e9509286",
         ),
-        targets = listOf(AppTarget(version = "4.14.0", versionCode = 4014000, minSdk = 29)),
+        targets = listOf(
+            AppTarget(version = "4.14.0", versionCode = 4014000, minSdk = 29),
+            AppTarget(version = "4.15.0", versionCode = 4015000, minSdk = 29),
+        ),
     )
 
     val PERPLEXITY = Compatibility(
@@ -877,6 +974,7 @@ internal object AppCompatibilities {
             AppTarget(version = "1.41.2", versionCode = 14102398, minSdk = 27),
             AppTarget(version = "1.41.3", versionCode = 14103401, minSdk = 27),
             AppTarget(version = "1.41.4", versionCode = 14104406, minSdk = 27),
+            AppTarget(version = "1.41.5", versionCode = 14105409, minSdk = 27),
         ),
     )
 
@@ -892,6 +990,7 @@ internal object AppCompatibilities {
             AppTarget(version = "5.20.39.0", versionCode = 605203900, minSdk = 26),
             AppTarget(version = "5.20.57.0", versionCode = 605205700, minSdk = 26),
             AppTarget(version = "5.20.74.0", versionCode = 605207400, minSdk = 26),
+            AppTarget(version = "5.20.98.0", versionCode = 605209800, minSdk = 26),
         ),
     )
 
@@ -958,7 +1057,10 @@ internal object AppCompatibilities {
         packageName = "com.sry.rateglance",
         apkFileType = ApkFileType.APKS,
         appIconColor = 0x0D192C,
-        targets = listOf(AppTarget(version = "1.17.6", versionCode = 304, minSdk = 26)),
+        targets = listOf(
+            AppTarget(version = "1.17.6", versionCode = 304, minSdk = 26),
+            AppTarget(version = "1.18.6", versionCode = 318, minSdk = 32),
+        ),
     )
 
     val RADIO_JAVAN = Compatibility(
@@ -979,7 +1081,10 @@ internal object AppCompatibilities {
         apkFileType = ApkFileType.APKS,
         appIconColor = 0x1988E0,
         signatures = setOf("ddd75c66578654d085424804cb27c7b6e04fd36616045bfee140d9756ffca563"),
-        targets = listOf(AppTarget(version = "4.7.44", versionCode = 8698961, minSdk = 24)),
+        targets = listOf(
+            AppTarget(version = "4.7.44", versionCode = 8698961, minSdk = 24),
+            AppTarget(version = "4.8.0", versionCode = 8699017, minSdk = 32),
+        ),
     )
 
     val READERA = Compatibility(
@@ -990,6 +1095,7 @@ internal object AppCompatibilities {
         targets = listOf(
             AppTarget(version = "26.05.20+2300", versionCode = 2300, minSdk = 16),
             AppTarget(version = "26.09.29+2320", versionCode = 2320, minSdk = 23),
+            AppTarget(version = "26.10.18+2330", versionCode = 2330, minSdk = 23),
         ),
     )
 
@@ -1007,6 +1113,7 @@ internal object AppCompatibilities {
         apkFileType = ApkFileType.APKS,
         appIconColor = 0x243ECA,
         targets = listOf(
+            AppTarget(version = "1.02.01.1020", versionCode = 10158, minSdk = 24),
             AppTarget(version = "1.01.100.1012", versionCode = 10157, minSdk = 24),
             AppTarget(version = "1.01.99.0909", versionCode = 10153, minSdk = 24),
             AppTarget(version = "1.01.98.0831", versionCode = 10151, minSdk = 24),
@@ -1033,6 +1140,7 @@ internal object AppCompatibilities {
         apkFileType = ApkFileType.APKS,
         appIconColor = 0x8E58FF,
         targets = listOf(
+            AppTarget(version = "Android V1.79.2", minSdk = 32),
             AppTarget(version = "Android V1.79.1", minSdk = 26),
             AppTarget(version = "Android V1.78.52", minSdk = 26),
             AppTarget(version = "Android V1.78.51", minSdk = 26),
@@ -1126,7 +1234,10 @@ internal object AppCompatibilities {
         signatures = setOf(
             "982d28261c4cbcc2ff8c9ce397d66af80150a0f4e684aed8eef328c0af169019",
         ),
-        targets = listOf(AppTarget(version = "26.6.1-120585", versionCode = 272606010, minSdk = 32)),
+        targets = listOf(
+            AppTarget(version = "26.6.1-120585", versionCode = 272606010, minSdk = 32),
+            AppTarget(version = "26.6.2-121046", versionCode = 272606020, minSdk = 32),
+        ),
     )
 
     val SYMFONIUM = Compatibility(
@@ -1168,6 +1279,7 @@ internal object AppCompatibilities {
             AppTarget(version = "415.0.0.182623", versionCode = 1282623, minSdk = 26),
             AppTarget(version = "415.0.0.182626", versionCode = 1282626, minSdk = 26),
             AppTarget(version = "416.0.0.183472", versionCode = 1283472, minSdk = 26),
+            AppTarget(version = "438.0.0.183733", versionCode = 1283733, minSdk = 26),
         ),
     )
 
@@ -1247,6 +1359,15 @@ internal object AppCompatibilities {
         ),
     )
 
+    val WATTPAD = Compatibility(
+        name = "Wattpad",
+        packageName = "wp.wattpad",
+        apkFileType = ApkFileType.APKS_REQUIRED,
+        appIconColor = 0xFF500A,
+        signatures = setOf("012de45837d20561255a02bbc22334c1f681d01b366fe31bef418baf535903ef"),
+        targets = listOf(AppTarget(version = "11.41.1", versionCode = 3830, minSdk = 32)),
+    )
+
     val YANOSIK = Compatibility(
         name = "Yanosik",
         packageName = "pl.neptis.yanosik.mobi.android",
@@ -1264,5 +1385,14 @@ internal object AppCompatibilities {
         apkFileType = ApkFileType.XAPK_REQUIRED,
         appIconColor = 0x38D880,
         targets = listOf(AppTarget(version = "5.1.7_20260914", versionCode = 3799, minSdk = 24)),
+    )
+
+    val GRAPH_MESSENGER = Compatibility(
+        name = "Graph Messenger",
+        packageName = "ir.ilmili.telegraph",
+        apkFileType = ApkFileType.APKM,
+        appIconColor = 0xB6D790,
+        signatures = setOf("e7d5ad736aeecd2fe237679e4deaf2a40bb32fc07837fe48778a5b41c0418862"),
+        targets = listOf(AppTarget(version = "13.0.2.0", versionCode = 71751, minSdk = 23)),
     )
 }

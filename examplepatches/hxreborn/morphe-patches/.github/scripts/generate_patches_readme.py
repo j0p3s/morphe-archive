@@ -185,6 +185,7 @@ def versions_table(targets):
 # without an icon, so adding a new app does not require touching this map.
 ICONS = {
     "com.thesortdapp.sortd": "albo.png",
+    "ir.ilmili.telegraph": "graphmessenger.png",
     "all.in.one.calculator": "allinonecalculator.png",
     "com.allformatplayer.streamvideoplayer": "allvideoplayer.png",
     "com.getaloa.app": "aloa.png",
@@ -203,6 +204,7 @@ ICONS = {
     "com.quickcursor": "quickcursor.png",
     "com.biobird.exvee": "biobird.png",
     "com.stresscodes.wallp": "walp.png",
+    "wp.wattpad": "wattpad.png",
     "com.wallmaa.minimal.wallpapers": "wallmaa.png",
     "com.spocky.projengmenu": "projectivy.png",
     "app.privacynotes": "privacynotes.png",
@@ -229,6 +231,7 @@ ICONS = {
     "com.gamma.scan": "qrscanner.png",
     "com.cxinventor.file.explorer": "cx.png",
     "com.gxnet.castle.indiatv": "castlefortv.png",
+    "com.external.castle": "castle.png",
     "com.streetwriters.notesnook": "notesnook.png",
     "com.orion.notein.global": "notein.png",
     "io.raindrop.raindropio": "raindrop.png",
@@ -238,6 +241,8 @@ ICONS = {
     "com.community.oneroom": "moviebox.png",
     "com.community.mbox.tv": "movieboxtv.png",
     "com.musixmatch.android.lyrify": "musixmatch.png",
+    "com.myscript.math": "myscriptmath.png",
+    "com.myscript.nebo": "myscriptnotes.png",
     "com.gstarmc.android": "dwgfastview.png",
     "com.mchutov.Quranify": "quranify.png",
     "com.reworewo.prayertimes": "prayertimes.png",
@@ -289,6 +294,9 @@ ICONS = {
     "com.generalmagic.magicearth": "magicearth.png",
     "com.lbrc.PeriodCalendar": "periodcalendar.png",
     "com.sygic.aura": "sygic.png",
+    "com.omniashare.minishare": "minishare.png",
+    "com.naraorganics.nara": "narababy.png",
+    "com.jndapp.glass.widgets": "glasswidgets.png",
 }
 
 ICON_DIR = Path(".github/assets/icons")

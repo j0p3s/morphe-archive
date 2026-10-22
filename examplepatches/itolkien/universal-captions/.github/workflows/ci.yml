@@ -1,27 +1,173 @@
-name: Caption regression tests
+name: Validate upstream Morphe captions
+
 on:
   push:
+    branches: [main]
   pull_request:
+    branches: [main]
   workflow_dispatch:
+    inputs:
+      morphe_repository:
+        description: 'Morphe source to test'
+        type: choice
+        required: true
+        default: MorpheApp/morphe-patches
+        options:
+          - MorpheApp/morphe-patches
+          - itolkien/morphe-patches
+      morphe_ref:
+        description: 'Branch, tag or commit SHA in the chosen source'
+        type: string
+        required: true
+        default: dev
+      build_mpp:
+        description: 'Also build a full Morphe MPP for Android testing'
+        type: boolean
+        required: true
+        default: false
+
+# Manual runs must not cancel each other (or be cancelled by main pushes).
+concurrency:
+  group: captions-${{ github.workflow }}-${{ github.event_name == 'workflow_dispatch' && github.run_id || github.ref }}
+  cancel-in-progress: ${{ github.event_name != 'workflow_dispatch' }}
+
 permissions:
   contents: read
+  packages: read
+
 jobs:
-  tests:
+  captions:
+    name: Test selected Morphe captions
     runs-on: ubuntu-latest
+    env:
+      # Automatic push/PR runs always validate official Morphe dev.
+      MORPHE_REPOSITORY: ${{ github.event_name == 'workflow_dispatch' && inputs.morphe_repository || 'MorpheApp/morphe-patches' }}
+      MORPHE_REF: ${{ github.event_name == 'workflow_dispatch' && inputs.morphe_ref || 'dev' }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - name: Validate source selection
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$MORPHE_REPOSITORY" in
+            MorpheApp/morphe-patches|itolkien/morphe-patches) ;;
+            *) echo "::error::Unsupported Morphe source"; exit 1 ;;
+          esac
+          # Accept ordinary Git refs and commit SHAs, never shell metacharacters.
+          if [[ -z "$MORPHE_REF" || ! "$MORPHE_REF" =~ ^[A-Za-z0-9._/-]+$ ||
+                "$MORPHE_REF" == -* || "$MORPHE_REF" == /* ||
+                "$MORPHE_REF" == */ || "$MORPHE_REF" == *..* ||
+                "$MORPHE_REF" == *"@{"* ]]; then
+            echo "::error::Invalid Morphe branch, tag or commit SHA"
+            exit 1
+          fi
+
+      - name: Checkout Universal Captions test sources
+        uses: actions/checkout@v4
+        with:
+          path: captions
+          persist-credentials: false
+
+      - name: Checkout selected Morphe source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.MORPHE_REPOSITORY }}
+          ref: ${{ env.MORPHE_REF }}
+          path: morphe
+          persist-credentials: false
+
+      - name: Record tested Morphe source and revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          sha="$(git -C morphe rev-parse HEAD)"
+          echo "MORPHE_SHA=$sha" >> "$GITHUB_ENV"
+          printf '%s\n' "$sha" > morphe-commit.txt
+          {
+            printf 'repository=%s\n' "$MORPHE_REPOSITORY"
+            printf 'requested_ref=%s\n' "$MORPHE_REF"
+            printf 'resolved_sha=%s\n' "$sha"
+          } > morphe-source.txt
+          {
+            echo '### Tested Morphe captions'
+            echo
+            echo "Source: \`$MORPHE_REPOSITORY\`"
+            echo "Requested ref: \`$MORPHE_REF\`"
+            echo "Resolved commit: \`$sha\`"
+            echo
+            echo 'Only our supplemental caption tests are copied into the checkout.'
+            echo 'No tracked Morphe production source is modified.'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Add caption regressions (test-only)
+        shell: bash
+        run: |
+          set -euo pipefail
+          source="captions/tests/upstream/MorpheCaptionUpstreamRegressionTest.java"
+          destination="morphe/extensions/youtube/src/test/java/app/morphe/extension/youtube/patches/MorpheCaptionUpstreamRegressionTest.java"
+          test -s "$source"
+          test -d "$(dirname "$destination")"
+          test ! -e "$destination"
+          test -f morphe/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/AutoTranslateCaptionsPatch.java
+          test -f morphe/extensions/youtube/src/main/java/app/morphe/extension/youtube/patches/TranslatedCaptionPensPatch.java
+          cp "$source" "$destination"
+          cmp "$source" "$destination"
+          git -C morphe diff --exit-code --quiet
+          echo 'Supplemental tests installed; Morphe production sources are untouched.'
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Test selected Kotlin/Java and caption regressions
+        working-directory: morphe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew :patches:test :extensions:youtube:testDebugUnitTest --no-daemon
+
+      - name: Build selected Morphe MPP (opt-in)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_mpp }}
+        working-directory: morphe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew :patches:generatePatchesList :patches:buildAndroid --no-daemon
+
+      - name: Verify optional Morphe MPP
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_mpp }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          root = Path('morphe')
+          packages = sorted((root / 'patches/build/libs').glob('*.mpp'))
+          assert len(packages) == 1, f'Expected one Morphe MPP, found {packages}'
+          with ZipFile(packages[0]) as bundle:
+              names = bundle.namelist()
+              assert bundle.testzip() is None, 'Corrupt MPP'
+              assert 'classes.dex' in names, 'Missing patch bytecode'
+              assert any(n.startswith('extensions/') and n.endswith('.mpe') for n in names), 'Missing extension'
+          manifest = json.loads((root / 'patches-list.json').read_text())
+          assert any(p['name'] == 'Captions' for p in manifest['patches']), 'Missing Captions patch'
+          print(f'Morphe bundle checked: {packages[0]}')
+          PY
+
+      - name: Upload optional Morphe MPP test artifact
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.build_mpp }}
+        uses: actions/upload-artifact@v4
         with:
-          gradle-version: '9.0.0'
-      - name: Test menu runtime and structural bytecode resolution
-        run: gradle -p tests/fingerprints test --no-daemon
-      - uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: fingerprint-test-results
-          path: tests/fingerprints/build/reports/tests/test
-          if-no-files-found: ignore
+          name: morphe-captions-test-${{ github.run_id }}
+          path: |
+            morphe/patches/build/libs/*.mpp
+            morphe/patches-list.json
+            morphe-commit.txt
+            morphe-source.txt
+          if-no-files-found: error
+          retention-days: 14

@@ -54,6 +54,7 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
                 || SettingsStatus.engagementRateEnabled
                 || SettingsStatus.hideFeedLiveButtonEnabled
                 || SettingsStatus.hideFeedSidebarButtonEnabled
+                || SettingsStatus.feedSidebarSwipeEnabled
                 || SettingsStatus.hideFeedSearchButtonEnabled
                 || SettingsStatus.feedFilterEnabled
                 || SettingsStatus.promotionalBannersEnabled
@@ -61,6 +62,7 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
                 || SettingsStatus.sensitiveWarningsEnabled
                 || SettingsStatus.popupLabelsEnabled
                 || SettingsStatus.subtitleToolsEnabled
+                || SettingsStatus.captionsAvailableEnabled
                 || SettingsStatus.blockAuthorEnabled
                 || SettingsStatus.notInterestedEnabled
                 || SettingsStatus.feedMuteEnabled
@@ -293,6 +295,14 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
                     "Show how long each video runs under its view count on profile grids. Photo posts and videos TikTok sent no length for show none.",
                     Settings.VIDEO_LENGTH_ON_GRID
             ));
+            if (SettingsStatus.gridSortEnabled) {
+                addPreference(new ChoicePreference(context, "Sort loaded videos on profile grids",
+                        Settings.PROFILE_GRID_SORT,
+                        new String[]{"Original order", "Newest first", "Oldest first", "Longest first",
+                                "Shortest first", "Most viewed first", "Most liked first"},
+                        new String[]{"off", "newest", "oldest", "longest", "shortest", "most_viewed", "most_liked"})
+                        .withNote("Sorts the videos a profile or Liked grid has loaded so far, with pinned videos first, and the order covers more videos as you scroll. The next time a grid opens, it follows this."));
+            }
         }
         if (SettingsStatus.authorRegionEnabled) {
             addPreference(new TogglePreference(
@@ -342,6 +352,7 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
         boolean any = SettingsStatus.videoOverlaysEnabled
                 || SettingsStatus.hideFeedLiveButtonEnabled
                 || SettingsStatus.hideFeedSidebarButtonEnabled
+                || SettingsStatus.feedSidebarSwipeEnabled
                 || SettingsStatus.hideFeedSearchButtonEnabled
                 || SettingsStatus.feedFilterEnabled;
         if (!any) return;
@@ -363,6 +374,14 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
                     "Hide the side menu button",
                     "Hide the button at the top left of the feed that opens TikTok's side menu, with Your orders, TikTok Minis and more.",
                     Settings.HIDE_FEED_SIDEBAR_BUTTON
+            ));
+        }
+        if (SettingsStatus.feedSidebarSwipeEnabled) {
+            addPreference(new TogglePreference(
+                    context,
+                    "Turn off the swipe to the side menu",
+                    "Swiping right on the For You feed no longer opens TikTok's side menu, with Your orders, TikTok Minis and more.",
+                    Settings.DISABLE_FEED_SIDEBAR_SWIPE
             ));
         }
         if (SettingsStatus.hideFeedSearchButtonEnabled) {
@@ -554,8 +573,16 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
     }
 
     private void addCaptions(Context context) {
-        if (SettingsStatus.subtitleToolsEnabled) {
+        if (SettingsStatus.subtitleToolsEnabled || SettingsStatus.captionsAvailableEnabled) {
             addPreference(new SectionHeadingPreference(context, "Captions"));
+        }
+        if (SettingsStatus.captionsAvailableEnabled) {
+            addPreference(new TogglePreference(context, "Keep captions available",
+                    "Bring back TikTok's captions switch in its accessibility settings, and the caption controls on videos, "
+                            + "when TikTok leaves them out. Captions only show on videos that have them.",
+                    Settings.KEEP_CAPTIONS_AVAILABLE));
+        }
+        if (SettingsStatus.subtitleToolsEnabled) {
             NumberInputPreference captionSize = new NumberInputPreference(context, "Caption text size",
                     L10n.f(context, "Use 0 for TikTok's size, or %1$d to %2$d. Applies to the next caption.",
                             CaptionStyle.MIN_TEXT_SIZE, CaptionStyle.MAX_TEXT_SIZE),
@@ -616,6 +643,14 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
                     "While Clear display is on, also hide the progress bar, the close button and the pause and speed buttons at the bottom. You can still drag along the bottom edge to move through the video. To leave Clear display, press and hold the video and tap Restore display, or pinch the screen.",
                     Settings.HIDE_CLEAR_DISPLAY_CONTROLS
             ));
+        }
+        // #232: below the controls row, which stays right under the automatic switch for #84.
+        if (SettingsStatus.automaticClearDisplayEnabled) {
+            addPreference(new TogglePreference(context, "Keep Clear display across videos",
+                    "Clear display you turn on stays on as you swipe to the next video. Off, each new video starts with its controls showing.",
+                    Settings.REMEMBER_CLEAR_DISPLAY_ON_SCROLL));
+        }
+        if (SettingsStatus.videoOverlaysEnabled) {
             addPreference(new NumberInputPreference(
                     context,
                     "Fade the video controls",
@@ -645,6 +680,12 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
                     "Liquid glass look",
                     "Draw the main feed's floating pill as glass, lighter and more see-through, with a bright rim along its top edge. Needs Floating bottom bar.",
                     Settings.LIQUID_GLASS_BOTTOM_BAR
+            ));
+            addPreference(new TogglePreference(
+                    context,
+                    "Glass lens on the current tab",
+                    "On the main feed, a smaller piece of glass sits behind the tab you're on and slides to the next tab you pick. Needs Liquid glass look.",
+                    Settings.GLASS_TAB_LENS
             ));
             addPreference(new TogglePreference(
                     context,
@@ -711,8 +752,22 @@ public final class InterfacePreferenceCategory extends ConditionalPreferenceCate
                 tapLabels.add("Turn Clear display on or off");
                 tapValues.add("clear_display");
             }
+            String[] tapLabelArray = tapLabels.toArray(new String[0]);
+            String[] tapValueArray = tapValues.toArray(new String[0]);
             addPreference(new ChoicePreference(context, "Double tap", Settings.DOUBLE_TAP_ACTION,
-                    tapLabels.toArray(new String[0]), tapValues.toArray(new String[0])));
+                    tapLabelArray, tapValueArray));
+            // Four corners with the same choices, after OmerKurdi79's version (#232).
+            addPreference(new TogglePreference(context, "Double tap by corner",
+                    "Give each quarter of the video its own double tap choice. The Double tap row above is used while this is off.",
+                    Settings.DOUBLE_TAP_SPLIT_ZONES));
+            addPreference(new ChoicePreference(context, "Top left double tap",
+                    Settings.DOUBLE_TAP_TOP_LEFT_ACTION, tapLabelArray, tapValueArray));
+            addPreference(new ChoicePreference(context, "Top right double tap",
+                    Settings.DOUBLE_TAP_TOP_RIGHT_ACTION, tapLabelArray, tapValueArray));
+            addPreference(new ChoicePreference(context, "Bottom left double tap",
+                    Settings.DOUBLE_TAP_BOTTOM_LEFT_ACTION, tapLabelArray, tapValueArray));
+            addPreference(new ChoicePreference(context, "Bottom right double tap",
+                    Settings.DOUBLE_TAP_BOTTOM_RIGHT_ACTION, tapLabelArray, tapValueArray));
         }
         if (SettingsStatus.swipeLeftEnabled) {
             addPreference(new ChoicePreference(context, "Swipe left", Settings.SWIPE_LEFT_ACTION,

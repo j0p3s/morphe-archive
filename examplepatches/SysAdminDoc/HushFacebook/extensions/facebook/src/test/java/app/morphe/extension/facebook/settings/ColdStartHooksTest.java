@@ -67,6 +67,7 @@ import app.morphe.extension.facebook.comments.MetaAiSummaries;
 import app.morphe.extension.facebook.media.HdrBrightnessForTests;
 import app.morphe.extension.facebook.media.PictureInPictureForTests;
 import app.morphe.extension.facebook.media.ProgressBar;
+import app.morphe.extension.facebook.media.FeedSound;
 import app.morphe.extension.facebook.media.FrameStepForTests;
 import app.morphe.extension.facebook.media.QualityChoiceForTests;
 import app.morphe.extension.facebook.media.SkipSilence;
@@ -269,6 +270,8 @@ public class ColdStartHooksTest {
         assertFalse("the screen answered as showing no HDR before the context said yes",
                 HdrBrightnessForTests.answersTheScreenAsShowingNoHdr());
         assertFalse("a sink's sound skipped its silent parts before the context said yes", SkipSilence.skipSilence(false));
+        assertTrue("a session started muted before the context said yes", FeedSound.sessionSound(true));
+        assertTrue("a sound-on was kept off before the context said yes", FeedSound.soundChange(null, true, false));
         assertFalse("a reel's bar kept full size before the context said yes", ProgressBar.keepsReelBar());
         assertFalse("a fade timer skipped before the context said yes", ProgressBar.keepsControls());
         assertFalse("a reel's caption lifted before the context said yes", ProgressBar.liftsFooter());
@@ -396,6 +399,7 @@ public class ColdStartHooksTest {
         assertFalse("a call push before the context was left to Messenger", MessengerHandoffForTests.dropsACallPush());
         assertFalse("a ring before the context was left to Messenger", MessengerHandoffForTests.dropsARing());
         assertFalse("a message before the context was left to Messenger", MessengerHandoffForTests.dropsAMessage());
+        assertFalse("a chat push before the context was left to Messenger", MessengerHandoffForTests.dropsAChatPush());
         assertTrue("a player start before the context was held",
                 TapToPlay.allowStart(new Object(), TapToPlayForTests.Trigger.BY_AUTOPLAY));
         assertTrue("an older player start before the context was held",

@@ -1,3 +1,13 @@
+## [1.5.5](https://github.com/YYDarlinker/morphe-ai-caption-translator/compare/v1.5.4...v1.5.5) (2026-10-21)
+
+- Translated captions no longer disappear when the model's sentence boundary differs from an uploaded subtitle's cue boundary. Exact cue pages stay preferred; remaining translated events are shown as event pages, so the reproduced 14.5 s authored-caption block now stays translated for its full duration instead of showing “Translating…”.
+- Partial translation results are published instead of rejecting the whole block. One invalid event no longer hides the rest; missing ranges show a neutral `…`, slow retries stop after three attempts, and a failed block shows the neutral marker instead of source text.
+- Pagination now follows the writing system instead of a Chinese-only path: Korean spacing, RTL/CJK/Indic profiles, language punctuation, explicit overflow pages for authored cues longer than two lines, and time-balanced page turns.
+- Source timing from subtitle XML is used where available, so auto-generated caption pages land on real speech boundaries rather than only estimated positions.
+- Numeric, date and unit differences are advisory instead of a hard rejection, and CJK whitespace or Unicode composition differences no longer discard an otherwise valid event.
+- The separate **Remember caption selection** patch is removed. This source now ships only **AI caption translator**, which follows YouTube's native caption selection and the official Captions / **Preferred caption language** setting; it no longer invents or carries a target language across videos.
+- Captions no longer go blank while a translation is still on its way: the previous line stays up briefly, then a neutral placeholder appears until the new line arrives. Only the line you are watching is translated again instead of the whole section.
+
 ## [1.5.4](https://github.com/YYDarlinker/morphe-ai-caption-translator/compare/v1.5.3...v1.5.4) (2026-10-14)
 
 - The add-on icon is shown again on the player menu row for the regular player and Shorts; the 1.5.3 resource rewrite had dropped it.

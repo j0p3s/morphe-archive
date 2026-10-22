@@ -4,14 +4,33 @@ Every HushGram release, newest first.
 
 ## Unreleased
 
+### Features
+
+* **Instagram - Use the system photo picker:** new switch, off to start. With it on, the gallery sheet you get when you make a post adds an entry that opens Android's own photo picker. You pick from your photos and any cloud gallery that plugs into it, and Instagram only gets what you choose instead of reaching across your whole library. The entry shows even when Google Photos isn't installed. Turn it on in Ads and privacy.
+* **Instagram - Downloads:** new switch, `Add the source to saved photos`, off to start. With it on, a saved photo carries where it came from in its EXIF details, the kind a gallery or exiftool reads: the account that posted it, the post date and a link to the post. JPEG photos only, and only what the save already knows, so a profile picture carries just the account. The picture itself is unchanged.
+
 ### Bug Fixes
 
+* **Instagram - Clean up Reels:** With `Keep clear mode on`, a long reel in clear mode no longer keeps its seek bar along the bottom. The bar comes back once you leave clear mode. (#277)
+* **Instagram - Clean up Reels:** With `Keep clear mode on`, the buttons, author row and top bar could pop back up on a reel that was still in clear mode, a few swipes in. Instagram resets them to shown when it gets a page ready while you aren't scrolling. That reset leaves them hidden now, and they still come back when clear mode ends. Reported in #233.
+* **Instagram - Hide the Explore grid:** Turning on `Hide suggested accounts in search` no longer takes your recent searches away with the suggestions. Only the Suggested for you accounts go now, and your recent searches stay where they were. (#272)
 * **Instagram - Turn off HDR brightness boosts:** On Instagram's armeabi-v7a builds (for 32-bit phones) the switch now turns off SDR super white and Ultra HDR always on too. Before, only the arm64 build had those two options turned off. (#85)
+* **Instagram - HushGram settings:** The settings shortcut on the app icon no longer shows a second of Reels (or whatever tab Instagram opens on) before the settings come up. The screen stays black until they're drawn. (#55)
+* **Instagram - Download any video:** Saved reels play with sound in more apps now. Some reels only carry a newer kind of sound (xHE-AAC) that a lot of galleries and players turn silent. When that happens and the post also has a plain video file, a normal save keeps the best picture and takes the sound from that file, which plays everywhere. No re-encoding, and no new setting to touch. Reels without a plain file save just as before. Refs #242.
 
 ### Improvements
 
-* **Instagram - Find the reel you came from:** Trial reels, the ones Instagram shows to people who don't follow the creator, aren't on the creator's profile, so the search could only give up. Tapping the creator of a trial reel now shows a short note saying so and skips the search. Reported in #225.
+* **Instagram - Find the reel you came from:** Trial reels (shown to people who don't follow the creator) aren't on the creator's profile, so the search could only give up. Tapping the creator of one now shows a short note and skips the search. Reported in #225.
 * **Instagram - Download any video:** Skip what's already saved reads its history file in small, fixed amounts now. A damaged file can't slow a save down, and it gets written out fresh at the next save, so newer saves aren't lost behind the damage. (#150)
+* **Instagram - Turn off double tap to like:** Patching takes about 4% less time with every patch on. The patch reads code only in the places its targets can be, instead of every method in the app. The patched app comes out the same. Refs #173.
+* **Instagram - View stories anonymously:** Patching with every patch on takes about 3% less time and 5% less processor work. Its checks for other callers now read only the classes that can hold one. The patched app comes out the same. Refs #173.
+* **Instagram:** HushGram launch screen and Emoji style now ask the patcher's index where their code is, instead of reading every method in the app. With every patch on, that's about 3% less processor work. The patched app comes out the same. Refs #173.
+* **Instagram:** Patches that find their code by a piece of text, or by Instagram's internal labels, now look it up directly instead of checking every string in the app. Patching is about 2% quicker. The patched app is the same. Refs #173.
+* **Tooling:** `scripts/native-runner.ps1` runs checks inside the installed patched Instagram on an offline emulator, as a throwaway signed-out Android user. Each verdict names the exact APK it ran on. Two controls (build identity, a missing hook) must hold before feature checks count.
+* **Tooling:** The native runner's first feature checks cover Hide your active status. They build Instagram's own presence requests without sending them, and only Active may turn Idle, only while the switch is on and HushGram isn't paused.
+* **Tooling:** The native runner checks View DM photos and videos anonymously on Instagram's receipt handler. Switched on, the handler finishes a stand-in receipt on the phone without building its request. Voice receipts, a paused HushGram and the switch off stay Instagram's.
+* **Tooling:** Nothing goes public until the whole app has been walked with that exact bundle on a release phone or an emulator. `publish-release.ps1` stops before GitHub without a full, crash-free walk of that bundle.
+* **Tooling:** `scripts/find-release-for-identity.ps1` says which release a diagnostics report's build identity came from. It reads the `hg1:` line out of each release bundle and prints the matching version, or tells you the build isn't one of ours. A report from a repackaged fork is clear that way before anyone digs into it.
 
 ## 0.0.14 (2026-10-20)
 

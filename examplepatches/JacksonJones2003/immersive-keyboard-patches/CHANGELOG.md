@@ -1,3 +1,51 @@
+## [1.13.0](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.12.1...v1.13.0) (2026-10-21)
+
+### ✨ New Features
+
+* Make the key dip follow the finger while glide typing ([f08b458](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/f08b458c5db40d2ef16e46cf118539b503e2e28f))
+
+## [1.13.0-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.12.1...v1.13.0-dev.1) (2026-10-21)
+
+### ✨ New Features
+
+* Make the key dip follow the finger while glide typing ([f08b458](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/f08b458c5db40d2ef16e46cf118539b503e2e28f))
+
+## [1.12.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.12.0...v1.12.1) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Give panels opened over the keyboard the same translucent tint as the toolbar ([c0fa419](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/c0fa4199d6ff9803378e144c830d91e296a63743))
+
+## [1.12.1-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.12.0...v1.12.1-dev.1) (2026-10-21)
+
+### 🐛 Bug Fixes
+
+* Give panels opened over the keyboard the same translucent tint as the toolbar ([c0fa419](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/c0fa4199d6ff9803378e144c830d91e296a63743))
+
+## [1.12.0](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.11.0...v1.12.0) (2026-10-21)
+
+### ✨ New Features
+
+* Keep the toolbar row still while it lights up on touch ([529df02](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/529df023ecd70c0e03949ce4fce25ea03184cddb))
+
+## [1.12.0-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.11.0...v1.12.0-dev.1) (2026-10-21)
+
+### ✨ New Features
+
+* Keep the toolbar row still while it lights up on touch ([529df02](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/529df023ecd70c0e03949ce4fce25ea03184cddb))
+
+## [1.11.0](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.10.0...v1.11.0) (2026-10-21)
+
+### ✨ New Features
+
+* Bounce only the keys around the finger instead of the whole keyboard ([8f6eef3](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/8f6eef36df7957ea25f68446ff49b475637b6ef2))
+
+## [1.11.0-dev.1](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.10.0...v1.11.0-dev.1) (2026-10-21)
+
+### ✨ New Features
+
+* Bounce only the keys around the finger instead of the whole keyboard ([8f6eef3](https://github.com/JacksonJones2003/immersive-keyboard-patches/commit/8f6eef36df7957ea25f68446ff49b475637b6ef2))
+
 ## [1.10.0](https://github.com/JacksonJones2003/immersive-keyboard-patches/compare/v1.9.5...v1.10.0) (2026-10-21)
 
 ### ✨ New Features

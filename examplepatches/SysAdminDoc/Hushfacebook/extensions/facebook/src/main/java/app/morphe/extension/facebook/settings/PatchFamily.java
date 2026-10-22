@@ -122,7 +122,8 @@ public enum PatchFamily {
             Settings.LIKE_ONLY, Settings.HIDE_COMMENT_GIF_STICKER_BUTTONS, Settings.OPEN_REPLY_THREADS,
             Settings.LOAD_WHOLE_REPLY_THREADS, Settings.HIDE_RELATED_GROUPS_UNDER_COMMENTS,
             Settings.HIDE_SHOP_LINK_COMMENTS, Settings.HIDE_COMMENTS_WITH_WORDS,
-            Settings.HIDE_INCOMING_COMMENT_TYPING, Settings.HIDE_NEW_COMMENTS_PILL),
+            Settings.HIDE_INCOMING_COMMENT_TYPING, Settings.HIDE_NEW_COMMENTS_PILL,
+            Settings.HIDE_VIDEO_COMMENT_COMPOSER),
     FULL_HEIGHT_COMMENTS(FamilyNames.FULL_HEIGHT_COMMENTS, "fullHeightComments", null,
             Settings.OPEN_COMMENTS_FULL_HEIGHT),
     TAG_SUGGESTIONS(FamilyNames.TAG_SUGGESTIONS, "tagSuggestions", null,
@@ -141,6 +142,8 @@ public enum PatchFamily {
             Settings.TURN_OFF_HDR_BRIGHTNESS, Settings.PREFER_SDR_RENDITIONS),
     SKIP_SILENCE(FamilyNames.SKIP_SILENCE, "skipSilentParts", null,
             Settings.SKIP_SILENT_PARTS),
+    KEEP_FEED_VIDEOS_MUTED(FamilyNames.KEEP_FEED_VIDEOS_MUTED, "keepFeedVideosMuted", null,
+            Settings.KEEP_FEED_VIDEOS_MUTED),
     PROGRESS_BAR(FamilyNames.PROGRESS_BAR, "keepProgressBar", null,
             Settings.KEEP_PROGRESS_BAR, Settings.KEEP_PROGRESS_BAR_TIME, Settings.TAP_TO_SEEK),
     SYSTEM_FONT(FamilyNames.SYSTEM_FONT, "systemFont", null,
@@ -240,8 +243,9 @@ public enum PatchFamily {
     AD_PREFETCH(FamilyNames.AD_PREFETCH, "adPrefetch", "No ads downloaded in advance"),
     AD_TELEMETRY(FamilyNames.AD_TELEMETRY, "adTelemetry", "No ad tracking"),
     AUDIENCE_NETWORK(FamilyNames.AUDIENCE_NETWORK, "audienceNetwork", "No Facebook ads in other apps"),
-    // The theme is written into the APK and stays; Pause takes Black cards back to near black.
-    AMOLED_THEME(FamilyNames.AMOLED_THEME, "amoledTheme", FamilyNames.AMOLED_THEME, Settings.AMOLED_FLAT_CARDS),
+    // The theme is written into the APK and stays; Pause takes Black cards back to near black and the lines away.
+    AMOLED_THEME(FamilyNames.AMOLED_THEME, "amoledTheme", FamilyNames.AMOLED_THEME, Settings.AMOLED_FLAT_CARDS,
+            Settings.AMOLED_FEED_GAPS),
     MATERIAL_YOU_THEME(FamilyNames.MATERIAL_YOU_THEME, "materialYouTheme", FamilyNames.MATERIAL_YOU_THEME),
     // No switch: a list picks the accent, and Pause makes it read Facebook's blue, so nothing stays in.
     ACCENT_COLOR(FamilyNames.ACCENT_COLOR, "accentColor", Settings.ACCENT_COLOR),
@@ -299,7 +303,7 @@ public enum PatchFamily {
                     Settings.WATCH_HISTORY_SHORTCUT, Settings.FREE_STUFF_SHORTCUT, Settings.SETTINGS_SHORTCUT,
                     Settings.SETTINGS_LOGO_PRESS,
                     Settings.SETTINGS_MENU_ROW, Settings.APP_LOCK,
-                    Settings.SAVE_CRASH_FILE));
+                    Settings.SAVE_CRASH_FILE, Settings.CLOSE_WHEN_LEFT));
 
     /**
      * The switches the download patches share and none of them owns: each shapes what every
@@ -462,7 +466,7 @@ public enum PatchFamily {
      * "on", "disabled by its switch" or "disabled while paused", then the saved switches. A
      * family with independent switches is on while either is. Options need their main switch. A
      * family set by its list says so, with its switches saved beside the list. The AMOLED theme is
-     * on either way, its one switch being an option on it.
+     * on either way, its switches being options on it.
      */
     private String reportLine(boolean paused) {
         StringBuilder line = new StringBuilder(patchName).append(": ");
@@ -497,9 +501,9 @@ public enum PatchFamily {
                     || Settings.HIDE_LINK_POSTS.savedValue() || Settings.HIDE_BACKGROUND_POSTS.savedValue()
                     || Settings.HIDE_REPOSTS.savedValue();
         }
-        // The theme runs with Black cards off and while paused: its switch only flattens the cards.
+        // The theme runs with its switches off and while paused: they only flatten the cards and draw the lines.
         if (this == AMOLED_THEME) {
-            line.append(paused ? "on, its switch off while paused (saved " : "on (");
+            line.append(paused ? "on, its switches off while paused (saved " : "on (");
         } else {
             line.append(paused ? "disabled while paused (saved " : anyOn ? "on (" : "disabled by its switch (");
         }

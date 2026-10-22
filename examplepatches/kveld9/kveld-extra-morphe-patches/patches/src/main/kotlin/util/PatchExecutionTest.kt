@@ -85,17 +85,6 @@ enum class TargetApp(
         patchDirectoryPart = "powerpoint",
         referenceSha256 = Constants.POWERPOINT_INPUT_SHA256,
     ),
-    LRMOBILE(
-        id = "lrmobile",
-        appName = "Lightroom",
-        packageName = Constants.LRMOBILE_PACKAGE_NAME,
-        candidateFilenames = listOf(
-            "lrmobile_${Constants.LRMOBILE_TARGET_VERSION}.apk"
-        ),
-        filePattern = Regex("(?i).*(?:lrmobile|lightroom).*\\.apk$"),
-        patchDirectoryPart = "lrmobile",
-        referenceSha256 = Constants.LRMOBILE_INPUT_SHA256,
-    ),
     CAPCUT(
         id = "capcut",
         appName = "CapCut",
@@ -192,18 +181,6 @@ enum class TargetApp(
         filePattern = Regex("(?i).*(?:sdmse|sdmaid).*\\.(?:apk|apkm|xapk)$"),
         patchDirectoryPart = "sdmse",
         referenceSha256 = Constants.SDMSE_INPUT_SHA256,
-    ),
-    MULTIACCOUNTS(
-        id = "multiaccounts",
-        appName = "Multiple Accounts",
-        packageName = Constants.MULTIACCOUNTS_PACKAGE_NAME,
-        candidateFilenames = listOf(
-            "multiaccounts_${Constants.MULTIACCOUNTS_TARGET_VERSION}.apk",
-            "com.excelliance.multiaccounts_${Constants.MULTIACCOUNTS_TARGET_VERSION}-672_minAPI23(arm64-v8a)(nodpi)_apkmirror.com.apk",
-        ),
-        filePattern = Regex("(?i).*(?:multiaccounts|multiple.?accounts).*\\.(?:apk|apkm|xapk)$"),
-        patchDirectoryPart = "multiaccounts",
-        referenceSha256 = Constants.MULTIACCOUNTS_INPUT_SHA256,
     ),
     ;
 
@@ -613,7 +590,7 @@ fun main(args: Array<String>) {
         var forced = 0
         targetPatches.forEach { patch ->
             patch.options.values.filter { it.default is Boolean }.forEach { option ->
-                patch.options[option.key] = true
+                patch.options[option.name] = true
                 forced++
             }
         }

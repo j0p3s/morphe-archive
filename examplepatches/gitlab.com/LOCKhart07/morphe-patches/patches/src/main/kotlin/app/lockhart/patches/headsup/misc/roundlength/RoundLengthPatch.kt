@@ -19,6 +19,7 @@
 package app.lockhart.patches.headsup.misc.roundlength
 
 import app.lockhart.patches.shared.Constants.COMPATIBILITY_HEADS_UP
+import app.lockhart.patches.shared.il2cpp.MISSING_IL2CPP_MESSAGE
 import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
@@ -34,6 +35,8 @@ private val SUPPORTED_ABIS = listOf("arm64-v8a", "armeabi-v7a")
 private val nativeBridgePatch = resourcePatch {
     execute {
         val libDirectory = get("lib")
+        if (libDirectory.walk().none { it.name == "libil2cpp.so" }) throw PatchException(MISSING_IL2CPP_MESSAGE)
+
         val abis = SUPPORTED_ABIS.filter { libDirectory.resolve(it).resolve("libil2cpp.so").isFile }
         if (abis.isEmpty()) throw PatchException("Could not find libil2cpp.so for a supported ABI")
 
