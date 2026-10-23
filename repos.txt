@@ -63,6 +63,7 @@ babyhuehnchen/morphe-patches
 bakwudo/uyu
 balu100/GoogleDialerEnableCallRecording
 bartlomiejfornalczyk/morphe-patches
+BDCrusher/tiktok-interaction-addons
 bdgerszewski/morphe-patches-ihealth
 bearinmindcat/morphe-patches
 bennytsai1234/youtube-thread-ripper
@@ -364,8 +365,8 @@ RookieEnough/De-Vanced
 Rosaldivo/rosaldivo-morphe-patches
 RoundSalmon4/morphe-patches-template
 rufusin/revanced-patches
-rushiranpise/RI-Vanced-Universal-Morphe-Patches
 rushiranpise/Ri-Vanced-Universal-Morphe-Patches
+rushiranpise/RI-Vanced-Universal-Morphe-Patches
 ryuya0124/gemini-microg-patches
 ryykitty/twitch-patched
 sabbirexist/kodex-patches
@@ -425,6 +426,7 @@ thrkingunknown/gboard-theme-patch
 tiaruebar1024/tiaruebar-patches
 TimBuckrue/nyt-games-vrr-patch
 timpra/a17
+titandrive/morphe-catppuccin
 tkiethuynh/den-patch
 TorbenStriegel/morphe-patches-custom
 Tornillo2/movistar-block-ads-morphe
@@ -452,6 +454,7 @@ wchill/anddea-rvx-morphed
 wchill/patcheddit
 wchill/rvx-morphed
 wonjoonSeol-WS/morphe-patches
+wonjoonSeol/morphe-patches
 WZSE/aapam-patches
 WZSE/morphe-patches
 Xhehab/Xhehab-Patches

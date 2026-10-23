@@ -59,14 +59,6 @@
                 "updatedAt": 1784836018593
             },
             {
-                "name": "android-patches",
-                "source": "https://raw.githubusercontent.com/AlexNaga/android-patches/main/patches-bundle.json",
-                "autoUpdate": true,
-                "sortOrder": 2,
-                "createdAt": 1784836018758,
-                "updatedAt": 1784836018758
-            },
-            {
                 "name": "my-morphe-patches",
                 "source": "https://raw.githubusercontent.com/Almewty/my-morphe-patches/main/patches-bundle.json",
                 "autoUpdate": true,
@@ -3019,14 +3011,6 @@
                 "updatedAt": 1792039054169
             },
             {
-                "name": "cappys-patches",
-                "source": "https://raw.githubusercontent.com/CappyT/cappys-patches/main/patches-bundle.json",
-                "autoUpdate": true,
-                "sortOrder": 412,
-                "createdAt": 1792039054838,
-                "updatedAt": 1792039054838
-            },
-            {
                 "name": "InfinityPlus-Patches",
                 "source": "https://raw.githubusercontent.com/Dabrogost/InfinityPlus-Patches/main/patches-bundle.json",
                 "autoUpdate": true,
@@ -3233,6 +3217,38 @@
                 "sortOrder": 444,
                 "createdAt": 1792642462752,
                 "updatedAt": 1792642462752
+            },
+            {
+                "name": "tiktok-interaction-addons",
+                "source": "https://raw.githubusercontent.com/BDCrusher/tiktok-interaction-addons/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 445,
+                "createdAt": 1792731257142,
+                "updatedAt": 1792731257142
+            },
+            {
+                "name": "pdb_patch",
+                "source": "https://raw.githubusercontent.com/madushas/pdb_patch/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 446,
+                "createdAt": 1792731270992,
+                "updatedAt": 1792731270992
+            },
+            {
+                "name": "morphe-catppuccin",
+                "source": "https://raw.githubusercontent.com/titandrive/morphe-catppuccin/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 447,
+                "createdAt": 1792731276862,
+                "updatedAt": 1792731276862
+            },
+            {
+                "name": "morphe-patches",
+                "source": "https://raw.githubusercontent.com/wonjoonSeol/morphe-patches/main/patches-bundle.json",
+                "autoUpdate": true,
+                "sortOrder": 448,
+                "createdAt": 1792731279166,
+                "updatedAt": 1792731279166
             }
         ]
     }
