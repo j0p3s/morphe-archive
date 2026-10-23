@@ -1,6 +1,7 @@
 package app.morphe.patches.moovit
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.bytecodePatch
@@ -80,7 +81,7 @@ private val myMoovitPlusGoPremiumCardFingerprint = Fingerprint(
     name = "emit",
     returnType = "Ljava/lang/Object;",
     parameters = listOf("Ljava/lang/Object;", "L"),
-    strings = listOf("goPremiumCard"),
+    strings = listOf(string("goPremiumCard", StringComparisonType.EQUALS)),
 )
 
 @Suppress("unused")

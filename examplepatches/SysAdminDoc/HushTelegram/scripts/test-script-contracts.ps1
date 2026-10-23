@@ -392,11 +392,14 @@ try {
     } finally {
         $archive.Dispose()
     }
+    # The shape morphe-desktop 1.19.0 (patcher 2.0) writes: success every time, plain applied
+    # names and the steps under stepResults.
     $dependencyReport = [pscustomobject]@{
-        patchingSteps = @([pscustomobject]@{ success = $true })
-        appliedPatches = @($allNames + $allDependencies | ForEach-Object {
-            [pscustomobject]@{ name = $_ }
-        })
+        success = $true
+        stepResults = @(
+            [pscustomobject]@{ step = 'PATCHING'; success = $true },
+            [pscustomobject]@{ step = 'REBUILDING'; success = $true })
+        appliedPatches = @($allNames + $allDependencies)
         failedPatches = @()
         packageName = $target.PackageName
         packageVersion = $target.PackageVersion
@@ -406,6 +409,40 @@ try {
         -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
     Assert-True $reportValidation.Valid `
         "A complete result with a declared dependency was rejected: $($reportValidation.Reason)"
+    # 1.18.1 and older: no success field, applied patches as {name} and the steps as patchingSteps.
+    $olderReport = $dependencyReport | Select-Object * -ExcludeProperty success, stepResults
+    $olderReport.appliedPatches = @($allNames + $allDependencies | ForEach-Object { [pscustomobject]@{ name = $_ } })
+    $olderReport | Add-Member -NotePropertyName patchingSteps -NotePropertyValue @([pscustomobject]@{ success = $true })
+    $olderValidation = Test-PatchingReport -Report $olderReport -ExpectedNames $allNames `
+        -AllowedDependencyNames $allDependencies -OutputPath $reportApk `
+        -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
+    Assert-True $olderValidation.Valid "A 1.18 CLI result was rejected: $($olderValidation.Reason)"
+    $stepless = $dependencyReport | Select-Object * -ExcludeProperty stepResults
+    $steplessValidation = Test-PatchingReport -Report $stepless -ExpectedNames $allNames `
+        -AllowedDependencyNames $allDependencies -OutputPath $reportApk `
+        -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
+    Assert-True (-not $steplessValidation.Valid -and $steplessValidation.Reason -match 'step') `
+        "A result with no step list passed: $($steplessValidation.Reason)"
+    $failedStep = $dependencyReport | Select-Object *
+    $failedStep.stepResults = @([pscustomobject]@{ step = 'PATCHING'; success = $true },
+        [pscustomobject]@{ step = 'REBUILDING'; success = $false; error = 'synthetic rebuild failure' })
+    $failedStepValidation = Test-PatchingReport -Report $failedStep -ExpectedNames $allNames `
+        -AllowedDependencyNames $allDependencies -OutputPath $reportApk `
+        -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
+    Assert-True (-not $failedStepValidation.Valid) 'A result whose rebuild step failed passed.'
+    # Failed patches read the same from either shape, and an entry without a name is skipped.
+    $readFailures = @(Get-ReportFailures -Entries @(
+        [pscustomobject]@{ name = 'Current shape'; error = "app.morphe.patcher.patch.PatchException: current`n`tat frame" },
+        [pscustomobject]@{ patch = [pscustomobject]@{ name = 'Older shape' }; reason = 'app.morphe.patcher.patch.PatchException: older' },
+        [pscustomobject]@{ error = 'no name' },
+        [pscustomobject]@{ patch = $null; reason = 'no patch' },
+        'a bare string'))
+    Assert-True ($readFailures.Count -eq 2 -and $readFailures[0].Name -ceq 'Current shape' -and
+        $readFailures[0].Reason -ceq "app.morphe.patcher.patch.PatchException: current`n`tat frame" -and
+        $readFailures[1].Name -ceq 'Older shape' -and $readFailures[1].Reason -ceq 'app.morphe.patcher.patch.PatchException: older') `
+        'Failed patches lost a name or a reason from one result shape.'
+    Assert-True (@(Get-ReportFailures -Entries @()).Count -eq 0 -and @(Get-ReportFailures -Entries $null).Count -eq 0) `
+        'An empty failure list read as a failure.'
 
     # Replacement uninstall assertions contradicted the data-preserving installation contract.
     # The isolated suite retains absent-package and ADB-failure coverage and proves owned leases,
@@ -2027,15 +2064,24 @@ try {
         Set-FactsFile 'patches-bundle.json' { param($text) $synced }
     }
 
-    # The bug form names the published version, which the synced index above now names too.
+    # The bug form names the published version, which the synced index above now names too, and
+    # the catalog's build. A retarget moves the form's build to the new Telegram first (b9f5d0b8)
+    # while the catalog waits for the release that regenerates it, so the control met a form one
+    # build ahead of its catalog on every tree in that window (13.1.0 over 13.0.3, 2026-10-22).
     function Sync-FixtureBugForm {
         $fixtureVersion = ((Get-Content -LiteralPath (Join-Path $factsRoot 'gradle.properties')) `
             -match '^version\s*=' | Select-Object -First 1) -replace '^version\s*=\s*', ''
         $publishedHere = Get-ReleaseIndexVersion
-        if ($publishedHere -eq $fixtureVersion) { return }
-        Set-FactsFile $bugFormRelative {
-            param($text) $text -replace ('HushTelegram ' + [regex]::Escape($publishedHere) + ' on Telegram'), "HushTelegram $fixtureVersion on Telegram"
+        $fixtureBuild = (Get-PatchTarget -PatchList (Get-Content -LiteralPath (Join-Path $factsRoot 'patches-list.json') -Raw |
+            ConvertFrom-Json)).PackageVersion
+        $text = Get-Content -LiteralPath (Join-Path $factsRoot $bugFormRelative) -Raw
+        $synced = $text
+        if ($publishedHere -ne $fixtureVersion) {
+            $synced = $synced -replace ('HushTelegram ' + [regex]::Escape($publishedHere) + ' on Telegram'), "HushTelegram $fixtureVersion on Telegram"
         }
+        $synced = $synced -replace '(placeholder:\s*HushTelegram \S+ on Telegram )\d+(?:\.\d+)+', "`${1}$fixtureBuild"
+        if ($synced -ceq $text) { return }
+        Set-FactsFile $bugFormRelative { param($unused) $synced }
     }
 
     # And the README's version badge and the sentence naming the latest release, which a release
@@ -2146,8 +2192,9 @@ try {
             param($text) $text -replace '(latest (?:published )?release is (?:still )?\[?v)\d+(?:\.\d+)+', "`${1}$publishedHere" `
                 -replace '(latest release is \[v[^\]]*\]\([^)\s]*/tag/v)\d+(?:\.\d+)+', "`${1}$publishedHere"
         }
+        # Whatever build the checkout's form names: a retarget moves it ahead of the catalog.
         Set-FactsFile $bugFormRelative {
-            param($text) $text -replace ('(placeholder:\s*HushTelegram \S+ on Telegram )' + [regex]::Escape($newestBuild)), "`${1}$movedBuild"
+            param($text) $text -replace '(placeholder:\s*HushTelegram \S+ on Telegram )\d+(?:\.\d+)+', "`${1}$movedBuild"
         }
         $global:LASTEXITCODE = 0
         & $factsScript -Root $factsRoot -SkipDescriptionTestCount -AllowPublishedIndexLag -SkipUrlCheck 6> $null
@@ -4893,11 +4940,12 @@ class AlignmentFixture {
             -Value (Get-FixtureManifest -Build $build -Code "$versionCode" -WithSplit -MinSdk $stockMinSdk -Package $package)
         Set-Content -LiteralPath "$apkm.patched.txt" -Encoding ASCII -NoNewline `
             -Value (Get-FixtureManifest -Build $build -Code "$versionCode" -WithSplit -Patched -MinSdk $stockMinSdk -Package $package)
-        # The report the CLI writes: every patch and the internal dependencies applied, one step,
-        # and the input's own version, which is what the CLI reports.
+        # The report morphe-desktop 1.19.0 writes: every patch and the internal dependencies applied
+        # as plain names, both steps passed, and the input's own version, which is what the CLI reports.
         Set-Content -LiteralPath "$apkm.result.json" -Encoding ASCII -Value ([ordered]@{
-            patchingSteps = @([ordered]@{ success = $true })
-            appliedPatches = @(@($releaseNames) + @($dependencyNamesHere) | ForEach-Object { [ordered]@{ name = $_ } })
+            success = $true
+            stepResults = @([ordered]@{ step = 'PATCHING'; success = $true }, [ordered]@{ step = 'REBUILDING'; success = $true })
+            appliedPatches = @(@($releaseNames) + @($dependencyNamesHere))
             failedPatches = @()
             packageName = $package
             packageVersion = $build } | ConvertTo-Json -Depth 6)

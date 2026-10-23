@@ -120,6 +120,7 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
     val found = BASE_PROFILE.hooks.keys.associateWith { mutableListOf<Method>() }
     community?.let { found.getValue(COMMUNITY_INBOX).add(it.render) }
     found.getValue("ai_sticker_cell").addAll(findAiStickerCells(classes))
+    found.getValue("ai_sticker_grid").addAll(findAiStickerGrids(classes))
     // Static fields stored by any class initializer that mentions the Notifications tab's "hide suggestions" preference
     // key. validatePeopleSection checks the exact key before anything is edited.
     val peopleJewelKeys = classes.flatMap { cls ->
@@ -371,14 +372,20 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
     if (changedViewer) found.getValue("screenshot_viewers").clear() else screenshotViewerRefusal = null
     found.getValue(EMOJI_DRAWER).addAll(connectEmojiDrawer(drawerReaders, drawerAnchors))
     found.getValue(EMOJI_SEARCH).addAll(findEmojiSearch(classes))
+    found.getValue(TAB_BADGES).addAll(findTabBadges(classes))
+    found.getValue(FACEBOOK_BADGE).addAll(findFacebookBadge(classes))
+    found.getValue(TAB_CONFIG).addAll(findTabConfig(classes))
     found.getValue(AI_MENTIONS).addAll(findAiMentions(classes))
     found.getValue(AI_COMMANDS).addAll(findAiCommands(classes))
-    found.getValue(AI_SEARCH_HINT).addAll(findAiSearchHint(classes))
+    val searchBars = findAiSearchHint(classes)
+    found.getValue(AI_SEARCH_HINT).addAll(searchBars)
+    found.getValue(AI_SEARCH_SCREEN_HINT).addAll(findAiSearchScreenHint(classes, searchBars))
     found.getValue(AI_MENTION_ROWS).addAll(findAiMentionRows(classes))
     found.getValue(XHE_AUDIO).addAll(findXheAudio(classes))
     found.getValue(DISAPPEARING_SWIPE).addAll(findDisappearingSwipe(classes))
     found.getValue(RECENT_MEDIA).addAll(findRecentMedia(classes))
-    found.getValue(ANALYTICS_UPLOADS).addAll(findAnalyticsUploads(classes) + findBoundUploadTasks(classes) + findXAnalyticsUploadTimers(classes))
+    found.getValue(ANALYTICS_UPLOADS).addAll(findAnalyticsUploads(classes) + findBoundUploadTasks(classes) +
+        findXAnalyticsUploadTimers(classes) + findInProcessUploadStarts(classes))
     found.getValue(ATTRIBUTION_UPLOADS).addAll(findAttributionUploads(classes))
     found.getValue(AD_EVENTS).addAll(findAdEvents(classes))
     found.getValue(MQTT_TELEMETRY).addAll(findMqttTelemetry(classes))
@@ -387,9 +394,12 @@ internal fun findControls(classes: Iterable<ClassDef>, community: CommunityInbox
     found.getValue(WIFI_IDENTITY).addAll(findWifiIdentityReads(classes))
     found.getValue(PHONE_ID_SYNC).addAll(findPhoneIdSync(classes))
     found.getValue(STORY_HOLD).addAll(findStoryHold(classes))
+    found.getValue(QUIET_CALL_RING).addAll(findQuietCallRing(classes))
+    found.getValue(QUIET_CALL_NOTIFICATION).addAll(findQuietCallNotification(classes))
     found.getValue(TEXT_STYLE).addAll(findTextStyleField(classes))
     found.getValue(MESSAGE_LOG).addAll(findMessageLogHook(classes))
     found.getValue(AUTO_REPLY).addAll(findMessageLogHook(classes))
+    autoReplyPictureRecipe = resolveAutoReplyPictureRecipe(classes)
     messageLogContract = resolveMessageLogContract(classes)
     readReceiptThreadFields = resolveReadReceiptThreadFields(classes)
     val (markReadBar, markReadClick) = findMarkReadButton(classes)

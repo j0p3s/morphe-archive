@@ -1,8 +1,8 @@
 package app.template.patches.expertplayer.premium
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_EXPERTPLAYER
+import app.template.patches.shared.addInstructionsChecked
 
 @Suppress("unused")
 val enablePremiumPatch = bytecodePatch(
@@ -16,7 +16,7 @@ val enablePremiumPatch = bytecodePatch(
 
     execute {
         // Writes isActive = true before the original field store, so the value stored is always true.
-        EntitlementInfoConstructorFingerprint.method.addInstructions(
+        EntitlementInfoConstructorFingerprint.method.addInstructionsChecked(
             0,
             "const/4 p2, 0x1",
         )

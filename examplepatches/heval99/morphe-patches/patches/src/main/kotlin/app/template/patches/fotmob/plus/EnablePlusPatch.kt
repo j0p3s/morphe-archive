@@ -1,12 +1,12 @@
 package app.template.patches.fotmob.plus
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_FOTMOB
+import app.template.patches.shared.addInstructionChecked
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
@@ -61,27 +61,27 @@ val enablePlusPatch = bytecodePatch(
                 !holdsStaffEmail && !constantFalse
             }
 
-        val getter = candidates.firstOrNull()
-            ?: throw PatchException("Subscription getter not found in $manager")
+        // Exactly one: a second match would mean the shape no longer singles out the getter
+        // (238.17794 has one), and forcing the wrong boolean true could change anything.
+        val getter = candidates.singleOrNull()
+            ?: throw PatchException(
+                "Expected one subscription getter in $manager, found ${candidates.map { it.name }}"
+            )
         getter.returnEarly(true)
 
         // 3. App icons. MembershipActivity reads the RevenueCat entitlements from the server, so
         // with no real subscription it takes the NoEntitlement branch, which shows only "No
         // active subscriptions found" and skips the "Exclusive app icons" picker that the three
-        // entitlement branches draw. Call the picker there too. Optional: builds without this
-        // screen (no such literal) keep steps 1-2 only, and a screen whose code no longer has
-        // the expected shape skips this step with a warning instead of failing ad removal too
-        // (238.17794 and 238.17666 are checked; 237/236 had no APK at hand). FotMobSmokeTest
-        // asserts the injected call, so a regression on a tested version still fails loudly.
+        // entitlement branches draw. Call the picker there too. Builds without this screen (no
+        // such literal, before 238) keep steps 1-2 only. When the literal is there (238 and
+        // newer, where the description promises the icons) a picker or branch shape that no
+        // longer matches fails the patch instead of shipping it without the icons
+        // (238.17794 and 238.17666 are checked; 237/236 had no APK at hand).
         val screen = MembershipScreenFingerprint.methodOrNull
         if (screen == null) {
             logger.info("Enable FotMob+: no \"$NO_SUBSCRIPTION_TEXT\" screen, skipping the app-icon step")
         } else {
-            try {
-                unlockAppIcons(screen)
-            } catch (e: PatchException) {
-                logger.warning("Enable FotMob+: app icons not unlocked: ${e.message}")
-            }
+            unlockAppIcons(screen)
         }
     }
 }
@@ -164,7 +164,7 @@ private fun unlockAppIcons(screen: MutableMethod) {
         throw PatchException("$where: v$activityReg is overwritten at index $clobber in the NoEntitlement branch")
     }
 
-    screen.addInstruction(
+    screen.addInstructionChecked(
         textCall + 2,
         "invoke-virtual {v$activityReg, v$zeroReg, v$composerReg}, " +
             "$MEMBERSHIP_ACTIVITY->$picker(I$composerType)V",

@@ -31,7 +31,7 @@ public class SettingsNavigationTest {
             View root = screen.get().getWindow().getDecorView();
             TextView count = root.findViewWithTag("search_status");
             root.findViewWithTag("category_chats").performClick();
-            assertEquals(ExpectedTotals.shown(20), count.getText().toString());
+            assertEquals(ExpectedTotals.shown(21), count.getText().toString());
             assertEquals(View.GONE, ((View) root.findViewWithTag("people").getParent()).getVisibility());
             ((EditText) root.findViewWithTag("find_control")).setText("People You");
             assertEquals(View.VISIBLE, root.findViewWithTag("empty_state").getVisibility());
@@ -40,7 +40,7 @@ public class SettingsNavigationTest {
             assertEquals(View.GONE, root.findViewWithTag("empty_state").getVisibility());
             assertTrue(root.findViewWithTag("category_all").isSelected());
             root.findViewWithTag("category_more").performClick();
-            assertEquals(ExpectedTotals.shown(26), count.getText().toString());
+            assertEquals(ExpectedTotals.shown(27), count.getText().toString());
             assertEquals(View.VISIBLE, ((View) root.findViewWithTag("facebook").getParent()).getVisibility());
         }
     }
@@ -57,6 +57,15 @@ public class SettingsNavigationTest {
             root.findViewWithTag("category_chats").performClick();
             assertEquals(View.VISIBLE, group.getVisibility());
             assertEquals("6", ((TextView) heading.getChildAt(1)).getText().toString());
+        }
+    }
+
+    /** The headings are English on every phone, so a Turkish phone's own capitals (a dotted İ) never reach them. */
+    @Test @org.robolectric.annotation.Config(qualifiers = "tr-rTR") public void headingsUseEnglishCapitalsOnATurkishPhone() {
+        try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
+            android.widget.LinearLayout group = screen.get().getWindow().getDecorView().findViewWithTag("links_bubbles");
+            android.widget.LinearLayout heading = (android.widget.LinearLayout) group.getChildAt(0);
+            assertEquals("LINKS AND BUBBLES", ((TextView) heading.getChildAt(0)).getText().toString());
         }
     }
 
@@ -94,7 +103,7 @@ public class SettingsNavigationTest {
             clear.performClick();
             assertEquals("", search.getText().toString());
             assertTrue(root.findViewWithTag("category_chats").isSelected());
-            assertEquals(ExpectedTotals.shown(20), ((TextView) root.findViewWithTag("search_status")).getText().toString());
+            assertEquals(ExpectedTotals.shown(21), ((TextView) root.findViewWithTag("search_status")).getText().toString());
             assertTrue(search.hasFocus());
             assertEquals(View.GONE, clear.getVisibility());
         }
@@ -104,11 +113,11 @@ public class SettingsNavigationTest {
         try (var screen = Robolectric.buildActivity(SettingsActivity.class).setup()) {
             ((Switch) screen.get().getWindow().getDecorView().findViewWithTag("light")).performClick();
             Toast themeToast = ShadowToast.getLatestToast();
-            assertEquals("Light theme on", ShadowToast.getTextOfLatestToast());
+            assertEquals("Light theme is on", ShadowToast.getTextOfLatestToast());
             Shadows.shadowOf(Looper.getMainLooper()).idle();
             ((Switch) screen.get().getWindow().getDecorView().findViewWithTag("people")).performClick();
             assertTrue(Shadows.shadowOf(themeToast).isCancelled());
-            assertEquals("Hide People You May Know on", ShadowToast.getTextOfLatestToast());
+            assertEquals("Hide People You May Know is on", ShadowToast.getTextOfLatestToast());
         }
     }
 

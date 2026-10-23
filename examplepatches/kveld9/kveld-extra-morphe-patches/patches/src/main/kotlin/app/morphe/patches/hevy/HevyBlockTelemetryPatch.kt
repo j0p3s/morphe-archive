@@ -128,7 +128,7 @@ val hevyBlockTelemetryPatch = bytecodePatch(
 
         // 1. Sentry React Native initialization stub (resolve Boolean.TRUE and return)
         val sentryFp = Fingerprint(
-            definingClass = "Lio/sentry/react/RNSentryModuleImpl;",
+            definingClass = "Lio/sentry/react/RNSentryModule;",
             name = "initNativeSdk",
         )
         sentryFp.method.addInstructions(
@@ -139,7 +139,7 @@ val hevyBlockTelemetryPatch = bytecodePatch(
                 return-void
             """.trimIndent(),
         )
-        hookedMethods.add("RNSentryModuleImpl.initNativeSdk")
+        hookedMethods.add("RNSentryModule.initNativeSdk")
 
         // 2. Adjust SDK queuing stubs
         val adjustAddFp = Fingerprint(
@@ -158,48 +158,29 @@ val hevyBlockTelemetryPatch = bytecodePatch(
 
         // 3. Facebook AppEvents flush
         val fbFlushFp = Fingerprint(
-            definingClass = "Lcom/facebook/appevents/AppEventQueue;",
+            definingClass = "Lcom/facebook/reactnative/androidsdk/FBAppEventsLoggerModule;",
             name = "flush",
         )
         fbFlushFp.method.addInstructions(0, "return-void")
-        hookedMethods.add("AppEventQueue.flush")
+        hookedMethods.add("FBAppEventsLoggerModule.flush")
 
-        // 4. Amplitude Context Provider ad tracking stubs
-        val amplitudeContextFp = Fingerprint(
-            definingClass = "Lcom/amplitude/reactnative/AndroidContextProvider;",
-            name = "isLimitAdTrackingEnabled",
-        )
-        amplitudeContextFp.method.addInstructions(
-            0,
-            """
-                const/4 v0, 0x1
-                return v0
-            """.trimIndent(),
-        )
-        hookedMethods.add("AndroidContextProvider.isLimitAdTrackingEnabled")
-
-        val amplitudePrefetchFp = Fingerprint(
-            definingClass = "Lcom/amplitude/reactnative/AndroidContextProvider;",
-            name = "prefetch",
-        )
-        amplitudePrefetchFp.method.addInstructions(0, "return-void")
-        hookedMethods.add("AndroidContextProvider.prefetch")
-
-        // 5. Branch Metrics referral tracking stub
+        // 4. Branch Metrics tracking stub
         val branchFp = Fingerprint(
-            definingClass = "Lio/branch/referral/Branch;",
+            definingClass = "Lio/branch/rnbranch/RNBranchModule;",
             name = "isTrackingDisabled",
+            parameters = listOf("Lcom/facebook/react/bridge/Promise;"),
         )
         branchFp.method.addInstructions(
             0,
             """
-                const/4 v0, 0x1
-                return v0
+                sget-object v0, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;
+                invoke-interface {p1, v0}, Lcom/facebook/react/bridge/Promise;->resolve(Ljava/lang/Object;)V
+                return-void
             """.trimIndent(),
         )
-        hookedMethods.add("Branch.isTrackingDisabled")
+        hookedMethods.add("RNBranchModule.isTrackingDisabled")
 
-        // 6. Amplitude React Native Bridge stub (drops legacy event tracking)
+        // 5. Amplitude React Native Bridge stub (drops legacy event tracking)
         val amplitudeFp = Fingerprint(
             definingClass = "Lcom/amplitude/reactnative/AmplitudeReactNativeModule;",
             name = "getLegacyEvents",
@@ -214,7 +195,7 @@ val hevyBlockTelemetryPatch = bytecodePatch(
         )
         hookedMethods.add("AmplitudeReactNativeModule.getLegacyEvents")
 
-        // 7. React Native NetworkingModule telemetry sinkhole (redirects Amplitude, Branch and Sentry JS requests to 0.0.0.0)
+        // 6. React Native NetworkingModule telemetry sinkhole (redirects Amplitude, Branch and Sentry JS requests to 0.0.0.0)
         val networkingFp = Fingerprint(
             definingClass = "Lcom/facebook/react/modules/network/NetworkingModule;",
             name = "sendRequest",

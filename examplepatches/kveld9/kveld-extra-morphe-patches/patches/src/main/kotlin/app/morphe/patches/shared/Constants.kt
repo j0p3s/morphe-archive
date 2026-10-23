@@ -49,8 +49,8 @@ object Constants {
     )
 
     const val TWITTER_PACKAGE_NAME = "com.twitter.android"
-    const val TWITTER_TARGET_VERSION = "12.35.0-prod.01"
-    const val TWITTER_INPUT_SHA256 = "16607ce5e435eccb23b8b8385cbd173e672ff06f533f159e7acf2412087d6f3b"
+    const val TWITTER_TARGET_VERSION = "12.36.1-prod.01"
+    const val TWITTER_INPUT_SHA256 = "0bef573e442f4aa7dd6111467859b97644d6e3bd2c8d6aadff3cffc175e1d6d2"
 
     val COMPATIBILITY_TWITTER = Compatibility(
         name = "X",
@@ -60,7 +60,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = TWITTER_TARGET_VERSION,
-                description = "Download com.twitter.android v$TWITTER_TARGET_VERSION (APKM) arm64-v8a 120-640dpi versionCode 312350001 (BUNDLE 35 S) from APKMirror",
+                description = "Download com.twitter.android v$TWITTER_TARGET_VERSION (APKM) arm64-v8a 120-640dpi versionCode 312361001 (BUNDLE 35 S) from APKMirror",
             )
         )
     )
@@ -100,8 +100,8 @@ object Constants {
     )
 
     const val CAPCUT_PACKAGE_NAME = "com.lemon.lvoverseas"
-    const val CAPCUT_TARGET_VERSION = "19.8.0"
-    const val CAPCUT_INPUT_SHA256 = "68a92fb7a06b29e95d791739650709d0dd7a23ed764174ca21797af4662faa4b"
+    const val CAPCUT_TARGET_VERSION = "19.9.0"
+    const val CAPCUT_INPUT_SHA256 = "3c74a9941237451953fe4ed1abe477b7413d11d11a4b5b45a17441afd30f2c38"
 
     val COMPATIBILITY_CAPCUT = Compatibility(
         name = "CapCut",
@@ -111,7 +111,7 @@ object Constants {
         targets = listOf(
             AppTarget(
                 version = CAPCUT_TARGET_VERSION,
-                description = "Download com.lemon.lvoverseas v$CAPCUT_TARGET_VERSION (APK) arm64-v8a nodpi versionCode 19800002 from APKMirror",
+                description = "Download com.lemon.lvoverseas v$CAPCUT_TARGET_VERSION (APK) arm64-v8a nodpi versionCode 19900002 from APKMirror",
             )
         )
     )
@@ -134,7 +134,7 @@ object Constants {
     )
 
     const val HEVY_PACKAGE_NAME = "com.hevy"
-    const val HEVY_TARGET_VERSION = "3.1.14"
+    const val HEVY_TARGET_VERSION = "3.2.2"
     const val HEVY_INPUT_SHA256 = ""
 
     val COMPATIBILITY_HEVY = Compatibility(

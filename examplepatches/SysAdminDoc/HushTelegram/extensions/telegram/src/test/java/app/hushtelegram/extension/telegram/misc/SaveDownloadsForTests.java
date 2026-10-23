@@ -5,6 +5,10 @@
 package app.hushtelegram.extension.telegram.misc;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -28,16 +32,33 @@ public final class SaveDownloadsForTests {
         final Document document;
         final boolean fileOrSong;
         final boolean forbidden;
+        final boolean secret;
 
         Message(Document document, boolean fileOrSong, boolean forbidden) {
+            this(document, fileOrSong, forbidden, false);
+        }
+
+        Message(Document document, boolean fileOrSong, boolean forbidden, boolean secret) {
             this.document = document;
             this.fileOrSong = fileOrSong;
             this.forbidden = forbidden;
+            this.secret = secret;
         }
     }
 
+    /** Telegram's message database, by "account:chat:message", and every lookup made in it. */
+    static final Map<String, Message> STORED = new HashMap<>();
+    static final List<String> LOOKUPS = new ArrayList<>();
+
     /** Answers the way the stubs do for {@link Message} parents. */
     static final SaveDownloads.Telegram TELEGRAM = new SaveDownloads.Telegram() {
+        @Override
+        public Object storedMessage(int account, long dialogId, int messageId) {
+            String key = account + ":" + dialogId + ":" + messageId;
+            LOOKUPS.add(key);
+            return STORED.get(key);
+        }
+
         @Override
         public Object document(Object parent) {
             return parent instanceof Message ? ((Message) parent).document : null;
@@ -51,6 +72,11 @@ public final class SaveDownloadsForTests {
         @Override
         public boolean savingForbidden(Object message) {
             return ((Message) message).forbidden;
+        }
+
+        @Override
+        public boolean secretChat(Object message) {
+            return ((Message) message).secret;
         }
 
         @Override
@@ -72,8 +98,25 @@ public final class SaveDownloadsForTests {
         SaveDownloads.telegram = TELEGRAM;
         SaveDownloads.work = task -> queued.set(true);
         try {
-            SaveDownloads.fileLoaded("2_51.pdf", new File("2_51.pdf"),
+            SaveDownloads.fileLoaded(0, "2_51.pdf", new File("2_51.pdf"),
                     new Message(new Document("2_51.pdf", "report.pdf"), true, false));
+        } finally {
+            SaveDownloads.telegram = telegram;
+            SaveDownloads.work = work;
+        }
+        return queued.get();
+    }
+
+    /** Whether a PDF from a chat that doesn't allow saving, once downloaded, would be queued for a copy. */
+    public static boolean queuesARestrictedCopy() {
+        SaveDownloads.Telegram telegram = SaveDownloads.telegram;
+        Executor work = SaveDownloads.work;
+        AtomicBoolean queued = new AtomicBoolean();
+        SaveDownloads.telegram = TELEGRAM;
+        SaveDownloads.work = task -> queued.set(true);
+        try {
+            SaveDownloads.fileLoaded(0, "2_51.pdf", new File("2_51.pdf"),
+                    new Message(new Document("2_51.pdf", "report.pdf"), true, true));
         } finally {
             SaveDownloads.telegram = telegram;
             SaveDownloads.work = work;

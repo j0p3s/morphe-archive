@@ -159,20 +159,14 @@ Telegram closes and reopens on this page.	Telegram ditutup lalu dibuka lagi di h
 Report a problem	Laporkan masalah
 # context: that row's summary
 Opens a GitHub report with your versions and settings filled in. Add what happened.	Membuka laporan GitHub dengan versi dan pengaturan Anda yang sudah terisi. Tambahkan apa yang terjadi.
-# context: home page row under the status card, and the title of the dialog it opens
+# context: row on the Settings backup page, and the title of the dialog it opens
 Quick setups	Penyiapan cepat
 # context: that row's summary
-Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Nyalakan sekumpulan sakelar dengan sekali ketuk, atau kembalikan semua sakelar seperti semula. Tekan dan tahan untuk menyembunyikan baris ini.
-# context: row on Settings backup that hides or shows the Quick setups row on the home page, and its two summaries
-Quick setups on the home page	Penyiapan cepat di beranda
-Shown. Tap to hide it.	Ditampilkan. Ketuk untuk menyembunyikannya.
-Hidden. Tap to show it again.	Disembunyikan. Ketuk untuk menampilkannya lagi.
+Turn on a set of switches in one tap, or put every switch back the way it started.	Nyalakan sekumpulan sakelar dengan sekali ketuk, atau kembalikan semua sakelar seperti semula.
 # context: Row on the Look and feel page that switches how the HushTelegram settings pages are drawn: each group of rows on a rounded card with an outline, or plain rows with a thin line between them. Its line says which look is on and what a tap changes it to.
 Settings look	Tampilan pengaturan
 Cards. Tap for plain rows.	Kartu. Ketuk untuk baris polos.
 Plain rows. Tap for cards.	Baris polos. Ketuk untuk kartu.
-# context: toast after a long press hides Quick setups; the page named is Settings backup
-Quick setups hidden. Bring it back from %1$s.	Penyiapan cepat disembunyikan. Tampilkan lagi dari %1$s.
 # context: Quick setups choice that turns on the switches that hide ads, suggestions and nags
 Quiet	Tenang
 # context: what Quiet does, under its name
@@ -334,6 +328,12 @@ Hide keyboard on scroll	Sembunyikan keyboard saat menggulir
 The keyboard closes when you start scrolling a chat. The emoji and sticker panel stays open.	Keyboard menutup saat Anda mulai menggulir obrolan. Panel emoji dan stiker tetap terbuka.
 Keep videos muted on volume keys	Biarkan video tanpa suara saat tombol volume ditekan
 Volume keys only change the volume. They no longer start the video or round video on screen with sound. Tap a video to hear it.	Tombol volume hanya mengubah volume. Tombol ini tidak lagi memutar video atau video bulat di layar dengan suara. Ketuk video untuk mendengarnya.
+# context: a second switch under Keep videos muted on volume keys (#27). Telegram turns a video put in full screen to one fixed landscape side; with this on it follows the phone to either side.
+Full screen videos turn either way	Video layar penuh berputar ke dua arah
+# context: that switch's summary. "full screen" is Telegram's full screen button on a video; "auto-rotate" is Android's own screen rotation setting, use the phone's name for it.
+After you tap full screen, a video follows your phone to either landscape side, even with auto-rotate off.	Setelah kamu mengetuk layar penuh, video mengikuti ponselmu ke sisi lanskap mana pun, meski putar otomatis nonaktif.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Keep videos muted on volume keys that lets a full screen video turn to either landscape side.
+full screen video turning either way	putaran video layar penuh ke dua arah
 Swipe back on profiles	Geser kembali di profil
 Swiping right on a profile's photos or media tabs goes back, like the rest of the profile, instead of showing the previous photo or tab.	Menggeser ke kanan pada foto atau tab media profil akan kembali, seperti di bagian profil lainnya, bukan menampilkan foto atau tab sebelumnya.
 Hide phone number	Sembunyikan nomor telepon
@@ -387,6 +387,12 @@ Removes the Telegram Features row from Settings and Invite Friends from Contacts
 Add Repeat to the message menu	Tambahkan Ulangi ke menu pesan
 Keep deleted messages	Simpan pesan yang dihapus
 Messages others delete stay in your chat on this phone, marked deleted next to the time. Your own deletes and disappearing messages work as usual.	Pesan yang dihapus orang lain tetap ada di obrolan Anda di ponsel ini, ditandai terhapus di samping waktu. Penghapusan oleh Anda dan pesan yang menghilang berfungsi seperti biasa.
+# context: a second switch under Keep deleted messages (#25). Turned on, the word "deleted" that marks a kept message next to its time is drawn in red.
+Show deleted in red	Tampilkan dihapus dengan warna merah
+# context: that switch's summary. "deleted" is the label shown next to the time, "Keep deleted messages" the name of the switch above it.
+The deleted label next to a kept message's time turns red, so it stands out in the chat. Works with Keep deleted messages on.	Label dihapus di samping waktu pesan yang disimpan berubah merah, jadi lebih mudah terlihat di obrolan. Berfungsi saat Simpan pesan yang dihapus aktif.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Keep deleted messages that draws the deleted label in red.
+red deleted label	label dihapus berwarna merah
 # context: an action row under Keep deleted messages; a tap deletes every message that switch kept
 Clear kept messages	Hapus pesan yang disimpan
 Deletes the messages this phone kept after others deleted them, in every account, the way Telegram would have.	Menghapus pesan yang disimpan ponsel ini setelah orang lain menghapusnya, di setiap akun, seperti yang akan dilakukan Telegram.
@@ -638,6 +644,10 @@ Tap to pick which UnifiedPush app to use.	Ketuk untuk memilih aplikasi UnifiedPu
 Save downloaded files	Simpan file yang diunduh
 # context: that switch's summary. "Download/Telegram" is a folder path and stays as it is. Chats that don't allow saving are ones whose owner turned on Telegram's content protection.
 Each file or song you download also goes to Download/Telegram on your phone, where file managers and other apps can open it. Files from secret chats and chats that don't allow saving stay in Telegram.	Setiap file atau lagu yang kamu unduh juga masuk ke Download/Telegram di ponselmu, tempat pengelola file dan aplikasi lain bisa membukanya. File dari obrolan rahasia dan obrolan yang tidak mengizinkan penyimpanan tetap di Telegram.
+# context: a second switch under Save downloaded files (#29). Turned on, it also copies files from chats whose owner turned on Telegram's content protection. Secret chats stay excluded.
+Also save from chats that don't allow saving	Simpan juga dari obrolan yang tidak mengizinkan penyimpanan
+# context: that switch's summary, a warning that it goes past the chat owner's choice. "Save downloaded files" is the name of the switch above it.
+With Save downloaded files on, files from chats whose owner turned off saving get copied too. Only use it where the owner is fine with you keeping a copy, since it goes past their setting. Secret chats still stay in Telegram.	Saat Simpan file yang diunduh aktif, file dari obrolan yang pemiliknya mematikan penyimpanan juga ikut disalin. Pakai hanya jika pemiliknya tidak keberatan kamu menyimpan salinan, karena ini melewati pengaturannya. Obrolan rahasia tetap di Telegram.
 # context: Folders by chat type, a switch on the Chat list page. Turning it on makes Telegram chat folders for each kind of chat.
 Folders by chat type	Folder menurut jenis obrolan
 # context: that switch's summary. Private, Groups, Channels and Bots are the folder names, use the same words as their own entries.
@@ -723,22 +733,26 @@ Couldn't open notification settings. Open Android settings.	Setelan notifikasi t
 Search only my chats	Cari hanya di obrolan saya
 Search finds your chats, contacts and messages from chats you're in, and nothing public. The Channels, Apps and Posts tabs go away, and a hashtag's public posts don't load.	Pencarian menemukan obrolan, kontak, dan pesan Anda dari obrolan yang Anda ikuti, tanpa hasil publik. Tab Saluran, Aplikasi, dan Postingan hilang, dan postingan publik sebuah tagar tidak dimuat.
 public search lookups	pencarian publik
-# context: Settings lock row under Quick setups on the home page, its notes, and what a refused change says (#17).
+# context: Settings lock row on the Pause page, its notes, and what a refused change says (#17). For the first minutes after locking the row reads Unlock now and one tap takes the lock off (#23); %1$d is minutes.
 Lock HushTelegram settings	Kunci pengaturan HushTelegram
-Makes every setting here read-only. To change one again, start an unlock here and wait 24 hours.	Membuat setiap pengaturan di sini hanya-baca. Untuk mengubahnya lagi, mulai buka kunci di sini lalu tunggu 24 jam.
+Makes every setting here read-only. A tap within %1$d min unlocks them again. After that, unlocking takes 24 hours.	Membuat setiap pengaturan di sini hanya-baca. Ketukan dalam %1$d mnt membukanya lagi. Setelah itu, membuka kunci memakan waktu 24 jam.
+Unlock now	Buka kunci sekarang
+Locked just now. Tap within %1$d min to unlock right away. After that, unlocking takes 24 hours.	Baru saja dikunci. Ketuk dalam %1$d mnt untuk langsung membuka kunci. Setelah itu, membuka kunci memakan waktu 24 jam.
 Start unlock	Mulai buka kunci
 Your settings are locked. Tap to start the 24-hour wait. You can cancel it while it runs.	Pengaturan Anda terkunci. Ketuk untuk memulai masa tunggu 24 jam. Anda bisa membatalkannya selama masih berjalan.
 Cancel unlock	Batalkan buka kunci
 Settings unlock in %1$d h %2$d min. Tap to cancel and keep them locked.	Pengaturan terbuka dalam %1$d j %2$d mnt. Ketuk untuk membatalkan dan tetap mengunci.
-Settings locked. Unlocking takes 24 hours.	Pengaturan dikunci. Membuka kunci memakan waktu 24 jam.
+Settings locked. Changed your mind? Tap again within %1$d min.	Pengaturan dikunci. Berubah pikiran? Ketuk lagi dalam %1$d mnt.
+Settings unlocked. They change as usual again.	Kunci pengaturan dibuka. Pengaturan bisa diubah seperti biasa lagi.
 Unlock started. Settings open in 24 hours unless you cancel.	Buka kunci dimulai. Pengaturan terbuka dalam 24 jam kecuali Anda membatalkannya.
 Unlock canceled. Settings stay locked.	Buka kunci dibatalkan. Pengaturan tetap terkunci.
 Couldn't change the lock. Try again in a moment.	Kunci tidak bisa diubah. Coba lagi dalam beberapa saat.
 Settings are locked. They unlock in %1$d h %2$d min.	Pengaturan terkunci. Terbuka dalam %1$d j %2$d mnt.
 Settings are locked. Tap Start unlock, then wait 24 hours.	Pengaturan terkunci. Ketuk Mulai buka kunci, lalu tunggu 24 jam.
+Settings are locked. Tap Unlock now within %1$d min.	Pengaturan terkunci. Ketuk Buka kunci sekarang dalam %1$d mnt.
 # context: Export settings row, its first sentence: what a settings file holds. The sentence after it lists what the file leaves out.
 Saves your switches, filter lists, sticker size and chat list emoji to a file, for all the accounts in this Telegram app. Your chats, drafts and kept messages aren't in it.	Menyimpan sakelar, daftar filter, ukuran stiker, dan emoji daftar obrolan Anda ke berkas, untuk semua akun di aplikasi Telegram ini. Obrolan, draf, dan pesan terhapus yang disimpan tidak ikut di dalamnya.
-# context: Export settings row. %1$s is a list joined the language's own way: row titles as they show (Pause HushTelegram, Debug logging, Check for new HushTelegram releases, Lock HushTelegram settings, Quick setups on the home page, UnifiedPush notifications, Folders by chat type) and the lowercase phrase below it, which ends the list.
+# context: Export settings row. %1$s is a list joined the language's own way: row titles as they show (Pause HushTelegram, Debug logging, Check for new HushTelegram releases, Lock HushTelegram settings, Settings look, UnifiedPush notifications, Folders by chat type) and the lowercase phrase below it, which ends the list.
 Left out of the file: %1$s.	Tidak disertakan dalam berkas: %1$s.
 the translation service, its key and the chats you turned translation on for	layanan terjemahan, kuncinya, dan obrolan yang terjemahannya Anda aktifkan
 # context: Sentences added after a description to say which account it works on. "Both" is turning Folders by chat type on and turning it off. The last one closes the About page's Accounts row.
@@ -857,3 +871,9 @@ Couldn't save the folder. Try again in a moment.	Folder tidak dapat disimpan. Co
 Couldn't read your folders.	Folder Anda tidak dapat dibaca.
 # context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Hide folder tab counters that opens the chat list on a picked folder
 which folder the chat list opens on	folder tempat daftar obrolan terbuka
+# context: Chat list page switch title, under Hide Contacts tab. When on, the round pencil button (new message) on the chat list is removed.
+Hide new message button	Sembunyikan tombol pesan baru
+# context: Summary under that switch. The menu is the side menu or Telegram's own menu; search is the chat list's search.
+Removes the round pencil button from the chat list. Start a chat from the menu or search. Restart Telegram to see the change.	Menghapus tombol pensil bulat dari daftar obrolan. Mulai obrolan dari menu atau pencarian. Mulai ulang Telegram untuk melihat perubahannya.
+# context: Lowercase noun phrase in a status line. It names the part of Hide Contacts tab that removes the round pencil (new message) button from the chat list.
+new message button	tombol pesan baru

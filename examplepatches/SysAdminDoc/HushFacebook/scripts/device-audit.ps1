@@ -133,8 +133,19 @@ function Assert-AuditLease {
     $token = [IO.File]::ReadAllText([IO.Path]::GetFullPath($LeaseTokenFile)).Trim()
     if ([string]::IsNullOrWhiteSpace($token)) { throw 'The lease token is empty.' }
     $leasePath = Join-Path $LeaseDirectory "$Serial.json"
-    # Keep ownership validation and renewal under the same exclusive file handle.
-    $stream = [IO.File]::Open($leasePath, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+    # Keep ownership validation and renewal under the same exclusive file handle. Another session
+    # waiting for the phone may be reading the lease right now, so a sharing violation is retried
+    # for a few seconds. A missing lease or a lock that outlasts the retries still stops the audit.
+    $stream = $null
+    foreach ($delay in @(100, 250, 500, 1000, 2000, 0)) {
+        try {
+            $stream = [IO.File]::Open($leasePath, [IO.FileMode]::Open, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None)
+            break
+        } catch [IO.IOException] {
+            if (($_.Exception.GetBaseException().HResult -band 0xFFFF) -notin 32, 33 -or $delay -eq 0) { throw }
+            Start-Sleep -Milliseconds $delay
+        }
+    }
     try {
         $reader = [IO.StreamReader]::new($stream, [Text.Encoding]::UTF8, $true, 1024, $true)
         try { $lease = $reader.ReadToEnd() | ConvertFrom-Json } finally { $reader.Dispose() }
@@ -500,7 +511,8 @@ function Publish-AuditBaseline($Candidate) {
     $destination = [IO.Path]::GetFullPath($Expectations)
     $temporary = $destination + '.' + [Guid]::NewGuid().ToString('N') + '.candidate'
     try {
-        [IO.File]::WriteAllText($temporary, ($Candidate | ConvertTo-Json -Depth 6) + "`n")
+        # The baselines are committed as LF, and ConvertTo-Json writes CRLF on Windows.
+        [IO.File]::WriteAllText($temporary, (($Candidate | ConvertTo-Json -Depth 6) -replace "`r`n", "`n") + "`n")
         if (Test-Path -LiteralPath $destination) { [IO.File]::Replace($temporary, $destination, [NullString]::Value) }
         else { [IO.File]::Move($temporary, $destination) }
     } finally {
@@ -549,6 +561,70 @@ function Get-AuditLocales {
     return $locales
 }
 
+# Whether $Restored puts back every switch $Original holds, and holds each switch $Original has
+# no entry for (one added after the build that wrote it) at its value in $Defaults.
+function Test-AuditSettingsRestored([string]$Original, [string]$Restored, [string]$Defaults) {
+    try {
+        $before = $Original | ConvertFrom-Json -AsHashtable
+        $after = $Restored | ConvertFrom-Json -AsHashtable
+        $reset = $Defaults | ConvertFrom-Json -AsHashtable
+    } catch { return $false }
+    foreach ($snapshot in @($before, $after, $reset)) {
+        if ($snapshot -isnot [hashtable] -or $snapshot.settings -isnot [hashtable]) { return $false }
+    }
+    foreach ($field in @(@($before.Keys) + @($after.Keys) | Sort-Object -Unique | Where-Object { $_ -cne 'settings' })) {
+        if ((ConvertTo-Json -InputObject $before[$field] -Compress) -cne (ConvertTo-Json -InputObject $after[$field] -Compress)) { return $false }
+    }
+    foreach ($key in $before.settings.Keys) {
+        if (-not $after.settings.ContainsKey($key)) { return $false }
+        if ((ConvertTo-Json -InputObject $before.settings[$key] -Compress) -cne (ConvertTo-Json -InputObject $after.settings[$key] -Compress)) { return $false }
+    }
+    foreach ($key in $after.settings.Keys) {
+        if ($before.settings.ContainsKey($key)) { continue }
+        if (-not $reset.settings.ContainsKey($key)) { return $false }
+        if ((ConvertTo-Json -InputObject $reset.settings[$key] -Compress) -cne (ConvertTo-Json -InputObject $after.settings[$key] -Compress)) { return $false }
+    }
+    return $true
+}
+
+function Resolve-AuditStateBefore($Current) {
+    <# The locale and theme the audit puts back at the end, given what the device shows now. #>
+    # A previous unfinished run owns its original snapshot. Do not overwrite it with audit settings.
+    $previousState = ((Invoke-Adb shell "cat $AuditDir/state-before.json 2>/dev/null; true") -join "`n").Trim()
+    $previousBackup = ((Invoke-Adb shell "ls $AuditDir/before.json 2>/dev/null; true") -join '').Trim()
+    if ($previousState) {
+        $savedState = $previousState | ConvertFrom-Json
+        if (($savedState.schema -isnot [int] -and $savedState.schema -isnot [long]) -or $savedState.schema -ne 1 -or
+                $savedState.serial -isnot [string] -or $savedState.device -isnot [string] -or $savedState.package -isnot [string] -or
+                $savedState.night -isnot [string] -or $savedState.serial -cne $Serial -or $savedState.device -cne $deviceIdentity -or
+                $savedState.package -cne $Package -or $savedState.night -cnotmatch '\A(yes|no|auto|custom)\z' -or
+                ($sdk -ge 33 -and $savedState.locales -isnot [string]) -or
+                ($null -ne $savedState.locales -and -not (Test-AuditLocaleList $savedState.locales))) {
+            throw 'Invalid recovery snapshot. Existing device backups were left untouched.'
+        }
+        return $savedState
+    }
+    if (-not $previousBackup) { return $Current }
+    # A before.json with no snapshot beside it was left by an older audit build or the settings
+    # tool, and twice on 2026-10-22 it stopped a walk until the snapshot was written by hand. Its
+    # switches still come back at the end, as for a run that never finished, and the locale and
+    # theme the device shows now stand in for the ones nothing recorded. A good restore clears the
+    # folder, so a dated copy comes off the phone first, and the audit goes no further without it.
+    $copy = Join-Path $OutDir ('orphaned-audit-' + (Get-Date -Format 'yyyyMMdd-HHmmss'))
+    New-Item -ItemType Directory -Path $copy -Force | Out-Null
+    Invoke-Adb pull $AuditDir $copy | Out-Null
+    $copied = Join-Path (Join-Path $copy ($AuditDir -split '/')[-1]) 'before.json'
+    $copiedText = if (Test-Path -LiteralPath $copied -PathType Leaf) { [IO.File]::ReadAllText($copied).Trim() } else { '' }
+    $readable = $false
+    if ($copiedText) { try { $null = $copiedText | ConvertFrom-Json; $readable = $true } catch { $readable = $false } }
+    if (-not $readable) {
+        throw "An older audit backup has no locale/theme snapshot, and its folder didn't copy to $copy whole. It was left untouched."
+    }
+    Write-Step ('an older audit backup had no locale/theme snapshot. Its switches come back at the end, the ' +
+        "current locale and theme stand in, and a copy of its folder is in $copy")
+    return $Current
+}
+
 function Restore-AuditState {
     $restored = $true
     # Each part must run even if another fails. Keep both backups until all parts are verified.
@@ -561,11 +637,22 @@ function Restore-AuditState {
                     if (-not (Test-Path -LiteralPath $backup)) {
                         Invoke-Adb pull "$AuditDir/before.json" $backup | Out-Null
                     }
-                    $restore = Send-Profile ([IO.File]::ReadAllText($backup))
+                    $original = [IO.File]::ReadAllText($backup)
+                    $restore = Send-Profile $original
                     if ($restore -cnotmatch '\Aapplied [0-9]+\z') { throw "Settings restore was not applied: $restore" }
                     $confirmed = Join-Path $OutDir 'restored.json'
                     Invoke-Adb pull "$AuditDir/applied.json" $confirmed | Out-Null
-                    if ([IO.File]::ReadAllText($confirmed).Trim() -cne [IO.File]::ReadAllText($backup).Trim()) {
+                    if ([IO.File]::ReadAllText($confirmed).Trim() -ceq $original.Trim()) { break }
+                    # A backup an older build wrote has no entry for a switch added since, which then
+                    # keeps its all-on value. Put every switch at its default, then the backup over it.
+                    $reset = Send-Profile '{"format":"hushfacebook-audit","profile":"defaults"}'
+                    if ($reset -cnotmatch '\Aapplied [0-9]+\z') { throw "The defaults profile was not applied: $reset" }
+                    $defaults = Join-Path $OutDir 'defaults.json'
+                    Invoke-Adb pull "$AuditDir/applied.json" $defaults | Out-Null
+                    $restore = Send-Profile $original
+                    if ($restore -cnotmatch '\Aapplied [0-9]+\z') { throw "Settings restore was not applied: $restore" }
+                    Invoke-Adb pull "$AuditDir/applied.json" $confirmed | Out-Null
+                    if (-not (Test-AuditSettingsRestored $original ([IO.File]::ReadAllText($confirmed)) ([IO.File]::ReadAllText($defaults)))) {
                         throw 'The applied settings snapshot does not match the original backup.'
                     }
                 }
@@ -599,7 +686,9 @@ function Restore-AuditState {
 function Get-Report([string]$Path) {
     if (-not $Entry) { throw 'The launcher entry was not resolved. No report request was sent.' }
     Invoke-Adb shell rm -f "$AuditDir/report.txt" | Out-Null
-    Invoke-Adb shell am start -W -n $Entry --ez "$Extra.AUDIT_REPORT" true | Out-Null
+    # The request matches the task's root intent (extras don't count), so with another screen on
+    # top Android only brings the task forward and drops it. Clearing to the launcher delivers it.
+    Invoke-Adb shell am start -W --activity-clear-top -n $Entry --ez "$Extra.AUDIT_REPORT" true | Out-Null
     for ($wait = 0; $wait -lt 20; $wait++) {
         Start-Sleep -Seconds 1
         $there = (Invoke-Adb shell "ls $AuditDir/report.txt 2>/dev/null; true") -join ''
@@ -661,7 +750,7 @@ function Save-SettingsPages([string]$Pass, [string]$RequestedLocale = '') {
         $name = if ($page) { ($page -replace "[^A-Za-z0-9]+", '-').Trim('-').ToLowerInvariant() } else { 'home' }
         Close-Settings
         Invoke-Adb shell rm -f "$AuditDir/page.json" | Out-Null
-        $command = "am start -W -n $Entry --ez $Extra.OPEN_SETTINGS true"
+        $command = "am start -W --activity-clear-top -n $Entry --ez $Extra.OPEN_SETTINGS true"
         if ($page) { $command += " --es $Extra.AUDIT_PAGE $(Format-Shell $page)" }
         Invoke-Adb shell $command | Out-Null
         Start-Sleep -Seconds $SettleSeconds
@@ -730,23 +819,7 @@ $sdk = [int](((Invoke-Adb shell getprop ro.build.version.sdk) -join '').Trim())
 if ($Locales.Count -gt 0 -and $sdk -lt 33) { throw 'App-locale passes require Android 13 or newer.' }
 $stateBefore = [ordered]@{ schema = 1; serial = $Serial; device = $deviceIdentity; package = $Package
     night = Get-AuditNightMode; locales = $(if ($sdk -ge 33) { Get-AuditLocales } else { $null }) }
-# A previous unfinished run owns its original snapshot. Do not overwrite it with audit settings.
-$previousState = ((Invoke-Adb shell "cat $AuditDir/state-before.json 2>/dev/null; true") -join "`n").Trim()
-$previousBackup = ((Invoke-Adb shell "ls $AuditDir/before.json 2>/dev/null; true") -join '').Trim()
-if ($previousState) {
-    $savedState = $previousState | ConvertFrom-Json
-    if (($savedState.schema -isnot [int] -and $savedState.schema -isnot [long]) -or $savedState.schema -ne 1 -or
-            $savedState.serial -isnot [string] -or $savedState.device -isnot [string] -or $savedState.package -isnot [string] -or
-            $savedState.night -isnot [string] -or $savedState.serial -cne $Serial -or $savedState.device -cne $deviceIdentity -or
-            $savedState.package -cne $Package -or $savedState.night -cnotmatch '\A(yes|no|auto|custom)\z' -or
-            ($sdk -ge 33 -and $savedState.locales -isnot [string]) -or
-            ($null -ne $savedState.locales -and -not (Test-AuditLocaleList $savedState.locales))) {
-        throw 'Invalid recovery snapshot. Existing device backups were left untouched.'
-    }
-    $stateBefore = $savedState
-} elseif ($previousBackup) {
-    throw 'An older audit backup has no locale/theme snapshot. Restore it before starting another audit; it was left untouched.'
-}
+$stateBefore = Resolve-AuditStateBefore $stateBefore
 $statePath = Join-Path $OutDir 'state-before.json'
 [IO.File]::WriteAllText($statePath, ($stateBefore | ConvertTo-Json))
 

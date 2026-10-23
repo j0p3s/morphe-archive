@@ -1,11 +1,11 @@
 package app.template.patches.scores365.premium
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_365SCORES
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -41,7 +41,7 @@ val enablePremiumPatch = bytecodePatch(
     compatibleWith(COMPATIBILITY_365SCORES)
 
     execute {
-        EntitlementStateConstructorFingerprint.method.addInstructions(
+        EntitlementStateConstructorFingerprint.method.addInstructionsChecked(
             0,
             """
                 const/16 p1, 0x1

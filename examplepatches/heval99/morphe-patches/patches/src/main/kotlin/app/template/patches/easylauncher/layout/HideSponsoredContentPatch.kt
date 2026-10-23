@@ -1,8 +1,8 @@
 package app.template.patches.easylauncher.layout
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_EASYLAUNCHER
+import app.template.patches.shared.addInstructionsChecked
 
 @Suppress("unused")
 val hideSponsoredContentPatch = bytecodePatch(
@@ -23,7 +23,7 @@ val hideSponsoredContentPatch = bytecodePatch(
             SponsoredPostsArticlesFingerprint,
             SponsoredLinkSuggestionsFingerprint,
         ).forEach { fingerprint ->
-            fingerprint.method.addInstructions(
+            fingerprint.method.addInstructionsChecked(
                 0,
                 """
                     invoke-static {}, Lkotlin/collections/CollectionsKt;->emptyList()Ljava/util/List;

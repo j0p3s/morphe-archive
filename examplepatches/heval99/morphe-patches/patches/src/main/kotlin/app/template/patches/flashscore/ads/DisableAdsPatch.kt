@@ -1,12 +1,12 @@
 package app.template.patches.flashscore.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_FLASHSCORE
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
@@ -90,7 +90,7 @@ val disableAdsPatch = bytecodePatch(
                     .filter { it.implementation != null }
                     .filter { it.name == "pollAd" }
                     .forEach {
-                        it.addInstructions(
+                        it.addInstructionsChecked(
                             0,
                             """
                                 const/4 v0, 0x0
@@ -124,7 +124,7 @@ val disableAdsPatch = bytecodePatch(
                 } == true
         } ?: throw PatchException("AdvertZone has no single (I)V setMinHeight helper")
         // The load method has 34 locals, so p0 is beyond the 4-bit range of invoke-virtual.
-        AdvertZoneLoadFingerprint.method.addInstructions(
+        AdvertZoneLoadFingerprint.method.addInstructionsChecked(
             0,
             """
                 move-object/from16 v0, p0
@@ -136,6 +136,6 @@ val disableAdsPatch = bytecodePatch(
         )
 
         // Video ads: drop the VMAP response before it is stored on the media item.
-        VideoMediaConstructorFingerprint.method.addInstructions(0, "const/4 p3, 0x0")
+        VideoMediaConstructorFingerprint.method.addInstructionsChecked(0, "const/4 p3, 0x0")
     }
 }

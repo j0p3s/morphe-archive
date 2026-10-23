@@ -1,12 +1,12 @@
 package app.template.patches.onecricket.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_ONECRICKET
+import app.template.patches.shared.addInstructionsChecked
 import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation
@@ -74,7 +74,7 @@ private fun BytecodePatchContext.keepGone(type: String) {
         it.name == "setVisibility" && it.parameterTypes.map(CharSequence::toString) == listOf("I")
     }
     if (existing != null) {
-        existing.addInstructions(0, "const/16 p1, 0x8")
+        existing.addInstructionsChecked(0, "const/16 p1, 0x8")
         return
     }
     val superclass = classDef.superclass ?: throw PatchException("$type has no superclass")
@@ -89,7 +89,7 @@ private fun BytecodePatchContext.keepGone(type: String) {
             null,
             MutableMethodImplementation(2),
         ).toMutable().apply {
-            addInstructions(
+            addInstructionsChecked(
                 0,
                 """
                     const/16 p1, 0x8

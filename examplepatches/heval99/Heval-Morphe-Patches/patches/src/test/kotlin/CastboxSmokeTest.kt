@@ -11,7 +11,7 @@ class CastboxSmokeTest {
     lateinit var workDir: File
 
     @Test
-    fun `Disable ads neuters SDK inits and terminal load-show`() {
+    fun `Disable ads neuters SDK inits, banner and full-screen loads`() {
         val root = repoRoot()
         val apk = File(root, "apks/castbox/base.apk")
 
@@ -59,5 +59,20 @@ class CastboxSmokeTest {
             ),
             label = "MaxInterstitialAd.showAd(String, String, Activity)",
         )
+
+        // MAX never starts: the app calls AppLovinSdk.initialize itself.
+        assertAllReturnEarly(classes, "Lcom/applovin/sdk/AppLovinSdk;", "initialize")
+
+        // Banners. GMA's loadAd lives on BaseAdView and AdManagerAdView (AdView declares none;
+        // hooking "AdView" matched nothing). The app's own banner/MREC slots are MaxAdView
+        // loadAd + startAutoRefresh, and the unfilled view must stay GONE.
+        assertAllReturnEarly(classes, "Lcom/google/android/gms/ads/BaseAdView;", "loadAd")
+        assertAllReturnEarly(classes, "Lcom/google/android/gms/ads/admanager/AdManagerAdView;", "loadAd")
+        assertAllReturnEarly(classes, "Lcom/applovin/mediation/ads/MaxAdView;", "loadAd", "startAutoRefresh")
+        assertMaxAdViewHidden(classes)
+
+        // GMA full-screen statics (reached through the bundled TradPlus/BidMachine adapters).
+        assertAllReturnEarly(classes, "Lcom/google/android/gms/ads/interstitial/InterstitialAd;", "load")
+        assertAllReturnEarly(classes, "Lcom/google/android/gms/ads/rewarded/RewardedAd;", "load")
     }
 }

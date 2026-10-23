@@ -1,12 +1,12 @@
 package app.template.patches.shazam.misc.openin
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_SHAZAM
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.TypeReference
@@ -104,7 +104,7 @@ val openInMorpheAppsPatch = bytecodePatch(
         }
 
         // Remap packageName, songUri, artistUri and albumUri (p3..p6) before they are stored.
-        StreamingProviderConstructorFingerprint.method.addInstructions(
+        StreamingProviderConstructorFingerprint.method.addInstructionsChecked(
             0,
             (3..6).joinToString("\n") { register ->
                 """

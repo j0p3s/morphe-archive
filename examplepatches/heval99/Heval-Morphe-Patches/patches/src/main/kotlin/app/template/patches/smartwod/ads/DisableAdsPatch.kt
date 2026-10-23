@@ -1,11 +1,11 @@
 package app.template.patches.smartwod.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_SMARTWOD
+import app.template.patches.shared.addInstructionsChecked
 
 // SmartWOD Timer is React Native + Hermes. Ads are Google Mobile Ads only, driven from JS
 // through the react-native-google-mobile-ads native module. The patch hooks the stable GMA
@@ -36,7 +36,7 @@ val disableAdsPatch = bytecodePatch(
     execute {
         // 1. JS mobileAds().initialize() resolves with an empty adapter list instead of starting
         //    the SDK, so any JS awaiting it carries on.
-        RnMobileAdsInitializeFingerprint.method.addInstructions(
+        RnMobileAdsInitializeFingerprint.method.addInstructionsChecked(
             0,
             """
                 invoke-static {}, Lcom/facebook/react/bridge/Arguments;->createArray()Lcom/facebook/react/bridge/WritableArray;

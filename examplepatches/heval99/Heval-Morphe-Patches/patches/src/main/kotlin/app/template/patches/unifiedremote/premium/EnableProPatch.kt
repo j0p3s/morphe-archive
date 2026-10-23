@@ -1,6 +1,7 @@
 package app.template.patches.unifiedremote.premium
 
 import app.morphe.patcher.patch.BytecodePatchContext
+import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableClass
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
@@ -53,10 +54,13 @@ val enableProPatch = bytecodePatch(
         val licenseStatus = licenseStatusClass()
 
         // The Full check: the only Context-boolean in this class that consults the
-        // status int getter. Fails loudly if the shape ever changes.
-        val fullCheck = licenseStatus.methods.firstOrNull { method ->
+        // status int getter. Fails loudly if the shape ever changes, including when a
+        // second method of that shape appears (3.25.1 has exactly one).
+        val fullCheck = licenseStatus.methods.filter { method ->
             method.isContextBoolean() && method.callsIntGetterOf(licenseStatus.type)
-        } ?: error("Unified Remote Full check not found in ${licenseStatus.type}")
+        }.singleOrNull() ?: throw PatchException(
+            "Expected one Unified Remote Full check in ${licenseStatus.type}",
+        )
 
         fullCheck.returnEarly(true)
     }

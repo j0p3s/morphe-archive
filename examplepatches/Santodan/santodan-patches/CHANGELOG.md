@@ -1,3 +1,21 @@
+## [0.13.0](https://github.com/Santodan/santodan-patches/compare/v0.12.0...v0.13.0) (2026-10-22)
+
+### 🐛 Bug Fixes
+
+* **nuviotv:** support beta8 and centralize native contracts [skip ci] ([7bc4157](https://github.com/Santodan/santodan-patches/commit/7bc4157e03df49d06e2325a1f31b99b6137b5d51))
+
+### ✨ New Features
+
+* **NuvioTV:** add native GitHub APK updates [skip ci] ([15bd85e](https://github.com/Santodan/santodan-patches/commit/15bd85ed1778e7e342088212bc2a0bfb195766a0))
+
+### Compatibility repair (2026-10-22)
+
+* **morphe:** rebuild v0.13.0 for Morphe Patcher 2.0.0 / Desktop 1.19.0, fixing bundle import errors.
+* **morphe:** migrate app compatibility constructors, add TV/mobile metadata and align smali dependencies.
+* **carscanner:** extract native files on demand before patching with Patcher 2.0.
+* **verification:** verify all 28 patches with the exact Desktop runtime, complete Nuvio DEX output and manifest-resource compilation.
+* Replace the existing v0.13.0 release assets without changing the tag or running the release workflow. Clients retaining the old cached bundle may need to reimport it.
+
 ## [0.12.0](https://github.com/Santodan/santodan-patches/compare/v0.11.2...v0.12.0) (2026-10-21)
 
 ### ✨ New Features
@@ -6,6 +24,16 @@
 * **nuviotv:** customize playback button visibility, order and groups [skip ci] ([b903a08](https://github.com/Santodan/santodan-patches/commit/b903a0820f67768e7eeb7c8574fea778c2c22342))
 * **nuviotv:** indicate the current stream with a Streams setting [skip ci] ([09b209f](https://github.com/Santodan/santodan-patches/commit/09b209fa6ee9d092b95b6e23e0dc12c7e518d360))
 * **nuviotv:** prioritize and autoplay preferred source add-on ([6e77240](https://github.com/Santodan/santodan-patches/commit/6e7724044c10edc619d31c63732b96f40134b75e))
+
+### Maintenance updates (2026-10-22)
+
+* **nuviotv:** update all fourteen patches to beta.8, including Chapters and player-engine placement, native stream routes and settings hooks.
+* **nuviotv:** centralize native contracts, add structural anchors and direct runtime accessors, and provide update reporting and a latest-version verification task.
+* **nuviotv:** fix the missing Santodan settings menu and affected controls by using beta.8's Compose state factory; correct runtime fixtures to match the original DEX.
+* **nuviotv:** fix the playback button editor failing on Mi Box runtimes without the no-argument `Optional.orElseThrow()` API.
+* **nuviotv:** include IntroDB's segment button in playback visibility, ordering and group customization.
+* **nuviotv:** show button icons and numbered positions in one continuous scrolling list; hold OK to pick up a button, use Up/Down to reorder, OK to save and Back to cancel.
+* **nuviotv:** preserve remembered focus/list state during recomposition to fix the long-press editor crash; add runtime slot-state regression coverage. The user confirmed the corrected behavior on a device.
 
 ## [0.11.2](https://github.com/Santodan/santodan-patches/compare/v0.11.1...v0.11.2) (2026-10-19)
 

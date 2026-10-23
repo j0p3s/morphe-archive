@@ -6,9 +6,9 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patches.shared.Constants
 import com.android.tools.smali.dexlib2.AccessFlags
 
-private object WatermarkBusinessFunctionA4Fingerprint : Fingerprint(
+private object WatermarkBusinessFunctionB4Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/subscription/biz/function/WatermarkBusinessFunction;",
-    name = "A4",
+    name = "B4",
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     returnType = "Z",
     parameters = listOf("Lcom/vega/subscriptionapi/biz/function/WatermarkSceneParams;"),
@@ -22,25 +22,25 @@ private object WatermarkBusinessFunctionQ0Fingerprint : Fingerprint(
     parameters = listOf("Lcom/vega/subscriptionapi/biz/function/WatermarkSceneParams;"),
 )
 
-private object WatermarkBusinessFunctionB4Fingerprint : Fingerprint(
+private object WatermarkBusinessFunctionD4Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/subscription/biz/function/WatermarkBusinessFunction;",
-    name = "B4",
+    name = "D4",
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     returnType = "Z",
     parameters = listOf("Lcom/lemon/lv/clipmonetize/wrapper/BenefitResource;"),
 )
 
-private object WatermarkBusinessFunctionE4Fingerprint : Fingerprint(
+private object WatermarkBusinessFunctionF4Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/subscription/biz/function/WatermarkBusinessFunction;",
-    name = "E4",
+    name = "F4",
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     returnType = "Z",
     parameters = listOf("Lcom/vega/subscriptionapi/biz/function/WatermarkBusinessParam;", "Lcom/lemon/lv/clipmonetize/wrapper/BenefitResource;"),
 )
 
-private object WatermarkBusinessFunctionU4Fingerprint : Fingerprint(
+private object WatermarkBusinessFunctionV4Fingerprint : Fingerprint(
     definingClass = "Lcom/vega/subscription/biz/function/WatermarkBusinessFunction;",
-    name = "u4",
+    name = "v4",
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     returnType = "Z",
     parameters = listOf("Lcom/lemon/lv/clipmonetize/wrapper/BenefitResource;"),
@@ -87,11 +87,11 @@ val capcutRemoveWatermarkPatch = bytecodePatch(
             patched++
         }
 
-        forceTrue(WatermarkBusinessFunctionA4Fingerprint)
-        forceTrue(WatermarkBusinessFunctionQ0Fingerprint)
         forceTrue(WatermarkBusinessFunctionB4Fingerprint)
-        forceTrue(WatermarkBusinessFunctionE4Fingerprint)
-        forceTrue(WatermarkBusinessFunctionU4Fingerprint)
+        forceTrue(WatermarkBusinessFunctionQ0Fingerprint)
+        forceTrue(WatermarkBusinessFunctionD4Fingerprint)
+        forceTrue(WatermarkBusinessFunctionF4Fingerprint)
+        forceTrue(WatermarkBusinessFunctionV4Fingerprint)
         forceFalse(WatermarkBusinessFunctionY2Fingerprint)
 
         println("[Remove Watermark] Applied $patched hooks -> watermark gates forced to allow removal.")

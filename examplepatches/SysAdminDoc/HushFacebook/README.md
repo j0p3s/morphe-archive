@@ -1,11 +1,11 @@
 ![Hushfacebook. Keep the people. Cut the noise.](assets/readme-hero.png)
 
 <p align="center">
-  <a href="https://github.com/SysAdminDoc/Hushfacebook/releases"><img src="https://img.shields.io/badge/version-0.16.1-0866FF" alt="Version 0.16.1"></a>
+  <a href="https://github.com/SysAdminDoc/Hushfacebook/releases"><img src="https://img.shields.io/badge/version-0.17.0-0866FF" alt="Version 0.17.0"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%2011%2B-3DDC84" alt="Platform Android 11+">
-  <img src="https://img.shields.io/badge/Facebook-583.0.0.39.55-0866FF" alt="Facebook 583.0.0.39.55">
-  <img src="https://img.shields.io/badge/for-Morphe%20Manager%201.34.0%2B-8A2BE2" alt="For Morphe Manager 1.34.0 or newer">
+  <img src="https://img.shields.io/badge/Facebook-584.0.0.51.56-0866FF" alt="Facebook 584.0.0.51.56">
+  <img src="https://img.shields.io/badge/for-Morphe%20Manager%202.0.0%2B-8A2BE2" alt="For Morphe Manager 2.0.0 or newer">
 </p>
 
 <p align="center">
@@ -22,7 +22,7 @@ Each row in the [patch table](#patches) says how its switch starts. The ad filte
 
 This project has no connection to Meta or to the Morphe project. Neither endorses it, and neither wrote it.
 
-The latest release is [v0.16.1](https://github.com/SysAdminDoc/Hushfacebook/releases/tag/v0.16.1), with 94 patches. It includes all changes since v0.16.0, among them the fix for 0.16.0's crash when comments open, posts opened from a notification included, and Instant games that download through Facebook itself instead of Google Play, as the [changelog](CHANGELOG.md) describes.
+The latest release is [v0.17.0](https://github.com/SysAdminDoc/Hushfacebook/releases/tag/v0.17.0), with 95 patches. It includes all changes since v0.16.1, among them the move to Facebook 584 and Morphe's 2.0 patcher (update Morphe Manager to 2.0.0 or newer first), a switch that closes Facebook when you leave it and a patch that keeps feed videos muted, as the [changelog](CHANGELOG.md) describes.
 
 [Add to Morphe](https://morphe.software/add-source?github=SysAdminDoc%2FHushfacebook) | [Download a release](https://github.com/SysAdminDoc/Hushfacebook/releases/latest) | [Browse the patches](#patches)
 
@@ -31,9 +31,9 @@ The latest release is [v0.16.1](https://github.com/SysAdminDoc/Hushfacebook/rele
 
 ## Install
 
-1. Install [Morphe Manager](https://github.com/MorpheApp/morphe-manager) 1.34.0 or newer.
+1. Install [Morphe Manager](https://github.com/MorpheApp/morphe-manager) 2.0.0 or newer.
 2. Add Hushfacebook as a patch source: https://morphe.software/add-source?github=SysAdminDoc%2FHushfacebook
-3. Download Facebook 583.0.0.39.55 from [APKMirror](https://www.apkmirror.com/apk/facebook-2/facebook/). Take the bundle labelled (arm64-v8a) (480-640dpi) (Android 11+), build 475614366, which is a .apkm file. A phone with a 32-bit processor takes the (armeabi-v7a) (320dpi) (Android 11+) bundle, build 475614365, instead.
+3. Download Facebook 584.0.0.51.56 from [APKMirror](https://www.apkmirror.com/apk/facebook-2/facebook/). Take the bundle labelled (arm64-v8a) (480dpi) (Android 11+), build 475817393, which is a .apkm file. Facebook hasn't released a build of 584 for phones with a 32-bit processor yet.
 4. In Morphe Manager, tap **Select other apps**, then **Open APK file**, and pick that file. Android may ask for file access the first time.
 5. Patch with the default selection and install. If Meta's own Facebook is on the phone, Android makes you uninstall it first, as [Package conflict](#package-conflict) explains.
 
@@ -191,7 +191,7 @@ Questions about setting up, or about whether a Facebook build works, go in [Disc
 
 ### Unsupported Version
 
-Manager shows this before it patches, usually with "This is a different build of the same version". Facebook 583.0.0.39.55 comes in several builds, each compiled separately, and Hushfacebook declares only the two its patches are checked against, 475614366 for 64-bit phones and 475614365 for 32-bit ones. Download one of those as [Install](#install) describes and the warning goes away. **Proceed anyway** patches the build you have, but other builds haven't been tried, and if a patch can't find what it changes, patching stops and names it. The same check is why Manager won't offer the Facebook you installed from Google Play unless it's that exact build.
+Manager shows this before it patches, usually with "This is a different build of the same version". Facebook 584.0.0.51.56 comes in several builds, each compiled separately, and Hushfacebook declares only the one its patches are checked against, 475817393 for 64-bit phones. Download one of those as [Install](#install) describes and the warning goes away. **Proceed anyway** patches the build you have, but other builds haven't been tried, and if a patch can't find what it changes, patching stops and names it. The same check is why Manager won't offer the Facebook you installed from Google Play unless it's that exact build.
 
 ### Patching stops on one patch
 
@@ -273,19 +273,18 @@ A few rows hand a link to another app instead of going online themselves. **Send
 | Field | Value |
 |---|---|
 | Package | `com.facebook.katana` |
-| Version | `583.0.0.39.55` |
-| 64-bit phones | build `475614366`, the (arm64-v8a) (480-640dpi) (Android 11+) bundle |
-| 32-bit phones | build `475614365`, the (armeabi-v7a) (320dpi) (Android 11+) bundle |
+| Version | `584.0.0.51.56` |
+| 64-bit phones | build `475817393`, the (arm64-v8a) (480dpi) (Android 11+) bundle |
+| 32-bit phones | none yet, Facebook hasn't released one for 584 |
 | Minimum Android version | Android 11 |
 | Download | [APKMirror](https://www.apkmirror.com/apk/facebook-2/facebook/) |
 
-There are 95 patches for `com.facebook.katana`, and a release only goes out once every one of them has applied to both builds. Older Facebook versions like 582 and 581 aren't supported any more, so update Facebook before you patch. When a newer stable Facebook comes out, Hushfacebook moves to it and drops the one before. Meta's builds for Android 9 and 8 can't be patched at all, since their code sits in a compressed archive the patcher can't read.
+There are 95 patches for `com.facebook.katana`, and a release only goes out once every one of them has applied to that build. Older Facebook versions like 583 and 582 aren't supported any more, so update Facebook before you patch. When a newer stable Facebook comes out, Hushfacebook moves to it and drops the one before. Meta's builds for Android 9 and 8 can't be patched at all, since their code sits in a compressed archive the patcher can't read.
 
-SHA-256 of the two .apkm files the release checks ran against:
+SHA-256 of the .apkm file the patches are checked against:
 
 ```text
-475614366  51ee76088f76aa62722ae25103d75882d44e03ac17aa8d7af4642ed05567714a  arm64-v8a
-475614365  43f18db0cde811d54636615b5f26b8f182c203ebe73568ec3143e4f291a62323  armeabi-v7a
+475817393  093b1406eb7eac8741bb9fafea5324abd2355e66c9e4b4b2aab9a218b569f5cc  arm64-v8a
 ```
 
 On Windows, compare yours with `Get-FileHash -Algorithm SHA256 .\facebook.apkm`, or use `sha256sum facebook.apkm` on Linux and macOS.

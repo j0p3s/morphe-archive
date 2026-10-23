@@ -5,7 +5,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0-blue" alt="License GPL-3.0"></a>
   <img src="https://img.shields.io/badge/platform-Android%209%2B-3DDC84" alt="Platform Android 9+">
   <img src="https://img.shields.io/badge/Telegram-13.0.3-2AABEE" alt="Telegram 13.0.3">
-  <img src="https://img.shields.io/badge/for-Morphe%20Manager%201.34.0%2B-8A2BE2" alt="For Morphe Manager 1.34.0 or newer">
+  <img src="https://img.shields.io/badge/for-Morphe%20Manager%202.0.0%2B-8A2BE2" alt="For Morphe Manager 2.0.0 or newer">
 </p>
 
 <p align="center">
@@ -31,7 +31,7 @@ The latest release is [v0.0.19](https://github.com/SysAdminDoc/HushTelegram/rele
 
 ## Install
 
-1. Install [Morphe Manager](https://github.com/MorpheApp/morphe-manager) 1.34.0 or newer.
+1. Install [Morphe Manager](https://github.com/MorpheApp/morphe-manager) 2.0.0 or newer.
 2. Open the [add-source link](https://morphe.software/add-source?github=SysAdminDoc%2FHushTelegram) on your phone to add HushTelegram as a patch source.
 3. Get Telegram 13.0.3. The [Google Play](https://play.google.com/store/apps/details?id=org.telegram.messenger) build (version code 71831) works, and so does telegram.org's build (version code 71839) from its [Download button](https://telegram.org/android) or a mirror such as [APKMirror](https://www.apkmirror.com/apk/telegram-fz-llc/telegram/). telegram.org hands out whatever is newest, so check the [checksum](#supported-telegram-builds) before you patch.
 4. Pick the file in Morphe Manager, keep the default selection and patch. It has every patch that comes with a switch.
@@ -45,7 +45,7 @@ The first time you sign in, Telegram turns down the API ID that ships with any p
 
 Open Telegram's Settings and tap **HushTelegram settings**, or press and hold the **Telegram** title at the top of your chat list. Telegram's chat list has no logo to press, so its title stands in. If neither works, long-press Telegram's icon and tap **HushTelegram**, or open Telegram's App info page and tap **Additional settings in the app** (Samsung calls it **Configure in Telegram**).
 
-The home page has search and seven pages of switches, grouped the way Morphe Manager groups them. **Quick setups** turns on the Quiet or Privacy switches in one tap, or puts every switch back the way it started. **Lock HushTelegram settings** makes every setting read-only until you start an unlock and wait 24 hours. **Pause HushTelegram** turns its changes off from the next start and keeps your choices for when you resume. **More settings** has the update check, link options, settings backup and diagnostics. **Report a problem** opens a GitHub bug report with your versions and switches already filled in.
+The home page has search and seven pages of switches, grouped the way Morphe Manager groups them. **More settings** has the update check, link options, Pause, settings backup and diagnostics. On the Pause page, **Pause HushTelegram** turns its changes off from the next start and keeps your choices for when you resume, and **Lock HushTelegram settings** makes every setting read-only until you start an unlock and wait 24 hours. **Quick setups** on the Settings backup page turns on the Quiet or Privacy switches in one tap, or puts every switch back the way it started. **Report a problem** opens a GitHub bug report with your versions and switches already filled in.
 
 <p><img src="assets/settings-overview.png" width="320" alt="HushTelegram settings with cyan controls, search, Pause and seven settings pages"><img src="assets/settings-ads.png" width="320" alt="The Ads page with Hide ads turned on"></p>
 

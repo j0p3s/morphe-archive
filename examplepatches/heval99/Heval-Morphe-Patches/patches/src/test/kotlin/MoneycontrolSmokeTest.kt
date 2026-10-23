@@ -67,7 +67,7 @@ class MoneycontrolSmokeTest {
     }
 
     @Test
-    fun `ad config, sticky ad, prerolls, GMA and Taboola are neutralised`() {
+    fun `ad config, sticky ad, prerolls, GMA, Taboola and Flutter plugin ads are neutralised`() {
         val root = repoRoot()
         val apk = File(root, "apks/moneycontrol/base.apk")
 
@@ -136,8 +136,9 @@ class MoneycontrolSmokeTest {
             getters.forEach { assertReturnsNull(it, "${prerollModel.type}.${it.name}") }
         }
 
-        // Step 4: GMA loads return at once; banner views hide themselves on loadAd. MobileAds
-        // initialize is deliberately untouched (Flutter plugin and JJT wait on its listener).
+        // Step 4: GMA loads return at once without calling back (no Java caller waits, and a
+        // failure would walk JJT's waterfall to Yandex); banner views hide themselves on loadAd.
+        // MobileAds initialize is deliberately untouched (Flutter plugin and JJT wait on its listener).
         val loadAd = "${GMA}AdRequest;"
         val managerRequest = "${GMA}admanager/AdManagerAdRequest;"
         assertReturnsEarlyVoid(cls("${GMA}AdLoader;").method("loadAd", listOf(loadAd)), "AdLoader.loadAd(AdRequest)")
@@ -164,5 +165,9 @@ class MoneycontrolSmokeTest {
 
         // Step 5: Taboola's unit hides itself and returns this instead of fetching.
         assertHidesSelf(cls(TABOOLA_UNIT).method("fetchContent", emptyList()), Opcode.RETURN_OBJECT, "TBLClassicUnit.fetchContent")
+
+        // Step 6: every google_mobile_ads plugin load (the Flutter screens' banners and natives)
+        // reports NO_FILL to Dart instead of reaching the silent Java loads.
+        assertTrue(assertFlutterGmaPluginLoadsFail(classes).isNotEmpty(), "no plugin load methods found")
     }
 }

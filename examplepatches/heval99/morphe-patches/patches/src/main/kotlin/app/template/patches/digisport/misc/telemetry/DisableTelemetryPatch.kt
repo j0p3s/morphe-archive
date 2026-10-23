@@ -1,6 +1,5 @@
 package app.template.patches.digisport.misc.telemetry
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
@@ -8,6 +7,7 @@ import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_DIGISPORT
+import app.template.patches.shared.addInstructionChecked
 import org.w3c.dom.Element
 
 // Digi Sport sends telemetry through Firebase Analytics, Crashlytics and Performance Monitoring
@@ -72,9 +72,9 @@ private fun BytecodePatchContext.requireMethod(type: String, name: String, varar
  * overload loads Boolean.FALSE into the argument before the original body runs.
  */
 private fun BytecodePatchContext.forceCollectionOff(type: String, name: String) {
-    requireMethod(type, name, "Z").addInstruction(0, "const/4 p1, 0x0")
+    requireMethod(type, name, "Z").addInstructionChecked(0, "const/4 p1, 0x0")
     requireMethod(type, name, "Ljava/lang/Boolean;")
-        .addInstruction(0, "sget-object p1, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;")
+        .addInstructionChecked(0, "sget-object p1, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;")
 }
 
 @Suppress("unused")

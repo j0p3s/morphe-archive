@@ -10,8 +10,10 @@ object FirebaseAnalyticsLogEventFingerprint : Fingerprint(
     parameters = listOf("Ljava/lang/String;", "Landroid/os/Bundle;"),
 )
 
-// Crashlytics is fully public in this build (not R8-renamed): the collection
-// flag getter decides whether anything is collected.
+// Crashlytics is fully public in this build (not R8-renamed): the public collection flag
+// getter, kept for parity with the public API. The data-collection arbiter that every
+// internal reader consults is forced off separately, by the key it reads (see
+// DisableTelemetryPatch).
 object CrashlyticsCollectionEnabledFingerprint : Fingerprint(
     definingClass = "Lcom/google/firebase/crashlytics/FirebaseCrashlytics;",
     name = "isCrashlyticsCollectionEnabled",

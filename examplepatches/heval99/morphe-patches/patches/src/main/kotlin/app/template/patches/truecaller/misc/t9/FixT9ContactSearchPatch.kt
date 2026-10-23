@@ -1,12 +1,12 @@
 package app.template.patches.truecaller.misc.t9
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
 import app.template.patches.shared.Constants.COMPATIBILITY_TRUECALLER
+import app.template.patches.shared.addInstructionChecked
 import app.template.patches.truecaller.misc.gms.TruecallerInitOnCreateFingerprint
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
@@ -87,7 +87,7 @@ val fixT9ContactSearchPatch = bytecodePatch(
                 call?.name == "onCreate" && call.parameterTypes.map(CharSequence::toString) == listOf("Landroid/os/Bundle;")
         }
         if (superCall < 0) throw PatchException("TruecallerInit.onCreate does not call super.onCreate")
-        onCreate.addInstruction(
+        onCreate.addInstructionChecked(
             superCall + 1,
             "invoke-static/range {p0 .. p0}, ${helperClass.type}->$INCREMENTAL_HELPER(Landroid/content/Context;)V",
         )

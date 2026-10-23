@@ -1,11 +1,11 @@
 package app.template.patches.flashscore.misc.promo
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_FLASHSCORE
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.iface.ClassDef
 
 // Firebase In-App Messaging's display callback. Its implementation is obfuscated, but it
@@ -51,7 +51,7 @@ val blockMarketingPopupsPatch = bytecodePatch(
         blockInAppMessaging()
 
         // 3. No promo strips are ever parsed from remote config.
-        InAppStripParseFingerprint.method.addInstructions(
+        InAppStripParseFingerprint.method.addInstructionsChecked(
             0,
             """
                 invoke-static {}, Ljava/util/Collections;->emptyList()Ljava/util/List;

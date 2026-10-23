@@ -135,9 +135,8 @@ val hevyBatteryOptimizationPatch = bytecodePatch(
     execute {
         // Stub BillingClientImpl.startConnection to eliminate Play Store IPC / bound service
         val billingFp = Fingerprint(
-            definingClass = "Lcom/android/billingclient/api/BillingClientImpl;",
-            name = "startConnection",
-            parameters = listOf("Lcom/android/billingclient/api/BillingClientStateListener;"),
+            strings = listOf("Starting in-app billing setup."),
+            returnType = "V",
         )
         billingFp.method.addInstructions(0, "return-void")
         println("[Stop Background Sync] Stubbed BillingClientImpl.startConnection to eliminate Play Store background IPC.")

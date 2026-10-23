@@ -1,11 +1,11 @@
 package app.template.patches.truecaller.layout
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
 import app.morphe.util.addInstructionsAtControlFlowLabel
+import app.template.patches.shared.addInstructionsWithLabelsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation
@@ -74,7 +74,7 @@ internal fun BytecodePatchContext.hideBottomBarTabs(vararg types: String) {
         null,
         MutableMethodImplementation(5),
     ).toMutable().apply {
-        addInstructionsWithLabels(
+        addInstructionsWithLabelsChecked(
             0,
             """
                 array-length v0, p0

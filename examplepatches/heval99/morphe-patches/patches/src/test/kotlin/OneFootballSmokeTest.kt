@@ -50,10 +50,14 @@ class OneFootballSmokeTest {
             GMA + "rewarded/RewardedAd;",
             GMA + "appopen/AppOpenAd;",
         )) {
-            val loads = klass(type).methods.filter { (it.name == "load" || it.name == "loadAd") && it.returnType == "V" }
+            val loads = klass(type).methods.filter { it.name in setOf("load", "loadAd", "loadAds") && it.returnType == "V" }
             assertTrue(loads.isNotEmpty(), "$type has no load entry point")
             loads.forEach { assertReturnsEarlyVoid(it, label = "$type.${it.name}") }
         }
+
+        // AdLoader's batch load (loadAds(AdRequest, int)) is a no-op too, not only loadAd.
+        val loadAds = klass(GMA + "AdLoader;").methods.single { it.name == "loadAds" }
+        assertReturnsEarlyVoid(loadAds, label = "AdLoader.loadAds(AdRequest, int)")
 
         // App-open preloading reports failure.
         val preloader = klass(GMA + "appopen/AppOpenAdPreloader;")

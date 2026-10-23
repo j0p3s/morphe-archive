@@ -1,10 +1,10 @@
 package app.template.patches.iptvremote.misc.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_IPTVREMOTE
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 
 private const val WORTISE_SDK = "Lcom/wortise/ads/WortiseSdk;"
@@ -89,7 +89,7 @@ val disableAdsPatch = bytecodePatch(
             val (move, ret) = if (method.returnType == "Z") "move-result" to "return"
             else "move-result-object" to "return-object"
 
-            method.addInstructions(
+            method.addInstructionsChecked(
                 0,
                 """
                     new-instance p0, $noAds

@@ -450,7 +450,7 @@ try {
 
 # The verifier run end to end, with stand-ins for the tools it starts: a java that answers the
 # version probe and plays DexDiff with the given exit code, an aapt2 that describes Threads
-# 451.0.0.51.80, and an apksigner that reports a Threads signer from patches-list.json. With
+# 452.0.0.50.64, and an apksigner that reports a Threads signer from patches-list.json. With
 # -JavaGone the apksigner also deletes that java, which leaves it unable to start by the time
 # DexDiff runs, as a JDK replaced mid-run would. A Continue preference around the DexDiff call
 # once turned exactly that into '[registers] success.'.
@@ -471,7 +471,7 @@ function Write-StandIn {
 
 function Invoke-VerifierWithStandIns {
     param([string]$Name, [int]$DexDiffExit, [switch]$JavaGone, [string[]]$SelectedPatches,
-        [string]$PatchedVersionCode = '512108444')
+        [string]$PatchedVersionCode = '512207626')
     $case = Join-Path $standIns $Name
     New-Item -ItemType Directory -Path $case -Force | Out-Null
     $javaStandIn = Join-Path $case 'java.cmd'
@@ -505,11 +505,11 @@ exit /b $DexDiffExit
     # The patched APK can report a version code of its own, as Change version code makes it.
     Write-StandIn (Join-Path $case 'aapt2.cmd') @"
 @echo off
-set "standInCode=512108444"
+set "standInCode=512207626"
 echo %* | findstr /c:"patched.apk" >nul && set "standInCode=$PatchedVersionCode"
 echo   E: manifest (line=2)
 echo     A: http://schemas.android.com/apk/res/android:versionCode(0x0101021b)=%standInCode%
-echo     A: http://schemas.android.com/apk/res/android:versionName(0x0101021c)="451.0.0.51.80" (Raw: "451.0.0.51.80")
+echo     A: http://schemas.android.com/apk/res/android:versionName(0x0101021c)="452.0.0.50.64" (Raw: "452.0.0.50.64")
 echo     A: package="$standInPackage" (Raw: "$standInPackage")
 exit /b 0
 "@
@@ -727,6 +727,7 @@ try {
         ("A standalone check passed an extension with the settings row and a list without its hook. " + ($standaloneBare.Output -join [Environment]::NewLine))
     $discardedClean = New-DexApk -Name 'features-ad-discarded-clean' -Entries ([ordered]@{ 'classes.dex' = (Get-Dex 'features-ad-discarded-clean') })
     $featureFaults = @('feed-missing', 'feed-replaced', 'feed-register', 'feed-duplicate', 'item-stub', 'ad-target', 'ad-discarded', 'ad-body', 'ad-helper-body', 'getter-body', 'ad-helper-native', 'getter-static',
+        'permalink-missing', 'permalink-register',
         'link-missing', 'link-replaced', 'link-register', 'post-link-missing', 'post-link-register', 'post-link-getter', 'post-link-bypass',
         'holder-link-missing', 'holder-link-receiver', 'holder-link-field', 'holder-post-link-register', 'holder-post-link-bypass',
         'resume-remember-missing', 'resume-remember-key', 'resume-recall-missing', 'resume-recall-key', 'resume-recall-cast',
@@ -907,7 +908,8 @@ try {
         Assert-True ($structural.ExitCode -eq 0 -and (Get-Findings $structural).Fails.Count -eq 0) "$fault was not structurally valid."
     }
     # 451's network-only fetch shares the label, and its quick coroutine copies high-register
-    # this into v13. Keep the direct-this fixtures above and verify both forms independently.
+    # this into v13, which 452 reuses before the read, so the recall goes through this in v26.
+    # Keep the direct-this fixtures above and verify both forms independently.
     $sharingAliasClean = New-DexApk -Name 'features-sharing-alias-clean' -Entries ([ordered]@{
         'classes.dex' = (Get-Dex 'features-sharing-alias-clean') })
     $sharingAliasGood = New-DexApk -Name 'features-sharing-alias-good' -Entries ([ordered]@{
@@ -921,8 +923,8 @@ try {
         'fetch-two-resumes' = 'post link fetch'
         'foreign-alias' = 'own post cast completed on every path'
         'mixed-alias' = 'own post cast completed on every path'
-        'recall-clobber' = 'loses its coroutine alias before recalling the post'
-        'wide-recall-clobber' = 'loses its coroutine alias before recalling the post'
+        'recall-clobber' = 'lets go of this before recalling the post'
+        'wide-recall-clobber' = 'lets go of this before recalling the post'
         'load-bypass' = 'own post cast completed on every path'
         'cast-bypass' = 'own post cast completed on every path'
         'cast-duplicate' = 'own post cast completed on every path'
@@ -1171,7 +1173,7 @@ try {
         'omitted-selection' = 'CopyText;->selection(Z)Z host calls differ'
         'omitted-body' = 'PostRowText;->invoke(Ljava/lang/Object;)Ljava/lang/Object; changed original instruction 4'
         'omitted-selection-body' = 'PostText(Ljava/lang/Object;ZLjava/lang/Object;I)V changed original instruction 6'
-        'shared' = 'reaches its override check at 2 from [1, 11], not only from the read at 1'
+        'shared' = 'reaches its override check at 2 from [1, 11], not only by falling in from 1'
         'none' = 'no post row lambda reads and checks a long press override'
         'actions' = "the post row's override checks read different actions, [Lfixture/PressOverride;->action"
         'selection-written' = "doesn't read one boolean parameter as it came in on every path"
@@ -1432,6 +1434,7 @@ try {
         'omitted-suggestion-missing-status-capture' = @('hideSuggestedUsers', 'hideAds')
         'omitted-feed-hook' = @('hideAds', 'none')
         'omitted-item-getter' = @('hideAds', 'none')
+        'omitted-permalink-hook' = @('hideAds', 'none')
     }
     foreach ($fault in $omittedFaults.Keys) {
         $case = "features-bad-$fault"

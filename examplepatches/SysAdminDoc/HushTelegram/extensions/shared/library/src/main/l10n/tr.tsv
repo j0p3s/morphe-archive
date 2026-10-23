@@ -159,20 +159,14 @@ Telegram closes and reopens on this page.	Telegram kapanır ve bu sayfada yenide
 Report a problem	Sorun bildir
 # context: that row's summary
 Opens a GitHub report with your versions and settings filled in. Add what happened.	Sürümlerin ve ayarların doldurulmuş bir GitHub raporu açar. Ne olduğunu ekle.
-# context: home page row under the status card, and the title of the dialog it opens
+# context: row on the Settings backup page, and the title of the dialog it opens
 Quick setups	Hızlı kurulumlar
 # context: that row's summary
-Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Bir grup anahtarı tek dokunuşla aç veya tüm anahtarları başlangıçtaki hâline döndür. Bu satırı gizlemek için basılı tut.
-# context: row on Settings backup that hides or shows the Quick setups row on the home page, and its two summaries
-Quick setups on the home page	Ana sayfada hızlı kurulumlar
-Shown. Tap to hide it.	Gösteriliyor. Gizlemek için dokun.
-Hidden. Tap to show it again.	Gizli. Yeniden göstermek için dokun.
+Turn on a set of switches in one tap, or put every switch back the way it started.	Bir grup anahtarı tek dokunuşla aç veya tüm anahtarları başlangıçtaki hâline döndür.
 # context: Row on the Look and feel page that switches how the HushTelegram settings pages are drawn: each group of rows on a rounded card with an outline, or plain rows with a thin line between them. Its line says which look is on and what a tap changes it to.
 Settings look	Ayarların görünümü
 Cards. Tap for plain rows.	Kartlar. Düz satırlar için dokun.
 Plain rows. Tap for cards.	Düz satırlar. Kartlar için dokun.
-# context: toast after a long press hides Quick setups; the page named is Settings backup
-Quick setups hidden. Bring it back from %1$s.	Hızlı kurulumlar gizlendi. %1$s sayfasından geri getirebilirsin.
 # context: Quick setups choice that turns on the switches that hide ads, suggestions and nags
 Quiet	Sessiz
 # context: what Quiet does, under its name
@@ -334,6 +328,12 @@ Hide keyboard on scroll	Kaydırınca klavyeyi gizle
 The keyboard closes when you start scrolling a chat. The emoji and sticker panel stays open.	Bir sohbeti kaydırmaya başladığınızda klavye kapanır. Emoji ve çıkartma paneli açık kalır.
 Keep videos muted on volume keys	Ses tuşlarında videoları sessiz tut
 Volume keys only change the volume. They no longer start the video or round video on screen with sound. Tap a video to hear it.	Ses tuşları yalnızca sesi değiştirir. Ekrandaki videoyu veya yuvarlak videoyu artık sesle başlatmaz. Duymak için bir videoya dokunun.
+# context: a second switch under Keep videos muted on volume keys (#27). Telegram turns a video put in full screen to one fixed landscape side; with this on it follows the phone to either side.
+Full screen videos turn either way	Tam ekran videolar iki yöne de döner
+# context: that switch's summary. "full screen" is Telegram's full screen button on a video; "auto-rotate" is Android's own screen rotation setting, use the phone's name for it.
+After you tap full screen, a video follows your phone to either landscape side, even with auto-rotate off.	Tam ekrana dokunduktan sonra video, otomatik döndürme kapalı olsa bile telefonunu iki yatay yöne de takip eder.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Keep videos muted on volume keys that lets a full screen video turn to either landscape side.
+full screen video turning either way	tam ekran videonun iki yöne de dönmesi
 Swipe back on profiles	Profillerde geri kaydır
 Swiping right on a profile's photos or media tabs goes back, like the rest of the profile, instead of showing the previous photo or tab.	Bir profilin fotoğraflarında veya medya sekmelerinde sağa kaydırmak, önceki fotoğraf ya da sekme yerine, profilin geri kalanında olduğu gibi geri gider.
 Hide phone number	Telefon numarasını gizle
@@ -387,6 +387,12 @@ Removes the Telegram Features row from Settings and Invite Friends from Contacts
 Add Repeat to the message menu	Mesaj menüsüne Tekrarla ekle
 Keep deleted messages	Silinen mesajları sakla
 Messages others delete stay in your chat on this phone, marked deleted next to the time. Your own deletes and disappearing messages work as usual.	Başkalarının sildiği mesajlar bu telefonda sohbetinizde kalır ve saatin yanında silindi olarak işaretlenir. Kendi sildikleriniz ve kaybolan mesajlar her zamanki gibi çalışır.
+# context: a second switch under Keep deleted messages (#25). Turned on, the word "deleted" that marks a kept message next to its time is drawn in red.
+Show deleted in red	Silindi etiketini kırmızı göster
+# context: that switch's summary. "deleted" is the label shown next to the time, "Keep deleted messages" the name of the switch above it.
+The deleted label next to a kept message's time turns red, so it stands out in the chat. Works with Keep deleted messages on.	Saklanan bir mesajın saatinin yanındaki silindi etiketi kırmızı olur, böylece sohbette göze çarpar. Silinen mesajları sakla açıkken çalışır.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Keep deleted messages that draws the deleted label in red.
+red deleted label	kırmızı silindi etiketi
 # context: an action row under Keep deleted messages; a tap deletes every message that switch kept
 Clear kept messages	Saklanan mesajları temizle
 Deletes the messages this phone kept after others deleted them, in every account, the way Telegram would have.	Başkaları sildikten sonra bu telefonun sakladığı mesajları her hesapta, Telegram'ın yapacağı şekilde siler.
@@ -638,6 +644,10 @@ Tap to pick which UnifiedPush app to use.	Hangi UnifiedPush uygulamasının kull
 Save downloaded files	İndirilen dosyaları kaydet
 # context: that switch's summary. "Download/Telegram" is a folder path and stays as it is. Chats that don't allow saving are ones whose owner turned on Telegram's content protection.
 Each file or song you download also goes to Download/Telegram on your phone, where file managers and other apps can open it. Files from secret chats and chats that don't allow saving stay in Telegram.	İndirdiğin her dosya ve şarkı telefonundaki Download/Telegram klasörüne de kopyalanır. Dosya yöneticileri ve diğer uygulamalar onu orada açabilir. Gizli sohbetlerden ve kaydetmeye izin vermeyen sohbetlerden gelen dosyalar Telegram'da kalır.
+# context: a second switch under Save downloaded files (#29). Turned on, it also copies files from chats whose owner turned on Telegram's content protection. Secret chats stay excluded.
+Also save from chats that don't allow saving	Kaydetmeye izin vermeyen sohbetlerden de kaydet
+# context: that switch's summary, a warning that it goes past the chat owner's choice. "Save downloaded files" is the name of the switch above it.
+With Save downloaded files on, files from chats whose owner turned off saving get copied too. Only use it where the owner is fine with you keeping a copy, since it goes past their setting. Secret chats still stay in Telegram.	İndirilen dosyaları kaydet açıkken, sahibi kaydetmeyi kapatmış sohbetlerdeki dosyalar da kopyalanır. Bunu yalnızca sahibinin bir kopya saklamana itiraz etmediği yerlerde kullan, çünkü onun ayarını aşar. Gizli sohbetler yine Telegram'da kalır.
 # context: Folders by chat type, a switch on the Chat list page. Turning it on makes Telegram chat folders for each kind of chat.
 Folders by chat type	Sohbet türüne göre klasörler
 # context: that switch's summary. Private, Groups, Channels and Bots are the folder names, use the same words as their own entries.
@@ -723,22 +733,26 @@ Couldn't open notification settings. Open Android settings.	Bildirim ayarları a
 Search only my chats	Yalnızca sohbetlerimde ara
 Search finds your chats, contacts and messages from chats you're in, and nothing public. The Channels, Apps and Posts tabs go away, and a hashtag's public posts don't load.	Arama sohbetlerinizi, kişilerinizi ve içinde bulunduğunuz sohbetlerdeki mesajları bulur, herkese açık hiçbir şeyi bulmaz. Kanallar, Uygulamalar ve Gönderiler sekmeleri kaybolur, bir etiketin herkese açık gönderileri yüklenmez.
 public search lookups	herkese açık arama sorguları
-# context: Settings lock row under Quick setups on the home page, its notes, and what a refused change says (#17).
+# context: Settings lock row on the Pause page, its notes, and what a refused change says (#17). For the first minutes after locking the row reads Unlock now and one tap takes the lock off (#23); %1$d is minutes.
 Lock HushTelegram settings	HushTelegram ayarlarını kilitle
-Makes every setting here read-only. To change one again, start an unlock here and wait 24 hours.	Buradaki her ayarı salt okunur yapar. Birini yeniden değiştirmek için kilidi açmayı buradan başlat ve 24 saat bekle.
+Makes every setting here read-only. A tap within %1$d min unlocks them again. After that, unlocking takes 24 hours.	Buradaki her ayarı salt okunur yapar. %1$d dk içinde bir dokunuş kilidi yeniden açar. Sonrasında kilidi açmak 24 saat sürer.
+Unlock now	Kilidi şimdi aç
+Locked just now. Tap within %1$d min to unlock right away. After that, unlocking takes 24 hours.	Az önce kilitlendi. Kilidi hemen açmak için %1$d dk içinde dokun. Sonrasında kilidi açmak 24 saat sürer.
 Start unlock	Kilidi açmayı başlat
 Your settings are locked. Tap to start the 24-hour wait. You can cancel it while it runs.	Ayarların kilitli. 24 saatlik beklemeyi başlatmak için dokun. Sürerken iptal edebilirsin.
 Cancel unlock	Kilit açmayı iptal et
 Settings unlock in %1$d h %2$d min. Tap to cancel and keep them locked.	Ayarların kilidi %1$d sa %2$d dk sonra açılır. İptal edip kilitli tutmak için dokun.
-Settings locked. Unlocking takes 24 hours.	Ayarlar kilitlendi. Kilidi açmak 24 saat sürer.
+Settings locked. Changed your mind? Tap again within %1$d min.	Ayarlar kilitlendi. Fikrini mi değiştirdin? %1$d dk içinde yeniden dokun.
+Settings unlocked. They change as usual again.	Ayarların kilidi açıldı. Yine her zamanki gibi değiştirilebilir.
 Unlock started. Settings open in 24 hours unless you cancel.	Kilit açma başladı. İptal etmezsen ayarlar 24 saat sonra açılır.
 Unlock canceled. Settings stay locked.	Kilit açma iptal edildi. Ayarlar kilitli kalıyor.
 Couldn't change the lock. Try again in a moment.	Kilit değiştirilemedi. Birazdan tekrar dene.
 Settings are locked. They unlock in %1$d h %2$d min.	Ayarlar kilitli. Kilit %1$d sa %2$d dk sonra açılır.
 Settings are locked. Tap Start unlock, then wait 24 hours.	Ayarlar kilitli. Kilidi açmayı başlat'a dokun, sonra 24 saat bekle.
+Settings are locked. Tap Unlock now within %1$d min.	Ayarlar kilitli. %1$d dk içinde Kilidi şimdi aç'a dokun.
 # context: Export settings row, its first sentence: what a settings file holds. The sentence after it lists what the file leaves out.
 Saves your switches, filter lists, sticker size and chat list emoji to a file, for all the accounts in this Telegram app. Your chats, drafts and kept messages aren't in it.	Anahtarlarınızı, filtre listelerinizi, çıkartma boyutunu ve sohbet listesi emojisini bu Telegram uygulamasındaki tüm hesaplar için bir dosyaya kaydeder. Sohbetleriniz, taslaklarınız ve saklanan mesajlarınız dosyaya girmez.
-# context: Export settings row. %1$s is a list joined the language's own way: row titles as they show (Pause HushTelegram, Debug logging, Check for new HushTelegram releases, Lock HushTelegram settings, Quick setups on the home page, UnifiedPush notifications, Folders by chat type) and the lowercase phrase below it, which ends the list.
+# context: Export settings row. %1$s is a list joined the language's own way: row titles as they show (Pause HushTelegram, Debug logging, Check for new HushTelegram releases, Lock HushTelegram settings, Settings look, UnifiedPush notifications, Folders by chat type) and the lowercase phrase below it, which ends the list.
 Left out of the file: %1$s.	Dosyaya alınmayanlar: %1$s.
 the translation service, its key and the chats you turned translation on for	çeviri hizmeti, anahtarı ve çeviriyi açtığınız sohbetler
 # context: Sentences added after a description to say which account it works on. "Both" is turning Folders by chat type on and turning it off. The last one closes the About page's Accounts row.
@@ -857,3 +871,9 @@ Couldn't save the folder. Try again in a moment.	Klasör kaydedilemedi. Birazdan
 Couldn't read your folders.	Klasörleriniz okunamadı.
 # context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Hide folder tab counters that opens the chat list on a picked folder
 which folder the chat list opens on	sohbet listesinin açıldığı klasör
+# context: Chat list page switch title, under Hide Contacts tab. When on, the round pencil button (new message) on the chat list is removed.
+Hide new message button	Yeni mesaj düğmesini gizle
+# context: Summary under that switch. The menu is the side menu or Telegram's own menu; search is the chat list's search.
+Removes the round pencil button from the chat list. Start a chat from the menu or search. Restart Telegram to see the change.	Sohbet listesindeki yuvarlak kalem düğmesini kaldırır. Bir sohbeti menüden veya aramadan başlatın. Değişikliği görmek için Telegram'ı yeniden başlatın.
+# context: Lowercase noun phrase in a status line. It names the part of Hide Contacts tab that removes the round pencil (new message) button from the chat list.
+new message button	yeni mesaj düğmesi

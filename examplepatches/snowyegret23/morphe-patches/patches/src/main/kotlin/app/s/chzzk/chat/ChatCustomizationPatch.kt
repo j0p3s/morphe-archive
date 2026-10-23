@@ -169,6 +169,7 @@ val chatCustomizationPatch = bytecodePatch(
             "3.14.0" -> setOf("Low0;", "Lzp0;")
             "3.14.10" -> setOf("Lpw0;", "Laq0;")
             "3.15.0" -> setOf("Lvx0;", "Lmm0;")
+            "3.15.2" -> setOf("Lvx0;", "Lnm0;")
             else -> error("Unsupported CHZZK version: ${packageMetadata.versionName}")
         }
         var widthMethods = 0

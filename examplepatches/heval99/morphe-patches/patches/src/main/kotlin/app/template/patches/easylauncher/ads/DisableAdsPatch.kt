@@ -1,10 +1,10 @@
 package app.template.patches.easylauncher.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_EASYLAUNCHER
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 
 @Suppress("unused")
@@ -33,7 +33,7 @@ val disableAdsPatch = bytecodePatch(
             val offset = if (AccessFlags.STATIC.isSet(accessFlags)) 0 else 1
             val callback = "p${index + offset}"
             // The method has many locals, so the parameter is out of 4-bit range: use /range.
-            addInstructions(
+            addInstructionsChecked(
                 0,
                 """
                     invoke-interface/range {$callback .. $callback}, $FUNCTION0->invoke()Ljava/lang/Object;

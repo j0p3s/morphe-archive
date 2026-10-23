@@ -2,6 +2,7 @@ import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.Method
+import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.NarrowLiteralInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -19,7 +20,9 @@ private const val PKG = "com.sofascore.results"
 private const val USER_ACCOUNT = "Lcom/sofascore/local_persistance/UserAccount;"
 private const val PROFILE_DATA = "Lcom/sofascore/model/profile/ProfileData;"
 private const val APPSFLYER_LIB = "Lcom/appsflyer/AppsFlyerLib;"
+private val APPSFLYER_METHODS = setOf("start", "logEvent", "logSession", "logAdRevenue")
 private const val GMS_MEASUREMENT = "Lcom/google/android/gms/measurement/api/AppMeasurementSdk;"
+private const val ANALYTICS_DEACTIVATED_KEY = "firebase_analytics_collection_deactivated"
 private const val FACEBOOK_PROVIDER = "Lcom/facebook/internal/FacebookInitProvider;"
 private const val AUDIENCE_PROVIDER = "Lcom/facebook/ads/AudienceNetworkContentProvider;"
 private const val PROMOTION_MODAL = "Lcom/sofascore/results/event/details/view/promotion/PromotionModal;"
@@ -192,19 +195,65 @@ class SofascoreSmokeTest {
             label = "ProfileData.getHasPremium()", diagnostics
         )
 
-        // Disable telemetry: AppsFlyer implementation + GMS measurement.
+        // Disable telemetry: AppsFlyer (start, both logEvent overloads, logSession and
+        // logAdRevenue, found like the patch by the AppsFlyerLib superclass), the measurement
+        // logEvent entry point, and the Firebase Analytics manifest switch.
         val appsFlyer = classes.firstOrNull { it.superclass == APPSFLYER_LIB }
             ?: error("AppsFlyerLib subclass not found in emitted dexes\n$diagnostics")
-        val appsFlyerLogEvent = appsFlyer.methodsNamed("logEvent")
-            .single { it.parameterTypes.size == 4 }
-        assertReturnsEarlyVoid(
-            appsFlyerLogEvent,
-            label = "${appsFlyer.type}.logEvent(Context, String, Map, listener)",
-            diagnostics
+        for (method in appsFlyer.methods.filter {
+            it.name in APPSFLYER_METHODS && it.returnType == "V" && it.implementation != null
+        }) {
+            assertReturnsEarlyVoid(
+                method,
+                label = "${appsFlyer.type}.${method.name}(${method.parameterTypes.joinToString()})",
+                diagnostics,
+            )
+        }
+        // start() must be among them: an anchor that matched nothing must fail the test.
+        assertTrue(
+            appsFlyer.methods.any { it.name == "start" && it.returnType == "V" && it.implementation != null },
+            "AppsFlyerLib subclass has no concrete start()\n$diagnostics",
         )
         assertReturnsEarlyVoid(
             require(GMS_MEASUREMENT).methodsNamed("logEvent").single(),
             label = "AppMeasurementSdk.logEvent()", diagnostics
+        )
+
+        // The "firebase_analytics_collection_deactivated" read (the R8-renamed measurement
+        // config, found like the patch: the single method holding the string) answers
+        // Boolean.TRUE right after its move-result-object, so measurement never starts and
+        // the automatic first_open / session_start / screen_view events never fire.
+        val analyticsReaders = classes.flatMap { cls -> cls.methods }
+            .filter { method -> ANALYTICS_DEACTIVATED_KEY in method.strings() }
+        assertTrue(
+            analyticsReaders.size == 1,
+            "expected one $ANALYTICS_DEACTIVATED_KEY reader, found " +
+                "${analyticsReaders.map { "${it.definingClass}.${it.name}" }}\n$diagnostics",
+        )
+        val readInsns = analyticsReaders.single().instructions()
+        val keyIndex = readInsns.indexOfFirst { it.stringOrNull() == ANALYTICS_DEACTIVATED_KEY }
+        assertTrue(keyIndex >= 0, "the $ANALYTICS_DEACTIVATED_KEY string vanished\n$diagnostics")
+        val keyRegister = (readInsns[keyIndex] as OneRegisterInstruction).registerA
+        val invoke = readInsns.getOrNull(keyIndex + 1)
+        val call = (invoke as? ReferenceInstruction)?.reference as? MethodReference
+        assertTrue(
+            invoke is FiveRegisterInstruction && invoke.registerCount == 2 &&
+                call?.returnType == "Ljava/lang/Boolean;" &&
+                call.parameterTypes.map(CharSequence::toString) == listOf("Ljava/lang/String;") &&
+                invoke.registerD == keyRegister,
+            "the $ANALYTICS_DEACTIVATED_KEY string is not read through a Boolean get(String) " +
+                "instance call taking it as the key; got ${invoke?.opcode} $call\n$diagnostics",
+        )
+        val move = readInsns.getOrNull(keyIndex + 2) as? OneRegisterInstruction
+        val forced = readInsns.getOrNull(keyIndex + 3) as? ReferenceInstruction
+        val forcedField = forced?.reference as? FieldReference
+        assertTrue(
+            readInsns.getOrNull(keyIndex + 2)?.opcode == Opcode.MOVE_RESULT_OBJECT && move != null &&
+                forced?.opcode == Opcode.SGET_OBJECT &&
+                forcedField?.definingClass == "Ljava/lang/Boolean;" && forcedField.name == "TRUE" &&
+                (forced as OneRegisterInstruction).registerA == move.registerA,
+            "the $ANALYTICS_DEACTIVATED_KEY read is not overwritten with Boolean.TRUE; got " +
+                "${readInsns.drop(keyIndex).take(4).map { it.opcode }}\n$diagnostics",
         )
 
         // Crashlytics is R8-renamed; locate its classes the same way the patch does.

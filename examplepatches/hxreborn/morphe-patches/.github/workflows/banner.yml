@@ -18,6 +18,7 @@ concurrency:
 jobs:
   banner:
     name: Rebuild the README banner
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout main

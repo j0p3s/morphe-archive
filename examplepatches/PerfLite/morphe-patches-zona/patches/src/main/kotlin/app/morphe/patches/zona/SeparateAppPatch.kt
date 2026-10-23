@@ -37,6 +37,22 @@ val separateAppPatch = resourcePatch(
         required = true,
     )
 
+    val iconColorOption = stringOption(
+        key = "iconColor",
+        default = "#FFA855F7",
+        title = "Icon mark color",
+        description = "ARGB color of the 'Z' launcher icon mark, e.g. #FFA855F7. Leave empty to keep the original blue color.",
+        required = false,
+    ) { it == null || it.isBlank() || it.matches(Regex("^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")) }
+
+    val iconBackgroundColorOption = stringOption(
+        key = "iconBackgroundColor",
+        default = "",
+        title = "Icon background color",
+        description = "ARGB color of the launcher icon background, e.g. #FF2B1E3F. Leave empty to keep the original dark background.",
+        required = false,
+    ) { it == null || it.isBlank() || it.matches(Regex("^#([0-9A-Fa-f]{6}|[0-9A-Fa-f]{8})$")) }
+
     finalize {
         val originalPackageName = packageMetadata.packageName
         val packageName = packageNameOption.value!!
@@ -76,6 +92,46 @@ val separateAppPatch = resourcePatch(
             val applications = document.getElementsByTagName("application")
             for (i in 0 until applications.length) {
                 (applications.item(i) as Element).setAttribute("android:label", appName)
+            }
+        }
+
+        // Recolor the 'Z' mark in all launcher icon foreground drawables.
+        // FreeZona uses `zona_foreground.xml` for its primary launcher icon (`res/mipmap-anydpi-v26/zona.xml`),
+        // while `ic_launcher_foreground.xml` is also kept for completeness.
+        val iconColor = iconColorOption.value
+        if (!iconColor.isNullOrBlank()) {
+            val foregrounds = listOf(
+                "res/drawable/zona_foreground.xml",
+                "res/drawable/ic_launcher_foreground.xml",
+            )
+            for (foreground in foregrounds) {
+                if (foreground in listApkEntries()) {
+                    document(foreground).use { document ->
+                        val paths = document.getElementsByTagName("path")
+                        for (i in 0 until paths.length) {
+                            (paths.item(i) as Element).setAttribute("android:fillColor", iconColor)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Optionally recolor the launcher icon background.
+        val iconBackgroundColor = iconBackgroundColorOption.value
+        val iconBackground = "res/drawable/ic_launcher_background.xml"
+        if (!iconBackgroundColor.isNullOrBlank() && iconBackground in listApkEntries()) {
+            document(iconBackground).use { document ->
+                (document.documentElement as Element).setAttribute("android:color", iconBackgroundColor)
+            }
+
+            for (icon in listApkEntries("res/mipmap-anydpi-v26/")) {
+                document(icon).use { document ->
+                    val backgrounds = document.getElementsByTagName("background")
+                    for (i in 0 until backgrounds.length) {
+                        (backgrounds.item(i) as Element)
+                            .setAttribute("android:drawable", "@drawable/ic_launcher_background")
+                    }
+                }
             }
         }
     }

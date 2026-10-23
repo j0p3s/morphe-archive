@@ -1,7 +1,13 @@
+import com.android.tools.smali.dexlib2.Opcodes
+import com.android.tools.smali.dexlib2.dexbacked.DexBackedDexFile
+import com.android.tools.smali.dexlib2.iface.ClassDef
+import com.android.tools.smali.dexlib2.iface.Method
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
+import java.nio.ByteBuffer
+import java.util.zip.ZipFile
 
 private const val PKG = "com.monefy.app.lite"
 
@@ -9,6 +15,16 @@ class MonefySmokeTest {
 
     @TempDir
     lateinit var workDir: File
+
+    /** The unpatched classes, read straight from the APK's dex files. */
+    private fun originalClasses(apk: File): List<ClassDef> = ZipFile(apk).use { zip ->
+        zip.entries().toList()
+            .filter { Regex("classes\\d*\\.dex").matches(it.name) }
+            .flatMap { entry ->
+                val bytes = zip.getInputStream(entry).use { it.readBytes() }
+                DexBackedDexFile(Opcodes.forApi(36), ByteBuffer.wrap(bytes)).classes.toList()
+            }
+    }
 
     @Test
     fun `Enable Premium patch forces the pro checks and clears the expired state`() {
@@ -28,14 +44,32 @@ class MonefySmokeTest {
             allPatches = loadAllPatches(newestPatchBundle(root)),
         )
 
-        fun klass(type: String) = classes.firstOrNull { it.type == type }
-            ?: error("$type not found in emitted dexes")
+        // R8 renames the classes and methods, so find each target the way the patch does: the
+        // ()Z method holding its stable string, read from the stock APK (the patched one no
+        // longer holds the strings).
+        val stock = originalClasses(apk)
+        fun target(string: String, classFilter: (ClassDef) -> Boolean = { true }): Method {
+            val matches = stock.filter(classFilter).flatMap { cls ->
+                cls.methods.filter { m ->
+                    m.returnType == "Z" && m.parameterTypes.isEmpty() &&
+                        m.instructions().any { it.stringOrNull() == string }
+                }
+            }
+            val match = matches.singleOrNull() ?: error("expected one ()Z holding \"$string\", found ${matches.size}")
+            return classes.first { it.type == match.definingClass }.method(match.name, emptyList())
+        }
 
-        assertForcedBoolean(klass("Lgh;").method("o"), expected = true, label = "ClearCashApplication.o()")
         assertForcedBoolean(
-            klass("Lcom/monefy/helpers/GeneralSettingsProvider;").method("F"),
-            expected = true, label = "GeneralSettingsProvider.F()",
+            target("com.monefy.app.pro") { it.superclass == "Landroid/app/Application;" },
+            expected = true, label = "ClearCashApplication master pro check",
         )
-        assertForcedBoolean(klass("Lzt;").method("p"), expected = false, label = "zt.p()")
+        assertForcedBoolean(
+            target("KEY_GOOGLE_PLAY_MONEFY_PRO_IN_APP_BOUGHT") { it.type == "Lcom/monefy/helpers/GeneralSettingsProvider;" },
+            expected = true, label = "GeneralSettingsProvider pro purchase flag",
+        )
+        assertForcedBoolean(
+            target("KEY_MONEFY_PRO_SUBSCRIPTION_EXPIRED"),
+            expected = false, label = "subscription-expired reader",
+        )
     }
 }

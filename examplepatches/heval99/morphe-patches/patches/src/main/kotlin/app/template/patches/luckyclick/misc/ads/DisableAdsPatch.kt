@@ -1,6 +1,5 @@
 package app.template.patches.luckyclick.misc.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
@@ -8,6 +7,7 @@ import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.luckyclick.misc.license.disableLicenseCheckPatch
 import app.template.patches.shared.Constants.COMPATIBILITY_LUCKYCLICK
+import app.template.patches.shared.addInstructionChecked
 import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.Method
@@ -88,7 +88,7 @@ val disableAdsPatch = bytecodePatch(
         if (storeRef?.name != "setValue" || boxed !in store.registers()) {
             throw PatchException("Disable ads: the purchase restore does not setValue its ad-free Boolean (found $storeRef)")
         }
-        restore.addInstruction(valueOfIndex + 2, "sget-object v$boxed, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;")
+        restore.addInstructionChecked(valueOfIndex + 2, "sget-object v$boxed, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;")
 
         // 3. Backstop at the SDK, so no mediated network can show anything should a new ad path
         // skip the ad-free state: never initialize Google Mobile Ads, and neuter every MobileAds
@@ -148,7 +148,7 @@ private fun MutableMethod.forceAdFreePermanentReads(): Int {
             throw PatchException("$definingClass.$name: getBoolean(\"$AD_FREE_PERMANENT\") result is not moved")
         }
         val register = (moveResult as OneRegisterInstruction).registerA
-        addInstruction(index + 2, if (register < 16) "const/4 v$register, 0x1" else "const/16 v$register, 0x1")
+        addInstructionChecked(index + 2, if (register < 16) "const/4 v$register, 0x1" else "const/16 v$register, 0x1")
         forced++
     }
     return forced

@@ -32,7 +32,6 @@ val braveTabGroupCloseSelectionPatch = bytecodePatch(
         val closeSelectionFp = try {
             val fp = Fingerprint(
                 definingClass = "Lorg/chromium/chrome/browser/tabmodel/TabCollectionTabModelImpl;",
-                name = "Z",
                 parameters = listOf(
                     "Ljava/util/List;",
                     "Lorg/chromium/chrome/browser/tab/Tab;",
@@ -56,6 +55,10 @@ val braveTabGroupCloseSelectionPatch = bytecodePatch(
             throw PatchException(BRAVE_UNSUPPORTED_VARIANT_MESSAGE)
         }
 
-        println("[Select Previous Tab on Close] Applied $patched hook in TabCollectionTabModelImpl.${closeSelectionFp.method.name} -> previous tab selection in tab group enabled.")
+        if (patched == 0) {
+            println("[Select Previous Tab on Close] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println("[Select Previous Tab on Close] Applied $patched hook in TabCollectionTabModelImpl.${closeSelectionFp.method.name} -> previous tab selection in tab group enabled.")
+        }
     }
 }

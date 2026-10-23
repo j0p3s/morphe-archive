@@ -1,6 +1,7 @@
 package app.template.patches.osmand.premium
 
 import app.morphe.patcher.patch.BytecodePatchContext
+import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
@@ -22,10 +23,19 @@ private val LOCAL_GATES = listOf(
     "isSubscribedToLocalOsmAndPro",
 )
 
-private fun BytecodePatchContext.booleanMethods(type: String, names: Collection<String>): List<MutableMethod> =
-    mutableClassDefByOrNull(type)?.methods.orEmpty()
+/**
+ * The concrete boolean methods of [type] named in [names]. Every name must be found: both classes
+ * and all getters are mandatory, so a rename or a moved method fails the patch instead of
+ * leaving a gate unforced.
+ */
+private fun BytecodePatchContext.booleanMethods(type: String, names: Collection<String>): List<MutableMethod> {
+    val methods = mutableClassDefBy(type).methods
         .filter { it.implementation != null }
         .filter { it.name in names && it.returnType == "Z" }
+    val missing = names.toSet() - methods.map { it.name }.toSet()
+    if (missing.isNotEmpty()) throw PatchException("$type has no concrete boolean $missing")
+    return methods
+}
 
 @Suppress("unused")
 val enablePremiumPatch = bytecodePatch(

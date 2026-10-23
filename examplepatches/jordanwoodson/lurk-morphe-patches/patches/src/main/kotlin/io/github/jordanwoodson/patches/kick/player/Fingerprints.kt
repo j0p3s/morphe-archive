@@ -47,7 +47,17 @@ internal object MainActivityCreateFingerprint : Fingerprint(
     parameters = listOf("Landroid/os/Bundle;"),
 )
 
+internal object SurfaceTransformFingerprint : Fingerprint(
+    definingClass = PLAYER_VIEW, name = "updateSurfaceViewTransform", returnType = "V", parameters = emptyList(),
+)
+
 internal object UpdatePipParamsFingerprint : Fingerprint(
     definingClass = PLAYER_VIEW, name = "updatePipParams", returnType = "Landroid/app/PictureInPictureParams;",
     parameters = listOf("Z", "Landroid/graphics/Rect;", "Landroid/util/Rational;"),
+)
+
+/** Kick's once-a-second player observer reads the IVS player's bitrate, duration and latency here. */
+internal object PlayerStatisticsFingerprint : Fingerprint(
+    definingClass = PLAYER_VIEW, name = "handlePlayerStatistics", returnType = "V",
+    parameters = listOf("Lcom/amazonaws/ivs/player/Player;"),
 )

@@ -1,13 +1,13 @@
 package app.template.patches.wsj.misc.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_WSJ
+import app.template.patches.shared.addInstructionChecked
+import app.template.patches.shared.addInstructionsChecked
 import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
@@ -63,7 +63,7 @@ val disableAdsPatch = bytecodePatch(
         classDefForEach { classDef ->
             if (SECTION_STRATEGY !in classDef.interfaces) return@classDefForEach
             mutableClassDefBy(classDef).methods.filter { it.isSectionAdIndices() }.forEach { method ->
-                method.addInstructions(
+                method.addInstructionsChecked(
                     0,
                     """
                         invoke-static {}, Ljava/util/Collections;->emptyList()Ljava/util/List;
@@ -124,7 +124,7 @@ val disableAdsPatch = bytecodePatch(
         if (padding.size != 1) {
             throw PatchException("Disable ads: expected one float getter on $AD_PADDING, found ${padding.size}")
         }
-        padding.single().addInstructions(
+        padding.single().addInstructionsChecked(
             0,
             """
                 const/4 v0, 0x0
@@ -213,7 +213,7 @@ val disableAdsPatch = bytecodePatch(
             mutableClassDefBy(classDef).methods.filter { it.implementation != null }.forEach { method ->
                 when {
                     method.isAdTagRequest() -> {
-                        method.addInstructions(
+                        method.addInstructionsChecked(
                             0,
                             """
                                 const/4 v0, 0x0
@@ -225,7 +225,7 @@ val disableAdsPatch = bytecodePatch(
                         adTagHooks++
                     }
                     method.isAdsLoaderGetter() -> {
-                        method.addInstructions(
+                        method.addInstructionsChecked(
                             0,
                             """
                                 const/4 v0, 0x0
@@ -251,7 +251,7 @@ val disableAdsPatch = bytecodePatch(
         if (builderSetters.none { it.name == "setAdsConfiguration" }) {
             throw PatchException("Disable ads: no concrete $MEDIA_ITEM_BUILDER->setAdsConfiguration")
         }
-        builderSetters.forEach { it.addInstructions(0, "return-object p0") }
+        builderSetters.forEach { it.addInstructionsChecked(0, "return-object p0") }
     }
 }
 
@@ -301,7 +301,7 @@ private fun MutableMethod.publishUnitOnly(): Pair<Int, Int> {
     }
     // Descending, so an insert never shifts an index still to be visited.
     for ((index, register) in calls.reversed()) {
-        addInstruction(index, "sget-object v$register, Lkotlin/Unit;->INSTANCE:Lkotlin/Unit;")
+        addInstructionChecked(index, "sget-object v$register, Lkotlin/Unit;->INSTANCE:Lkotlin/Unit;")
     }
     return created to set
 }

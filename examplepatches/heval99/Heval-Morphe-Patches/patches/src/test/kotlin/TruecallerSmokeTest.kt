@@ -43,6 +43,7 @@ private const val T9_INCREMENTAL_HELPER = "morpheRefreshT9Incremental"
 private const val CLEVERTAP_FEATURE_KEY = "featureCleverTap"
 private const val CRASHLYTICS_COLLECTION_KEY = "firebase_crashlytics_collection_enabled"
 private const val CONTACT_TYPE = "Lcom/truecaller/enterpriseinfo/api/model/ContactType;"
+private const val MOBILE_NUMBERS_SELECTION = "data_type = ? AND data_phonebook_id NOT NULL AND data8 = ?"
 
 class TruecallerSmokeTest {
 
@@ -83,7 +84,7 @@ class TruecallerSmokeTest {
     }
 
     @Test
-    fun `Truecaller patches unlock premium, remove ads, telemetry, update prompts and optional UI, and route GMS to MicroG RE`() {
+    fun `Truecaller patches unlock premium, remove ads, telemetry, contact upload, update prompts and optional UI, and route GMS to MicroG RE`() {
         val root = repoRoot()
         val apk = File(root, "apks/truecaller/base.apk")
 
@@ -119,6 +120,7 @@ class TruecallerSmokeTest {
                 "Fix T9 contact search",
                 "Hide Wear OS settings",
                 "Hide business media",
+                "Disable contact upload",
                 "GmsCore support",
                 "Spoof signature",
             ),
@@ -139,6 +141,7 @@ class TruecallerSmokeTest {
         assertUseSmsVerification(classes)
         assertFixT9ContactSearch(classes, byType)
         assertHideBusinessMedia(classes)
+        assertDisableContactUpload(classes)
         // onGetCredential tests isAvailableOnDevice(int) in this build, so the routing applies.
         assertGmsCoreSupport(classes, workDir, PKG, TRUECALLER_INIT, SIGNATURE_SHA1, expectCredentialRouting = true)
         assertSpoofSignature(classes, PKG, SIGNATURE_SHA1)
@@ -167,8 +170,10 @@ class TruecallerSmokeTest {
         }
         assertForcedBoolean(gate, expected = true, label = "${gateClass.type}.${gate.name}(PremiumFeatureStatus)")
 
-        // 4. isFeatureAvailable(feature, refresh): true at once, except CALL_ASSISTANT and
-        // FAMILY_SHARING, which branch to the untouched stock check.
+        // 4. isFeatureAvailable(feature, refresh): true at once for the device-checked features;
+        // CALL_ASSISTANT and FAMILY_SHARING (both only work through Truecaller's servers) return
+        // false at once, so the premium UI does not offer them as unlocked. The stock check
+        // (with the server's kill-switch list) stays below the early returns, unreached.
         val (featureClass, feature) = classes.singleMethod("feature availability check") { _, m ->
             m.returnType == "Z" && m.params() == listOf(PREMIUM_FEATURE, "Z") && "disabledPremiumFeatures" in m.strings()
         }
@@ -185,14 +190,20 @@ class TruecallerSmokeTest {
                 branch.registerB == (get as OneRegisterInstruction).registerA) {
                 "$featureLabel does not compare p1 with PremiumFeature.$constant"
             }
-            check(featureInsns.branchTarget(index + 1) == 6) { "$featureLabel: the $constant branch does not reach the stock check" }
+            // Both server-backed branches reach the false return at 6, before the stock code.
+            check(featureInsns.branchTarget(index + 1) == 6) { "$featureLabel: the $constant branch does not reach the server-backed false return" }
         }
         val forced = featureInsns.getOrNull(4)
         check(forced?.opcode == Opcode.CONST_4 && (forced as NarrowLiteralInstruction).narrowLiteral == 1 &&
             featureInsns.getOrNull(5)?.opcode == Opcode.RETURN &&
             (featureInsns[5] as OneRegisterInstruction).registerA == (forced as OneRegisterInstruction).registerA
         ) { "$featureLabel does not return true for the other features" }
-        check(featureInsns.drop(6).any { it.stringOrNull() == "disabledPremiumFeatures" }) { "$featureLabel lost its stock check" }
+        val unavailable = featureInsns.getOrNull(6)
+        check(unavailable?.opcode == Opcode.CONST_4 && (unavailable as NarrowLiteralInstruction).narrowLiteral == 0 &&
+            featureInsns.getOrNull(7)?.opcode == Opcode.RETURN &&
+            (featureInsns[7] as OneRegisterInstruction).registerA == (unavailable as OneRegisterInstruction).registerA
+        ) { "$featureLabel does not return false for the server-backed features" }
+        check(featureInsns.drop(8).any { it.stringOrNull() == "disabledPremiumFeatures" }) { "$featureLabel lost its stock check" }
 
         // 5. PremiumState constructor: const/16 p1, 0x1 and sget-object p2, GOLD before anything else.
         val stateClass = classes.single { cls -> cls.methods.any { m -> m.strings().any { it.startsWith("PremiumState(isPremium=") } } }
@@ -655,7 +666,8 @@ class TruecallerSmokeTest {
         // The SharedPreferences toggle resolver starts with one "key.equals(p1) -> return value"
         // block per override, each falling through to the next and finally to the stock code.
         // Hide family button and Restore classic call log add one each, Disable ads five (incl. the
-        // Offer Hub), Hide business media the seven verified business campaign toggles.
+        // Offer Hub), Hide business media the seven verified business campaign toggles, Disable
+        // contact upload the Call Assistant number sync and the contact editor name suggestion.
         val (cls, resolver) = classes.singleMethod("feature toggle resolver") { _, m ->
             m.returnType == "Z" && m.params() == listOf("Ljava/lang/String;", FEATURE_STATE) &&
                 m.instructions().any { it.call()?.definingClass == "Landroid/content/SharedPreferences;" && it.call()?.name == "getBoolean" }
@@ -678,6 +690,8 @@ class TruecallerSmokeTest {
             "featureBizVerifiedCampaignsDetailsView" to 0,
             "featureBizVerifiedCampaignsCarouselDetailsView" to 0,
             "featureBizVerifiedCampaignsDV3" to 0,
+            "featureCallAssistantNumberSync" to 0,
+            "featureContactEditorNameSuggestion" to 0,
         )
         val overrides = mutableMapOf<String, Int>()
         for (block in expected.keys.indices) {
@@ -847,5 +861,36 @@ class TruecallerSmokeTest {
         }
 
         // 3. The verified business campaign toggles are checked in assertToggleOverrides.
+    }
+
+    private fun assertDisableContactUpload(classes: List<ClassDef>) {
+        // 1. Both saved-mobile-number queries (chat contact discovery, contacts' Premium status) pass
+        // the selection ending in " AND 0" to ContentResolver.query; no method keeps the stock one.
+        check(classes.methodsWhere { _, m -> MOBILE_NUMBERS_SELECTION in m.strings() }.isEmpty()) {
+            "a method still queries with the stock mobile number selection"
+        }
+        val emptied = classes.methodsWhere { _, m -> "$MOBILE_NUMBERS_SELECTION AND 0" in m.strings() }
+        check(emptied.size == 2) { "expected 2 emptied mobile number queries, found ${emptied.map { (c, m) -> "${c.type}.${m.name}" }}" }
+        for ((cls, method) in emptied) {
+            val label = "${cls.type}.${method.name} (mobile number query)"
+            val insns = method.instructions()
+            val selections = insns.indices.filter { insns[it].stringOrNull() == "$MOBILE_NUMBERS_SELECTION AND 0" }
+            check(selections.size == 1) { "$label loads the emptied selection ${selections.size} times" }
+            val register = (insns[selections.single()] as OneRegisterInstruction).registerA
+            val query = insns.drop(selections.single() + 1).firstOrNull { it.arguments()?.contains(register) == true }
+            check(query?.call()?.definingClass == "Landroid/content/ContentResolver;" && query.call()?.name == "query" &&
+                query.arguments()?.getOrNull(3) == register
+            ) { "$label does not pass the emptied selection to ContentResolver.query; got ${query?.opcode} ${query?.call()}" }
+        }
+
+        // 2. and 3. "featureCallAssistantNumberSync" and "featureContactEditorNameSuggestion" are
+        // checked in assertToggleOverrides; both are still read through the resolver.
+        for (key in listOf("featureCallAssistantNumberSync", "featureContactEditorNameSuggestion")) {
+            check(classes.methodsWhere { _, m ->
+                key in m.strings() && m.instructions().any {
+                    it.call()?.returnType == "Z" && it.call()?.parameterTypes?.map(CharSequence::toString) == listOf("Ljava/lang/String;", FEATURE_STATE)
+                }
+            }.isNotEmpty()) { "no method reads $key through the toggle resolver" }
+        }
     }
 }

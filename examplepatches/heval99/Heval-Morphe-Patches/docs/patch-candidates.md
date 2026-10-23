@@ -146,7 +146,7 @@ In queue order. Verdicts are first impressions; nothing has been triaged yet.
 | 20 | Lovora | unknown | Not specified | Find the package first |
 | 21 | VidMate | not on Google Play | Not specified | Off-Play downloader from download sites (repack risk); skip |
 
-**Community note:** a Korean user worries about patching KakaoTalk, which handles payments and certificates in Korea. A re-signed KakaoTalk may break Kakao Pay and certificate features; consider a warning in the patch description or the README.
+**Community note (resolved 2026-10-19):** a Korean user worried about patching KakaoTalk, which handles payments and certificates in Korea (a re-signed build may break Kakao Pay and certificate features). KakaoTalk support was removed on 2026-10-19 (see the blocklist), so no warning is needed.
 
 ## Open GitHub issues (2026-10-14)
 

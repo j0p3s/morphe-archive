@@ -1,7 +1,7 @@
 package io.github.jordanwoodson.patches.twitch.playback
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
-import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
+import io.github.jordanwoodson.patches.twitch.shared.addInstructions
+import io.github.jordanwoodson.patches.twitch.shared.replaceInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.stringOption
@@ -14,6 +14,10 @@ import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import io.github.jordanwoodson.patches.twitch.settings.twitchSettings
 import io.github.jordanwoodson.patches.twitch.settings.twitchSettingsPatch
+import io.github.jordanwoodson.patches.shared.invokeStatic
+import io.github.jordanwoodson.patches.shared.parameterRegister
+import io.github.jordanwoodson.patches.twitch.shared.lowParameters
+import io.github.jordanwoodson.patches.shared.requireLowRegisters
 import io.github.jordanwoodson.patches.twitch.shared.Constants.COMPATIBILITY_TWITCH
 import io.github.jordanwoodson.patches.twitch.shared.twitchMatch
 import io.github.jordanwoodson.patches.shared.settings.ChoiceSetting
@@ -26,7 +30,9 @@ private val QUALITIES = linkedMapOf("Twitch's default" to "0", "Source" to "1", 
 val defaultVideoQualityPatch = bytecodePatch(
     name = "Default video quality",
     description = "Starts playback at the selected rendition when available, with Source as the default. " +
-        "Saved player choices, including Auto, take priority. Unavailable renditions use Twitch's fallback.",
+        "Saved player choices, including Auto, take priority. Unavailable renditions use Twitch's fallback. " +
+        "A lower rendition for metered networks (mobile data, or Wi-Fi marked as metered) can be chosen in Lurk " +
+        "settings > Playback > On mobile data; it's the same as on Wi-Fi until then.",
     default = false,
 ) {
     compatibleWith(COMPATIBILITY_TWITCH)
@@ -57,8 +63,10 @@ val defaultVideoQualityPatch = bytecodePatch(
         }
         // Change only the fallback argument. Saved _live/_vod/_clip values, including Auto and
         // audio_only, remain under Twitch's control.
+        val p = reader.lowParameters(2, 1, firstLocal = 0)
         reader.addInstructions(0, """
-            invoke-static { p2, p1 }, $PLAYBACK->qualityPreferenceDefault(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
+            ${p.prologue}
+            ${invokeStatic("$PLAYBACK->qualityPreferenceDefault(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;", p[2], p[1])}
             move-result-object p2
         """)
 
@@ -70,8 +78,11 @@ val defaultVideoQualityPatch = bytecodePatch(
             if (player.opcode != Opcode.IGET_OBJECT || field?.type != "Lcom/amazonaws/ivs/player/MediaPlayer;") {
                 throw PatchException("Twitch: unexpected player quality selection")
             }
+            // After the first instruction, with no register proven free: fail rather than lose the call.
+            val ivs = (player as OneRegisterInstruction).registerA
+            requireLowRegisters("player quality selection", parameterRegister(1), ivs)
             addInstructions(1, """
-                invoke-static { p1, v${(player as OneRegisterInstruction).registerA} }, $PLAYBACK->playerQuality(Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/String;
+                ${invokeStatic("$PLAYBACK->playerQuality(Ljava/lang/String;Ljava/lang/Object;)Ljava/lang/String;", parameterRegister(1), ivs)}
                 move-result-object p1
             """)
         }
@@ -97,8 +108,16 @@ val defaultVideoQualityPatch = bytecodePatch(
             move-result-object v$key
             invoke-interface { v$array, v$key }, Lcom/facebook/react/bridge/WritableArray;->pushString(Ljava/lang/String;)V
         """)
-        twitchSettings.add(ChoiceSetting("video_quality", "Default video quality",
-            "Used until a player quality is saved. Missing renditions use Twitch's fallback.", Section.PLAYBACK,
-            default = quality!!, choices = QUALITIES.toList(), restart = true))
+        twitchSettings.add(
+            ChoiceSetting("video_quality", "Default video quality",
+                "Used until a player quality is saved. Missing renditions use Twitch's fallback.", Section.PLAYBACK,
+                default = quality!!, choices = QUALITIES.toList(), restart = true),
+            // Source is never lower than a default, so it isn't offered; Twitch's default (Auto) counts as highest.
+            ChoiceSetting("video_quality_metered", "On mobile data",
+                "Used instead of the default on metered networks (mobile data, or Wi-Fi marked as metered) when it " +
+                    "is lower. Like the default, only until a player quality is saved.", Section.PLAYBACK,
+                default = "0", choices = listOf("Same as on Wi-Fi" to "0") + QUALITIES.toList().drop(2),
+                restart = true, parent = "video_quality"),
+        )
     }
 }

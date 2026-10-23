@@ -1,10 +1,10 @@
 package app.template.patches.all.screenshot
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.ClassDef
@@ -202,7 +202,7 @@ val removeScreenshotRestrictionPatch = bytecodePatch(
                             redirected++
                         }
                         is MaskFlagWrite -> {
-                            method.addInstructions(
+                            method.addInstructionsChecked(
                                 index + 1,
                                 "invoke-static { v${edit.objectRegister} }, $CLEAR_SECURE_FLAG",
                             )

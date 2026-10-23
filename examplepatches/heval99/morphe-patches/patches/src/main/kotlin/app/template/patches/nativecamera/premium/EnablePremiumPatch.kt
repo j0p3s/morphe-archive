@@ -1,6 +1,5 @@
 package app.template.patches.nativecamera.premium
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
@@ -67,7 +66,7 @@ val enablePremiumPatch = bytecodePatch(
             ?.narrowLiteral
             ?: throw PatchException("Premium read default is not a constant")
         val persistSignature = "${persist.definingClass}->${persist.name}(${persist.parameterTypes.joinToString("")})V"
-        init.addInstructions(
+        init.addInstructionsChecked(
             readIndex,
             """
                 const/4 v$defaultRegister, 0x1

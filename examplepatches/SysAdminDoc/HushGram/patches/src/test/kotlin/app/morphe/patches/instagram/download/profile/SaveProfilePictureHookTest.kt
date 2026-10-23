@@ -186,7 +186,7 @@ class SaveProfilePictureHookTest {
         val versions = AppCompatibilities.instagram().single().targets.mapNotNull { it.version }.toSet()
         val bundles = versions.flatMap { version -> Fixtures.files { it.extension == "apks" && it.name.contains("-$version-") } } +
             Fixtures.otherBuilds()
-        assertEquals("the declared build and the two others", 3, bundles.size)
+        assertEquals("the declared build and the others", Fixtures.BUILDS, bundles.size)
         var checked = 0
         run {
             for (bundle in bundles) {
@@ -241,7 +241,7 @@ class SaveProfilePictureHookTest {
                 checked++
             }
         }
-        assertEquals("every build checked", 3, checked)
+        assertEquals("every build checked", Fixtures.BUILDS, checked)
     }
 
     /** With the bio's getter gone, every other bridge goes in and the bio's keeps answering null, so only Copy bio is left out. */

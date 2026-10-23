@@ -32,7 +32,6 @@ private const val PREF_PREFIX = "brave_origin_off_"
  */
 private val ORIGIN_SWITCH_KEYS = listOf(
     "rewards_switch",
-    "email_aliases_switch",
     "leo_ai_switch",
     "news_switch",
     "vpn_switch",
@@ -129,7 +128,7 @@ private val braveOriginResourcePatch = resourcePatch(
     compatibleWith(Constants.COMPATIBILITY_BRAVE)
 
     execute {
-        val targetFile = get("res").findXmlContaining(listOf("rewards_switch")).firstOrNull() ?: run {
+        val targetFile = findXmlContaining(listOf("rewards_switch")).firstOrNull() ?: run {
                 println("[Brave Origin] Skipped: rewards_switch XML preference not found.")
                 return@execute
             }
@@ -175,7 +174,6 @@ val braveOriginPatch = bytecodePatch(
     dependsOn(
         braveOriginResourcePatch,
         braveNativeExtractionPatch,
-        braveBtiCompatibilityPatch,
     )
 
     execute {
@@ -323,14 +321,14 @@ val braveOriginPatch = bytecodePatch(
                     return v0
                     :not_locked
                     iget-object v0, p1, Landroidx/preference/Preference;->$prefKeyField:Ljava/lang/String;
-                    invoke-static {v0}, Lorg/chromium/chrome/browser/settings/BraveOriginPreferences;->m5(Ljava/lang/String;)Ljava/lang/String;
+                    invoke-static {v0}, Lorg/chromium/chrome/browser/settings/BraveOriginPreferences;->M4(Ljava/lang/String;)Ljava/lang/String;
                     move-result-object v0
                     if-eqz v0, :no_key
                     check-cast p2, Ljava/lang/Boolean;
                     invoke-virtual {p2}, Ljava/lang/Boolean;->booleanValue()Z
                     move-result v1
                     xor-int/lit8 v1, v1, 0x1
-                    invoke-virtual {p0}, Lorg/chromium/chrome/browser/settings/BraveOriginPreferences;->U3()Landroid/content/Context;
+                    invoke-virtual {p0}, Lorg/chromium/chrome/browser/settings/BraveOriginPreferences;->u3()Landroid/content/Context;
                     move-result-object v2
                     invoke-virtual {v2}, Landroid/content/Context;->getApplicationContext()Landroid/content/Context;
                     move-result-object v2
@@ -350,7 +348,7 @@ val braveOriginPatch = bytecodePatch(
                     move-result-object v2
                     :write_done
                     invoke-interface {v2}, Landroid/content/SharedPreferences${'$'}Editor;->apply()V
-                    invoke-virtual {p0}, Lorg/chromium/chrome/browser/settings/BraveOriginPreferences;->l5()V
+                    invoke-virtual {p0}, Lorg/chromium/chrome/browser/settings/BraveOriginPreferences;->L4()V
                     :no_key
                     const/4 v0, 0x1
                     return v0
@@ -368,7 +366,7 @@ val braveOriginPatch = bytecodePatch(
         setupPrefFingerprint.method.addInstructionsWithLabels(
             0,
             """
-                invoke-virtual {p0, p1}, Lorg/chromium/chrome/browser/settings/BraveOriginPreferences;->Z4(Ljava/lang/CharSequence;)Landroidx/preference/Preference;
+                invoke-virtual {p0, p1}, Lorg/chromium/chrome/browser/settings/BraveOriginPreferences;->z4(Ljava/lang/CharSequence;)Landroidx/preference/Preference;
                 move-result-object v0
                 if-eqz v0, :setup_done
                 move-object v3, p0
@@ -411,8 +409,12 @@ val braveOriginPatch = bytecodePatch(
 
         val configuredGatekeepers = GATEKEEPER_POLICIES.map { it.name } + "Leo Flag"
         val targetClasses = hookedMethods.map { it.substringBefore('.') }.distinct()
-        println(
-            "[Brave Origin] Hooked ${hookedMethods.size} core methods across ${targetClasses.size} classes (${hookedMethods.joinToString(", ")}) & configured ${configuredGatekeepers.size} policy gatekeepers (${configuredGatekeepers.joinToString(", ")})"
-        )
+        if (hookedMethods.isEmpty()) {
+            println("[Brave Origin] WARNING: applied 0 hook(s) -> this feature is NOT active on this APK; its targets moved upstream.")
+        } else {
+            println(
+                "[Brave Origin] Hooked ${hookedMethods.size} core methods across ${targetClasses.size} classes (${hookedMethods.joinToString(", ")}) & configured ${configuredGatekeepers.size} policy gatekeepers (${configuredGatekeepers.joinToString(", ")})"
+            )
+        }
     }
 }

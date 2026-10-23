@@ -67,6 +67,7 @@ val hevyResourceSlimmerPatch = resourcePatch(
         }
 
         // 2. Stub heavy onboarding MP4 tutorial in res/raw/
+        decode("res/raw*")
         val resRawDir = get("res/raw")
         if (resRawDir.exists() && resRawDir.isDirectory) {
             resRawDir.walkTopDown().filter { it.isFile && it.name.endsWith(".mp4") }.forEach { file ->
@@ -81,6 +82,7 @@ val hevyResourceSlimmerPatch = resourcePatch(
         }
 
         // 3. Stub heavy IMG.LY PhotoEditor textures and stickers in res/
+        decode("res/drawable*")
         val resDir = get("res")
         if (resDir.exists() && resDir.isDirectory) {
             resDir.walkTopDown().filter { it.isFile }.forEach { file ->

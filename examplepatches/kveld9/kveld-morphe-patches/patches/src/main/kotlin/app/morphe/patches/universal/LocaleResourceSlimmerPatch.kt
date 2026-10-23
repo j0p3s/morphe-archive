@@ -6,7 +6,7 @@ import app.morphe.patches.shared.LocaleUtils
 
 @Suppress("unused")
 val localeResourceSlimmerPatch = resourcePatch(
-    name = "Remove Extra Languages",
+    name = "Remove Extra Languages (Universal)",
     description = "Deletes unselected translation folders.",
     default = false,
 ) {
@@ -20,10 +20,11 @@ val localeResourceSlimmerPatch = resourcePatch(
     )
 
     execute {
+        decode("res/values*")
         val mainRes = get("res")
         val resDirs = LocaleUtils.resolveResourceDirectories(mainRes)
         if (resDirs.isEmpty()) {
-            println("[Remove Extra Languages] res/ directory not found - skipping safely.")
+            println("[Remove Extra Languages (Universal)] res/ directory not found - skipping safely.")
             return@execute
         }
 
@@ -58,12 +59,12 @@ val localeResourceSlimmerPatch = resourcePatch(
 
         if (removedDirs == 0) {
             val packageSuffix = if (resDirs.size > 1) " across ${resDirs.size} resource packages" else ""
-            println("[Remove Extra Languages] No non-target localization directories found to strip$packageSuffix (kept: ${keepSet.sorted().joinToString(", ")}).")
+            println("[Remove Extra Languages (Universal)] No non-target localization directories found to strip$packageSuffix (kept: ${keepSet.sorted().joinToString(", ")}).")
             return@execute
         }
 
         val savedFormatted = LocaleUtils.formatBytes(savedBytes)
         val packageSuffix = if (resDirs.size > 1) " across ${resDirs.size} resource packages" else ""
-        println("[Remove Extra Languages] Stripped $removedDirs localization dirs$packageSuffix (kept: ${keepSet.sorted().joinToString(", ")}) -> Saved $savedFormatted")
+        println("[Remove Extra Languages (Universal)] Stripped $removedDirs localization dirs$packageSuffix (kept: ${keepSet.sorted().joinToString(", ")}) -> Saved $savedFormatted")
     }
 }

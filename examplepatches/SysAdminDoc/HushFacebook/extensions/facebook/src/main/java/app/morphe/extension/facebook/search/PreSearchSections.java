@@ -24,15 +24,18 @@ import app.morphe.extension.shared.settings.BaseSettings;
 
 /**
  * The rows on the search screen before anything is typed (#80): the For you section leaves while
- * Hide For you in search is on, and with Debug logging on every row is named.
+ * Hide For you in search is on, People you may know while its own switch is on, and with Debug
+ * logging on every row is named.
  *
  * <p>Facebook draws each row from a server-built entry. The patch hands over each entry's node and
  * the module tree read off it as the row is drawn, and draws the module this answers, an empty row
- * for null. The For you section, the searches Facebook suggests with a Refresh button, is one entry
- * whose node is a {@link #FOR_YOU_NODE} and whose {@code rendered_modules} string, which Facebook
+ * for null. Facebook 584 tests the node for null before it reads the module, so there the patch hands
+ * over the node alone, and a null node is drawn as the same empty row. The For you section, the searches Facebook suggests with a Refresh button, is one entry
+ * whose node is a {@link #NULL_STATE_NODE} and whose {@code rendered_modules} string, which Facebook
  * hands its own performance logger, names {@link #FOR_YOU_MODULE} (583 on the S22, 2026-10-20).
- * Recent searches don't come through here. No account checked so far was served People you may know
- * on this screen, so nothing else is hidden.
+ * People you may know is an entry of the same node type whose string names
+ * {@link #PEOPLE_YOU_MAY_KNOW_MODULE} (a reporter's Debug log, 583, 2026-10-22), and it leaves while
+ * Hide "People you may know" in search is on. Recent searches don't come through here.
  *
  * <p>With Debug logging on, this logs the GraphQL type names of the node and the module, read through
  * {@link FeedFilter#typeName}'s checks, and the module names. Only names survive: a type or module
@@ -40,7 +43,8 @@ import app.morphe.extension.shared.settings.BaseSettings;
  * or search text gets out. Each distinct line is logged once, up to {@link #MAX_SHAPES}, and after
  * that no entry is read for the log.
  *
- * <p>Off, paused, before the settings are ready, or when anything here fails, the module is Facebook's own.
+ * <p>Off, paused, before the settings are ready, or when anything here fails, the module or node is
+ * Facebook's own.
  */
 public final class PreSearchSections {
     static final int MAX_SHAPES = 32;
@@ -51,12 +55,16 @@ public final class PreSearchSections {
     /** A tree keys a field by its name's hashCode. */
     private static final int RENDERED_MODULES = "rendered_modules".hashCode();
 
-    /** The node type of the For you entry. */
-    static final String FOR_YOU_NODE = "SearchNullStateNativeTemplatesResult";
+    /** The node type of the For you and People you may know entries. */
+    static final String NULL_STATE_NODE = "SearchNullStateNativeTemplatesResult";
     /** The module name the For you entry's node lists in its {@code rendered_modules}. */
     static final String FOR_YOU_MODULE = "TRENDING_QUERY_SUGGESTION";
+    /** The module name the People you may know entry's node lists in its {@code rendered_modules}. */
+    static final String PEOPLE_YOU_MAY_KNOW_MODULE = "PEOPLE_YOU_MAY_KNOW";
     /** Counted under the patch's name each time the For you entry is drawn empty. */
     static final String HIDDEN = "Search screen drawn without For you";
+    /** Counted under the patch's name each time the People you may know entry is drawn empty. */
+    static final String HIDDEN_PEOPLE = "Search screen drawn without People you may know";
 
     private static final String FAMILY = FamilyNames.SUGGESTED_POSTS;
     private static final String HOOK = "search screen entry";
@@ -80,41 +88,68 @@ public final class PreSearchSections {
      */
     @Nullable
     public static Object entry(@Nullable Object node, @Nullable Object module) {
-        log(node, module);
+        log(node, module, true);
+        return hides(node, module != null) ? null : module;
+    }
+
+    /**
+     * Injection point in 584's item case, right after an entry's node is read and before Facebook
+     * tests it for null and reads its module. Logs the node with Debug logging on, then answers the
+     * node to draw. Never throws.
+     *
+     * @param node the entry's node, null when Facebook draws an empty row.
+     * @return the node to draw, null for Facebook's empty row.
+     */
+    @Nullable
+    public static Object node(@Nullable Object node) {
+        if (node != null) log(node, null, false);
+        return hides(node, node != null) ? null : node;
+    }
+
+    /** Whether a row that would be drawn from the node is one a switch hides. Counts it when it is. */
+    private static boolean hides(@Nullable Object node, boolean drawn) {
         try {
             HookStatus.invoked(FAMILY);
-            if (module == null || !Utils.settingsReady() || !Settings.HIDE_SEARCH_FOR_YOU.get() || !forYou(node)) {
-                return module;
-            }
+            if (!drawn || !Utils.settingsReady()) return false;
+            String hidden = hidden(node, Settings.HIDE_SEARCH_FOR_YOU.get(), Settings.HIDE_SEARCH_PEOPLE_YOU_MAY_KNOW.get());
+            if (hidden == null) return false;
             HookStatus.bound(FAMILY, HOOK);
-            HookStatus.counted(FAMILY, HIDDEN);
-            Logger.printDebug(() -> "Search screen: drew For you as an empty row");
-            return null;
+            HookStatus.counted(FAMILY, hidden);
+            Logger.printDebug(() -> hidden + ", an empty row in its place");
+            return true;
         } catch (Throwable failure) {
             HookStatus.threw(FAMILY, HOOK, failure);
-            return module;
+            return false;
         }
     }
 
-    /** Whether the node is the For you entry's: its type, and its module names, read whole. */
-    static boolean forYou(@Nullable Object node) {
-        if (!FOR_YOU_NODE.equals(FeedFilter.typeName(node))) return false;
+    /**
+     * What the node's entry is, as the line it's counted under, when its switch is on: its type, and
+     * its module names, read whole. Null for any other entry, and nothing is read with both off.
+     */
+    @Nullable
+    static String hidden(@Nullable Object node, boolean forYou, boolean people) {
+        if (!forYou && !people) return null;
+        if (!NULL_STATE_NODE.equals(FeedFilter.typeName(node))) return null;
         String modules = renderedModules(node);
-        if (modules == null) return false;
+        if (modules == null) return null;
         for (String name : modules.split(",")) {
-            if (FOR_YOU_MODULE.equals(name.trim())) return true;
+            String module = name.trim();
+            if (forYou && FOR_YOU_MODULE.equals(module)) return HIDDEN;
+            if (people && PEOPLE_YOU_MAY_KNOW_MODULE.equals(module)) return HIDDEN_PEOPLE;
         }
-        return false;
+        return null;
     }
 
-    private static void log(@Nullable Object node, @Nullable Object module) {
+    /** Logs the node, and the module unless {@code moduleRead} is false (584 hands over the node alone). */
+    private static void log(@Nullable Object node, @Nullable Object module, boolean moduleRead) {
         if (!enabled() || full) return;
         try {
             String nodeType = FeedFilter.typeName(node);
             // A node whose type can't be read may be released, and its strings aren't asked.
             String modules = nodeType == null ? "unread" : modules(node);
-            record("node=" + name(nodeType) + " module=" + (module == null ? "none" : name(FeedFilter.typeName(module)))
-                    + " rendered_modules=" + modules);
+            String moduleName = !moduleRead ? "" : " module=" + (module == null ? "none" : name(FeedFilter.typeName(module)));
+            record("node=" + name(nodeType) + moduleName + " rendered_modules=" + modules);
         } catch (Throwable unreadable) {
             record("unreadable entry");
         }

@@ -1,14 +1,14 @@
 # App and patch development map
 
-This guide maps the TikTok app Hushfeed modifies to the code and release checks that make a patch. Its version and patch counts were last synced with the source on 2026-10-20, and `scripts/validate-release-facts.ps1` fails when they drift. The generated [patch catalog](../patches-list.json) is the current source of truth for patch names and compatibility.
+This guide maps the TikTok app Hushfeed modifies to the code and release checks that make a patch. Its version and patch counts were last synced with the source on 2026-10-22, and `scripts/validate-release-facts.ps1` fails when they drift. The generated [patch catalog](../patches-list.json) is the current source of truth for patch names and compatibility.
 
 ## What Hushfeed ships
 
 Hushfeed is a Morphe patch bundle, not a TikTok APK. Morphe Manager takes a TikTok APK chosen by the user, applies the selected patches, and signs the result with the user's existing key. The patch definitions and the runtime code they inject live in separate Gradle modules.
 
-Source snapshot: version 0.77.0, 138 patch entries. Those come from gradle.properties and patches-list.json.
+Source snapshot: version 0.78.0, 138 patch entries. Those come from gradle.properties and patches-list.json.
 
-Published bundle: version 0.77.0, 136 patches. Those come from patches-bundle.json and the release it names.
+Published bundle: version 0.78.0, 138 patches. Those come from patches-bundle.json and the release it names.
 
 The source runs ahead of the published bundle until the next release ships. The index moves only after a new bundle is published and verified, which is the release sequence described in CONTRIBUTING.md. Do not hand-edit the index to make the two match.
 
@@ -69,7 +69,7 @@ The delivered bundle contains classes.dex, extensions/tiktok.mpe, and extensions
 | :extensions:shared | Shared runtime extension payload |
 | :extensions:shared:library | Shared settings, utility, and diagnostic code used by extensions and tests |
 
-The Morphe Gradle plugin and the default extension namespace are configured in settings.gradle.kts. The current plugin pin is 1.3.4. The version catalog pins patcher 1.15.1 and the README holds the Manager floor at 1.34.0. Keep those pins compatible because Manager refuses a bundle built for a newer patcher. The TikTok extension compiles for Java 11 with API 23 as its floor. The shared library compiles for Java 17, also with API 23 as its floor. Module build files declare which payload name each extension produces. The stub modules let source compile against host types; they are not a substitute for checking the real APK.
+The Morphe Gradle plugin and the default extension namespace are configured in settings.gradle.kts. The current plugin pin is 1.3.4. The version catalog pins patcher 2.0.0 and the README holds the Manager floor at 2.0.0 (morphe-desktop 1.19.0 is the first CLI on it). Keep those pins compatible because Manager refuses a bundle built for a newer patcher. The TikTok extension compiles for Java 11 with API 23 as its floor. The shared library compiles for Java 17, also with API 23 as its floor. Module build files declare which payload name each extension produces. The stub modules let source compile against host types; they are not a substitute for checking the real APK.
 
 ## Where to look first
 

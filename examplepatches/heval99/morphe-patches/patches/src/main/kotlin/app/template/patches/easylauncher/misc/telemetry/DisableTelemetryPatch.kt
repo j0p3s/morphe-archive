@@ -1,6 +1,5 @@
 package app.template.patches.easylauncher.misc.telemetry
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
@@ -127,7 +126,7 @@ val disableTelemetryPatch = bytecodePatch(
         // 5. Braze: the push service's initialize returns Unit without enqueuing BrazeInitWorker.
         val unit = classDefBy("Lkotlin/Unit;").staticFields.firstOrNull { it.type == "Lkotlin/Unit;" }
             ?: throw PatchException("kotlin.Unit has no singleton field")
-        BrazePushInitializeFingerprint.method.addInstructions(
+        BrazePushInitializeFingerprint.method.addInstructionsChecked(
             0,
             """
                 sget-object p0, Lkotlin/Unit;->${unit.name}:Lkotlin/Unit;
@@ -137,6 +136,6 @@ val disableTelemetryPatch = bytecodePatch(
 
         // 6. Crashlytics: the app can no longer switch collection on at runtime (the manifest
         // switch above turns it off at startup).
-        FirebaseSetCrashCollectionEnabledFingerprint.method.addInstructions(0, "const/4 p1, 0x0")
+        FirebaseSetCrashCollectionEnabledFingerprint.method.addInstructionsChecked(0, "const/4 p1, 0x0")
     }
 }

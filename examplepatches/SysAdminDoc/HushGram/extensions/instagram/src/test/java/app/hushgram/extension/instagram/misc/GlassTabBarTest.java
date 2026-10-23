@@ -326,6 +326,7 @@ public class GlassTabBarTest {
             int under = host.bar.getPaddingBottom();
 
             assertEquals("shown in front", 0, GlassTabBar.navBarHeight(nav));
+            assertEquals("a Reels viewer stops above the slot and the handle", 100 + nav, GlassTabBar.reelsMargin(100));
             host.frame();
             assertEquals("the pill makes room for the handle", height + nav, host.bar.getLayoutParams().height);
             assertEquals("and sits above it", under + nav, host.bar.getPaddingBottom());
@@ -335,6 +336,7 @@ public class GlassTabBarTest {
             host.frame();
             assertTrue("hidden, the insets went round again", insets.get() > asked);
             assertEquals("hidden", nav, GlassTabBar.navBarHeight(nav));
+            assertEquals("Instagram keeps the handle's room itself, so the viewer stops at the slot", 100, GlassTabBar.reelsMargin(100));
             host.frame();
             assertEquals("hidden, no room for the handle", height, host.bar.getLayoutParams().height);
 
@@ -349,6 +351,7 @@ public class GlassTabBarTest {
             ActivityController<Activity> other = Robolectric.buildActivity(Activity.class).setup();
             try {
                 assertEquals("another activity in front", nav, GlassTabBar.navBarHeight(nav));
+                assertEquals(100, GlassTabBar.reelsMargin(100));
             } finally {
                 other.pause().stop().destroy();
             }
@@ -362,6 +365,7 @@ public class GlassTabBarTest {
             PauseForTests.pause(HushgramPause.Reason.SWITCH);
             asked = insets.get();
             assertEquals("paused", nav, GlassTabBar.navBarHeight(nav));
+            assertEquals(100, GlassTabBar.reelsMargin(100));
             host.frame();
             assertTrue("paused, the insets went round again", insets.get() > asked);
             assertEquals("paused, no room for the handle", height, host.bar.getLayoutParams().height);
@@ -435,7 +439,7 @@ public class GlassTabBarTest {
             host.controller.pause().resume();
             host.frame();
             assertEquals("no sheet holder yet", 0, GlassTabBar.navBarHeight(nav));
-            assertEquals("a reel away from the pill stops above the handle (#221)", nav, GlassTabBar.reelsRoomWhileAway());
+            assertEquals("a reel stops above the pill's slot and the handle (#221, #280)", nav, GlassTabBar.reelsMargin(0));
             host.frame();
             int height = host.bar.getLayoutParams().height;
 
@@ -464,7 +468,7 @@ public class GlassTabBarTest {
             assertEquals("a sheet came up, and the insets didn't go round", asked, insets.get());
             assertEquals("under a sheet Instagram keeps the 0", 0, GlassTabBar.navBarHeight(nav));
             assertEquals("the keyboard over the sheet too", 0, GlassTabBar.navBarHeightOverTheKeyboard(nav));
-            assertEquals("the Reels viewer under the sheet keeps its size", nav, GlassTabBar.reelsRoomWhileAway());
+            assertEquals("the Reels viewer under the sheet keeps its size", nav, GlassTabBar.reelsMargin(0));
             host.frame();
             assertEquals("the sheet still stops above the navigation bar", nav, bottomMargin(holder));
             assertEquals("the pill keeps its room under the sheet", height, host.bar.getLayoutParams().height);
@@ -473,10 +477,12 @@ public class GlassTabBarTest {
             host.frame();
             assertEquals("the sheet went, and the insets didn't go round", asked, insets.get());
             assertEquals("the keyboard with no sheet gets the height", nav, GlassTabBar.navBarHeightOverTheKeyboard(nav));
+            assertEquals("Instagram pads the Reels viewer by it, so the viewer gives up as much (#222)", 0, GlassTabBar.reelsMargin(0));
             host.frame();
             assertEquals("and Instagram keeps the sheets above it itself", 0, bottomMargin(holder));
             assertEquals(0, bottomMargin(footer));
             assertEquals("the keyboard closed", 0, GlassTabBar.navBarHeight(nav));
+            assertEquals(nav, GlassTabBar.reelsMargin(0));
             host.frame();
             assertEquals(nav, bottomMargin(holder));
 
@@ -490,10 +496,11 @@ public class GlassTabBarTest {
             host.bar.setVisibility(View.GONE);
             host.frame();
             assertEquals("a screen without the bar gets the height", nav, GlassTabBar.navBarHeight(nav));
+            assertEquals(0, GlassTabBar.reelsMargin(0));
             host.frame();
             assertEquals("and the sheets give the room back", 0, bottomMargin(holder));
             assertEquals("full screen, no navigation bar to stop above", 0, GlassTabBar.navBarHeight(0));
-            assertEquals(0, GlassTabBar.reelsRoomWhileAway());
+            assertEquals(0, GlassTabBar.reelsMargin(0));
 
             String report = String.join("\n", HookStatus.report());
             assertTrue(report, report.contains(GlassTabBar.COUNT_SHEETS_LIFTED));
@@ -1462,6 +1469,33 @@ public class GlassTabBarTest {
         assertTrue(GlassTabBar.shouldRecord(true, GlassTabBar.MAX_STALE_MS, 60));
     }
 
+    /**
+     * #262: a blur recording that throws leaves the pill on its plain tint only until one works again.
+     * Before, one failure turned the blur off for as long as the bar lived, and the pill stayed on the
+     * dark tint. A blur that fails too many times in a row rests a while, then tries again, and one that
+     * works in between starts the count over.
+     */
+    @Test
+    public void aFailedBlurRecordingIsTriedAgain() {
+        GlassTabBar.BlurTries tries = new GlassTabBar.BlurTries();
+        long now = 10_000;
+        assertFalse(tries.resting(now));
+        for (int i = 1; i < GlassTabBar.BLUR_TRIES; i++) {
+            assertFalse("a failure is tried again", tries.failed(now));
+            assertFalse(tries.resting(now));
+        }
+        tries.worked();
+        for (int i = 1; i < GlassTabBar.BLUR_TRIES; i++) {
+            assertFalse("one that worked started the count over", tries.failed(now));
+        }
+        assertTrue("one too many in a row, and the blur rests", tries.failed(now));
+        assertTrue(tries.resting(now));
+        assertTrue(tries.resting(now + GlassTabBar.BLUR_REST_MS - 1));
+        assertFalse("then tries again", tries.resting(now + GlassTabBar.BLUR_REST_MS));
+        assertFalse("with the count started over", tries.failed(now + GlassTabBar.BLUR_REST_MS));
+        assertFalse(tries.resting(now + GlassTabBar.BLUR_REST_MS));
+    }
+
     @Test
     public void hapticTicksCloserThanTheMinimumGapAreDropped() {
         assertTrue(GlassTabBar.Haptics.farEnough(1000, 1000 - GlassTabBar.Haptics.MIN_TICK_GAP_MS));
@@ -1606,6 +1640,64 @@ public class GlassTabBarTest {
         assertEquals("nothing above the feed", 0, glass.getPixel(50, 5));
     }
 
+    /**
+     * #222: the glass leaves a Reels viewer out of what it draws, the way it leaves out a SurfaceView, so a
+     * reel's video is drawn once, where it plays, and never a second time into the blur. What's round the
+     * viewer still draws. Drawn the old way, the viewer and its video go into the glass, so the count
+     * below proves it's seen.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    public void theGlassLeavesTheReelsViewerOutOfWhatItDraws() {
+        Context context = RuntimeEnvironment.getApplication();
+        FrameLayout holder = new FrameLayout(context);
+        FrameLayout screens = new FrameLayout(context);
+        screens.setBackground(new ColorDrawable(Color.RED));
+        FrameLayout viewer = new FrameLayout(context);
+        AtomicInteger drawn = new AtomicInteger();
+        View video = new View(context) {
+            @Override public void draw(Canvas canvas) {
+                drawn.incrementAndGet();
+                super.draw(canvas);
+            }
+        };
+        video.setBackground(new ColorDrawable(Color.BLUE));
+        viewer.addView(video);
+        View caption = new View(context);
+        caption.setBackground(new ColorDrawable(Color.GREEN));
+        screens.addView(viewer);
+        screens.addView(caption);
+        holder.addView(screens);
+        holder.layout(0, 0, 100, 100);
+        screens.layout(0, 0, 100, 100);
+        viewer.layout(0, 0, 100, 60);
+        video.layout(0, 0, 100, 60);
+        caption.layout(0, 70, 100, 90);
+
+        Set<View> paths = new HashSet<>();
+        Set<View> skipped = new HashSet<>();
+        assertFalse("a view elsewhere isn't left out", GlassTabBar.leaveOut(new View(context), holder, paths, skipped));
+        assertTrue(paths.isEmpty());
+        assertTrue(skipped.isEmpty());
+        assertTrue(GlassTabBar.leaveOut(viewer, holder, paths, skipped));
+        assertTrue("the way down to the viewer", paths.contains(screens) && paths.contains(viewer));
+        assertFalse(paths.contains(holder));
+        assertTrue(skipped.contains(viewer));
+
+        // The old way, with no SurfaceView under the bar: the screens draw whole, the viewer among them.
+        Bitmap old = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888);
+        GlassTabBar.drawLeavingOutSurfaces(new Canvas(old), screens, new HashSet<>(), 0);
+        assertTrue("drawn the old way, the reel's video goes into the glass", drawn.get() > 0);
+        assertEquals(Color.BLUE, old.getPixel(50, 30));
+
+        drawn.set(0);
+        Bitmap glass = Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888);
+        GlassTabBar.drawLeavingOutSurfaces(new Canvas(glass), screens, paths, skipped, 0);
+        assertEquals("the viewer is left out", 0, drawn.get());
+        assertEquals("what's behind it still shows", Color.RED, glass.getPixel(50, 30));
+        assertEquals("and so does what's round it", Color.GREEN, glass.getPixel(50, 80));
+    }
+
     private static final class CountingSurface extends SurfaceView {
         int drawn;
 
@@ -1669,6 +1761,68 @@ public class GlassTabBarTest {
             host.frame();
             assertEquals("the same video recorded again", 1L, (long) ReflectionHelpers.getField(pill, "lastRecorded"));
             assertTrue("still hidden", hide.isOffScreen());
+        }
+    }
+
+    /**
+     * #262: a view under the bar that throws as the glass records it, as one Instagram is recycling can
+     * while a list scrolls, costs the blur that recording and no more. The glass tries again shortly, so
+     * the blur comes back even on a still screen, rests on the plain tint after too many failures in a
+     * row, and records again once the rest is over. Before, the first throw turned the blur off for as
+     * long as the bar lived, and the pill sat on the dark tint.
+     */
+    @Test
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Config(sdk = 33, qualifiers = "en-rUS-w411dp-h891dp-xhdpi")
+    public void aBlurRecordingThatThrowsIsTriedAgainInsteadOfTurningTheBlurOff() {
+        GlassTabBar.animationsOnForTests = false;
+        HookStatus.clear();
+        try (GlassHost host = new GlassHost(Color.BLACK, true, GlassHeight.STANDARD, false, true)) {
+            boolean[] throwing = {false};
+            Object[] pill = {null};
+            View feed = new View(host.activity) {
+                @Override public void draw(Canvas canvas) {
+                    // Only as the glass records it: the window's own draw goes on.
+                    if (throwing[0] && pill[0] != null && (boolean) ReflectionHelpers.getField(pill[0], "drawingBackdrop")) {
+                        throw new IllegalStateException("recycled");
+                    }
+                    super.draw(canvas);
+                }
+            };
+            feed.setBackgroundColor(Color.RED);
+            host.root.addView(feed, 0, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            GlassTabBar.apply(host.activity);
+            host.frame();
+            pill[0] = host.bar.getBackground();
+            assertTrue("no backdrop recorded", (boolean) ReflectionHelpers.getField(pill[0], "recorded"));
+            GlassTabBar.BlurTries tries = ReflectionHelpers.getField(host.glass(), "tries");
+
+            throwing[0] = true;
+            ReflectionHelpers.callInstanceMethod(pill[0], "cancelCatchUp");
+            ReflectionHelpers.callInstanceMethod(pill[0], "recordBackdrop");
+            assertFalse("a recording cut short isn't shown", (boolean) ReflectionHelpers.getField(pill[0], "recorded"));
+            assertFalse("one failure doesn't rest the blur", tries.resting(SystemClock.uptimeMillis()));
+            assertTrue("it's tried again shortly", (boolean) ReflectionHelpers.getField(pill[0], "catchUpPending"));
+            throwing[0] = false;
+            ShadowLooper.idleMainLooper(GlassTabBar.RECORD_EVERY_MS * 2, java.util.concurrent.TimeUnit.MILLISECONDS);
+            assertTrue("the blur came back on a still screen", (boolean) ReflectionHelpers.getField(pill[0], "recorded"));
+            String report = String.join("\n", HookStatus.report());
+            assertTrue(report, report.contains("IllegalStateException"));
+
+            // A view that throws every time it's drawn.
+            throwing[0] = true;
+            for (int i = 0; i < GlassTabBar.BLUR_TRIES; i++) ReflectionHelpers.callInstanceMethod(pill[0], "recordBackdrop");
+            assertTrue("too many in a row, and the blur rests", tries.resting(SystemClock.uptimeMillis()));
+            report = String.join("\n", HookStatus.report());
+            assertTrue(report, report.contains(GlassTabBar.COUNT_BLUR_RESTED));
+            throwing[0] = false;
+            host.frame();
+            assertFalse("resting, nothing is recorded", (boolean) ReflectionHelpers.getField(pill[0], "recorded"));
+
+            ShadowLooper.idleMainLooper(GlassTabBar.BLUR_REST_MS, java.util.concurrent.TimeUnit.MILLISECONDS);
+            assertFalse(tries.resting(SystemClock.uptimeMillis()));
+            host.frame();
+            assertTrue("the rest over, the blur records again", (boolean) ReflectionHelpers.getField(pill[0], "recorded"));
         }
     }
 

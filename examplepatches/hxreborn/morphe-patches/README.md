@@ -12,10 +12,20 @@
 
 </div>
 
+Patches for [Morphe](https://morphe.software): AMOLED themes, ad removal, tracking removal and premium
+unlocks for Proton Mail, Pass and VPN, Perplexity, MovieBox, Showly, Projectivy Launcher, Network
+Analyzer, Cx File Explorer and the rest of the list below. Add the source in Morphe Manager, pick the
+app, and patch the APK on your phone.
+
+New patches and fixes go out as pre-releases first. To get them, open Sources in Morphe Manager, pick
+this bundle and turn on **Pre-release patches**; the
+[pre-release changelog](https://github.com/hxreborn/morphe-patches/blob/dev/CHANGELOG.md) lists what
+each one changes.
+
 ## 🩹 Patches list
 
 <!-- PATCHES_START -->
-> **[v1.57.0](https://github.com/hxreborn/morphe-patches/releases/tag/v1.57.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;293 patches total
+> **[v1.58.0](https://github.com/hxreborn/morphe-patches/releases/tag/v1.58.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;296 patches total
 
 <table>
 <tr>
@@ -45,7 +55,7 @@
 <tr>
 <td align="center" width="25%"><a href="#botim"><img src=".github/assets/icons/botim.png" width="40"><br>botim</a><br><sub>1 patch</sub></td>
 <td align="center" width="25%"><a href="#calcnote"><img src=".github/assets/icons/calcnote.png" width="40"><br>CalcNote</a><br><sub>1 patch</sub></td>
-<td align="center" width="25%"><a href="#castle"><img src=".github/assets/icons/castle.png" width="40"><br>Castle</a><br><sub>1 patch</sub></td>
+<td align="center" width="25%"><a href="#castle"><img src=".github/assets/icons/castle.png" width="40"><br>Castle</a><br><sub>4 patches</sub></td>
 <td align="center" width="25%"><a href="#castle-for-tv"><img src=".github/assets/icons/castlefortv.png" width="40"><br>Castle for TV</a><br><sub>2 patches</sub></td>
 </tr>
 <tr>
@@ -507,7 +517,7 @@
 
 <a id="castle"></a>
 <details>
-<summary><img src=".github/assets/icons/castle.png" width="18" align="top">&nbsp;&nbsp;Castle&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<summary><img src=".github/assets/icons/castle.png" width="18" align="top">&nbsp;&nbsp;Castle&nbsp;&nbsp;•&nbsp;&nbsp;4 patches</summary>
 <br>
 
 **🎯 Supported versions:**
@@ -517,6 +527,9 @@
 
 | 💊&nbsp;Patch | 📜&nbsp;Description |
 |----------|----------------|
+| <a id="castle-disable-update-prompt"></a>[Disable update prompt](patches/src/main/kotlin/app/morphe/patches/castle/misc/update/DisableUpdatePromptPatch.kt) | Disables the new version dialog and the required update. |
+| <a id="castle-remove-ads"></a>[Remove ads](patches/src/main/kotlin/app/morphe/patches/castle/ads/RemoveAdsPatch.kt) | Removes banner, video, interstitial and rewarded ads. Actions that waited on a rewarded ad run immediately. |
+| <a id="castle-spoof-signature"></a>[Spoof signature](patches/src/main/kotlin/app/morphe/patches/castle/misc/fix/signature/SpoofSignaturePatch.kt) | Removes the modified app warning that stops video playback. |
 | <a id="castle-unlock-premium"></a>[Unlock premium](patches/src/main/kotlin/app/morphe/patches/castle/misc/premium/UnlockPremiumPatch.kt) | Unlocks member-only titles and shows the account as Premium. Requires a signed-in account. |
 
 </details>

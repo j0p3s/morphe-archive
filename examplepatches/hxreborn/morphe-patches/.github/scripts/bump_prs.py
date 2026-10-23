@@ -106,16 +106,16 @@ def bump_commit(text, subject, tracker):
     env = {**os.environ, **BOT_IDENTITY}
     with tempfile.TemporaryDirectory() as temp:
         index = {**env, "GIT_INDEX_FILE": str(Path(temp) / "index")}
-        git("read-tree", "origin/main", env=index)
+        git("read-tree", "origin/dev", env=index)
         git("update-index", "--cacheinfo", f"100644,{blob},{COMPAT_PATH}", env=index)
         tree = git("write-tree", env=index).strip()
     footer = ["-m", f"Closes #{tracker}"] if tracker else []
-    return git("commit-tree", tree, "-p", "origin/main", "-m", subject, *footer, env=env).strip()
+    return git("commit-tree", tree, "-p", "origin/dev", "-m", subject, *footer, env=env).strip()
 
 
 def sync_bump_prs(records):
-    git("fetch", "-q", "--depth=1", "origin", "+refs/heads/main:refs/remotes/origin/main")
-    source = git("show", f"origin/main:{COMPAT_PATH}")
+    git("fetch", "-q", "--depth=1", "origin", "+refs/heads/dev:refs/remotes/origin/dev")
+    source = git("show", f"origin/dev:{COMPAT_PATH}")
     issues = json.loads(gh("issue", "list", "--label", ISSUE_LABEL, "--state", "open", "--limit", "1000",
                            "--json", "number,title"))
     for record in records:
@@ -145,7 +145,7 @@ def sync_bump_prs(records):
             git("push", "-q", "--force", "origin", f"{bump_commit(text, subject, tracker)}:refs/heads/{branch}")
         body = f"Applies cleanly to {name} {apk['version']}. Needs a device check before merge."
         if pr and pr[0] == "create":
-            gh("pr", "create", "--draft", "--base", "main", "--head", branch, "--title", subject, "--body", body)
+            gh("pr", "create", "--draft", "--base", "dev", "--head", branch, "--title", subject, "--body", body)
         elif pr:
             gh("pr", "edit", str(pr[1]), "--title", subject, "--body", body)
         print(f"{name}: {branch} {'pushed' if push else 'unchanged'}, pr {pr[0] if pr else 'unchanged'}",

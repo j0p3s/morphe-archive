@@ -1,10 +1,10 @@
 package app.template.patches.guardian.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_GUARDIAN
+import app.template.patches.shared.addInstructionsWithLabelsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 
 private const val GMA = "Lcom/google/android/gms/ads/"
@@ -57,7 +57,7 @@ val disableAdsPatch = bytecodePatch(
             val adView = first + words[0]
             val locals = implementation!!.registerCount - words.sum() - first
             if (locals < 7) throw PatchException("The ad load method has only $locals locals")
-            addInstructionsWithLabels(
+            addInstructionsWithLabelsChecked(
                 0,
                 """
                     invoke-virtual/range {p$adView .. p$adView}, ${GMA}BaseAdView;->getAdListener()${GMA}AdListener;

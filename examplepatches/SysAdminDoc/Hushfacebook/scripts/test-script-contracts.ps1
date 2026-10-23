@@ -36,6 +36,25 @@ function Assert-Throws {
     throw "$Message No error was raised."
 }
 
+function New-DesktopJarStandIn {
+    # A desktop CLI jar holding only what Get-DesktopPatcherVersion reads: the patcher's
+    # version.properties, left out when -Patcher is empty, or -Properties as that file's text.
+    # Its manifest names no Patcher-Version, so it also stands in for a bundle that names none.
+    param([string]$Path, [string]$Patcher, [string]$Properties)
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    if (Test-Path -LiteralPath $Path) { Remove-Item -LiteralPath $Path -Force }
+    $archive = [System.IO.Compression.ZipFile]::Open($Path, [System.IO.Compression.ZipArchiveMode]::Create)
+    try {
+        $entries = [ordered]@{ 'META-INF/MANIFEST.MF' = "Manifest-Version: 1.0`nImplementation-Title: morphe-desktop`n" }
+        if ($Properties) { $entries['app/morphe/patcher/version.properties'] = $Properties }
+        elseif ($Patcher) { $entries['app/morphe/patcher/version.properties'] = "version=$Patcher`n" }
+        foreach ($name in $entries.Keys) {
+            $writer = New-Object System.IO.StreamWriter($archive.CreateEntry($name).Open())
+            try { $writer.Write($entries[$name]) } finally { $writer.Dispose() }
+        }
+    } finally { $archive.Dispose() }
+}
+
 function New-NotFoundAnswer {
     # What Invoke-WebRequest raises for a 404 in both shells, as far as Assert-UrlReachable reads
     # it: an error whose Response carries the status. A function named Invoke-WebRequest that
@@ -272,7 +291,10 @@ try {
         $archive.Dispose()
     }
     $dependencyReport = [pscustomobject]@{
-        patchingSteps = @([pscustomobject]@{ success = $true })
+        success = $true
+        stepResults = @(
+            [pscustomobject]@{ step = 'PATCHING'; success = $true },
+            [pscustomobject]@{ step = 'REBUILDING'; success = $true })
         appliedPatches = @($allNames + $allDependencies | ForEach-Object {
             [pscustomobject]@{ name = $_ }
         })
@@ -285,6 +307,26 @@ try {
         -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
     Assert-True $reportValidation.Valid `
         "A complete result with a declared dependency was rejected: $($reportValidation.Reason)"
+    # The 1.18 CLI's step list name still reads, and a result with no step list is invalid, not an error.
+    $olderReport = $dependencyReport | Select-Object * -ExcludeProperty success, stepResults
+    $olderReport | Add-Member -NotePropertyName patchingSteps -NotePropertyValue @([pscustomobject]@{ success = $true })
+    $olderValidation = Test-PatchingReport -Report $olderReport -ExpectedNames $allNames `
+        -AllowedDependencyNames $allDependencies -OutputPath $reportApk `
+        -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
+    Assert-True $olderValidation.Valid "A 1.18 CLI result was rejected: $($olderValidation.Reason)"
+    $stepless = $dependencyReport | Select-Object * -ExcludeProperty stepResults
+    $steplessValidation = Test-PatchingReport -Report $stepless -ExpectedNames $allNames `
+        -AllowedDependencyNames $allDependencies -OutputPath $reportApk `
+        -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
+    Assert-True (-not $steplessValidation.Valid -and $steplessValidation.Reason -match 'step') `
+        "A result with no step list passed: $($steplessValidation.Reason)"
+    $failedStep = $dependencyReport | Select-Object *
+    $failedStep.stepResults = @([pscustomobject]@{ step = 'PATCHING'; success = $true },
+        [pscustomobject]@{ step = 'REBUILDING'; success = $false })
+    $failedStepValidation = Test-PatchingReport -Report $failedStep -ExpectedNames $allNames `
+        -AllowedDependencyNames $allDependencies -OutputPath $reportApk `
+        -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
+    Assert-True (-not $failedStepValidation.Valid) 'A result whose rebuild step failed passed.'
 
     $fakeAdb = Join-Path $caseRoot 'adb.cmd'
     $log = Join-Path $caseRoot 'adb.log'
@@ -525,6 +567,8 @@ foreach ($name in $consumerScripts) {
 
 . (Join-Path $PSScriptRoot 'release-receipt.ps1')
 . (Join-Path $PSScriptRoot 'walk-receipt.ps1')
+# New-VerifierReceipt, which writes the receipt release.ps1's publish stage reads.
+. (Join-Path $PSScriptRoot 'injected-register-device.ps1')
 
 $manifestLines = @(
     'N: android=http://schemas.android.com/apk/res/android (line=1)',
@@ -4300,13 +4344,13 @@ try {
         $applySaved = @{ Fixtures = $env:HUSHFACEBOOK_FIXTURE_DIR; Jar = $env:HUSHFACEBOOK_DESKTOP_JAR }
         try {
             New-Item -ItemType Directory -Path $applyFixtures -Force | Out-Null
-            foreach ($name in @('facebook-583.0.0.39.55-arm64.apkm', 'facebook-583.0.0.39.55-armv7.apkm', 'facebook-580.0.0.51.74.apkm')) {
+            foreach ($name in @('facebook-584.0.0.51.56-arm64.apkm', 'facebook-584.0.0.51.56-armv7.apkm', 'facebook-580.0.0.51.74.apkm')) {
                 Set-Content -LiteralPath (Join-Path $applyFixtures $name) -Value 'fixture' -Encoding ASCII
             }
             Set-Content -LiteralPath $applyJar -Value 'cli' -Encoding ASCII
             Set-Content -LiteralPath $applyFiles[0] -Value 'version = 9.9.9' -Encoding ASCII
             Set-Content -LiteralPath $applyFiles[1] -Encoding UTF8 -Value ('{"patches":[{"name":"A","compatibility":' +
-                '[{"packageName":"com.facebook.katana","targets":[{"version":"583.0.0.39.55"}]}]}]}')
+                '[{"packageName":"com.facebook.katana","targets":[{"version":"584.0.0.51.56"}]}]}]}')
             Set-Content -LiteralPath $applyFiles[2] -Encoding UTF8 -Value @(
                 'param([string]$Apk, [string]$DesktopJar, [string]$WorkDir, [string]$Bundle, [string]$KeepIn)',
                 "Add-Content -LiteralPath '$applyLog' -Value (""apk="" + (Split-Path -Leaf `$Apk) + "" bundle=`$Bundle keep=`$KeepIn"")",
@@ -4335,7 +4379,7 @@ try {
                     $builds[1] -like '* :patches:buildAndroid *') `
                     "A push of $moved did not build the release bundle in the full pass alone: $($builds -join ' | ')"
                 $applied = @(Get-Content -LiteralPath $applyLog -ErrorAction SilentlyContinue | Sort-Object)
-                $declared = @('facebook-583.0.0.39.55-arm64.apkm', 'facebook-583.0.0.39.55-armv7.apkm')
+                $declared = @('facebook-584.0.0.51.56-arm64.apkm', 'facebook-584.0.0.51.56-armv7.apkm')
                 $rightRuns = @(for ($at = 0; $at -lt $applied.Count; $at++) {
                     $run = [regex]::Match($applied[$at], '^apk=(?<apk>\S+) bundle=(?<bundle>.+) keep=(?<keep>.+)$')
                     if ($run.Success -and $at -lt $declared.Count -and $run.Groups['apk'].Value -eq $declared[$at] -and
@@ -4354,7 +4398,29 @@ try {
             Assert-True (-not (Test-Path -LiteralPath $applyLog) -and
                 @(Get-Content -LiteralPath $applyBuildLog | Where-Object { $_ -like '* :patches:buildAndroid *' }).Count -eq 0) `
                 'An extension-only push built the release bundle or patched the fixtures.'
+            # A desktop CLI bundling another patcher major than the pin stops the push before the
+            # build starts, not at the fixture apply after it (the 0.17.0 push got 17 minutes in).
+            $pinFile = Join-Path $hookRoot 'gradle/libs.versions.toml'
+            New-Item -ItemType Directory -Path (Split-Path -Parent $pinFile) -Force | Out-Null
+            Set-Content -LiteralPath $pinFile -Encoding ASCII -Value @('[versions]', 'morphe-patcher = "2.0.0"')
+            New-DesktopJarStandIn -Path $applyJar -Patcher '1.15.1'
+            Remove-Item -LiteralPath $applyLog, $applyBuildLog -Force -ErrorAction SilentlyContinue
+            Assert-Throws { & $prePushScript -Root $hookRoot -ChangedPaths @('patches/src/main/kotlin/app/morphe/Any.kt') 6> $null } `
+                "*$applyJar bundles morphe-patcher 1.15.1, but gradle/libs.versions.toml needs 2.0.0*" `
+                'A push with a 1.x desktop CLI on the 2.0 pin was not refused up front.'
+            Assert-True (-not (Test-Path -LiteralPath $applyBuildLog) -and -not (Test-Path -LiteralPath $applyLog)) `
+                'A push with a desktop CLI on the wrong patcher built or patched something before it was refused.'
+            New-DesktopJarStandIn -Path $applyJar -Patcher ''
+            Assert-Throws { & $prePushScript -Root $hookRoot -ChangedPaths @('patches/src/main/kotlin/app/morphe/Any.kt') 6> $null } `
+                "*$applyJar has no app/morphe/patcher/version.properties*" `
+                'A push with a desktop CLI that names no patcher was not refused up front.'
+            # On the pin's major the push goes on to build and patch as before.
+            New-DesktopJarStandIn -Path $applyJar -Patcher '2.0.0'
+            & $prePushScript -Root $hookRoot -ChangedPaths @('patches/src/main/kotlin/app/morphe/Any.kt') 6> $null
+            Assert-True (@(Get-Content -LiteralPath $applyLog -ErrorAction SilentlyContinue).Count -eq 2) `
+                'A push with a desktop CLI on the pinned patcher major did not patch the fixtures.'
         } finally {
+            Remove-Item -LiteralPath (Join-Path $hookRoot 'gradle') -Recurse -Force -ErrorAction SilentlyContinue
             $env:HUSHFACEBOOK_FIXTURE_DIR = $applySaved.Fixtures
             $env:HUSHFACEBOOK_DESKTOP_JAR = $applySaved.Jar
             $env:HUSHFACEBOOK_BUILD_WRAPPER = $wrapperStub
@@ -5637,7 +5703,9 @@ try {
         ':old',
         'echo Unknown option -P',
         'exit /b 1') -join "`r`n") + "`r`n"), [System.Text.Encoding]::ASCII)
-    Set-Content -LiteralPath $stubJar -Value 'not a jar' -Encoding ASCII
+    # A jar with the patcher's version file and nothing else: verify-all-patches.ps1 reads which
+    # patcher a CLI bundles before it runs one, and the stand-in java never opens the jar.
+    New-DesktopJarStandIn -Path $stubJar -Patcher $releaseToolchain.PatcherVersion
     New-TestBundleArchive -Path (Join-Path $tools 'patched.apk') -Entries ([ordered]@{
         'AndroidManifest.xml' = 'binary manifest'; 'classes.dex' = "dex`n035" })
 
@@ -5693,7 +5761,8 @@ try {
         # The report the CLI writes: every patch and the internal dependencies applied, one step,
         # and the input's own version, which is what the CLI reports.
         Set-Content -LiteralPath "$apkm.result.json" -Encoding ASCII -Value ([ordered]@{
-            patchingSteps = @([ordered]@{ success = $true })
+            success = $true
+            stepResults = @([ordered]@{ step = 'PATCHING'; success = $true })
             appliedPatches = @(@($releaseNames) + @($dependencyNamesHere) | ForEach-Object { [ordered]@{ name = $_ } })
             failedPatches = @()
             packageName = $releaseTarget.PackageName
@@ -5906,6 +5975,57 @@ try {
             "$(@(Get-Content -LiteralPath $javaLog) -join '; ')")
     Assert-True ((Get-Content -LiteralPath $resourceStock -Raw) -ceq (Get-Content -LiteralPath "$newestFixture.merged.txt" -Raw)) `
         'The resource check was not handed the merge as its stock side.'
+    # A jar bundling another patcher major than the bundle's is refused before anything is merged
+    # or patched, naming the jar and both versions: the 0.17.0 push reached the CLI with a 1.18.1
+    # jar on the 2.0 pin. A jar that doesn't say which patcher it bundles is refused too.
+    $otherPatcher = if ([int](($releaseToolchain.PatcherVersion -split '\.')[0]) -gt 1) { '1.15.1' } else { '2.0.0' }
+    $otherJar = Join-Path $tools 'morphe-desktop-other.jar'
+    New-DesktopJarStandIn -Path $otherJar -Patcher $otherPatcher
+    $bareJar = Join-Path $tools 'morphe-desktop-bare.jar'
+    New-DesktopJarStandIn -Path $bareJar -Patcher ''
+    foreach ($wrongJar in @(
+            @{ Jar = $otherJar; Pattern = "*$otherJar bundles morphe-patcher $otherPatcher, but the bundle $(Split-Path -Leaf $releaseBundle) needs $($releaseToolchain.PatcherVersion)*" },
+            @{ Jar = $bareJar; Pattern = "*$bareJar has no app/morphe/patcher/version.properties*" })) {
+        Remove-Item -LiteralPath $javaLog, $mergeLog -Force -ErrorAction SilentlyContinue
+        Assert-Throws {
+            & $verifyAllScript -Apk $newestFixture -DesktopJar $wrongJar.Jar -WorkDir (Join-Path $releaseRoot 'verify-work') `
+                -Bundle $releaseBundle -PatchList (Join-Path $releaseRepo 'patches-list.json') -Java $stubJava `
+                -Aapt2 $stubAapt2 *> $null
+        } $wrongJar.Pattern "verify-all-patches.ps1 took $(Split-Path -Leaf $wrongJar.Jar) for a $($releaseToolchain.PatcherVersion) bundle."
+        Assert-True (-not (Test-Path -LiteralPath $javaLog) -and -not (Test-Path -LiteralPath $mergeLog)) `
+            "verify-all-patches.ps1 merged or ran the CLI before refusing $(Split-Path -Leaf $wrongJar.Jar)."
+    }
+    # A bundle naming no Patcher-Version is held to the checkout's pin instead.
+    $checkoutPin = [regex]::Match((Get-Content -LiteralPath (Join-Path (Split-Path -Parent $PSScriptRoot) 'gradle/libs.versions.toml') -Raw),
+        '(?m)^\s*morphe-patcher\s*=\s*"([^"]+)"').Groups[1].Value
+    $pinOther = if ([int](($checkoutPin -split '\.')[0]) -gt 1) { '1.15.1' } else { '2.0.0' }
+    New-DesktopJarStandIn -Path $otherJar -Patcher $pinOther
+    $pinlessBundle = Join-Path $tools 'pinless.mpp'
+    New-DesktopJarStandIn -Path $pinlessBundle -Patcher ''
+    Remove-Item -LiteralPath $javaLog, $mergeLog -Force -ErrorAction SilentlyContinue
+    Assert-Throws {
+        & $verifyAllScript -Apk $newestFixture -DesktopJar $otherJar -WorkDir (Join-Path $releaseRoot 'verify-work') `
+            -Bundle $pinlessBundle -PatchList (Join-Path $releaseRepo 'patches-list.json') -Java $stubJava `
+            -Aapt2 $stubAapt2 *> $null
+    } "*$otherJar bundles morphe-patcher $pinOther, but gradle/libs.versions.toml needs $checkoutPin*" `
+        "verify-all-patches.ps1 took a $pinOther CLI for a bundle naming no patcher, on the $checkoutPin pin."
+    Assert-True (-not (Test-Path -LiteralPath $javaLog) -and -not (Test-Path -LiteralPath $mergeLog)) `
+        'verify-all-patches.ps1 merged or ran the CLI before refusing a CLI for a bundle naming no patcher.'
+    Remove-Item -LiteralPath $otherJar, $bareJar, $pinlessBundle -Force
+    # version.properties is a Java properties file: CRLF, a colon, spaces round the separator.
+    # An empty value doesn't run into the next line.
+    $parsedJar = Join-Path $tools 'morphe-desktop-parsed.jar'
+    foreach ($case in @(
+            @{ Text = "#Generated`r`nversion=2.0.0`r`n"; Want = '2.0.0' },
+            @{ Text = "version : 1.15.1"; Want = '1.15.1' },
+            @{ Text = "  version=2.1.0-dev.3  `n"; Want = '2.1.0-dev.3' },
+            @{ Text = "version=`nname=patcher`n"; Want = $null })) {
+        New-DesktopJarStandIn -Path $parsedJar -Properties $case.Text
+        $parsed = Get-DesktopPatcherVersion -Jar $parsedJar
+        Assert-True ($parsed -eq $case.Want) `
+            "Get-DesktopPatcherVersion read '$parsed' from version.properties '$($case.Text -replace "`r", '\r' -replace "`n", '\n')', not '$($case.Want)'."
+    }
+    Remove-Item -LiteralPath $parsedJar -Force
     foreach ($broken in $brokenMerges) {
         $flag = Join-Path $tools $broken.Flag
         Set-Content -LiteralPath $flag -Value 'on' -Encoding ASCII
@@ -7838,8 +7958,8 @@ try {
     Set-Content -LiteralPath (Join-Path $flowRepo 'CHANGELOG.md') -Value '# Changelog' -Encoding ASCII
     Set-Content -LiteralPath (Join-Path $flowRepo '.gitignore') -Value @('build/', 'patches/build/', 'extensions/facebook/build/',
         'release-receipt-*.json') -Encoding ASCII
-    $flowTarget = '"compatiblePackages":{"com.facebook.katana":["583.0.0.39.55"]},' +
-        '"compatibility":[{"packageName":"com.facebook.katana","targets":[{"version":"583.0.0.39.55"}]}]'
+    $flowTarget = '"compatiblePackages":{"com.facebook.katana":["584.0.0.51.56"]},' +
+        '"compatibility":[{"packageName":"com.facebook.katana","targets":[{"version":"584.0.0.51.56"}]}]'
     Set-Content -LiteralPath (Join-Path $flowRepo 'patches-list.json') -Encoding ASCII -Value (
         '{"patches":[{"name":"A",' + $flowTarget + '},{"name":"B",' + $flowTarget + '}]}')
     $logLiteral = $flowLog.Replace("'", "''")
@@ -8051,10 +8171,10 @@ try {
     $flowFixtures = Join-Path $releaseFlow 'fixtures'
     New-Item -ItemType Directory -Force -Path $flowFixtures | Out-Null
     $env:HUSHFACEBOOK_FIXTURE_DIR = $flowFixtures
-    Assert-Throws { & $flowScript -Stage bundle -Version 1.2.3 6> $null 3> $null } '*no fixture of Facebook 583.0.0.39.55*' `
+    Assert-Throws { & $flowScript -Stage bundle -Version 1.2.3 6> $null 3> $null } '*no fixture of Facebook 584.0.0.51.56*' `
         'The bundle stage cut a receipt without a fixture of the declared build.'
     Assert-True (@(Read-FlowLog).Count -eq 1) 'The bundle stage went past a declared build with no fixture.'
-    foreach ($abi in 'arm64-v8a', 'armeabi-v7a') { Set-Content -LiteralPath (Join-Path $flowFixtures "facebook-583.0.0.39.55-$abi.apkm") -Value $abi }
+    foreach ($abi in 'arm64-v8a', 'armeabi-v7a') { Set-Content -LiteralPath (Join-Path $flowFixtures "facebook-584.0.0.51.56-$abi.apkm") -Value $abi }
     Set-Content -LiteralPath (Join-Path $flowFixtures 'facebook-580.0.0.51.74-arm64-v8a.apkm') -Value 'undeclared'
 
     # Bundle builds once, hands the receipt every declared build's fixtures and the gate's kept
@@ -8062,7 +8182,7 @@ try {
     & $flowScript -Stage bundle -Version 1.2.3 6> $null 3> $null
     $flow = @(Read-FlowLog)
     Assert-True ($flow.Count -eq 2 -and $flow[0] -like 'gradle * tasks= :patches:buildAndroid ' -and
-        $flow[1] -like ('receipt fixtures=facebook-583.0.0.39.55-arm64-v8a.apkm,facebook-583.0.0.39.55-armeabi-v7a.apkm ' +
+        $flow[1] -like ('receipt fixtures=facebook-584.0.0.51.56-arm64-v8a.apkm,facebook-584.0.0.51.56-armeabi-v7a.apkm ' +
             'bundle=patches-1.2.3.mpp applied=*/repo/patches/build/fixture-apply')) `
         "The bundle stage did not build and cut the receipt over the declared fixtures: $($flow -join ' | ')"
     $sums = @(Get-Content -LiteralPath (Join-Path $flowAssets 'SHA256SUMS.txt'))
@@ -8090,13 +8210,33 @@ try {
     function Write-FlowWalk([hashtable]$Change = @{}) {
         $walkIdentity = 'sha256=' + (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $flowAssets 'patches-1.2.3.mpp')).Hash.ToLowerInvariant() +
             '; source=clean:' + ('1' * 40) + '; tree=' + ('2' * 40) + '; inputs=' + ('3' * 64)
-        $walkReceipt = New-WalkReceipt -Result PASS -Full $true -Serial 'TESTPHONE01' -Device 'SM-S908U1' -Facebook '583.0.0.39.55' `
+        $walkReceipt = New-WalkReceipt -Result PASS -Full $true -Serial 'TESTPHONE01' -Device 'SM-S908U1' -Facebook '584.0.0.51.56' `
             -PatchBuild $walkIdentity -InstalledApkSha256 ('4' * 64) -Started '2026-10-21T16:00:00Z' -Finished '2026-10-21T16:30:00Z' `
             -FamiliesRan 120 -Families 160 -Crashes 0
         foreach ($key in $Change.Keys) { $walkReceipt[$key] = $Change[$key] }
         Set-Content -LiteralPath $flowWalk -Value ($walkReceipt | ConvertTo-Json -Depth 4) -Encoding ASCII
     }
     Write-FlowWalk
+    # Nor without the device register check's receipt, written the way verify-injected-registers.ps1
+    # -ReceiptPath writes it: on the S22, Meta's build and the patched one raising the same messages,
+    # with the identity the staged bundle carries read out of the verified APK.
+    $flowVerifier = Join-Path $releaseFlow 'verifier-receipt.json'
+    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null } '*-Verifier*' `
+        'Publish ran without a verifier receipt.'
+    Assert-True (@(Read-FlowLog).Count -eq 0) 'Publish ran a step before asking for the verifier receipt.'
+    function Write-FlowVerifier([hashtable]$Change = @{}, [object[]]$Deltas = @(), [bool]$StaticPassed = $true) {
+        $verifierIdentity = 'sha256=' + (Get-FileHash -Algorithm SHA256 -LiteralPath (Join-Path $flowAssets 'patches-1.2.3.mpp')).Hash.ToLowerInvariant() +
+            '; source=clean:' + ('1' * 40) + '; tree=' + ('2' * 40) + '; inputs=' + ('3' * 64)
+        $patchedMessages = 0
+        foreach ($delta in $Deltas) { $patchedMessages += $delta.Patched }
+        $verifierReceipt = New-VerifierReceipt -Serial 'TESTPHONE01' -Device 'SM-S908U1' -Facebook '584.0.0.51.56' `
+            -PatchBuild $verifierIdentity -PatchedApkSha256 ('4' * 64) -StaticPassed $StaticPassed `
+            -Comparison ([pscustomobject]@{ Valid = $Deltas.Count -eq 0; CleanTotal = 0; PatchedTotal = $patchedMessages; Deltas = $Deltas }) `
+            -Finished '2026-10-21T16:40:00Z'
+        foreach ($key in $Change.Keys) { $verifierReceipt[$key] = $Change[$key] }
+        Set-Content -LiteralPath $flowVerifier -Value ($verifierReceipt | ConvertTo-Json -Depth 5) -Encoding ASCII
+    }
+    Write-FlowVerifier
 
     # Rebuild comes first. Publish refuses a staged bundle no rebuild has backed, before the notes,
     # the tag or GitHub.
@@ -8104,7 +8244,7 @@ try {
     $flowBundle = Join-Path $flowAssets 'patches-1.2.3.mpp'
     $flowNote = Join-Path $flowAssets 'rebuild-1.2.3.json'
     function Test-FlowUntagged { return -not (& git -C $flowRepo tag --list v1.2.3) -and -not (& git -C $flowOrigin tag --list v1.2.3) }
-    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null 3> $null } '*Run -Stage rebuild first*' `
+    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } '*Run -Stage rebuild first*' `
         'Publish went ahead with a bundle the rebuild stage never compared.'
     Assert-True (@(Read-FlowLog).Count -eq 0 -and (Test-FlowUntagged)) 'Publish ran a step or tagged before the rebuild stage had run.'
 
@@ -8146,7 +8286,7 @@ try {
         Assert-True ($flow.Count -eq 1) "A failed rebuild still ran what follows it: $($flow -join ' | ')"
         $null = Assert-RebuildCleanedUp $flow[0] 'A failed rebuild'
         Assert-True (-not (Test-Path -LiteralPath $flowNote)) 'A failed rebuild left a note for publish to read.'
-        Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null 3> $null } '*Run -Stage rebuild first*' `
+        Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } '*Run -Stage rebuild first*' `
             'Publish went ahead after a rebuild that failed.'
         Assert-True (@(Read-FlowLog).Count -eq 0 -and (Test-FlowUntagged)) 'Publish ran a step or tagged after a rebuild that failed.'
 
@@ -8186,7 +8326,7 @@ try {
         # A bundle changed since isn't the one that was compared, and publish refuses it before the tag.
         $keptBundle = [System.IO.File]::ReadAllBytes($flowBundle)
         [System.IO.File]::AppendAllText($flowBundle, 'changed')
-        Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null 3> $null } `
+        Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } `
             "*isn't the bundle a rebuild of $flowHead was compared with, so nothing was tagged*" `
             'Publish went ahead with a bundle changed since its rebuild.'
         [System.IO.File]::WriteAllBytes($flowBundle, $keptBundle)
@@ -8196,7 +8336,7 @@ try {
         # Nor does a note for another commit back this one: publish refuses, and the stage builds again.
         $keptNote = Get-Content -LiteralPath $flowNote -Raw
         Set-Content -LiteralPath $flowNote -Value $keptNote.Replace($flowHead, ('b' * 40)) -Encoding ASCII -NoNewline
-        Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null 3> $null } `
+        Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } `
             "*isn't the bundle a rebuild of $flowHead was compared with, so nothing was tagged*" `
             'Publish went ahead on a rebuild of another commit.'
         Assert-True (@(Read-FlowLog).Count -eq 1 -and (Test-FlowUntagged)) 'Publish ran a step or tagged on a rebuild of another commit.'
@@ -8215,7 +8355,7 @@ try {
     $keptReceipt = Get-Content -LiteralPath $flowReceipt -Raw
     foreach ($other in @(('{"release":{"commit":"' + ('b' * 40) + '"}}'), '{"release":{}}')) {
         Set-Content -LiteralPath $flowReceipt -Value $other -Encoding ASCII -NoNewline
-        Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null 3> $null } '*The receipt is for*' `
+        Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } '*The receipt is for*' `
             "Publish went ahead with a receipt that isn't for HEAD: $other"
     }
     Set-Content -LiteralPath $flowReceipt -Value $keptReceipt -Encoding ASCII -NoNewline
@@ -8224,7 +8364,7 @@ try {
     # A staged release its check refuses stops the stage before the notes, the tag or GitHub, and
     # the copy it checked goes.
     Set-Content -LiteralPath $flowFails -Value 'staged' -Encoding ASCII
-    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null 3> $null } '*nothing was tagged: the stand-in refused it*' `
+    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } '*nothing was tagged: the stand-in refused it*' `
         'Publish went ahead with a staged release its check refused.'
     Remove-Item -LiteralPath $flowFails -Force
     $flow = @(Read-FlowLog)
@@ -8235,7 +8375,7 @@ try {
     # A link in the copy, which could be pointed elsewhere before gh reads it, stops the stage before
     # the notes, the tag or GitHub. Removing the copy takes the link away, not what it points at.
     Set-Content -LiteralPath $flowFails -Value 'link' -Encoding ASCII
-    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null 3> $null } '*linked in the publishing copy is a link, so nothing was tagged*' `
+    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } '*linked in the publishing copy is a link, so nothing was tagged*' `
         'Publish went ahead with a link in the copy it checked.'
     Remove-Item -LiteralPath $flowFails -Force
     $flow = @(Read-FlowLog)
@@ -8256,7 +8396,7 @@ try {
             @{ Why = 'another bundle'; Change = @{ patchBuild = 'sha256=' + ('9' * 64) + '; source=clean:' + ('1' * 40) }; Pattern = '*walked app reported patch build*' },
             @{ Why = 'another schema'; Change = @{ schema = 2 }; Pattern = "*walk receipt isn't schema 1*" })) {
         Write-FlowWalk $badWalk.Change
-        Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null 3> $null } $badWalk.Pattern `
+        Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } $badWalk.Pattern `
             "Publish went ahead on $($badWalk.Why)."
         $flow = @(Read-FlowLog)
         Assert-True ($flow.Count -eq 1 -and $flow[0] -like 'staged *' -and (Test-FlowUntagged)) `
@@ -8265,12 +8405,60 @@ try {
         Assert-True ($refusedCopy -and -not (Test-Path -LiteralPath $refusedCopy)) "Publish refused for $($badWalk.Why) left its copy behind."
     }
     Set-Content -LiteralPath $flowWalk -Value 'not json' -Encoding ASCII
-    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null 3> $null } "*walk receipt doesn't read as JSON*" `
+    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } "*walk receipt doesn't read as JSON*" `
         'Publish went ahead on a walk receipt that does not read.'
     Assert-True (@(Read-FlowLog).Count -eq 1 -and (Test-FlowUntagged)) 'Publish tagged on a walk receipt that does not read.'
+    # A verifier run that raised a message Meta's build doesn't (0.16.0's comment crash), lost one,
+    # failed its static half, ran on another phone or checked another bundle's APK stops the stage
+    # too, and the refusal names the message, which names the method.
+    Write-FlowWalk
+    $crashMessage = 'Verification error in X.BZ3 X.BZ1.A0G'
+    foreach ($badVerifier in @(
+            @{ Why = 'an extra verifier message'; Deltas = @([pscustomobject]@{ Kind = 'extra'; Message = $crashMessage; Clean = 0; Patched = 1 })
+                Pattern = "*device register check doesn't back*raised $crashMessage (clean 0, patched 1)*" },
+            @{ Why = 'a lost verifier message'; Deltas = @([pscustomobject]@{ Kind = 'missing'; Message = 'Rejecting class LX/Abc;'; Clean = 2; Patched = 1 })
+                Pattern = '*lost Rejecting class LX/Abc; (clean 2, patched 1)*' },
+            @{ Why = 'four extra messages'; Pattern = '*X.A3.m3 (clean 0, patched 1), and 1 more*'
+                Deltas = @(1..4 | ForEach-Object { [pscustomobject]@{ Kind = 'extra'; Message = "Verification error in X.A$_.m$_"; Clean = 0; Patched = 1 } }) },
+            # Compare-VerifierTallies sorts by message, so "Rejecting" lines come before the raised
+            # "Verification error" one, and the refusal still has to name the raised one.
+            @{ Why = 'a raised message behind lost ones'; Pattern = "*from Meta's: raised $crashMessage (clean 0, patched 1); lost Rejecting class LX/A1;*, and 1 more*"
+                Deltas = @(@(1..3 | ForEach-Object { [pscustomobject]@{ Kind = 'missing'; Message = "Rejecting class LX/A$_;"; Clean = 1; Patched = 0 } }) +
+                    @([pscustomobject]@{ Kind = 'extra'; Message = $crashMessage; Clean = 0; Patched = 1 })) },
+            @{ Why = 'a failed static half'; StaticPassed = $false; Pattern = '*static half of the register check failed*' },
+            @{ Why = 'a FAIL with nothing named'; Change = @{ result = 'FAIL' }; Pattern = '*verifier run ended FAIL, not PASS*' },
+            @{ Why = 'tallies that differ'; Change = @{ patchedMessages = 1 }; Pattern = "*verifier tallies don't match: clean 0, patched 1*" },
+            @{ Why = 'no list of differences'; Change = @{ deltas = $null }; Pattern = "*doesn't list the verifier's differences*" },
+            @{ Why = 'another phone'; Change = @{ device = 'Pixel 9' }; Pattern = "*Pixel 9 isn't one of the release phones*" },
+            @{ Why = 'another bundle'; Change = @{ patchBuild = 'sha256=' + ('9' * 64) + '; source=unknown; inputs=' + ('3' * 64) }
+                Pattern = '*verified APK carries patch build*' },
+            @{ Why = 'an APK with no identity'; Change = @{ patchBuild = '' }; Pattern = "*verified APK carries patch build ''*" },
+            @{ Why = 'another schema'; Change = @{ schema = 2 }; Pattern = "*verifier receipt isn't schema 1*" })) {
+        $deltas = if ($badVerifier.ContainsKey('Deltas')) { $badVerifier.Deltas } else { @() }
+        $static = -not $badVerifier.ContainsKey('StaticPassed') -or $badVerifier.StaticPassed
+        $change = if ($badVerifier.ContainsKey('Change')) { $badVerifier.Change } else { @{} }
+        Write-FlowVerifier -Change $change -Deltas $deltas -StaticPassed $static
+        Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } `
+            $badVerifier.Pattern "Publish went ahead on $($badVerifier.Why)."
+        $flow = @(Read-FlowLog)
+        Assert-True ($flow.Count -eq 1 -and $flow[0] -like 'staged *' -and (Test-FlowUntagged)) `
+            "Publish ran a step or tagged on $($badVerifier.Why): $($flow -join ' | ')"
+        $refusedCopy = [regex]::Match($flow[0], ' folder=(.+) files=').Groups[1].Value
+        Assert-True ($refusedCopy -and -not (Test-Path -LiteralPath $refusedCopy)) "Publish refused for $($badVerifier.Why) left its copy behind."
+    }
+    # What the producer writes for a bad run is a FAIL the gate refuses on its own.
+    Write-FlowVerifier -Deltas @([pscustomobject]@{ Kind = 'extra'; Message = $crashMessage; Clean = 0; Patched = 1 })
+    $written = Get-Content -LiteralPath $flowVerifier -Raw | ConvertFrom-Json
+    Assert-True ($written.result -ceq 'FAIL' -and $written.static -ceq 'PASS' -and @($written.deltas).Count -eq 1 -and
+        $written.deltas[0].message -ceq $crashMessage -and $written.patchedMessages -eq 1) "The verifier receipt didn't record the run's failure: $($written | ConvertTo-Json -Depth 5 -Compress)"
+    Set-Content -LiteralPath $flowVerifier -Value 'not json' -Encoding ASCII
+    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } `
+        "*verifier receipt doesn't read as JSON*" 'Publish went ahead on a verifier receipt that does not read.'
+    Assert-True (@(Read-FlowLog).Count -eq 1 -and (Test-FlowUntagged)) 'Publish tagged on a verifier receipt that does not read.'
+    Write-FlowVerifier
     # An emulator walks for a release as well as a phone does.
     Write-FlowWalk @{ serial = 'emulator-5554'; device = 'Hushfacebook_API36'; emulator = $true }
-    & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null 3> $null
+    & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null
     $flow = @(Read-FlowLog)
     Assert-True ($flow.Count -eq 4 -and $flow[0] -like ("staged version=1.2.3 commit=$flowHead swap=refused folder=* files=patches-1.2.3.cdx.json," +
             'patches-1.2.3.mpp,patches-1.2.3.tooling.json,release-receipt-1.2.3.json,SHA256SUMS.txt') -and
@@ -8294,7 +8482,7 @@ try {
     Assert-True ((& git -C $flowOrigin rev-parse 'v1.2.3^{commit}') -eq (& git -C $flowRepo rev-parse HEAD)) `
         'Publish did not push a v1.2.3 tag on the source commit.'
     $flowTamper = 'patches-1.2.3.mpp'
-    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk 6> $null 3> $null } '*hosted patches-1.2.3.mpp differs*' `
+    Assert-Throws { & $flowScript -Stage publish -Version 1.2.3 -Checked $flowChecked -Walk $flowWalk -Verifier $flowVerifier 6> $null 3> $null } '*hosted patches-1.2.3.mpp differs*' `
         'Publish passed a release whose hosted bundle is not the one it built.'
     $flowTamper = $null
     $null = Read-FlowLog
@@ -8322,7 +8510,7 @@ try {
     Assert-True ($flow.Count -eq 4 -and $flow[0] -eq 'gh release view v1.2.3 -R SysAdminDoc/HushFacebook --json publishedAt --jq .publishedAt' -and
         $flow[1] -like 'py * index --version 1.2.3 --created 2026-10-09T21:03:04 --bundle-summary * --readme-summary * --runtime 2 --patch 4' -and
         $flow[2] -like 'gh repo view *' -and
-        $flow[3] -eq 'gh repo edit SysAdminDoc/HushFacebook --description Hushfacebook v1.2.3: 2 patches for Facebook 583.0.0.39.55 with Morphe.') `
+        $flow[3] -eq 'gh repo edit SysAdminDoc/HushFacebook --description Hushfacebook v1.2.3: 2 patches for Facebook 584.0.0.51.56 with Morphe.') `
         "Index did not read the release, write the index and update the description: $($flow -join ' | ')"
     Assert-True (Test-Path -LiteralPath (Join-Path $flowRepo 'release-receipt-1.2.3.json') -PathType Leaf) `
         'Index did not put the receipt back where the facts check reads it.'

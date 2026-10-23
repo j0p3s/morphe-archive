@@ -82,6 +82,7 @@ public class PatchFamilyTest {
         Settings.REVEAL_SPOILERS.resetToDefault();
         Settings.HIDE_KEYBOARD_ON_SCROLL.resetToDefault();
         Settings.KEEP_VIDEOS_MUTED.resetToDefault();
+        Settings.VIDEO_EITHER_LANDSCAPE.resetToDefault();
         Settings.SWIPE_BACK_ON_PROFILES.resetToDefault();
         Settings.HIDE_PHONE_NUMBER.resetToDefault();
         Settings.MESSAGE_SECONDS.resetToDefault();
@@ -106,6 +107,7 @@ public class PatchFamilyTest {
         Settings.HIDE_FEATURES_AND_INVITE.resetToDefault();
         Settings.MESSAGE_MENU_REPEAT.resetToDefault();
         Settings.KEEP_DELETED_MESSAGES.resetToDefault();
+        Settings.RED_DELETED_LABEL.resetToDefault();
         Settings.ASK_BEFORE_STICKER.resetToDefault();
         Settings.OUTSIDE_TRANSLATE.resetToDefault();
         Settings.HIDE_CHANNEL_BUTTONS.resetToDefault();
@@ -114,6 +116,7 @@ public class PatchFamilyTest {
         Settings.FASTER_DOWNLOADS.resetToDefault();
         Settings.DATA_SAVER_DOWNLOADS.resetToDefault();
         Settings.SAVE_DOWNLOADS.resetToDefault();
+        Settings.SAVE_RESTRICTED_DOWNLOADS.resetToDefault();
         Settings.CHAT_TYPE_FOLDERS.resetToDefault();
         Settings.UNIFIED_PUSH.resetToDefault();
         Settings.ASK_BEFORE_GIF.resetToDefault();
@@ -166,14 +169,18 @@ public class PatchFamilyTest {
         assertEquals("Hide Contacts tab", family.patchName);
         assertEquals("hideContactsTab", family.statusMethod);
         // The compact bar and the side menu start off too and work with or without the first.
-        assertEquals(Arrays.asList(Settings.HIDE_CONTACTS_TAB, Settings.COMPACT_TAB_BAR, Settings.SIDE_MENU), family.switches);
+        assertEquals(Arrays.asList(Settings.HIDE_CONTACTS_TAB, Settings.COMPACT_TAB_BAR, Settings.SIDE_MENU,
+                Settings.HIDE_NEW_MESSAGE), family.switches);
         for (BooleanSetting setting : family.switches) assertFalse(setting.key, setting.defaultValue);
         // Telegram builds the bar with the main screen, so a change to it shows after a restart.
         assertTrue(Settings.HIDE_CONTACTS_TAB.rebootApp);
         assertTrue(Settings.COMPACT_TAB_BAR.rebootApp);
         // Each swipe reads the side menu's switch, so it needs none.
         assertFalse(Settings.SIDE_MENU.rebootApp);
-        assertEquals(EnumSet.of(PatchFamily.Capability.COMPACT_TAB_BAR, PatchFamily.Capability.SIDE_MENU), family.expectedCapabilities());
+        // The pencil button is set up when the chat list is built, so hiding it needs one too.
+        assertTrue(Settings.HIDE_NEW_MESSAGE.rebootApp);
+        assertEquals(EnumSet.of(PatchFamily.Capability.COMPACT_TAB_BAR, PatchFamily.Capability.SIDE_MENU,
+                PatchFamily.Capability.HIDE_NEW_MESSAGE), family.expectedCapabilities());
         assertOnItsPage(family);
         // The bar sits under the chat list, beside its folder switches.
         assertEquals(PatchFamily.Page.CHAT_LIST, PatchFamily.Page.of(family));
@@ -212,10 +219,14 @@ public class PatchFamilyTest {
     public void keepDeletedMessagesHasItsOwnOffByDefaultSwitchThatAppliesAtOnce() {
         PatchFamily family = PatchFamily.KEEP_DELETED_MESSAGES;
         assertEquals("Keep deleted messages", family.patchName);
-        assertEquals(Collections.singletonList(Settings.KEEP_DELETED_MESSAGES), family.switches);
-        assertFalse(Settings.KEEP_DELETED_MESSAGES.defaultValue);
-        assertFalse(Settings.KEEP_DELETED_MESSAGES.rebootApp);
-        assertTrue(family.expectedCapabilities().isEmpty());
+        // The second switch, the red label, starts off too and shows at the next measuring.
+        assertEquals(Arrays.asList(Settings.KEEP_DELETED_MESSAGES, Settings.RED_DELETED_LABEL), family.switches);
+        for (BooleanSetting setting : family.switches) {
+            assertFalse(setting.key, setting.defaultValue);
+            assertFalse(setting.key, setting.rebootApp);
+        }
+        assertEquals(EnumSet.of(PatchFamily.Capability.RED_DELETED_LABEL), family.expectedCapabilities());
+        assertEquals("redDeletedLabel", PatchFamily.Capability.RED_DELETED_LABEL.statusMethod);
         assertOnItsPage(family);
     }
 
@@ -385,10 +396,13 @@ public class PatchFamilyTest {
         PatchFamily family = PatchFamily.SAVE_DOWNLOADS;
         assertEquals("Save downloaded files", family.patchName);
         assertEquals("saveDownloads", family.statusMethod);
-        assertEquals(Collections.singletonList(Settings.SAVE_DOWNLOADS), family.switches);
-        assertFalse(Settings.SAVE_DOWNLOADS.defaultValue);
-        // Each finished download reads the switch, so no restart is needed.
-        assertFalse(Settings.SAVE_DOWNLOADS.rebootApp);
+        // The second switch lets chats that don't allow saving through, so it starts off like the first.
+        assertEquals(Arrays.asList(Settings.SAVE_DOWNLOADS, Settings.SAVE_RESTRICTED_DOWNLOADS), family.switches);
+        for (BooleanSetting setting : family.switches) {
+            assertFalse(setting.key, setting.defaultValue);
+            // Each finished download reads the switches, so no restart is needed.
+            assertFalse(setting.key, setting.rebootApp);
+        }
         assertTrue(family.expectedCapabilities().isEmpty());
         assertOnItsPage(family);
         assertEquals(PatchFamily.Page.PLAYBACK, PatchFamily.Page.of(family));
@@ -558,10 +572,13 @@ public class PatchFamilyTest {
     public void keepVideosMutedHasItsOwnOffByDefaultSwitchThatAppliesAtOnce() {
         PatchFamily family = PatchFamily.KEEP_VIDEOS_MUTED;
         assertEquals("Keep videos muted on volume keys", family.patchName);
-        assertEquals(Collections.singletonList(Settings.KEEP_VIDEOS_MUTED), family.switches);
-        assertFalse(Settings.KEEP_VIDEOS_MUTED.defaultValue);
-        assertFalse(Settings.KEEP_VIDEOS_MUTED.rebootApp);
-        assertTrue(family.expectedCapabilities().isEmpty());
+        assertEquals(Arrays.asList(Settings.KEEP_VIDEOS_MUTED, Settings.VIDEO_EITHER_LANDSCAPE), family.switches);
+        for (BooleanSetting setting : Arrays.asList(Settings.KEEP_VIDEOS_MUTED, Settings.VIDEO_EITHER_LANDSCAPE)) {
+            assertFalse(setting.key, setting.defaultValue);
+            assertFalse(setting.key, setting.rebootApp);
+        }
+        assertEquals(EnumSet.of(PatchFamily.Capability.VIDEO_EITHER_LANDSCAPE), family.expectedCapabilities());
+        assertEquals("videoEitherLandscape", PatchFamily.Capability.VIDEO_EITHER_LANDSCAPE.statusMethod);
         assertOnItsPage(family);
     }
 

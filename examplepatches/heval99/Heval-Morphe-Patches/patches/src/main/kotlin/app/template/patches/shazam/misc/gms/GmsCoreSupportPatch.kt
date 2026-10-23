@@ -34,9 +34,12 @@ val gmsCoreSupportPatch = gmsCoreSupportPatch(
     compatibility = COMPATIBILITY_SHAZAM,
     default = false,
     dependencies = setOf(spoofSignaturePatch),
-    // Clone allowed: every provider authority is under com.shazam.android (the one the dex
-    // hard-codes, com.shazam.android.shareprovider, is rewritten with the rename), and there is no
-    // account type or foreign authority.
+    // No clone: the dex hard-codes the original package name in behaviour checks - the
+    // launcher's onStart branches on "com.shazam.android", and Apple's AMS kit pairs
+    // "com.shazam.android" with its signing-certificate allowlist - so a clone takes
+    // broken paths (the provider authorities themselves are all under com.shazam.android
+    // and would rename fine).
+    allowClone = false,
     extraDescription = "Shazam's Sign in with Google needs it. Shazam's automatic sign-in attempts " +
         "are skipped, because MicroG RE would show them as an account chooser; use the Sign in " +
         "with Google button instead.",

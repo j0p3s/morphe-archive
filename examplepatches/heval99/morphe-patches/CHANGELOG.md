@@ -1,3 +1,40 @@
+## [1.18.0](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.17.0...v1.18.0) (2026-10-22)
+
+### 🐛 Bug Fixes
+
+* **ads:** make Disable ads block what it promises in Castbox, Podcast Republic, Pi Music Player, BeSoccer, Expert Player and Moneycontrol ([40ac9d3](https://github.com/heval99/Heval-Morphe-Patches/commit/40ac9d3c3d730801d6ae3b39c01b3f3a219e7242))
+* fail loudly on drift and harden GmsCore support ([7dd00a6](https://github.com/heval99/Heval-Morphe-Patches/commit/7dd00a6284a765eb924d40017e33cf3baf28ef32))
+* **kakaotalk,line:** remove KakaoTalk and LINE support ([dd9dd18](https://github.com/heval99/Heval-Morphe-Patches/commit/dd9dd188ef4adbfb5597f779b4adff9d2100c2ab))
+* keep only the latest verified version per app and correct the patch notes ([d0f5354](https://github.com/heval99/Heval-Morphe-Patches/commit/d0f5354314601b483cdf0007ded73092668f1ad6))
+* **shazam:** open the Spotify login in a browser tab ([7075b7f](https://github.com/heval99/Heval-Morphe-Patches/commit/7075b7fe3815148b016ba8ac435f6020b90ba7a2)), closes [#62](https://github.com/heval99/Heval-Morphe-Patches/issues/62)
+* **sofascore,shazam,brave,truecaller:** complete the telemetry, Web Discovery and server-backed premium gates ([8708913](https://github.com/heval99/Heval-Morphe-Patches/commit/8708913a197aba881423f7352f16847619762762))
+
+### ✨ New Features
+
+* **truecaller:** add Disable contact upload ([94b5eca](https://github.com/heval99/Heval-Morphe-Patches/commit/94b5ecaec85fcf23ac97302f4ea6ebf4b03231cb))
+* **wemuslim:** add WeMuslim 3.5.4 support ([ef5b416](https://github.com/heval99/Heval-Morphe-Patches/commit/ef5b416ccd58b78a643e9d8fae74388a48013822))
+
+## [1.18.0-dev.1](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.17.1-dev.1...v1.18.0-dev.1) (2026-10-20)
+
+### 🐛 Bug Fixes
+
+* **shazam:** open the Spotify login in a browser tab ([7075b7f](https://github.com/heval99/Heval-Morphe-Patches/commit/7075b7fe3815148b016ba8ac435f6020b90ba7a2)), closes [#62](https://github.com/heval99/Heval-Morphe-Patches/issues/62)
+
+### ✨ New Features
+
+* **truecaller:** add Disable contact upload ([94b5eca](https://github.com/heval99/Heval-Morphe-Patches/commit/94b5ecaec85fcf23ac97302f4ea6ebf4b03231cb))
+* **wemuslim:** add WeMuslim 3.5.4 support ([ef5b416](https://github.com/heval99/Heval-Morphe-Patches/commit/ef5b416ccd58b78a643e9d8fae74388a48013822))
+
+## [1.17.1-dev.1](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.17.0...v1.17.1-dev.1) (2026-10-19)
+
+### 🐛 Bug Fixes
+
+* **ads:** make Disable ads block what it promises in Castbox, Podcast Republic, Pi Music Player, BeSoccer, Expert Player and Moneycontrol ([40ac9d3](https://github.com/heval99/Heval-Morphe-Patches/commit/40ac9d3c3d730801d6ae3b39c01b3f3a219e7242))
+* fail loudly on drift and harden GmsCore support ([7dd00a6](https://github.com/heval99/Heval-Morphe-Patches/commit/7dd00a6284a765eb924d40017e33cf3baf28ef32))
+* **kakaotalk,line:** remove KakaoTalk and LINE support ([dd9dd18](https://github.com/heval99/Heval-Morphe-Patches/commit/dd9dd188ef4adbfb5597f779b4adff9d2100c2ab))
+* keep only the latest verified version per app and correct the patch notes ([d0f5354](https://github.com/heval99/Heval-Morphe-Patches/commit/d0f5354314601b483cdf0007ded73092668f1ad6))
+* **sofascore,shazam,brave,truecaller:** complete the telemetry, Web Discovery and server-backed premium gates ([8708913](https://github.com/heval99/Heval-Morphe-Patches/commit/8708913a197aba881423f7352f16847619762762))
+
 ## [1.17.0](https://github.com/heval99/Heval-Morphe-Patches/compare/v1.16.0...v1.17.0) (2026-10-19)
 
 ### 🐛 Bug Fixes

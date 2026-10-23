@@ -1,13 +1,13 @@
 package app.template.patches.crex.premium
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_CREX
+import app.template.patches.shared.addInstructionChecked
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -38,7 +38,7 @@ val enablePremiumPatch = bytecodePatch(
         if (flag.definingClass != HOME_ACTIVITY || flag.type != "Z") {
             throw PatchException("HomeActivity expiry check stores an unexpected field: $flag")
         }
-        homeCheck.method.addInstructions(
+        homeCheck.method.addInstructionsChecked(
             0,
             """
                 const/4 v0, 0x0
@@ -60,7 +60,7 @@ val enablePremiumPatch = bytecodePatch(
         defaultStores.sortedDescending().forEach { index ->
             val register = clinit.getInstruction<OneRegisterInstruction>(index).registerA
             // const/16 takes any 8-bit register; const/4 would fail above v15.
-            clinit.addInstruction(index, "const/16 v$register, 0x0")
+            clinit.addInstructionChecked(index, "const/16 v$register, 0x0")
         }
     }
 }

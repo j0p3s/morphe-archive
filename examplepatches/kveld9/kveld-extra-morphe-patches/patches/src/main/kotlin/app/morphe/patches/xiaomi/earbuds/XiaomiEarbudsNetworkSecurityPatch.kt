@@ -15,6 +15,7 @@ private val xiaomiEarbudsNetworkSecurityConfigResourcePatch = resourcePatch(
     compatibleWith(Constants.COMPATIBILITY_XIAOMI_EARBUDS)
 
     execute {
+        decode("res/xml*")
         val configFile = get("res/xml/network_security_config.xml")
         if (!configFile.exists()) {
             println("[Safer Connections (Setup)] res/xml/network_security_config.xml not found - skipping config patch.")

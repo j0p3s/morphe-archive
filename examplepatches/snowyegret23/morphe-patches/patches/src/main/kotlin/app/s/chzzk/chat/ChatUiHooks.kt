@@ -38,7 +38,7 @@ internal fun BytecodePatchContext.uiBridge(name: String, registers: Int, body: S
 }
 
 internal fun BytecodePatchContext.addChatUiHooks() {
-    val layoutOwner = if (packageMetadata.versionName == "3.15.0") "Lj7;" else "Lh7;"
+    val layoutOwner = if (packageMetadata.versionName in listOf("3.15.0", "3.15.2")) "Lj7;" else "Lh7;"
     val layoutWidth = mutableClassDefBy(layoutOwner).methods.single { it.name == "invoke" }
     check(layoutWidth.localRegisterCount >= 4)
     layoutWidth.addInstructionsWithLabels(0, """

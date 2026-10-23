@@ -62,15 +62,32 @@ for patch in data["patches"]:
             by_pkg[pkg]["patches"][patch["name"]] = patch
 
 
-# Patch kind -> icon, matched on the patch name (first match wins).
+# Patch kind -> icon, matched on whole words of the lower-cased patch name (first match wins).
+# Whole words keep "pro" from matching "promotions"/"prompts", and the "+" rule only fires on a
+# word that ends in "+" (FotMob+, Premium+), not on counts like "99+".
 KIND_ICONS = [
-    (("experimental",), "🧪"),
-    (("ads",), "🚫"),
-    (("telemetry", "facebook sdk"), "🛡️"),
-    (("license",), "🔑"),
-    (("notification", "prompt"), "🔕"),
-    (("premium", "pro", "full version", "origin", "+"), "💎"),
+    (re.compile(r"\bads\b"), "🚫"),
+    (re.compile(r"\btelemetry\b|\bfacebook sdk\b"), "🛡️"),
+    (re.compile(r"\blicen[cs]e\b"), "🔑"),
+    (re.compile(r"\bnotifications?\b|\bprompts?\b"), "🔕"),
+    (re.compile(r"\bpremium\b|\bpro\b|\bfull version\b|\borigin\b|[a-z]\+"), "💎"),
 ]
+# Names the word rules would misfile, keyed by the lower-cased patch name.
+KIND_ICON_OVERRIDES = {
+    # Hiding promotions is a layout change, not a premium unlock.
+    "disable promotions": "🧩",
+    "hide promotions": "🧩",
+    "hide betting promotions": "🧩",
+    "hide partner promotions": "🧩",
+    # Hides the upsell tab; it unlocks nothing.
+    "hide premium tab": "🧩",
+    # Unread-counter display limits, not premium features.
+    "remove 99+ unread limit": "🧩",
+    "remove 300+ unread limit": "🧩",
+    # These fix or keep notifications working; they do not silence them.
+    "fix push notifications": "🧩",
+    "read notifications without receipt": "🧩",
+}
 ICON_ORDER = ["🚫", "🛡️", "💎", "🔑", "🔕", "🧩"]
 LEGEND = (
     "🚫 ads&nbsp;&nbsp;🛡️ telemetry / tracking&nbsp;&nbsp;💎 premium / pro&nbsp;&nbsp;"
@@ -89,9 +106,11 @@ def is_experimental(patch, pkg):
 
 def kind_icon(patch):
     """What the patch does, from its name; experimental is flagged separately."""
-    name = patch["name"].lower()
-    for keys, icon in KIND_ICONS[1:]:
-        if any(k in name for k in keys):
+    name = patch["name"].lower().strip()
+    if name in KIND_ICON_OVERRIDES:
+        return KIND_ICON_OVERRIDES[name]
+    for pattern, icon in KIND_ICONS:
+        if pattern.search(name):
             return icon
     return "🧩"
 
@@ -291,9 +310,12 @@ generated = build_content()
 readme = readme.replace("https://morphe.software/add-source?github=xyz-user/xyz-patches", f"https://morphe.software/add-source?github={repo_full}")
 readme = readme.replace("https://github.com/xyz-user/xyz-patches", f"https://github.com/{repo_full}")
 
+# A function replacement is inserted literally, so backslashes or group references in the
+# generated text (e.g. the "\|" that cell() emits) can never be read as regex escapes.
+replacement = f"{actual_start}\n{generated}\n{END_MARKER}"
 new_readme = re.sub(
     rf"{START_PATTERN}.*?{re.escape(END_MARKER)}",
-    f"{actual_start}\n{generated}\n{END_MARKER}",
+    lambda _match: replacement,
     readme,
     flags=re.DOTALL,
 )

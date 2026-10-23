@@ -1,10 +1,10 @@
 package app.template.patches.truecaller.misc.verification
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_TRUECALLER
+import app.template.patches.shared.addInstructionChecked
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -36,7 +36,7 @@ val useSmsVerificationPatch = bytecodePatch(
             val (index, instruction) = googleReads.single()
             val register = (instruction as OneRegisterInstruction).registerA
             replaceInstruction(index, "sget-object v$register, $OTP_SMS_API->SMS:$OTP_SMS_API")
-            addInstruction(index + 1, "return-object v$register")
+            addInstructionChecked(index + 1, "return-object v$register")
         }
     }
 }

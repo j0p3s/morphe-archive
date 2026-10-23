@@ -1,9 +1,11 @@
 package app.morphe.patches.officehub
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.removeInstructions
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.string
 import app.morphe.patches.shared.Constants.COMPATIBILITY_OFFICEHUB
 import app.morphe.patches.shared.clearTryBlocks
 import app.morphe.patches.shared.ensureRegisterCount
@@ -17,7 +19,7 @@ private val codeTransparencyDialogFingerprint = Fingerprint(
         "Lcom/microsoft/mobile/hub/orchestrator/impl/g1;",
         "Z",
     ),
-    strings = listOf("com.microsoft.android.codetransparencyvalidator"),
+    strings = listOf(string("com.microsoft.android.codetransparencyvalidator", StringComparisonType.EQUALS)),
 )
 
 @Suppress("unused")

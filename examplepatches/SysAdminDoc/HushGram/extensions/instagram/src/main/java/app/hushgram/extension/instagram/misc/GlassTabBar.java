@@ -97,12 +97,13 @@ import app.hushgram.extension.shared.settings.HushgramPause;
  * in a TextureView come through. A video in a SurfaceView is left out and shows through the tint
  * instead, so the glass stays glass over videos. A docked bar's glass shows the strip just above it, upside down.
  * With the float switch on, the content container also runs to the bottom of the screen and the glass shows
- * what's behind it (#262), so nothing of Instagram's own colour is left round the pill. Reels run on behind the pill too, at one size whether
- * it shows or not, with their caption, buttons and seek bar raised clear of it (#221).
+ * what's behind it (#262), so nothing of Instagram's own colour is left round the pill. Reels are the one
+ * screen left out: the Reels viewer stops at the top of the pill's slot, at one size whether the pill
+ * shows, slides away or Instagram hides its bar (#221, #280), and the glass never draws it (#222).
  *
  * <p>Instagram sets the bar's colour, padding and visibility from time to time, so a draw listener
- * puts the pieces back whenever one is changed. Anything that throws turns the blur off for the
- * bar's lifetime and leaves Instagram's own bar as it was.
+ * puts the pieces back whenever one is changed. A failure there is reported and the bar carries on. A
+ * blur that keeps failing rests on the plain tint for a while, then tries again ({@link BlurTries}, #262).
  */
 public final class GlassTabBar {
     /**
@@ -326,11 +327,6 @@ public final class GlassTabBar {
      * A strip anchored from the top, or not laid out yet, is left alone.
      */
     static boolean stripOnTheReel(View strip, Iterable<View> viewers, int scrubber, Rect scratch) {
-        return stripOnTheReel(strip, viewers, scrubber, scratch, 0);
-    }
-
-    /** {@link #stripOnTheReel}, stopping [clear] above the viewer's bottom when no seek bar shows. */
-    static boolean stripOnTheReel(View strip, Iterable<View> viewers, int scrubber, Rect scratch, int clear) {
         if (strip == null || !strip.isShown() || !strip.isLaidOut() || strip.isLayoutRequested()) return false;
         if (!(strip.getLayoutParams() instanceof FrameLayout.LayoutParams)) return false;
         FrameLayout.LayoutParams params = (FrameLayout.LayoutParams) strip.getLayoutParams();
@@ -353,7 +349,7 @@ public final class GlassTabBar {
         View seekBar = scrubber == 0 ? null : shownWithId(viewer, scrubber, scratch, 0);
         View anchor = seekBar != null ? seekBar : viewer;
         anchor.getLocationOnScreen(at);
-        int off = bottom - (at[1] + anchor.getHeight() - (seekBar != null ? 0 : clear));
+        int off = bottom - (at[1] + anchor.getHeight());
         if (off == 0 || params.bottomMargin + off < 0) return false;
         params.bottomMargin += off;
         strip.setLayoutParams(params);
@@ -429,13 +425,42 @@ public final class GlassTabBar {
     }
 
     /**
+     * Puts [view] in [skipped], and it and every view up from it to [parent]'s child in [paths], when
+     * [view] sits under [parent], and says whether it does. The glass then draws round [view] the way it
+     * draws round a SurfaceView ({@link #drawLeavingOutSurfaces}) and never draws [view] itself. That keeps
+     * a Reels viewer out of the blur, so the reel's video is drawn once, where it plays (#222).
+     */
+    static boolean leaveOut(View view, ViewGroup parent, java.util.Set<View> paths, java.util.Set<View> skipped) {
+        if (!under(view, parent)) return false;
+        for (View at = view; at != parent; at = (View) at.getParent()) paths.add(at);
+        skipped.add(view);
+        return true;
+    }
+
+    private static boolean under(View view, ViewGroup parent) {
+        android.view.ViewParent up = view.getParent();
+        for (int depth = 0; depth < 100 && up != null; depth++) {
+            if (up == parent) return true;
+            up = up.getParent();
+        }
+        return false;
+    }
+
+    /**
      * Draws [view] into [canvas] where its parent would, leaving out the SurfaceViews in [paths]. A view on
      * the way down to one is drawn piece by piece, its background and then each child, and any other view
      * draws itself whole. A video in a SurfaceView is a layer under the window, never in the views, so
      * nothing of it is lost: the pill shows it through its tint, unblurred.
      */
     static void drawLeavingOutSurfaces(Canvas canvas, View view, java.util.Set<View> paths, int depth) {
-        if (view.getVisibility() != View.VISIBLE || view.getAlpha() <= 0f || view instanceof android.view.SurfaceView) return;
+        drawLeavingOutSurfaces(canvas, view, paths, java.util.Collections.emptySet(), depth);
+    }
+
+    /** {@link #drawLeavingOutSurfaces}, leaving out the views in [skipped] too ({@link #leaveOut}). */
+    static void drawLeavingOutSurfaces(Canvas canvas, View view, java.util.Set<View> paths, java.util.Set<View> skipped,
+            int depth) {
+        if (view.getVisibility() != View.VISIBLE || view.getAlpha() <= 0f || view instanceof android.view.SurfaceView
+                || skipped.contains(view)) return;
         int saved = canvas.save();
         canvas.translate(view.getLeft(), view.getTop());
         if (!view.getMatrix().isIdentity()) canvas.concat(view.getMatrix());
@@ -449,7 +474,7 @@ public final class GlassTabBar {
             if (background != null) background.draw(canvas);
             canvas.translate(-view.getScrollX(), -view.getScrollY());
             for (int i = 0, n = group.getChildCount(); i < n; i++) {
-                drawLeavingOutSurfaces(canvas, group.getChildAt(i), paths, depth + 1);
+                drawLeavingOutSurfaces(canvas, group.getChildAt(i), paths, skipped, depth + 1);
             }
         }
         canvas.restoreToCount(saved);
@@ -513,6 +538,10 @@ public final class GlassTabBar {
      * recording every frame doubled the GPU's busy time.
      */
     static final long RECORD_EVERY_MS = 33;
+    /** Blur recordings that may fail in a row before the blur rests ({@link BlurTries}, #262). */
+    static final int BLUR_TRIES = 3;
+    /** How long the blur rests on the plain tint after {@link #BLUR_TRIES} failed recordings in a row. */
+    static final long BLUR_REST_MS = 2000;
     /** How long the capsule takes to slide to a new tab. */
     static final long SLIDE_MS = 280;
     /** How long a missing shadow or content view stays unsearched before the parent is walked for it again. */
@@ -522,12 +551,20 @@ public final class GlassTabBar {
      * found even when nothing else draws the bar, without a bar that never has one drawing forever.
      */
     static final int MISS_REDRAWS = 4;
-    /** How often the views are walked for a Reels viewer to keep at one size under a floating pill. */
+    /**
+     * How often the views are walked for a Reels viewer to keep above a floating pill's slot. A change of
+     * the margin it wants is walked for at once.
+     */
     static final long REELS_LOOK_MS = 100;
+    /**
+     * The least time between frames held back for a layout this asked for (a Reels viewer's or a sheet's
+     * new margin), so views Instagram keeps putting back can never stop the window from drawing.
+     */
+    static final long HOLD_BACK_MS = 100;
     /** Counted in the glass family's Diagnostics line each time a Reels viewer's margin is set under the pill. */
-    static final String COUNT_REELS_LIFTED = "Reels viewer kept at one size under the pill";
-    /** Counted each time a reel's caption, buttons or seek bar is raised clear of the pill (#221). */
-    static final String COUNT_REEL_RAISED = "Reel's caption or seek bar raised over the pill";
+    static final String COUNT_REELS_LIFTED = "Reels viewer kept above the pill's slot";
+    /** Counted each time a reel's caption, buttons or seek bar is raised clear of a footer laid over the reel (#260). */
+    static final String COUNT_REEL_RAISED = "Reel's caption or seek bar raised over its footer";
     /** Counted each time a footer under a reel is laid over the reel instead of shrinking it (#260). */
     static final String COUNT_FOOTER_OVERLAID = "Footer laid over the reel";
     /**
@@ -537,6 +574,8 @@ public final class GlassTabBar {
     static final long FOOTER_REDRAW_MS = 500;
     /** Counted each time a video in a SurfaceView shows up under the bar, with none there before, and is kept out of the blur. */
     static final String COUNT_VIDEO_LEFT_OUT = "Video kept out of the blur";
+    /** Counted each time the blur fails {@link #BLUR_TRIES} recordings in a row and rests on the plain tint. */
+    static final String COUNT_BLUR_RESTED = "Blur rested after failing";
     /** Counted each time a tab's own background, Instagram's selected tab capsule, is taken off under the pill. */
     static final String COUNT_TAB_BACKGROUND = "Tab's own capsule taken off";
     /** Counted each time Instagram's touch strip for a reel's seek bar is moved back onto the seek bar. */
@@ -646,10 +685,12 @@ public final class GlassTabBar {
         if (glass == null) {
             navTaken = 0;
             sheetRoom = 0;
+            navGiven = Math.max(0, height);
             return height;
         }
         navTaken = height;
         sheetRoom = height;
+        navGiven = 0;
         HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_NAV_BEHIND);
         return 0;
     }
@@ -666,10 +707,12 @@ public final class GlassTabBar {
         Glass glass = height <= 0 ? null : floatingGlassInFront();
         if (glass == null || !glass.underASheet()) {
             sheetRoom = 0;
+            navGiven = Math.max(0, height);
             return height;
         }
         navTaken = height;
         sheetRoom = height;
+        navGiven = 0;
         HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_NAV_BEHIND);
         return 0;
     }
@@ -680,6 +723,35 @@ public final class GlassTabBar {
      * sheets included, above the bar itself. Main thread.
      */
     private static int sheetRoom;
+    /**
+     * The navigation bar's height Instagram was last given through and pads its screens by itself, or
+     * 0 when it was answered 0. With the keyboard up both this and {@link #navTaken} hold the height.
+     * Main thread.
+     */
+    private static int navGiven;
+
+    /**
+     * Called by FullScreenBars once Instagram's screens have been told new bar heights, which moves the
+     * bottom of each of them, the Reels viewer's included, in the next layout. Each floating pill in the
+     * front activity gives its Reels viewers their margin for the new heights now ({@link #reelsMargin}),
+     * so both land in that one layout and the viewer keeps its size. Given its margin in the frame after,
+     * a viewer was sized twice, and the reel in it could stop on its cover while its sound played on
+     * (#222). Main thread.
+     */
+    public static void heightsTold() {
+        try {
+            if (!Utils.settingsReady() || HushgramPause.isPaused()) return;
+            Activity activity = front.get();
+            if (activity == null) return;
+            for (Map.Entry<View, WeakReference<Glass>> entry : applied.entrySet()) {
+                WeakReference<Glass> held = entry.getValue();
+                Glass glass = held == null ? null : held.get();
+                if (glass != null) glass.keepReelsForNewHeights(activity);
+            }
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.GLASS_TAB_BAR, "heights told", failure);
+        }
+    }
 
     /** Whether the front activity shows a floating glass bar: restyled, floating, and shown. */
     static boolean floatingBarInFront() {
@@ -721,8 +793,8 @@ public final class GlassTabBar {
     }
 
     /**
-     * Whether [bar] wears the glass and its pill floats, with the reel running on behind it (#221), so
-     * Blur the bars around a reel has no strip to fill under it.
+     * Whether [bar] wears the glass and its pill floats, with no strip of its own round it, so Blur the
+     * bars around a reel has none to fill.
      */
     public static boolean wearsFloatingGlass(@Nullable View bar) {
         WeakReference<Glass> held = bar == null ? null : applied.get(bar);
@@ -747,13 +819,16 @@ public final class GlassTabBar {
     }
 
     /**
-     * How far above the bottom edge a Reels viewer stops under a floating pill: the navigation bar's
-     * height Instagram was answered 0 for, so the seek bar stays out of the gesture handle's reach and
-     * from under the navigation buttons (#221), or 0 when Instagram was given that height and keeps its
-     * screens above it itself.
+     * The bottom margin a Reels viewer gets under a floating pill whose slot over the navigation bar,
+     * its lift included, is [slot] tall: the viewer stops where the slot starts, so the reel sits where
+     * it did before it ran on behind the pill, and its seek bar stays clear of the pill and the gesture
+     * handle (#221, #280). Past the slot it adds the navigation bar's height Instagram was answered 0
+     * for, less any it was given through since and pads its screens by itself ({@link #navGiven}), so the
+     * viewer's bottom edge, and its size, stay put whichever answer Instagram last had: with the keyboard
+     * up, under a sheet, or with its bar hidden for a paused reel (#222).
      */
-    static int reelsRoomWhileAway() {
-        return navTaken;
+    static int reelsMargin(int slot) {
+        return Math.max(0, slot) + Math.max(0, navTaken - navGiven);
     }
 
     /** {@link #sheetRoom} for a pill that floats, 0 for one that doesn't. */
@@ -780,6 +855,7 @@ public final class GlassTabBar {
         front = new WeakReference<>(null);
         navTaken = 0;
         sheetRoom = 0;
+        navGiven = 0;
     }
 
     static void diagnose(String what, @Nullable Throwable failure) {
@@ -1081,7 +1157,8 @@ public final class GlassTabBar {
         private final boolean floating;
         private final PillDrawable pill = new PillDrawable();
         private int base;
-        private boolean blurBroken;
+        /** How the blur's recordings have gone lately, so one that fails is tried again ({@link BlurTries}, #262). */
+        private final BlurTries tries = new BlurTries();
         /** The padding Instagram gave the bar, and what this last put on it, to tell their changes from ours. */
         private int originalLeft, originalRight, originalTop, originalBottom;
         private int lastLeft = -1, lastRight = -1, lastTop = -1, lastBottom = -1;
@@ -1121,6 +1198,10 @@ public final class GlassTabBar {
         /** Whether a footer's margin changed in this frame's look, so the frame is laid out again before it's drawn. */
         private boolean footerMoved;
         private long footerRedrawAt = Long.MIN_VALUE / 2;
+        /** Whether a Reels viewer's margin changed in this frame's look, so the frame is laid out again before it's drawn. */
+        private boolean reelsMoved;
+        /** When a frame was last held back for a layout ({@link #HOLD_BACK_MS}). */
+        private long heldBackAt = Long.MIN_VALUE / 2;
         /**
          * Puts back a raised view's translation and scroll as it comes off the window: Instagram mounts
          * the same views again elsewhere, and one would carry the lift there.
@@ -1631,49 +1712,55 @@ public final class GlassTabBar {
                     }
                 }
                 if (content instanceof ViewGroup) keepScreensAboveTheBar((ViewGroup) content, params);
-                if (floating) keepReelsAboveThePill(parent, params, now);
+                if (floating) {
+                    keepReelsAboveTheSlot(parent, now);
+                    raiseReels(parent.getContext());
+                    keepTheStripOnTheReel(parent);
+                }
             }
             arrangeTabs();
         }
 
         /**
-         * Under a floating pill each Reels viewer runs on behind it, down to the navigation bar
-         * ({@link #reelsRoomWhileAway}), and keeps that one size whether the pill shows, slides off (Hide
-         * the tab bar on Reels, #170) or Instagram hides the bar. A viewer that stopped above the pill grew
-         * and shrank with it, so the video rescaled and the caption dropped with every slide (#221). The
-         * views are walked for viewers at most every {@link #REELS_LOOK_MS}. Each frame, every reel's
-         * caption, buttons and seek bar are raised clear of the pill while the bar shows
-         * ({@link #raiseReels}). A pill slid off the screen still shows as far as this goes, so nothing
-         * moves while it slides.
+         * Under a floating pill each Reels viewer stops at the top of the pill's slot ({@link #reelsMargin})
+         * and keeps that one size whether the pill shows, slides off (Hide the tab bar on Reels, #170) or
+         * Instagram hides the bar for a paused reel. A viewer that grew and shrank with the pill rescaled
+         * the video with every slide (#221). One run on behind the pill, down to the navigation bar, had
+         * the reel centred that much lower, with a wide black band over it (#280), and had the glass
+         * drawing the reel's video into its blur (#222). The views are walked for viewers at most every
+         * {@link #REELS_LOOK_MS}, and at once when the margin they want changes, so a viewer is never left
+         * a frame at a size Instagram's own layout just gave it.
          */
-        private void keepReelsAboveThePill(View holder, @Nullable ViewGroup.LayoutParams params, long now) {
-            if (params == null || params.height <= 0) return;
-            int wanted = reelsRoomWhileAway();
-            if (now - reelsLookedAt >= REELS_LOOK_MS) {
-                reelsLookedAt = now;
-                reelsWanted = wanted;
-                viewers.clear();
-                if (reelsAboveTheBar(holder, bar, id(holder.getContext(), REELS_ROOT), wanted, lifted, viewers) > 0) {
-                    HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_REELS_LIFTED);
-                }
-            } else if (wanted != reelsWanted) {
-                // A change the wait held back is looked at once it's over, since nothing may draw by then.
-                bar.postInvalidateDelayed(REELS_LOOK_MS);
+        private void keepReelsAboveTheSlot(View holder, long now) {
+            if (originalBarHeight <= 0) return;
+            int wanted = reelsMargin(barHeightPx(height, originalBarHeight, density) + lift);
+            if (wanted == reelsWanted && now - reelsLookedAt < REELS_LOOK_MS) return;
+            reelsLookedAt = now;
+            reelsWanted = wanted;
+            viewers.clear();
+            if (reelsAboveTheBar(holder, bar, id(holder.getContext(), REELS_ROOT), wanted, lifted, viewers) > 0) {
+                reelsMoved = true;
+                HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_REELS_LIFTED);
             }
-            int above = bar.getVisibility() == View.VISIBLE ? Math.max(0, params.height - wanted) : 0;
-            raiseReels(holder.getContext(), above);
-            keepTheStripOnTheReel(holder, above);
         }
 
         /**
-         * Raises the caption, buttons and seek bar of each reel in the viewers ({@link #reelBand}) by
-         * [above], the pill's height over the navigation bar, plus the height of any footer Instagram
-         * shows under that viewer, such as a paused reel's controls (#260). The footer is laid over the
-         * reel's bottom ({@link #overlapFooter}) rather than shrinking it, and raised by [above] too. A
+         * Gives the Reels viewers their margin for the bar heights Instagram's screens were just told
+         * ({@link GlassTabBar#heightsTold}), when this is a floating pill in [activity].
+         */
+        void keepReelsForNewHeights(Activity activity) {
+            if (!floating || !bar.isAttachedToWindow() || !ownedBy(bar, activity) || !(bar.getParent() instanceof View)) return;
+            keepReelsAboveTheSlot((View) bar.getParent(), SystemClock.uptimeMillis());
+        }
+
+        /**
+         * Raises the caption, buttons and seek bar of each reel in the viewers ({@link #reelBand}) by the
+         * height of any footer Instagram shows under that viewer, such as a paused reel's controls (#260).
+         * The footer is laid over the reel's bottom ({@link #overlapFooter}) rather than shrinking it. A
          * view raised before and no longer met is put back. A band is raised by scrolling its content
          * ({@link #lift}).
          */
-        private void raiseReels(Context context, int above) {
+        private void raiseReels(Context context) {
             int info = id(context, REEL_INFO), scrubber = id(context, SCRUBBER);
             int footers = id(context, REEL_FOOTERS), media = id(context, REEL_MEDIA);
             raisedNow.clear();
@@ -1683,7 +1770,7 @@ public final class GlassTabBar {
                 footerViews.clear();
                 reelAnchors(viewer, info, scrubber, footers, anchors, footerViews, 0);
                 int footer = 0;
-                for (View view : footerViews) footer += overlapFooter(view, above);
+                for (View view : footerViews) footer += overlapFooter(view);
                 for (View anchor : anchors) {
                     View band = bands.get(anchor);
                     if (band == null || !holds(band, anchor)) {
@@ -1691,7 +1778,7 @@ public final class GlassTabBar {
                         if (band == null) continue;
                         bands.put(anchor, band);
                     }
-                    if (raisedNow.add(band) && lift(band, -(above + footer))) {
+                    if (raisedNow.add(band) && lift(band, -footer)) {
                         HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_REEL_RAISED);
                     }
                 }
@@ -1765,11 +1852,10 @@ public final class GlassTabBar {
         /**
          * Lays [footer], Instagram's container for what shows under a reel (a paused reel's controls, a
          * comment box), over the reel's bottom by a top margin of minus its height, so the reel keeps its
-         * size, and raises it by [above] clear of the pill. A top margin that is neither 0 nor one this
-         * gave is Instagram's, and that footer is left alone. Returns the footer's height when it's laid
-         * over the reel, or 0.
+         * size. A top margin that is neither 0 nor one this gave is Instagram's, and that footer is left
+         * alone. Returns the footer's height when it's laid over the reel, or 0.
          */
-        private int overlapFooter(View footer, int above) {
+        private int overlapFooter(View footer) {
             if (!(footer.getLayoutParams() instanceof ViewGroup.MarginLayoutParams)) return 0;
             ViewGroup.MarginLayoutParams margins = (ViewGroup.MarginLayoutParams) footer.getLayoutParams();
             Integer ours = overlapped.get(footer);
@@ -1783,8 +1869,6 @@ public final class GlassTabBar {
             }
             if (height == 0) overlapped.remove(footer);
             else overlapped.put(footer, -height);
-            raisedNow.add(footer);
-            raise(footer, -above);
             return height;
         }
 
@@ -1846,9 +1930,9 @@ public final class GlassTabBar {
 
         /**
          * Keeps Instagram's touch strip on the seek bar of the reel in front ({@link #stripOnTheReel}), or,
-         * with no seek bar, [above] over the viewer's bottom, clear of the pill.
+         * with no seek bar, on the viewer's bottom.
          */
-        private void keepTheStripOnTheReel(View holder, int above) {
+        private void keepTheStripOnTheReel(View holder) {
             if (viewers.isEmpty()) return;
             if (holder.isLayoutRequested()) {
                 // A margin changed this frame, so the reel and the strip are where they were. Look again after the layout.
@@ -1860,7 +1944,7 @@ public final class GlassTabBar {
                 strip = find(holder, TOUCH_STRIP);
                 stripRef = strip == null ? null : new WeakReference<>(strip);
             }
-            if (strip != null && stripOnTheReel(strip, viewers, id(holder.getContext(), SCRUBBER), reelsRect, above)) {
+            if (strip != null && stripOnTheReel(strip, viewers, id(holder.getContext(), SCRUBBER), reelsRect)) {
                 HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_STRIP_KEPT);
             }
         }
@@ -1883,19 +1967,22 @@ public final class GlassTabBar {
         @Override public boolean onPreDraw() {
             Trace.beginSection("hushgram:preDraw");
             boolean layOutAgain = false;
+            long now = SystemClock.uptimeMillis();
             try {
                 stepAsideForStories();
                 footerMoved = false;
+                reelsMoved = false;
                 keep();
                 if (footerMoved) {
                     // Instagram laid this frame out with the reel shrunk over the footer (#260). Hold the
                     // frame back for the layout the footer's new margin asks for, so the shrunk reel never shows.
-                    long now = SystemClock.uptimeMillis();
                     if (now - footerRedrawAt >= FOOTER_REDRAW_MS) {
                         footerRedrawAt = now;
                         layOutAgain = true;
                     }
                 }
+                // A Reels viewer laid out at a size it's about to lose isn't shown at it either.
+                if (reelsMoved) layOutAgain = true;
                 askForInsetsWhenShownChanges();
                 // Moved sheets hold the frame back for their new layout too, so a sheet never shows on the
                 // navigation bar first. They move once when the holder first turns up and when the room changes.
@@ -1909,23 +1996,48 @@ public final class GlassTabBar {
                     if (scrollHide != null) scrollHide.show();
                     bar.invalidate();
                 }
-                // Something on screen is drawing a frame, so the glass records what's under it again, at most
-                // every RECORD_EVERY_MS, and once more shortly after a frame it skipped so it never stays behind.
-                // Only its own render node is recorded, not a view, so this asks for no frame of its own: the
-                // screen stops drawing as soon as nothing else changes.
-                // Off screen the bar is still drawn, so a video that starts under it is still kept out.
-                if (!blurBroken && blurWanted) {
-                    if (scrollHide == null || !scrollHide.isOffScreen()) pill.recordIfDue();
-                    else pill.recordIfSurfaceAppeared();
-                }
             } catch (Throwable failure) {
+                // Reported, and the frame and the blur go on: neither depends on what threw (#262).
                 HookStatus.threw(FamilyNames.GLASS_TAB_BAR, "draw", failure);
                 diagnose("pre-draw failed", failure);
-                blurBroken = true;
             } finally {
                 Trace.endSection();
             }
-            return !layOutAgain;
+            recordUnder();
+            if (!layOutAgain) return true;
+            if (now - heldBackAt < HOLD_BACK_MS) return true;
+            heldBackAt = now;
+            return false;
+        }
+
+        /**
+         * Something on screen is drawing a frame, so the glass records what's under it again, at most every
+         * RECORD_EVERY_MS, and once more shortly after a frame it skipped so it never stays behind. Only its
+         * own render node is recorded, not a view, so this asks for no frame of its own: the screen stops
+         * drawing as soon as nothing else changes. Off screen the bar is still drawn, so a video that starts
+         * under it is still kept out. A recording that throws leaves the pill on its plain tint only until
+         * one works again ({@link BlurTries}, #262).
+         */
+        private void recordUnder() {
+            if (!blurWanted) return;
+            try {
+                if (scrollHide == null || !scrollHide.isOffScreen()) pill.recordIfDue();
+                else pill.recordIfSurfaceAppeared();
+            } catch (Throwable failure) {
+                blurFailed("blur", failure);
+            }
+        }
+
+        /**
+         * A blur recording that threw: reported, tried again shortly, and after {@link #BLUR_TRIES} in a row
+         * left to rest on the plain tint for {@link #BLUR_REST_MS}. Before, one failure turned the blur off for
+         * as long as the bar lived, and the pill sat on the dark tint from then on (#262).
+         */
+        private void blurFailed(String what, Throwable failure) {
+            HookStatus.threw(FamilyNames.GLASS_TAB_BAR, what, failure);
+            diagnose(what + " failed", failure);
+            if (tries.failed(SystemClock.uptimeMillis())) HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_BLUR_RESTED);
+            else pill.retrySoon();
         }
 
         /** The tab Instagram marks selected, or null. */
@@ -2027,7 +2139,7 @@ public final class GlassTabBar {
                 underlay(canvas);
                 // Light glass has nothing under it to stand out against, so it gets a soft shadow.
                 if (!dark) shadow(canvas, rect, radius);
-                boolean blurred = !blurBroken && blurWanted && drawBackdrop(canvas);
+                boolean blurred = blurWanted && !tries.resting(SystemClock.uptimeMillis()) && drawBackdrop(canvas);
                 fill.setColor(tint(base, blurred, opacity));
                 canvas.drawRoundRect(rect, radius, radius, fill);
 
@@ -2063,7 +2175,7 @@ public final class GlassTabBar {
                 shapes.addRoundRect(shrunk, round, round, Path.Direction.CW);
                 if (apart) shapes.addOval(circle, Path.Direction.CW);
                 boolean blurred = false;
-                if (!blurBroken && blurWanted) {
+                if (blurWanted && !tries.resting(SystemClock.uptimeMillis())) {
                     int saved = canvas.save();
                     canvas.clipPath(shapes);
                     blurred = drawBackdrop(canvas);
@@ -2098,7 +2210,7 @@ public final class GlassTabBar {
              */
             private void underlay(@NonNull Canvas canvas) {
                 // The content stops above the bar, so something has to fill round the pill. A floating
-                // pill has the screens, Reels included (#221), running on behind it.
+                // pill has the screens running on behind it, all but Reels, which stop above its slot.
                 if (!floating && !strip.paint(canvas, 0, 0, bar.getWidth(), bar.getHeight())) {
                     fill.setColor(base);
                     canvas.drawRect(0, 0, bar.getWidth(), bar.getHeight(), fill);
@@ -2213,10 +2325,17 @@ public final class GlassTabBar {
             private boolean catchUpPending;
             private final Runnable catchUp = () -> {
                 catchUpPending = false;
-                if (blurBroken || !bar.isAttachedToWindow()) return;
+                if (!bar.isAttachedToWindow() || tries.resting(SystemClock.uptimeMillis())) return;
                 recordBackdrop();
                 bar.invalidate();
             };
+
+            /** Records again shortly after a recording failed, so the blur comes back on a screen that's gone still. */
+            void retrySoon() {
+                if (catchUpPending) return;
+                catchUpPending = true;
+                bar.postDelayed(catchUp, RECORD_EVERY_MS);
+            }
 
             /** Drops a catch-up still waiting, so the next frame can arrange a new one. */
             void cancelCatchUp() {
@@ -2233,6 +2352,8 @@ public final class GlassTabBar {
                 if (backdrop != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) backdrop.discardDisplayList();
                 leftOut.clear();
                 surfaces.clear();
+                skipped.clear();
+                hadSurfaces = false;
             }
 
             /** Records the backdrop if it's been long enough and this frame isn't late, or arranges to once it can. */
@@ -2253,6 +2374,10 @@ public final class GlassTabBar {
             /** Each SurfaceView under the bar, and the views down to it, that the last recording left out. */
             private final java.util.Set<View> leftOut = new java.util.HashSet<>();
             private final java.util.Set<View> surfaces = new java.util.HashSet<>();
+            /** The Reels viewers the last recording left out ({@link #leaveOut}). */
+            private final java.util.Set<View> skipped = new java.util.HashSet<>();
+            /** Whether the last recording had a SurfaceView to leave out. */
+            private boolean hadSurfaces;
 
             void recordIfSurfaceAppeared() {
                 if (!surfaceAppeared()) return;
@@ -2289,6 +2414,7 @@ public final class GlassTabBar {
              */
             void recordBackdrop() {
                 if (drawingBackdrop || Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return;
+                if (tries.resting(SystemClock.uptimeMillis())) return;
                 if (!(bar.getParent() instanceof ViewGroup) || !pillBounds(area)) return;
                 ViewGroup parent = (ViewGroup) bar.getParent();
                 int barIndex = parent.indexOfChild(bar);
@@ -2335,25 +2461,31 @@ public final class GlassTabBar {
                     try {
                         recording.concat(source);
                         recording.clipRect(x0, top, x0 + wide, top + tall);
-                        boolean hadVideo = !leftOut.isEmpty();
-                        if (surfacePaths(parent, barIndex, leftOut) && !hadVideo) {
-                            HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_VIDEO_LEFT_OUT);
+                        boolean found = surfacePaths(parent, barIndex, leftOut);
+                        if (found && !hadSurfaces) HookStatus.counted(FamilyNames.GLASS_TAB_BAR, COUNT_VIDEO_LEFT_OUT);
+                        hadSurfaces = found;
+                        // A Reels viewer stops above a floating pill and is left out, so the glass never
+                        // draws the reel's video a second time (#222).
+                        skipped.clear();
+                        for (View viewer : viewers) {
+                            if (viewer != null) leaveOut(viewer, parent, leftOut, skipped);
                         }
                         for (int i = 0; i < barIndex; i++) {
                             View sibling = parent.getChildAt(i);
                             if (sibling.getWidth() <= 0 || sibling.getBottom() <= top || sibling.getTop() >= top + tall) continue;
-                            drawLeavingOutSurfaces(recording, sibling, leftOut, 0);
+                            drawLeavingOutSurfaces(recording, sibling, leftOut, skipped, 0);
                         }
                     } finally {
                         backdrop.endRecording();
                     }
                     recorded = true;
+                    tries.worked();
                     report("backdrop recorded under " + barIndex + " views: pill " + Math.round(area.width()) + "x"
                             + Math.round(area.height()) + " as " + width + "x" + height);
                 } catch (Throwable failure) {
-                    blurBroken = true;
-                    HookStatus.threw(FamilyNames.GLASS_TAB_BAR, "blur", failure);
-                    diagnose("backdrop failed", failure);
+                    // A recording cut short isn't shown: the pill draws its tint, or this frame tries again.
+                    recorded = false;
+                    blurFailed("blur", failure);
                 } finally {
                     drawingBackdrop = false;
                     Trace.endSection();
@@ -2371,6 +2503,37 @@ public final class GlassTabBar {
             @Override public int getOpacity() {
                 return PixelFormat.TRANSLUCENT;
             }
+        }
+    }
+
+    /**
+     * How a glass bar's blur recordings have gone lately (#262). A recording that throws, such as one
+     * drawing a view Instagram is recycling as a list scrolls, leaves the pill on its plain tint only
+     * until the next one works. After {@link #BLUR_TRIES} in a row the blur rests on the tint for
+     * {@link #BLUR_REST_MS}, so a view that throws every time it's drawn doesn't cost a failure each
+     * frame, and then tries again. Before, one failure turned the blur off for as long as the bar lived.
+     * Main thread.
+     */
+    static final class BlurTries {
+        private int failedInARow;
+        private long restUntil = Long.MIN_VALUE;
+
+        /** Whether the blur rests at [now], drawing the plain tint and recording nothing. */
+        boolean resting(long now) {
+            return now < restUntil;
+        }
+
+        /** A recording failed at [now]. Says whether that was one too many in a row and the blur rests. */
+        boolean failed(long now) {
+            if (++failedInARow < BLUR_TRIES) return false;
+            failedInARow = 0;
+            restUntil = now + BLUR_REST_MS;
+            return true;
+        }
+
+        /** A recording worked, so the count of failures starts over. */
+        void worked() {
+            failedInARow = 0;
         }
     }
 

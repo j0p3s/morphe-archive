@@ -6,12 +6,12 @@
 
 package app.template.patches.shared.hevalcontrols
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.util.findFreeRegister
+import app.template.patches.shared.addInstructionsWithLabelsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 
@@ -68,7 +68,7 @@ fun MutableMethod.addHevalGate(
     }
 
     val v = "v$scratch"
-    addInstructionsWithLabels(
+    addInstructionsWithLabelsChecked(
         index,
         """
             const-string $v, "$featureId"

@@ -1,8 +1,10 @@
 package app.morphe.patches.powerpoint
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.fieldAccess
 import app.morphe.patcher.methodCall
+import app.morphe.patcher.string
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.formats.Instruction22c
@@ -51,7 +53,7 @@ internal val firstRunN0Fingerprint = Fingerprint(
     returnType = "V",
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     parameters = emptyList(),
-    strings = listOf("FRE Completed"),
+    strings = listOf(string("FRE Completed", StringComparisonType.EQUALS)),
 )
 
 internal val ftuxPaywallLauncherFingerprint = Fingerprint(

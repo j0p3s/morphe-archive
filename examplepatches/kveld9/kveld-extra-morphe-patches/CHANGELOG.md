@@ -1,3 +1,14 @@
+## [1.26.1](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.26.0...v1.26.1) (2026-10-22)
+
+### Bug Fixes
+
+* **capcut:** update target to 19.9.0 ([88f462c](https://github.com/kveld9/kveld-extra-morphe-patches/commit/88f462c9be2c187fa897f19b2b0014b545962ecc))
+* **hevy:** make billing stub fail loudly if Play library changes ([a1a4c41](https://github.com/kveld9/kveld-extra-morphe-patches/commit/a1a4c418c139f924314a8789c4f837f6c06745f2))
+* **hevy:** update in-app billing connection hook for 3.2.2 ([ffa11b5](https://github.com/kveld9/kveld-extra-morphe-patches/commit/ffa11b59f9088853d0169e0f95b7405ac518c9b7))
+* **hevy:** update supported version to 3.2.2 ([0ab1635](https://github.com/kveld9/kveld-extra-morphe-patches/commit/0ab163517f4c4a2d3335fae0966772410d8d4462))
+* **hevy:** update telemetry and tracking hooks for 3.2.2 ([7f86566](https://github.com/kveld9/kveld-extra-morphe-patches/commit/7f865661372850d91c9c916416c57dc6e84a9253))
+* **twitter:** support version 12.36.1-prod.01 ([4229ffb](https://github.com/kveld9/kveld-extra-morphe-patches/commit/4229ffb2c614be97bb206c04385b976de2dff53d))
+
 ## [1.26.0](https://github.com/kveld9/kveld-extra-morphe-patches/compare/v1.25.2...v1.26.0) (2026-10-22)
 
 ### Bug Fixes

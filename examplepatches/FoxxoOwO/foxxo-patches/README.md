@@ -15,62 +15,27 @@ Or add manually in Morphe Manager:
 ## 🩹 Patches list
 
 <!-- PATCHES_START EXPANDED -->
-> **[v1.2.0](https://github.com/FoxxoOwO/foxxo-patches/releases/tag/v1.2.0)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;12 patches total
+> **[v1.4.2](https://github.com/FoxxoOwO/foxxo-patches/releases/tag/v1.4.2)**&nbsp;&nbsp;•&nbsp;&nbsp;`main`&nbsp;&nbsp;•&nbsp;&nbsp;3 patches total
 <details open>
-<summary>📦 Instagram&nbsp;&nbsp;•&nbsp;&nbsp;11 patches</summary>
-<br>
-
-| 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
-|----------|----------------|-----------|
-| [Clone](#clone) | Renames the package and app label so the patched build installs alongside a stock Instagram instead of replacing it. | • Package name<br>• App name |
-| [Debug bridge](#debug-bridge) | Development only: exposes the Feurstagram settings over ADB broadcasts so they can be driven from a shell instead of the on-screen panel. |  |
-| [Feed item filtering](#feed-item-filtering) | Drops ad/promo and suggested feed units at the JSON-parse layer, catching the ones injected inline into the timeline that URL blocking misses. Gated on the Ads and Suggested toggles. |  |
-| [Force SDR display](#force-sdr-display) | Reroutes Instagram's window colour-mode changes so the app can be pinned to SDR, keeping the dark UI's blacks deep instead of the washed-out look HDR forces. |  |
-| [Install-packages permission](#install-packages-permission) | Declares REQUEST_INSTALL_PACKAGES so the update dialog can download and install a new release directly instead of opening the browser. |  |
-| [Limit feed to following profiles](#limit-feed-to-following-profiles) | Optionally restricts the home feed to accounts you follow, by rewriting the feed request's pagination header. Gated on the runtime toggle. |  |
-| [Network content blocking](#network-content-blocking) | Blocks the feed, stories, explore, reels, ads, suggestions and tracking at the network layer, gated on the runtime toggles. |  |
-| [Popup hiding](#popup-hiding) | Drops Instagram's popups ("Couldn't refresh feed"), which a blocked surface raises on every failed request. Gated on the Instagram popups toggle. |  |
-| [Restart relay](#restart-relay) | Declares the one-shot activity Feurstagram runs in its own process to bring Instagram back after the cache-clear restart. |  |
-| [Settings entry point](#settings-entry-point) | Opens the Feurstagram settings on a long-press of the Home tab, and installs the surface hiders and update check. |  |
-| [Signature check bypass](#signature-check-bypass) | Forces Instagram's signing-certificate trust checks to always pass, so a re-signed APK is treated as an official Meta build and deep links route to their content instead of falling back to the home feed. |  |
-
-</details>
-
-<details open>
-<summary>📦 AI Plant Doctor&nbsp;&nbsp;•&nbsp;&nbsp;1 patch</summary>
+<summary>📦 Instagram&nbsp;&nbsp;•&nbsp;&nbsp;3 patches</summary>
 <br>
 
 **🎯 Supported versions:**
 
-| 3.1.0 |
+| 447.0.0.55.81 |
 | :---: |
 
 | 💊&nbsp;Patch | 📜&nbsp;Description | ⚙️&nbsp;Options |
 |----------|----------------|-----------|
-| [Unlock premium](#unlock-premium) | Unlocks all AI Plant Doctor premium features by bypassing Google Play Billing and returning an active annual subscription. |  |
+| [Chat only](#chat-only) | Turns Instagram into a chat-only messenger: opens Direct instead of the feed and removes the home feed, Reels, Explore, Stories, ads and suggestions. Long-press the Direct title (or the Profile tab) to open the Feurstagram settings. |  |
+| [Clone](#clone) | Renames the package and app label so the patched build installs alongside a stock Instagram instead of replacing it. | • Package name<br>• App name |
+| [Debug bridge](#debug-bridge) | Development only: exposes the Feurstagram settings over ADB broadcasts so they can be driven from a shell instead of the on-screen panel. |  |
 
 </details>
 
 <!-- PATCHES_END -->
 
 ---
-
-## 🌿 AI Plant Doctor (`me.jodoin.aiplantdoctor`)
-
-### What the patch does
-Unlocks all premium features of the **AI Plant Doctor** app (`me.jodoin.aiplantdoctor v3.1.0_antisplit`) by intercepting Google Play Billing communication. The app always detects an active annual subscription (`me.jodoin.aiplantdoctor.premium_annual`).
-
-### Unlocked features
-- Unlimited plant diagnosis (AI Plant Doctor)
-- Full access to the Budsy assistant
-- Unlimited pest and disease detection
-- Personalized care plans
-- Advanced plant health analysis
-- AI diagnostics and Day Pass features
-
-### How it works
-The app is built with Flutter. The subscription check logic resides in Dart code (`libapp.so`), which obtains the purchase state across the Pigeon IPC bridge from the Java `in_app_purchase_android` plugin.
-The patch intercepts the `queryPurchasesAsync` call at the Java layer and injects a mocked response containing an active `me.jodoin.aiplantdoctor.premium_annual` purchase, completely bypassing Google Play BillingClient.
 
 ## 📸 Instagram Direct / Chat-Only (`com.instagram.android`)
 

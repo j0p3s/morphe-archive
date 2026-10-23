@@ -159,20 +159,14 @@ Telegram closes and reopens on this page.	Telegram se cierra y se vuelve a abrir
 Report a problem	Informar de un problema
 # context: that row's summary
 Opens a GitHub report with your versions and settings filled in. Add what happened.	Abre un informe en GitHub con tus versiones y ajustes ya puestos. Añade qué pasó.
-# context: home page row under the status card, and the title of the dialog it opens
+# context: row on the Settings backup page, and the title of the dialog it opens
 Quick setups	Configuración rápida
 # context: that row's summary
-Turn on a set of switches in one tap, or put every switch back the way it started. Press and hold to hide this row.	Activa varios interruptores con un toque o devuelve todos los interruptores a como estaban al principio. Mantén pulsada esta fila para ocultarla.
-# context: row on Settings backup that hides or shows the Quick setups row on the home page, and its two summaries
-Quick setups on the home page	Configuración rápida en la página de inicio
-Shown. Tap to hide it.	Visible. Toca para ocultarla.
-Hidden. Tap to show it again.	Oculta. Toca para mostrarla de nuevo.
+Turn on a set of switches in one tap, or put every switch back the way it started.	Activa varios interruptores con un toque o devuelve todos los interruptores a como estaban al principio.
 # context: Row on the Look and feel page that switches how the HushTelegram settings pages are drawn: each group of rows on a rounded card with an outline, or plain rows with a thin line between them. Its line says which look is on and what a tap changes it to.
 Settings look	Aspecto de la configuración
 Cards. Tap for plain rows.	Tarjetas. Toca para usar filas simples.
 Plain rows. Tap for cards.	Filas simples. Toca para usar tarjetas.
-# context: toast after a long press hides Quick setups; the page named is Settings backup
-Quick setups hidden. Bring it back from %1$s.	Configuración rápida oculta. Vuelve a mostrarla desde %1$s.
 # context: Quick setups choice that turns on the switches that hide ads, suggestions and nags
 Quiet	Tranquilo
 # context: what Quiet does, under its name
@@ -334,6 +328,12 @@ Hide keyboard on scroll	Ocultar teclado al desplazar
 The keyboard closes when you start scrolling a chat. The emoji and sticker panel stays open.	El teclado se cierra cuando empiezas a desplazarte por un chat. El panel de emojis y stickers sigue abierto.
 Keep videos muted on volume keys	Mantener videos sin sonido con las teclas de volumen
 Volume keys only change the volume. They no longer start the video or round video on screen with sound. Tap a video to hear it.	Las teclas de volumen solo cambian el volumen. Ya no inician con sonido el video o video redondo que se ve en pantalla. Toca un video para oírlo.
+# context: a second switch under Keep videos muted on volume keys (#27). Telegram turns a video put in full screen to one fixed landscape side; with this on it follows the phone to either side.
+Full screen videos turn either way	Los videos en pantalla completa giran hacia ambos lados
+# context: that switch's summary. "full screen" is Telegram's full screen button on a video; "auto-rotate" is Android's own screen rotation setting, use the phone's name for it.
+After you tap full screen, a video follows your phone to either landscape side, even with auto-rotate off.	Después de tocar pantalla completa, el video sigue a tu teléfono hacia cualquiera de los lados en horizontal, aunque la rotación automática esté desactivada.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Keep videos muted on volume keys that lets a full screen video turn to either landscape side.
+full screen video turning either way	giro del video en pantalla completa hacia ambos lados
 Swipe back on profiles	Deslizar para volver en perfiles
 Swiping right on a profile's photos or media tabs goes back, like the rest of the profile, instead of showing the previous photo or tab.	Deslizar a la derecha en las fotos o en las pestañas de contenido de un perfil vuelve atrás, como en el resto del perfil, en vez de mostrar la foto o pestaña anterior.
 Hide phone number	Ocultar número de teléfono
@@ -387,6 +387,12 @@ Removes the Telegram Features row from Settings and Invite Friends from Contacts
 Add Repeat to the message menu	Añadir Repetir al menú de mensajes
 Keep deleted messages	Conservar los mensajes eliminados
 Messages others delete stay in your chat on this phone, marked deleted next to the time. Your own deletes and disappearing messages work as usual.	Los mensajes que otros eliminan se quedan en tu chat en este teléfono, marcados como eliminados junto a la hora. Tus propias eliminaciones y los mensajes que desaparecen funcionan como siempre.
+# context: a second switch under Keep deleted messages (#25). Turned on, the word "deleted" that marks a kept message next to its time is drawn in red.
+Show deleted in red	Mostrar eliminado en rojo
+# context: that switch's summary. "deleted" is the label shown next to the time, "Keep deleted messages" the name of the switch above it.
+The deleted label next to a kept message's time turns red, so it stands out in the chat. Works with Keep deleted messages on.	La etiqueta eliminado junto a la hora de un mensaje conservado se pone roja, para que destaque en el chat. Funciona con Conservar los mensajes eliminados activado.
+# context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Keep deleted messages that draws the deleted label in red.
+red deleted label	la etiqueta eliminado en rojo
 # context: an action row under Keep deleted messages; a tap deletes every message that switch kept
 Clear kept messages	Borrar los mensajes conservados
 Deletes the messages this phone kept after others deleted them, in every account, the way Telegram would have.	Elimina los mensajes que este teléfono conservó después de que otros los eliminaran, en todas las cuentas, como lo habría hecho Telegram.
@@ -638,6 +644,10 @@ Tap to pick which UnifiedPush app to use.	Toca para elegir qué app de UnifiedPu
 Save downloaded files	Guardar archivos descargados
 # context: that switch's summary. "Download/Telegram" is a folder path and stays as it is. Chats that don't allow saving are ones whose owner turned on Telegram's content protection.
 Each file or song you download also goes to Download/Telegram on your phone, where file managers and other apps can open it. Files from secret chats and chats that don't allow saving stay in Telegram.	Cada archivo o canción que descargues también va a Download/Telegram en tu teléfono, donde los gestores de archivos y otras apps pueden abrirlo. Los archivos de chats secretos y de chats que no permiten guardar se quedan en Telegram.
+# context: a second switch under Save downloaded files (#29). Turned on, it also copies files from chats whose owner turned on Telegram's content protection. Secret chats stay excluded.
+Also save from chats that don't allow saving	Guardar también de chats que no permiten guardar
+# context: that switch's summary, a warning that it goes past the chat owner's choice. "Save downloaded files" is the name of the switch above it.
+With Save downloaded files on, files from chats whose owner turned off saving get copied too. Only use it where the owner is fine with you keeping a copy, since it goes past their setting. Secret chats still stay in Telegram.	Con Guardar archivos descargados activado, también se copian los archivos de chats cuyo dueño desactivó el guardado. Úsalo solo donde al dueño le parezca bien que guardes una copia, porque se salta su ajuste. Los chats secretos siguen quedándose en Telegram.
 # context: Folders by chat type, a switch on the Chat list page. Turning it on makes Telegram chat folders for each kind of chat.
 Folders by chat type	Carpetas por tipo de chat
 # context: that switch's summary. Private, Groups, Channels and Bots are the folder names, use the same words as their own entries.
@@ -723,22 +733,26 @@ Couldn't open notification settings. Open Android settings.	No se pudieron abrir
 Search only my chats	Buscar solo en mis chats
 Search finds your chats, contacts and messages from chats you're in, and nothing public. The Channels, Apps and Posts tabs go away, and a hashtag's public posts don't load.	La búsqueda encuentra tus chats, contactos y mensajes de los chats en los que estás, y nada público. Las pestañas Canales, Apps y Publicaciones desaparecen, y las publicaciones públicas de un hashtag no se cargan.
 public search lookups	búsquedas públicas
-# context: Settings lock row under Quick setups on the home page, its notes, and what a refused change says (#17).
+# context: Settings lock row on the Pause page, its notes, and what a refused change says (#17). For the first minutes after locking the row reads Unlock now and one tap takes the lock off (#23); %1$d is minutes.
 Lock HushTelegram settings	Bloquear la configuración de HushTelegram
-Makes every setting here read-only. To change one again, start an unlock here and wait 24 hours.	Hace que cada ajuste de aquí sea de solo lectura. Para volver a cambiar uno, inicia aquí el desbloqueo y espera 24 horas.
+Makes every setting here read-only. A tap within %1$d min unlocks them again. After that, unlocking takes 24 hours.	Hace que cada ajuste de aquí sea de solo lectura. Un toque en los próximos %1$d min lo desbloquea. Después, desbloquear lleva 24 horas.
+Unlock now	Desbloquear ahora
+Locked just now. Tap within %1$d min to unlock right away. After that, unlocking takes 24 hours.	Recién bloqueada. Toca en los próximos %1$d min para desbloquear al instante. Después, desbloquear lleva 24 horas.
 Start unlock	Iniciar desbloqueo
 Your settings are locked. Tap to start the 24-hour wait. You can cancel it while it runs.	Tu configuración está bloqueada. Toca para iniciar la espera de 24 horas. Puedes cancelarla mientras dura.
 Cancel unlock	Cancelar desbloqueo
 Settings unlock in %1$d h %2$d min. Tap to cancel and keep them locked.	La configuración se desbloquea en %1$d h %2$d min. Toca para cancelar y mantenerla bloqueada.
-Settings locked. Unlocking takes 24 hours.	Configuración bloqueada. Desbloquearla lleva 24 horas.
+Settings locked. Changed your mind? Tap again within %1$d min.	Configuración bloqueada. ¿Cambiaste de idea? Toca de nuevo en %1$d min.
+Settings unlocked. They change as usual again.	Configuración desbloqueada. Ya puedes cambiarla como siempre.
 Unlock started. Settings open in 24 hours unless you cancel.	Desbloqueo iniciado. La configuración se abre en 24 horas si no lo cancelas.
 Unlock canceled. Settings stay locked.	Desbloqueo cancelado. La configuración sigue bloqueada.
 Couldn't change the lock. Try again in a moment.	No se pudo cambiar el bloqueo. Inténtalo de nuevo en un momento.
 Settings are locked. They unlock in %1$d h %2$d min.	La configuración está bloqueada. Se desbloquea en %1$d h %2$d min.
 Settings are locked. Tap Start unlock, then wait 24 hours.	La configuración está bloqueada. Toca Iniciar desbloqueo y espera 24 horas.
+Settings are locked. Tap Unlock now within %1$d min.	Configuración bloqueada. Toca Desbloquear ahora en los próximos %1$d min.
 # context: Export settings row, its first sentence: what a settings file holds. The sentence after it lists what the file leaves out.
 Saves your switches, filter lists, sticker size and chat list emoji to a file, for all the accounts in this Telegram app. Your chats, drafts and kept messages aren't in it.	Guarda en un archivo tus interruptores, listas de filtros, tamaño de stickers y emoji de la lista de chats, para todas las cuentas de esta app de Telegram. Tus chats, borradores y mensajes conservados no van en él.
-# context: Export settings row. %1$s is a list joined the language's own way: row titles as they show (Pause HushTelegram, Debug logging, Check for new HushTelegram releases, Lock HushTelegram settings, Quick setups on the home page, UnifiedPush notifications, Folders by chat type) and the lowercase phrase below it, which ends the list.
+# context: Export settings row. %1$s is a list joined the language's own way: row titles as they show (Pause HushTelegram, Debug logging, Check for new HushTelegram releases, Lock HushTelegram settings, Settings look, UnifiedPush notifications, Folders by chat type) and the lowercase phrase below it, which ends the list.
 Left out of the file: %1$s.	Fuera del archivo: %1$s.
 the translation service, its key and the chats you turned translation on for	el servicio de traducción, su clave y los chats en los que activaste la traducción
 # context: Sentences added after a description to say which account it works on. "Both" is turning Folders by chat type on and turning it off. The last one closes the About page's Accounts row.
@@ -857,3 +871,9 @@ Couldn't save the folder. Try again in a moment.	No se pudo guardar la carpeta. 
 Couldn't read your folders.	No se pudieron leer tus carpetas.
 # context: Lowercase noun phrase filling %1$s or %2$s in "This patched app changes %1$s but not %2$s." It names the part of Hide folder tab counters that opens the chat list on a picked folder
 which folder the chat list opens on	carpeta en la que se abre la lista de chats
+# context: Chat list page switch title, under Hide Contacts tab. When on, the round pencil button (new message) on the chat list is removed.
+Hide new message button	Ocultar el botón de nuevo mensaje
+# context: Summary under that switch. The menu is the side menu or Telegram's own menu; search is the chat list's search.
+Removes the round pencil button from the chat list. Start a chat from the menu or search. Restart Telegram to see the change.	Quita el botón redondo del lápiz de la lista de chats. Inicia un chat desde el menú o la búsqueda. Reinicia Telegram para ver el cambio.
+# context: Lowercase noun phrase in a status line. It names the part of Hide Contacts tab that removes the round pencil (new message) button from the chat list.
+new message button	botón de nuevo mensaje

@@ -1,6 +1,5 @@
 package app.template.patches.futbin.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
@@ -8,6 +7,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_FUTBIN
+import app.template.patches.shared.addInstructionChecked
 import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
@@ -90,7 +90,7 @@ val disableAdsPatch = bytecodePatch(
         val anzuInit = AnzuInitFingerprint.method
         val premiumResult = AnzuInitFingerprint.instructionMatches[1].index
         val register = anzuInit.instructions[premiumResult].let { it as OneRegisterInstruction }.registerA
-        anzuInit.addInstruction(premiumResult + 1, "${if (register < 16) "const/4" else "const/16"} v$register, 0x1")
+        anzuInit.addInstructionChecked(premiumResult + 1, "${if (register < 16) "const/4" else "const/16"} v$register, 0x1")
 
         // 6. Google Mobile Ads, belt and braces: the SDK never initializes, every load is a
         // no-op and the app-open preloader reports failure. The app calls no other MobileAds

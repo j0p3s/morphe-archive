@@ -8,7 +8,6 @@ A diagnostic report is already being saved.	Sudah ada laporan diagnostik yang se
 A file named %1$s in %2$s paused HushGram.	File bernama %1$s di %2$s menjeda HushGram.
 About	Tentang
 Add the source to saved photos	Tambahkan sumber ke foto tersimpan
-Adds an entry to the gallery sheet when you make a post that opens Android's own photo picker. You pick from your photos and any cloud gallery, and Instagram only gets what you choose instead of reaching across your whole library. Starts off.	Menambahkan entri ke lembar galeri saat kamu membuat postingan, yang membuka pemilih foto milik Android sendiri. Kamu memilih dari fotomu dan galeri cloud mana pun, dan Instagram hanya mendapat yang kamu pilih, bukan menjangkau seluruh galerimu. Mulai dalam keadaan mati.
 Ads and privacy	Iklan dan privasi
 Back	Kembali
 Before you sign in	Sebelum Anda masuk
@@ -93,7 +92,6 @@ There's no diagnostic data to clear.	Tidak ada data diagnostik yang dapat dihapu
 There's no diagnostic data to put back.	Tidak ada data diagnostik yang dapat dikembalikan.
 Try again, or go back to Instagram.	Coba lagi, atau kembali ke Instagram.
 Updates	Pembaruan
-Use the system photo picker	Gunakan pemilih foto sistem
 Version	Versi
 Version %1$s for Instagram %2$s	Versi %1$s untuk Instagram %2$s
 While you view anonymously, a story you've watched turns gray and moves to the end of the row, on this phone only. Instagram still isn't told you watched it.	Saat kamu melihat secara anonim, cerita yang sudah kamu tonton berubah abu-abu dan pindah ke ujung baris, hanya di ponsel ini. Instagram tetap tidak diberi tahu bahwa kamu menontonnya.
@@ -124,7 +122,7 @@ Stories	Cerita
 Hide Reels in the feed	Sembunyikan Reels di feed
 The rows of suggested reels between posts in your home feed. A reel someone you follow posts stays.	Deretan reel yang disarankan di antara postingan di feed beranda Anda. Reel yang diposting orang yang Anda ikuti tetap ada.
 Hide the Follow button	Sembunyikan tombol Ikuti
-The Follow button beside a reel's author. Their profile still has one.	Tombol Ikuti di samping pembuat reel. Profilnya tetap punya tombol itu.
+The Follow and Subscribe buttons beside a reel's author. Their profile still has them.	Tombol Ikuti dan Berlangganan di samping pembuat reel. Profilnya tetap punya tombol itu.
 Hide promotion buttons on reels	Sembunyikan tombol promosi di reel
 Hides the buttons that push Edits, templates, Meta AI and Ray-Ban Meta glasses. Live badges and state-controlled media labels stay.	Menyembunyikan tombol yang mempromosikan Edits, templat, Meta AI, dan kacamata Ray-Ban Meta. Lencana siaran langsung dan label media milik negara tetap ada.
 Hide friends' activity and comment previews	Sembunyikan aktivitas teman dan pratinjau komentar
@@ -631,7 +629,7 @@ Media link copied	Tautan media disalin
 No direct link for this one	Tidak ada tautan langsung untuk yang ini
 Posted %1$s	Diposting %1$s
 Size %1$d × %2$d	Ukuran %1$d × %2$d
-Adds Details to a feed post's menu. It shows when the post went up, who posted it, its media ID and the size Download saves, with buttons to copy the file link, username and caption.	Menambahkan Detail ke menu postingan di feed. Menampilkan kapan postingan diunggah, siapa yang mengunggah, ID medianya, dan ukuran yang disimpan Unduh, dengan tombol untuk menyalin tautan file, nama pengguna, dan keterangan.
+Adds Details to a feed post's or reel's menu. It shows when it went up, who posted it, its media ID and the size Download saves, with buttons to copy the file link, username and caption.	Menambahkan Detail ke menu postingan di feed atau reel. Menampilkan kapan diunggah, siapa yang mengunggah, ID medianya, dan ukuran yang disimpan Unduh, dengan tombol untuk menyalin tautan file, nama pengguna, dan keterangan.
 Caption	Keterangan
 Caption copied	Keterangan disalin
 Copy caption	Salin keterangan

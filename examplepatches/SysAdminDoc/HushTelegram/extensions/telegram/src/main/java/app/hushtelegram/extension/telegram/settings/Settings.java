@@ -186,6 +186,12 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushtelegram_keep_videos_muted", FALSE);
 
     /**
+     * A video put in full screen follows the phone to either landscape side (#27).
+     */
+    public static final BooleanSetting VIDEO_EITHER_LANDSCAPE =
+            new BooleanSetting("hushtelegram_video_either_landscape", FALSE);
+
+    /**
      * A swipe to the right on a profile's photos or media tabs goes back instead of to the previous
      * photo or tab.
      */
@@ -357,6 +363,12 @@ public class Settings extends BaseSettings {
             new BooleanSetting("hushtelegram_keep_deleted_messages", FALSE);
 
     /**
+     * The deleted label next to a kept message's time shows in red (#25).
+     */
+    public static final BooleanSetting RED_DELETED_LABEL =
+            new BooleanSetting("hushtelegram_red_deleted_label", FALSE);
+
+    /**
      * A sticker you tap asks Send or Cancel before it goes into the chat.
      */
     public static final BooleanSetting ASK_BEFORE_STICKER =
@@ -400,6 +412,13 @@ public class Settings extends BaseSettings {
     public static final BooleanSetting SIDE_MENU =
             new BooleanSetting("hushtelegram_drawer_menu", FALSE);
 
+    /**
+     * The chat list's round pencil button is hidden. Telegram sets it up when it builds the chat list,
+     * so a restart shows the change.
+     */
+    public static final BooleanSetting HIDE_NEW_MESSAGE =
+            new BooleanSetting("hushtelegram_hide_new_message", FALSE, true);
+
     /** Downloads take 512 KB pieces, 8 at a time, unless Telegram drops back to small ones itself. */
     public static final BooleanSetting FASTER_DOWNLOADS =
             new BooleanSetting("hushtelegram_faster_downloads", FALSE);
@@ -411,6 +430,14 @@ public class Settings extends BaseSettings {
     /** A file or song that finishes downloading gets a copy in Download/Telegram, unless saving it isn't allowed. */
     public static final BooleanSetting SAVE_DOWNLOADS =
             new BooleanSetting("hushtelegram_save_downloads", FALSE);
+
+    /**
+     * With {@link #SAVE_DOWNLOADS} on, a file from a chat or message whose owner turned off saving
+     * gets its copy too. Secret chats and self-destructing media still stay in Telegram. Starts off,
+     * since it goes past the owner's setting (#29).
+     */
+    public static final BooleanSetting SAVE_RESTRICTED_DOWNLOADS =
+            new BooleanSetting("hushtelegram_save_restricted_downloads", FALSE);
 
     /** Turned on, makes Private, Groups, Channels and Bots folders; turned off, removes the untouched ones it made. */
     public static final BooleanSetting CHAT_TYPE_FOLDERS =

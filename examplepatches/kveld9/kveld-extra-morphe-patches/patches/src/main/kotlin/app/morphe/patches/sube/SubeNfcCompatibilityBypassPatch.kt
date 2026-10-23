@@ -1,8 +1,10 @@
 package app.morphe.patches.sube
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.string
 import app.morphe.patches.shared.Constants.COMPATIBILITY_SUBE
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
@@ -11,10 +13,10 @@ import com.android.tools.smali.dexlib2.iface.reference.FieldReference
 
 private val nfcCompatibilityGateFingerprint = Fingerprint(
     classFingerprint = Fingerprint(
-        strings = listOf("com.nxp.mifare"),
+        strings = listOf(string("com.nxp.mifare", StringComparisonType.EQUALS)),
     ),
     returnType = "Lcom/nacionservicios/nssacommons/system/nfc/NfcCompatibility;",
-    strings = listOf("com.nxp.mifare"),
+    strings = listOf(string("com.nxp.mifare", StringComparisonType.EQUALS)),
 )
 
 @Suppress("unused")

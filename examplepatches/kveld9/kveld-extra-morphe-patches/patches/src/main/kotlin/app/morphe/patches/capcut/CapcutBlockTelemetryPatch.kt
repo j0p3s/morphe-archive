@@ -1,10 +1,12 @@
 package app.morphe.patches.capcut
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
+import app.morphe.patcher.string
 import app.morphe.patches.shared.Constants
 import app.morphe.patches.shared.childrenNamed
 import app.morphe.patches.shared.disableComponentsByName
@@ -198,11 +200,11 @@ private fun isSafeBooleanDispatcher(method: Method): Boolean {
 }
 
 private val appsFlyerDataflowFingerprint = Fingerprint(
-    strings = listOf("DataflowID"),
+    strings = listOf(string("DataflowID", StringComparisonType.EQUALS)),
 )
 
 private val appLogEventFingerprint = Fingerprint(
-    strings = listOf("event_v3"),
+    strings = listOf(string("event_v3", StringComparisonType.EQUALS)),
 )
 
 private fun BytecodePatchContext.hookAppsFlyerDelegate(

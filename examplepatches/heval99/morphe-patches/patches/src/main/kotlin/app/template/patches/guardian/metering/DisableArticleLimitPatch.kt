@@ -1,13 +1,13 @@
 package app.template.patches.guardian.metering
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_GUARDIAN
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.builder.BuilderInstruction
 import com.android.tools.smali.dexlib2.iface.Method
@@ -66,7 +66,7 @@ val disableArticleLimitPatch = bytecodePatch(
         meterApiState.apply {
             val locals = implementation!!.registerCount - parameterTypes.size - 1
             if (locals < 2) throw PatchException("GetMeterApiState has only $locals locals")
-            addInstructions(
+            addInstructionsChecked(
                 0,
                 """
                     new-instance v0, $none
@@ -123,7 +123,7 @@ val disableArticleLimitPatch = bytecodePatch(
         // Nothing reads a register after the return, so any other low register holds the flag.
         val flag = if (register == 0) 1 else 0
         meteringState.replaceInstruction(offlineIndex, "new-instance v$register, $none")
-        meteringState.addInstructions(
+        meteringState.addInstructionsChecked(
             offlineIndex + 1,
             """
                 const/4 v$flag, 0x0

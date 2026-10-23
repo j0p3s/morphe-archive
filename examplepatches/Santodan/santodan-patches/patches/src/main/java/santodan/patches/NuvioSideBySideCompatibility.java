@@ -1,5 +1,7 @@
 package santodan.patches;
 
+import software.santodan.nuvio.NuvioNative;
+
 import app.morphe.patcher.patch.ApkFileType;
 import app.morphe.patcher.patch.Compatibility;
 
@@ -9,14 +11,14 @@ public final class NuvioSideBySideCompatibility {
 
     public static Compatibility create() {
         return new Compatibility(
-            "com.nuvio.tv",
+            NuvioNative.PACKAGE_NAME,
             "NuvioTV",
             null,
             ApkFileType.APK,
             null,
             null,
             NuvioLayout.targets(),
-            false
+            app.morphe.patcher.patch.FormFactor.TV, false
         );
     }
 }

@@ -528,6 +528,13 @@ public class HushTelegramPreferenceFragmentTest {
             // The chat gets volume keys until the switch is turned on.
             assertFalse(Settings.KEEP_VIDEOS_MUTED.key,
                     ((SwitchPreference) page.findPreference(Settings.KEEP_VIDEOS_MUTED.key)).isChecked());
+            assertEquals("Full screen videos turn either way",
+                    String.valueOf(page.findPreference(Settings.VIDEO_EITHER_LANDSCAPE.key).getTitle()));
+            assertEquals("After you tap full screen, a video follows your phone to either landscape side, even with "
+                    + "auto-rotate off.", String.valueOf(page.findPreference(Settings.VIDEO_EITHER_LANDSCAPE.key).getSummary()));
+            // Full screen keeps Telegram's one side until the switch is turned on.
+            assertFalse(Settings.VIDEO_EITHER_LANDSCAPE.key,
+                    ((SwitchPreference) page.findPreference(Settings.VIDEO_EITHER_LANDSCAPE.key)).isChecked());
             assertEquals("Swipe back on profiles", String.valueOf(page.findPreference(Settings.SWIPE_BACK_ON_PROFILES.key).getTitle()));
             assertEquals("Swiping right on a profile's photos or media tabs goes back, like the rest of the profile, "
                     + "instead of showing the previous photo or tab.",
@@ -650,6 +657,15 @@ public class HushTelegramPreferenceFragmentTest {
             // Downloads stay in Telegram's own folder until the switch is turned on.
             assertFalse(Settings.SAVE_DOWNLOADS.key,
                     ((SwitchPreference) page.findPreference(Settings.SAVE_DOWNLOADS.key)).isChecked());
+            assertEquals("Also save from chats that don't allow saving",
+                    String.valueOf(page.findPreference(Settings.SAVE_RESTRICTED_DOWNLOADS.key).getTitle()));
+            assertEquals("With Save downloaded files on, files from chats whose owner turned off saving get copied too. "
+                    + "Only use it where the owner is fine with you keeping a copy, since it goes past their setting. "
+                    + "Secret chats still stay in Telegram.",
+                    String.valueOf(page.findPreference(Settings.SAVE_RESTRICTED_DOWNLOADS.key).getSummary()));
+            // The owner's setting holds until this one is turned on as well.
+            assertFalse(Settings.SAVE_RESTRICTED_DOWNLOADS.key,
+                    ((SwitchPreference) page.findPreference(Settings.SAVE_RESTRICTED_DOWNLOADS.key)).isChecked());
             assertEquals("Silence people outside your contacts", String.valueOf(page.findPreference(Settings.SILENCE_NON_CONTACTS.key).getTitle()));
             assertEquals("Private messages from people not in your contacts still show a notification, but without "
                     + "sound or vibration. Bots, reminders and login codes keep their sound.",
@@ -738,6 +754,13 @@ public class HushTelegramPreferenceFragmentTest {
             // Telegram removes a message another person deletes until the switch is turned on.
             assertFalse(Settings.KEEP_DELETED_MESSAGES.key,
                     ((SwitchPreference) page.findPreference(Settings.KEEP_DELETED_MESSAGES.key)).isChecked());
+            assertEquals("Show deleted in red", String.valueOf(page.findPreference(Settings.RED_DELETED_LABEL.key).getTitle()));
+            assertEquals("The deleted label next to a kept message's time turns red, so it stands out in the chat. "
+                    + "Works with Keep deleted messages on.",
+                    String.valueOf(page.findPreference(Settings.RED_DELETED_LABEL.key).getSummary()));
+            // The label keeps the time's color until the switch is turned on.
+            assertFalse(Settings.RED_DELETED_LABEL.key,
+                    ((SwitchPreference) page.findPreference(Settings.RED_DELETED_LABEL.key)).isChecked());
             assertEquals("Ask before sending a sticker", String.valueOf(page.findPreference(Settings.ASK_BEFORE_STICKER.key).getTitle()));
             assertEquals("Asks Send or Cancel before a sticker you tap goes into a chat. Cancel drops it. Scheduled "
                     + "stickers go out without asking.",
@@ -787,6 +810,12 @@ public class HushTelegramPreferenceFragmentTest {
                     String.valueOf(page.findPreference(Settings.SIDE_MENU.key).getSummary()));
             // A swipe on the chat list stays Telegram's until the switch is turned on.
             assertFalse(((SwitchPreference) page.findPreference(Settings.SIDE_MENU.key)).isChecked());
+            assertEquals("Hide new message button", String.valueOf(page.findPreference(Settings.HIDE_NEW_MESSAGE.key).getTitle()));
+            assertEquals("Removes the round pencil button from the chat list. Start a chat from the menu or search. "
+                            + "Restart Telegram to see the change.",
+                    String.valueOf(page.findPreference(Settings.HIDE_NEW_MESSAGE.key).getSummary()));
+            // The pencil button stays until the switch is turned on.
+            assertFalse(((SwitchPreference) page.findPreference(Settings.HIDE_NEW_MESSAGE.key)).isChecked());
             assertEquals("Ask before sending a GIF", String.valueOf(page.findPreference(Settings.ASK_BEFORE_GIF.key).getTitle()));
             assertEquals("Asks Send or Cancel before a GIF you tap goes into a chat. Cancel drops it. Scheduled GIFs "
                     + "go out without asking.",
@@ -846,11 +875,22 @@ public class HushTelegramPreferenceFragmentTest {
             assertNull(pageOf(controller).findPreference(HushTelegramPreferenceFragment.CLEAR_KEPT));
         }
         PatchFamily.inBuildForTests = EnumSet.of(PatchFamily.KEEP_DELETED_MESSAGES);
+        // A build whose label can't go red has no switch for it, and Clear sits right under Keep deleted messages.
+        PatchFamily.capabilitiesForTests = EnumSet.noneOf(PatchFamily.Capability.class);
+        try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
+            List<Preference> rows = new ArrayList<>();
+            collect(pageOf(controller).getPreferenceScreen(), rows);
+            assertEquals(-1, indexOfKey(rows, Settings.RED_DELETED_LABEL.key));
+            assertEquals(HushTelegramPreferenceFragment.CLEAR_KEPT, rows.get(indexOfKey(rows, Settings.KEEP_DELETED_MESSAGES.key) + 1).getKey());
+        }
+        PatchFamily.capabilitiesForTests = null;
         ShadowToast.reset();
         try (ActivityController<Activity> controller = Robolectric.buildActivity(Activity.class).setup()) {
             List<Preference> rows = new ArrayList<>();
             collect(pageOf(controller).getPreferenceScreen(), rows);
-            Preference clear = rows.get(indexOfKey(rows, Settings.KEEP_DELETED_MESSAGES.key) + 1);
+            int keep = indexOfKey(rows, Settings.KEEP_DELETED_MESSAGES.key);
+            assertEquals("the red switch sits under its family's", Settings.RED_DELETED_LABEL.key, rows.get(keep + 1).getKey());
+            Preference clear = rows.get(keep + 2);
             assertEquals(HushTelegramPreferenceFragment.CLEAR_KEPT, clear.getKey());
             assertEquals("Clear kept messages", String.valueOf(clear.getTitle()));
             assertEquals("Deletes the messages this phone kept after others deleted them, in every account, the way "

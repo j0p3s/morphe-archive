@@ -103,6 +103,7 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 | 447.0.0.55.81 |
 | :---: |
+| Download com.instagram.android v447.0.0.55.81 (APKM) arm64-v8a 120-480dpi versionCode 385311891 (BUNDLE3 S) from APKMirror |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
@@ -118,8 +119,9 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 **Supported versions:**
 
-| 12.35.0-prod.01 |
+| 12.36.1-prod.01 |
 | :---: |
+| Download com.twitter.android v12.36.1-prod.01 (APKM) arm64-v8a 120-640dpi versionCode 312361001 (BUNDLE 35 S) from APKMirror |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
@@ -136,6 +138,7 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 | 5.28.6 |
 | :---: |
+| Download com.nokoprint v5.28.6 (XAPK bundle) from APKPure |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
@@ -155,8 +158,9 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 **Supported versions:**
 
-| 19.8.0 |
+| 19.9.0 |
 | :---: |
+| Download com.lemon.lvoverseas v19.9.0 (APK) arm64-v8a nodpi versionCode 19900002 from APKMirror |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
@@ -182,6 +186,7 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 | 5.201.1.1809 |
 | :---: |
+| Download com.tranzmate v5.201.1.1809 (APKM) arm64-v8a 160-640dpi versionCode 1809 (BUNDLE 31 S) from APKMirror |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
@@ -201,6 +206,7 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 | 16.0.20604.20012 |
 | :---: |
+| Download com.microsoft.office.officehubrow v16.0.20604.20012 (APKM) arm64-v8a 120-480dpi versionCode 45489613 (BUNDLE 32 S) from APKMirror |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
@@ -218,6 +224,7 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 | 16.0.20527.20034 |
 | :---: |
+| Download com.microsoft.office.powerpoint v16.0.20527.20034 (APKM) arm64-v8a 120-480dpi versionCode 2005437911 (BUNDLE 5 S) from APKMirror |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
@@ -238,6 +245,7 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 | 2.7.25 |
 | :---: |
+| Download com.sube.app v2.7.25 (XAPK bundle) from APKPure |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
@@ -255,8 +263,9 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 **Supported versions:**
 
-| 3.1.14 |
+| 3.2.2 |
 | :---: |
+| Download com.hevy v3.2.2 (APKM) arm64-v8a 120-640dpi versionCode 3308730 (BUNDLE) from APKMirror |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
@@ -275,6 +284,7 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 | 1.38.0i |
 | :---: |
+| Download com.mi.earphone v1.38.0i (XAPK bundle) from APKPure |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|
@@ -300,6 +310,7 @@ To use them, add `kveld9/kveld-morphe-patches` as a second source in Morphe Mana
 
 | 2.2.2-rc0 |
 | :---: |
+| Download eu.darken.sdmse v2.2.2-rc0 (APK) FOSS-RELEASE versionCode 20202000 |
 
 | Patch | Description | Options |
 |----------|----------------|-----------|

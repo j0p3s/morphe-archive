@@ -149,12 +149,33 @@ class BraveSmokeTest {
         }
         assertTrue(binder != null, "BraveOriginPreferences listener was not rewritten")
 
-        // The listener also drives the native P3A / usage ping prefs (no Java gatekeeper).
+        // The listener also drives the native P3A / usage ping prefs (no Java gatekeeper) and
+        // the Web Discovery switch's profile-scoped native pref, written through the same
+        // (BrowserContextHandle)PrefService helper and Profile field that the Search engines
+        // screen's own "send_web_discovery" switch uses.
         assertTrue(
             binder!!.instructions().any { it.referencesString("brave.p3a.enabled") } &&
                 binder.instructions().any { it.referencesString("brave.stats.reporting_enabled") } &&
+                binder.instructions().any { it.referencesString("brave.web_discovery_enabled") } &&
                 binder.instructions().any { it.isPrefSetBoolean() },
-            "Origin listener does not write the native P3A / usage ping prefs",
+            "Origin listener does not write the native P3A / usage ping / web discovery prefs",
+        )
+        assertTrue(
+            binder.instructions().any { insn ->
+                val call = (insn as? ReferenceInstruction)?.reference as? MethodReference
+                call?.returnType == PREF_SERVICE &&
+                    call.parameterTypes.map(CharSequence::toString) ==
+                    listOf("Lorg/chromium/content_public/browser/BrowserContextHandle;")
+            },
+            "Origin listener does not reach the profile PrefService for the web discovery pref",
+        )
+        assertTrue(
+            binder.instructions().any { insn ->
+                insn.opcode == Opcode.IGET_OBJECT &&
+                    ((insn as ReferenceInstruction).reference as? FieldReference)?.type ==
+                    "Lorg/chromium/chrome/browser/profiles/Profile;"
+            },
+            "Origin listener does not load the fragment's Profile for the web discovery pref",
         )
 
         // ── Disable telemetry (experimental) ─────────────────────────────────────────────

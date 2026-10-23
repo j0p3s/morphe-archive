@@ -83,8 +83,10 @@ class FotMobSmokeTest {
         }
         assertForcedBoolean(staff, expected = false, label = "${manager.type}.${staff.name} (staff check)")
 
-        val getter = manager.methods.firstOrNull { it.isSubscriptionGetter() }
-            ?: error("subscription getter not found in ${manager.type}")
+        // Exactly one candidate, like the patch requires (it throws on none or several).
+        val getters = manager.methods.filter { it.isSubscriptionGetter() }
+        assertEquals(1, getters.size, "subscription getter candidates in ${manager.type}: ${getters.map { it.name }}")
+        val getter = getters.single()
         assertForcedBoolean(getter, expected = true, label = "${manager.type}.${getter.name} (subscription)")
 
         // App icons: the membership screen lambda (the only method with the NoEntitlement text)

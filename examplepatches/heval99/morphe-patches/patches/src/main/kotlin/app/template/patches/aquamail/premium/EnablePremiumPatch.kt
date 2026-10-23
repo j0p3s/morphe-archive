@@ -1,6 +1,5 @@
 package app.template.patches.aquamail.premium
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableClass
@@ -8,6 +7,7 @@ import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.aquamail.premium.GetLicenseDataFingerprint
 import app.template.patches.shared.Constants.COMPATIBILITY_AQUAMAIL
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.FieldReference
@@ -97,7 +97,7 @@ private fun BytecodePatchContext.patchLicenseSnapshot() {
         "LicenseManager.getLicenseData() has too few registers " +
             "(${getLicenseData.implementation!!.registerCount})"
     }
-    getLicenseData.addInstructions(
+    getLicenseData.addInstructionsChecked(
         0,
         """
             new-instance v0, $LICENSE_DATA
@@ -126,7 +126,7 @@ val enablePremiumPatch = bytecodePatch(
         LicenseLevelFingerprint.method.returnEarly(40)
 
         // getLicenseType() drives the plan label ("Free"); report the in-app license type.
-        LicenseTypeFingerprint.method.addInstructions(
+        LicenseTypeFingerprint.method.addInstructionsChecked(
             0,
             """
                 invoke-virtual {p0}, Lorg/kman/AquaMail/data/LicenseManager;->getLicenseTypeInApp()Lorg/kman/AquaMail/data/LicenseType;

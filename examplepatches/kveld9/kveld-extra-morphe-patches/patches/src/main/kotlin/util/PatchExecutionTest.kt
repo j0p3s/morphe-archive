@@ -90,7 +90,7 @@ enum class TargetApp(
         appName = "CapCut",
         packageName = Constants.CAPCUT_PACKAGE_NAME,
         candidateFilenames = listOf(
-            "com.lemon.lvoverseas_19.8.0-19800002_minAPI23(arm64-v8a,armeabi-v7a)(nodpi)_apkmirror.com.apk",
+            "com.lemon.lvoverseas_19.9.0-19900002_minAPI23(arm64-v8a,armeabi-v7a)(nodpi)_apkmirror.com.apk",
             "capcut_${Constants.CAPCUT_TARGET_VERSION}.apk"
         ),
         filePattern = Regex("(?i).*(?:capcut|lemon\\.lvoverseas).*\\.(?:apk|apkm|xapk)$"),
@@ -702,9 +702,6 @@ fun main(args: Array<String>) {
     val config = PatcherConfig(
         apkFile = actualApkFile,
         temporaryFilesPath = tempDir,
-        aaptBinaryPath = null,
-        frameworkFileDirectory = null,
-        useArsclib = false,
         keepArchitectures = setOf(CpuArchitecture.ARM64_V8A, CpuArchitecture.ARMEABI_V7A),
         useBytecodeMode = BytecodeMode.STRIP_FAST,
         verifier = NoOpDexVerifier

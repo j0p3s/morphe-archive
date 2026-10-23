@@ -2,6 +2,14 @@ name: Release
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
+      - dev
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
@@ -44,8 +52,11 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: ./gradlew :extensions:extension:checkstyle --no-daemon
 
-      # Semantic release runs its own Gradle build command.
-      # Only the main branch generates a release as specified by .releaserc
+      - name: Run tests
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: ./gradlew :patches:test :extensions:extension:test --no-daemon
+
       - name: Release
         uses: cycjimmy/semantic-release-action@v6
         id: release
@@ -59,18 +70,47 @@ jobs:
           subject-name: 'Morphe Patches ${{ steps.release.outputs.new_release_git_tag }}'
           subject-path: patches/build/libs/patches-*.mpp
 
-      - name: Close shipped app requests
-        if: steps.release.outputs.new_release_published == 'true'
+      - name: Label issues fixed in the pre-release
+        if: steps.release.outputs.new_release_published == 'true' && github.ref_name == 'dev'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           TAG: ${{ steps.release.outputs.new_release_git_tag }}
+          LAST: ${{ steps.release.outputs.last_release_git_tag }}
+        run: |
+          python3 .github/scripts/closed_issues.py "$REPO" "${LAST:+$LAST..}$TAG" |
+          while read -r n; do
+            [ "$(gh issue view "$n" --repo "$REPO" --json state --jq .state)" = OPEN ] || continue
+            gh issue edit "$n" --repo "$REPO" --add-label "in pre-release"
+            echo "labelled #$n"
+          done
+
+      - name: Remove the pre-release label from shipped issues
+        if: steps.release.outputs.new_release_published == 'true' && github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.release.outputs.new_release_git_tag }}
+          LAST: ${{ steps.release.outputs.last_release_git_tag }}
+        run: |
+          python3 .github/scripts/closed_issues.py "$REPO" "${LAST:+$LAST..}$TAG" |
+          while read -r n; do
+            gh issue edit "$n" --repo "$REPO" --remove-label "in pre-release" >/dev/null 2>&1 || true
+          done
+
+      - name: Close shipped app requests
+        if: steps.release.outputs.new_release_published == 'true' && github.ref_name == 'main'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ steps.release.outputs.new_release_git_tag }}
+          LAST: ${{ steps.release.outputs.last_release_git_tag }}
         run: |
           discussion=.github/actions/triage/discussion.sh
-          previous=$(git tag --sort=-v:refname | grep -vx "$TAG" | head -n 1)
-          git show "$previous:patches-list.json" > "$RUNNER_TEMP/previous.json"
+          git show "$LAST:patches-list.json" > "$RUNNER_TEMP/previous.json"
+          git show "$TAG:patches-list.json" > "$RUNNER_TEMP/current.json"
           bash -eo pipefail "$discussion" list app-requests > "$RUNNER_TEMP/requests.json"
-          python3 .github/scripts/shipped_requests.py "$RUNNER_TEMP/previous.json" patches-list.json "$RUNNER_TEMP/requests.json" |
+          python3 .github/scripts/shipped_requests.py "$RUNNER_TEMP/previous.json" "$RUNNER_TEMP/current.json" "$RUNNER_TEMP/requests.json" |
           while read -r row; do
             n=$(jq -r .number <<< "$row")
             app=$(jq -r .app <<< "$row")
@@ -92,8 +132,6 @@ jobs:
             echo "closed #$n ($app) as shipped in $TAG"
           done
 
-      # Always verify compilation when semantic-release did not publish a release.
-      # This covers non-main branches, chore commits, docs commits, etc.
       - name: Verify project compiles
         if: steps.release.outputs.new_release_published != 'true'
         env:

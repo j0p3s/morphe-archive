@@ -156,6 +156,55 @@ fun assertMobileAdsStaticsNeutralised(mobileAds: ClassDef, required: List<String
     }.forEach { assertForcedBoolean(it, expected = false, label = "MobileAds.putPublisherFirstPartyIdEnabled(Z)") }
 }
 
+/**
+ * Asserts every concrete void method called one of [names] on [type] returns at once, and that
+ * each name has at least one (an SDK hook that matched nothing must fail the test).
+ */
+fun assertAllReturnEarly(classes: List<ClassDef>, type: String, vararg names: String) {
+    val owner = classes.firstOrNull { it.type == type } ?: error("$type not found in emitted dexes")
+    for (name in names) {
+        val targets = owner.methods.filter { it.name == name && it.returnType == "V" && it.implementation != null }
+        assertTrue(targets.isNotEmpty(), "$type has no concrete void $name")
+        targets.forEach { assertReturnsEarlyVoid(it, label = "$type->$name(${it.parameterTypes.joinToString()})") }
+    }
+}
+
+/**
+ * AppLovin MAX banner views stay GONE (shared/misc/ads/MaxGmaAdHooks.kt hideMaxAdView):
+ * setVisibility(I) first loads GONE into its argument, and every constructor return-void is
+ * preceded by `const 0x8` + `invoke-virtual setVisibility(I)V`.
+ */
+fun assertMaxAdViewHidden(classes: List<ClassDef>) {
+    val type = "Lcom/applovin/mediation/ads/MaxAdView;"
+    val view = classes.firstOrNull { it.type == type } ?: error("$type not found in emitted dexes")
+
+    val setVisibility = view.method("setVisibility", listOf("I"))
+    val first = setVisibility.instructions().firstOrNull()
+    val p1 = setVisibility.implementation!!.registerCount - 1
+    assertTrue(
+        first is NarrowLiteralInstruction && first.narrowLiteral == 8 &&
+            (first as OneRegisterInstruction).registerA == p1,
+        "MaxAdView.setVisibility does not force GONE; first instruction is ${first?.opcode}"
+    )
+
+    val constructors = view.methods.filter { it.name == "<init>" && it.implementation != null }
+    assertTrue(constructors.isNotEmpty(), "MaxAdView has no constructor")
+    for (constructor in constructors) {
+        val insns = constructor.instructions()
+        val returns = insns.withIndex().filter { it.value.opcode == Opcode.RETURN_VOID }.map { it.index }
+        assertTrue(returns.isNotEmpty(), "MaxAdView constructor has no return-void")
+        for (index in returns) {
+            val call = (insns.getOrNull(index - 1) as? ReferenceInstruction)?.reference as? MethodReference
+            val gone = insns.getOrNull(index - 2)
+            assertTrue(
+                call?.definingClass == type && call.name == "setVisibility" &&
+                    gone is NarrowLiteralInstruction && gone.narrowLiteral == 8,
+                "MaxAdView.<init>(${constructor.parameterTypes.joinToString()}) returns at $index without hiding the view"
+            )
+        }
+    }
+}
+
 /** Asserts the method was replaced by `return FlowKt.flowOf(Boolean.TRUE)`. */
 fun assertReturnsTrueFlow(method: Method, label: String, diagnostics: String = "") {
     val insns = method.instructions()

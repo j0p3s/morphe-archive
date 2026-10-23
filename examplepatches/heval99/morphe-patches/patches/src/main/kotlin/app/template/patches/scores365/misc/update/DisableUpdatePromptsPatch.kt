@@ -29,8 +29,15 @@ val disableUpdatePromptsPatch = bytecodePatch(
                 instruction.opcode == Opcode.CONST_STRING &&
                     ((instruction as ReferenceInstruction).reference as StringReference).string in UPDATE_EXTRAS
             }
-            if (edits.size < UPDATE_EXTRAS.size) {
-                throw PatchException("${method.definingClass}.onCreate no longer reads both update extras")
+            // Compare the keys, not the count: two reads of one key must not pass for both.
+            val found = edits.map { (_, instruction) ->
+                ((instruction as ReferenceInstruction).reference as StringReference).string
+            }.toSet()
+            if (found != UPDATE_EXTRAS) {
+                throw PatchException(
+                    "${method.definingClass}.onCreate no longer reads both update extras " +
+                        "(missing ${UPDATE_EXTRAS - found})",
+                )
             }
             for ((index, instruction) in edits) {
                 val register = (instruction as OneRegisterInstruction).registerA

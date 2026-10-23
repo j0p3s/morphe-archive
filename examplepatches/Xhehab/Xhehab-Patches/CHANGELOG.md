@@ -1,3 +1,27 @@
+## [3.3.4](https://github.com/Xhehab/Xhehab-Patches/compare/v3.3.3...v3.3.4) (2026-10-22)
+
+### 🚀 Updated App Support
+
+* Video Player All Format 2.9.2 ([18b62aa](https://github.com/Xhehab/Xhehab-Patches/commit/18b62aae17eea495958269fe803fcb2ef569bf8f))
+
+## [3.3.3](https://github.com/Xhehab/Xhehab-Patches/compare/v3.3.2...v3.3.3) (2026-10-22)
+
+### 🚀 Updated App Support
+
+* Video Player All Format 2.9.2 ([2730be0](https://github.com/Xhehab/Xhehab-Patches/commit/2730be03d25732f5607de7e583161ab64c8c8467))
+
+## [3.3.2](https://github.com/Xhehab/Xhehab-Patches/compare/v3.3.1...v3.3.2) (2026-10-22)
+
+### 🚀 Updated App Support
+
+* THENX 6.7.1 ([bda94c8](https://github.com/Xhehab/Xhehab-Patches/commit/bda94c862efb35be621e6d563ba63699379c7954))
+
+## [3.3.1](https://github.com/Xhehab/Xhehab-Patches/compare/v3.3.0...v3.3.1) (2026-10-22)
+
+### 🚀 Updated App Support
+
+* Update TrainWise 1.5.0 and RP Hypertrophy 1.8.0 ([630d87b](https://github.com/Xhehab/Xhehab-Patches/commit/630d87b7894bd8e782c929afc0a600a7c2438a45))
+
 ## [3.3.0](https://github.com/Xhehab/Xhehab-Patches/compare/v3.2.0...v3.3.0) (2026-07-16)
 
 ### ✨ New Features

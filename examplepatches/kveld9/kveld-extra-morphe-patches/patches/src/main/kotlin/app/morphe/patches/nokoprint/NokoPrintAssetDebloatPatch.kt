@@ -92,6 +92,7 @@ val nokoPrintAssetDebloatPatch = resourcePatch(
         stripDirectory("assets/template")
 
         // 3. Strip ad configs, consent flows, and trackers in res/raw/
+        decode("res/raw*")
         val unneededRawFiles = listOf(
             "res/raw/applovin_consent_flow_privacy_policy.json",
             "res/raw/applovin_consent_flow_terms_of_service_and_privacy_policy.json",
@@ -129,6 +130,7 @@ val nokoPrintAssetDebloatPatch = resourcePatch(
         }
 
         // 5. Strip redundant third-party ad network & floating animation drawables (only binary images, never XML vector drawables)
+        decode("res/drawable*")
         val resDir = get("res")
         if (resDir.exists() && resDir.isDirectory) {
             val adDrawableTokens = listOf(

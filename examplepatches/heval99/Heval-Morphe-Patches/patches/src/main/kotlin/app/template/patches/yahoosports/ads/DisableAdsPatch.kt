@@ -1,10 +1,10 @@
 package app.template.patches.yahoosports.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_YAHOO_SPORTS
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 
 /**
@@ -23,7 +23,7 @@ val disableAdsPatch = bytecodePatch(
     execute {
         // 1. Every ad card hides itself instead of building and loading its ad view. CardCtrl
         // sets VISIBLE before setData, so GONE here is final.
-        SportsAdCardViewSetDataFingerprint.method.addInstructions(
+        SportsAdCardViewSetDataFingerprint.method.addInstructionsChecked(
             0,
             """
                 const/16 v0, 0x8
@@ -48,7 +48,7 @@ val disableAdsPatch = bytecodePatch(
         switches.forEach { it.returnEarly(false) }
 
         // 3. Videos carry no IMA ad tag, so no pre-roll is requested.
-        SapiMediaItemGetAdTagUriFingerprint.method.addInstructions(
+        SapiMediaItemGetAdTagUriFingerprint.method.addInstructionsChecked(
             0,
             """
                 const/4 v0, 0x0

@@ -366,12 +366,12 @@ body:
       description: Newest first.
       options:
         # generated:versions
+        - "1.58.0"
         - "1.57.0"
         - "1.56.0"
         - "1.55.0"
         - "1.54.0"
         - "1.53.0"
-        - "1.52.0"
         - "Older than these"
         # /generated
     validations:
@@ -458,6 +458,9 @@ body:
         - "CalcNote \u00b7 Unlock pro"
         - "Castle for TV \u00b7 Remove ads"
         - "Castle for TV \u00b7 Unlock premium"
+        - "Castle \u00b7 Disable update prompt"
+        - "Castle \u00b7 Remove ads"
+        - "Castle \u00b7 Spoof signature"
         - "Castle \u00b7 Unlock premium"
         - "Catzy \u00b7 Max intimacy level"
         - "Catzy \u00b7 Remove app protection"

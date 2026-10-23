@@ -5,13 +5,13 @@ import app.morphe.patcher.patch.AppTarget
 import app.morphe.patcher.patch.Compatibility
 
 object Constants {
-    // TrainWise — Workout & Fitness Coach
+    // TrainWise App
     val TRAINWISE_COMPATIBILITY = Compatibility(
-        name = "TrainWise - Workout & Fitness Coach",
+        name = "TrainWise App",
         packageName = "com.trainwiseapp.app",
         apkFileType = ApkFileType.XAPK,
         appIconColor = 0x00C853,
-        targets = listOf(AppTarget(version = "1.4.10"))
+        targets = listOf(AppTarget(version = "1.5.0"))
     )
 
     // STNDRD — Workout & Fitness Plans
@@ -38,7 +38,7 @@ object Constants {
         packageName = "video.player.videoplayer",
         apkFileType = ApkFileType.APKM,
         appIconColor = 0x18DC14,
-        targets = listOf(AppTarget(version = "2.7.3"))
+        targets = listOf(AppTarget(version = "2.9.2"))
     )
 
     // Boostcamp
@@ -92,7 +92,7 @@ object Constants {
         packageName = "com.rp.hypertrophy",
         apkFileType = ApkFileType.XAPK,
         appIconColor = 0xEC0915,
-        targets = listOf(AppTarget(version = "1.2.0"))
+        targets = listOf(AppTarget(version = "1.8.0"))
     )
 
     // THENX
@@ -101,7 +101,7 @@ object Constants {
         packageName = "com.sysops.thenx",
         apkFileType = ApkFileType.XAPK,
         appIconColor = 0xE53935,
-        targets = listOf(AppTarget(version = "6.7.0"))
+        targets = listOf(AppTarget(version = "6.7.1"))
     )
 
     // BASE Strength AI

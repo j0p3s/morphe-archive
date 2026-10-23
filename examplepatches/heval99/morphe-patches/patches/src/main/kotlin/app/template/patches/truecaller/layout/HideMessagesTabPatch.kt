@@ -1,7 +1,5 @@
 package app.template.patches.truecaller.layout
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.PatchException
@@ -10,6 +8,7 @@ import app.morphe.patcher.util.proxy.mutableTypes.MutableField.Companion.toMutab
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.template.patches.shared.Constants.COMPATIBILITY_TRUECALLER
+import app.template.patches.shared.addInstructionsChecked
 import app.template.patches.shared.addInstructionsWithLabelsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
@@ -44,7 +43,7 @@ val hideMessagesTabPatch = bytecodePatch(
         // 2. The default tab is always Calls, also when the user had made Messages the default
         // (long press on the tab). Otherwise the back button keeps "returning" to the missing
         // Messages tab instead of leaving the app.
-        DefaultTabFingerprint.method.addInstructions(
+        DefaultTabFingerprint.method.addInstructionsChecked(
             0,
             """
                 sget-object p0, $CALLS
@@ -122,7 +121,7 @@ val hideMessagesTabPatch = bytecodePatch(
                 null,
                 MutableMethodImplementation(6),
             ).toMutable().apply {
-                addInstructionsWithLabels(
+                addInstructionsWithLabelsChecked(
                     0,
                     """
                         const/4 v0, 0x0
@@ -166,7 +165,7 @@ val hideMessagesTabPatch = bytecodePatch(
                 )
             },
         )
-        builder.addInstructions(
+        builder.addInstructionsChecked(
             cast + 1,
             "invoke-static {v$barRegister, v$listRegister}, ${builderClass.type}->$SHOW_BAR_HELPER(${BOTTOM_BAR_VIEW}Ljava/util/List;)V",
         )

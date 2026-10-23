@@ -1,12 +1,12 @@
 package app.template.patches.tasker.premium
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_TASKER
 import app.morphe.util.returnEarly
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 
 @Suppress("unused")
@@ -23,7 +23,7 @@ val enableFullVersionPatch = bytecodePatch(
         }
         if (statusGetters.isEmpty()) throw PatchException("LicenseStatus getter not found")
         statusGetters.forEach {
-            it.addInstructions(
+            it.addInstructionsChecked(
                 0,
                 """
                     sget-object v0, $LICENSE_STATUS->Licensed:$LICENSE_STATUS

@@ -1,13 +1,13 @@
 package app.template.patches.flashscore.misc.betting
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod.Companion.toMutable
 import app.template.patches.shared.Constants.COMPATIBILITY_FLASHSCORE
+import app.template.patches.shared.addInstructionsChecked
+import app.template.patches.shared.addInstructionsWithLabelsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.builder.MutableMethodImplementation
@@ -76,7 +76,7 @@ private fun MutableMethod.replaceArrayListParameters() {
             invoke-direct/range {p${i + 1} .. p${i + 1}}, $ARRAY_LIST-><init>()V
         """.trimIndent()
     }
-    addInstructions(0, smali)
+    addInstructionsChecked(0, smali)
 }
 
 /**
@@ -219,7 +219,7 @@ val hideBettingContentPatch = bytecodePatch(
             null,
             MutableMethodImplementation(3),
         ).toMutable().apply {
-            addInstructionsWithLabels(
+            addInstructionsWithLabelsChecked(
                 0,
                 """
                     iget-object v0, p0, ${valueClass.type}->${keyField.name}:$keyType
@@ -234,7 +234,7 @@ val hideBettingContentPatch = bytecodePatch(
         }
         valueClass.methods.add(helper)
 
-        get.addInstructions(
+        get.addInstructionsChecked(
             0,
             """
                 invoke-static {p0}, ${valueClass.type}->$BETTING_HELPER_NAME(${valueClass.type})Ljava/lang/Object;
@@ -289,7 +289,7 @@ val hideBettingContentPatch = bytecodePatch(
                 null,
                 MutableMethodImplementation(6),
             ).toMutable().apply {
-                addInstructionsWithLabels(
+                addInstructionsWithLabelsChecked(
                     0,
                     """
                         if-nez p0, :copy
@@ -331,7 +331,7 @@ val hideBettingContentPatch = bytecodePatch(
             val parameters = constructor.parameterTypes.map { it.toString() }
             val setIndex = parameters.indexOf(SET)
             val tabs = "p${1 + parameters.take(setIndex).sumOf { if (it == "J" || it == "D") 2L else 1L }}"
-            constructor.addInstructions(
+            constructor.addInstructionsChecked(
                 0,
                 """
                     invoke-static/range {$tabs .. $tabs}, ${headerModel.type}->$TABS_HELPER_NAME($SET)$SET
@@ -364,7 +364,7 @@ val hideBettingContentPatch = bytecodePatch(
             }.map { (index, insn) -> index to (insn as OneRegisterInstruction).registerA }
             // Back to front, so the earlier indices stay valid.
             stores.reversed().forEach { (index, register) ->
-                constructor.addInstructions(index, "${if (register < 16) "const/4" else "const/16"} v$register, 0x0")
+                constructor.addInstructionsChecked(index, "${if (register < 16) "const/4" else "const/16"} v$register, 0x0")
             }
             forcedStores += stores.size
         }

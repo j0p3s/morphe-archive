@@ -1,4 +1,5 @@
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -33,14 +34,26 @@ class AlarmClockSmokeTest {
             allPatches = loadAllPatches(newestPatchBundle(root)),
         )
 
-        // The class is R8-renamed, so find the entitlement implementation by its shape.
-        val check = classes.flatMap { cls ->
+        // The class and method are R8-renamed, so find the entitlement check the way the patch
+        // does: the concrete (ShopFeature)Z holding "feature" that is the only implementation of
+        // its interface method.
+        val byType = classes.associateBy { it.type }
+        fun Method.signature() = name + parameterTypes.joinToString("", "(", ")") + returnType
+        val candidates = classes.flatMap { cls ->
             cls.methods.filter {
-                it.name == "d" && it.returnType == "Z" &&
+                it.returnType == "Z" && it.implementation != null &&
                     it.parameterTypes.map { p -> p.toString() } == listOf(SHOP_FEATURE) &&
-                    it.implementation != null
+                    it.instructions().any { insn -> insn.stringOrNull() == "feature" }
+            }.map { cls to it }
+        }
+        val implementations = classes.flatMap { it.interfaces }.groupingBy { it }.eachCount()
+        val check = candidates.filter { (cls, m) ->
+            cls.interfaces.any { type ->
+                implementations[type] == 1 && byType[type]?.methods?.any {
+                    it.implementation == null && it.signature() == m.signature()
+                } == true
             }
-        }.singleOrNull() ?: error("shop entitlement check d(ShopFeature)Z not found")
+        }.singleOrNull()?.second ?: error("sole-implementation shop entitlement check (ShopFeature)Z not found")
 
         val insns = check.instructions().toList()
         val first = insns.getOrNull(0)

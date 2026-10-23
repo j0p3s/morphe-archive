@@ -12,6 +12,10 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
+    base_branches:
+      - "^dev$"
+    ignore_title_keywords:
+      - "Merge branch `dev` to `main`"
     ignore_usernames:
       - dependabot[bot]
   path_filters:

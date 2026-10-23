@@ -1,8 +1,8 @@
 package app.template.patches.bluecoins.premium
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_BLUECOINS
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.builder.BuilderInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
@@ -55,7 +55,7 @@ val enablePremiumPatch = bytecodePatch(
             is RegisterRangeInstruction -> emitCall.startRegister + 1
             else -> error("Bluecoins: unexpected emit call format ${emitCall.opcode}")
         }
-        emitMethod.addInstructions(
+        emitMethod.addInstructionsChecked(
             emitIndex,
             "sget-object v$valueRegister, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;",
         )
@@ -65,7 +65,7 @@ val enablePremiumPatch = bytecodePatch(
         // "premium") beats the salted state, so the combine lambda itself must return TRUE. 13.1.79 has no override; when the use
         // case reads "versionOverride" the combine anchor is mandatory and fails loudly.
         if (PremiumUseCaseFingerprint.methodOrNull != null) {
-            PremiumOverrideCombineFingerprint.method.addInstructions(
+            PremiumOverrideCombineFingerprint.method.addInstructionsChecked(
                 0,
                 """
                     sget-object p1, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;

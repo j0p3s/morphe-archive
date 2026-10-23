@@ -2,8 +2,6 @@ package app.template.patches.guardian.misc.telemetry
 
 import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.Match
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
@@ -11,6 +9,8 @@ import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_GUARDIAN
+import app.template.patches.shared.addInstructionChecked
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 import org.w3c.dom.Element
 
@@ -97,7 +97,7 @@ val disableTelemetryPatch = bytecodePatch(
             ?: throw PatchException("Disable telemetry: $FIREBASE_ANALYTICS not found")
         analytics.filterNot { it.isStatic() }
             .singleVoid("FirebaseAnalytics.setAnalyticsCollectionEnabled", "Z")
-            .addInstruction(0, "const/4 p1, 0x0")
+            .addInstructionChecked(0, "const/4 p1, 0x0")
         analytics.singleVoid("FirebaseAnalytics.logEvent", "Landroid/os/Bundle;", STRING).returnEarly()
 
         // 5. Crashlytics (R8-renamed, found through getInstance()): collection cannot be switched
@@ -105,7 +105,7 @@ val disableTelemetryPatch = bytecodePatch(
         val crashlytics = single(CrashlyticsGetInstanceFingerprint, "FirebaseCrashlytics.getInstance")
             .classDef.methods.filterNot { it.isStatic() }
         crashlytics.singleVoid("FirebaseCrashlytics.setCrashlyticsCollectionEnabled", "Z")
-            .addInstruction(0, "const/4 p1, 0x0")
+            .addInstructionChecked(0, "const/4 p1, 0x0")
         crashlytics.singleVoid("FirebaseCrashlytics.log", STRING).returnEarly()
 
         // 6. The push "received" beacon returns Boolean.FALSE (its HTTP status) without a request.
@@ -113,7 +113,7 @@ val disableTelemetryPatch = bytecodePatch(
         single(PushReceivedBeaconFingerprint, "push received beacon").method.apply {
             val locals = implementation!!.registerCount - parameterTypes.size - (if (isStatic()) 0 else 1)
             if (locals < 1) throw PatchException("Disable telemetry: the push beacon has no local register")
-            addInstructions(
+            addInstructionsChecked(
                 0,
                 """
                     sget-object v0, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;

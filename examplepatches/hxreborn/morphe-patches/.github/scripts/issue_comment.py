@@ -121,7 +121,12 @@ def answers_needs_info(issue, comment):
     )
 
 
-def ping_reply():
+def ping_reply(issue):
+    if any(label["name"] == "in pre-release" for label in issue.get("labels") or []):
+        return (
+            f"{PING_MARKER}\n"
+            "A pre-release with this change is out, see the comment above. It ships in the next stable release once confirmed.\n"
+        )
     return (
         f"{PING_MARKER}\n"
         "There's no ETA for this request yet. Any updates will be posted here.\n"
@@ -170,7 +175,7 @@ if __name__ == "__main__":
     if issue["state"] == "open":
         if not is_early_status_ping(issue, comment):
             sys.exit(NO_REPLY)
-        print(ping_reply(), end="")
+        print(ping_reply(issue), end="")
     elif "--unreleased" in flags:
         if not (is_request(body) or is_release_question(body)):
             sys.exit(NO_REPLY)

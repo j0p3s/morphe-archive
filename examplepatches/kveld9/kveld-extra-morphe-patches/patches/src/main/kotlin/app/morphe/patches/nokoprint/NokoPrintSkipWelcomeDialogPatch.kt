@@ -1,9 +1,11 @@
 package app.morphe.patches.nokoprint
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.string
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.patches.shared.Constants
 import app.morphe.patches.shared.getReference
@@ -28,7 +30,7 @@ val nokoPrintSkipWelcomeDialogPatch = bytecodePatch(
             name = "onClick",
             returnType = "V",
             parameters = listOf("Landroid/content/DialogInterface;", "I"),
-            strings = listOf(PRIVACY_ACCEPTED_KEY),
+            strings = listOf(string(PRIVACY_ACCEPTED_KEY, StringComparisonType.EQUALS)),
         ).method
 
         val acceptInstructions = acceptHandlerMethod.implementation?.instructions?.toList()
@@ -45,7 +47,10 @@ val nokoPrintSkipWelcomeDialogPatch = bytecodePatch(
             definingClass = "Lcom/nokoprint/ActivityHome;",
             returnType = "V",
             parameters = listOf("Z"),
-            strings = listOf("purchase_sku", "purchase_store"),
+            strings = listOf(
+                string("purchase_sku", StringComparisonType.EQUALS),
+                string("purchase_store", StringComparisonType.EQUALS),
+            ),
         ).method
 
         requireLocalRegisters(builderMethod, 3)

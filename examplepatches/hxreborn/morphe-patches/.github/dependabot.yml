@@ -12,6 +12,7 @@ updates:
       prefix: "ci(deps)"
     labels: []
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
 
@@ -20,6 +21,7 @@ updates:
       prefix: "ci(deps)"
     labels: []
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly
     ignore:
@@ -35,5 +37,6 @@ updates:
     # scan needs the root build.gradle.kts; dependabot aborts without one
     labels: []
     directory: /
+    target-branch: dev
     schedule:
       interval: weekly

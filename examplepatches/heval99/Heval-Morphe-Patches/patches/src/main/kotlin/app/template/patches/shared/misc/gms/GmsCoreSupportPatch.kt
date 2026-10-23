@@ -24,7 +24,6 @@
 package app.template.patches.shared.misc.gms
 
 import app.morphe.patcher.Fingerprint
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.BytecodePatch
 import app.morphe.patcher.patch.BytecodePatchContext
@@ -38,6 +37,7 @@ import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.stringOption
 import app.morphe.util.returnEarly
+import app.template.patches.shared.addInstructionChecked
 import app.template.patches.shared.misc.gms.GmsCoreConstants.ACTIONS
 import app.template.patches.shared.misc.gms.GmsCoreConstants.AUTHORITIES
 import app.template.patches.shared.misc.gms.GmsCoreConstants.PERMISSIONS
@@ -173,6 +173,11 @@ fun gmsCoreSupportPatch(
             // app's method and the edit would silently miss this app. Drop any stale match first.
             GooglePlayUtilityFingerprint.clearMatch()
             ServiceCheckFingerprint.clearMatch()
+            // The per-app fingerprints are top-level objects too, so the same applies to them when
+            // one app is patched more than once in a process (the second run would get the first
+            // run's method). clearMatch() only drops the cached match; the next lookup re-resolves.
+            mainActivityOnCreateFingerprint.clearMatch()
+            earlyReturnFingerprints.forEach { it.clearMatch() }
 
             // Resolve every fingerprint first: several match on the GMS strings rewritten below.
             val mainActivityOnCreate = mainActivityOnCreateFingerprint.method
@@ -214,13 +219,24 @@ fun gmsCoreSupportPatch(
             routeGoogleIdRequestsToBeginSignIn()
 
             earlyReturnMethods.forEach { method ->
-                if (method.returnType == "Z") method.returnEarly(false) else method.returnEarly()
+                // Rule 2: an abstract match would crash returnEarly with an NPE.
+                if (method.implementation == null) {
+                    throw PatchException("${method.definingClass}->${method.name} has no body to return early from")
+                }
+                when (method.returnType) {
+                    "V" -> method.returnEarly()
+                    "Z" -> method.returnEarly(false)
+                    else -> throw PatchException(
+                        "${method.definingClass}->${method.name} returns ${method.returnType}; " +
+                            "early return supports only void and boolean methods",
+                    )
+                }
             }
 
             rewriteGmsStrings(renamedManifestStrings)
 
             // Verify GmsCore is installed and not battery-optimised. p0 = the activity.
-            mainActivityOnCreate.addInstruction(
+            mainActivityOnCreate.addInstructionChecked(
                 0,
                 "invoke-static/range { p0 .. p0 }, $GMS_CORE_EXTENSION_CLASS->" +
                     "checkGmsCore(Landroid/app/Activity;)V",
@@ -309,12 +325,20 @@ private fun BytecodePatchContext.disableFrameworkCredentialProvider() {
  * is affected: in builds that keep androidx's digital-credential or restore-credential branches
  * (R8 removed them in Sofascore), those report "Google Play Services update required" instead.
  * onClearCredential (sign-out) is left alone; it has its own fallback flow.
+ *
+ * Fails when onGetCredential has a body and the app ships the Identity Credentials client (its
+ * service action string, [IDENTITY_CREDENTIALS_SERVICE_ACTION]) but no version test was rewritten:
+ * that is the drifted-shape case, where Google ID requests would go to MicroG RE's failing chooser.
+ * 365Scores 14.9.7 has neither (a bare keep-rule stub and no client, only its R class).
  */
 private fun BytecodePatchContext.routeGoogleIdRequestsToBeginSignIn() {
     if (classDefByOrNull(PLAY_SERVICES_CREDENTIAL_PROVIDER) == null) return
+    var rewritten = 0
+    var hasBody = false
     for (method in mutableClassDefBy(PLAY_SERVICES_CREDENTIAL_PROVIDER).methods) {
         if (method.name != "onGetCredential") continue
         val instructions = method.implementation?.instructions?.toList() ?: continue
+        hasBody = true
         instructions.forEachIndexed { index, instruction ->
             val call = (instruction as? ReferenceInstruction)?.reference as? MethodReference ?: return@forEachIndexed
             if (call.definingClass != PLAY_SERVICES_CREDENTIAL_PROVIDER || call.name != "isAvailableOnDevice" ||
@@ -323,9 +347,20 @@ private fun BytecodePatchContext.routeGoogleIdRequestsToBeginSignIn() {
             val result = instructions.getOrNull(index + 1)
             if (result?.opcode != Opcode.MOVE_RESULT) return@forEachIndexed
             method.replaceInstruction(index + 1, "const/16 v${(result as OneRegisterInstruction).registerA}, 0x0")
+            rewritten++
         }
     }
+    // Runs before rewriteGmsStrings, so the action string still has its Google Play services name.
+    if (hasBody && rewritten == 0 && classDefByStrings(IDENTITY_CREDENTIALS_SERVICE_ACTION).isNotEmpty()) {
+        throw PatchException(
+            "The Identity Credentials client is present but no isAvailableOnDevice(I)Z test in " +
+                "$PLAY_SERVICES_CREDENTIAL_PROVIDER->onGetCredential was found",
+        )
+    }
 }
+
+/** The Identity Credentials client binds to this Google Play services action (see [ACTIONS]). */
+private const val IDENTITY_CREDENTIALS_SERVICE_ACTION = "com.google.android.gms.identitycredentials.service.START"
 
 /**
  * Exact string constants (old to new) that are rewritten anywhere in the dex. Upstream's rules:

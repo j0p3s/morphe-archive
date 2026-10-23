@@ -1,11 +1,11 @@
 package app.template.patches.boxbox.misc.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_BOXBOX
+import app.template.patches.shared.addInstructionChecked
 import app.template.patches.shared.misc.ads.neutraliseMobileAdsStatics
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -48,7 +48,7 @@ val disableAdsPatch = bytecodePatch(
                     field.definingClass != isAdsEnabled.definingClass
                 ) continue
                 val value = (instruction as TwoRegisterInstruction).registerA
-                constructor.addInstruction(
+                constructor.addInstructionChecked(
                     index,
                     // const/16 takes any 8-bit register; const/4 would fail above v15.
                     if (boxed) "sget-object v$value, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;"

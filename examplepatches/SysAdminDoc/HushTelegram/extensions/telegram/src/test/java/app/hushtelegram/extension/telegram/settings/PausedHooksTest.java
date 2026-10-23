@@ -266,8 +266,9 @@ public class PausedHooksTest {
         probes.put(PatchFamily.HIDE_KEYBOARD_ON_SCROLL, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.ScrollKeyboardForTests.dragCloses()));
         // A volume key in a chat goes to the volume.
-        probes.put(PatchFamily.KEEP_VIDEOS_MUTED, Collections.singletonList(
-                () -> app.hushtelegram.extension.telegram.misc.VolumeKeysForTests.keyGoesToTheVolume()));
+        probes.put(PatchFamily.KEEP_VIDEOS_MUTED, Arrays.asList(
+                () -> app.hushtelegram.extension.telegram.misc.VolumeKeysForTests.keyGoesToTheVolume(),
+                () -> app.hushtelegram.extension.telegram.misc.VideoTurnForTests.turnsEitherWay()));
         // A swipe on a profile's photos goes back.
         probes.put(PatchFamily.SWIPE_BACK_ON_PROFILES, Collections.singletonList(
                 () -> !app.hushtelegram.extension.telegram.misc.SwipeBack.touchBlocks(true)));
@@ -306,9 +307,11 @@ public class PausedHooksTest {
                 () -> app.hushtelegram.extension.telegram.misc.DownloadSpeed.fast(false),
                 () -> app.hushtelegram.extension.telegram.misc.DataSaverDownloadsForTests.holdsOnMeteredDataSaver(),
                 () -> app.hushtelegram.extension.telegram.misc.DataSaverDownloadsForTests.holdsMaskOnMeteredDataSaver()));
-        // A finished file from a message is queued for a copy in Download/Telegram.
-        probes.put(PatchFamily.SAVE_DOWNLOADS, Collections.singletonList(
-                () -> app.hushtelegram.extension.telegram.misc.SaveDownloadsForTests.queuesACopy()));
+        // A finished file from a message is queued for a copy in Download/Telegram, and so is one from
+        // a chat that doesn't allow saving.
+        probes.put(PatchFamily.SAVE_DOWNLOADS, Arrays.asList(
+                () -> app.hushtelegram.extension.telegram.misc.SaveDownloadsForTests.queuesACopy(),
+                () -> app.hushtelegram.extension.telegram.misc.SaveDownloadsForTests.queuesARestrictedCopy()));
         // Flipping the switch on asks Telegram for the folders.
         probes.put(PatchFamily.CHAT_TYPE_FOLDERS, Collections.singletonList(
                 () -> app.hushtelegram.extension.telegram.misc.ChatTypeFoldersForTests.asksForFolders()));
@@ -348,9 +351,10 @@ public class PausedHooksTest {
                 () -> app.hushtelegram.extension.telegram.misc.MessageMenuForTests.copyPhotoOn(),
                 () -> app.hushtelegram.extension.telegram.misc.MessageMenuForTests.detailsOn(),
                 () -> app.hushtelegram.extension.telegram.misc.MessageMenuForTests.quickForwardOn()));
-        // A message another person deletes stays on the phone.
-        probes.put(PatchFamily.KEEP_DELETED_MESSAGES, Collections.singletonList(
-                () -> app.hushtelegram.extension.telegram.misc.KeepDeleted.on()));
+        // A message another person deletes stays on the phone, and its deleted label can be red.
+        probes.put(PatchFamily.KEEP_DELETED_MESSAGES, Arrays.asList(
+                () -> app.hushtelegram.extension.telegram.misc.KeepDeleted.on(),
+                () -> app.hushtelegram.extension.telegram.misc.KeepDeletedForTests.paintsRed()));
         // A sticker, a GIF, a voice or video message and a call each ask first, under their own switches.
         probes.put(PatchFamily.ASK_BEFORE_STICKER, Arrays.asList(
                 () -> app.hushtelegram.extension.telegram.misc.SendConfirmForTests.stickerOn(),
@@ -370,7 +374,8 @@ public class PausedHooksTest {
         // keeps Telegram's 72 dp height.
         probes.put(PatchFamily.HIDE_CONTACTS_TAB, Arrays.asList(
                 () -> app.hushtelegram.extension.telegram.misc.MainTabs.blocksSwipe(0, true),
-                () -> app.hushtelegram.extension.telegram.misc.MainTabs.barHeight(72) != 72));
+                () -> app.hushtelegram.extension.telegram.misc.MainTabs.barHeight(72) != 72,
+                () -> app.hushtelegram.extension.telegram.misc.MainTabsForTests.hidesNewMessage()));
         // The gallery's camera stays off until a tap, and a tap that asks for the permission wakes it.
         probes.put(PatchFamily.GALLERY_CAMERA_ON_TAP, Arrays.asList(
                 () -> app.hushtelegram.extension.telegram.misc.GalleryCamera.keepCameraOff(new Object()),

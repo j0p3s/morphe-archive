@@ -4,7 +4,6 @@
 // array (what the method itself returns on error) instead of null.
 package app.template.patches.hevy.misc.telemetry
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.BytecodePatchContext
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
@@ -12,6 +11,7 @@ import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_HEVY
+import app.template.patches.shared.addInstructionsChecked
 import org.w3c.dom.Element
 
 // Push (Firebase Messaging) and purchases (RevenueCat) must keep working; nothing here touches them.
@@ -76,7 +76,7 @@ val blockTelemetryPatch = bytecodePatch(
         // 1. Sentry: initNativeSdk(ReadableMap, Promise) resolves true, as it does after a
         // successful init, without calling SentryAndroid.init.
         methods(SENTRY_MODULE, "initNativeSdk", listOf("Lcom/facebook/react/bridge/ReadableMap;", PROMISE)).forEach {
-            it.addInstructions(
+            it.addInstructionsChecked(
                 0,
                 """
                     sget-object v0, Ljava/lang/Boolean;->TRUE:Ljava/lang/Boolean;
@@ -98,7 +98,7 @@ val blockTelemetryPatch = bytecodePatch(
         methods(AMPLITUDE_CONTEXT, "isLimitAdTrackingEnabled").forEach { it.returnEarly(true) }
         methods(AMPLITUDE_CONTEXT, "prefetch").forEach { it.returnEarly() }
         methods(AMPLITUDE_MODULE, "getLegacyEvents", listOf("Ljava/lang/String;", "Ljava/lang/String;", PROMISE)).forEach {
-            it.addInstructions(
+            it.addInstructionsChecked(
                 0,
                 """
                     new-instance v0, Lcom/facebook/react/bridge/WritableNativeArray;

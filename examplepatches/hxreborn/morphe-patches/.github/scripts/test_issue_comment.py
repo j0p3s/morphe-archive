@@ -137,10 +137,15 @@ ok = not is_early_status_ping(ISSUE, {"created_at": "2026-11-09T06:22:47Z", "bod
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} a ping after 30 days gets no reply")
 
-text = ping_reply()
+text = ping_reply({"labels": []})
 ok = text == PING_MARKER + "\nThere's no ETA for this request yet. Any updates will be posted here.\n"
 failures += not ok
 print(f"{'ok  ' if ok else 'FAIL'} the ping reply is the marker and the no-ETA sentence")
+
+text = ping_reply({"labels": [{"name": "in pre-release"}]})
+ok = text == PING_MARKER + "\nA pre-release with this change is out, see the comment above. It ships in the next stable release once confirmed.\n"
+failures += not ok
+print(f"{'ok  ' if ok else 'FAIL'} a ping on an issue in pre-release points at the pre-release comment")
 
 PATCHES = {"version": "1.49.1", "patches": [{"compatiblePackages": [
     {"name": "Proton VPN", "packageName": "ch.protonvpn.android", "targets": [{"version": "5.20.39.0"}, {"version": "5.20.57.0"}]},
@@ -333,7 +338,9 @@ def reply_script():
 UNRELEASED_SHA = "a" * 40
 RELEASED_SHA = "b" * 40
 MISSING_SHA = "c" * 40
-SHAS = {"known": [UNRELEASED_SHA, RELEASED_SHA], "tags": {RELEASED_SHA: ["v1.2.0"], UNRELEASED_SHA: []}}
+PRERELEASED_SHA = "d" * 40
+SHAS = {"known": [UNRELEASED_SHA, RELEASED_SHA, PRERELEASED_SHA],
+        "tags": {RELEASED_SHA: ["v1.2.0"], UNRELEASED_SHA: [], PRERELEASED_SHA: ["v1.3.0-dev.1"]}}
 
 
 def run_reply(body, state="closed", closing=(), bot_comments=(), **extra):
@@ -362,6 +369,7 @@ UNRELEASED_SENT = UNRELEASED_MARKER + "\nx"
 REPLY_CASES = [
     ("an ETA question on an unreleased closed issue gets the unreleased line", dict(body=ETA, closing=[UNRELEASED_SHA]), 0, UNRELEASED_MARKER),
     ("an ETA question once the commit is tagged gets the redirect", dict(body=ETA, closing=[RELEASED_SHA]), 0, CLOSED_MARKER),
+    ("a commit tagged only by a pre-release still gets the unreleased line", dict(body=ETA, closing=[PRERELEASED_SHA]), 0, UNRELEASED_MARKER),
     ("an issue closed without a commit keeps the redirect", dict(body=ETA, closing=["-"]), 0, CLOSED_MARKER),
     ("a closing commit missing from the clone keeps the redirect", dict(body=ETA, closing=[MISSING_SHA]), 0, CLOSED_MARKER),
     ("the latest close counts after a reopen", dict(body=ETA, closing=[RELEASED_SHA, UNRELEASED_SHA]), 0, UNRELEASED_MARKER),

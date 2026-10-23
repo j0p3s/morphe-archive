@@ -53,7 +53,79 @@ public final class ChatBoundaryProbe {
         call(chat,"onPage",pageTypes,current,current.url);
         call(chat,"onPageDisposed",new Class<?>[]{WebView.class},current);
         ProbeSupport.check(!pages.containsKey(current) && ((java.lang.ref.WeakReference<?>)ProbeSupport.field(chat,"active").get(null)).get()==null,"native destroy ends authority without next page");
+        setting("emotes_7tv",false);
+        ProbeSupport.check(Boolean.FALSE.equals(call(chat,"onMessage",messageTypes,current,end.toString(),current.url)),"with 7TV off no bridge message is taken");
+        setting("emotes_7tv",true);
         System.out.println("PASS: native WebView lifecycle, scoped disposal and late catalog guards");
+    }
+    /** Chat keywords: the page's line batches through the real KickChat and ChatFilter, verdicts back to the page. */
+    static void keywords()throws Exception {
+        Class<?> chat=c(CHAT);Class<?>[] pageTypes={WebView.class,String.class},messageTypes={WebView.class,String.class,String.class};
+        setting("emotes_7tv",false);setting("chat_keywords",true);setting("chat_highlight_mentions",true);
+        setting("chat_highlight_vibrate",false);
+        ProbeSupport.setting("chat_highlight_words","clutch, gg wp");ProbeSupport.setting("chat_blocked_words","spoiler");
+        ProbeSupport.setting("chat_blocked_users","Troll, @handle-only");
+        Capture view=(Capture)ProbeSupport.allocate(Capture.class);
+        view.url=page("{\"channelId\":668,\"selfUser\":{\"id\":1,\"slug\":\"me-too\",\"username\":\"Me_Too\"}}");
+        call(chat,"onPage",pageTypes,view,view.url);
+        JSONObject options=new JSONObject(view.source.substring(view.source.lastIndexOf("\n(")+2,view.source.length()-2));
+        ProbeSupport.check(options.getBoolean("keywords") && options.has("generation"),"keywords option and page generation");
+        String generation=options.getString("generation");
+        org.json.JSONArray items=new org.json.JSONArray()
+            .put(line("a","Troll","troll","hello"))
+            .put(line("b","Someone","handle-only","hi"))
+            .put(line("c","Viewer","viewer","no spoiler please"))
+            .put(line("d","Viewer","viewer","hey @Me_Too look"))
+            .put(line("e","Me_Too","me-too","talking about me-too myself"))
+            .put(line("f","Viewer","viewer","that was CLUTCH"))
+            .put(line("g","Viewer","viewer","gg wp everyone"))
+            .put(line("h","Viewer","viewer","clutches and ggs"))
+            .put(line("bad id\"","Viewer","viewer","clutch"));
+        JSONObject batch=new JSONObject().put("type","lurkKeywords").put("generation",generation).put("items",items);
+        view.source=null;
+        ProbeSupport.check(Boolean.TRUE.equals(call(chat,"onMessage",messageTypes,view,batch.toString(),view.url)),"keyword batch is taken");
+        String js=view.source;
+        ProbeSupport.check(js!=null && js.startsWith("window.lurkChat && window.lurkChat.verdicts && window.lurkChat.verdicts("),"verdicts go back to the page");
+        JSONObject verdicts=new JSONObject(js.substring(js.indexOf("verdicts(")+9,js.length()-2));
+        ProbeSupport.check(verdicts.getInt("a")==2 && verdicts.getInt("b")==2 && verdicts.getInt("c")==2,"blocked user by name, by handle, and a blocked word hide");
+        ProbeSupport.check(verdicts.getInt("d")==1 && !verdicts.has("e"),"a mention of the signed-in user is tinted, their own message isn't");
+        ProbeSupport.check(verdicts.getInt("f")==1 && verdicts.getInt("g")==1 && !verdicts.has("h"),"highlight words and phrases, whole words, any case");
+        ProbeSupport.check(verdicts.length()==6,"no verdict for plain lines or a malformed ID");
+        view.source=null;
+        call(chat,"onMessage",messageTypes,view,batch.put("generation","stale").toString(),view.url);
+        ProbeSupport.check(view.source==null,"a batch from another page generation gets no verdicts");
+        call(chat,"onMessage",messageTypes,view,batch.put("generation",generation).toString(),"https://example.invalid/");
+        ProbeSupport.check(view.source==null,"a batch from a foreign origin gets no verdicts");
+        setting("chat_keywords",false);
+        ProbeSupport.check(Boolean.FALSE.equals(call(chat,"onMessage",messageTypes,view,batch.toString(),view.url)),"with keywords and 7TV off the bridge message is left to Kick");
+        call(chat,"onPageDisposed",new Class<?>[]{WebView.class},view);
+        System.out.println("PASS: Chat keywords batches, ChatFilter verdicts, page and origin guards");
+    }
+    /** Chat timestamps, text size and compact chat reach the page as options, each only when set. */
+    static void look()throws Exception {
+        Class<?>[] pageTypes={WebView.class,String.class};
+        setting("chat_timestamps",true);ProbeSupport.setting("chat_text_size","20");setting("chat_compact",true);
+        Capture view=(Capture)ProbeSupport.allocate(Capture.class);
+        call(c(CHAT),"onPage",pageTypes,view,page("{}"));
+        JSONObject options=new JSONObject(view.source.substring(view.source.lastIndexOf("\n(")+2,view.source.length()-2));
+        ProbeSupport.check(options.getBoolean("timestamps") && options.getInt("textSize")==20 && options.getBoolean("compact"),"timestamps, text size and compact reach the page");
+        if(ProbeSupport.registered("chat_timestamp_format")){
+            ProbeSupport.check(options.getInt("clock")==0,"the 24-hour clock reaches the page by default");
+            ProbeSupport.setting("chat_timestamp_format","1");
+            call(c(CHAT),"onPageStarted",pageTypes,view,page("{}"));
+            options=new JSONObject(view.source.substring(view.source.lastIndexOf("\n(")+2,view.source.length()-2));
+            ProbeSupport.check(options.getInt("clock")==1,"the 12-hour clock reaches the page");
+            ProbeSupport.setting("chat_timestamp_format","0");
+        }
+        setting("chat_timestamps",false);ProbeSupport.setting("chat_text_size","99");setting("chat_compact",false);
+        view.source=null;
+        call(c(CHAT),"onPage",pageTypes,view,page("{}"));
+        ProbeSupport.check(view.source==null,"switched off, and an out-of-range size, add nothing");
+        ProbeSupport.setting("chat_text_size","0");
+        System.out.println("PASS: chat look options");
+    }
+    static JSONObject line(String id,String name,String slug,String text)throws Exception{
+        return new JSONObject().put("id",id).put("name",name).put("slug",slug).put("text",text);
     }
     static JSONObject emit(String name,String url)throws Exception {
         Capture capture=(Capture)ProbeSupport.allocate(Capture.class);
@@ -90,12 +162,65 @@ public final class ChatBoundaryProbe {
         ProbeSupport.check(result==response && proceeds[0]==1,"response identity and one proceed");
         ProbeSupport.check(json.equals(call(body,"string",new Class<?>[]{})),"peek preserves unread response body");
     }
+    /**
+     * Anonymous chat: with its switch on, KickHttp refuses what posts to a chat on Kick's API (a message, a reply or a
+     * quick emote, and a celebration's action) before it reaches the network, and lets everything else through; with
+     * it off (and 7TV off) no interceptor is added.
+     */
+    static void anonymous()throws Exception {
+        if(!ProbeSupport.registered("chat_anonymous")){System.out.println("SKIP: Anonymous chat isn't in this APK");return;}
+        setting("emotes_7tv",false);setting("chat_anonymous",true);
+        Object b=builder();
+        call(c(HTTP),"withInterceptor",new Class<?>[]{c("okhttp3.OkHttpClient$Builder")},b);
+        List<?> interceptors=(List<?>)call(call(b,"build",new Class<?>[]{}),"interceptors",new Class<?>[]{});
+        ProbeSupport.check(interceptors.size()==1,"Anonymous chat adds one interceptor");
+        Object interceptor=interceptors.get(0);
+        Object body=call(c("okhttp3.RequestBody"),"create",new Class<?>[]{c("okhttp3.MediaType"),String.class},null,"{}");
+        String[][] cases={
+            {"POST","https://kick.com/api/v2/messages/send/123","blocked"},
+            {"POST","https://web.kick.com/api/v2/messages/send/123","blocked"},
+            {"POST","https://kick.com/api/v2/chatrooms/5/celebrations/abc/action","blocked"},
+            {"GET","https://kick.com/api/v2/messages/send/123","sent"},
+            {"POST","https://kick.com/api/v2/channels/xqc/follow","sent"},
+            {"POST","https://example.com/api/v2/messages/send/123","sent"},
+            {"POST","https://mobile.kick.com/api/v1/stream/1/playback","sent"},
+        };
+        for(String[] each:cases){
+            Object rb=c("okhttp3.Request$Builder").getConstructor().newInstance();
+            call(rb,"url",new Class<?>[]{String.class},each[1]);
+            call(rb,"method",new Class<?>[]{String.class,c("okhttp3.RequestBody")},each[0],each[0].equals("GET")?null:body);
+            Object request=call(rb,"build",new Class<?>[]{});
+            int[] proceeds={0};
+            Object chain=Proxy.newProxyInstance(c("okhttp3.Interceptor$Chain").getClassLoader(),new Class<?>[]{c("okhttp3.Interceptor$Chain")},(p,m,a)->{
+                if(m.getName().equals("request"))return request;
+                if(m.getName().equals("proceed")){proceeds[0]++;return null;}
+                throw new AssertionError("unexpected chain call " + m);
+            });
+            String outcome;
+            try{call(interceptor,"intercept",new Class<?>[]{c("okhttp3.Interceptor$Chain")},chain);outcome="sent";}
+            catch(InvocationTargetException e){
+                ProbeSupport.check(e.getCause() instanceof java.io.IOException,"a refused send fails as I/O: "+e.getCause());
+                outcome="blocked";
+            }
+            ProbeSupport.check(outcome.equals(each[2]) && proceeds[0]==(outcome.equals("sent")?1:0),
+                "Anonymous chat: "+each[0]+" "+each[1]+" was "+outcome+" with "+proceeds[0]+" proceeds");
+        }
+        setting("chat_anonymous",false);
+        b=builder();
+        call(c(HTTP),"withInterceptor",new Class<?>[]{c("okhttp3.OkHttpClient$Builder")},b);
+        interceptors=(List<?>)call(call(b,"build",new Class<?>[]{}),"interceptors",new Class<?>[]{});
+        ProbeSupport.check(interceptors.isEmpty(),"Anonymous chat off: no interceptor");
+        setting("emotes_7tv",true);
+        System.out.println("PASS: Anonymous chat refuses chat sends on Kick's API and passes everything else; off adds nothing");
+    }
     public static void main(String[] args){ProbeSupport.run("Kick native response-to-page options",()->{
         try(ZipFile apk=new ZipFile(args[0])){
             String script=new String(apk.getInputStream(apk.getEntry("assets/lurk-chat.js")).readAllBytes(),StandardCharsets.UTF_8);
             // Cache actual APK asset; no Android WebView renderer is needed to capture the bridge call.
             ProbeSupport.field(c(CHAT),"script").set(null,script+"\n");
         }
+        // Show deleted messages has its own scenario below; its option only asks the page for a report.
+        setting("chat_show_deleted",false);
         for(String key:new String[]{"emotes_7tv","chat_ignore_clears","hide_sub_messages","hide_host_messages","hide_reward_redemptions"})setting(key,true);
         response("https://kick.com/api/v2/channels/xqc","{\"id\":668,\"slug\":\"xqc\",\"user_id\":676}",200,true);
         JSONObject options=emit("full",page("{\"channelId\":668}"));
@@ -135,6 +260,12 @@ public final class ChatBoundaryProbe {
             ProbeSupport.check((options.has("hide")?options.getJSONArray("hide").length():0)==selectors[i],"independent hide selectors " + names[i]);
             setting(keys[i],false);
         }
+        setting("chat_show_deleted",true);options=emit("moderator-only",page("{}"));
+        ProbeSupport.check(options.getBoolean("moderatorView") && options.length()==1,"Show deleted messages alone only asks for its report");
+        setting("chat_show_deleted",false);
         lifecycle();
+        keywords();
+        look();
+        anonymous();
     });}
 }

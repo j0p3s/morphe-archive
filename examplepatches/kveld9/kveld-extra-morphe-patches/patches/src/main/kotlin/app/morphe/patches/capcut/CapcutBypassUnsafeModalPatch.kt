@@ -1,8 +1,10 @@
 package app.morphe.patches.capcut
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.string
 import app.morphe.patches.shared.Constants
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -11,7 +13,7 @@ import com.android.tools.smali.dexlib2.iface.reference.StringReference
 private object LynxUnsafeModalDefaultFingerprint : Fingerprint(
     definingClass = "Lcom/vega/lynx/LynxSchemaConfig;",
     name = "<init>",
-    strings = listOf("image_lynx_global_unsafe_pkg_modal"),
+    strings = listOf(string("image_lynx_global_unsafe_pkg_modal", StringComparisonType.CONTAINS)),
 )
 
 private const val UNSAFE_MODAL_URL =

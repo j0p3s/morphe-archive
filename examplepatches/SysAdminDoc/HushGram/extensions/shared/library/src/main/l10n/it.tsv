@@ -8,7 +8,6 @@ A diagnostic report is already being saved.	Un report diagnostico è già in fas
 A file named %1$s in %2$s paused HushGram.	Un file chiamato %1$s in %2$s ha messo in pausa HushGram.
 About	Informazioni
 Add the source to saved photos	Aggiungi l'origine alle foto salvate
-Adds an entry to the gallery sheet when you make a post that opens Android's own photo picker. You pick from your photos and any cloud gallery, and Instagram only gets what you choose instead of reaching across your whole library. Starts off.	Aggiunge una voce al pannello della galleria quando crei un post, che apre il selettore foto di Android. Scegli tra le tue foto e qualsiasi galleria nel cloud, e Instagram riceve solo ciò che scegli invece di accedere a tutta la tua libreria. Parte disattivato.
 Ads and privacy	Annunci e privacy
 Back	Indietro
 Before you sign in	Prima di accedere
@@ -93,7 +92,6 @@ There's no diagnostic data to clear.	Non ci sono dati diagnostici da cancellare.
 There's no diagnostic data to put back.	Non ci sono dati diagnostici da ripristinare.
 Try again, or go back to Instagram.	Riprova, oppure torna a Instagram.
 Updates	Aggiornamenti
-Use the system photo picker	Usa il selettore foto di sistema
 Version	Versione
 Version %1$s for Instagram %2$s	Versione %1$s per Instagram %2$s
 While you view anonymously, a story you've watched turns gray and moves to the end of the row, on this phone only. Instagram still isn't told you watched it.	Mentre guardi in modo anonimo, una storia che hai visto diventa grigia e passa in fondo alla fila, solo su questo telefono. Instagram non viene comunque informato che l'hai vista.
@@ -124,7 +122,7 @@ Stories	Storie
 Hide Reels in the feed	Nascondi i reel nel feed
 The rows of suggested reels between posts in your home feed. A reel someone you follow posts stays.	Le righe di reel suggeriti tra i post nel tuo feed della Home. Un reel pubblicato da qualcuno che segui resta.
 Hide the Follow button	Nascondi il pulsante Segui
-The Follow button beside a reel's author. Their profile still has one.	Il pulsante Segui accanto all'autore di un reel. Il suo profilo ne ha comunque uno.
+The Follow and Subscribe buttons beside a reel's author. Their profile still has them.	I pulsanti Segui e Iscriviti accanto all'autore di un reel. Il suo profilo li ha comunque.
 Hide promotion buttons on reels	Nascondi i pulsanti promozionali sui reel
 Hides the buttons that push Edits, templates, Meta AI and Ray-Ban Meta glasses. Live badges and state-controlled media labels stay.	Nasconde i pulsanti che promuovono Edits, i modelli, Meta AI e gli occhiali Ray-Ban Meta. Restano i badge Live e le etichette dei media statali.
 Hide friends' activity and comment previews	Nascondi l'attività degli amici e le anteprime dei commenti
@@ -631,7 +629,7 @@ Media link copied	Link del media copiato
 No direct link for this one	Nessun link diretto per questo
 Posted %1$s	Pubblicato %1$s
 Size %1$d × %2$d	Dimensione %1$d × %2$d
-Adds Details to a feed post's menu. It shows when the post went up, who posted it, its media ID and the size Download saves, with buttons to copy the file link, username and caption.	Aggiunge Dettagli al menu di un post del feed. Mostra quando il post è stato pubblicato, chi l'ha pubblicato, il suo ID media e la dimensione che Scarica salva, con pulsanti per copiare il link del file, il nome utente e la didascalia.
+Adds Details to a feed post's or reel's menu. It shows when it went up, who posted it, its media ID and the size Download saves, with buttons to copy the file link, username and caption.	Aggiunge Dettagli al menu di un post del feed o di un reel. Mostra quando è stato pubblicato, chi l'ha pubblicato, il suo ID media e la dimensione che Scarica salva, con pulsanti per copiare il link del file, il nome utente e la didascalia.
 Caption	Didascalia
 Caption copied	Didascalia copiata
 Copy caption	Copia la didascalia

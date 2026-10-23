@@ -1,3 +1,10 @@
+## [1.42.3](https://github.com/ajstrick81/morphe-androidtv-patches/compare/v1.42.2...v1.42.3) (2026-10-23)
+
+
+### Bug Fixes
+
+* **tubi:** re-anchor Skip ads for 10.40.5000 + block new image pause-ad surface ([68a0747](https://github.com/ajstrick81/morphe-androidtv-patches/commit/68a07473273b4c29ac23db207dbdb27c296bf78e))
+
 ## [1.42.2](https://github.com/ajstrick81/morphe-androidtv-patches/compare/v1.42.1...v1.42.2) (2026-10-17)
 
 

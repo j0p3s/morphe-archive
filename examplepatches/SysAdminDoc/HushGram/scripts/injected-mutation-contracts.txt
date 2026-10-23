@@ -292,6 +292,8 @@ shared-call Lapp/hushgram/extension/instagram/reels/ReelWatchHistory;->holdBack(
 # so that hook's rules cover the bar under reels opened from anywhere else.
 start-call Lapp/hushgram/extension/instagram/reels/ReelDeclutter;->hideFollowButton()Z holding android_purge_26_q3_ClipsFollowButtonComponent_render
 once-call Lapp/hushgram/extension/instagram/reels/ReelDeclutter;->hideFollowButton()Z holding android_purge_26_q3_ClipsFollowButtonComponent_render
+start-call Lapp/hushgram/extension/instagram/reels/ReelDeclutter;->hideFollowButton()Z holding android_purge_26_q3_SubscriptionCtaButtonComponent_render
+once-call Lapp/hushgram/extension/instagram/reels/ReelDeclutter;->hideFollowButton()Z holding android_purge_26_q3_SubscriptionCtaButtonComponent_render
 start-call Lapp/hushgram/extension/instagram/reels/ReelDeclutter;->hideChips()Z holding android_purge_26_q3_ClipsBaselAttributionPillComponent_render
 shared-call Lapp/hushgram/extension/instagram/reels/ReelDeclutter;->hideChips()Z holding android_purge_26_q3_ClipsBaselAttributionPillComponent_render
 start-call Lapp/hushgram/extension/instagram/reels/ReelDeclutter;->hideChips()Z holding android_purge_26_q2_ClipsBaselCreativeToolAttributionPillComponent_render
@@ -818,6 +820,16 @@ shared-call Lapp/hushgram/extension/instagram/feed/FollowingFeed;->flag(I)Z in s
 # Its second switch hands the picker's list of feeds to limitPicker just before the same list build
 # freezes it, once. Left out, For you stays in the picker; twice or elsewhere, it isn't that list.
 once-call Lapp/hushgram/extension/instagram/feed/FollowingFeed;->limitPicker(Ljava/util/List;)V in static (LX/*;I)Ljava/lang/Object; holding FeedPickerStateManager feedPickerStateManager
+# It hands the feed type to picked() first thing in both methods that switch Home to a feed: the
+# one that logs instagram_feed_picker_selection with its feed_type (02tL.A00 on 452), and the
+# picker's, which loads no string, reads the remembered feed flag, calls the first for each
+# listener and clears its list (02tF.A00). Left out, End of following's Back to home opens an
+# empty contextual feed and Instagram closes; twice or elsewhere, it isn't the hook the patch
+# wrote. StartOnFollowingHookTest checks both on the fixture.
+start-call Lapp/hushgram/extension/instagram/feed/FollowingFeed;->picked(Ljava/lang/Object;)Ljava/lang/Object; in instance (LX/*;)V holding instagram_feed_picker_selection feed_type
+once-call Lapp/hushgram/extension/instagram/feed/FollowingFeed;->picked(Ljava/lang/Object;)Ljava/lang/Object; in instance (LX/*;)V holding instagram_feed_picker_selection feed_type
+start-call Lapp/hushgram/extension/instagram/feed/FollowingFeed;->picked(Ljava/lang/Object;)Ljava/lang/Object; in instance (LX/*;)V calling instance LX/*;->A00(LX/*;)V holding const:0x810e4c00064e2f Ljava/util/AbstractCollection;->clear()V
+once-call Lapp/hushgram/extension/instagram/feed/FollowingFeed;->picked(Ljava/lang/Object;)Ljava/lang/Object; in instance (LX/*;)V calling instance LX/*;->A00(LX/*;)V holding const:0x810e4c00064e2f Ljava/util/AbstractCollection;->clear()V
 # Its third switch asks keepLogo first thing in the title view's method that shows the picked feed's
 # name: the one (boolean, String) method of ActionBarTitleViewSwitcher, the class Instagram's layouts
 # name, that switches to its second child, holding "secondLabel" and "secondLabelChevron". A yes
@@ -1160,12 +1172,14 @@ once-call Lapp/hushgram/extension/instagram/stories/StoryFollowButton;->bind(Lja
 # nux_story take a view or two ints. Left out, every story you watch greys and moves to the end of
 # the tray; twice or elsewhere, it isn't the hook the patch wrote.
 once-call Lapp/hushgram/extension/instagram/stories/StorySeenRings;->seen(Ljava/lang/Object;Ljava/lang/Object;JLjava/lang/Object;)V in instance (Lcom/instagram/model/reels/ReelItem;LX/*;)V holding LX/*;->*(LX/*;LX/*;I)V
-# And it hands StoryTrayOrder the reel store's list for Home's feed adapter right before that list
-# returns (03sa.A0a on 452, the synchronized (list) list method calling the store's static
-# (session, list) filter), so watched stories go behind unwatched ones while their rings stay new
-# (#241). Left out, the tray keeps the server's order; twice or elsewhere, it isn't the hook the
-# patch wrote.
+# And it hands StoryTrayOrder the reel store's lists right before they return, so watched stories go
+# behind unwatched ones while their rings stay new (#241): the one for the feed's stories unit
+# (03sa.A0a on 452.1, the synchronized (list) list method calling the store's static (session, list)
+# filter) and the one Home's top story row reads (03sa.A0b on 452.1, the synchronized (boolean,
+# boolean) list method logging an empty store). Left out, that list keeps the server's order; twice
+# or elsewhere, it isn't the hook the patch wrote.
 once-call Lapp/hushgram/extension/instagram/stories/StoryTrayOrder;->order(Ljava/util/List;Ljava/lang/Object;)Ljava/util/List; in instance (Ljava/util/List;)Ljava/util/List; calling static LX/*;->*(Lcom/instagram/common/session/UserSession;Ljava/util/List;)Ljava/util/ArrayList; holding const:0x8113970001674b
+once-call Lapp/hushgram/extension/instagram/stories/StoryTrayOrder;->order(Ljava/util/List;Ljava/lang/Object;)Ljava/util/List; in instance (ZZ)Ljava/util/List; holding main\sfeed\stray\sreels\sis\sempty
 #
 # Turn off double tap to like asks the extension first thing in the feed's double-tap like, the one
 # method every kind of post's gesture delegate hands a double tap to, and returns there before the

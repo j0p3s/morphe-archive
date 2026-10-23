@@ -12,6 +12,12 @@ internal const val PREF_SERVICE_CLASS = "Lorg/chromium/components/prefs/PrefServ
 internal const val P3A_ENABLED_PREF = "brave.p3a.enabled"
 internal const val STATS_REPORTING_ENABLED_PREF = "brave.stats.reporting_enabled"
 
+// The "Web discovery project" switch's native pref. Profile-scoped (the Search engines screen's
+// own "send_web_discovery" switch writes it too), unlike the local-state P3A / usage ping prefs.
+internal const val WEB_DISCOVERY_ENABLED_PREF = "brave.web_discovery_enabled"
+internal const val BROWSER_CONTEXT_HANDLE = "Lorg/chromium/content_public/browser/BrowserContextHandle;"
+internal const val PROFILE = "Lorg/chromium/chrome/browser/profiles/Profile;"
+
 // LocalStatePrefs.a(): the local state PrefService, or null until native prefs are loaded.
 internal object LocalStatePrefsGetterFingerprint : Fingerprint(
     definingClass = LOCAL_STATE_PREFS_CLASS,

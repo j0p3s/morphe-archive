@@ -227,10 +227,29 @@ try {
         -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
     Assert-True $reportValidation.Valid `
         "A complete result with a declared dependency was rejected: $($reportValidation.Reason)"
+    # morphe-desktop 1.19.0 names the list stepResults. Its passing steps count, and a failed one
+    # is still refused, so the 1.19 shape is read and not just tolerated.
+    foreach ($stepOk in @($true, $false)) {
+        $renamed = $dependencyReport.PSObject.Copy()
+        $renamed.PSObject.Properties.Remove('patchingSteps')
+        $renamed | Add-Member -NotePropertyName stepResults -NotePropertyValue @(
+            [pscustomobject]@{ success = $true }, [pscustomobject]@{ success = $stepOk })
+        $renamedValidation = Test-PatchingReport -Report $renamed -ExpectedNames $allNames `
+            -AllowedDependencyNames $allDependencies -OutputPath $reportApk `
+            -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
+        if ($stepOk) {
+            Assert-True $renamedValidation.Valid "A 1.19 result with passing stepResults was rejected: $($renamedValidation.Reason)"
+        } else {
+            Assert-True (-not $renamedValidation.Valid -and $renamedValidation.Reason -ceq 'a patching step failed or is missing') `
+                "A 1.19 result with a failed step in stepResults was not turned down: $($renamedValidation.Reason)"
+        }
+    }
 
     # The old replacement expectations contradicted account preservation. Exercise refusal
     # before device mutation, signer checks and ownership instead of expecting uninstalls.
     & (Join-Path $PSScriptRoot 'test-device-safety.ps1') -Root $Root
+    # The walk publish holds a release to: the result it earns and the receipts it writes.
+    & (Join-Path $PSScriptRoot 'test-walk-app.ps1') -Root $Root
 
     $emptyJdk = Join-Path $caseRoot 'empty-jdk'
     New-Item -ItemType Directory -Path $emptyJdk | Out-Null
@@ -4461,14 +4480,24 @@ try {
         # Pinterest asks for the ad ID and Android's ad services, which Remove ad tracking
         # permissions takes out with the application's ad services property.
         $adTracking = $releaseNames -ccontains 'Remove ad tracking permissions'
+        # Firebase messaging's receive permission, which GmsCore support moves to microG-RE's name.
+        $gmsCore = $releaseNames -ccontains 'GmsCore support'
+        $c2dm = if ($Patched) { 'app.revanced.android.c2dm' } else { 'com.google.android.c2dm' }
+        if ($gmsCore) {
+            $lines += @('      E: uses-permission (line=11)', "        A: $androidName`"$c2dm.permission.RECEIVE`" (Raw: `"$c2dm.permission.RECEIVE`")")
+        }
         if ($adTracking -and -not $Patched) {
             foreach ($permission in @('com.google.android.gms.permission.AD_ID',
                     'android.permission.ACCESS_ADSERVICES_AD_ID', 'android.permission.ACCESS_ADSERVICES_ATTRIBUTION')) {
                 $lines += @('      E: uses-permission (line=11)', "        A: $androidName`"$permission`" (Raw: `"$permission`")")
             }
         }
-        if ($Patched -and $releaseNames -ccontains 'Open links in your browser') {
-            $lines += '      E: queries (line=12)'
+        $browserQueries = $Patched -and $releaseNames -ccontains 'Open links in your browser'
+        if ($browserQueries -or ($Patched -and $gmsCore)) { $lines += '      E: queries (line=12)' }
+        if ($Patched -and $gmsCore) {
+            $lines += @('        E: package (line=13)', "          A: $androidName`"app.revanced.android.gms`" (Raw: `"app.revanced.android.gms`")")
+        }
+        if ($browserQueries) {
             foreach ($scheme in @('http', 'https')) {
                 $lines += @('        E: intent (line=13)', '          E: action (line=14)',
                     "            A: $androidName`"android.intent.action.VIEW`" (Raw: `"android.intent.action.VIEW`")",
@@ -4498,6 +4527,14 @@ try {
                 "          A: $androidName`"com.pinterest.split.FeatureActivity`" (Raw: `"com.pinterest.split.FeatureActivity`")",
                 $androidExported)
         }
+        if ($gmsCore) {
+            # Firebase messaging's receiver, whose sender permission and receive action move with the rest.
+            $receiver = 'com.google.firebase.iid.FirebaseInstanceIdReceiver'
+            $lines += @('        E: receiver (line=30)', "          A: $androidName`"$receiver`" (Raw: `"$receiver`")", $androidExported,
+                "          A: http://schemas.android.com/apk/res/android:permission(0x01010006)=`"$c2dm.permission.SEND`" (Raw: `"$c2dm.permission.SEND`")",
+                '          E: intent-filter (line=31)', '            E: action (line=32)',
+                "              A: $androidName`"$c2dm.intent.RECEIVE`" (Raw: `"$c2dm.intent.RECEIVE`")")
+        }
         if ($Patched -and $releaseNames -ccontains 'Disable analytics') {
             # The fixture declares none of the collection switches, so the patch adds each one.
             $flags = [ordered]@{ firebase_analytics_collection_deactivated = 'true'
@@ -4510,7 +4547,7 @@ try {
                     "          A: http://schemas.android.com/apk/res/android:value(0x01010024)=$($flags[$flag])")
             }
         }
-        if ($Patched -and $releaseNames -ccontains 'Spoof signature for Google sign-in') {
+        if ($Patched -and ($gmsCore -or $releaseNames -ccontains 'Spoof signature for Google sign-in')) {
             # The two signature metadata entries, as the allowlist approves them.
             foreach ($template in @(Read-ManifestDeltaAllowlist -Path (Join-Path $PSScriptRoot 'manifest-delta-allowlist.txt') `
                     -SelectedPatchNames @('Spoof signature for Google sign-in'))) {

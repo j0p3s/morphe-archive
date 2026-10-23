@@ -1,4 +1,15 @@
 version: 2
+
+# The Morphe Gradle plugin and libraries (app.morphe:*) are only published to the MorpheApp
+# GitHub Packages registry, which needs a token even for public packages. The two values are
+# Dependabot secrets (Settings > Secrets and variables > Dependabot), not Actions secrets.
+registries:
+  morphe-registry:
+    type: maven-repository
+    url: https://maven.pkg.github.com/MorpheApp/registry
+    username: ${{secrets.DEPENDABOT_GPR_USER}}
+    password: ${{secrets.DEPENDABOT_GPR_TOKEN}}
+
 updates:
   - package-ecosystem: github-actions
     labels: []
@@ -22,5 +33,7 @@ updates:
     labels: []
     directory: /
     target-branch: dev
+    registries:
+      - morphe-registry
     schedule:
       interval: monthly

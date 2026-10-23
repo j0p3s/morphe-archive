@@ -77,6 +77,7 @@ public final class SettingsStatus {
     public static boolean revealSpoilers() { return false; }
     public static boolean hideKeyboardOnScroll() { return false; }
     public static boolean keepVideosMuted() { return false; }
+    public static boolean videoEitherLandscape() { return false; }
     public static boolean swipeBackOnProfiles() { return false; }
     public static boolean hidePhoneNumber() { return false; }
     public static boolean shareNumberUnticked() { return false; }
@@ -102,6 +103,7 @@ public final class SettingsStatus {
     public static boolean hideFeaturesAndInvite() { return false; }
     public static boolean messageMenuRepeat() { return false; }
     public static boolean keepDeleted() { return false; }
+    public static boolean redDeletedLabel() { return false; }
     public static boolean askBeforeSending() { return false; }
     public static boolean outsideTranslate() { return false; }
     public static boolean hideChannelButtons() { return false; }
@@ -109,6 +111,7 @@ public final class SettingsStatus {
     public static boolean hideContactsTab() { return false; }
     public static boolean compactTabBar() { return false; }
     public static boolean sideMenu() { return false; }
+    public static boolean hideNewMessage() { return false; }
     public static boolean fasterDownloads() { return false; }
     public static boolean dataSaverDownloads() { return false; }
     public static boolean saveDownloads() { return false; }

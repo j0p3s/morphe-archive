@@ -1,3 +1,9 @@
+## [1.4.3](https://github.com/snowyegret23/morphe-patches/compare/v1.4.2...v1.4.3) (2026-10-22)
+
+### 🚀 Updated App Support
+
+* support CHZZK 3.15.2 alongside previous versions ([dc58a42](https://github.com/snowyegret23/morphe-patches/commit/dc58a427b25a44500f7257a83facff7ebe471be1))
+
 ## [1.4.2](https://github.com/snowyegret23/morphe-patches/compare/v1.4.1...v1.4.2) (2026-10-19)
 
 ### 🐛 Bug Fixes

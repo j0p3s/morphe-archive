@@ -1,13 +1,21 @@
 import com.android.tools.smali.dexlib2.Opcode
+import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Assumptions.assumeTrue
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
 import java.io.File
 
 private const val PKG = "app.expert.player"
+private const val GMA = "Lcom/google/android/gms/ads/"
 private const val AD_RUNNABLE = "Lio/flutter/plugins/googlemobileads/FlutterMobileAdsWrapper\$1;"
 private const val PAIRIP_LICENSE = "Lcom/pairip/licensecheck/LicenseClient;"
+private val GMA_FULL_SCREEN = listOf(
+    "interstitial/InterstitialAd;", "admanager/AdManagerInterstitialAd;", "rewarded/RewardedAd;",
+    "rewardedinterstitial/RewardedInterstitialAd;", "appopen/AppOpenAd;",
+)
 
 class ExpertPlayerSmokeTest {
 
@@ -15,7 +23,7 @@ class ExpertPlayerSmokeTest {
     lateinit var workDir: File
 
     @Test
-    fun `Disable ads returns before the Mobile Ads start`() {
+    fun `Disable ads fails every plugin ad load and skips the PairIP license check`() {
         val root = repoRoot()
         val apk = File(root, "apks/expertplayer/base.apk")
 
@@ -32,20 +40,36 @@ class ExpertPlayerSmokeTest {
             allPatches = loadAllPatches(newestPatchBundle(root)),
         )
 
-        val runnable = classes.firstOrNull { it.type == AD_RUNNABLE }
-            ?: error("$AD_RUNNABLE not found in emitted dexes")
-
-        assertReturnsEarlyVoid(
-            runnable.method("run", emptyList()),
-            label = "FlutterMobileAdsWrapper\$1.run()",
-        )
-
+        // Step 1: PairIP's license check returns at once.
         val license = classes.firstOrNull { it.type == PAIRIP_LICENSE }
             ?: error("$PAIRIP_LICENSE not found in emitted dexes")
 
         assertReturnsEarlyVoid(
             license.method("checkLicense", listOf("Landroid/content/Context;")),
             label = "LicenseClient.checkLicense(Context)",
+        )
+
+        // Step 2: every google_mobile_ads plugin load reports NO_FILL to Dart.
+        val loads = assertFlutterGmaPluginLoadsFail(classes)
+        assertTrue(loads.isNotEmpty(), "no plugin load methods found")
+
+        // Step 3: every GMA load entry point returns at once (backstop).
+        assertAllReturnEarly(classes, "${GMA}BaseAdView;", "loadAd")
+        assertAllReturnEarly(classes, "${GMA}admanager/AdManagerAdView;", "loadAd")
+        assertAllReturnEarly(classes, "${GMA}AdLoader;", "loadAd", "loadAds")
+        for (owner in GMA_FULL_SCREEN) assertAllReturnEarly(classes, GMA + owner, "load")
+
+        // MobileAds.initialize still runs from the plugin's init thread, so the Dart init Future
+        // completes through the SDK's own listener.
+        val runnable = classes.firstOrNull { it.type == AD_RUNNABLE }
+            ?: error("$AD_RUNNABLE not found in emitted dexes")
+        val run = runnable.method("run", emptyList()).instructions()
+        assertTrue(
+            run.firstOrNull()?.opcode != Opcode.RETURN_VOID && run.any {
+                val ref = (it as? ReferenceInstruction)?.reference as? MethodReference
+                ref?.definingClass == "${GMA}MobileAds;" && ref.name == "initialize"
+            },
+            "FlutterMobileAdsWrapper\$1.run() must still call MobileAds.initialize",
         )
     }
 

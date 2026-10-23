@@ -1,6 +1,7 @@
 package app.morphe.patches.moovit
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.bytecodePatch
@@ -13,7 +14,7 @@ import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 
 private val subscriptionStateFingerprint = Fingerprint(
     classFingerprint = Fingerprint(
-        strings = listOf("subscribed_skus"),
+        strings = listOf(string("subscribed_skus", StringComparisonType.EQUALS)),
     ),
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     returnType = "Z",

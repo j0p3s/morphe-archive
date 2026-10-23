@@ -1,11 +1,11 @@
 package app.template.patches.flashscore.misc.rating
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.template.patches.shared.Constants.COMPATIBILITY_FLASHSCORE
+import app.template.patches.shared.addInstructionsWithLabelsChecked
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 
@@ -34,7 +34,7 @@ val disableRatingPromptsPatch = bytecodePatch(
         }
 
         // p1 is the key; v0 and v1 are locals the method writes before reading.
-        getBool.addInstructionsWithLabels(
+        getBool.addInstructionsWithLabelsChecked(
             0,
             """
                 invoke-virtual {p1}, Ljava/lang/Enum;->name()Ljava/lang/String;

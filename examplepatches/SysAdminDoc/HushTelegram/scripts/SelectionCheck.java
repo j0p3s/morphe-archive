@@ -320,6 +320,7 @@ public final class SelectionCheck {
         hook(calls, flags, "revealSpoilers", "misc/Spoilers", "mediaCovered");
         hook(calls, flags, "hideKeyboardOnScroll", "misc/ScrollKeyboard", "chatScrolled");
         hook(calls, flags, "keepVideosMuted", "misc/VolumeKeys", "chatTakesKey");
+        hook(calls, flags, "videoEitherLandscape", "misc/VideoTurn", "fullScreen");
         hook(calls, flags, "swipeBackOnProfiles", "misc/SwipeBack", "touchBlocks");
         hook(calls, flags, "hidePhoneNumber", "misc/HidePhone", "shown");
         hook(calls, flags, "shareNumberUnticked", "misc/ContactShare", "startsTicked");
@@ -344,6 +345,7 @@ public final class SelectionCheck {
         hook(calls, flags, "hideFeaturesAndInvite", "misc/FeaturesInvite", "addFeaturesRow");
         hook(calls, flags, "messageMenuRepeat", "misc/MessageMenu", "fill");
         hook(calls, flags, "keepDeleted", "misc/KeepDeleted", "userUpdate", "channelUpdate", "push", "measuring");
+        hook(calls, flags, "redDeletedLabel", "misc/KeepDeleted", "painted");
         hook(calls, flags, "askBeforeSending", "misc/SendConfirm", "sticker", "gif", "voice", "call");
         hook(calls, flags, "outsideTranslate", "misc/OutsideTranslate", "show", "fill", "chosen", "headerMenu", "headerClick");
         hook(calls, flags, "hideChannelButtons", "misc/ChannelButtons", "set");
@@ -351,6 +353,7 @@ public final class SelectionCheck {
         hook(calls, flags, "hideContactsTab", "misc/MainTabs", "tabsShown", "blocksSwipe");
         hook(calls, flags, "compactTabBar", "misc/MainTabs", "barPadding", "barCorner", "barHeight", "barMinWidth");
         hook(calls, flags, "sideMenu", "misc/SideMenu", "swipeStarts", "back");
+        hook(calls, flags, "hideNewMessage", "misc/MainTabs", "newMessageButton");
         hook(calls, flags, "fasterDownloads", "misc/DownloadSpeed", "fast");
         hook(calls, flags, "dataSaverDownloads", "misc/DataSaverDownloads", "hold", "holdMask");
         hook(calls, flags, "saveDownloads", "misc/SaveDownloads", "fileLoaded");

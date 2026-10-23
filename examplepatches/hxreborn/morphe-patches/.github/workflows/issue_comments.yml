@@ -77,7 +77,7 @@ jobs:
               --jq '.[] | select(.event == "closed") | (.commit_id // "-")')
             commit=$(printf '%s\n' "$closing" | tail -n 1)
             if [ -n "$commit" ] && [ "$commit" != - ] && git cat-file -e "$commit^{commit}" 2>/dev/null; then
-              tags=$(git tag --contains "$commit")
+              tags=$(git tag --contains "$commit" | { grep -v -- - || [ $? -eq 1 ]; })
               [ -n "$tags" ] || unreleased=--unreleased
             fi
           fi

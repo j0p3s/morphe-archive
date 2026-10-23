@@ -420,3 +420,152 @@ Static analysis of the patched dex (`work/apktool`, `work/jadx`):
   `mel_708` from the chat header, having read `わたし_290` from a profile page).
 - `PdbBubble` entry points: `onHomeCreated(Activity)` and `onActivityCreated(Activity)`
   both funnel into `schedule(activity)` → `attach(activity)` after a 600 ms delay.
+
+## 2026-10-22 · release metadata audit (why Morphe Manager still shows 0.2.0)
+
+Reported by the user after pushing: Morphe Manager shows **0.2.0** as the latest even
+after re-adding the repo. Cause and findings:
+
+- **The repo has no release past v0.2.0.** GitHub tags are only `v0.1.0` and
+  `v0.2.0`; the v0.2.0 release carries a single asset `patches-0.2.0.mpp`.
+  Morphe Manager resolves a source from the repo's **latest release**
+  (`https://morphe.software/add-source?github=OWNER/REPO`), so 0.3.x/0.4.0 are
+  invisible no matter what the working tree says. Pushing code is not releasing.
+- **`patches-bundle.json` had a dead download_url** — it pointed at
+  `…/releases/download/v0.3.5/patches-0.3.5.mpp`, and that URL **404s** (v0.3.5 was
+  never published). The file advertised version 0.4.0 next to a broken link.
+- **`patches-list.json` was frozen at 0.2.0** and listed only 15 patches, missing
+  *Show profile IDs on names*, *Floating power button* and *No profile-visitor limit*.
+  Its own NOTE says semantic-release regenerates it — but there is **no release.yml
+  in this repo** (only `.github/build.yml.example`), so nothing ever did.
+
+Fixes applied:
+- `patches-bundle.json`: `download_url` → `…/download/v0.4.0/patches-0.4.0.mpp`,
+  refreshed `description` + `created_at`.
+- `patches-list.json`: regenerated with `./gradlew :patches:generatePatchesList` →
+  version **0.4.0**, **18 patches** (the 3 missing ones now present).
+- `patches/src/main/kotlin/util/PatchListGenerator.kt` (template code, now diverged
+  deliberately): it took `File("build/libs").listFiles { … }.first()` — with several
+  versions of the bundle in `build/libs` (which is normal locally) it generated the
+  list from an **arbitrary, stale** bundle. That is exactly what happened here: it
+  read `patches-0.2.0.mpp` and reported 0.2.0/15 patches. Now sorts by parsed
+  version and takes the newest. CI is unaffected (one artifact there), but local
+  `publish` runs would have shipped a wrong list.
+- README: added the **add-source link** and the note that only a published release
+  makes a version visible, plus table rows for the three newest patches.
+
+Release facts worth remembering:
+- Manager source URL: `https://morphe.software/add-source?github=madushas/pdb_patch`.
+- Release asset name must be `patches-<version>.mpp` (matches the template's
+  `downloadUrlTemplate` and the local `patches/build/libs/patches-<version>.mpp`).
+- The bundle's own version comes from `META-INF/MANIFEST.MF` inside the `.mpp`,
+  written from `gradle.properties` `version` — verified `0.4.0` in
+  `patches-0.4.0.mpp`.
+
+### `tools/pdbrelease` (added with the audit)
+Keeps the four version-bearing things in agreement and makes the release explicit:
+`--check` (verify only), `--prepare` (build + regenerate `patches-list.json` +
+sync `patches-bundle.json` + commit), `--publish` (also `git push` + `gh release
+create`). `--check` currently passes at 0.4.0 / 18 patches / v0.4.0 asset.
+`gh` is installed and authed as `madushas` (scopes: repo, read:packages, project).
+
+## 2026-10-22 — Why Morphe Manager showed 0.2.0 / "metadata unavailable"
+
+**The push was fine.** `main` was already at `f1065f8`; commits `dfce18c` + `f1065f8` were on GitHub. The problem was that **no release existed past `v0.2.0`**.
+
+How the Manager actually resolves `github=OWNER/REPO` (verified in `MorpheApp/morphe-manager`
+source, `PatchBundleRepository.normalizeRemoteBundleUrl` + `MorpheAPI.rawPatchesBundleRequest`):
+
+1. `github.com/OWNER/REPO` → `https://raw.githubusercontent.com/OWNER/REPO/main/patches-bundle.json`
+   (branch defaults to `main`; no releases API involved).
+2. That JSON supplies `version` + `download_url` (DTO `PatchesReleaseInfo`, all 5 fields required).
+3. The Manager downloads `download_url` into `patches.jar`.
+4. If that download fails, the source stays in `PatchBundleSource.State.Missing`, and the UI shows
+   `sources_management_metadata_unavailable_hint` — the "metadata unavailable" notice. The version
+   on screen is whatever was last installed successfully (0.2.0).
+
+So with `download_url` pointing at a `v0.4.0` asset that did not exist, step 3 404'd → Missing.
+
+**Fix applied:** created release `v0.4.0` on `madushas/pdb_patch` with asset `patches-0.4.0.mpp`
+(922725 bytes, sha256 `0fa03ff3…a62093`), target `main`. Verified: latest release = v0.4.0, raw main
+JSON = 0.4.0 → same URL, asset returns HTTP 200.
+
+Note: `gh release create --target <sha>` fails with 422 (`target_commitish is invalid`); use
+`--target main`.
+
+**Remaining manual step:** in Morphe Manager, refresh the source (or remove + re-add
+`https://morphe.software/add-source?github=madushas/pdb_patch`).
+
+## 2026-10-22 · Manager showed "0 patches" — dex-less bundle (v0.4.1)
+
+**Symptom:** After releasing v0.4.0, Manager updated the source to 0.4.0, listed Pdb as an app,
+but showed 0 patches.
+
+**Root cause:** Morphe Manager loads patches from DEX, not .class:
+`PatchBundle.Loader.validateDexEntries()` throws "missing dex entries" for a jar without
+classes.dex (source: MorpheApp/morphe-manager .../patcher/patch/PatchBundle.kt). Our .mpp was
+built with plain `:patches:build`. The gradle plugin (morphe-patches-gradle-plugin,
+PatchesPlugin.configurePublishing) has a separate **`buildAndroid`** task that runs D8
+(minApi 26) and merges classes.dex into the .mpp; only `publish` depends on buildAndroid,
+so CI releases are dexed but local `build` output is not. The app list still appeared because
+the Manager reads patches-list.json from the repo, not the bundle.
+Also: settings plugin needs GITHUB_ACTOR/GITHUB_TOKEN (or gpr.user/gpr.key in
+gradle.properties) or plugin application fails with bare IllegalArgumentException
+(SettingsPlugin.configureDependencies).
+
+**Fix (v0.4.1):**
+- tools/pdbrelease now runs `:patches:buildAndroid` and greps the .mpp for .dex before shipping.
+- Rebuilt, regenerated patches-list.json (0.4.1 / 18 patches), synced patches-bundle.json,
+  pushed 72ce3d6, released v0.4.1.
+- Verified: dex contains 49 patch classes incl. the 3 new patch names; chain
+  raw-main bundle (0.4.1) -> download_url 200 -> patches-list 0.4.1/18 -> latest release v0.4.1.
+- v0.4.0 release left on GitHub as the broken artifact (history); Manager will offer 0.4.1.
+
+**Cache note:** Manager skips re-download when version AND createdAt are unchanged; the
+fresh created_at in patches-bundle.json forces the refresh.
+
+## 2026-10-22 · v0.4.1/v0.4.2 assets were STILL dex-less — the generatePatchesList overwrite trap (v0.4.3)
+
+**Symptom after the v0.4.1 "fix":** Manager on the phone still showed 0 patches / 1 app.
+Reproduced on the emulator by installing Morphe Manager 1.35.0 (same version as the phone)
+and adding the source. logcat gave the exact error:
+
+    E Morphe Manager: Failed to load bundle Pdb Patches
+    E Morphe Manager: java.lang.IllegalStateException: Patch bundle is missing dex entries
+        at app.morphe.manager.patcher.patch.PatchBundle$Loader.validateDexEntries(SourceFile:121)
+
+**But the GitHub v0.4.1 asset had no dex** (922,726 B, no classes.dex), while the local
+post-buildAndroid file had it. Root cause was in tools/pdbrelease itself:
+
+    ./gradlew :patches:buildAndroid      # dex merged in
+    unzip -l ... | grep .dex             # verify PASSED
+    ./gradlew :patches:generatePatchesList   # <-- dependsOn(`build`) re-ran `jar`,
+                                             #     OVERWROTE the .mpp with a dex-less jar
+
+The dex verify ran BEFORE the list regeneration, and the regeneration silently undid the
+dexing. Both the v0.4.1 and (from a leftover duplicate call after my first edit) the v0.4.2
+uploads shipped the dex-less jar. Lesson: after ANY gradle task, the dex check must re-run;
+the asset must be verified byte-for-byte ON GITHUB, not just locally.
+
+**Intended release flow (pdbrelease --prepare now encodes this order, hard-fails otherwise):**
+
+1. `./gradlew :patches:generatePatchesList` FIRST (runs `build` → dex-less jar is fine here;
+   patches-list.json is regenerated from the newest .mpp in build/libs)
+2. `./gradlew :patches:buildAndroid` LAST — D8 (minApi 26) merges classes.dex into the .mpp
+3. Verify `.dex` in the .mpp AFTER the last gradle task (fails the release otherwise)
+4. Sync patches-bundle.json (version + download_url), verify all three files agree, commit
+5. `--publish`: `git push origin HEAD` + `gh release create v<version> <asset>`
+   (needs GITHUB_TOKEN in env; fails fast if missing)
+6. Download the released asset from GitHub and verify it has classes.dex — the upload is
+   the artifact that matters, not the local file
+
+**Verification on the emulator (Manager 1.35.0, same as the phone):** deleted the source,
+re-added github.com/madushas/pdb_patch, tapped Update → sheet now shows
+"Pdb Patches 0.4.3 · Patches 18 · Apps 1" (screenshot: work/eval/morphe-manager-source-043.png,
+vision-check PASS). Logcat shows no load error.
+
+**gh_token.txt:** removed from tools/pdbrelease — GITHUB_TOKEN now comes from the
+environment only (fail-fast in --publish). The file stays local + gitignored.
+
+**Broken releases left on GitHub:** v0.4.0, v0.4.1, v0.4.2 assets are dex-less; Manager
+never reads them once patches-bundle.json on main points at v0.4.3. Kept for history.

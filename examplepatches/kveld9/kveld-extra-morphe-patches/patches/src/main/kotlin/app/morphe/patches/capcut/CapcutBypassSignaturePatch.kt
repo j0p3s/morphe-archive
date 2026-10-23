@@ -1,8 +1,10 @@
 package app.morphe.patches.capcut
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.string
 import app.morphe.patches.shared.Constants
 import com.android.tools.smali.dexlib2.AccessFlags
 
@@ -52,7 +54,10 @@ private object CrackingVerdictPersistFingerprint : Fingerprint(
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     returnType = "V",
     parameters = listOf("I"),
-    strings = listOf("isCracking", "crackCode"),
+    strings = listOf(
+        string("isCracking", StringComparisonType.EQUALS),
+        string("crackCode", StringComparisonType.EQUALS),
+    ),
 )
 
 private object CrackingDialogRenderFingerprint : Fingerprint(
@@ -61,7 +66,7 @@ private object CrackingDialogRenderFingerprint : Fingerprint(
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     returnType = "Ljava/lang/Object;",
     parameters = listOf(),
-    strings = listOf("lynx_overlay_id"),
+    strings = listOf(string("lynx_overlay_id", StringComparisonType.EQUALS)),
 )
 
 private object TemplateFeedCrackingInterceptFingerprint : Fingerprint(

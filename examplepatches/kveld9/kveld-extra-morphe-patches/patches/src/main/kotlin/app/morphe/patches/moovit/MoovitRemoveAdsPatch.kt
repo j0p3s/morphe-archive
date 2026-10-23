@@ -1,8 +1,10 @@
 package app.morphe.patches.moovit
 
 import app.morphe.patcher.Fingerprint
+import app.morphe.patcher.StringComparisonType
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
+import app.morphe.patcher.string
 import app.morphe.patches.shared.Constants.COMPATIBILITY_MOOVIT
 import com.android.tools.smali.dexlib2.AccessFlags
 
@@ -10,7 +12,7 @@ private val adUnitResolverFingerprint = Fingerprint(
     accessFlags = listOf(AccessFlags.PUBLIC, AccessFlags.FINAL),
     returnType = "Ljava/lang/String;",
     parameters = listOf("Lcom/moovit/app/ads/AdSource;"),
-    strings = listOf("is_interstitial_ads_free_version"),
+    strings = listOf(string("is_interstitial_ads_free_version", StringComparisonType.EQUALS)),
 )
 
 private val moovitAdViewSetSourceFingerprint = Fingerprint(

@@ -183,8 +183,9 @@ public final class Settings {
     }
 
     /**
-     * The inbox search bar reads "Ask Meta AI or search" when Messenger's Meta AI search check is true. With the switch on
-     * the check reads false, the answer accounts without Meta AI in search get, so the bar shows the plain hint.
+     * The inbox search bar, and the search screen it opens, read "Ask Meta AI or search" when Messenger's Meta AI search
+     * check is true. With the switch on the check reads false, the answer accounts without Meta AI in search get, so both
+     * boxes show the plain hint.
      */
     public static boolean metaAiSearchHint(boolean original) {
         if (!original) return false;
@@ -240,6 +241,122 @@ public final class Settings {
         return hidden;
     }
 
+    /**
+     * Messenger's tab list for the bottom bar as it's built. The bar draws only the tabs whose gate let them in, but it
+     * marks the open tab by its place in this full list, so a hidden tab ahead of it lit up its neighbor (with People
+     * hidden, opening Notifications showed Menu as open). Dropping the hidden tabs here keeps the two in step; every other
+     * tab and its order stay as Messenger built them.
+     */
+    public static <T> List<T> visibleTabs(List<T> tabs) {
+        try {
+            List<T> kept = new ArrayList<>(tabs.size());
+            for (T tab : tabs) {
+                String key = tab instanceof Enum ? barTabKey(((Enum<?>) tab).name()) : null;
+                if (key == null || !("meta_ai".equals(key) ? hideMetaAiTab() : hideBottomTab(key))) kept.add(tab);
+            }
+            return kept.size() == tabs.size() ? tabs : kept;
+        } catch (RuntimeException error) {
+            // The one list serves every tab switch, so the failure goes on each switch that's on, never on one that's off.
+            boolean blamed = false;
+            for (String control : TAB_CONTROLS) {
+                if (wouldUse(control)) { hookFailed(control, "Can't line up the tab bar", error); blamed = true; }
+            }
+            if (!blamed) android.util.Log.e("HushMessenger", "Can't line up the tab bar", error);
+            return tabs;
+        }
+    }
+
+    /** Every switch that takes a tab off the bottom bar, so each one's list goes through {@link #visibleTabs}. */
+    static final List<String> TAB_CONTROLS = Collections.unmodifiableList(Arrays.asList("tab_people", "tab_notifications", "meta_ai"));
+
+    /**
+     * The switch that hides a bottom tab, by the tab's constant in Messenger's tab enum, or null for a tab with none. MUSE
+     * is the AI agent tab some accounts get in Meta AI's place, so Hide Meta AI takes it too.
+     */
+    static String barTabKey(String name) {
+        switch (name) {
+            case "PEOPLE": return "tab_people";
+            case "JEWEL": return "tab_notifications";
+            case "AI":
+            case "MUSE": return "meta_ai";
+            default: return null;
+        }
+    }
+
+    static final String TAB_BADGES = "tab_badges";
+    /**
+     * Under Hide tab badges: each badge's Keep switch, by the tab id Messenger's bottom bar asks its badge for. The
+     * Facebook button at the top of Chats goes by "facebook". Menu is the "more" tab; "me_setting" never has a badge.
+     */
+    static final Map<String, String> KEEP_BADGES;
+    static {
+        Map<String, String> keep = new LinkedHashMap<>();
+        keep.put("inbox", "tab_badges_keep_chats");
+        keep.put("people", "tab_badges_keep_people");
+        keep.put("jewel", "tab_badges_keep_notifications");
+        keep.put("more", "tab_badges_keep_menu");
+        keep.put("facebook", "tab_badges_keep_facebook");
+        KEEP_BADGES = Collections.unmodifiableMap(keep);
+    }
+
+    /** Switches shown under a control's row, by the control that has to be in the bundle for them to mean anything. */
+    static final Map<String, String> SUB_SWITCHES;
+    static {
+        Map<String, String> owners = new LinkedHashMap<>();
+        owners.put(BUBBLE_CHAT_HEADS, "bubbles");
+        owners.put(KEEP_FACEBOOK_PROFILE, "facebook");
+        for (String keep : KEEP_BADGES.values()) owners.put(keep, TAB_BADGES);
+        SUB_SWITCHES = Collections.unmodifiableMap(owners);
+    }
+
+    /** The badges hidden this run, by the tab ids KEEP_BADGES lists, or null before Messenger asked for one. */
+    static volatile Set<String> hiddenBadges;
+    private static final Object HIDDEN_BADGES = new Object();
+
+    /** The badges the saved switches, Pause and safe mode hide now. */
+    static Set<String> badgesToHide() {
+        if (!wouldUse(TAB_BADGES)) return Collections.emptySet();
+        SharedPreferences prefs = preferences;
+        Set<String> hidden = new HashSet<>();
+        for (Map.Entry<String, String> badge : KEEP_BADGES.entrySet())
+            if (!prefs.getBoolean(badge.getValue(), false)) hidden.add(badge.getKey());
+        return Collections.unmodifiableSet(hidden);
+    }
+
+    /**
+     * Messenger's bottom bar and the Facebook button take a badge controller as they're built and keep listening to it,
+     * so a badge doesn't come back or go away mid-run. Every asker gets the first answer until a restart, like the tabs.
+     */
+    private static Set<String> hiddenBadges() {
+        Set<String> held = hiddenBadges;
+        if (held != null) return held;
+        if (!HostScreens.started) HostScreens.initializeLate();
+        synchronized (HIDDEN_BADGES) {
+            if (hiddenBadges == null) hiddenBadges = badgesToHide();
+            return hiddenBadges;
+        }
+    }
+
+    /**
+     * Asked by the bottom bar for each tab's badge controller. True hands the tab the controller Messenger itself uses for
+     * a tab whose badge is turned off, so the tab shows no dot or count and opens as usual.
+     */
+    public static boolean hideTabBadge(String tab) {
+        try {
+            if (tab == null || !hiddenBadges().contains(tab)) return false;
+            activeAt.put(TAB_BADGES, System.currentTimeMillis());
+            return true;
+        } catch (RuntimeException error) {
+            hookFailed(TAB_BADGES, "Can't hide a tab badge", error);
+            return false;
+        }
+    }
+
+    /** Whether the Facebook button at the top of Chats gets its badge. Without one Messenger draws the plain button. */
+    public static boolean facebookButtonBadge(boolean original) {
+        return original && !hideTabBadge("facebook");
+    }
+
     /** First answer this process gave for the emoji drawer, or null before Messenger asked. */
     static volatile Boolean oldEmojiDrawer;
     private static final Object EMOJI_DRAWER = new Object();
@@ -270,6 +387,13 @@ public final class Settings {
      * safe mode now says otherwise. Null when the control doesn't hold one, Messenger hasn't asked yet, or they agree.
      */
     static Boolean heldUntilRestart(String key) {
+        if (TAB_BADGES.equals(key)) {
+            Set<String> badges = hiddenBadges;
+            if (badges == null) return null;
+            Set<String> now = badgesToHide();
+            // Still hiding what a restart would show again reads as held on; any other change is waiting to take effect.
+            return badges.equals(now) ? null : !badges.isEmpty() && now.isEmpty();
+        }
         Boolean held = "meta_ai".equals(key) ? metaAiTab : "emoji_drawer".equals(key) ? oldEmojiDrawer
             : OwnFont.KEY.equals(key) ? customFont : bottomTabs.get(key);
         return held == null || held == wouldUse(key) ? null : held;
@@ -366,6 +490,12 @@ public final class Settings {
      * the next card. True keeps the card on screen. Taps and swipes never ask.
      */
     public static boolean holdStoryAtEnd() { return enabled("story_hold"); }
+
+    /**
+     * Asked when a call starts ringing, before Messenger decides to ring and vibrate, and again for the call's
+     * notification. True takes Messenger's own ringtone-off path and posts the notification without the pop-up.
+     */
+    public static boolean quietIncomingCalls() { return enabled("quiet_calls"); }
 
     /** What Android tells an app that can't see the phone's location about the Wi-Fi network it's on. */
     static final String HIDDEN_WIFI_NAME = "<unknown ssid>";
@@ -542,6 +672,28 @@ public final class Settings {
             if (type != null) data.setDataAndType(picked, type);
         } catch (RuntimeException error) {
             hookFailed(GalleryPicker.KEY, "Couldn't read what your gallery app picked", error);
+        }
+    }
+    /**
+     * The chat's handler for a photo from another app asks this first, with the chat's thread and the result. It opens
+     * only one item in the editor, so a pick of several from the pick screen goes to Messenger's Send to sheet with that
+     * chat on top, and true tells the handler it's taken. False leaves the first item to the editor: one item, Off, Pause,
+     * or a sheet that didn't open.
+     */
+    public static boolean galleryItems(Object thread, android.content.Intent data) {
+        try {
+            Context context = appContext;
+            android.content.ClipData clip = data == null ? null : data.getClipData();
+            if (context == null || clip == null || clip.getItemCount() < 2 || !data.getBooleanExtra(GalleryPicker.ITEMS_MARK, false) ||
+                !enabled(GalleryPicker.KEY)) return false;
+            // Two callers hand the handler the same result, so the second only takes it and opens no second sheet.
+            if (data.getBooleanExtra(GalleryPicker.ITEMS_SENT, false)) return true;
+            context.startActivity(GalleryPicker.sendIntent(context, thread, clip));
+            data.putExtra(GalleryPicker.ITEMS_SENT, true);
+            return true;
+        } catch (RuntimeException error) {
+            hookFailedPrivately(GalleryPicker.KEY, "Couldn't send everything you picked", error);
+            return false;
         }
     }
     /**
@@ -1344,6 +1496,25 @@ public final class Settings {
         return null;
     }
 
+    /**
+     * Replaced by the auto reply patch when this Messenger's media send matched: builds the photo messages for [picture]
+     * in the chat [thread] (a thread key string) and returns Messenger's future of them. Null means the build has no
+     * bridge, so a reply goes out as text only.
+     */
+    public static Object autoReplyPictureMessages(Context context, String thread, Uri picture) {
+        return null;
+    }
+
+    /** Replaced with the notification reply service's own send for one built message. Returns its future, or null. */
+    public static Object autoReplySendMessage(Object message) {
+        return null;
+    }
+
+    /** Replaced to return true when the two methods above were filled in. */
+    public static boolean autoReplyPictures() {
+        return false;
+    }
+
     /** Only the independent folder identity survives refreshes, never a context or a row. */
     public static synchronized Object cachedLegacyDrawerKey(Object proposed) {
         if (proposed == null) return null;
@@ -1613,7 +1784,7 @@ public final class Settings {
      * toolbar's context. Messenger hands the press to a title shortcut plugin that only its internal builds have, so for
      * everyone else it did nothing but vibrate. Like the Menu rows, this doesn't ask Pause or safe mode first: it's a way back into settings to undo
      * either. A launch Android refuses gets the same toasts as the side menu row, pointing at the launcher shortcut.
-     * Turn off the logo long press leaves the press to Messenger.
+     * Ignore the logo long press leaves the press to Messenger.
      */
     public static void logoLongPressed(Context context) {
         // Only the switch counts here: a press can come before settings have read what the patch put in.

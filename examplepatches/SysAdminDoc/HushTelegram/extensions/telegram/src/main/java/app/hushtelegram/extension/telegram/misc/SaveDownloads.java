@@ -33,6 +33,8 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import app.hushtelegram.extension.shared.Utils;
 import app.hushtelegram.extension.shared.diagnostics.HookStatus;
@@ -46,11 +48,14 @@ import app.hushtelegram.extension.telegram.settings.Settings;
  * <p>Since Android 11 Telegram keeps what it downloads in its own app folder, and its message menu
  * saves one file at a time with Save to Downloads. The patch has Telegram's finished-download
  * callback, ImageLoader's {@code FileLoaderDelegate.fileDidLoaded}, call {@link #fileLoaded} first.
- * With the switch on, the file goes to the folder Save to Downloads uses.
+ * With the switch on, the file goes to the folder Save to Downloads uses. A file loaded from an open
+ * chat comes with its message. One Telegram auto-downloads while its chat is closed comes with only
+ * a key naming the message, so the copy reads that message from Telegram's database first.
  *
  * <p>Only what Telegram would let you save by hand: a document or a song from a message. Photos and
  * videos have Telegram's own Save to gallery, and GIFs, voice and round videos stay put. Nothing
- * from a secret chat, self-destructing media, or a chat or message that doesn't allow saving. On
+ * from a secret chat, self-destructing media, or a chat or message that doesn't allow saving. A
+ * second switch, off until turned on, lets that last kind through (#29), never the first two. On
  * Android 9 and 10 with storage access, Telegram's folder is already shared, so there's nothing to
  * copy.
  *
@@ -78,11 +83,17 @@ public final class SaveDownloads {
         /** Whether the message, a secret chat or the chat's own setting keeps it from being saved. */
         boolean savingForbidden(Object message);
 
+        /** Whether the message is in a secret chat, or can't tell which chat it's in. */
+        boolean secretChat(Object message);
+
         /** The name Telegram's downloader knows the document by. */
         String attachName(Object document);
 
         /** The document's own file name, empty when it has none. */
         String documentName(Object document);
+
+        /** The account's stored message, as a MessageObject, or null when it isn't stored. Waits for Telegram's storage queue. */
+        Object storedMessage(int account, long dialogId, int messageId);
     }
 
     static Telegram telegram = new Telegram() {
@@ -102,6 +113,11 @@ public final class SaveDownloads {
         }
 
         @Override
+        public boolean secretChat(Object message) {
+            return SaveDownloads.secretChat(message);
+        }
+
+        @Override
         public String attachName(Object document) {
             return SaveDownloads.attachName(document);
         }
@@ -109,6 +125,11 @@ public final class SaveDownloads {
         @Override
         public String documentName(Object document) {
             return SaveDownloads.documentName(document);
+        }
+
+        @Override
+        public Object storedMessage(int account, long dialogId, int messageId) {
+            return SaveDownloads.storedMessage(account, dialogId, messageId);
         }
     };
 
@@ -122,26 +143,99 @@ public final class SaveDownloads {
     /**
      * Injected at the start of the finished-download callback, on FileLoader's queue.
      *
-     * @param name   the downloader's name for the file
-     * @param file   the finished file
-     * @param parent what it was downloaded for, a MessageObject for a message's file
+     * @param account the account whose downloader finished it
+     * @param name    the downloader's name for the file
+     * @param file    the finished file
+     * @param parent  what it was downloaded for: a MessageObject for a file loaded from an open chat,
+     *                or for one auto-downloaded in the background, the {@code sent_} key naming its message
      */
-    public static void fileLoaded(String name, File file, Object parent) {
+    public static void fileLoaded(int account, String name, File file, Object parent) {
         HookStatus.invoked(FamilyNames.SAVE_DOWNLOADS);
         try {
             if (name == null || file == null || !Utils.settingsReady() || !Settings.SAVE_DOWNLOADS.get()) return;
-            Object document = telegram.document(parent);
-            // A message's thumbnail or cover loads with the message as its parent too; only the document itself counts.
-            if (document == null || !name.equals(telegram.attachName(document)) || !telegram.fileOrSong(parent)) return;
-            if (telegram.savingForbidden(parent)) {
-                HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, "file kept in Telegram, saving not allowed");
+            if (parent instanceof String) {
+                Queued queued = Queued.parse((String) parent);
+                // Photos and videos auto-download the same way; only a file or a song is looked up.
+                if (queued == null || (queued.type != FILE_TYPE && queued.type != SONG_TYPE)) return;
+                work.execute(() -> loadedInBackground(account, name, file, queued));
                 return;
             }
-            String display = displayName(telegram.documentName(document), file.getName());
-            work.execute(() -> save(file, display, name));
+            Runnable copy = check(name, file, parent);
+            if (copy != null) work.execute(copy);
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.SAVE_DOWNLOADS, "download", failure);
         }
+    }
+
+    /** Telegram's MessageObject.TYPE_FILE and TYPE_MUSIC, which the patch checks are still these. */
+    static final int FILE_TYPE = 9;
+    static final int SONG_TYPE = 14;
+
+    static final String KEPT = "file kept in Telegram, saving not allowed";
+    static final String NOT_STORED = "file's message not found, kept in Telegram";
+
+    /** Telegram's {@code sent_<channel>_<message>_<chat>_<type>_<size>} key. A group or channel's chat ID is negative. */
+    private static final Pattern SENT = Pattern.compile("sent_.*_(\\d+)_(-?\\d+)_(\\d+)_(\\d+)");
+
+    /**
+     * What Telegram's background download queue says about a file: the message and chat it's from,
+     * and what kind of message it is. The queue hands the downloader this key instead of the message.
+     */
+    static final class Queued {
+        final int messageId;
+        final long dialogId;
+        final int type;
+
+        private Queued(int messageId, long dialogId, int type) {
+            this.messageId = messageId;
+            this.dialogId = dialogId;
+            this.type = type;
+        }
+
+        /** The key's parts, or null when it isn't a {@code sent_} key. */
+        static Queued parse(String key) {
+            Matcher parts = SENT.matcher(key);
+            if (!parts.matches()) return null;
+            try {
+                return new Queued(Integer.parseInt(parts.group(1)), Long.parseLong(parts.group(2)), Integer.parseInt(parts.group(3)));
+            } catch (NumberFormatException tooLong) {
+                return null;
+            }
+        }
+    }
+
+    /**
+     * Telegram stores a file it auto-downloads in the background under the downloader's name, since
+     * the queue only has the key, so the copy finds the message in Telegram's own database first. On
+     * the copy worker, since that waits for Telegram's storage queue.
+     */
+    private static void loadedInBackground(int account, String name, File file, Queued queued) {
+        try {
+            Object message = telegram.storedMessage(account, queued.dialogId, queued.messageId);
+            if (message == null) {
+                HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, NOT_STORED);
+                return;
+            }
+            Runnable copy = check(name, file, message);
+            if (copy != null) copy.run();
+        } catch (Throwable failure) {
+            HookStatus.threw(FamilyNames.SAVE_DOWNLOADS, "background download", failure);
+        }
+    }
+
+    /** The copy a message's finished file gets, or null when it stays in Telegram. */
+    private static Runnable check(String name, File file, Object message) {
+        Object document = telegram.document(message);
+        // A message's thumbnail or cover loads with the message as its parent too; only the document itself counts.
+        if (document == null || !name.equals(telegram.attachName(document)) || !telegram.fileOrSong(message)) return null;
+        boolean restricted = telegram.savingForbidden(message);
+        if (restricted && (!Settings.SAVE_RESTRICTED_DOWNLOADS.get() || telegram.secretChat(message))) {
+            HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, KEPT);
+            return null;
+        }
+        if (restricted) HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, RESTRICTED);
+        String display = displayName(telegram.documentName(document), file.getName());
+        return () -> save(file, display, name, restricted);
     }
 
     /** What ext4 and FAT give a file name: 255 bytes of UTF-8. Over that, MediaStore refuses the file. */
@@ -181,6 +275,7 @@ public final class SaveDownloads {
     static final String SAVED = "file saved to Download/Telegram";
     static final String ALREADY_SAVED = "file already in Download/Telegram";
     static final String DROPPED = "copy dropped, switched off or paused";
+    static final String RESTRICTED = "file from a chat that doesn't allow saving, copied as switched on";
 
     /** The private list of copies: the downloader's name for a document, to the Downloads entry holding it. */
     static final String RECEIPTS = "hushtelegram_saved_downloads";
@@ -199,12 +294,13 @@ public final class SaveDownloads {
 
     /**
      * @param name     the name the copy shows in Downloads
-     * @param document the downloader's name for the document, which no other document has
+     * @param document   the downloader's name for the document, which no other document has
+     * @param restricted whether its chat doesn't allow saving, so the second switch has to stay on too
      */
-    static void save(File file, String name, String document) {
+    static void save(File file, String name, String document, boolean restricted) {
         try {
             // Turned off or paused while it waited behind other copies.
-            if (!wanted()) {
+            if (!wanted(restricted)) {
                 HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, DROPPED);
                 return;
             }
@@ -218,14 +314,15 @@ public final class SaveDownloads {
                 HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, "file already in shared storage");
                 return;
             }
-            HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, copy(context, file, name, document));
+            HookStatus.counted(FamilyNames.SAVE_DOWNLOADS, copy(context, file, name, document, restricted));
         } catch (Throwable failure) {
             HookStatus.threw(FamilyNames.SAVE_DOWNLOADS, "copy", failure);
         }
     }
 
-    private static boolean wanted() {
-        return Utils.settingsReady() && Settings.SAVE_DOWNLOADS.get();
+    private static boolean wanted(boolean restricted) {
+        return Utils.settingsReady() && Settings.SAVE_DOWNLOADS.get()
+                && (!restricted || Settings.SAVE_RESTRICTED_DOWNLOADS.get());
     }
 
     /**
@@ -251,7 +348,8 @@ public final class SaveDownloads {
      * name and size. One added before it is taken once by name and size, see {@link #OLDER_COPY}.
      */
     @RequiresApi(Build.VERSION_CODES.Q)
-    private static String copy(Context context, File file, String name, String document) throws IOException {
+    private static String copy(Context context, File file, String name, String document, boolean restricted)
+            throws IOException {
         ContentResolver resolver = context.getContentResolver();
         Uri downloads = MediaStore.Downloads.EXTERNAL_CONTENT_URI;
         SharedPreferences receipts = context.getSharedPreferences(RECEIPTS, Context.MODE_PRIVATE);
@@ -282,7 +380,7 @@ public final class SaveDownloads {
                 for (int read; (read = in.read(buffer)) != -1; ) out.write(buffer, 0, read);
             }
             // Turned off or paused while it was written: the hidden entry goes and nothing shows up.
-            if (!wanted()) {
+            if (!wanted(restricted)) {
                 resolver.delete(pending, null, null);
                 return DROPPED;
             }
@@ -371,9 +469,15 @@ public final class SaveDownloads {
     /** {@code messageOwner.noforwards}, a secret chat, or {@code MessagesController.isPeerNoForwards} for the chat. */
     public static boolean savingForbidden(Object message) { return true; }
 
+    /** {@code messageOwner} missing, or {@code DialogObject.isEncryptedDialog(getDialogId())}. */
+    public static boolean secretChat(Object message) { return true; }
+
     /** {@code FileLoader.getAttachFileName(document)}. */
     public static String attachName(Object document) { return null; }
 
     /** {@code FileLoader.getDocumentFileName(document)}. */
     public static String documentName(Object document) { return null; }
+
+    /** {@code MessagesStorage.getInstance(account).getMessage(dialogId, messageId)}, wrapped in a MessageObject, or null. */
+    public static Object storedMessage(int account, long dialogId, int messageId) { return null; }
 }

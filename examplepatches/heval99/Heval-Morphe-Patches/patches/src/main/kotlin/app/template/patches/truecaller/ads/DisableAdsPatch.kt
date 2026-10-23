@@ -1,11 +1,11 @@
 package app.template.patches.truecaller.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.patcher.util.proxy.mutableTypes.MutableMethod
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_TRUECALLER
+import app.template.patches.shared.addInstructionsChecked
 import app.template.patches.truecaller.shared.overrideFeatureToggle
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
@@ -61,7 +61,7 @@ val disableAdsPatch = bytecodePatch(
             // p1 (an object reference) is free once the method returns at once; invoke/range
             // reaches p0..p1 whatever the register count.
             binds.forEach {
-                it.addInstructions(
+                it.addInstructionsChecked(
                     0,
                     """
                         const/16 p1, 0x8
@@ -92,7 +92,7 @@ val disableAdsPatch = bytecodePatch(
                 call?.name == "onCreate"
         }
         if (superCall < 0) throw PatchException("$AD_APP_OPENING_ACTIVITY.onCreate does not call super.onCreate")
-        onCreate.addInstructions(
+        onCreate.addInstructionsChecked(
             superCall + 1,
             """
                 invoke-virtual/range {p0 .. p0}, Landroid/app/Activity;->finish()V
@@ -106,7 +106,7 @@ val disableAdsPatch = bytecodePatch(
         // list shows when its slot is active but has no ad (#53); Enable Premium cannot hide it,
         // because the ads module does not read Premium. It is a suspend function, so the boxed
         // Boolean is returned directly.
-        AdsV2PlacementEnabledFingerprint.method.addInstructions(
+        AdsV2PlacementEnabledFingerprint.method.addInstructionsChecked(
             0,
             """
                 sget-object p0, Ljava/lang/Boolean;->FALSE:Ljava/lang/Boolean;

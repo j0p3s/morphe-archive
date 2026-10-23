@@ -4,6 +4,8 @@ import app.morphe.patcher.Fingerprint
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.methodCall
 import app.morphe.patcher.patch.BytecodePatchContext
+import app.morphe.patcher.patch.PatchException
+import app.morphe.patcher.string
 import app.morphe.patcher.util.smali.ExternalLabel
 import app.template.patches.shared.addInstructionsWithLabelsChecked
 
@@ -19,6 +21,28 @@ internal object FeatureToggleResolverFingerprint : Fingerprint(
         methodCall(definingClass = "Landroid/content/SharedPreferences;", name = "getBoolean"),
     ),
 )
+
+/**
+ * Throws unless some method still passes the toggle [key] to the resolver, so an override of a
+ * renamed or removed toggle fails the patch instead of silently changing nothing.
+ */
+internal fun BytecodePatchContext.requireFeatureToggleRead(key: String) {
+    val resolver = FeatureToggleResolverFingerprint.originalMethod
+    val reads = Fingerprint(
+        filters = listOf(
+            string(key),
+            methodCall(
+                definingClass = resolver.definingClass,
+                name = resolver.name,
+                parameters = listOf("Ljava/lang/String;", FEATURE_STATE),
+                returnType = "Z",
+            ),
+        ),
+    ).matchAllOrNull().orEmpty()
+    if (reads.isEmpty()) {
+        throw PatchException("No method passes the feature toggle \"$key\" to ${resolver.definingClass}->${resolver.name}")
+    }
+}
 
 /**
  * Makes the feature-toggle resolver return [value] for the toggle [key], whatever the server or

@@ -1,10 +1,8 @@
 package app.template.patches.truecaller.premium
 
 import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
-import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
-import app.morphe.patcher.util.smali.ExternalLabel
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_TRUECALLER
 import app.template.patches.shared.addInstructionsWithLabelsChecked
@@ -22,7 +20,7 @@ val enablePremiumPatch = bytecodePatch(
     name = "Enable Premium",
     description = "Unlocks the Premium interface and the Premium features that are checked on " +
         "the device. Features backed by Truecaller's servers (Call Assistant, family sharing, Who viewed / searched for me data, Identify AI, " +
-        "cloud call recording, fraud insurance, the verified badge) are not unlocked.",
+        "cloud call recording, fraud insurance, the verified badge) are reported as unavailable.",
 ) {
     compatibleWith(COMPATIBILITY_TRUECALLER)
 
@@ -45,8 +43,11 @@ val enablePremiumPatch = bytecodePatch(
         // 4. isFeatureAvailable(feature, refresh). This also skips the server's
         // "disabledPremiumFeatures" kill-switch list, which is read in the same method; forcing
         // only the availability half would need an R8-shaped mid-method edit. CALL_ASSISTANT and
-        // FAMILY_SHARING keep the stock check: both only work through Truecaller's servers, and a
-        // forced Call Assistant lets users pick "Assistant" for spam calls, which then ring through.
+        // FAMILY_SHARING return false at once instead of falling through to the stock check:
+        // both only work through Truecaller's servers, and the forced premium state would make
+        // the stock check offer them anyway. A forced Call Assistant would also let users pick
+        // "Assistant" for spam calls, which then ring through. The stock check stays below the
+        // early returns, unreached.
         val premiumFeature = classDefBy(PREMIUM_FEATURE)
         for (feature in SERVER_BACKED_FEATURES) {
             if (premiumFeature.staticFields.none { it.name == feature && it.type == PREMIUM_FEATURE }) {
@@ -60,13 +61,15 @@ val enablePremiumPatch = bytecodePatch(
                 SERVER_BACKED_FEATURES.joinToString("\n") { feature ->
                     """
                         sget-object v0, $PREMIUM_FEATURE->$feature:$PREMIUM_FEATURE
-                        if-eq p1, v0, :stock_check
+                        if-eq p1, v0, :server_backed
                     """
                 } + """
                     const/4 v0, 0x1
                     return v0
+                    :server_backed
+                    const/4 v0, 0x0
+                    return v0
                 """,
-                ExternalLabel("stock_check", getInstruction(0)),
             )
         }
 

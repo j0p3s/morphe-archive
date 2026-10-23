@@ -1,10 +1,10 @@
 package app.template.patches.myfitnesspal.misc.telemetry
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_MYFITNESSPAL
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.reference.MethodReference
 
@@ -31,7 +31,7 @@ val disableDatadogTelemetryPatch = bytecodePatch(
         if (skip == RUM_START_DECISION) {
             throw PatchException("Datadog start decision builds an unexpected Skip type: $skip")
         }
-        decision.method.addInstructions(
+        decision.method.addInstructionsChecked(
             0,
             """
                 new-instance v0, $skip

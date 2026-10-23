@@ -2,7 +2,7 @@
 
 치지직을 보면서 채팅창을 내 화면에 맞게 조절하는 Android 패치 모음입니다. 채팅 폭을 드래그로 조절하고, 글자 크기와 배지·시각 표시, 플레이어 버튼을 바꿀 수 있습니다.
 
-**지원 앱: 치지직 3.15.0 · 3.14.10 · 3.14.0** · [Morphe](https://morphe.software)에서 적용합니다.
+**지원 앱: 치지직 3.15.2 · 3.15.0 · 3.14.10 · 3.14.0** · [Morphe](https://morphe.software)에서 적용합니다.
 
 ## 설치하기
 
@@ -14,7 +14,7 @@
 
 소스를 추가한 뒤에는 다음 순서로 설치합니다.
 
-1. APKMirror에서 [치지직 3.15.0](https://www.apkmirror.com/apk/naver-corp/치지직-chzzk-네이버-게임의-새-이름/치지직-chzzk-3-15-0-release/) · [3.14.10](https://www.apkmirror.com/apk/naver-corp/치지직-chzzk-네이버-게임의-새-이름/치지직-chzzk-3-14-10-release/) 또는 [3.14.0](https://www.apkmirror.com/apk/naver-corp/치지직-chzzk-네이버-게임의-새-이름/치지직-chzzk-3-14-0-release/)의 기기에 맞는 **APKM** 파일을 내려받아 선택합니다. 같은 패치 모음이 APK 버전에 맞춰 적용됩니다.
+1. APKMirror에서 [치지직 3.15.2](https://www.apkmirror.com/apk/naver-corp/치지직-chzzk-네이버-게임의-새-이름/치지직-chzzk-3-15-2-release/) · [3.15.0](https://www.apkmirror.com/apk/naver-corp/치지직-chzzk-네이버-게임의-새-이름/치지직-chzzk-3-15-0-release/) · [3.14.10](https://www.apkmirror.com/apk/naver-corp/치지직-chzzk-네이버-게임의-새-이름/치지직-chzzk-3-14-10-release/) 또는 [3.14.0](https://www.apkmirror.com/apk/naver-corp/치지직-chzzk-네이버-게임의-새-이름/치지직-chzzk-3-14-0-release/)의 기기에 맞는 **APKM** 파일을 내려받아 선택합니다. 같은 패치 모음이 APK 버전에 맞춰 적용됩니다.
 2. **S Chzzk Patches**의 기본 선택을 사용합니다. 7개 패치가 모두 켜져 있습니다.
 3. 패치 후 설치하면 원본과 별개인 **치지직 S**가 추가됩니다. 앱 이름·패키지 이름을 직접 지정하려면 전문가 모드에서 해당 패치 옵션을 바꾸세요.
 4. **설정 → Morphe** 또는 **방송 화면의 ⋯ → Morphe 설정**에서 채팅과 시청 옵션을 조절합니다.
@@ -73,7 +73,7 @@ Morphe의 APK 찾기 기능은 직접 다운로드 주소가 등록되지 않은
 
 ## 지원 범위
 
-3.15.0 · 3.14.10 · 3.14.0을 함께 지원합니다. 모든 버전에서 휴대폰용 480–640dpi APKM과 태블릿 등에 사용하는 120–480dpi APKM에 적용할 수 있습니다. 120–480dpi 변형은 Android 12L 이상이 필요합니다.
+3.15.2 · 3.15.0 · 3.14.10 · 3.14.0을 함께 지원합니다. 모든 버전에서 휴대폰용 480–640dpi APKM과 태블릿 등에 사용하는 120–480dpi APKM에 적용할 수 있습니다. 120–480dpi 변형은 Android 12L 이상이 필요합니다.
 
 ## 직접 빌드하기
 

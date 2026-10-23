@@ -205,7 +205,7 @@ private fun BytecodePatchContext.addPlayerMenuEntry() {
         invoke-interface {p0, v0, v1}, Ljava/util/List;->add(ILjava/lang/Object;)V
         return-void
     """)
-    val menuOwner = if (packageMetadata.versionName == "3.15.0") "Lt1;" else "Lq1;"
+    val menuOwner = if (packageMetadata.versionName in listOf("3.15.0", "3.15.2")) "Lt1;" else "Lq1;"
     val menu = mutableClassDefBy(menuOwner).methods.single { it.name == "invoke" }
     val call = menu.implementation!!.instructions.withIndex().single {
         it.value.getReference<MethodReference>()?.let { ref ->

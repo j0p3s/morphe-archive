@@ -104,9 +104,9 @@ public class BadDexFixture {
     private static final String SETTINGS_ENTRY = "Lapp/morphe/extension/hushthreads/settings/SettingsEntry;";
     private static final String LOGO_HEADER = "Lfixture/LogoHeader;";
     private static final String LOGO = "Lapp/morphe/extension/hushthreads/settings/ThreadsLogo;";
-    private static final String LOGO_NOTE = "com.instagram.barcelona.feed.ui.MainFeedScreen.<anonymous>.<anonymous>.<anonymous>.<anonymous>.<anonymous>.<anonymous> (MainFeedScreen.kt:2624)";
-    private static final ImmutableMethodReference LOGO_CLICKABLE = method("LX/02eC;", "A01", "LX/09hc;",
-            "LX/09xw;", "LX/00lS;", "LX/09hc;", "LX/01bY;", "Ljava/lang/String;", "Lkotlin/jvm/functions/Function0;", "Z");
+    private static final String LOGO_NOTE = "com.instagram.barcelona.feed.ui.MainFeedScreen.<anonymous>.<anonymous>.<anonymous>.<anonymous>.<anonymous>.<anonymous> (MainFeedScreen.kt:2641)";
+    private static final ImmutableMethodReference LOGO_CLICKABLE = method("LX/2dO;", "A01", "LX/9hi;",
+            "LX/9wj;", "LX/0mY;", "LX/9hi;", "LX/1Mz;", "Ljava/lang/String;", "Lkotlin/jvm/functions/Function0;", "Z");
     private static final ImmutableMethodReference LOGO_STAND_IN = method(LOGO, "clickable", OBJECT,
             OBJECT, OBJECT, OBJECT, OBJECT, "Ljava/lang/String;", OBJECT, "Z");
 
@@ -722,6 +722,8 @@ public class BadDexFixture {
     private static final String RECORDED_RAW = "hushthreadsSuggestedUsersRaw";
     private static final String FEATURE_CACHE = "Lcom/instagram/barcelona/feed/data/cache/BarcelonaFeedCache;";
     private static final String FEATURE_LAMBDA = FEATURE_CACHE.substring(0, FEATURE_CACHE.length() - 1) + "$addAndSaveItemsFromFeedFetchSuccess$2$1;";
+    private static final String FEATURE_PERMALINK = "Lcom/instagram/barcelona/sponsored/permalink/ThreadsPermalinkAdFetcher;";
+    private static final String FEATURE_PERMALINK_RESULT = "Lfixture/PermalinkAds;";
     private static final String FEATURE_RESPONSE = "Lfixture/Permalink;";
     private static final String FEATURE_HOLDER = "Lfixture/CopyLink;";
     private static final String FEATURE_PARENT = "Lfixture/GraphResponse;";
@@ -732,6 +734,7 @@ public class BadDexFixture {
     private static final String SIGNER_HOST = "Lfixture/Signers;";
     private static final String SIGNER_RESULT = "Lfixture/SignerResult;";
     private static final ImmutableMethodReference PAGE_FILTER = method(FEATURE_ADS, "filter", SHORTCUT_LIST, SHORTCUT_LIST);
+    private static final ImmutableMethodReference PERMALINK_FILTER = method(FEATURE_ADS, "permalinkAds", SHORTCUT_LIST, SHORTCUT_LIST);
     private static final ImmutableMethodReference LINK_SANITIZER = method(FEATURE_LINKS, "sanitizeShared", "Ljava/lang/String;", "Ljava/lang/String;");
     private static final String FEATURE_USER = "Lcom/instagram/user/model/User;";
     private static final String FEATURE_REPOSITORY = "Lcom/instagram/barcelona/share/permalink/data/PermalinkRepository;";
@@ -2068,8 +2071,11 @@ public class BadDexFixture {
 
     /**
      * Copy text's host shapes. Two post row lambdas, text and link preview, each read their long
-     * press override into v1 and check it for null straight after: a null one takes the row's plain
-     * press, and any other is read for its Function0 action, which the row presses when it's set.
+     * press override into v1 and check it for null: a null one takes the row's plain press, and any
+     * other is read for its Function0 action, which the row presses when it's set. The text lambda
+     * is 451's, checking the override straight after reading it and jumping to its action. The link
+     * lambda is 452's, writing v2 between the read and the check, then falling into the action and
+     * testing the override's enabled boolean before the action.
      * v0 holds the row's note and is read on both sides, v2 to v4 are locals, v4 one nothing reads,
      * this is v5 and the lambda's argument v6. PostText(state, selectable, modifier, flags) copies
      * its boolean into v1 after its selection note and tests that. PostRow's plain press and
@@ -2084,14 +2090,15 @@ public class BadDexFixture {
      * twice, a stray call, an added instruction in Threads' own code, and the same for the selection
      * hook. shared, none, actions, selection-written, selection-constant, selection-default,
      * selection-unchecked and selection-twice are stock faults, on both sides: a second way into the
-     * text lambda's check, no override check in either lambda, the link lambda pressing another
+     * text lambda's check, a nop between each action read and its test so neither lambda checks an override, the link lambda pressing another
      * action, a selection check that tests a negated copy of the boolean, one that tests a constant
      * instead of it, one whose left-out default is a call's answer rather than Compose's 0 or 1, no
      * if-eqz after the selection note, and PostRow's plain press holding a selection note too.
      */
     private static List<ClassDef> copyTextClasses(boolean patched, boolean hooked, boolean asks, String fault) {
         List<ClassDef> classes = new ArrayList<>();
-        classes.add(featureClass(PRESS_OVERRIDE, OBJECT, List.of(featureField(PRESS_OVERRIDE, "action", FUNCTION0), featureField(PRESS_OVERRIDE, "other", FUNCTION0))));
+        classes.add(featureClass(PRESS_OVERRIDE, OBJECT, List.of(featureField(PRESS_OVERRIDE, "action", FUNCTION0), featureField(PRESS_OVERRIDE, "other", FUNCTION0),
+                featureField(PRESS_OVERRIDE, "enabled", "Z"))));
         boolean stray = patched && (fault.equals("copy-text-stray"));
         List<Instruction> plain = new ArrayList<>();
         if (stray) plain.addAll(List.of(invoke(COPY_LONG_PRESS, 0, 0), op(Opcode.MOVE_RESULT_OBJECT, 0)));
@@ -2105,33 +2112,63 @@ public class BadDexFixture {
             boolean text = owner.equals(POST_ROW_TEXT);
             // actions has the link lambda press another action, and its hook read that one.
             String own = text ? fault : fault.equals("copy-text-actions") ? "copy-text-actions-link" : "";
+            String action = own.equals("copy-text-actions-link") ? "other" : "action";
             BrowserCode code = new BrowserCode();
             code.add(string(0, "com.instagram.barcelona.feed.post.ui.FeedPostRow.<anonymous>.<anonymous> (FeedPostRow.kt:" + (text ? 812 : 845) + ")"));
             code.add(objectField(Opcode.IGET_OBJECT, 1, 5, owner, "override", PRESS_OVERRIDE));
+            // As on 452, the link lambda reads its override earlier than the instruction before its check.
+            if (!text) code.add(new ImmutableInstruction11n(Opcode.CONST_4, 2, 0));
             boolean front = hooked && !own.equals("copy-text-moved") && !(fault.equals("copy-text-missing") && !text);
             List<Integer> skips = new ArrayList<>();
             int entry = code.size();
             for (int n = front ? own.equals("copy-text-double") ? 2 : 1 : 0; n > 0; n--) skips.add(copyTextHook(code, own));
-            int guard = code.branch(new ImmutableInstruction21t(Opcode.IF_NEZ, 1, 1));
-            code.add(invoke(POST_ROW_PLAIN, 0));
-            if (patched && (own.equals("copy-text-body") || own.equals("copy-text-omitted-body"))) code.add(op(Opcode.NOP));
-            code.add(new ImmutableInstruction11n(Opcode.CONST_4, 2, 0));
-            code.add(op(Opcode.RETURN_OBJECT, 2));
-            int has = code.size();
-            if (hooked && own.equals("copy-text-moved")) skips.add(copyTextHook(code, own));
-            code.add(objectField(Opcode.IGET_OBJECT, 3, 1, PRESS_OVERRIDE, own.equals("copy-text-actions-link") ? "other" : "action", FUNCTION0));
-            // none tests the action the other way round in both lambdas, so neither check is an override check.
-            int none = code.branch(new ImmutableInstruction21t(fault.equals("copy-text-none") ? Opcode.IF_EQZ : Opcode.IF_NEZ, 3, 1));
-            code.add(op(Opcode.RETURN_OBJECT, 1));
-            int act = code.size();
-            code.add(invoke(POST_ROW_PRESS, 0, 3));
-            code.add(op(Opcode.RETURN_OBJECT, 1));
-            // shared reaches the check from a goto past the end too, which lands on its hook.
-            if (fault.equals("copy-text-shared") && text) code.to(code.branch(new com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction20t(Opcode.GOTO_16, 1)), entry);
-            code.to(guard, has);
-            code.to(none, act);
-            // Each hook's null side goes to what follows it, or for target past the check to the plain press.
-            for (int skip : skips) code.to(skip, own.equals("copy-text-target") ? guard + 1 : skip + 5);
+            // none puts a nop between each lambda's action read and its test, so neither check is an override check.
+            boolean none = fault.equals("copy-text-none");
+            if (text) {
+                // 451: a set override jumps to its action, tested straight after it's read.
+                int guard = code.branch(new ImmutableInstruction21t(Opcode.IF_NEZ, 1, 1));
+                code.add(invoke(POST_ROW_PLAIN, 0));
+                if (patched && (own.equals("copy-text-body") || own.equals("copy-text-omitted-body"))) code.add(op(Opcode.NOP));
+                code.add(new ImmutableInstruction11n(Opcode.CONST_4, 2, 0));
+                code.add(op(Opcode.RETURN_OBJECT, 2));
+                int has = code.size();
+                if (hooked && own.equals("copy-text-moved")) skips.add(copyTextHook(code, own));
+                code.add(objectField(Opcode.IGET_OBJECT, 3, 1, PRESS_OVERRIDE, action, FUNCTION0));
+                if (none) code.add(op(Opcode.NOP));
+                int set = code.branch(new ImmutableInstruction21t(Opcode.IF_NEZ, 3, 1));
+                code.add(op(Opcode.RETURN_OBJECT, 1));
+                int act = code.size();
+                code.add(invoke(POST_ROW_PRESS, 0, 3));
+                code.add(op(Opcode.RETURN_OBJECT, 1));
+                // shared reaches the check from a goto past the end too, which lands on its hook.
+                if (fault.equals("copy-text-shared")) code.to(code.branch(new com.android.tools.smali.dexlib2.immutable.instruction.ImmutableInstruction20t(Opcode.GOTO_16, 1)), entry);
+                code.to(guard, has);
+                code.to(set, act);
+                // Each hook's null side goes to what follows it, or for target past the check to the plain press.
+                for (int skip : skips) code.to(skip, own.equals("copy-text-target") ? guard + 1 : skip + 5);
+            } else {
+                // 452: a set override falls into its action, read after a boolean of the override's and
+                // tested after it.
+                int guard = code.branch(ifEqz(1, 1));
+                code.add(objectField(Opcode.IGET_BOOLEAN, 2, 1, PRESS_OVERRIDE, "enabled", "Z"));
+                code.add(objectField(Opcode.IGET_OBJECT, 3, 1, PRESS_OVERRIDE, action, FUNCTION0));
+                if (none) code.add(op(Opcode.NOP));
+                int enabled = code.branch(ifEqz(2, 1));
+                int set = code.branch(new ImmutableInstruction21t(Opcode.IF_NEZ, 3, 1));
+                int idle = code.size();
+                code.add(op(Opcode.RETURN_OBJECT, 1));
+                int act = code.size();
+                code.add(invoke(POST_ROW_PRESS, 0, 3));
+                code.add(op(Opcode.RETURN_OBJECT, 1));
+                int unset = code.size();
+                code.add(invoke(POST_ROW_PLAIN, 0));
+                code.add(new ImmutableInstruction11n(Opcode.CONST_4, 2, 0));
+                code.add(op(Opcode.RETURN_OBJECT, 2));
+                code.to(guard, unset);
+                code.to(enabled, idle);
+                code.to(set, act);
+                for (int skip : skips) code.to(skip, skip + 5);
+            }
             classes.add(featureClass(owner, OBJECT, List.of(featureField(owner, "override", PRESS_OVERRIDE)),
                     define(owner, "invoke", OBJECT, false, body(7, code.finish()), OBJECT)));
         }
@@ -2373,7 +2410,8 @@ public class BadDexFixture {
      * v8. v3 is an int only the carousel's path reads, and v4 one only the rest reads, since the
      * carousel's path writes it before it gets there: a hook taking either is live on one edge alone.
      * [hooked] puts the hook in with v5, which nothing reads. refresh() is a second method of the
-     * class, where a stray call goes.
+     * class, where a stray call goes, and scrolled() 452's scroll depth log, which holds the key
+     * only to compare it.
      */
     private static List<ClassDef> searchCarouselClasses(boolean hooked, String fault) {
         BrowserCode code = new BrowserCode();
@@ -2410,9 +2448,13 @@ public class BadDexFixture {
             refresh.add(op(Opcode.MOVE_RESULT, 0));
         }
         refresh.add(op(Opcode.RETURN_VOID));
+        // As in 452, the scroll depth log compares an item's key with the carousel's, adding nothing.
+        Instruction[] scrolled = {string(0, "standalone_suggested_users"), virtual(method("Ljava/lang/String;", "equals", "Z", OBJECT), 0, 2),
+                op(Opcode.MOVE_RESULT, 0), op(Opcode.RETURN, 0)};
         return List.of(featureClass(SEARCH_LIST, OBJECT, List.of(featureField(SEARCH_LIST, "suggested", SHORTCUT_LIST)),
                 define(SEARCH_LIST, "build", "V", false, body(9, code.finish()), SEARCH_ITEMS, OBJECT),
-                define(SEARCH_LIST, "refresh", "V", false, body(2, refresh.toArray(new Instruction[0])))));
+                define(SEARCH_LIST, "refresh", "V", false, body(2, refresh.toArray(new Instruction[0]))),
+                define(SEARCH_LIST, "scrolled", "Z", false, body(3, scrolled), OBJECT)));
     }
 
     private static final String SUGGESTED_ROW = "Lfixture/SuggestedUsersRow;";
@@ -2921,6 +2963,20 @@ public class BadDexFixture {
                 SHORTCUT_LIST, OBJECT, "Lkotlin/jvm/functions/Function3;", "Z")));
         classes.add(featureClass(FEATURE_LAMBDA, OBJECT, List.of(), define(FEATURE_LAMBDA, "<init>", "V", false,
                 body(1, direct(method(OBJECT, "<init>", "V"), 0), op(Opcode.RETURN_VOID)))));
+        // An opened post's ads: the fetcher builds its one result from the list the hook hands back.
+        List<Instruction> permalinkFetch = new ArrayList<>(List.of(string(0, "text_feed/threads_permalink_ads/"), new ImmutableInstruction11n(Opcode.CONST_4, 1, 0)));
+        if ((ads || fault.equals("omitted-permalink-hook")) && !fault.equals("permalink-missing") && !fault.startsWith("historical")) {
+            int list = fault.equals("permalink-register") ? 0 : 3;
+            permalinkFetch.add(invoke(PERMALINK_FILTER, list));
+            permalinkFetch.add(op(Opcode.MOVE_RESULT_OBJECT, list));
+        }
+        permalinkFetch.add(type(Opcode.NEW_INSTANCE, 2, FEATURE_PERMALINK_RESULT));
+        permalinkFetch.add(direct(method(FEATURE_PERMALINK_RESULT, "<init>", "V", SHORTCUT_LIST, "I"), 2, 3, 1));
+        permalinkFetch.add(op(Opcode.RETURN_OBJECT, 2));
+        classes.add(featureClass(FEATURE_PERMALINK, OBJECT, List.of(), define(FEATURE_PERMALINK, "fetch", OBJECT, true,
+                body(4, permalinkFetch.toArray(new Instruction[0])), SHORTCUT_LIST)));
+        classes.add(featureClass(FEATURE_PERMALINK_RESULT, OBJECT, List.of(), define(FEATURE_PERMALINK_RESULT, "<init>", "V", false,
+                body(3, direct(method(OBJECT, "<init>", "V"), 0), op(Opcode.RETURN_VOID)), SHORTCUT_LIST, "I")));
         classes.add(featureClass(FEATURE_ITEM, OBJECT, List.of(featureField(FEATURE_ITEM, "kind", FEATURE_KIND),
                 featureField(FEATURE_ITEM, "suggested", FEATURE_RAW), featureField(FEATURE_ITEM, "kickstart", FEATURE_RAW), featureField(FEATURE_ITEM, "other", FEATURE_RAW),
                 featureField(FEATURE_ITEM, "active", FEATURE_WRAPPER), featureField(FEATURE_ITEM, "otherActive", FEATURE_WRAPPER)),
@@ -3163,12 +3219,15 @@ public class BadDexFixture {
         ImmutableMethodImplementation adCheck = ads ? body(2, type(Opcode.CHECK_CAST, 1, FEATURE_MEDIA),
                 virtual(fault.equals("ad-target") || fault.equals("ad-discarded") ? method(FEATURE_MEDIA, "other", "Z") : MEDIA_AD, 1), op(Opcode.MOVE_RESULT, 0), op(Opcode.RETURN, 0))
                 : body(2, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN, 0));
-        classes.add(featureClass(FEATURE_ADS, OBJECT, List.of(),
+        List<Method> adMethods = new ArrayList<>(List.of(
                 define(FEATURE_ADS, "filter", SHORTCUT_LIST, true, body(1, op(Opcode.RETURN_OBJECT, 0)), SHORTCUT_LIST),
                 define(FEATURE_ADS, "itemMedia", OBJECT, true, getter, OBJECT), define(FEATURE_ADS, "isAd", "Z", true, adCheck, OBJECT),
                 define(FEATURE_ADS, "isSuggestedUserItem", "Z", true,
                         fault.equals("omitted-suggestion-predicate") ? body(1, new ImmutableInstruction11n(Opcode.CONST_4, 0, 1), op(Opcode.RETURN, 0))
                                 : suggestions ? suggestionPredicate(fault) : body(1, new ImmutableInstruction11n(Opcode.CONST_4, 0, 0), op(Opcode.RETURN, 0)), OBJECT)));
+        // The historical builds' extension came before the opened post's ad hook.
+        if (!fault.startsWith("historical")) adMethods.add(define(FEATURE_ADS, "permalinkAds", SHORTCUT_LIST, true, body(1, op(Opcode.RETURN_OBJECT, 0)), SHORTCUT_LIST));
+        classes.add(featureClass(FEATURE_ADS, OBJECT, List.of(), adMethods.toArray(new Method[0])));
         classes.add(featureClass(FEATURE_ANALYTICS, OBJECT, List.of(), define(FEATURE_ANALYTICS, "endpoint", "Ljava/lang/String;", true,
                 body(1, op(Opcode.RETURN_OBJECT, 0)), "Ljava/lang/String;")));
         classes.add(featureClass(FEATURE_LINKS, OBJECT, List.of(), define(FEATURE_LINKS, "sanitizeShared", "Ljava/lang/String;", true,
@@ -3248,7 +3307,7 @@ public class BadDexFixture {
         }
     }
 
-    /** 451's duplicate fetch label and high-register coroutine receiver, with matched stock mutations. */
+    /** 451's duplicate fetch label and 452's high-register coroutine receiver, with matched stock mutations. */
     private static List<ClassDef> featureSharingAliasBuild(boolean patched, String fault) {
         List<ClassDef> classes = featureBuild(patched, patched ? Set.of("sanitizeSharingLinks") : Set.of(), 0, "");
         String resumed = "call to 'resume' before 'invoke' with coroutine";
@@ -3290,14 +3349,17 @@ public class BadDexFixture {
         if (patched) quick.add(invoke(POST_KEEPER, fault.equals("remember-key") ? 3 : self, post));
         quick.add(new ImmutableInstruction11n(Opcode.CONST_4, 5, 0));
         quick.add(objectField(Opcode.IPUT_OBJECT, 5, self, FEATURE_QUICK, "post", OBJECT));
-        if (fault.equals("recall-clobber")) quick.add(new ImmutableInstruction11n(Opcode.CONST_4, self, 0));
-        if (fault.equals("wide-recall-clobber")) quick.add(new ImmutableInstruction21s(Opcode.CONST_WIDE_16, self - 1, 0));
+        // As in 452, the alias is reused for an instance-of between the cast and the read, so the
+        // recall goes through this itself. The clobbers write this, or the upper half of a wide pair.
+        quick.add(new ImmutableInstruction22c(Opcode.INSTANCE_OF, self, 3, new ImmutableTypeReference(FEATURE_RESPONSE)));
+        if (fault.equals("recall-clobber")) quick.add(new ImmutableInstruction21s(Opcode.CONST_16, 26, 0));
+        if (fault.equals("wide-recall-clobber")) quick.add(new ImmutableInstruction21s(Opcode.CONST_WIDE_16, 25, 0));
         int read = quick.size();
         quick.add(virtual(LINK_GETTER, 3));
         quick.add(op(Opcode.MOVE_RESULT_OBJECT, 2));
         if (patched) {
             List<Instruction> recall = new ArrayList<>(recallHook(self, 2, "", "quick-"));
-            if (fault.equals("recall-key")) recall.set(0, invoke(POST_RECALL, 3));
+            recall.set(0, fault.equals("recall-key") ? invoke(POST_RECALL, 3) : new ImmutableInstruction3rc(Opcode.INVOKE_STATIC_RANGE, 26, 1, POST_RECALL));
             quick.addAll(recall);
         }
         quick.add(op(Opcode.RETURN_OBJECT, 2));
@@ -3376,6 +3438,7 @@ public class BadDexFixture {
         for (String feature : allFeatures) dexes.put("features-only-" + feature, featureBuild(true, Set.of(feature), 7, ""));
         for (int mask = 1; mask <= 7; mask++) dexes.put("features-mask-" + mask, featureBuild(true, Set.of("disableAnalytics"), mask, ""));
         for (String fault : List.of("feed-missing", "feed-replaced", "feed-register", "feed-duplicate", "item-stub", "ad-target", "ad-discarded", "ad-body", "ad-helper-body", "getter-body", "ad-helper-native", "getter-static",
+                "permalink-missing", "permalink-register",
                 "link-missing", "link-replaced", "link-register", "post-link-missing", "post-link-register", "post-link-getter", "post-link-bypass",
                 "holder-link-missing", "holder-link-receiver", "holder-link-field", "holder-post-link-register", "holder-post-link-bypass",
                 "resume-remember-missing", "resume-remember-key", "resume-recall-missing", "resume-recall-key", "resume-recall-cast",
@@ -3581,7 +3644,7 @@ public class BadDexFixture {
             if (fault.contains("missing-status")) omitFeatureStatus(unselected, "hideSuggestedUsers", true);
             dexes.put("features-bad-" + fault, unselected);
         }
-        for (String fault : List.of("omitted-feed-hook", "omitted-item-getter")) dexes.put("features-bad-" + fault, featureBuild(true, Set.of(), 0, fault));
+        for (String fault : List.of("omitted-feed-hook", "omitted-item-getter", "omitted-permalink-hook")) dexes.put("features-bad-" + fault, featureBuild(true, Set.of(), 0, fault));
         Set<String> historical = Set.of("hideAds", "sanitizeSharingLinks", "disableAnalytics", "restoreTrust");
         dexes.put("features-historical", featureBuild(true, historical, 7, "historical"));
         dexes.put("features-historical-missing-ad-status", featureBuild(true, historical, 7, "historical-missing-ad-status"));

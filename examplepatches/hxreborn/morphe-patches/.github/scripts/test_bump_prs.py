@@ -171,8 +171,8 @@ with tempfile.TemporaryDirectory() as temp:
     (work / bump_prs.COMPAT_PATH).write_text(SOURCE)
     run_git("add", ".", cwd=work)
     run_git("commit", "-q", "-m", "init", cwd=work)
-    run_git("push", "-q", "origin", "main", cwd=work)
-    main_before = run_git("rev-parse", "main", cwd=origin)
+    run_git("push", "-q", "origin", "main:dev", cwd=work)
+    dev_before = run_git("rev-parse", "dev", cwd=origin)
     os.chdir(work)
     bump_prs.gh = fake_gh
     branch = "app-update/com.one"
@@ -182,10 +182,10 @@ with tempfile.TemporaryDirectory() as temp:
 
     # then
     tip = run_git("rev-parse", branch, cwd=origin)
-    assert run_git("rev-parse", f"{branch}^", cwd=origin) == main_before
+    assert run_git("rev-parse", f"{branch}^", cwd=origin) == dev_before
     assert run_git("log", "-1", "--format=%B", branch, cwd=origin) == "bump(One): add support for `1.1`\n\nCloses #77"
     assert run_git("log", "-1", "--format=%ae", branch, cwd=origin) == bump_prs.BOT_EMAIL
-    assert run_git("diff", "--name-only", "main", branch, cwd=origin) == bump_prs.COMPAT_PATH
+    assert run_git("diff", "--name-only", "dev", branch, cwd=origin) == bump_prs.COMPAT_PATH
     assert 'AppTarget(version = "1.1", versionCode = 11, minSdk = 26),' in \
         run_git("show", f"{branch}:{bump_prs.COMPAT_PATH}", cwd=origin)
     assert pr_calls == [("pr", "create")]
@@ -200,8 +200,8 @@ with tempfile.TemporaryDirectory() as temp:
     bump_prs.sync_bump_prs(result("1.2"))
 
     # then
-    assert run_git("rev-parse", f"{branch}^", cwd=origin) == main_before
+    assert run_git("rev-parse", f"{branch}^", cwd=origin) == dev_before
     assert run_git("log", "-1", "--format=%B", branch, cwd=origin) == "bump(One): add support for `1.2`"
     assert pr_calls == [("pr", "create"), ("pr", "edit")]
-    assert run_git("rev-parse", "main", cwd=origin) == main_before
+    assert run_git("rev-parse", "dev", cwd=origin) == dev_before
 print("bump branches pass")

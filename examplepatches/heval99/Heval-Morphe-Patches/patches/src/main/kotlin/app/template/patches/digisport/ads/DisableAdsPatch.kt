@@ -1,10 +1,10 @@
 package app.template.patches.digisport.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructionsWithLabels
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_DIGISPORT
+import app.template.patches.shared.addInstructionsChecked
+import app.template.patches.shared.addInstructionsWithLabelsChecked
 
 // Digi Sport shows AdMob banners as rows in articles and the live EPG list (VHSectionAd ->
 // AdMobManager), and IMA pre-rolls before live channels and article/VOD videos. Live channels can
@@ -26,7 +26,7 @@ val disableAdsPatch = bytecodePatch(
         // never posted. requestAd (the only AdRequest.Builder().build() + AdView.loadAd) and putAd
         // return at once too, which also covers the AdListener's access$requestAd /
         // access$putAd re-entries and the posted lambda; the access$ bridges only forward.
-        AdMobManagerLoadAdFingerprint.method.addInstructions(
+        AdMobManagerLoadAdFingerprint.method.addInstructionsChecked(
             0,
             """
                 const/16 v0, 0x8
@@ -42,7 +42,7 @@ val disableAdsPatch = bytecodePatch(
         // loadAd. A VHSectionAd only ever holds ad rows, so a recycled holder stays hidden.
         // bind has .locals 0, so only p0/p1 exist: p1 (the UIAd) is dropped for the view, then
         // p0 (this) is reused for GONE and the layout params, and p1 for the 0 height.
-        VHSectionAdBindFingerprint.method.addInstructionsWithLabels(
+        VHSectionAdBindFingerprint.method.addInstructionsWithLabelsChecked(
             0,
             """
                 iget-object p1, p0, Landroidx/recyclerview/widget/RecyclerView${'$'}ViewHolder;->itemView:Landroid/view/View;
@@ -65,7 +65,7 @@ val disableAdsPatch = bytecodePatch(
         // GetArticleVod calls isBlank on it), so GetArticleVod adds no pre-roll item.
         // GetArticleDetailsUtils only null-checks it and still adds a blank.mp4 item with an empty
         // ad tag; step 5 makes that item play without ads.
-        ArticleApiPayloadsGetMVideoPrerollFingerprint.method.addInstructions(
+        ArticleApiPayloadsGetMVideoPrerollFingerprint.method.addInstructionsChecked(
             0,
             """
                 const-string v0, ""
@@ -77,7 +77,7 @@ val disableAdsPatch = bytecodePatch(
         // plays every item with an ads configuration without ads ("Playing media without ads, as
         // no AdsLoader was provided."). PlayerService.onCreate ignores the result, and every
         // reader of the never-set mImaPreRoll null-checks it.
-        InitImaAdsFingerprint.method.addInstructions(
+        InitImaAdsFingerprint.method.addInstructionsChecked(
             0,
             """
                 const/4 v0, 0x0
@@ -94,7 +94,7 @@ val disableAdsPatch = bytecodePatch(
             ListingDataGetAdsListFingerprint,
             ApiResultsResponseDataGetAdsFingerprint,
         ).forEach { fingerprint ->
-            fingerprint.method.addInstructions(
+            fingerprint.method.addInstructionsChecked(
                 0,
                 """
                     new-instance v0, Ljava/util/ArrayList;
@@ -109,7 +109,7 @@ val disableAdsPatch = bytecodePatch(
         ArticleAdConstraintsFingerprint.method.returnEarly(false)
 
         // 8. No ad section between article widgets; the caller skips a null section.
-        AddAdWidgetFingerprint.method.addInstructions(
+        AddAdWidgetFingerprint.method.addInstructionsChecked(
             0,
             """
                 const/4 v0, 0x0

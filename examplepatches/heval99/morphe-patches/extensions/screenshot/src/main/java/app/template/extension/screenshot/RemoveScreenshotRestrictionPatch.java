@@ -30,10 +30,13 @@ public final class RemoveScreenshotRestrictionPatch {
         window.addFlags(flags & ~WindowManager.LayoutParams.FLAG_SECURE);
     }
 
+    /**
+     * The mask is kept as is: the bit is dropped from the value only, so an app's own
+     * {@code setFlags(0, FLAG_SECURE)} still clears FLAG_SECURE (masking it out of the mask
+     * would have left the bit as it was).
+     */
     public static void setFlags(Window window, int flags, int mask) {
-        window.setFlags(
-                flags & ~WindowManager.LayoutParams.FLAG_SECURE,
-                mask & ~WindowManager.LayoutParams.FLAG_SECURE);
+        window.setFlags(flags & ~WindowManager.LayoutParams.FLAG_SECURE, mask);
     }
 
     /**

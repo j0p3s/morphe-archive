@@ -25,7 +25,9 @@ private val BANNER_VIEW_PARAMETERS = listOf(
 val disableAdsPatch = bytecodePatch(
     name = "Disable ads",
     description = "Removes the banner ad and skips the ad consent form, which otherwise closes " +
-        "the app for free users who refuse consent."
+        "the app for free users who refuse consent. Skipping the consent flow also removes the " +
+        "in-app privacy options entry and skips the app's Crashlytics setup, both of which run " +
+        "from that flow."
 ) {
     compatibleWith(COMPATIBILITY_DUPLILA)
 
@@ -36,7 +38,9 @@ val disableAdsPatch = bytecodePatch(
         // 1. Skip the UMP consent flow. No consent form is requested or shown, the "consent is
         // required for the free version" exit never runs, and initAds() is never reached, so
         // canShowAds stays false. The flow also turns Firebase Analytics collection on; that is
-        // skipped too (the manifest default stays in force).
+        // skipped too (the manifest default stays in force). Its consent callback is also where
+        // the app sets up Crashlytics and enables the privacy options entry
+        // (requireShowPrivacyOptions), so neither happens.
         ConsentFlowFingerprint.method.returnEarly()
 
         // 2. The banner composable emits nothing, so no AdView and no "Cannot show ads" filler

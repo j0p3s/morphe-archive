@@ -448,7 +448,9 @@ public class PausedHooksTest {
                 PostPrompts::hidePostCounts,
                 // The reaction preview is left undrawn only while the patch runs.
                 PostPrompts::hideReactionPreview,
-                () -> PostPrompts.hideReactionPreview(true)));
+                () -> PostPrompts.hideReactionPreview(true),
+                // So is the count beside a post's faces.
+                () -> PostPrompts.reactionCount("56") == null));
         // A post the store remembers is dropped by the feed guard while the switch is on.
         probes.put(PatchFamily.SEEN_POSTS, Collections.singletonList(SeenPostsForTests::hidesARememberedPost));
         // The pill socket's yes for Meta AI's questions is answered as a no, so it draws no row for
@@ -833,8 +835,12 @@ public class PausedHooksTest {
                 MetaAiSearchForTests::hidesAnswer,
                 MetaAiSearchForTests::dropsPrompts,
                 MetaAiSearchForTests::stopsSuggestionRoute));
-        // A search Facebook would add to your history is kept out.
-        probes.put(PatchFamily.SEARCH_HISTORY, Collections.singletonList(() -> SearchHistory.skipSave(false)));
+        // A search Facebook would add to your history is kept out, and off the Recent list.
+        probes.put(PatchFamily.SEARCH_HISTORY, Arrays.asList(() -> SearchHistory.skipSave(false), () -> {
+            Map<Object, Object> recent = new LinkedHashMap<>();
+            SearchHistory.keepRecent(recent, "filter", "list");
+            return recent.isEmpty();
+        }));
         // XAnalytics' upload and uploader resume are skipped, and the Papaya job finishes unrun.
         probes.put(PatchFamily.ANALYTICS_UPLOADS, Arrays.asList(
                 AnalyticsUploads::holdXAnalyticsUpload,

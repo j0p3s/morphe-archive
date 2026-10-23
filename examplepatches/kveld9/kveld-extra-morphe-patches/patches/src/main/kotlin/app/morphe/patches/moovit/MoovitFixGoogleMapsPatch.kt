@@ -42,6 +42,7 @@ private val moovitMapsApiKeyResourcePatch = resourcePatch(
             }
         }
 
+        decode("res/values*")
         val stringsFile = get("res/values/strings.xml")
         if (stringsFile.exists()) {
             document(stringsFile.absolutePath).use { doc ->

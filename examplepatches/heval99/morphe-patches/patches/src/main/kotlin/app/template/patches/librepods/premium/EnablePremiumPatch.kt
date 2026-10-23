@@ -1,9 +1,9 @@
 package app.template.patches.librepods.premium
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_LIBREPODS
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
@@ -59,7 +59,7 @@ val enablePremiumPatch = bytecodePatch(
 
         // The boxed value is handed straight to _isPremium (a MutableStateFlow) via
         // Lqy2->j(Object, Object)Z, so forcing the register here makes the flow emit true.
-        processPurchases.addInstructions(
+        processPurchases.addInstructionsChecked(
             indexOfValueOf,
             "const/4 v$booleanRegister, 0x1",
         )

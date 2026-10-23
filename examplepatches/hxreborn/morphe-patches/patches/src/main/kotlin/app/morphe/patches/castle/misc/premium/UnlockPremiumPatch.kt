@@ -9,6 +9,7 @@ import app.morphe.patcher.extensions.InstructionExtensions.getInstruction
 import app.morphe.patcher.patch.rawResourcePatch
 import app.morphe.patches.shared.compat.AppCompatibilities
 import app.morphe.patches.shared.misc.secshell.editSecShellPayload
+import app.morphe.patches.shared.misc.secshell.secShellPayloadPatch
 import app.morphe.util.getReference
 import app.morphe.util.indexOfFirstInstructionOrThrow
 import com.android.tools.smali.dexlib2.Opcode
@@ -53,6 +54,8 @@ val unlockPremiumPatch = rawResourcePatch(
         "Requires a signed-in account.",
 ) {
     compatibleWith(AppCompatibilities.CASTLE)
+
+    dependsOn(secShellPayloadPatch)
 
     execute {
         editSecShellPayload {

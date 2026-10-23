@@ -79,13 +79,14 @@
             "path": "SHA256SUMS.txt"
           }
         ],
-        "successComment": false
+        "successCommentCondition": false
       }
     ],
     [
       "@cleyrop-org/semantic-release-backmerge",
       {
         "backmergeBranches": [{"from": "main", "to": "dev"}],
+        "backmergeStrategy": "merge",
         "clearWorkspace": true
       }
     ]

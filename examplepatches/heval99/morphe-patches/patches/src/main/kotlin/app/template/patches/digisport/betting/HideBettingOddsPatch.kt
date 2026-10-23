@@ -1,8 +1,8 @@
 package app.template.patches.digisport.betting
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_DIGISPORT
+import app.template.patches.shared.addInstructionsChecked
 
 @Suppress("unused")
 val hideBettingOddsPatch = bytecodePatch(
@@ -13,7 +13,7 @@ val hideBettingOddsPatch = bytecodePatch(
 
     execute {
         // Every match row reads as having no odds, so its odds block stays GONE.
-        UIResultsMatchGetBetFingerprint.method.addInstructions(
+        UIResultsMatchGetBetFingerprint.method.addInstructionsChecked(
             0,
             """
                 const/4 v0, 0x0

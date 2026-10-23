@@ -269,6 +269,24 @@ try {
         -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
     Assert-True $reportValidation.Valid `
         "A complete result with a declared dependency was rejected: $($reportValidation.Reason)"
+    # morphe-desktop 1.19.0 writes its steps as stepResults and 1.18.1 as patchingSteps. Both read,
+    # and a result with no step list, or with a step that failed, is invalid rather than an error.
+    function Test-StepReport([object[]]$Steps, [string]$Name = 'stepResults') {
+        $report = [pscustomobject]@{ success = $true; appliedPatches = @($allNames + $allDependencies | ForEach-Object {
+                [pscustomobject]@{ name = $_ } }); failedPatches = @()
+            packageName = $target.PackageName; packageVersion = $target.PackageVersion }
+        if ($null -ne $Steps) { $report | Add-Member -NotePropertyName $Name -NotePropertyValue $Steps }
+        Test-PatchingReport -Report $report -ExpectedNames $allNames -AllowedDependencyNames $allDependencies `
+            -OutputPath $reportApk -ExpectedPackageName $target.PackageName -ExpectedPackageVersion $target.PackageVersion
+    }
+    $passedStep = [pscustomobject]@{ step = 'PATCHING'; success = $true }
+    Assert-True (Test-StepReport @($passedStep, [pscustomobject]@{ step = 'REBUILDING'; success = $true })).Valid `
+        'A morphe-desktop 1.19.0 result was rejected.'
+    Assert-True (Test-StepReport @([pscustomobject]@{ success = $true }) -Name 'patchingSteps').Valid `
+        'A morphe-desktop 1.18.1 result was rejected.'
+    Assert-True (-not (Test-StepReport $null).Valid) 'A result with no step list passed.'
+    Assert-True (-not (Test-StepReport @($passedStep, [pscustomobject]@{ step = 'REBUILDING'; success = $false })).Valid) `
+        'A result whose rebuild step failed passed.'
 
     $fakeAdb = Join-Path $caseRoot 'adb.cmd'
     $log = Join-Path $caseRoot 'adb.log'
@@ -6529,7 +6547,12 @@ try {
     Edit-ReleaseFile 'gradle/libs.versions.toml' {
         param($text) $text -replace '(?m)^(\s*manager-floor\s*=\s*")[^"]+', "`${1}$laterFloor"
     }
-    Edit-ReleaseFile 'README.md' { param($text) $text.Replace($releaseFloor, $laterFloor) }
+    # Whole version numbers only. A plain replace of floor 2.0.0 also hit the 2.0.0 inside Threads
+    # 452.0.0.50.64, so the README named a build the catalog doesn't. The badge's %20 sits right
+    # before its floor, so a digit there still counts as the start of one.
+    Edit-ReleaseFile 'README.md' {
+        param($text) $text -replace ('(?:(?<=%20)|(?<![\d.]))' + [regex]::Escape($releaseFloor) + '(?!\.?\d)'), $laterFloor
+    }
     Edit-ReleaseFile '.github/ISSUE_TEMPLATE/bug_report.yml' {
         param($text) $text.Replace("Morphe Manager $releaseFloor", "Morphe Manager $laterFloor")
     }
@@ -7377,3 +7400,4 @@ Write-Host '[scripts] report, target, Java and guarded replacement contracts pas
 
 & (Join-Path $PSScriptRoot 'test-native-page-alignment.ps1') -Root $Root
 if ($LASTEXITCODE -ne 0) { throw 'Native alignment contract suite failed.' }
+& (Join-Path $PSScriptRoot 'test-walk-app.ps1') -Root $Root

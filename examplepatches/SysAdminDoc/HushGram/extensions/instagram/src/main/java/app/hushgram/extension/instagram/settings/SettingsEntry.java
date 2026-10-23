@@ -33,6 +33,7 @@ import java.lang.ref.WeakReference;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Predicate;
 
@@ -40,6 +41,7 @@ import app.hushgram.extension.instagram.direct.MessagesLock;
 import app.hushgram.extension.instagram.download.SaveLeftovers;
 import app.hushgram.extension.instagram.feed.CommentEmojiRow;
 import app.hushgram.extension.instagram.feed.FeedFollowButton;
+import app.hushgram.extension.instagram.feed.FollowingFeed;
 import app.hushgram.extension.instagram.misc.MediaCache;
 import app.hushgram.extension.instagram.misc.GlassTabBar;
 import app.hushgram.extension.instagram.reels.BurnInGuard;
@@ -144,6 +146,7 @@ public final class SettingsEntry {
         ProfileSaved.install(context);
         CommentEmojiRow.install(context);
         FeedFollowButton.install(context);
+        FollowingFeed.install(context);
         ProfileMenuPress.install(context);
         ProfileTitle.install(context);
         LaunchScreen.install(context);
@@ -354,10 +357,45 @@ public final class SettingsEntry {
     public static void onNewIntent(Activity activity, Intent intent) {
         try {
             if (noteIntent(intent)) ShortcutCover.show(activity);
+            else if (leavesSettings(intent)) closeForLink(activity);
             if (openPending) OpenWhenResumed.openWhenSettled(activity);
         } catch (Exception ex) {
             Logger.printException(() -> "Settings entry: onNewIntent failure", ex);
         }
+    }
+
+    /**
+     * Whether [intent], one that isn't the shortcut's, takes the person somewhere in Instagram: a
+     * link, which carries data, or a tapped notification, which names itself in an extra. Instagram
+     * shows where it leads under the settings, so they close for it.
+     */
+    static boolean leavesSettings(Intent intent) {
+        if (intent == null) return false;
+        if (intent.getData() != null) return true;
+        Bundle extras = intent.getExtras();
+        if (extras == null) return false;
+        for (String key : extras.keySet()) {
+            if (key != null && key.toLowerCase(Locale.ROOT).contains("notification")) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Closes the settings shown on [activity] as if the person had, so a link that came in shows.
+     * A request that hasn't shown yet is dropped with its cover, or it would open over the link.
+     */
+    private static void closeForLink(Activity activity) {
+        if (openPending) {
+            openPending = false;
+            onClosedByUser();
+            ShortcutCover.off("a link or notification came in first");
+            Logger.printInfo(() -> "Settings entry: a link or notification came in before the settings showed, dropping the request");
+        }
+        Fragment shown = activity.getFragmentManager().findFragmentByTag(DIALOG_TAG);
+        if (!(shown instanceof DialogFragment)) return;
+        onClosedByUser();
+        ((DialogFragment) shown).dismissAllowingStateLoss();
+        Logger.printInfo(() -> "Settings entry: a link or notification came in, closing the settings over it");
     }
 
     private static final String SAVED_SETTINGS = "app.hushgram.settings.saved_dialog";

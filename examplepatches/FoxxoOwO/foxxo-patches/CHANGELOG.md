@@ -1,3 +1,28 @@
+## [1.4.2](https://github.com/FoxxoOwO/foxxo-patches/compare/v1.4.1...v1.4.2) (2026-10-22)
+
+### 🐛 Bug Fixes
+
+* **aiplantdoctor:** drop the AI Plant Doctor patch ([cee17c1](https://github.com/FoxxoOwO/foxxo-patches/commit/cee17c126edf1f04b6fd440bf7787e037020f2c3))
+
+## [1.4.1](https://github.com/FoxxoOwO/foxxo-patches/compare/v1.4.0...v1.4.1) (2026-10-22)
+
+### 🐛 Bug Fixes
+
+* **aiplantdoctor:** clear PairIP licence check so the patched build starts ([759ade6](https://github.com/FoxxoOwO/foxxo-patches/commit/759ade6443b2add8be78e02c523a4e0ec49925eb))
+
+## [1.4.0](https://github.com/FoxxoOwO/foxxo-patches/compare/v1.3.0...v1.4.0) (2026-10-22)
+
+### ✨ New Features
+
+* **instagram:** merge the distraction-free patches into one "Chat only" patch ([f0db50b](https://github.com/FoxxoOwO/foxxo-patches/commit/f0db50b7817a3e676b2151f200174fe4158f197a))
+
+## [1.3.0](https://github.com/FoxxoOwO/foxxo-patches/compare/v1.2.0...v1.3.0) (2026-10-22)
+
+### ✨ New Features
+
+* **aiplantdoctor:** retarget premium unlock to 3.3.0 ([6c2f737](https://github.com/FoxxoOwO/foxxo-patches/commit/6c2f737f83192c862c3ee34cc188cdfedb1ab087))
+* **instagram:** pin the tested 447.0.0.55.81 build ([7dd72ed](https://github.com/FoxxoOwO/foxxo-patches/commit/7dd72edd6add278e405a2d8e86b1ae0ab4c7a9ee))
+
 ## [1.2.0](https://github.com/FoxxoOwO/foxxo-patches/compare/v1.1.0...v1.2.0) (2026-09-26)
 
 ### ✨ New Features

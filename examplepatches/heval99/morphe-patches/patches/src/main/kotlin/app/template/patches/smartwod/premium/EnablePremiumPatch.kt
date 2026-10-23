@@ -1,8 +1,8 @@
 package app.template.patches.smartwod.premium
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_SMARTWOD
+import app.template.patches.shared.addInstructionsChecked
 
 internal const val EXTENSION_CLASS_DESCRIPTOR =
     "Lapp/template/extension/smartwod/EnablePremiumPatch;"
@@ -23,7 +23,7 @@ val enablePremiumPatch = bytecodePatch(
 
     execute {
         // Skip ensureConnection + queryPurchasesAsync entirely and resolve the fake purchases.
-        GetAvailableItemsByTypeFingerprint.method.addInstructions(
+        GetAvailableItemsByTypeFingerprint.method.addInstructionsChecked(
             0,
             """
                 invoke-static {p1, p2}, $EXTENSION_CLASS_DESCRIPTOR->resolve(Ljava/lang/String;Lcom/facebook/react/bridge/Promise;)V

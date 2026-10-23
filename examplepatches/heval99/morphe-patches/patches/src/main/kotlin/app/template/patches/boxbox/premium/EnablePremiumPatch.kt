@@ -1,12 +1,12 @@
 package app.template.patches.boxbox.premium
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_BOXBOX
+import app.template.patches.shared.addInstructionChecked
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
@@ -79,7 +79,7 @@ val enablePremiumPatch = bytecodePatch(
                         throw PatchException("${method.definingClass}.${method.name}: entries.get(I) result is not moved")
                     }
                     val register = (moveResult as OneRegisterInstruction).registerA
-                    method.addInstruction(index + 2, "sget-object v$register, $pro")
+                    method.addInstructionChecked(index + 2, "sget-object v$register, $pro")
                     cachedReads++
                 }
             }
@@ -95,7 +95,7 @@ val enablePremiumPatch = bytecodePatch(
                 (method.returnType == "Ljava/lang/Enum;" || method.returnType == enumType)
         }
         planReturns.forEach { method ->
-            method.addInstructions(
+            method.addInstructionsChecked(
                 0,
                 """
                     sget-object v0, $pro

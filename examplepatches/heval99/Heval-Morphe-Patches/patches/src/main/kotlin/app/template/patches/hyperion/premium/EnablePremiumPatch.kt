@@ -1,12 +1,12 @@
 package app.template.patches.hyperion.premium
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstruction
 import app.morphe.patcher.extensions.InstructionExtensions.instructions
 import app.morphe.patcher.extensions.InstructionExtensions.replaceInstruction
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_HYPERION
+import app.template.patches.shared.addInstructionChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.builder.BuilderInstruction
@@ -81,7 +81,7 @@ val enablePremiumPatch = bytecodePatch(
             }
             // invoke-static {vX} has a 4-bit register, so const/4 can always address it.
             val register = (valueOf as FiveRegisterInstruction).registerC
-            onCreate.addInstruction(index, "const/4 v$register, 0x1")
+            onCreate.addInstructionChecked(index, "const/4 v$register, 0x1")
         }
 
         // 2. The reset (clears the stored token, pushes Boolean.FALSE) returns at once. It is

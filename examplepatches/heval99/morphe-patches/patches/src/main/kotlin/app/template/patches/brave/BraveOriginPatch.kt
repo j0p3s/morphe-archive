@@ -10,11 +10,13 @@ import app.morphe.patcher.methodCall
 import app.morphe.patcher.opcode
 import app.morphe.patcher.string
 import app.morphe.patcher.patch.ApkFileType
+import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.resourcePatch
 import app.morphe.patcher.patch.bytecodePatch
 import app.morphe.util.returnEarly
 import app.template.patches.shared.Constants.COMPATIBILITY_BRAVE
 import app.template.patches.shared.addInstructionsChecked
+import app.template.patches.shared.addInstructionsWithLabelsChecked
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.OneRegisterInstruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
@@ -262,12 +264,47 @@ val braveOriginPatch = bytecodePatch(
 
         // P3A and the usage ping have no Java gatekeeper (they are native services), so for
         // those two switches the listener also writes the native local-state pref they read.
+        // Web Discovery has no Java gatekeeper either, and its native pref is profile-scoped
+        // (the Search engines screen's own "send_web_discovery" switch writes it too), so that
+        // branch writes it through the profile's PrefService instead of LocalStatePrefs.
         val localStateGetter = LocalStatePrefsGetterFingerprint.originalMethod
         val prefSetBoolean = PrefServiceSetBooleanFingerprint.originalMethod
 
+        // The profile -> PrefService helper (owl.a here; renamed per build), resolved from the
+        // Search engines screen's own web-discovery writer, which holds both strings.
+        val webDiscoveryReads = Fingerprint(
+            strings = listOf("send_web_discovery", WEB_DISCOVERY_ENABLED_PREF),
+        ).matchAllOrNull().orEmpty()
+        val profilePrefService = webDiscoveryReads.firstNotNullOfOrNull { match ->
+            match.method.implementation?.instructions
+                ?.mapNotNull { instruction ->
+                    val call = (instruction as? ReferenceInstruction)?.reference as? MethodReference
+                    if (call?.returnType == PREF_SERVICE_CLASS &&
+                        call.parameterTypes.map(CharSequence::toString) == listOf(BROWSER_CONTEXT_HANDLE)
+                    ) call else null
+                }
+                ?.singleOrNull()
+        }
+        if (webDiscoveryReads.isEmpty() || profilePrefService == null) {
+            throw PatchException(
+                "No ($BROWSER_CONTEXT_HANDLE)$PREF_SERVICE_CLASS helper next to " +
+                    "\"$WEB_DISCOVERY_ENABLED_PREF\" and \"send_web_discovery\"",
+            )
+        }
+
+        // The fragment's Profile field (ChromeBaseSettingsFragment.H0 here; renamed per
+        // build): the only Profile-typed field read anywhere on the Origin preferences class.
+        val profileField = classDefBy(ORIGIN_PREFERENCES_CLASS).methods.asSequence()
+            .flatMap { method -> method.implementation?.instructions?.asSequence() ?: emptySequence() }
+            .mapNotNull { (it as? ReferenceInstruction)?.reference as? FieldReference }
+            .filter { it.type == PROFILE }
+            .distinctBy { "${it.definingClass}->${it.name}" }
+            .singleOrNull()
+            ?: throw PatchException("$ORIGIN_PREFERENCES_CLASS reads no $PROFILE field")
+
         d1Fingerprint.method.apply {
             removeInstructions(0, implementation!!.instructions.count())
-            addInstructionsWithLabels(
+            addInstructionsWithLabelsChecked(
                 0,
                 """
                     iget-boolean v0, p0, ${lockField.definingClass}->${lockField.name}:${lockField.type}
@@ -306,17 +343,31 @@ val braveOriginPatch = bytecodePatch(
                     move-result v2
                     if-eqz v2, :check_stats
                     const-string v3, "$P3A_ENABLED_PREF"
-                    goto :write_native
+                    goto :write_local_state
                     :check_stats
                     const-string v2, "BraveStatsPingEnabled"
                     invoke-virtual {v2, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
                     move-result v2
-                    if-eqz v2, :native_done
+                    if-eqz v2, :check_web_disc
                     const-string v3, "$STATS_REPORTING_ENABLED_PREF"
-                    :write_native
+                    goto :write_local_state
+                    :check_web_disc
+                    const-string v2, "BraveWebDiscoveryEnabled"
+                    invoke-virtual {v2, v0}, Ljava/lang/String;->equals(Ljava/lang/Object;)Z
+                    move-result v2
+                    if-eqz v2, :native_done
+                    iget-object v2, p0, ${profileField.definingClass}->${profileField.name}:${profileField.type}
+                    if-eqz v2, :native_done
+                    invoke-static {v2}, ${profilePrefService.definingClass}->${profilePrefService.name}($BROWSER_CONTEXT_HANDLE)$PREF_SERVICE_CLASS
+                    move-result-object v2
+                    if-eqz v2, :native_done
+                    const-string v3, "$WEB_DISCOVERY_ENABLED_PREF"
+                    goto :write_native
+                    :write_local_state
                     invoke-static {}, ${localStateGetter.definingClass}->${localStateGetter.name}()${localStateGetter.returnType}
                     move-result-object v2
                     if-eqz v2, :native_done
+                    :write_native
                     xor-int/lit8 v1, v1, 0x1
                     invoke-virtual {v2, v3, v1}, ${prefSetBoolean.definingClass}->${prefSetBoolean.name}(Ljava/lang/String;Z)V
                     :native_done

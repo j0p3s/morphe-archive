@@ -12,6 +12,7 @@ val nokoPrintNetworkSecurityHardeningPatch = resourcePatch(
     compatibleWith(Constants.COMPATIBILITY_NOKOPRINT)
 
     execute {
+        decode("res/xml*")
         val configFile = get("res/xml/network_security_config.xml")
         if (!configFile.exists()) {
             println("[Printer-Compatible Connections] network_security_config.xml not found - skipping.")

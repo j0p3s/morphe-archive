@@ -1,6 +1,5 @@
 package app.template.patches.digisport.misc.consent
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_DIGISPORT
@@ -26,7 +25,7 @@ val skipAdConsentFormPatch = bytecodePatch(
     execute {
         // 1. loadConsentInfo posts SUCCESS and returns this before it touches UMP, so neither
         // requestConsentInfoUpdate nor loadAndShowConsentFormIfRequired runs.
-        LoadConsentInfoFingerprint.method.addInstructions(
+        LoadConsentInfoFingerprint.method.addInstructionsChecked(
             0,
             """
                 iget-object v0, p0, $GOOGLE_CONSENT_UMP->mStatus:Landroidx/lifecycle/MutableLiveData;

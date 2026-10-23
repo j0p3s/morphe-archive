@@ -533,12 +533,6 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                             + "places and maps. Photos keep their own places.")));
             privacy.add(placeRow(context));
         }
-        if (build.contains(PatchFamily.SYSTEM_PHOTO_PICKER)) {
-            privacy.add(toggle(context, Settings.SYSTEM_PHOTO_PICKER, L10n.t("Use the system photo picker"),
-                    L10n.t("Adds an entry to the gallery sheet when you make a post that opens Android's own photo "
-                            + "picker. You pick from your photos and any cloud gallery, and Instagram only gets what "
-                            + "you choose instead of reaching across your whole library. Starts off.")));
-        }
         if (!privacy.isEmpty()) {
             PreferenceCategory section = category(screen, L10n.t("Ads and privacy"), SettingsIcons.PRIVACY,
                     L10n.t("Hide ads and share less about yourself with Instagram."));
@@ -887,7 +881,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
         }
         if (build.contains(PatchFamily.REEL_DECLUTTER)) {
             reels.add(toggle(context, Settings.HIDE_REEL_FOLLOW_BUTTON, L10n.t("Hide the Follow button"),
-                    L10n.t("The Follow button beside a reel's author. Their profile still has one.")));
+                    L10n.t("The Follow and Subscribe buttons beside a reel's author. Their profile still has them.")));
             reels.add(toggle(context, Settings.HIDE_REEL_CHIPS, L10n.t("Hide promotion buttons on reels"),
                     L10n.t("Hides the buttons that push Edits, templates, Meta AI and Ray-Ban Meta glasses. Live "
                             + "badges and state-controlled media labels stay.")));
@@ -1547,7 +1541,7 @@ public final class HushgramPreferenceFragment extends AbstractPreferenceFragment
                         L10n.t("The same Download on a photo post, and on a carousel showing a photo. Saves the largest "
                                 + "size Instagram has.")));
                 downloads.addPreference(toggle(context, Settings.POST_DETAILS, L10n.t("Details in a post's menu"),
-                        L10n.t("Adds Details to a feed post's menu. It shows when the post went up, who posted it, "
+                        L10n.t("Adds Details to a feed post's or reel's menu. It shows when it went up, who posted it, "
                                 + "its media ID and the size Download saves, with buttons to copy the file link, "
                                 + "username and caption.")));
                 downloads.addPreference(toggle(context, Settings.DOWNLOAD_CHOOSE_PAGES, L10n.t("Choose carousel pages"),

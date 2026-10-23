@@ -1,9 +1,9 @@
 package app.template.patches.ircodefinder.ads
 
-import app.morphe.patcher.extensions.InstructionExtensions.addInstructions
 import app.morphe.patcher.patch.PatchException
 import app.morphe.patcher.patch.bytecodePatch
 import app.template.patches.shared.Constants.COMPATIBILITY_IR_CODE_FINDER
+import app.template.patches.shared.addInstructionsChecked
 import com.android.tools.smali.dexlib2.AccessFlags
 import com.android.tools.smali.dexlib2.Opcode
 import com.android.tools.smali.dexlib2.iface.instruction.FiveRegisterInstruction
@@ -45,7 +45,7 @@ val disableAdsPatch = bytecodePatch(
             if (superCall < 0 || containerStore == null) {
                 throw PatchException("Disable ads: no container store after the super call in $definingClass.<init>")
             }
-            addInstructions(
+            addInstructionsChecked(
                 containerStore + 1,
                 """
                     const/16 v0, 0x8
@@ -63,7 +63,7 @@ val disableAdsPatch = bytecodePatch(
         val unitField = unitClass?.fields?.singleOrNull {
             AccessFlags.STATIC.isSet(it.accessFlags) && it.type == unitClass.type
         }
-        InterstitialLoadFingerprint.method.addInstructions(
+        InterstitialLoadFingerprint.method.addInstructionsChecked(
             0,
             if (unitField != null) {
                 """

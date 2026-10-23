@@ -1954,6 +1954,8 @@ public class DexDiff {
     private static final String MEDIA = "Lcom/instagram/feed/media/Media;";
     private static final String ADS = "Lapp/morphe/extension/hushthreads/ads/FeedAds;->";
     private static final String FILTER_PAGE = ADS + "filter(Ljava/util/List;)Ljava/util/List;";
+    private static final String PERMALINK_ADS = ADS + "permalinkAds(Ljava/util/List;)Ljava/util/List;";
+    private static final String PERMALINK_AD_FETCHER = "Lcom/instagram/barcelona/sponsored/permalink/ThreadsPermalinkAdFetcher;";
     private static final String CLEAN_LINK = "Lapp/morphe/extension/hushthreads/misc/LinkCleaner;->sanitizeShared(Ljava/lang/String;)Ljava/lang/String;";
     private static final String POST_LINK = "Lapp/morphe/extension/hushthreads/misc/LinkCleaner;->postLink(Ljava/lang/String;Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/String;";
     private static final String REMEMBER_POST = "Lapp/morphe/extension/hushthreads/misc/LinkCleaner;->rememberPost(Ljava/lang/Object;Ljava/lang/Object;)V";
@@ -1995,7 +1997,7 @@ public class DexDiff {
     private static final List<String> FEED_POST_NOTES = List.of("com.instagram.barcelona.feed.post.ui.PostSingleMedia",
             "com.instagram.barcelona.feed.post.ui.PostCarousel");
     /** The notes of the composables that show a video inside a post: an Instagram post shown in a thread, a trend's preview and an ad card. */
-    private static final List<String> EMBED_NOTES = List.of("com.instagram.barcelona.igmedia.InlineIgVideo (InlineIgVideo.kt:",
+    private static final List<String> EMBED_NOTES = List.of("com.instagram.barcelona.igmedia.InlineIgVideo",
             "com.instagram.barcelona.common.ui.mediahighlights.AutoplayingMediaHighlightVideo (TrendMediaHighlightsPreview.kt:",
             "com.instagram.barcelona.sponsored.ui.AdCard (AdCard.kt:");
     /** The note of the full-screen viewer's video composable, which plays by PostVideo's default and has to stay as Threads wrote it. */
@@ -2407,6 +2409,36 @@ public class DexDiff {
                 && Arrays.equals(invokeRegisters(a.get(1)), new int[]{adInput})
                 && ((OneRegisterInstruction) a.get(2)).getRegisterA() == ((OneRegisterInstruction) a.get(3)).getRegisterA(),
                 "isAd uses the wrong receiver or result");
+        // A build whose extension can't take an opened post's ads out predates that hook.
+        if (patched.containsKey(PERMALINK_ADS)) featurePermalinkAds(clean, patched);
+    }
+
+    /**
+     * An opened post's ads: the fetcher builds its one result from the list it read the ads into,
+     * and that list goes through the extension right before the result is made. A branch into the
+     * new-instance would skip the hook, so featureBody wants every way in to land on the hook.
+     */
+    private static void featurePermalinkAds(Map<String, List<Method>> clean, Map<String, List<Method>> patched) {
+        Method fetch = featureTarget(clean, m -> m.getDefiningClass().equals(PERMALINK_AD_FETCHER)
+                && holds(m, "text_feed/threads_permalink_ads/"), "opened post ad fetcher");
+        List<Instruction> body = instructions(fetch);
+        List<Integer> sites = new ArrayList<>();
+        for (int k = 1; k + 1 < body.size(); k++) {
+            Instruction made = body.get(k - 1), init = body.get(k), back = body.get(k + 1);
+            if (init.getOpcode() != Opcode.INVOKE_DIRECT || !(((ReferenceInstruction) init).getReference() instanceof MethodReference)) continue;
+            MethodReference ctor = (MethodReference) ((ReferenceInstruction) init).getReference();
+            int[] args = invokeRegisters(init);
+            if (ctor.getName().equals("<init>") && String.join("", ctor.getParameterTypes()).equals("Ljava/util/List;I")
+                    && made.getOpcode() == Opcode.NEW_INSTANCE && reference(made).equals(ctor.getDefiningClass())
+                    && ((OneRegisterInstruction) made).getRegisterA() == args[0]
+                    && back.getOpcode() == Opcode.RETURN_OBJECT && ((OneRegisterInstruction) back).getRegisterA() == args[0]) sites.add(k - 1);
+        }
+        requireFeature(sites.size() == 1, "opened post ad fetcher builds " + sites.size() + " results from a List");
+        int made = sites.get(0);
+        int[] args = invokeRegisters(body.get(made + 1));
+        requireFeature(args[1] != args[0], "opened post ad fetcher builds its result from itself");
+        featureBody(fetch, featureMethod(patched, featureSig(fetch)), 0, Map.of(made, args[1]), PERMALINK_ADS);
+        featureHostCalls(patched, PERMALINK_ADS, Map.of(featureSig(fetch), 1));
     }
 
     private static final String FEATURE_STRING = "Ljava/lang/String;";
@@ -3176,11 +3208,11 @@ public class DexDiff {
      * isEmpty(), read out of a field, and enter the stretch only for a list that isn't empty.
      */
     private static SearchCarouselSite featureSearchCarouselSite(Map<String, List<Method>> clean) {
-        Method stock = featureTarget(clean, m -> !m.getDefiningClass().startsWith(OWN) && holds(m, SEARCH_CAROUSEL_KEY), "Search carousel builder");
+        Method stock = featureTarget(clean, m -> !m.getDefiningClass().startsWith(OWN) && holds(m, SEARCH_CAROUSEL_KEY)
+                && java.util.stream.IntStream.range(0, instructions(m).size()).anyMatch(n -> addsCarouselKeyAt(instructions(m), n)), "Search carousel builder");
         FeatureFlow flow = new FeatureFlow(stock);
         List<Instruction> body = flow.layout.instructions;
-        int key = featureOne(java.util.stream.IntStream.range(0, body.size()).boxed().filter(n -> body.get(n) instanceof ReferenceInstruction r
-                && r.getReference() instanceof StringReference s && s.getString().equals(SEARCH_CAROUSEL_KEY)).toList(), "Search carousel key");
+        int key = featureOne(java.util.stream.IntStream.range(0, body.size()).boxed().filter(n -> addsCarouselKeyAt(body, n)).toList(), "Search carousel key");
         List<List<Integer>> into = new ArrayList<>();
         for (int n = 0; n < body.size(); n++) into.add(new ArrayList<>());
         for (int n = 0; n < body.size(); n++) {
@@ -3205,6 +3237,20 @@ public class DexDiff {
         requireFeature(lists.size() == 1 && lists.iterator().next() >= 0 && body.get(lists.iterator().next()).getOpcode() == Opcode.IGET_OBJECT,
                 "Search carousel check is not whether the list it reads is empty");
         return new SearchCarouselSite(stock, guard, start, away);
+    }
+
+    /**
+     * Whether [at] loads the carousel's key and hands it straight to a call that adds an item under it.
+     * From 452 Search also compares each item's key with it, through equals, when it logs how far the
+     * list was scrolled, and that method adds nothing.
+     */
+    private static boolean addsCarouselKeyAt(List<Instruction> body, int at) {
+        if (!(body.get(at) instanceof ReferenceInstruction r && r.getReference() instanceof StringReference s
+                && s.getString().equals(SEARCH_CAROUSEL_KEY)) || at + 1 >= body.size()) return false;
+        Instruction next = body.get(at + 1);
+        if (!isPlainInvoke(next.getOpcode()) || next.getOpcode() == Opcode.INVOKE_SUPER || next.getOpcode() == Opcode.INVOKE_SUPER_RANGE
+                || !(((ReferenceInstruction) next).getReference() instanceof MethodReference call)) return false;
+        return !(call.getName().equals("equals") && call.getReturnType().equals("Z") && call.getParameterTypes().size() == 1);
     }
 
     /**
@@ -3756,10 +3802,11 @@ public class DexDiff {
             int self = m.getImplementation().getRegisterCount() - 2;
             FeatureFlow resumedFlow = new FeatureFlow(m);
             Map<Integer, FeatureBlock> resumed = new HashMap<>();
-            final int key;
+            final int key, recall;
             if (!fetches.isEmpty()) {
                 // The receiver, then the four arguments: the post is the second and the continuation the last.
                 key = invokeRegisters(stock.get(fetches.get(0)))[4];
+                recall = key;
                 for (int call : fetches) {
                     int[] arguments = invokeRegisters(stock.get(call));
                     requireFeature(arguments[4] == key, featureSig(m) + " hands the plain fetch more than one continuation");
@@ -3784,15 +3831,18 @@ public class DexDiff {
                     int kept = registerA(stock.get(cast));
                     resumed.put(cast + 1, (now, at) -> featureRemember(now, at, key, kept));
                 }
-                for (int read : stockReads) requireFeature(resumedFlow.parameterOnEveryPath(read + 2, key, self),
-                        featureSig(m) + " loses its coroutine alias before recalling the post");
+                // The recall goes through this itself: 452 reuses the alias for an instance-of
+                // between the cast and the read.
+                recall = self;
+                for (int read : stockReads) requireFeature(resumedFlow.parameterOnEveryPath(read + 2, self, self),
+                        featureSig(m) + " lets go of this before recalling the post");
             } else {
                 continue;
             }
             remembers.put(featureSig(m), resumed.size());
             for (int read : stockReads) {
                 int value = registerA(stock.get(read + 1));
-                resumed.put(read + 2, (now, at) -> featureResumeLink(clean, now, at, value, key, resumedFlow, read + 2));
+                resumed.put(read + 2, (now, at) -> featureResumeLink(clean, now, at, value, recall, resumedFlow, read + 2));
             }
             featureBody(m, featureMethod(patched, featureSig(m)), 0, Map.of(), POST_LINK, null, resumed);
             recalls.put(featureSig(m), stockReads.size());
@@ -5080,9 +5130,9 @@ public class DexDiff {
 
     /**
      * A post row lambda's long press override as Threads shipped it: [stock] reads it at [read] into
-     * [register] and checks it for null right after, and [action] is the override's own long press.
+     * [register] and checks it for null at [guard], and [action] is the override's own long press.
      */
-    private record CopyTextSite(Method stock, int read, int register, FieldReference action) {}
+    private record CopyTextSite(Method stock, int read, int guard, int register, FieldReference action) {}
 
     /** PostText [stock], and its boolean [parameter], held in [flag], that its selection check reads as it came in. */
     private record CopyTextSelection(Method stock, int parameter, int flag) {}
@@ -5112,7 +5162,7 @@ public class DexDiff {
                 int locals = stock.getImplementation().getRegisterCount() - stock.getParameterTypes().stream().mapToInt(DexDiff::slots).sum()
                         - (AccessFlags.STATIC.isSet(stock.getAccessFlags()) ? 0 : 1);
                 Map<Integer, FeatureBlock> blocks = new HashMap<>();
-                for (CopyTextSite site : lambda.getValue()) blocks.put(site.read() + 1, (body, at) -> featureCopyTextHook(body, now, at, site, old, locals));
+                for (CopyTextSite site : lambda.getValue()) blocks.put(site.guard(), (body, at) -> featureCopyTextHook(body, now, at, site, old, locals));
                 featureBody(stock, changed, 0, Map.of(), COPY_LONG_PRESS, null, blocks);
             }
             CopyTextSelection selection = featureCopyTextSelection(clean);
@@ -5129,7 +5179,7 @@ public class DexDiff {
 
     /** The hook the patch puts in front of [site]'s override check, at [at] of the patched lambda [body], laid out as [now]. Answers its length. */
     private static int featureCopyTextHook(List<Instruction> body, Layout now, int at, CopyTextSite site, FeatureFlow old, int locals) {
-        int guard = site.read() + 1, held = site.register();
+        int guard = site.guard(), held = site.register();
         String where = " in front of the override check at " + guard + " in " + featureSig(site.stock());
         requireFeature(at + 5 <= body.size() && body.get(at).getOpcode() == Opcode.IF_EQZ && registerA(body.get(at)) == held,
                 "no hook" + where + " that tests the override in v" + held + " for null first");
@@ -5152,10 +5202,13 @@ public class DexDiff {
 
     /**
      * Every long press override check in the clean post row lambdas, found the way the patch finds
-     * them: an iget-object of a field of the lambda's own class, an if-nez on it straight after, and
-     * where that jumps, within four instructions, a read of a Function0 field of the override's type
-     * from the override, with an if-nez on that. There has to be at least one, they all read the same
-     * action, each check is reached only from its read, and the override sits where a call can name it.
+     * them: an if-nez or if-eqz on a register, and on its not-null side, within four instructions, a
+     * read of that register's Function0 field, of a type the lambda keeps a field of, tested at most
+     * one other test later. 451 reads the override just before the check and its action where the
+     * check jumps. 452 reads the override earlier, falls into the action and tests a boolean of the
+     * override's first. There has to be at least one, they all read the same action, each check is
+     * reached only by falling into it, what it tests can only be the lambda's own override, of the
+     * action's type, and the override sits where a call can name it.
      */
     private static List<CopyTextSite> featureCopyTextSites(Map<String, List<Method>> clean) {
         List<CopyTextSite> sites = new ArrayList<>();
@@ -5163,16 +5216,24 @@ public class DexDiff {
             if (m.getDefiningClass().startsWith(OWN) || m.getImplementation() == null || !holdsNote(m, POST_ROW_NOTE)) continue;
             FeatureFlow flow = new FeatureFlow(m);
             List<Instruction> body = flow.layout.instructions;
-            for (int read = 0; read < body.size(); read++) {
-                FieldReference action = featureCopyTextAction(flow, read);
+            for (int guard = 0; guard < body.size(); guard++) {
+                FieldReference action = featureCopyTextAction(flow, guard);
                 if (action == null) continue;
-                int guard = read + 1;
                 List<Integer> into = new ArrayList<>();
                 for (int n = 0; n < body.size(); n++) if (flow.normal.get(n).contains(guard) || flow.exceptional.get(n).contains(guard)) into.add(n);
-                requireFeature(into.equals(List.of(read)), featureSig(m) + " reaches its override check at " + guard + " from " + into + ", not only from the read at " + read);
-                int register = registerA(body.get(read));
+                requireFeature(into.equals(List.of(guard - 1)), featureSig(m) + " reaches its override check at " + guard + " from " + into
+                        + ", not only by falling in from " + (guard - 1));
+                int register = registerA(body.get(guard));
+                int[] source = featureSource(flow, guard, register);
+                int read = source == null ? -1 : source[0];
+                requireFeature(read >= 0 && body.get(read).getOpcode() == Opcode.IGET_OBJECT
+                        && ((FieldReference) ((ReferenceInstruction) body.get(read)).getReference()).getDefiningClass().equals(m.getDefiningClass()),
+                        "the override check at " + guard + " in " + featureSig(m) + " doesn't read only the lambda's own override");
                 requireFeature(register <= 15, featureSig(m) + " holds its override in v" + register + ", which the hook's call can't name");
-                sites.add(new CopyTextSite(m, read, register, action));
+                FieldReference override = (FieldReference) ((ReferenceInstruction) body.get(read)).getReference();
+                requireFeature(action.getDefiningClass().equals(override.getType()), "the override check at " + guard + " in " + featureSig(m)
+                        + " reads " + action + " from another type than the override it read at " + read);
+                sites.add(new CopyTextSite(m, read, guard, register, action));
             }
         }
         requireFeature(!sites.isEmpty(), "no post row lambda reads and checks a long press override");
@@ -5182,26 +5243,52 @@ public class DexDiff {
         return sites;
     }
 
-    /** The override's own long press when [read] in [flow]'s lambda is a read of the lambda's override followed by its check, or null. */
-    private static FieldReference featureCopyTextAction(FeatureFlow flow, int read) {
+    /**
+     * The override's own long press when [guard] in [flow]'s lambda is the row's null check of an
+     * override of its own: an if-nez or if-eqz on a register, and on its not-null side, within four
+     * instructions, a read of that register's Function0 field, of a type the lambda keeps a field
+     * of, tested at most one other test later. Null for anything else.
+     */
+    private static FieldReference featureCopyTextAction(FeatureFlow flow, int guard) {
         List<Instruction> body = flow.layout.instructions;
-        if (read + 1 >= body.size() || body.get(read).getOpcode() != Opcode.IGET_OBJECT || body.get(read + 1).getOpcode() != Opcode.IF_NEZ) return null;
-        FieldReference field = (FieldReference) ((ReferenceInstruction) body.get(read)).getReference();
-        int register = registerA(body.get(read));
-        if (!field.getDefiningClass().equals(flow.method.getDefiningClass()) || registerA(body.get(read + 1)) != register) return null;
-        List<Integer> jumps = flow.normal.get(read + 1).stream().filter(n -> n != read + 2).toList();
-        if (jumps.size() != 1) return null;
-        int target = jumps.get(0);
-        for (int at = target; at < Math.min(target + 4, body.size() - 1); at++) {
+        Instruction check = body.get(guard);
+        if (check.getOpcode() != Opcode.IF_NEZ && check.getOpcode() != Opcode.IF_EQZ) return null;
+        int register = registerA(check), held;
+        if (check.getOpcode() == Opcode.IF_NEZ) {
+            List<Integer> jumps = flow.normal.get(guard).stream().filter(n -> n != guard + 1).toList();
+            if (jumps.size() != 1) return null;
+            held = jumps.get(0);
+        } else {
+            held = guard + 1;
+        }
+        for (int at = held; at < Math.min(held + 4, body.size()); at++) {
             Instruction i = body.get(at);
             if (i.getOpcode() != Opcode.IGET_OBJECT) continue;
             FieldReference action = (FieldReference) ((ReferenceInstruction) i).getReference();
-            if (((TwoRegisterInstruction) i).getRegisterB() != register || !action.getDefiningClass().equals(field.getType())
-                    || !action.getType().equals(FUNCTION0)) continue;
-            Instruction next = body.get(at + 1);
-            return next.getOpcode() == Opcode.IF_NEZ && registerA(next) == registerA(i) ? action : null;
+            int got = ((TwoRegisterInstruction) i).getRegisterA();
+            if (((TwoRegisterInstruction) i).getRegisterB() != register || !action.getType().equals(FUNCTION0)) continue;
+            if (!featureOwnsFieldOf(flow.method, action.getDefiningClass())) return null;
+            int tested = -1;
+            for (int n = at + 1; n < Math.min(at + 3, body.size()) && tested < 0; n++) {
+                if (body.get(n) instanceof OneRegisterInstruction one && one.getRegisterA() == got) tested = n;
+            }
+            if (tested < 0) return null;
+            for (int n = at + 1; n < tested; n++) {
+                if (body.get(n).getOpcode() != Opcode.IF_NEZ && body.get(n).getOpcode() != Opcode.IF_EQZ) return null;
+            }
+            Opcode test = body.get(tested).getOpcode();
+            return test == Opcode.IF_NEZ || test == Opcode.IF_EQZ ? action : null;
         }
         return null;
+    }
+
+    /** Whether [m] reads a field of its own class of [type] anywhere. */
+    private static boolean featureOwnsFieldOf(Method m, String type) {
+        for (Instruction i : instructions(m)) {
+            if (i.getOpcode() == Opcode.IGET_OBJECT && ((ReferenceInstruction) i).getReference() instanceof FieldReference f
+                    && f.getDefiningClass().equals(m.getDefiningClass()) && f.getType().equals(type)) return true;
+        }
+        return false;
     }
 
     /**
@@ -6249,7 +6336,9 @@ public class DexDiff {
                 featureFalseStub(patched, ADS + "isAd(Ljava/lang/Object;)Z", true);
                 featurePreserveTargets(clean, patched, m -> m.getDefiningClass().equals(MEDIA)
                         || m.getReturnType().equals("Z") && instructions(m).stream().anyMatch(i -> i instanceof WideLiteralInstruction
-                                && (int) ((WideLiteralInstruction) i).getWideLiteral() == 0x8669a9b0));
+                                && (int) ((WideLiteralInstruction) i).getWideLiteral() == 0x8669a9b0)
+                        || m.getDefiningClass().equals(PERMALINK_AD_FETCHER));
+                featureHostCalls(patched, PERMALINK_ADS, Map.of());
                 break;
             case "sanitizeSharingLinks":
                 featureHostCalls(patched, CLEAN_LINK, Map.of());

@@ -17,6 +17,7 @@ import com.android.tools.smali.dexlib2.iface.ClassDef
 import com.android.tools.smali.dexlib2.iface.Method
 import com.android.tools.smali.dexlib2.iface.instruction.Instruction
 import com.android.tools.smali.dexlib2.iface.instruction.ReferenceInstruction
+import com.android.tools.smali.dexlib2.iface.reference.Reference
 import com.android.tools.smali.dexlib2.iface.reference.StringReference
 import com.android.tools.smali.dexlib2.immutable.ImmutableMethod
 import com.android.tools.smali.dexlib2.util.MethodUtil
@@ -42,23 +43,33 @@ internal class SecShellDex(bytes: ByteArray) {
 
     fun hasString(string: String) = string in dexFile.stringSection
 
-    fun methodUsingString(string: String, firstParameter: String): MutableMethod {
-        val matches = dexFile.classes.flatMap { classDef ->
+    fun methodsUsingString(string: String, firstParameter: String? = null): List<MutableMethod> =
+        dexFile.classes.flatMap { classDef ->
             classDef.methods.filter { method ->
-                method.parameterTypes.firstOrNull() == firstParameter &&
+                (firstParameter == null || method.parameterTypes.firstOrNull() == firstParameter) &&
                     method.implementation?.instructions?.any { it.usesString(string) } == true
             }
+        }.map { found ->
+            editedClass(found.definingClass).methods.single { MethodUtil.methodSignaturesMatch(it, found) }
         }
-        val found = matches.singleOrNull()
-            ?: throw PatchException("Expected one method using \"$string\", found ${matches.size}")
-        return editedClass(found.definingClass).methods.single { MethodUtil.methodSignaturesMatch(it, found) }
+
+    fun instanceFields(classType: String) = classDef(classType).instanceFields.toList()
+
+    fun referencesInMethodUsing(string: String): List<Reference> {
+        val bodies = dexFile.classes.flatMap { it.methods }.mapNotNull { it.implementation }
+            .filter { body -> body.instructions.any { it.usesString(string) } }
+        val body = bodies.singleOrNull()
+            ?: throw PatchException("Expected one method using \"$string\", found ${bodies.size}")
+        return body.instructions.filterIsInstance<ReferenceInstruction>().map { it.reference }
     }
 
     fun method(classType: String, name: String): MutableMethod {
-        val matches = editedClass(classType).methods.filter { it.name == name }
+        val matches = methods(classType, name)
         return matches.singleOrNull()
             ?: throw PatchException("Expected one method $name in $classType, found ${matches.size}")
     }
+
+    fun methods(classType: String, name: String) = editedClass(classType).methods.filter { it.name == name }
 
     fun replaceBody(classType: String, name: String, registers: Int, smali: String) {
         val original = method(classType, name)
@@ -85,11 +96,10 @@ internal class SecShellDex(bytes: ByteArray) {
     private fun Instruction.usesString(string: String) =
         ((this as? ReferenceInstruction)?.reference as? StringReference)?.string == string
 
-    private fun editedClass(type: String) = editedClasses.getOrPut(type) {
-        MutableClass(
-            dexFile.classes.firstOrNull { it.type == type } ?: throw PatchException("Payload dex has no class $type"),
-        )
-    }
+    private fun classDef(type: String) =
+        dexFile.classes.firstOrNull { it.type == type } ?: throw PatchException("Payload dex has no class $type")
+
+    private fun editedClass(type: String) = editedClasses.getOrPut(type) { MutableClass(classDef(type)) }
 
     private fun Method.withBody(registers: Int, smali: String): Method {
         val implementation = MutableMethodImplementation(registers)
